@@ -926,6 +926,7 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   guaranteeUnique … true なら、効いているあいだ毎ターン、その子の固有技カードが手札に必ず出る(ピクシー)
 //   cardBonus … (stage) 効いているあいだ、1ターンに使えるカード枚数(盤面ぜんぶ・その子自身)を何枚増やすか
 //   voltage   … (stage) { max, dmg, heal, guts } 味方がカードを1枚使うたびに1たまる。1段階ごとに 与ダメ+dmg・回復量+heal・ガッツの自動回復+guts(全員)
+//   pandoraBox … (pandoraBox) パンドラの箱。{ costRate(ターン終わりに払う最大ライフの割合), selfCardBonus(パンドラ自身が使えるカード+), devilDmg(1枚目の与ダメ倍率), devilCombo{count,rate}(1枚目に付く連撃), angelRate(2枚目で味方全員のライフ・ガッツ上限の何割戻すか), hopeGutsRate(最後の希望で戻すガッツ) }
 //   target    … 'ally' なら、使うとき味方1体(自分も含む)を選ぶ。選んだ枠は applyTacticsExUse の target に入る
 //   lifeSpring … (lifeSpring) { maxUpRate, gutsRate } 選んだ子が立っていればライフ上限を maxUpRate 上げて(効果のあいだ)満タンに、ダウン中なら立たせて満タンに。どちらもガッツを上限の gutsRate 戻す
 //   usesPerWave … true なら、回数がWAVEのはじめに戻る(maxUses は1WAVEぶん)
@@ -1082,6 +1083,19 @@ const TACTICS_EX_SKILLS = Object.freeze({
     maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
     effect: 'timeStop',
   }),
+  // ★2026-10-03 パンドラ「パンドラの箱」(ユーザーの案・数字は仮。見た目の分離(悪魔側・天使側の画像)と3枚の染色は、あとの段階で入れる)。
+  //   天使側と悪魔側に分かれて3ターン戦う(システム上は1体のまま)。毎ターン終わりにライフを削り(1・2ターン目)、
+  //   自分が使えるカード+1。1枚目は悪魔側(与ダメ+50%・与ダメ30%の連撃×1)、2枚目は天使側(味方全員のライフ・ガッツ上限の10%回復)。
+  //   3ターン生き残ると「最後の希望」(自分はダウン・ダウン中の味方は復活・味方全員ライフ満タン・ガッツ上限の50%)。
+  //   途中で倒れると、倒れたときのガッツが生きている味方へ均等に分けられる
+  Pandora: Object.freeze({
+    id: 'pandora_box',
+    name: 'パンドラの箱',
+    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりにライフを最大の30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%戻る。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%戻る。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    maxUses: 1, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
+    effect: 'pandoraBox',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1142,7 +1156,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1201,6 +1215,13 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
+      const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
+      const c = raw.pandoraBox.devilCombo;
+      return { costRate: Math.min(0.9, n(raw.pandoraBox.costRate)), selfCardBonus: Math.min(3, tacticsSafeInt(raw.pandoraBox.selfCardBonus, 0)),
+        devilDmg: Math.max(1, n(raw.pandoraBox.devilDmg) || 1), angelRate: n(raw.pandoraBox.angelRate), hopeGutsRate: n(raw.pandoraBox.hopeGutsRate),
+        devilCombo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate) } : null };
+    })() : null,
     lifeSpring: raw.lifeSpring && typeof raw.lifeSpring === 'object'
       ? { maxUpRate: Math.max(0, Number(raw.lifeSpring.maxUpRate) || 0), gutsRate: Math.max(0, Number(raw.lifeSpring.gutsRate) || 0) } : null,
     present: raw.present && typeof raw.present === 'object' ? (() => {
@@ -1347,6 +1368,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
       presentCfg: def.present ? { ...def.present } : null, present: null,
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
+      pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1489,11 +1511,17 @@ const tacticsExStageEntries = (state, units, now) => {
   }).map(slot => ({ slot, mine: effects[slot] }));
 };
 // 1ターンに使えるカード枚数(盤面ぜんぶ)へ足す数
-const tacticsExCardBonusTotal = (state, units, now) => tacticsExStageEntries(state, units, now).reduce((sum, e) => sum + tacticsSafeInt(e.mine.cardBonus, 0), 0);
+// ★パンドラの箱(selfCardBonus)も、盤面の枚数に足す(少人数のとき、パンドラ自身の+1が盤面の上限に止められないように)
+const tacticsExCardBonusTotal = (state, units, now) => tacticsExStageEntries(state, units, now).reduce((sum, e) => sum + tacticsSafeInt(e.mine.cardBonus, 0), 0)
+  + Object.keys(normalizeTacticsExState(state).effects).map(Number).reduce((sum, slot) => {
+    const box = tacticsExPandoraBoxOf(state, units, slot, now);
+    return sum + (box ? tacticsSafeInt(box.selfCardBonus, 0) : 0);
+  }, 0);
 // その子自身が1ターンに使えるカード枚数へ足す数(効果を使った子だけ)
 const tacticsExCardBonusAt = (state, units, slot, now) => {
   const hit = tacticsExStageEntries(state, units, now).find(e => e.slot === slot);
-  return hit ? tacticsSafeInt(hit.mine.cardBonus, 0) : 0;
+  const box = tacticsExPandoraBoxOf(state, units, slot, now);
+  return (hit ? tacticsSafeInt(hit.mine.cardBonus, 0) : 0) + (box ? tacticsSafeInt(box.selfCardBonus, 0) : 0);
 };
 // いまのボルテージと、その強化(効いていなければ null)。dmgMult/healMult は掛け算、gutsAdd はガッツの自動回復率へ足す
 const tacticsExVoltageOf = (state, units, now) => {
@@ -1565,6 +1593,44 @@ const checkTacticsExTarget = (def, units, target) => {
   if (!def || def.target !== 'ally') return null;
   if (!Number.isInteger(target)) return 'どの味方に使うか選ぶ';
   return Array.isArray(units) && units[target] ? null : 'そこには味方がいない';
+};
+// ---- パンドラ(pandoraBox): パンドラの箱 ----
+// その枠で「パンドラの箱」が効いているときの数字(効いていなければ null)
+const tacticsExPandoraBoxOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'pandoraBox') return null;
+  const cfg = normalizeTacticsExState(state).effects[slot].pandoraBoxCfg;
+  return cfg && typeof cfg === 'object' ? cfg : null;
+};
+// 1枚目(「同じ子の2枚目」ではないほう)の悪魔側の力。与ダメ倍率と連撃。2枚目以降・効いていなければ null
+const tacticsExPandoraDevil = (state, units, slot, now, halved = false) => {
+  const cfg = halved ? null : tacticsExPandoraBoxOf(state, units, slot, now);
+  if (!cfg) return null;
+  const c = cfg.devilCombo;
+  return { dmg: Math.max(1, Number(cfg.devilDmg) || 1), combo: c && c.count > 0 && c.rate > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate), label: '悪魔の力' } : null };
+};
+// ターンの終わりに、パンドラの箱がどうなるか。cost=ライフを払う / hope=最後の希望(最後のターン) / died=倒れていた(ガッツを分ける)。
+// 箱が効いていなければ null。slot=パンドラの枠、cfg=数字
+const tacticsExPandoraTurnEnd = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const slot = Object.keys(effects).map(Number).find(s => {
+    const unit = Array.isArray(units) ? units[s] : null;
+    return unit && tacticsExActiveEffect(state, s, unit.id, now) === 'pandoraBox';
+  });
+  if (slot == null) return null;
+  const mine = effects[slot], unit = normalizeTacticsUnit(units[slot]);
+  if (!unit || !mine.pandoraBoxCfg) return null;
+  const last = tacticsSafeInt(mine.turn, 0) + tacticsSafeInt(mine.turns, 0) - 1;
+  return { slot, cfg: mine.pandoraBoxCfg, phase: unit.downed ? 'died' : (tacticsSafeInt(now && now.turn, 0) >= last ? 'hope' : 'cost') };
+};
+// 箱の始末(最後の希望・倒れた)が済んだことにする。これ以降は何も起きない(同じターンの数字が続いても)。効いていなければ同じ state
+const spendTacticsExPandoraBox = (state) => {
+  const safe = normalizeTacticsExState(state);
+  const keys = Object.keys(safe.effects).filter(k => safe.effects[k] && safe.effects[k].effect === 'pandoraBox');
+  if (!keys.length) return state;
+  const effects = { ...safe.effects };
+  keys.forEach(k => { effects[k] = { ...effects[k], effect: 'pandoraBoxSpent' }; });
+  return { ...safe, effects };
 };
 // ---- ヤオビクニ(timeStop): 使ったターンは敵が行動せず、ターン数も進まない ----
 // いま時間が止まっている枠(まだ敵の番を止めていないもの)。なければ null

@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -434,7 +434,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
     /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken:1\)/.test(app)
     && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\) : 0;/.test(app)
-    && (app.match(/exCombos:tacticsExCombosAt\(slotIdx\)/g) || []).length === 3);
+    && (app.match(/exCombos:tacticsExCombosAt\(slotIdx(,halved|,true)?\)/g) || []).length === 3);
 }
 
 // ---------- ⑫ エイキ「緋桜瞬歩」(2026-10-02 ユーザー指示) ----------
@@ -640,7 +640,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('本体: 距離補正・味方全員ぶんの倍率・連撃(配列)・回復カード・ガッツ自動回復へ結線してある',
     /const exDistMult = tacticsExMultiBuffNow\(slotIdx\)\.distMult;/.test(app)
     && /out\.dmg\*=party\.dmg; out\.critRate\*=party\.critRate;/.test(app)
-    && /return own&&gift \? \[own,gift\] : \(own\|\|gift\|\|null\);/.test(app)
+    && /const list=\[own,gift,devil\]\.filter\(Boolean\);\n\s*return list\.length===0\?null:\(list\.length===1\?list\[0\]:list\);/.test(app)
     && /tacticsRateHeal\(cardHealRate\*tacticsExPartyBuffNow\(\)\.heal,0\)/.test(app)
     && /baseGutsRecoveryRate\+tacticsExPartyBuffNow\(\)\.gutsAdd/.test(app));
   check('本体: ターン終わりにボルテージをため、次のターンも効くならピクシーの固有技を手札へ出す・使ったときにも出す',
@@ -701,6 +701,49 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /if \(timeStopSlot!=null\) \{\n\s*addPopup\('⏳ 時間停止！/.test(app)
     && /const nextTurn=timeStopSlot!=null\?turnCount:turnCount\+1; setTurnCount\(nextTurn\);/.test(app)
     && /data-tactics-ex-target=\{t\.slot\}/.test(screen));
+}
+
+// ---------- ⑰ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮) ----------
+{
+  const pd = ex.tacticsExDefOf('Pandora');
+  check('パンドラ「パンドラの箱」: 1回・併用できる・3ターン・ライフ30%・自分+1枚・悪魔側 与ダメ×1.5と連撃30%×1・天使側10%・最後の希望ガッツ50%', !!pd && pd.name === 'パンドラの箱' && pd.maxUses === 1 && pd.withCards
+    && pd.duration === 'turns' && pd.turns === 3 && pd.effect === 'pandoraBox' && ex.isTacticsExEffectImplemented(pd) && !!pd.pandoraBox
+    && pd.pandoraBox.costRate === 0.3 && pd.pandoraBox.selfCardBonus === 1 && pd.pandoraBox.devilDmg === 1.5 && pd.pandoraBox.devilCombo.count === 1 && pd.pandoraBox.devilCombo.rate === 0.3
+    && pd.pandoraBox.angelRate === 0.1 && pd.pandoraBox.hopeGutsRate === 0.5, JSON.stringify(pd));
+  const A = (wave, turn) => ({ wave, turn });
+  const mk = (id, hp, downed = false) => ({ id, hp, maxHp: 400, baseMaxHp: 400, atk: 1, def: 1, guts: 50, maxGuts: 135, baseMaxGuts: 135, downed });
+  const units = [mk('Pandora', 400), mk('Golem', 400), mk('Mocchi', 200, true)];
+  const st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: pd, slot: 0, monId: 'Pandora', now: A(2, 3) });
+  check('箱が効いているのは使ったターンから3ターン(3〜5ターン目)・次のWAVEでは切れる・パンドラの枠だけ',
+    !!ex.tacticsExPandoraBoxOf(st, units, 0, A(2, 3)) && !!ex.tacticsExPandoraBoxOf(st, units, 0, A(2, 5)) && ex.tacticsExPandoraBoxOf(st, units, 0, A(2, 6)) === null
+    && ex.tacticsExPandoraBoxOf(st, units, 0, A(3, 3)) === null && ex.tacticsExPandoraBoxOf(st, units, 1, A(2, 3)) === null
+    && ex.tacticsExPandoraBoxOf(ex.createTacticsExState(), units, 0, A(2, 3)) === null);
+  const dv = ex.tacticsExPandoraDevil(st, units, 0, A(2, 3), false);
+  check('悪魔側の力: 1枚目だけ 与ダメ×1.5・連撃30%×1(名前「悪魔の力」)。「同じ子の2枚目」・箱が無いときは null',
+    !!dv && dv.dmg === 1.5 && dv.combo.count === 1 && dv.combo.rate === 0.3 && dv.combo.label === '悪魔の力'
+    && ex.tacticsExPandoraDevil(st, units, 0, A(2, 3), true) === null && ex.tacticsExPandoraDevil(ex.createTacticsExState(), units, 0, A(2, 3), false) === null);
+  check('パンドラ自身が使えるカードが+1(自分の枠+1・盤面の枚数も+1・ほかの子の枠は+0)', ex.tacticsExCardBonusAt(st, units, 0, A(2, 3)) === 1 && ex.tacticsExCardBonusAt(st, units, 1, A(2, 3)) === 0
+    && ex.tacticsExCardBonusTotal(st, units, A(2, 3)) === 1 && ex.tacticsExCardBonusTotal(st, units, A(2, 6)) === 0);
+  const t1 = ex.tacticsExPandoraTurnEnd(st, units, A(2, 3)), t2 = ex.tacticsExPandoraTurnEnd(st, units, A(2, 4)), t3 = ex.tacticsExPandoraTurnEnd(st, units, A(2, 5));
+  check('ターン終わり: 1・2ターン目はライフを払う(cost)・3ターン目は最後の希望(hope)・箱が無ければ null', !!t1 && t1.slot === 0 && t1.phase === 'cost' && t2.phase === 'cost' && t3.phase === 'hope'
+    && ex.tacticsExPandoraTurnEnd(st, units, A(2, 6)) === null && ex.tacticsExPandoraTurnEnd(ex.createTacticsExState(), units, A(2, 3)) === null);
+  const downedUnits = [mk('Pandora', 0, true), mk('Golem', 400), mk('Mocchi', 200, true)];
+  check('パンドラが倒れていたら died(最後の希望は起きない)', ex.tacticsExPandoraTurnEnd(st, downedUnits, A(2, 4)).phase === 'died' && ex.tacticsExPandoraTurnEnd(st, downedUnits, A(2, 5)).phase === 'died');
+  const spent = ex.spendTacticsExPandoraBox(st);
+  check('始末が済むと何も起きない(同じターンの数字が続いても)・効いていなければ同じ state',
+    ex.tacticsExPandoraTurnEnd(spent, units, A(2, 5)) === null && ex.tacticsExPandoraBoxOf(spent, units, 0, A(2, 4)) === null && ex.tacticsExPandoraDevil(spent, units, 0, A(2, 4), false) === null
+    && (() => { const e = ex.createTacticsExState(); return ex.spendTacticsExPandoraBox(e) === e; })());
+  check('もう一度使うことはできない(1回だけ)', !ex.checkTacticsExUse({ def: pd, state: st, slot: 0, monId: 'Pandora', alive: true, now: A(3, 1) }).ok);
+  check('本体: 悪魔側(与ダメ・連撃・予測)・天使側(2枚目)・ターン終わりの始末へ結線してある',
+    /tacticsExPandoraDevilNow\(slotIdx,isSecondOrLaterAtk\)\.dmg\*/.test(app)
+    && /const devil=tacticsExPandoraDevilNow\(slotIdx,halved\)\.combo;/.test(app)
+    && /getAttackPredictedDmg = useCallback\(\(card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null, halved=false\)/.test(app)
+    && (screen.match(/getAttackPredictedDmg\([^;]*,(halved|pendingHalved|isSecondOrLater)\)/g) || []).length === 4
+    && /pandoraCardNo\[entry\.slotIdx\]===2\?tacticsExPandoraBoxOf\(/.test(app) && /tacticsRateHeal\(boxNow\.angelRate,boxNow\.angelRate,false\)/.test(app)
+    && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'devil'\}\)/.test(app) && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'angel'\}\)/.test(app) && /setTacticsPandoraForms\(\{\}\);/.test(app)
+    && /data-pandora-pair/.test(screen) && /pandoraArt\|\|<DyedMonsterImage/.test(screen) && /tacticsPandoraForms=\{tacticsPandoraForms\}/.test(app)
+    && /const boxStep=tacticsExPandoraTurnEnd\(tacticsExStateRef\.current,tacticsUnitsRef\.current,tacticsExLiveRef\.current\.now\);\s*if\(boxStep\) await settleTacticsExPandoraBox\(boxStep\);/.test(app)
+    && /if\(timeStopSlot==null&&isTacticsMode\(runMode\)&&tacticsExEnabled\)\{\s*const boxStep/.test(app));
 }
 
 // ---------- ⑧ 壊れた値 ----------

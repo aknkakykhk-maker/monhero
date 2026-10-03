@@ -609,6 +609,9 @@ function MonsterHeroGame() {
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
   const [graveyard, setGraveyard] = useState([]);
+  const [tacticsPandoraForms, setTacticsPandoraForms] = useState({}); // パンドラの箱: 枠ごとの「いま見せている姿」('devil'|'angel')。カードを切っている間だけ入る
+  const handPileRef = useRef({ hand: [], deck: [], graveyard: [] }); // EXスキルが「いまの」手札・山札・墓地を読むための控え(毎回の描画で更新)
+  handPileRef.current = { hand, deck, graveyard };
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
   // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
@@ -1648,6 +1651,16 @@ function MonsterHeroGame() {
   //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
   const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
   const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  // マーケットで自分で買った枠は、「新しくもらったよ」と助手に知らせてもらう必要がない。
+  // 買った時点で知らせ済みにする(しないと、次にプロフィールを開いたとき、買った枠の「手に入れた」案内が出てしまう・2026-10-03)。
+  // 画面の状態を先に変え、保存は読んでから足す。保存できなくても進行は止めない
+  const markProfileFrameNoticed = useCallback((frameId) => {
+    if (!frameId) return;
+    setProfileFrameNoticed(prev => normalizeOwnedProfileFrames([...prev, frameId]));
+    Promise.resolve(storeGet(PROFILE_FRAME_NOTICE_KEY, [], false))
+      .then(stored => storeSet(PROFILE_FRAME_NOTICE_KEY, normalizeOwnedProfileFrames([...normalizeOwnedProfileFrames(stored), frameId]), false))
+      .catch(error => { console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error); });
+  }, []);
   // 条件を満たしたぶんを配る。増えた枠のidを返す(何ももらえないときは空)
   const grantProfileFrames = useCallback((assistantId, bondLevel) => {
     const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
@@ -6762,9 +6775,17 @@ function MonsterHeroGame() {
   // プロフィールフレームを買える条件の進み具合(2026-10-03・ユーザー指示)。条件が無い枠は null。
   // 種族は MONSTER_LINEAGE_MAP の主血統(main)で見る。ミタラシ・剣士モッチーもモッチー種に入る。
   // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る。
-  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal) => {
-    const c = profileFrameCondition(frame);
+  // shop を渡すと、その交換所で必要な条件だけを見る(ビートP交換所は条件なしの枠もある)。渡さないときは枠の条件そのもの
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null) => {
+    const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
+    if (c.kind === 'monsterReincarnate') {
+      // そのモンスター自身の転生回数(reincarnateCount)。限界突破とは別の仕組み
+      const need = Math.max(1, Math.floor(Number(c.count) || 1));
+      const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => (
+        mon && mon.baseId === c.monsterId ? Math.max(top, Math.max(0, Math.floor(Number(mon.reincarnateCount) || 0))) : top), 0);
+      return { met: best >= need, text: c.text || '', progress: `いまの最高 ${best}回 ／ 必要 ${need}回` };
+    }
     if (c.kind === 'speciesRebirth') {
       const need = Math.max(1, Math.floor(Number(c.count) || 1));
       const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => {
@@ -6847,7 +6868,7 @@ function MonsterHeroGame() {
     if (isMarketItemOwned(item)) return false;
     // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
     if (item.type === 'frame') {
-      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal());
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint');
       if (status && !status.met) { setMarketExchangeError('買える条件をまだ満たしていません。'); return false; }
     }
     const purchase = buildMarketItemPurchase({ item, gold, breederPoints, ownedItems:ownedItemsRef.current, quantity });
@@ -6879,6 +6900,7 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = nextFrames;
       setOwnedProfileFrames(nextFrames);
       storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
+      markProfileFrameNoticed(item.id);
     } else if (item.type !== 'item') {
       setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
     }
@@ -6958,7 +6980,7 @@ function MonsterHeroGame() {
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
-        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal());
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
         if (frameStatus && !frameStatus.met) {
           setMarketExchangeError('買える条件をまだ満たしていません。');
           return { ok:false, reason:'condition' };
@@ -6996,6 +7018,7 @@ function MonsterHeroGame() {
       if (isFrame) {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
+        markProfileFrameNoticed(exchange.frameId);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -9898,13 +9921,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return unit ? tacticsExActiveStyle(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
   };
   // スイーツパラダイスで足す連撃({count, rate})。効いていなければ null(ほかのモードも null)
-  const tacticsExCombosAt = (slotIdx) => {
+  const tacticsExCombosAt = (slotIdx, halved=false) => {
     const live=tacticsExLiveRef.current;
     if(!live.enabled||!Number.isInteger(slotIdx)) return null;
     const own=tacticsExExtraCombosAt(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
     // ★スネグーラチカのプレゼントの「連撃付与」は味方全員の攻撃に付く。自分のぶんと別の連撃として重ねる
     const gift=tacticsExPartyBuffNow().combo;
-    return own&&gift ? [own,gift] : (own||gift||null);
+    const devil=tacticsExPandoraDevilNow(slotIdx,halved).combo; // パンドラの箱: 1枚目に悪魔側の連撃
+    const list=[own,gift,devil].filter(Boolean);
+    return list.length===0?null:(list.length===1?list[0]:list);
   };
   // 世界樹の守りの、味方全員の被ダメージ倍率(効いていなければ1。ほかのモードも1)
   // アーク・イブリースの与ダメ・被ダメ・会心の倍率(効いていなければ全部1。ほかのモードも1)
@@ -9918,6 +9943,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       out.dmg*=party.dmg; out.critRate*=party.critRate;
     }
     return out;
+  };
+  // パンドラの箱の悪魔側の力(1枚目の攻撃だけ。halved=「同じ子の2枚目」)。効いていなければ与ダメ1倍・連撃なし
+  const tacticsExPandoraDevilNow = (slotIdx, halved=false) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return { dmg:1, combo:null };
+    const devil=tacticsExPandoraDevil(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now,halved);
+    return devil?{ dmg:devil.dmg, combo:devil.combo }:{ dmg:1, combo:null };
   };
   // 味方全員に効く倍率(ミーアのボルテージ・スネグーラチカのプレゼント)。効いていなければ全部1・連撃は null。ほかのモードも同じ
   const tacticsExPartyBuffNow = () => {
@@ -10297,7 +10329,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
-    const totalBuffMult=traitMult*tacticsExMultiBuffNow(slotIdx).dmg*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*tacticsExMultiBuffNow(slotIdx).dmg*tacticsExPandoraDevilNow(slotIdx,isSecondOrLaterAtk).dmg*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
       ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
@@ -10320,7 +10352,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // additionalGlobalCombo: カード選択中のプレビュー専用。previewLocalBoostsが計算した、
   // このカードより手前で使ったききの応援ぶんの全体連撃(まだstateに乗っていない同ターン分)。
   // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
-  const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null) => {
+  const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null, halved=false) => {
     if (baseDmg<=0) return 0;
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
@@ -10329,7 +10361,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx,halved), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -11018,6 +11050,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
     // 時間を止めたターンは数えない(20ターン制限にも入れない)。止めた記録は使い終わったことにして、止め続けない
+    // パンドラの箱: ターン終わりの始末。時間が止まったターンは箱も進めない
+    if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
+      const boxStep=tacticsExPandoraTurnEnd(tacticsExStateRef.current,tacticsUnitsRef.current,tacticsExLiveRef.current.now);
+      if(boxStep) await settleTacticsExPandoraBox(boxStep);
+    }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
   };
@@ -11139,6 +11176,60 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setTacticsExCutin({ ...cutin, key: Date.now(), ...(ms !== TACTICS_EX_CUTIN_MS ? { ms } : {}) });
     tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, ms);
   };
+  // パンドラの箱のターン終わりの始末(2026-10-03)。cost=ライフを払う / hope=最後の希望 / died=倒れたときのガッツを味方へ分ける
+  const settleTacticsExPandoraBox = async (step) => {
+    const slot=step.slot, cfg=step.cfg;
+    const name=slots[slot]?.masuName||slots[slot]?.name||'パンドラ';
+    let units=tacticsUnitsRef.current;
+    let phase=step.phase;
+    const othersOf=()=>tacticsFilledSlots(units).filter(i=>i!==slot);
+    const aliveOthersOf=()=>tacticsAliveSlots(units).filter(i=>i!==slot);
+    if(phase==='cost'){
+      const u=normalizeTacticsUnit(units[slot]);
+      let cost=Math.floor(u.maxHp*cfg.costRate);
+      // ★ほかに立っている味方がいないときは、払って倒れない(最後の1体が倒れるとランが終わってしまう)
+      if(aliveOthersOf().length===0) cost=Math.min(cost,Math.max(0,u.hp-1));
+      if(cost>0){
+        units=damageTacticsTargets(units,[slot],cost); commitTacticsUnits(units);
+        showTacticsSlotFx(prev=>({...(prev||{}),[slot]:{...((prev||{})[slot]||{}),dmg:cost}}));
+        pushBattleLog(`${name}は命を削った（${cost.toLocaleString()}）`,'ally');
+        await battleWait(500);
+      }
+      units=tacticsUnitsRef.current;
+      if(!normalizeTacticsUnit(units[slot]).downed) return; // まだ立っている。箱は続く
+      phase='died';
+    }
+    if(phase==='hope'){
+      if(othersOf().length===0){
+        pushBattleLog(`${name}の「最後の希望」…助ける味方がいなかった`,'ally');
+      } else {
+        // パンドラ自身がダウンし、ダウン中の味方は立ち上がり、全員のライフが満タンになり、ガッツが戻る
+        units=damageTacticsTargets(units,[slot],normalizeTacticsUnit(units[slot]).hp);
+        const hpMap={}, gutsMap={};
+        othersOf().forEach(i=>{
+          const u=normalizeTacticsUnit(units[i]); const gain=Math.max(0,u.maxHp-u.hp);
+          if(gain>0){ units=healTacticsAt(units,i,gain); hpMap[i]=gain; }
+          const v=normalizeTacticsUnit(units[i]); const g=Math.max(0,Math.min(v.maxGuts-v.guts,Math.floor(v.maxGuts*cfg.hopeGutsRate)));
+          if(g>0){ units=recoverTacticsGutsAt(units,i,g); gutsMap[i]=g; }
+        });
+        commitTacticsUnits(units); mergeTacticsSlotFx(hpMap,gutsMap);
+        addPopup('✨ 最後の希望','hero','text-amber-200 font-black text-2xl drop-shadow-md');
+        pushBattleLog(`✨ ${name}の「最後の希望」。ダウンの味方が立ち上がり、全員のライフが満タンになった`,'ally');
+        await battleWait(900);
+      }
+    } else if(phase==='died'){
+      const u=normalizeTacticsUnit(units[slot]); const alive=aliveOthersOf();
+      if(u&&u.guts>0&&alive.length>0){
+        const each=Math.floor(u.guts/alive.length), gutsMap={};
+        alive.forEach(i=>{ const v=normalizeTacticsUnit(units[i]); const g=Math.max(0,Math.min(v.maxGuts-v.guts,each)); if(g>0){ units=recoverTacticsGutsAt(units,i,g); gutsMap[i]=g; } });
+        units=units.map((x,i)=>(i===slot&&x?{ ...x, guts:0 }:x));
+        commitTacticsUnits(units); mergeTacticsSlotFx({},gutsMap);
+        pushBattleLog(`${name}が倒れた。残りのガッツ ${u.guts} が味方へ分けられた`,'ally');
+        await battleWait(700);
+      } else pushBattleLog(`${name}が倒れた。「最後の希望」は起きなかった`,'ally');
+    }
+    commitTacticsExState(spendTacticsExPandoraBox(tacticsExStateRef.current));
+  };
   // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
@@ -11204,7 +11295,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // ピクシーの「お気に入りの魔法」: 使ったターンから固有技のカードが手札に出る(手札がいっぱいで、いちばん後ろのカードを選んでいるときは、次のターンから)
     if(def.guaranteeUnique&&(hand.length<5||!selectedCards.includes(hand.length-1))){
-      const ens=ensureTacticsExUniqueInHand({ hand, deck, graveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx);
+      const ens=ensureTacticsExUniqueInHand(handPileRef.current,c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx);
       if(ens.moved){ setHand(ens.hand); setDeck(ens.deck); setGraveyard(ens.graveyard); }
     }
     // スネグーラチカの「クリスマスプレゼント」: 中身をランダムで決める。必ず全員のガッツが戻り、決まった中身が起きる
@@ -11218,6 +11309,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       pushBattleLog(`🎁 プレゼントの中身: ${roll.jackpot?'大当たり！ 全部':names.join('・')}`,'ally');
       addPopup(roll.jackpot?'🎁 大当たり！ 全部入り':`🎁 ${names[0]}`,'hero','text-amber-300 font-black text-2xl drop-shadow-md',undefined,slotIdx);
     }
+    // パンドラの箱: 悪魔・天使の絵は起動時に読まないので、使った瞬間に先読みして、カードを切るときに出遅れないようにする
+    if(def.effect==='pandoraBox') [PANDORA_DEVIL_IMG,PANDORA_ANGEL_IMG].forEach(u=>{ try{ const im=new Image(); im.src=u; }catch(e){} });
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
@@ -11314,6 +11407,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
     const halveCounter=makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
+    const pandoraCardNo={}; // パンドラの箱: 枠ごとに、このターン何枚目のカードか(アシストカードは数えない)
     for (const entry of usedCardEntries) {
       const card=entry.card;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
@@ -11343,6 +11437,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(halved) addPopup(isTacticsMode(runMode)?'同じ子の2枚目 効果半減':'2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
+      // ★パンドラの箱の天使側の力: パンドラが2枚目のカードを使うと、味方全員のライフ・ガッツが上限の一部だけ戻る(2026-10-03)
+      if(isTacticsMode(runMode)&&!isBreeder&&entry.slotIdx!=null){
+        pandoraCardNo[entry.slotIdx]=(pandoraCardNo[entry.slotIdx]||0)+1;
+        const boxNow=pandoraCardNo[entry.slotIdx]===2?tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now):null;
+        // 1枚目は悪魔、2枚目は天使の姿に変える(3枚目以降は天使のまま)
+        if(pandoraCardNo[entry.slotIdx]===1&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now)) setTacticsPandoraForms({[entry.slotIdx]:'devil'});
+        else if(boxNow||(pandoraCardNo[entry.slotIdx]>2&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now))) setTacticsPandoraForms({[entry.slotIdx]:'angel'});
+        if(boxNow&&boxNow.angelRate>0){
+          const angel=tacticsRateHeal(boxNow.angelRate,boxNow.angelRate,false);
+          if(angel) hpBeforeEnemyAttack=angel.total;
+          addPopup('👼 天使の力 全員回復','hero','text-sky-200 font-black text-xl drop-shadow-md');
+          pushBattleLog(`👼 ${battleActorName(entry.slotIdx)}の2枚目。天使の力で味方全員のライフ・ガッツが戻った`,'ally');
+        }
+      }
       if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul,guardCardWeight(card)); }
       else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul,guardCardWeight(card)); }
       // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
@@ -11368,7 +11476,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx,true), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
@@ -11490,7 +11598,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx,halved), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -11742,6 +11850,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else { await battleWait(100); }
 
     const drawCount=usedCards.filter(c=>c.type==='draw').length;
+    setTacticsPandoraForms({}); // カードを切り終えたら本体の姿へ戻す
     const usedHandIndexes=new Set(usedCardEntries.map(entry=>entry.handIndex));
     let nextHand=hand.filter((_,i)=>!usedHandIndexes.has(i));
     let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards];
@@ -16703,7 +16812,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             marketExchangeError={marketExchangeError}
             purchaseProcessing={marketPurchaseProcessingRef.current}
             isItemOwned={isMarketItemOwned}
-            frameConditionOf={(frameId)=>profileFrameConditionStatus(profileFrameById(frameId))}
+            frameConditionOf={(frameId,shop)=>profileFrameConditionStatus(profileFrameById(frameId),rhythmClearTotal,shop)}
             previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
             onBack={returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
@@ -17848,11 +17957,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(frame&&!unlock&&profileFrameSale(frame)){
               const status=profileFrameConditionStatus(frame);
               const shops=profileFrameSales(frame).map(sale=>`${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' ／ ');
+              // 条件がかからない交換所(条件の shops に入っていない交換所)
+              const freeShops=profileFrameSales(frame).filter(sale=>!profileFrameConditionFor(frame,sale.shop)).map(sale=>PROFILE_FRAME_SHOPS[sale.shop].label).join('・');
               return (
                 <div data-profile-frame-locked-info data-profile-frame-sale className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
                   {status&&<p className="text-[10px] font-black text-amber-300 leading-tight text-center">{status.text}</p>}
                   {status&&<p className="text-[9px] text-slate-400 leading-tight text-center mt-1">{status.met?'条件を達成しています！':status.progress}</p>}
                   <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">マーケットで買えます：{shops}</p>
+                  {freeShops&&<p className="text-[9px] text-emerald-300 leading-tight text-center mt-1">{freeShops}なら条件なしで買えます</p>}
                   <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
                 </div>
               );
@@ -17983,7 +18095,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}

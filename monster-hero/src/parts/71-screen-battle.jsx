@@ -625,7 +625,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -1647,7 +1647,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -1697,7 +1697,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i); break;
+                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -1884,7 +1884,7 @@ function BattleScreen({
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
                 const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
-                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i);
+                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i,isSecondOrLater);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
               } else if(s){
@@ -1897,7 +1897,7 @@ function BattleScreen({
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
                     const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
-                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i);
+                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i,halved);
                   }
                 });
               }
@@ -1937,6 +1937,18 @@ function BattleScreen({
               const slotAimHit=slotAimed?plannedHitWithCover(i):null;
               // この子のEXスキル(タクティクスだけ。持っていなければ null)
               const slotExInfo=tacticsExInfo?tacticsExInfo(i):null;
+              // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
+              // カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
+              const pandoraForm = s && s.id === 'Pandora' ? (tacticsPandoraForms && tacticsPandoraForms[i]) : null;
+              const pandoraArt = (s && s.id === 'Pandora' && slotExInfo && slotExInfo.active && slotExInfo.def && slotExInfo.def.effect === 'pandoraBox') ? (() => {
+                const ph = tacticsNewLayout ? 58 : 64, pw = Math.round(ph * 2 / 3);
+                const fig = (url, form, left) => {
+                  const front = pandoraForm === form, dim = !!pandoraForm && !front;
+                  return <img data-pandora-form={form} src={url} alt="" draggable={false} className="object-contain drop-shadow-md"
+                    style={{ position: 'absolute', bottom: 0, left, width: pw, height: ph, zIndex: front ? 3 : (form === 'angel' ? 2 : 1), transform: front ? 'scale(1.12)' : 'none', filter: dim ? 'brightness(.5)' : 'none', transition: 'transform .15s, filter .15s' }}/>;
+                };
+                return <span data-pandora-pair className="relative inline-block" style={{ width: ph, height: ph }}>{fig(PANDORA_DEVIL_IMG, 'devil', 0)}{fig(PANDORA_ANGEL_IMG, 'angel', ph - pw)}</span>;
+              })() : null;
               return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
@@ -2166,25 +2178,25 @@ function BattleScreen({
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
                   <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{})}}>{s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
-                    ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
+                    ?<PandoraDualThunder image={(pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>)}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
-                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
+                        image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
                         charging={attackAnim.charge===true}
                         empowered={attackAnim.charge===false}/>
                     :isAnimating&&attackAnim.motion==='waterBurst'
                       ?<WaterBurstMotion
-                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
+                        image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :isAnimating&&attackAnim.motion==='miaSongNotes'
                       ?<MiaSongNotesMotion
-                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
+                        image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :themedAttack
-                      ?<ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge===false} image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}/>
-                      :slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      ?<ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge===false} image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}/>
+                      :slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
                   {/* ガードのバリア(2026-09-29 ユーザー選択「案A バリア」)。構えているあいだは idle、敵の攻撃を受けたら

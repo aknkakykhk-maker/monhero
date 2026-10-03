@@ -667,9 +667,12 @@ const helpDataRows = (id) => {
           const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
           const sales = (typeof profileFrameSales === 'function') ? profileFrameSales(frame) : [];
           const cond = (typeof profileFrameCondition === 'function') ? profileFrameCondition(frame) : null;
-          const price = sales.map(sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' か ');
+          // 条件がかかる交換所と、条件なしで買える交換所(条件の shops で決まる)を分けて書く
+          const label = sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`;
+          const gated = sales.filter(sale => cond && typeof profileFrameConditionFor === 'function' && profileFrameConditionFor(frame, sale.shop));
+          const free = sales.filter(sale => !gated.includes(sale));
           const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。`
-            : sales.length ? `${cond ? `「${cond.text}」を達成すると、` : ''}マーケットの${price}で買えます。`
+            : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}`
             : 'はじめから選べます。';
           return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
         });
