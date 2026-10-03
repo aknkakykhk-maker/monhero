@@ -139,7 +139,7 @@ check('商品アイコンはタップで拡大できる',
 check('拡大表示は実際に使われる形(丸／角丸)で出す',
   has("const round=item.type==='icon'||item.type==='assist';"));
 check('商品アイコンの大きさを1か所で決めている',
-  has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };")
+  has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9', frame: 'w-10 h-10' };")
     && has("${MARKET_ICON_SIZE[item.type]||'w-10 h-10'}"));
 check('所持数は0でも消さずに出す', has('×{ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
 // 「詳細」のすぐ下に買うボタンがあると、押し間違えて買ってしまう。

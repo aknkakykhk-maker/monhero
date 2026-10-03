@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c3d905c7023c9b7
+// source-sha256: 7f67146ebd0c7ecd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 18:22";
+const BUILD_DATE = "2026-10-03 18:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -13580,7 +13580,8 @@ const MARKET_ICON_SIZE = {
   disc: 'w-12 h-12',
   assist: 'w-10 h-10',
   icon: 'w-10 h-10',
-  item: 'w-9 h-9'
+  item: 'w-9 h-9',
+  frame: 'w-10 h-10'
 };
 const MARKET_PROFILE_ICON_STYLES = {
   Tiger: {
@@ -13947,8 +13948,29 @@ const DexMonsterIdleArt = ({
 const MarketProductIcon = ({
   item,
   onZoom,
-  disabled = false
+  disabled = false,
+  previewIcon = null
 }) => {
+  if (item.type === 'frame') {
+    const frameCls = `${MARKET_ICON_SIZE.frame} shrink-0 ${disabled ? '' : 'active:scale-90'}`;
+    const inner = React.createElement(ProfileAvatar, {
+      src: previewIcon && previewIcon.src,
+      id: previewIcon && previewIcon.id,
+      frameId: item.id,
+      className: "w-full h-full",
+      fallback: React.createElement("span", {
+        className: "h-full w-full rounded-full bg-slate-800/80"
+      })
+    });
+    return onZoom ? React.createElement("button", {
+      type: "button",
+      onClick: onZoom,
+      "aria-label": `${item.name}を大きく見る`,
+      className: frameCls
+    }, inner) : React.createElement("div", {
+      className: frameCls
+    }, inner);
+  }
   const content = item.icon ? item.type === 'icon' ? React.createElement(BreederIcon, {
     src: item.icon,
     id: item.id,
@@ -14003,7 +14025,8 @@ const MarketProductCard = ({
   onBuy,
   canBuy = false,
   disabled = false,
-  dataAttrs = null
+  dataAttrs = null,
+  previewIcon = null
 }) => {
   const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
   const usesPsyche = item.currency === 'psyche';
@@ -14016,7 +14039,8 @@ const MarketProductCard = ({
   }), React.createElement(MarketProductIcon, {
     item: item,
     onZoom: onZoom,
-    disabled: disabled
+    disabled: disabled,
+    previewIcon: previewIcon
   }), React.createElement("div", {
     className: `w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
@@ -19186,6 +19210,7 @@ const skillFxSpecOf = kind => {
   } : norm;
   return SKILL_FX_SPEC_CACHE[kind];
 };
+const SKFX_MIC_KIND = (kind, spec) => /^Mia-/.test(String(kind)) || spec?.fx?.shape === 'note';
 const SkillFxMotion = ({
   kind,
   image,
@@ -19221,7 +19246,22 @@ const SkillFxMotion = ({
     alt: ''
   }))), React.createElement("span", {
     className: "thm-atk__monster"
-  }, image), spec.line && React.createElement("span", {
+  }, image), SKFX_MIC_KIND(kind, spec) && React.createElement("span", {
+    className: "skfx-mic",
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    className: "mia-song-notes__mic-body"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-clip"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-pole mia-song-notes__mic-pole--upper"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-pole"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-joint"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-base"
+  })), spec.line && React.createElement("span", {
     className: `thm-atk__line skfx-line skfx-line--${spec.line}`,
     "aria-hidden": "true"
   }, React.createElement("i", null)), fx && React.createElement("span", {
@@ -36945,6 +36985,7 @@ function BreederMarketScreen({
   marketExchangeError,
   purchaseProcessing,
   isItemOwned,
+  previewIcon = null,
   onBack,
   onSelectTab,
   onZoomIcon,
@@ -36981,6 +37022,7 @@ function BreederMarketScreen({
   const activeDiamondTab = diamondTabs.some(tab => tab.key === marketTab) ? marketTab : 'disc';
   const diamondItems = marketItems.filter(item => item.type === activeDiamondTab && item.type !== 'icon' && item.currency !== 'psyche');
   const breederPointItems = marketItems.filter(item => item.type === 'icon');
+  const breederFrameItems = marketItems.filter(item => item.type === 'frame');
   const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
   const SECTION_TABS = {
     breeder: {
@@ -36991,7 +37033,10 @@ function BreederMarketScreen({
       }, {
         key: 'disc',
         label: '円盤石アイコン'
-      }]
+      }, ...(breederFrameItems.length ? [{
+        key: 'frame',
+        label: 'フレーム'
+      }] : [])]
     },
     exchange: {
       color: '#059669',
@@ -37011,7 +37056,10 @@ function BreederMarketScreen({
       }, {
         key: 'assist',
         label: 'アシスト'
-      }, {
+      }, ...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length ? [{
+        key: 'frame',
+        label: 'フレーム'
+      }] : []), {
         key: 'item',
         label: 'アイテム'
       }, {
@@ -37029,7 +37077,7 @@ function BreederMarketScreen({
     [section]: key
   }));
   const breederTab = activeSectionTab('breeder');
-  const breederTabItems = breederPointItems.filter(item => breederTab === 'disc' === /_disc_icon$/.test(item.id));
+  const breederTabItems = breederTab === 'frame' ? breederFrameItems : breederPointItems.filter(item => breederTab === 'disc' === /_disc_icon$/.test(item.id));
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
@@ -37112,6 +37160,7 @@ function BreederMarketScreen({
     return React.createElement(React.Fragment, {
       key: item.id
     }, showBase && React.createElement(MarketProductCard, {
+      previewIcon: previewIcon,
       item: item,
       owned: owned,
       comingSoon: comingSoon,
@@ -37442,6 +37491,42 @@ function BreederMarketScreen({
       }),
       detail: teaching,
       onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
+    });
+  }), eventTab === 'frame' && RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer => {
+    const frame = profileFrameById(offer.frameId);
+    const item = {
+      id: offer.frameId,
+      name: offer.name,
+      emoji: '🖼️',
+      type: 'frame',
+      currency: 'beatPoint',
+      cost: offer.cost,
+      desc: frame?.desc || ''
+    };
+    const owned = isItemOwned({
+      id: offer.frameId,
+      type: 'frame'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-frame': offer.id
+      },
+      previewIcon: previewIcon,
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      middle: item.desc ? React.createElement(MarketDetailChip, {
+        label: `${offer.name}の説明を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : null
     });
   }), eventTab === 'disc' && RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
@@ -63627,6 +63712,7 @@ function MonsterHeroGame() {
   const isMarketItemOwned = item => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
+    if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
     if (item.type === 'item') return false;
     return ownedMarketIcons.includes(item.id);
   };
@@ -63743,6 +63829,11 @@ function MonsterHeroGame() {
           storeSet('mh_teaching_roster', next, false);
           return next;
         });
+      } else if (item.type === 'frame') {
+        const nextFrames = normalizeOwnedProfileFrames([...ownedProfileFramesRef.current, item.id]);
+        ownedProfileFramesRef.current = nextFrames;
+        setOwnedProfileFrames(nextFrames);
+        storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
       } else if (item.type !== 'item') {
         setOwnedMarketIcons(prev => {
           const next = [...prev, item.id];
@@ -63830,6 +63921,9 @@ function MonsterHeroGame() {
       const isAssist = offer?.kind === 'assist';
       const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
       const beforeTeachings = Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds;
+      const isFrame = offer?.kind === 'frame';
+      const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
+      const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
       const exchange = rhythmEventPointExchangePreview({
         offer,
         eventPoints: beforePoints,
@@ -63837,10 +63931,11 @@ function MonsterHeroGame() {
         ownedItems: beforeItems,
         quantity,
         unlockedMonsterIds: beforeUnlocked,
-        unlockedTeachingIds: beforeTeachings
+        unlockedTeachingIds: beforeTeachings,
+        ownedProfileFrames: beforeFrames
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -63863,6 +63958,10 @@ function MonsterHeroGame() {
         key: 'mh_unlocked_teachings',
         before: storedTeachings,
         next: exchange.unlockedTeachingIds
+      }] : []), ...(isFrame ? [{
+        key: PROFILE_FRAME_OWNED_KEY,
+        before: storedFrames,
+        next: exchange.ownedProfileFrames
       }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -63884,6 +63983,10 @@ function MonsterHeroGame() {
             rosters
           });
         }
+      }
+      if (isFrame) {
+        ownedProfileFramesRef.current = exchange.ownedProfileFrames;
+        setOwnedProfileFrames(exchange.ownedProfileFrames);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -79820,6 +79923,10 @@ function MonsterHeroGame() {
       marketExchangeError: marketExchangeError,
       purchaseProcessing: marketPurchaseProcessingRef.current,
       isItemOwned: isMarketItemOwned,
+      previewIcon: {
+        src: resolveIconUrl(breederIcon),
+        id: breederIcon
+      },
       onBack: returnToHome,
       onSelectTab: key => {
         setMarketTab(key);
@@ -82195,7 +82302,19 @@ function MonsterHeroGame() {
         onClose: () => setMarketIconZoom(null)
       }, React.createElement("div", {
         className: "flex flex-col items-center gap-3"
-      }, React.createElement("div", {
+      }, item.type === 'frame' ? React.createElement("div", {
+        "data-market-frame-zoom": item.id,
+        className: "flex w-full items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-8"
+      }, React.createElement(ProfileAvatar, {
+        src: resolveIconUrl(breederIcon),
+        id: breederIcon,
+        frameId: item.id,
+        alt: item.name,
+        className: "h-40 w-40",
+        fallback: React.createElement("span", {
+          className: "h-full w-full rounded-full bg-slate-800/80"
+        })
+      })) : React.createElement("div", {
         className: `w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round ? 'rounded-full' : 'rounded-2xl'}`
       }, item.icon ? item.type === 'icon' ? React.createElement(BreederIcon, {
         src: item.icon,
@@ -85401,6 +85520,12 @@ const createAnimationStyle = () => {
       opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
       animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
     }
+    /* 技ごとの動き(SkillFxMotion)で出す音楽系のマイク。ミーアの歌モーションと同じ絵を、技の長さに合わせて出す */
+    .skfx-mic {
+      position:absolute; left:9%; bottom:2%; width:25%; height:60%; z-index:6; pointer-events:none;
+      opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
+      animation:miaSongMicPop var(--thm-ms,760ms) cubic-bezier(.2,1.4,.36,1) forwards;
+    }
     @keyframes miaSongMicPop {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
@@ -85547,7 +85672,7 @@ const createAnimationStyle = () => {
       .mia-song-notes__monster,
       .mia-song-notes--lunge .mia-song-notes__monster,
       .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
-      .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
+      .mia-song-notes__mic, .skfx-mic { animation:miaSongMicReduced 760ms ease-out forwards; }
       .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
       .mia-song-notes__stage i, .mia-song-notes__spark, .mia-song-notes__waves { display:none; }
       .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }

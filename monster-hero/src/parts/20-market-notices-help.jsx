@@ -3,7 +3,7 @@
 const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
-const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };
+const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9', frame: 'w-10 h-10' };
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
@@ -184,7 +184,16 @@ const DexMonsterArt = ({ mon, alt, hidden=false, colors=null }) => mon.imgUrl
 const DexMonsterIdleArt = ({ mon, alt, motion = true, colors = null }) => (motion && mon.imgUrl && monsterIdleRigOf(mon.id))
   ? <span data-dex-idle-art className="relative block h-full aspect-square max-w-full">{withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt, false, colors), {fill:true, own:true})}</span>
   : <DexMonsterArt mon={mon} alt={alt} colors={colors}/>;
-const MarketProductIcon = ({ item, onZoom, disabled=false }) => {
+const MarketProductIcon = ({ item, onZoom, disabled=false, previewIcon=null }) => {
+  // プロフィールフレームの商品(2026-10-03)。枠は円の外へはみ出すので、overflow-hidden の円には入れず、
+  // 中が空の円(薄い下地)に枠を重ねて見せる。枠の描き方は ProfileFrameLayer(全画面で同じ)
+  if(item.type==='frame'){
+    const frameCls=`${MARKET_ICON_SIZE.frame} shrink-0 ${disabled?'':'active:scale-90'}`;
+    // 商品の小さな絵は、自分のアイコンに付けた姿(買う前に自分に付けるとどう見えるか分かる)。
+    // previewIcon={src,id} は商品カード(MarketProductCard)の呼び出し側から渡す。無いときは下地の円
+    const inner=<ProfileAvatar src={previewIcon&&previewIcon.src} id={previewIcon&&previewIcon.id} frameId={item.id} className="w-full h-full" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>;
+    return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={frameCls}>{inner}</button>:<div className={frameCls}>{inner}</div>;
+  }
   const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;
   const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;
   return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={cls}>{content}</button>:<div className={cls}>{content}</div>;
@@ -219,7 +228,7 @@ const marketNameNodes = (name) => marketNameForWrap(name).split('​')
 // comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
 // ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
 // dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
-const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null }) => {
+const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null, previewIcon=null }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
@@ -227,7 +236,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
   const usesBeatPoint=item.currency==='beatPoint';
   const priceLabel=usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
   return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
-    <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
+    <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
         ★縦は**上寄せ**にする。中央寄せだと、1行で収まる品(魂格再編の書・染色もどき)だけが
           枠の真ん中へ降りてきて、2行の品の1行目と高さがそろわなかった。

@@ -521,9 +521,48 @@ const profileFrameUnlock = (frame) => {
 const profileFrameOwned = (id, owned) => {
   const frame = profileFrameById(id);
   if (!frame || frame.released !== true) return false;
-  if (!profileFrameUnlock(frame)) return true;
+  // もらう条件(仲良し度)か売り値が付いている枠は、手に入れた記録がなければ選べない。どちらも無い枠は最初から選べる
+  if (!profileFrameUnlock(frame) && !profileFrameSale(frame)) return true;
   return normalizeOwnedProfileFrames(owned).includes(frame.id);
 };
+// ==== 売るフレーム(2026-10-03 ユーザー指示「フレームも販売実装を予定してるから、ブリーダーポイントとビートポイントのとこに実装できる準備をしといて」) ====
+// ★まだ売り物は無い。ここは「枠に売り値を書けば、交換所に並んで買える」ための土台だけ。
+// 売る枠は `unlock:{ shop:'breederPoint'|'beatPoint', cost:1500 }` を書く。
+//   shop … どの交換所で売るか(PROFILE_FRAME_SHOPS)。breederPoint=ブリーダーP交換所 / beatPoint=ビートP交換所
+//   cost … 値段(その交換所の通貨で)。1以上の整数
+// ★助手の仲良し度でもらう枠(unlock:{assistantId,bondLevel})とは別の種類。同じ枠に両方は書かない。
+// ★「unlock が無い枠は最初から全員が選べる」という決まりは変えない。だから売る枠を unlock なしにして
+//   released:true にすると全員に無料で出てしまう。売る枠は必ず shop と cost を書く(検査が見張る)。
+// ★買うと mh_profile_frame_owned_v1 にidが入る(助手の仲良し度でもらったときと同じ入れ物。新しい保存キーは作らない)。
+const PROFILE_FRAME_SHOPS = Object.freeze({
+  breederPoint: Object.freeze({ label:'ブリーダーP交換所', currency:'breederPoint' }),
+  beatPoint:    Object.freeze({ label:'ビートP交換所',     currency:'beatPoint' }),
+});
+// その枠の売り値。売り物でなければ null
+const profileFrameSale = (frame) => {
+  const unlock = frame && frame.unlock;
+  const shop = unlock && PROFILE_FRAME_SHOPS[unlock.shop] ? unlock.shop : '';
+  const cost = Math.floor(Number(unlock && unlock.cost));
+  return (shop && Number.isFinite(cost) && cost >= 1) ? { shop, cost, currency: PROFILE_FRAME_SHOPS[shop].currency } : null;
+};
+// 指定の交換所で売っている枠(公開済みだけ。並びは PROFILE_FRAMES のとおり)
+const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => (profileFrameSale(frame) || {}).shop === shop);
+// 売る枠として書かれているのに、売り値が正しくない(shop だけ・cost が0など)枠のid。検査用
+const profileFramesWithBrokenSale = () => PROFILE_FRAMES
+  .filter(frame => frame.unlock && frame.unlock.shop !== undefined && !profileFrameSale(frame))
+  .map(frame => frame.id);
+// ブリーダーP交換所で売る枠は、PROFILE_FRAMES の売り値(unlock.shop:'breederPoint')から商品を**自動で**作る
+// (2026-10-03・手で書き写さない。枠に売り値を書けば並ぶ)。type:'frame' はプロフィールのフレーム。
+// 買う処理(buyMarketItem)・所持の判定(isMarketItemOwned)・見た目(MarketProductCard)がこの type を扱う。
+// ★ビートP交換所で売る枠(unlock.shop:'beatPoint')は data/rhythm-event.js が RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS を作る。
+// ★いまは売る枠が1つも無いので、ここは何も足さない。
+// ★profileFrameSale を使うので、その定義より後ろに置く(const は宣言より前に呼べない)。
+PROFILE_FRAMES
+  .filter(frame => frame.released === true && (frame.unlock && frame.unlock.shop === 'breederPoint'))
+  .forEach(frame => {
+    const sale = profileFrameSale(frame);
+    if (sale) BREEDER_MARKET_ITEMS.push({ id:frame.id, name:`${frame.name}のフレーム`, type:'frame', cost:sale.cost, desc:frame.desc || '' });
+  });
 // その助手の枠を、もらえるLvの小さい順に返す(助手の画面・ヘルプの表で使う)
 const profileFramesForAssistant = (assistantId) => releasedProfileFrames()
   .filter(frame => (profileFrameUnlock(frame) || {}).assistantId === assistantId)

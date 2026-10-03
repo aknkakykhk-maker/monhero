@@ -463,6 +463,12 @@ const createAnimationStyle = () => {
       opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
       animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
     }
+    /* 技ごとの動き(SkillFxMotion)で出す音楽系のマイク。ミーアの歌モーションと同じ絵を、技の長さに合わせて出す */
+    .skfx-mic {
+      position:absolute; left:9%; bottom:2%; width:25%; height:60%; z-index:6; pointer-events:none;
+      opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
+      animation:miaSongMicPop var(--thm-ms,760ms) cubic-bezier(.2,1.4,.36,1) forwards;
+    }
     @keyframes miaSongMicPop {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
@@ -609,7 +615,7 @@ const createAnimationStyle = () => {
       .mia-song-notes__monster,
       .mia-song-notes--lunge .mia-song-notes__monster,
       .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
-      .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
+      .mia-song-notes__mic, .skfx-mic { animation:miaSongMicReduced 760ms ease-out forwards; }
       .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
       .mia-song-notes__stage i, .mia-song-notes__spark, .mia-song-notes__waves { display:none; }
       .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }
