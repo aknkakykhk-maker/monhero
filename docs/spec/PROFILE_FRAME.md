@@ -340,7 +340,7 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
 | 枠 | ブリーダーP交換所の条件（`condition.kind`） | ブリーダーP | ビートP |
 | --- | --- | --- | --- |
 | スエゾー・ゴーレム・ライガー・ハム・ピクシー・ミーア | そのモンスターを1回「転生」（`monsterReincarnate`・`reincarnateCount`） | 1 | 100（条件なし） |
-| ラグナロク | バトルの難易度ラグナロクをクリア（`difficultyCleared`・`RAGNAROK`） | 1 | 1000（条件なし） |
+| ラグナロク | バトルの難易度ラグナロクをクリア（`difficultyCleared`・`RAGNAROK`） | 1 | 10000（条件なし） |
 
 - **「転生」は限界突破とは別の仕組み**（`reincarnateCount` と `rebirthCount`）。この5枚は転生だけを見る
 - 条件を読む関数は `profileFrameConditionFor(frame, shop)`。その交換所に条件がかからなければ `null`
