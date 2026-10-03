@@ -34,11 +34,11 @@ const api = context.api;
 
 const expectedDifficulties = [
   'Beginner','Easy','Normal','Hard','Expert','Master','GrandMaster','Hell','Legend',
-  'EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY',
+  'EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM',
 ];
-equal([...api.SPECIES_CHALLENGE_DIFFICULTY_IDS], expectedDifficulties, '14難易度の順序が正しい');
+equal([...api.SPECIES_CHALLENGE_DIFFICULTY_IDS], expectedDifficulties, '17難易度の順序が正しい');
 equal(expectedDifficulties.slice(0, 9), Object.keys(api.DIFFICULTY_SETTINGS), '通常難易度の既存設定を参照する');
-equal(expectedDifficulties.slice(9), api.EXTREME_DIFFICULTIES.map(({ id }) => id), '極限難易度の既存設定を参照する');
+equal(expectedDifficulties.slice(9, 14), api.EXTREME_DIFFICULTIES.map(({ id }) => id), '極限難易度の既存設定を参照する');
 for (const id of expectedDifficulties.slice(0, 5)) {
   assert(api.isSpeciesChallengeDifficultyUnlocked(id, []), `${id}は初期解放される`);
 }
@@ -101,7 +101,7 @@ assert(used.ok && used.nextMasu.transcendPoints === 1 && !used.nextMasu.transcen
 assert(fruitApi.useTranscendFruitOnMasu(masu, items, rainbowFruit, 1).ok, '虹の実は全種族に使える');
 const rejected = fruitApi.useTranscendFruitOnMasu(masu, items, otherFruit, 1);
 assert(!rejected.ok && rejected.nextOwnedItems[rainbowFruit] === 1, '別種族を拒否し虹を自動代用しない');
-assert(Object.values(api.SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS).reduce((sum, count) => sum + count, 0) === 181, '1種族の初回報酬合計は181個である');
+assert(Object.values(api.SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS).reduce((sum, count) => sum + count, 0) === 421, '1種族の初回報酬合計は421個である');
 
 assert(api.SPECIES_CHALLENGE_PROGRESS_KEY === 'mh_species_challenge_progress_v1', '進行は指定済みキーを使う');
 assert(debugScreen.includes("storeSet('mh_masu_mons',nextMasuMons,false)") && debugScreen.includes("storeSet('mh_owned_items',result.nextOwnedItems,false)"), '実の使用は既存のMasu・所持品キーだけへ保存する');

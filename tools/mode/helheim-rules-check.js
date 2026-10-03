@@ -40,6 +40,13 @@ check('ランキングキーへ追加され既存キーを崩さない',(()=>{co
   return keys.includes('ExtremeHELHEIM')&&keys.includes('ExtremeRAGNAROK')&&keys.includes('ExtremeGOD')&&new Set(keys).size===keys.length;})());
 check('難易度一覧の末尾に並ぶ',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-3).join()==='GOD,RAGNAROK,HELHEIM');
 
+// 種族チャレンジは極限チャレンジと同じ難易度まで出す。GOD以降のIDは本体で手書きしているので、ずれていないか見る
+check('種族チャレンジの難易度が極限の全難易度(HELHEIMまで)と一致する',
+  JSON.stringify(G('SPECIES_CHALLENGE_DIFFICULTY_IDS'))===JSON.stringify([...Object.keys(G('DIFFICULTY_SETTINGS')),...G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id)])
+  &&G('SPECIES_CHALLENGE_DIFFICULTY_IDS').slice(-3).join()==='GOD,RAGNAROK,HELHEIM');
+check('種族チャレンジの初回クリア報酬(超越の実)',[['INFINITY',40],['GOD',60],['RAGNAROK',80],['HELHEIM',100],['Beginner',1]].every(([id,n])=>G('speciesChallengeFirstClearReward')(id)===n));
+check('種族チャレンジはRAGNAROKを先にクリアするとHELHEIMが開く',(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('HELHEIM',['GOD'])&&f('HELHEIM',['RAGNAROK'])&&f('GOD',['INFINITY']);})());
+
 // 冥府
 check('冥府Lv',[[1,1],[2,1],[3,2],[4,2],[5,3],[6,3],[7,4],[8,4],[9,5],[10,5]].every(([w,l])=>under(w).level===l));
 const expected={1:[1.3,2.0,.30,3.0,.0175,.15,0,.95],2:[1.6,2.0,.30,3.0,.0175,.15,0,.90],3:[1.9,2.25,.30,3.0,.0175,.15,0,.85],
