@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cd357362cb3f64be
+// source-sha256: 88a47c1f7c8fc0cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 20:55";
+const BUILD_DATE = "2026-10-03 21:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -58803,6 +58803,13 @@ function MonsterHeroGame() {
   const ownedProfileFramesRef = useRef([]);
   const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
   const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  const markProfileFrameNoticed = useCallback(frameId => {
+    if (!frameId) return;
+    setProfileFrameNoticed(prev => normalizeOwnedProfileFrames([...prev, frameId]));
+    Promise.resolve(storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)).then(stored => storeSet(PROFILE_FRAME_NOTICE_KEY, normalizeOwnedProfileFrames([...normalizeOwnedProfileFrames(stored), frameId]), false)).catch(error => {
+      console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error);
+    });
+  }, []);
   const grantProfileFrames = useCallback((assistantId, bondLevel) => {
     const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
     if (!earned.length) return [];
@@ -64148,6 +64155,7 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = nextFrames;
         setOwnedProfileFrames(nextFrames);
         storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
+        markProfileFrameNoticed(item.id);
       } else if (item.type !== 'item') {
         setOwnedMarketIcons(prev => {
           const next = [...prev, item.id];
@@ -64311,6 +64319,7 @@ function MonsterHeroGame() {
       if (isFrame) {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
+        markProfileFrameNoticed(exchange.frameId);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);

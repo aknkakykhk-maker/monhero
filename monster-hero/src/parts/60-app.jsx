@@ -1650,6 +1650,16 @@ function MonsterHeroGame() {
   //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
   const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
   const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  // マーケットで自分で買った枠は、「新しくもらったよ」と助手に知らせてもらう必要がない。
+  // 買った時点で知らせ済みにする(しないと、次にプロフィールを開いたとき、買った枠の「手に入れた」案内が出てしまう・2026-10-03)。
+  // 画面の状態を先に変え、保存は読んでから足す。保存できなくても進行は止めない
+  const markProfileFrameNoticed = useCallback((frameId) => {
+    if (!frameId) return;
+    setProfileFrameNoticed(prev => normalizeOwnedProfileFrames([...prev, frameId]));
+    Promise.resolve(storeGet(PROFILE_FRAME_NOTICE_KEY, [], false))
+      .then(stored => storeSet(PROFILE_FRAME_NOTICE_KEY, normalizeOwnedProfileFrames([...normalizeOwnedProfileFrames(stored), frameId]), false))
+      .catch(error => { console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error); });
+  }, []);
   // 条件を満たしたぶんを配る。増えた枠のidを返す(何ももらえないときは空)
   const grantProfileFrames = useCallback((assistantId, bondLevel) => {
     const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
@@ -6889,6 +6899,7 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = nextFrames;
       setOwnedProfileFrames(nextFrames);
       storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
+      markProfileFrameNoticed(item.id);
     } else if (item.type !== 'item') {
       setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
     }
@@ -7006,6 +7017,7 @@ function MonsterHeroGame() {
       if (isFrame) {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
+        markProfileFrameNoticed(exchange.frameId);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);

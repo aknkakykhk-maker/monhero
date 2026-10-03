@@ -158,6 +158,9 @@ const seed = ({ conditions }) => {
     check(`② ブリーダーPが1だけ引かれる(${bpBefore} → ${bpBefore - 1})`, (await store(page, 'mh_breeder_points')) === bpBefore - 1, String(await store(page, 'mh_breeder_points')));
     check('② 買ったフレームが mh_profile_frame_owned_v1 に入る', ((await store(page, 'mh_profile_frame_owned_v1')) || []).includes('frame_suezo_beat'),
       JSON.stringify(await store(page, 'mh_profile_frame_owned_v1')));
+    // 自分で買った枠は、助手が「新しくもらったよ」と知らせる必要がない(知らせ済みにする。2026-10-03・プロフィールを開くと終わったはずの案内が出る不具合)
+    check('② 買った枠は知らせ済みになる(プロフィールを開いても「手に入れた」案内が出ない)',
+      ((await store(page, 'mh_profile_frame_notice_v1')) || []).includes('frame_suezo_beat'), JSON.stringify(await store(page, 'mh_profile_frame_notice_v1')));
     check('② ビートPは変わらない', (await store(page, 'mh_rhythm_event_points_v1')) === 500);
 
     // ムーをビートPで買う
@@ -181,6 +184,7 @@ const seed = ({ conditions }) => {
     await page.waitForTimeout(1200);
     check('② ビートPが100だけ引かれる(500 → 400)', (await store(page, 'mh_rhythm_event_points_v1')) === 400, String(await store(page, 'mh_rhythm_event_points_v1')));
     check('② ムーも mh_profile_frame_owned_v1 に入る', ((await store(page, 'mh_profile_frame_owned_v1')) || []).includes('frame_moo'));
+    check('② ビートPで買ったムーも知らせ済みになる', ((await store(page, 'mh_profile_frame_notice_v1')) || []).includes('frame_moo'));
     check('② モッチーは買えていない(条件未達成)', !((await store(page, 'mh_profile_frame_owned_v1')) || []).includes('frame_mocchi'));
 
     // ③ フレーム選択画面で選べる
