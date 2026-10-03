@@ -442,6 +442,19 @@
     }
    ],
    "challengeFactor": 1.2
+  },
+  "crazy_party_night": {
+   "audio": "monster-hero/audio/bgm-crazy-party-night.mp3",
+   "chartRevision": 26,
+   "audioSha256": "45e7252c400eb169e18c74d6ed57d594686ae80361ffe4cd4a91e47732232741",
+   "durationMs": 94032,
+   "analyzedTiming": {
+    "bpm": 127.992,
+    "beatZeroMs": 434.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }
