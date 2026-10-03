@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 252005b84e04a0f0
+// generated-sha256: fb5c379c450be514
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 21:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 21:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10362,9 +10362,12 @@ const helpDataRows = (id) => {
           const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
           const sales = (typeof profileFrameSales === 'function') ? profileFrameSales(frame) : [];
           const cond = (typeof profileFrameCondition === 'function') ? profileFrameCondition(frame) : null;
-          const price = sales.map(sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' か ');
+          // 条件がかかる交換所と、条件なしで買える交換所(条件の shops で決まる)を分けて書く
+          const label = sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`;
+          const gated = sales.filter(sale => cond && typeof profileFrameConditionFor === 'function' && profileFrameConditionFor(frame, sale.shop));
+          const free = sales.filter(sale => !gated.includes(sale));
           const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。`
-            : sales.length ? `${cond ? `「${cond.text}」を達成すると、` : ''}マーケットの${price}で買えます。`
+            : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}`
             : 'はじめから選べます。';
           return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
         });
@@ -23942,7 +23945,7 @@ function BreederMarketScreen({
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
     // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない。詳細で条件と進み具合が読める
-    const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id) : null;
+    const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id,'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
     const canBuy = !comingSoon && !frameLocked && !owned && balance>=item.cost && !busy;
@@ -24132,7 +24135,7 @@ function BreederMarketScreen({
             const item={ id:offer.frameId, name:offer.name, emoji:'🖼️', type:'frame', currency:'beatPoint', cost:offer.cost, desc:frame?.desc||'' };
             const owned=isItemOwned({ id:offer.frameId, type:'frame' });
             // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない
-            const frameCondition=frameConditionOf?frameConditionOf(offer.frameId):null;
+            const frameCondition=frameConditionOf?frameConditionOf(offer.frameId,'beatPoint'):null;
             const frameLocked=!!frameCondition&&!frameCondition.met&&!owned;
             const detailItem=frameCondition?{...item,frameCondition}:item;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-frame':offer.id}} previewIcon={previewIcon}
@@ -36956,6 +36959,16 @@ function MonsterHeroGame() {
   //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
   const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
   const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  // マーケットで自分で買った枠は、「新しくもらったよ」と助手に知らせてもらう必要がない。
+  // 買った時点で知らせ済みにする(しないと、次にプロフィールを開いたとき、買った枠の「手に入れた」案内が出てしまう・2026-10-03)。
+  // 画面の状態を先に変え、保存は読んでから足す。保存できなくても進行は止めない
+  const markProfileFrameNoticed = useCallback((frameId) => {
+    if (!frameId) return;
+    setProfileFrameNoticed(prev => normalizeOwnedProfileFrames([...prev, frameId]));
+    Promise.resolve(storeGet(PROFILE_FRAME_NOTICE_KEY, [], false))
+      .then(stored => storeSet(PROFILE_FRAME_NOTICE_KEY, normalizeOwnedProfileFrames([...normalizeOwnedProfileFrames(stored), frameId]), false))
+      .catch(error => { console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error); });
+  }, []);
   // 条件を満たしたぶんを配る。増えた枠のidを返す(何ももらえないときは空)
   const grantProfileFrames = useCallback((assistantId, bondLevel) => {
     const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
@@ -42070,9 +42083,17 @@ function MonsterHeroGame() {
   // プロフィールフレームを買える条件の進み具合(2026-10-03・ユーザー指示)。条件が無い枠は null。
   // 種族は MONSTER_LINEAGE_MAP の主血統(main)で見る。ミタラシ・剣士モッチーもモッチー種に入る。
   // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る。
-  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal) => {
-    const c = profileFrameCondition(frame);
+  // shop を渡すと、その交換所で必要な条件だけを見る(ビートP交換所は条件なしの枠もある)。渡さないときは枠の条件そのもの
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null) => {
+    const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
+    if (c.kind === 'monsterReincarnate') {
+      // そのモンスター自身の転生回数(reincarnateCount)。限界突破とは別の仕組み
+      const need = Math.max(1, Math.floor(Number(c.count) || 1));
+      const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => (
+        mon && mon.baseId === c.monsterId ? Math.max(top, Math.max(0, Math.floor(Number(mon.reincarnateCount) || 0))) : top), 0);
+      return { met: best >= need, text: c.text || '', progress: `いまの最高 ${best}回 ／ 必要 ${need}回` };
+    }
     if (c.kind === 'speciesRebirth') {
       const need = Math.max(1, Math.floor(Number(c.count) || 1));
       const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => {
@@ -42155,7 +42176,7 @@ function MonsterHeroGame() {
     if (isMarketItemOwned(item)) return false;
     // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
     if (item.type === 'frame') {
-      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal());
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint');
       if (status && !status.met) { setMarketExchangeError('買える条件をまだ満たしていません。'); return false; }
     }
     const purchase = buildMarketItemPurchase({ item, gold, breederPoints, ownedItems:ownedItemsRef.current, quantity });
@@ -42187,6 +42208,7 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = nextFrames;
       setOwnedProfileFrames(nextFrames);
       storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
+      markProfileFrameNoticed(item.id);
     } else if (item.type !== 'item') {
       setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
     }
@@ -42266,7 +42288,7 @@ function MonsterHeroGame() {
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
-        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal());
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
         if (frameStatus && !frameStatus.met) {
           setMarketExchangeError('買える条件をまだ満たしていません。');
           return { ok:false, reason:'condition' };
@@ -42304,6 +42326,7 @@ function MonsterHeroGame() {
       if (isFrame) {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
+        markProfileFrameNoticed(exchange.frameId);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -52097,7 +52120,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             marketExchangeError={marketExchangeError}
             purchaseProcessing={marketPurchaseProcessingRef.current}
             isItemOwned={isMarketItemOwned}
-            frameConditionOf={(frameId)=>profileFrameConditionStatus(profileFrameById(frameId))}
+            frameConditionOf={(frameId,shop)=>profileFrameConditionStatus(profileFrameById(frameId),rhythmClearTotal,shop)}
             previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
             onBack={returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
@@ -53242,11 +53265,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(frame&&!unlock&&profileFrameSale(frame)){
               const status=profileFrameConditionStatus(frame);
               const shops=profileFrameSales(frame).map(sale=>`${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' ／ ');
+              // 条件がかからない交換所(条件の shops に入っていない交換所)
+              const freeShops=profileFrameSales(frame).filter(sale=>!profileFrameConditionFor(frame,sale.shop)).map(sale=>PROFILE_FRAME_SHOPS[sale.shop].label).join('・');
               return (
                 <div data-profile-frame-locked-info data-profile-frame-sale className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
                   {status&&<p className="text-[10px] font-black text-amber-300 leading-tight text-center">{status.text}</p>}
                   {status&&<p className="text-[9px] text-slate-400 leading-tight text-center mt-1">{status.met?'条件を達成しています！':status.progress}</p>}
                   <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">マーケットで買えます：{shops}</p>
+                  {freeShops&&<p className="text-[9px] text-emerald-300 leading-tight text-center mt-1">{freeShops}なら条件なしで買えます</p>}
                   <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
                 </div>
               );

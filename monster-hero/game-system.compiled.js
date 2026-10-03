@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 13c2d19c06234c63
+// source-sha256: d0a43bd9081e2927
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 21:13";
+const BUILD_DATE = "2026-10-03 21:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14601,8 +14601,10 @@ const helpDataRows = id => {
         const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
         const sales = typeof profileFrameSales === 'function' ? profileFrameSales(frame) : [];
         const cond = typeof profileFrameCondition === 'function' ? profileFrameCondition(frame) : null;
-        const price = sales.map(sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' か ');
-        const how = unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : sales.length ? `${cond ? `「${cond.text}」を達成すると、` : ''}マーケットの${price}で買えます。` : 'はじめから選べます。';
+        const label = sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`;
+        const gated = sales.filter(sale => cond && typeof profileFrameConditionFor === 'function' && profileFrameConditionFor(frame, sale.shop));
+        const free = sales.filter(sale => !gated.includes(sale));
+        const how = unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}` : 'はじめから選べます。';
         return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
       });
     case 'assistants':
@@ -37358,7 +37360,7 @@ function BreederMarketScreen({
   } = {}) => {
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
-    const frameCondition = item.type === 'frame' && frameConditionOf ? frameConditionOf(item.id) : null;
+    const frameCondition = item.type === 'frame' && frameConditionOf ? frameConditionOf(item.id, 'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
     const canBuy = !comingSoon && !frameLocked && !owned && balance >= item.cost && !busy;
@@ -37727,7 +37729,7 @@ function BreederMarketScreen({
       id: offer.frameId,
       type: 'frame'
     });
-    const frameCondition = frameConditionOf ? frameConditionOf(offer.frameId) : null;
+    const frameCondition = frameConditionOf ? frameConditionOf(offer.frameId, 'beatPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const detailItem = frameCondition ? {
       ...item,
@@ -58806,6 +58808,13 @@ function MonsterHeroGame() {
   const ownedProfileFramesRef = useRef([]);
   const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
   const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  const markProfileFrameNoticed = useCallback(frameId => {
+    if (!frameId) return;
+    setProfileFrameNoticed(prev => normalizeOwnedProfileFrames([...prev, frameId]));
+    Promise.resolve(storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)).then(stored => storeSet(PROFILE_FRAME_NOTICE_KEY, normalizeOwnedProfileFrames([...normalizeOwnedProfileFrames(stored), frameId]), false)).catch(error => {
+      console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error);
+    });
+  }, []);
   const grantProfileFrames = useCallback((assistantId, bondLevel) => {
     const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
     if (!earned.length) return [];
@@ -63978,9 +63987,18 @@ function MonsterHeroGame() {
     assistantId: selectedAssistantId,
     onTalk: () => addAssistantBond('talk')
   }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
-  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal) => {
-    const c = profileFrameCondition(frame);
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal, shop = null) => {
+    const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
     if (!c) return null;
+    if (c.kind === 'monsterReincarnate') {
+      const need = Math.max(1, Math.floor(Number(c.count) || 1));
+      const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => mon && mon.baseId === c.monsterId ? Math.max(top, Math.max(0, Math.floor(Number(mon.reincarnateCount) || 0))) : top, 0);
+      return {
+        met: best >= need,
+        text: c.text || '',
+        progress: `いまの最高 ${best}回 ／ 必要 ${need}回`
+      };
+    }
     if (c.kind === 'speciesRebirth') {
       const need = Math.max(1, Math.floor(Number(c.count) || 1));
       const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => {
@@ -64083,7 +64101,7 @@ function MonsterHeroGame() {
     if (item.available === false) return false;
     if (isMarketItemOwned(item)) return false;
     if (item.type === 'frame') {
-      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal());
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal(), 'breederPoint');
       if (status && !status.met) {
         setMarketExchangeError('買える条件をまだ満たしていません。');
         return false;
@@ -64142,6 +64160,7 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = nextFrames;
         setOwnedProfileFrames(nextFrames);
         storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
+        markProfileFrameNoticed(item.id);
       } else if (item.type !== 'item') {
         setOwnedMarketIcons(prev => {
           const next = [...prev, item.id];
@@ -64233,7 +64252,7 @@ function MonsterHeroGame() {
       const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
       if (isFrame) {
-        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal());
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
         if (frameStatus && !frameStatus.met) {
           setMarketExchangeError('買える条件をまだ満たしていません。');
           return {
@@ -64305,6 +64324,7 @@ function MonsterHeroGame() {
       if (isFrame) {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
+        markProfileFrameNoticed(exchange.frameId);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -80407,7 +80427,7 @@ function MonsterHeroGame() {
       marketExchangeError: marketExchangeError,
       purchaseProcessing: marketPurchaseProcessingRef.current,
       isItemOwned: isMarketItemOwned,
-      frameConditionOf: frameId => profileFrameConditionStatus(profileFrameById(frameId)),
+      frameConditionOf: (frameId, shop) => profileFrameConditionStatus(profileFrameById(frameId), rhythmClearTotal, shop),
       previewIcon: {
         src: resolveIconUrl(breederIcon),
         id: breederIcon
@@ -82472,6 +82492,7 @@ function MonsterHeroGame() {
         if (frame && !unlock && profileFrameSale(frame)) {
           const status = profileFrameConditionStatus(frame);
           const shops = profileFrameSales(frame).map(sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' ／ ');
+          const freeShops = profileFrameSales(frame).filter(sale => !profileFrameConditionFor(frame, sale.shop)).map(sale => PROFILE_FRAME_SHOPS[sale.shop].label).join('・');
           return React.createElement("div", {
             "data-profile-frame-locked-info": true,
             "data-profile-frame-sale": true,
@@ -82482,7 +82503,9 @@ function MonsterHeroGame() {
             className: "text-[9px] text-slate-400 leading-tight text-center mt-1"
           }, status.met ? '条件を達成しています！' : status.progress), React.createElement("p", {
             className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
-          }, "マーケットで買えます：", shops), React.createElement("p", {
+          }, "マーケットで買えます：", shops), freeShops && React.createElement("p", {
+            className: "text-[9px] text-emerald-300 leading-tight text-center mt-1"
+          }, freeShops, "なら条件なしで買えます"), React.createElement("p", {
             className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
           }, frame.desc || ''));
         }
