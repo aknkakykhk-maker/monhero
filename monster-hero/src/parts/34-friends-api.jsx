@@ -78,6 +78,32 @@ const friendsFaceIconOf = (baseId) => {
   const byPath = items.find((entry) => bare(entry.icon) === bare(faceSrc));
   return byPath ? { src: byPath.icon, id: byPath.id } : { src: faceSrc, id: baseId };
 };
+// ---- フレンド一覧の並べ替え・絞り込み・お気に入り(端末だけの設定。サーバーには送らない) ----
+// お気に入りは新しい保存キーへ、ブリーダーIDの配列だけを覚える。壊れていても空へ倒す
+const FRIEND_FAVORITES_KEY = 'mh_friend_favorites_v1';
+const FRIEND_FAVORITES_MAX = 100;
+const friendsNormalizeFavorites = (raw) => {
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  list.forEach((id) => { const safe = friendsSafeId(id); if (safe && !out.includes(safe)) out.push(safe); });
+  return out.slice(0, FRIEND_FAVORITES_MAX);
+};
+// 一覧に出す順に並べて返す。①お気に入り ②ログイン中 ③最近開いた順 ④名前。query(名前の一部)があれば絞り込む。
+// views は friendsGroup の friends / looks は breeder_profiles / summaries は friend_profiles(どちらも無い人は空でよい)
+const friendsArrangeList = ({ views, looks, summaries, favorites, query, nowMs }) => {
+  const fav = new Set(Array.isArray(favorites) ? favorites : []);
+  const text = String(query == null ? '' : query).trim().toLowerCase();
+  const rows = (Array.isArray(views) ? views : []).map((view) => {
+    const look = (looks && looks[view.otherId]) || {};
+    const sum = (summaries && summaries[view.otherId]) || null;
+    const at = Math.max(sum ? sum.updatedAt || 0 : 0, look.lastSeenAt || 0);
+    const seen = friendsPresenceText(sum ? sum.place : null, at, nowMs);
+    return { view, name: look.userName || '名無しのブリーダー', favorite: fav.has(view.otherId), online: seen.online, seenAt: at };
+  }).filter((row) => !text || row.name.toLowerCase().includes(text));
+  rows.sort((a, b) => (Number(b.favorite) - Number(a.favorite)) || (Number(b.online) - Number(a.online))
+    || (b.seenAt - a.seenAt) || a.name.localeCompare(b.name, 'ja'));
+  return rows;
+};
 const friendsStatusOf = (value) => (Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED);
 
 // 行(サーバーの形)を、自分から見た形へ。otherId が相手

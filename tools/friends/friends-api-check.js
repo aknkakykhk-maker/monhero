@@ -45,7 +45,7 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(`${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`, sandbox);
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`, sandbox);
 const api = sandbox.__api;
 
 const statusOf = (a, b) => {
@@ -202,6 +202,22 @@ const statusOf = (a, b) => {
     const seen = new Set();
     return db.friend_links.every((r) => { const k = pairKey(r.requester_id, r.target_id); if (seen.has(k)) return false; seen.add(k); return true; });
   })());
+
+  // ---- 一覧の並べ替え・絞り込み・お気に入り ----
+  const tNow = 1700000000000;
+  const mk = (id, name, agoMs, place) => ({ id, name, look: { userName: name, lastSeenAt: tNow - agoMs }, sum: place ? { place, updatedAt: tNow - agoMs } : null });
+  const arrPeople = [mk('a', 'あおい', 3 * 3600 * 1000, null), mk('b', 'いちか', 60 * 1000, 'battle'), mk('c', 'うみ', 20 * 60 * 1000, null), mk('d', 'えり', 2 * 60 * 1000, 'home'), mk('e', 'おとは', 10 * 3600 * 1000, null)];
+  const arrViews = arrPeople.map((p) => ({ otherId: p.id, status: 'accepted', outgoing: true, blockedByMe: false, updatedAt: 1 }));
+  const arrLooks = Object.fromEntries(arrPeople.map((p) => [p.id, p.look]));
+  const arrSums = Object.fromEntries(arrPeople.filter((p) => p.sum).map((p) => [p.id, p.sum]));
+  const order = (extra) => api.friendsArrangeList({ views: arrViews, looks: arrLooks, summaries: arrSums, favorites: [], query: '', nowMs: tNow, ...(extra || {}) }).map((r) => r.view.otherId).join('');
+  check('お気に入りが無ければ、ログイン中(新しい順)→最近開いた順', order() === 'bdcae', order());
+  check('お気に入りは、ログイン中でなくても一番上に並ぶ', order({ favorites: ['e'] }) === 'ebdca' && order({ favorites: ['e', 'a'] }) === 'aebdc', order({ favorites: ['e', 'a'] }));
+  check('名前の一部で絞り込める(大文字小文字は問わない)', order({ query: 'い' }) === 'ba' && order({ query: 'ZZZ' }) === '' && order({ query: '  う ' }) === 'c', order({ query: 'い' }));
+  check('ログイン中の判定は5分以内', api.friendsArrangeList({ views: arrViews, looks: arrLooks, summaries: arrSums, favorites: [], query: '', nowMs: tNow }).filter((r) => r.online).length === 2);
+  check('お気に入りの保存値は、壊れていても空へ倒れ、重複・不正なIDは除く', JSON.stringify(api.friendsNormalizeFavorites(['x', 'x', 'a,b', 5, null, 'y'])) === '["x","y"]'
+    && api.friendsNormalizeFavorites('zzz').length === 0 && api.friendsNormalizeFavorites(null).length === 0
+    && api.friendsNormalizeFavorites(Array.from({ length: 300 }, (_, i) => `id${i}`)).length === 100);
 
   // ---- friend_profiles だけが無い環境(第2弾のSQLが未適用) ----
   delete db.friend_profiles;
