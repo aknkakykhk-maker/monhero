@@ -107,6 +107,8 @@ jobs:
           node tools/mode/rhythm-play-bonus-check.js
           node tools/mode/rhythm-weekly-reward-check.js
           node tools/mode/rhythm-event-thanks-check.js
+          node tools/mode/halloween-night-check.js
+          node tools/market/assistant-costume-check.js
           node tools/mode/rhythm-reward-gift-check.js
           node tools/ranking/pending-resend-check.js
           node tools/mode/rhythm-keyframe-blur-check.js

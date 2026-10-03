@@ -191,6 +191,8 @@ const RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER = 0.2;
 // ★終わりは週の区切り(月曜5:00)に合わせる。ランキングイベントと同じ決めごと。
 // ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
 // id はイベント会話の既読の記録にも使うので、あとから変えない。
+const HALLOWEEN_NIGHT_START_AT = '2026-10-04T08:00:00+09:00';
+const HALLOWEEN_NIGHT_END_AT = '2026-11-01T04:00:00+09:00';
 const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
   // ユグドラシル・メルホイップをビートP交換所で先行公開するのに合わせた、貯めるための1週間
   Object.freeze({
@@ -200,17 +202,53 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     endAt: '2026-10-05T05:00:00+09:00',
     boost: 5,
   }),
+  // ハロウィンナイト(2026-10-04〜11-01)。2026-10-03・ユーザー指示「イベント期間はモンビーポイント5倍、
+  // モンビー中のクイック周回5倍」。ビートPは上のキャンペーンと同じ5倍。
+  //   loopScale … モンヒロビートを演奏したときに入るクイック周回の倍率(ふだんは2倍・ランキングイベントの対象曲は3倍)。
+  //               曲を問わず全曲にかかる。書かないキャンペーンでは今までどおり
+  // ★終わりは「3:59」までと案内しているので、endAt は 4:00(その分より前まで)。
+  // ★ストーリーは HALLOWEEN_NIGHT_STORIES(下)。期間とは別に、決まった時刻で出る
+  Object.freeze({
+    id: 'halloween_night_2026',
+    name: 'ハロウィン・ナイト',
+    startAt: HALLOWEEN_NIGHT_START_AT,
+    endAt: HALLOWEEN_NIGHT_END_AT,
+    boost: 5,
+    loopScale: 5,
+  }),
 ]);
+// ハロウィン・ナイトのストーリー(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め)、
+// 週ごとに更新の5部構成」)。第1部が開幕、第5部が閉幕。第2〜4部は毎週日曜の8:00。
+//   id は assistants.js の EVENT_REPLAYS の id と同じ。あとから変えない(見たかどうかの記録に使う)。
+//   at より前には流さず、見ていない部は古いほうから1つずつ流す。期間が終わっても回想から見られる。
+// ★出る時刻は見るたびに数え直す(CLAUDE.md ⑥-4)
+const HALLOWEEN_NIGHT_STORIES = Object.freeze([
+  Object.freeze({ id: 'halloween_night_2026_part1', part: 1, at: HALLOWEEN_NIGHT_START_AT }),
+  Object.freeze({ id: 'halloween_night_2026_part2', part: 2, at: '2026-10-11T08:00:00+09:00' }),
+  Object.freeze({ id: 'halloween_night_2026_part3', part: 3, at: '2026-10-18T08:00:00+09:00' }),
+  Object.freeze({ id: 'halloween_night_2026_part4', part: 4, at: '2026-10-25T08:00:00+09:00' }),
+  Object.freeze({ id: 'halloween_night_2026_part5', part: 5, at: HALLOWEEN_NIGHT_END_AT }),
+]);
+// いま読める(時刻が来ている)ハロウィン・ナイトの部のid。古いほうから
+const halloweenNightStoryIdsAt = (nowMs) => {
+  const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
+  if (!Number.isFinite(now)) return [];
+  return HALLOWEEN_NIGHT_STORIES.filter(story => now >= Date.parse(story.at)).map(story => story.id);
+};
 const rhythmEventPointCampaignAt = (nowMs) => {
   const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
   if (!Number.isFinite(now)) return null;
-  return RHYTHM_EVENT_POINT_CAMPAIGNS.find(campaign => {
+  // 重なっているときは、あとから始まったほうを使う(2つ重ねがけはしない)。
+  // ハロウィンナイト(10/4 8:00〜)は、ビートPアップキャンペーン(〜10/5 5:00)と重なる
+  const live = RHYTHM_EVENT_POINT_CAMPAIGNS.filter(campaign => {
     const startMs = Date.parse(campaign.startAt);
     const endMs = Date.parse(campaign.endAt);
     const boost = Number(campaign.boost);
     return Number.isFinite(startMs) && Number.isFinite(endMs) && Number.isFinite(boost) && boost > 0
       && now >= startMs && now < endMs;
-  }) || null;
+  });
+  if (live.length === 0) return null;
+  return live.reduce((latest, campaign) => (Date.parse(campaign.startAt) >= Date.parse(latest.startAt) ? campaign : latest));
 };
 // ビートPが「いつもの1/5」ではなく満額で貯まる時間か(ランキングイベント開催中か、キャンペーン中か)。
 // ラッキーラッシュのおまけビートPも、これを見て1/5にするかどうかを決める
@@ -339,9 +377,11 @@ const RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS = Object.freeze(
 //   1着につき1回、持っていれば交換できない。交換すると mh_assistant_costume_owned_v1 にidが入る。
 // ★breeder.js が読み込まれていない環境(この定義だけを取り出す検査)では空になる。
 const RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS = Object.freeze(
-  (typeof ASSISTANT_COSTUMES !== 'undefined' && typeof assistantCostumeSaleIn === 'function')
-    ? releasedAssistantCostumes().filter(costume => assistantCostumeSaleIn(costume, 'beatPoint'))
-        .map(costume => Object.freeze({ id:`costume_${costume.id}`, name:costume.name, kind:'costume', costumeId:costume.id, assistantId:costume.assistantId, grantAmount:1, unit:'着', cost:assistantCostumeSaleIn(costume, 'beatPoint').cost }))
+  (typeof ASSISTANT_COSTUMES !== 'undefined' && typeof assistantCostumeEverSellsIn === 'function')
+    // 期間で売り方が変わる服(ハロウィン・ナイトの衣装)のために、枠は読み込み時に作り、いま売れるかは available を見るたびに数え直す
+    ? ASSISTANT_COSTUMES.filter(costume => assistantCostumeEverSellsIn(costume, 'beatPoint'))
+        .map(costume => Object.freeze({ id:`costume_${costume.id}`, name:costume.name, kind:'costume', costumeId:costume.id, assistantId:costume.assistantId, grantAmount:1, unit:'着', cost:assistantCostumeSaleEverCost(costume, 'beatPoint'),
+          get available() { return costume.released === true && !!assistantCostumeSaleIn(costume, 'beatPoint'); } }))
     : []);
 // 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
 // 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す

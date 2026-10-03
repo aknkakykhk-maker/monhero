@@ -23,7 +23,10 @@ let sharp = null;
 try { sharp = require('sharp'); } catch { /* 無ければ減色せずに書き出す */ }
 
 const root = path.resolve(__dirname, '..');
-const srcDir = path.join(root, 'monster-hero/images/assistant');
+// 引数に服の絵のフォルダ(例: monster-hero/images/assistant/halloween)を渡すと、そこの絵から
+// <そのフォルダ>/face/ へ顔アイコンを作る(助手の着替え用。切り出し方は COSTUME_TUNE を使う)
+const costumeArg = process.argv[2] ? path.resolve(root, process.argv[2]) : null;
+const srcDir = costumeArg || path.join(root, 'monster-hero/images/assistant');
 const outDir = path.join(srcDir, 'face');
 const OUT_SIZE = 256;      // 書き出す顔アイコンの一辺(px)。表示は最大72pxなので余裕がある
 const ALPHA_MIN = 24;      // これ以上の不透明度をキャラの一部とみなす
@@ -36,7 +39,7 @@ const HEAD_RATIO = 0.46;   // キャラ全体の高さに対する「顔まわ�
 const HEAD_TOP_SKIP = 0.09;
 // 助手ごとに切り出し方が違うとき(髪や耳の伸び方が違う)は、ここへ上書きを足す。
 // 書かなければ上の既定値をそのまま使う
-const PER_ASSISTANT = {
+const PER_ASSISTANT_BASE = {
   // myua: { headRatio: 0.46, headTopSkip: 0.09 },
   // ききは頭上のリボンがみゅあのうさ耳よりさらに高く伸びているため、既定の
   // headTopSkip(0.09)のままだとリボンの分量に押し出されて顔が下へ寄り、
@@ -69,6 +72,14 @@ const PER_ASSISTANT = {
   // 同じくらいの「引き」にそろえる。skip を負にしているのは枠を上へ広げるため。
   dra: { headRatio: 1.02, headTopSkip: -0.05 },
 };
+
+// 着替えの絵(2026-10-04 ハロウィン衣装)は構図が元の服と違う(みゅあは縦長の全身、ききとももすけは正方形のバストアップ)ので、別の切り出し方を使う
+const COSTUME_TUNE = {
+  myua: { headRatio: 0.50, headTopSkip: 0.12 },
+  kiki: { headRatio: 0.62, headTopSkip: 0.06 },
+  momosuke: { headRatio: 0.62, headTopSkip: 0.06 },
+};
+const PER_ASSISTANT = costumeArg ? COSTUME_TUNE : PER_ASSISTANT_BASE;
 
 // どの接頭辞を処理するかは data/assistants.js の ASSISTANTS から取る。
 // 助手を増やしたとき、このツール側を書き換えなくても顔が作られるようにするため

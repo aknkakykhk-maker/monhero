@@ -22761,7 +22761,21 @@ const rhythmDemoSong=songs=>(songs||[]).find(song=>song.songId===RHYTHM_DEMO_SON
 // 体験版の曲えらびに出す曲。**曲が増えても画面を書き換えずに済むよう**配列で持つ
 // (2026-09-05・曲選択画面を一覧の形にしたときに用意した)。
 // 耳で確かめた曲をここへ足せば、そのまま曲えらびの一覧に並ぶ。
+// 決まった時刻まで曲えらびに出さない曲(2026-10-03・ユーザー指示「イベント開始と同時に新規実装」)。
+// {songId: 出しはじめる時刻}。**見るたびに数え直す**(読み込み時に1回だけ決めると、開きっぱなしの端末で出ない・CLAUDE.md ⑥-4)。
+// 書いていない曲は、これまでどおりいつでも出る。出しはじめたあとは外さない(消す必要は無いが、残っていても害は無い)
+const RHYTHM_SONG_RELEASE_AT=Object.freeze({
+  // ハロウィン・ナイト(data/rhythm-event.js の HALLOWEEN_NIGHT_START_AT)の開始と同時
+  crazy_party_night:'2026-10-04T08:00:00+09:00',
+});
+const rhythmSongReleased=(songId,nowMs=Date.now())=>{
+  const at=RHYTHM_SONG_RELEASE_AT[songId];
+  if(!at)return true;
+  const ms=Date.parse(at);
+  return Number.isFinite(ms)&&Number(nowMs)>=ms;
+};
 const rhythmDemoSongs=songs=>RHYTHM_DEMO_SONG_IDS
+  .filter(songId=>rhythmSongReleased(songId))
   .map(songId=>(songs||[]).find(song=>song.songId===songId))
   .filter(Boolean);
 // 体験版で選べる難易度そのもの(曲ごとの絞り込みは rhythmDemoDifficulties が行う)。

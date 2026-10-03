@@ -31,8 +31,12 @@ const idOf = (source, name) => {
 const eventStoryIds = () => {
   const source = readSource();
   const names = (source.match(/const RHYTHM_EVENT_STORY_IDS = \[([^\]]*)\]/) || [])[1] || '';
+  // `...HALLOWEEN_NIGHT_STORY_IDS` は、時刻で出る5部のお話(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。
+  // 検査を回す時刻によっては、どれかが開幕の会話のように画面を覆うので、全部「見た」ことにする(2026-10-04)
+  const halloween = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/data/rhythm-event.js'), 'utf8')
+    .match(/id: '(halloween_night_2026_part\d)'/g) || [];
   const ids = names.split(',').map(s => s.trim()).filter(Boolean)
-    .map(name => idOf(source, name)).filter(Boolean);
+    .flatMap(name => name.startsWith('...') ? halloween.map(h => h.slice(5, -1)) : [idOf(source, name)]).filter(Boolean);
   if (!ids.length) throw new Error('RHYTHM_EVENT_STORY_IDS を読めませんでした(本体の書き方が変わった可能性)');
   return ids;
 };

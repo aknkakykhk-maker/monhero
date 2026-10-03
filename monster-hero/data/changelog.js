@@ -34,16 +34,54 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    // 2026-10-04 ユーザー指示(mp4とジャケット)。ハロウィンナイトのイベントと同時に公開する。歯ごたえ1.3はユーザーが決めた
-    // ★公開するときに date をそのときの実時刻へ付け直す(コミット時刻と1時間以上ずれると changelog-order-check が落ちる)
-    date: "2026-10-04 03:15", type:'update', title:'モンヒロビート：新曲「Crazy Party Night ～ぱんぷきんの逆襲～」を追加しました', status:'new',
+    // 2026-10-03 ユーザー指示「ハロウィンイベント(ハロウィン・ナイト)の開始」。時刻で出し入れする項目なので、date は
+    // 出はじめる時刻(visibleFrom)にそろえる(RHYTHM_EVENT_PLAYBOOK.md §3)。ランキングは無く、期間・倍率は
+    // RHYTHM_EVENT_POINT_CAMPAIGNS の halloween_night_2026、5部のお話は HALLOWEEN_NIGHT_STORIES が受け持つ
+    date: "2026-10-04 08:00", type:'event', group:'rhythm', title:'【期間限定】ハロウィン・ナイトを開催します', status:'new',
+    visibleFrom:'2026-10-04T08:00:00+09:00',
+    image: 'images/events/halloween-night-2026.jpg?v=f409e52df4e2',
+    assistantNotice: {
+      id:'update_notice_halloween_night_v1', type:'content',
+      notifyFrom:'2026-10-04T08:00:00+09:00',
+      notifyUntil:'2026-11-01T04:00:00+09:00',
+      destination:'RHYTHM_DEMO_HOME', buttonLabel:'モンヒロビートへ',
+    },
+    items:[
+      '10/4(日) 8:00 〜 11/1(日) 3:59 のあいだ、ハロウィン・ナイトを開催します。',
+      '期間中は、モンヒロビートの公開曲を最後まで遊ぶと、ビートPがいつもの5倍もらえます。ラッキーラッシュのおまけのビートPも5倍です。',
+      'クイックの∞周回を回しながらモンヒロビートを演奏したときに入る周回数も、期間中はどの曲でも5倍になります（ふだんは2倍です）。',
+      'ランキングはありません。好きな曲を自分のペースで遊んでください。',
+      '新曲「Crazy Party Night ～ぱんぷきんの逆襲～」を、イベントの開始と同時に追加します。イベントのBGMです。',
+      'ハロウィンのお話は5部構成です。第1部は開始と同時に、第2〜4部は毎週日曜の朝8:00に、最後の第5部はイベントが終わる11/1(日)の朝4:00に、HOMEで流れます。見のがしても、プロフィールの「イベント回想」から見返せます。',
+      'みゅあ・きき・ももが、ハロウィンのコスプレ衣装で登場します。衣装はマーケットで買えて、プロフィールの「着替え」から着られます。',
+    ],
+  },
+  {
+    // 2026-10-03 ユーザー指示「新機能で助手の着替え機能実装。マーケットに販売。1000ビートポイント。ハロウィンイベント後解放、100000ダイヤ」。
+    // 土台は #2090。最初の服がハロウィン・ナイトの衣装(3着)。ここから着替えがプレイヤーに見えるので更新履歴とヘルプに載せる
+    date: "2026-10-04 08:00", type:'market', group:'rhythm', title:'助手の着替えができるようになりました（最初の服はハロウィンの衣装）', status:'new',
+    visibleFrom:'2026-10-04T08:00:00+09:00',
+    assistantNotice: { id:'update_notice_assistant_costume_v1', type:'market', notifyFrom:'2026-10-04T08:00:00+09:00', destination:'PROFILE', buttonLabel:'プロフィールを見る' },
+    items:[
+      'プロフィールに「着替え」を追加しました。持っている服を選ぶと、助手の吹き出しの顔と立ち絵が、その服に変わります。',
+      '最初の服は、ハロウィン・ナイトの衣装です。みゅあは魔女、ききはうさ耳のパーカー、ももは小悪魔のコスプレです。',
+      'ハロウィン・ナイトのあいだ（11/1 3:59まで）は、ビートP交換所の「着替え」タブで、1着1,000ビートPで交換できます。',
+      'イベントが終わると、ダイヤショップの「着替え」タブに移り、1着100,000ダイヤで買えるようになります。',
+      '買った服は、イベントが終わっても着られます。「元の服」にはいつでも戻せます。',
+    ],
+  },
+  {
+    // 2026-10-04 ユーザー指示(mp4とジャケット)。ハロウィン・ナイトのイベントと同時に公開する。歯ごたえ1.3はユーザーが決めた。
+    // 時刻で出し入れする項目(曲も rhythmDemoSongs が RHYTHM_SONG_RELEASE_AT で同じ時刻まで隠す)なので、date は出はじめる時刻にそろえる
+    date: "2026-10-04 08:00", type:'update', title:'モンヒロビート：新曲「Crazy Party Night ～ぱんぷきんの逆襲～」を追加しました', status:'new',
+    visibleFrom:'2026-10-04T08:00:00+09:00',
     image: 'images/song-art/crazy-party-night.jpg?v=cc3f31ed7b0d',
     items:[
       'モンヒロビートに「Crazy Party Night ～ぱんぷきんの逆襲～」（1分34秒）を追加しました。曲えらびからすぐ遊べます。',
       'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.11 ／ EXPERT Lv.17 ／ MASTER Lv.23 です。',
       'ノーツ数は 140 ／ 158 ／ 219 ／ 267 ／ 307 です。',
     ],
-    assistantNotice: { id:'update_notice_crazy_party_night_v1', type:'content' },
+    assistantNotice: { id:'update_notice_crazy_party_night_v1', type:'content', notifyFrom:'2026-10-04T08:00:00+09:00' },
   },
   {
     date: "2026-10-04 02:45", type:'update', title:'あつの表情アイコンが増え、ももすけの絵が新しくなりました', status:'new',
