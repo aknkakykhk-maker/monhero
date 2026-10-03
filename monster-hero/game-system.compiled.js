@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 99a51827797fdb9c
+// source-sha256: 357cae9af1a1b532
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 22:45";
+const BUILD_DATE = "2026-10-03 23:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33394,7 +33394,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mia: Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
-    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33405,7 +33405,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
       max: 10,
       dmg: 0.03,
       heal: 0.05,
-      guts: 0.02
+      guts: 0.02,
+      hp: 0.03
     }),
     effect: 'stage'
   }),
@@ -33480,7 +33481,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
       angelRate: 0.1,
       hopeGutsRate: 0.5
     }),
-    effect: 'pandoraBox'
+    effect: 'pandoraBox',
+    conditions: Object.freeze(['notActive'])
   }),
   Golem: Object.freeze({
     id: 'golem_all_in',
@@ -33601,7 +33603,8 @@ const normalizeTacticsExDef = raw => {
       max: Math.min(99, tacticsSafeInt(raw.voltage.max, 0)),
       dmg: Math.max(0, Number(raw.voltage.dmg) || 0),
       heal: Math.max(0, Number(raw.voltage.heal) || 0),
-      guts: Math.max(0, Number(raw.voltage.guts) || 0)
+      guts: Math.max(0, Number(raw.voltage.guts) || 0),
+      hp: Math.max(0, Number(raw.voltage.hp) || 0)
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
@@ -34069,7 +34072,8 @@ const tacticsExVoltageOf = (state, units, now) => {
     max: tacticsSafeInt(cfg.max, 0),
     dmgMult: 1 + v * (Number(cfg.dmg) || 0),
     healMult: 1 + v * (Number(cfg.heal) || 0),
-    gutsAdd: v * (Number(cfg.guts) || 0)
+    gutsAdd: v * (Number(cfg.guts) || 0),
+    hpAdd: v * (Number(cfg.hp) || 0)
   };
 };
 const addTacticsExVoltage = (state, units, now, n) => {
@@ -68299,6 +68303,7 @@ function MonsterHeroGame() {
       taken: 1,
       heal: 1,
       gutsAdd: 0,
+      hpAdd: 0,
       combo: null,
       voltage: null,
       present: null
@@ -68314,6 +68319,7 @@ function MonsterHeroGame() {
       taken: pres.taken,
       heal: volt ? volt.healMult : 1,
       gutsAdd: volt ? volt.gutsAdd : 0,
+      hpAdd: volt ? volt.hpAdd : 0,
       combo: pres.combo,
       voltage: volt,
       present: pres.kinds.length ? pres : null
@@ -69373,7 +69379,7 @@ function MonsterHeroGame() {
       const withIce = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, id, iceLockActive, slotIdx, enemyDist);
       return Math.max(0, withIce - Math.max(0, currentAutoGutsRecovery)) * soulBattleParty.autoGutsMultiplier;
     };
-    const regen = tacticsRegen(autoHpRecoveryRate, isTacticsMode(runMode) ? baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd : soulAdjustedGutsRecoveryRate);
+    const regen = tacticsRegen(autoHpRecoveryRate + (isTacticsMode(runMode) ? tacticsExPartyBuffNow().hpAdd : 0), isTacticsMode(runMode) ? baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd : soulAdjustedGutsRecoveryRate);
     let gutsRegen = 0,
       autoHealVal = 0;
     if (regen) {
@@ -69575,7 +69581,7 @@ function MonsterHeroGame() {
       statusLines: (() => {
         const out = [];
         const volt = def.effect === 'stage' ? tacticsExVoltageOf(state, tacticsUnits, tacticsExNow) : null;
-        if (volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd * 100)}%）`);
+        if (volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ライフ回復+${Math.round(volt.hpAdd * 100)}%・ガッツ回復+${Math.round(volt.gutsAdd * 100)}%）`);
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
         const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
         if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);

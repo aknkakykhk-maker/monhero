@@ -9954,12 +9954,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 味方全員に効く倍率(ミーアのボルテージ・スネグーラチカのプレゼント)。効いていなければ全部1・連撃は null。ほかのモードも同じ
   const tacticsExPartyBuffNow = () => {
     const live=tacticsExLiveRef.current;
-    const base={ dmg:1, critRate:1, taken:1, heal:1, gutsAdd:0, combo:null, voltage:null, present:null };
+    const base={ dmg:1, critRate:1, taken:1, heal:1, gutsAdd:0, hpAdd:0, combo:null, voltage:null, present:null };
     if(!live.enabled||!isTacticsMode(runMode)) return base;
     const st=tacticsExStateRef.current, units=tacticsUnitsRef.current;
     const volt=tacticsExVoltageOf(st,units,live.now);
     const pres=tacticsExPresentOf(st,units,live.now);
-    return { dmg:(volt?volt.dmgMult:1)*pres.dmg, critRate:pres.critRate, taken:pres.taken, heal:volt?volt.healMult:1, gutsAdd:volt?volt.gutsAdd:0,
+    return { dmg:(volt?volt.dmgMult:1)*pres.dmg, critRate:pres.critRate, taken:pres.taken, heal:volt?volt.healMult:1, gutsAdd:volt?volt.gutsAdd:0, hpAdd:volt?volt.hpAdd:0,
       combo:pres.combo, voltage:volt, present:pres.kinds.length?pres:null };
   };
   const tacticsExPartyTakenMultNow = () => {
@@ -10971,8 +10971,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★新モードは1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
     //   合計の上限から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんが
     //   その子へ入り、倒れている子が多いほど残った子がよけいに回復する(逆になっている)
-    // ★ミーアのボルテージで、ターン終わりのガッツ自動回復の率が上がる(2026-10-03。ボルテージ1段階ごとに足す)
-    const regen=tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate);
+    // ★ミーアのボルテージで、ターン終わりのライフ・ガッツ自動回復の率が上がる(2026-10-03。ボルテージ1段階ごとに足す。ライフ分は同日に追加)
+    const regen=tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate);
     let gutsRegen=0, autoHealVal=0;
     if (regen) {
       currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts;
@@ -11145,7 +11145,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         statusLines:(()=>{
           const out=[];
           const volt=def.effect==='stage'?tacticsExVoltageOf(state,tacticsUnits,tacticsExNow):null;
-          if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
+          if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ライフ回復+${Math.round(volt.hpAdd*100)}%・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
           const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
           if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);

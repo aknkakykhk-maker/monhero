@@ -555,7 +555,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('ピクシー「お気に入りの魔法」: 3回・併用できる・3ターン・距離補正×1.5・固有技が必ず出る', !!px && px.name === 'お気に入りの魔法' && px.maxUses === 3 && px.withCards
     && px.duration === 'turns' && px.turns === 3 && px.distMult === 1.5 && px.guaranteeUnique && px.effect === 'multiBuff' && ex.isTacticsExEffectImplemented(px), JSON.stringify(px));
   check('ミーア「オン・ステージ！」: 3回・併用できる・4ターン・枚数+1・ボルテージ(最大10・与ダメ3%・回復5%・ガッツ2%)', !!mi && mi.name === 'オン・ステージ！' && mi.maxUses === 3 && mi.withCards
-    && mi.turns === 4 && mi.cardBonus === 1 && mi.voltage && mi.voltage.max === 10 && mi.voltage.dmg === 0.03 && mi.voltage.heal === 0.05 && mi.voltage.guts === 0.02
+    && mi.turns === 4 && mi.cardBonus === 1 && mi.voltage && mi.voltage.max === 10 && mi.voltage.dmg === 0.03 && mi.voltage.heal === 0.05 && mi.voltage.guts === 0.02 && mi.voltage.hp === 0.03
     && mi.effect === 'stage' && ex.isTacticsExEffectImplemented(mi), JSON.stringify(mi));
   check('スネグーラチカ「クリスマスプレゼント」: 各WAVE1回・併用できる・2ターン・ガッツ20%・大当たり10%', !!sn && sn.name === 'クリスマスプレゼント' && sn.maxUses === 1 && sn.usesPerWave && sn.withCards
     && sn.turns === 2 && sn.present && sn.present.fixedGuts === 0.2 && sn.present.jackpot === 0.1 && sn.present.combo.count === 2 && sn.effect === 'present' && ex.isTacticsExEffectImplemented(sn), JSON.stringify(sn));
@@ -596,10 +596,10 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExCardBonusTotal(sm, units, A(1, 6)) === 1 && ex.tacticsExCardBonusTotal(sm, units, A(1, 7)) === 0 && ex.tacticsExCardBonusTotal(sm, units, A(2, 3)) === 0
     && ex.tacticsExCardBonusTotal(ex.createTacticsExState(), units, A(1, 3)) === 0);
   const v0 = ex.tacticsExVoltageOf(sm, units, A(1, 3));
-  check('ミーア: はじめのボルテージは0(強化なし)', !!v0 && v0.voltage === 0 && v0.max === 10 && v0.dmgMult === 1 && v0.healMult === 1 && v0.gutsAdd === 0, JSON.stringify(v0));
+  check('ミーア: はじめのボルテージは0(強化なし)', !!v0 && v0.voltage === 0 && v0.max === 10 && v0.dmgMult === 1 && v0.healMult === 1 && v0.gutsAdd === 0 && v0.hpAdd === 0, JSON.stringify(v0));
   sm = ex.addTacticsExVoltage(sm, units, A(1, 3), 5);
   const v5 = ex.tacticsExVoltageOf(sm, units, A(1, 4));
-  check('ミーア: カード5枚でボルテージ5 → 与ダメ×1.15・回復×1.25・ガッツ自動回復+10%', !!v5 && v5.voltage === 5 && Math.abs(v5.dmgMult - 1.15) < 1e-9 && Math.abs(v5.healMult - 1.25) < 1e-9 && Math.abs(v5.gutsAdd - 0.1) < 1e-9, JSON.stringify(v5));
+  check('ミーア: カード5枚でボルテージ5 → 与ダメ×1.15・回復×1.25・ガッツ自動回復+10%・ライフ自動回復+15%', !!v5 && v5.voltage === 5 && Math.abs(v5.dmgMult - 1.15) < 1e-9 && Math.abs(v5.healMult - 1.25) < 1e-9 && Math.abs(v5.gutsAdd - 0.1) < 1e-9 && Math.abs(v5.hpAdd - 0.15) < 1e-9, JSON.stringify(v5));
   sm = ex.addTacticsExVoltage(sm, units, A(1, 4), 30);
   check('ミーア: ボルテージは最大10で止まる(与ダメ×1.30・回復×1.50・ガッツ+20%)', ex.tacticsExVoltageOf(sm, units, A(1, 5)).voltage === 10 && Math.abs(ex.tacticsExVoltageOf(sm, units, A(1, 5)).dmgMult - 1.3) < 1e-9
     && Math.abs(ex.tacticsExVoltageOf(sm, units, A(1, 5)).healMult - 1.5) < 1e-9);
@@ -733,7 +733,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('始末が済むと何も起きない(同じターンの数字が続いても)・効いていなければ同じ state',
     ex.tacticsExPandoraTurnEnd(spent, units, A(2, 5)) === null && ex.tacticsExPandoraBoxOf(spent, units, 0, A(2, 4)) === null && ex.tacticsExPandoraDevil(spent, units, 0, A(2, 4), false) === null
     && (() => { const e = ex.createTacticsExState(); return ex.spendTacticsExPandoraBox(e) === e; })());
-  check('もう一度使うことはできない(1回だけ)', !ex.checkTacticsExUse({ def: pd, state: st, slot: 0, monId: 'Pandora', alive: true, now: A(3, 1) }).ok);
+  check('箱が効いているあいだは、もう一度使えない(ラン3回のうち、切れたあとなら使える)', !ex.checkTacticsExUse({ def: pd, state: st, slot: 0, monId: 'Pandora', alive: true, now: A(2, 4) }).ok && ex.checkTacticsExUse({ def: pd, state: ex.spendTacticsExPandoraBox(st), slot: 0, monId: 'Pandora', alive: true, now: A(3, 1) }).ok);
   check('本体: 悪魔側(与ダメ・連撃・予測)・天使側(2枚目)・ターン終わりの始末へ結線してある',
     /tacticsExPandoraDevilNow\(slotIdx,isSecondOrLaterAtk\)\.dmg\*/.test(app)
     && /const devil=tacticsExPandoraDevilNow\(slotIdx,halved\)\.combo;/.test(app)

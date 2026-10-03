@@ -56,6 +56,7 @@ if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つか�
 const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
 const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
+  const halved = false; // 「同じ子の2枚目」ではない(パンドラの箱の悪魔側が見る値)
   const tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない
   ${act.text}
   return { totalDmg, attackHits, hasCrit };

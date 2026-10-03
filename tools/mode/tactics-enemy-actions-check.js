@@ -396,7 +396,7 @@ check('氷海の支配者は、持っている子ごとに敵と同じ距離か�
     && has('const withIce=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,id,iceLockActive,slotIdx,enemyDist);')
     && has('const extra=iceExtraRateAt(slotIdx);'));
 check('全員へ配る自動回復には氷海ぶんを混ぜない',
-  has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
+  has('tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
 // ★ハムの「同時使用可能枚数+1」とスエゾーの「眼力」は、狙われた／攻撃した の枠に収まらないので別に見る
 // ★2026-09-22: 1体ぶんの上限に baseCardLimit(そのターンの総数)を使っていたので、
 //   盤面に👑が2体いると5枚まで使えていた。「1 ＋ その子の👑 ＋ きき ＋ その枠の連携」で数える
