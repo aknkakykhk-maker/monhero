@@ -293,15 +293,43 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
 // ★消耗品の一覧(RHYTHM_EVENT_POINT_SHOP_OFFERS)とは分けて持つ。個数を選べず、渡すものが「解放」なので
 // 絵はここに書かない。画面が monsterId と同じidの円盤石(data/breeder.js の BREEDER_MARKET_ITEMS)から引く
 // (このファイルは検査で単独で読まれることがあり、breeder.js の定数を参照すると落ちるため)。
+// ★2026-10-03 ユーザー指示「ビート交換所に実装されてる円盤石と全アシカも追加して。全部1500ビートポイント」。
+//   ダイヤショップに並んでいる実装済みの円盤石12体を、ここにも並べた(全部1,500P)。並びはダイヤショップと同じ。
+//   アシストカードは下の RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS。
+const RHYTHM_EVENT_POINT_DISC_COST = 1500;
+const rhythmEventDiscOffer = (monsterId, name) => Object.freeze({ id:`disc_${monsterId.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()}`, name:`${name}の円盤石`, kind:'disc', monsterId, grantAmount:1, unit:'個', cost:RHYTHM_EVENT_POINT_DISC_COST });
 const RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS = Object.freeze([
-  Object.freeze({ id:'disc_yggdrasil', name:'ユグドラシルの円盤石', kind:'disc', monsterId:'Yggdrasil', grantAmount:1, unit:'個', cost:1500 }),
-  Object.freeze({ id:'disc_mel_whip', name:'メルホイップの円盤石', kind:'disc', monsterId:'MelWhip', grantAmount:1, unit:'個', cost:1500 }),
+  rhythmEventDiscOffer('Yggdrasil', 'ユグドラシル'),
+  rhythmEventDiscOffer('MelWhip', 'メルホイップ'),
+  rhythmEventDiscOffer('Zan', 'ザン'),
+  rhythmEventDiscOffer('Mitarashi', 'ミタラシ'),
+  rhythmEventDiscOffer('Ark', 'アーク'),
+  rhythmEventDiscOffer('Iblis', 'イブリース'),
+  rhythmEventDiscOffer('Snegurochka', 'スネグーラチカ'),
+  rhythmEventDiscOffer('Undine', 'ウンディーネ'),
+  rhythmEventDiscOffer('Yaobikuni', 'ヤオビクニ'),
+  rhythmEventDiscOffer('Plant', 'プラント'),
+  rhythmEventDiscOffer('Mia', 'ミーア'),
+  rhythmEventDiscOffer('Pandora', 'パンドラ'),
+  rhythmEventDiscOffer('Eiki', 'エイキ'),
+  rhythmEventDiscOffer('KenshiMocchi', '剣士モッチー'),
+]);
+// アシストカード(2026-10-03)。1枚につき1回だけ交換できる(持っていれば交換できない)。
+// 交換するとアシストカードが解放される(保存先はダイヤショップで買ったときと同じ mh_unlocked_teachings)。
+// 絵と効果は、画面が cardId と同じidのアシストカード商品(data/breeder.js の BREEDER_MARKET_ITEMS)から引く。
+// ★足す・減らすのは、ダイヤショップに並ぶアシストカードと同じ(BREEDER_MARKET_ITEMS の type:'assist')。
+const RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS = Object.freeze([
+  Object.freeze({ id:'assist_kiki', name:'アシストカード「きき」', kind:'assist', cardId:'kiki', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
+  Object.freeze({ id:'assist_meloso', name:'アシストカード「メロソ」', kind:'assist', cardId:'meloso', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
+  Object.freeze({ id:'assist_momosuke', name:'アシストカード「ももすけ」', kind:'assist', cardId:'momosuke', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
+  Object.freeze({ id:'assist_poltz', name:'アシストカード「ポルツ」', kind:'assist', cardId:'poltz', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
 ]);
 // 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
 // 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す
 const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
 // unlockedMonsterIds … 解放済みのモンスターid(円盤石の交換のときだけ使う)
-const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[] } = {}) => {
+// unlockedTeachingIds … 解放済みのアシストカードid(アシストカードの交換のときだけ使う)
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[] } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {
     const n = Number(value);
@@ -313,7 +341,7 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
   const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const unitCost = safeInt(offer?.cost);
   const grantAmount = safeInt(offer?.grantAmount);
-  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc'].includes(offer.kind)) {
+  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist'].includes(offer.kind)) {
     return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
   }
   // 円盤石: 1回に1つ。持っているモンスターは交換できない。ダイヤ・所持品は変えない
@@ -325,6 +353,16 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
     if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
     return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
       monsterId, unlockedMonsterIds:[...unlocked, monsterId] };
+  }
+  // アシストカード: 1回に1枚。持っているカードは交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'assist') {
+    const cardId = typeof offer.cardId === 'string' ? offer.cardId : '';
+    const unlocked = Array.isArray(unlockedTeachingIds) ? unlockedTeachingIds.filter(id => typeof id === 'string') : [];
+    if (!cardId || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (unlocked.includes(cardId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      cardId, unlockedTeachingIds:[...unlocked, cardId] };
   }
   const totalCost = Math.min(max, unitCost * q);
   if (points < totalCost) {
