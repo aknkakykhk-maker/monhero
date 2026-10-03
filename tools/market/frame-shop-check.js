@@ -52,10 +52,10 @@ check('いま売っているフレームは、モンスターの枠10枚だけ(�
   real.profileFramesForSale('breederPoint').map(f => f.id).join() === SOLD.join()
   && real.profileFramesForSale('beatPoint').map(f => f.id).join() === SOLD.join(),
   `${real.profileFramesForSale('breederPoint').map(f => f.id).join()} / ${real.profileFramesForSale('beatPoint').map(f => f.id).join()}`);
-check('値段はブリーダーP 1 / ビートP 100(ラグナロクだけビートP 1000)',
+check('値段はブリーダーP 1 / ビートP 100(ラグナロクだけビートP 10000)',
   SOLD.every(id => {
     const f = real.PROFILE_FRAMES.find(x => x.id === id);
-    return real.profileFrameSaleIn(f, 'breederPoint').cost === 1 && real.profileFrameSaleIn(f, 'beatPoint').cost === (id === 'frame_ragnarok' ? 1000 : 100);
+    return real.profileFrameSaleIn(f, 'breederPoint').cost === 1 && real.profileFrameSaleIn(f, 'beatPoint').cost === (id === 'frame_ragnarok' ? 10000 : 100);
   }));
 check('10枚とも買える条件が付いている', SOLD.every(id => !!real.profileFrameCondition(real.PROFILE_FRAMES.find(x => x.id === id))));
 check('売る枠として書かれているのに売り値が壊れている枠も無い', real.profileFramesWithBrokenSale().length === 0, real.profileFramesWithBrokenSale().join(','));

@@ -357,10 +357,10 @@ const PROFILE_FRAME_MONSTER_SHOPS = Object.freeze([
   Object.freeze({ shop:'breederPoint', cost:1 }),
   Object.freeze({ shop:'beatPoint', cost:100 }),
 ]);
-// ラグナロクの枠はビートPだけ高い(1000P・ユーザー指示)。ブリーダーPは1P
+// ラグナロクの枠はビートPだけ高い(2026-10-03 ユーザー指示で1000P、のち10000Pへ変更)。ブリーダーPは1P
 const PROFILE_FRAME_RAGNAROK_SHOPS = Object.freeze([
   Object.freeze({ shop:'breederPoint', cost:1 }),
-  Object.freeze({ shop:'beatPoint', cost:1000 }),
+  Object.freeze({ shop:'beatPoint', cost:10000 }),
 ]);
 // モンヒロビートの通算クリア回数(「これからの回数」を数える専用キー・2026-10-03)。
 // ★既存の mh_rhythm_best_v1 は「曲×難易度ごとにクリアしたか」しか持たないので、回数は別に数える。
@@ -428,7 +428,7 @@ const PROFILE_FRAMES = [
   // ==================== モンスターの枠7枚(2026-10-03) ====================
   // ユーザーから受け取った透過PNG(1254px → 384pxへ軽くした。ASSETS.md)。
   // 7枚。スエゾー・ゴーレム・ライガー・ハム・ピクシー・ミーアはそのモンスターを1回「転生」すると、ブリーダーP交換所で買える(ビートP交換所は条件なし)。
-  // ラグナロクはバトルの難易度ラグナロクをクリアすると、ブリーダーP交換所で買える(ビートP交換所は条件なし・1000P)。
+  // ラグナロクはバトルの難易度ラグナロクをクリアすると、ブリーダーP交換所で買える(ビートP交換所は条件なし・10000P)。
   // ★条件に shops:['breederPoint'] と書いたぶん、ビートP交換所では条件なしで買える。
   { id:'frame_suezo', name:'スエゾー', kind:'image', released:true, hole:0.573,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Suezo', count:1, shops:['breederPoint'], text:'スエゾーを1回転生する' } },
