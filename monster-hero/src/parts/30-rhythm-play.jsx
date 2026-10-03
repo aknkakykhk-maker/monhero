@@ -1215,7 +1215,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
       let liveArg=null;
       if(live.live&&fx){
         const clock=stageClockRef.current,grid=live.grid,songMs=clock&&Number.isFinite(clock.t)?clock.t+Math.min(250,Math.max(0,now-clock.at)):null;
-        if(grid&&songMs!==null){const beats=(songMs-grid.zeroMs)/grid.beatMs,index=Math.floor(beats),since=(beats-index)*grid.beatMs,onBar=((index%grid.bar)+grid.bar)%grid.bar===0;
+        if(grid&&songMs!==null){const beats=(songMs-rhythmBeatZeroAt(grid,songMs))/grid.beatMs,index=Math.floor(beats),since=(beats-index)*grid.beatMs,onBar=((index%grid.bar)+grid.bar)%grid.bar===0;
           liveArg={beats,bar:grid.bar,pulse:beats>=0?Math.exp(-since/(onBar?240:160))*(onBar?1:.6):0};}
         else liveArg={beats:(now-start)/500,bar:4,pulse:0};
       }
@@ -1771,9 +1771,9 @@ const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.re
 // 道の演出。拍の線(奥から流れる。小節の頭は明るい線)と、道のふちの光(拍を過ぎた瞬間に光ってすぐ消える)。
 // 線の高さはノーツと同じ式(rhythmProjectTravelProgress)、幅は道の境目と同じ投影から出す。叩いたときの光・ノーツより下に描く
 const roadGrid=roadFxRef.current;
-if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-zeroMs)/beatMs,beatIndex=Math.floor(phase),since=(phase-beatIndex)*beatMs,onBar=((beatIndex%bar)+bar)%bar===0;
+if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs,beatIndex=Math.floor(phase),since=(phase-beatIndex)*beatMs,onBar=((beatIndex%bar)+bar)%bar===0;
   if(canvasReady){const lines=roadLinesRef.current,areaH=travel.rect.height,areaW=travel.rect.width;let count=0;
-    for(let k=Math.ceil((visualTime-travelMs*.35-zeroMs)/beatMs);count<64;k++){const t=zeroMs+k*beatMs;if(t>visualTime+travelMs*1.05)break;if(t<0)continue;
+    for(let k=Math.ceil((visualTime-travelMs*.35-rhythmBeatZeroAt(roadGrid,visualTime))/beatMs)-1;count<64;k++){const t=rhythmBeatLineTime(roadGrid,zeroMs+k*beatMs);if(t<visualTime-travelMs*.35)continue;if(t>visualTime+travelMs*1.05)break;if(t<0)continue;
       const progress=1-(t-visualTime)/travelMs,y=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx+travel.noteHeight/2;
       if(!(y>=0&&y<=areaH))continue;const yr=y/areaH,o=count*6;
       lines[o]=y;lines[o+1]=rhythmProjectBoundary(0,yr)*areaW;lines[o+2]=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yr)*areaW;lines[o+3]=((k%bar)+bar)%bar===0?1:0;lines[o+4]=rhythmProjectionScale(yr);

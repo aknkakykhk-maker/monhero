@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c59781bc7b42a761
+// source-sha256: 5597348d4e555777
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 13:36";
+const BUILD_DATE = "2026-10-03 15:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4725,6 +4725,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_stay_with_me_short',
+  name: 'Stay With Me ～Locked Fate～ short ver.',
+  creator: 'オリジナル',
+  src: 'audio/bgm-stay-with-me-short.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_kiki_issen_short',
+  name: '綺季一閃 ～花雪に舞う詠姫～ short ver.',
+  creator: 'オリジナル',
+  src: 'audio/bgm-kiki-issen-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -5788,6 +5802,7 @@ const Audio_ = (() => {
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
+    "audio/bgm-kiki-issen-short.mp3": "1dc188dbb7a7",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
@@ -5810,6 +5825,7 @@ const Audio_ = (() => {
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
+    "audio/bgm-stay-with-me-short.mp3": "54a59963e979",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
@@ -29287,7 +29303,7 @@ const RhythmTapTest = ({
           grid = live.grid,
           songMs = clock && Number.isFinite(clock.t) ? clock.t + Math.min(250, Math.max(0, now - clock.at)) : null;
         if (grid && songMs !== null) {
-          const beats = (songMs - grid.zeroMs) / grid.beatMs,
+          const beats = (songMs - rhythmBeatZeroAt(grid, songMs)) / grid.beatMs,
             index = Math.floor(beats),
             since = (beats - index) * grid.beatMs,
             onBar = (index % grid.bar + grid.bar) % grid.bar === 0;
@@ -30187,7 +30203,7 @@ const RhythmTapTest = ({
             zeroMs,
             bar
           } = roadGrid,
-          phase = (visualTime - zeroMs) / beatMs,
+          phase = (visualTime - rhythmBeatZeroAt(roadGrid, visualTime)) / beatMs,
           beatIndex = Math.floor(phase),
           since = (phase - beatIndex) * beatMs,
           onBar = (beatIndex % bar + bar) % bar === 0;
@@ -30196,8 +30212,9 @@ const RhythmTapTest = ({
             areaH = travel.rect.height,
             areaW = travel.rect.width;
           let count = 0;
-          for (let k = Math.ceil((visualTime - travelMs * .35 - zeroMs) / beatMs); count < 64; k++) {
-            const t = zeroMs + k * beatMs;
+          for (let k = Math.ceil((visualTime - travelMs * .35 - rhythmBeatZeroAt(roadGrid, visualTime)) / beatMs) - 1; count < 64; k++) {
+            const t = rhythmBeatLineTime(roadGrid, zeroMs + k * beatMs);
+            if (t < visualTime - travelMs * .35) continue;
             if (t > visualTime + travelMs * 1.05) break;
             if (t < 0) continue;
             const progress = 1 - (t - visualTime) / travelMs,

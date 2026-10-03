@@ -39,6 +39,31 @@ const WARP_V1=Object.freeze({bars:WARP_BARS,minOnsets:WARP_MIN_ONSETS,minWindows
 let WARP_V2=Object.freeze({bars:2,minOnsets:5,minWindows:8,maxStep:8,maxJump:30,wrapResidual:true,moveMs:8,minHoldout:30,lowLagMaxMs:15,maxAbsRatio:.45});
 
 const round=(value,digits=1)=>Math.round(value*10**digits)/10**digits;
+// Rev.26: 曲のつなぎ目の段差(2026-10-03)。元の曲の録音を切り貼りした版では、つなぎ目から先の拍が、つなぎ目の前の格子から
+// 一定の量だけずれる(Stay With Me の short ver. は 89.0秒から先が -278.7ms、綺季一閃の short ver. は 101.0秒から先が -225.6ms。
+// どちらも小節の頭をそろえたときのずれ)。なめらかな揺れ(下の tempoWarp)は段差を「解析のぶれ」として使わないので、
+// 人が測ったつなぎ目を音源の一覧(rhythm-song-registry.json)の `splices:[{atMs,shiftMs}]` に書き、その曲だけ段差として使う。
+// shiftMs は「本当の拍の時刻 − つなぎ目の前の格子を延ばした時刻」(テンポの揺れの at と同じ向き)
+const SPLICE_REVISION=26;
+const REGISTRY_FILE=path.join(__dirname,'authoring','rhythm-song-registry.json');
+const splicesOf=trackId=>{
+  try{
+    const entry=JSON.parse(fs.readFileSync(REGISTRY_FILE,'utf8')).songs[trackId];
+    const list=entry&&Array.isArray(entry.splices)?entry.splices:[];
+    return list.map(s=>({atMs:Number(s.atMs),shiftMs:Number(s.shiftMs)})).filter(s=>Number.isFinite(s.atMs)&&Number.isFinite(s.shiftMs)).sort((a,b)=>a.atMs-b.atMs);
+  }catch{return [];}
+};
+const spliceWarp=audio=>{
+  const timing=audio&&audio.timing;
+  const splices=audio&&audio.trackId?splicesOf(audio.trackId):[];
+  if(!timing||!splices.length)return null;
+  const gridMs=Number(timing.gridMs)||timing.beatMs/timing.subdivisionsPerBeat;
+  const zero=Number(timing.beatZeroMs)||0;
+  // 格子の番号から時刻を出し、その時刻より前で最後のつなぎ目のずれを返す
+  const at=grid=>{const ms=zero+grid*gridMs;let shift=0;for(const s of splices)if(ms>=s.atMs)shift=s.shiftMs;return shift;};
+  return {active:true,version:'splice',points:splices,rangeMs:round(Math.max(...splices.map(s=>Math.abs(s.shiftMs)))),
+    reason:`曲のつなぎ目(${splices.map(s=>`${round(s.atMs/1000,1)}秒から ${s.shiftMs>0?'+':''}${round(s.shiftMs)}ms`).join('・')})`,at};
+};
 const median=list=>{const sorted=[...list].sort((a,b)=>a-b);return sorted.length?sorted[sorted.length>>1]:0;};
 
 // options.force: なめらかさ・幅の条件を見ずに揺れを返す(検査で、半分の区間から測った揺れを残りの半分に当てて確かめるため)
@@ -129,12 +154,14 @@ const holdoutSpread=(audio,floor,bar,V=WARP_V1,gridMs=0,skipLow=onset=>onset.sha
 const tempoWarpForRevision=(revision,audio)=>{
   const rev=Number(revision)||0;
   if(rev<WARP_REVISION)return {active:false,at:()=>0,points:[],reason:'Rev.21 より前'};
+  // Rev.26: つなぎ目を書いた曲は、その段差を使う(なめらかな揺れとは重ねない)
+  if(rev>=SPLICE_REVISION){const splice=spliceWarp(audio);if(splice)return splice;}
   if(rev>=WARP_V2_REVISION){const v2=tempoWarp(audio,{v2:true});if(v2.active)return {...v2,version:2};}
   return tempoWarp(audio);
 };
 const tempoWarpForChart=(chart,audio)=>tempoWarpForRevision(chart&&chart.chartRevision,audio);
 
-module.exports={WARP_REVISION,WARP_V2_REVISION,tempoWarp,tempoWarpForChart,tempoWarpForRevision,WARP_MAX_STEP_MS,WARP_MIN_RANGE_MS};
+module.exports={WARP_REVISION,WARP_V2_REVISION,SPLICE_REVISION,spliceWarp,tempoWarp,tempoWarpForChart,tempoWarpForRevision,WARP_MAX_STEP_MS,WARP_MIN_RANGE_MS};
 
 if(require.main===module){
   const dir=path.join(__dirname,'authoring');

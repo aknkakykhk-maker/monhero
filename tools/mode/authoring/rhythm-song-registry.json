@@ -402,6 +402,44 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "stay_with_me_short": {
+   "audio": "monster-hero/audio/bgm-stay-with-me-short.mp3",
+   "chartRevision": 26,
+   "audioSha256": "54a59963e97936b3e09e5897fe1802a6510ae69df76f9c0332eb401a20557bfa",
+   "durationMs": 176580,
+   "analyzedTiming": {
+    "bpm": 169.99,
+    "beatZeroMs": 474,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "splices": [
+    {
+     "atMs": 89000,
+     "shiftMs": -278.7
+    }
+   ]
+  },
+  "kiki_issen_short": {
+   "audio": "monster-hero/audio/bgm-kiki-issen-short.mp3",
+   "chartRevision": 26,
+   "audioSha256": "1dc188dbb7a796d3cf5f496ffcfb5afcc8aa84c92d3005cfc441708bac0816c8",
+   "durationMs": 194580,
+   "analyzedTiming": {
+    "bpm": 155.011,
+    "beatZeroMs": 234.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "splices": [
+    {
+     "atMs": 101000,
+     "shiftMs": -225.6
+    }
+   ]
   }
  }
 }
