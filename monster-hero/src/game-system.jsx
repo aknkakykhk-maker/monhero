@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d247b4f149157f96
+// generated-sha256: 059cc223fbfc728e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 18:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 18:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23200,6 +23200,74 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
 };
 // ==== 強化フェーズの共通部品ここまで ====
 
+// ---- part: 42-picker-sheet.jsx ----
+// ==== 共通部品: 一覧から選ぶ窓(PickerSheet) ====
+//
+// アイコン・プロフィールフレーム・好きなモンスターのように、**数が増えていく一覧から1つ選ぶ**窓の共通の形。
+// 増えても分かりにくくならないよう、次をそろえる(2026-10-03・ユーザー指摘
+// 「アイコンとフレーム設定が見にくい。今の状態だと数が増えれば増えるほど分かりにくくなる」)。
+//   ・上に「いまの選択」(preview)を固定して、選んだ結果がいつも見える
+//   ・名前で探す検索欄(search)と、絞り込みのチップ(chips。件数つき)
+//   ・一覧(children)だけがスクロールする。見出し・チップ・閉じるは動かない
+//   ・下に「閉じる」(footerExtra で、その場の補足も置ける)
+// 選んだ項目の目印は文字を足さず、枠・色・チェックの絵だけで示す(ボタンの文字は名前だけに保つ)。
+//
+//   title / note … 見出しと補足(1行)
+//   preview      … 固定で出す「いまの選択」(省略可)
+//   onSearch     … 渡すと検索欄を出す(search が入力中の文字)
+//   chips        … [{ id, label, count }]。chip が選ばれている id、onChip で切り替え
+//   footerExtra  … 一覧の下・閉じるの上に置くもの(鍵の説明など。省略可)
+//   onClose      … 閉じる(背景を押しても閉じる)
+const PickerSheet = ({ title, note = '', preview = null, search = '', onSearch = null, searchPlaceholder = '名前でさがす',
+  chips = null, chip = null, onChip = null, footerExtra = null, onClose, accent = 'border-indigo-500', dataPicker = '', children }) => (
+  <div {...(dataPicker ? { 'data-picker-sheet': dataPicker } : {})} className="fixed inset-0 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}
+    onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 90000 }}>
+    <div onClick={(event) => event.stopPropagation()} className={`flex w-full max-w-md flex-col rounded-t-3xl border-2 border-b-0 ${accent} bg-slate-900 shadow-2xl`}
+      style={{ maxHeight: '94%', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      <div className="shrink-0 px-4 pb-2 pt-4">
+        <h3 className="text-center text-lg font-black text-white">{title}</h3>
+        {note ? <p className="mt-0.5 text-center text-[10px] font-bold leading-tight text-slate-400">{note}</p> : null}
+        {preview ? <div data-picker-preview className="mt-3 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-3 py-2">{preview}</div> : null}
+        {onSearch ? (
+          <input type="search" value={search} onChange={(event) => onSearch(event.target.value.slice(0, 20))} data-picker-search
+            placeholder={searchPlaceholder} aria-label={searchPlaceholder} autoComplete="off" spellCheck={false}
+            className="mt-3 min-h-[44px] w-full rounded-xl border border-white/15 bg-black/40 px-3 text-[13px] font-bold text-white placeholder:text-slate-500"/>
+        ) : null}
+        {Array.isArray(chips) && chips.length > 0 ? (
+          <div role="tablist" className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 mh-scroll">
+            {chips.map((c) => {
+              const on = c.id === chip;
+              return (
+                <button key={c.id} type="button" role="tab" aria-selected={on} data-picker-chip={c.id} onClick={() => onChip && onChip(c.id)}
+                  className={`min-h-[36px] shrink-0 whitespace-nowrap rounded-full border px-3 text-[11px] font-black active:scale-95 ${on ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-300'}`}>
+                  {c.label}{typeof c.count === 'number' ? <span className={`ml-1 text-[10px] ${on ? 'text-slate-800' : 'text-slate-500'}`}>{c.count}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-2 mh-scroll" data-picker-body>{children}</div>
+      {footerExtra ? <div className="shrink-0 px-4 pt-1">{footerExtra}</div> : null}
+      <div className="shrink-0 px-4 pt-2">
+        <button type="button" onClick={onClose} className="min-h-[48px] w-full rounded-xl bg-slate-800 py-3 text-xs font-bold text-slate-300 active:scale-[.98]">閉じる</button>
+      </div>
+    </div>
+  </div>
+);
+// 一覧の中の見出し(グリッドの全幅を使う)。件数も出す
+const PickerGroupLabel = ({ children, count = null }) => (
+  <div className="col-span-full flex items-baseline gap-2 px-0.5 pt-2 first:pt-0">
+    <h4 className="text-[11px] font-black tracking-wider text-amber-300">{children}</h4>
+    {typeof count === 'number' ? <span className="text-[10px] font-bold text-slate-500">{count}</span> : null}
+    <span className="h-px flex-1 bg-white/10" aria-hidden="true"></span>
+  </div>
+);
+// 選ばれている印(チェックの丸)。文字を足さず、絵だけで示す
+const PickerCheckMark = () => (
+  <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow"><Check size={12}/></span>
+);
+
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
 // React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
@@ -24013,64 +24081,78 @@ function ProfileScreen({
             <div className="text-[10px] text-slate-400 text-center mt-1.5">名前もアイコンも、あとからこの画面でいつでも変えられます</div>
           </div>);
         })()}
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(
-          <button type="button" data-profile-friends data-friend-requests={Number(friendRequestCount)||0} onClick={onOpenFriends} className={`relative mb-3 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount)>0?'border-rose-400/80 bg-rose-950/50':'border-pink-400/40 bg-pink-950/40'}`}>
-            <Users size={16} className="text-pink-300 shrink-0"/>
-            <span className="flex-1 min-w-0 text-left">
-              <b className="block text-[13px] font-black text-pink-100">フレンド</b>
-              <small className={`block text-[10px] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`フレンド申請が${Number(friendRequestCount)}件届いています`:'フレンドコードで申請して、プロフィールを見せ合えます'}</small>
-            </span>
-            {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
-            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
-          </button>
-        )}
-        <div className={`${SCREEN_PANEL_CLASS} mb-4 flex flex-col items-center gap-3`}>
-          {/* アイコン(下層)とプロフィールフレーム(上層)。フレームは円の外へ出るので、
-              ここでは overflow-hidden を掛けない(内側のクリップは ProfileAvatar が持つ)。
-              フレームを選んでいるときだけ、もとから付いている紫の縁を消して二重に見せない */}
-          <button onClick={onOpenIconPicker} aria-label="ブリーダーアイコンを変える" className={`relative w-20 h-20 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId)?'border-transparent':'border-indigo-400/50'}`}>
-            <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="icon" className="w-full h-full"
-              fallback={<User size={36} className="text-indigo-400"/>}
-              badge={<span className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={12} className="text-white"/></span>}/>
-          </button>
-          {/* アイコンとは独立した設定。ここを変えてもアイコンは変わらない */}
-          <button onClick={onOpenFramePicker} className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-3 py-1.5 active:scale-95 group">
-            <Sparkles size={12} className="text-amber-300"/>
-            <span className="text-[11px] font-black text-slate-200">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
-            <Edit3 size={12} className="text-slate-400 group-hover:text-white"/>
-          </button>
-          <button onClick={()=>onOpenNameEdit(breederName)} className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 active:scale-95 group">
-            <span className="font-black text-base text-white">{breederName}</span><Edit3 size={12} className="text-slate-400 group-hover:text-white"/>
-          </button>
-          <div className="flex items-center gap-2"><Crown size={16} className="text-amber-300"/><span className="text-lg font-black text-indigo-200">LV.{breederLevel.level}</span></div>
-          <div className="w-full max-w-[240px]">
-            <div className="h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
-            <div className="text-[10px] text-slate-400 font-mono text-center mt-1">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
-          </div>
-          {/* 持ちもの。ダイヤとブリーダーPは同じ役目なので等幅の2列にそろえ、
-              アイテム(押すとアイテム欄へ行く)だけを全幅の導線にする */}
-          <div className="grid w-full grid-cols-2 gap-2">
-            <div className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2">
-              <Gem size={12} className="shrink-0 text-amber-400"/>
-              <span className="text-[12px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
-              <span className="text-[10px] font-bold text-amber-400">ダイヤ</span>
-            </div>
-            <div className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2">
-              <Coins size={12} className="shrink-0 text-amber-400"/><span className="text-[12px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
-              <span className="text-[10px] font-bold text-amber-400">ブリーダーP</span>
+        {/* ① 名刺: アイコン・名前・Lv・XP を横に並べて、画面の高さを食わないようにする。
+            アイコンを押すと選択画面、名前を押すと書き換え。フレームを選んでいるときだけ、もとから付いている紫の縁を消して二重に見せない */}
+        <div className={`${SCREEN_PANEL_CLASS} mb-3`} data-profile-card>
+          <div className="flex items-center gap-3">
+            <button onClick={onOpenIconPicker} aria-label="ブリーダーアイコンを変える" className={`relative h-20 w-20 shrink-0 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId)?'border-transparent':'border-indigo-400/50'}`}>
+              <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="icon" className="w-full h-full"
+                fallback={<User size={36} className="text-indigo-400"/>}
+                badge={<span className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={12} className="text-white"/></span>}/>
+            </button>
+            <div className="min-w-0 flex-1">
+              <button onClick={()=>onOpenNameEdit(breederName)} className="flex min-h-[40px] max-w-full items-center gap-1.5 active:scale-95">
+                <span className="truncate text-lg font-black text-white">{breederName}</span><Edit3 size={13} className="shrink-0 text-slate-400"/>
+              </button>
+              <div className="flex items-center gap-1.5"><Crown size={14} className="text-amber-300"/><span className="text-base font-black text-indigo-200">LV.{breederLevel.level}</span></div>
+              <div className="mt-1.5">
+                <div className="h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
+                <div className="mt-0.5 text-[10px] text-slate-400 font-mono">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
+              </div>
             </div>
           </div>
-          <button onClick={onOpenItems} className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-xl border border-teal-500/40 bg-teal-950/40 px-4 py-2.5 active:scale-[.98]">
-            <Package size={14} className="text-teal-400"/><span className="text-[12px] font-black text-teal-200">アイテム（{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個）</span>
-          </button>
-          {/* 遊んだ時間。数え始めた日も一緒に出す(これまで数えていなかったので、
-              既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
-          <div className="w-full flex flex-col items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-xl">
-            <div className="flex items-center gap-2">
-              <Timer size={13} className="text-indigo-300"/>
-              <span className="text-[11px] font-black text-indigo-200">プレイ時間</span>
-              <span className="text-[12px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
-            </div>
+          {/* ② 設定のタイル。入口が散らばらないよう、アイコン・フレーム・ひとこと・好きなモンスターを同じ形でまとめる。
+              増えても、ここへ同じ形で足していく */}
+          {(()=>{
+            const frameName=(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし';
+            const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
+            const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
+            const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
+            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+            return (
+            <div className="mt-3 grid grid-cols-2 gap-2" data-profile-settings>
+              <button type="button" data-profile-tile="icon" onClick={onOpenIconPicker} className={tile}>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">🖼️</span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block truncate text-[11px] font-black text-white">えらびなおす</b></span>
+              </button>
+              <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
+                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">フレーム：{frameName}</b></span>
+              </button>
+              {showFriendTiles&&(
+                <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white">{profileMessage||'まだ書いていません'}</b></span>
+                </button>
+              )}
+              {showFriendTiles&&(
+                <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
+                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
+                </button>
+              )}
+            </div>);
+          })()}
+        </div>
+        {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
+            (これまで数えていなかったので、既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
+        <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Gem size={11}/>ダイヤ</span>
+            <span className="text-[13px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
+          </div>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Coins size={11}/>ブリーダーP</span>
+            <span className="text-[13px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
+          </div>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
+            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
+          </div>
+        </div>
+        <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
+          <summary className="cursor-pointer text-[11px] font-black text-indigo-200">プレイ時間のくわしい記録</summary>
+          <div className="mt-2 flex flex-col items-center gap-1">
             <div className="flex items-center gap-2 text-[11px] font-black text-indigo-300">
               <span>今日 <span className="text-white font-mono">{formatPlaytime(playtimeTodayMs(playtimeView))}</span></span>
               <span className="text-slate-400">/</span>
@@ -24081,30 +24163,25 @@ function ProfileScreen({
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
           </div>
-        </div>
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
-          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
-          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-          return (
-          <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
-            {face?<ProfileAvatar src={face.src} id={face.id} className="h-10 w-10 shrink-0"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
-            <span className="min-w-0 flex-1 text-left">
-              <small className="block text-[10px] font-black text-pink-300">好きなモンスター（フレンドに見えます）</small>
-              <b className="block truncate text-[13px] font-black text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b>
-            </span>
-            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
-          </button>);
-        })()}
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(
-          <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💬</span>
-            <span className="min-w-0 flex-1 text-left">
-              <small className="block text-[10px] font-black text-pink-300">ひとこと（フレンドに見えます）</small>
-              <b className="block truncate text-[13px] font-black text-white">{profileMessage||'まだ書いていません'}</b>
-            </span>
-            <Edit3 size={15} className="shrink-0 text-pink-400"/>
+        </details>
+        {/* ④ よく使う入口。フレンド(申請が届くと赤いバッジ)とアイテムを同じ大きさで並べる。フレンドは公開前は出さない */}
+        <div className={`mb-4 grid gap-2 ${(onboarded&&!onboardingPreview&&friendsEnabled)?'grid-cols-2':'grid-cols-1'}`} data-profile-links>
+          {onboarded&&!onboardingPreview&&friendsEnabled&&(
+            <button type="button" data-profile-friends data-friend-requests={Number(friendRequestCount)||0} onClick={onOpenFriends} className={`relative flex min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount)>0?'border-rose-400/80 bg-rose-950/50':'border-pink-400/40 bg-pink-950/40'}`}>
+              <Users size={18} className="text-pink-300 shrink-0"/>
+              <span className="flex-1 min-w-0 text-left">
+                <b className="block text-[13px] font-black text-pink-100">フレンド</b>
+                <small className={`block truncate text-[10px] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`申請が${Number(friendRequestCount)}件届いています`:'申請・プロフィール'}</small>
+              </span>
+              {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
+            </button>
+          )}
+          <button onClick={onOpenItems} className="flex min-h-[64px] items-center gap-2 rounded-2xl border border-teal-500/40 bg-teal-950/40 px-3 py-2.5 active:scale-[.98]">
+            <Package size={18} className="shrink-0 text-teal-400"/>
+            <span className="flex-1 min-w-0 text-left"><b className="block text-[13px] font-black text-teal-200">アイテム</b><small className="block truncate text-[10px] text-teal-300">{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個</small></span>
           </button>
-        )}
+        </div>
+        {onboarded&&!onboardingPreview&&<div className="mb-2"><ScreenSectionLabel>助手</ScreenSectionLabel></div>}
         {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
             助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
         {onboarded&&!onboardingPreview&&(()=>{
@@ -24215,9 +24292,9 @@ function ProfileScreen({
             <ScreenSectionLabel>バトル記録</ScreenSectionLabel>
             <ScreenLead>モードをタップすると詳しい記録を確認できます</ScreenLead>
             {!selected?(
-              <div className="grid grid-cols-1 gap-2">
-                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className="w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
-                  <span className="flex items-center gap-2"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block text-[13px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span><ChevronRight size={16} className="shrink-0 text-slate-400"/></span>
+              <div className="grid grid-cols-2 gap-2">
+                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className={`w-full min-h-[72px] rounded-2xl border bg-slate-900/70 px-2.5 py-2.5 text-left active:scale-[.98] ${species?'col-span-2':''}`} style={{borderColor:`${mode.color}66`}}>
+                  <span className="flex items-center gap-1.5"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block whitespace-nowrap text-[12px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span></span>
                 </button>})}
               </div>
             ):(
@@ -36668,6 +36745,13 @@ function MonsterHeroGame() {
   // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
   const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
   const [showFramePicker, setShowFramePicker] = useState(false);
+  // 選択画面の検索・絞り込み(閉じるとき初期へ戻す。保存はしない)
+  const [iconQuery, setIconQuery] = useState('');
+  const [iconChip, setIconChip] = useState('all');
+  const [frameQuery, setFrameQuery] = useState('');
+  const [frameChip, setFrameChip] = useState('all');
+  const [favQuery, setFavQuery] = useState('');
+  const [favSort, setFavSort] = useState('bond');
   // 鍵つきの枠を押したとき、その条件を出すためのid(押していなければ null)
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
   // もらった飾り枠(2026-09-16)。助手との仲良し度が Lv2/5/7 になると1枚ずつ増える。
@@ -52654,36 +52738,48 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {showIconPicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="text-lg font-black text-white mb-2 text-center">アイコンを選択</h3>
-              {/* いまの見た目。フレームはここでは変えられない(プロフィールの「フレーム」から変える) */}
-              <div className="flex flex-col items-center gap-1 mb-4">
-                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-16 h-16" fallback={<User size={28} className="text-indigo-400"/>}/>
-                <span className="text-[9px] font-black text-slate-500">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
+        {showIconPicker&&(()=>{
+          // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
+          // フレームはここでは変えられない(プロフィールの「フレーム」から変える)
+          const closeIcon=()=>{ setShowIconPicker(false); setIconQuery(''); setIconChip('all'); };
+          const all=breederIconOptions({ownedMarketIconIds:ownedMarketIcons});
+          const label=(m)=>String(m.name||'').replace(/のアイコン$/,'');
+          const q=iconQuery.trim().toLowerCase();
+          const matches=all.filter(m=>(iconChip==='all'||m.source===iconChip)&&(!q||label(m).toLowerCase().includes(q)));
+          const starters=matches.filter(m=>m.source==='starter');
+          const markets=matches.filter(m=>m.source==='market');
+          const pick=(m)=>{ setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); closeIcon(); };
+          const cell=(m)=>{
+            const selected=breederIcon===m.id;
+            return (
+              <button key={m.id} type="button" data-icon-option={m.id} aria-pressed={selected} onClick={()=>pick(m)}
+                className={`relative flex flex-col items-center gap-1 rounded-2xl border-2 p-1.5 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
+                <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-xl" className="aspect-square w-full"/>
+                {selected&&<PickerCheckMark/>}
+                <span className="w-full truncate text-center text-[9px] font-black leading-tight text-slate-200">{label(m)}</span>
+              </button>
+            );
+          };
+          const ownedMarket=all.filter(m=>m.source==='market').length;
+          return (
+            <PickerSheet title="アイコンを選ぶ" note="タップで決まります。フレームは、プロフィールの「フレーム」から変えられます。" onClose={closeIcon}
+              preview={<>
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="h-14 w-14 shrink-0" fallback={<User size={26} className="text-indigo-400"/>}/>
+                <span className="min-w-0"><b className="block text-[12px] font-black text-white">いまのアイコン</b><small className="block truncate text-[10px] font-bold text-slate-400">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</small></span>
+              </>}
+              search={iconQuery} onSearch={all.length>8?setIconQuery:null} searchPlaceholder="アイコンを名前でさがす"
+              chips={ownedMarket>0?[{id:'all',label:'すべて',count:all.length},{id:'starter',label:'はじめから',count:all.length-ownedMarket},{id:'market',label:'購入ずみ',count:ownedMarket}]:null}
+              chip={iconChip} onChip={setIconChip} dataPicker="icon">
+              {matches.length===0&&<p className="py-8 text-center text-[11px] font-bold text-slate-500">当てはまるアイコンがありません</p>}
+              <div className="grid grid-cols-4 gap-2">
+                {starters.length>0&&iconChip==='all'&&ownedMarket>0&&<PickerGroupLabel count={starters.length}>はじめから</PickerGroupLabel>}
+                {starters.map(cell)}
+                {markets.length>0&&iconChip==='all'&&<PickerGroupLabel count={markets.length}>マーケットで買ったアイコン</PickerGroupLabel>}
+                {markets.map(cell)}
               </div>
-              <div className="grid grid-cols-4 gap-3 mb-4">
-                {breederIconOptions().filter(m=>m.source==='starter').map(m=>(
-                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
-                    <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
-                  </button>
-                ))}
-              </div>
-              {ownedMarketIcons.length>0&&(<>
-                <h4 className="text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"><ShoppingBag size={10}/>マーケット購入アイコン</h4>
-                <div className="grid grid-cols-4 gap-3 mb-4">
-                  {breederIconOptions({ownedMarketIconIds:ownedMarketIcons}).filter(m=>m.source==='market').map(m=>(
-                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
-                      <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
-                    </button>
-                  ))}
-                </div>
-              </>)}
-              <button onClick={()=>setShowIconPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
-            </div>
-          </div>
-        )}
+            </PickerSheet>
+          );
+        })()}
 
         {/* プロフィールフレームを選ぶ(2026-09-15)。
             ・アイコンとは独立した設定。ここではアイコンを変えない
@@ -52707,85 +52803,121 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
           </div>
         )}
-        {showFavoritePicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
-              <h3 className="text-lg font-black text-white mb-1 text-center">好きなモンスター</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">フレンドがあなたのプロフィールを開いたとき、この子が見えます。</p>
-              <div className="min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5" data-favorite-picker>
-                <button type="button" data-favorite-option="none" onClick={()=>selectFavoriteMasu(null)} aria-pressed={favoriteMasuId==null}
+        {showFavoritePicker&&(()=>{
+          // 好きなモンスターを選ぶ窓(PickerSheet)。数が増えても探せるよう、名前で探す・絆Lv順/総合力順/名前順で並べ替える。
+          // 並べ替えの総合力は、その順に切り替えたときだけ計算する(多いと重いため)
+          const closeFav=()=>{ setShowFavoritePicker(false); setFavQuery(''); setFavSort('bond'); };
+          const q=favQuery.trim().toLowerCase();
+          const list=masuMons.filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]&&(!q||String(ALL_PLAYER_MONSTERS[m.baseId].name||'').toLowerCase().includes(q)))
+            .map(m=>({m,base:ALL_PLAYER_MONSTERS[m.baseId],bond:masuBondLevelInfo(m).level,power:favSort==='power'?Math.round(Number(masuPowerOf(m))||0):0}));
+          list.sort((a,b2)=>favSort==='name'?String(a.base.name).localeCompare(String(b2.base.name),'ja')||b2.bond-a.bond
+            :favSort==='power'?b2.power-a.power||b2.bond-a.bond:b2.bond-a.bond||String(a.base.name).localeCompare(String(b2.base.name),'ja'));
+          const shown=list.slice(0,200);
+          const cur=favoriteMasuId!=null?masuMons.find(m=>String(m.id)===String(favoriteMasuId)):null;
+          const curBase=cur?ALL_PLAYER_MONSTERS[cur.baseId]:null;
+          const curFace=curBase?friendsFaceIconOf(cur.baseId):null;
+          return (
+            <PickerSheet title="好きなモンスター" note="フレンドがあなたのプロフィールを開いたとき、この子が見えます。" onClose={closeFav} accent="border-pink-500"
+              preview={<>
+                {curFace?<ProfileAvatar src={curFace.src} id={curFace.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{curBase?curBase.name:'まだ選んでいません'}</b><small className="block text-[10px] font-bold text-pink-300">{curBase?`絆Lv.${masuBondLevelInfo(cur).level}`:'下から選んでください'}</small></span>
+              </>}
+              search={favQuery} onSearch={masuMons.length>6?setFavQuery:null} searchPlaceholder="モンスターを名前でさがす"
+              chips={masuMons.length>1?[{id:'bond',label:'絆Lvが高い順'},{id:'power',label:'総合力が高い順'},{id:'name',label:'名前順'}]:null}
+              chip={favSort} onChip={setFavSort} dataPicker="favorite">
+              <div className="flex flex-col gap-1.5" data-favorite-picker>
+                <button type="button" data-favorite-option="none" onClick={()=>{selectFavoriteMasu(null);setFavQuery('');setFavSort('bond');}} aria-pressed={favoriteMasuId==null}
                   className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${favoriteMasuId==null?'border-pink-400 bg-pink-950/60 text-pink-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}>設定しない</button>
-                {masuMons.filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]).slice().sort((a,b)=>masuBondLevelInfo(b).level-masuBondLevelInfo(a).level).slice(0,200).map(m=>{
-                  const base=ALL_PLAYER_MONSTERS[m.baseId]; const chosen=favoriteMasuId!=null&&String(m.id)===String(favoriteMasuId);
+                {shown.map(({m,base,bond,power})=>{
+                  const chosen=favoriteMasuId!=null&&String(m.id)===String(favoriteMasuId);
+                  const face=friendsFaceIconOf(m.baseId);
                   return (
-                    <button key={m.id} type="button" data-favorite-option={String(m.id)} onClick={()=>selectFavoriteMasu(m.id)} aria-pressed={chosen}
-                      className={`flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen?'border-pink-400 bg-pink-950/60':'border-slate-700 bg-slate-950/40'}`}>
-                      {(()=>{ const face=friendsFaceIconOf(m.baseId); return face?<ProfileAvatar src={face.src} id={face.id} className="h-9 w-9 shrink-0"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>; })()}
+                    <button key={m.id} type="button" data-favorite-option={String(m.id)} onClick={()=>{selectFavoriteMasu(m.id);setFavQuery('');setFavSort('bond');}} aria-pressed={chosen}
+                      className={`relative flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen?'border-pink-400 bg-pink-950/60':'border-slate-700 bg-slate-950/40'}`}>
+                      {face?<ProfileAvatar src={face.src} id={face.id} className="h-9 w-9 shrink-0"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>}
                       <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{base.name}</span>
-                      <span className="shrink-0 text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(m).level}</span>
+                      <span className="shrink-0 text-right text-[10px] font-black text-pink-300">絆Lv.{bond}{favSort==='power'&&power>0?<small className="block text-[9px] text-amber-300">総合力 {power.toLocaleString()}</small>:null}</span>
+                      {chosen&&<PickerCheckMark/>}
                     </button>
                   );
                 })}
                 {masuMons.length===0&&<p className="py-4 text-center text-[11px] font-bold text-slate-400">まだマスモンがいません</p>}
+                {masuMons.length>0&&shown.length===0&&<p className="py-6 text-center text-[11px] font-bold text-slate-500">当てはまるモンスターがいません</p>}
               </div>
-              <div className="mt-3"><ModalCloseButton onClick={()=>setShowFavoritePicker(false)}/></div>
-            </div>
-          </div>
-        )}
-        {showFramePicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
-              <h3 className="text-lg font-black text-white mb-1 text-center">プロフィールフレーム</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。</p>
-              <div className="flex flex-col items-center gap-1 mb-4">
-                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-20 h-20" fallback={<User size={36} className="text-indigo-400"/>}/>
-                <span className="text-[9px] font-black text-slate-500">いまの見た目</span>
+            </PickerSheet>
+          );
+        })()}
+        {showFramePicker&&(()=>{
+          // プロフィールフレームを選ぶ窓(PickerSheet)。いまの見た目を上に固定し、名前で探す・使える/ロック中で絞る・色の枠と助手の枠を見出しで分ける。
+          // 候補は「いまのブリーダーアイコン＋そのフレーム」を重ねて見せる。押したその場で反映して保存する(閉じるまで見比べられる)。
+          // まだもらっていない枠も並べる(絵は見せて、鍵と条件だけを重ねる。2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)。
+          // 並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない
+          const closeFrame=()=>{ setShowFramePicker(false); setFrameQuery(''); setFrameChip('all'); };
+          const frames=releasedProfileFrames();
+          const q=frameQuery.trim().toLowerCase();
+          const ownedOf=(frame)=>profileFrameOwned(frame.id, ownedProfileFrames);
+          const matches=frames.filter(frame=>(!q||String(frame.name||'').toLowerCase().includes(q))
+            &&(frameChip==='all'||(frameChip==='owned'?ownedOf(frame):!ownedOf(frame))));
+          const colorFrames=matches.filter(frame=>!profileFrameUnlock(frame));
+          const assistantFrames=matches.filter(frame=>!!profileFrameUnlock(frame));
+          const ownedCount=frames.filter(ownedOf).length;
+          const currentFrame=profileFrameById(normalizeProfileFrameId(profileFrameId))||{};
+          const cell=(frame)=>{
+            const owned=ownedOf(frame);
+            const unlock=profileFrameUnlock(frame);
+            const who=unlock?assistantById(unlock.assistantId):null;
+            const selected=normalizeProfileFrameId(profileFrameId)===frame.id;
+            return (
+              <button key={frame.id} data-profile-frame-option={frame.id} data-profile-frame-locked={owned?'no':'yes'}
+                onClick={()=>{ if(owned) selectProfileFrame(frame.id); else setFrameLockedInfo(frame.id); }}
+                aria-pressed={selected} aria-disabled={!owned}
+                className={`relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
+                <span className={`relative block ${owned?'':'opacity-45'}`}>
+                  <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
+                  {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                </span>
+                {selected&&<PickerCheckMark/>}
+                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
+                {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
+              </button>
+            );
+          };
+          // 鍵を押したときだけ、条件といまの進み具合を一覧の下(閉じるの上)に出す。スクロールしなくても見える
+          const lockedInfo=frameLockedInfo&&(()=>{
+            const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
+            if(!frame||!unlock) return null;
+            const who=assistantById(unlock.assistantId);
+            const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
+            const level=assistantBondLevelOf(points);
+            const needPoints=(assistantBondLevelsOf(unlock.assistantId).find(st=>st.level===unlock.bondLevel)||{}).need;
+            const remain=Number.isFinite(needPoints)?Math.max(0, needPoints-points):null;
+            return (
+              <div data-profile-frame-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+                <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
+                <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
+                <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
               </div>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {releasedProfileFrames().map(frame=>{
-                  // まだもらっていない枠も並べる。絵は見せて、鍵と条件だけを重ねる
-                  // (2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)
-                  const owned=profileFrameOwned(frame.id, ownedProfileFrames);
-                  const unlock=profileFrameUnlock(frame);
-                  const who=unlock?assistantById(unlock.assistantId):null;
-                  const selected=normalizeProfileFrameId(profileFrameId)===frame.id;
-                  return (
-                    <button key={frame.id} data-profile-frame-option={frame.id} data-profile-frame-locked={owned?'no':'yes'}
-                      onClick={()=>{ if(owned) selectProfileFrame(frame.id); else setFrameLockedInfo(frame.id); }}
-                      aria-pressed={selected} aria-disabled={!owned}
-                      className={`relative flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-indigo-400 bg-indigo-950/50':'border-slate-700 bg-slate-950/40'}`}>
-                      <span className={`relative block ${owned?'':'opacity-45'}`}>
-                        <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
-                        {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
-                      </span>
-                      <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
-                      {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
-                    </button>
-                  );
-                })}
+            );
+          })();
+          return (
+            <PickerSheet title="プロフィールフレーム" note="アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。" onClose={closeFrame}
+              preview={<>
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="h-14 w-14 shrink-0" fallback={<User size={26} className="text-indigo-400"/>}/>
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{currentFrame.name||'フレームなし'}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">{currentFrame.desc||'いまの見た目'}</small></span>
+              </>}
+              search={frameQuery} onSearch={frames.length>9?setFrameQuery:null} searchPlaceholder="フレームを名前でさがす"
+              chips={ownedCount<frames.length?[{id:'all',label:'すべて',count:frames.length},{id:'owned',label:'使える',count:ownedCount},{id:'locked',label:'もらう前',count:frames.length-ownedCount}]:null}
+              chip={frameChip} onChip={setFrameChip} footerExtra={lockedInfo} dataPicker="frame">
+              {matches.length===0&&<p className="py-8 text-center text-[11px] font-bold text-slate-500">当てはまるフレームがありません</p>}
+              <div className="grid grid-cols-3 gap-2.5">
+                {colorFrames.length>0&&assistantFrames.length>0&&<PickerGroupLabel count={colorFrames.length}>色の枠</PickerGroupLabel>}
+                {colorFrames.map(cell)}
+                {assistantFrames.length>0&&<PickerGroupLabel count={assistantFrames.length}>助手の枠（仲良し度でもらえます）</PickerGroupLabel>}
+                {assistantFrames.map(cell)}
               </div>
-              {/* 鍵を押したときだけ、条件といまの進み具合をその場に出す */}
-              {frameLockedInfo&&(()=>{
-                const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
-                if(!frame||!unlock) return null;
-                const who=assistantById(unlock.assistantId);
-                const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
-                const level=assistantBondLevelOf(points);
-                const needPoints=(assistantBondLevelsOf(unlock.assistantId).find(st=>st.level===unlock.bondLevel)||{}).need;
-                const remain=Number.isFinite(needPoints)?Math.max(0, needPoints-points):null;
-                return (
-                  <div data-profile-frame-locked-info className="mb-3 rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-                    <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
-                    <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
-                    <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
-                  </div>
-                );
-              })()}
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).desc||''}</p>
-              <button onClick={()=>setShowFramePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
-            </div>
-          </div>
-        )}
+            </PickerSheet>
+          );
+        })()}
 
         {showBackup&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>

@@ -66,64 +66,78 @@ function ProfileScreen({
             <div className="text-[10px] text-slate-400 text-center mt-1.5">名前もアイコンも、あとからこの画面でいつでも変えられます</div>
           </div>);
         })()}
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(
-          <button type="button" data-profile-friends data-friend-requests={Number(friendRequestCount)||0} onClick={onOpenFriends} className={`relative mb-3 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount)>0?'border-rose-400/80 bg-rose-950/50':'border-pink-400/40 bg-pink-950/40'}`}>
-            <Users size={16} className="text-pink-300 shrink-0"/>
-            <span className="flex-1 min-w-0 text-left">
-              <b className="block text-[13px] font-black text-pink-100">フレンド</b>
-              <small className={`block text-[10px] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`フレンド申請が${Number(friendRequestCount)}件届いています`:'フレンドコードで申請して、プロフィールを見せ合えます'}</small>
-            </span>
-            {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
-            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
-          </button>
-        )}
-        <div className={`${SCREEN_PANEL_CLASS} mb-4 flex flex-col items-center gap-3`}>
-          {/* アイコン(下層)とプロフィールフレーム(上層)。フレームは円の外へ出るので、
-              ここでは overflow-hidden を掛けない(内側のクリップは ProfileAvatar が持つ)。
-              フレームを選んでいるときだけ、もとから付いている紫の縁を消して二重に見せない */}
-          <button onClick={onOpenIconPicker} aria-label="ブリーダーアイコンを変える" className={`relative w-20 h-20 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId)?'border-transparent':'border-indigo-400/50'}`}>
-            <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="icon" className="w-full h-full"
-              fallback={<User size={36} className="text-indigo-400"/>}
-              badge={<span className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={12} className="text-white"/></span>}/>
-          </button>
-          {/* アイコンとは独立した設定。ここを変えてもアイコンは変わらない */}
-          <button onClick={onOpenFramePicker} className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-3 py-1.5 active:scale-95 group">
-            <Sparkles size={12} className="text-amber-300"/>
-            <span className="text-[11px] font-black text-slate-200">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
-            <Edit3 size={12} className="text-slate-400 group-hover:text-white"/>
-          </button>
-          <button onClick={()=>onOpenNameEdit(breederName)} className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 active:scale-95 group">
-            <span className="font-black text-base text-white">{breederName}</span><Edit3 size={12} className="text-slate-400 group-hover:text-white"/>
-          </button>
-          <div className="flex items-center gap-2"><Crown size={16} className="text-amber-300"/><span className="text-lg font-black text-indigo-200">LV.{breederLevel.level}</span></div>
-          <div className="w-full max-w-[240px]">
-            <div className="h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
-            <div className="text-[10px] text-slate-400 font-mono text-center mt-1">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
-          </div>
-          {/* 持ちもの。ダイヤとブリーダーPは同じ役目なので等幅の2列にそろえ、
-              アイテム(押すとアイテム欄へ行く)だけを全幅の導線にする */}
-          <div className="grid w-full grid-cols-2 gap-2">
-            <div className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2">
-              <Gem size={12} className="shrink-0 text-amber-400"/>
-              <span className="text-[12px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
-              <span className="text-[10px] font-bold text-amber-400">ダイヤ</span>
-            </div>
-            <div className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2">
-              <Coins size={12} className="shrink-0 text-amber-400"/><span className="text-[12px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
-              <span className="text-[10px] font-bold text-amber-400">ブリーダーP</span>
+        {/* ① 名刺: アイコン・名前・Lv・XP を横に並べて、画面の高さを食わないようにする。
+            アイコンを押すと選択画面、名前を押すと書き換え。フレームを選んでいるときだけ、もとから付いている紫の縁を消して二重に見せない */}
+        <div className={`${SCREEN_PANEL_CLASS} mb-3`} data-profile-card>
+          <div className="flex items-center gap-3">
+            <button onClick={onOpenIconPicker} aria-label="ブリーダーアイコンを変える" className={`relative h-20 w-20 shrink-0 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId)?'border-transparent':'border-indigo-400/50'}`}>
+              <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="icon" className="w-full h-full"
+                fallback={<User size={36} className="text-indigo-400"/>}
+                badge={<span className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={12} className="text-white"/></span>}/>
+            </button>
+            <div className="min-w-0 flex-1">
+              <button onClick={()=>onOpenNameEdit(breederName)} className="flex min-h-[40px] max-w-full items-center gap-1.5 active:scale-95">
+                <span className="truncate text-lg font-black text-white">{breederName}</span><Edit3 size={13} className="shrink-0 text-slate-400"/>
+              </button>
+              <div className="flex items-center gap-1.5"><Crown size={14} className="text-amber-300"/><span className="text-base font-black text-indigo-200">LV.{breederLevel.level}</span></div>
+              <div className="mt-1.5">
+                <div className="h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
+                <div className="mt-0.5 text-[10px] text-slate-400 font-mono">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
+              </div>
             </div>
           </div>
-          <button onClick={onOpenItems} className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-xl border border-teal-500/40 bg-teal-950/40 px-4 py-2.5 active:scale-[.98]">
-            <Package size={14} className="text-teal-400"/><span className="text-[12px] font-black text-teal-200">アイテム（{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個）</span>
-          </button>
-          {/* 遊んだ時間。数え始めた日も一緒に出す(これまで数えていなかったので、
-              既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
-          <div className="w-full flex flex-col items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-xl">
-            <div className="flex items-center gap-2">
-              <Timer size={13} className="text-indigo-300"/>
-              <span className="text-[11px] font-black text-indigo-200">プレイ時間</span>
-              <span className="text-[12px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
-            </div>
+          {/* ② 設定のタイル。入口が散らばらないよう、アイコン・フレーム・ひとこと・好きなモンスターを同じ形でまとめる。
+              増えても、ここへ同じ形で足していく */}
+          {(()=>{
+            const frameName=(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし';
+            const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
+            const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
+            const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
+            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+            return (
+            <div className="mt-3 grid grid-cols-2 gap-2" data-profile-settings>
+              <button type="button" data-profile-tile="icon" onClick={onOpenIconPicker} className={tile}>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">🖼️</span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block truncate text-[11px] font-black text-white">えらびなおす</b></span>
+              </button>
+              <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
+                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">フレーム：{frameName}</b></span>
+              </button>
+              {showFriendTiles&&(
+                <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white">{profileMessage||'まだ書いていません'}</b></span>
+                </button>
+              )}
+              {showFriendTiles&&(
+                <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
+                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
+                </button>
+              )}
+            </div>);
+          })()}
+        </div>
+        {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
+            (これまで数えていなかったので、既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
+        <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Gem size={11}/>ダイヤ</span>
+            <span className="text-[13px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
+          </div>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Coins size={11}/>ブリーダーP</span>
+            <span className="text-[13px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
+          </div>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
+            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
+          </div>
+        </div>
+        <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
+          <summary className="cursor-pointer text-[11px] font-black text-indigo-200">プレイ時間のくわしい記録</summary>
+          <div className="mt-2 flex flex-col items-center gap-1">
             <div className="flex items-center gap-2 text-[11px] font-black text-indigo-300">
               <span>今日 <span className="text-white font-mono">{formatPlaytime(playtimeTodayMs(playtimeView))}</span></span>
               <span className="text-slate-400">/</span>
@@ -134,30 +148,25 @@ function ProfileScreen({
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
           </div>
-        </div>
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
-          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
-          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-          return (
-          <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
-            {face?<ProfileAvatar src={face.src} id={face.id} className="h-10 w-10 shrink-0"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
-            <span className="min-w-0 flex-1 text-left">
-              <small className="block text-[10px] font-black text-pink-300">好きなモンスター（フレンドに見えます）</small>
-              <b className="block truncate text-[13px] font-black text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b>
-            </span>
-            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
-          </button>);
-        })()}
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(
-          <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💬</span>
-            <span className="min-w-0 flex-1 text-left">
-              <small className="block text-[10px] font-black text-pink-300">ひとこと（フレンドに見えます）</small>
-              <b className="block truncate text-[13px] font-black text-white">{profileMessage||'まだ書いていません'}</b>
-            </span>
-            <Edit3 size={15} className="shrink-0 text-pink-400"/>
+        </details>
+        {/* ④ よく使う入口。フレンド(申請が届くと赤いバッジ)とアイテムを同じ大きさで並べる。フレンドは公開前は出さない */}
+        <div className={`mb-4 grid gap-2 ${(onboarded&&!onboardingPreview&&friendsEnabled)?'grid-cols-2':'grid-cols-1'}`} data-profile-links>
+          {onboarded&&!onboardingPreview&&friendsEnabled&&(
+            <button type="button" data-profile-friends data-friend-requests={Number(friendRequestCount)||0} onClick={onOpenFriends} className={`relative flex min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount)>0?'border-rose-400/80 bg-rose-950/50':'border-pink-400/40 bg-pink-950/40'}`}>
+              <Users size={18} className="text-pink-300 shrink-0"/>
+              <span className="flex-1 min-w-0 text-left">
+                <b className="block text-[13px] font-black text-pink-100">フレンド</b>
+                <small className={`block truncate text-[10px] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`申請が${Number(friendRequestCount)}件届いています`:'申請・プロフィール'}</small>
+              </span>
+              {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
+            </button>
+          )}
+          <button onClick={onOpenItems} className="flex min-h-[64px] items-center gap-2 rounded-2xl border border-teal-500/40 bg-teal-950/40 px-3 py-2.5 active:scale-[.98]">
+            <Package size={18} className="shrink-0 text-teal-400"/>
+            <span className="flex-1 min-w-0 text-left"><b className="block text-[13px] font-black text-teal-200">アイテム</b><small className="block truncate text-[10px] text-teal-300">{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個</small></span>
           </button>
-        )}
+        </div>
+        {onboarded&&!onboardingPreview&&<div className="mb-2"><ScreenSectionLabel>助手</ScreenSectionLabel></div>}
         {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
             助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
         {onboarded&&!onboardingPreview&&(()=>{
@@ -268,9 +277,9 @@ function ProfileScreen({
             <ScreenSectionLabel>バトル記録</ScreenSectionLabel>
             <ScreenLead>モードをタップすると詳しい記録を確認できます</ScreenLead>
             {!selected?(
-              <div className="grid grid-cols-1 gap-2">
-                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className="w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
-                  <span className="flex items-center gap-2"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block text-[13px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span><ChevronRight size={16} className="shrink-0 text-slate-400"/></span>
+              <div className="grid grid-cols-2 gap-2">
+                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className={`w-full min-h-[72px] rounded-2xl border bg-slate-900/70 px-2.5 py-2.5 text-left active:scale-[.98] ${species?'col-span-2':''}`} style={{borderColor:`${mode.color}66`}}>
+                  <span className="flex items-center gap-1.5"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block whitespace-nowrap text-[12px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span></span>
                 </button>})}
               </div>
             ):(
