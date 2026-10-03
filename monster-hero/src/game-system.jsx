@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f7324574e8c756ca
+// generated-sha256: 4b02d707132552b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 23:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 23:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21159,7 +21159,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Snegurochka: Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
-    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%戻り、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツがさらに上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 2,
     present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
@@ -21169,7 +21169,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Undine: Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
-    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%戻る。',
+    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
     // ★2026-10-03 ユーザー指示で 3回 → 5回
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
@@ -21192,7 +21192,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pandora: Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
-    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりにライフを最大の30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%戻る。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%戻る。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
     effect: 'pandoraBox',
@@ -24940,7 +24940,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
                     const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
                     if(!exDef)return null;
                     const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
-                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
+                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.usesPerWave?'各WAVE ':'ラン'}${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
                   })()}
                 </div>)}
               </div>
@@ -31319,25 +31319,25 @@ function BattleScreen({
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
                   <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
-                    ?<PandoraDualThunder image={(pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>)}/>
+                    ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
-                        image={(pandoraArt||slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
+                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
                         charging={attackAnim.charge===true}
                         empowered={attackAnim.charge===false}/>
                     :isAnimating&&attackAnim.motion==='waterBurst'
                       ?<WaterBurstMotion
-                        image={(pandoraArt||slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
+                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :isAnimating&&attackAnim.motion==='miaSongNotes'
                       ?<MiaSongNotesMotion
-                        image={(pandoraArt||slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
+                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :themedAttack
-                      ?<ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge===false} image={(pandoraArt||slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}/>
-                      :(pandoraArt||slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      ?<ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge===false} image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}/>
+                      :slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
                   {/* ガードのバリア(2026-09-29 ユーザー選択「案A バリア」)。構えているあいだは idle、敵の攻撃を受けたら

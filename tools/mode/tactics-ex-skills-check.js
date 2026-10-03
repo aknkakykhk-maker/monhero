@@ -116,6 +116,12 @@ check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.ta
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
 check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX_SKILLS)
   .every(id => !!ex.tacticsExDurationText(ex.tacticsExDefOf(id))));
+// 説明文の言い回し(2026-10-03 ユーザー指摘「ガッツの上限のなん%が戻るって回復のことだよね？ 文言おかしくない？」)。
+// ライフ・ガッツが増えるのは「回復する」と書く(「戻る」は別の意味に読める)。「最大ライフ」の語順も崩さない
+{
+  const bad = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id)).filter(d => /上限の[0-9]+%戻|ライフを最大の/.test(d.desc || '')).map(d => d.name);
+  check('どの説明文も「上限の◯%戻る」「ライフを最大の」を使わない(回復と書く)', bad.length === 0, bad.join(','));
+}
 const ids = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id).id);
 check('EXのidが重ならない', new Set(ids).size === ids.length, ids.join(','));
 // STEP1 では効果の中身がまだ無い。入れたら TACTICS_EX_IMPLEMENTED_EFFECTS へ足すので、ここも合わせて変わる
@@ -741,7 +747,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && (screen.match(/getAttackPredictedDmg\([^;]*,(halved|pendingHalved|isSecondOrLater)\)/g) || []).length === 4
     && /pandoraCardNo\[entry\.slotIdx\]===2\?tacticsExPandoraBoxOf\(/.test(app) && /tacticsRateHeal\(boxNow\.angelRate,boxNow\.angelRate,false\)/.test(app)
     && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'devil'\}\)/.test(app) && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'angel'\}\)/.test(app) && /setTacticsPandoraForms\(\{\}\);/.test(app)
-    && /data-pandora-pair/.test(screen) && /pandoraArt\|\|<DyedMonsterImage/.test(screen) && /tacticsPandoraForms=\{tacticsPandoraForms\}/.test(app)
+    && /data-pandora-pair/.test(screen) && /\{pandoraArt\?pandoraArt:s\?\.imgUrl\?/.test(screen) && /tacticsPandoraForms=\{tacticsPandoraForms\}/.test(app)
     && /const boxStep=tacticsExPandoraTurnEnd\(tacticsExStateRef\.current,tacticsUnitsRef\.current,tacticsExLiveRef\.current\.now\);\s*if\(boxStep\) await settleTacticsExPandoraBox\(boxStep\);/.test(app)
     && /if\(timeStopSlot==null&&isTacticsMode\(runMode\)&&tacticsExEnabled\)\{\s*const boxStep/.test(app));
 }
