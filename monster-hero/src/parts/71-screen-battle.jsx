@@ -1942,10 +1942,17 @@ function BattleScreen({
               const pandoraForm = s && s.id === 'Pandora' ? (tacticsPandoraForms && tacticsPandoraForms[i]) : null;
               const pandoraArt = (s && s.id === 'Pandora' && slotExInfo && slotExInfo.active && slotExInfo.def && slotExInfo.def.effect === 'pandoraBox') ? (() => {
                 const ph = tacticsNewLayout ? 58 : 64, pw = Math.round(ph * 2 / 3);
+                // 攻撃モーションは、いま攻撃している側(1枚目=悪魔・2枚目以降=天使)の1体にだけ掛ける。もう片方はその場に残る
                 const fig = (url, form, left) => {
-                  const front = pandoraForm === form, dim = !!pandoraForm && !front;
-                  return <img data-pandora-form={form} src={url} alt="" draggable={false} className="object-contain drop-shadow-md"
-                    style={{ position: 'absolute', bottom: 0, left, width: pw, height: ph, zIndex: front ? 3 : (form === 'angel' ? 2 : 1), transform: front ? 'scale(1.12)' : 'none', filter: dim ? 'brightness(.5)' : 'none', transition: 'transform .15s, filter .15s' }}/>;
+                  const front = pandoraForm === form, dim = !!pandoraForm && !front, attacker = front && isAnimating;
+                  const imgNode = <img data-pandora-form={form} src={url} alt="" draggable={false} className="object-contain drop-shadow-md"
+                    style={{ display: 'block', width: pw, height: ph, transform: front && !attacker ? 'scale(1.12)' : 'none', filter: dim ? 'brightness(.5)' : 'none', transition: 'transform .15s, filter .15s' }}/>;
+                  const moving = !attacker ? imgNode
+                    : (s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder') ? <PandoraDualThunder image={imgNode}/>
+                    : themedAttack ? <ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge === false} image={imgNode}/>
+                    : imgNode;
+                  const moveStyle = attacker ? { zIndex: 9999, animation: themedAttack ? undefined : attackMotionAnimation(attackAnim), ...attackAimStyle } : null;
+                  return <span data-pandora-fig={form} style={{ position: 'absolute', bottom: 0, left, width: pw, height: ph, zIndex: front ? 3 : (form === 'angel' ? 2 : 1), ...moveStyle }}>{moving}</span>;
                 };
                 return <span data-pandora-pair className="relative inline-block" style={{ width: ph, height: ph }}>{fig(PANDORA_DEVIL_IMG, 'devil', 0)}{fig(PANDORA_ANGEL_IMG, 'angel', ph - pw)}</span>;
               })() : null;
@@ -2177,7 +2184,7 @@ function BattleScreen({
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
-                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{})}}>{s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
+                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={(pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>)}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
