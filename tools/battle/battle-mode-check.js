@@ -114,16 +114,17 @@ check('WAVEごとの内訳の合計がリザルトの合計と一致する',
   sumOfWaves(3.0, 'quick', m.waveXpGainInMode) === m.xpForWavesClearedInMode(10, 3.0, 'quick')
     && sumOfWaves(1.5, 'quick', m.waveGoldGainInMode) === m.goldForWavesClearedInMode(10, 1.5, 'quick'));
 // スコアの式はモードで変えない。
-// ★新モード(tactics)だけ、式で出した値の桁を 1/1000 へ縮める(2026-09-19 ユーザーが選択)。
-//   式そのものは同じなので、既存モードのスコアは変わらない
+// ★桁は全モード共通で 1/1000 へ縮める(タクティクスは2026-09-19、それ以外は2026-10-03 に
+//   ユーザーが選択)。式そのものは同じで、縮めたあとの値だけが変わる。
+//   モードで分岐しない(分岐するとモードによって桁が食い違い、ランキングが比べられなくなる)
 const scoreBlock = grab(source, 'const rawRoundScore', 'setScore(s=>s+finalRoundScore);');
 check('スコアの式はモードで変えない',
   scoreBlock.length > 0
     && scoreBlock.includes('const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;')
     && !/QUICK_REWARD_MULT/.test(scoreBlock));
-check('モードを見るのは新モードの桁縮めだけ',
-  (scoreBlock.match(/runMode/g) || []).length === 1
-    && scoreBlock.includes('isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore)'),
+check('桁縮めはモードを見ずに全モードへ同じ割り方で掛ける',
+  (scoreBlock.match(/runMode/g) || []).length === 0
+    && scoreBlock.includes('const finalRoundScore=shrinkBattleScore(rawRoundScore);'),
   `runMode を見る回数 ${(scoreBlock.match(/runMode/g) || []).length}`);
 // 経験値はスコアと倍率が違うモード(極限チャレンジ)があるので xpMult を通す
 check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使う',

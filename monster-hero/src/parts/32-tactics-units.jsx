@@ -407,6 +407,89 @@ const shrinkTacticsScore = (score) => {
   return Math.max(1, Math.floor(raw / TACTICS_SCORE_DIVISOR));
 };
 
+// ===== タクティクス以外のスコアも同じ 1/1000 へ(2026-10-03・ユーザー指示) =====
+//
+// チャレンジ・プロ・クイック・極限・種族チャレンジのスコアも桁が大きくなりすぎたため、
+// タクティクスと同じ縮め方(式はそのまま、最後に 1/1000)にした。経験値・ダイヤの倍率は
+// score 倍率を直接変えずに済ませている(xpMultiplier が scoreMultiplier を使っているため)。
+// ★すでに端末に残っている自己ベストなども、一度だけ同じ割り方で縮める(下の移行)。
+//   タクティクス(mh_tactics_* / Tactics* / TacticsSpecies-*)はもう縮んでいるので触らない。
+const shrinkBattleScore = shrinkTacticsScore;
+const BATTLE_SCORE_SHRINK_MIGRATED_KEY = 'mh_battle_score_shrink_migrated_v1';
+// 保存されている1つの数値(自己ベストなど)を縮める。0・数でないものはそのまま返す
+const shrinkSavedBattleScore = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || !(n > 0)) return value;
+  return shrinkBattleScore(n);
+};
+// 端末に積んだランキング送信待ち(mh_rank_<難易度>)のうち、縮める対象の難易度か。
+// タクティクス(Tactics*)とモンヒロビート(Rhythm-*)は別の尺度なので触らない
+const isBattleScoreShrinkRankingKey = (difficulty) => {
+  const d = String(difficulty || '');
+  return d.length > 0 && !/^(tactics|rhythm)/i.test(d);
+};
+// 種族チャレンジの進行 { species: { <血統>: { records: { <難易度>: { bestScore, ... } } } } }。
+// 記録の形は変えず、bestScore だけを縮める
+const shrinkSpeciesProgressScores = (progress) => {
+  if (!progress || typeof progress !== 'object' || Array.isArray(progress)) return progress;
+  if (!progress.species || typeof progress.species !== 'object' || Array.isArray(progress.species)) return progress;
+  const species = {};
+  Object.keys(progress.species).forEach(speciesId => {
+    const entry = progress.species[speciesId];
+    if (!entry || typeof entry !== 'object' || !entry.records || typeof entry.records !== 'object' || Array.isArray(entry.records)) {
+      species[speciesId] = entry; return;
+    }
+    const records = {};
+    Object.keys(entry.records).forEach(difficultyId => {
+      const record = entry.records[difficultyId];
+      records[difficultyId] = record && typeof record === 'object' && !Array.isArray(record) && 'bestScore' in record
+        ? { ...record, bestScore: shrinkSavedBattleScore(record.bestScore) } : record;
+    });
+    species[speciesId] = { ...entry, records };
+  });
+  return { ...progress, species };
+};
+// ランキング送信待ちの一覧の score を縮める(送り直すときに大きい数のまま届かないように)
+const shrinkLocalRankingEntries = (list) => (Array.isArray(list) ? list : []).map(entry =>
+  entry && typeof entry === 'object' && 'score' in entry ? { ...entry, score: shrinkSavedBattleScore(entry.score) } : entry);
+// 端末に保存したスコアを、一度だけ縮める。縮めた値と完了フラグは1つの取引で書くので、
+// 途中で終了しても「半分だけ縮んだ」状態は残らない(二重に縮むと元に戻せない)。
+// 引数は storeGet / storeSet / storeList / 取引関数。取り違えないよう呼び出し側から渡す。
+// 戻り値は { done, changed }。失敗しても例外は投げず、次の起動でやり直す。
+const migrateBattleScoresToShrunk = async (get, set, list, transaction) => {
+  try {
+    if (await get(BATTLE_SCORE_SHRINK_MIGRATED_KEY, false, false)) return { done: false, changed: 0 };
+    const entries = [];
+    const plan = (key, before, next) => { if (JSON.stringify(before) !== JSON.stringify(next)) entries.push({ key, before, next }); };
+    // 自己ベスト(チャレンジ mh_hs_ / クイック mh_quick_hs_ / プロ mh_pro_hs_ / 極限 mh_extreme_hs_)
+    for (const prefix of ['mh_hs_', 'mh_quick_hs_', 'mh_pro_hs_', 'mh_extreme_hs_']) {
+      for (const key of (await list(prefix, false)) || []) {
+        const before = await get(key, 0, false);
+        plan(key, before, shrinkSavedBattleScore(before));
+      }
+    }
+    // 種族チャレンジの自己ベスト(タクティクス側のキーは触らない)
+    const speciesBefore = await get(SPECIES_CHALLENGE_PROGRESS_KEY, null, false);
+    if (speciesBefore) plan(SPECIES_CHALLENGE_PROGRESS_KEY, speciesBefore, shrinkSpeciesProgressScores(speciesBefore));
+    // ランキング送信待ち
+    for (const key of (await list('mh_rank_', false)) || []) {
+      if (!isBattleScoreShrinkRankingKey(key.slice('mh_rank_'.length))) continue;
+      const before = await get(key, [], false);
+      if (Array.isArray(before)) plan(key, before, shrinkLocalRankingEntries(before));
+    }
+    // ランキングの控え(表示用)。古い大きい数字を一瞬でも出さないよう捨てる(開けば取り直す)
+    const cacheBefore = await get('mh_ranking_cache', null, false);
+    if (cacheBefore) plan('mh_ranking_cache', cacheBefore, null);
+    const changed = entries.length;
+    entries.push({ key: BATTLE_SCORE_SHRINK_MIGRATED_KEY, before: false, next: true });
+    const ok = await transaction(entries, get, set);
+    return { done: ok, changed: ok ? changed : 0 };
+  } catch (error) {
+    console.error('[score-shrink] migration failed:', error && error.message ? error.message : error);
+    return { done: false, changed: 0 };
+  }
+};
+
 // ===== 供モンが合流すると敵も強くなる =====
 //
 // ★「何人増えたか」ではなく「連れてきた子の総合力」で決める(2026-09-19 ユーザーが選択)。
