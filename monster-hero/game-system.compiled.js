@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04cbeea4d185f9e3
+// source-sha256: 99a51827797fdb9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 22:41";
+const BUILD_DATE = "2026-10-03 22:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33464,7 +33464,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
     desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりにライフを最大の30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%戻る。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%戻る。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
-    maxUses: 1,
+    maxUses: 3,
     unlimited: false,
     withCards: true,
     duration: 'turns',
@@ -51286,7 +51286,7 @@ function BattleScreen({
         className: "object-contain drop-shadow-md"
       })
     }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? React.createElement(ArkHolyRainMotion, {
-      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
+      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51300,7 +51300,7 @@ function BattleScreen({
       charging: attackAnim.charge === true,
       empowered: attackAnim.charge === false
     }) : isAnimating && attackAnim.motion === 'waterBurst' ? React.createElement(WaterBurstMotion, {
-      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
+      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51314,7 +51314,7 @@ function BattleScreen({
       lunge: attackAnim.charge === false,
       charging: attackAnim.charge === true
     }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? React.createElement(MiaSongNotesMotion, {
-      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
+      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51330,7 +51330,7 @@ function BattleScreen({
     }) : themedAttack ? React.createElement(ThemedAttackMotion, {
       kind: themedAttack,
       lunge: attackAnim.charge === false,
-      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
+      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51341,7 +51341,7 @@ function BattleScreen({
         },
         className: "z-10 object-contain drop-shadow-md"
       }))
-    }) : slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
+    }) : pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
       baseId: s.id,
       src: s.imgUrl,
       alt: s.name,

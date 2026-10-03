@@ -706,7 +706,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 // ---------- ⑰ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮) ----------
 {
   const pd = ex.tacticsExDefOf('Pandora');
-  check('パンドラ「パンドラの箱」: 1回・併用できる・3ターン・ライフ30%・自分+1枚・悪魔側 与ダメ×1.5と連撃30%×1・天使側10%・最後の希望ガッツ50%', !!pd && pd.name === 'パンドラの箱' && pd.maxUses === 1 && pd.withCards
+  check('パンドラ「パンドラの箱」: ラン3回・併用できる・3ターン・ライフ30%・自分+1枚・悪魔側 与ダメ×1.5と連撃30%×1・天使側10%・最後の希望ガッツ50%', !!pd && pd.name === 'パンドラの箱' && pd.maxUses === 3 && pd.withCards
     && pd.duration === 'turns' && pd.turns === 3 && pd.effect === 'pandoraBox' && ex.isTacticsExEffectImplemented(pd) && !!pd.pandoraBox
     && pd.pandoraBox.costRate === 0.3 && pd.pandoraBox.selfCardBonus === 1 && pd.pandoraBox.devilDmg === 1.5 && pd.pandoraBox.devilCombo.count === 1 && pd.pandoraBox.devilCombo.rate === 0.3
     && pd.pandoraBox.angelRate === 0.1 && pd.pandoraBox.hopeGutsRate === 0.5, JSON.stringify(pd));

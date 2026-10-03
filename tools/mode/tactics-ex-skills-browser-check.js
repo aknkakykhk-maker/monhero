@@ -577,7 +577,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     const pdBefore = await partyOf(pdSlot);
     await tapSlot(pdSlot);
     p = await panel();
-    check('「パンドラの箱」: 1/1・カードと併用できる・3ターン', !!p && p.name === 'パンドラの箱' && /1 \/ 1/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
+    check('「パンドラの箱」: 3/3・カードと併用できる・3ターン', !!p && p.name === 'パンドラの箱' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(900);
     const pdLimit1 = await limitOf();
