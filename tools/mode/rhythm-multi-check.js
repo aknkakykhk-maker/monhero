@@ -194,6 +194,21 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   leaveAll([h, a]);
 }
 
+// ===== ⑤-2 おまかせはほかの人の選曲を優先する(2026-10-03・ユーザー指示) =====
+// 部屋主がおまかせで、もう1人が曲を選んだら、何度やっても選ばれた曲になる(おまかせは抽選の箱に入らない)
+{
+  let hits = 0;
+  for (let i = 0; i < 8; i += 1) {
+    const [h, a] = ['h', 'a'].map(makeClient);
+    joinRoom([h, a], `OM${i}Z`);
+    h.M.confirmMembers(); clock.advance(2500);
+    h.M.pick('*'); a.M.pick('songC'); clock.advance(3000);
+    if (all([h, a], 'ready') && view(h).room.songId === 'songC' && view(a).room.songId === 'songC') hits += 1;
+    leaveAll([h, a]);
+  }
+  check('おまかせの人がいても、ほかの人が選んだ曲から抽選する', hits === 8, `${hits}/8`);
+}
+
 // ===== ⑥ ホストの「待たずに進む」 =====
 {
   const [h, a, b] = ['h', 'a', 'b'].map(makeClient);

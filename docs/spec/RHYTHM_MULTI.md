@@ -21,7 +21,7 @@
 | 段(`room.phase`) | 制限時間 | 時間切れのとき |
 | --- | --- | --- |
 | `matching` | なし(公開ルームは2人以上で15秒出入りなし→確定) | — |
-| `select` | 30秒 | 選んでいない人は「おまかせ」 |
+| `select` | 30秒(+3秒、届くのを待つ猶予) | 選んでいない人は「おまかせ」。おまかせは抽選の箱に入らない(ほかの人の選曲が優先) |
 | `ready` | シャッフル2.4秒+30秒(+3秒の猶予) | 準備していない人は、いまの難易度で準備完了 |
 | `playing` | 曲の長さ+準備(3秒+3.2秒)+10秒 | 結果が届かない人はリタイア扱い |
 | `result` | 45秒 | 次の選曲へ |
@@ -71,14 +71,16 @@
 - **周回報酬とビートP**は、ひとりで遊ぶときと同じ計算に**人数ボーナス**を掛ける: 参加者1人ごとに+50%(`rhythmMultiRewardScale`: 2人1.5倍〜5人3倍)。
 - 自己ベスト・全国ランキングにも、ひとりで遊ぶときと同じく入る(`from==='multi'` も送信対象)。
 - マスモン設定のマスモンは出る。アシストモード・ラッキーラッシュは使えない。
-- 演出は「軽さ優先」(`RHYTHM_LOOK_PRESETS` の LIGHT)を重ねる。設定 `multiLightLook`(既定 ON)で切り替え。保存してある見た目は書き換えない。
+- 演出は `multiLook` の段階を重ねる: LIGHT(既定)/STANDARD/VIVID は `RHYTHM_LOOK_PRESETS` の値、OWN は自分の設定のまま(2026-10-03)。難易度えらびの画面で選ぶ。保存してある見た目は書き換えない。
+  `multiLook` が無い古い保存値は `multiLightLook` から決める(ON→LIGHT・OFF→OWN)。選び直すと `multiLightLook` も合わせて書く(古い版で開いても近い見え方になる)。
 
 ## 4. 保存するもの
 
 | キー | 中身 |
 | --- | --- |
 | `mh_rhythm_multi_penalty_v1` | 公開ルームのライブを途中でやめたときの入室待ち `{until}`(3分) |
-| `mh_rhythm_settings_v1` の `multiLightLook` | 対戦の演出を軽くするか(既定 `true`) |
+| `mh_rhythm_settings_v1` の `multiLightLook` | 対戦の演出を軽くするか(既定 `true`。`multiLook` が無い保存値の読み替えに使う) |
+| `mh_rhythm_settings_v1` の `multiLook` | 対戦の演出の段階 `LIGHT`/`STANDARD`/`VIVID`/`OWN`(既定 `LIGHT`) |
 
 部屋・チャット・結果は保存しない。
 

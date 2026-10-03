@@ -82,6 +82,10 @@ const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playi
 // 「おまかせ」を選んだしるし(曲の id とぶつからない文字)
 const RHYTHM_MULTI_OMAKASE = '*';
 // 対戦のライブで重ねる見た目(オプションの見た目のおまかせ「軽さ優先」と同じ中身。保存してある設定は書き換えない)
+// 対戦の演出の段階の選択肢(難易度えらびの画面に並べる)。id は RHYTHM_MULTI_LOOK_LEVELS と同じ
+const RHYTHM_MULTI_LOOK_CHOICES = Object.freeze([
+  { id: 'LIGHT', label: '軽め' }, { id: 'STANDARD', label: '標準' }, { id: 'VIVID', label: '華やか' }, { id: 'OWN', label: 'いつもの' },
+]);
 const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({ ...((RHYTHM_LOOK_PRESETS.find((preset) => preset.id === 'LIGHT') || {}).values || {}) });
 // ライブの報酬(周回・ビートP)の人数ボーナス。参加した人が1人ふえるごとに+50%(2人1.5倍〜5人3倍。2026-10-02・ユーザー指示)
 const RHYTHM_MULTI_REWARD_STEP = 0.5;
@@ -364,7 +368,11 @@ const RHYTHM_MULTI = (() => {
     } else if (r.phase === 'select') {
       if (members.length < 2) { setRoom({ phase: 'matching', deadline: 0 }); return; }
       const allPicked = members.every((m) => m.pickRound === r.round && m.pick);
-      if (allPicked || now >= r.deadline) doDraw(members);
+      // ★締め切りのあと少しだけ(準備の猶予と同じ3秒)待つ。締め切り直前に選んだ人の選曲がまだ届いていないと、
+      //   その曲が抽選から漏れ、部屋主がおまかせなら全曲から引いてしまう(2026-10-03・ユーザー指示
+      //   「おまかせはみんなでの曲抽選のときは他の人のが優先されるように」)。時間切れの人は自分でおまかせを送ってくるので、
+      //   ふつうはそろった時点(allPicked)で引く
+      if (allPicked || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doDraw(members);
     } else if (r.phase === 'ready') {
       const allReady = members.every((m) => m.readyRound === r.round);
       if (allReady || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doStart(members);
@@ -921,7 +929,7 @@ function RhythmModeSelectStage() {
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLightLook = true, onToggleLightLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
@@ -1571,8 +1579,15 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               <div className="min-w-0 flex-1">
                 <small className="block text-[9px] font-black text-slate-400">ライブする曲</small>
                 <b data-rhythm-multi-drawn className="block truncate text-sm font-black leading-tight">{rhythmSongFullName(drawnSong)}</b>
-                {onToggleLightLook && <button data-rhythm-multi-light-look type="button" aria-pressed={multiLightLook} onClick={onToggleLightLook}
-                  className={`mt-0.5 rounded-full border px-1.5 text-[9px] font-black ${multiLightLook ? 'border-emerald-300/60 text-emerald-200' : 'border-white/20 text-slate-400'}`}>演出を軽く(対戦) {multiLightLook ? 'ON' : 'OFF'}</button>}
+                {/* 演出の段階(2026-10-03・ユーザー指示「完全に軽くじゃないやつも切り替えられるように」)。
+                    軽め・標準・華やか は見た目のおまかせを対戦のあいだだけ重ねる。いつもの は自分の設定のまま */}
+                {onChangeMultiLook && <div data-rhythm-multi-light-look role="group" aria-label="対戦の演出" className="mt-1 flex items-center gap-0.5">
+                  <small className="mr-0.5 shrink-0 text-[9px] font-black text-slate-400">演出</small>
+                  {RHYTHM_MULTI_LOOK_CHOICES.map((c) => (
+                    <button key={c.id} type="button" data-rhythm-multi-look={c.id} aria-pressed={multiLook === c.id} onClick={() => onChangeMultiLook(c.id)}
+                      className={`min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
+                  ))}
+                </div>}
               </div>
             </div>
           )}
@@ -1627,7 +1642,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         footer={() => (
           <div className="grid grid-cols-2 gap-1.5">
             <button data-rhythm-multi-omakase type="button" aria-pressed={myPick === RHYTHM_MULTI_OMAKASE} onClick={() => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE)}
-              className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}</button>
+              className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small className="block text-[8px] font-bold opacity-80">ほかの人の曲が優先</small></button>
             <button data-rhythm-multi-leave type="button" onClick={leaveRoom}
               className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300">ルームを出る</button>
           </div>

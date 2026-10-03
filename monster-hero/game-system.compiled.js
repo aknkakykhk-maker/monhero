@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6aee6ef1fee97d19
+// source-sha256: e26a2899c56f6ea7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 15:09";
+const BUILD_DATE = "2026-10-03 15:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5065,6 +5065,7 @@ const rhythmNextEffectCap = (settings, level) => {
   }
   return null;
 };
+const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'OWN']);
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset => Object.entries(preset.values).every(([key, value]) => settings && settings[key] === value)) || {
   id: ''
 }).id;
@@ -5243,6 +5244,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   effectAmount: 'LIGHT',
   lightweightMode: false,
   multiLightLook: true,
+  multiLook: 'LIGHT',
   noteSeType: 'STANDARD',
   noteSeJudgeVary: true,
   noteSeFlickVolume: 100,
@@ -5322,6 +5324,7 @@ const normalizeRhythmSettings = value => {
     lightweightMode: bool('lightweightMode'),
     livePartnerVisible: bool('livePartnerVisible'),
     multiLightLook: bool('multiLightLook'),
+    multiLook: RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook) ? source.multiLook : source.multiLightLook === false ? 'OWN' : 'LIGHT',
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
@@ -53372,6 +53375,19 @@ const RHYTHM_MULTI_MODE_LABELS = Object.freeze({
 });
 const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playing', 'result']);
 const RHYTHM_MULTI_OMAKASE = '*';
+const RHYTHM_MULTI_LOOK_CHOICES = Object.freeze([{
+  id: 'LIGHT',
+  label: '軽め'
+}, {
+  id: 'STANDARD',
+  label: '標準'
+}, {
+  id: 'VIVID',
+  label: '華やか'
+}, {
+  id: 'OWN',
+  label: 'いつもの'
+}]);
 const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({
   ...((RHYTHM_LOOK_PRESETS.find(preset => preset.id === 'LIGHT') || {}).values || {})
 });
@@ -53790,7 +53806,7 @@ const RHYTHM_MULTI = (() => {
         return;
       }
       const allPicked = members.every(m => m.pickRound === r.round && m.pick);
-      if (allPicked || now >= r.deadline) doDraw(members);
+      if (allPicked || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doDraw(members);
     } else if (r.phase === 'ready') {
       const allReady = members.every(m => m.readyRound === r.round);
       if (allReady || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doStart(members);
@@ -54687,8 +54703,8 @@ function RhythmMultiScreen({
   quickRunInfo = null,
   onPreviewSong = null,
   onUserGesture = null,
-  multiLightLook = true,
-  onToggleLightLook = null,
+  multiLook = 'LIGHT',
+  onChangeMultiLook = null,
   onBack,
   onStartPlay,
   modeSelect = null,
@@ -55765,13 +55781,21 @@ function RhythmMultiScreen({
     }, "ライブする曲"), React.createElement("b", {
       "data-rhythm-multi-drawn": true,
       className: "block truncate text-sm font-black leading-tight"
-    }, rhythmSongFullName(drawnSong)), onToggleLightLook && React.createElement("button", {
+    }, rhythmSongFullName(drawnSong)), onChangeMultiLook && React.createElement("div", {
       "data-rhythm-multi-light-look": true,
+      role: "group",
+      "aria-label": "対戦の演出",
+      className: "mt-1 flex items-center gap-0.5"
+    }, React.createElement("small", {
+      className: "mr-0.5 shrink-0 text-[9px] font-black text-slate-400"
+    }, "演出"), RHYTHM_MULTI_LOOK_CHOICES.map(c => React.createElement("button", {
+      key: c.id,
       type: "button",
-      "aria-pressed": multiLightLook,
-      onClick: onToggleLightLook,
-      className: `mt-0.5 rounded-full border px-1.5 text-[9px] font-black ${multiLightLook ? 'border-emerald-300/60 text-emerald-200' : 'border-white/20 text-slate-400'}`
-    }, "演出を軽く(対戦) ", multiLightLook ? 'ON' : 'OFF'))), React.createElement("div", {
+      "data-rhythm-multi-look": c.id,
+      "aria-pressed": multiLook === c.id,
+      onClick: () => onChangeMultiLook(c.id),
+      className: `min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`
+    }, c.label))))), React.createElement("div", {
       className: "grid grid-cols-5 gap-1.5 landscape:flex-1"
     }, drawnDiffs.map(d => {
       const open = drawnOpenDiffs.some(x => x.id === d.id);
@@ -55857,8 +55881,10 @@ function RhythmMultiScreen({
       type: "button",
       "aria-pressed": myPick === RHYTHM_MULTI_OMAKASE,
       onClick: () => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE),
-      className: `flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
-    }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''), React.createElement("button", {
+      className: `flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+    }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : '', React.createElement("small", {
+      className: "block text-[8px] font-bold opacity-80"
+    }, "ほかの人の曲が優先")), React.createElement("button", {
       "data-rhythm-multi-leave": true,
       type: "button",
       onClick: leaveRoom,
@@ -58458,10 +58484,15 @@ function MonsterHeroGame() {
     songId: null
   });
   const [rhythmMultiPreviewSongId, setRhythmMultiPreviewSongId] = useState('');
-  const rhythmMultiPlaySettings = useMemo(() => ({
-    ...rhythmSettings,
-    ...RHYTHM_MULTI_LIGHT_LOOK
-  }), [rhythmSettings]);
+  const rhythmMultiPlaySettings = useMemo(() => {
+    const id = rhythmSettings.multiLook || 'LIGHT';
+    if (id === 'OWN') return rhythmSettings;
+    const preset = RHYTHM_LOOK_PRESETS.find(item => item.id === id) || RHYTHM_LOOK_PRESETS.find(item => item.id === 'LIGHT');
+    return {
+      ...rhythmSettings,
+      ...(preset ? preset.values : {})
+    };
+  }, [rhythmSettings]);
   const rhythmPreviewSongId = gameState === 'RHYTHM_MULTI' && rhythmMultiPreviewSongId ? rhythmMultiPreviewSongId : rhythmSelectedSongId;
   const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmPreviewSongId) || null;
   const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
@@ -76688,7 +76719,7 @@ function MonsterHeroGame() {
     })(), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
-      settings: rhythmPlay.from === 'multi' && rhythmSettings.multiLightLook !== false ? rhythmMultiPlaySettings : rhythmSettings,
+      settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
       multi: rhythmPlay.from === 'multi',
       multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiRewardScale(rhythmPlay.multiCount) : 1,
@@ -76794,11 +76825,12 @@ function MonsterHeroGame() {
       onUserGesture: () => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
       },
-      multiLightLook: rhythmSettings.multiLightLook !== false,
-      onToggleLightLook: async () => {
+      multiLook: rhythmSettings.multiLook || 'LIGHT',
+      onChangeMultiLook: async id => {
         const saved = await saveRhythmSettings({
           ...rhythmSettings,
-          multiLightLook: rhythmSettings.multiLightLook === false
+          multiLook: id,
+          multiLightLook: id !== 'OWN'
         });
         setRhythmSettings(saved);
       },

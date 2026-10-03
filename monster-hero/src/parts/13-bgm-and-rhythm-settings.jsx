@@ -381,6 +381,8 @@ const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Mat
 const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き・盛り上がりの光','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル']);
 // 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
 const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
+// 対戦の演出の段階。見た目のおまかせの id と、自分の設定のまま(OWN)
+const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'OWN']);
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
@@ -512,6 +514,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
+  // 対戦の演出の段階(2026-10-03・ユーザー指示「マルチでの演出量を完全に軽くじゃないやつも切り替えられるようにして」)。
+  // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
+  // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
+  multiLook:'LIGHT',
   // タップ音の種類(2026-09-26)。新しい項目なので、保存値に無い人は「標準」(これまでの音)で補う
   noteSeType:'STANDARD',
   // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
@@ -614,6 +620,7 @@ const normalizeRhythmSettings = value => {
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'),
+    multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
