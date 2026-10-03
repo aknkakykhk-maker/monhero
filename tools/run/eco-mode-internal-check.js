@@ -82,7 +82,8 @@ const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','// 特
 if(!repeatToggle.includes('const next=!!enabled&&isQuickMode(runMode)'))fail('∞周回のクイック限定が維持されていません');
 if(!repeatToggle.includes("if(!next)setEcoModeSafe('off')"))fail('AUTO∞ OFF時に省エネをOFFにしていません');
 for(const token of ['flex-1 min-w-0 flex flex-wrap','min-h-[44px] min-w-[84px] shrink-0'])if(!battle.includes(token))fail('ACTION見切れ防止レイアウトが維持されていません');
-if(/['"]mh_[^'"]*eco/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
+// 「eco」は単語として見る。mh_rhythm_multi_record の「…reco…」まで拾っていた(2026-10)
+if(/['"]mh_(?:[^'"]*_)?eco(?:_[^'"]*)?['"]/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
 const controlsFrom=battle.indexOf('<span className={`flex-1 min-w-0 flex flex-wrap');
 const controlsTo=battle.indexOf('{/* 使うカードが決まっている番は',controlsFrom);
 if(controlsFrom<0||controlsTo<0)fail('省エネ切替UIの範囲を取得できません');

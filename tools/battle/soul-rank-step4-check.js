@@ -110,7 +110,7 @@ check('AUTOも同じslot-aware getCardGutsを使う',
 check('連携は参加中所持者の有無だけで+1',
   app.includes("const soulCoordinationCardBonus = soulCoordinationSlots.length>0 ? 1 : 0"));
 check('既存カード上限+連携を最終5枚でクランプ',
-  app.includes('const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus)'));
+  app.includes('const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus'));
 check('連携追加枠は連携所持者のslotだけ増やす',
   app.includes('const coordinationHolder=Number.isInteger(slotIdx)&&soulCoordinationSlots.includes(slotIdx)')
   && app.includes('base+(coordinationHolder?soulCoordinationCardBonus:0)'));

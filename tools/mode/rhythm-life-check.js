@@ -125,7 +125,7 @@ check('一度立ったclearは、あとで失敗しても下がらない',
   game.includes('clear:previous.clear||'));
 check('保存キーは増やしていない',
   game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';")
-  &&!game.includes('mh_rhythm_clear')&&!game.includes('mh_rhythm_failed'));
+  &&!/mh_rhythm_clear(?!_total_v1)/.test(game)&&!game.includes('mh_rhythm_failed')); // クリア回数の合計 mh_rhythm_clear_total_v1 は別の記録(後から足された)なので許す。クリア／失敗そのものの専用キーは増やさない
 check('曲えらびのひし形に「失敗」の段がある',
   game.includes("if(!record.clear)return 'FAILED';")
   &&game.includes("FAILED:    Object.freeze({label:'失敗（ライフ0）'"));

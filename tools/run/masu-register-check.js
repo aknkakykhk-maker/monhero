@@ -58,7 +58,7 @@ for (const [label, scene] of SCREENS) {
   check(`${label}画面を見つけられる`, at >= 0);
   if (at < 0) continue;
   // その画面の中央スクロール領域(直前のflex-1 min-h-0)を取り出す
-  const areaAt = source.lastIndexOf('className="flex-1 min-h-0 w-full flex flex-col items-center', at);
+  const areaAt = source.lastIndexOf('flex-1 min-h-0 w-full flex flex-col items-center', at); // クラスの先頭に relative z-10 が付いた(2026-10)ので、引用符では始めない
   const area = source.slice(areaAt, at);
   check(`${label}: 中央のスクロール領域で justify-center を使っていない(上側が届かなくなるため)`,
     !/flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto/.test(area),

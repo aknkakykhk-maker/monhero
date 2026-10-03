@@ -211,6 +211,9 @@ const OVERLAP_FN = () => {
     };
 
     await closeDetail();
+    // バトル開始の演出(BATTLE START / WAVE 1 / VS 敵名)が出ているあいだは文字が重なって当然なので、終わるまで待つ
+    await page.waitForFunction(() => !document.body.innerText.includes('BATTLE START'), { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(500);
     await measure('カードを置く前');
     check('カードを1枚置けた', await playCard('攻撃'));
     await measure('攻撃カードを1枚置いたあと');

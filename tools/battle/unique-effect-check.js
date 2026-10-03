@@ -227,7 +227,9 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
   }
   // ライフ・ガッツの上限は、ゲージがその場で新しい上限を描くので即時でなければならない
   check('同じターンから効く: ライフ・ガッツの上限アップ',
-    /const liveEffectiveMaxHp = \(\) => resolveEffectiveMaxStat\(maxHpRef\.current, livePermaBuff\('muaHpPct'\)\);/.test(source)
+    // 仲間の最大ライフの割合(applyAllyMaxHpRate)が外側へ掛かる形になった(2026-10)。上限アップが即時に使われる点は同じ
+    (/const liveEffectiveMaxHp = \(\) => resolveEffectiveMaxStat\(maxHpRef\.current, livePermaBuff\('muaHpPct'\)\);/.test(source)
+      || /const liveEffectiveMaxHp = \(\) => applyAllyMaxHpRate\(resolveEffectiveMaxStat\(maxHpRef\.current, livePermaBuff\('muaHpPct'\)\), allyMaxHpRateRef\.current\);/.test(source))
     && /const liveEffectiveMaxGuts = \(\) => resolveEffectiveMaxStat\(maxGutsRef\.current, livePermaBuff\('muaGutsPct'\)\);/.test(source));
 
   // 次のターンから効くもの(持ち回っていない＝そのターンの計算には乗らない)。
