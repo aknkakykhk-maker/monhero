@@ -216,6 +216,7 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 
 - 倍率は `modeBreederXpMult` / `modeBondXpMult` / `modeGoldMult` の3つに分かれている。プロは「全部3倍」ではなく、**絆だけ3倍・ブリーダーは1.5倍・ダイヤは等倍**。
 - スコア倍率はモードで変えない（難易度の設定どおり）。
+- **スコアの桁は全モード共通で 1/1000 に縮める**（2026-10-03・ユーザー指示。タクティクスは2026-09-19から）。式と倍率は変えず、WAVEごとの最後に `shrinkBattleScore`（切り捨て・1点以上は最低1点）を通す。経験値・ダイヤの倍率には効かない（`scoreMultiplier` を変えると経験値も動くため、倍率の表には触れていない）。端末の自己ベストの移行は `migrateBattleScoresToShrunk`、ランキング側の数字は `docs/sql/rankings/SCORE_SHRINK_*.sql`（手順は同じ場所の `SCORE_SHRINK_IPHONE_STEPS.md`）。
 - ランキングは Supabase の列を増やさず、`difficulty` へ入れる値で分ける。プロは `rankingDifficultyForMode` が先頭へ `Pro` を付けた `ProHard` のような値を使う。既存のチャレンジの記録（`Hard` など）は書き換えも変換もしない。表示用に素の難易度へ戻すのは `rankingDifficultyBase`。
 - BGMはプロ専用曲を作らず、チャレンジと同じ `battle` / `dullahan` を流す。BGM設定の項目も増やさないので既存の `mh_bgm_arrangement` はそのまま読める。
 - 助手（みゅあ）は `battlePro` の場面と `pro` の親密度行動を持つ。既存の `challenge` / `quick` の獲得量・1日上限・合計上限（30）は変えていない。

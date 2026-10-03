@@ -5503,6 +5503,9 @@ function MonsterHeroGame() {
       const savedTeachingRoster = normalizeTeachingRoster(
         await storeGet('mh_teaching_roster', null, false), savedUnlockedTeachings);
       setTeachingRosterIds(savedTeachingRoster);
+      // スコアを 1/1000 へ縮めた(2026-10-03)ので、端末に残った自己ベストなども一度だけ同じ割り方で縮める。
+      // 自己ベストを読み込む前に済ませる(縮める前の値を画面へ入れない)
+      await migrateBattleScoresToShrunk(storeGet, storeSet, storeList, saveStoredValuesOrRollback);
       const scores = {}; const attempts = {}; const clears = {}; const reachedWaves = {};
       // クイックモードはチャレンジと別のキーへ保存しているので、まとめて読み込む
       const quickScores = {}; const quickClears = {}; const quickWaves = {};
@@ -10425,8 +10428,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
     const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;
-    // 新モードだけスコアを1/1000へ縮める。式そのものは変えない(2026-09-19 ユーザーが選択)
-    const finalRoundScore=isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore):Math.floor(rawRoundScore);
+    // スコアは全モード 1/1000 へ縮める。式そのものは変えない(タクティクスは2026-09-19、
+    // それ以外は2026-10-03 にユーザーが選択)。経験値・ダイヤの倍率には効かない
+    const finalRoundScore=shrinkBattleScore(rawRoundScore);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
@@ -14419,7 +14423,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
     const ranked = modeHasRanking(mode);
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
-    const settingOf = (id) => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+    const settingOf = (id) => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
     // タブは3種類。種族を選んでいなければ「全種族」(種族をまたいだ全国ランキング)にする
     //   allSpecies … その難易度の全国ランキング(種族を問わない)
@@ -15403,7 +15407,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   「通常/極限、種族とかはどっちのモードにもあるように」)。難易度の中身は
           //   種族チャレンジとまったく同じ引き方で、極限は極限チャレンジの設定をそのまま使う
           const tacticsDiff=isTacticsMode(battleMode);
-          const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
+          const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
           const allDifficulties=species||tacticsDiff
             ?(species?SPECIES_CHALLENGE_DIFFICULTY_IDS:TACTICS_DIFFICULTY_IDS).map(id=>[id,speciesSetting(id)])
             :Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
@@ -16539,7 +16543,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesId=speciesEntries.some(l=>l.id===speciesChallengeDebugSpeciesId)?speciesChallengeDebugSpeciesId:(speciesEntries[0]?.id||'');
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesId);
           const saveProgress=async(next)=>{const normalized=normalizeSpeciesChallengeProgress(next);setSpeciesChallengeProgress(normalized,BATTLE_MODE_SPECIES_CHALLENGE);await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false);};
-          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const resetSpecies=async()=>{if(!window.confirm(`${speciesChallengeSpeciesName(speciesId)}の種族チャレンジ進行だけをリセットしますか？`))return;const next=normalizeSpeciesChallengeProgress(speciesChallengeProgress);delete next.species[speciesId];await saveProgress(next);};
           const challengeEntries=buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[]);
           const heroCandidates=challengeEntries.filter(entry=>monsterLineageOf(entry.baseId).main.id===speciesId);
@@ -16598,7 +16602,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const challengeEntries=buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[]);
           const entryById=id=>challengeEntries.find(entry=>entry.entryId===id);
           const entryLabel=id=>{const entry=entryById(id);return entry?`${entry.name}（${entry.type==='masu'?'マスモン':'ベースモン'}／${entry.lineageName}）`:id;};
-          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,selection.speciesId);
           const entryLineageId=entry=>monsterLineageOf(entry.baseId).main.id;
           const heroCandidates=challengeEntries.filter(entry=>entryLineageId(entry)===selection.speciesId);

@@ -86,6 +86,9 @@ const localRows = (extra = {}) => ([
         localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
         localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
         localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
+        // スコアを 1/1000 にする一度きりの移行(2026-10-03)は済んだ端末として始める。
+        // この検査が見るのは「int4 を超える大きい点数もそのまま送り直せること」で、移行は別の検査が見る
+        localStorage.setItem('mh_battle_score_shrink_migrated_v1', JSON.stringify(true));
         localStorage.setItem('mh_rank_Legend', JSON.stringify(rows));
       }, localRows());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });

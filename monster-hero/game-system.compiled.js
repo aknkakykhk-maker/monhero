@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c4a4bb85c36510c
+// source-sha256: 226ded8a7c647f5d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 02:06";
+const BUILD_DATE = "2026-10-04 02:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12389,7 +12389,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
     })
   })
 }]);
-const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
+const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM']);
 const TACTICS_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
 const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
@@ -12694,7 +12694,10 @@ const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   NIGHTMARE: 20,
   CHAOS: 25,
   ULTIMATE: 30,
-  INFINITY: 40
+  INFINITY: 40,
+  GOD: 60,
+  RAGNAROK: 80,
+  HELHEIM: 100
 });
 const speciesChallengeFirstClearReward = difficultyId => Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS, difficultyId) ? SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS[difficultyId] : 0;
 const speciesChallengeRewardPendingKey = (speciesId, difficultyId) => `${speciesId}:${difficultyId}`;
@@ -14562,7 +14565,7 @@ const helpDataRows = id => {
       });
     case 'speciesChallengeRewards':
       return SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
-        const setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(s => s.id === id);
+        const setting = DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(s => s.id === id);
         return [setting?.label || id, `初回クリアで 超越の実 ×${speciesChallengeFirstClearReward(id)}`];
       });
     case 'levelUpPointMultipliers':
@@ -32896,6 +32899,97 @@ const shrinkTacticsScore = score => {
   if (!(raw > 0)) return 0;
   return Math.max(1, Math.floor(raw / TACTICS_SCORE_DIVISOR));
 };
+const shrinkBattleScore = shrinkTacticsScore;
+const BATTLE_SCORE_SHRINK_MIGRATED_KEY = 'mh_battle_score_shrink_migrated_v1';
+const shrinkSavedBattleScore = value => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || !(n > 0)) return value;
+  return shrinkBattleScore(n);
+};
+const isBattleScoreShrinkRankingKey = difficulty => {
+  const d = String(difficulty || '');
+  return d.length > 0 && !/^(tactics|rhythm)/i.test(d);
+};
+const shrinkSpeciesProgressScores = progress => {
+  if (!progress || typeof progress !== 'object' || Array.isArray(progress)) return progress;
+  if (!progress.species || typeof progress.species !== 'object' || Array.isArray(progress.species)) return progress;
+  const species = {};
+  Object.keys(progress.species).forEach(speciesId => {
+    const entry = progress.species[speciesId];
+    if (!entry || typeof entry !== 'object' || !entry.records || typeof entry.records !== 'object' || Array.isArray(entry.records)) {
+      species[speciesId] = entry;
+      return;
+    }
+    const records = {};
+    Object.keys(entry.records).forEach(difficultyId => {
+      const record = entry.records[difficultyId];
+      records[difficultyId] = record && typeof record === 'object' && !Array.isArray(record) && 'bestScore' in record ? {
+        ...record,
+        bestScore: shrinkSavedBattleScore(record.bestScore)
+      } : record;
+    });
+    species[speciesId] = {
+      ...entry,
+      records
+    };
+  });
+  return {
+    ...progress,
+    species
+  };
+};
+const shrinkLocalRankingEntries = list => (Array.isArray(list) ? list : []).map(entry => entry && typeof entry === 'object' && 'score' in entry ? {
+  ...entry,
+  score: shrinkSavedBattleScore(entry.score)
+} : entry);
+const migrateBattleScoresToShrunk = async (get, set, list, transaction) => {
+  try {
+    if (await get(BATTLE_SCORE_SHRINK_MIGRATED_KEY, false, false)) return {
+      done: false,
+      changed: 0
+    };
+    const entries = [];
+    const plan = (key, before, next) => {
+      if (JSON.stringify(before) !== JSON.stringify(next)) entries.push({
+        key,
+        before,
+        next
+      });
+    };
+    for (const prefix of ['mh_hs_', 'mh_quick_hs_', 'mh_pro_hs_', 'mh_extreme_hs_']) {
+      for (const key of (await list(prefix, false)) || []) {
+        const before = await get(key, 0, false);
+        plan(key, before, shrinkSavedBattleScore(before));
+      }
+    }
+    const speciesBefore = await get(SPECIES_CHALLENGE_PROGRESS_KEY, null, false);
+    if (speciesBefore) plan(SPECIES_CHALLENGE_PROGRESS_KEY, speciesBefore, shrinkSpeciesProgressScores(speciesBefore));
+    for (const key of (await list('mh_rank_', false)) || []) {
+      if (!isBattleScoreShrinkRankingKey(key.slice('mh_rank_'.length))) continue;
+      const before = await get(key, [], false);
+      if (Array.isArray(before)) plan(key, before, shrinkLocalRankingEntries(before));
+    }
+    const cacheBefore = await get('mh_ranking_cache', null, false);
+    if (cacheBefore) plan('mh_ranking_cache', cacheBefore, null);
+    const changed = entries.length;
+    entries.push({
+      key: BATTLE_SCORE_SHRINK_MIGRATED_KEY,
+      before: false,
+      next: true
+    });
+    const ok = await transaction(entries, get, set);
+    return {
+      done: ok,
+      changed: ok ? changed : 0
+    };
+  } catch (error) {
+    console.error('[score-shrink] migration failed:', error && error.message ? error.message : error);
+    return {
+      done: false,
+      changed: 0
+    };
+  }
+};
 const TACTICS_ENEMY_POWER_EXPONENT = 0.7;
 const TACTICS_ENEMY_POWER_MAX = 6;
 const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_ENEMY_POWER_EXPONENT) => {
@@ -38244,7 +38338,7 @@ function ProfileScreen({
     const progressOf = mode => typeof speciesChallengeProgressOf === 'function' ? speciesChallengeProgressOf(mode) : speciesChallengeProgress;
     const speciesSummaryOf = mode => speciesChallengeProfileSummary(progressOf(mode));
     const speciesSummary = speciesSummaryOf(BATTLE_MODE_SPECIES_CHALLENGE);
-    const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+    const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
     const tacticsHsOf = modeId => typeof tacticsRecordsOf === 'function' ? tacticsRecordsOf(modeId).hs : {};
     const scoreMapFor = mode => isTacticsMode(mode.id) ? tacticsHsOf(mode.id) : isProMode(mode.id) ? proHighScores : highScores;
     const representativeFor = mode => {
@@ -62717,6 +62811,7 @@ function MonsterHeroGame() {
       setUnlockedTeachingIds(savedUnlockedTeachings);
       const savedTeachingRoster = normalizeTeachingRoster(await storeGet('mh_teaching_roster', null, false), savedUnlockedTeachings);
       setTeachingRosterIds(savedTeachingRoster);
+      await migrateBattleScoresToShrunk(storeGet, storeSet, storeList, saveStoredValuesOrRollback);
       const scores = {};
       const attempts = {};
       const clears = {};
@@ -68856,7 +68951,7 @@ function MonsterHeroGame() {
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
     const rawRoundScore = (totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier;
-    const finalRoundScore = isTacticsMode(runMode) ? shrinkTacticsScore(rawRoundScore) : Math.floor(rawRoundScore);
+    const finalRoundScore = shrinkBattleScore(rawRoundScore);
     setScore(s => s + finalRoundScore);
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
     const normalGainedDistBonus = finalDistDamage.map(d => d * DIST_BONUS_PER_DAMAGE);
@@ -74421,7 +74516,7 @@ function MonsterHeroGame() {
   const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
     const ranked = modeHasRanking(mode);
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
-    const settingOf = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+    const settingOf = id => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
     const speciesFilter = lineages.some(l => l.id === speciesRankFilter) ? speciesRankFilter : speciesRankFilter === SPECIES_RANK_TAB_SELF_BEST ? SPECIES_RANK_TAB_SELF_BEST : SPECIES_RANK_TAB_ALL;
     const lineageIcon = lineage => {
@@ -76875,7 +76970,7 @@ function MonsterHeroGame() {
       const species = isSpeciesChallengeMode(battleMode),
         quick = isQuickMode(battleMode);
       const tacticsDiff = isTacticsMode(battleMode);
-      const speciesSetting = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+      const speciesSetting = id => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
       const allDifficulties = species || tacticsDiff ? (species ? SPECIES_CHALLENGE_DIFFICULTY_IDS : TACTICS_DIFFICULTY_IDS).map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
       const difficultyGroups = splitDifficultyEntries(allDifficulties);
       const challengeExtremeTab = !species && !quick && !tacticsDiff && !isProMode(battleMode);
@@ -79716,7 +79811,7 @@ function MonsterHeroGame() {
         setSpeciesChallengeProgress(normalized, BATTLE_MODE_SPECIES_CHALLENGE);
         await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, normalized, false);
       };
-      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const resetSpecies = async () => {
         if (!window.confirm(`${speciesChallengeSpeciesName(speciesId)}の種族チャレンジ進行だけをリセットしますか？`)) return;
         const next = normalizeSpeciesChallengeProgress(speciesChallengeProgress);
@@ -80060,7 +80155,7 @@ function MonsterHeroGame() {
         const entry = entryById(id);
         return entry ? `${entry.name}（${entry.type === 'masu' ? 'マスモン' : 'ベースモン'}／${entry.lineageName}）` : id;
       };
-      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, selection.speciesId);
       const entryLineageId = entry => monsterLineageOf(entry.baseId).main.id;
       const heroCandidates = challengeEntries.filter(entry => entryLineageId(entry) === selection.speciesId);

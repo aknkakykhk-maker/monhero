@@ -601,7 +601,7 @@ const helpDataRows = (id) => {
     // 種族チャレンジの難易度と、その難易度をはじめてクリアしたときにもらえる超越の実の数
     case 'speciesChallengeRewards':
       return SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
-        const setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(s => s.id === id);
+        const setting = DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(s => s.id === id);
         return [setting?.label || id, `初回クリアで 超越の実 ×${speciesChallengeFirstClearReward(id)}`];
       });
     // 限界突破の回数で変わる「レベルアップ1回ぶんの強化ポイント」。

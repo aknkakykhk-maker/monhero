@@ -121,7 +121,7 @@ const UNCLAIMED_DIFFICULTY = 'Easy';
     // 仕込んだ種族(ピクシー種)を選ぶ
     const pixieRow = page.locator(`[data-species-row="${SPECIES_ID}"]`);
     check('仕込んだ種族の行がある', await pixieRow.count() === 1);
-    check('種族の行にクリア数が反映されている', /クリア\s*1\s*\/\s*14/.test(await pixieRow.textContent()),
+    check('種族の行にクリア数が反映されている', /クリア\s*1\s*\/\s*17/.test(await pixieRow.textContent()),
       (await pixieRow.textContent()).replace(/\s+/g, ' ').slice(0, 60));
     await pixieRow.dispatchEvent('click');
     await page.waitForTimeout(200);

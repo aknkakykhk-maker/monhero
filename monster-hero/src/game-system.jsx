@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5238eeb52d662f59
+// generated-sha256: 2d87f0cbe8e6d1c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 02:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 02:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8729,9 +8729,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
 ]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
+// 極限チャレンジと同じく、いちばん奥(GOD・RAGNAROK・HELHEIM)まで遊べる(2026-10-03 ユーザー指示)。
+// ★GOD以降の定義(ALL_EXTREME_DIFFICULTIES)はこの下で作られるので、ここではIDだけを並べる。
+//   極限の難易度を足したら、ここへも足すこと。ずれていないかは tools/mode/helheim-rules-check.js が見る
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
+  'GOD','RAGNAROK','HELHEIM',
 ]);
 // タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
 // 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
@@ -8994,6 +8998,7 @@ const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds
 const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
   Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
+  GOD:60, RAGNAROK:80, HELHEIM:100,
 });
 const speciesChallengeFirstClearReward = (difficultyId) =>
   Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS,difficultyId)
@@ -10296,7 +10301,7 @@ const helpDataRows = (id) => {
     // 種族チャレンジの難易度と、その難易度をはじめてクリアしたときにもらえる超越の実の数
     case 'speciesChallengeRewards':
       return SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
-        const setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(s => s.id === id);
+        const setting = DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(s => s.id === id);
         return [setting?.label || id, `初回クリアで 超越の実 ×${speciesChallengeFirstClearReward(id)}`];
       });
     // 限界突破の回数で変わる「レベルアップ1回ぶんの強化ポイント」。
@@ -20508,6 +20513,89 @@ const shrinkTacticsScore = (score) => {
   return Math.max(1, Math.floor(raw / TACTICS_SCORE_DIVISOR));
 };
 
+// ===== タクティクス以外のスコアも同じ 1/1000 へ(2026-10-03・ユーザー指示) =====
+//
+// チャレンジ・プロ・クイック・極限・種族チャレンジのスコアも桁が大きくなりすぎたため、
+// タクティクスと同じ縮め方(式はそのまま、最後に 1/1000)にした。経験値・ダイヤの倍率は
+// score 倍率を直接変えずに済ませている(xpMultiplier が scoreMultiplier を使っているため)。
+// ★すでに端末に残っている自己ベストなども、一度だけ同じ割り方で縮める(下の移行)。
+//   タクティクス(mh_tactics_* / Tactics* / TacticsSpecies-*)はもう縮んでいるので触らない。
+const shrinkBattleScore = shrinkTacticsScore;
+const BATTLE_SCORE_SHRINK_MIGRATED_KEY = 'mh_battle_score_shrink_migrated_v1';
+// 保存されている1つの数値(自己ベストなど)を縮める。0・数でないものはそのまま返す
+const shrinkSavedBattleScore = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || !(n > 0)) return value;
+  return shrinkBattleScore(n);
+};
+// 端末に積んだランキング送信待ち(mh_rank_<難易度>)のうち、縮める対象の難易度か。
+// タクティクス(Tactics*)とモンヒロビート(Rhythm-*)は別の尺度なので触らない
+const isBattleScoreShrinkRankingKey = (difficulty) => {
+  const d = String(difficulty || '');
+  return d.length > 0 && !/^(tactics|rhythm)/i.test(d);
+};
+// 種族チャレンジの進行 { species: { <血統>: { records: { <難易度>: { bestScore, ... } } } } }。
+// 記録の形は変えず、bestScore だけを縮める
+const shrinkSpeciesProgressScores = (progress) => {
+  if (!progress || typeof progress !== 'object' || Array.isArray(progress)) return progress;
+  if (!progress.species || typeof progress.species !== 'object' || Array.isArray(progress.species)) return progress;
+  const species = {};
+  Object.keys(progress.species).forEach(speciesId => {
+    const entry = progress.species[speciesId];
+    if (!entry || typeof entry !== 'object' || !entry.records || typeof entry.records !== 'object' || Array.isArray(entry.records)) {
+      species[speciesId] = entry; return;
+    }
+    const records = {};
+    Object.keys(entry.records).forEach(difficultyId => {
+      const record = entry.records[difficultyId];
+      records[difficultyId] = record && typeof record === 'object' && !Array.isArray(record) && 'bestScore' in record
+        ? { ...record, bestScore: shrinkSavedBattleScore(record.bestScore) } : record;
+    });
+    species[speciesId] = { ...entry, records };
+  });
+  return { ...progress, species };
+};
+// ランキング送信待ちの一覧の score を縮める(送り直すときに大きい数のまま届かないように)
+const shrinkLocalRankingEntries = (list) => (Array.isArray(list) ? list : []).map(entry =>
+  entry && typeof entry === 'object' && 'score' in entry ? { ...entry, score: shrinkSavedBattleScore(entry.score) } : entry);
+// 端末に保存したスコアを、一度だけ縮める。縮めた値と完了フラグは1つの取引で書くので、
+// 途中で終了しても「半分だけ縮んだ」状態は残らない(二重に縮むと元に戻せない)。
+// 引数は storeGet / storeSet / storeList / 取引関数。取り違えないよう呼び出し側から渡す。
+// 戻り値は { done, changed }。失敗しても例外は投げず、次の起動でやり直す。
+const migrateBattleScoresToShrunk = async (get, set, list, transaction) => {
+  try {
+    if (await get(BATTLE_SCORE_SHRINK_MIGRATED_KEY, false, false)) return { done: false, changed: 0 };
+    const entries = [];
+    const plan = (key, before, next) => { if (JSON.stringify(before) !== JSON.stringify(next)) entries.push({ key, before, next }); };
+    // 自己ベスト(チャレンジ mh_hs_ / クイック mh_quick_hs_ / プロ mh_pro_hs_ / 極限 mh_extreme_hs_)
+    for (const prefix of ['mh_hs_', 'mh_quick_hs_', 'mh_pro_hs_', 'mh_extreme_hs_']) {
+      for (const key of (await list(prefix, false)) || []) {
+        const before = await get(key, 0, false);
+        plan(key, before, shrinkSavedBattleScore(before));
+      }
+    }
+    // 種族チャレンジの自己ベスト(タクティクス側のキーは触らない)
+    const speciesBefore = await get(SPECIES_CHALLENGE_PROGRESS_KEY, null, false);
+    if (speciesBefore) plan(SPECIES_CHALLENGE_PROGRESS_KEY, speciesBefore, shrinkSpeciesProgressScores(speciesBefore));
+    // ランキング送信待ち
+    for (const key of (await list('mh_rank_', false)) || []) {
+      if (!isBattleScoreShrinkRankingKey(key.slice('mh_rank_'.length))) continue;
+      const before = await get(key, [], false);
+      if (Array.isArray(before)) plan(key, before, shrinkLocalRankingEntries(before));
+    }
+    // ランキングの控え(表示用)。古い大きい数字を一瞬でも出さないよう捨てる(開けば取り直す)
+    const cacheBefore = await get('mh_ranking_cache', null, false);
+    if (cacheBefore) plan('mh_ranking_cache', cacheBefore, null);
+    const changed = entries.length;
+    entries.push({ key: BATTLE_SCORE_SHRINK_MIGRATED_KEY, before: false, next: true });
+    const ok = await transaction(entries, get, set);
+    return { done: ok, changed: ok ? changed : 0 };
+  } catch (error) {
+    console.error('[score-shrink] migration failed:', error && error.message ? error.message : error);
+    return { done: false, changed: 0 };
+  }
+};
+
 // ===== 供モンが合流すると敵も強くなる =====
 //
 // ★「何人増えたか」ではなく「連れてきた子の総合力」で決める(2026-09-19 ユーザーが選択)。
@@ -24446,7 +24534,7 @@ function ProfileScreen({
             ? speciesChallengeProgressOf(mode) : speciesChallengeProgress);
           const speciesSummaryOf=(mode)=>speciesChallengeProfileSummary(progressOf(mode));
           const speciesSummary=speciesSummaryOf(BATTLE_MODE_SPECIES_CHALLENGE);
-          const speciesDifficultyLabel=(id)=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const speciesDifficultyLabel=(id)=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const tacticsHsOf=(modeId)=>(typeof tacticsRecordsOf==='function'?tacticsRecordsOf(modeId).hs:{});
           const scoreMapFor=(mode)=>isTacticsMode(mode.id)?tacticsHsOf(mode.id):isProMode(mode.id)?proHighScores:highScores;
           const representativeFor=(mode)=>{
@@ -40832,6 +40920,9 @@ function MonsterHeroGame() {
       const savedTeachingRoster = normalizeTeachingRoster(
         await storeGet('mh_teaching_roster', null, false), savedUnlockedTeachings);
       setTeachingRosterIds(savedTeachingRoster);
+      // スコアを 1/1000 へ縮めた(2026-10-03)ので、端末に残った自己ベストなども一度だけ同じ割り方で縮める。
+      // 自己ベストを読み込む前に済ませる(縮める前の値を画面へ入れない)
+      await migrateBattleScoresToShrunk(storeGet, storeSet, storeList, saveStoredValuesOrRollback);
       const scores = {}; const attempts = {}; const clears = {}; const reachedWaves = {};
       // クイックモードはチャレンジと別のキーへ保存しているので、まとめて読み込む
       const quickScores = {}; const quickClears = {}; const quickWaves = {};
@@ -45754,8 +45845,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
     const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;
-    // 新モードだけスコアを1/1000へ縮める。式そのものは変えない(2026-09-19 ユーザーが選択)
-    const finalRoundScore=isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore):Math.floor(rawRoundScore);
+    // スコアは全モード 1/1000 へ縮める。式そのものは変えない(タクティクスは2026-09-19、
+    // それ以外は2026-10-03 にユーザーが選択)。経験値・ダイヤの倍率には効かない
+    const finalRoundScore=shrinkBattleScore(rawRoundScore);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
@@ -49748,7 +49840,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
     const ranked = modeHasRanking(mode);
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
-    const settingOf = (id) => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+    const settingOf = (id) => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
     // タブは3種類。種族を選んでいなければ「全種族」(種族をまたいだ全国ランキング)にする
     //   allSpecies … その難易度の全国ランキング(種族を問わない)
@@ -50732,7 +50824,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   「通常/極限、種族とかはどっちのモードにもあるように」)。難易度の中身は
           //   種族チャレンジとまったく同じ引き方で、極限は極限チャレンジの設定をそのまま使う
           const tacticsDiff=isTacticsMode(battleMode);
-          const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
+          const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
           const allDifficulties=species||tacticsDiff
             ?(species?SPECIES_CHALLENGE_DIFFICULTY_IDS:TACTICS_DIFFICULTY_IDS).map(id=>[id,speciesSetting(id)])
             :Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
@@ -51868,7 +51960,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesId=speciesEntries.some(l=>l.id===speciesChallengeDebugSpeciesId)?speciesChallengeDebugSpeciesId:(speciesEntries[0]?.id||'');
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesId);
           const saveProgress=async(next)=>{const normalized=normalizeSpeciesChallengeProgress(next);setSpeciesChallengeProgress(normalized,BATTLE_MODE_SPECIES_CHALLENGE);await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false);};
-          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const resetSpecies=async()=>{if(!window.confirm(`${speciesChallengeSpeciesName(speciesId)}の種族チャレンジ進行だけをリセットしますか？`))return;const next=normalizeSpeciesChallengeProgress(speciesChallengeProgress);delete next.species[speciesId];await saveProgress(next);};
           const challengeEntries=buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[]);
           const heroCandidates=challengeEntries.filter(entry=>monsterLineageOf(entry.baseId).main.id===speciesId);
@@ -51927,7 +52019,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const challengeEntries=buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[]);
           const entryById=id=>challengeEntries.find(entry=>entry.entryId===id);
           const entryLabel=id=>{const entry=entryById(id);return entry?`${entry.name}（${entry.type==='masu'?'マスモン':'ベースモン'}／${entry.lineageName}）`:id;};
-          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,selection.speciesId);
           const entryLineageId=entry=>monsterLineageOf(entry.baseId).main.id;
           const heroCandidates=challengeEntries.filter(entry=>entryLineageId(entry)===selection.speciesId);
