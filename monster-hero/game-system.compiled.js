@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 226ded8a7c647f5d
+// source-sha256: 85a512b79ae2bec3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 02:21";
+const BUILD_DATE = "2026-10-04 02:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14231,7 +14231,30 @@ const MarketItemDetail = ({
     accent: meta.text
   }), item.desc && React.createElement("p", {
     className: "mt-3 text-[12px] text-slate-200 leading-relaxed"
-  }, item.desc), item.frameCondition && React.createElement("div", {
+  }, item.desc), item.groupMembers && React.createElement("div", {
+    "data-market-icon-group": item.groupId,
+    className: "mt-3 rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-slate-200 leading-snug"
+  }, item.groupMembers.length, "種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。"), React.createElement("p", {
+    className: "mt-1 text-[10px] text-slate-400 leading-snug"
+  }, "プロフィールで、1つずつ選んで設定できます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-4 gap-2"
+  }, item.groupMembers.map(m => React.createElement("div", {
+    key: m.id,
+    "data-market-icon-group-member": m.id,
+    className: "flex flex-col items-center gap-1"
+  }, React.createElement(BreederIcon, {
+    src: m.icon,
+    id: m.id,
+    alt: m.name,
+    className: "w-full aspect-square"
+  }), React.createElement("span", {
+    className: "w-full text-center text-[8px] font-black leading-tight text-slate-300",
+    style: {
+      overflowWrap: 'anywhere'
+    }
+  }, String(m.name || '').replace(/のアイコン$/, '')))))), item.frameCondition && React.createElement("div", {
     "data-market-frame-condition": true,
     className: "mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black"
   }, React.createElement("div", {
@@ -14240,7 +14263,7 @@ const MarketItemDetail = ({
     className: "mt-1 text-[11px] text-slate-300"
   }, item.frameCondition.met ? '条件を達成しています！' : item.frameCondition.progress)), React.createElement("div", {
     className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
-  }, React.createElement("div", {
+  }, !item.groupMembers && React.createElement("div", {
     className: "flex justify-between"
   }, React.createElement("span", {
     className: "text-slate-400"
@@ -37335,7 +37358,29 @@ function BreederMarketScreen({
   }];
   const activeDiamondTab = diamondTabs.some(tab => tab.key === marketTab) ? marketTab : 'disc';
   const diamondItems = marketItems.filter(item => item.type === activeDiamondTab && item.type !== 'icon' && item.currency !== 'psyche');
-  const breederPointItems = marketItems.filter(item => item.type === 'icon');
+  const breederPointItems = (() => {
+    const icons = marketItems.filter(item => item.type === 'icon');
+    const seen = new Set();
+    const out = [];
+    icons.forEach(item => {
+      const group = breederIconGroupOf(item.id);
+      if (!group) {
+        out.push(item);
+        return;
+      }
+      if (seen.has(group.id)) return;
+      seen.add(group.id);
+      const members = group.memberIds.map(id => icons.find(m => m.id === id)).filter(Boolean);
+      out.push({
+        ...members[0],
+        name: `${group.name}のアイコン`,
+        groupMembers: members,
+        groupId: group.id
+      });
+    });
+    return out;
+  })();
+  const hasDiscIconCards = breederPointItems.some(item => /_disc_icon$/.test(item.id));
   const breederFrameItems = marketItems.filter(item => item.type === 'frame');
   const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
   const SECTION_TABS = {
@@ -37344,10 +37389,10 @@ function BreederMarketScreen({
       tabs: [{
         key: 'face',
         label: 'アイコン'
-      }, {
+      }, ...(hasDiscIconCards ? [{
         key: 'disc',
         label: '円盤石アイコン'
-      }, ...(breederFrameItems.length ? [{
+      }] : []), ...(breederFrameItems.length ? [{
         key: 'frame',
         label: 'フレーム'
       }] : [])]
@@ -37494,7 +37539,10 @@ function BreederMarketScreen({
       }),
       detail: detailMon || detailTeaching,
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
-      middle: item.type === 'frame' && frameCondition ? React.createElement(MarketDetailChip, {
+      middle: item.groupMembers ? React.createElement(MarketDetailChip, {
+        label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : item.type === 'frame' && frameCondition ? React.createElement(MarketDetailChip, {
         label: `${item.name}の買える条件を見る`,
         onClick: () => onOpenItemDetail({
           ...item,
@@ -59149,7 +59197,7 @@ function MonsterHeroGame() {
     speciesProgressOf: speciesChallengeProgressOf,
     tacticsRecordsOf,
     unlockedMonsterIds,
-    ownedMarketIcons,
+    ownedMarketIcons: expandOwnedMarketIcons(ownedMarketIcons),
     ownedProfileFrames
   };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS);
@@ -64194,7 +64242,7 @@ function MonsterHeroGame() {
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
     if (item.type === 'item') return false;
-    return ownedMarketIcons.includes(item.id);
+    return expandOwnedMarketIcons(ownedMarketIcons).includes(item.id);
   };
   const saveMonsterPartySets = nextSets => {
     const normalized = normalizeMonsterPartySets(nextSets);
@@ -64324,7 +64372,8 @@ function MonsterHeroGame() {
         markProfileFrameNoticed(item.id);
       } else if (item.type !== 'item') {
         setOwnedMarketIcons(prev => {
-          const next = [...prev, item.id];
+          const group = breederIconGroupOf(item.id);
+          const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])];
           storeSet('mh_market_icons', next, false);
           return next;
         });
@@ -82388,7 +82437,7 @@ function MonsterHeroGame() {
         setIconChip('all');
       };
       const all = breederIconOptions({
-        ownedMarketIconIds: ownedMarketIcons
+        ownedMarketIconIds: expandOwnedMarketIcons(ownedMarketIcons)
       });
       const label = m => String(m.name || '').replace(/のアイコン$/, '');
       const q = iconQuery.trim().toLowerCase();
