@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f385bc20f090da1e
+// generated-sha256: ee26362b4990d6fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 22:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 22:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12923,11 +12923,13 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
   const from = (pos && pos.from) || { x: vw / 2, y: vh * 0.72 };
   const to = (pos && pos.to) || { x: vw / 2, y: vh * 0.3 };
   // compact(図鑑の舞台の中)は、舞台の中の割合で置く(使う子は下寄り・敵の位置は上)。バトルは測った位置
+  const enemyBarEl = (!compact && typeof document !== 'undefined') ? document.querySelector('[data-enemy-bar]') : null;
+  const bandTop = enemyBarEl ? enemyBarEl.getBoundingClientRect().bottom + 10 : vh * 0.14;
   const style = compact
     ? { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':'50%', '--spm-fy':'72%', '--spm-tx':'50%', '--spm-ty':'24%' }
     : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px`,
-      // 技名の帯は、使う子と敵のあいだに置く(中央固定だと、使う子の動きと重なって見えなくなる)
-      '--spm-by':`${Math.round((from.y + to.y) / 2 - 32)}px` };
+      // 技名の帯は、敵のライフ帯のすぐ下(画面の上のほう)に置く。中央固定だと使う子の動きと重なって見えなくなる
+      '--spm-by':`${Math.round(bandTop)}px` };
   const body = (
     <div data-special-move-fx={phase} data-special-form={form} className={`spm spm--${phase} spm--form-${form}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
       <div className="spm__shade"/>
@@ -30890,7 +30892,7 @@ function BattleScreen({
             (2026-09-24 ユーザー指摘「スネグーラチカも消えてる・ほかもあやしい」)。
             攻撃モーションは枠の外へ飛び出して敵まで届くので、z-10 のままだとライフの帯や強化の札の
             裏を通り、パンドラの分身・突進する子・斬り込む子がその間だけ隠れていた */}
-        <div data-tactics-board-band className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...((tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)))||(attackAnim&&!ecoBattleView)?{zIndex:60}:{})}}>
+        <div data-tactics-board-band className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...((tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)))?{zIndex:60}:(attackAnim&&!ecoBattleView)?{zIndex:6450}:{})}}>
           {/* ★新しい盤面(2×2)では、ここ(盤面のまんなか)へ出すと4枠の境目に乗り、
               どの子のライフも読めなくなっていた(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
               味方への効果は対象の味方や使ったモンスター」)。
