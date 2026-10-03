@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5058534e05070a26
+// source-sha256: 11b5adeda257517c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 23:07";
+const BUILD_DATE = "2026-10-03 23:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50848,13 +50848,37 @@ function BattleScreen({
         pw = Math.round(ph * 2 / 3);
       const fig = (url, form, left) => {
         const front = pandoraForm === form,
-          dim = !!pandoraForm && !front;
-        return React.createElement("img", {
+          dim = !!pandoraForm && !front,
+          attacker = front && isAnimating;
+        const imgNode = React.createElement("img", {
           "data-pandora-form": form,
           src: url,
           alt: "",
           draggable: false,
           className: "object-contain drop-shadow-md",
+          style: {
+            display: 'block',
+            width: pw,
+            height: ph,
+            transform: front && !attacker ? 'scale(1.12)' : 'none',
+            filter: dim ? 'brightness(.5)' : 'none',
+            transition: 'transform .15s, filter .15s'
+          }
+        });
+        const moving = !attacker ? imgNode : s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
+          image: imgNode
+        }) : themedAttack ? React.createElement(ThemedAttackMotion, {
+          kind: themedAttack,
+          lunge: attackAnim.charge === false,
+          image: imgNode
+        }) : imgNode;
+        const moveStyle = attacker ? {
+          zIndex: 9999,
+          animation: themedAttack ? undefined : attackMotionAnimation(attackAnim),
+          ...attackAimStyle
+        } : null;
+        return React.createElement("span", {
+          "data-pandora-fig": form,
           style: {
             position: 'absolute',
             bottom: 0,
@@ -50862,11 +50886,9 @@ function BattleScreen({
             width: pw,
             height: ph,
             zIndex: front ? 3 : form === 'angel' ? 2 : 1,
-            transform: front ? 'scale(1.12)' : 'none',
-            filter: dim ? 'brightness(.5)' : 'none',
-            transition: 'transform .15s, filter .15s'
+            ...moveStyle
           }
-        });
+        }, moving);
       };
       return React.createElement("span", {
         "data-pandora-pair": true,
@@ -51271,13 +51293,16 @@ function BattleScreen({
       className: "relative flex items-center justify-center",
       style: {
         ...(s ? slotArtBox : {}),
-        ...(isAnimating && tacticsNewLayout ? {
+        ...(isAnimating && tacticsNewLayout && !pandoraArt ? {
           zIndex: 9999,
           animation: themedAttack ? undefined : attackMotionAnimation(attackAnim),
           ...attackAimStyle
+        } : {}),
+        ...(pandoraArt && isAnimating ? {
+          zIndex: 9999
         } : {})
       }
-    }, s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
+    }, pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
       image: pandoraArt || React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
