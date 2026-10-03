@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0280695f2e8b2c3b
+// source-sha256: 4372d96d5dfb01fa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 13:03";
+const BUILD_DATE = "2026-10-03 13:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -54853,41 +54853,33 @@ function RhythmMultiScreen({
     }, "⏹", React.createElement("br", null), "終了") : '←'), React.createElement("div", {
       className: "min-w-0 flex-1 leading-none"
     }, React.createElement("small", {
-      className: "block text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
-    }, "MONBEAT"), React.createElement("b", {
-      className: "block truncate text-sm font-black tracking-widest text-cyan-200"
-    }, "SELECT MODE ・ モードえらび"), ms.beatPointText && React.createElement("small", {
+      className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+    }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
+      className: "block truncate text-base font-black tracking-wider text-cyan-200"
+    }, "モードえらび"), ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
       className: "block truncate text-[9px] font-black text-violet-200/90"
     }, ms.beatPointText)), quickRunInfo && React.createElement("small", {
       "data-rhythm-multi-quick-run": true,
-      className: `max-w-[34%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
+      className: `max-w-[42%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
     }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), React.createElement(RhythmOrientationButton, null)), ms.exiting && React.createElement("div", {
       "data-quick-run-exit-overlay": true,
       className: "absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"
     }, React.createElement("b", {
       className: "text-sm font-black text-amber-200"
     }, "周回を終えています…")), React.createElement("div", {
-      className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
+      className: "flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden"
     }, ms.assistant && React.createElement("div", {
       "data-rhythm-mode-assistant": true,
-      className: "relative flex shrink-0 items-end gap-2 px-3 pt-2 landscape:w-[32%] landscape:flex-col landscape:items-center landscape:justify-end landscape:px-2 landscape:pt-0"
+      className: "relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-fuchsia-950/40 to-indigo-950/60 landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none"
     }, React.createElement("img", {
       src: ms.assistant.image,
       alt: "",
       draggable: false,
-      className: "pointer-events-none absolute inset-0 hidden h-full w-full object-cover object-[50%_30%] landscape:block"
-    }), React.createElement("img", {
-      src: ms.assistant.face,
-      alt: "",
-      draggable: false,
-      className: "h-14 w-14 shrink-0 rounded-2xl border-2 object-cover landscape:hidden",
-      style: {
-        borderColor: ms.assistant.accent
-      }
+      className: "pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
     }), React.createElement("p", {
       "data-rhythm-mode-assistant-line": true,
-      className: "min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[12px] font-bold leading-snug text-white landscape:absolute landscape:inset-x-2 landscape:bottom-3 landscape:flex-none",
+      className: "absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]",
       style: {
         borderColor: ms.assistant.accent
       }
@@ -54897,7 +54889,7 @@ function RhythmMultiScreen({
         color: ms.assistant.accent
       }
     }, ms.assistant.name), ms.assistant.text)), React.createElement("div", {
-      className: "min-h-0 flex-1 space-y-2 overflow-y-auto p-3 landscape:py-2"
+      className: "shrink-0 space-y-2.5 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
     }, friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
@@ -54914,50 +54906,48 @@ function RhythmMultiScreen({
       className: `${btn} shrink-0 bg-pink-700 text-xs`,
       onClick: () => joinFromInvite(invite)
     }, "参加する")))), React.createElement("div", {
-      className: ms.multi ? 'grid gap-2 landscape:grid-cols-2' : ''
+      className: `grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`
     }, React.createElement("button", {
       "data-rhythm-mode-solo": true,
       type: "button",
       onClick: ms.onSolo,
-      className: "flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-r from-amber-300 to-yellow-400 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]"
+      className: "flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-br from-amber-300 to-yellow-400 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl"
+      className: "text-2xl leading-none"
     }, "🎵"), React.createElement("span", {
-      className: "min-w-0 flex-1"
+      className: "min-w-0"
     }, React.createElement("b", {
-      className: "block text-lg font-black leading-tight"
+      className: "block text-[17px] font-black leading-tight"
     }, "ソロライブ"), React.createElement("small", {
-      className: "block text-[11px] font-black text-slate-800/80"
-    }, "ひとりで好きな曲を演奏する"))), ms.multi && React.createElement("button", {
+      className: "block text-[10px] font-black leading-tight text-slate-800/80"
+    }, "ひとりで好きな曲を演奏"))), ms.multi && React.createElement("button", {
       "data-rhythm-multi-free": true,
       type: "button",
       onClick: () => searchRoom('free'),
-      className: "flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-r from-orange-400 to-amber-500 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]"
+      className: "flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-br from-orange-400 to-amber-500 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-3xl"
+      className: "text-2xl leading-none"
     }, "🎮"), React.createElement("span", {
-      className: "min-w-0 flex-1"
+      className: "min-w-0"
     }, React.createElement("b", {
-      className: "block text-lg font-black leading-tight"
+      className: "block text-[17px] font-black leading-tight"
     }, "フリーマッチ"), React.createElement("small", {
-      className: "block text-[11px] font-black text-slate-900/80"
-    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力ライブ")))), ms.multi && React.createElement("section", {
+      className: "block text-[10px] font-black leading-tight text-slate-900/80"
+    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力")))), ms.multi && React.createElement("section", {
       "data-rhythm-mode-private": true,
-      className: `${card} space-y-2`
+      className: "min-w-0 rounded-2xl border border-white/15 bg-slate-900/85 p-2.5"
     }, React.createElement("h3", {
-      className: "text-xs font-black text-slate-300"
+      className: "mb-1.5 text-[11px] font-black text-slate-300"
     }, "プライベートルーム(友だちと遊ぶ)"), React.createElement("div", {
-      className: "grid gap-2"
+      className: "flex min-w-0 gap-2"
     }, React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
-      className: `${btn} w-full bg-indigo-700`,
+      className: "min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black",
       onClick: createPrivate
-    }, "＋ ルーム作成"), React.createElement("div", {
-      className: "flex gap-2"
-    }, React.createElement("input", {
+    }, "＋ 作成"), React.createElement("input", {
       id: "rhythm-multi-code",
       "data-rhythm-multi-code-input": true,
       "aria-label": "ルームコード",
@@ -54967,24 +54957,24 @@ function RhythmMultiScreen({
       autoComplete: "off",
       spellCheck: false,
       onChange: e => setCodeInput(e.target.value.toUpperCase()),
-      className: "min-h-[44px] min-w-[7rem] flex-1 rounded-xl border border-white/20 bg-slate-950 px-2 text-center text-lg font-black tracking-[0.3em] text-white",
+      className: "min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-1 text-center text-base font-black tracking-[0.25em] text-white",
       placeholder: "ABCD"
     }), React.createElement("button", {
       "data-rhythm-multi-join": true,
       type: "button",
-      className: `${btn} shrink-0 bg-indigo-700`,
+      className: "min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black",
       onClick: joinPrivate
-    }, "ルーム入室")))), message && React.createElement("p", {
+    }, "入室"))), message && React.createElement("p", {
       "data-rhythm-multi-message": true,
       className: "text-[12px] font-black text-rose-300"
     }, message), React.createElement("div", {
-      className: "flex gap-2"
+      className: "grid grid-cols-3 gap-2"
     }, React.createElement("button", {
       "data-rhythm-demo-monsters": true,
       type: "button",
       "aria-label": `マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`,
       onClick: ms.onMonsters,
-      className: `${tile} border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`
+      className: `${tile} min-w-0 border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`
     }, React.createElement("span", {
       "data-rhythm-demo-monsters-faces": true,
       "aria-hidden": "true",
@@ -54993,7 +54983,7 @@ function RhythmMultiScreen({
       key: face.id,
       className: "h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950",
       style: i ? {
-        marginLeft: '-6px'
+        marginLeft: '-7px'
       } : undefined
     }, face.src && React.createElement("img", {
       src: face.src,
@@ -55004,11 +54994,11 @@ function RhythmMultiScreen({
       className: "text-lg leading-none"
     }, "👾")), React.createElement("span", {
       className: "text-[11px] font-black"
-    }, "マスモン設定 ", ms.monsterCount, "/", ms.monsterMax)), React.createElement("button", {
+    }, "マスモン ", ms.monsterCount, "/", ms.monsterMax)), React.createElement("button", {
       "data-rhythm-demo-help": true,
       type: "button",
       onClick: ms.onHelp,
-      className: `${tile} border-amber-400/50 bg-amber-950/40 text-amber-100`
+      className: `${tile} min-w-0 border-amber-400/50 bg-amber-950/40 text-amber-100`
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-lg leading-none"
@@ -55018,13 +55008,19 @@ function RhythmMultiScreen({
       "data-rhythm-mode-options": true,
       type: "button",
       onClick: ms.onOptions,
-      className: `${tile} border-cyan-400/50 bg-cyan-950/40 text-cyan-100`
+      className: `${tile} min-w-0 border-cyan-400/50 bg-cyan-950/40 text-cyan-100`
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-lg leading-none"
     }, "⚙️"), React.createElement("span", {
       className: "text-[11px] font-black"
-    }, "オプション"))))));
+    }, "オプション"))))), React.createElement("div", {
+      "aria-hidden": "true",
+      className: "shrink-0",
+      style: {
+        height: 'var(--mh-sa-bottom)'
+      }
+    }));
   }
   if (!view && !searching) return React.createElement("main", {
     "data-rhythm-multi": true,
