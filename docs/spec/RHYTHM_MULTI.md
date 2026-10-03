@@ -2,12 +2,13 @@
 
 プロセカの「みんなでライブ」を参考にした、最大5人の協力ライブ。
 実装: `monster-hero/src/parts/77-screen-rhythm-multi.jsx`(部屋の状態 `RHYTHM_MULTI` と画面 `RhythmMultiScreen`)。
+モンヒロビートの入口「モードえらび」(`RHYTHM_MODE_SELECT`)も同じ部品で描く(`modeSelect` を渡したとき)。部屋に入れたら `onRoomEntered` で `RHYTHM_MULTI` へ移り、`RHYTHM_MULTI` で部屋が無くなったらモードえらびへ戻る。
 検査: `node tools/mode/rhythm-multi-check.js`(通信と時間を偽物にして、複数人ぶん動かす)。
 
 ## 1. 流れ
 
 ```
-ルームえらび(フリー / ベテラン / プライベート)
+モードえらび RHYTHM_MODE_SELECT(フリーマッチ / ルーム作成 / ルーム入室 / フレンドの招待。ベテランは2026-10-03に画面から外した)
  → マッチング(5人そろう / ホストの「メンバー確定」/ 公開ルームは2人以上で15秒出入りなし)
  → 選曲 30秒(曲 or おまかせ。全員そろうか時間切れで次へ)
  → MUSIC SHUFFLE(全員の選曲から1曲を抽選。全員おまかせなら全曲から)

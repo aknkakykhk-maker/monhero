@@ -161,11 +161,10 @@ function RhythmSongSelectScreen({
               ★バトルを見に行きたいときは、周回の帯の詳細にある「⚔ バトルへ戻って…」から。 */}
           {/* ★押したあとはHOMEへ抜けるまで数秒かかる(報酬の付与・送信・バトルの演出の終わり待ち)。
               そのあいだは押せなくし、何を待っているのかを畫面で言う(2026-09-13) */}
-          <button data-rhythm-back data-quick-run-finishing={rhythmBackgroundRun?'1':undefined}
-            data-quick-run-exiting={exitingQuickRun?'1':undefined} disabled={!!exitingQuickRun}
-            aria-label={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
+          {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
+          <button data-rhythm-song-select-back type="button" aria-label="モードえらびへ戻る" title="モードえらびへ戻る"
             onClick={onExit}
-            className={`min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun?'text-amber-300/60':rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
+            className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
@@ -186,20 +185,8 @@ function RhythmSongSelectScreen({
           {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
               分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
               マスモンのボタンは、設定中の子の顔を重ねて並べる(何体入っているかもひと目で分かる)。幅は前と同じくらい */}
-          {onOpenMulti&&<button data-rhythm-demo-multi aria-label="みんなで対戦" title="みんなで対戦"
-            onClick={onOpenMulti}
-            className="flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100"><span aria-hidden="true" className="text-base leading-none">🎮</span><span className="text-[9px] font-black leading-none">対戦</span></button>}
-          <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
-            onClick={onOpenHelp}
-            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`}><span aria-hidden="true" className="text-base leading-none">📖</span><span className="text-[9px] font-black leading-none">遊びかた</span></button>
-          <button data-rhythm-demo-monsters aria-label={`マスモン設定（${monsterSlots.length}/${RHYTHM_MONSTER_SLOT_MAX}体）`} title="マスモン設定"
-            onClick={onOpenMonsterSlots}
-            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 px-1 leading-none text-fuchsia-100${spotClass('monsters')}`}>
-            <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-4 items-center">{monsterSlots.length
-              ?monsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map((masu,i)=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return <span key={masu.id} className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i?{marginLeft:'-5px'}:undefined}>{base&&<img src={base.faceIconUrl||base.iconUrl} alt="" className="h-full w-full object-cover" draggable={false}/>}</span>;})
-              :<span className="text-base leading-none">👾</span>}</span>
-            <span className="text-[9px] font-black leading-none">マスモン</span>
-          </button>
+          {/* 対戦・遊びかた・マスモン設定は、モードえらびの画面へ移した(2026-10-03・ユーザー指示「これによって曲選択画面の
+              上の帯にスペースができる」)。オプションは曲を選びながら速さなどを変えたいので、ここに残す */}
           <button data-rhythm-demo-options aria-label="オプション" title="オプション"
             onClick={onOpenOptions}
             className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`}><span aria-hidden="true" className="text-base leading-none">⚙️</span><span className="text-[9px] font-black leading-none">設定</span></button>

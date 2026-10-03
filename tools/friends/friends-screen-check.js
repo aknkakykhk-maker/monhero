@@ -266,11 +266,9 @@ const serve = (flagOn) => new Promise(resolve => {
         if (!(await clickText('^(受け取る|閉じる|OK|確認|あとで|次へ|はじめる|決定|スキップ)$'))) break;
         await page.waitForTimeout(250);
       }
-      // ホーム → モンヒロビート → みんなで対戦
+      // ホーム → モンヒロビート(最初にモードえらび。フレンドの招待もここに出る。2026-10-03)
       await page.evaluate(() => document.querySelector('.mh-home-facility.rhythm')?.click());
-      await page.waitForSelector('[data-rhythm-demo-multi]', { timeout: 20000 });
-      await page.evaluate(() => document.querySelector('[data-rhythm-demo-multi]').click());
-      await page.waitForSelector('[data-rhythm-multi]', { timeout: 10000 });
+      await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 });
       // 入口: 招待が出る(フレンドからだけ。知らない人の招待は出ない)。まだ招待は無いので、最初は出ない
       await page.waitForTimeout(1500);
       out.noInviteYet = await page.evaluate(() => !document.querySelector('[data-rhythm-multi-friend-invites]'));

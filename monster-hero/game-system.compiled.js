@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f0ba47f800cea5d
+// source-sha256: b07c8af6ae4f5671
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 11:29";
+const BUILD_DATE = "2026-10-03 11:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5460,7 +5460,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   momosukeIntro: 'six_eternel_remix',
   monbeatCupEvent: 'kaze_ga_soyogu',
   symphonyEvent: 'melo_mou_hitotsu_no_sekai_e',
-  rhythmMultiEvent: 'melo_haruka'
+  rhythmMultiEvent: 'melo_haruka',
+  rhythmModeSelect: 'pandora_boss_remix'
 });
 const BGM_BATTLE_MODE_TABS = Object.freeze([{
   id: 'challenge',
@@ -38210,17 +38211,13 @@ function RhythmSongSelectScreen({
       paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
   }, React.createElement("button", {
-    "data-rhythm-back": true,
-    "data-quick-run-finishing": rhythmBackgroundRun ? '1' : undefined,
-    "data-quick-run-exiting": exitingQuickRun ? '1' : undefined,
-    disabled: !!exitingQuickRun,
-    "aria-label": exitingQuickRun ? '周回を終えています' : rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
-    title: exitingQuickRun ? '周回を終えています' : rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
+    "data-rhythm-song-select-back": true,
+    type: "button",
+    "aria-label": "モードえらびへ戻る",
+    title: "モードえらびへ戻る",
     onClick: onExit,
-    className: `min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun ? 'text-amber-300/60' : rhythmBackgroundRun ? 'text-amber-200' : 'text-slate-300'}`
-  }, rhythmBackgroundRun ? React.createElement("span", {
-    className: "text-[10px] font-black leading-tight"
-  }, "⏹", React.createElement("br", null), "終了") : React.createElement(ArrowLeft, {
+    className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
+  }, React.createElement(ArrowLeft, {
     size: 20
   })), React.createElement("div", {
     className: "min-w-0 flex-1"
@@ -38243,57 +38240,7 @@ function RhythmSongSelectScreen({
   }, quickRunBandButton), quickRunStartNode && React.createElement("div", {
     "data-quick-run-start-header": true,
     className: "min-w-0 max-w-[260px] flex-1"
-  }, quickRunStartNode), React.createElement(RhythmOrientationButton, null), onOpenMulti && React.createElement("button", {
-    "data-rhythm-demo-multi": true,
-    "aria-label": "みんなで対戦",
-    title: "みんなで対戦",
-    onClick: onOpenMulti,
-    className: "flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100"
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-base leading-none"
-  }, "🎮"), React.createElement("span", {
-    className: "text-[9px] font-black leading-none"
-  }, "対戦")), React.createElement("button", {
-    "data-rhythm-demo-help": true,
-    "aria-label": "遊びかた",
-    title: "遊びかた",
-    onClick: onOpenHelp,
-    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-base leading-none"
-  }, "📖"), React.createElement("span", {
-    className: "text-[9px] font-black leading-none"
-  }, "遊びかた")), React.createElement("button", {
-    "data-rhythm-demo-monsters": true,
-    "aria-label": `マスモン設定（${monsterSlots.length}/${RHYTHM_MONSTER_SLOT_MAX}体）`,
-    title: "マスモン設定",
-    onClick: onOpenMonsterSlots,
-    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 px-1 leading-none text-fuchsia-100${spotClass('monsters')}`
-  }, React.createElement("span", {
-    "data-rhythm-demo-monsters-faces": true,
-    "aria-hidden": "true",
-    className: "flex h-4 items-center"
-  }, monsterSlots.length ? monsterSlots.slice(0, RHYTHM_MONSTER_SLOT_MAX).map((masu, i) => {
-    const base = ALL_PLAYER_MONSTERS[masu.baseId];
-    return React.createElement("span", {
-      key: masu.id,
-      className: "h-4 w-4 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950",
-      style: i ? {
-        marginLeft: '-5px'
-      } : undefined
-    }, base && React.createElement("img", {
-      src: base.faceIconUrl || base.iconUrl,
-      alt: "",
-      className: "h-full w-full object-cover",
-      draggable: false
-    }));
-  }) : React.createElement("span", {
-    className: "text-base leading-none"
-  }, "👾")), React.createElement("span", {
-    className: "text-[9px] font-black leading-none"
-  }, "マスモン")), React.createElement("button", {
+  }, quickRunStartNode), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
     "data-rhythm-demo-options": true,
     "aria-label": "オプション",
     title: "オプション",
@@ -52993,7 +52940,6 @@ function DebugDataScreen({
   }, "ギフトボックスの配布・補償／キャンペーン／ランキングの送信。どれも配布や送信の条件そのものを書き換えることになるため、 うっかり本物の記録を触らないよう入口を作っていません。"))));
 }
 const RHYTHM_MULTI_ROOM_MAX = 5;
-const RHYTHM_MULTI_VETERAN_MIN_LEVEL = 30;
 const RHYTHM_MULTI_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const RHYTHM_MULTI_CODE_LENGTH = 4;
 const RHYTHM_MULTI_HEARTBEAT_MS = 2000;
@@ -54179,7 +54125,9 @@ function RhythmMultiScreen({
   multiLightLook = true,
   onToggleLightLook = null,
   onBack,
-  onStartPlay
+  onStartPlay,
+  modeSelect = null,
+  onRoomEntered = null
 }) {
   const view = useRhythmMultiView();
   const difficultyIds = difficultyList.map(d => d.id);
@@ -54378,10 +54326,6 @@ function RhythmMultiScreen({
   };
   const searchRoom = async kind => {
     setMessage('');
-    if (kind === 'veteran' && profile.level < RHYTHM_MULTI_VETERAN_MIN_LEVEL) {
-      setMessage(`ベテランルームはブリーダーLv.${RHYTHM_MULTI_VETERAN_MIN_LEVEL}以上で入れます`);
-      return;
-    }
     const left = await rhythmMultiPenaltyLeftMs();
     if (left > 0) {
       setMessage(`途中でやめたため、あと${Math.ceil(left / 60000)}分は公開ルームに入れません`);
@@ -54407,6 +54351,14 @@ function RhythmMultiScreen({
     setChatOpen(false);
     setSearching(null);
   };
+  const inRoom = !!view;
+  React.useEffect(() => {
+    if (modeSelect) {
+      if (inRoom && onRoomEntered) onRoomEntered();
+      return;
+    }
+    if (!inRoom && !searching && onBack) onBack();
+  }, [inRoom, !!searching]);
   const shareCode = async () => {
     if (!view) return;
     const text = `モンヒロビートで協力ライブしよう! 部屋コード: ${view.code}`;
@@ -54489,16 +54441,78 @@ function RhythmMultiScreen({
   }, songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''), React.createElement("b", {
     className: "text-8xl font-black text-white"
   }, Math.max(1, countdown.left)));
-  if (!view && !searching) {
+  if (!view && !searching && modeSelect) {
+    const ms = modeSelect;
+    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
     return React.createElement("main", {
-      "data-rhythm-multi": true,
+      "data-rhythm-mode-select": true,
       "data-rhythm-multi-step": "rooms",
-      className: shell
-    }, header('ルームえらび', onBack), React.createElement("div", {
-      className: "min-h-0 flex-1 overflow-y-auto p-3"
-    }, React.createElement("p", {
-      className: "mb-2 text-[11px] font-bold leading-relaxed text-slate-300"
-    }, "最大", RHYTHM_MULTI_ROOM_MAX, "人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストと全国ランキングにも入り、周回の報酬とビートPは人数が多いほど増えます(1人ふえるごとに+50%)。"), friendsOn && friendInvites.length > 0 && React.createElement("section", {
+      className: `${shell} bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950`
+    }, React.createElement("header", {
+      className: "z-10 flex shrink-0 items-center gap-1.5 border-b border-cyan-400/15 bg-slate-950/90 px-2 py-1",
+      style: {
+        paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
+      }
+    }, React.createElement("button", {
+      "data-rhythm-back": true,
+      "data-quick-run-finishing": ms.backgroundRun ? '1' : undefined,
+      "data-quick-run-exiting": ms.exiting ? '1' : undefined,
+      disabled: !!ms.exiting,
+      type: "button",
+      "aria-label": ms.exiting ? '周回を終えています' : ms.backgroundRun ? '周回を終えてホームへ戻る' : '戻る',
+      onClick: ms.onExit,
+      className: `min-h-[44px] min-w-[44px] shrink-0 rounded-xl font-black ${ms.exiting ? 'text-amber-300/60' : ms.backgroundRun ? 'text-amber-200' : 'text-lg text-slate-300'}`
+    }, ms.backgroundRun ? React.createElement("span", {
+      className: "text-[10px] leading-tight"
+    }, "⏹", React.createElement("br", null), "終了") : '←'), React.createElement("div", {
+      className: "min-w-0 flex-1 leading-none"
+    }, React.createElement("small", {
+      className: "block text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+    }, "MONBEAT"), React.createElement("b", {
+      className: "block truncate text-sm font-black tracking-widest text-cyan-200"
+    }, "SELECT MODE ・ モードえらび"), ms.beatPointText && React.createElement("small", {
+      "data-rhythm-beat-point-balance": true,
+      className: "block truncate text-[9px] font-black text-violet-200/90"
+    }, ms.beatPointText)), quickRunInfo && React.createElement("small", {
+      "data-rhythm-multi-quick-run": true,
+      className: `max-w-[34%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
+    }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), React.createElement(RhythmOrientationButton, null)), ms.exiting && React.createElement("div", {
+      "data-quick-run-exit-overlay": true,
+      className: "absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"
+    }, React.createElement("b", {
+      className: "text-sm font-black text-amber-200"
+    }, "周回を終えています…")), React.createElement("div", {
+      className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
+    }, ms.assistant && React.createElement("div", {
+      "data-rhythm-mode-assistant": true,
+      className: "relative flex shrink-0 items-end gap-2 px-3 pt-2 landscape:w-[32%] landscape:flex-col landscape:items-center landscape:justify-end landscape:px-2 landscape:pt-0"
+    }, React.createElement("img", {
+      src: ms.assistant.image,
+      alt: "",
+      draggable: false,
+      className: "pointer-events-none absolute inset-0 hidden h-full w-full object-cover object-[50%_30%] landscape:block"
+    }), React.createElement("img", {
+      src: ms.assistant.face,
+      alt: "",
+      draggable: false,
+      className: "h-14 w-14 shrink-0 rounded-2xl border-2 object-cover landscape:hidden",
+      style: {
+        borderColor: ms.assistant.accent
+      }
+    }), React.createElement("p", {
+      "data-rhythm-mode-assistant-line": true,
+      className: "min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[12px] font-bold leading-snug text-white landscape:absolute landscape:inset-x-2 landscape:bottom-3 landscape:flex-none",
+      style: {
+        borderColor: ms.assistant.accent
+      }
+    }, React.createElement("b", {
+      className: "mb-0.5 block text-[10px]",
+      style: {
+        color: ms.assistant.accent
+      }
+    }, ms.assistant.name), ms.assistant.text)), React.createElement("div", {
+      className: "min-h-0 flex-1 space-y-2 overflow-y-auto p-3 landscape:py-2"
+    }, friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
     }, React.createElement("h3", {
@@ -54514,35 +54528,48 @@ function RhythmMultiScreen({
       className: `${btn} shrink-0 bg-pink-700 text-xs`,
       onClick: () => joinFromInvite(invite)
     }, "参加する")))), React.createElement("div", {
-      className: "space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0"
-    }, React.createElement("section", {
-      className: `${card} space-y-2`
-    }, React.createElement("h3", {
-      className: "text-xs font-black text-slate-300"
-    }, "知らない人と遊ぶ"), React.createElement("button", {
+      className: ms.multi ? 'grid gap-2 landscape:grid-cols-2' : ''
+    }, React.createElement("button", {
+      "data-rhythm-mode-solo": true,
+      type: "button",
+      onClick: ms.onSolo,
+      className: "flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-r from-amber-300 to-yellow-400 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-3xl"
+    }, "🎵"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-lg font-black leading-tight"
+    }, "ソロライブ"), React.createElement("small", {
+      className: "block text-[11px] font-black text-slate-800/80"
+    }, "ひとりで好きな曲を演奏する"))), ms.multi && React.createElement("button", {
       "data-rhythm-multi-free": true,
       type: "button",
-      className: `${btn} w-full bg-fuchsia-700`,
-      onClick: () => searchRoom('free')
-    }, "フリールーム", React.createElement("small", {
-      className: "block text-[10px] font-bold text-fuchsia-100/80"
-    }, "だれでも入れます")), React.createElement("button", {
-      "data-rhythm-multi-veteran": true,
-      type: "button",
-      className: `${btn} w-full ${profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? 'bg-amber-700' : 'bg-slate-700'}`,
-      onClick: () => searchRoom('veteran')
-    }, "ベテランルーム", React.createElement("small", {
-      className: "block text-[10px] font-bold text-amber-100/80"
-    }, "ブリーダーLv.", RHYTHM_MULTI_VETERAN_MIN_LEVEL, "以上", profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? '' : '(まだ入れません)'))), React.createElement("section", {
+      onClick: () => searchRoom('free'),
+      className: "flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-r from-orange-400 to-amber-500 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-3xl"
+    }, "🎮"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-lg font-black leading-tight"
+    }, "フリーマッチ"), React.createElement("small", {
+      className: "block text-[11px] font-black text-slate-900/80"
+    }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力ライブ")))), ms.multi && React.createElement("section", {
+      "data-rhythm-mode-private": true,
       className: `${card} space-y-2`
     }, React.createElement("h3", {
       className: "text-xs font-black text-slate-300"
-    }, "友だちと遊ぶ(プライベートルーム)"), React.createElement("button", {
+    }, "プライベートルーム(友だちと遊ぶ)"), React.createElement("div", {
+      className: "grid gap-2"
+    }, React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
       className: `${btn} w-full bg-indigo-700`,
       onClick: createPrivate
-    }, "ルームを作成"), React.createElement("div", {
+    }, "＋ ルーム作成"), React.createElement("div", {
       className: "flex gap-2"
     }, React.createElement("input", {
       id: "rhythm-multi-code",
@@ -54554,18 +54581,70 @@ function RhythmMultiScreen({
       autoComplete: "off",
       spellCheck: false,
       onChange: e => setCodeInput(e.target.value.toUpperCase()),
-      className: "min-h-[48px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-center text-xl font-black tracking-[0.4em] text-white",
+      className: "min-h-[44px] min-w-[7rem] flex-1 rounded-xl border border-white/20 bg-slate-950 px-2 text-center text-lg font-black tracking-[0.3em] text-white",
       placeholder: "ABCD"
     }), React.createElement("button", {
       "data-rhythm-multi-join": true,
       type: "button",
-      className: `${btn} bg-indigo-700`,
+      className: `${btn} shrink-0 bg-indigo-700`,
       onClick: joinPrivate
-    }, "参加")))), message && React.createElement("p", {
+    }, "ルーム入室")))), message && React.createElement("p", {
       "data-rhythm-multi-message": true,
-      className: "mt-2 text-[12px] font-black text-rose-300"
-    }, message)));
+      className: "text-[12px] font-black text-rose-300"
+    }, message), React.createElement("div", {
+      className: "flex gap-2"
+    }, React.createElement("button", {
+      "data-rhythm-demo-monsters": true,
+      type: "button",
+      "aria-label": `マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`,
+      onClick: ms.onMonsters,
+      className: `${tile} border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`
+    }, React.createElement("span", {
+      "data-rhythm-demo-monsters-faces": true,
+      "aria-hidden": "true",
+      className: "flex h-6 items-center"
+    }, ms.monsterFaces.length ? ms.monsterFaces.map((face, i) => React.createElement("span", {
+      key: face.id,
+      className: "h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950",
+      style: i ? {
+        marginLeft: '-6px'
+      } : undefined
+    }, face.src && React.createElement("img", {
+      src: face.src,
+      alt: "",
+      draggable: false,
+      className: "h-full w-full object-cover"
+    }))) : React.createElement("span", {
+      className: "text-lg leading-none"
+    }, "👾")), React.createElement("span", {
+      className: "text-[11px] font-black"
+    }, "マスモン設定 ", ms.monsterCount, "/", ms.monsterMax)), React.createElement("button", {
+      "data-rhythm-demo-help": true,
+      type: "button",
+      onClick: ms.onHelp,
+      className: `${tile} border-amber-400/50 bg-amber-950/40 text-amber-100`
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-lg leading-none"
+    }, "📖"), React.createElement("span", {
+      className: "text-[11px] font-black"
+    }, "遊びかた")), React.createElement("button", {
+      "data-rhythm-mode-options": true,
+      type: "button",
+      onClick: ms.onOptions,
+      className: `${tile} border-cyan-400/50 bg-cyan-950/40 text-cyan-100`
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-lg leading-none"
+    }, "⚙️"), React.createElement("span", {
+      className: "text-[11px] font-black"
+    }, "オプション"))))));
   }
+  if (!view && !searching) return React.createElement("main", {
+    "data-rhythm-multi": true,
+    "data-rhythm-multi-step": "leaving",
+    className: shell
+  });
   const members = view ? view.members : [];
   const phase = room ? room.phase : 'matching';
   const participant = !!room && room.participants.includes(view.selfId);
@@ -54577,10 +54656,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi": true,
       "data-rhythm-multi-step": "matching",
       className: shell
-    }, header('マッチング', () => {
-      leaveRoom();
-      if (!view) onBack();
-    }), view && view.full ? React.createElement("div", {
+    }, header('マッチング', leaveRoom), view && view.full ? React.createElement("div", {
       className: "min-h-0 flex-1 overflow-y-auto p-3"
     }, React.createElement("section", {
       "data-rhythm-multi-full": true,
@@ -54591,7 +54667,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} mt-2 w-full bg-slate-700`,
       onClick: leaveRoom
-    }, "ルームえらびへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
+    }, "モードえらびへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
       bubbleOf: chatBubbleOf,
       members: members,
       hostId: view ? view.hostId : '',
@@ -55307,7 +55383,7 @@ function MonsterHeroGame() {
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
-    setGameState('RHYTHM_DEMO_HOME');
+    setGameState('RHYTHM_MODE_SELECT');
   };
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
@@ -58683,6 +58759,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',
     MISSIONS: 'home',
     RHYTHM_HISTORY: 'home',
+    RHYTHM_MODE_SELECT: 'rhythmModeSelect',
     FRIENDS: 'home',
     BATTLE_MENU: 'enhance',
     BATTLE_SYSTEM_SELECT: 'enhance',
@@ -58729,7 +58806,7 @@ function MonsterHeroGame() {
   const isRunStage = value => RUN_STAGE_SCREENS.includes(value);
   const [runStage, setRunStage] = useState(null);
   const runStageRef = useRef(null);
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS', 'RHYTHM_MULTI'];
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS', 'RHYTHM_MULTI'];
   const rhythmScreenOpen = isRhythmScreen(gameState);
   const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'];
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
@@ -61425,6 +61502,19 @@ function MonsterHeroGame() {
   };
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   const activeAssistant = assistantById(selectedAssistantId);
+  const rhythmModeSelectOpen = gameState === 'RHYTHM_MODE_SELECT';
+  const rhythmModeAssistant = useMemo(() => {
+    if (!rhythmModeSelectOpen || !activeAssistant) return null;
+    const line = typeof pickAssistantLine === 'function' ? pickAssistantLine('rhythmModeSelect', null, assistantBondLevelNow, activeAssistant.id) : null;
+    const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
+    return {
+      name: activeAssistant.name,
+      accent: activeAssistant.accent,
+      image: assistantFullImage(activeAssistant, line && line.e || 'happy'),
+      face: assistantFaceSrc(activeAssistant, line && line.e || 'happy'),
+      text
+    };
+  }, [rhythmModeSelectOpen, activeAssistant && activeAssistant.id]);
   const newProfileFrames = ownedProfileFrames.filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
   const newProfileFrameAssistantName = (() => {
     const ids = [...new Set(newProfileFrames.map(frame => (profileFrameUnlock(frame) || {}).assistantId).filter(Boolean))];
@@ -71113,7 +71203,7 @@ function MonsterHeroGame() {
     }, {
       id: 'other',
       label: 'その他',
-      items: [['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM']]
+      items: [['rhythmModeSelect', 'モンヒロビート モードえらび BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM']]
     }];
     const battleModes = BGM_BATTLE_MODE_TABS;
     const selected = categories.find(category => category.id === bgmArrangementCategory) || categories[0];
@@ -75985,7 +76075,8 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_OPTIONS');
       }
-    }), gameState === 'RHYTHM_MULTI' && React.createElement(RhythmMultiScreen, {
+    }), (gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT') && React.createElement(RhythmMultiScreen, {
+      key: gameState,
       profile: {
         name: breederName,
         level: breederLevel.level,
@@ -76016,7 +76107,38 @@ function MonsterHeroGame() {
         catchingUp,
         reason: quickRunProgress.finished ? quickRunFinishReasonText(quickRunProgress.reason) : ''
       } : null,
-      onBack: () => setGameState('RHYTHM_DEMO_HOME'),
+      onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
+      onRoomEntered: () => setGameState('RHYTHM_MULTI'),
+      modeSelect: gameState === 'RHYTHM_MODE_SELECT' ? {
+        multi: RELEASE_FLAGS.rhythmMulti === true,
+        onExit: exitRhythmSongSelect,
+        backgroundRun: rhythmBackgroundRun,
+        exiting: rhythmExitingRun,
+        onSolo: () => setGameState('RHYTHM_DEMO_HOME'),
+        onHelp: () => {
+          setRhythmHelpTopicId(null);
+          setGameState('RHYTHM_DEMO_HELP');
+        },
+        onMonsters: () => {
+          setRhythmMonsterPickerOpen(false);
+          setRhythmMonsterMessage('');
+          setGameState('RHYTHM_DEMO_MONSTERS');
+        },
+        onOptions: () => {
+          setRhythmOptionsBack('RHYTHM_MODE_SELECT');
+          setGameState('RHYTHM_OPTIONS');
+        },
+        monsterCount: rhythmMonsterSlots.length,
+        monsterMax: RHYTHM_MONSTER_SLOT_MAX,
+        monsterFaces: rhythmMonsterSlots.slice(0, RHYTHM_MONSTER_SLOT_MAX).map(masu => {
+          const base = ALL_PLAYER_MONSTERS[masu.baseId];
+          return {
+            id: masu.id,
+            src: base ? base.faceIconUrl || base.iconUrl : ''
+          };
+        }),
+        assistant: rhythmModeAssistant
+      } : null,
       onStartPlay: (song, difficulty, startId, count) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
         setRhythmPlay({
@@ -76071,7 +76193,7 @@ function MonsterHeroGame() {
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
       exitingQuickRun: rhythmExitingRun,
-      onExit: exitRhythmSongSelect,
+      onExit: () => setGameState('RHYTHM_MODE_SELECT'),
       onOpenEventRanking: () => {
         const kind = rhythmSongSelectEvent && rhythmSongSelectEvent.kind === 'limited' ? 'limited' : 'weekly';
         dismissRhythmEventNotice();
@@ -76083,7 +76205,6 @@ function MonsterHeroGame() {
         setRhythmHelpTopicId(null);
         setGameState('RHYTHM_DEMO_HELP');
       },
-      onOpenMulti: RELEASE_FLAGS.rhythmMulti === true ? () => setGameState('RHYTHM_MULTI') : null,
       onOpenMonsterSlots: () => {
         setRhythmMonsterPickerOpen(false);
         setRhythmMonsterMessage('');
@@ -76140,7 +76261,7 @@ function MonsterHeroGame() {
       startQuickRunFromRhythm: startQuickRunFromRhythm,
       wave: wave
     }), gameState === 'RHYTHM_DEMO_HELP' && React.createElement(RhythmHelpScreen, {
-      onBackToSongSelect: () => setGameState('RHYTHM_DEMO_HOME'),
+      onBackToSongSelect: () => setGameState('RHYTHM_MODE_SELECT'),
       rhythmHelpTopicId: rhythmHelpTopicId,
       setRhythmHelpTopicId: setRhythmHelpTopicId,
       startRhythmPractice: startRhythmPractice,
@@ -76148,7 +76269,7 @@ function MonsterHeroGame() {
     }), gameState === 'RHYTHM_DEMO_MONSTERS' && React.createElement(RhythmMonstersScreen, {
       applyRhythmMonsterSlots: applyRhythmMonsterSlots,
       masuMons: masuMons,
-      onBackToSongSelect: () => setGameState('RHYTHM_DEMO_HOME'),
+      onBackToSongSelect: () => setGameState('RHYTHM_MODE_SELECT'),
       rhythmMonsterMessage: rhythmMonsterMessage,
       rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
       rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,

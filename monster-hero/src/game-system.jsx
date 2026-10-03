@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4ab06d06fdfbd2cb
+// generated-sha256: 306f200486060cb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 11:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 11:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4553,7 +4553,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -24376,11 +24376,10 @@ function RhythmSongSelectScreen({
               ★バトルを見に行きたいときは、周回の帯の詳細にある「⚔ バトルへ戻って…」から。 */}
           {/* ★押したあとはHOMEへ抜けるまで数秒かかる(報酬の付与・送信・バトルの演出の終わり待ち)。
               そのあいだは押せなくし、何を待っているのかを畫面で言う(2026-09-13) */}
-          <button data-rhythm-back data-quick-run-finishing={rhythmBackgroundRun?'1':undefined}
-            data-quick-run-exiting={exitingQuickRun?'1':undefined} disabled={!!exitingQuickRun}
-            aria-label={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
+          {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
+          <button data-rhythm-song-select-back type="button" aria-label="モードえらびへ戻る" title="モードえらびへ戻る"
             onClick={onExit}
-            className={`min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun?'text-amber-300/60':rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
+            className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
@@ -24401,20 +24400,8 @@ function RhythmSongSelectScreen({
           {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
               分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
               マスモンのボタンは、設定中の子の顔を重ねて並べる(何体入っているかもひと目で分かる)。幅は前と同じくらい */}
-          {onOpenMulti&&<button data-rhythm-demo-multi aria-label="みんなで対戦" title="みんなで対戦"
-            onClick={onOpenMulti}
-            className="flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100"><span aria-hidden="true" className="text-base leading-none">🎮</span><span className="text-[9px] font-black leading-none">対戦</span></button>}
-          <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
-            onClick={onOpenHelp}
-            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`}><span aria-hidden="true" className="text-base leading-none">📖</span><span className="text-[9px] font-black leading-none">遊びかた</span></button>
-          <button data-rhythm-demo-monsters aria-label={`マスモン設定（${monsterSlots.length}/${RHYTHM_MONSTER_SLOT_MAX}体）`} title="マスモン設定"
-            onClick={onOpenMonsterSlots}
-            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 px-1 leading-none text-fuchsia-100${spotClass('monsters')}`}>
-            <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-4 items-center">{monsterSlots.length
-              ?monsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map((masu,i)=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return <span key={masu.id} className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i?{marginLeft:'-5px'}:undefined}>{base&&<img src={base.faceIconUrl||base.iconUrl} alt="" className="h-full w-full object-cover" draggable={false}/>}</span>;})
-              :<span className="text-base leading-none">👾</span>}</span>
-            <span className="text-[9px] font-black leading-none">マスモン</span>
-          </button>
+          {/* 対戦・遊びかた・マスモン設定は、モードえらびの画面へ移した(2026-10-03・ユーザー指示「これによって曲選択画面の
+              上の帯にスペースができる」)。オプションは曲を選びながら速さなどを変えたいので、ここに残す */}
           <button data-rhythm-demo-options aria-label="オプション" title="オプション"
             onClick={onOpenOptions}
             className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`}><span aria-hidden="true" className="text-base leading-none">⚙️</span><span className="text-[9px] font-black leading-none">設定</span></button>
@@ -32507,7 +32494,6 @@ function DebugDataScreen({
 //    探す人どうしが同時に部屋を作っても、1人きりの部屋は「コードの小さい部屋」へ引っ越して1つにまとまる。
 //  ・画面を行き来しても部屋が切れないよう、状態は React の外(このファイルの RHYTHM_MULTI)に置く。
 const RHYTHM_MULTI_ROOM_MAX = 5;
-const RHYTHM_MULTI_VETERAN_MIN_LEVEL = 30;
 const RHYTHM_MULTI_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const RHYTHM_MULTI_CODE_LENGTH = 4;
 const RHYTHM_MULTI_HEARTBEAT_MS = 2000;
@@ -33308,7 +33294,7 @@ const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLightLook = true, onToggleLightLook = null, onBack, onStartPlay }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLightLook = true, onToggleLightLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
   const view = useRhythmMultiView();
   const difficultyIds = difficultyList.map((d) => d.id);
   const songIds = songs.map((song) => song.songId);
@@ -33475,10 +33461,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setMessage('');
     RHYTHM_MULTI.join(code, myProfile(), 'private');
   };
-  // フリー/ベテラン: 空きのある部屋を探して入る。無ければ自分で部屋を作って、人が来るのを待つ
+  // フリー: 空きのある部屋を探して入る(ベテランは2026-10-03に画面から外した。部屋さがしの仕組みは残してある)。無ければ自分で部屋を作って、人が来るのを待つ
   const searchRoom = async (kind) => {
     setMessage('');
-    if (kind === 'veteran' && profile.level < RHYTHM_MULTI_VETERAN_MIN_LEVEL) { setMessage(`ベテランルームはブリーダーLv.${RHYTHM_MULTI_VETERAN_MIN_LEVEL}以上で入れます`); return; }
     const left = await rhythmMultiPenaltyLeftMs();
     if (left > 0) { setMessage(`途中でやめたため、あと${Math.ceil(left / 60000)}分は公開ルームに入れません`); return; }
     setSearching(kind);
@@ -33494,6 +33479,13 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     return () => { alive = false; };
   }, [searching]);
   const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); setChatOpen(false); setSearching(null); };
+  // モードえらび(modeSelect あり)で部屋に入れたら、対戦の画面(RHYTHM_MULTI)へ移る。
+  // 対戦の画面で部屋が無くなったら(出た・満員で抜けた)、モードえらびへ戻る
+  const inRoom = !!view;
+  React.useEffect(() => {
+    if (modeSelect) { if (inRoom && onRoomEntered) onRoomEntered(); return; }
+    if (!inRoom && !searching && onBack) onBack();
+  }, [inRoom, !!searching]);
   const shareCode = async () => {
     if (!view) return;
     const text = `モンヒロビートで協力ライブしよう! 部屋コード: ${view.code}`;
@@ -33551,46 +33543,108 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     </div>
   );
 
-  // ①ルームえらび。横画面(推奨)では「知らない人と遊ぶ」「友だちと遊ぶ」を左右に並べる
-  if (!view && !searching) {
+  // ①モードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」「ソロモード、マルチモード、
+  // マスモン選択などいれられる場所を作る」「マルチのベテランはなくしていい」。参考はプロセカの SELECT ROOM)。
+  // ここは RHYTHM_MODE_SELECT の画面として描く(modeSelect を受け取ったとき)。部屋に入ったら onRoomEntered で
+  // RHYTHM_MULTI へ移る。RHYTHM_MULTI で部屋を出たら(view が無くなったら)モードえらびへ戻す(下の useEffect)。
+  // 横画面(推奨)では左に助手の立ち絵とひとこと、右に遊び方のボタンを並べる
+  if (!view && !searching && modeSelect) {
+    const ms = modeSelect;
+    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
     return (
-      <main data-rhythm-multi data-rhythm-multi-step="rooms" className={shell}>
-        {header('ルームえらび', onBack)}
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          <p className="mb-2 text-[11px] font-bold leading-relaxed text-slate-300">最大{RHYTHM_MULTI_ROOM_MAX}人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストと全国ランキングにも入り、周回の報酬とビートPは人数が多いほど増えます(1人ふえるごとに+50%)。</p>
-          {friendsOn && friendInvites.length > 0 && (
-            <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
-              <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
-              {friendInvites.map((invite) => (
-                <div key={invite.senderId} className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
-                  <span className="min-w-0 flex-1 break-words text-[13px] font-black leading-snug">{friendNameOf(invite.senderId)}さんが部屋に誘っています</span>
-                  <button data-rhythm-multi-friend-join type="button" className={`${btn} shrink-0 bg-pink-700 text-xs`} onClick={() => joinFromInvite(invite)}>参加する</button>
-                </div>
-              ))}
-            </section>
-          )}
-          <div className="space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0">
-            <section className={`${card} space-y-2`}>
-              <h3 className="text-xs font-black text-slate-300">知らない人と遊ぶ</h3>
-              <button data-rhythm-multi-free type="button" className={`${btn} w-full bg-fuchsia-700`} onClick={() => searchRoom('free')}>フリールーム<small className="block text-[10px] font-bold text-fuchsia-100/80">だれでも入れます</small></button>
-              <button data-rhythm-multi-veteran type="button" className={`${btn} w-full ${profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? 'bg-amber-700' : 'bg-slate-700'}`} onClick={() => searchRoom('veteran')}>ベテランルーム<small className="block text-[10px] font-bold text-amber-100/80">ブリーダーLv.{RHYTHM_MULTI_VETERAN_MIN_LEVEL}以上{profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? '' : '(まだ入れません)'}</small></button>
-            </section>
-            <section className={`${card} space-y-2`}>
-              <h3 className="text-xs font-black text-slate-300">友だちと遊ぶ(プライベートルーム)</h3>
-              <button data-rhythm-multi-create type="button" className={`${btn} w-full bg-indigo-700`} onClick={createPrivate}>ルームを作成</button>
-              <div className="flex gap-2">
-                <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
-                  onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                  className="min-h-[48px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-center text-xl font-black tracking-[0.4em] text-white" placeholder="ABCD" />
-                <button data-rhythm-multi-join type="button" className={`${btn} bg-indigo-700`} onClick={joinPrivate}>参加</button>
-              </div>
-            </section>
+      <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950`}>
+        <header className="z-10 flex shrink-0 items-center gap-1.5 border-b border-cyan-400/15 bg-slate-950/90 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
+          {/* 戻るとHOMEへ。裏でクイック∞周回が回っているときは、締めてから戻る(曲えらびにあった戻るボタンの役目をここへ移した) */}
+          <button data-rhythm-back data-quick-run-finishing={ms.backgroundRun ? '1' : undefined} data-quick-run-exiting={ms.exiting ? '1' : undefined} disabled={!!ms.exiting}
+            type="button" aria-label={ms.exiting ? '周回を終えています' : ms.backgroundRun ? '周回を終えてホームへ戻る' : '戻る'} onClick={ms.onExit}
+            className={`min-h-[44px] min-w-[44px] shrink-0 rounded-xl font-black ${ms.exiting ? 'text-amber-300/60' : ms.backgroundRun ? 'text-amber-200' : 'text-lg text-slate-300'}`}>
+            {ms.backgroundRun ? <span className="text-[10px] leading-tight">⏹<br />終了</span> : '←'}
+          </button>
+          <div className="min-w-0 flex-1 leading-none">
+            <small className="block text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
+            <b className="block truncate text-sm font-black tracking-widest text-cyan-200">SELECT MODE ・ モードえらび</b>
+            {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
           </div>
-          {message && <p data-rhythm-multi-message className="mt-2 text-[12px] font-black text-rose-300">{message}</p>}
+          {quickRunInfo && <small data-rhythm-multi-quick-run className={`max-w-[34%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
+            {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
+          </small>}
+          <RhythmOrientationButton/>
+        </header>
+        {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
+        <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
+          {/* 助手の立ち絵とひとこと。縦画面では顔と吹き出しを1段で */}
+          {ms.assistant && (
+            <div data-rhythm-mode-assistant className="relative flex shrink-0 items-end gap-2 px-3 pt-2 landscape:w-[32%] landscape:flex-col landscape:items-center landscape:justify-end landscape:px-2 landscape:pt-0">
+              <img src={ms.assistant.image} alt="" draggable={false} className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover object-[50%_30%] landscape:block" />
+              <img src={ms.assistant.face} alt="" draggable={false} className="h-14 w-14 shrink-0 rounded-2xl border-2 object-cover landscape:hidden" style={{ borderColor: ms.assistant.accent }} />
+              <p data-rhythm-mode-assistant-line className="min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[12px] font-bold leading-snug text-white landscape:absolute landscape:inset-x-2 landscape:bottom-3 landscape:flex-none" style={{ borderColor: ms.assistant.accent }}>
+                <b className="mb-0.5 block text-[10px]" style={{ color: ms.assistant.accent }}>{ms.assistant.name}</b>{ms.assistant.text}
+              </p>
+            </div>
+          )}
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 landscape:py-2">
+            {friendsOn && friendInvites.length > 0 && (
+              <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
+                <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
+                {friendInvites.map((invite) => (
+                  <div key={invite.senderId} className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
+                    <span className="min-w-0 flex-1 break-words text-[13px] font-black leading-snug">{friendNameOf(invite.senderId)}さんが部屋に誘っています</span>
+                    <button data-rhythm-multi-friend-join type="button" className={`${btn} shrink-0 bg-pink-700 text-xs`} onClick={() => joinFromInvite(invite)}>参加する</button>
+                  </div>
+                ))}
+              </section>
+            )}
+            <div className={ms.multi ? 'grid gap-2 landscape:grid-cols-2' : ''}>
+              {/* ソロ: いつもの曲えらびへ */}
+              <button data-rhythm-mode-solo type="button" onClick={ms.onSolo}
+                className="flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-r from-amber-300 to-yellow-400 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]">
+                <span aria-hidden="true" className="text-3xl">🎵</span>
+                <span className="min-w-0 flex-1"><b className="block text-lg font-black leading-tight">ソロライブ</b><small className="block text-[11px] font-black text-slate-800/80">ひとりで好きな曲を演奏する</small></span>
+              </button>
+              {/* マルチ: フリーマッチ(だれとでも)。ベテランは無くした(2026-10-03・ユーザー指示) */}
+              {ms.multi && <button data-rhythm-multi-free type="button" onClick={() => searchRoom('free')}
+                className="flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-r from-orange-400 to-amber-500 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]">
+                <span aria-hidden="true" className="text-3xl">🎮</span>
+                <span className="min-w-0 flex-1"><b className="block text-lg font-black leading-tight">フリーマッチ</b><small className="block text-[11px] font-black text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力ライブ</small></span>
+              </button>}
+            </div>
+            {ms.multi && (
+              <section data-rhythm-mode-private className={`${card} space-y-2`}>
+                <h3 className="text-xs font-black text-slate-300">プライベートルーム(友だちと遊ぶ)</h3>
+                <div className="grid gap-2">
+                  <button data-rhythm-multi-create type="button" className={`${btn} w-full bg-indigo-700`} onClick={createPrivate}>＋ ルーム作成</button>
+                  <div className="flex gap-2">
+                    <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                      onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                      className="min-h-[44px] min-w-[7rem] flex-1 rounded-xl border border-white/20 bg-slate-950 px-2 text-center text-lg font-black tracking-[0.3em] text-white" placeholder="ABCD" />
+                    <button data-rhythm-multi-join type="button" className={`${btn} shrink-0 bg-indigo-700`} onClick={joinPrivate}>ルーム入室</button>
+                  </div>
+                </div>
+              </section>
+            )}
+            {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
+            {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
+            <div className="flex gap-2">
+              <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`}>
+                <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-6 items-center">{ms.monsterFaces.length
+                  ? ms.monsterFaces.map((face, i) => <span key={face.id} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i ? { marginLeft: '-6px' } : undefined}>{face.src && <img src={face.src} alt="" draggable={false} className="h-full w-full object-cover" />}</span>)
+                  : <span className="text-lg leading-none">👾</span>}</span>
+                <span className="text-[11px] font-black">マスモン設定 {ms.monsterCount}/{ms.monsterMax}</span>
+              </button>
+              <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} border-amber-400/50 bg-amber-950/40 text-amber-100`}>
+                <span aria-hidden="true" className="text-lg leading-none">📖</span><span className="text-[11px] font-black">遊びかた</span>
+              </button>
+              <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} border-cyan-400/50 bg-cyan-950/40 text-cyan-100`}>
+                <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="text-[11px] font-black">オプション</span>
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     );
   }
+  // RHYTHM_MULTI で部屋にいない(出た・閉じられた)ときは、すぐモードえらびへ戻す(下の useEffect が戻す。そのあいだは空の画面)
+  if (!view && !searching) return <main data-rhythm-multi data-rhythm-multi-step="leaving" className={shell} />;
 
   const members = view ? view.members : [];
   const phase = room ? room.phase : 'matching';
@@ -33604,11 +33658,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const publicRoom = !!view && view.mode !== 'private';
     return (
       <main data-rhythm-multi data-rhythm-multi-step="matching" className={shell}>
-        {header('マッチング', () => { leaveRoom(); if (!view) onBack(); })}
+        {header('マッチング', leaveRoom)}
         {view && view.full
           ? <div className="min-h-0 flex-1 overflow-y-auto p-3"><section data-rhythm-multi-full className={card}>
             <p className="text-sm font-black text-rose-300">このルームは満員です(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
-            <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>ルームえらびへ戻る</button>
+            <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>モードえらびへ戻る</button>
           </section></div>
           : <>
             <RhythmMultiMemberCards bubbleOf={chatBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
@@ -34092,7 +34146,9 @@ function MonsterHeroGame() {
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
     setRhythmMonsterPickerOpen(false); setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY,DEFAULT_RHYTHM_SELECT_VIEW,false)));
-    setGameState('RHYTHM_DEMO_HOME');
+    // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
+    // ソロはそこから曲えらび(RHYTHM_DEMO_HOME)へ進む
+    setGameState('RHYTHM_MODE_SELECT');
   };
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
@@ -37431,6 +37487,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
+    RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
@@ -37532,7 +37589,7 @@ function MonsterHeroGame() {
   // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
   //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
   //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI'];
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   //
   // ★**一覧で持たず、gameStateの頭で見る。**
@@ -40432,6 +40489,15 @@ function MonsterHeroGame() {
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
+  // モンヒロビートのモードえらびで、助手が立ち絵でひとこと(2026-10-03)。開くたびに1本えらぶ
+  const rhythmModeSelectOpen = gameState === 'RHYTHM_MODE_SELECT';
+  const rhythmModeAssistant = useMemo(() => {
+    if (!rhythmModeSelectOpen || !activeAssistant) return null;
+    const line = (typeof pickAssistantLine === 'function') ? pickAssistantLine('rhythmModeSelect', null, assistantBondLevelNow, activeAssistant.id) : null;
+    const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
+    return { name: activeAssistant.name, accent: activeAssistant.accent,
+      image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
+  }, [rhythmModeSelectOpen, activeAssistant && activeAssistant.id]);
   // まだ助手が知らせていない飾り枠。もらった順に並ぶ
   const newProfileFrames = ownedProfileFrames
     .filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
@@ -47787,7 +47853,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
       {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM']]},
-      {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
+      {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
@@ -49728,12 +49794,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
 
-        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
+            ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
+            key で分けて、画面が変わったら部品の中の状態を作り直す */}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLightLook={rhythmSettings.multiLightLook!==false}
           onToggleLightLook={async()=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLightLook:rhythmSettings.multiLightLook===false});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
-          onBack={()=>setGameState('RHYTHM_DEMO_HOME')}
+          onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
+          onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          modeSelect={gameState==='RHYTHM_MODE_SELECT'?{
+            multi:RELEASE_FLAGS.rhythmMulti===true,
+            onExit:exitRhythmSongSelect, backgroundRun:rhythmBackgroundRun, exiting:rhythmExitingRun,
+            onSolo:()=>setGameState('RHYTHM_DEMO_HOME'),
+            onHelp:()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');},
+            onMonsters:()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');},
+            onOptions:()=>{setRhythmOptionsBack('RHYTHM_MODE_SELECT');setGameState('RHYTHM_OPTIONS');},
+            monsterCount:rhythmMonsterSlots.length, monsterMax:RHYTHM_MONSTER_SLOT_MAX,
+            monsterFaces:rhythmMonsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return {id:masu.id,src:base?(base.faceIconUrl||base.iconUrl):''};}),
+            assistant:rhythmModeAssistant,
+          }:null}
           onStartPlay={(song,difficulty,startId,count)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count});setGameState('RHYTHM_PLAY');}}/>}
 
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
@@ -49761,7 +49842,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             exitingQuickRun={rhythmExitingRun}
-            onExit={exitRhythmSongSelect}
+            onExit={()=>setGameState('RHYTHM_MODE_SELECT')}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
               const kind=rhythmSongSelectEvent&&rhythmSongSelectEvent.kind==='limited'?'limited':'weekly';
@@ -49771,7 +49852,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setGameState('RHYTHM_RANKING');
             }}
             onOpenHelp={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
-            onOpenMulti={RELEASE_FLAGS.rhythmMulti===true?()=>setGameState('RHYTHM_MULTI'):null}
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
             onOpenRanking={(song)=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
@@ -49823,7 +49903,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             の2階層にし、一覧には group の小見出しを挟む。 */}
         {gameState==='RHYTHM_DEMO_HELP'&&(
           <RhythmHelpScreen
-            onBackToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
+            onBackToSongSelect={()=>setGameState('RHYTHM_MODE_SELECT')}
             rhythmHelpTopicId={rhythmHelpTopicId}
             setRhythmHelpTopicId={setRhythmHelpTopicId}
             startRhythmPractice={startRhythmPractice}
@@ -49836,7 +49916,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <RhythmMonstersScreen
             applyRhythmMonsterSlots={applyRhythmMonsterSlots}
             masuMons={masuMons}
-            onBackToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
+            onBackToSongSelect={()=>setGameState('RHYTHM_MODE_SELECT')}
             rhythmMonsterMessage={rhythmMonsterMessage}
             rhythmMonsterPickerOpen={rhythmMonsterPickerOpen}
             rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse}
