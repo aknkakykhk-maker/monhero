@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1e01dcba1dd3f7b8
+// source-sha256: 912370145abb7a31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 23:33";
+const BUILD_DATE = "2026-10-03 23:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -51303,7 +51303,7 @@ function BattleScreen({
         } : {})
       }
     }, pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
-      image: pandoraArt || React.createElement(DyedMonsterImage, {
+      image: React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51315,7 +51315,7 @@ function BattleScreen({
         className: "object-contain drop-shadow-md"
       })
     }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? React.createElement(ArkHolyRainMotion, {
-      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51329,7 +51329,7 @@ function BattleScreen({
       charging: attackAnim.charge === true,
       empowered: attackAnim.charge === false
     }) : isAnimating && attackAnim.motion === 'waterBurst' ? React.createElement(WaterBurstMotion, {
-      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51343,7 +51343,7 @@ function BattleScreen({
       lunge: attackAnim.charge === false,
       charging: attackAnim.charge === true
     }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? React.createElement(MiaSongNotesMotion, {
-      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51359,7 +51359,7 @@ function BattleScreen({
     }) : themedAttack ? React.createElement(ThemedAttackMotion, {
       kind: themedAttack,
       lunge: attackAnim.charge === false,
-      image: pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51370,7 +51370,7 @@ function BattleScreen({
         },
         className: "z-10 object-contain drop-shadow-md"
       }))
-    }) : pandoraArt || slotArt(React.createElement(DyedMonsterImage, {
+    }) : slotArt(React.createElement(DyedMonsterImage, {
       baseId: s.id,
       src: s.imgUrl,
       alt: s.name,

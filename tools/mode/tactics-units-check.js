@@ -1581,7 +1581,7 @@ check('固有技の効果も枠の印に出る',
     // 攻撃の種類ごとの演出(themedAttack)で分岐が挟まったので、「どちらの要素に攻撃の動きを付けるか」だけを見る(2026-09-27)
     /isAnimating&&!tacticsNewLayout\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen)
       && battleScreen.includes("data-tactics-attack-content={tacticsNewLayout?'content-only':undefined}")
-      && /isAnimating&&tacticsNewLayout\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen));
+      && /isAnimating&&tacticsNewLayout(&&!pandoraArt)\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen));
   check('タクティクス操作帯とカードの装飾を統一する',
     battleScreen.includes("rounded-[10px] border border-blue-300/55 bg-blue-500/10")
       && battleScreen.includes("tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'")
