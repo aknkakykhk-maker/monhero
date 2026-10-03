@@ -330,9 +330,9 @@ const RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS = Object.freeze([
 //   交換すると mh_profile_frame_owned_v1 にidが入る(助手の仲良し度でもらったときと同じ入れ物)。
 // ★breeder.js が読み込まれていない環境(この定義だけを取り出す検査)では空になる。
 const RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS = Object.freeze(
-  (typeof PROFILE_FRAMES !== 'undefined' && typeof profileFrameSale === 'function')
-    ? PROFILE_FRAMES.filter(frame => frame.released === true && (profileFrameSale(frame) || {}).shop === 'beatPoint')
-        .map(frame => Object.freeze({ id:`frame_${frame.id}`, name:`${frame.name}のフレーム`, kind:'frame', frameId:frame.id, grantAmount:1, unit:'枚', cost:profileFrameSale(frame).cost }))
+  (typeof PROFILE_FRAMES !== 'undefined' && typeof profileFrameSaleIn === 'function')
+    ? PROFILE_FRAMES.filter(frame => frame.released === true && profileFrameSaleIn(frame, 'beatPoint'))
+        .map(frame => Object.freeze({ id:`frame_${frame.id}`, name:`${frame.name}のフレーム`, kind:'frame', frameId:frame.id, grantAmount:1, unit:'枚', cost:profileFrameSaleIn(frame, 'beatPoint').cost }))
     : []);
 // 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
 // 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す

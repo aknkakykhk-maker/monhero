@@ -352,6 +352,15 @@ const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';
 //   ドラ(2026-09-17に加入)のぶんは**まだ無い**。後日対応と決めてある(ユーザー指示)。
 //   無くても画面は壊れない(nextProfileFrameForAssistant が null を返し、
 //   プロフィールの「次にもらえる枠」ボタンが出ないだけ)。足すときはここへ3枠。
+// モンスターの3枚の値段(2026-10-03・ユーザー指示「ブリーダーポイント 1、ビートポイント 100」)。どちらの交換所でも買える
+const PROFILE_FRAME_MONSTER_SHOPS = Object.freeze([
+  Object.freeze({ shop:'breederPoint', cost:1 }),
+  Object.freeze({ shop:'beatPoint', cost:100 }),
+]);
+// モンヒロビートの通算クリア回数(「これからの回数」を数える専用キー・2026-10-03)。
+// ★既存の mh_rhythm_best_v1 は「曲×難易度ごとにクリアしたか」しか持たないので、回数は別に数える。
+//   公開より前の記録は入れない(0から数える・ユーザー選択)。
+const RHYTHM_CLEAR_TOTAL_KEY = 'mh_rhythm_clear_total_v1';
 const PROFILE_FRAMES = [
   { id:'none',   name:'フレームなし', kind:'none', released:true,
     desc:'飾り枠を付けません。これまでと同じ見た目です。' },
@@ -394,15 +403,21 @@ const PROFILE_FRAMES = [
   //   unlock   … **自分が選べるか**。書いてあるものは条件を満たすまで選べない
   //               (描くのは自由。持っている人の枠は、他人の画面でもちゃんと出る)
   //   ★ここを一緒にすると「解放した人の枠が他人の画面で消える」ので、必ず分けること。
-  // モンスターの3枚は助手とは無関係。配り方を決めていないので未公開のまま
-  // (released:false。選択画面に出ず、他人の記録に入っていても描かれない)
-  { id:'frame_mocchi', name:'モッチー', kind:'image', released:false, hole:0.656,
+  // モンスターの3枚は助手とは無関係。条件を達成すると、ブリーダーP交換所かビートP交換所で買える
+  // (2026-10-03・ユーザー指示。値段は ブリーダーP 1 / ビートP 100)。
+  //   unlock.shops     … どの交換所で何Pか(両方に並ぶ)。下の「売るフレーム」の節を見る
+  //   unlock.condition … 買えるようになる条件。達成するまでは交換所で鍵つき(買えない)
+  // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る(mh_profile_frame_owned_v1)。
+  { id:'frame_mocchi', name:'モッチー', kind:'image', released:true, hole:0.656,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'speciesRebirth', lineage:'mocchi', count:1, text:'モッチー種(モッチー・ミタラシ・剣士モッチー)を1回以上限界突破する' } },
     src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf',
     desc:'桜の花びらと桜もちをあしらった、モッチーの和風フレーム。' },
-  { id:'frame_moo', name:'ムー', kind:'image', released:false, hole:0.682,
+  { id:'frame_moo', name:'ムー', kind:'image', released:true, hole:0.682,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'Master', text:'バトルの難易度マスター以上をクリアする' } },
     src:'images/profile-frames/moo.png?v=fc64f9da9806',
     desc:'紫の宝玉と金の角をいただく、ラスボス「ムー」のフレーム。' },
-  { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:false, hole:0.724,
+  { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:true, hole:0.724,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'rhythmClears', count:10, text:'モンヒロビートを10回以上クリアする' } },
     src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
     desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
   // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
@@ -538,30 +553,51 @@ const PROFILE_FRAME_SHOPS = Object.freeze({
   breederPoint: Object.freeze({ label:'ブリーダーP交換所', currency:'breederPoint' }),
   beatPoint:    Object.freeze({ label:'ビートP交換所',     currency:'beatPoint' }),
 });
-// その枠の売り値。売り物でなければ null
-const profileFrameSale = (frame) => {
+// その枠の売り値の一覧。`unlock:{shop,cost}`(1か所だけ) と `unlock:{shops:[{shop,cost},…]}`(複数の交換所) のどちらも読める。
+// 値段が正しくないものは入れない
+const profileFrameSales = (frame) => {
   const unlock = frame && frame.unlock;
-  const shop = unlock && PROFILE_FRAME_SHOPS[unlock.shop] ? unlock.shop : '';
-  const cost = Math.floor(Number(unlock && unlock.cost));
-  return (shop && Number.isFinite(cost) && cost >= 1) ? { shop, cost, currency: PROFILE_FRAME_SHOPS[shop].currency } : null;
+  if (!unlock || typeof unlock !== 'object') return [];
+  const list = Array.isArray(unlock.shops) ? unlock.shops : (unlock.shop !== undefined ? [unlock] : []);
+  const seen = new Set();
+  return list.map(entry => {
+    const shop = entry && PROFILE_FRAME_SHOPS[entry.shop] ? entry.shop : '';
+    const cost = Math.floor(Number(entry && entry.cost));
+    return (shop && Number.isFinite(cost) && cost >= 1) ? { shop, cost, currency: PROFILE_FRAME_SHOPS[shop].currency } : null;
+  }).filter(sale => sale && !seen.has(sale.shop) && seen.add(sale.shop));
 };
+// その枠の売り値(最初の1つ)。売り物でなければ null
+const profileFrameSale = (frame) => profileFrameSales(frame)[0] || null;
+// 指定の交換所での売り値。そこで売っていなければ null
+const profileFrameSaleIn = (frame, shop) => profileFrameSales(frame).find(sale => sale.shop === shop) || null;
 // 指定の交換所で売っている枠(公開済みだけ。並びは PROFILE_FRAMES のとおり)
-const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => (profileFrameSale(frame) || {}).shop === shop);
+const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => !!profileFrameSaleIn(frame, shop));
+// 買える条件(2026-10-03)。条件が無ければ null(いつでも買える)。形は { kind, text, … }
+//   kind:'speciesRebirth'  … lineage の種(主血統)のモンスターを count 回以上限界突破
+//   kind:'difficultyCleared' … difficulty 以上の難易度をクリア
+//   kind:'rhythmClears'    … モンヒロビートを count 回以上クリア(通算。RHYTHM_CLEAR_TOTAL_KEY)
+const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'difficultyCleared', 'rhythmClears']);
+const profileFrameCondition = (frame) => {
+  const condition = frame && frame.unlock && frame.unlock.condition;
+  return (condition && PROFILE_FRAME_CONDITION_KINDS.includes(condition.kind)) ? condition : null;
+};
 // 売る枠として書かれているのに、売り値が正しくない(shop だけ・cost が0など)枠のid。検査用
 const profileFramesWithBrokenSale = () => PROFILE_FRAMES
-  .filter(frame => frame.unlock && frame.unlock.shop !== undefined && !profileFrameSale(frame))
+  .filter(frame => frame.unlock && (frame.unlock.shop !== undefined || frame.unlock.shops !== undefined)
+    && (profileFrameSales(frame).length === 0
+      || (Array.isArray(frame.unlock.shops) && profileFrameSales(frame).length !== frame.unlock.shops.length)
+      || (frame.unlock.condition !== undefined && !profileFrameCondition(frame))))
   .map(frame => frame.id);
-// ブリーダーP交換所で売る枠は、PROFILE_FRAMES の売り値(unlock.shop:'breederPoint')から商品を**自動で**作る
+// ブリーダーP交換所で売る枠は、PROFILE_FRAMES の売り値(unlock.shop / unlock.shops の breederPoint)から商品を**自動で**作る
 // (2026-10-03・手で書き写さない。枠に売り値を書けば並ぶ)。type:'frame' はプロフィールのフレーム。
 // 買う処理(buyMarketItem)・所持の判定(isMarketItemOwned)・見た目(MarketProductCard)がこの type を扱う。
-// ★ビートP交換所で売る枠(unlock.shop:'beatPoint')は data/rhythm-event.js が RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS を作る。
-// ★いまは売る枠が1つも無いので、ここは何も足さない。
-// ★profileFrameSale を使うので、その定義より後ろに置く(const は宣言より前に呼べない)。
+// ★ビートP交換所で売る枠(beatPoint)は data/rhythm-event.js が RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS を作る。
+// ★profileFrameSales を使うので、その定義より後ろに置く(const は宣言より前に呼べない)。
 PROFILE_FRAMES
-  .filter(frame => frame.released === true && (frame.unlock && frame.unlock.shop === 'breederPoint'))
+  .filter(frame => frame.released === true && profileFrameSaleIn(frame, 'breederPoint'))
   .forEach(frame => {
-    const sale = profileFrameSale(frame);
-    if (sale) BREEDER_MARKET_ITEMS.push({ id:frame.id, name:`${frame.name}のフレーム`, type:'frame', cost:sale.cost, desc:frame.desc || '' });
+    const sale = profileFrameSaleIn(frame, 'breederPoint');
+    BREEDER_MARKET_ITEMS.push({ id:frame.id, name:`${frame.name}のフレーム`, type:'frame', cost:sale.cost, desc:frame.desc || '' });
   });
 // その助手の枠を、もらえるLvの小さい順に返す(助手の画面・ヘルプの表で使う)
 const profileFramesForAssistant = (assistantId) => releasedProfileFrames()

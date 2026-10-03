@@ -188,6 +188,8 @@ function MonsterHeroGame() {
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
+  // モンヒロビートの通算クリア回数(スエゾービートのフレームを買える条件)。保存キーは mh_rhythm_clear_total_v1
+  const [rhythmClearTotal, setRhythmClearTotal] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
@@ -5412,6 +5414,7 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = catchUp;
       setOwnedProfileFrames(catchUp);
       setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      setRhythmClearTotal(await loadRhythmClearTotal());
       if (catchUp.length !== loadedFrames.length) {
         try { await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false); } catch {}
       }
@@ -6756,6 +6759,29 @@ function MonsterHeroGame() {
     onTalk: () => addAssistantBond('talk'),
   }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
 
+  // プロフィールフレームを買える条件の進み具合(2026-10-03・ユーザー指示)。条件が無い枠は null。
+  // 種族は MONSTER_LINEAGE_MAP の主血統(main)で見る。ミタラシ・剣士モッチーもモッチー種に入る。
+  // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る。
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal) => {
+    const c = profileFrameCondition(frame);
+    if (!c) return null;
+    if (c.kind === 'speciesRebirth') {
+      const need = Math.max(1, Math.floor(Number(c.count) || 1));
+      const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => {
+        const lineage = mon && MONSTER_LINEAGE_MAP[mon.baseId];
+        if (!lineage || lineage.main !== c.lineage) return top;
+        return Math.max(top, Math.max(0, Math.floor(Number(mon.rebirthCount) || 0)));
+      }, 0);
+      return { met: best >= need, text: c.text || '', progress: `いまの最高 ${best}回 ／ 必要 ${need}回` };
+    }
+    if (c.kind === 'difficultyCleared') {
+      const met = isQuickDifficultyUnlocked(c.difficulty, clearCounts, proClearCounts, extremeClearCounts);
+      return { met, text: c.text || '', progress: met ? 'クリア済み' : 'まだクリアしていません' };
+    }
+    const need = Math.max(1, Math.floor(Number(c.count) || 1));
+    const have = normalizeRhythmClearTotal(clearTotal);
+    return { met: have >= need, text: c.text || '', progress: `いまの回数 ${Math.min(have, need)}回 ／ 必要 ${need}回` };
+  };
   const isMarketItemOwned = (item) => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
@@ -6819,6 +6845,11 @@ function MonsterHeroGame() {
     if (marketPurchaseProcessingRef.current) return false;
     if (item.available === false) return false; // 実装準備中のアイテムは購入不可
     if (isMarketItemOwned(item)) return false;
+    // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
+    if (item.type === 'frame') {
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal());
+      if (status && !status.met) { setMarketExchangeError('買える条件をまだ満たしていません。'); return false; }
+    }
     const purchase = buildMarketItemPurchase({ item, gold, breederPoints, ownedItems:ownedItemsRef.current, quantity });
     if (!purchase.ok) return false;
     marketPurchaseProcessingRef.current = true;
@@ -6925,6 +6956,14 @@ function MonsterHeroGame() {
       const isFrame = offer?.kind==='frame';
       const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
+      if (isFrame) {
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal());
+        if (frameStatus && !frameStatus.met) {
+          setMarketExchangeError('買える条件をまだ満たしていません。');
+          return { ok:false, reason:'condition' };
+        }
+      }
       const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames });
       if (!exchange.ok) {
         setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
@@ -15997,6 +16036,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
           // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
           if(result?.assist===true)return;
+          // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
+          // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
+          if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
           const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
@@ -16661,6 +16703,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             marketExchangeError={marketExchangeError}
             purchaseProcessing={marketPurchaseProcessingRef.current}
             isItemOwned={isMarketItemOwned}
+            frameConditionOf={(frameId)=>profileFrameConditionStatus(profileFrameById(frameId))}
             previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
             onBack={returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
@@ -17771,8 +17814,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const ownedOf=(frame)=>profileFrameOwned(frame.id, ownedProfileFrames);
           const matches=frames.filter(frame=>(!q||String(frame.name||'').toLowerCase().includes(q))
             &&(frameChip==='all'||(frameChip==='owned'?ownedOf(frame):!ownedOf(frame))));
-          const colorFrames=matches.filter(frame=>!profileFrameUnlock(frame));
+          const colorFrames=matches.filter(frame=>!profileFrameUnlock(frame)&&!profileFrameSale(frame));
           const assistantFrames=matches.filter(frame=>!!profileFrameUnlock(frame));
+          // 条件を達成するとマーケットで買える枠(2026-10-03・モッチー・ムー・スエゾービート)
+          const saleFrames=matches.filter(frame=>!profileFrameUnlock(frame)&&!!profileFrameSale(frame));
           const ownedCount=frames.filter(ownedOf).length;
           const currentFrame=profileFrameById(normalizeProfileFrameId(profileFrameId))||{};
           const cell=(frame)=>{
@@ -17792,12 +17837,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {selected&&<PickerCheckMark/>}
                 <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
                 {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
+                {!owned&&!unlock&&profileFrameSale(frame)&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">マーケットで購入</span>}
               </button>
             );
           };
           // 鍵を押したときだけ、条件といまの進み具合を一覧の下(閉じるの上)に出す。スクロールしなくても見える
           const lockedInfo=frameLockedInfo&&(()=>{
             const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
+            // マーケットで買う枠(2026-10-03)。条件と進み具合、買える場所を出す。買うのはマーケット
+            if(frame&&!unlock&&profileFrameSale(frame)){
+              const status=profileFrameConditionStatus(frame);
+              const shops=profileFrameSales(frame).map(sale=>`${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' ／ ');
+              return (
+                <div data-profile-frame-locked-info data-profile-frame-sale className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+                  {status&&<p className="text-[10px] font-black text-amber-300 leading-tight text-center">{status.text}</p>}
+                  {status&&<p className="text-[9px] text-slate-400 leading-tight text-center mt-1">{status.met?'条件を達成しています！':status.progress}</p>}
+                  <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">マーケットで買えます：{shops}</p>
+                  <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
+                </div>
+              );
+            }
             if(!frame||!unlock) return null;
             const who=assistantById(unlock.assistantId);
             const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
@@ -17823,10 +17882,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               chip={frameChip} onChip={setFrameChip} footerExtra={lockedInfo} dataPicker="frame">
               {matches.length===0&&<p className="py-8 text-center text-[11px] font-bold text-slate-500">当てはまるフレームがありません</p>}
               <div className="grid grid-cols-3 gap-2.5">
-                {colorFrames.length>0&&assistantFrames.length>0&&<PickerGroupLabel count={colorFrames.length}>色の枠</PickerGroupLabel>}
+                {colorFrames.length>0&&(assistantFrames.length>0||saleFrames.length>0)&&<PickerGroupLabel count={colorFrames.length}>色の枠</PickerGroupLabel>}
                 {colorFrames.map(cell)}
                 {assistantFrames.length>0&&<PickerGroupLabel count={assistantFrames.length}>助手の枠（仲良し度でもらえます）</PickerGroupLabel>}
                 {assistantFrames.map(cell)}
+                {saleFrames.length>0&&<PickerGroupLabel count={saleFrames.length}>モンスターの枠（条件を達成するとマーケットで買えます）</PickerGroupLabel>}
+                {saleFrames.map(cell)}
               </div>
             </PickerSheet>
           );

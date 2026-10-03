@@ -286,16 +286,13 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
 
 **助手の枠（9枚）は 2026-09-16 に公開した**（§2.1）。残っているのは次だけ。
 
-- モンスター柄の3枚（モッチー・ムー・スエゾービート）の配り方。
-  マーケット販売 / ビートP交換 / イベント報酬 / ミッション / 図鑑 など、何も決めていない
-- 決まったら `released:true` にして、`unlock` に条件を書く。
-  いまの `unlock` は助手の仲良し度だけを見る形なので、別の条件を足すときは
-  `profileFrameUnlock` と `profileFramesEarnedAt` を種類で分ける
+- モンスター柄の3枚（モッチー・ムー・スエゾービート）は **2026-10-03 に売りはじめた**（§8.3）。
+  配り方は「条件を達成すると、ブリーダーP交換所かビートP交換所で買える」に決まった。
 
 ### 8.2 フレームを売る（準備だけ済み・2026-10-03）
 
 ユーザー指示「フレームも販売実装を予定してるから、ブリーダーポイントとビートポイントのとこに実装できる準備をしといて」。
-**売るフレームはまだ1つも無い**。枠に売り値を書けば交換所に並んで買える土台だけ入れてある。
+枠に売り値を書けば交換所に並んで買える土台。**最初に売るのはモンスターの3枚**（§8.3）。
 
 **売り方（2か所を書くだけ）**
 
@@ -303,6 +300,7 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
    ```js
    unlock:{ shop:'breederPoint', cost:300 }   // ブリーダーP交換所で300P
    unlock:{ shop:'beatPoint',    cost:1500 }  // ビートP交換所で1,500P
+   unlock:{ shops:[{ shop:'breederPoint', cost:1 }, { shop:'beatPoint', cost:100 }] }  // 両方の交換所で(値段は交換所ごと)
    ```
 2. `node tools/market/frame-shop-check.js` を通す。
 
@@ -320,7 +318,24 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
 | 商品の絵は、**自分のアイコンに付けた姿**で出す（拡大も） | 買う前に「自分に付けるとどう見えるか」が分かる。枠は円の外へはみ出すので専用の出し方（`MarketProductIcon` の `type:'frame'`）。これだけが「マーケットの商品画像に枠を付けない」決まりの例外 |
 
 画像のフレーム（`kind:'image'`）を売るときは、画像を `images/profile-frames/` へ軽くして入れる（[`ASSETS.md`](../rules/ASSETS.md)）。
-値段と、どの枠をどちらで売るかは、ここに書いていない（これから決める）。
+
+### 8.3 モンスターの3枚を、条件つきで売る（2026-10-03）
+
+ユーザー指示「各フレームを条件達成で買えるようにしたい」「ブリーダーポイント 1、ビートポイント 100」。
+3枚とも **ブリーダーP交換所は1P / ビートP交換所は100P**（どちらでも買える）。`unlock.shops` に両方の値段、
+`unlock.condition` に買える条件を書いてある。
+
+| 枠 | 買える条件（`condition.kind`） | 見るもの |
+| --- | --- | --- |
+| モッチー | `speciesRebirth`（モッチー種を1回以上限界突破） | `MONSTER_LINEAGE_MAP` の**主血統（main）が `mocchi`** のマスモン（モッチー・ミタラシ・剣士モッチー）の `rebirthCount`。副血統だけモッチーのヤオビクニは入らない |
+| ムー | `difficultyCleared`（バトルの難易度マスター以上をクリア） | `isQuickDifficultyUnlocked('Master', …)`（チャレンジ・プロ・極限のクリア回数。「上の難易度をクリアしていれば下も開く」と同じ判定） |
+| スエゾービート | `rhythmClears`（モンヒロビートを10回以上クリア） | 通算クリア回数 `mh_rhythm_clear_total_v1`（**この更新から数えはじめる**。過去の分は入れない） |
+
+- 条件を達成するまでは、どちらの交換所でも**鍵つき**（札「条件を達成すると買えます」・買えない）。商品の「詳細」から条件と進み具合を読める
+- **買う処理でも条件を確かめる**（`buyMarketItem` / `exchangeRhythmEventPoints` が、保存されている回数を読み直して通す。画面の値が古くても通さない）
+- **条件は「買えるか」だけ**。買ったあとに条件を割っても枠は残る（`mh_profile_frame_owned_v1`）
+- 通算クリア回数はライフを残して終えた演奏だけ数える。練習・アシストモード・失敗は数えない
+- 検査: `tools/market/frame-shop-check.js`（定義と条件・保存）、`tools/market/frame-shop-browser-check.js`（実際の画面で未達成は買えず、達成すると買える）
 
 ### 8.1 小さいアイコンでの大きさ（公開前に決める）
 

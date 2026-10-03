@@ -317,6 +317,10 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
   return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
     <MarketModalHead item={item} accent={meta.text}/>
     {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+      {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
+        <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
+        <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
+      </div>}
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
       <div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
@@ -661,7 +665,12 @@ const helpDataRows = (id) => {
         .map(frame => {
           const unlock = (typeof profileFrameUnlock === 'function') ? profileFrameUnlock(frame) : null;
           const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
-          const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : 'はじめから選べます。';
+          const sales = (typeof profileFrameSales === 'function') ? profileFrameSales(frame) : [];
+          const cond = (typeof profileFrameCondition === 'function') ? profileFrameCondition(frame) : null;
+          const price = sales.map(sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' か ');
+          const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。`
+            : sales.length ? `${cond ? `「${cond.text}」を達成すると、` : ''}マーケットの${price}で買えます。`
+            : 'はじめから選べます。';
           return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
         });
     // 助手の一覧。名前と性格の違いを実データから出す

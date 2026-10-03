@@ -87,9 +87,10 @@ async function run() {
   const lowFrames = await readFrames(low);
   check('選択画面に枠が並ぶ', lowFrames.length >= 20, `${lowFrames.length}件`);
   const lockedLow = lowFrames.filter(f => f.locked);
-  check('Lv1では助手の枠が9枚とも鍵つきで並ぶ', lockedLow.length === 9, `${lockedLow.length}枚`);
+  // 助手の枠9枚 + 交換所で買うモンスターの枠3枚(2026-10-03)
+  check('Lv1では助手の枠9枚と交換所で買う枠3枚が鍵つきで並ぶ', lockedLow.length === 12, `${lockedLow.length}枚`);
   check('鍵つきの枠にも、もらえる条件が出ている',
-    lockedLow.every(f => /Lv\d/.test(f.text)), lockedLow.slice(0, 2).map(f => f.text).join(' / '));
+    lockedLow.every(f => /Lv\d|マーケットで購入/.test(f.text)), lockedLow.slice(0, 2).map(f => f.text).join(' / '));
   check('色の枠は鍵が付かない', lowFrames.filter(f => !f.locked).length >= 13, `${lowFrames.filter(f => !f.locked).length}枚`);
   // 鍵を押すと条件が出る
   await low.evaluate(() => document.querySelector('[data-profile-frame-option="frame_mua_1"]')?.click());

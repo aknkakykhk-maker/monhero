@@ -25,7 +25,7 @@
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail, frameConditionOf=null,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
@@ -109,8 +109,11 @@ function BreederMarketScreen({
   const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false}={})=>{
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
+    // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない。詳細で条件と進み具合が読める
+    const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id) : null;
+    const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
-    const canBuy = !comingSoon && !owned && balance>=item.cost && !busy;
+    const canBuy = !comingSoon && !frameLocked && !owned && balance>=item.cost && !busy;
     // 近日公開予定の子(まだ ALL_PLAYER_MONSTERS にいない)も、案の段階の中身で詳細を開けるようにする
     const detailMon = item.type==='disc' ? (ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS!=='undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null) : null;
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
@@ -119,13 +122,13 @@ function BreederMarketScreen({
     return (
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard previewIcon={previewIcon}
-          item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
+          item={item} owned={owned} comingSoon={comingSoon||frameLocked} comingSoonLabel={frameLocked?'条件を達成すると買えます':undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
@@ -296,13 +299,17 @@ function BreederMarketScreen({
             const frame=profileFrameById(offer.frameId);
             const item={ id:offer.frameId, name:offer.name, emoji:'🖼️', type:'frame', currency:'beatPoint', cost:offer.cost, desc:frame?.desc||'' };
             const owned=isItemOwned({ id:offer.frameId, type:'frame' });
+            // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない
+            const frameCondition=frameConditionOf?frameConditionOf(offer.frameId):null;
+            const frameLocked=!!frameCondition&&!frameCondition.met&&!owned;
+            const detailItem=frameCondition?{...item,frameCondition}:item;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-frame':offer.id}} previewIcon={previewIcon}
-              item={item} owned={owned} comingSoon={false}
-              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              item={item} owned={owned} comingSoon={frameLocked} comingSoonLabel={frameLocked?'条件を達成すると買えます':undefined}
+              canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
-              middle={item.desc?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
+              middle={(item.desc||frameCondition)?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(detailItem)}/>:null}
             />;
           })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0f651428a6489b4d
+// source-sha256: ceadded644b4b277
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 19:08";
+const BUILD_DATE = "2026-10-03 19:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14228,7 +14228,14 @@ const MarketItemDetail = ({
     accent: meta.text
   }), item.desc && React.createElement("p", {
     className: "mt-3 text-[12px] text-slate-200 leading-relaxed"
-  }, item.desc), React.createElement("div", {
+  }, item.desc), item.frameCondition && React.createElement("div", {
+    "data-market-frame-condition": true,
+    className: "mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black"
+  }, React.createElement("div", {
+    className: "text-amber-300 leading-snug"
+  }, "買える条件：", item.frameCondition.text), React.createElement("div", {
+    className: "mt-1 text-[11px] text-slate-300"
+  }, item.frameCondition.met ? '条件を達成しています！' : item.frameCondition.progress)), React.createElement("div", {
     className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
   }, React.createElement("div", {
     className: "flex justify-between"
@@ -14592,7 +14599,10 @@ const helpDataRows = id => {
       return ((typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []) || []).map(frame => {
         const unlock = typeof profileFrameUnlock === 'function' ? profileFrameUnlock(frame) : null;
         const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
-        const how = unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : 'はじめから選べます。';
+        const sales = typeof profileFrameSales === 'function' ? profileFrameSales(frame) : [];
+        const cond = typeof profileFrameCondition === 'function' ? profileFrameCondition(frame) : null;
+        const price = sales.map(sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' か ');
+        const how = unlock ? `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : sales.length ? `${cond ? `「${cond.text}」を達成すると、` : ''}マーケットの${price}で買えます。` : 'はじめから選べます。';
         return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
       });
     case 'assistants':
@@ -22343,6 +22353,21 @@ let rhythmEventPointsQueue = Promise.resolve();
 const addRhythmEventPoints = amount => {
   const run = rhythmEventPointsQueue.then(() => addRhythmEventPointsNow(amount));
   rhythmEventPointsQueue = run.catch(() => {});
+  return run;
+};
+const normalizeRhythmClearTotal = value => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(n))) : 0;
+};
+const loadRhythmClearTotal = async () => normalizeRhythmClearTotal(await storeGet(RHYTHM_CLEAR_TOTAL_KEY, 0, false));
+let rhythmClearTotalQueue = Promise.resolve();
+const addRhythmClearTotal = () => {
+  const run = rhythmClearTotalQueue.then(async () => {
+    const next = Math.min(Number.MAX_SAFE_INTEGER, (await loadRhythmClearTotal()) + 1);
+    await storeSet(RHYTHM_CLEAR_TOTAL_KEY, next, false);
+    return next;
+  });
+  rhythmClearTotalQueue = run.catch(() => {});
   return run;
 };
 const storeList = async (prefix, shared = false) => {
@@ -37083,7 +37108,8 @@ function BreederMarketScreen({
   onExchangeHeroProof,
   eventPoints = 0,
   onExchangeEventPoints,
-  onOpenUpcomingDetail
+  onOpenUpcomingDetail,
+  frameConditionOf = null
 }) {
   const [marketSection, setMarketSection] = useState(null);
   const [sheet, setSheet] = useState(null);
@@ -37234,8 +37260,10 @@ function BreederMarketScreen({
   } = {}) => {
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
+    const frameCondition = item.type === 'frame' && frameConditionOf ? frameConditionOf(item.id) : null;
+    const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
-    const canBuy = !comingSoon && !owned && balance >= item.cost && !busy;
+    const canBuy = !comingSoon && !frameLocked && !owned && balance >= item.cost && !busy;
     const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null : null;
     const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
     const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
@@ -37250,7 +37278,8 @@ function BreederMarketScreen({
       previewIcon: previewIcon,
       item: item,
       owned: owned,
-      comingSoon: comingSoon,
+      comingSoon: comingSoon || frameLocked,
+      comingSoonLabel: frameLocked ? '条件を達成すると買えます' : undefined,
       canBuy: canBuy,
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
@@ -37264,7 +37293,13 @@ function BreederMarketScreen({
       }),
       detail: detailMon || detailTeaching,
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
-      middle: item.type === 'item' ? React.createElement(React.Fragment, null, React.createElement("span", {
+      middle: item.type === 'frame' && frameCondition ? React.createElement(MarketDetailChip, {
+        label: `${item.name}の買える条件を見る`,
+        onClick: () => onOpenItemDetail({
+          ...item,
+          frameCondition
+        })
+      }) : item.type === 'item' ? React.createElement(React.Fragment, null, React.createElement("span", {
         className: `text-[11px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-400'}`
       }, "×", ownedItems[item.id] || 0), item.desc && React.createElement(MarketDetailChip, {
         label: `${item.name}の効果を見る`,
@@ -37594,6 +37629,12 @@ function BreederMarketScreen({
       id: offer.frameId,
       type: 'frame'
     });
+    const frameCondition = frameConditionOf ? frameConditionOf(offer.frameId) : null;
+    const frameLocked = !!frameCondition && !frameCondition.met && !owned;
+    const detailItem = frameCondition ? {
+      ...item,
+      frameCondition
+    } : item;
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
@@ -37602,17 +37643,18 @@ function BreederMarketScreen({
       previewIcon: previewIcon,
       item: item,
       owned: owned,
-      comingSoon: false,
-      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      comingSoon: frameLocked,
+      comingSoonLabel: frameLocked ? '条件を達成すると買えます' : undefined,
+      canBuy: !owned && !frameLocked && safeEventPoints >= offer.cost && !busy,
       disabled: purchaseProcessing,
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
         item,
         confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
       }),
-      middle: item.desc ? React.createElement(MarketDetailChip, {
+      middle: item.desc || frameCondition ? React.createElement(MarketDetailChip, {
         label: `${offer.name}の説明を見る`,
-        onClick: () => onOpenItemDetail(item)
+        onClick: () => onOpenItemDetail(detailItem)
       }) : null
     });
   }), eventTab === 'disc' && RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
@@ -57429,6 +57471,7 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
+  const [rhythmClearTotal, setRhythmClearTotal] = useState(0);
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   const [confirmRequest, setConfirmRequest] = useState(null);
@@ -62414,6 +62457,7 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = catchUp;
       setOwnedProfileFrames(catchUp);
       setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      setRhythmClearTotal(await loadRhythmClearTotal());
       if (catchUp.length !== loadedFrames.length) {
         try {
           await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false);
@@ -63820,6 +63864,38 @@ function MonsterHeroGame() {
     assistantId: selectedAssistantId,
     onTalk: () => addAssistantBond('talk')
   }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
+  const profileFrameConditionStatus = (frame, clearTotal = rhythmClearTotal) => {
+    const c = profileFrameCondition(frame);
+    if (!c) return null;
+    if (c.kind === 'speciesRebirth') {
+      const need = Math.max(1, Math.floor(Number(c.count) || 1));
+      const best = (Array.isArray(masuMons) ? masuMons : []).reduce((top, mon) => {
+        const lineage = mon && MONSTER_LINEAGE_MAP[mon.baseId];
+        if (!lineage || lineage.main !== c.lineage) return top;
+        return Math.max(top, Math.max(0, Math.floor(Number(mon.rebirthCount) || 0)));
+      }, 0);
+      return {
+        met: best >= need,
+        text: c.text || '',
+        progress: `いまの最高 ${best}回 ／ 必要 ${need}回`
+      };
+    }
+    if (c.kind === 'difficultyCleared') {
+      const met = isQuickDifficultyUnlocked(c.difficulty, clearCounts, proClearCounts, extremeClearCounts);
+      return {
+        met,
+        text: c.text || '',
+        progress: met ? 'クリア済み' : 'まだクリアしていません'
+      };
+    }
+    const need = Math.max(1, Math.floor(Number(c.count) || 1));
+    const have = normalizeRhythmClearTotal(clearTotal);
+    return {
+      met: have >= need,
+      text: c.text || '',
+      progress: `いまの回数 ${Math.min(have, need)}回 ／ 必要 ${need}回`
+    };
+  };
   const isMarketItemOwned = item => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
@@ -63892,6 +63968,13 @@ function MonsterHeroGame() {
     if (marketPurchaseProcessingRef.current) return false;
     if (item.available === false) return false;
     if (isMarketItemOwned(item)) return false;
+    if (item.type === 'frame') {
+      const status = profileFrameConditionStatus(profileFrameById(item.id), await loadRhythmClearTotal());
+      if (status && !status.met) {
+        setMarketExchangeError('買える条件をまだ満たしていません。');
+        return false;
+      }
+    }
     const purchase = buildMarketItemPurchase({
       item,
       gold,
@@ -64035,6 +64118,16 @@ function MonsterHeroGame() {
       const isFrame = offer?.kind === 'frame';
       const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      if (isFrame) {
+        const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal());
+        if (frameStatus && !frameStatus.met) {
+          setMarketExchangeError('買える条件をまだ満たしていません。');
+          return {
+            ok: false,
+            reason: 'condition'
+          };
+        }
+      }
       const exchange = rhythmEventPointExchangePreview({
         offer,
         eventPoints: beforePoints,
@@ -78337,6 +78430,11 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'calibration') return;
         if (rhythmPlay.from === 'tutorial') return;
         if (result?.assist === true) return;
+        if (result?.cleared !== false) {
+          try {
+            setRhythmClearTotal(await addRhythmClearTotal());
+          } catch {}
+        }
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
         if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
@@ -80073,6 +80171,7 @@ function MonsterHeroGame() {
       marketExchangeError: marketExchangeError,
       purchaseProcessing: marketPurchaseProcessingRef.current,
       isItemOwned: isMarketItemOwned,
+      frameConditionOf: frameId => profileFrameConditionStatus(profileFrameById(frameId)),
       previewIcon: {
         src: resolveIconUrl(breederIcon),
         id: breederIcon
@@ -82088,8 +82187,9 @@ function MonsterHeroGame() {
       const q = frameQuery.trim().toLowerCase();
       const ownedOf = frame => profileFrameOwned(frame.id, ownedProfileFrames);
       const matches = frames.filter(frame => (!q || String(frame.name || '').toLowerCase().includes(q)) && (frameChip === 'all' || (frameChip === 'owned' ? ownedOf(frame) : !ownedOf(frame))));
-      const colorFrames = matches.filter(frame => !profileFrameUnlock(frame));
+      const colorFrames = matches.filter(frame => !profileFrameUnlock(frame) && !profileFrameSale(frame));
       const assistantFrames = matches.filter(frame => !!profileFrameUnlock(frame));
+      const saleFrames = matches.filter(frame => !profileFrameUnlock(frame) && !!profileFrameSale(frame));
       const ownedCount = frames.filter(ownedOf).length;
       const currentFrame = profileFrameById(normalizeProfileFrameId(profileFrameId)) || {};
       const cell = frame => {
@@ -82126,11 +82226,30 @@ function MonsterHeroGame() {
           className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
         }, frame.name), !owned && unlock && React.createElement("span", {
           className: "text-[8px] font-black leading-tight text-center text-amber-400"
-        }, who && who.name || '', " Lv", unlock.bondLevel));
+        }, who && who.name || '', " Lv", unlock.bondLevel), !owned && !unlock && profileFrameSale(frame) && React.createElement("span", {
+          className: "text-[8px] font-black leading-tight text-center text-amber-400"
+        }, "マーケットで購入"));
       };
       const lockedInfo = frameLockedInfo && (() => {
         const frame = profileFrameById(frameLockedInfo);
         const unlock = frame ? profileFrameUnlock(frame) : null;
+        if (frame && !unlock && profileFrameSale(frame)) {
+          const status = profileFrameConditionStatus(frame);
+          const shops = profileFrameSales(frame).map(sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' ／ ');
+          return React.createElement("div", {
+            "data-profile-frame-locked-info": true,
+            "data-profile-frame-sale": true,
+            className: "rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
+          }, status && React.createElement("p", {
+            className: "text-[10px] font-black text-amber-300 leading-tight text-center"
+          }, status.text), status && React.createElement("p", {
+            className: "text-[9px] text-slate-400 leading-tight text-center mt-1"
+          }, status.met ? '条件を達成しています！' : status.progress), React.createElement("p", {
+            className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
+          }, "マーケットで買えます：", shops), React.createElement("p", {
+            className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
+          }, frame.desc || ''));
+        }
         if (!frame || !unlock) return null;
         const who = assistantById(unlock.assistantId);
         const points = normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
@@ -82193,11 +82312,13 @@ function MonsterHeroGame() {
         className: "py-8 text-center text-[11px] font-bold text-slate-500"
       }, "当てはまるフレームがありません"), React.createElement("div", {
         className: "grid grid-cols-3 gap-2.5"
-      }, colorFrames.length > 0 && assistantFrames.length > 0 && React.createElement(PickerGroupLabel, {
+      }, colorFrames.length > 0 && (assistantFrames.length > 0 || saleFrames.length > 0) && React.createElement(PickerGroupLabel, {
         count: colorFrames.length
       }, "色の枠"), colorFrames.map(cell), assistantFrames.length > 0 && React.createElement(PickerGroupLabel, {
         count: assistantFrames.length
-      }, "助手の枠（仲良し度でもらえます）"), assistantFrames.map(cell)));
+      }, "助手の枠（仲良し度でもらえます）"), assistantFrames.map(cell), saleFrames.length > 0 && React.createElement(PickerGroupLabel, {
+        count: saleFrames.length
+      }, "モンスターの枠（条件を達成するとマーケットで買えます）"), saleFrames.map(cell)));
     })(), showBackup && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
