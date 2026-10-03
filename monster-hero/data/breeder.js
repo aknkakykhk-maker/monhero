@@ -357,6 +357,11 @@ const PROFILE_FRAME_MONSTER_SHOPS = Object.freeze([
   Object.freeze({ shop:'breederPoint', cost:1 }),
   Object.freeze({ shop:'beatPoint', cost:100 }),
 ]);
+// ラグナロクの枠はビートPだけ高い(1000P・ユーザー指示)。ブリーダーPは1P
+const PROFILE_FRAME_RAGNAROK_SHOPS = Object.freeze([
+  Object.freeze({ shop:'breederPoint', cost:1 }),
+  Object.freeze({ shop:'beatPoint', cost:1000 }),
+]);
 // モンヒロビートの通算クリア回数(「これからの回数」を数える専用キー・2026-10-03)。
 // ★既存の mh_rhythm_best_v1 は「曲×難易度ごとにクリアしたか」しか持たないので、回数は別に数える。
 //   公開より前の記録は入れない(0から数える・ユーザー選択)。
@@ -420,6 +425,39 @@ const PROFILE_FRAMES = [
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'rhythmClears', count:10, text:'モンヒロビートを10回以上クリアする' } },
     src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
     desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
+  // ==================== モンスターの枠7枚(2026-10-03) ====================
+  // ユーザーから受け取った透過PNG(1254px → 384pxへ軽くした。ASSETS.md)。
+  // 7枚。スエゾー・ゴーレム・ライガー・ハム・ピクシー・ミーアはそのモンスターを1回「転生」すると、ブリーダーP交換所で買える(ビートP交換所は条件なし)。
+  // ラグナロクはバトルの難易度ラグナロクをクリアすると、ブリーダーP交換所で買える(ビートP交換所は条件なし・1000P)。
+  // ★条件に shops:['breederPoint'] と書いたぶん、ビートP交換所では条件なしで買える。
+  { id:'frame_suezo', name:'スエゾー', kind:'image', released:true, hole:0.573,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Suezo', count:1, shops:['breederPoint'], text:'スエゾーを1回転生する' } },
+    src:'images/profile-frames/suezo.png?v=6f617e7aa00a',
+    desc:'黄金の輪に、スエゾーがぺろりと顔を出す、きらめくフレーム。' },
+  { id:'frame_golem', name:'ゴーレム', kind:'image', released:true, hole:0.755,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Golem', count:1, shops:['breederPoint'], text:'ゴーレムを1回転生する' } },
+    src:'images/profile-frames/golem.png?v=84bc05c75f8d',
+    desc:'ごつごつした白い岩が、ぐるりと連なる、ゴーレムの輪。' },
+  { id:'frame_tiger', name:'ライガー', kind:'image', released:true, hole:0.703,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Tiger', count:1, shops:['breederPoint'], text:'ライガーを1回転生する' } },
+    src:'images/profile-frames/tiger.png?v=3ced385df138',
+    desc:'蒼い結晶と金の飾りをまとった、ライガーの輪。' },
+  { id:'frame_ham', name:'ハム', kind:'image', released:true, hole:0.792,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Ham', count:1, shops:['breederPoint'], text:'ハムを1回転生する' } },
+    src:'images/profile-frames/ham.png?v=0d4103bbbab8',
+    desc:'ふわふわの毛並みと肉球、桃色の耳をあしらった、ハムの輪。' },
+  { id:'frame_pixie', name:'ピクシー', kind:'image', released:true, hole:0.750,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Pixie', count:1, shops:['breederPoint'], text:'ピクシーを1回転生する' } },
+    src:'images/profile-frames/pixie.png?v=a9a36e085925',
+    desc:'ハートの宝石とこうもりの羽が並ぶ、ピクシーの輪。' },
+  { id:'frame_mia', name:'ミーア', kind:'image', released:true, hole:0.734,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Mia', count:1, shops:['breederPoint'], text:'ミーアを1回転生する' } },
+    src:'images/profile-frames/mia.png?v=fc46dfb38806',
+    desc:'白い羽と色とりどりのリボンで飾った、ミーアの輪。' },
+  { id:'frame_ragnarok', name:'ラグナロク', kind:'image', released:true, hole:0.672,
+    unlock:{ shops:PROFILE_FRAME_RAGNAROK_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'RAGNAROK', shops:['breederPoint'], text:'バトルの難易度ラグナロクをクリアする' } },
+    src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece',
+    desc:'燃えさかる炎をまとう黒い竜が、ぐるりと取り巻く輪。' },
   // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
   // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
   // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
@@ -574,12 +612,20 @@ const profileFrameSaleIn = (frame, shop) => profileFrameSales(frame).find(sale =
 const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => !!profileFrameSaleIn(frame, shop));
 // 買える条件(2026-10-03)。条件が無ければ null(いつでも買える)。形は { kind, text, … }
 //   kind:'speciesRebirth'  … lineage の種(主血統)のモンスターを count 回以上限界突破
+//   kind:'monsterReincarnate' … monsterId のモンスター(マスモン)を count 回以上「転生」(reincarnateCount。限界突破とは別の仕組み)
 //   kind:'difficultyCleared' … difficulty 以上の難易度をクリア
 //   kind:'rhythmClears'    … モンヒロビートを count 回以上クリア(通算。RHYTHM_CLEAR_TOTAL_KEY)
-const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'difficultyCleared', 'rhythmClears']);
+const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears']);
 const profileFrameCondition = (frame) => {
   const condition = frame && frame.unlock && frame.unlock.condition;
   return (condition && PROFILE_FRAME_CONDITION_KINDS.includes(condition.kind)) ? condition : null;
+};
+// その交換所で買うときに必要な条件。条件に `shops:['breederPoint']` と書いてあれば、その交換所だけ条件つき
+// (書いていなければどの交換所でも条件つき)。条件が無い・その交換所には条件が無いときは null(いつでも買える)
+const profileFrameConditionFor = (frame, shop) => {
+  const condition = profileFrameCondition(frame);
+  if (!condition) return null;
+  return (Array.isArray(condition.shops) && !condition.shops.includes(shop)) ? null : condition;
 };
 // 売る枠として書かれているのに、売り値が正しくない(shop だけ・cost が0など)枠のid。検査用
 const profileFramesWithBrokenSale = () => PROFILE_FRAMES

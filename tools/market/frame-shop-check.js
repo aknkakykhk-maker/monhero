@@ -6,8 +6,9 @@
 //   仮の売り物で確かめる(ゲームのデータには何も足さない)。
 //
 // 見るもの
-//   ① いま売っているのは、モンスターの3枚だけ(モッチー・ムー・スエゾービート)。ブリーダーP交換所にもビートP交換所にも並び、
-//      どれも買える条件が付いている(2026-10-03・ユーザー指示)。そのほかの枠は売らない
+//   ① いま売っているのは、モンスターの枠10枚だけ(モッチー・ムー・スエゾービート・スエゾー・ゴーレム・ライガー・ハム・ピクシー・ミーア・ラグナロク)。
+//      ブリーダーP交換所にもビートP交換所にも並び、どれも買える条件が付いている(2026-10-03・ユーザー指示)。
+//      後ろの7枚は、条件がブリーダーP交換所だけにかかる(ビートP交換所は条件なし)。そのほかの枠は売らない
 //   ② 売り値(unlock:{shop,cost} と unlock:{shops:[…]})の読み方。壊れた書き方は「売り物ではない」になり、検査が拾う
 //   ③ ★売る枠を買うまで選べない(unlock が無い枠は最初から全員が選べる、という決まりを破らない)
 //   ④ ビートP交換所の計算(rhythmEventPointExchangePreview)が frame を扱う
@@ -39,25 +40,26 @@ const load = (fake = '') => {
   vm.createContext(ctx);
   // 検査の中だけで仮の売り物を足す(PROFILE_FRAMES の最後に差し込む)。ゲームのデータそのものは書き換えない(別のコンテキストで動かす)
   const src = fake ? block.replace(/\n\];\nconst PROFILE_FRAME_MAP/, `\n${fake}];\nconst PROFILE_FRAME_MAP`) : block;
-  vm.runInContext(`${src}\nthis.out={PROFILE_FRAMES,PROFILE_FRAME_SHOPS,profileFrameSale,profileFrameSaleIn,profileFrameSales,profileFrameCondition,profileFramesForSale,profileFramesWithBrokenSale,profileFrameOwned,normalizeProfileFrameId,releasedProfileFrames,profileFrameUnlock,BREEDER_MARKET_ITEMS};`, ctx);
+  vm.runInContext(`${src}\nthis.out={PROFILE_FRAMES,PROFILE_FRAME_SHOPS,profileFrameSale,profileFrameSaleIn,profileFrameSales,profileFrameCondition,profileFrameConditionFor,profileFramesForSale,profileFramesWithBrokenSale,profileFrameOwned,normalizeProfileFrameId,releasedProfileFrames,profileFrameUnlock,BREEDER_MARKET_ITEMS};`, ctx);
   return ctx.out;
 };
 
 // ① いま売っているのはモンスターの3枚だけ
 const real = load();
-const SOLD = ['frame_mocchi', 'frame_moo', 'frame_suezo_beat'];
-check('いま売っているフレームは、モンスターの3枚だけ(ブリーダーP・ビートPの両方)',
+const SOLD = ['frame_mocchi', 'frame_moo', 'frame_suezo_beat', 'frame_suezo', 'frame_golem', 'frame_tiger', 'frame_ham', 'frame_pixie', 'frame_mia', 'frame_ragnarok'];
+const NEW6 = SOLD.slice(3);
+check('いま売っているフレームは、モンスターの枠10枚だけ(ブリーダーP・ビートPの両方)',
   real.profileFramesForSale('breederPoint').map(f => f.id).join() === SOLD.join()
   && real.profileFramesForSale('beatPoint').map(f => f.id).join() === SOLD.join(),
   `${real.profileFramesForSale('breederPoint').map(f => f.id).join()} / ${real.profileFramesForSale('beatPoint').map(f => f.id).join()}`);
-check('値段は3枚ともブリーダーP 1 / ビートP 100',
+check('値段はブリーダーP 1 / ビートP 100(ラグナロクだけビートP 1000)',
   SOLD.every(id => {
     const f = real.PROFILE_FRAMES.find(x => x.id === id);
-    return real.profileFrameSaleIn(f, 'breederPoint').cost === 1 && real.profileFrameSaleIn(f, 'beatPoint').cost === 100;
+    return real.profileFrameSaleIn(f, 'breederPoint').cost === 1 && real.profileFrameSaleIn(f, 'beatPoint').cost === (id === 'frame_ragnarok' ? 1000 : 100);
   }));
-check('3枚とも買える条件が付いている', SOLD.every(id => !!real.profileFrameCondition(real.PROFILE_FRAMES.find(x => x.id === id))));
+check('10枚とも買える条件が付いている', SOLD.every(id => !!real.profileFrameCondition(real.PROFILE_FRAMES.find(x => x.id === id))));
 check('売る枠として書かれているのに売り値が壊れている枠も無い', real.profileFramesWithBrokenSale().length === 0, real.profileFramesWithBrokenSale().join(','));
-check('いまの商品の一覧に入っているフレームは、売っている3枚だけ',
+check('いまの商品の一覧に入っているフレームは、売っている10枚だけ',
   real.BREEDER_MARKET_ITEMS.filter(item => item.type === 'frame').map(item => item.id).join() === SOLD.join());
 check('もともとの枠(条件なし・助手の仲良し度)の選べる・選べないは変わらない',
   real.profileFrameOwned('gold', []) === true && real.profileFrameOwned('none', []) === true
@@ -142,12 +144,28 @@ const cond = (id) => real.profileFrameCondition(real.PROFILE_FRAMES.find(f => f.
 check('モッチーの条件は、モッチー種(主血統 mocchi)を1回以上限界突破', cond('frame_mocchi').kind === 'speciesRebirth' && cond('frame_mocchi').lineage === 'mocchi' && cond('frame_mocchi').count === 1);
 check('ムーの条件は、難易度マスター以上のクリア', cond('frame_moo').kind === 'difficultyCleared' && cond('frame_moo').difficulty === 'Master');
 check('スエゾービートの条件は、モンヒロビート10回クリア', cond('frame_suezo_beat').kind === 'rhythmClears' && cond('frame_suezo_beat').count === 10);
+// 新しい6枚: 条件はブリーダーP交換所だけにかかり、ビートP交換所は条件なしで買える
+const condFor = (id, shop) => real.profileFrameConditionFor(real.PROFILE_FRAMES.find(f => f.id === id), shop);
+check('スエゾー・ゴーレム・ライガー・ハム・ピクシー・ミーアの条件は、そのモンスターを1回転生(monsterReincarnate)',
+  [['frame_suezo', 'Suezo'], ['frame_golem', 'Golem'], ['frame_tiger', 'Tiger'], ['frame_ham', 'Ham'], ['frame_pixie', 'Pixie'], ['frame_mia', 'Mia']]
+    .every(([id, mon]) => cond(id).kind === 'monsterReincarnate' && cond(id).monsterId === mon && cond(id).count === 1));
+check('ラグナロクの条件は、難易度ラグナロク(RAGNAROK)のクリア', cond('frame_ragnarok').kind === 'difficultyCleared' && cond('frame_ragnarok').difficulty === 'RAGNAROK');
+check('新しい7枚は、ブリーダーP交換所だけ条件つきで、ビートP交換所は条件なし',
+  NEW6.every(id => !!condFor(id, 'breederPoint') && condFor(id, 'beatPoint') === null));
+check('もとの3枚は、どちらの交換所でも条件つき',
+  SOLD.slice(0, 3).every(id => !!condFor(id, 'breederPoint') && !!condFor(id, 'beatPoint')));
+check('転生は reincarnateCount を見る(限界突破の rebirthCount と取り違えない)',
+  (() => {
+    const at = app.indexOf("c.kind === 'monsterReincarnate'");
+    const block = at >= 0 ? app.slice(at, app.indexOf('return {', at)) : '';
+    return block.includes('reincarnateCount') && !block.includes('rebirthCount');
+  })());
 check('壊れた条件(知らない種類)は「条件なし」でなく、売り値の壊れとして検査が拾う',
   load(FAKE("{ shop:'beatPoint', cost:100, condition:{ kind:'nothing' } }")).profileFramesWithBrokenSale().join() === 'fake_sale');
 check('ブリーダーP交換所で買うとき、条件を保存値で読み直して確かめる',
-  /if \(item\.type === 'frame'\) \{\s*const status = profileFrameConditionStatus\(profileFrameById\(item\.id\), await loadRhythmClearTotal\(\)\);\s*if \(status && !status\.met\)/.test(app));
+  /if \(item\.type === 'frame'\) \{\s*const status = profileFrameConditionStatus\(profileFrameById\(item\.id\), await loadRhythmClearTotal\(\), 'breederPoint'\);\s*if \(status && !status\.met\)/.test(app));
 check('ビートP交換所で交換するときも、条件を保存値で読み直して確かめる',
-  /if \(isFrame\) \{\s*const frameStatus = profileFrameConditionStatus\(profileFrameById\(offer\.frameId\), await loadRhythmClearTotal\(\)\);\s*if \(frameStatus && !frameStatus\.met\)/.test(app));
+  /if \(isFrame\) \{\s*const frameStatus = profileFrameConditionStatus\(profileFrameById\(offer\.frameId\), await loadRhythmClearTotal\(\), 'beatPoint'\);\s*if \(frameStatus && !frameStatus\.met\)/.test(app));
 check('条件が未達成のカードは買えない札が出る(ブリーダーP・ビートP)',
   market.includes('canBuy = !comingSoon && !frameLocked && !owned') && market.includes("canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}"));
 check('モンヒロビートの通算クリア回数は新しいキーで数え、既存の mh_rhythm_best_v1 は書き換えない',
