@@ -38,12 +38,12 @@ end $$;
 -- ---- 適用前のひかえ ----
 create temporary table score_shrink_before on commit drop as
 select
-  count(*) filter (where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK))$' and r.created_at < p.cutoff) as shrink_rows,
-  count(*) filter (where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK))$' and r.created_at < p.cutoff and r.score > 0) as shrink_positive_rows,
-  max(r.score) filter (where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK))$' and r.created_at < p.cutoff) as shrink_max,
-  count(*) filter (where not (r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK))$' and r.created_at < p.cutoff)
+  count(*) filter (where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM))$' and r.created_at < p.cutoff) as shrink_rows,
+  count(*) filter (where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM))$' and r.created_at < p.cutoff and r.score > 0) as shrink_positive_rows,
+  max(r.score) filter (where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM))$' and r.created_at < p.cutoff) as shrink_max,
+  count(*) filter (where not (r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM))$' and r.created_at < p.cutoff)
                       or r.difficulty is null) as other_rows,
-  coalesce(sum(r.score) filter (where not (r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK))$' and r.created_at < p.cutoff)
+  coalesce(sum(r.score) filter (where not (r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM))$' and r.created_at < p.cutoff)
                       or r.difficulty is null), 0)::numeric as other_sum,
   count(*) as total_rows
 from public.rankings r cross join score_shrink_params p;
@@ -53,7 +53,7 @@ from public.rankings r cross join score_shrink_params p;
 create table public.rankings_score_shrink_backup_20261003 as
 select r.id, r.difficulty, r.score as score_before, r.created_at, p.cutoff, now() as backed_up_at
 from public.rankings r cross join score_shrink_params p
-where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK))$' and r.created_at < p.cutoff and r.score > 0;
+where r.difficulty ~ '^((Pro)?(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend)|Extreme(EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM)|Species-.+-(Beginner|Easy|Normal|Hard|Expert|Master|GrandMaster|Hell|Legend|EXTREME|NIGHTMARE|CHAOS|ULTIMATE|INFINITY|GOD|RAGNAROK|HELHEIM))$' and r.created_at < p.cutoff and r.score > 0;
 
 -- 控えはAPIから見えないようにする(RLSを有効にしてポリシーを作らない＋権限を外す)
 alter table public.rankings_score_shrink_backup_20261003 enable row level security;

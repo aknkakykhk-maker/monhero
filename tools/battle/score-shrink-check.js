@@ -79,6 +79,27 @@ const initial = () => ({
   mh_ranking_cache: { score: { Hard: [{ score: 1 }] }, at: 1 },
   mh_gold: 12345,
 });
+// ---- 5. ランキングを縮めるSQLの対象が、コードの難易度と食い違っていないか ----
+// 新しい難易度(極限の HELHEIM など)を足したのにSQLの一覧へ足し忘れると、その難易度のランキングだけ
+// 縮まずに残る(実際に ExtremeHELHEIM が漏れかけた・2026-10-04)。ここで機械的に突き合わせる。
+const difficulties = read('monster-hero/src/parts/19-difficulties-and-rules.jsx');
+const normalBlock = difficulties.slice(difficulties.indexOf('const DIFFICULTY_SETTINGS = {'), difficulties.indexOf('};', difficulties.indexOf('const DIFFICULTY_SETTINGS = {')));
+const codeNormal = [...normalBlock.matchAll(/^  (\w+):\s+\{ label:/gm)].map(m => m[1]);
+const codeExtreme = [...difficulties.matchAll(/\bid:'([A-Z]+)', label:'\1'/g)].map(m => m[1]).filter((v, i, arr) => arr.indexOf(v) === i);
+const sqlFiles = ['SCORE_SHRINK_AUDIT.sql', 'SCORE_SHRINK_APPLY.sql', 'SCORE_SHRINK_APPLY_TEST.sql', 'SCORE_SHRINK_VERIFY.sql'];
+check('コードの難易度を読み取れている(通常9・極限8以上)', codeNormal.length === 9 && codeExtreme.length >= 8,
+  `通常 ${codeNormal.join(',')} / 極限 ${codeExtreme.join(',')}`);
+sqlFiles.forEach(file => {
+  const sql = read(`docs/sql/rankings/${file}`);
+  const normals = [...sql.matchAll(/\(Pro\)\?\(([^)]*)\)/g)].map(m => m[1].split('|'));
+  const extremes = [...sql.matchAll(/Extreme\(([^)]*)\)/g)].map(m => m[1].split('|'));
+  const sameSet = (x, y) => x.length === y.length && x.every(v => y.includes(v));
+  check(`${file}: 通常の難易度の一覧がコードと一致する`, normals.length > 0 && normals.every(list => sameSet(list, codeNormal)));
+  check(`${file}: 極限の難易度の一覧がコードと一致する(足し忘れなし)`,
+    extremes.length > 0 && extremes.every(list => sameSet(list, codeExtreme)),
+    `SQL ${extremes[0] ? extremes[0].join(',') : '-'}`);
+});
+
 (async () => {
   const s = makeStore(initial());
   const first = await api.migrateBattleScoresToShrunk(s.get, s.set, s.list, api.saveStoredValuesOrRollback);
