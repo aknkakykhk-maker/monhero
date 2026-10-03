@@ -1208,6 +1208,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     })();
     return () => { cancelled = true; };
   }, [friendsOn]);
+  // 同じ部屋にいた人を「最近いっしょに遊んだ人」として端末に覚える(あとからフレンド画面で申請できる)。
+  // 相手のブリーダーIDは知らせ(hb)に載ってくる。自分と同じ・IDの無い人は覚えない。サーバーへは送らない
+  const recentSig = view ? view.members.map((m) => `${m.bid || ''}:${m.name || ''}`).join(',') : '';
+  React.useEffect(() => {
+    if (!friendsOn || !view || !friendSelfId) return;
+    const others = view.members.filter((m) => m.bid && m.bid !== friendSelfId && m.id !== view.selfId).map((m) => ({ id: m.bid, name: m.name }));
+    if (others.length) friendsRememberRecent(others);
+  }, [friendsOn, recentSig, friendSelfId]);
   const hasRoster = !!(roster && roster.length);
   React.useEffect(() => {
     if (!friendsOn || view || !friendSelfId || !hasRoster) { setFriendInvites([]); return undefined; }
