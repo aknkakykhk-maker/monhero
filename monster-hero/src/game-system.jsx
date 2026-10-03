@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1b42eb58369c8e0f
+// generated-sha256: 7eabebb260067261
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 16:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 17:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23421,7 +23421,7 @@ function BreederMarketScreen({
   const SECTION_TABS = {
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'}] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -23598,7 +23598,7 @@ function BreederMarketScreen({
         {renderSectionTabs('event')}
         <div className={SCREEN_LIST_CLASS}>
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
-          {eventTab!=='disc'&&eventItemOffers.map(offer=>{
+          {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
@@ -23632,6 +23632,24 @@ function BreederMarketScreen({
                 rebirth:{monsterId:offer.monsterId,discIcon:disc?.icon||item.icon} })}
               detail={mon}
               onDetail={()=>mon&&onOpenDetail(disc||item,mon,null)}
+            />;
+          })}
+          {/* 交換できるアシストカード(2026-10-03 ユーザー指示「ビート交換所に実装されてる円盤石と全アシカも追加して。全部1500ビートポイント」)。
+              1枚につき1回。持っていれば「所持済み」(ダイヤショップのアシストカードと同じ見え方)。
+              絵と効果は、cardId と同じidのアシストカード商品とアシストカードの教えから引く */}
+          {eventTab==='assist'&&RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS.map(offer=>{
+            const card=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.cardId&&item.type==='assist');
+            const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
+            const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'beatPoint', cost:offer.cost };
+            const owned=isItemOwned({ id:offer.cardId, type:'assist' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(card?{...card,name:offer.name}:item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              detail={teaching}
+              onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
             />;
           })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
@@ -41316,9 +41334,13 @@ function MonsterHeroGame() {
       const isDisc = offer?.kind==='disc';
       const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
       const beforeUnlocked = Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds;
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked });
+      // アシストカードの交換(2026-10-03)も同じ。解放済みカードの保存(mh_unlocked_teachings)を同じ取引に入れる
+      const isAssist = offer?.kind==='assist';
+      const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
+      const beforeTeachings = Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds;
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?'このモンスターはもう持っています。':'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -41326,6 +41348,7 @@ function MonsterHeroGame() {
         { key:'mh_gold', before:beforeGold, next:exchange.gold },
         { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
+        ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -41342,6 +41365,11 @@ function MonsterHeroGame() {
           const rosters = monsterPartySets.rosters.map((roster,index)=>index===monsterPartySets.activeIndex?[...roster,exchange.monsterId]:roster);
           saveMonsterPartySets({ ...monsterPartySets, rosters });
         }
+      }
+      if (isAssist) {
+        setUnlockedTeachingIds(exchange.unlockedTeachingIds);
+        // ダイヤショップで買ったときと同じく、編成に空きがあれば自動で入れる(6枚埋まっていれば入れない)
+        setTeachingRosterIds(prev => { if (prev.length >= TEACHING_ROSTER_SIZE) return prev; const next = [...prev, exchange.cardId]; storeSet('mh_teaching_roster', next, false); return next; });
       }
       saveMissionProgress('market');
       return exchange;

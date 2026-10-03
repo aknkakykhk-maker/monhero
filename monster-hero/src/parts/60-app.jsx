@@ -6881,9 +6881,13 @@ function MonsterHeroGame() {
       const isDisc = offer?.kind==='disc';
       const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
       const beforeUnlocked = Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds;
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked });
+      // アシストカードの交換(2026-10-03)も同じ。解放済みカードの保存(mh_unlocked_teachings)を同じ取引に入れる
+      const isAssist = offer?.kind==='assist';
+      const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
+      const beforeTeachings = Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds;
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?'このモンスターはもう持っています。':'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -6891,6 +6895,7 @@ function MonsterHeroGame() {
         { key:'mh_gold', before:beforeGold, next:exchange.gold },
         { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
+        ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -6907,6 +6912,11 @@ function MonsterHeroGame() {
           const rosters = monsterPartySets.rosters.map((roster,index)=>index===monsterPartySets.activeIndex?[...roster,exchange.monsterId]:roster);
           saveMonsterPartySets({ ...monsterPartySets, rosters });
         }
+      }
+      if (isAssist) {
+        setUnlockedTeachingIds(exchange.unlockedTeachingIds);
+        // ダイヤショップで買ったときと同じく、編成に空きがあれば自動で入れる(6枚埋まっていれば入れない)
+        setTeachingRosterIds(prev => { if (prev.length >= TEACHING_ROSTER_SIZE) return prev; const next = [...prev, exchange.cardId]; storeSet('mh_teaching_roster', next, false); return next; });
       }
       saveMissionProgress('market');
       return exchange;
