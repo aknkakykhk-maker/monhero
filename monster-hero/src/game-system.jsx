@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c53420d79b11f5e5
+// generated-sha256: c06e231cbf371b9e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 18:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 18:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12587,6 +12587,8 @@ const skillFxSpecOf = (kind) => {
   SKILL_FX_SPEC_CACHE[kind] = SKM_FORM_OVERRIDE[kind] ? { ...norm, form:SKM_FORM_OVERRIDE[kind] } : norm;
   return SKILL_FX_SPEC_CACHE[kind];
 };
+// 音楽系の技にマイクを出すかどうか。ミーアの技は全部、ほかの子でも音符を飛ばす技は出す
+const SKFX_MIC_KIND = (kind, spec) => /^Mia-/.test(String(kind)) || spec?.fx?.shape === 'note';
 const SkillFxMotion = ({kind, image, lunge=false}) => {
   const spec = skillFxSpecOf(kind);
   if (!spec) return null;
@@ -12603,6 +12605,15 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
       {uex&&<UniqueFxExtras image={image} ghost={!spec.twin}/>}
       {spec.twin&&['dark','light'].map(side=><span key={side} className={`skfx-twin skfx-twin--${side}`} aria-hidden="true">{React.cloneElement(image,{alt:''})}</span>)}
       <span className="thm-atk__monster">{image}</span>
+      {/* 音楽系の技(ミーアの歌・音符の技)はマイクを出す。専用の歌モーション(MiaSongNotesMotion)と同じマイクの絵を使う */}
+      {SKFX_MIC_KIND(kind,spec)&&<span className="skfx-mic" aria-hidden="true">
+        <i className="mia-song-notes__mic-body"/>
+        <i className="mia-song-notes__mic-clip"/>
+        <i className="mia-song-notes__mic-pole mia-song-notes__mic-pole--upper"/>
+        <i className="mia-song-notes__mic-pole"/>
+        <i className="mia-song-notes__mic-joint"/>
+        <i className="mia-song-notes__mic-base"/>
+      </span>}
       {spec.line&&<span className={`thm-atk__line skfx-line skfx-line--${spec.line}`} aria-hidden="true"><i/></span>}
       {fx&&<span className="thm-atk__flys skfx-layer" aria-hidden="true">{fx.items.map((b, i) => (
         <i key={i} className={`skfx-p skfx-p--${fx.shape} skfx-path--${fx.path}`}
@@ -54833,6 +54844,12 @@ const createAnimationStyle = () => {
       opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
       animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
     }
+    /* 技ごとの動き(SkillFxMotion)で出す音楽系のマイク。ミーアの歌モーションと同じ絵を、技の長さに合わせて出す */
+    .skfx-mic {
+      position:absolute; left:9%; bottom:2%; width:25%; height:60%; z-index:6; pointer-events:none;
+      opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
+      animation:miaSongMicPop var(--thm-ms,760ms) cubic-bezier(.2,1.4,.36,1) forwards;
+    }
     @keyframes miaSongMicPop {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
@@ -54979,7 +54996,7 @@ const createAnimationStyle = () => {
       .mia-song-notes__monster,
       .mia-song-notes--lunge .mia-song-notes__monster,
       .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
-      .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
+      .mia-song-notes__mic, .skfx-mic { animation:miaSongMicReduced 760ms ease-out forwards; }
       .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
       .mia-song-notes__stage i, .mia-song-notes__spark, .mia-song-notes__waves { display:none; }
       .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }

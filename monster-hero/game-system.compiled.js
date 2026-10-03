@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c812fb2a7e1aac7
+// source-sha256: 30b2f049b28d040b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 18:12";
+const BUILD_DATE = "2026-10-03 18:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -19210,6 +19210,7 @@ const skillFxSpecOf = kind => {
   } : norm;
   return SKILL_FX_SPEC_CACHE[kind];
 };
+const SKFX_MIC_KIND = (kind, spec) => /^Mia-/.test(String(kind)) || spec?.fx?.shape === 'note';
 const SkillFxMotion = ({
   kind,
   image,
@@ -19245,7 +19246,22 @@ const SkillFxMotion = ({
     alt: ''
   }))), React.createElement("span", {
     className: "thm-atk__monster"
-  }, image), spec.line && React.createElement("span", {
+  }, image), SKFX_MIC_KIND(kind, spec) && React.createElement("span", {
+    className: "skfx-mic",
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    className: "mia-song-notes__mic-body"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-clip"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-pole mia-song-notes__mic-pole--upper"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-pole"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-joint"
+  }), React.createElement("i", {
+    className: "mia-song-notes__mic-base"
+  })), spec.line && React.createElement("span", {
     className: `thm-atk__line skfx-line skfx-line--${spec.line}`,
     "aria-hidden": "true"
   }, React.createElement("i", null)), fx && React.createElement("span", {
@@ -85267,6 +85283,12 @@ const createAnimationStyle = () => {
       opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
       animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
     }
+    /* 技ごとの動き(SkillFxMotion)で出す音楽系のマイク。ミーアの歌モーションと同じ絵を、技の長さに合わせて出す */
+    .skfx-mic {
+      position:absolute; left:9%; bottom:2%; width:25%; height:60%; z-index:6; pointer-events:none;
+      opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
+      animation:miaSongMicPop var(--thm-ms,760ms) cubic-bezier(.2,1.4,.36,1) forwards;
+    }
     @keyframes miaSongMicPop {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
@@ -85413,7 +85435,7 @@ const createAnimationStyle = () => {
       .mia-song-notes__monster,
       .mia-song-notes--lunge .mia-song-notes__monster,
       .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
-      .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
+      .mia-song-notes__mic, .skfx-mic { animation:miaSongMicReduced 760ms ease-out forwards; }
       .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
       .mia-song-notes__stage i, .mia-song-notes__spark, .mia-song-notes__waves { display:none; }
       .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }
