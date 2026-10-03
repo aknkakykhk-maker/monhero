@@ -6546,7 +6546,7 @@ function MonsterHeroGame() {
     if (!rhythmModeSelectOpen || !activeAssistant) return null;
     const line = (typeof pickAssistantLine === 'function') ? pickAssistantLine('rhythmModeSelect', null, assistantBondLevelNow, activeAssistant.id) : null;
     const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
-    return { name: activeAssistant.name, accent: activeAssistant.accent,
+    return { id: activeAssistant.id, name: activeAssistant.name, accent: activeAssistant.accent,
       image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
   }, [rhythmModeSelectOpen, activeAssistant && activeAssistant.id]);
   // まだ助手が知らせていない飾り枠。もらった順に並ぶ

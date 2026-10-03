@@ -702,7 +702,9 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
 
 // ---- 画面 ----
 // 部屋の中の状態は React の外(RHYTHM_MULTI)にあるので、画面を行き来しても部屋は切れない。
-function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null }) {
+// チャット欄(2026-10-03・ユーザー指摘「チャットが使いにくい」で作り直し)。
+// 上に見出しと✕、真ん中に発言の一覧(高さいっぱい)、下に定型文(折り返して全部見せる)と入力欄
+function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
   const listRef = React.useRef(null);
@@ -720,58 +722,75 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
   const submit = () => { if (send(chatText)) setChatText(''); };
   const memberOf = (id) => members.find((m) => m.id === id) || null;
   return (
-    <section data-rhythm-multi-chat className="flex min-h-0 flex-col rounded-2xl border border-white/15 bg-slate-900/95 p-3">
-      <h3 className="text-xs font-black text-slate-300">チャット</h3>
+    <section data-rhythm-multi-chat className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 items-center gap-2 pb-1.5">
+        <h3 className="min-w-0 flex-1 text-sm font-black text-cyan-100">💬 チャット<small className="ml-1.5 text-[10px] font-bold text-slate-400">ルームの{count}件</small></h3>
+        {onClose && <button data-rhythm-multi-chat-close type="button" aria-label="チャットを閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200">✕</button>}
+      </div>
       {/* LINE のように、自分の発言は右、ほかの人は左(顔アイコンつき) */}
-      <ul ref={listRef} data-rhythm-multi-chat-list className="mt-1 max-h-60 min-h-[5rem] space-y-1.5 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold landscape:max-h-[45vh]">
-        {count === 0 && <li className="text-[11px] text-slate-500">まだ発言はありません。下の定型文をタップすると、すぐに送れます</li>}
+      <ul ref={listRef} data-rhythm-multi-chat-list className="min-h-[6rem] flex-1 space-y-1.5 overflow-y-auto rounded-xl bg-slate-950/70 p-2 text-[15px] font-bold">
+        {count === 0 && <li className="text-[12px] text-slate-500">まだ発言はありません。下の定型文をタップすると、すぐに送れます</li>}
         {view.chat.map((c) => {
           const mine = c.id === view.selfId;
           const m = memberOf(c.id);
           return (
             <li key={c.cid} data-rhythm-multi-chat-line className={`flex items-end gap-1.5 ${mine ? 'justify-end' : ''}`}>
               {!mine && (m
-                ? <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-7 w-7 shrink-0" />
-                : <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs">🎵</span>)}
+                ? <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-8 w-8 shrink-0" />
+                : <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs">🎵</span>)}
               <span className={`flex min-w-0 max-w-[80%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
                 {!mine && <b className="max-w-full truncate text-[10px] text-amber-200">{c.name}</b>}
-                <span className={`break-words rounded-2xl px-2.5 py-1 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`}>{c.text}</span>
+                <span className={`break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`}>{c.text}</span>
               </span>
             </li>
           );
         })}
       </ul>
-      <RhythmMultiStampBar phase={phase} onSend={send} className="mt-2" />
-      {waitNote && <small data-rhythm-multi-chat-wait className="mt-1 block text-[10px] font-black text-amber-300">続けて送るときは、少し待ってね</small>}
-      <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+      <RhythmMultiStampBar phase={phase} onSend={send} wrap limit={10} className="mt-2 shrink-0" />
+      {waitNote && <small data-rhythm-multi-chat-wait className="mt-1 block shrink-0 text-[11px] font-black text-amber-300">続けて送るときは、少し待ってね</small>}
+      <form className="mt-2 flex shrink-0 gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <input data-rhythm-multi-chat-input value={chatText} maxLength={RHYTHM_MULTI_CHAT_MAX_LENGTH} autoComplete="off" enterKeyHint="send"
           onChange={(e) => setChatText(e.target.value)} placeholder={`ひとこと(${RHYTHM_MULTI_CHAT_MAX_LENGTH}文字まで)`}
-          className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
-        <button data-rhythm-multi-chat-send type="submit" disabled={!chatText.trim()} className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-4 text-sm font-black disabled:opacity-40">送信</button>
+          className="min-h-[46px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
+        <button data-rhythm-multi-chat-send type="submit" disabled={!chatText.trim()} className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-4 text-sm font-black disabled:opacity-40">送信</button>
       </form>
     </section>
   );
 }
 
-// 定型文の帯。横にすべらせて選ぶ。画面ごとに合う文を先頭へ出す(rhythmMultiStampsFor)
-function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0 }) {
+// 定型文。wrap なら折り返して全部見せる(横にすべらせて探さなくていい)。そうでなければ横に並べてすべらせる。
+// 押したら、その札が「✓ 送信」に一瞬変わる(届いたか分からないと何度も押してしまう)。続けて送れないときは「⏳」
+function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = false, big = false }) {
   const stamps = rhythmMultiStampsFor(phase);
   const shown = limit > 0 ? stamps.slice(0, limit) : stamps;
+  const [flash, setFlash] = React.useState(null); // { text, ok }
+  React.useEffect(() => {
+    if (!flash) return undefined;
+    const timer = setTimeout(() => setFlash(null), 900);
+    return () => clearTimeout(timer);
+  }, [flash]);
+  const press = (stamp) => { const ok = onSend(stamp) !== false; setFlash({ text: stamp, ok }); };
   return (
-    <div data-rhythm-multi-stamps className={`flex gap-1.5 overflow-x-auto pb-0.5 ${className}`} style={{ scrollbarWidth: 'none' }}>
-      {shown.map((stamp) => (
-        <button key={stamp} data-rhythm-multi-chat-stamp type="button" onClick={() => onSend(stamp)}
-          className="min-h-[38px] shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-700 px-3 text-xs font-black active:scale-95">{stamp}</button>
-      ))}
+    <div data-rhythm-multi-stamps className={`${wrap ? 'flex flex-wrap' : 'flex overflow-x-auto pb-0.5'} gap-1.5 ${className}`} style={wrap ? undefined : { scrollbarWidth: 'none' }}>
+      {shown.map((stamp) => {
+        const hit = flash && flash.text === stamp;
+        return (
+          <button key={stamp} data-rhythm-multi-chat-stamp type="button" onClick={() => press(stamp)}
+            className={`shrink-0 whitespace-nowrap rounded-full border font-black transition active:scale-95 ${big ? 'min-h-[42px] px-3.5 text-[13px]' : 'min-h-[38px] px-3 text-xs'} ${hit ? (flash.ok ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-amber-300 bg-amber-700 text-white') : 'border-white/15 bg-slate-700/90 text-white'}`}>
+            {hit ? (flash.ok ? '✓ 送信' : '⏳ 少し待って') : stamp}
+          </button>
+        );
+      })}
     </div>
   );
 }
+
 
 // カードの上の吹き出し(発言してから少しのあいだだけ)
 function RhythmMultiChatBubble({ text }) {
   if (!text) return null;
   return (
-    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 top-3 z-20 flex justify-center">
+    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 top-3 z-40 flex justify-center">
       <span className="line-clamp-2 max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg landscape:text-xs">{text}</span>
     </span>
   );
@@ -850,6 +869,12 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+.mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
+.mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
+.mhmv-badge{animation:mhmvPop .5s cubic-bezier(.2,1.4,.4,1) both}
+.mhmv-ring{box-shadow:0 0 0 3px #fcd34d,0 0 12px 2px rgba(252,211,77,.6)}
+@keyframes mhmvGlow{0%,100%{box-shadow:0 0 10px 1px rgba(252,211,77,.55),inset 0 0 12px rgba(252,211,77,.25)}50%{box-shadow:0 0 22px 5px rgba(244,114,182,.75),inset 0 0 18px rgba(252,211,77,.4)}}
+@keyframes mhmvPop{0%{transform:translateX(-50%) scale(.3);opacity:0}100%{transform:translateX(-50%) scale(1);opacity:1}}
 .mhms-in-left{animation:mhmsInLeft .5s ease-out both}
 @keyframes mhmsSway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
 @keyframes mhmsPulse{0%,100%{opacity:.75}50%{opacity:1}}
@@ -859,8 +884,20 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsShine{0%,55%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(420%) skewX(-20deg)}}
 @keyframes mhmsIn{from{opacity:0;transform:translateX(24px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left{animation:none!important}.mhms-note,.mhms-spark{display:none}}
+@media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
+// 助手の立ち絵の切り出し方(2026-10-03・ユーザー指摘「もものアイコンが右側に変なの見えてる / 位置も調整して」)。
+// みゅあ・ききの絵は横長(1536×1024)なので、枠いっぱいに広げて真ん中を切り出す(object-cover)。
+// ももすけ・ドラの絵は正方形で、ももすけは右端に別の絵のかけらが入っている。顔の位置(cx, cy・絵の幅と高さに対する割合)を
+// 枠の真ん中(横)・top(縦)に合わせ、枠の幅の zoom 倍に広げて、かけらを枠の外へ出す
+// (高さで合わせると、縦画面の縦長の枠で大きくなりすぎて耳が切れた)
+const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
+  // ももすけは表情ごとに体の位置が違い、かけらも左(angry・happy)と右(crying・wink)にある。
+  // 透明でない部分を数えて決めた体の真ん中(cxBy)へ合わせ、体の幅だけが入る 1.5 倍に広げる(2026-10-03)
+  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42,
+    cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
+  dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
+});
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
   { left: '6%', delay: '0s', size: 18, ch: '♪' }, { left: '22%', delay: '-3.2s', size: 14, ch: '♫' },
@@ -887,12 +924,12 @@ function RhythmModeSelectStage() {
 function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLightLook = true, onToggleLightLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
-    if (!modeSelect || typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
+    if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
     const tag = document.createElement('style');
     tag.id = 'mh-rhythm-mode-select-css';
     tag.textContent = RHYTHM_MODE_SELECT_CSS;
     document.head.appendChild(tag);
-  }, [!!modeSelect]);
+  }, []);
   const difficultyIds = difficultyList.map((d) => d.id);
   const songIds = songs.map((song) => song.songId);
   React.useEffect(() => {
@@ -1126,10 +1163,28 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       {chatUnread > 0 && <b data-rhythm-multi-chat-unread className="absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white">{chatUnread > 9 ? '9+' : chatUnread}</b>}
     </button>
   );
+  // 最新の発言を添えた💬(結果画面用)。押すとチャット欄が開く
+  const chatLatestButton = () => {
+    const last = chatList.length ? chatList[chatList.length - 1] : null;
+    return (
+      <button data-rhythm-multi-chat-open type="button" onClick={() => setChatOpen(true)} aria-label={chatUnread ? `チャット(未読${chatUnread}件)` : 'チャット'}
+        className="relative flex min-h-[46px] w-[34%] max-w-[220px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left">
+        <span aria-hidden="true" className="text-xl leading-none">💬</span>
+        <span className="min-w-0 flex-1 leading-tight">
+          <small className="block text-[9px] font-black text-cyan-200">{last ? last.name : 'チャット'}</small>
+          <b data-rhythm-multi-chat-latest className="block truncate text-[12px] font-black text-white">{last ? last.text : 'タップで開く'}</b>
+        </span>
+        {chatUnread > 0 && <b data-rhythm-multi-chat-unread className="absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white">{chatUnread > 9 ? '9+' : chatUnread}</b>}
+      </button>
+    );
+  };
+  // チャット欄。外側(暗いところ)を押しても閉じる。縦画面は下から8割、横画面は右半分を高さいっぱい
   const chatSheet = chatOpen && view && (
-    <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 z-[80000] max-h-[70%] overflow-y-auto border-t border-cyan-400/30 bg-slate-950 p-2 landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-none landscape:w-[46%] landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
-      <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} />
-      <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 font-black" onClick={() => setChatOpen(false)}>閉じる</button>
+    <div className="absolute inset-0 z-[80000]">
+      <button type="button" aria-label="チャットを閉じる" className="absolute inset-0 bg-slate-950/55" onClick={() => setChatOpen(false)} />
+      <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[50%] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
+        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} />
+      </div>
     </div>
   );
   const countdownLayer = countdown && (
@@ -1175,7 +1230,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           {ms.assistant && (
             <div data-rhythm-mode-assistant className="mhms-glass mhms-in-left relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none">
               <span aria-hidden="true" className="mhms-glow" />
-              <img src={ms.assistant.image} alt="" draggable={false} className="mhms-float pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />
+              <div className="mhms-float pointer-events-none absolute inset-0">
+                {RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]
+                  ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(ms.assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; return <img data-rhythm-mode-assistant-art src={ms.assistant.image} alt="" draggable={false} className="absolute max-w-none" style={{ width: `${fr.zoom * 100}%`, height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)` }} />; })()
+                  : <img data-rhythm-mode-assistant-art src={ms.assistant.image} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />}
+              </div>
               <p data-rhythm-mode-assistant-line className="mhms-bubble absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]" style={{ borderColor: ms.assistant.accent }}>
                 <b className="mb-0.5 block text-[10px]" style={{ color: ms.assistant.accent }}>{ms.assistant.name}</b>{ms.assistant.text}
               </p>
@@ -1379,13 +1438,16 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             const isMvp = r.m.id === team.mvpId && !team.waiting;
             const lv = r.res ? drawnLevel(r.res.diffId) : 0;
             return (
-              <li key={r.m.id} data-rhythm-multi-result-row className={`relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 pt-3 text-center ${isMvp ? 'border-2 border-pink-400 bg-pink-950/40 shadow-[0_0_14px_rgba(244,114,182,.5)]' : 'border border-white/10 bg-slate-900/80'}`}>
+              <li key={r.m.id} data-rhythm-multi-result-row className={`relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4' : 'border border-white/10 bg-slate-900/80 pt-3'}`}>
                 <RhythmMultiChatBubble text={chatBubbleOf(r.m.id)} />
-                {isMvp && <b data-rhythm-multi-mvp className="absolute left-1/2 top-0.5 -translate-x-1/2 whitespace-nowrap rounded-full bg-pink-500 px-1.5 py-px text-[9px] font-black text-white">★MVP★</b>}
-                <RhythmMultiAvatar m={r.m} resolveIconUrl={resolveIconUrl} sizeClass="h-12 w-12 landscape:h-16 landscape:w-16" />
-                <span className="mt-1 w-full truncate text-[10px] font-black landscape:text-xs">{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}</span>
+                {/* MVP は札をアイコンより前に出し、王冠・金色の光で目立たせる(2026-10-03・ユーザー指摘「MVPが裏に回ってる / もっと強調して」) */}
+                {isMvp && <b data-rhythm-multi-mvp className="mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]">👑 MVP</b>}
+                <span className={`relative z-10 shrink-0 rounded-full ${isMvp ? 'mhmv-ring' : ''}`}>
+                  <RhythmMultiAvatar m={r.m} resolveIconUrl={resolveIconUrl} sizeClass="h-12 w-12 landscape:h-16 landscape:w-16" />
+                </span>
+                <span className={`relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`}>{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}</span>
                 <small className="block h-3 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]">{r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''}</small>
-                <b className="block w-full text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal">{r.res ? (r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0')) : r.m.gone ? '—' : 'ライブ中…'}</b>
+                <b className={`block w-full text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0')) : r.m.gone ? '—' : 'ライブ中…'}</b>
                 {r.res && !r.res.quit && <>
                   <small className="mt-1 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px]">{r.res.diffId || '-'}{lv ? ` Lv.${lv}` : ''}</small>
                   {!r.res.cleared && <small className="text-[8px] font-black text-rose-300">失敗</small>}
@@ -1395,9 +1457,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           })}
         </ul>
         {/* 結果を見ながら、ワンタップで「もう一回!」「ありがとう!」(2026-10-03・ユーザー指示) */}
-        <div data-rhythm-multi-result-chat className="flex shrink-0 items-center gap-1.5 px-2 pt-1 landscape:px-3">
-          <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} className="min-w-0 flex-1" />
-          {chatButton()}
+        {/* 定型文は折り返して6つだけ(すべらせて探さない)。右の💬に最新の発言を出す(2026-10-03・ユーザー指摘「チャットが使いにくい」) */}
+        <div data-rhythm-multi-result-chat className="flex shrink-0 items-center gap-2 px-2 pt-1.5 landscape:px-3">
+          <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} wrap big limit={6} className="min-w-0 flex-1" />
+          {chatLatestButton()}
         </div>
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           <button data-rhythm-multi-member-stats type="button" onClick={() => setStatsOpen(true)}
@@ -1450,7 +1513,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom)}
         <RhythmMultiMemberCards bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.playing ? { text: 'ライブ中', cls: 'bg-amber-400 text-slate-950' } : { text: '待機中', cls: 'bg-slate-600 text-white' })} />
-        <RhythmMultiStampBar phase={phase} onSend={(text) => RHYTHM_MULTI.sendChat(text)} className="shrink-0 px-2 pt-1" />
+        <RhythmMultiStampBar phase={phase} onSend={(text) => RHYTHM_MULTI.sendChat(text)} wrap big limit={6} className="shrink-0 px-2 pt-1" />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           <p className="min-w-0 flex-1 text-sm font-black text-amber-200">{phase === 'playing' ? 'いまライブ中です。次の曲から参加できます' : 'ホストが次へ進むのを待っています'}{drawnSong ? <small className="block truncate text-[11px] font-bold text-slate-300">{rhythmSongFullName(drawnSong)}</small> : null}</p>
           <button data-rhythm-multi-leave type="button" className={`${btn} bg-slate-700 landscape:w-48`} onClick={leaveRoom}>ルームを出る</button>
