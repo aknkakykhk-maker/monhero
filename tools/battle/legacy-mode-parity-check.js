@@ -184,7 +184,7 @@ check('特殊防御の抽選は既存モードだと従来の表を通る',
   has('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
     && has('const aimedSlots = isTacticsMode(runMode)'));
 check('自動回復の率は既存モードだと従来のまま',
-  has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
+  has('tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
 check('威圧は既存モードだと編成から決まる',
   has("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,"));
 // 2026-09-22: タクティクスは「1＋その子の👑＋きき＋連携」で数えるようになった。

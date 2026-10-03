@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e8275766839f46f
+// generated-sha256: 7808386748ecfdce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 22:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 22:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21022,7 +21022,7 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   distMult  … (multiBuff) 効いているあいだ、その子の攻撃の距離補正をこの値に固定する(0なら変えない。1.5 なら敵と同じ距離のときと同じ)
 //   guaranteeUnique … true なら、効いているあいだ毎ターン、その子の固有技カードが手札に必ず出る(ピクシー)
 //   cardBonus … (stage) 効いているあいだ、1ターンに使えるカード枚数(盤面ぜんぶ・その子自身)を何枚増やすか
-//   voltage   … (stage) { max, dmg, heal, guts } 味方がカードを1枚使うたびに1たまる。1段階ごとに 与ダメ+dmg・回復量+heal・ガッツの自動回復+guts(全員)
+//   voltage   … (stage) { max, dmg, heal, guts, hp } 味方がカードを1枚使うたびに1たまる。1段階ごとに 与ダメ+dmg・回復量+heal・ガッツの自動回復+guts(全員)
 //   pandoraBox … (pandoraBox) パンドラの箱。{ costRate(ターン終わりに払う最大ライフの割合), selfCardBonus(パンドラ自身が使えるカード+), devilDmg(1枚目の与ダメ倍率), devilCombo{count,rate}(1枚目に付く連撃), angelRate(2枚目で味方全員のライフ・ガッツ上限の何割戻すか), hopeGutsRate(最後の希望で戻すガッツ) }
 //   target    … 'ally' なら、使うとき味方1体(自分も含む)を選ぶ。選んだ枠は applyTacticsExUse の target に入る
 //   lifeSpring … (lifeSpring) { maxUpRate, gutsRate } 選んだ子が立っていればライフ上限を maxUpRate 上げて(効果のあいだ)満タンに、ダウン中なら立たせて満タンに。どちらもガッツを上限の gutsRate 戻す
@@ -21141,13 +21141,13 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'multiBuff',
   }),
   // ★2026-10-03 ミーア「オン・ステージ！」(数字は仮)。ボルテージは味方がカードを使うたびに1たまる(最大10)。
-  //   1段階ごとに 味方全員の与ダメージ+3%・回復カードの回復量+5%・ターン終わりのガッツ自動回復+2%。終わると0に戻る
+  //   1段階ごとに 味方全員の与ダメージ+3%・回復カードの回復量+5%・ターン終わりのガッツ自動回復+2%・ライフ自動回復+3%。終わると0に戻る
   Mia: Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
-    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
-    cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02 }),
+    cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02, hp: 0.03 }),
     effect: 'stage',
   }),
   // ★2026-10-03 スネグーラチカ「クリスマスプレゼント」(数字は仮)。各WAVE1回。必ず全員のガッツが少し戻り、
@@ -21192,6 +21192,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
     effect: 'pandoraBox',
+    // ラン3回のあいだ、箱が効いている途中でもう一度使うことはできない(重ね掛けで3ターンが延びないように)
+    conditions: Object.freeze(['notActive']),
   }),
   Golem: Object.freeze({
     id: 'golem_all_in',
@@ -21309,7 +21311,7 @@ const normalizeTacticsExDef = (raw) => {
     cardBonus: Math.min(3, Math.max(0, tacticsSafeInt(raw.cardBonus, 0))),
     voltage: raw.voltage && typeof raw.voltage === 'object' && tacticsSafeInt(raw.voltage.max, 0) > 0
       ? { max: Math.min(99, tacticsSafeInt(raw.voltage.max, 0)),
-        dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0) } : null,
+        dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
@@ -21620,12 +21622,12 @@ const tacticsExCardBonusAt = (state, units, slot, now) => {
   const box = tacticsExPandoraBoxOf(state, units, slot, now);
   return (hit ? tacticsSafeInt(hit.mine.cardBonus, 0) : 0) + (box ? tacticsSafeInt(box.selfCardBonus, 0) : 0);
 };
-// いまのボルテージと、その強化(効いていなければ null)。dmgMult/healMult は掛け算、gutsAdd はガッツの自動回復率へ足す
+// いまのボルテージと、その強化(効いていなければ null)。dmgMult/healMult は掛け算、gutsAdd はガッツ・hpAdd はライフの自動回復率へ足す
 const tacticsExVoltageOf = (state, units, now) => {
   const hit = tacticsExStageEntries(state, units, now).find(e => e.mine.voltageCfg);
   if (!hit) return null;
   const cfg = hit.mine.voltageCfg, v = Math.min(tacticsSafeInt(cfg.max, 0), Math.max(0, tacticsSafeInt(hit.mine.voltage, 0)));
-  return { voltage: v, max: tacticsSafeInt(cfg.max, 0), dmgMult: 1 + v * (Number(cfg.dmg) || 0), healMult: 1 + v * (Number(cfg.heal) || 0), gutsAdd: v * (Number(cfg.guts) || 0) };
+  return { voltage: v, max: tacticsSafeInt(cfg.max, 0), dmgMult: 1 + v * (Number(cfg.dmg) || 0), healMult: 1 + v * (Number(cfg.heal) || 0), gutsAdd: v * (Number(cfg.guts) || 0), hpAdd: v * (Number(cfg.hp) || 0) };
 };
 // 味方がカードを n 枚使ったぶん、ボルテージをためる(上限まで。効いていなければ状態をそのまま返す)
 const addTacticsExVoltage = (state, units, now, n) => {
@@ -45270,12 +45272,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 味方全員に効く倍率(ミーアのボルテージ・スネグーラチカのプレゼント)。効いていなければ全部1・連撃は null。ほかのモードも同じ
   const tacticsExPartyBuffNow = () => {
     const live=tacticsExLiveRef.current;
-    const base={ dmg:1, critRate:1, taken:1, heal:1, gutsAdd:0, combo:null, voltage:null, present:null };
+    const base={ dmg:1, critRate:1, taken:1, heal:1, gutsAdd:0, hpAdd:0, combo:null, voltage:null, present:null };
     if(!live.enabled||!isTacticsMode(runMode)) return base;
     const st=tacticsExStateRef.current, units=tacticsUnitsRef.current;
     const volt=tacticsExVoltageOf(st,units,live.now);
     const pres=tacticsExPresentOf(st,units,live.now);
-    return { dmg:(volt?volt.dmgMult:1)*pres.dmg, critRate:pres.critRate, taken:pres.taken, heal:volt?volt.healMult:1, gutsAdd:volt?volt.gutsAdd:0,
+    return { dmg:(volt?volt.dmgMult:1)*pres.dmg, critRate:pres.critRate, taken:pres.taken, heal:volt?volt.healMult:1, gutsAdd:volt?volt.gutsAdd:0, hpAdd:volt?volt.hpAdd:0,
       combo:pres.combo, voltage:volt, present:pres.kinds.length?pres:null };
   };
   const tacticsExPartyTakenMultNow = () => {
@@ -46287,8 +46289,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★新モードは1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
     //   合計の上限から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんが
     //   その子へ入り、倒れている子が多いほど残った子がよけいに回復する(逆になっている)
-    // ★ミーアのボルテージで、ターン終わりのガッツ自動回復の率が上がる(2026-10-03。ボルテージ1段階ごとに足す)
-    const regen=tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate);
+    // ★ミーアのボルテージで、ターン終わりのライフ・ガッツ自動回復の率が上がる(2026-10-03。ボルテージ1段階ごとに足す。ライフ分は同日に追加)
+    const regen=tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate);
     let gutsRegen=0, autoHealVal=0;
     if (regen) {
       currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts;
@@ -46461,7 +46463,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         statusLines:(()=>{
           const out=[];
           const volt=def.effect==='stage'?tacticsExVoltageOf(state,tacticsUnits,tacticsExNow):null;
-          if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
+          if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ライフ回復+${Math.round(volt.hpAdd*100)}%・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
           const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
           if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
