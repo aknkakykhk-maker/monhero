@@ -420,7 +420,8 @@
      "atMs": 89000,
      "shiftMs": -278.7
     }
-   ]
+   ],
+   "chartIntensity": "strong"
   },
   "kiki_issen_short": {
    "audio": "monster-hero/audio/bgm-kiki-issen-short.mp3",
@@ -439,7 +440,8 @@
      "atMs": 101000,
      "shiftMs": -225.6
     }
-   ]
+   ],
+   "challengeFactor": 1.2
   }
  }
 }

@@ -238,6 +238,8 @@ node tools/build.js --check
 
 `node mode/rhythm-chart-rev25-check.js` は、MHB CHART ENGINE Rev.25(サビ前後の密度を保つ・長いノーツを増やす・2026-09-30・CHUNITHM の譜面との比べ合わせから)を見張る。Rising Hope を Rev.24 と Rev.25 で作り、曲全体のノーツ数が ±3% 以内のまま、MASTER のサビに入る前後(50〜60秒)と終盤(70〜80秒)の密度が上がること、EXPERT・MASTER の HOLD・SLIDE が増えること(ベースの伸びも材料にする)、自動修正(step7)のあとも同じ時刻・同じ場所に重なるノーツが無いことを確かめる。
 
+`node mode/rhythm-chart-rev26-check.js` は、MHB CHART ENGINE Rev.26(曲のつなぎ目の段差・2026-10-03)と、激しさの中間 `strong` を見張る。音源の一覧の `splices` を書いた曲だけつなぎ目から先に一定のずれを返すこと、ゲームの拍の表(`RHYTHM_SONG_BEATS` の4つ目)が同じ値であること、拍の線の計算がつなぎ目の前後で正しいこと、譜面のノーツがつなぎ目の前は格子・後ろは格子+ずれに乗ること、`strong` が `extreme` の倍率の平方根で作られていることを確かめる。
+
 `node mode/rhythm-song-climax.js [--write|--check]` は、曲ごとの盛り上がる区間の表(`RHYTHM_SONG_CLIMAX`・data/rhythm-mode.js の `<rhythm-song-climax>` の間)を、解析ファイルの区切りの強さ(structure.sections の intensity)から作る(2026-09-29・オプション「盛り上がりの光」)。曲を足したら `--write` を打つ。`node mode/rhythm-climax-fx-check.js` が表の古さ・設定の既定値・CSS・叩いた場所の判定の部品の使い回し・ランクの演出の条件を見張る。
 
 `node mode/rhythm-robot-play.js --song <曲id> --difficulty <難易度> --settings '{"climaxFx":true}' --shots 20000,60000 --shot-dir <dir>` は、ロボットに演奏の設定を渡して遊ばせ、曲のその時刻で画面を撮る(2026-09-29)。盛り上がりの光が点いた・消えた時刻、叩いた場所の判定の数、ランクが上がったときの文字も最後に出す。

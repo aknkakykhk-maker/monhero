@@ -124,7 +124,7 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 ```
 
-初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-30 時点で 25。遊んだ記録から学んだ調整値が書き足されると、それより大きい番号になる。`docs/spec/RHYTHM_PLAY_LOG.md`）が自動で入る。
+初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-10-03 時点で 26。遊んだ記録から学んだ調整値が書き足されると、それより大きい番号になる。`docs/spec/RHYTHM_PLAY_LOG.md`）が自動で入る。
 Rev.9 からは、パイプライン（`--write`）が生成の前に音の層の解析 `authoring/<曲>-v3-layers.json` を作る（主役の追跡の材料。**コミットに含める**）。
 生成のときに `主役の追跡: ドラム◯小節・歌や主旋律◯小節…` と出ていれば効いている（`効かない` と出たら層の解析を作り直す）。
 Rev.12 からは、パイプラインが生成の直後に区間の差し替え（`rhythm-chart-v3-splice.js --apply`）を通す。難易度ごとに `差し替えた` / `差し替えない（理由）` と出る。
@@ -166,6 +166,19 @@ done
 正しくは 222.22BPM / 4拍子）。`--beats-per-bar 4` と `--beat-zero <ms>` も指定できる。
 
 倍テンポを疑うときは「拍に音が乗る率」を**偶数拍と奇数拍に分けて**見るのが早い。
+
+### すでにある曲の short ver. ・切り貼りした版（2026-10-03・Rev.26）
+
+元の曲の録音を途中で切ってつないだ版は、**つなぎ目から先の拍が、前の格子から一定の量だけずれる**。
+1つのテンポのままだと、後ろ半分のノーツが音より最大で16分の半分ほど早い・遅いになる。
+
+1. 元の曲の音源と5秒ごとに相関で突き合わせ、ショートのどこが元のどこかを出す（前半は頭を切った34.5msぶん遅れて並ぶ）
+2. テンポと拍の頭は**元の曲の登録値を引き継ぐ**（拍の頭は前半のずれを足す。例 440 → 474）
+3. つなぎ目の時刻を0.5秒刻みの相関で探し、ずれを「小節の頭がそろう量」で出す（飛ばした長さを小節の長さで割った余りを負にしたもの）
+4. 音源の一覧へ `"splices":[{"atMs":<つなぎ目>,"shiftMs":<ずれ>}]` を書き、ゲームの拍の表 `RHYTHM_SONG_BEATS` の4つ目にも `[[atMs,shiftMs]]` を書く
+5. `node tools/mode/rhythm-chart-rev26-check.js` が、2つの値の一致と、つなぎ目の前後でノーツがそれぞれの格子に乗ることを見る
+
+ジャケットは元の曲のものを使い回す（`artwork` に同じ絵）。`displayName` は元の曲と同じにして、`subtitle` に「～◯◯～ short ver.」と書く。
 
 ---
 
@@ -228,6 +241,10 @@ console.log('最密4秒',best+'打  最短',g[0]+'ms');"
 
 上だけを尖らせたいときは `challengeFactor` ではなく **`chartIntensity:'extreme'`** を使う
 （書いた曲にしか効かない。詳しくは `docs/spec/RHYTHM_MODE.md`「19曲目 FREEDOM DiVE↓」）。
+`extreme` は全難易度が大きく上がる（Stay With Me short ver. で MASTER 20 → 34）。**中間がほしいときは `chartIntensity:'strong'`**
+（extreme の倍率の平方根・16分裏は65%まで残す。同じ曲で 26。2026-10-03）。
+音が格子に乗りにくい曲は `challengeFactor` を上げても MASTER が増えず、EXPERT が MASTER を追い越して「難易度の順が崩れている」で止まる。
+そのときは `challengeFactor` ではなく `chartIntensity` を使う。
 
 決まったら `challengeFactor` に書く。**測り方（`CHALLENGE_*`）は触らない**（ほかの曲まで変わる）。
 決めた理由は `docs/spec/RHYTHM_MODE.md` に残す（`rhythm-song-challenge-check.js` が見張る）。

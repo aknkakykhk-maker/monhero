@@ -34,6 +34,28 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-03 ユーザー指示「2曲追加」。歯ごたえ1.2はユーザーが決めた
+    date: "2026-10-03 16:03", type:'update', title:'モンヒロビート：新曲「綺季一閃 ～花雪に舞う詠姫～ short ver.」を追加しました', status:'new',
+    image: 'images/song-art/kiki-issen.jpg?v=49bfb0c27729',
+    items:[
+      'モンヒロビートに「綺季一閃 ～花雪に舞う詠姫～ short ver.」（3分15秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.21 ／ MASTER Lv.30 です。',
+      'ノーツ数は 318 ／ 364 ／ 498 ／ 595 ／ 631 です。',
+    ],
+    assistantNotice: { id:'update_notice_kiki_issen_short_v1', type:'content' },
+  },
+  {
+    // 2026-10-03 ユーザー指示「2曲追加」。歯ごたえ(激しさの中間 strong)はユーザーが決めた
+    date: "2026-10-03 16:03", type:'update', title:'モンヒロビート：新曲「Stay With Me ～Locked Fate～ short ver.」を追加しました', status:'new',
+    image: 'images/song-art/stay-with-me.jpg?v=0a8784f80cf1',
+    items:[
+      'モンヒロビートに「Stay With Me ～Locked Fate～ short ver.」（2分57秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.22 ／ MASTER Lv.26 です。',
+      'ノーツ数は 242 ／ 291 ／ 397 ／ 531 ／ 536 です。',
+    ],
+    assistantNotice: { id:'update_notice_stay_with_me_short_v1', type:'content' },
+  },
+  {
     // 2026-10-03 ユーザー指示「見た目自体の強化して」(モードえらび)
     date: "2026-10-03 13:36", type:'update', group:'ui', title:'モンヒロビートのモードえらびが、ライブ会場のような見た目になりました', status:'new', releaseFlag:'rhythmMode',
     items:[
