@@ -69,7 +69,9 @@ const quickGrowth = slice('const finishQuickGrowth = () => {', 'const finishQuic
 check('クイックの合流WAVEが並びと同じ',
   quickGrowth.includes(`const joinWaves = [${POST_WAVE_JOIN_WAVES.join(', ')}];`));
 check('固有技のあとは必ずアシストカードへ進む(並びの前提)',
-  slice('const continueAfterUniqueUpgrade = () => {', '};').includes("advanceRunStage('PICK_TEACHING');"));
+  // 技の強化の結果の演出(SKILL UP!)をはさむ形になり、次の画面へ進む処理は proceedAfterUniqueUpgrade へ分かれた(2026-10)。演出ありでもなしでも、そこを通る
+  slice('const continueAfterUniqueUpgrade = () => {', 'const proceedAfterUniqueUpgrade').split('proceedAfterUniqueUpgrade();').length - 1 >= 2
+    && slice('const proceedAfterUniqueUpgrade = () => {', '};').includes("advanceRunStage('PICK_TEACHING');"));
 const joinPossible = slice('const postWaveJoinPossible = (withSpeciesPool) => {', '};');
 check('供モンが来るかの判定は、実際の候補の取り方(pickJoinCandidates)と編成の空きを使う',
   joinPossible.includes('pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize())')

@@ -4774,8 +4774,7 @@
    "subLaneWidth": 2,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -2.92,
-   "sourceCharacter": "FULL",
-   "cross": true
+   "sourceCharacter": "FULL"
   },
   {
    "type": "TAP",

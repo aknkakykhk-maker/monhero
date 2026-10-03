@@ -101,8 +101,10 @@ const check = (name, ok, detail = '') => {
     // --- ③ 寄り道してもHOMEへは出られない ---
     // プロフィールからはアイテムや記録を見られる。その戻り先がHOMEになっていると、
     // そこから遊べてしまう。戻ってくる先が「はじめての設定」のままであることを見る
-    await tap(/^アイテム（/);
-    check('寄り道してもHOMEへは出られない', !(await textOf()).includes('バトル記録'));
+    // プロフィールは作り直され(2026-10)、「バトル記録」の欄が最初から並ぶ。アイテムの入口も「アイテム（◯）」ではなく
+    // 「アイテム」+小さな件数になった。HOMEかどうかは、HOMEにしか無い「モンヒロバトル」のボタンで見る
+    await tap(/^アイテム/);
+    check('寄り道してもHOMEへは出られない', await page.getByRole('button', { name: 'モンヒロバトル' }).count() === 0);
     // 見出しの左にある戻る。★番号(nth)で押さない。以前は新しく始めた人にも出ていた継承固有技Lvのお詫びの
     // 「確認」ボタンが先頭にあり、2番目が戻るだった。お詫びを出さなくしたら(2026-09-27)順番がずれて押し違えた
     await page.getByRole('button', { name: '戻る', exact: true }).first().dispatchEvent('click');
@@ -119,7 +121,7 @@ const check = (name, ok, detail = '') => {
     await tap(/^アイコンを選ぶ$/);
     await page.evaluate(() => {
       const list = [...document.querySelectorAll('button')]
-        .filter(b => b.querySelector('img') && b.className.includes('aspect-square'));
+        .filter(b => b.hasAttribute('data-icon-option')); // アイコン選びは窓(PickerSheet)へ作り直された(2026-10・data-icon-option)
       if (list.length) list[0].click();
     });
     await page.waitForTimeout(700);
