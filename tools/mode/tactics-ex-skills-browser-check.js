@@ -589,6 +589,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       return out;
     });
     check('悪魔・天使の姿の絵が読める', pdArt.length === 2 && pdArt.every(Boolean), JSON.stringify(pdArt));
+    const pdPair = await page.evaluate((sl) => { const el = document.querySelector(`[data-slot-index="${sl}"] [data-pandora-pair], [data-tactics-attack-image="${sl}"] [data-pandora-pair]`) || document.querySelector('[data-pandora-pair]'); return el ? el.querySelectorAll('img').length : 0; }, pdSlot);
+    check('箱のあいだ、パンドラの枠に悪魔と天使の2体が並ぶ', pdPair === 2, `img ${pdPair}`);
     check('使うと1ターンに選べるカードが1枚増える(パンドラ自身が2枚使える)', Number.isInteger(pdLimit0) && pdLimit1 === pdLimit0 + 1, `${pdLimit0} → ${pdLimit1}`);
     check('枠の札が「あと3ターン」になる', await page.locator(`[data-tactics-ex-mark="${pdSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと3ターン');
     const pdPass = page.locator('[data-tactics-ex-pass]');

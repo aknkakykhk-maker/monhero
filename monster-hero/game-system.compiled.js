@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d0a43bd9081e2927
+// source-sha256: 79bbc504b8f45987
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 21:25";
+const BUILD_DATE = "2026-10-03 21:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50805,9 +50805,6 @@ function BattleScreen({
       });
     }
     const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
-    const pandoraForm = s && s.id === 'Pandora' ? tacticsPandoraForms && tacticsPandoraForms[i] : null;
-    const slotImgUrl = pandoraForm === 'devil' ? PANDORA_DEVIL_IMG : pandoraForm === 'angel' ? PANDORA_ANGEL_IMG : s && s.imgUrl;
-    const slotImgColors = pandoraForm ? undefined : s && s.colors;
     const attackAimStyle = isAnimating && attackAim && attackAim.slotIndex === i ? attackAimVars(attackAim.dx, attackAim.dy) : null;
     const slotArt = img => !ecoBattleView && !idleMotionOff ? React.createElement(MonsterIdleArt, {
       baseId: s?.id,
@@ -50836,6 +50833,41 @@ function BattleScreen({
     const slotAimed = aimedSlots.includes(i);
     const slotAimHit = slotAimed ? plannedHitWithCover(i) : null;
     const slotExInfo = tacticsExInfo ? tacticsExInfo(i) : null;
+    const pandoraForm = s && s.id === 'Pandora' ? tacticsPandoraForms && tacticsPandoraForms[i] : null;
+    const pandoraArt = s && s.id === 'Pandora' && slotExInfo && slotExInfo.active && slotExInfo.def && slotExInfo.def.effect === 'pandoraBox' ? (() => {
+      const ph = tacticsNewLayout ? 58 : 64,
+        pw = Math.round(ph * 2 / 3);
+      const fig = (url, form, left) => {
+        const front = pandoraForm === form,
+          dim = !!pandoraForm && !front;
+        return React.createElement("img", {
+          "data-pandora-form": form,
+          src: url,
+          alt: "",
+          draggable: false,
+          className: "object-contain drop-shadow-md",
+          style: {
+            position: 'absolute',
+            bottom: 0,
+            left,
+            width: pw,
+            height: ph,
+            zIndex: front ? 3 : form === 'angel' ? 2 : 1,
+            transform: front ? 'scale(1.12)' : 'none',
+            filter: dim ? 'brightness(.5)' : 'none',
+            transition: 'transform .15s, filter .15s'
+          }
+        });
+      };
+      return React.createElement("span", {
+        "data-pandora-pair": true,
+        className: "relative inline-block",
+        style: {
+          width: ph,
+          height: ph
+        }
+      }, fig(PANDORA_DEVIL_IMG, 'devil', 0), fig(PANDORA_ANGEL_IMG, 'angel', ph - pw));
+    })() : null;
     return React.createElement("button", {
       key: i,
       "data-slot-index": i,
@@ -51237,11 +51269,11 @@ function BattleScreen({
         } : {})
       }
     }, s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
-      image: React.createElement(DyedMonsterImage, {
+      image: pandoraArt || React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: slotImgUrl,
+        src: s.imgUrl,
         alt: s.name,
-        masuColors: slotImgColors,
+        masuColors: s.colors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51249,11 +51281,11 @@ function BattleScreen({
         className: "object-contain drop-shadow-md"
       })
     }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? React.createElement(ArkHolyRainMotion, {
-      image: slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: slotImgUrl,
+        src: s.imgUrl,
         alt: s.name,
-        masuColors: slotImgColors,
+        masuColors: s.colors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51263,11 +51295,11 @@ function BattleScreen({
       charging: attackAnim.charge === true,
       empowered: attackAnim.charge === false
     }) : isAnimating && attackAnim.motion === 'waterBurst' ? React.createElement(WaterBurstMotion, {
-      image: slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: slotImgUrl,
+        src: s.imgUrl,
         alt: s.name,
-        masuColors: slotImgColors,
+        masuColors: s.colors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51277,11 +51309,11 @@ function BattleScreen({
       lunge: attackAnim.charge === false,
       charging: attackAnim.charge === true
     }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? React.createElement(MiaSongNotesMotion, {
-      image: slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: slotImgUrl,
+        src: s.imgUrl,
         alt: s.name,
-        masuColors: slotImgColors,
+        masuColors: s.colors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51293,22 +51325,22 @@ function BattleScreen({
     }) : themedAttack ? React.createElement(ThemedAttackMotion, {
       kind: themedAttack,
       lunge: attackAnim.charge === false,
-      image: slotArt(React.createElement(DyedMonsterImage, {
+      image: slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: slotImgUrl,
+        src: s.imgUrl,
         alt: s.name,
-        masuColors: slotImgColors,
+        masuColors: s.colors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }))
-    }) : slotArt(React.createElement(DyedMonsterImage, {
+    }) : slotArt(pandoraArt || React.createElement(DyedMonsterImage, {
       baseId: s.id,
-      src: slotImgUrl,
+      src: s.imgUrl,
       alt: s.name,
-      masuColors: slotImgColors,
+      masuColors: s.colors,
       style: {
         width: tacticsNewLayout ? '58px' : '64px',
         height: tacticsNewLayout ? '58px' : '64px'

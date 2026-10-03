@@ -1902,10 +1902,6 @@ function BattleScreen({
                 });
               }
               const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
-              // パンドラの箱: カードを切っている間だけ悪魔・天使の姿に差し替える(染色は本体用なので、この間は掛けない)
-              const pandoraForm = s && s.id === 'Pandora' ? (tacticsPandoraForms && tacticsPandoraForms[i]) : null;
-              const slotImgUrl = pandoraForm === 'devil' ? PANDORA_DEVIL_IMG : pandoraForm === 'angel' ? PANDORA_ANGEL_IMG : (s && s.imgUrl);
-              const slotImgColors = pandoraForm ? undefined : (s && s.colors);
               // 敵の位置へ向けるためのCSS変数。測れなかったときは :root の既定値(真上)で動く
               // 新しい盤面は枠が2段に並ぶ。攻撃中の子の枠だけ前へ出さないと、沈み込み・横滑りのときに
               // あとから描かれる隣や下の枠の裏へ絵が回る(古い盤面は枠ごと z-index:9999 で前へ出している)
@@ -1941,6 +1937,18 @@ function BattleScreen({
               const slotAimHit=slotAimed?plannedHitWithCover(i):null;
               // この子のEXスキル(タクティクスだけ。持っていなければ null)
               const slotExInfo=tacticsExInfo?tacticsExInfo(i):null;
+              // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
+              // カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
+              const pandoraForm = s && s.id === 'Pandora' ? (tacticsPandoraForms && tacticsPandoraForms[i]) : null;
+              const pandoraArt = (s && s.id === 'Pandora' && slotExInfo && slotExInfo.active && slotExInfo.def && slotExInfo.def.effect === 'pandoraBox') ? (() => {
+                const ph = tacticsNewLayout ? 58 : 64, pw = Math.round(ph * 2 / 3);
+                const fig = (url, form, left) => {
+                  const front = pandoraForm === form, dim = !!pandoraForm && !front;
+                  return <img data-pandora-form={form} src={url} alt="" draggable={false} className="object-contain drop-shadow-md"
+                    style={{ position: 'absolute', bottom: 0, left, width: pw, height: ph, zIndex: front ? 3 : (form === 'angel' ? 2 : 1), transform: front ? 'scale(1.12)' : 'none', filter: dim ? 'brightness(.5)' : 'none', transition: 'transform .15s, filter .15s' }}/>;
+                };
+                return <span data-pandora-pair className="relative inline-block" style={{ width: ph, height: ph }}>{fig(PANDORA_DEVIL_IMG, 'devil', 0)}{fig(PANDORA_ANGEL_IMG, 'angel', ph - pw)}</span>;
+              })() : null;
               return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
@@ -2170,25 +2178,25 @@ function BattleScreen({
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
                   <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{})}}>{s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
-                    ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={slotImgUrl} alt={s.name} masuColors={slotImgColors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
+                    ?<PandoraDualThunder image={(pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>)}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
-                        image={slotArt(<DyedMonsterImage baseId={s.id} src={slotImgUrl} alt={s.name} masuColors={slotImgColors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
+                        image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
                         charging={attackAnim.charge===true}
                         empowered={attackAnim.charge===false}/>
                     :isAnimating&&attackAnim.motion==='waterBurst'
                       ?<WaterBurstMotion
-                        image={slotArt(<DyedMonsterImage baseId={s.id} src={slotImgUrl} alt={s.name} masuColors={slotImgColors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
+                        image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :isAnimating&&attackAnim.motion==='miaSongNotes'
                       ?<MiaSongNotesMotion
-                        image={slotArt(<DyedMonsterImage baseId={s.id} src={slotImgUrl} alt={s.name} masuColors={slotImgColors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
+                        image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :themedAttack
-                      ?<ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge===false} image={slotArt(<DyedMonsterImage baseId={s.id} src={slotImgUrl} alt={s.name} masuColors={slotImgColors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}/>
-                      :slotArt(<DyedMonsterImage baseId={s.id} src={slotImgUrl} alt={s.name} masuColors={slotImgColors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      ?<ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge===false} image={slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))}/>
+                      :slotArt((pandoraArt||<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>))):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
                   {/* ガードのバリア(2026-09-29 ユーザー選択「案A バリア」)。構えているあいだは idle、敵の攻撃を受けたら
