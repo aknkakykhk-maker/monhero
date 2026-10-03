@@ -337,12 +337,15 @@ const assistantExpressionName = (who, expression) => {
   return list.includes(expression) ? expression : fallback;
 };
 // 吹き出しの丸い顔に使う軽い画像
+// ★着替え(data/breeder.js の assistantCostumeImage)を着ているときは、その服の絵を返す。服の絵が決まらないときは元の服
 const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
-  ? `${who.imageDir}/face/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`
+  ? ((typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'face'))
+    || `${who.imageDir}/face/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 // 元の大きい立ち絵(今後、全身で出したい場面ができたときに使う)
 const assistantFullImage = (who, expression) => (who && who.imagePrefix)
-  ? `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`
+  ? ((typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'full'))
+    || `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 
 // ---------- 親密度(みゅあとの仲良し度) ----------

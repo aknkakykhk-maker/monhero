@@ -275,7 +275,7 @@ const MARKET_CURRENCY_META = Object.freeze({
 });
 // 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
-  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item') ? 'diamond' : 'breederPoint';
+  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item'||item?.type==='costume') ? 'diamond' : 'breederPoint';
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる

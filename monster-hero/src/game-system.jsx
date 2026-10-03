@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7f3865d797132273
+// generated-sha256: fc3df3c67b222c75
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 02:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 02:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2220,7 +2220,7 @@ const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={},
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
   const cost = unitCost * purchaseQuantity;
   const currency = item?.currency === 'psyche' ? 'psyche'
-    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item') ? 'diamond' : 'breederPoint';
+    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume') ? 'diamond' : 'breederPoint';
   const balances = { diamond:Math.max(0, Math.floor(Number(gold) || 0)), breederPoint:Math.max(0, Math.floor(Number(breederPoints) || 0)), psyche:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) };
   if (!item || item.available === false || balances[currency] < cost) return { ok:false, currency, cost, gold:balances.diamond, breederPoints:balances.breederPoint, ownedItems };
   const nextItems = item.type === 'item' ? { ...ownedItems, [item.id]:ownedItemCount(ownedItems, item.id) + purchaseQuantity } : ownedItems;
@@ -9975,7 +9975,7 @@ const MARKET_CURRENCY_META = Object.freeze({
 });
 // 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
-  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item') ? 'diamond' : 'breederPoint';
+  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item'||item?.type==='costume') ? 'diamond' : 'breederPoint';
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
@@ -23983,10 +23983,13 @@ function BreederMarketScreen({
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  // 着替え(2026-10-03)。売る服が1着も無いうちは「着替え」タブごと出さない(空のタブを見せない)
+  const costumeItems = marketItems.filter(item=>item.type==='costume');
   const diamondTabs = [
     {key:'disc',label:'円盤石'},
     {key:'assist',label:'アシスト'},
     {key:'item',label:'アイテム'},
+    ...(costumeItems.length?[{key:'costume',label:'着替え'}]:[]),
   ];
   const activeDiamondTab = diamondTabs.some(tab=>tab.key===marketTab)?marketTab:'disc';
   const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
@@ -24013,7 +24016,7 @@ function BreederMarketScreen({
   const SECTION_TABS = {
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.length?[{key:'costume',label:'着替え'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -24247,6 +24250,22 @@ function BreederMarketScreen({
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
             />;
           })}
+          {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
+              服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
+          {eventTab==='costume'&&RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.map(offer=>{
+            const costume=assistantCostumeById(offer.costumeId);
+            const who=assistantById(offer.assistantId);
+            const item={ id:offer.costumeId, name:offer.name, emoji:'👗', icon:costume?.icon, type:'costume', currency:'beatPoint', cost:offer.cost, desc:`${who?.name||''}の着替え。${costume?.desc||''}` };
+            const owned=isItemOwned({ id:offer.costumeId, type:'costume' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-costume':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={item.desc?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
+            />;
+          })}
           {/* 交換できるプロフィールフレーム(2026-10-03)。いまは売る枠が無いので何も並ばない(タブも出ない)。
               枠に unlock:{shop:'beatPoint',cost} を書くと、ここへ自動で並ぶ。1枚につき1回、持っていれば「所持済み」 */}
           {eventTab==='frame'&&RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer=>{
@@ -24327,6 +24346,7 @@ function ProfileScreen({
   profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
+  costumeEnabled=false, wornCostume=null, onOpenCostumePicker=null,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
@@ -24410,6 +24430,12 @@ function ProfileScreen({
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
                 <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">フレーム：{frameName}</b></span>
               </button>
+              {costumeEnabled&&onOpenCostumePicker&&(
+                <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">👗</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">着替え：{wornCostume?wornCostume.name:'元の服'}</b></span>
+                </button>
+              )}
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
@@ -37088,6 +37114,16 @@ function MonsterHeroGame() {
   // ★一度もらったら外さない。助手を切り替えても、条件を変えても残す
   const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
   const ownedProfileFramesRef = useRef([]);
+  // 助手の着替え(2026-10-03)。買った服(mh_assistant_costume_owned_v1)と、助手ごとに今着ている服(mh_assistant_costume_worn_v1)。
+  // ★どちらも新設のキー。既存の mh_* には触らない(CLAUDE.md ⑦)。読み込みでは書き戻さない
+  const [ownedAssistantCostumes, setOwnedAssistantCostumes] = useState([]);
+  const ownedAssistantCostumesRef = useRef([]);
+  const [wornAssistantCostumes, setWornAssistantCostumes] = useState({});
+  const [showCostumePicker, setShowCostumePicker] = useState(false);
+  const [costumeAssistantId, setCostumeAssistantId] = useState(null);
+  const [costumeLockedInfo, setCostumeLockedInfo] = useState(null);
+  // 画面が描く瞬間に、助手の顔・立ち絵の出し口(assistants.js)へ「いま着ている服」を渡す
+  setAssistantCostumeWornNow(wornAssistantCostumes);
   // 「新しくもらったよ」と助手が知らせ終えた枠のid。
   // ★もらうたびに知らせたいので、既読は1回きりの id ではなく**枠ごと**に覚える
   //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
@@ -37151,6 +37187,26 @@ function MonsterHeroGame() {
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
     });
+  }, []);
+
+  // 助手を着替えさせる(2026-10-03)。costumeId が null なら元の服へ戻す。
+  // 持っていない服・その助手の服ではないものは受けない。押したその場で画面へ反映し、保存は読み直して足す
+  // (他の助手が着ている服を消さない)。保存できなくても表示だけは変わる
+  const wearAssistantCostume = useCallback((assistantId, costumeId) => {
+    const costume = costumeId ? assistantCostumeById(costumeId) : null;
+    if (costumeId && (!costume || costume.assistantId !== assistantId || !ownedAssistantCostumesRef.current.includes(costume.id))) return;
+    setWornAssistantCostumes(prev => {
+      const next = { ...prev };
+      if (costume) next[assistantId] = costume.id; else delete next[assistantId];
+      return next;
+    });
+    Promise.resolve(storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false))
+      .then(stored => {
+        const base = normalizeWornAssistantCostumes(stored, ownedAssistantCostumesRef.current);
+        if (costume) base[assistantId] = costume.id; else delete base[assistantId];
+        return storeSet(ASSISTANT_COSTUME_WORN_KEY, base, false);
+      })
+      .catch(error => { console.error('[assistant-costume] save failed:', error && error.message ? error.message : error); });
   }, []);
 
   // ===== ランキングに出す「いまの見た目」を登録する(2026-09-16) =====
@@ -40869,6 +40925,11 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = catchUp;
       setOwnedProfileFrames(catchUp);
       setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      // 着替え。保存値が無い・壊れているときは「何も持っていない・全員元の服」で始める
+      const loadedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+      ownedAssistantCostumesRef.current = loadedCostumes;
+      setOwnedAssistantCostumes(loadedCostumes);
+      setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
       setRhythmClearTotal(await loadRhythmClearTotal());
       if (catchUp.length !== loadedFrames.length) {
         try { await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false); } catch {}
@@ -42252,6 +42313,7 @@ function MonsterHeroGame() {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
+    if (item.type === 'costume') return normalizeOwnedAssistantCostumes(ownedAssistantCostumes).includes(item.id);
     if (item.type === 'item') return false;
     // アイコンは、同じキャラのまとめのどれか1つでも持っていれば全部持っている扱い(保存値は広げるだけで書き換えない)
     return expandOwnedMarketIcons(ownedMarketIcons).includes(item.id);
@@ -42347,6 +42409,13 @@ function MonsterHeroGame() {
       setOwnedProfileFrames(nextFrames);
       storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
       markProfileFrameNoticed(item.id);
+    } else if (item.type === 'costume') {
+      // 売っている助手の着替え。保存を読み直して足す(画面の値だけを見て書くと、ほかで増えたぶんを消しうる)
+      const storedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+      const nextCostumes = normalizeOwnedAssistantCostumes([...storedCostumes, ...ownedAssistantCostumesRef.current, item.id]);
+      ownedAssistantCostumesRef.current = nextCostumes;
+      setOwnedAssistantCostumes(nextCostumes);
+      storeSet(ASSISTANT_COSTUME_OWNED_KEY, nextCostumes, false);
     } else if (item.type !== 'item') {
       // 同じキャラのまとめは、1つ買うと中身が全部入る(商品の並びでは1つにまとまっている)
       setOwnedMarketIcons(prev => { const group = breederIconGroupOf(item.id); const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])]; storeSet('mh_market_icons', next, false); return next; });
@@ -42425,6 +42494,10 @@ function MonsterHeroGame() {
       const isFrame = offer?.kind==='frame';
       const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      // 着替えの交換も同じ。持っている服の保存(mh_assistant_costume_owned_v1)を同じ取引に入れる
+      const isCostume = offer?.kind==='costume';
+      const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
+      const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
@@ -42433,9 +42506,9 @@ function MonsterHeroGame() {
           return { ok:false, reason:'condition' };
         }
       }
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames });
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames, ownedAssistantCostumes:beforeCostumes });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':isCostume?'この着替えはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -42445,6 +42518,7 @@ function MonsterHeroGame() {
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
         ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
+        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange.ownedAssistantCostumes }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -42466,6 +42540,10 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
+      }
+      if (isCostume) {
+        ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
+        setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -52225,6 +52303,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenNameEdit={(name)=>{setTempName(name);setShowNameEdit(true);}}
             onOpenIconPicker={()=>setShowIconPicker(true)}
             onOpenFramePicker={()=>setShowFramePicker(true)}
+            costumeEnabled={assistantCostumeFeatureOn()}
+            wornCostume={assistantCostumeWornFor(selectedAssistantId)}
+            onOpenCostumePicker={()=>{setCostumeAssistantId(selectedAssistantId);setShowCostumePicker(true);}}
             onOpenItems={()=>setGameState('ITEM_INVENTORY')}
             onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
@@ -53456,6 +53537,60 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {saleFrames.length>0&&<PickerGroupLabel count={saleFrames.length}>モンスターの枠（条件を達成するとマーケットで買えます）</PickerGroupLabel>}
                 {saleFrames.map(cell)}
               </div>
+            </PickerSheet>
+          );
+        })()}
+
+        {showCostumePicker&&(()=>{
+          // 助手の着替えを選ぶ窓(PickerSheet)。上のチップで助手を切り替え、その助手の服を並べる。
+          // 「元の服」は誰でも選べる。持っていない服は絵を薄くして鍵を重ね、押すとマーケットで買えることを案内する。
+          // 押したその場で反映して保存する(閉じるまで見比べられる)。並ぶのは公開済み(released:true)の服だけ
+          const closeCostume=()=>{ setShowCostumePicker(false); setCostumeLockedInfo(null); };
+          const who=assistantById(costumeAssistantId)||assistantById(selectedAssistantId);
+          const chipList=ASSISTANT_LIST.map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
+          const costumes=assistantCostumesFor(who.id);
+          const worn=assistantCostumeById(wornAssistantCostumes[who.id]);
+          const faceOf=(costume)=>costume&&costume.icon?costume.icon:null;
+          const cell=(costume)=>{
+            const owned=!costume||ownedAssistantCostumes.includes(costume.id);
+            const selected=costume?(worn&&worn.id===costume.id):!worn;
+            const src=costume?faceOf(costume):`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+            return (
+              <button key={costume?costume.id:'original'} data-assistant-costume-option={costume?costume.id:'original'} data-assistant-costume-locked={owned?'no':'yes'}
+                onClick={()=>{ if(owned){ wearAssistantCostume(who.id, costume?costume.id:null); setCostumeLockedInfo(null); } else setCostumeLockedInfo(costume.id); }}
+                aria-pressed={!!selected} aria-disabled={!owned}
+                className={`relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
+                <span className={`relative block ${owned?'':'opacity-45'}`}>
+                  {src?<img src={src} alt={costume?costume.name:'元の服'} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
+                  {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                </span>
+                {selected&&<PickerCheckMark/>}
+                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:'元の服'}</span>
+                {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">マーケットで購入</span>}
+              </button>
+            );
+          };
+          const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
+          const lockedInfo=lockedCostume&&(
+            <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
+              <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
+              <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{lockedCostume.desc||''}</p>
+            </div>
+          );
+          return (
+            <PickerSheet title="助手の着替え" note="助手の顔と立ち絵が、えらんだ服に変わります。服はマーケットで買えます。" onClose={closeCostume}
+              preview={<>
+                {(()=>{const nowSrc=assistantFaceImage(who,'happy');return nowSrc?<img src={nowSrc} alt={who.name} className="h-14 w-14 shrink-0 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="text-3xl" aria-hidden="true">{who.emoji}</span>;})()}
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:'元の服'}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
+              </>}
+              chips={chipList} chip={who.id} onChip={(id)=>{ setCostumeAssistantId(id); setCostumeLockedInfo(null); }}
+              footerExtra={lockedInfo} dataPicker="assistant-costume">
+              <div className="grid grid-cols-3 gap-2.5">
+                {cell(null)}
+                {costumes.map(cell)}
+              </div>
+              {costumes.length===0&&<p className="py-6 text-center text-[11px] font-bold text-slate-500">{who.name}の着替えは、まだありません</p>}
             </PickerSheet>
           );
         })()}

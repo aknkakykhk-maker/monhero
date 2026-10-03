@@ -21,6 +21,7 @@ function ProfileScreen({
   profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
+  costumeEnabled=false, wornCostume=null, onOpenCostumePicker=null,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
@@ -104,6 +105,12 @@ function ProfileScreen({
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
                 <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">フレーム：{frameName}</b></span>
               </button>
+              {costumeEnabled&&onOpenCostumePicker&&(
+                <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">👗</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">着替え：{wornCostume?wornCostume.name:'元の服'}</b></span>
+                </button>
+              )}
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>

@@ -1287,7 +1287,7 @@ const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={},
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
   const cost = unitCost * purchaseQuantity;
   const currency = item?.currency === 'psyche' ? 'psyche'
-    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item') ? 'diamond' : 'breederPoint';
+    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume') ? 'diamond' : 'breederPoint';
   const balances = { diamond:Math.max(0, Math.floor(Number(gold) || 0)), breederPoint:Math.max(0, Math.floor(Number(breederPoints) || 0)), psyche:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) };
   if (!item || item.available === false || balances[currency] < cost) return { ok:false, currency, cost, gold:balances.diamond, breederPoints:balances.breederPoint, ownedItems };
   const nextItems = item.type === 'item' ? { ...ownedItems, [item.id]:ownedItemCount(ownedItems, item.id) + purchaseQuantity } : ownedItems;
