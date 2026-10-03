@@ -231,7 +231,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   check('ブリーダーidは英数字と記号だけ通す', hb && hb.bid === 'abc-123script', hb && hb.bid);
 }
 {
-  // 同じメンバーで続けると連続が増え、顔ぶれが変わると1曲目に戻る
+  // 前のライブの全員がまた参加すると連続が増える。メンバーが増えても続き、だれかが抜けると1曲目に戻る
   const [h, a, b] = ['h', 'a', 'b'].map(makeClient);
   joinRoom([h, a], 'ST9Z');
   h.M.confirmMembers(); clock.advance(2500);
@@ -252,8 +252,12 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   b.M.join('ST9Z', { name: 'b', level: 40, icon: '', frame: '', diff: 'NORMAL' }, 'private'); clock.advance(3000);
   playRound([h, a, b]);
   const s4 = view(h).streak;
+  a.M.leave(); clock.advance(15000);
+  playRound([h, b]);
+  const s5 = view(h).streak;
   check('同じメンバーで続けると連続が1つずつ増える', s1 === 1 && s2 === 2 && s3 === 3, `${s1},${s2},${s3}`);
-  check('メンバーが変わると連続は1曲目に戻る', s4 === 1, `${s4}`);
+  check('メンバーが増えても連続は続く(2026-10-03・ユーザー指示)', s4 === 4, `${s4}`);
+  check('だれかが抜けると連続は1曲目に戻る', s5 === 1, `${s5}`);
   leaveAll([h, a, b]);
 }
 

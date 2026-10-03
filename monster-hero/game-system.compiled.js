@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 18a4995d52225d79
+// source-sha256: a8c12acb2064c7c8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 17:56";
+const BUILD_DATE = "2026-10-03 17:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -54156,9 +54156,9 @@ const RHYTHM_MULTI = (() => {
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true;
           me.res = null;
-          const key = msg.participants.slice().sort().join(',');
-          s.liveStreak = key === s.liveKey ? s.liveStreak + 1 : 1;
-          s.liveKey = key;
+          const kept = s.liveIds.length > 0 && s.liveIds.every(pid => msg.participants.includes(pid));
+          s.liveStreak = kept ? s.liveStreak + 1 : 1;
+          s.liveIds = msg.participants.slice();
           startListeners.forEach(fn => {
             try {
               fn({
@@ -54268,7 +54268,7 @@ const RHYTHM_MULTI = (() => {
         resultSeen: '',
         queue: [],
         playUntil: 0,
-        liveKey: '',
+        liveIds: [],
         liveStreak: 0
       };
       s.members[id] = {
@@ -55903,7 +55903,7 @@ function RhythmMultiScreen({
     }, team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`), view.streak >= 2 && React.createElement("small", {
       "data-rhythm-multi-streak": true,
       className: "mt-0.5 inline-block rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-2 text-[10px] font-black text-white"
-    }, "🔥 同じメンバーで", view.streak, "曲目 ・ ごほうび+", Math.round(rhythmMultiStreakBonus(view.streak) * 100), "%")), React.createElement("div", {
+    }, "🔥 連続", view.streak, "曲目 ・ ごほうび+", Math.round(rhythmMultiStreakBonus(view.streak) * 100), "%")), React.createElement("div", {
       className: "hidden min-w-0 flex-1 landscape:block"
     }, React.createElement("div", {
       "data-rhythm-multi-gauge": true,
