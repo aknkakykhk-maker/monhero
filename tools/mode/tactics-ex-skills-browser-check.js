@@ -552,7 +552,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     const unBefore = await partyOf(unSlot);
     await tapSlot(unSlot);
     p = await panel();
-    check('「生命の泉」: 3/3・カードと併用できる・3ターン', !!p && p.name === '生命の泉' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
+    check('「生命の泉」: 5/5・カードと併用できる・3ターン', !!p && p.name === '生命の泉' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(500);
     const targets = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-ex-target]')].map(b => ({ slot: b.getAttribute('data-tactics-ex-target'), downed: b.getAttribute('data-tactics-ex-target-downed'), text: b.textContent.trim().slice(0, 40) })));
@@ -565,7 +565,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       && unAfter.hp === `${maxOf(unAfter.hp)}/${maxOf(unAfter.hp)}` && gutsNow(unAfter.guts) > gutsNow(unBefore.guts), `${JSON.stringify(unBefore)} → ${JSON.stringify(unAfter)}`);
     await tapSlot(unSlot);
     p = await panel();
-    check('使ったあとは 2 / 3・詳細に「生命の泉の対象」が出る', !!p && /2 \/ 3/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
+    check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
     const ybSlot = await startWith('ヤオビクニ');

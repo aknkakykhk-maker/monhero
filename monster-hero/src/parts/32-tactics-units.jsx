@@ -1068,7 +1068,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
     desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%戻る。',
-    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    // ★2026-10-03 ユーザー指示で 3回 → 5回
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
     effect: 'lifeSpring',
   }),

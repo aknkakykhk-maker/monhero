@@ -656,7 +656,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 // ---------- ⑯ ウンディーネ「生命の泉」・ヤオビクニ「悠久の刻」(2026-10-03 ユーザーの案) ----------
 {
   const un = ex.tacticsExDefOf('Undine'), yb = ex.tacticsExDefOf('Yaobikuni');
-  check('ウンディーネ「生命の泉」: 3回・併用できる・3ターン・味方を選ぶ・上限+30%・ガッツ30%', !!un && un.name === '生命の泉' && un.maxUses === 3 && un.withCards && un.duration === 'turns' && un.turns === 3
+  check('ウンディーネ「生命の泉」: 5回・併用できる・3ターン・味方を選ぶ・上限+30%・ガッツ30%', !!un && un.name === '生命の泉' && un.maxUses === 5 && un.withCards && un.duration === 'turns' && un.turns === 3
     && un.target === 'ally' && un.lifeSpring && un.lifeSpring.maxUpRate === 0.3 && un.lifeSpring.gutsRate === 0.3 && un.effect === 'lifeSpring' && ex.isTacticsExEffectImplemented(un), JSON.stringify(un));
   check('ヤオビクニ「悠久の刻」: 回数2回・併用できる・発動ターンだけ・時間停止', !!yb && yb.name === '悠久の刻' && yb.maxUses === 2 && !yb.unlimited && yb.withCards && yb.duration === 'turn'
     && yb.effect === 'timeStop' && ex.isTacticsExEffectImplemented(yb), JSON.stringify(yb));
