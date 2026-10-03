@@ -609,6 +609,8 @@ function MonsterHeroGame() {
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
   const [graveyard, setGraveyard] = useState([]);
+  const handPileRef = useRef({ hand: [], deck: [], graveyard: [] }); // EXスキルが「いまの」手札・山札・墓地を読むための控え(毎回の描画で更新)
+  handPileRef.current = { hand, deck, graveyard };
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
   // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
@@ -9906,13 +9908,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return unit ? tacticsExActiveStyle(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
   };
   // スイーツパラダイスで足す連撃({count, rate})。効いていなければ null(ほかのモードも null)
-  const tacticsExCombosAt = (slotIdx) => {
+  const tacticsExCombosAt = (slotIdx, halved=false) => {
     const live=tacticsExLiveRef.current;
     if(!live.enabled||!Number.isInteger(slotIdx)) return null;
     const own=tacticsExExtraCombosAt(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
     // ★スネグーラチカのプレゼントの「連撃付与」は味方全員の攻撃に付く。自分のぶんと別の連撃として重ねる
     const gift=tacticsExPartyBuffNow().combo;
-    return own&&gift ? [own,gift] : (own||gift||null);
+    const devil=tacticsExPandoraDevilNow(slotIdx,halved).combo; // パンドラの箱: 1枚目に悪魔側の連撃
+    const list=[own,gift,devil].filter(Boolean);
+    return list.length===0?null:(list.length===1?list[0]:list);
   };
   // 世界樹の守りの、味方全員の被ダメージ倍率(効いていなければ1。ほかのモードも1)
   // アーク・イブリースの与ダメ・被ダメ・会心の倍率(効いていなければ全部1。ほかのモードも1)
@@ -9926,6 +9930,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       out.dmg*=party.dmg; out.critRate*=party.critRate;
     }
     return out;
+  };
+  // パンドラの箱の悪魔側の力(1枚目の攻撃だけ。halved=「同じ子の2枚目」)。効いていなければ与ダメ1倍・連撃なし
+  const tacticsExPandoraDevilNow = (slotIdx, halved=false) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return { dmg:1, combo:null };
+    const devil=tacticsExPandoraDevil(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now,halved);
+    return devil?{ dmg:devil.dmg, combo:devil.combo }:{ dmg:1, combo:null };
   };
   // 味方全員に効く倍率(ミーアのボルテージ・スネグーラチカのプレゼント)。効いていなければ全部1・連撃は null。ほかのモードも同じ
   const tacticsExPartyBuffNow = () => {
@@ -10305,7 +10316,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
-    const totalBuffMult=traitMult*tacticsExMultiBuffNow(slotIdx).dmg*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*tacticsExMultiBuffNow(slotIdx).dmg*tacticsExPandoraDevilNow(slotIdx,isSecondOrLaterAtk).dmg*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
       ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
@@ -10328,7 +10339,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // additionalGlobalCombo: カード選択中のプレビュー専用。previewLocalBoostsが計算した、
   // このカードより手前で使ったききの応援ぶんの全体連撃(まだstateに乗っていない同ターン分)。
   // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
-  const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null) => {
+  const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null, halved=false) => {
     if (baseDmg<=0) return 0;
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
@@ -10337,7 +10348,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx,halved), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -11026,6 +11037,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
     // 時間を止めたターンは数えない(20ターン制限にも入れない)。止めた記録は使い終わったことにして、止め続けない
+    // パンドラの箱: ターン終わりの始末。時間が止まったターンは箱も進めない
+    if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
+      const boxStep=tacticsExPandoraTurnEnd(tacticsExStateRef.current,tacticsUnitsRef.current,tacticsExLiveRef.current.now);
+      if(boxStep) await settleTacticsExPandoraBox(boxStep);
+    }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
   };
@@ -11147,6 +11163,60 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setTacticsExCutin({ ...cutin, key: Date.now(), ...(ms !== TACTICS_EX_CUTIN_MS ? { ms } : {}) });
     tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, ms);
   };
+  // パンドラの箱のターン終わりの始末(2026-10-03)。cost=ライフを払う / hope=最後の希望 / died=倒れたときのガッツを味方へ分ける
+  const settleTacticsExPandoraBox = async (step) => {
+    const slot=step.slot, cfg=step.cfg;
+    const name=slots[slot]?.masuName||slots[slot]?.name||'パンドラ';
+    let units=tacticsUnitsRef.current;
+    let phase=step.phase;
+    const othersOf=()=>tacticsFilledSlots(units).filter(i=>i!==slot);
+    const aliveOthersOf=()=>tacticsAliveSlots(units).filter(i=>i!==slot);
+    if(phase==='cost'){
+      const u=normalizeTacticsUnit(units[slot]);
+      let cost=Math.floor(u.maxHp*cfg.costRate);
+      // ★ほかに立っている味方がいないときは、払って倒れない(最後の1体が倒れるとランが終わってしまう)
+      if(aliveOthersOf().length===0) cost=Math.min(cost,Math.max(0,u.hp-1));
+      if(cost>0){
+        units=damageTacticsTargets(units,[slot],cost); commitTacticsUnits(units);
+        showTacticsSlotFx(prev=>({...(prev||{}),[slot]:{...((prev||{})[slot]||{}),dmg:cost}}));
+        pushBattleLog(`${name}は命を削った（${cost.toLocaleString()}）`,'ally');
+        await battleWait(500);
+      }
+      units=tacticsUnitsRef.current;
+      if(!normalizeTacticsUnit(units[slot]).downed) return; // まだ立っている。箱は続く
+      phase='died';
+    }
+    if(phase==='hope'){
+      if(othersOf().length===0){
+        pushBattleLog(`${name}の「最後の希望」…助ける味方がいなかった`,'ally');
+      } else {
+        // パンドラ自身がダウンし、ダウン中の味方は立ち上がり、全員のライフが満タンになり、ガッツが戻る
+        units=damageTacticsTargets(units,[slot],normalizeTacticsUnit(units[slot]).hp);
+        const hpMap={}, gutsMap={};
+        othersOf().forEach(i=>{
+          const u=normalizeTacticsUnit(units[i]); const gain=Math.max(0,u.maxHp-u.hp);
+          if(gain>0){ units=healTacticsAt(units,i,gain); hpMap[i]=gain; }
+          const v=normalizeTacticsUnit(units[i]); const g=Math.max(0,Math.min(v.maxGuts-v.guts,Math.floor(v.maxGuts*cfg.hopeGutsRate)));
+          if(g>0){ units=recoverTacticsGutsAt(units,i,g); gutsMap[i]=g; }
+        });
+        commitTacticsUnits(units); mergeTacticsSlotFx(hpMap,gutsMap);
+        addPopup('✨ 最後の希望','hero','text-amber-200 font-black text-2xl drop-shadow-md');
+        pushBattleLog(`✨ ${name}の「最後の希望」。ダウンの味方が立ち上がり、全員のライフが満タンになった`,'ally');
+        await battleWait(900);
+      }
+    } else if(phase==='died'){
+      const u=normalizeTacticsUnit(units[slot]); const alive=aliveOthersOf();
+      if(u&&u.guts>0&&alive.length>0){
+        const each=Math.floor(u.guts/alive.length), gutsMap={};
+        alive.forEach(i=>{ const v=normalizeTacticsUnit(units[i]); const g=Math.max(0,Math.min(v.maxGuts-v.guts,each)); if(g>0){ units=recoverTacticsGutsAt(units,i,g); gutsMap[i]=g; } });
+        units=units.map((x,i)=>(i===slot&&x?{ ...x, guts:0 }:x));
+        commitTacticsUnits(units); mergeTacticsSlotFx({},gutsMap);
+        pushBattleLog(`${name}が倒れた。残りのガッツ ${u.guts} が味方へ分けられた`,'ally');
+        await battleWait(700);
+      } else pushBattleLog(`${name}が倒れた。「最後の希望」は起きなかった`,'ally');
+    }
+    commitTacticsExState(spendTacticsExPandoraBox(tacticsExStateRef.current));
+  };
   // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
@@ -11212,7 +11282,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // ピクシーの「お気に入りの魔法」: 使ったターンから固有技のカードが手札に出る(手札がいっぱいで、いちばん後ろのカードを選んでいるときは、次のターンから)
     if(def.guaranteeUnique&&(hand.length<5||!selectedCards.includes(hand.length-1))){
-      const ens=ensureTacticsExUniqueInHand({ hand, deck, graveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx);
+      const ens=ensureTacticsExUniqueInHand(handPileRef.current,c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx);
       if(ens.moved){ setHand(ens.hand); setDeck(ens.deck); setGraveyard(ens.graveyard); }
     }
     // スネグーラチカの「クリスマスプレゼント」: 中身をランダムで決める。必ず全員のガッツが戻り、決まった中身が起きる
@@ -11322,6 +11392,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
     const halveCounter=makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
+    const pandoraCardNo={}; // パンドラの箱: 枠ごとに、このターン何枚目のカードか(アシストカードは数えない)
     for (const entry of usedCardEntries) {
       const card=entry.card;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
@@ -11351,6 +11422,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(halved) addPopup(isTacticsMode(runMode)?'同じ子の2枚目 効果半減':'2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
+      // ★パンドラの箱の天使側の力: パンドラが2枚目のカードを使うと、味方全員のライフ・ガッツが上限の一部だけ戻る(2026-10-03)
+      if(isTacticsMode(runMode)&&!isBreeder&&entry.slotIdx!=null){
+        pandoraCardNo[entry.slotIdx]=(pandoraCardNo[entry.slotIdx]||0)+1;
+        const boxNow=pandoraCardNo[entry.slotIdx]===2?tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now):null;
+        if(boxNow&&boxNow.angelRate>0){
+          const angel=tacticsRateHeal(boxNow.angelRate,boxNow.angelRate,false);
+          if(angel) hpBeforeEnemyAttack=angel.total;
+          addPopup('👼 天使の力 全員回復','hero','text-sky-200 font-black text-xl drop-shadow-md');
+          pushBattleLog(`👼 ${battleActorName(entry.slotIdx)}の2枚目。天使の力で味方全員のライフ・ガッツが戻った`,'ally');
+        }
+      }
       if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul,guardCardWeight(card)); }
       else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul,guardCardWeight(card)); }
       // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
@@ -11376,7 +11458,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx,true), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
@@ -11498,7 +11580,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx,halved), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
