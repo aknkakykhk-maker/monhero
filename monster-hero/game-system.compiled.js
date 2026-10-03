@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fc1625ae727107c
+// source-sha256: b6c527ce30a26533
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 11:10";
+const BUILD_DATE = "2026-10-03 11:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33828,6 +33828,43 @@ const friendsFaceIconOf = baseId => {
     id: baseId
   };
 };
+const FRIEND_FAVORITES_KEY = 'mh_friend_favorites_v1';
+const FRIEND_FAVORITES_MAX = 100;
+const friendsNormalizeFavorites = raw => {
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  list.forEach(id => {
+    const safe = friendsSafeId(id);
+    if (safe && !out.includes(safe)) out.push(safe);
+  });
+  return out.slice(0, FRIEND_FAVORITES_MAX);
+};
+const friendsArrangeList = ({
+  views,
+  looks,
+  summaries,
+  favorites,
+  query,
+  nowMs
+}) => {
+  const fav = new Set(Array.isArray(favorites) ? favorites : []);
+  const text = String(query == null ? '' : query).trim().toLowerCase();
+  const rows = (Array.isArray(views) ? views : []).map(view => {
+    const look = looks && looks[view.otherId] || {};
+    const sum = summaries && summaries[view.otherId] || null;
+    const at = Math.max(sum ? sum.updatedAt || 0 : 0, look.lastSeenAt || 0);
+    const seen = friendsPresenceText(sum ? sum.place : null, at, nowMs);
+    return {
+      view,
+      name: look.userName || '名無しのブリーダー',
+      favorite: fav.has(view.otherId),
+      online: seen.online,
+      seenAt: at
+    };
+  }).filter(row => !text || row.name.toLowerCase().includes(text));
+  rows.sort((a, b) => Number(b.favorite) - Number(a.favorite) || Number(b.online) - Number(a.online) || b.seenAt - a.seenAt || a.name.localeCompare(b.name, 'ja'));
+  return rows;
+};
 const friendsStatusOf = value => Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED;
 const friendLinkView = (selfId, row) => {
   const requester = typeof row?.requester_id === 'string' ? row.requester_id : '';
@@ -52394,10 +52431,26 @@ function FriendsScreen({
   });
   const [confirm, setConfirm] = React.useState(null);
   const [targetAsk, setTargetAsk] = React.useState(target);
+  const [favorites, setFavorites] = React.useState([]);
+  const [query, setQuery] = React.useState('');
   const aliveRef = React.useRef(true);
   React.useEffect(() => () => {
     aliveRef.current = false;
   }, []);
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(storeGet(FRIEND_FAVORITES_KEY, [], false)).then(saved => {
+      if (!cancelled && aliveRef.current) setFavorites(friendsNormalizeFavorites(saved));
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const toggleFavorite = id => {
+    const next = favorites.includes(id) ? favorites.filter(x => x !== id) : friendsNormalizeFavorites([id, ...favorites]);
+    setFavorites(next);
+    Promise.resolve(storeSet(FRIEND_FAVORITES_KEY, next, false)).catch(() => {});
+  };
   const say = key => {
     const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
     setNotice({
@@ -52719,12 +52772,22 @@ function FriendsScreen({
       onCancel: () => setConfirm(null)
     }));
   }
-  const person = (view, right) => {
+  const arranged = friendsArrangeList({
+    views: groups.friends,
+    looks: profiles,
+    summaries,
+    favorites,
+    query,
+    nowMs: now
+  });
+  const onlineCount = arranged.filter(row => row.online).length;
+  const person = (view, right, extra = null) => {
     const look = lookOf(view.otherId);
-    return React.createElement("div", {
-      key: view.otherId,
-      className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`
-    }, avatar(view.otherId, 'h-10 w-10'), React.createElement("div", {
+    return React.createElement("div", _extends({
+      key: view.otherId
+    }, extra || {}, {
+      className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2 ${extra ? 'cursor-pointer active:scale-[.99]' : ''}`
+    }), avatar(view.otherId, 'h-10 w-10'), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("b", {
       className: "block truncate text-[12px] font-black text-white"
@@ -52770,11 +52833,52 @@ function FriendsScreen({
     }, "フレンドを追加する")
   }) : React.createElement("div", {
     className: "flex flex-col gap-2"
-  }, groups.friends.map(view => person(view, React.createElement("button", {
+  }, groups.friends.length >= 6 && React.createElement("input", {
+    type: "search",
+    value: query,
+    onChange: event => setQuery(event.target.value.slice(0, 20)),
+    "data-friend-search": true,
+    placeholder: "名前でさがす",
+    "aria-label": "フレンドを名前でさがす",
+    autoComplete: "off",
+    spellCheck: false,
+    className: "min-h-[44px] w-full rounded-xl border border-white/15 bg-black/40 px-3 text-[13px] font-bold text-white placeholder:text-slate-500"
+  }), React.createElement("p", {
+    "data-friend-online-count": true,
+    className: "px-1 text-[10px] font-black text-slate-400"
+  }, onlineCount > 0 ? React.createElement("span", {
+    className: "text-emerald-300"
+  }, "● ログイン中 ", onlineCount, "人") : 'ログイン中の人はいません', React.createElement("span", {
+    className: "ml-2 text-slate-500"
+  }, "／ ★でお気に入り(上に並びます)")), arranged.length === 0 && React.createElement("p", {
+    className: "px-1 py-6 text-center text-[11px] font-bold text-slate-500"
+  }, "「", query, "」に当てはまるフレンドはいません"), arranged.map(row => person(row.view, React.createElement("div", {
+    className: "flex shrink-0 items-center gap-1"
+  }, React.createElement("button", {
     type: "button",
-    onClick: () => openProfile(view),
-    className: `${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`
-  }, "プロフィール ›"))))), tab === 'requests' && React.createElement("div", {
+    "data-friend-star": row.favorite ? 'on' : 'off',
+    "aria-pressed": row.favorite,
+    "aria-label": row.favorite ? 'お気に入りをやめる' : 'お気に入りにする',
+    onClick: event => {
+      event.stopPropagation();
+      toggleFavorite(row.view.otherId);
+    },
+    className: `flex h-11 w-11 items-center justify-center rounded-xl border text-lg active:scale-90 ${row.favorite ? 'border-amber-400/70 bg-amber-500/20 text-amber-300' : 'border-white/15 bg-black/30 text-slate-500'}`
+  }, row.favorite ? '★' : '☆'), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-slate-500"
+  }, "›")), {
+    role: 'button',
+    tabIndex: 0,
+    'data-friend-row': row.view.otherId,
+    onClick: () => openProfile(row.view),
+    onKeyDown: event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openProfile(row.view);
+      }
+    }
+  })))), tab === 'requests' && React.createElement("div", {
     className: "flex flex-col gap-3"
   }, React.createElement("div", null, React.createElement(ScreenSectionLabel, null, "届いている申請"), groups.incoming.length === 0 ? React.createElement("p", {
     className: "px-1 py-2 text-[11px] font-bold text-slate-500"

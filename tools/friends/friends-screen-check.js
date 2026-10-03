@@ -155,12 +155,19 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.waitForTimeout(300);
       await shot('3-friends');
       result.presenceOnline = await page.evaluate(() => [...document.querySelectorAll('[data-friend-presence=online]')].map(e => e.innerText).join('|'));
-      result.twoFriends = ((await bodyText()).match(/プロフィール ›/g) || []).length;
-      // 見せる情報を仕込んだ「ともだちの子」の行のボタンを押す(先頭の人とは限らない)
-      await page.evaluate(() => {
-        const row = [...document.querySelectorAll('div')].filter(d => /ともだちの子/.test(d.innerText || '') && d.querySelector('button')).pop();
-        [...row.querySelectorAll('button')].find(b => /プロフィール/.test(b.innerText))?.click();
-      });
+      result.twoFriends = await page.evaluate(() => document.querySelectorAll('[data-friend-row]').length);
+      result.noSearchYet = await page.evaluate(() => !document.querySelector('[data-friend-search]'));
+      result.onlineCountText = await page.evaluate(() => (document.querySelector('[data-friend-online-count]') || {}).innerText || '');
+      // ★お気に入り: 「とどいた子」を★にすると、その子が一番上へ来て、端末に保存される。そのあと、行をタップして「ともだちの子」を開く
+      result.orderBefore = await page.evaluate(() => [...document.querySelectorAll('[data-friend-row]')].map(r => r.getAttribute('data-friend-row')).join(','));
+      // 先頭ではない2人目を★にして、先頭へ上がることを見る
+      result.starTarget = result.orderBefore.split(',')[1];
+      await page.evaluate((id) => document.querySelector(`[data-friend-row="${id}"] [data-friend-star]`).click(), result.starTarget);
+      await page.waitForTimeout(400);
+      result.orderAfter = await page.evaluate(() => [...document.querySelectorAll('[data-friend-row]')].map(r => r.getAttribute('data-friend-row')).join(','));
+      result.starOn = await page.evaluate((id) => document.querySelector(`[data-friend-row="${id}"] [data-friend-star]`).getAttribute('data-friend-star'), result.starTarget);
+      result.savedFavorites = await page.evaluate(() => localStorage.getItem('mh_friend_favorites_v1'));
+      await page.evaluate(() => document.querySelector('[data-friend-row="other-friend"]').click());
       await page.waitForSelector('[data-friends-profile]', { timeout: 5000 });
       await shot('4-profile');
       result.profileText = await bodyText();
@@ -175,6 +182,7 @@ const serve = (flagOn) => new Promise(resolve => {
       const target = fake.db.friend_links.filter(r => /other-(friend|incoming)/.test(r.requester_id + r.target_id) && r.status === 'removed');
       result.removedCount = target.length;
       result.afterRemoveText = await bodyText();
+      result.afterRemoveRows = await page.evaluate(() => document.querySelectorAll('[data-friend-row]').length);
       result.deletes = fake.calls.deletes;
       result.crashed = await page.evaluate(() => document.body.innerText.includes('問題が発生しました'));
       result.errors = errors;
@@ -203,6 +211,10 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('届いた申請が一覧に出る', r.incomingShown === true);
   ok('承認すると accepted になる', r.acceptedRow === 'accepted', `${r.acceptedRow}`);
   ok('フレンドが2人並ぶ', r.twoFriends === 2, `${r.twoFriends}人`);
+  ok('フレンドが5人以下のあいだは、検索欄を出さない', r.noSearchYet === true);
+  ok('ログイン中の人数が出る', /ログイン中 \d+人|ログイン中の人はいません/.test(r.onlineCountText || ''), `${r.onlineCountText}`);
+  ok('★にすると、その人が一番上へ来る', (r.orderAfter || '').startsWith(`${r.starTarget},`) && r.starOn === 'on' && (r.orderBefore || '') !== (r.orderAfter || ''), `${r.orderBefore} → ${r.orderAfter}`);
+  ok('お気に入りは端末に保存される(新しい保存キー)', (r.savedFavorites || '').includes(r.starTarget || '#'), `${r.savedFavorites}`);
   ok('プロフィールに相手の名前が出る', /ともだちの子|とどいた子/.test(r.profileText || '') && (r.profileText || '').includes('モンヒロビートの記録'));
   ok('プロフィールの一番上(バトル記録より前)にフレンドの入口がある', r.friendsFirst === true);
   ok('プロフィールに「好きなモンスター」の行がある', /好きなモンスター/.test(r.favoriteRow || '') && /まだ選んでいません/.test(r.favoriteRow || ''), `${r.favoriteRow}`);
@@ -211,7 +223,7 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('プロフィールに好きなモンスターと「詳細」が出る', /好きなモンスター/.test(r.profileText || '') && /モッチー/.test(r.profileText || '') && r.favoriteDetailButton === true);
   ok('自分の見せる情報が、起動後に friend_profiles へ送られる', !!r.selfRow && ['home','battle','rhythm','multi','masu','market','other'].includes(r.selfRow.place), JSON.stringify(r.selfRow && r.selfRow.place));
   ok('解除すると removed になり、行は消えない', r.removedCount >= 1, `${r.removedCount}件`);
-  ok('解除後は一覧に戻る', (r.afterRemoveText || '').includes('プロフィール ›') || (r.afterRemoveText || '').includes('まだフレンドがいません'));
+  ok('解除後は一覧に戻る', r.afterRemoveRows >= 1 || (r.afterRemoveText || '').includes('まだフレンドがいません'), `${r.afterRemoveRows}行`);
   ok('DELETE を一度も使っていない', r.deletes === 0);
   ok('画面が落ちていない', r.crashed === false);
   ok('実行時エラーが出ていない', r.errors.length === 0, r.errors.slice(0, 2).join(' / ') || 'なし');

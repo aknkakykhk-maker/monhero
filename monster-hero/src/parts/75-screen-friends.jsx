@@ -61,8 +61,22 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   const [summary, setSummary] = React.useState({ status: 'idle', entry: null });
   const [confirm, setConfirm] = React.useState(null);    // { kind: 'remove'|'block', otherId }
   const [targetAsk, setTargetAsk] = React.useState(target);
+  const [favorites, setFavorites] = React.useState([]);   // お気に入りのフレンド(端末だけに覚える。サーバーには送らない)
+  const [query, setQuery] = React.useState('');
   const aliveRef = React.useRef(true);
   React.useEffect(() => () => { aliveRef.current = false; }, []);
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(storeGet(FRIEND_FAVORITES_KEY, [], false)).then((saved) => {
+      if (!cancelled && aliveRef.current) setFavorites(friendsNormalizeFavorites(saved));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const toggleFavorite = (id) => {
+    const next = favorites.includes(id) ? favorites.filter((x) => x !== id) : friendsNormalizeFavorites([id, ...favorites]);
+    setFavorites(next);
+    Promise.resolve(storeSet(FRIEND_FAVORITES_KEY, next, false)).catch(() => {});
+  };
 
   const say = (key) => {
     const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
@@ -286,10 +300,13 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   }
 
   // ---- 一覧(3つのタブ) ----
-  const person = (view, right) => {
+  // フレンドの一覧(お気に入り → ログイン中 → 最近開いた順。名前で絞り込める)
+  const arranged = friendsArrangeList({ views: groups.friends, looks: profiles, summaries, favorites, query, nowMs: now });
+  const onlineCount = arranged.filter((row) => row.online).length;
+  const person = (view, right, extra = null) => {
     const look = lookOf(view.otherId);
     return (
-      <div key={view.otherId} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
+      <div key={view.otherId} {...(extra || {})} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2 ${extra ? 'cursor-pointer active:scale-[.99]' : ''}`}>
         {avatar(view.otherId, 'h-10 w-10')}
         <div className="min-w-0 flex-1">
           <b className="block truncate text-[12px] font-black text-white">{look.userName}</b>
@@ -313,8 +330,27 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
         {tab === 'friends' && (groups.friends.length === 0
           ? <ScreenEmpty emoji="🤝" lines={['まだフレンドがいません', '「追加」から、フレンドコードで申請してみましょう']}
               action={<button type="button" onClick={() => setTab('add')} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>フレンドを追加する</button>}/>
-          : <div className="flex flex-col gap-2">{groups.friends.map((view) => person(view,
-              <button type="button" onClick={() => openProfile(view)} className={`${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>プロフィール ›</button>))}</div>)}
+          : <div className="flex flex-col gap-2">
+              {groups.friends.length >= 6 && (
+                <input type="search" value={query} onChange={(event) => setQuery(event.target.value.slice(0, 20))} data-friend-search
+                  placeholder="名前でさがす" aria-label="フレンドを名前でさがす" autoComplete="off" spellCheck={false}
+                  className="min-h-[44px] w-full rounded-xl border border-white/15 bg-black/40 px-3 text-[13px] font-bold text-white placeholder:text-slate-500"/>
+              )}
+              <p data-friend-online-count className="px-1 text-[10px] font-black text-slate-400">
+                {onlineCount > 0 ? <span className="text-emerald-300">● ログイン中 {onlineCount}人</span> : 'ログイン中の人はいません'}
+                <span className="ml-2 text-slate-500">／ ★でお気に入り(上に並びます)</span>
+              </p>
+              {arranged.length === 0 && <p className="px-1 py-6 text-center text-[11px] font-bold text-slate-500">「{query}」に当てはまるフレンドはいません</p>}
+              {arranged.map((row) => person(row.view, (
+                <div className="flex shrink-0 items-center gap-1">
+                  <button type="button" data-friend-star={row.favorite ? 'on' : 'off'} aria-pressed={row.favorite} aria-label={row.favorite ? 'お気に入りをやめる' : 'お気に入りにする'}
+                    onClick={(event) => { event.stopPropagation(); toggleFavorite(row.view.otherId); }}
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl border text-lg active:scale-90 ${row.favorite ? 'border-amber-400/70 bg-amber-500/20 text-amber-300' : 'border-white/15 bg-black/30 text-slate-500'}`}>{row.favorite ? '★' : '☆'}</button>
+                  <span aria-hidden="true" className="text-slate-500">›</span>
+                </div>),
+                { role: 'button', tabIndex: 0, 'data-friend-row': row.view.otherId, onClick: () => openProfile(row.view),
+                  onKeyDown: (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openProfile(row.view); } } }))}
+            </div>)}
         {tab === 'requests' && (
           <div className="flex flex-col gap-3">
             <div>
