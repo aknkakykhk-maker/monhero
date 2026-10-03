@@ -57,17 +57,26 @@ const friendsIdOfRankingEntry = (entry) => {
   const key = typeof entry?.identityKey === 'string' ? entry.identityKey : '';
   return key.startsWith('name:') ? '' : friendsSafeId(key);
 };
-// モンスターの「顔アイコン」(マーケットで買えるプロフィールアイコンと同じ絵)を、本番のプロフィールと同じ見え方で出すための材料。
-// 顔の専用絵が無い子は立ち絵がそのまま入っているので、マーケットの商品ごとの拡大・位置の調整(BreederIcon が id で引く)を通さないと
-// 全身に見えてしまう。マーケットの商品(type:'icon')のうち同じ絵のものを探して、その id を返す。無ければモンスターidのまま
+// モンスターの「顔アイコン」を、本番のプロフィールのアイコンとまったく同じ見え方で出すための材料(src と id)。
+// プロフィールのアイコンは、BreederIcon が id で引く「拡大・位置の調整」を通して丸く切り抜いている。
+// その id と絵の決め方は breederIconOptions と同じにする(ここで別の決め方を作らない):
+//   ① 最初から使える8体 … モンスターidと、その顔アイコン(顔の専用絵が無ければ立ち絵)
+//   ② それ以外 … マーケットで買えるプロフィールアイコン(type:'icon')。商品名は「◯◯のアイコン」
+//      (スネグーラチカのように、顔アイコンとは別の絵を商品に使っている子もいるので、絵のファイルではなく名前で探す)
+//   ③ 名前で見つからなければ、同じ絵のファイルの商品 → それも無ければモンスターidのまま(調整なし)
 const friendsFaceIconOf = (baseId) => {
   const mon = ALL_PLAYER_MONSTERS[baseId];
-  const src = mon ? (mon.faceIconUrl || mon.iconUrl) : null;
-  if (!src) return null;
+  const faceSrc = mon ? (mon.faceIconUrl || mon.iconUrl) : null;
+  if (!faceSrc) return null;
+  const starters = typeof STARTER_MONSTER_IDS !== 'undefined' && Array.isArray(STARTER_MONSTER_IDS) ? STARTER_MONSTER_IDS : [];
+  if (starters.includes(baseId)) return { src: faceSrc, id: baseId };
   const bare = (url) => String(url || '').split('?')[0];
-  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
-  const item = items.find((entry) => entry && entry.type === 'icon' && bare(entry.icon) === bare(src));
-  return { src, id: item ? item.id : baseId };
+  const items = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [])
+    .filter((entry) => entry && entry.type === 'icon');
+  const byName = items.find((entry) => entry.name === `${mon.name}のアイコン`);
+  if (byName) return { src: byName.icon, id: byName.id };
+  const byPath = items.find((entry) => bare(entry.icon) === bare(faceSrc));
+  return byPath ? { src: byPath.icon, id: byPath.id } : { src: faceSrc, id: baseId };
 };
 const friendsStatusOf = (value) => (Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED);
 
