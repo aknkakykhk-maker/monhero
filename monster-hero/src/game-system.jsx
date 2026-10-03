@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a339bb742e49d6c5
+// generated-sha256: 059cc223fbfc728e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 18:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 18:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12587,8 +12587,8 @@ const skillFxSpecOf = (kind) => {
   SKILL_FX_SPEC_CACHE[kind] = SKM_FORM_OVERRIDE[kind] ? { ...norm, form:SKM_FORM_OVERRIDE[kind] } : norm;
   return SKILL_FX_SPEC_CACHE[kind];
 };
-// 音楽系の技にマイクを出すかどうか。ミーアの技は全部、ほかの子でも音符を飛ばす技は出す
-const SKFX_MIC_KIND = (kind, spec) => /^Mia-/.test(String(kind)) || spec?.fx?.shape === 'note';
+// 歌う技にマイクを出すかどうか。ミーアの技だけ(2026-10-03 ユーザー指示「ミーア以外はマイク出さないで」)
+const SKFX_MIC_KIND = (kind) => /^Mia-/.test(String(kind));
 const SkillFxMotion = ({kind, image, lunge=false}) => {
   const spec = skillFxSpecOf(kind);
   if (!spec) return null;
@@ -12606,7 +12606,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
       {spec.twin&&['dark','light'].map(side=><span key={side} className={`skfx-twin skfx-twin--${side}`} aria-hidden="true">{React.cloneElement(image,{alt:''})}</span>)}
       <span className="thm-atk__monster">{image}</span>
       {/* 音楽系の技(ミーアの歌・音符の技)はマイクを出す。専用の歌モーション(MiaSongNotesMotion)と同じマイクの絵を使う */}
-      {SKFX_MIC_KIND(kind,spec)&&<span className="skfx-mic" aria-hidden="true">
+      {SKFX_MIC_KIND(kind)&&<span className="skfx-mic" aria-hidden="true">
         <i className="mia-song-notes__mic-body"/>
         <i className="mia-song-notes__mic-clip"/>
         <i className="mia-song-notes__mic-pole mia-song-notes__mic-pole--upper"/>

@@ -678,8 +678,8 @@ const skillFxSpecOf = (kind) => {
   SKILL_FX_SPEC_CACHE[kind] = SKM_FORM_OVERRIDE[kind] ? { ...norm, form:SKM_FORM_OVERRIDE[kind] } : norm;
   return SKILL_FX_SPEC_CACHE[kind];
 };
-// 音楽系の技にマイクを出すかどうか。ミーアの技は全部、ほかの子でも音符を飛ばす技は出す
-const SKFX_MIC_KIND = (kind, spec) => /^Mia-/.test(String(kind)) || spec?.fx?.shape === 'note';
+// 歌う技にマイクを出すかどうか。ミーアの技だけ(2026-10-03 ユーザー指示「ミーア以外はマイク出さないで」)
+const SKFX_MIC_KIND = (kind) => /^Mia-/.test(String(kind));
 const SkillFxMotion = ({kind, image, lunge=false}) => {
   const spec = skillFxSpecOf(kind);
   if (!spec) return null;
@@ -697,7 +697,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
       {spec.twin&&['dark','light'].map(side=><span key={side} className={`skfx-twin skfx-twin--${side}`} aria-hidden="true">{React.cloneElement(image,{alt:''})}</span>)}
       <span className="thm-atk__monster">{image}</span>
       {/* 音楽系の技(ミーアの歌・音符の技)はマイクを出す。専用の歌モーション(MiaSongNotesMotion)と同じマイクの絵を使う */}
-      {SKFX_MIC_KIND(kind,spec)&&<span className="skfx-mic" aria-hidden="true">
+      {SKFX_MIC_KIND(kind)&&<span className="skfx-mic" aria-hidden="true">
         <i className="mia-song-notes__mic-body"/>
         <i className="mia-song-notes__mic-clip"/>
         <i className="mia-song-notes__mic-pole mia-song-notes__mic-pole--upper"/>
