@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e0c4996802b3706
+// source-sha256: 28219809467dfc4d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 16:06";
+const BUILD_DATE = "2026-10-04 00:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -27304,6 +27304,97 @@ const shrinkTacticsScore = score => {
   if (!(raw > 0)) return 0;
   return Math.max(1, Math.floor(raw / TACTICS_SCORE_DIVISOR));
 };
+const shrinkBattleScore = shrinkTacticsScore;
+const BATTLE_SCORE_SHRINK_MIGRATED_KEY = 'mh_battle_score_shrink_migrated_v1';
+const shrinkSavedBattleScore = value => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || !(n > 0)) return value;
+  return shrinkBattleScore(n);
+};
+const isBattleScoreShrinkRankingKey = difficulty => {
+  const d = String(difficulty || '');
+  return d.length > 0 && !/^(tactics|rhythm)/i.test(d);
+};
+const shrinkSpeciesProgressScores = progress => {
+  if (!progress || typeof progress !== 'object' || Array.isArray(progress)) return progress;
+  if (!progress.species || typeof progress.species !== 'object' || Array.isArray(progress.species)) return progress;
+  const species = {};
+  Object.keys(progress.species).forEach(speciesId => {
+    const entry = progress.species[speciesId];
+    if (!entry || typeof entry !== 'object' || !entry.records || typeof entry.records !== 'object' || Array.isArray(entry.records)) {
+      species[speciesId] = entry;
+      return;
+    }
+    const records = {};
+    Object.keys(entry.records).forEach(difficultyId => {
+      const record = entry.records[difficultyId];
+      records[difficultyId] = record && typeof record === 'object' && !Array.isArray(record) && 'bestScore' in record ? {
+        ...record,
+        bestScore: shrinkSavedBattleScore(record.bestScore)
+      } : record;
+    });
+    species[speciesId] = {
+      ...entry,
+      records
+    };
+  });
+  return {
+    ...progress,
+    species
+  };
+};
+const shrinkLocalRankingEntries = list => (Array.isArray(list) ? list : []).map(entry => entry && typeof entry === 'object' && 'score' in entry ? {
+  ...entry,
+  score: shrinkSavedBattleScore(entry.score)
+} : entry);
+const migrateBattleScoresToShrunk = async (get, set, list, transaction) => {
+  try {
+    if (await get(BATTLE_SCORE_SHRINK_MIGRATED_KEY, false, false)) return {
+      done: false,
+      changed: 0
+    };
+    const entries = [];
+    const plan = (key, before, next) => {
+      if (JSON.stringify(before) !== JSON.stringify(next)) entries.push({
+        key,
+        before,
+        next
+      });
+    };
+    for (const prefix of ['mh_hs_', 'mh_quick_hs_', 'mh_pro_hs_', 'mh_extreme_hs_']) {
+      for (const key of (await list(prefix, false)) || []) {
+        const before = await get(key, 0, false);
+        plan(key, before, shrinkSavedBattleScore(before));
+      }
+    }
+    const speciesBefore = await get(SPECIES_CHALLENGE_PROGRESS_KEY, null, false);
+    if (speciesBefore) plan(SPECIES_CHALLENGE_PROGRESS_KEY, speciesBefore, shrinkSpeciesProgressScores(speciesBefore));
+    for (const key of (await list('mh_rank_', false)) || []) {
+      if (!isBattleScoreShrinkRankingKey(key.slice('mh_rank_'.length))) continue;
+      const before = await get(key, [], false);
+      if (Array.isArray(before)) plan(key, before, shrinkLocalRankingEntries(before));
+    }
+    const cacheBefore = await get('mh_ranking_cache', null, false);
+    if (cacheBefore) plan('mh_ranking_cache', cacheBefore, null);
+    const changed = entries.length;
+    entries.push({
+      key: BATTLE_SCORE_SHRINK_MIGRATED_KEY,
+      before: false,
+      next: true
+    });
+    const ok = await transaction(entries, get, set);
+    return {
+      done: ok,
+      changed: ok ? changed : 0
+    };
+  } catch (error) {
+    console.error('[score-shrink] migration failed:', error && error.message ? error.message : error);
+    return {
+      done: false,
+      changed: 0
+    };
+  }
+};
 const TACTICS_ENEMY_POWER_EXPONENT = 0.7;
 const TACTICS_ENEMY_POWER_MAX = 6;
 const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_ENEMY_POWER_EXPONENT) => {
@@ -48699,6 +48790,7 @@ function MonsterHeroGame() {
       setUnlockedTeachingIds(savedUnlockedTeachings);
       const savedTeachingRoster = normalizeTeachingRoster(await storeGet('mh_teaching_roster', null, false), savedUnlockedTeachings);
       setTeachingRosterIds(savedTeachingRoster);
+      await migrateBattleScoresToShrunk(storeGet, storeSet, storeList, saveStoredValuesOrRollback);
       const scores = {};
       const attempts = {};
       const clears = {};
@@ -54585,7 +54677,7 @@ function MonsterHeroGame() {
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
     const rawRoundScore = (totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier;
-    const finalRoundScore = isTacticsMode(runMode) ? shrinkTacticsScore(rawRoundScore) : Math.floor(rawRoundScore);
+    const finalRoundScore = shrinkBattleScore(rawRoundScore);
     setScore(s => s + finalRoundScore);
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
     const normalGainedDistBonus = finalDistDamage.map(d => d * DIST_BONUS_PER_DAMAGE);

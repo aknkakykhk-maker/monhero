@@ -111,6 +111,7 @@
 | `mh_player_id` | string | ランキング送信に使う端末ID。`localStorage` 直接アクセス(`storeGet` を通さない) |
 | `mh_ranking_cache` | object | 全国ランキングの取得結果の控え(表示用。無くても取り直す)。**保存する形は軽くする**(下記) |
 | `mh_bond_live_sync_v1` | object / `{version:1,sent:{}}` | 絆Lv・総合力ランキング(`bond_levels`)へリアルタイムで送った行の指紋。見出しは「ブリーダー名＋個体ID」、値は行の内容から作った短い文字列。前と同じ行は送らないために使うだけで、壊れていたら空から数え直す(全員を1回送り直すだけで記録は壊れない)。送れた行だけ覚える(2026-09-27) |
+| `mh_battle_score_shrink_migrated_v1` | boolean / `false` | スコアを全モード 1/1000 にした(2026-10-03)ときの、端末に残した数字の一度きりの移行が済んだか。縮めるのは `mh_hs_*` / `mh_quick_hs_*` / `mh_pro_hs_*` / `mh_extreme_hs_*` / `mh_species_challenge_progress_v1` の `bestScore` / 送信待ちの `mh_rank_<難易度>`(タクティクス・モンヒロビートは除く)。`mh_ranking_cache` は捨てて取り直させる。縮めた値とこのフラグは1つの取引で書く(途中で止まっても二重に縮まない)。ランキング側の数字は `docs/sql/rankings/SCORE_SHRINK_*.sql` で別に縮める |
 | `mh_pro_last_party` | object / `EMPTY_PRO_LAST_PARTY` | プロモードで最後に使った編成(`normalizeProLastParty`) |
 | `mh_home_pasture_ids` | string[] / `[]` | HOME の牧場に出すマスモンの個体ID(`normalizeHomePastureIds`) |
 | `mh_monster_roster_sets_v1` | object | 編成セット(`normalizeMonsterPartySets`)。`mh_monster_roster` は現在のセットの写し |

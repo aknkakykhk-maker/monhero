@@ -5109,6 +5109,9 @@ function MonsterHeroGame() {
       const savedTeachingRoster = normalizeTeachingRoster(
         await storeGet('mh_teaching_roster', null, false), savedUnlockedTeachings);
       setTeachingRosterIds(savedTeachingRoster);
+      // スコアを 1/1000 へ縮めた(2026-10-03)ので、端末に残った自己ベストなども一度だけ同じ割り方で縮める。
+      // 自己ベストを読み込む前に済ませる(縮める前の値を画面へ入れない)
+      await migrateBattleScoresToShrunk(storeGet, storeSet, storeList, saveStoredValuesOrRollback);
       const scores = {}; const attempts = {}; const clears = {}; const reachedWaves = {};
       // クイックモードはチャレンジと別のキーへ保存しているので、まとめて読み込む
       const quickScores = {}; const quickClears = {}; const quickWaves = {};
@@ -9853,8 +9856,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
     const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;
-    // 新モードだけスコアを1/1000へ縮める。式そのものは変えない(2026-09-19 ユーザーが選択)
-    const finalRoundScore=isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore):Math.floor(rawRoundScore);
+    // スコアは全モード 1/1000 へ縮める。式そのものは変えない(タクティクスは2026-09-19、
+    // それ以外は2026-10-03 にユーザーが選択)。経験値・ダイヤの倍率には効かない
+    const finalRoundScore=shrinkBattleScore(rawRoundScore);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
