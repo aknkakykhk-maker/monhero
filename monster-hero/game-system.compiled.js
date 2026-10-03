@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4372d96d5dfb01fa
+// source-sha256: c59781bc7b42a761
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 13:15";
+const BUILD_DATE = "2026-10-03 13:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -54498,6 +54498,124 @@ function RhythmMultiMemberCards({
   }));
 }
 const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!', 'ALL MARVELOUS!']);
+const RHYTHM_MODE_SELECT_CSS = `
+.mhms-stage{background:radial-gradient(120% 70% at 50% -10%,rgba(217,70,239,.32),transparent 60%),radial-gradient(90% 60% at 15% 110%,rgba(56,189,248,.22),transparent 65%),radial-gradient(90% 60% at 90% 105%,rgba(244,114,182,.22),transparent 65%),linear-gradient(160deg,#0b0620 0%,#1d0b3a 45%,#0a1030 100%);}
+.mhms-fx{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.mhms-beam{position:absolute;top:-20%;width:34%;height:130%;transform-origin:50% 0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 75%);filter:blur(6px);opacity:.55;mix-blend-mode:screen;clip-path:polygon(42% 0,58% 0,100% 100%,0 100%)}
+.mhms-beam.b1{left:8%;background:linear-gradient(180deg,rgba(244,114,182,.45),rgba(244,114,182,0) 75%);animation:mhmsSway 7s ease-in-out infinite}
+.mhms-beam.b2{left:40%;background:linear-gradient(180deg,rgba(125,211,252,.4),rgba(125,211,252,0) 75%);animation:mhmsSway 9s ease-in-out -3s infinite reverse}
+.mhms-beam.b3{left:70%;background:linear-gradient(180deg,rgba(250,204,21,.32),rgba(250,204,21,0) 75%);animation:mhmsSway 8s ease-in-out -5s infinite}
+.mhms-floor{position:absolute;left:-10%;right:-10%;bottom:-18%;height:42%;background:radial-gradient(50% 50% at 50% 50%,rgba(232,121,249,.35),transparent 70%);animation:mhmsPulse 4s ease-in-out infinite}
+.mhms-note{position:absolute;bottom:-8%;font-weight:900;color:rgba(255,255,255,.55);text-shadow:0 0 8px rgba(244,114,182,.9);animation:mhmsRise 9s linear infinite}
+.mhms-spark{position:absolute;width:4px;height:4px;border-radius:9999px;background:#fff;box-shadow:0 0 8px 2px rgba(255,255,255,.8);animation:mhmsTwinkle 2.8s ease-in-out infinite}
+.mhms-title{background:linear-gradient(90deg,#67e8f9,#f0abfc 55%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(240,171,252,.45))}
+.mhms-glow{position:absolute;left:50%;top:46%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(244,114,182,.45),rgba(168,85,247,.18) 55%,transparent 75%);animation:mhmsPulse 3.6s ease-in-out infinite}
+.mhms-float{animation:mhmsFloat 4.5s ease-in-out infinite}
+.mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
+.mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
+.mhms-card.free::after{animation-delay:1.9s}
+.mhms-card .mhms-mark{position:absolute;right:-4px;bottom:-6px;font-size:26px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.2);white-space:nowrap;pointer-events:none}
+.mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
+.mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+.mhms-in-left{animation:mhmsInLeft .5s ease-out both}
+@keyframes mhmsSway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes mhmsPulse{0%,100%{opacity:.75}50%{opacity:1}}
+@keyframes mhmsRise{0%{transform:translateY(0) rotate(-8deg);opacity:0}12%{opacity:1}100%{transform:translateY(-115vh) rotate(12deg);opacity:0}}
+@keyframes mhmsTwinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+@keyframes mhmsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes mhmsShine{0%,55%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(420%) skewX(-20deg)}}
+@keyframes mhmsIn{from{opacity:0;transform:translateX(24px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left{animation:none!important}.mhms-note,.mhms-spark{display:none}}
+`;
+const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
+  left: '6%',
+  delay: '0s',
+  size: 18,
+  ch: '♪'
+}, {
+  left: '22%',
+  delay: '-3.2s',
+  size: 14,
+  ch: '♫'
+}, {
+  left: '41%',
+  delay: '-6.1s',
+  size: 20,
+  ch: '♪'
+}, {
+  left: '63%',
+  delay: '-1.6s',
+  size: 15,
+  ch: '♬'
+}, {
+  left: '80%',
+  delay: '-4.8s',
+  size: 19,
+  ch: '♫'
+}, {
+  left: '93%',
+  delay: '-7.4s',
+  size: 13,
+  ch: '♪'
+}]);
+const RHYTHM_MODE_SELECT_SPARKS = Object.freeze([{
+  left: '12%',
+  top: '18%',
+  delay: '0s'
+}, {
+  left: '34%',
+  top: '9%',
+  delay: '-.9s'
+}, {
+  left: '57%',
+  top: '22%',
+  delay: '-1.8s'
+}, {
+  left: '76%',
+  top: '12%',
+  delay: '-.4s'
+}, {
+  left: '88%',
+  top: '34%',
+  delay: '-2.2s'
+}, {
+  left: '48%',
+  top: '40%',
+  delay: '-1.3s'
+}]);
+function RhythmModeSelectStage() {
+  return React.createElement("div", {
+    className: "mhms-fx",
+    "aria-hidden": "true"
+  }, React.createElement("span", {
+    className: "mhms-beam b1"
+  }), React.createElement("span", {
+    className: "mhms-beam b2"
+  }), React.createElement("span", {
+    className: "mhms-beam b3"
+  }), React.createElement("span", {
+    className: "mhms-floor"
+  }), RHYTHM_MODE_SELECT_SPARKS.map((sp, i) => React.createElement("span", {
+    key: `s${i}`,
+    className: "mhms-spark",
+    style: {
+      left: sp.left,
+      top: sp.top,
+      animationDelay: sp.delay
+    }
+  })), RHYTHM_MODE_SELECT_NOTES.map((n, i) => React.createElement("span", {
+    key: `n${i}`,
+    className: "mhms-note",
+    style: {
+      left: n.left,
+      fontSize: `${n.size}px`,
+      animationDelay: n.delay
+    }
+  }, n.ch)));
+}
 function RhythmMultiScreen({
   profile,
   songs,
@@ -54516,6 +54634,13 @@ function RhythmMultiScreen({
   onRoomEntered = null
 }) {
   const view = useRhythmMultiView();
+  React.useEffect(() => {
+    if (!modeSelect || typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-rhythm-mode-select-css';
+    tag.textContent = RHYTHM_MODE_SELECT_CSS;
+    document.head.appendChild(tag);
+  }, [!!modeSelect]);
   const difficultyIds = difficultyList.map(d => d.id);
   const songIds = songs.map(song => song.songId);
   React.useEffect(() => {
@@ -54833,9 +54958,9 @@ function RhythmMultiScreen({
     return React.createElement("main", {
       "data-rhythm-mode-select": true,
       "data-rhythm-multi-step": "rooms",
-      className: `${shell} bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950`
-    }, React.createElement("header", {
-      className: "z-10 flex shrink-0 items-center gap-1.5 border-b border-cyan-400/15 bg-slate-950/90 px-2 py-1",
+      className: `${shell} mhms-stage`
+    }, React.createElement(RhythmModeSelectStage, null), React.createElement("header", {
+      className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm",
       style: {
         paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
       }
@@ -54855,7 +54980,7 @@ function RhythmMultiScreen({
     }, React.createElement("small", {
       className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
     }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
-      className: "block truncate text-base font-black tracking-wider text-cyan-200"
+      className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
     }, "モードえらび"), ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
       className: "block truncate text-[9px] font-black text-violet-200/90"
@@ -54868,18 +54993,21 @@ function RhythmMultiScreen({
     }, React.createElement("b", {
       className: "text-sm font-black text-amber-200"
     }, "周回を終えています…")), React.createElement("div", {
-      className: "flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden"
+      className: "relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden"
     }, ms.assistant && React.createElement("div", {
       "data-rhythm-mode-assistant": true,
-      className: "relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-fuchsia-950/40 to-indigo-950/60 landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none"
-    }, React.createElement("img", {
+      className: "mhms-glass mhms-in-left relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-glow"
+    }), React.createElement("img", {
       src: ms.assistant.image,
       alt: "",
       draggable: false,
-      className: "pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
+      className: "mhms-float pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
     }), React.createElement("p", {
       "data-rhythm-mode-assistant-line": true,
-      className: "absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]",
+      className: "mhms-bubble absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]",
       style: {
         borderColor: ms.assistant.accent
       }
@@ -54911,41 +55039,60 @@ function RhythmMultiScreen({
       "data-rhythm-mode-solo": true,
       type: "button",
       onClick: ms.onSolo,
-      className: "flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-br from-amber-300 to-yellow-400 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2"
+      className: "mhms-card mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      style: {
+        animationDelay: '.05s'
+      }
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-2xl leading-none"
+      className: "mhms-mark"
+    }, "SOLO LIVE"), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-ico relative text-3xl leading-none"
     }, "🎵"), React.createElement("span", {
-      className: "min-w-0"
+      className: "relative min-w-0"
     }, React.createElement("b", {
-      className: "block text-[17px] font-black leading-tight"
+      className: "block text-[18px] font-black italic leading-tight"
     }, "ソロライブ"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-800/80"
     }, "ひとりで好きな曲を演奏"))), ms.multi && React.createElement("button", {
       "data-rhythm-multi-free": true,
       type: "button",
       onClick: () => searchRoom('free'),
-      className: "flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-br from-orange-400 to-amber-500 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2"
+      className: "mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      style: {
+        animationDelay: '.12s'
+      }
     }, React.createElement("span", {
       "aria-hidden": "true",
-      className: "text-2xl leading-none"
+      className: "mhms-mark"
+    }, "FREE MATCH"), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-ico relative text-3xl leading-none"
     }, "🎮"), React.createElement("span", {
-      className: "min-w-0"
+      className: "relative min-w-0"
     }, React.createElement("b", {
-      className: "block text-[17px] font-black leading-tight"
+      className: "block text-[18px] font-black italic leading-tight"
     }, "フリーマッチ"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-900/80"
     }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力")))), ms.multi && React.createElement("section", {
       "data-rhythm-mode-private": true,
-      className: "min-w-0 rounded-2xl border border-white/15 bg-slate-900/85 p-2.5"
+      className: "mhms-glass mhms-in min-w-0 rounded-2xl p-2.5",
+      style: {
+        animationDelay: '.2s'
+      }
     }, React.createElement("h3", {
-      className: "mb-1.5 text-[11px] font-black text-slate-300"
-    }, "プライベートルーム(友だちと遊ぶ)"), React.createElement("div", {
+      className: "mb-1.5 flex items-center gap-1.5 text-[11px] font-black text-violet-100"
+    }, React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🔑"), "プライベートルーム", React.createElement("small", {
+      className: "font-bold text-violet-200/70"
+    }, "友だちと遊ぶ")), React.createElement("div", {
       className: "flex min-w-0 gap-2"
     }, React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
-      className: "min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black",
+      className: "min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95",
       onClick: createPrivate
     }, "＋ 作成"), React.createElement("input", {
       id: "rhythm-multi-code",
@@ -54957,24 +55104,27 @@ function RhythmMultiScreen({
       autoComplete: "off",
       spellCheck: false,
       onChange: e => setCodeInput(e.target.value.toUpperCase()),
-      className: "min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-1 text-center text-base font-black tracking-[0.25em] text-white",
+      className: "min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-violet-300/30 bg-slate-950/70 px-1 text-center text-base font-black tracking-[0.25em] text-white",
       placeholder: "ABCD"
     }), React.createElement("button", {
       "data-rhythm-multi-join": true,
       type: "button",
-      className: "min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black",
+      className: "min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95",
       onClick: joinPrivate
     }, "入室"))), message && React.createElement("p", {
       "data-rhythm-multi-message": true,
       className: "text-[12px] font-black text-rose-300"
     }, message), React.createElement("div", {
-      className: "grid grid-cols-3 gap-2"
+      className: "mhms-in grid grid-cols-3 gap-2",
+      style: {
+        animationDelay: '.28s'
+      }
     }, React.createElement("button", {
       "data-rhythm-demo-monsters": true,
       type: "button",
       "aria-label": `マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`,
       onClick: ms.onMonsters,
-      className: `${tile} min-w-0 border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`
+      className: `${tile} mhms-glass min-w-0 text-fuchsia-100`
     }, React.createElement("span", {
       "data-rhythm-demo-monsters-faces": true,
       "aria-hidden": "true",
@@ -54998,7 +55148,7 @@ function RhythmMultiScreen({
       "data-rhythm-demo-help": true,
       type: "button",
       onClick: ms.onHelp,
-      className: `${tile} min-w-0 border-amber-400/50 bg-amber-950/40 text-amber-100`
+      className: `${tile} mhms-glass min-w-0 text-amber-100`
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-lg leading-none"
@@ -55008,7 +55158,7 @@ function RhythmMultiScreen({
       "data-rhythm-mode-options": true,
       type: "button",
       onClick: ms.onOptions,
-      className: `${tile} min-w-0 border-cyan-400/50 bg-cyan-950/40 text-cyan-100`
+      className: `${tile} mhms-glass min-w-0 text-cyan-100`
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-lg leading-none"

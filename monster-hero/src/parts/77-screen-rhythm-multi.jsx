@@ -823,10 +823,76 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
 
 const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!', 'ALL MARVELOUS!']);
 
+// ---- モードえらびの見た目(2026-10-03・ユーザー指示「見た目自体の強化して」) ----
+// ライブ会場の舞台のような背景(揺れるスポットライト・舞う音符・キラキラ・床の光)と、
+// 角を切った札の形のボタン(光が流れる・英字の透かし)。
+// ★CSSは <head> へ1回だけ入れる(HOMEのバッジと同じやり方。画面のDOMへ <style> を混ぜない)。
+// ★動かすのは transform と opacity だけ(裏で回している周回や演奏の重さに響かないように)。
+// ★動きを減らす設定の人には、すべて止める
+const RHYTHM_MODE_SELECT_CSS = `
+.mhms-stage{background:radial-gradient(120% 70% at 50% -10%,rgba(217,70,239,.32),transparent 60%),radial-gradient(90% 60% at 15% 110%,rgba(56,189,248,.22),transparent 65%),radial-gradient(90% 60% at 90% 105%,rgba(244,114,182,.22),transparent 65%),linear-gradient(160deg,#0b0620 0%,#1d0b3a 45%,#0a1030 100%);}
+.mhms-fx{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.mhms-beam{position:absolute;top:-20%;width:34%;height:130%;transform-origin:50% 0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 75%);filter:blur(6px);opacity:.55;mix-blend-mode:screen;clip-path:polygon(42% 0,58% 0,100% 100%,0 100%)}
+.mhms-beam.b1{left:8%;background:linear-gradient(180deg,rgba(244,114,182,.45),rgba(244,114,182,0) 75%);animation:mhmsSway 7s ease-in-out infinite}
+.mhms-beam.b2{left:40%;background:linear-gradient(180deg,rgba(125,211,252,.4),rgba(125,211,252,0) 75%);animation:mhmsSway 9s ease-in-out -3s infinite reverse}
+.mhms-beam.b3{left:70%;background:linear-gradient(180deg,rgba(250,204,21,.32),rgba(250,204,21,0) 75%);animation:mhmsSway 8s ease-in-out -5s infinite}
+.mhms-floor{position:absolute;left:-10%;right:-10%;bottom:-18%;height:42%;background:radial-gradient(50% 50% at 50% 50%,rgba(232,121,249,.35),transparent 70%);animation:mhmsPulse 4s ease-in-out infinite}
+.mhms-note{position:absolute;bottom:-8%;font-weight:900;color:rgba(255,255,255,.55);text-shadow:0 0 8px rgba(244,114,182,.9);animation:mhmsRise 9s linear infinite}
+.mhms-spark{position:absolute;width:4px;height:4px;border-radius:9999px;background:#fff;box-shadow:0 0 8px 2px rgba(255,255,255,.8);animation:mhmsTwinkle 2.8s ease-in-out infinite}
+.mhms-title{background:linear-gradient(90deg,#67e8f9,#f0abfc 55%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(240,171,252,.45))}
+.mhms-glow{position:absolute;left:50%;top:46%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(244,114,182,.45),rgba(168,85,247,.18) 55%,transparent 75%);animation:mhmsPulse 3.6s ease-in-out infinite}
+.mhms-float{animation:mhmsFloat 4.5s ease-in-out infinite}
+.mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
+.mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
+.mhms-card.free::after{animation-delay:1.9s}
+.mhms-card .mhms-mark{position:absolute;right:-4px;bottom:-6px;font-size:26px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.2);white-space:nowrap;pointer-events:none}
+.mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
+.mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+.mhms-in-left{animation:mhmsInLeft .5s ease-out both}
+@keyframes mhmsSway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes mhmsPulse{0%,100%{opacity:.75}50%{opacity:1}}
+@keyframes mhmsRise{0%{transform:translateY(0) rotate(-8deg);opacity:0}12%{opacity:1}100%{transform:translateY(-115vh) rotate(12deg);opacity:0}}
+@keyframes mhmsTwinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+@keyframes mhmsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes mhmsShine{0%,55%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(420%) skewX(-20deg)}}
+@keyframes mhmsIn{from{opacity:0;transform:translateX(24px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left{animation:none!important}.mhms-note,.mhms-spark{display:none}}
+`;
+// 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
+const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
+  { left: '6%', delay: '0s', size: 18, ch: '♪' }, { left: '22%', delay: '-3.2s', size: 14, ch: '♫' },
+  { left: '41%', delay: '-6.1s', size: 20, ch: '♪' }, { left: '63%', delay: '-1.6s', size: 15, ch: '♬' },
+  { left: '80%', delay: '-4.8s', size: 19, ch: '♫' }, { left: '93%', delay: '-7.4s', size: 13, ch: '♪' },
+]);
+const RHYTHM_MODE_SELECT_SPARKS = Object.freeze([
+  { left: '12%', top: '18%', delay: '0s' }, { left: '34%', top: '9%', delay: '-.9s' }, { left: '57%', top: '22%', delay: '-1.8s' },
+  { left: '76%', top: '12%', delay: '-.4s' }, { left: '88%', top: '34%', delay: '-2.2s' }, { left: '48%', top: '40%', delay: '-1.3s' },
+]);
+function RhythmModeSelectStage() {
+  return (
+    <div className="mhms-fx" aria-hidden="true">
+      <span className="mhms-beam b1" /><span className="mhms-beam b2" /><span className="mhms-beam b3" />
+      <span className="mhms-floor" />
+      {RHYTHM_MODE_SELECT_SPARKS.map((sp, i) => <span key={`s${i}`} className="mhms-spark" style={{ left: sp.left, top: sp.top, animationDelay: sp.delay }} />)}
+      {RHYTHM_MODE_SELECT_NOTES.map((n, i) => <span key={`n${i}`} className="mhms-note" style={{ left: n.left, fontSize: `${n.size}px`, animationDelay: n.delay }}>{n.ch}</span>)}
+    </div>
+  );
+}
+
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
 function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLightLook = true, onToggleLightLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
   const view = useRhythmMultiView();
+  React.useEffect(() => {
+    if (!modeSelect || typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-rhythm-mode-select-css';
+    tag.textContent = RHYTHM_MODE_SELECT_CSS;
+    document.head.appendChild(tag);
+  }, [!!modeSelect]);
   const difficultyIds = difficultyList.map((d) => d.id);
   const songIds = songs.map((song) => song.songId);
   React.useEffect(() => {
@@ -1083,8 +1149,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
     return (
-      <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950`}>
-        <header className="z-10 flex shrink-0 items-center gap-1.5 border-b border-cyan-400/15 bg-slate-950/90 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
+      <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`}>
+        <RhythmModeSelectStage />
+        <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
           {/* 戻るとHOMEへ。裏でクイック∞周回が回っているときは、締めてから戻る(曲えらびにあった戻るボタンの役目をここへ移した) */}
           <button data-rhythm-back data-quick-run-finishing={ms.backgroundRun ? '1' : undefined} data-quick-run-exiting={ms.exiting ? '1' : undefined} disabled={!!ms.exiting}
             type="button" aria-label={ms.exiting ? '周回を終えています' : ms.backgroundRun ? '周回を終えてホームへ戻る' : '戻る'} onClick={ms.onExit}
@@ -1093,7 +1160,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           </button>
           <div className="min-w-0 flex-1 leading-none">
             <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
-            <b className="block truncate text-base font-black tracking-wider text-cyan-200">モードえらび</b>
+            <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
           </div>
           {quickRunInfo && <small data-rhythm-multi-quick-run className={`max-w-[42%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
@@ -1104,11 +1171,12 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden">
+        <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden">
           {ms.assistant && (
-            <div data-rhythm-mode-assistant className="relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-fuchsia-950/40 to-indigo-950/60 landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none">
-              <img src={ms.assistant.image} alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />
-              <p data-rhythm-mode-assistant-line className="absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]" style={{ borderColor: ms.assistant.accent }}>
+            <div data-rhythm-mode-assistant className="mhms-glass mhms-in-left relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none">
+              <span aria-hidden="true" className="mhms-glow" />
+              <img src={ms.assistant.image} alt="" draggable={false} className="mhms-float pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />
+              <p data-rhythm-mode-assistant-line className="mhms-bubble absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]" style={{ borderColor: ms.assistant.accent }}>
                 <b className="mb-0.5 block text-[10px]" style={{ color: ms.assistant.accent }}>{ms.assistant.name}</b>{ms.assistant.text}
               </p>
             </div>
@@ -1128,42 +1196,44 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div className={`grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {/* ソロ: いつもの曲えらびへ */}
               <button data-rhythm-mode-solo type="button" onClick={ms.onSolo}
-                className="flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-br from-amber-300 to-yellow-400 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2">
-                <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
-                <span className="min-w-0"><b className="block text-[17px] font-black leading-tight">ソロライブ</b><small className="block text-[10px] font-black leading-tight text-slate-800/80">ひとりで好きな曲を演奏</small></span>
+                className="mhms-card mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.05s' }}>
+                <span aria-hidden="true" className="mhms-mark">SOLO LIVE</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎵</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">ソロライブ</b><small className="block text-[10px] font-black leading-tight text-slate-800/80">ひとりで好きな曲を演奏</small></span>
               </button>
               {/* マルチ: フリーマッチ(だれとでも)。ベテランは無くした(2026-10-03・ユーザー指示) */}
               {ms.multi && <button data-rhythm-multi-free type="button" onClick={() => searchRoom('free')}
-                className="flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-br from-orange-400 to-amber-500 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2">
-                <span aria-hidden="true" className="text-2xl leading-none">🎮</span>
-                <span className="min-w-0"><b className="block text-[17px] font-black leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></span>
+                className="mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
+                <span aria-hidden="true" className="mhms-mark">FREE MATCH</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎮</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></span>
               </button>}
             </div>
             {ms.multi && (
-              <section data-rhythm-mode-private className="min-w-0 rounded-2xl border border-white/15 bg-slate-900/85 p-2.5">
-                <h3 className="mb-1.5 text-[11px] font-black text-slate-300">プライベートルーム(友だちと遊ぶ)</h3>
+              <section data-rhythm-mode-private className="mhms-glass mhms-in min-w-0 rounded-2xl p-2.5" style={{ animationDelay: '.2s' }}>
+                <h3 className="mb-1.5 flex items-center gap-1.5 text-[11px] font-black text-violet-100"><span aria-hidden="true">🔑</span>プライベートルーム<small className="font-bold text-violet-200/70">友だちと遊ぶ</small></h3>
                 <div className="flex min-w-0 gap-2">
-                  <button data-rhythm-multi-create type="button" className="min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black" onClick={createPrivate}>＋ 作成</button>
+                  <button data-rhythm-multi-create type="button" className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95" onClick={createPrivate}>＋ 作成</button>
                   <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
                     onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                    className="min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-1 text-center text-base font-black tracking-[0.25em] text-white" placeholder="ABCD" />
-                  <button data-rhythm-multi-join type="button" className="min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black" onClick={joinPrivate}>入室</button>
+                    className="min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-violet-300/30 bg-slate-950/70 px-1 text-center text-base font-black tracking-[0.25em] text-white" placeholder="ABCD" />
+                  <button data-rhythm-multi-join type="button" className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95" onClick={joinPrivate}>入室</button>
                 </div>
               </section>
             )}
             {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
-            <div className="grid grid-cols-3 gap-2">
-              <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} min-w-0 border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`}>
+            <div className="mhms-in grid grid-cols-3 gap-2" style={{ animationDelay: '.28s' }}>
+              <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} mhms-glass min-w-0 text-fuchsia-100`}>
                 <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-6 items-center">{ms.monsterFaces.length
                   ? ms.monsterFaces.map((face, i) => <span key={face.id} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i ? { marginLeft: '-7px' } : undefined}>{face.src && <img src={face.src} alt="" draggable={false} className="h-full w-full object-cover" />}</span>)
                   : <span className="text-lg leading-none">👾</span>}</span>
                 <span className="text-[11px] font-black">マスモン {ms.monsterCount}/{ms.monsterMax}</span>
               </button>
-              <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} min-w-0 border-amber-400/50 bg-amber-950/40 text-amber-100`}>
+              <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} mhms-glass min-w-0 text-amber-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">📖</span><span className="text-[11px] font-black">遊びかた</span>
               </button>
-              <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} min-w-0 border-cyan-400/50 bg-cyan-950/40 text-cyan-100`}>
+              <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} mhms-glass min-w-0 text-cyan-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="text-[11px] font-black">オプション</span>
               </button>
             </div>
