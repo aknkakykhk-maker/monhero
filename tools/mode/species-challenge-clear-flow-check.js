@@ -99,7 +99,9 @@ check('種族チャレンジのランキング本文がある', rankBodyStart >=
 const rankBody = rankBodyStart >= 0 ? source.slice(rankBodyStart, rankBodyEnd) : '';
 check('他モードと同じ「◯◯ランキング」の見出しにする',
   // 見出しは「モード名」の下に小さく「ランキング」を添える形になった(2026-09-22)。どちらの形でも「◯◯ランキング」と読める
-  (source.includes('{`${mode.label}ランキング`}') || /\{mode\.label\}<\/h2><div[^>]*>ランキング<\/div>/.test(source))
+  (source.includes('{`${mode.label}ランキング`}') || /\{mode\.label\}<\/h2><div[^>]*>ランキング<\/div>/.test(source)
+    // 見出しは共通の ScreenHead(title=モード名・note="ランキング")になった(2026-10)
+    || /<ScreenHead[^>]*title=\{mode\.label\}[^>]*note="ランキング"/.test(source))
     && !source.includes('`${mode.label}の記録`'));
 check('モードカードの導線も他モードと同じ「ランキング」表記',
   // モードカードのボタンは「🏆 このモードのランキング」にそろった(2026-09-22)。「の記録」へ戻っていないことを見る

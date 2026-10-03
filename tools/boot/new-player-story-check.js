@@ -90,7 +90,7 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
     // アイコンの一覧から最初の1つを選ぶ(画像のボタン)
     await page.evaluate(() => {
       // 一覧のアイコンは正方形の画像ボタン(プロフィールの顔の「アイコンを変える」ボタンは aria-label 付きなので除く)
-      const b = [...document.querySelectorAll('button.aspect-square')].find((x) => x.offsetParent && x.querySelector('img') && !x.getAttribute('aria-label'));
+      const b = [...document.querySelectorAll('button[data-icon-option]')].find((x) => x.offsetParent) /* アイコン選びは窓へ作り直された */;
       if (b) b.click();
     });
     await page.waitForTimeout(800);

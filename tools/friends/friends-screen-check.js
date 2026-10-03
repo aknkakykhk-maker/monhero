@@ -437,7 +437,7 @@ const serve = (flagOn) => new Promise(resolve => {
       // 割り込む別の案内だけを閉じる(フレンドの知らせの「あとで」は押さない)
       for (let round = 0; round < 40; round++) {
         if (await page.evaluate(() => !!document.querySelector('[data-friend-request-notice]'))) break;
-        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ)$');
+        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ|あとで)$'); // マーケットの告知などの「あとで」も閉じる。フレンドの知らせが出たら上で抜けるので、そちらの「あとで」は押さない
         await page.waitForTimeout(400);
       }
       out.noticeShown = await page.evaluate(() => !!document.querySelector('[data-friend-request-notice]'));

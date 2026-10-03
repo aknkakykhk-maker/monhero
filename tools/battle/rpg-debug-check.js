@@ -796,10 +796,11 @@ check('行動順の表示は折り返して横にはみ出さない',
 // ================= ④ 通常バトルを変えていない =================
 const normalDealt = grab(source, 'const getDmg = useCallback(', '\n  const getAttackPredictedDmg');
 const normalTaken = grab(source, 'const getIncomingDamageBeforeTurnReduction = useCallback(', '\n  const applyTurnDamageReduction');
+// 距離補正の表は、EXの距離補正をはさむ式の中に入った(2026-10)。ふだんの値は同じ
 check('通常バトルのダメージ式にRPG側が混ざっていない',
   !/\brpg[A-Z_a-z]/.test(normalDealt) && !/\bRPG_/.test(normalDealt)
   && !/\brpg[A-Z_a-z]/.test(normalTaken) && !/\bRPG_/.test(normalTaken)
-  && normalDealt.includes('const distMult = [1.5,1.3,1.1,0.9][distDiff]||1.0;') && normalTaken.includes('Math.max(30,'),
+  && normalDealt.includes('[1.5,1.3,1.1,0.9][distDiff]||1.0') && normalTaken.includes('Math.max(30,'),
   '与ダメ・被ダメとも既存の式のまま');
 check('通常バトルへ素早さ・運を持ち込んでいない',
   !/\bspeed\b|\bluck\b/.test(normalDealt) && !/\bspeed\b|\bluck\b/.test(normalTaken));

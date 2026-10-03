@@ -1,25 +1,139 @@
-# 定期メンテナンス点検 2026-10-01 12:36 JST
+# 定期メンテナンス点検 2026-10-03 19:58 JST
 
-点検の種類: 週次(全領域・重い数本を除く)
+点検の種類: 月次(全検査+深い衛生チェック)
 
 ## 検査
-- 合計 544 本 / OK 544 / NG 0 / TIMEOUT 0 / SKIP 0 / MISSING 0 / 3904秒
+- 合計 566 本 / OK 543 / NG 23 / TIMEOUT 0 / SKIP 0 / MISSING 0 / 5666秒
+- ❌ NG: `auto-settings-check.js`
+  -     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+  -     at node:internal/main/run_main_module:36:49
+  - 
+  - Node.js v22.22.0
+- ❌ NG: `battle/battle-damage-preview-check.js`
+  -   diff: 'simple'
+  - }
+  - 
+  - Node.js v22.22.0
+- ❌ NG: `battle/battle-mode-check.js`
+  - OK: プロ用の助手コメントが場面として用意されている
+  - OK: プロモードを実際に遊んで確かめる道具がある
+  - 
+  - 1件のNGがあります
+- ❌ NG: `battle/battle-scenario-check.js`
+  -     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+  -     at node:internal/main/run_main_module:36:49
+  - 
+  - Node.js v22.22.0
+- ❌ NG: `battle/battle-text-cover-check.js`
+  - OK: 守りのカードも置いたあと：文字の上に文字が乗っていない
+  - OK: 実行時エラーが出ていない
+  - 
+  - 1件のNGがあります
+- ❌ NG: `battle/rpg-debug-check.js`
+  - OK: RPGの計算は通常バトルの定数を書き換えていない
+  - OK: ベースモンの定義そのものを書き換えていない
+  - 
+  - 1件NG
+- ❌ NG: `battle/soul-rank-step4-check.js`
+  - OK: STEP5の魂格継承合体・ランキングスナップショットはSTEP4チェック対象外
+  - OK: STEP6の魂格オーラはまだ接続しない
+  - 
+  - 1件のNGがあります
+- ❌ NG: `battle/unique-effect-check.js`
+  - OK: 被ダメージ軽減は「被ダメ -◯%」として別に出る
+  - OK: 被ダメージ軽減を「丈夫さ +◯%」と表示していない
+  - 
+  - 1件のNGがあります
+- ❌ NG: `boot/new-player-story-check.js`
+  - OK: お詫びは済んだ印だけ付けて、あとから配られないようにしている — true
+  - OK: 実行時エラーが出ていない
+  - 
+  - 2件のNGがあります
+- ❌ NG: `boot/onboarding-required-check.js`
+  - NG: 遅らせたログインボーナスは設定のあとに出る
+  - OK: 実行時エラーが出ていない
+  - 
+  - 6件のNGがあります
+- ❌ NG: `friends/friends-screen-check.js`
+  - OK: 表が無い環境では「準備中」と出る — notready
+  - OK: 表が無い環境でも実行時エラーが出ない — なし
+  - 
+  - 1件のNGがあります
+- ❌ NG: `masu/soul-rank-step4-check.js`
+  - NG: 連携は全体+1/重複なし/所持本人だけ/総上限5
+  - OK: STEP5以降の合体継承・バッジ/オーラは未着手
+  - 
+  - 2件のNG
+- ❌ NG: `mode/rhythm-chart-v3-check.js`
+  - ✓ 生成器も同じ条件で候補から外している
+  - ✗ 公開中の全曲(Rev.7以降): クロスが押さえっぱなしの外側にある (stay_with_me_short EXPERT 403)
+  - 
+  - 1件のNGがあります
+- ❌ NG: `mode/rhythm-life-check.js`
+  - ✓ 裏で周回していた人には、入らなかった理由を曲リザルトで伝える
+  - ✓ 仕様書にクリア／失敗と周回数の扱いを記載
+  - 
+  - 1件のNGがあります
+- ❌ NG: `mode/species-challenge-clear-flow-check.js`
+  - OK: 同じ種族の別難易度へは混ざらない
+  - OK: 別の種族へは混ざらない
+  - 
+  - 1件NG
+- ❌ NG: `mode/tactics-ex-skills-browser-check.js`
+  - OK: スネグーラチカを勇者モンにしてタクティクスプロを始められる — ok
+  - NG: 最後まで確かめられた — Error: 枠0を押せない: disabled=false 上にあるもの=<dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]"><dt class="font-bo
+  - 
+  - 1件のNGがあります
+- ❌ NG: `mode/tactics-units-check.js`
+  -     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+  -     at node:internal/main/run_main_module:36:49
+  - 
+  - Node.js v22.22.0
+- ❌ NG: `monster/meloso-assist-check.js`
+  -   diff: 'simple'
+  - }
+  - 
+  - Node.js v22.22.0
+- ❌ NG: `monster/mermaid-browser-check.js`
+  -   OK  再読み込み後も購入状態が残る
+  -   OK  操作中に致命的なJSエラーが出ない
+  - 
+  - 16/21 項目が成功
+- ❌ NG: `run/eco-mode-internal-check.js`
+  -     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+  -     at node:internal/main/run_main_module:36:49
+  - 
+  - Node.js v22.22.0
+- ❌ NG: `run/masu-register-check.js`
+  - OK: 登録すると今回ためた絆経験値をそのまま初期値にする
+  - OK: 二重登録できないようにしている
+  - 
+  - 2件のNGがあります
+- ❌ NG: `run/post-wave-phase-check.js`
+  - OK: 並びに無い画面では何も出さない
+  - OK: 並びが無いときは何も出さない
+  - 
+  - NG 1 件
+- ❌ NG: `ui/screen-effects-check.js`
+  -    内訳: 画面専用 22 / 進行 30 / 対象外 19
+  - OK: 「進行」が「画面専用」より多い(一律に止めてはいけない理由が表に残っている)
+  - 
+  - NG 2 件
 
 ## 衛生チェック
-- ℹ️ どこからも名前が出てこない画像の候補 179 枚(動的なパスは拾えないため、消す前に確認): assistant/dra_angry.PNG, assistant/dra_crying.PNG, assistant/dra_excited.PNG, assistant/dra_happy.PNG, assistant/dra_normal.PNG, assistant/dra_surprise.PNG, assistant/dra_troubled.PNG, assistant/dra_wink.PNG …
 - 約束の破れ・急な肥大は見つかりませんでした
 
 ## 大きさ
-- monster-hero/src/parts/60-app.jsx: 1.57MB
-- monster-hero/data/rhythm-mode.js: 1.64MB
-- monster-hero/data/changelog.js: 1.00MB
-- monster-hero/game-system.compiled.js: 3.74MB
+- monster-hero/src/parts/60-app.jsx: 1.63MB
+- monster-hero/data/rhythm-mode.js: 1.77MB
+- monster-hero/data/changelog.js: 1.06MB
+- monster-hero/game-system.compiled.js: 4.16MB
 - docs/spec/RHYTHM_MODE.md: 0.53MB
 - CLAUDE.md: 0.02MB
-- monster-hero/images/: 28.70MB
-- monster-hero/audio/: 109.26MB
+- monster-hero/images/: 28.74MB
+- monster-hero/audio/: 114.63MB
 - monster-hero/movies/: 2.93MB
 
 ## 総合
 
-✅ 異常なし
+❌ 対応が要るものがあります(上の ❌)

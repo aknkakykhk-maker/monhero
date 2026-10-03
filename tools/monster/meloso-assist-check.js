@@ -114,10 +114,11 @@ assert(game.includes(`Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))`)
 assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining))`),
   '永続軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // タクティクスでは「狙われた子だけ」のぶん(tacticsSlotRate)も掛ける形になった。ふだんのバトルは bySlot を渡さないので 1.0 で今までと同じ
+// ふだんのバトルでは追加の掛け算がすべて 1 のままで、今までと同じ式。タクティクスだけ「狙われた子のぶん」と、EXの被ダメ軽減(世界樹の守り・複数効果・パーティ効果)が最後に掛かる。
+// 後ろへ足されるEXの掛け算の中身までは固定せず、「isTacticsMode のときだけ掛け、そうでなければ :1」の形を見る(2026-10)
 assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`)
   || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`)
-  // 2026-09-29: タクティクスのEX「世界樹の守り」のぶんが最後に掛かる形になった。ふだんのバトルは1で今までと同じ
-  || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)\n      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow():1)))`),
+  || /\? Math\.max\(1,Math\.floor\(damage\*getTurnBuff\('takenDamageMult',1\.0\)\s*\*tacticsSlotRate\(isTacticsMode\(runMode\)\?turnBuffs\.bySlot:null,slotIdx,'takenDamageMult',1\.0\)\s*\*\(isTacticsMode\(runMode\)\?[^:]+:1\)\)\)/.test(game),
   '次ターン被ダメージ軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // 予測表示は1発ずつ数えるため、ガードを引いた値(hit.taken)を resolveTacticsGuardedHit で出してから軽減を掛ける形になった(順番は同じ)
 assert(game.includes(`applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)))`)
