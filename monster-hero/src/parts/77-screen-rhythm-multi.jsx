@@ -93,7 +93,8 @@ const rhythmMultiRewardScale = (count) => {
   const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
   return 1 + RHYTHM_MULTI_REWARD_STEP * (n - 1);
 };
-// 連続ボーナス(2026-10-03・ユーザー指示「1曲毎に10%、上限100%」)。同じメンバーで続けたライブの何曲目か(streak)で、
+// 連続ボーナス(2026-10-03・ユーザー指示「1曲毎に10%、上限100%」)。続けて遊んだライブの何曲目か(streak)で
+// (前のライブの全員がまた参加していれば続く。メンバーが増えても続き、だれかが抜けたら1に戻る)、
 // 2曲目+10%・3曲目+20%…11曲目より後は+100%。人数ボーナスに掛け合わせて、周回報酬とビートPに使う
 const RHYTHM_MULTI_STREAK_STEP = 0.1;
 // フリーマッチでひとりのまま待っているとき、プライベートルームを勧めるまでの時間
@@ -510,9 +511,9 @@ const RHYTHM_MULTI = (() => {
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
-          const key = msg.participants.slice().sort().join(',');
-          s.liveStreak = key === s.liveKey ? s.liveStreak + 1 : 1;
-          s.liveKey = key;
+          const kept = s.liveIds.length > 0 && s.liveIds.every((pid) => msg.participants.includes(pid));
+          s.liveStreak = kept ? s.liveStreak + 1 : 1;
+          s.liveIds = msg.participants.slice();
           startListeners.forEach((fn) => { try { fn({ round: msg.round, songId: msg.songId, count: msg.participants.length, streak: s.liveStreak }); } catch (_) { /* 無視 */ } });
         }
         // 「ライブに入った」を1回だけ知らせて、そこからは演奏が終わるまで送らない
@@ -572,8 +573,9 @@ const RHYTHM_MULTI = (() => {
         code, mode: roomMode, status: 'connecting', selfId: id, members: {}, chat: [], lastChatAt: 0, createdAt: now,
         room: { phase: 'matching', round: '', songId: '', deadline: 0, participants: [] },
         memberSig: '', lastMemberChange: now, startedRound: '', shuffleShown: '', resultSeen: '', queue: [], playUntil: 0,
-        // 同じメンバーで続けて遊んだライブの数(連続ボーナス)。参加者の顔ぶれが前のライブと同じなら1つ増やす
-        liveKey: '', liveStreak: 0,
+        // 続けて遊んだライブの数(連続ボーナス)。前のライブの参加者が全員またいれば1つ増やす。
+        // メンバーが増えただけなら続く(2026-10-03・ユーザー指示「メンバーが増える側のときはボーナス継続がいい」)。だれかが抜けたら1に戻る
+        liveIds: [], liveStreak: 0,
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
@@ -1617,7 +1619,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <b className="block truncate text-sm font-black">{drawnSong ? rhythmSongFullName(drawnSong) : ''}</b>
             <small className="block text-[10px] font-black text-slate-400">{team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`}</small>
             {/* 同じメンバーで続けたライブ(連続ボーナス・2026-10-03) */}
-            {view.streak >= 2 && <small data-rhythm-multi-streak className="mt-0.5 inline-block rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-2 text-[10px] font-black text-white">🔥 同じメンバーで{view.streak}曲目 ・ ごほうび+{Math.round(rhythmMultiStreakBonus(view.streak) * 100)}%</small>}
+            {view.streak >= 2 && <small data-rhythm-multi-streak className="mt-0.5 inline-block rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-2 text-[10px] font-black text-white">🔥 連続{view.streak}曲目 ・ ごほうび+{Math.round(rhythmMultiStreakBonus(view.streak) * 100)}%</small>}
           </div>
           <div className="hidden min-w-0 flex-1 landscape:block">
             <div data-rhythm-multi-gauge className="relative mt-3 h-3 rounded-full bg-slate-800">
