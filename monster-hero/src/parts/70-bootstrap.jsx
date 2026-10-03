@@ -2077,7 +2077,7 @@ const createAnimationStyle = () => {
       rotate:var(--a); animation:spmSpark 600ms ease-in forwards; animation-delay:calc(var(--i) * 45ms); }
     @keyframes spmSpark { 0% { opacity:0; transform:translateX(130px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(1.3); } }
     /* 斜めの帯 */
-    .spm__band { left:-10%; right:-10%; top:42%; height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
+    .spm__band { left:-10%; right:-10%; top:var(--spm-by,42%); height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
       background:linear-gradient(90deg, rgba(6,8,18,.2), rgba(8,10,24,.92) 16%, rgba(8,10,24,.92) 84%, rgba(6,8,18,.2));
       border-top:2px solid var(--spm-c1); border-bottom:2px solid var(--spm-c1);
       box-shadow:0 0 16px var(--spm-c2), inset 0 0 22px color-mix(in srgb, var(--spm-c2) 45%, transparent);
