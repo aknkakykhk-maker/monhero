@@ -47,7 +47,7 @@ const sandbox = {
 // 通信層を、指定した fetch(偽サーバー)で新しく読み込む。第2の読み込みは「列がまだ無い環境」の検査に使う
 const EXPORTS_SOURCE = `${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
 const loadApi = (fetchImpl) => {
   const box = { ...sandbox, fetch: fetchImpl };
   vm.createContext(box);
@@ -253,6 +253,34 @@ const statusOf = (a, b) => {
   check('読み戻したひとこと・記録が一致する', got && got.message === 'よろしくね' && got.records.battle[0].v === 99 && got.records.rhythm.songs[0].f === 1 && got.records.collection.dexTotal === 22, JSON.stringify(got && got.records));
   const built = api.friendsBuildSummary({ place: 'home', masuMons: [], favoriteMasuId: null, playtime: null, message: '  やあ  ', records: { v: 1 } });
   check('送る内容にひとこと(整えたもの)と記録が入る', built.message === 'やあ' && built.records.v === 1 && api.friendsBuildSummary({ place: 'home', masuMons: [], favoriteMasuId: null, playtime: null }).message === null);
+
+  // ---- 最近いっしょに遊んだ人 / メモ / 招待リンク / スコア勝負 ----
+  const rec0 = api.friendsMergeRecent([], [{ id: 'p1', name: 'あ' }, { id: 'self', name: '自分' }, { id: 'a,b', name: '不正' }, null], 1000, 'self');
+  check('最近の人: 自分・不正なIDは覚えない', rec0.length === 1 && rec0[0].id === 'p1' && rec0[0].at === 1000, JSON.stringify(rec0));
+  const rec1 = api.friendsMergeRecent(rec0, [{ id: 'p2', name: 'い' }, { id: 'p1', name: 'あ2' }], 2000, 'self');
+  check('最近の人: 同じ人は1件にまとまり、新しい順に並ぶ(名前は最新に)', rec1.length === 2 && rec1[0].id === 'p2' && rec1[1].id === 'p1' && rec1[1].name === 'あ2' && rec1[1].at === 2000, JSON.stringify(rec1));
+  const many = api.friendsMergeRecent([], Array.from({ length: 60 }, (_, i) => ({ id: `u${i}`, name: 'x' })), 5000, '');
+  check('最近の人: 30人まで', many.length === 30);
+  check('最近の人: 壊れた保存値は空へ倒れる', api.friendsNormalizeRecent('zzz').length === 0 && api.friendsNormalizeRecent(null).length === 0
+    && api.friendsNormalizeRecent([{ id: 'ok', name: 'n', at: 'x' }, 5, { id: 'a b' }])[0].at === 0);
+  check('メモ: 12文字まで・制御文字と改行を整える', api.friendsCleanNote('  あだ名\nです ') === 'あだ名 です' && api.friendsCleanNote('あ'.repeat(30)).length === 12 && api.friendsCleanNote(null) === '');
+  const notes = api.friendsNormalizeNotes({ u1: ' 友だち ', 'bad id': 'x', u2: '', u3: 5, u4: 'あ'.repeat(40) });
+  check('メモ: 空・不正なIDは捨て、12文字へ整える。壊れた値は空', notes.u1 === '友だち' && !('bad id' in notes) && !('u2' in notes) && notes.u3 === '5' && notes.u4.length === 12
+    && Object.keys(api.friendsNormalizeNotes([1, 2])).length === 0 && Object.keys(api.friendsNormalizeNotes(null)).length === 0);
+  check('招待リンク: 今のページのURLにコードを付ける(クエリ・ハッシュは外す)', api.friendsInviteLink('https://example.github.io/monhero/index.html?x=1#top', 'abcd-2345') === 'https://example.github.io/monhero/index.html?friend=ABCD2345'
+    && api.friendsInviteLink('https://e.com/', 'zzz') === '' && api.friendsInviteLink('', 'ABCD2345') === '');
+  check('招待リンク: URLからコードを取り出す(形が違えば空)', api.friendsCodeFromSearch('?friend=abcd2345') === 'ABCD2345' && api.friendsCodeFromSearch('?a=1&friend=ABCD2345&b=2') === 'ABCD2345'
+    && api.friendsCodeFromSearch('?friend=zzz') === '' && api.friendsCodeFromSearch('') === '' && api.friendsCodeFromSearch('?friend=%E0%A4%A') === '');
+  const cmpRows = api.friendsCompareScores([{ s: 'A', d: 'HARD', sc: 1000 }, { s: 'B', d: 'EASY', sc: 500 }, { s: 'C', d: 'EASY', sc: 300 }, { s: 'D', d: 'EASY', sc: 100 }],
+    { A: { HARD: { played: true, bestScore: 1500 } }, B: { EASY: { played: true, bestScore: 450 } }, C: { EASY: { played: true, bestScore: 300 } }, D: { EASY: { played: false, bestScore: 0 } } });
+  check('スコア勝負: 同じ曲・同じ難易度で、勝ち・負け・同点・未プレイが分かる', cmpRows[0].result === 'win' && cmpRows[0].diff === 500 && cmpRows[1].result === 'lose' && cmpRows[1].diff === -50
+    && cmpRows[2].result === 'draw' && cmpRows[3].result === 'none' && api.friendsCompareScores([{ s: 'Z', d: 'EASY', sc: 1 }], null)[0].result === 'none', JSON.stringify(cmpRows.map((r) => r.result)));
+  const arrNotes = api.friendsArrangeList({ views: arrViews, looks: arrLooks, summaries: arrSums, favorites: [], query: 'ライバル', nowMs: tNow, notes: { c: 'ライバル' } }).map((r) => r.view.otherId).join('');
+  check('一覧: メモでも絞り込める', arrNotes === 'c', arrNotes);
+  const multiSrc = fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero/src/parts/77-screen-rhythm-multi.jsx'), 'utf8');
+  check('マルチ: ブリーダーIDを部屋の知らせに載せ、受け取り、覚えている(区切り文字の入ったIDは捨てる)', multiSrc.includes("out.bid = (typeof friendsSafeId === 'function') ? friendsSafeId(raw.bid) : '';")
+    && multiSrc.includes('bid: me.bid || undefined') && multiSrc.includes("bid: msg.bid || ''") && multiSrc.includes('friendsSafeId(profile && profile.bid)')
+    && multiSrc.includes("bid: friendsOn ? friendSelfId : ''") && multiSrc.includes('friendsRememberRecent(others)'));
 
   // ---- friend_profiles だけが無い環境(第2弾のSQLが未適用) ----
   delete db.friend_profiles;

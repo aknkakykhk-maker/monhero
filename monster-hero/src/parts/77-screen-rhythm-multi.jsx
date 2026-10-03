@@ -174,6 +174,8 @@ const rhythmMultiCleanMessage = (raw) => {
     out.joinedAt = rhythmMultiInt(raw.joinedAt, 9e15);
     out.icon = rhythmMultiText(raw.icon, 60);
     out.frame = rhythmMultiText(raw.frame, 40);
+    // フレンド機能用の、端末ごとのブリーダーID(「最近いっしょに遊んだ人」を覚えるために使う)。区切り文字の入ったものは空にする
+    out.bid = (typeof friendsSafeId === 'function') ? friendsSafeId(raw.bid) : '';
     out.pick = rhythmMultiText(raw.pick, 60);
     out.pickRound = rhythmMultiText(raw.pickRound, 40);
     out.readyRound = rhythmMultiText(raw.readyRound, 40);
@@ -322,7 +324,7 @@ const RHYTHM_MULTI = (() => {
     if (!s || !socket || !me) return;
     if (me.playing && !force) return;
     socket.send({
-      t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, icon: me.icon, frame: me.frame,
+      t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, icon: me.icon, frame: me.frame, bid: me.bid || undefined,
       pick: me.pick, pickRound: me.pickRound, readyRound: me.readyRound, diff: me.diff, playing: me.playing,
       open: me.open, mode: s.mode, res: me.res || undefined, room: isHostNow() ? roomPayload() : undefined,
     });
@@ -470,7 +472,7 @@ const RHYTHM_MULTI = (() => {
       // 自分の状態は自分が持っているものが正しいので、自分の知らせでは上書きしない
       if (msg.id === s.selfId) { prev.seen = Date.now(); emit(); return; }
       s.members[msg.id] = {
-        ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, icon: msg.icon, frame: msg.frame,
+        ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, icon: msg.icon, frame: msg.frame, bid: msg.bid || '',
         pick: msg.pick, pickRound: msg.pickRound, readyRound: msg.readyRound, diff: msg.diff, playing: msg.playing,
         open: msg.open, res: msg.res || prev.res, seen: Date.now(),
       };
@@ -557,6 +559,7 @@ const RHYTHM_MULTI = (() => {
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
         icon: rhythmMultiText(profile && profile.icon, 60), frame: rhythmMultiText(profile && profile.frame, 40),
+        bid: (typeof friendsSafeId === 'function') ? friendsSafeId(profile && profile.bid) : '',
         joinedAt: now, pick: '', pickRound: '', readyRound: '', diff: rhythmMultiText(profile && profile.diff, 20), playing: false,
         // フリー/ベテランの部屋は、はじめから公開(空きがあるあいだ受付へ知らせる)。プライベートは「ルーム解放」を押したときだけ
         open: roomMode !== 'private', res: null, seen: now,
@@ -1015,6 +1018,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     })();
     return () => { cancelled = true; };
   }, [friendsOn]);
+  // 同じ部屋にいた人を「最近いっしょに遊んだ人」として端末に覚える(あとからフレンド画面で申請できる)。
+  // 相手のブリーダーIDは知らせ(hb)に載ってくる。自分と同じ・IDの無い人は覚えない。サーバーへは送らない
+  const recentSig = view ? view.members.map((m) => `${m.bid || ''}:${m.name || ''}`).join(',') : '';
+  React.useEffect(() => {
+    if (!friendsOn || !view || !friendSelfId) return;
+    const others = view.members.filter((m) => m.bid && m.bid !== friendSelfId && m.id !== view.selfId).map((m) => ({ id: m.bid, name: m.name }));
+    if (others.length) friendsRememberRecent(others);
+  }, [friendsOn, recentSig, friendSelfId]);
   const hasRoster = !!(roster && roster.length);
   React.useEffect(() => {
     if (!friendsOn || view || !friendSelfId || !hasRoster) { setFriendInvites([]); return undefined; }
@@ -1091,7 +1102,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
   React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
 
-  const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
+  const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, bid: friendsOn ? friendSelfId : '', diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
   const joinFromInvite = (invite) => {
     setMessage('');
