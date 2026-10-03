@@ -60,7 +60,7 @@
 | ピクシー（`Pixie`） | お気に入りの魔法 | ラン3回 | 併用できる | 使ったターンから3ターン | `multiBuff`（`distMult`・`guaranteeUnique`） |
 | ミーア（`Mia`） | オン・ステージ！ | ラン3回 | 併用できる | 使ったターンから4ターン | `stage`（`cardBonus`・`voltage`） |
 | スネグーラチカ（`Snegurochka`） | クリスマスプレゼント | **各WAVE1回** | 併用できる | 使ったターンから2ターン（持続のある中身だけ） | `present`（`usesPerWave`・`present`） |
-| ウンディーネ（`Undine`） | 生命の泉 | ラン3回 | 併用できる | 使ったターンから3ターン（ライフ上限アップのあいだ） | `lifeSpring`（`target:'ally'`） |
+| ウンディーネ（`Undine`） | 生命の泉 | ラン5回 | 併用できる | 使ったターンから3ターン（ライフ上限アップのあいだ） | `lifeSpring`（`target:'ally'`） |
 | ヤオビクニ（`Yaobikuni`） | 悠久の刻 | ラン2回 | 併用できる | 発動ターン | `timeStop` |
 | ザン（`Zan`） | 血踊 | ラン5回 | 併用できる | 使ったターンから5ターン（WAVEが変わると切れる） | `dodgeCombo` |
 | エイキ（`Eiki`） | 緋桜瞬歩 | ラン3回 | 使ったターンはその子だけ不可 | 使ったターンから5ターン（WAVEが変わると切れる） | `distMatch` |
