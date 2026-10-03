@@ -122,8 +122,8 @@ check('選択肢のボタンは名前の定数を渡している',
 
 // ---- 画面から変えられる設定が、どこかのタブに置いてあるか ----
 // 置き忘れると「保存はされるのに変える場所が無い」設定ができる。
-// multiLightLook はオプションではなく、みんなで対戦の難易度えらびの画面で切り替える(77-screen-rhythm-multi.jsx)
-const SCREENLESS = new Set(['displayTimingOffsetMs', 'judgmentTextPosition', 'holdSlideOpacity', 'livePartnerVisible', 'multiLightLook']);
+// multiLightLook と multiLook(対戦の演出の段階)はオプションではなく、みんなで対戦の難易度えらびの画面で切り替える(77-screen-rhythm-multi.jsx)
+const SCREENLESS = new Set(['displayTimingOffsetMs', 'judgmentTextPosition', 'holdSlideOpacity', 'livePartnerVisible', 'multiLightLook', 'multiLook']);
 const defaults = grab('const DEFAULT_RHYTHM_SETTINGS = Object.freeze({', '});');
 const settingKeys = [...defaults.matchAll(/(?:^|[\s{,])([a-zA-Z][a-zA-Z0-9]*)\s*:/g)].map(m => m[1]);
 const missing = settingKeys.filter(key => !SCREENLESS.has(key) && !options.includes(`'${key}'`));
