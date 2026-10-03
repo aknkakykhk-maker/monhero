@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2b98fe7413f509dc
+// generated-sha256: a00fb95bacee88c9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 02:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 02:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10017,12 +10017,22 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
   return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
     <MarketModalHead item={item} accent={meta.text}/>
     {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+    {item.groupMembers&&<div data-market-icon-group={item.groupId} className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+      <p className="text-[12px] font-black text-slate-200 leading-snug">{item.groupMembers.length}種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。</p>
+      <p className="mt-1 text-[10px] text-slate-400 leading-snug">プロフィールで、1つずつ選んで設定できます。</p>
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {item.groupMembers.map(m=><div key={m.id} data-market-icon-group-member={m.id} className="flex flex-col items-center gap-1">
+          <BreederIcon src={m.icon} id={m.id} alt={m.name} className="w-full aspect-square"/>
+          <span className="w-full text-center text-[8px] font-black leading-tight text-slate-300" style={{overflowWrap:'anywhere'}}>{String(m.name||'').replace(/のアイコン$/,'')}</span>
+        </div>)}
+      </div>
+    </div>}
       {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
         <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
         <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
       </div>}
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
-      <div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>
+      {!item.groupMembers&&<div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>}
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
       <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
     </div>
@@ -23980,13 +23990,28 @@ function BreederMarketScreen({
   ];
   const activeDiamondTab = diamondTabs.some(tab=>tab.key===marketTab)?marketTab:'disc';
   const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
-  const breederPointItems = marketItems.filter(item=>item.type==='icon');
+  // アイコンは同じキャラを1つにまとめて売る(2026-10-03・ユーザー指示)。中身は「詳細」で見られ、1つ買うと全部手に入る。
+  // まとめの定義は data/breeder.js の BREEDER_ICON_GROUPS。代表(いちばん先の中身)の商品を、名前だけ「◯◯のアイコン」にして1枚で出す
+  const breederPointItems = (()=>{
+    const icons=marketItems.filter(item=>item.type==='icon');
+    const seen=new Set(); const out=[];
+    icons.forEach(item=>{
+      const group=breederIconGroupOf(item.id);
+      if(!group){ out.push(item); return; }
+      if(seen.has(group.id)) return;
+      seen.add(group.id);
+      const members=group.memberIds.map(id=>icons.find(m=>m.id===id)).filter(Boolean);
+      out.push({ ...members[0], name:`${group.name}のアイコン`, groupMembers:members, groupId:group.id });
+    });
+    return out;
+  })();
+  const hasDiscIconCards = breederPointItems.some(item=>/_disc_icon$/.test(item.id));
   // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
   const breederFrameItems = marketItems.filter(item=>item.type==='frame');
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
   const SECTION_TABS = {
-    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'},...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
+    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
@@ -24057,7 +24082,7 @@ function BreederMarketScreen({
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
@@ -37261,7 +37286,7 @@ function MonsterHeroGame() {
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
   // フレンドへ送る内容の「最新の値」。送信は少し遅れて走るので、その時点の値をここから読む(宣言のあとに置く)
   friendLatestRef.current = { gameState, masuMons, favoriteMasuId, profileMessage, highScores, proHighScores, quickHighestWaves, extremeBestScores,
-    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons, ownedProfileFrames };
+    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons: expandOwnedMarketIcons(ownedMarketIcons), ownedProfileFrames };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
@@ -42228,7 +42253,8 @@ function MonsterHeroGame() {
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
     if (item.type === 'item') return false;
-    return ownedMarketIcons.includes(item.id);
+    // アイコンは、同じキャラのまとめのどれか1つでも持っていれば全部持っている扱い(保存値は広げるだけで書き換えない)
+    return expandOwnedMarketIcons(ownedMarketIcons).includes(item.id);
   };
 
   const saveMonsterPartySets = (nextSets) => {
@@ -42322,7 +42348,8 @@ function MonsterHeroGame() {
       storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
       markProfileFrameNoticed(item.id);
     } else if (item.type !== 'item') {
-      setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
+      // 同じキャラのまとめは、1つ買うと中身が全部入る(商品の並びでは1つにまとまっている)
+      setOwnedMarketIcons(prev => { const group = breederIconGroupOf(item.id); const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])]; storeSet('mh_market_icons', next, false); return next; });
     }
     saveMissionProgress('market');
     return true;
@@ -53235,7 +53262,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
           // フレームはここでは変えられない(プロフィールの「フレーム」から変える)
           const closeIcon=()=>{ setShowIconPicker(false); setIconQuery(''); setIconChip('all'); };
-          const all=breederIconOptions({ownedMarketIconIds:ownedMarketIcons});
+          const all=breederIconOptions({ownedMarketIconIds:expandOwnedMarketIcons(ownedMarketIcons)});
           const label=(m)=>String(m.name||'').replace(/のアイコン$/,'');
           const q=iconQuery.trim().toLowerCase();
           const matches=all.filter(m=>(iconChip==='all'||m.source===iconChip)&&(!q||label(m).toLowerCase().includes(q)));

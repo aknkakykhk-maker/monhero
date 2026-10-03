@@ -31,12 +31,11 @@ const seed = () => {
 };
 
 // [商品名, マーケットのタブ, 購入ボタンのaria-label]
+// アイコンは同じキャラを1つにまとめて売る(2026-10-03)。「ウンディーネのアイコン」を1つ買うと、円盤石アイコンも一緒に手に入る
 const MARKET_ITEMS = [
   ['ウンディーネのアイコン', 'アイコン', 'ウンディーネのアイコンを1ptで購入'],
-  ['ウンディーネの円盤石アイコン', '円盤石アイコン', 'ウンディーネの円盤石アイコンを1ptで購入'],
   ['ウンディーネの円盤石', '円盤石', 'ウンディーネの円盤石を150000ダイヤで購入'],
   ['ヤオビクニのアイコン', 'アイコン', 'ヤオビクニのアイコンを1ptで購入'],
-  ['ヤオビクニの円盤石アイコン', '円盤石アイコン', 'ヤオビクニの円盤石アイコンを1ptで購入'],
   ['ヤオビクニの円盤石', '円盤石', 'ヤオビクニの円盤石を150000ダイヤで購入'],
 ];
 
@@ -114,9 +113,19 @@ const MARKET_ITEMS = [
     await clickText(tab);
   };
   const marketByTab = {};
-  for (const tab of ['アイコン', '円盤石アイコン', '円盤石']) { await openSection(tab); marketByTab[tab] = await text(); }
+  for (const tab of ['アイコン', '円盤石']) { await openSection(tab); marketByTab[tab] = await text(); }
   for (const [name, tab] of MARKET_ITEMS) check(`マーケットの「${tab}」に「${name}」がある`, marketByTab[tab].includes(name));
+  check('円盤石アイコンは別の商品として並ばず、キャラのアイコンにまとまっている(「円盤石アイコン」のタブも無い)',
+    !marketByTab['アイコン'].includes('ウンディーネの円盤石アイコン') && !marketByTab['アイコン'].includes('円盤石アイコン'));
 
+  // 「詳細」で、まとめの中身(顔のアイコンと円盤石アイコン)を見られる
+  await openSection('アイコン');
+  const detailOpened = await page.evaluate(() => { const b = document.querySelector('button[aria-label="ウンディーネのアイコンの中身を見る"]'); if (b) b.click(); return !!b; });
+  await page.waitForTimeout(700);
+  const members = await page.evaluate(() => [...document.querySelectorAll('[data-market-icon-group-member]')].map(el => el.getAttribute('data-market-icon-group-member')));
+  check('「詳細」でまとめの中身(ウンディーネの顔と円盤石アイコン)を見られる', detailOpened && members.join() === 'undine_icon,undine_disc_icon', members.join());
+  await page.evaluate(() => { const d = document.querySelector('[data-market-icon-group]'); const b = d && [...d.closest('[role="dialog"]').querySelectorAll('button')].pop(); if (b) b.click(); });
+  await page.waitForTimeout(500);
   for (const [name, tab, buyLabel] of MARKET_ITEMS) {
     await openSection(tab);
     const found = await page.evaluate((l) => {
