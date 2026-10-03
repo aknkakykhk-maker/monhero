@@ -80,6 +80,10 @@ const measure=async(playwright,port,scene)=>{
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
     for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
+    // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
     for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
     await page.evaluate(s=>document.querySelector(`[data-rhythm-song-row="${s}"]`)?.click(),SONG);await page.waitForTimeout(300);

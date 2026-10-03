@@ -73,6 +73,8 @@ const seed = () => {
   });
   const openRhythm = async () => {
     await page.evaluate(() => document.querySelector('[data-quick-to-rhythm]')?.click());
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
     await dismissOverlays();
   };
@@ -93,6 +95,9 @@ const seed = () => {
       const b = [...document.querySelectorAll('button')].find(x => /モンヒロビート|モンビー/.test(x.innerText || ''));
       b?.click();
     });
+    // 入るとまずモードえらび(2026-10-03)。ソロライブで曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo]', { timeout: 15000 }).catch(() => {});
+    await page.evaluate(() => document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForTimeout(1200);
     const onHomeBeforeRun = await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]'));
     if (onHomeBeforeRun) {
@@ -101,6 +106,9 @@ const seed = () => {
         await page.evaluate(() => !!document.querySelector('[data-quick-run-start]')));
       check('まだ編成が無いので案内文のほうを出す',
         await page.evaluate(() => !!document.querySelector('[data-quick-run-start-hint]')));
+      // 曲えらびの「←」でモードえらびへ、モードえらびの「←」でHOMEへ
+      await page.evaluate(() => document.querySelector('[data-rhythm-song-select-back]')?.click());
+      await page.waitForTimeout(800);
       await page.evaluate(() => document.querySelector('[data-rhythm-back]')?.click());
       await page.waitForTimeout(1200);
       await dismissOverlays();
@@ -172,6 +180,9 @@ const seed = () => {
     // ---- ⑤ 周回をやめたら帯が変わる ----
     await openRhythm();
     // バトルへ戻って∞を切る(モンビーからは切れない仕様なので、いったん戻る)
+    // 曲えらびの「←」はモードえらびへ戻るだけ(2026-10-03)。その左上のボタンが以前の曲えらびの戻ると同じ役目
+    await page.evaluate(() => document.querySelector('[data-rhythm-song-select-back]')?.click());
+    await page.waitForTimeout(800);
     await page.evaluate(() => document.querySelector('[data-rhythm-back]')?.click());
     await page.waitForTimeout(1200);
     await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());

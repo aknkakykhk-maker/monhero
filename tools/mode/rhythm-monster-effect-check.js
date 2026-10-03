@@ -159,6 +159,8 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
       await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
       for(let i=0;i<6;i++){if(!(await clickText('^(受け取る|閉じる|OK|閉じる|確認)$')))break;await page.waitForTimeout(250);}
       await clickText('モンヒロビート');await page.waitForTimeout(1200);
+      // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+      await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
       // 曲えらびから本番の譜面で始める(タイミング合わせの譜面にはモンスターノーツが無い)
       await clickText('^(決定|はじめる|プレイ|▶)$');
       await page.waitForTimeout(2500);

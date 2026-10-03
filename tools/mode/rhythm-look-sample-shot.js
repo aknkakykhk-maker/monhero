@@ -43,6 +43,8 @@ fs.mkdirSync(OUT,{recursive:true});
   await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),null,{timeout:40000});
   for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
   await clickText('モンヒロビート');await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
+  // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+  await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
   for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
   if(SONG){await page.evaluate(t=>{const el=[...document.querySelectorAll('[data-rhythm-song-list] button, [data-rhythm-song-list] [role=button]')].find(x=>(x.innerText||'').split('\n').some(l=>l.trim()===t));if(el)el.click();},SONG);await page.waitForTimeout(600);}
   await clickText('^\\d+ '+DIFF);await page.waitForTimeout(300);
