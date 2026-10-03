@@ -21,6 +21,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;           // 最後に開いてから5分以内は「いま」
 let _friendsUnavailable = false;                   // 表が無いと分かったら、ページを閉じるまで使わない
+let _friendProfileExtraUnavailable = false;        // friend_profiles に message / records の列がまだ無いとき(第3弾のSQL未適用)。外して送り直す
 let _friendProfilesUnavailable = false;           // friend_profiles だけ無いと分かったとき(SQL未適用)。フレンド本体は止めない
 let _friendCodeCache = null;                       // { breederId, code }
 const friendsUnavailable = () => _friendsUnavailable;
@@ -489,9 +490,104 @@ const friendsPlaytimeText = (seconds) => {
   return minutes > 0 ? `${minutes}分` : '1分未満';
 };
 const FRIEND_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+// ---- ひとこと / 記録のまとめ ----
+const FRIEND_MESSAGE_MAX = 30;
+// 自由入力のひとこと。制御文字を除き、空白を1つにまとめ、30文字までにする(表示は React が文字として出すので、HTMLとしては解釈されない)
+const friendsCleanMessage = (value) => String(value == null ? '' : value)
+  .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, FRIEND_MESSAGE_MAX);
+const FRIEND_RECORD_SONG_MAX = 15;
+// バトル記録の見出し(モードid → 絵文字と名前)。プロフィールの「バトル記録」と同じモードの並び
+const friendsBattleModeLabels = () => {
+  const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE, TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE];
+  return Object.fromEntries(modes.filter(Boolean).map((mode) => [mode.id, { emoji: mode.emoji || '⚔️', label: mode.label || mode.id }]));
+};
+const friendsInt = (value) => { const n = Math.floor(Number(value)); return Number.isFinite(n) && n > 0 ? n : 0; };
+// プロフィールの「バトル記録」と同じ並び・同じ数字(代表の1つ)を、モードごとに数だけにして返す。[{ id, k:'s'(スコア)|'w'(WAVE), v }]
+const friendsBattleSummary = (src) => {
+  const s = src || {};
+  const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
+  const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE,
+    ...[TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE].filter((mode) => battleModePlayable(mode.id))];
+  const out = [];
+  modes.forEach((mode) => {
+    try {
+      let entry = null;
+      if (isSpeciesChallengeMode(mode.id)) {
+        const progress = typeof s.speciesProgressOf === 'function' ? s.speciesProgressOf(mode.id) : null;
+        entry = { id: mode.id, k: 's', v: friendsInt(speciesChallengeProfileSummary(progress).bestScore) };
+      } else if (isQuickMode(mode.id)) {
+        entry = { id: mode.id, k: 'w', v: friendsInt(highestModeWave(s.quickHighestWaves, difficultyIds)) };
+      } else {
+        const tactics = isTacticsMode(mode.id);
+        const scores = mode.id === EXTREME_MODE.id ? s.extremeBestScores
+          : tactics ? (typeof s.tacticsHsOf === 'function' ? s.tacticsHsOf(mode.id) : {})
+          : isProMode(mode.id) ? s.proHighScores : s.highScores;
+        const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map((item) => item.id)
+          : tactics ? TACTICS_DIFFICULTY_IDS : difficultyIds;
+        entry = { id: mode.id, k: 's', v: friendsInt(highestModeScore(scores, ids)) };
+      }
+      if (entry && entry.v > 0) out.push(entry);
+    } catch (error) { /* 1モードの失敗で、ほかの記録まで送れなくならないようにする */ }
+  });
+  return out;
+};
+// モンヒロビートの曲ごとのベスト(曲ごとに、遊んだいちばん上の難易度の記録)。スコアの高い順に15曲まで。
+// f … 0:なし 1:フルコンボ 2:オールエクセレント 3:オールマーベラス
+const friendsRhythmSummary = (bestRecords) => {
+  const songs = [];
+  let played = 0;
+  (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).forEach((song) => {
+    const byDifficulty = bestRecords && bestRecords[song.songId];
+    if (!byDifficulty) return;
+    let pick = null;
+    RHYTHM_DIFFICULTIES.forEach(({ id }, index) => {
+      const rec = byDifficulty[id];
+      if (rec && rec.played) pick = { s: song.songId, d: id, sc: friendsInt(rec.bestScore), f: rec.allMarvelous ? 3 : rec.allExcellent ? 2 : rec.fullCombo ? 1 : 0, order: index };
+    });
+    if (pick) { played += 1; songs.push(pick); }
+  });
+  songs.sort((a, b) => b.sc - a.sc);
+  return { played, songs: songs.slice(0, FRIEND_RECORD_SONG_MAX).map(({ order, ...rest }) => rest) };
+};
+// 持っているもの・図鑑の進み(数だけ)
+const friendsCollectionSummary = ({ masuMons, unlockedMonsterIds, ownedIconIds, ownedFrameIds }) => {
+  const list = (Array.isArray(masuMons) ? masuMons : []).filter((m) => m && ALL_PLAYER_MONSTERS[m.baseId]);
+  return {
+    masu: list.length,
+    dex: (Array.isArray(unlockedMonsterIds) ? unlockedMonsterIds : []).filter((id) => ALL_PLAYER_MONSTERS[id]).length,
+    dexTotal: Object.keys(ALL_PLAYER_MONSTERS).length,
+    transcended: list.filter((m) => m.transcended).length,
+    reincarnated: list.filter((m) => friendsInt(m.reincarnateCount) > 0).length,
+    icons: Array.isArray(ownedIconIds) ? ownedIconIds.length : 0,
+    frames: Array.isArray(ownedFrameIds) ? ownedFrameIds.length : 0,
+  };
+};
+// 送る記録のまとめ全体(サーバーの records 列へ入るJSON)
+const friendsBuildRecords = (src) => ({
+  v: 1,
+  battle: friendsBattleSummary(src),
+  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  collection: friendsCollectionSummary(src || {}),
+});
+// 受け取った records を、安全な形へ整える(型を確かめ、ありえない値は捨てる。未知のモード・曲は読まない)
+const friendsNormalizeRecords = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const battle = (Array.isArray(raw.battle) ? raw.battle : []).map((e) => (e && typeof e.id === 'string' && (e.k === 's' || e.k === 'w') && friendsInt(e.v) > 0)
+    ? { id: e.id.slice(0, 40), k: e.k, v: friendsInt(e.v) } : null).filter(Boolean).slice(0, 20);
+  const songsRaw = raw.rhythm && Array.isArray(raw.rhythm.songs) ? raw.rhythm.songs : [];
+  const songs = songsRaw.map((e) => (e && typeof e.s === 'string' && typeof e.d === 'string')
+    ? { s: e.s.slice(0, 80), d: e.d.slice(0, 20), sc: friendsInt(e.sc), f: [0, 1, 2, 3].includes(e.f) ? e.f : 0 } : null).filter(Boolean).slice(0, FRIEND_RECORD_SONG_MAX);
+  const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
+  return {
+    battle,
+    rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs },
+    collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
+      reincarnated: friendsInt(c.reincarnated), icons: friendsInt(c.icons), frames: friendsInt(c.frames) },
+  };
+};
 // 端末の持ち物から、フレンドに見せる情報を作る(書く内容はここで決まる)
 //  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなモンスター」に選んだ個体のid / playtime … normalizePlaytime の形
-const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
+const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, message = '', records = null }) => {
   let bestBond = 0, bestBondMon = '', bestPower = 0, bestPowerMon = '', favorite = null;
   (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
     try {
@@ -518,21 +614,33 @@ const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
     bestBond: bestBond > 0 ? bestBond : null, bestBondMon: bestBondMon || null,
     bestPower: bestPower > 0 ? bestPower : null, bestPowerMon: bestPowerMon || null,
     favorite,
+    message: friendsCleanMessage(message) || null,
+    records: records && typeof records === 'object' ? records : null,
   };
 };
 // 自分の分を上書きする。失敗しても進行は止めない(呼ぶ側は結果を見なくてよい)
 const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   const id = friendsSafeId(breederIdRaw);
   if (!id || !summary) return false;
+  const base = {
+    breeder_id: id, place: summary.place, started_on: summary.startedOn, play_seconds: summary.playSeconds,
+    best_bond: summary.bestBond, best_bond_mon: summary.bestBondMon, best_power: summary.bestPower,
+    best_power_mon: summary.bestPowerMon, favorite: summary.favorite,
+  };
+  const send = (row) => friendsRequest('friend_profiles?on_conflict=breeder_id', {
+    method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal', body: [row] });
   try {
-    await friendsRequest('friend_profiles?on_conflict=breeder_id', {
-      method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal',
-      body: [{
-        breeder_id: id, place: summary.place, started_on: summary.startedOn, play_seconds: summary.playSeconds,
-        best_bond: summary.bestBond, best_bond_mon: summary.bestBondMon, best_power: summary.bestPower,
-        best_power_mon: summary.bestPowerMon, favorite: summary.favorite,
-      }],
-    });
+    // message / records の列がまだ無い環境(SQL未適用)では、その2つを外して送る。ほかの情報は今までどおり届く
+    if (_friendProfileExtraUnavailable) await send(base);
+    else {
+      try { await send({ ...base, message: summary.message, records: summary.records }); }
+      catch (error) {
+        if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
+          _friendProfileExtraUnavailable = true;
+          await send(base);
+        } else throw error;
+      }
+    }
     return true;
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
@@ -545,9 +653,19 @@ const sbFetchFriendSummaries = async (ids) => {
   const byId = {};
   if (!safe.length) return byId;
   try {
-    const rows = await friendsRequest(
-      `friend_profiles?select=breeder_id,place,started_on,play_seconds,best_bond,best_bond_mon,best_power,best_power_mon,favorite,updated_at&breeder_id=in.(${safe.join(',')})`,
-      { soft: true });
+    const baseCols = 'breeder_id,place,started_on,play_seconds,best_bond,best_bond_mon,best_power,best_power_mon,favorite,updated_at';
+    const fetchRows = (cols) => friendsRequest(`friend_profiles?select=${cols}&breeder_id=in.(${safe.join(',')})`, { soft: true });
+    let rows;
+    if (_friendProfileExtraUnavailable) rows = await fetchRows(baseCols);
+    else {
+      try { rows = await fetchRows(`${baseCols},message,records`); }
+      catch (error) {
+        if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST/i.test(String(error.message))) {
+          _friendProfileExtraUnavailable = true;
+          rows = await fetchRows(baseCols);
+        } else throw error;
+      }
+    }
     (Array.isArray(rows) ? rows : []).forEach((row) => {
       if (!row || typeof row.breeder_id !== 'string') return;
       const at = Date.parse(row.updated_at);
@@ -560,6 +678,7 @@ const sbFetchFriendSummaries = async (ids) => {
         bestBond: num(row.best_bond), bestBondMon: typeof row.best_bond_mon === 'string' ? row.best_bond_mon : null,
         bestPower: num(row.best_power), bestPowerMon: typeof row.best_power_mon === 'string' ? row.best_power_mon : null,
         favorite: fav, updatedAt: Number.isFinite(at) ? at : 0,
+        message: friendsCleanMessage(row.message), records: friendsNormalizeRecords(row.records),
       };
     });
   } catch (error) {
