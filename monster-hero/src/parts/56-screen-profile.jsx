@@ -260,7 +260,7 @@ function ProfileScreen({
             ? speciesChallengeProgressOf(mode) : speciesChallengeProgress);
           const speciesSummaryOf=(mode)=>speciesChallengeProfileSummary(progressOf(mode));
           const speciesSummary=speciesSummaryOf(BATTLE_MODE_SPECIES_CHALLENGE);
-          const speciesDifficultyLabel=(id)=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const speciesDifficultyLabel=(id)=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const tacticsHsOf=(modeId)=>(typeof tacticsRecordsOf==='function'?tacticsRecordsOf(modeId).hs:{});
           const scoreMapFor=(mode)=>isTacticsMode(mode.id)?tacticsHsOf(mode.id):isProMode(mode.id)?proHighScores:highScores;
           const representativeFor=(mode)=>{

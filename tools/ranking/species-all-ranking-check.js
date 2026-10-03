@@ -40,7 +40,7 @@ vm.createContext(ctx);
 vm.runInContext([
   lineagesSrc,
   // 難易度の並びと、キーを組み立てる関数だけを本体から持ってくる
-  // (SPECIES_CHALLENGE_DIFFICULTY_IDS は通常14難易度＋極限から作られるので、その2つも一緒に)
+  // (SPECIES_CHALLENGE_DIFFICULTY_IDS は通常9難易度＋極限から作られるので、その2つも一緒に)
   grab('const DIFFICULTY_SETTINGS = {', 'const SPECIES_CHALLENGE_PROGRESS_KEY'),
   // speciesChallengeLineages は dexMainLineages 経由なので、ここでは血統の正本から直接作る
   `const speciesChallengeLineages = () => Object.values(MONSTER_LINEAGES).filter(l => l && l.id);`,
@@ -63,7 +63,7 @@ check('キーまわりの関数を実装から取り出せる',
 
 const lineages = x.speciesChallengeLineages();
 const DIFFS = x.SPECIES_CHALLENGE_DIFFICULTY_IDS;
-check('血統と難易度を読めている', lineages.length > 0 && DIFFS.length === 14,
+check('血統と難易度を読めている', lineages.length > 0 && DIFFS.length === 17,
   `${lineages.length}血統 / ${DIFFS.length}難易度`);
 // 'all' が実在の血統idと衝突していないこと。ここが崩れると全種族と個別種族を取り違える
 check("血統idに 'all' が存在しない(合成キーと衝突しない)",
@@ -93,7 +93,7 @@ check('展開先はすべて同じ難易度',
 check('展開先に重複が無い', new Set(members).size === members.length);
 check('展開先に他モードのキーが混ざらない',
   members.every(key => key.startsWith('Species-')) && !members.includes('Species-all-Beginner'));
-check('14難易度すべてで展開できる',
+check('17難易度すべてで展開できる',
   DIFFS.every(id => x.speciesChallengeAllRankingMembers(id).length === lineages.length));
 
 // --- ③ 実際に組み立てるURLの形 ---

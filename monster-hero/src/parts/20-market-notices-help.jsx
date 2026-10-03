@@ -317,12 +317,22 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
   return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
     <MarketModalHead item={item} accent={meta.text}/>
     {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+    {item.groupMembers&&<div data-market-icon-group={item.groupId} className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+      <p className="text-[12px] font-black text-slate-200 leading-snug">{item.groupMembers.length}種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。</p>
+      <p className="mt-1 text-[10px] text-slate-400 leading-snug">プロフィールで、1つずつ選んで設定できます。</p>
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {item.groupMembers.map(m=><div key={m.id} data-market-icon-group-member={m.id} className="flex flex-col items-center gap-1">
+          <BreederIcon src={m.icon} id={m.id} alt={m.name} className="w-full aspect-square"/>
+          <span className="w-full text-center text-[8px] font-black leading-tight text-slate-300" style={{overflowWrap:'anywhere'}}>{String(m.name||'').replace(/のアイコン$/,'')}</span>
+        </div>)}
+      </div>
+    </div>}
       {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
         <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
         <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
       </div>}
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
-      <div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>
+      {!item.groupMembers&&<div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>}
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
       <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
     </div>
@@ -601,7 +611,7 @@ const helpDataRows = (id) => {
     // 種族チャレンジの難易度と、その難易度をはじめてクリアしたときにもらえる超越の実の数
     case 'speciesChallengeRewards':
       return SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
-        const setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(s => s.id === id);
+        const setting = DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(s => s.id === id);
         return [setting?.label || id, `初回クリアで 超越の実 ×${speciesChallengeFirstClearReward(id)}`];
       });
     // 限界突破の回数で変わる「レベルアップ1回ぶんの強化ポイント」。

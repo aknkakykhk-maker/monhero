@@ -9,7 +9,7 @@ const empty = () => api.normalizeSpeciesChallengeProgress(null);
 
 assert(api.speciesChallengeFirstClearReward('Beginner') === 1, 'Beginner初回は1個');
 assert(api.speciesChallengeFirstClearReward('INFINITY') === 40, 'INFINITY初回は40個');
-assert(Object.values(api.SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS).reduce((sum,n)=>sum+n,0) === 181, '14難易度合計181個');
+assert(Object.values(api.SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS).reduce((sum,n)=>sum+n,0) === 421, '17難易度合計421個');
 
 let first = api.finalizeSpeciesChallengeClearReward({ progress:empty(),ownedItems:{ potion:7 },speciesId:'mocchi',difficultyId:'Beginner' });
 assert(first.rewardGranted && first.rewardAmount === 1 && first.nextOwnedItems[fruit('mocchi')] === 1, 'Beginner初回を対応種族(主血統)へ付与');

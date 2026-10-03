@@ -322,6 +322,52 @@ const BREEDER_MARKET_ITEMS = [
   // 助手ドラの表情アイコン(8種)
   ...DRA_MARKET_ICONS
 ];
+// ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
+// 同じキャラのアイコンが何種類もある(助手の8表情・モンスターの顔と円盤石など)。
+// ショップではキャラごとに1つにまとめて売り、「詳細」で中身を見られる。プロフィールで設定するときは、中身を1つずつ選べる。
+//
+// ★「どれか1つでも持っている人は、全部持っていることになる」(ユーザー指示)。
+//   これは**読むときに広げる**だけで、保存してある mh_market_icons は書き換えない(CLAUDE.md ⑦)。
+//   買ったときは、まとめの中身を全部 mh_market_icons へ足す(1つ買うと全部入る)。
+// ★値段はまとめ全体で、代表(いちばん先のもの)の値段。いまは全部1pt。
+// ★商品そのもの(BREEDER_MARKET_ITEMS)は変えない。id・名前・絵・値段は今までどおりで、
+//   「どれとどれが同じキャラか」だけをここで決める。
+const breederIconGroupKeyOf = (id) => {
+  const key = String(id || '');
+  if (key === 'mua' || /^myua_/.test(key)) return 'mua';
+  if (key === 'dra' || /^dra_/.test(key)) return 'dra';
+  if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
+  if (/^momosuke_/.test(key)) return 'momosuke';
+  return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
+};
+const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ' });
+// 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
+const BREEDER_ICON_GROUPS = (() => {
+  const order = [];
+  const byKey = {};
+  BREEDER_MARKET_ITEMS.filter(item => item.type === 'icon').forEach(item => {
+    const key = breederIconGroupKeyOf(item.id);
+    if (!byKey[key]) { byKey[key] = []; order.push(key); }
+    byKey[key].push(item);
+  });
+  return order.filter(key => byKey[key].length >= 2).map(key => {
+    const members = byKey[key];
+    const name = BREEDER_ICON_GROUP_NAMES[key] || String(members[0].name || '').replace(/（覚醒）のアイコン$|の円盤石アイコン$|のアイコン$/, '');
+    return Object.freeze({ id:key, name, memberIds:Object.freeze(members.map(m => m.id)) });
+  });
+})();
+const BREEDER_ICON_GROUP_BY_MEMBER = Object.freeze(Object.fromEntries(
+  BREEDER_ICON_GROUPS.flatMap(group => group.memberIds.map(id => [id, group]))));
+// そのアイコンが入っているまとめ。まとまらないアイコンは null
+const breederIconGroupOf = (id) => BREEDER_ICON_GROUP_BY_MEMBER[id] || null;
+// 持っているアイコンのid一覧を「まとめの中身を全部持っている」形へ広げる。保存値は変えない。
+// 壊れた値(配列でない・文字列でない)は捨てる
+const expandOwnedMarketIcons = (owned) => {
+  const list = Array.isArray(owned) ? owned.filter(id => typeof id === 'string') : [];
+  const out = new Set(list);
+  list.forEach(id => { const group = BREEDER_ICON_GROUP_BY_MEMBER[id]; if (group) group.memberIds.forEach(m => out.add(m)); });
+  return [...out];
+};
 // 難易度キー → その難易度で使えるスキップチケットのid
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
   BREEDER_MARKET_ITEMS.filter(item => item.usage === 'battleSkip').map(item => [item.skipDifficulty, item.id])
