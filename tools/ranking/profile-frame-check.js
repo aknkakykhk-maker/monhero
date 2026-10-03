@@ -254,7 +254,12 @@ check('ランキングは他プレイヤーのフレームを出す', /const ran
 
 // ===== ④ 付けない場所(図鑑・マーケット・円盤石・通常のモンスターアイコン) =====
 check('図鑑のモンスターアイコンに枠を付けていない', !/const DexMonsterIcon[\s\S]{0,600}ProfileFrameLayer/.test(widgets));
-check('マーケットの商品画像に枠を付けていない', !/const MarketProductIcon[\s\S]{0,900}frameId/.test(widgets));
+// 例外: プロフィールフレームそのものを売る商品(type:'frame')の絵だけは、枠を付けて見せる(2026-10-03)。
+//   それ以外の商品(モンスター・アイテム・アイコン・アシスト)の絵には付けない。
+//   frameId を書いてよいのは、type==='frame' の枝(MarketProductIcon の先頭)の1か所だけ
+check('マーケットの商品画像に枠を付けていない(フレームそのものを売る商品だけが例外)',
+  (widgets.match(/const MarketProductIcon[\s\S]*?\n};\n/)?.[0].match(/frameId/g) || []).length === 1
+  && /if\(item\.type==='frame'\)\{[\s\S]{0,700}frameId=\{item\.id\}/.test(widgets));
 check('円盤石・通常のモンスター画像に枠を付けていない',
   !/DyedMonsterImage[^\n]{0,200}frameId/.test(app) && !/DyedMonsterImage[^\n]{0,200}frameId/.test(widgets));
 
