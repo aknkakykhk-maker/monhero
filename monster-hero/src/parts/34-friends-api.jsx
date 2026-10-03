@@ -79,6 +79,67 @@ const friendsFaceIconOf = (baseId) => {
   const byPath = items.find((entry) => bare(entry.icon) === bare(faceSrc));
   return byPath ? { src: byPath.icon, id: byPath.id } : { src: faceSrc, id: baseId };
 };
+// ---- 最近いっしょに遊んだ人 / フレンドのメモ(どちらも端末だけに覚える。サーバーへは送らない) ----
+const FRIEND_RECENT_KEY = 'mh_friend_recent_v1';
+const FRIEND_RECENT_MAX = 30;
+const FRIEND_NOTES_KEY = 'mh_friend_notes_v1';
+const FRIEND_NOTE_MAX = 12;
+const FRIEND_NOTES_COUNT_MAX = 200;
+const friendsNormalizeRecent = (raw) => {
+  const out = [];
+  (Array.isArray(raw) ? raw : []).forEach((e) => {
+    const id = friendsSafeId(e && e.id);
+    const at = Number(e && e.at);
+    if (id && !out.some((x) => x.id === id)) out.push({ id, name: String((e && e.name) || '').replace(/[\u0000-\u001f]/g, '').slice(0, 12) || '名無しのブリーダー', at: Number.isFinite(at) && at > 0 ? at : 0 });
+  });
+  return out.sort((a, b) => b.at - a.at).slice(0, FRIEND_RECENT_MAX);
+};
+// 覚えている一覧へ、いま同じ部屋にいる人を加える(新しい順・同じ人は1件・最大30人)。selfId は自分(覚えない)
+const friendsMergeRecent = (existing, incoming, nowMs, selfId = '') => {
+  const fresh = (Array.isArray(incoming) ? incoming : []).filter((e) => e && friendsSafeId(e.id) && e.id !== selfId).map((e) => ({ id: e.id, name: e.name, at: nowMs }));
+  return friendsNormalizeRecent([...fresh, ...friendsNormalizeRecent(existing)]);
+};
+const friendsRememberRecent = async (incoming) => {
+  try {
+    const saved = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
+    const next = friendsMergeRecent(saved, incoming, Date.now());
+    if (JSON.stringify(next) !== JSON.stringify(saved)) await storeSet(FRIEND_RECENT_KEY, next, false);
+  } catch (error) { /* 覚えられなくても、遊びには影響しない */ }
+};
+// フレンドごとのメモ(自分だけに見える。12文字まで)。{ ブリーダーID: メモ }。壊れていれば空へ倒す
+const friendsCleanNote = (value) => String(value == null ? '' : value).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, FRIEND_NOTE_MAX);
+const friendsNormalizeNotes = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.keys(raw).slice(0, FRIEND_NOTES_COUNT_MAX).forEach((id) => {
+    const safe = friendsSafeId(id);
+    const note = friendsCleanNote(raw[id]);
+    if (safe && note) out[safe] = note;
+  });
+  return out;
+};
+// 招待リンク(コードを渡す): 開くとフレンド申請の確認が出る。base は今開いているページのURL(? 以降なし)
+const friendsInviteLink = (base, code) => {
+  const c = friendsNormalizeCode(code);
+  const url = String(base || '').split('#')[0].split('?')[0];
+  return c && url ? `${url}?friend=${c}` : '';
+};
+// いまのURLの検索部分(?friend=ABCD2345)から、フレンドコードを取り出す(無い・形が違えば空)
+const friendsCodeFromSearch = (search) => {
+  const m = String(search || '').match(/[?&]friend=([^&#]*)/);
+  if (!m) return '';
+  let raw = m[1];
+  try { raw = decodeURIComponent(raw); } catch (error) { return ''; }
+  return friendsNormalizeCode(raw);
+};
+// ---- スコア勝負: 相手の曲ごとのベストと、自分の記録を、同じ曲・同じ難易度で比べる ----
+// friendSongs … 相手の records.rhythm.songs / myBest … normalizeRhythmBestRecords の形
+const friendsCompareScores = (friendSongs, myBest) => (Array.isArray(friendSongs) ? friendSongs : []).map((e) => {
+  const mine = myBest && myBest[e.s] && myBest[e.s][e.d] ? friendsInt(myBest[e.s][e.d].bestScore) : 0;
+  const played = !!(myBest && myBest[e.s] && myBest[e.s][e.d] && myBest[e.s][e.d].played);
+  const diff = mine - e.sc;
+  return { ...e, mine, played, diff, result: !played ? 'none' : diff > 0 ? 'win' : diff < 0 ? 'lose' : 'draw' };
+});
 // ---- フレンド一覧の並べ替え・絞り込み・お気に入り(端末だけの設定。サーバーには送らない) ----
 // お気に入りは新しい保存キーへ、ブリーダーIDの配列だけを覚える。壊れていても空へ倒す
 const FRIEND_FAVORITES_KEY = 'mh_friend_favorites_v1';
@@ -91,7 +152,7 @@ const friendsNormalizeFavorites = (raw) => {
 };
 // 一覧に出す順に並べて返す。①お気に入り ②ログイン中 ③最近開いた順 ④名前。query(名前の一部)があれば絞り込む。
 // views は friendsGroup の friends / looks は breeder_profiles / summaries は friend_profiles(どちらも無い人は空でよい)
-const friendsArrangeList = ({ views, looks, summaries, favorites, query, nowMs }) => {
+const friendsArrangeList = ({ views, looks, summaries, favorites, query, nowMs, notes = null }) => {
   const fav = new Set(Array.isArray(favorites) ? favorites : []);
   const text = String(query == null ? '' : query).trim().toLowerCase();
   const rows = (Array.isArray(views) ? views : []).map((view) => {
@@ -99,8 +160,9 @@ const friendsArrangeList = ({ views, looks, summaries, favorites, query, nowMs }
     const sum = (summaries && summaries[view.otherId]) || null;
     const at = Math.max(sum ? sum.updatedAt || 0 : 0, look.lastSeenAt || 0);
     const seen = friendsPresenceText(sum ? sum.place : null, at, nowMs);
-    return { view, name: look.userName || '名無しのブリーダー', favorite: fav.has(view.otherId), online: seen.online, seenAt: at };
-  }).filter((row) => !text || row.name.toLowerCase().includes(text));
+    const note = (notes && notes[view.otherId]) || '';
+    return { view, name: look.userName || '名無しのブリーダー', note, favorite: fav.has(view.otherId), online: seen.online, seenAt: at };
+  }).filter((row) => !text || row.name.toLowerCase().includes(text) || row.note.toLowerCase().includes(text));
   rows.sort((a, b) => (Number(b.favorite) - Number(a.favorite)) || (Number(b.online) - Number(a.online))
     || (b.seenAt - a.seenAt) || a.name.localeCompare(b.name, 'ja'));
   return rows;

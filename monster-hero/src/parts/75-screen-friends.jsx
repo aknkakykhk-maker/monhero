@@ -60,7 +60,12 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   const [selected, setSelected] = React.useState(null);  // フレンドのプロフィールを開いているとき { otherId, ... }
   const [summary, setSummary] = React.useState({ status: 'idle', entry: null });
   const [confirm, setConfirm] = React.useState(null);    // { kind: 'remove'|'block', otherId }
-  const [targetAsk, setTargetAsk] = React.useState(target);
+  // 申請の相手。ランキングから来たときは breederId が入っている。招待リンクから来たときは code だけなので、読み込みのあとで引き当てる
+  const [targetAsk, setTargetAsk] = React.useState(target && target.breederId ? target : null);
+  const [notes, setNotes] = React.useState({});             // フレンドごとのメモ(自分だけ・端末だけに覚える。12文字まで)
+  const [noteEdit, setNoteEdit] = React.useState(null);     // { id, text }(メモを書き換え中)
+  const [recent, setRecent] = React.useState([]);           // 最近いっしょに遊んだ人(みんなで対戦で同じ部屋にいた人。端末だけに覚える)
+  const [myBest, setMyBest] = React.useState(null);         // 自分のモンヒロビートの記録(スコア勝負で比べるため。読むだけ)
   const [favorites, setFavorites] = React.useState([]);   // お気に入りのフレンド(端末だけに覚える。サーバーには送らない)
   const [query, setQuery] = React.useState('');
   const [profileTab, setProfileTab] = React.useState('overview');   // フレンドのプロフィールの中のタブ(概要 / バトル / 曲 / 集めたもの)
@@ -73,6 +78,46 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const savedNotes = friendsNormalizeNotes(await storeGet(FRIEND_NOTES_KEY, {}, false));
+        const savedRecent = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
+        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        if (cancelled || !aliveRef.current) return;
+        setNotes(savedNotes); setRecent(savedRecent); setMyBest(best);
+        // 最近遊んだ人の最新の名前・アイコンも読んでおく(読めなければ、覚えていた名前のまま出す)
+        const found = await sbFetchFriendProfiles(savedRecent.map((e) => e.id));
+        if (!cancelled && aliveRef.current) setProfiles((prev) => ({ ...found, ...prev }));
+      } catch (error) { /* 読めなくても、一覧そのものは出す */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const saveNote = (id, text) => {
+    const clean = friendsCleanNote(text);
+    const next = { ...notes };
+    if (clean) next[id] = clean; else delete next[id];
+    setNotes(next);
+    setNoteEdit(null);
+    Promise.resolve(storeSet(FRIEND_NOTES_KEY, friendsNormalizeNotes(next), false)).catch(() => {});
+  };
+  // 招待リンクから来たとき(?friend=コード): コードの持ち主を引き当てて、申請の確認を出す
+  React.useEffect(() => {
+    if (!target || !target.code || target.breederId || phase !== 'ready' || !selfId) return undefined;
+    let cancelled = false;
+    (async () => {
+      let id = null;
+      try { id = await sbFindBreederIdByCode(target.code); } catch (error) { if (!cancelled) say(error && error.notReady ? 'notready' : 'error'); }
+      if (cancelled || !aliveRef.current) return;
+      if (typeof onTargetHandled === 'function') onTargetHandled();
+      if (!id) { say('notfound'); setTab('add'); return; }
+      if (id === selfId) { say('self'); setTab('add'); return; }
+      const look = await sbFetchFriendProfiles([id]);
+      if (!cancelled && aliveRef.current) setTargetAsk({ breederId: id, userName: (look[id] || {}).userName || '名無しのブリーダー' });
+    })();
+    return () => { cancelled = true; };
+  }, [phase, selfId]);
   const toggleFavorite = (id) => {
     const next = favorites.includes(id) ? favorites.filter((x) => x !== id) : friendsNormalizeFavorites([id, ...favorites]);
     setFavorites(next);
@@ -183,6 +228,21 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     const entry = await sbFetchFriendRhythmSummary(view.otherId);
     if (aliveRef.current) setSummary({ status: 'done', entry });
   };
+  // 招待リンク(開くだけでフレンド申請の確認が出る)。共有の窓が使えない端末では、リンクをコピーする
+  const inviteLink = () => friendsInviteLink(typeof window !== 'undefined' ? window.location.href : '', myCode);
+  const shareLink = async () => {
+    const url = inviteLink();
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) { await navigator.share({ title: 'モンスターヒーロー', text: 'フレンドになろう！ このリンクを開くと申請できるよ', url }); return; }
+      await navigator.clipboard.writeText(url);
+      setNotice({ text: '招待リンクをコピーしました。LINEなどに貼って送ってください', tone: 'ok' });
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;   // 共有をやめたときは何も言わない
+      setNotice({ text: 'リンクを共有できませんでした。コードを伝えてください', tone: 'warn' });
+    }
+  };
+  const requestRecent = (id) => run(() => sbSendFriendRequest(selfId, id));
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(myCode);
@@ -244,6 +304,18 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                 <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
                 <span data-friend-presence={seen.online ? 'online' : 'offline'} className={`text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>
                 {sum && sum.message ? <p data-friend-message className="max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100">「{sum.message}」</p> : null}
+                {noteEdit && noteEdit.id === selected.otherId ? (
+                  <div data-friend-note-form className="flex w-full max-w-[280px] gap-1">
+                    <input type="text" data-friend-note-input value={noteEdit.text} maxLength={FRIEND_NOTE_MAX} autoComplete="off" spellCheck={false} aria-label="フレンドのメモ"
+                      onChange={(event) => setNoteEdit({ id: noteEdit.id, text: event.target.value })} placeholder="あだ名・メモ"
+                      className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-black/40 px-3 text-center text-[13px] font-bold text-white placeholder:text-slate-600"/>
+                    <button type="button" data-friend-note-save onClick={() => saveNote(noteEdit.id, noteEdit.text)} className={`${btn} shrink-0 px-3 border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>保存</button>
+                    <button type="button" aria-label="メモをやめる" onClick={() => setNoteEdit(null)} className={`${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`}>×</button>
+                  </div>
+                ) : (
+                  <button type="button" data-friend-note-edit onClick={() => setNoteEdit({ id: selected.otherId, text: notes[selected.otherId] || '' })}
+                    className="max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95">📝 {notes[selected.otherId] || 'メモを書く（自分だけに見えます）'}</button>
+                )}
               </div>
               <ScreenTabs className="mt-3" value={profileTab} onChange={setProfileTab} items={[
                 { id: 'overview', label: '概要' }, { id: 'battle', label: 'バトル' }, { id: 'songs', label: '曲のベスト' }, { id: 'collection', label: '集めたもの' }]}/>
@@ -310,10 +382,21 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               })()}
               {profileTab === 'songs' && sum && sum.records && (() => {
                 const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
-                const songs = sum.records.rhythm.songs.map((e) => ({ e, song: RHYTHM_SONGS.find((x) => x.songId === e.s) })).filter((x) => x.song);
+                const cmp = friendsCompareScores(sum.records.rhythm.songs, myBest);
+                const songs = cmp.map((e) => ({ e, song: RHYTHM_SONGS.find((x) => x.songId === e.s) })).filter((x) => x.song);
+                const wins = songs.filter((x) => x.e.result === 'win').length;
+                const loses = songs.filter((x) => x.e.result === 'lose').length;
+                const draws = songs.filter((x) => x.e.result === 'draw').length;
+                const resultStyle = { win: 'bg-emerald-500/25 text-emerald-200', lose: 'bg-rose-500/25 text-rose-200', draw: 'bg-sky-500/25 text-sky-200', none: 'bg-slate-700/60 text-slate-300' };
                 return (
                   <div data-friend-songs className="mt-2 flex flex-col gap-2">
                     <p className="px-1 text-[10px] font-black text-slate-400">遊んだ曲 {sum.records.rhythm.played}曲（スコアの高い順に{FRIEND_RECORD_SONG_MAX}曲まで）</p>
+                    {songs.length > 0 && (
+                      <div data-friend-versus className={`${SCREEN_PANEL_FLAT_CLASS} text-center`}>
+                        <small className="block text-[9px] font-bold text-slate-400">スコア勝負（同じ曲・同じ難易度で、自分と比べます）</small>
+                        <b className="text-[14px] font-black text-white"><span className="text-emerald-300">{wins}勝</span>　<span className="text-rose-300">{loses}敗</span>{draws > 0 ? <span className="text-sky-300">　{draws}分</span> : null}</b>
+                      </div>
+                    )}
                     {songs.length === 0 && <p className="px-1 py-4 text-center text-[11px] font-bold text-slate-500">まだ曲の記録がありません</p>}
                     {songs.map(({ e, song }) => (
                       <div key={e.s} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
@@ -321,9 +404,14 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                           <b className="block truncate text-[12px] font-black text-white">{rhythmSongFullName(song)}</b>
                           <small className="block text-[9px] font-bold text-slate-400">{e.d}{e.f > 0 ? `　★${flagText[e.f]}` : ''}</small>
                         </div>
-                        <strong className="shrink-0 text-[13px] font-black tabular-nums text-pink-200">{e.sc.toLocaleString()}</strong>
+                        <div className="shrink-0 text-right">
+                          <strong className="block text-[13px] font-black tabular-nums text-pink-200">{e.sc.toLocaleString()}</strong>
+                          <small data-friend-versus-row={e.result} className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[9px] font-black ${resultStyle[e.result]}`}>
+                            {e.result === 'none' ? 'まだ遊んでいません' : e.result === 'win' ? `自分 ${e.mine.toLocaleString()}　勝ち +${e.diff.toLocaleString()}` : e.result === 'lose' ? `自分 ${e.mine.toLocaleString()}　あと${(-e.diff).toLocaleString()}点` : `自分 ${e.mine.toLocaleString()}　同点`}
+                          </small>
+                        </div>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、遊んだいちばん上の難易度の記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、相手が遊んだいちばん上の難易度の記録です。自分の同じ難易度の記録と比べています。</p>
                   </div>);
               })()}
               {profileTab === 'collection' && sum && sum.records && (() => {
@@ -360,7 +448,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
 
   // ---- 一覧(3つのタブ) ----
   // フレンドの一覧(お気に入り → ログイン中 → 最近開いた順。名前で絞り込める)
-  const arranged = friendsArrangeList({ views: groups.friends, looks: profiles, summaries, favorites, query, nowMs: now });
+  const arranged = friendsArrangeList({ views: groups.friends, looks: profiles, summaries, favorites, query, nowMs: now, notes });
   const onlineCount = arranged.filter((row) => row.online).length;
   const person = (view, right, extra = null) => {
     const look = lookOf(view.otherId);
@@ -369,6 +457,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
         {avatar(view.otherId, 'h-10 w-10')}
         <div className="min-w-0 flex-1">
           <b className="block truncate text-[12px] font-black text-white">{look.userName}</b>
+          {notes[view.otherId] ? <small data-friend-note-label className="block truncate text-[9px] font-bold text-amber-200">📝 {notes[view.otherId]}</small> : null}
           {(() => {
             const sum = summaries[view.otherId];
             const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
@@ -445,6 +534,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <ScreenSectionLabel>あなたのフレンドコード</ScreenSectionLabel>
               <p data-friend-code className="my-2 text-center text-3xl font-black tracking-widest text-pink-200">{myCode ? friendsFormatCode(myCode) : '— — — —'}</p>
               <button type="button" disabled={!myCode} onClick={copyCode} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>コードをコピー</button>
+              <button type="button" data-friend-share-link disabled={!myCode} onClick={shareLink} className={`${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`}>招待リンクを送る（LINEなど）</button>
               <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。</p>
             </div>
             <div className={SCREEN_PANEL_CLASS}>
@@ -456,6 +546,27 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <button type="button" disabled={busy || !friendsNormalizeCode(codeInput)} onClick={sendByCode} className={`${btn} mt-2 w-full border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>フレンド申請を送る</button>
               <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">ランキングの名前をタップしても、その人に申請できます。</p>
             </div>
+            {(() => {
+              const related = new Set([...groups.friends, ...groups.incoming, ...groups.outgoing, ...groups.blocked].map((view) => view.otherId));
+              const candidates = recent.filter((e) => e.id !== selfId && !related.has(e.id)).slice(0, 10);
+              if (candidates.length === 0) return null;
+              return (
+                <div data-friend-recent className={SCREEN_PANEL_CLASS}>
+                  <ScreenSectionLabel>最近いっしょに遊んだ人</ScreenSectionLabel>
+                  <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">みんなで対戦で同じ部屋にいた人です。気が合ったら、申請してみましょう。</p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {candidates.map((e) => {
+                      const look = profiles[e.id];
+                      return (
+                        <div key={e.id} data-friend-recent-row={e.id} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
+                          {avatar(e.id, 'h-9 w-9')}
+                          <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{(look && look.userName) || e.name}</b>
+                          <button type="button" disabled={busy} onClick={() => requestRecent(e.id)} className={`${btn} shrink-0 px-3 border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>申請</button>
+                        </div>);
+                    })}
+                  </div>
+                </div>);
+            })()}
           </div>
         )}
       </div>

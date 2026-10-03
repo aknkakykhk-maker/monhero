@@ -396,12 +396,12 @@ check('氷海の支配者は、持っている子ごとに敵と同じ距離か�
     && has('const withIce=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,id,iceLockActive,slotIdx,enemyDist);')
     && has('const extra=iceExtraRateAt(slotIdx);'));
 check('全員へ配る自動回復には氷海ぶんを混ぜない',
-  has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate)'));
+  has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
 // ★ハムの「同時使用可能枚数+1」とスエゾーの「眼力」は、狙われた／攻撃した の枠に収まらないので別に見る
 // ★2026-09-22: 1体ぶんの上限に baseCardLimit(そのターンの総数)を使っていたので、
 //   盤面に👑が2体いると5枚まで使えていた。「1 ＋ その子の👑 ＋ きき ＋ その枠の連携」で数える
 check('札の枚数ボーナスは持っている子だけが1枚多く使える',
-  has('const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0);')
+  has('const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0)')
     && has('      return Math.min(cardLimit,own);'));
 check('盤面にいる持ち主の人数ぶんを heroCardBonus に数える',
   has('? tacticsAliveSlots(tacticsUnits).filter(i => heroCardBonusOf(tacticsUnits[i]?.id) > 0).length'));

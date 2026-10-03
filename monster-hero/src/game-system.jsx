@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e697e27b3cfa0e11
+// generated-sha256: c53420d79b11f5e5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 18:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 18:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11257,8 +11257,11 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   // ★exCombos … タクティクスのEX「スイーツパラダイス」(2026-09-29 ユーザー指示「連撃30%×4」)。
   //   使ったターンのその子の攻撃へ { rate } の連撃を count 回足す。連撃ダメージ補正も乗る。
   //   4本ぶん専用モーションを繰り返すと長くなるので、数字だけを続けて出す(noAnim)。ほかのモードは渡さないので常に null
-  if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
-    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, exCombos.label || 'スイーツパラダイス', true);
+  //   2026-10-03: 配列でも渡せる(自分のEXの連撃と、スネグーラチカのプレゼントの連撃を別々に重ねる)
+  for (const ec of (Array.isArray(exCombos) ? exCombos : [exCombos])) {
+    if (ec && ec.count > 0 && ec.rate > 0) {
+      for (let i = 0; i < ec.count; i++) combo(ec.rate + comboDmgBonus, ec.label || 'スイーツパラダイス', true);
+    }
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
@@ -19698,7 +19701,7 @@ scheduleTick();};
     {runOk&&<div data-rhythm-result-hero-gains-run className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/60 px-2 py-1.5">
       <div className="flex items-baseline justify-between gap-1"><span className="text-[9px] font-black text-fuchsia-200">クイック∞周回</span><b className="text-[15px] font-black leading-none text-white">+{quickRunAward.loops}周</b></div>
       {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}</div>}
-      {quickRunAward.multiScale>1&&<div className="mt-0.5 text-[9px] font-black text-cyan-200">👥 人数ボーナス ×{quickRunAward.multiScale}</div>}
+      {quickRunAward.multiScale>1&&<div className="mt-0.5 text-[9px] font-black text-cyan-200">👥 対戦ボーナス ×{quickRunAward.multiScale}</div>}
       <div className="mt-0.5 text-[9px] font-black text-slate-300">{quickRunAward.fromLoop}周目 → {quickRunAward.toLoop}周目</div>
       <div className="mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300">
         <span>経験値 <b className="text-cyan-300">+{Number(quickRunAward.xp||0).toLocaleString()}</b></span>
@@ -19712,7 +19715,7 @@ scheduleTick();};
       <div className="flex items-baseline justify-between gap-1"><span className="text-[9px] font-black text-rose-200">クイック∞周回</span><b className="text-[15px] font-black leading-none text-rose-200">+0周</b></div>
       <p className="mt-0.5 text-[9px] font-bold leading-snug text-rose-100">ライフが0になったので周回クリアになりません（クリアなら +{Number(quickRunAward.baseLoops||0)}周）</p>
     </div>}
-    {beat&&<div data-rhythm-result-hero-gains-beat className="flex items-baseline justify-between gap-1 rounded-xl border border-violet-400/50 bg-violet-950/60 px-2 py-1.5"><span className="whitespace-nowrap text-[9px] font-black text-violet-200">🎟️ ビートP{beat.target?' ×1.5':''}{beat.lengthBonusPercent>0&&<span data-rhythm-result-hero-gains-beat-length className="block text-sky-200">長さ+{beat.lengthBonusPercent}%</span>}{beat.multiScale>1&&<span className="block text-cyan-200">👥 人数 ×{beat.multiScale}</span>}</span><b className="text-[15px] font-black leading-none text-white">+{beat.amount.toLocaleString()}P</b></div>}
+    {beat&&<div data-rhythm-result-hero-gains-beat className="flex items-baseline justify-between gap-1 rounded-xl border border-violet-400/50 bg-violet-950/60 px-2 py-1.5"><span className="whitespace-nowrap text-[9px] font-black text-violet-200">🎟️ ビートP{beat.target?' ×1.5':''}{beat.lengthBonusPercent>0&&<span data-rhythm-result-hero-gains-beat-length className="block text-sky-200">長さ+{beat.lengthBonusPercent}%</span>}{beat.multiScale>1&&<span className="block text-cyan-200">👥 対戦 ×{beat.multiScale}</span>}</span><b className="text-[15px] font-black leading-none text-white">+{beat.amount.toLocaleString()}P</b></div>}
     {luck&&<div data-rhythm-result-hero-gains-luck className="flex items-baseline justify-between gap-1 rounded-xl border border-lime-300/50 bg-lime-950/50 px-2 py-1.5"><span className="text-[9px] font-black text-lime-200">🍀 ラッキー</span><b className="text-[13px] font-black leading-none tabular-nums text-white">{Number(luck.points).toLocaleString()}pt</b></div>}
   </div>}
 </aside>;})()}
@@ -19825,7 +19828,7 @@ scheduleTick();};
   {/* イベントの対象曲だけ、ふだんの2倍ではなく3倍で入る(2026-09-11・ユーザー指示)。
       入った周回数だけでは「この曲だから多かった」と気づけないので、その場で言う */}
   {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
-  {quickRunAward.multiScale>1&&<div data-rhythm-result-quick-run-multi className="mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200">👥 みんなで対戦の人数ボーナス ×{quickRunAward.multiScale}</div>}
+  {quickRunAward.multiScale>1&&<div data-rhythm-result-quick-run-multi className="mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{quickRunAward.multiScale}</div>}
   <div className="mt-1 text-[11px] font-black text-slate-200">{quickRunAward.fromLoop}周目 <span className="text-slate-500">→</span> {quickRunAward.toLoop}周目</div>
   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-300">
     <span>経験値 <b className="text-cyan-300">+{Number(quickRunAward.xp||0).toLocaleString()}</b></span>
@@ -19841,7 +19844,7 @@ scheduleTick();};
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
 {(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
-{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦の人数ボーナス ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
+{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
 {(()=>{const sections=Array.isArray(result.liveLog)?result.liveLog:[];if(!sections.some(section=>section.total>0))return null;const worst=sections.filter(section=>section.total>=3&&(section.bad+section.miss)>0).sort((a,b)=>(b.bad+b.miss)/b.total-(a.bad+a.miss)/a.total)[0]||null;return <div data-rhythm-live-log className="mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2">
   <div className="flex items-baseline justify-between"><b className="text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
@@ -20975,6 +20978,12 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   selfTakenRate … (multiBuff) 効いているあいだ、その子が受けるダメージを何割減らすか(0.2 なら×0.8。ほかの軽減と掛け算で重なる)
 //   critRateRate … (multiBuff) 会心率を何割増やすか(0.5 なら×1.5。足し算ではなく、いまの会心率にかける)
 //   critDmgRate  … (multiBuff) 会心ダメージを何割増やすか(0.3 なら×1.3。足し算ではなく、いまの会心ダメージ倍率にかける)
+//   distMult  … (multiBuff) 効いているあいだ、その子の攻撃の距離補正をこの値に固定する(0なら変えない。1.5 なら敵と同じ距離のときと同じ)
+//   guaranteeUnique … true なら、効いているあいだ毎ターン、その子の固有技カードが手札に必ず出る(ピクシー)
+//   cardBonus … (stage) 効いているあいだ、1ターンに使えるカード枚数(盤面ぜんぶ・その子自身)を何枚増やすか
+//   voltage   … (stage) { max, dmg, heal, guts } 味方がカードを1枚使うたびに1たまる。1段階ごとに 与ダメ+dmg・回復量+heal・ガッツの自動回復+guts(全員)
+//   usesPerWave … true なら、回数がWAVEのはじめに戻る(maxUses は1WAVEぶん)
+//   present   … (present) スネグーラチカのプレゼントの数字。fixedGuts=必ず入る全員のガッツ(上限の割合) / jackpot=大当たりの確率 / dmg・taken・crit・heal・guts=ランダム1種の効き目 / combo={count,rate}
 //   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
 //   dodgeComboRate … 回避するたびに増える連撃の rate(0.1 なら、回避1回ごとに与ダメージ10%の連撃が1回増える)
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
@@ -21076,6 +21085,37 @@ const TACTICS_EX_SKILLS = Object.freeze({
     rates: Object.freeze({ def: 0.3 }), critRateRate: 0.5, critDmgRate: 0.3, extraCombos: Object.freeze({ count: 5, rate: 0.05 }),
     effect: 'multiBuff',
   }),
+  // ★2026-10-03 ユーザーの案(数字は仮。「決め打ちしないで細かい数値は調整したい」)。ピクシー「お気に入りの魔法」。
+  //   毎ターン固有技が手札に必ず出る。魔法空間(次ターンの使用ガッツ0)がその子の枠だけに効くので、連発できる。
+  //   距離補正は ×1.5 に固定(敵と同じ距離から攻撃したときと同じ。エイキの ×1.7 より低い)。併用は指定が無かったので「できる」
+  Pixie: Object.freeze({
+    id: 'pixie_favorite_magic',
+    name: 'お気に入りの魔法',
+    desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    distMult: 1.5, guaranteeUnique: true,
+    effect: 'multiBuff',
+  }),
+  // ★2026-10-03 ミーア「オン・ステージ！」(数字は仮)。ボルテージは味方がカードを使うたびに1たまる(最大10)。
+  //   1段階ごとに 味方全員の与ダメージ+3%・回復カードの回復量+5%・ターン終わりのガッツ自動回復+2%。終わると0に戻る
+  Mia: Object.freeze({
+    id: 'mia_on_stage',
+    name: 'オン・ステージ！',
+    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
+    cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02 }),
+    effect: 'stage',
+  }),
+  // ★2026-10-03 スネグーラチカ「クリスマスプレゼント」(数字は仮)。各WAVE1回。必ず全員のガッツが少し戻り、
+  //   そのうえランダムで6種のうち1つ(低確率の大当たりは6つ全部)。持続のある効果は2ターン
+  Snegurochka: Object.freeze({
+    id: 'snegurochka_present',
+    name: 'クリスマスプレゼント',
+    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%戻り、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツがさらに上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 2,
+    present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
+    effect: 'present',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -21136,7 +21176,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -21187,6 +21227,20 @@ const normalizeTacticsExDef = (raw) => {
     partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
     partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
     dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
+    distMult: Math.max(0, Number.isFinite(Number(raw.distMult)) ? Number(raw.distMult) : 0),
+    guaranteeUnique: raw.guaranteeUnique === true,
+    cardBonus: Math.min(3, Math.max(0, tacticsSafeInt(raw.cardBonus, 0))),
+    voltage: raw.voltage && typeof raw.voltage === 'object' && tacticsSafeInt(raw.voltage.max, 0) > 0
+      ? { max: Math.min(99, tacticsSafeInt(raw.voltage.max, 0)),
+        dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0) } : null,
+    usesPerWave: raw.usesPerWave === true,
+    present: raw.present && typeof raw.present === 'object' ? (() => {
+      const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
+      const c = raw.present.combo;
+      return { fixedGuts: n(raw.present.fixedGuts), jackpot: Math.min(1, n(raw.present.jackpot)), dmg: n(raw.present.dmg), taken: Math.min(0.9, n(raw.present.taken)),
+        crit: n(raw.present.crit), heal: n(raw.present.heal), guts: n(raw.present.guts),
+        combo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate) } : null };
+    })() : null,
     lifeCostRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.lifeCostRate)) ? Number(raw.lifeCostRate) : 0)),
     dmgRate: Math.max(0, Number.isFinite(Number(raw.dmgRate)) ? Number(raw.dmgRate) : 0),
     selfTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.selfTakenRate)) ? Number(raw.selfTakenRate) : 0)),
@@ -21319,6 +21373,9 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
+      distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, cardBonus: def.cardBonus || 0,
+      voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
+      presentCfg: def.present ? { ...def.present } : null, present: null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -21426,7 +21483,106 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
   if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot];
   const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
-  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critDmg: 1 + num(own.critDmgRate) };
+  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critDmg: 1 + num(own.critDmgRate), distMult: num(own.distMult) };
+};
+// ---- ピクシー(guaranteeUnique): 効いているあいだ、毎ターン固有技カードを手札へ出す ----
+// 出す子の枠(効いていなければ null)。次のターンに効くかを見たいときは、now にそのターンを渡す
+const tacticsExUniqueGuaranteeSlot = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const hit = Object.keys(effects).map(Number).find(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && effects[slot].guaranteeUnique === true && tacticsExActiveEffect(state, slot, unit.id, now) === 'multiBuff';
+  });
+  return hit == null ? null : hit;
+};
+// 手札に predicate を満たすカードが無ければ、山札→捨て札の順で探して手札へ入れる。
+// 手札がいっぱい(5枚)なら、いちばん後ろの別のカードを山札の底へ戻して入れ替える。見つからなければそのまま
+const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handMax = 5) => {
+  const h = Array.isArray(hand) ? hand.slice() : [], d = Array.isArray(deck) ? deck.slice() : [], g = Array.isArray(graveyard) ? graveyard.slice() : [];
+  if (h.some(predicate)) return { hand: h, deck: d, graveyard: g, moved: false };
+  let card = null;
+  let at = d.findIndex(predicate);
+  if (at >= 0) card = d.splice(at, 1)[0];
+  else { at = g.findIndex(predicate); if (at >= 0) card = g.splice(at, 1)[0]; }
+  if (!card) return { hand: h, deck: d, graveyard: g, moved: false };
+  if (h.length >= handMax) { const out = h.pop(); if (out) d.push(out); }
+  h.push(card);
+  return { hand: h, deck: d, graveyard: g, moved: true };
+};
+// ---- ミーア(stage): カード枚数+1・ボルテージ ----
+const tacticsExStageEntries = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).map(Number).filter(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'stage';
+  }).map(slot => ({ slot, mine: effects[slot] }));
+};
+// 1ターンに使えるカード枚数(盤面ぜんぶ)へ足す数
+const tacticsExCardBonusTotal = (state, units, now) => tacticsExStageEntries(state, units, now).reduce((sum, e) => sum + tacticsSafeInt(e.mine.cardBonus, 0), 0);
+// その子自身が1ターンに使えるカード枚数へ足す数(効果を使った子だけ)
+const tacticsExCardBonusAt = (state, units, slot, now) => {
+  const hit = tacticsExStageEntries(state, units, now).find(e => e.slot === slot);
+  return hit ? tacticsSafeInt(hit.mine.cardBonus, 0) : 0;
+};
+// いまのボルテージと、その強化(効いていなければ null)。dmgMult/healMult は掛け算、gutsAdd はガッツの自動回復率へ足す
+const tacticsExVoltageOf = (state, units, now) => {
+  const hit = tacticsExStageEntries(state, units, now).find(e => e.mine.voltageCfg);
+  if (!hit) return null;
+  const cfg = hit.mine.voltageCfg, v = Math.min(tacticsSafeInt(cfg.max, 0), Math.max(0, tacticsSafeInt(hit.mine.voltage, 0)));
+  return { voltage: v, max: tacticsSafeInt(cfg.max, 0), dmgMult: 1 + v * (Number(cfg.dmg) || 0), healMult: 1 + v * (Number(cfg.heal) || 0), gutsAdd: v * (Number(cfg.guts) || 0) };
+};
+// 味方がカードを n 枚使ったぶん、ボルテージをためる(上限まで。効いていなければ状態をそのまま返す)
+const addTacticsExVoltage = (state, units, now, n) => {
+  const safe = normalizeTacticsExState(state);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  const entries = tacticsExStageEntries(safe, units, now).filter(e => e.mine.voltageCfg);
+  if (!entries.length || add <= 0) return safe;
+  const effects = { ...safe.effects };
+  entries.forEach(e => { effects[e.slot] = { ...e.mine, voltage: Math.min(tacticsSafeInt(e.mine.voltageCfg.max, 0), tacticsSafeInt(e.mine.voltage, 0) + add) }; });
+  return { ...safe, effects };
+};
+// ---- スネグーラチカ(present): クリスマスプレゼント ----
+const TACTICS_EX_PRESENT_KINDS = Object.freeze(['dmg', 'taken', 'combo', 'heal', 'guts', 'crit']);
+const TACTICS_EX_PRESENT_LABELS = Object.freeze({ dmg: '与ダメージアップ', taken: '被ダメージダウン', combo: '連撃付与', heal: 'ライフ回復', guts: 'ガッツ追加回復', crit: '会心率アップ' });
+// 乱数2つ(0以上1未満)から中身を決める。r1 が大当たりの確率より小さければ全部、そうでなければ r2 で1種類
+const rollTacticsExPresent = (r1, r2, jackpot = 0.1) => (Number(r1) < jackpot
+  ? { jackpot: true, kinds: TACTICS_EX_PRESENT_KINDS.slice() }
+  : { jackpot: false, kinds: [TACTICS_EX_PRESENT_KINDS[Math.min(TACTICS_EX_PRESENT_KINDS.length - 1, Math.max(0, Math.floor(Number(r2) * TACTICS_EX_PRESENT_KINDS.length)))]] });
+// 決まった中身を、使った子の効果へ控える(持続のある4種(与ダメ・被ダメ・連撃・会心率)は効いているあいだ見る。回復・ガッツはその場で入れる)
+const setTacticsExPresent = (state, slot, roll) => {
+  const safe = normalizeTacticsExState(state);
+  const mine = safe.effects[slot];
+  if (!mine || !roll || !Array.isArray(roll.kinds)) return safe;
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, present: { jackpot: roll.jackpot === true, kinds: roll.kinds.filter(k => TACTICS_EX_PRESENT_KINDS.includes(k)) } } } };
+};
+// いま効いているプレゼントの、味方全員への効き目(効いていなければ全部1・連撃は null)
+const tacticsExPresentOf = (state, units, now) => {
+  const out = { dmg: 1, taken: 1, critRate: 1, combo: null, kinds: [], jackpot: false };
+  const effects = normalizeTacticsExState(state).effects;
+  Object.keys(effects).map(Number).forEach(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    const mine = effects[slot];
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'present' || !mine.present || !mine.presentCfg) return;
+    const cfg = mine.presentCfg, kinds = mine.present.kinds || [];
+    out.kinds = kinds.slice(); out.jackpot = mine.present.jackpot === true;
+    if (kinds.includes('dmg')) out.dmg *= 1 + (Number(cfg.dmg) || 0);
+    if (kinds.includes('taken')) out.taken *= 1 - Math.min(0.9, Number(cfg.taken) || 0);
+    if (kinds.includes('crit')) out.critRate *= 1 + (Number(cfg.crit) || 0);
+    if (kinds.includes('combo') && cfg.combo && cfg.combo.count > 0 && cfg.combo.rate > 0) out.combo = { count: tacticsSafeInt(cfg.combo.count, 0), rate: Number(cfg.combo.rate), label: 'クリスマスプレゼント' };
+  });
+  return out;
+};
+// WAVEのはじめに、「各WAVEで回数が戻る」EX(スネグーラチカ)の回数を0へ戻す(変わらなければ同じ state を返す)
+const resetTacticsExWaveUses = (state) => {
+  const safe = normalizeTacticsExState(state);
+  const uses = { ...safe.uses };
+  let changed = false;
+  Object.keys(uses).forEach(key => {
+    const rec = uses[key];
+    const def = rec && TACTICS_EX_SKILLS[rec.monId];
+    if (def && def.usesPerWave && tacticsSafeInt(rec.count, 0) > 0) { uses[key] = { ...rec, count: 0 }; changed = true; }
+  });
+  return changed ? { ...safe, uses } : state;
 };
 // 血踊が効いている子が敵の攻撃を回避したことを数える(効いていなければ状態をそのまま返す)
 const recordTacticsExDodge = (state, units, slot, now) => {
@@ -21597,6 +21753,67 @@ const friendsFaceIconOf = (baseId) => {
   const byPath = items.find((entry) => bare(entry.icon) === bare(faceSrc));
   return byPath ? { src: byPath.icon, id: byPath.id } : { src: faceSrc, id: baseId };
 };
+// ---- 最近いっしょに遊んだ人 / フレンドのメモ(どちらも端末だけに覚える。サーバーへは送らない) ----
+const FRIEND_RECENT_KEY = 'mh_friend_recent_v1';
+const FRIEND_RECENT_MAX = 30;
+const FRIEND_NOTES_KEY = 'mh_friend_notes_v1';
+const FRIEND_NOTE_MAX = 12;
+const FRIEND_NOTES_COUNT_MAX = 200;
+const friendsNormalizeRecent = (raw) => {
+  const out = [];
+  (Array.isArray(raw) ? raw : []).forEach((e) => {
+    const id = friendsSafeId(e && e.id);
+    const at = Number(e && e.at);
+    if (id && !out.some((x) => x.id === id)) out.push({ id, name: String((e && e.name) || '').replace(/[\u0000-\u001f]/g, '').slice(0, 12) || '名無しのブリーダー', at: Number.isFinite(at) && at > 0 ? at : 0 });
+  });
+  return out.sort((a, b) => b.at - a.at).slice(0, FRIEND_RECENT_MAX);
+};
+// 覚えている一覧へ、いま同じ部屋にいる人を加える(新しい順・同じ人は1件・最大30人)。selfId は自分(覚えない)
+const friendsMergeRecent = (existing, incoming, nowMs, selfId = '') => {
+  const fresh = (Array.isArray(incoming) ? incoming : []).filter((e) => e && friendsSafeId(e.id) && e.id !== selfId).map((e) => ({ id: e.id, name: e.name, at: nowMs }));
+  return friendsNormalizeRecent([...fresh, ...friendsNormalizeRecent(existing)]);
+};
+const friendsRememberRecent = async (incoming) => {
+  try {
+    const saved = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
+    const next = friendsMergeRecent(saved, incoming, Date.now());
+    if (JSON.stringify(next) !== JSON.stringify(saved)) await storeSet(FRIEND_RECENT_KEY, next, false);
+  } catch (error) { /* 覚えられなくても、遊びには影響しない */ }
+};
+// フレンドごとのメモ(自分だけに見える。12文字まで)。{ ブリーダーID: メモ }。壊れていれば空へ倒す
+const friendsCleanNote = (value) => String(value == null ? '' : value).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, FRIEND_NOTE_MAX);
+const friendsNormalizeNotes = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.keys(raw).slice(0, FRIEND_NOTES_COUNT_MAX).forEach((id) => {
+    const safe = friendsSafeId(id);
+    const note = friendsCleanNote(raw[id]);
+    if (safe && note) out[safe] = note;
+  });
+  return out;
+};
+// 招待リンク(コードを渡す): 開くとフレンド申請の確認が出る。base は今開いているページのURL(? 以降なし)
+const friendsInviteLink = (base, code) => {
+  const c = friendsNormalizeCode(code);
+  const url = String(base || '').split('#')[0].split('?')[0];
+  return c && url ? `${url}?friend=${c}` : '';
+};
+// いまのURLの検索部分(?friend=ABCD2345)から、フレンドコードを取り出す(無い・形が違えば空)
+const friendsCodeFromSearch = (search) => {
+  const m = String(search || '').match(/[?&]friend=([^&#]*)/);
+  if (!m) return '';
+  let raw = m[1];
+  try { raw = decodeURIComponent(raw); } catch (error) { return ''; }
+  return friendsNormalizeCode(raw);
+};
+// ---- スコア勝負: 相手の曲ごとのベストと、自分の記録を、同じ曲・同じ難易度で比べる ----
+// friendSongs … 相手の records.rhythm.songs / myBest … normalizeRhythmBestRecords の形
+const friendsCompareScores = (friendSongs, myBest) => (Array.isArray(friendSongs) ? friendSongs : []).map((e) => {
+  const mine = myBest && myBest[e.s] && myBest[e.s][e.d] ? friendsInt(myBest[e.s][e.d].bestScore) : 0;
+  const played = !!(myBest && myBest[e.s] && myBest[e.s][e.d] && myBest[e.s][e.d].played);
+  const diff = mine - e.sc;
+  return { ...e, mine, played, diff, result: !played ? 'none' : diff > 0 ? 'win' : diff < 0 ? 'lose' : 'draw' };
+});
 // ---- フレンド一覧の並べ替え・絞り込み・お気に入り(端末だけの設定。サーバーには送らない) ----
 // お気に入りは新しい保存キーへ、ブリーダーIDの配列だけを覚える。壊れていても空へ倒す
 const FRIEND_FAVORITES_KEY = 'mh_friend_favorites_v1';
@@ -21609,7 +21826,7 @@ const friendsNormalizeFavorites = (raw) => {
 };
 // 一覧に出す順に並べて返す。①お気に入り ②ログイン中 ③最近開いた順 ④名前。query(名前の一部)があれば絞り込む。
 // views は friendsGroup の friends / looks は breeder_profiles / summaries は friend_profiles(どちらも無い人は空でよい)
-const friendsArrangeList = ({ views, looks, summaries, favorites, query, nowMs }) => {
+const friendsArrangeList = ({ views, looks, summaries, favorites, query, nowMs, notes = null }) => {
   const fav = new Set(Array.isArray(favorites) ? favorites : []);
   const text = String(query == null ? '' : query).trim().toLowerCase();
   const rows = (Array.isArray(views) ? views : []).map((view) => {
@@ -21617,8 +21834,9 @@ const friendsArrangeList = ({ views, looks, summaries, favorites, query, nowMs }
     const sum = (summaries && summaries[view.otherId]) || null;
     const at = Math.max(sum ? sum.updatedAt || 0 : 0, look.lastSeenAt || 0);
     const seen = friendsPresenceText(sum ? sum.place : null, at, nowMs);
-    return { view, name: look.userName || '名無しのブリーダー', favorite: fav.has(view.otherId), online: seen.online, seenAt: at };
-  }).filter((row) => !text || row.name.toLowerCase().includes(text));
+    const note = (notes && notes[view.otherId]) || '';
+    return { view, name: look.userName || '名無しのブリーダー', note, favorite: fav.has(view.otherId), online: seen.online, seenAt: at };
+  }).filter((row) => !text || row.name.toLowerCase().includes(text) || row.note.toLowerCase().includes(text));
   rows.sort((a, b) => (Number(b.favorite) - Number(a.favorite)) || (Number(b.online) - Number(a.online))
     || (b.seenAt - a.seenAt) || a.name.localeCompare(b.name, 'ja'));
   return rows;
@@ -31077,13 +31295,14 @@ function BattleScreen({
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
                 <dt className="font-bold text-slate-400">使える回数</dt>
-                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（このラン）`}</dd>
+                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
                 {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+                {(exPanel.statusLines||[]).map((t,i)=><React.Fragment key={i}><dt className="font-bold text-slate-400">いまの状態</dt><dd data-tactics-ex-status className="font-black text-fuchsia-200">{t}</dd></React.Fragment>)}
                 {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
@@ -32283,7 +32502,12 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   const [selected, setSelected] = React.useState(null);  // フレンドのプロフィールを開いているとき { otherId, ... }
   const [summary, setSummary] = React.useState({ status: 'idle', entry: null });
   const [confirm, setConfirm] = React.useState(null);    // { kind: 'remove'|'block', otherId }
-  const [targetAsk, setTargetAsk] = React.useState(target);
+  // 申請の相手。ランキングから来たときは breederId が入っている。招待リンクから来たときは code だけなので、読み込みのあとで引き当てる
+  const [targetAsk, setTargetAsk] = React.useState(target && target.breederId ? target : null);
+  const [notes, setNotes] = React.useState({});             // フレンドごとのメモ(自分だけ・端末だけに覚える。12文字まで)
+  const [noteEdit, setNoteEdit] = React.useState(null);     // { id, text }(メモを書き換え中)
+  const [recent, setRecent] = React.useState([]);           // 最近いっしょに遊んだ人(みんなで対戦で同じ部屋にいた人。端末だけに覚える)
+  const [myBest, setMyBest] = React.useState(null);         // 自分のモンヒロビートの記録(スコア勝負で比べるため。読むだけ)
   const [favorites, setFavorites] = React.useState([]);   // お気に入りのフレンド(端末だけに覚える。サーバーには送らない)
   const [query, setQuery] = React.useState('');
   const [profileTab, setProfileTab] = React.useState('overview');   // フレンドのプロフィールの中のタブ(概要 / バトル / 曲 / 集めたもの)
@@ -32296,6 +32520,46 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const savedNotes = friendsNormalizeNotes(await storeGet(FRIEND_NOTES_KEY, {}, false));
+        const savedRecent = friendsNormalizeRecent(await storeGet(FRIEND_RECENT_KEY, [], false));
+        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        if (cancelled || !aliveRef.current) return;
+        setNotes(savedNotes); setRecent(savedRecent); setMyBest(best);
+        // 最近遊んだ人の最新の名前・アイコンも読んでおく(読めなければ、覚えていた名前のまま出す)
+        const found = await sbFetchFriendProfiles(savedRecent.map((e) => e.id));
+        if (!cancelled && aliveRef.current) setProfiles((prev) => ({ ...found, ...prev }));
+      } catch (error) { /* 読めなくても、一覧そのものは出す */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const saveNote = (id, text) => {
+    const clean = friendsCleanNote(text);
+    const next = { ...notes };
+    if (clean) next[id] = clean; else delete next[id];
+    setNotes(next);
+    setNoteEdit(null);
+    Promise.resolve(storeSet(FRIEND_NOTES_KEY, friendsNormalizeNotes(next), false)).catch(() => {});
+  };
+  // 招待リンクから来たとき(?friend=コード): コードの持ち主を引き当てて、申請の確認を出す
+  React.useEffect(() => {
+    if (!target || !target.code || target.breederId || phase !== 'ready' || !selfId) return undefined;
+    let cancelled = false;
+    (async () => {
+      let id = null;
+      try { id = await sbFindBreederIdByCode(target.code); } catch (error) { if (!cancelled) say(error && error.notReady ? 'notready' : 'error'); }
+      if (cancelled || !aliveRef.current) return;
+      if (typeof onTargetHandled === 'function') onTargetHandled();
+      if (!id) { say('notfound'); setTab('add'); return; }
+      if (id === selfId) { say('self'); setTab('add'); return; }
+      const look = await sbFetchFriendProfiles([id]);
+      if (!cancelled && aliveRef.current) setTargetAsk({ breederId: id, userName: (look[id] || {}).userName || '名無しのブリーダー' });
+    })();
+    return () => { cancelled = true; };
+  }, [phase, selfId]);
   const toggleFavorite = (id) => {
     const next = favorites.includes(id) ? favorites.filter((x) => x !== id) : friendsNormalizeFavorites([id, ...favorites]);
     setFavorites(next);
@@ -32406,6 +32670,21 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
     const entry = await sbFetchFriendRhythmSummary(view.otherId);
     if (aliveRef.current) setSummary({ status: 'done', entry });
   };
+  // 招待リンク(開くだけでフレンド申請の確認が出る)。共有の窓が使えない端末では、リンクをコピーする
+  const inviteLink = () => friendsInviteLink(typeof window !== 'undefined' ? window.location.href : '', myCode);
+  const shareLink = async () => {
+    const url = inviteLink();
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) { await navigator.share({ title: 'モンスターヒーロー', text: 'フレンドになろう！ このリンクを開くと申請できるよ', url }); return; }
+      await navigator.clipboard.writeText(url);
+      setNotice({ text: '招待リンクをコピーしました。LINEなどに貼って送ってください', tone: 'ok' });
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;   // 共有をやめたときは何も言わない
+      setNotice({ text: 'リンクを共有できませんでした。コードを伝えてください', tone: 'warn' });
+    }
+  };
+  const requestRecent = (id) => run(() => sbSendFriendRequest(selfId, id));
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(myCode);
@@ -32467,6 +32746,18 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                 <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
                 <span data-friend-presence={seen.online ? 'online' : 'offline'} className={`text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>
                 {sum && sum.message ? <p data-friend-message className="max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100">「{sum.message}」</p> : null}
+                {noteEdit && noteEdit.id === selected.otherId ? (
+                  <div data-friend-note-form className="flex w-full max-w-[280px] gap-1">
+                    <input type="text" data-friend-note-input value={noteEdit.text} maxLength={FRIEND_NOTE_MAX} autoComplete="off" spellCheck={false} aria-label="フレンドのメモ"
+                      onChange={(event) => setNoteEdit({ id: noteEdit.id, text: event.target.value })} placeholder="あだ名・メモ"
+                      className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-black/40 px-3 text-center text-[13px] font-bold text-white placeholder:text-slate-600"/>
+                    <button type="button" data-friend-note-save onClick={() => saveNote(noteEdit.id, noteEdit.text)} className={`${btn} shrink-0 px-3 border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>保存</button>
+                    <button type="button" aria-label="メモをやめる" onClick={() => setNoteEdit(null)} className={`${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`}>×</button>
+                  </div>
+                ) : (
+                  <button type="button" data-friend-note-edit onClick={() => setNoteEdit({ id: selected.otherId, text: notes[selected.otherId] || '' })}
+                    className="max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95">📝 {notes[selected.otherId] || 'メモを書く（自分だけに見えます）'}</button>
+                )}
               </div>
               <ScreenTabs className="mt-3" value={profileTab} onChange={setProfileTab} items={[
                 { id: 'overview', label: '概要' }, { id: 'battle', label: 'バトル' }, { id: 'songs', label: '曲のベスト' }, { id: 'collection', label: '集めたもの' }]}/>
@@ -32533,10 +32824,21 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               })()}
               {profileTab === 'songs' && sum && sum.records && (() => {
                 const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
-                const songs = sum.records.rhythm.songs.map((e) => ({ e, song: RHYTHM_SONGS.find((x) => x.songId === e.s) })).filter((x) => x.song);
+                const cmp = friendsCompareScores(sum.records.rhythm.songs, myBest);
+                const songs = cmp.map((e) => ({ e, song: RHYTHM_SONGS.find((x) => x.songId === e.s) })).filter((x) => x.song);
+                const wins = songs.filter((x) => x.e.result === 'win').length;
+                const loses = songs.filter((x) => x.e.result === 'lose').length;
+                const draws = songs.filter((x) => x.e.result === 'draw').length;
+                const resultStyle = { win: 'bg-emerald-500/25 text-emerald-200', lose: 'bg-rose-500/25 text-rose-200', draw: 'bg-sky-500/25 text-sky-200', none: 'bg-slate-700/60 text-slate-300' };
                 return (
                   <div data-friend-songs className="mt-2 flex flex-col gap-2">
                     <p className="px-1 text-[10px] font-black text-slate-400">遊んだ曲 {sum.records.rhythm.played}曲（スコアの高い順に{FRIEND_RECORD_SONG_MAX}曲まで）</p>
+                    {songs.length > 0 && (
+                      <div data-friend-versus className={`${SCREEN_PANEL_FLAT_CLASS} text-center`}>
+                        <small className="block text-[9px] font-bold text-slate-400">スコア勝負（同じ曲・同じ難易度で、自分と比べます）</small>
+                        <b className="text-[14px] font-black text-white"><span className="text-emerald-300">{wins}勝</span>　<span className="text-rose-300">{loses}敗</span>{draws > 0 ? <span className="text-sky-300">　{draws}分</span> : null}</b>
+                      </div>
+                    )}
                     {songs.length === 0 && <p className="px-1 py-4 text-center text-[11px] font-bold text-slate-500">まだ曲の記録がありません</p>}
                     {songs.map(({ e, song }) => (
                       <div key={e.s} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
@@ -32544,9 +32846,14 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                           <b className="block truncate text-[12px] font-black text-white">{rhythmSongFullName(song)}</b>
                           <small className="block text-[9px] font-bold text-slate-400">{e.d}{e.f > 0 ? `　★${flagText[e.f]}` : ''}</small>
                         </div>
-                        <strong className="shrink-0 text-[13px] font-black tabular-nums text-pink-200">{e.sc.toLocaleString()}</strong>
+                        <div className="shrink-0 text-right">
+                          <strong className="block text-[13px] font-black tabular-nums text-pink-200">{e.sc.toLocaleString()}</strong>
+                          <small data-friend-versus-row={e.result} className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[9px] font-black ${resultStyle[e.result]}`}>
+                            {e.result === 'none' ? 'まだ遊んでいません' : e.result === 'win' ? `自分 ${e.mine.toLocaleString()}　勝ち +${e.diff.toLocaleString()}` : e.result === 'lose' ? `自分 ${e.mine.toLocaleString()}　あと${(-e.diff).toLocaleString()}点` : `自分 ${e.mine.toLocaleString()}　同点`}
+                          </small>
+                        </div>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、遊んだいちばん上の難易度の記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、相手が遊んだいちばん上の難易度の記録です。自分の同じ難易度の記録と比べています。</p>
                   </div>);
               })()}
               {profileTab === 'collection' && sum && sum.records && (() => {
@@ -32583,7 +32890,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
 
   // ---- 一覧(3つのタブ) ----
   // フレンドの一覧(お気に入り → ログイン中 → 最近開いた順。名前で絞り込める)
-  const arranged = friendsArrangeList({ views: groups.friends, looks: profiles, summaries, favorites, query, nowMs: now });
+  const arranged = friendsArrangeList({ views: groups.friends, looks: profiles, summaries, favorites, query, nowMs: now, notes });
   const onlineCount = arranged.filter((row) => row.online).length;
   const person = (view, right, extra = null) => {
     const look = lookOf(view.otherId);
@@ -32592,6 +32899,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
         {avatar(view.otherId, 'h-10 w-10')}
         <div className="min-w-0 flex-1">
           <b className="block truncate text-[12px] font-black text-white">{look.userName}</b>
+          {notes[view.otherId] ? <small data-friend-note-label className="block truncate text-[9px] font-bold text-amber-200">📝 {notes[view.otherId]}</small> : null}
           {(() => {
             const sum = summaries[view.otherId];
             const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
@@ -32668,6 +32976,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <ScreenSectionLabel>あなたのフレンドコード</ScreenSectionLabel>
               <p data-friend-code className="my-2 text-center text-3xl font-black tracking-widest text-pink-200">{myCode ? friendsFormatCode(myCode) : '— — — —'}</p>
               <button type="button" disabled={!myCode} onClick={copyCode} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>コードをコピー</button>
+              <button type="button" data-friend-share-link disabled={!myCode} onClick={shareLink} className={`${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`}>招待リンクを送る（LINEなど）</button>
               <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。</p>
             </div>
             <div className={SCREEN_PANEL_CLASS}>
@@ -32679,6 +32988,27 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <button type="button" disabled={busy || !friendsNormalizeCode(codeInput)} onClick={sendByCode} className={`${btn} mt-2 w-full border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>フレンド申請を送る</button>
               <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">ランキングの名前をタップしても、その人に申請できます。</p>
             </div>
+            {(() => {
+              const related = new Set([...groups.friends, ...groups.incoming, ...groups.outgoing, ...groups.blocked].map((view) => view.otherId));
+              const candidates = recent.filter((e) => e.id !== selfId && !related.has(e.id)).slice(0, 10);
+              if (candidates.length === 0) return null;
+              return (
+                <div data-friend-recent className={SCREEN_PANEL_CLASS}>
+                  <ScreenSectionLabel>最近いっしょに遊んだ人</ScreenSectionLabel>
+                  <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">みんなで対戦で同じ部屋にいた人です。気が合ったら、申請してみましょう。</p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {candidates.map((e) => {
+                      const look = profiles[e.id];
+                      return (
+                        <div key={e.id} data-friend-recent-row={e.id} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
+                          {avatar(e.id, 'h-9 w-9')}
+                          <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{(look && look.userName) || e.name}</b>
+                          <button type="button" disabled={busy} onClick={() => requestRecent(e.id)} className={`${btn} shrink-0 px-3 border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>申請</button>
+                        </div>);
+                    })}
+                  </div>
+                </div>);
+            })()}
           </div>
         )}
       </div>
@@ -32914,6 +33244,20 @@ const rhythmMultiRewardScale = (count) => {
   const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
   return 1 + RHYTHM_MULTI_REWARD_STEP * (n - 1);
 };
+// 連続ボーナス(2026-10-03・ユーザー指示「1曲毎に10%、上限100%」)。続けて遊んだライブの何曲目か(streak)で
+// (前のライブの全員がまた参加していれば続く。メンバーが増えても続き、だれかが抜けたら1に戻る)、
+// 2曲目+10%・3曲目+20%…11曲目より後は+100%。人数ボーナスに掛け合わせて、周回報酬とビートPに使う
+const RHYTHM_MULTI_STREAK_STEP = 0.1;
+// フリーマッチでひとりのまま待っているとき、プライベートルームを勧めるまでの時間
+const RHYTHM_MULTI_ALONE_HINT_MS = 45000;
+const RHYTHM_MULTI_STREAK_MAX_BONUS = 1;
+const rhythmMultiStreakBonus = (streak) => {
+  const v = Number(streak);
+  const n = Number.isFinite(v) ? Math.max(1, Math.floor(v)) : 1;
+  return Math.min(RHYTHM_MULTI_STREAK_MAX_BONUS, Math.round(RHYTHM_MULTI_STREAK_STEP * (n - 1) * 100) / 100);
+};
+// 人数ボーナス × 連続ボーナス。表示に使うので小数2けたで丸める
+const rhythmMultiTotalScale = (count, streak) => Math.round(rhythmMultiRewardScale(count) * (1 + rhythmMultiStreakBonus(streak)) * 100) / 100;
 // 「メンバーの成績」に出す判定の並び(演奏側の RHYTHM_JUDGMENT_IDS と同じ順)
 const RHYTHM_MULTI_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 
@@ -32995,6 +33339,8 @@ const rhythmMultiCleanMessage = (raw) => {
     out.joinedAt = rhythmMultiInt(raw.joinedAt, 9e15);
     out.icon = rhythmMultiText(raw.icon, 60);
     out.frame = rhythmMultiText(raw.frame, 40);
+    // ブリーダーid(フレンド申請に使う。2026-10-03)。英数字と記号だけ通す
+    out.bid = rhythmMultiText(raw.bid, 64).replace(/[^A-Za-z0-9_-]/g, '');
     out.pick = rhythmMultiText(raw.pick, 60);
     out.pickRound = rhythmMultiText(raw.pickRound, 40);
     out.readyRound = rhythmMultiText(raw.readyRound, 40);
@@ -33143,7 +33489,7 @@ const RHYTHM_MULTI = (() => {
     if (!s || !socket || !me) return;
     if (me.playing && !force) return;
     socket.send({
-      t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, icon: me.icon, frame: me.frame,
+      t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, icon: me.icon, frame: me.frame, bid: me.bid || undefined,
       pick: me.pick, pickRound: me.pickRound, readyRound: me.readyRound, diff: me.diff, playing: me.playing,
       open: me.open, mode: s.mode, res: me.res || undefined, room: isHostNow() ? roomPayload() : undefined,
     });
@@ -33291,7 +33637,7 @@ const RHYTHM_MULTI = (() => {
       // 自分の状態は自分が持っているものが正しいので、自分の知らせでは上書きしない
       if (msg.id === s.selfId) { prev.seen = Date.now(); emit(); return; }
       s.members[msg.id] = {
-        ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, icon: msg.icon, frame: msg.frame,
+        ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, icon: msg.icon, frame: msg.frame, bid: msg.bid,
         pick: msg.pick, pickRound: msg.pickRound, readyRound: msg.readyRound, diff: msg.diff, playing: msg.playing,
         open: msg.open, res: msg.res || prev.res, seen: Date.now(),
       };
@@ -33316,7 +33662,10 @@ const RHYTHM_MULTI = (() => {
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
-          startListeners.forEach((fn) => { try { fn({ round: msg.round, songId: msg.songId, count: msg.participants.length }); } catch (_) { /* 無視 */ } });
+          const kept = s.liveIds.length > 0 && s.liveIds.every((pid) => msg.participants.includes(pid));
+          s.liveStreak = kept ? s.liveStreak + 1 : 1;
+          s.liveIds = msg.participants.slice();
+          startListeners.forEach((fn) => { try { fn({ round: msg.round, songId: msg.songId, count: msg.participants.length, streak: s.liveStreak }); } catch (_) { /* 無視 */ } });
         }
         // 「ライブに入った」を1回だけ知らせて、そこからは演奏が終わるまで送らない
         sendHb(true);
@@ -33363,6 +33712,7 @@ const RHYTHM_MULTI = (() => {
         shuffleShown: s.shuffleShown,
         resultSeen: s.resultSeen,
         chat: s.chat.slice(),
+        streak: s.liveStreak,
       };
     },
     join(code, profile, mode) {
@@ -33374,10 +33724,14 @@ const RHYTHM_MULTI = (() => {
         code, mode: roomMode, status: 'connecting', selfId: id, members: {}, chat: [], lastChatAt: 0, createdAt: now,
         room: { phase: 'matching', round: '', songId: '', deadline: 0, participants: [] },
         memberSig: '', lastMemberChange: now, startedRound: '', shuffleShown: '', resultSeen: '', queue: [], playUntil: 0,
+        // 続けて遊んだライブの数(連続ボーナス)。前のライブの参加者が全員またいれば1つ増やす。
+        // メンバーが増えただけなら続く(2026-10-03・ユーザー指示「メンバーが増える側のときはボーナス継続がいい」)。だれかが抜けたら1に戻る
+        liveIds: [], liveStreak: 0,
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
         icon: rhythmMultiText(profile && profile.icon, 60), frame: rhythmMultiText(profile && profile.frame, 40),
+        bid: rhythmMultiText(profile && profile.bid, 64).replace(/[^A-Za-z0-9_-]/g, ''),
         joinedAt: now, pick: '', pickRound: '', readyRound: '', diff: rhythmMultiText(profile && profile.diff, 20), playing: false,
         // フリー/ベテランの部屋は、はじめから公開(空きがあるあいだ受付へ知らせる)。プライベートは「ルーム解放」を押したときだけ
         open: roomMode !== 'private', res: null, seen: now,
@@ -33408,6 +33762,25 @@ const RHYTHM_MULTI = (() => {
         });
         setTimeout(() => { sock.close(); resolve(rhythmMultiBestRoom(rooms, '')); }, RHYTHM_MULTI_LOBBY_LISTEN_MS);
       });
+    },
+    // フリーマッチの受付を聞いて、いま人を待っている部屋の人数を数える(モードえらびの「いま◯人が待っています」・2026-10-03)。
+    // 部屋主が2秒ごとに知らせる「ここにいるよ」を、最近8秒ぶんだけ数える。onCount(人数, 部屋数) を1秒ごとに呼ぶ。止める関数を返す
+    watchLobby(kind, onCount) {
+      const rooms = {};
+      const sock = rhythmMultiOpenSocket({
+        topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+        onOpen: () => {},
+        onMessage: (raw) => { const n = rhythmMultiCleanRoomNotice(raw); if (n) rooms[n.code] = { n: n.n, seen: Date.now() }; },
+        onClose: () => {},
+      });
+      const tick = () => {
+        const now = Date.now();
+        let people = 0; let count = 0;
+        Object.keys(rooms).forEach((code) => { if (now - rooms[code].seen > 8000) { delete rooms[code]; return; } people += rooms[code].n; count += 1; });
+        try { onCount(people, count); } catch (_) { /* 無視 */ }
+      };
+      const timer = setInterval(tick, 1000);
+      return () => { clearInterval(timer); try { sock.close(); } catch (_) { /* 無視 */ } };
     },
     // 部屋主の「メンバー確定」(プライベートルーム)。2人以上いるときだけ
     confirmMembers() {
@@ -33506,6 +33879,32 @@ const RHYTHM_MULTI = (() => {
   };
   return api;
 })();
+
+// ---- 対戦の記録(2026-10-03・ユーザー指示「一緒に遊んだ記録」) ----
+// 新しい保存キー。ライブの回数・MVPの回数・いちばん高いチームの平均・いちばん長い連続・最近30回ぶん。
+// 読むときは必ず rhythmMultiNormalizeRecord を通す(無い・壊れているときは0から)。同じ回(round)は2度数えない
+const RHYTHM_MULTI_RECORD_KEY = 'mh_rhythm_multi_record_v1';
+const RHYTHM_MULTI_RECORD_RECENT_MAX = 30;
+const rhythmMultiNormalizeRecord = (raw) => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const int = (v) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.floor(Number(v)) : 0);
+  const recent = (Array.isArray(o.recent) ? o.recent : []).filter((x) => x && typeof x === 'object').slice(0, RHYTHM_MULTI_RECORD_RECENT_MAX).map((x) => ({
+    at: int(x.at), round: rhythmMultiText(x.round, 40), songId: rhythmMultiText(x.songId, 60),
+    avg: int(x.avg), score: int(x.score), n: Math.min(RHYTHM_MULTI_ROOM_MAX, Math.max(1, int(x.n) || 1)), streak: Math.max(1, int(x.streak) || 1),
+    mvp: x.mvp === true, quit: x.quit === true,
+    names: (Array.isArray(x.names) ? x.names : []).slice(0, RHYTHM_MULTI_ROOM_MAX - 1).map((n) => rhythmMultiText(n, 12)).filter(Boolean),
+  }));
+  return { lives: int(o.lives), mvp: int(o.mvp), bestAvg: int(o.bestAvg), bestStreak: int(o.bestStreak), lastRound: rhythmMultiText(o.lastRound, 40), recent };
+};
+const rhythmMultiAddRecord = (record, entry) => {
+  const rec = rhythmMultiNormalizeRecord(record);
+  if (!entry || !entry.round || rec.lastRound === entry.round || rec.recent.some((x) => x.round === entry.round)) return rec;
+  const one = rhythmMultiNormalizeRecord({ recent: [entry] }).recent[0];
+  return {
+    lives: rec.lives + 1, mvp: rec.mvp + (one.mvp ? 1 : 0), bestAvg: Math.max(rec.bestAvg, one.avg), bestStreak: Math.max(rec.bestStreak, one.streak),
+    lastRound: one.round, recent: [one, ...rec.recent].slice(0, RHYTHM_MULTI_RECORD_RECENT_MAX),
+  };
+};
 
 const useRhythmMultiView = () => {
   const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
@@ -33622,6 +34021,128 @@ function RhythmMultiChatBubble({ text }) {
     <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 top-3 z-40 flex justify-center">
       <span className="line-clamp-2 max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg landscape:text-xs">{text}</span>
     </span>
+  );
+}
+
+// ---- 2026-10-03・ユーザー指示「フレンド申請と待ち時間の目安」「ごほうびと記録」で足した小さな部品 ----
+// 部品の中に自分の状態を持たせる(大きな画面の部品の途中で return するので、そこへ hooks を足さないため)
+
+// フリーマッチの受付を聞いて「いま◯人が待っています」。モードえらびを開いているあいだだけ聞く
+function RhythmMultiLobbyCount() {
+  const [count, setCount] = React.useState(null);
+  React.useEffect(() => RHYTHM_MULTI.watchLobby('free', (people) => setCount(people)), []);
+  return (
+    <small data-rhythm-multi-lobby-count className="block truncate text-[10px] font-black leading-tight text-slate-950/80">
+      {count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません'}
+    </small>
+  );
+}
+
+// フリーマッチで、しばらく自分ひとりのときの案内(人が来ないときはプライベートルームへ)
+function RhythmMultiAloneHint({ alone, onLeave }) {
+  const [since, setSince] = React.useState(() => Date.now());
+  const [, tick] = React.useState(0);
+  React.useEffect(() => { if (alone) setSince(Date.now()); }, [alone]);
+  React.useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
+  if (!alone || Date.now() - since < RHYTHM_MULTI_ALONE_HINT_MS) return null;
+  return (
+    <div data-rhythm-multi-alone-hint className="mt-1.5 rounded-xl border border-amber-300/40 bg-amber-950/40 p-2 text-[11px] font-bold leading-snug text-amber-100">
+      いまはメンバーが集まりにくいようです。このまま待つか、友だちとプライベートルームで遊ぶのもおすすめです。
+      {onLeave && <button type="button" onClick={onLeave} className="mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black">モードえらびへ戻る</button>}
+    </div>
+  );
+}
+
+// 結果が出たら、対戦の記録へ1回ぶん足す(同じ回は2度数えない)
+function RhythmMultiRecordSaver({ entry }) {
+  React.useEffect(() => {
+    if (!entry || !entry.round) return;
+    let alive = true;
+    (async () => {
+      try {
+        const saved = await storeGet(RHYTHM_MULTI_RECORD_KEY, null);
+        if (!alive) return;
+        const next = rhythmMultiAddRecord(saved, entry);
+        if (next.lastRound === entry.round) await storeSet(RHYTHM_MULTI_RECORD_KEY, next);
+      } catch (_) { /* 記録できなくても対戦は続ける */ }
+    })();
+    return () => { alive = false; };
+  }, [entry && entry.round]);
+  return null;
+}
+
+// 対戦の記録(モードえらびの「記録」から開く)
+function RhythmMultiRecordSheet({ songName, onClose }) {
+  const [rec, setRec] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => { const saved = await storeGet(RHYTHM_MULTI_RECORD_KEY, null).catch(() => null); if (alive) setRec(rhythmMultiNormalizeRecord(saved)); })();
+    return () => { alive = false; };
+  }, []);
+  const date = (ms) => { const d = new Date(ms); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  const rank = rec && rec.bestAvg > 0 && typeof rhythmRankForScore === 'function' ? rhythmRankForScore(rec.bestAvg) : '—';
+  return (
+    <div className="absolute inset-0 z-[85000]">
+      <button type="button" aria-label="記録を閉じる" className="absolute inset-0 bg-slate-950/60" onClick={onClose} />
+      <div data-rhythm-multi-record className="absolute inset-x-0 bottom-0 flex h-[82%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-3 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[55%] landscape:rounded-none landscape:rounded-l-2xl" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
+        <div className="flex shrink-0 items-center gap-2">
+          <h3 className="min-w-0 flex-1 text-sm font-black text-cyan-100">📜 みんなで対戦の記録</h3>
+          <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black">✕</button>
+        </div>
+        {!rec ? <p className="mt-3 text-xs font-bold text-slate-400">読み込んでいます…</p> : <>
+          <div className="mt-2 grid shrink-0 grid-cols-4 gap-1.5 text-center">
+            {[['ライブ', `${rec.lives}回`], ['MVP', `${rec.mvp}回`], ['最高ランク', rank], ['最長連続', `${rec.bestStreak}曲`]].map(([k, v]) => (
+              <div key={k} className="rounded-xl bg-slate-800/80 px-1 py-1.5"><small className="block text-[9px] font-black text-slate-400">{k}</small><b className="block text-sm font-black text-white">{v}</b></div>
+            ))}
+          </div>
+          <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto">
+            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400">まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります</li>}
+            {rec.recent.map((x) => (
+              <li key={x.round} data-rhythm-multi-record-row className="rounded-xl bg-slate-800/70 px-2 py-1.5 text-[11px] font-bold leading-snug">
+                <div className="flex items-center gap-2">
+                  <small className="shrink-0 text-[10px] text-slate-400">{date(x.at)}</small>
+                  <b className="min-w-0 flex-1 truncate text-white">{songName(x.songId)}</b>
+                  {x.mvp && <small className="shrink-0 rounded-full bg-amber-300 px-1.5 text-[9px] font-black text-slate-950">👑 MVP</small>}
+                  <b className="shrink-0 text-amber-200">{typeof rhythmRankForScore === 'function' ? rhythmRankForScore(x.avg) : ''}</b>
+                </div>
+                <small className="block truncate text-[10px] text-slate-400">{x.n}人{x.streak > 1 ? `・連続${x.streak}曲目` : ''}{x.names.length ? `・${x.names.join('、')}` : ''}{x.quit ? '・リタイア' : `・自分 ${x.score.toLocaleString()}`}</small>
+              </li>
+            ))}
+          </ul>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+// 結果画面でメンバーのカードを押したときのシート(名前・Lv・この曲のスコア・フレンド申請)
+function RhythmMultiMemberSheet({ m, res, resolveIconUrl, friendsOn, friendSelfId, isFriend, onClose }) {
+  const [state, setState] = React.useState(isFriend ? 'already' : '');
+  const [busy, setBusy] = React.useState(false);
+  const canAsk = friendsOn && !!friendSelfId && !!m.bid && m.bid !== friendSelfId;
+  const send = async () => {
+    if (!canAsk || busy) return;
+    setBusy(true);
+    try { setState(await sbSendFriendRequest(friendSelfId, m.bid)); } catch (_) { setState('error'); }
+    setBusy(false);
+  };
+  const text = state && typeof FRIENDS_RESULT_TEXT !== 'undefined' && FRIENDS_RESULT_TEXT[state] ? FRIENDS_RESULT_TEXT[state][0]
+    : state === 'error' ? '申請を送れませんでした。もう一度ためしてください' : '';
+  return (
+    <div className="absolute inset-0 z-[86000] flex items-center justify-center p-4">
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={onClose} />
+      <div data-rhythm-multi-member-sheet className="relative w-full max-w-xs rounded-2xl border border-cyan-300/40 bg-slate-900 p-4 text-center shadow-2xl">
+        <div className="mx-auto w-fit"><RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-16 w-16" /></div>
+        <b className="mt-2 block truncate text-base font-black">{m.name}</b>
+        <small className="block text-[11px] font-black text-slate-400">ブリーダーLv.{m.level}{res && !res.quit ? ` ・ この曲 ${res.score.toLocaleString()}` : ''}</small>
+        {canAsk && !['already', 'accepted', 'sent', 'pending'].includes(state) && (
+          <button data-rhythm-multi-friend-request type="button" disabled={busy} onClick={send} className="mt-3 min-h-[46px] w-full rounded-xl bg-gradient-to-b from-pink-500 to-fuchsia-700 text-sm font-black disabled:opacity-50">{busy ? '送っています…' : '🤝 フレンド申請'}</button>
+        )}
+        {!canAsk && !isFriend && <p className="mt-3 text-[11px] font-bold text-slate-400">{!friendsOn ? 'フレンド機能はいま使えません' : 'この人には、ここからはフレンド申請できません'}</p>}
+        {text && <p data-rhythm-multi-friend-result className="mt-2 text-[12px] font-black text-amber-200">{text}</p>}
+        <button type="button" onClick={onClose} className="mt-3 min-h-[42px] w-full rounded-xl bg-slate-700 text-sm font-black">閉じる</button>
+      </div>
+    </div>
   );
 }
 
@@ -33797,6 +34318,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     return '';
   };
   const [statsOpen, setStatsOpen] = React.useState(false);
+  const [memberSheetId, setMemberSheetId] = React.useState('');
+  const [recordOpen, setRecordOpen] = React.useState(false);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
   const [selectView, setSelectView] = React.useState(null);
@@ -33836,6 +34359,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     })();
     return () => { cancelled = true; };
   }, [friendsOn]);
+  // 同じ部屋にいた人を「最近いっしょに遊んだ人」として端末に覚える(あとからフレンド画面で申請できる)。
+  // 相手のブリーダーIDは知らせ(hb)に載ってくる。自分と同じ・IDの無い人は覚えない。サーバーへは送らない
+  const recentSig = view ? view.members.map((m) => `${m.bid || ''}:${m.name || ''}`).join(',') : '';
+  React.useEffect(() => {
+    if (!friendsOn || !view || !friendSelfId) return;
+    const others = view.members.filter((m) => m.bid && m.bid !== friendSelfId && m.id !== view.selfId).map((m) => ({ id: m.bid, name: m.name }));
+    if (others.length) friendsRememberRecent(others);
+  }, [friendsOn, recentSig, friendSelfId]);
   const hasRoster = !!(roster && roster.length);
   React.useEffect(() => {
     if (!friendsOn || view || !friendSelfId || !hasRoster) { setFriendInvites([]); return undefined; }
@@ -33878,7 +34409,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       const open = song ? diffs.filter((d) => rhythmDifficultyUnlocked(song.songId, d.id, bestRecords)) : [];
       const diff = song ? rhythmMultiPickDifficulty(open.length ? open : diffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds) : null;
       setCountdown(null);
-      if (song && diff) onStartPlay(song, diff, countdown.info.round, countdown.info.count);
+      if (song && diff) onStartPlay(song, diff, countdown.info.round, countdown.info.count, countdown.info.streak);
       else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, { noPenalty: true });
       return undefined;
     }
@@ -33912,7 +34443,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
   React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
 
-  const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
+  const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff, bid: friendSelfId });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
   const joinFromInvite = (invite) => {
     setMessage('');
@@ -34094,7 +34625,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 className="mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
                 <span aria-hidden="true" className="mhms-mark">FREE MATCH</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎮</span>
-                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small><RhythmMultiLobbyCount /></span>
               </button>}
             </div>
             {ms.multi && (
@@ -34111,7 +34642,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             )}
             {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
-            <div className="mhms-in grid grid-cols-3 gap-2" style={{ animationDelay: '.28s' }}>
+            <div className={`mhms-in grid gap-2 ${ms.multi ? 'grid-cols-4' : 'grid-cols-3'}`} style={{ animationDelay: '.28s' }}>
               <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} mhms-glass min-w-0 text-fuchsia-100`}>
                 <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-6 items-center">{ms.monsterFaces.length
                   ? ms.monsterFaces.map((face, i) => <span key={face.id} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i ? { marginLeft: '-7px' } : undefined}>{face.src && <img src={face.src} alt="" draggable={false} className="h-full w-full object-cover" />}</span>)
@@ -34121,6 +34652,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} mhms-glass min-w-0 text-amber-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">📖</span><span className="text-[11px] font-black">遊びかた</span>
               </button>
+              {ms.multi && <button data-rhythm-mode-record type="button" onClick={() => setRecordOpen(true)} className={`${tile} mhms-glass min-w-0 text-emerald-100`}>
+                <span aria-hidden="true" className="text-lg leading-none">📜</span><span className="text-[11px] font-black">記録</span>
+              </button>}
               <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} mhms-glass min-w-0 text-cyan-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="text-[11px] font-black">オプション</span>
               </button>
@@ -34128,6 +34662,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           </div>
         </div>
         <div aria-hidden="true" className="shrink-0" style={{ height: 'var(--mh-sa-bottom)' }} />
+        {recordOpen && <RhythmMultiRecordSheet songName={(id) => { const song = songById(id); return song ? rhythmSongFullName(song) : '(曲)'; }} onClose={() => setRecordOpen(false)} />}
       </main>
     );
   }
@@ -34161,6 +34696,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
                   {!view ? '' : publicRoom ? `${RHYTHM_MULTI_ROOM_MAX}人そろうか、2人以上でしばらく待つとメンバーが確定します` : isHost ? '2人以上そろったら「メンバー確定」を押してください' : 'ホストがメンバーを確定するのを待っています'}
                 </p>
+                <RhythmMultiAloneHint alone={!!view && publicRoom && members.length <= 1} onLeave={leaveRoom} />
                 {view && <div className="mt-1 flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <small className="block text-[9px] font-black text-slate-400">ルームコード</small>
@@ -34233,6 +34769,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <div className="min-w-0 flex-1 landscape:max-w-[34%]">
             <b className="block truncate text-sm font-black">{drawnSong ? rhythmSongFullName(drawnSong) : ''}</b>
             <small className="block text-[10px] font-black text-slate-400">{team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`}</small>
+            {/* 同じメンバーで続けたライブ(連続ボーナス・2026-10-03) */}
+            {view.streak >= 2 && <small data-rhythm-multi-streak className="mt-0.5 inline-block rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-2 text-[10px] font-black text-white">🔥 連続{view.streak}曲目 ・ ごほうび+{Math.round(rhythmMultiStreakBonus(view.streak) * 100)}%</small>}
           </div>
           <div className="hidden min-w-0 flex-1 landscape:block">
             <div data-rhythm-multi-gauge className="relative mt-3 h-3 rounded-full bg-slate-800">
@@ -34267,7 +34805,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             const isMvp = r.m.id === team.mvpId && !team.waiting;
             const lv = r.res ? drawnLevel(r.res.diffId) : 0;
             return (
-              <li key={r.m.id} data-rhythm-multi-result-row className={`relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5'}`}>
+              <li key={r.m.id} data-rhythm-multi-result-row role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => setMemberSheetId(r.m.id) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5'}`}>
                 <RhythmMultiChatBubble text={chatBubbleOf(r.m.id)} />
                 {/* MVP は札をアイコンより前に出し、王冠・金色の光で目立たせる(2026-10-03・ユーザー指摘「MVPが裏に回ってる / もっと強調して」) */}
                 {isMvp && <b data-rhythm-multi-mvp className="mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]">👑 MVP</b>}
@@ -34299,6 +34837,19 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <button data-rhythm-multi-result-next type="button" onClick={() => RHYTHM_MULTI.nextFromResult(room.round)}
             className="min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px]">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
         </div>
+        {/* 結果が出たら対戦の記録へ足す(自分が参加して、全員の結果がそろってから) */}
+        {(() => {
+          const mine = team.rows.find((row) => row.m.id === view.selfId);
+          if (team.waiting || !mine || !mine.res) return null;
+          return <RhythmMultiRecordSaver entry={{ at: Date.now(), round: room.round, songId: room.songId, avg: team.average, score: mine.res.score, n: room.participants.length,
+            streak: view.streak || 1, mvp: team.mvpId === view.selfId, quit: !!mine.res.quit, names: team.rows.filter((row) => row.m.id !== view.selfId).map((row) => row.m.name) }} />;
+        })()}
+        {memberSheetId && (() => {
+          const row = team.rows.find((x) => x.m.id === memberSheetId);
+          if (!row) return null;
+          const isFriend = !!(row.m.bid && (roster || []).some((f) => f.otherId === row.m.bid));
+          return <RhythmMultiMemberSheet m={row.m} res={row.res} resolveIconUrl={resolveIconUrl} friendsOn={friendsOn} friendSelfId={friendSelfId} isFriend={isFriend} onClose={() => setMemberSheetId('')} />;
+        })()}
         {statsOpen && (
           <div data-rhythm-multi-stats className="absolute inset-0 z-[85000] flex flex-col bg-slate-950" style={{ paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
             <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2">
@@ -38611,6 +39162,28 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
+  // ほかの案内が出ていないHOMEへ来たところで、フレンド画面を開いて申請の確認を出す。公開前・はじめての設定の前は何もしない
+  const [pendingFriendCode, setPendingFriendCode] = useState('');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const code = friendsCodeFromSearch(window.location.search);
+    if (!code) return;
+    setPendingFriendCode(code);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('friend');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch (error) { /* URLを直せなくても、申請の確認は出せる */ }
+  }, []);
+  useEffect(() => {
+    if (!pendingFriendCode) return;
+    if (RELEASE_FLAGS.friends !== true) { setPendingFriendCode(''); return; }
+    if (!(friendsActive && bootPhase === 'GAME' && gameState === 'HOME' && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
+      && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length === 0)) return;
+    setPendingFriendCode('');
+    openFriends({ code: pendingFriendCode });
+  }, [pendingFriendCode, friendsActive, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
   // 「見た」の記録(rhythmEventStorySeenRef)とは別に持つ。あちらは最後まで見ないと付かない
   const rhythmEventStoryStartedRef = useRef([]);
@@ -43027,7 +43600,9 @@ function MonsterHeroGame() {
     else if ((tactics || effectiveMaxGuts >= 120) && allyCount >= 2) limit = 2;
     return Math.min(5,limit + heroCardBonus + kikiCardBonus);
   }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus, runMode, tacticsUnits]);
-  const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus);
+  // ★ミーアの「オン・ステージ！」が効いているあいだ、盤面ぜんぶで1ターンに使える枚数が増える(上限5は変えない。2026-10-03)
+  const exCardBonus = isTacticsMode(runMode) ? tacticsExCardBonusTotal(tacticsExState,tacticsUnits,{ wave, turn:turnCount }) : 0;
+  const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus+exCardBonus);
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
@@ -43040,7 +43615,8 @@ function MonsterHeroGame() {
     //   (2026-09-22 ユーザー指摘「剣士モッチーで攻撃カードが3枚使えた」)。
     //   baseCardLimit は**そのターンに盤面ぜんぶで何枚使えるか**であって、1体ぶんの上限ではない
     if(isTacticsMode(runMode)){
-      const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0);
+      const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0)
+        +(Number.isInteger(slotIdx)?tacticsExCardBonusAt(tacticsExState,tacticsUnits,slotIdx,{ wave, turn:turnCount }):0);
       return Math.min(cardLimit,own);
     }
     // 既存5モードは今までどおり。勇者モン本人ときき中は、そのターンの総数まで重ねられる
@@ -44136,7 +44712,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0
     ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)
       *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)
-      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow()*tacticsExMultiBuffNow(slotIdx).taken:1)))
+      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow()*tacticsExMultiBuffNow(slotIdx).taken*tacticsExPartyBuffNow().taken:1)))
     : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
     getIncomingDamageBeforeTurnReduction(intent)
@@ -44284,6 +44860,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const result = expireTacticsExMaxRates(tacticsUnitsRef.current, tacticsExStateRef.current, { wave, turn:turnCount });
     if (result.changed) commitTacticsUnits(scaleTacticsUnits(result.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
   }, [wave, turnCount, tacticsExState, runMode]);
+  // ★「各WAVEで回数が戻る」EX(スネグーラチカ)は、WAVEが変わったところで回数を0へ戻す(2026-10-03)。戻すものが無ければ何もしない
+  useEffect(() => {
+    if (!isTacticsMode(runMode)) return;
+    const reset = resetTacticsExWaveUses(tacticsExStateRef.current);
+    if (reset !== tacticsExStateRef.current) commitTacticsExState(reset);
+  }, [wave, runMode]);
   // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
   //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
   const tacticsExEffectAt = (slotIdx) => {
@@ -44303,14 +44885,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExCombosAt = (slotIdx) => {
     const live=tacticsExLiveRef.current;
     if(!live.enabled||!Number.isInteger(slotIdx)) return null;
-    return tacticsExExtraCombosAt(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
+    const own=tacticsExExtraCombosAt(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
+    // ★スネグーラチカのプレゼントの「連撃付与」は味方全員の攻撃に付く。自分のぶんと別の連撃として重ねる
+    const gift=tacticsExPartyBuffNow().combo;
+    return own&&gift ? [own,gift] : (own||gift||null);
   };
   // 世界樹の守りの、味方全員の被ダメージ倍率(効いていなければ1。ほかのモードも1)
   // アーク・イブリースの与ダメ・被ダメ・会心の倍率(効いていなければ全部1。ほかのモードも1)
   const tacticsExMultiBuffNow = (slotIdx) => {
     const live=tacticsExLiveRef.current;
     const mine=live.enabled&&Number.isInteger(slotIdx) ? tacticsExMultiBuffOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now) : null;
-    return mine||{dmg:1,taken:1,critRate:1,critDmg:1};
+    const out=mine?{ ...mine }:{dmg:1,taken:1,critRate:1,critDmg:1,distMult:0};
+    // ★味方全員に効くもの(ミーアのボルテージ・スネグーラチカのプレゼント)を重ねる
+    if(live.enabled&&Number.isInteger(slotIdx)){
+      const party=tacticsExPartyBuffNow();
+      out.dmg*=party.dmg; out.critRate*=party.critRate;
+    }
+    return out;
+  };
+  // 味方全員に効く倍率(ミーアのボルテージ・スネグーラチカのプレゼント)。効いていなければ全部1・連撃は null。ほかのモードも同じ
+  const tacticsExPartyBuffNow = () => {
+    const live=tacticsExLiveRef.current;
+    const base={ dmg:1, critRate:1, taken:1, heal:1, gutsAdd:0, combo:null, voltage:null, present:null };
+    if(!live.enabled||!isTacticsMode(runMode)) return base;
+    const st=tacticsExStateRef.current, units=tacticsUnitsRef.current;
+    const volt=tacticsExVoltageOf(st,units,live.now);
+    const pres=tacticsExPresentOf(st,units,live.now);
+    return { dmg:(volt?volt.dmgMult:1)*pres.dmg, critRate:pres.critRate, taken:pres.taken, heal:volt?volt.healMult:1, gutsAdd:volt?volt.gutsAdd:0,
+      combo:pres.combo, voltage:volt, present:pres.kinds.length?pres:null };
   };
   const tacticsExPartyTakenMultNow = () => {
     const live=tacticsExLiveRef.current;
@@ -44655,7 +45257,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx-attackStartDist);
     // ★エイキの「緋桜瞬歩」が効いているあいだは、距離補正が距離の差に関係なく ×1.7
-    const distMult = tacticsExEffectAt(slotIdx)==='distMatch' ? TACTICS_EX_DIST_MATCH_MULT : ([1.5,1.3,1.1,0.9][distDiff]||1.0);
+    const exDistMult = tacticsExMultiBuffNow(slotIdx).distMult;
+    const distMult = tacticsExEffectAt(slotIdx)==='distMatch' ? TACTICS_EX_DIST_MATCH_MULT : (exDistMult>0 ? exDistMult : ([1.5,1.3,1.1,0.9][distDiff]||1.0));
     let baseDmgMult = 1.0;
     if (card.subType==='stun_atsu') { baseDmgMult = card.baseValue||1.5; }
     else if (card.type==='unique') { const level=card.evoLevel||0; const chuuniBonus=(card.monId==='Ark'||card.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0; baseDmgMult=card.baseMult+(level*0.5)+chuuniBonus; }
@@ -45316,7 +45919,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★新モードは1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
     //   合計の上限から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんが
     //   その子へ入り、倒れている子が多いほど残った子がよけいに回復する(逆になっている)
-    const regen=tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate);
+    // ★ミーアのボルテージで、ターン終わりのガッツ自動回復の率が上がる(2026-10-03。ボルテージ1段階ごとに足す)
+    const regen=tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate);
     let gutsRegen=0, autoHealVal=0;
     if (regen) {
       currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts;
@@ -45476,7 +46080,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
-      stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
+      // 詳細パネルへ出す「いまの状態」の行(ミーアのボルテージ・スネグーラチカのプレゼントの中身)
+        statusLines:(()=>{
+          const out=[];
+          const volt=def.effect==='stage'?tacticsExVoltageOf(state,tacticsUnits,tacticsExNow):null;
+          if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
+          const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
+          if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり（全部）':pres.kinds.map(k=>TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
+          return out;
+        })(),
+        stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
         const b=applyTacticsExStats(normalizeTacticsUnit(u),state,slotIdx,tacticsExNow);
         return { atk:b.atk, def:b.def, changed:b.atk!==u.atk||b.def!==u.def }; })(),
     };
@@ -45541,6 +46154,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         commitTacticsUnits(recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hpGain),slotIdx,gutsGain));
         if(hpGain>0||gutsGain>0) mergeTacticsSlotFx({[slotIdx]:hpGain},{[slotIdx]:gutsGain});
       }
+    }
+    // ピクシーの「お気に入りの魔法」: 使ったターンから固有技のカードが手札に出る(手札がいっぱいで、いちばん後ろのカードを選んでいるときは、次のターンから)
+    if(def.guaranteeUnique&&(hand.length<5||!selectedCards.includes(hand.length-1))){
+      const ens=ensureTacticsExUniqueInHand({ hand, deck, graveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===slotIdx);
+      if(ens.moved){ setHand(ens.hand); setDeck(ens.deck); setGraveyard(ens.graveyard); }
+    }
+    // スネグーラチカの「クリスマスプレゼント」: 中身をランダムで決める。必ず全員のガッツが戻り、決まった中身が起きる
+    if(def.effect==='present'&&def.present){
+      const roll=rollTacticsExPresent(Math.random(),Math.random(),def.present.jackpot);
+      commitTacticsExState(setTacticsExPresent(tacticsExStateRef.current,slotIdx,roll));
+      tacticsRateHeal(0,def.present.fixedGuts,false);
+      if(roll.kinds.includes('heal')) tacticsRateHeal(def.present.heal,0,false);
+      if(roll.kinds.includes('guts')) tacticsRateHeal(0,def.present.guts,false);
+      const names=roll.kinds.map(k=>TACTICS_EX_PRESENT_LABELS[k]);
+      pushBattleLog(`🎁 プレゼントの中身: ${roll.jackpot?'大当たり！ 全部':names.join('・')}`,'ally');
+      addPopup(roll.jackpot?'🎁 大当たり！ 全部入り':`🎁 ${names[0]}`,'hero','text-amber-300 font-black text-2xl drop-shadow-md',undefined,slotIdx);
     }
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
@@ -45891,7 +46520,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   「起き上がった！」は commitTacticsUnits が1か所で出す
           // ★量は1体ずつ「その子の上限 × 率」(2026-09-20 ユーザー指示)。
           //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る
-          const healedAll=tacticsRateHeal(cardHealRate,0);
+          // ★ミーアのボルテージで回復カードの回復量が上がる(2026-10-03)
+          const healedAll=tacticsRateHeal(cardHealRate*tacticsExPartyBuffNow().heal,0);
           // ★誰にいくつ入ったかは枠ごとに出る。まんなかへ合計を重ねない(2026-09-21 ユーザー指示)
           if(healedAll) hpBeforeEnemyAttack=healedAll.total;
         } else {
@@ -46070,7 +46700,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards];
     const replenish=(count)=>{for(let i=0;i<count;i++){if(nextDeck.length===0){if(nextGraveyard.length===0)break; nextDeck=[...nextGraveyard].sort(()=>Math.random()-0.5); nextGraveyard=[];} if(nextDeck.length>0)nextHand.push(nextDeck.pop());}};
     replenish(usedCardEntries.length+drawCount);
+    // ★ミーアのボルテージ: 使ったカードの枚数だけたまる(2026-10-03。効果が切れていれば何も起きない)
+    if(isTacticsMode(runMode)&&usedCardEntries.length>0){
+      const stNow=tacticsExStateRef.current;
+      const stVolt=addTacticsExVoltage(stNow,tacticsUnitsRef.current,{ wave, turn:turnCount },usedCardEntries.length);
+      if(stVolt!==stNow) commitTacticsExState(stVolt);
+    }
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
+    // ★ピクシーの「お気に入りの魔法」: 次のターンも効いていれば、固有技のカードを手札へ必ず出す(2026-10-03)
+    if(isTacticsMode(runMode)){
+      const favSlot=tacticsExUniqueGuaranteeSlot(tacticsExStateRef.current,tacticsUnitsRef.current,{ wave, turn:turnCount+1 });
+      if(favSlot!=null){
+        const ensured=ensureTacticsExUniqueInHand({ hand:nextHand, deck:nextDeck, graveyard:nextGraveyard },c=>c&&c.type==='unique'&&c.ownerSlotIdx===favSlot); // その枠が持つ固有技(継承した固有技を選んでいてもその技)
+        nextHand=ensured.hand; nextDeck=ensured.deck; nextGraveyard=ensured.graveyard;
+      }
+    }
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
     // ★枠ごとの消費0も、そのターンのカードを使ったら落とす(タクティクス)。
     //   更新関数は「同じ入力なら同じ結果」でなければならないので、純関数を通す
@@ -50287,11 +50931,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // みんなで対戦の演奏は、まずスコアをルームへ知らせる。そのうえで、ひとりで遊ぶときと同じく
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
-          // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)
-          const multiScale=rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1;
+          // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
+          // 同じメンバーで続けると、さらに1曲ごとに+10%(上限+100%・2026-10-03)
+          const multiScale=rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak):1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
@@ -50377,7 +51022,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             monsterFaces:rhythmMonsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return {id:masu.id,src:base?(base.faceIconUrl||base.iconUrl):''};}),
             assistant:rhythmModeAssistant,
           }:null}
-          onStartPlay={(song,difficulty,startId,count)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count});setGameState('RHYTHM_PLAY');}}/>}
+          onStartPlay={(song,difficulty,startId,count,streak)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak});setGameState('RHYTHM_PLAY');}}/>}
 
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
