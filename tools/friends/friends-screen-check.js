@@ -124,6 +124,12 @@ const serve = (flagOn) => new Promise(resolve => {
       row.records = { v: 1, battle: [{ id: scoreMode.id, k: 's', v: 1234567 }, { id: quickMode.id, k: 'w', v: 25 }],
         rhythm: { played: 2, songs: [{ s: ids.song, d: 'HARD', sc: 987654, f: 1 }] },
         collection: { masu: 30, dex: 18, dexTotal: 22, transcended: 3, reincarnated: 2, icons: 10, frames: 4 } };
+      // 最近いっしょに遊んだ人(端末に覚えている)と、自分のモンヒロビートの記録(スコア勝負で比べる)を仕込む
+      fake.db.breeder_profiles.push({ breeder_id: 'other-recent', user_name: '最近の子', icon: null, profile_frame: null, updated_at: new Date().toISOString() });
+      await page.evaluate(([id, songId]) => {
+        localStorage.setItem('mh_friend_recent_v1', JSON.stringify([{ id, name: '最近の子', at: Date.now() }]));
+        localStorage.setItem(RHYTHM_BEST_RECORDS_KEY, JSON.stringify({ [songId]: { HARD: { played: true, bestScore: 900000 } } }));
+      }, ['other-recent', ids.song]);
       // ひとこと: プロフィールの行から書いて保存する(端末に保存され、サーバーへも送られる)
       result.messageRow = await page.evaluate(() => (document.querySelector('[data-profile-message]') || {}).innerText || '');
       await page.evaluate(() => document.querySelector('[data-profile-message]').click());
@@ -144,13 +150,21 @@ const serve = (flagOn) => new Promise(resolve => {
       await clickText('^追加$');
       await page.waitForSelector('[data-friend-code]', { timeout: 5000 });
       await shot('1-add');
+      result.shareButton = await page.evaluate(() => !!document.querySelector('[data-friend-share-link]'));
+      result.recentRow = await page.evaluate(() => !!document.querySelector('[data-friend-recent-row="other-recent"]'));
+      await page.evaluate(() => [...document.querySelector('[data-friend-recent-row="other-recent"]').querySelectorAll('button')].find(b => /申請/.test(b.innerText)).click());
+      await page.waitForTimeout(900);
+      result.recentRequested = (fake.db.friend_links.find(r => r.requester_id === 'self-user' && r.target_id === 'other-recent') || {}).status;
+      result.recentGone = await page.evaluate(() => !document.querySelector('[data-friend-recent-row="other-recent"]'));
       result.myCode = await page.evaluate(() => document.querySelector('[data-friend-code]').innerText.replace('-', ''));
       result.registered = fake.db.friend_codes.filter(r => r.breeder_id === 'self-user').length;
       // ③ コードで申請
       await page.fill('input[aria-label="友だちのフレンドコード"]', 'aaaa-2222');
       await clickText('フレンド申請を送る');
       await page.waitForFunction(() => document.body.innerText.includes('申請を送りました'), { timeout: 8000 });
-      result.sentStatus = fake.db.friend_links.find(r => r.requester_id === 'self-user' && r.target_id === 'other-friend')?.status;   // 送った直後の状態を控える
+      // 最近の人への申請で出た表示と取り違えないよう、行ができるまで待ってから、送った直後の状態を控える
+      for (let i = 0; i < 20 && !fake.db.friend_links.find(r => r.requester_id === 'self-user' && r.target_id === 'other-friend'); i++) await page.waitForTimeout(250);
+      result.sentStatus = fake.db.friend_links.find(r => r.requester_id === 'self-user' && r.target_id === 'other-friend')?.status;
       await clickText('^申請');
       await page.waitForTimeout(300);
       result.outgoingShown = (await bodyText()).includes('ともだちの子');
@@ -192,6 +206,18 @@ const serve = (flagOn) => new Promise(resolve => {
       await shot('4-profile');
       result.profileText = await bodyText();
       result.friendMessage = await page.evaluate(() => (document.querySelector('[data-friend-message]') || {}).innerText || '');
+      // メモ: 書いて保存すると端末に残り、一覧の行にも出る
+      await page.evaluate(() => document.querySelector('[data-friend-note-edit]').click());
+      await page.fill('[data-friend-note-input]', 'あだ名テスト');
+      await page.evaluate(() => document.querySelector('[data-friend-note-save]').click());
+      await page.waitForTimeout(300);
+      result.noteSaved = await page.evaluate(() => localStorage.getItem('mh_friend_notes_v1'));
+      result.noteButton = await page.evaluate(() => (document.querySelector('[data-friend-note-edit]') || {}).innerText || '');
+      await page.evaluate(() => document.querySelector('button[aria-label="フレンド一覧へ戻る"]').click());
+      await page.waitForSelector('[data-friend-row]', { timeout: 5000 });
+      result.noteLabel = await page.evaluate(() => [...document.querySelectorAll('[data-friend-note-label]')].map(e => e.innerText).join('|'));
+      await page.evaluate(() => document.querySelector('[data-friend-row="other-friend"]').click());
+      await page.waitForSelector('[data-friends-profile]', { timeout: 5000 });
       const tabText = async (label, selector) => {
         await page.evaluate((l) => [...document.querySelectorAll('[role=tab]')].find(t => (t.innerText || '').trim() === l)?.click(), label);
         await page.waitForTimeout(250);
@@ -199,6 +225,8 @@ const serve = (flagOn) => new Promise(resolve => {
       };
       result.battleTab = await tabText('バトル', '[data-friend-battle]');
       result.songsTab = await tabText('曲のベスト', '[data-friend-songs]');
+      result.versus = await page.evaluate(() => (document.querySelector('[data-friend-versus]') || {}).innerText || '');
+      result.versusRow = await page.evaluate(() => (document.querySelector('[data-friend-versus-row]') || {}).innerText || '');
       result.collectionTab = await tabText('集めたもの', '[data-friend-collection]');
       await shot('4b-collection');
       await page.evaluate(() => [...document.querySelectorAll('[role=tab]')].find(t => (t.innerText || '').trim() === '概要')?.click());
@@ -262,6 +290,10 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('「バトル」タブにモードごとの記録が出る', (r.battleLabels || []).every(l => (r.battleTab || '').includes(l)) && /1,234,567 pt/.test(r.battleTab || '') && /WAVE 25/.test(r.battleTab || ''), `${r.battleTab}`);
   ok('「曲のベスト」タブに曲・難易度・スコア・フルコンボが出る', (r.songsTab || '').includes(r.songName || '#') && /HARD/.test(r.songsTab || '') && /987,654/.test(r.songsTab || '') && /フルコンボ/.test(r.songsTab || ''), `${r.songsTab}`);
   ok('「集めたもの」タブにマスモン数・図鑑・超越・転生などが出る', /30体/.test(r.collectionTab || '') && /18 \/ 22/.test(r.collectionTab || '') && /3体/.test(r.collectionTab || '') && /2体/.test(r.collectionTab || '') && /10個/.test(r.collectionTab || '') && /4個/.test(r.collectionTab || ''), `${r.collectionTab}`);
+  ok('追加タブに「招待リンクを送る」のボタンがある', r.shareButton === true);
+  ok('最近いっしょに遊んだ人が出て、「申請」で申請でき、出なくなる', r.recentRow === true && r.recentRequested === 'pending' && r.recentGone === true, `${r.recentRow} / ${r.recentRequested} / ${r.recentGone}`);
+  ok('メモを端末に保存し、プロフィールと一覧の行に出す', /あだ名テスト/.test(r.noteSaved || '') && /あだ名テスト/.test(r.noteButton || '') && /あだ名テスト/.test(r.noteLabel || ''), `${r.noteSaved} / ${r.noteButton} / ${r.noteLabel}`);
+  ok('スコア勝負: 同じ曲・同じ難易度の自分の記録と比べて、勝敗と差が出る', /0勝/.test(r.versus || '') && /1敗/.test(r.versus || '') && /あと87,654点/.test(r.versusRow || ''), `${r.versus} / ${r.versusRow}`);
   ok('自分の見せる情報が、起動後に friend_profiles へ送られる', !!r.selfRow && ['home','battle','rhythm','multi','masu','market','other'].includes(r.selfRow.place), JSON.stringify(r.selfRow && r.selfRow.place));
   ok('解除すると removed になり、行は消えない', r.removedCount >= 1, `${r.removedCount}件`);
   ok('解除後は一覧に戻る', r.afterRemoveRows >= 1 || (r.afterRemoveText || '').includes('まだフレンドがいません'), `${r.afterRemoveRows}行`);
@@ -450,6 +482,72 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('承認すると、プロフィールのバッジが消える', badge.badgeAfter === false);
   ok('バッジの画面が落ちていない', badge.crashed === false);
   ok('バッジの画面で実行時エラーが出ていない', badge.errors.length === 0, badge.errors.slice(0, 2).join(' / ') || 'なし');
+
+  // ⑨ 招待リンク(?friend=コード)で開いたとき: HOMEへ来たところでフレンド画面が開き、申請の確認が出る
+  const runLinkScenario = async () => {
+    const fake = createFakeFriendsServer();
+    fake.db.friend_codes.push({ breeder_id: 'other-friend', friend_code: 'AAAA2222', created_at: fake.tick() });
+    fake.db.breeder_profiles.push({ breeder_id: 'other-friend', user_name: 'リンクの子', icon: null, profile_frame: null, updated_at: new Date().toISOString() });
+    const server = await serve(true);
+    let browser; const out = {};
+    try {
+      browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const errors = [];
+      page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
+      await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
+        const request = route.request(); const url = request.url();
+        if (/\/rest\/v1\/(friend_codes|friend_links|friend_profiles|friend_invites)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
+          const res = fake.handle(url, request.method(), request.postData());
+          await route.fulfill({ status: res.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: res.body === undefined ? '' : JSON.stringify(res.body) });
+          return;
+        }
+        if (request.method() === 'OPTIONS') { await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } }); return; }
+        await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '[]' });
+      });
+      await page.addInitScript(() => {
+        const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+        put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true);
+        put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
+        put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
+        put('mh_rhythm_tutorial_seen_v1', true); put('mh_breeder_id_v1', 'self-user');
+      });
+      const clickText = async (pattern, nth = 0) => page.evaluate(([source, index]) => {
+        const rx = new RegExp(source);
+        const list = [...document.querySelectorAll('button')].filter(b => rx.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
+        if (!list[index]) return false;
+        list[index].click();
+        return true;
+      }, [pattern, nth]);
+      await page.goto(`http://localhost:${PORT}/monster-hero/index.html?friend=aaaa-2222`, { waitUntil: 'load', timeout: 60000 });
+      await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
+      await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+      await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+      // 割り込む別の案内を閉じながら、申請の確認が出るのを待つ
+      for (let round = 0; round < 60; round++) {
+        if (await page.evaluate(() => !!document.querySelector('[data-confirm-sheet]'))) break;
+        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ|あとで)$');
+        await page.waitForTimeout(400);
+      }
+      out.sheet = await page.evaluate(() => (document.querySelector('[data-confirm-sheet]') || {}).innerText || '');
+      out.urlAfter = await page.evaluate(() => window.location.search);
+      if (process.env.FRIENDS_SHOT_DIR) await page.screenshot({ path: path.join(process.env.FRIENDS_SHOT_DIR, '10-link-ask.png') });
+      await clickText('^申請する$');
+      await page.waitForTimeout(900);
+      out.row = fake.db.friend_links.find(r => r.requester_id === 'self-user' && r.target_id === 'other-friend') || null;
+      out.crashed = await page.evaluate(() => document.body.innerText.includes('問題が発生しました'));
+      out.errors = errors;
+    } finally {
+      if (browser) await browser.close();
+      server.close();
+    }
+    return out;
+  };
+  const link = await runLinkScenario();
+  ok('招待リンクで開くと、相手の名前つきで申請の確認が出る', /リンクの子さんにフレンド申請/.test(link.sheet || ''), `${link.sheet}`);
+  ok('リンクのコードはURLから消える(再読み込みで二度出ない)', !/friend=/.test(link.urlAfter || ''), `${link.urlAfter}`);
+  ok('「申請する」で、リンクのコードの持ち主へ申請が作られる', !!link.row && link.row.status === 'pending');
+  ok('リンクで開いても画面が落ちない・エラーが出ない', link.crashed === false && link.errors.length === 0, link.errors.slice(0, 2).join(' / ') || 'なし');
 
   // ⑤ 表が無い環境
   const missing = await runScenario(true, { tablesMissing: true });
