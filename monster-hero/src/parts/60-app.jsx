@@ -1844,7 +1844,7 @@ function MonsterHeroGame() {
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
   // フレンドへ送る内容の「最新の値」。送信は少し遅れて走るので、その時点の値をここから読む(宣言のあとに置く)
   friendLatestRef.current = { gameState, masuMons, favoriteMasuId, profileMessage, highScores, proHighScores, quickHighestWaves, extremeBestScores,
-    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons, ownedProfileFrames };
+    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons: expandOwnedMarketIcons(ownedMarketIcons), ownedProfileFrames };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
@@ -6811,7 +6811,8 @@ function MonsterHeroGame() {
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
     if (item.type === 'item') return false;
-    return ownedMarketIcons.includes(item.id);
+    // アイコンは、同じキャラのまとめのどれか1つでも持っていれば全部持っている扱い(保存値は広げるだけで書き換えない)
+    return expandOwnedMarketIcons(ownedMarketIcons).includes(item.id);
   };
 
   const saveMonsterPartySets = (nextSets) => {
@@ -6905,7 +6906,8 @@ function MonsterHeroGame() {
       storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
       markProfileFrameNoticed(item.id);
     } else if (item.type !== 'item') {
-      setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
+      // 同じキャラのまとめは、1つ買うと中身が全部入る(商品の並びでは1つにまとまっている)
+      setOwnedMarketIcons(prev => { const group = breederIconGroupOf(item.id); const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])]; storeSet('mh_market_icons', next, false); return next; });
     }
     saveMissionProgress('market');
     return true;
@@ -17811,7 +17813,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
           // フレームはここでは変えられない(プロフィールの「フレーム」から変える)
           const closeIcon=()=>{ setShowIconPicker(false); setIconQuery(''); setIconChip('all'); };
-          const all=breederIconOptions({ownedMarketIconIds:ownedMarketIcons});
+          const all=breederIconOptions({ownedMarketIconIds:expandOwnedMarketIcons(ownedMarketIcons)});
           const label=(m)=>String(m.name||'').replace(/のアイコン$/,'');
           const q=iconQuery.trim().toLowerCase();
           const matches=all.filter(m=>(iconChip==='all'||m.source===iconChip)&&(!q||label(m).toLowerCase().includes(q)));

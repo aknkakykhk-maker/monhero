@@ -44,7 +44,7 @@
 | `mh_breeder_points` | number / `0` | 未使用マーケットポイント |
 | `mh_breeder_points_granted` | number or null | 累計付与済み相当数 |
 | `mh_breeder_id_v1` | string or null | 端末ごとに1回だけ作るブリーダーID。全国ランキングで同名の別人を見分けるために送る(名前を変えても変わらない。`docs/spec/RHYTHM_RANKING.md` §4) |
-| `mh_market_icons` | string[] / `[]` | 購入アイコンID |
+| `mh_market_icons` | string[] / `[]` | 購入アイコンID。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
 | `mh_unlocked_monsters` | string[] / 初期8種 | 解放済み種ID |
