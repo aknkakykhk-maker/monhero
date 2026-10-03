@@ -334,13 +334,23 @@ const RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS = Object.freeze(
     ? PROFILE_FRAMES.filter(frame => frame.released === true && profileFrameSaleIn(frame, 'beatPoint'))
         .map(frame => Object.freeze({ id:`frame_${frame.id}`, name:`${frame.name}のフレーム`, kind:'frame', frameId:frame.id, grantAmount:1, unit:'枚', cost:profileFrameSaleIn(frame, 'beatPoint').cost }))
     : []);
+// 助手の着替え(2026-10-03 ユーザー指示「着替え自体はマーケットに販売する予定」)。
+// ★まだ売る服は無い。服(data/breeder.js の ASSISTANT_COSTUMES)に `price:{ beatPoint:◯◯ }` を書くと、ここへ自動で並ぶ。
+//   1着につき1回、持っていれば交換できない。交換すると mh_assistant_costume_owned_v1 にidが入る。
+// ★breeder.js が読み込まれていない環境(この定義だけを取り出す検査)では空になる。
+const RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS = Object.freeze(
+  (typeof ASSISTANT_COSTUMES !== 'undefined' && typeof assistantCostumeSaleIn === 'function')
+    ? releasedAssistantCostumes().filter(costume => assistantCostumeSaleIn(costume, 'beatPoint'))
+        .map(costume => Object.freeze({ id:`costume_${costume.id}`, name:costume.name, kind:'costume', costumeId:costume.id, assistantId:costume.assistantId, grantAmount:1, unit:'着', cost:assistantCostumeSaleIn(costume, 'beatPoint').cost }))
+    : []);
 // 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
 // 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す
 const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
 // unlockedMonsterIds … 解放済みのモンスターid(円盤石の交換のときだけ使う)
 // unlockedTeachingIds … 解放済みのアシストカードid(アシストカードの交換のときだけ使う)
 // ownedProfileFrames … 持っているフレームid(フレームの交換のときだけ使う)
-const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[] } = {}) => {
+// ownedAssistantCostumes … 持っている着替えのid(着替えの交換のときだけ使う)
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[], ownedAssistantCostumes=[] } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {
     const n = Number(value);
@@ -352,7 +362,7 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
   const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const unitCost = safeInt(offer?.cost);
   const grantAmount = safeInt(offer?.grantAmount);
-  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame'].includes(offer.kind)) {
+  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame','costume'].includes(offer.kind)) {
     return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
   }
   // 円盤石: 1回に1つ。持っているモンスターは交換できない。ダイヤ・所持品は変えない
@@ -384,6 +394,16 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
     if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
     return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
       frameId, ownedProfileFrames:[...owned, frameId] };
+  }
+  // 着替え: 1回に1着。持っている服は交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'costume') {
+    const costumeId = typeof offer.costumeId === 'string' ? offer.costumeId : '';
+    const owned = Array.isArray(ownedAssistantCostumes) ? ownedAssistantCostumes.filter(id => typeof id === 'string') : [];
+    if (!costumeId || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (owned.includes(costumeId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      costumeId, ownedAssistantCostumes:[...owned, costumeId] };
   }
   const totalCost = Math.min(max, unitCost * q);
   if (points < totalCost) {
