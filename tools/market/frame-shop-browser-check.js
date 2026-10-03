@@ -111,7 +111,7 @@ const seed = ({ conditions }) => {
       check(`① ${label}: 条件が未達成の3枚は「条件を達成すると買えます」の札で、買えない`,
         cards.every(c => c.locked && !c.buyEnabled), cards.map(c => `${c.name}:${c.locked}/${c.buyEnabled}`).join(' '));
     }
-    // 新しい7枚(2026-10-03): 条件はブリーダーP交換所だけ。ビートP交換所は条件なし(スエゾー〜ミーア(ゴーレム含む)は100P・ラグナロクは1000P)
+    // 新しい7枚(2026-10-03): 条件はブリーダーP交換所だけ。ビートP交換所は条件なし(スエゾー〜ミーア(ゴーレム含む)は100P・ラグナロクは10000P)
     const NEW6 = ['スエゾー', 'ゴーレム', 'ライガー', 'ハム', 'ピクシー', 'ミーア', 'ラグナロク'];
     await openShop(page, 'ブリーダーP');
     const bpNew = await frameCards(page, NEW6);
@@ -121,7 +121,7 @@ const seed = ({ conditions }) => {
     const beatNew = await frameCards(page, NEW6);
     check('① ビートP交換所: 新しい7枚は鍵が付かない(条件なし)', beatNew.every(c => c.found && !c.locked), beatNew.map(c => `${c.name}:${c.found}/${c.locked}`).join(' '));
     check('① ビートP交換所: スエゾー〜ミーア(ゴーレム含む)は100P(所持500P)で買える', beatNew.slice(0, 6).every(c => c.buyEnabled), beatNew.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
-    check('① ビートP交換所: ラグナロクは1000Pなので、500Pでは買えない', !beatNew[6].buyEnabled && /1000/.test(beatNew[6].text.replace(/,/g, '')), beatNew[6].text.slice(0, 40));
+    check('① ビートP交換所: ラグナロクは10000Pなので、500Pでは買えない', !beatNew[6].buyEnabled && /10000/.test(beatNew[6].text.replace(/,/g, '')), beatNew[6].text.slice(0, 40));
     check('① 未達成のあいだ、持ち物は何も増えない', ((await store(page, 'mh_profile_frame_owned_v1')) || []).length === 0);
     await ctx.close();
   }
