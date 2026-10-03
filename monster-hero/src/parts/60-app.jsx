@@ -4132,6 +4132,28 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
+  // ほかの案内が出ていないHOMEへ来たところで、フレンド画面を開いて申請の確認を出す。公開前・はじめての設定の前は何もしない
+  const [pendingFriendCode, setPendingFriendCode] = useState('');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const code = friendsCodeFromSearch(window.location.search);
+    if (!code) return;
+    setPendingFriendCode(code);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('friend');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch (error) { /* URLを直せなくても、申請の確認は出せる */ }
+  }, []);
+  useEffect(() => {
+    if (!pendingFriendCode) return;
+    if (RELEASE_FLAGS.friends !== true) { setPendingFriendCode(''); return; }
+    if (!(friendsActive && bootPhase === 'GAME' && gameState === 'HOME' && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
+      && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length === 0)) return;
+    setPendingFriendCode('');
+    openFriends({ code: pendingFriendCode });
+  }, [pendingFriendCode, friendsActive, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
   // 「見た」の記録(rhythmEventStorySeenRef)とは別に持つ。あちらは最後まで見ないと付かない
   const rhythmEventStoryStartedRef = useRef([]);
