@@ -16,10 +16,10 @@ const check=(label,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${label}${detai
 
 // 「おまかせ」の値は本体(RHYTHM_LOOK_PRESETS)をそのまま使う。expect … その設定で演奏画面に出ているはずのもの
 const EXPECT={
-  LIGHT:{effect:'MINIMAL',stage:null,road:false,judgmentFx:false},
-  STANDARD:{effect:'LIGHT',stage:null,road:false,judgmentFx:false},
-  VIVID:{effect:'LOW',stage:'VIVID',road:true,judgmentFx:true},
-  FULL:{effect:'NORMAL',stage:'LIVE',stageGl:true,road:true,judgmentFx:true},
+  LIGHT:{effect:'MINIMAL',stage:null,road:false,judgmentFx:false,climax:false},
+  STANDARD:{effect:'LIGHT',stage:null,road:false,judgmentFx:false,climax:false},
+  VIVID:{effect:'LOW',stage:'VIVID',road:true,judgmentFx:true,climax:true},
+  FULL:{effect:'NORMAL',stage:'LIVE',stageGl:true,road:true,judgmentFx:true,climax:true},
 };
 
 (async()=>{
@@ -59,10 +59,14 @@ const EXPECT={
         await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
         await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
         await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
-        for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(250);}
+        for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
         await clickText('モンヒロビート');
+        // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+        await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
+        // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+        await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
         await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
-        for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(300);}
+        for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
         await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
         await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});opened=true;
         await page.waitForFunction(()=>/0:0[3-9]\//.test(document.querySelector('[data-rhythm-song-clock]')?.textContent||''),{timeout:60000,polling:200});
@@ -70,7 +74,7 @@ const EXPECT={
       }catch(e){errors.push(`開けない: ${String(e.message).split('\n')[0]}`);}
       const seen=opened?await page.evaluate(()=>{const q=s=>document.querySelector(s),area=q('[data-rhythm-play-area]');
         return {effect:area?.dataset.rhythmEffect||'',judgmentFx:area?.dataset.rhythmJudgmentFx==='1',stage:q('[data-rhythm-stage]')?.dataset.rhythmStage||null,stageGl:!!q('[data-rhythm-stage-gl]'),
-          road:!!q('[data-rhythm-road-haze]'),canvas:!!q('[data-rhythm-note-canvas]'),score:!!q('[data-rhythm-score]'),life:!!q('[data-rhythm-life-value]'),
+          road:!!q('[data-rhythm-road-haze]'),roadCss:q('[data-rhythm-road-haze]')?getComputedStyle(q('[data-rhythm-road-haze]')).position:'',climax:!!q('[data-rhythm-climax]'),canvas:!!q('[data-rhythm-note-canvas]'),score:!!q('[data-rhythm-score]'),life:!!q('[data-rhythm-life-value]'),
           judgmentText:!!q('[data-rhythm-judgment-text]'),songDim:q('[data-rhythm-hud-songline]')?.dataset.hudSongDim==='1',clock:q('[data-rhythm-song-clock]')?.textContent||''};}):null;
       const tag=`「${preset.label}」`;
       check(`${tag} 演奏画面が開いて曲が進む`,!!seen&&/0:0[5-9]|0:1\d/.test(seen.clock),seen?seen.clock.slice(0,9):'開けない');
@@ -81,6 +85,9 @@ const EXPECT={
       check(`${tag} ライブ背景が設定どおり(${expect.stage||'なし'})`,seen.stage===expect.stage,String(seen.stage));
       if(expect.stageGl)check(`${tag} ライブ背景を WebGL で描いている`,seen.stageGl);
       check(`${tag} 道の演出が設定どおり(${expect.road?'あり':'なし'})`,seen.road===expect.road);
+      // 2026-09-26 の main の取り込みで CSS が消え、部品はあるのに何も見えていなかった(2026-09-29 に見つけた)
+      if(expect.road)check(`${tag} 道のもやの CSS が効いている`,seen.roadCss==='absolute',seen.roadCss);
+      check(`${tag} 盛り上がりの光が設定どおり(${expect.climax?'あり':'なし'})`,seen.climax===expect.climax);
       check(`${tag} 判定の演出の印が演奏エリアに設定どおり付いている(${expect.judgmentFx?'あり':'なし'})`,seen.judgmentFx===expect.judgmentFx);
       check(`${tag} 演奏が始まって少したつと曲名が薄くなる`,seen.songDim);
       await page.close();

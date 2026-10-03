@@ -463,13 +463,15 @@ check('ガッツの回復は1か所(gainGuts)へまとめる',
 //   効くのは盤面ぜんぶ(2026-09-19 ユーザーの整理)。ライフはそうなっていたのに
 //   ガッツだけ「使った子」へ入れていた
 //   (2026-09-21 ユーザー指摘「みゅあの回復は全体なのに1体にしかきいてなかった」)。
-// ★「その子だけ」へ入るのは2つ。固有技(スエゾー＝そのモンスターの技)と、
-//   氷海の支配者(持っている子だけ・仕様 4.9)
+// ★全体へ入るのは回復カードの4つ(メロソ・みゅあ・ももすけ、みゅあの旧形の分岐)。
+// ★「その子だけ」へ入るのは4つ。固有技(スエゾー＝そのモンスターの技)と、
+//   氷海の支配者(持っている子だけ・仕様 4.9)、固有技「大樹の加護」(ユグドラシル・メルホイップ＝使った子)、
+//   特性「生命の源」(持っている子だけ。2026-09-29)
 check('ガッツを増やすものは、行き先を名指しで渡す', has('const gainGutsAt = (slotIdx, amount) => {')
   && has('const gainGutsByRate = (slotIdx, rate) => {')
   && has('const gainGutsByRateAll = (rate) => {')
-  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 2
-  && (source.match(/gainGutsByRateAll\(/g) || []).length === 3
+  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 4
+  && (source.match(/gainGutsByRateAll\(/g) || []).length === 4
   && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 2,
   `その子だけ ${(source.match(/gainGutsByRate\(slotIdx,/g) || []).length}か所 / 全体 ${(source.match(/gainGutsByRateAll\(/g) || []).length}か所 / 固定量 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);
 // 氷海ぶんは全員へ配る率に混ぜず、持っている子へだけ足す(混ぜると誰か1人の特性で全員が得をする)
@@ -1524,6 +1526,8 @@ check('固有技の効果も枠の印に出る',
         + 'const heroCardBonusOf=(id)=>(__cfg.owners.includes(id)?1:0);'
         + 'const kikiCardBonus=__cfg.kiki; const baseCardLimit=__cfg.baseLimit; const cardLimit=__cfg.cardLimit;'
         + 'const soulCoordinationSlots=__cfg.coordSlots; const soulCoordinationCardBonus=__cfg.coordBonus;'
+        // EXの「その子のカード枚数」への足し算(tacticsExCardBonusAt)が slotMaxUses へ加わった。ここでは効果なし(0)の代役を置く
+        + 'const tacticsExCardBonusAt=()=>0; const tacticsExState=null; const tacticsUnits=null; const wave=1; const turnCount=1;'
         + usesSrc.trim() + '\nglobalThis.f=slotMaxUses;', box);
     return box.f;
   };
@@ -1577,7 +1581,7 @@ check('固有技の効果も枠の印に出る',
     // 攻撃の種類ごとの演出(themedAttack)で分岐が挟まったので、「どちらの要素に攻撃の動きを付けるか」だけを見る(2026-09-27)
     /isAnimating&&!tacticsNewLayout\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen)
       && battleScreen.includes("data-tactics-attack-content={tacticsNewLayout?'content-only':undefined}")
-      && /isAnimating&&tacticsNewLayout\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen));
+      && /isAnimating&&tacticsNewLayout(&&!pandoraArt)\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen));
   check('タクティクス操作帯とカードの装飾を統一する',
     battleScreen.includes("rounded-[10px] border border-blue-300/55 bg-blue-500/10")
       && battleScreen.includes("tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'")

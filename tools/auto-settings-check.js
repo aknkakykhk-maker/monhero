@@ -92,7 +92,8 @@ assert(source.includes("setAutoBreakthroughBulkValue('follow')"), 'AUTO設定を
 const bulkStart = source.indexOf('const applyAutoBreakthroughBulk = async () => {');
 const bulkEnd = source.indexOf('const saveAutoSettings = async () => {', bulkStart);
 const bulk = source.slice(bulkStart, bulkEnd);
-assert(bulk.includes("window.confirm(`所有マスモン${currentMons.length}体"), '一括変更前の確認がありません');
+// 確認は、ブラウザの window.confirm からゲーム内の確認窓(askConfirm)へ作り替わった(2026-10)
+assert(bulk.includes("await askConfirm({") && bulk.includes("所有マスモン${currentMons.length}体"), '一括変更前の確認がありません');
 assert(bulk.includes("saveStoredValuesOrRollback([") && bulk.includes("{ key:'mh_masu_mons', before:currentMons, next }"), '一括設定を読み戻し検証つきで既存mh_masu_monsへ保存していません');
 assert(bulk.includes('if (!saved)') && bulk.indexOf('if (!saved)') < bulk.indexOf('masuMonsRef.current = next'), '一括保存失敗時にstateへ進む可能性があります');
 assert(bulk.includes('masuMonsRef.current = next') && bulk.includes('setMasuMons(next)'), '一括保存成功後に最新個体ref/stateを同期していません');

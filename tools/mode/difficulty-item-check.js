@@ -132,15 +132,18 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   check('枚数を決める画面が出る', useScreen.includes('使う枚数'));
   check('もらえる絆経験値が出る', useScreen.includes('もらえる絆経験値'));
 
-  // スライダーを最大にすると、経験値と到達レベルが増える
+  // MAX にすると、経験値と到達レベルが増える
+  // (2026-10-01 に数の選び方をマーケットと同じ QuantityStepper にした。以前はスライダーと「最大」)
   const before = await page.evaluate(() => {
-    const m = document.body.innerText.match(/\+([\d,]+)/);
+    // 刻みボタンの「+1」「+10」を拾わないよう、「もらえる絆経験値」の行の数字を読む
+    const m = document.body.innerText.match(/もらえる絆経験値\s*\+([\d,]+)/);
     return m ? m[1] : '';
   });
-  await clickText('^最大$');
+  await clickText('^MAX（');
   await page.waitForTimeout(600);
   const afterTxt = await bodyText();
-  check('最大にすると増える経験値が変わる', !afterTxt.includes(`+${before} `) || afterTxt.includes('+300'), `1枚=${before} → 最大`);
+  const afterGain = (afterTxt.match(/もらえる絆経験値\s*\+([\d,]+)/) || [])[1] || '';
+  check('最大にすると増える経験値が変わる', !!before && !!afterGain && afterGain !== before, `1枚=${before} → MAX=${afterGain}`);
   check('絆レベルの変化が出る', /絆Lv\.\d+ → Lv\.\d+/.test(afterTxt) || /Lv\.\d+ \(\+\d+\)/.test(afterTxt), afterTxt.match(/絆Lv\.\d+[^。]{0,24}/)?.[0] || '');
 
   // 使うとレベルが上がり、所持数が減る

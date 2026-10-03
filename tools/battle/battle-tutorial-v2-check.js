@@ -102,14 +102,14 @@ const check = (name, ok, detail = '') => {
     await page.getByText('どのバトルで遊ぶかを選びます').first().waitFor({ timeout: 15000 });
     check('ふだんの入口(バトルの仕組みえらび)から始まる', true);
 
-    // 吹き出しの見出しを読みながら「つぎへ」で進める
+    // 吹き出しの見出しを読みながら「次へ」で進める
     // 吹き出しの中身。枠は role="dialog" aria-label="バトルチュートリアル" で出ている
     const bubbleText = () => page.evaluate(() => {
       const box = document.querySelector('[aria-label="バトルチュートリアル"]');
       return box ? box.textContent.replace(/\s+/g, ' ').trim() : null;
     });
     const tapNext = async () => {
-      const next = page.locator('button').filter({ hasText: /^つぎへ$/ });
+      const next = page.locator('button').filter({ hasText: /^次へ$/ });
       if (await next.count() === 0) return false;
       await next.first().dispatchEvent('click');
       await page.waitForTimeout(220);
@@ -242,7 +242,8 @@ const check = (name, ok, detail = '') => {
     await page.locator('button').filter({ hasText: /^ニコラオの力/ }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^習得する$/ }).first().dispatchEvent('click');
-    await page.waitForTimeout(1200);
+    // 覚えたカードの演出(TeachingResultFx)を約1.9秒見せてからバトルへ進む
+    await page.waitForTimeout(3000);
     check('練習のままバトル画面まで進む',
       await page.locator('[data-battle-action]').count() >= 1);
     // 画面の見かたの説明を順に進め、ACTIONボタンの説明まで来たら光っているものを見る
@@ -255,7 +256,7 @@ const check = (name, ok, detail = '') => {
     check('ACTIONの説明でACTIONボタンが光る',
       Array.isArray(actionSpots) && actionSpots.length === 1 && actionSpots[0].action === true,
       JSON.stringify(actionSpots));
-    // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「つぎへ」も無くなる
+    // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「次へ」も無くなる
     for (let i = 0; i < 12; i++) if (!(await tapNext())) break;
     const doSpots = await spots();
     check('カードを使う番はACTIONも光る',

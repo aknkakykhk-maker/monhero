@@ -51,7 +51,7 @@ const seed = () => {
   }, w);
   const dismiss = async () => { for (let i=0;i<12;i++) {
     const c = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|とじる|OK)$/.test((x.innerText||'').trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText||'').trim()));
       if (b) { b.click(); return true; }
       const d = document.querySelector('[role="dialog"]'); if (d) { (d.querySelector('button')||d).click(); return true; }
       return false; });
@@ -81,7 +81,7 @@ const seed = () => {
     await page.evaluate(() => { [...document.querySelectorAll('button')].find(x => /近距離|中距離|零距離|遠距離/.test(x.textContent))?.click(); });
     await page.waitForTimeout(1300); await dismiss();
     await page.evaluate(() => { [...document.querySelectorAll('button')].find(x => /新規習得/.test(x.textContent))?.click(); });
-    await page.waitForTimeout(900); await clickExact('習得する'); await page.waitForTimeout(1800);
+    await page.waitForTimeout(900); await clickExact('習得する'); await page.waitForTimeout(3500);
     // 一括実行だとブラウザが重く、待ち時間だけでは間に合わないことがある。
     // バトル画面(AUTOボタン)が出るまで待ってから先へ進む
     await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});

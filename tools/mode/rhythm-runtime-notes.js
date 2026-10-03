@@ -196,6 +196,12 @@ const RELEASED_MARKERS=Object.freeze({
   mou_hitotsu_no_sekai_e:'mou-hitotsu-no-sekai-e-v3',
   senjou_no_shippuu:'senjou-no-shippuu-v3',
   makutsu_no_senritsu:'makutsu-no-senritsu-v3',
+  only_my_railgun:'only-my-railgun-v3',
+  big_bridge_no_shitou:'big-bridge-no-shitou-v3',
+  rising_hope:'rising-hope-v3',
+  haruka:'haruka-v3',
+  stay_with_me_short:'stay-with-me-short-v3',
+  kiki_issen_short:'kiki-issen-short-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -225,6 +231,12 @@ const RELEASED_TRACKS=Object.freeze({
   mou_hitotsu_no_sekai_e:'mou_hitotsu_no_sekai_e',
   senjou_no_shippuu:'senjou_no_shippuu',
   makutsu_no_senritsu:'makutsu_no_senritsu',
+  only_my_railgun:'only_my_railgun',
+  big_bridge_no_shitou:'big_bridge_no_shitou',
+  rising_hope:'rising_hope',
+  haruka:'haruka',
+  stay_with_me_short:'stay_with_me_short',
+  kiki_issen_short:'kiki_issen_short',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

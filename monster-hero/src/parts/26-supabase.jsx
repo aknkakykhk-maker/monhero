@@ -794,6 +794,14 @@ const persistRankingScore = async ({ row, insertScore=sbInsertScore, saveLocal }
 // 起動直後はランキングの取得や絵の読み込みが重なるので、少し待ってから始める。
 const RANKING_RESEND_LIMIT = 10;
 const RANKING_RESEND_DELAY_MS = 4000;
+// 曲を終えた直後の送信が通らなかったとき、アプリを開いたまま送り直す間隔(2026-09-29)。
+// これまで送り直しは「アプリを開いたとき1回」だけで、電波の弱い場所で遊んだ記録は、アプリを閉じて開き直すまで
+// 全国ランキングに出なかった(ユーザー報告「スコアがランキングに反映されない」)
+const RHYTHM_RANKING_RETRY_DELAYS_MS = [12000, 45000, 150000];
+// ランキングを開くとき、直前の送信がまだ終わっていなければ待つ長さ(送信の待ち時間の上限8秒より少し長く)
+const RHYTHM_RANKING_SUBMIT_WAIT_MS = 9000;
+// ランキングを開くときの送り直しを待つ長さ。待ちきれなければ、いま入っているぶんだけ見せる
+const RHYTHM_RANKING_RESEND_WAIT_MS = 10000;
 
 // 退避した一覧から、まだ送れていないものだけを拾う。
 //   ・nationalSaved が false のものだけ(true や、フラグの無い古い記録は触らない)
@@ -1725,4 +1733,63 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
   clearRecordedRef.current = false;
   runIdRef.current = createRunId();
   return runIdRef.current;
+};
+
+// ===== モンヒロビートの遊んだ記録(2026-09-28) =====
+// ユーザー指示「人間が関与しないで完璧なツールに仕上がる仕組みを」「全プレイヤーから送る」。
+// 公開中の曲をふつうに最後まで遊んだとき、ノーツごとの判定のずれを縮めて rhythm_play_logs へ1行送る。
+// 譜面生成ツール(tools/mode/rhythm-play-log.js)が週1回これを読み、「音に合わせて押せているか」を測って
+// 次に足す曲の作り方を決める(docs/spec/RHYTHM_PLAY_LOG.md)。
+//   ・名前・ブリーダーID・セーブデータは送らない。端末ごとのでたらめなID(mh_rhythm_play_log_device_v1)だけ
+//     (1人の記録が多すぎるときに重みをならすため)
+//   ・送れなくてもゲームは何も変わらない(黙って捨てる。やり直さない)
+//   ・置き場所(表)がまだ無い(404)・権限が無い(401/403)と分かったら、そのページを閉じるまで送らない
+//   ・表の作り方は docs/sql/rankings/RHYTHM_PLAY_LOG_APPLY.sql(先にアプリを公開しても壊れない)
+const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
+let rhythmPlayLogDisabled = false;
+// タッチの診断(2026-09-30・docs/spec/RHYTHM_TOUCH_DIAG.md)。遊んだ記録と同じく、表が無い・権限が無いと分かったら、ページを閉じるまで送らない
+const RHYTHM_TOUCH_DIAG_TABLE = 'rhythm_touch_diagnostics';
+let rhythmTouchDiagDisabled = false;
+// 手元のサーバー(検査・ローカル確認)で開いたゲームからは、タッチの診断・遊んだ記録を送らない(2026-10-01)。
+// 検査は本物の曲を最後まで流すので、送ると本番の表へ検査の行が混ざり、iPhone と Android の比べが狂う
+const sbTelemetryLocal = () => {
+  try {
+    if (typeof location === 'undefined') return false;
+    if (location.protocol === 'file:') return true;
+    return ['localhost', '127.0.0.1', '[::1]', '::1', ''].includes(String(location.hostname || ''));
+  } catch { return false; }
+};
+const sbSendRhythmTouchDiag = async (row) => {
+  if (rhythmTouchDiagDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const sbSendRhythmPlayLog = async (row) => {
+  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_PLAY_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmPlayLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 };

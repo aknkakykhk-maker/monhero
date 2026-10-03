@@ -30,6 +30,8 @@ vm.runInContext([
   // 絆Lvの計算から寄付ダイヤの換算までを、本番の定義のまま持ってくる
   grab('const XP_CURVE_EXPONENT', 'const BOND_XP_DISCOUNT'),
   grab('const BOND_XP_DISCOUNT', 'const rosterBaseId = (entryId, masuMons)'),
+  // 転生の計算が転生ロックの判定(isMasuLocked)を呼ぶので、ロックの定義も一緒に持ってくる(2026-10-01)
+  grab('const MASU_LOCK_KEY', 'const buildMasuDonation'),
   'globalThis.__m={normalizeMasuProgression,buildMasuBreakthrough,buildMasuReincarnation,resetMasuForRebirth,'
   + 'applyUniqueSkillPointPlan,buildUniqueSkillPointReset,uniqueSkillAtLevel,MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
   + 'totalBondXpForLevel,masuBondLevelInfo,breakthroughItemCost,masuRebirthCost,REINCARNATE_MIN_LEVEL};',
@@ -46,7 +48,8 @@ check('リセット券は所持済み扱いにならず連続購入できる',
   && has("const nextItems = item.type === 'item' ? { ...ownedItems, [item.id]:ownedItemCount(ownedItems, item.id) + purchaseQuantity } : ownedItems;"));
 check('足りないときは購入しない',
   has('if (!item || item.available === false || balances[currency] < cost) return { ok:false')
-  && has('if (!purchase.ok) return;'));
+  // 2026-09-28(PR #1908)から、確認の窓が閉じてよいかを知るため、買えなかったときは false を返す
+  && has('if (!purchase.ok) return false;'));
 check('ダイヤと所持数は既存キーへまとめて保存し、失敗したら巻き戻す',
   has("{ key:'mh_gold', before:beforeGold, next:nextGold },")
   && has("{ key:'mh_owned_items', before:beforeItems, next:nextItems },")

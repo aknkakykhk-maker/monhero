@@ -41,7 +41,7 @@ const seed = () => {
   const dismissOverlays = async () => {
     for (let i = 0; i < 12; i++) {
       const closed = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK)$/.test((x.innerText || '').trim()));
+        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         const dialog = document.querySelector('[role="dialog"]');
         if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }
@@ -60,6 +60,8 @@ const seed = () => {
       const b = [...document.querySelectorAll('button')].find(x => /モンヒロビート|モンビー/.test(x.innerText || ''));
       b?.click();
     });
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
     await dismissOverlays();
   };
@@ -103,12 +105,13 @@ const seed = () => {
     const scrolled = await listTop();
     check('一覧を下へ送れる', scrolled > 0, `${scrolled}px`);
 
-    // 遊びかた(別の画面)へ移って戻る。全国ランキングも同じく画面を離れる操作
-    await page.evaluate(() => document.querySelector('[data-rhythm-demo-help]')?.click());
+    // 設定(別の画面)へ移って戻る。全国ランキングも同じく画面を離れる操作
+    // (以前は「遊びかた」で見ていたが、2026-10-03に遊びかたはモードえらびの画面へ移った)
+    await page.evaluate(() => document.querySelector('[data-rhythm-demo-options]')?.click());
     await page.waitForTimeout(1200);
     const leftHome = await page.evaluate(() => !document.querySelector('[data-rhythm-demo-home]'));
     check('別の画面へ移れる', leftHome);
-    await page.evaluate(() => { document.querySelector('[data-rhythm-demo-help-back]')?.click(); });
+    await page.evaluate(() => { document.querySelector('[data-rhythm-options] header button[aria-label="戻る"]')?.click(); });
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(600);
     check('曲えらびへ戻れている', await page.evaluate(() => !!document.querySelector('[data-rhythm-song-list]')));

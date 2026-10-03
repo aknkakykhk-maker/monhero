@@ -1,0 +1,7 @@
+# 月次だけで回す重い検査(1本100秒超)。週次は飛ばす。
+# 実測(2026-10-01、全548本62分)から作った。週次は約65分になる。
+# 検査が増減して時間が大きく変わったら、全検査を測り直してここを作り直す。
+mode/rhythm-touch-bridge-check.js
+audio/rhythm-loudness-check.js
+mode/rhythm-background-run-check.js
+monster/mermaid-browser-check.js

@@ -21,21 +21,24 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
 // --- 1. 取れたときの音 ---
+// 2026-09-27: 取れたときの音は音色の組み立てから共通の voice()(終わりの音 'end' / フリック 'flick')へ作り替わり、判定で鳴らし分ける。
+// 古い照合(専用の発振器の周波数や引数なしの playClear)は外し、今の形(別の種類で鳴らす・同じ設定を読む)を見る
 check('取れたときの音(playClear)がタップ音とは別に用意されている',
-  /const playClear=\(\)=>\{/.test(rhythm)&&rhythm.includes('playClear,'));
+  /const playClear=\(judgment=null\)=>\{/.test(rhythm)&&rhythm.includes('playClear,'));
 check('タップ音と同じ設定(音量・ON/OFF・全体ミュート)を読む',(()=>{
-  const body=rhythm.slice(rhythm.indexOf('const playClear=()=>{'),rhythm.indexOf('// フルコンボ等を達成して曲を終えたとき'));
-  return body.includes('readSettings()')&&body.includes('settings.enabled')&&body.includes('settings.volume')
-    &&body.includes('rhythmAudioGloballyEnabled()');
+  const body=rhythm.slice(rhythm.indexOf('const playClear='),rhythm.indexOf('const playFlick='));
+  const voiceBody=rhythm.slice(rhythm.indexOf('const voice=(settings,kind,judgment'),rhythm.indexOf('const voice=(settings,kind,judgment')+400);
+  return body.includes('readSettings()')&&voiceBody.includes('settings.enabled')&&voiceBody.includes('settings.volume')
+    &&voiceBody.includes('rhythmAudioGloballyEnabled()');
 })());
 check('専用の保存キーを増やしていない',!/mh_[a-z_]*clear/i.test(rhythm));
-check('タップ音とは違う音になっている(高さが変わって抜ける)',(()=>{
-  const body=rhythm.slice(rhythm.indexOf('const playClear=()=>{'),rhythm.indexOf('// フルコンボ等を達成して曲を終えたとき'));
-  return body.includes('exponentialRampToValueAtTime(1975.53')&&body.includes('setValueAtTime(1318.51');
+check('タップ音とは違う音(終わりの音 end・専用の音量)になっている',(()=>{
+  const body=rhythm.slice(rhythm.indexOf('const playClear='),rhythm.indexOf('const playFlick='));
+  return body.includes("'end'")&&body.includes('settings.endVolume');
 })());
 check('鳴らすのはHOLD / SLIDE / FLICKだけで、TAPでは鳴らさない',
   game.includes("const clearedGesture=judgment!=='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='FLICK');")
-  &&game.includes('if(clearedGesture){')&&game.includes('RHYTHM_NOTE_SE_RUNTIME.playClear();'));
+  &&game.includes('if(clearedGesture){')&&game.includes('RHYTHM_NOTE_SE_RUNTIME.playClear(judgment);'));
 check('MISSでは鳴らさない',game.includes("judgment!=='MISS'&&(note.type==='HOLD'"));
 
 // --- 2. 取れたときの光 ---

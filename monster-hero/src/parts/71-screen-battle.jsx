@@ -85,6 +85,84 @@ const tacticsAuraKindOf = (text = '', side = '') => {
 };
 // 何も起きていない間、画面の動きを休ませるまでの時間(ミリ秒)。BattleScreen の data-fx-rest を参照
 const TACTICS_FX_REST_MS = 5000;
+// ==== バトルの重さの見張り(2026-09-28 ユーザー指示「モンビーみたいに重さチェックやその他点検ツールを取り入れて
+// 軽くて見た目が良く出来る仕組みを作って」) ====
+// モンヒロビートの「重いときは演出を自動で控えめに」(30-rhythm-play)と同じ数え方。rAF の間隔から
+// 「描くのが間に合わなかったコマ」(いちばん短い間隔の1.8倍を超え、しかも20msを超えたもの・または50ms以上)を数え、
+// 3秒のうち8%を超えたら画面の軽さを一段下げる。1秒以上あいた間(裏に回った・止まっていた)は数えない。
+// ★下げるのは「軽め」まで。最軽量は並びごと変わるので、自分で選んだ人だけ。
+// ★見張るのはタクティクス新画面で、一時停止していない間だけ。休んでいる間は rAF も回さない(スマホを休ませる)
+const BATTLE_AUTO_LOAD_WINDOW_MS = 3000;
+const BATTLE_AUTO_LOAD_MIN_FRAMES = 5;
+const BATTLE_AUTO_LOAD_SLOW_RATIO = 0.08;
+const BATTLE_AUTO_LOAD_FLOOR = 'LIGHT';
+// 見張りを始めた直後(バトルの立ち上がり・軽さを下げた直後の描き直し)は、一瞬詰まるのがふつうなので数えない
+const BATTLE_AUTO_LOAD_WARMUP_MS = 2000;
+// 1コマが「遅い」か。rhythm と同じ線(一様に遅い端末は1.8倍では拾えないので、50ms 以上は常に遅い)
+const battleSlowFrame = (gap, minGap) => (gap > Math.max(5, minGap) * 1.8 && gap > 20) || gap >= 50;
+// 性能計測(デバッグ限定・既定OFF)。ONの記憶は専用キー mh_battle_perf_v1。
+// **OFFのあいだは加算も配列追加も一切しない**(計測のために重くしない)。戦闘の計算・進行には一切関与しない。
+// プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない
+const BATTLE_PERF_KEY = 'mh_battle_perf_v1';
+const BATTLE_PERF = (() => {
+  const zero = () => ({ frames: 0, totalMs: 0, maxMs: 0, slow: 0, over50: 0, over100: 0, minGap: 1e9, longTasks: 0, longTaskMs: 0, autoSteps: [], since: 0 });
+  let on = false, last = null, acc = zero(), observer = null;
+  const watchLongTasks = () => {
+    if (observer || typeof PerformanceObserver === 'undefined') return;
+    try {
+      observer = new PerformanceObserver((list) => { if (!on) return; for (const e of list.getEntries()) { acc.longTasks++; acc.longTaskMs += e.duration; } });
+      observer.observe({ type: 'longtask', buffered: false });
+    } catch { observer = null; }
+  };
+  const api = {
+    get enabled() { return on; },
+    setEnabled(next) {
+      on = !!next; last = null; acc = zero();
+      try { if (typeof localStorage !== 'undefined') localStorage.setItem(BATTLE_PERF_KEY, on ? '1' : '0'); } catch {}
+      if (on) watchLongTasks(); else if (observer) { try { observer.disconnect(); } catch {} observer = null; }
+      return on;
+    },
+    restore() { try { if (typeof localStorage !== 'undefined') on = localStorage.getItem(BATTLE_PERF_KEY) === '1'; } catch {} if (on) watchLongTasks(); return on; },
+    reset() { last = null; acc = zero(); },
+    // 見張りの rAF から毎コマ1回だけ呼ぶ(計測用の rAF は増やさない)
+    frame(nowMs) {
+      if (!on) return;
+      const t = Number(nowMs);
+      if (!Number.isFinite(t)) return;
+      if (!acc.since) acc.since = t;
+      if (last !== null) {
+        const dt = t - last;
+        if (dt > 0 && dt < 1000) {
+          acc.frames++; acc.totalMs += dt; if (dt > acc.maxMs) acc.maxMs = dt;
+          if (dt >= 5 && dt < acc.minGap) acc.minGap = dt;
+          if (battleSlowFrame(dt, acc.minGap)) acc.slow++;
+          if (dt >= 50) acc.over50++;
+          if (dt >= 100) acc.over100++;
+        }
+      }
+      last = t;
+    },
+    // 見張りをやめた(休止・画面を離れた)ときは、次のコマとの間を数えない
+    pause() { last = null; },
+    // 自動で軽さを下げた記録(いつ・何から何へ・そのときの遅いコマの割合)
+    autoStep(from, to, slow, frames) {
+      if (!on) return;
+      if (acc.autoSteps.length < 20) acc.autoSteps.push({ at: Math.round(typeof performance !== 'undefined' ? performance.now() : 0), from, to, slow, frames });
+    },
+    // いまの記録の要約(パネル表示・検査用)。infinite … ずっと動き続けているアニメーションの数
+    snapshot() {
+      if (!on) return null;
+      let infinite = null;
+      try { if (typeof document !== 'undefined' && document.getAnimations) infinite = document.getAnimations().filter(a => a.playState === 'running' && a.effect && a.effect.getComputedTiming && a.effect.getComputedTiming().iterations === Infinity).length; } catch {}
+      const avg = acc.frames ? acc.totalMs / acc.frames : 0;
+      return { frames: acc.frames, fps: avg ? Math.round(1000 / avg) : 0, avgMs: Math.round(avg * 10) / 10, maxMs: Math.round(acc.maxMs),
+        slowPct: acc.frames ? Math.round(acc.slow / acc.frames * 1000) / 10 : 0, over50: acc.over50, over100: acc.over100,
+        longTasks: acc.longTasks, longTaskMs: Math.round(acc.longTaskMs), infinite, autoSteps: acc.autoSteps.slice() };
+    },
+  };
+  api.restore();
+  return api;
+})();
 // タクティクスの敵ごとの動き方(新しい画面だけ)。値は 70-bootstrap の data-enemy-motion の CSS 名
 // (2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」で10体すべてに広げた)
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
@@ -350,6 +428,44 @@ const BossMovieLayer = ({ shake = true }) => {
 // 覚醒ムーは技名のカットイン・技ごとの全画面の演出・ひび割れも出す。
 // ★位置は出す瞬間に1回だけ測る(敵の丸枠と味方の枠)。動きの途中で測り直すと、跳ねている絵の位置を拾ってしまう
 // lite: 画面の軽さ「軽め」。飛ばすもの・画面を暗くする・覚醒ムーの全画面の演出を省き、当たりの光と技名だけにする
+// ==== 敵の技の格上げ(2026-10-02 ユーザー指示「敵モンスターの攻撃を演出も強化して。これはタクティクスのみ」) ====
+// 覚醒ムーは技ごとの全画面の演出を持っているので、それ以外の敵(9体)の大技へ足す。
+//   技名の帯(連撃・貫通・必殺技・全体攻撃) / 当たる瞬間の閃光 / 全体攻撃の暗転 / 画面の揺れ(60-app) /
+//   フィニッシュ(味方の枠の上に重なる絵。必殺技・全体攻撃は敵ごと、貫通は共通)
+// フィニッシュの部品は固有技と同じ(24-battle-fx.jsx の SpecialFinish)。色は敵の色(--em-c)。
+// d は当たる瞬間からの遅れ(ms。固有技の表と同じ作り方なので、呼び出し側が「当たる瞬間 - 250ms」を足す)
+const TACTICS_ENEMY_BANNER_SKILLS = Object.freeze(['rush', 'pierce', 'special', 'allout']);
+const TACTICS_ENEMY_FLASH_SKILLS = Object.freeze(['pierce', 'special', 'allout']);
+const TACTICS_ENEMY_PIERCE_FINISH = Object.freeze([{t:'blade',a:0,len:360,w:8,d:240},{t:'col',w:30,h:420,d:260,sky:true},{t:'ring',d:300,r:3}]);
+const TACTICS_ENEMY_FINISH = Object.freeze({
+  // カワズモー(力士のカエル): 大回転落とし=地面を砕く衝撃 / 大投げたまや=花火
+  kawazumo:     { special:[{t:'ring',d:300,r:4.2,flat:.38},{t:'bits',n:14,shape:'dust',dist:130,d:300},{t:'bits',n:8,shape:'star',dist:100,d:340}],
+                  allout:[{t:'bits',n:18,shape:'star',dist:170,d:260},{t:'bits',n:12,shape:'spark',dist:110,d:340},{t:'col',w:120,h:420,d:240,sky:true,soft:true},{t:'ring',d:300,r:3.4}] },
+  // メタルナー(拳法ロボ): 宙ポン拳=交差する掌打 / メタビーム=極太のビーム
+  metalner:     { special:[{t:'blade',a:-42,len:340,w:10,d:240},{t:'blade',a:42,len:340,w:10,d:310},{t:'ring',d:340,r:3.6},{t:'bits',n:10,shape:'spark',dist:110,d:340}],
+                  allout:[{t:'blade',a:0,len:420,w:18,d:240},{t:'col',w:60,h:440,d:260,sky:true},{t:'ring',d:300,r:3.8}] },
+  // イナリ(子ぎつね): にゃんぷうき=葉の旋風 / ハワイにゃん=花
+  inari:        { special:[{t:'bits',n:16,shape:'leaf',dist:140,d:280,spin:1},{t:'bits',n:10,shape:'leaf',dist:80,d:340,spin:-1},{t:'ring',d:300,r:3.2}],
+                  allout:[{t:'bits',n:18,shape:'petal',dist:150,d:260,spin:1},{t:'bits',n:12,shape:'petal',dist:90,d:320,spin:-1},{t:'ring',d:300,r:3.4,flat:.45}] },
+  // コイノボリ(鯉のぼり): キングウェーブ=大波 / 大津波=二重の大波
+  koinobori:    { special:[{t:'wave',d:240},{t:'bits',n:12,shape:'drop',dist:140,d:340},{t:'ring',d:340,r:3.2,flat:.45}],
+                  allout:[{t:'wave',d:220},{t:'wave',d:380},{t:'bits',n:16,shape:'drop',dist:130,d:300,fall:true},{t:'ring',d:420,r:4,flat:.45}] },
+  // デルピエロ(鎌の騎士): ブラッディクロス=大きな十字の斬撃 / フォトンドライブ=光の星
+  delpiero:     { special:[{t:'blade',a:-40,len:380,w:12,d:240},{t:'blade',a:40,len:380,w:12,d:320},{t:'col',w:40,h:440,d:380,sky:true},{t:'ring',d:380,r:3.8}],
+                  allout:[{t:'bits',n:16,shape:'star',dist:150,d:280},{t:'blade',a:0,len:320,w:9,d:300},{t:'blade',a:90,len:320,w:9,d:300},{t:'ring',d:300,r:4}] },
+  // ドクドク(ハートの手): めいどのみやげ=ハートと雫 / ようかい液=降りそそぐ液
+  dokudoku:     { special:[{t:'bits',n:12,shape:'heart',dist:130,d:280},{t:'bits',n:10,shape:'drop',dist:100,d:330},{t:'ring',d:300,r:3.4}],
+                  allout:[{t:'bits',n:18,shape:'drop',dist:130,d:260,fall:true},{t:'wave',d:300},{t:'ring',d:340,r:3.6,flat:.45}] },
+  // ラミア(阿修羅): 帝釈崩天=三本の雷柱 / 大焦熱=炎の柱
+  lamia:        { special:[{t:'col',w:44,h:440,d:240,sky:true,x:-54},{t:'col',w:56,h:480,d:280,sky:true},{t:'col',w:44,h:440,d:320,sky:true,x:54},{t:'ring',d:340,r:3.8},{t:'blade',a:0,len:300,w:7,d:340}],
+                  allout:[{t:'col',w:56,h:380,d:260,flame:true,x:-52},{t:'col',w:66,h:440,d:240,flame:true},{t:'col',w:56,h:380,d:280,flame:true,x:52},{t:'bits',n:12,shape:'flame',dist:110,d:320,rise:true}] },
+  // ニャルラトホテプ(邪神): 無貌の讃歌=回る魔法陣と光 / 真空魔空弾=魔法陣と十字
+  nyarlathotep: { special:[{t:'ring',d:240,r:3.4,flat:.45,rune:true},{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'col',w:120,h:440,d:300,sky:true,soft:true}],
+                  allout:[{t:'ring',d:240,r:3.2,flat:.45,rune:true},{t:'blade',a:90,len:340,w:9,d:300},{t:'bits',n:12,shape:'spark',dist:120,d:300},{t:'bits',n:8,shape:'spark',dist:80,d:360}] },
+  // スプラッター(斧の処刑人): エクスキューション=巨大な斧の一閃と血しぶき / デスエナジー=赤い炎
+  splatter:     { special:[{t:'blade',a:-58,len:440,w:16,d:240},{t:'col',w:44,h:440,d:320,sky:true},{t:'bits',n:12,shape:'drop',dist:130,d:340},{t:'ring',d:340,r:3.6}],
+                  allout:[{t:'col',w:60,h:400,d:260,flame:true},{t:'bits',n:14,shape:'spark',dist:120,d:300},{t:'ring',d:300,r:3.8,flat:.45}] },
+});
 const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = false }) => {
   const [geo, setGeo] = useState(null);
   React.useLayoutEffect(() => {
@@ -386,7 +502,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   return ReactDOM.createPortal(
     <div data-enemy-stage-fx data-enemy-motion={motion} data-stage-skill={skill} data-stage-moo={isMoo ? 'true' : undefined}
       className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 64000, '--em-dur': `${ms}ms`, '--sx': `${sx}px`, '--sy': `${sy}px` }}>
-      {!lite && !afterMovie && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill))) && (
+      {!lite && !afterMovie && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill)) || (!isMoo && skill === 'allout')) && (
         <div data-stage-dim style={{ background: `radial-gradient(circle at ${sx}px ${sy}px, transparent ${Math.round(sr * 1.15)}px, rgba(0,0,0,.74) ${Math.round(sr * 1.15 + 110)}px)` }}/>
       )}
       {strikes && geo.slots.map((t) => hits.map((h, k) => {
@@ -402,6 +518,23 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
           </React.Fragment>
         );
       }))}
+      {!isMoo && !lite && !afterMovie && TACTICS_ENEMY_BANNER_SKILLS.includes(skill) && skillLabel && (
+        <div data-enemy-banner={skill}><div data-enemy-banner-band><span data-enemy-banner-tag>{skill === 'special' ? '必殺技' : skill === 'allout' ? '全体攻撃' : skill === 'pierce' ? '貫通' : '連撃'}</span><span data-enemy-banner-name style={{ fontSize:`${Math.max(18, Math.min(34, Math.floor(260 / Math.max(1, String(skillLabel).length))))}px` }}>{skillLabel}</span></div></div>
+      )}
+      {!isMoo && !lite && TACTICS_ENEMY_FLASH_SKILLS.includes(skill) && (
+        <div data-enemy-flash style={{ animationDelay: at(hit) }}/>
+      )}
+      {!isMoo && !lite && strikes && (() => {
+        const parts = skill === 'pierce' ? TACTICS_ENEMY_PIERCE_FINISH : ((TACTICS_ENEMY_FINISH[motion] || {})[skill] || null);
+        if (!parts) return null;
+        const hitMs = Math.round(ms * hit);
+        return geo.slots.map((t) => (
+          <div key={`fin-${t.i}`} className="spm spm--enemy" data-enemy-finish={`${motion}-${skill}`}
+            style={{ '--spm-c1':'color-mix(in srgb, rgb(var(--em-c)) 38%, #fff)', '--spm-c2':'rgb(var(--em-c))', '--spm-tx':`${Math.round(t.x)}px`, '--spm-ty':`${Math.round(t.y)}px` }}>
+            <SpecialFinish parts={parts} offset={Math.max(0, hitMs - 240)}/>
+          </div>
+        ));
+      })()}
       {isMoo && !afterMovie && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && (
         <div data-moo-cutin><div data-moo-cutin-band><span>{skillLabel}</span></div></div>
       )}
@@ -469,7 +602,7 @@ const kindOfTacticsSlotFx = (fx) => {
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
 function BattleScreen({
-  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, battleIntimidate,
+  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
   battleTutorialAllowsEmergency, battleTutorialCardAllowed, battleTutorialCardKind,
   battleTutorialCardTarget, battleTutorialNeed, battleTutorialNeedCard, battleTutorialSpotClass,
@@ -480,7 +613,7 @@ function BattleScreen({
   enemyAttackFx, enemyDist, enemyIntent, enemyNextIntent, enemyRevivalUsed, enemySkillName,
   extremeDifficulty, extremeRun, extremeRunRef, focusedCard, getAttackPredictedDmg,
   getAvailableUniquesForSlot, getCardGuts, getDmg, getIncomingDamageBeforeTurnReduction,
-  getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx,
+  getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx, guardImpact,
   guardLevel, guardValueOf, tacticsSlotGuardValue, guts, hand, heroCardBonus, heroDist, hp, iceLockActive,
   iceLockPreparing, iceLockTurns, isAssistCard, isAttackCard, isBusy, isHeroSlotMon,
   kikiCardBonus, liteBattleView, mainHero, openHelp, ownedUniques, pendingCard, pendingCardGuts,
@@ -492,8 +625,8 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro,
-  teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms,
+  teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
   // 強化の札を「アイコン1行」と「数値つきの一覧」で切り替える(2026-09-20 ユーザー指摘)。
@@ -572,6 +705,52 @@ function BattleScreen({
       if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
     };
   }, [tacticsNewLayout, wakeBattleFx]);
+  // 重さの見張り(上の BATTLE_AUTO_LOAD_* を参照)。自動で下げるのは設定「重いときは自動で軽く」が ON のときだけ。
+  // 性能計測(デバッグ)が ON なら、下げるものが無くても見張って数える
+  const fxLoadIndex = BATTLE_FX_LOADS.indexOf(fxLoad);
+  const autoLoadOn = tacticsNewLayout && !ecoBattleView && battleFx.autoLoad !== 'OFF' && typeof onBattleFxAutoStep === 'function'
+    && fxLoadIndex >= 0 && fxLoadIndex < BATTLE_FX_LOADS.indexOf(BATTLE_AUTO_LOAD_FLOOR);
+  const [perfOn] = useState(() => BATTLE_PERF.enabled);
+  const watchFrames = tacticsNewLayout && !(fxRestEnabled && fxRest) && (autoLoadOn || perfOn);
+  const autoLoadRef = useRef(null);
+  autoLoadRef.current = autoLoadOn ? { from: fxLoad, to: BATTLE_FX_LOADS[fxLoadIndex + 1], step: onBattleFxAutoStep } : null;
+  useEffect(() => {
+    if (!watchFrames || typeof requestAnimationFrame !== 'function') return undefined;
+    let raf = 0, begin = 0, stepped = false;
+    const w = { last: 0, start: 0, frames: 0, slow: 0, minGap: 1e9 };
+    const tick = (now) => {
+      BATTLE_PERF.frame(now);
+      const auto = autoLoadRef.current;
+      if (auto && !stepped) {
+        if (!begin) begin = now;
+        const gap = w.last ? now - w.last : 0;
+        w.last = now;
+        if (now - begin >= BATTLE_AUTO_LOAD_WARMUP_MS) {
+          if (!w.start) w.start = now;
+          else if (gap > 0 && gap < 1000) { w.frames++; if (gap >= 5 && gap < w.minGap) w.minGap = gap; if (battleSlowFrame(gap, w.minGap)) w.slow++; }
+          if (now - w.start >= BATTLE_AUTO_LOAD_WINDOW_MS) {
+            if (w.frames >= BATTLE_AUTO_LOAD_MIN_FRAMES && w.slow / w.frames > BATTLE_AUTO_LOAD_SLOW_RATIO && auto.to) {
+              // ★一段下げたら、この見張りはそこで終わる。軽さが変わると作り直され、立ち上がりの詰まりを数えずに見張り直す
+              stepped = true;
+              BATTLE_PERF.autoStep(auto.from, auto.to, w.slow, w.frames);
+              auto.step(auto.to);
+            }
+            w.start = now; w.frames = 0; w.slow = 0;
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); BATTLE_PERF.pause(); };
+  }, [watchFrames, fxLoad]);
+  // 性能計測のパネル(デバッグで ON にしたときだけ)。1秒ごとに要約を読み直す
+  const [perfSnap, setPerfSnap] = useState(null);
+  useEffect(() => {
+    if (!perfOn || !tacticsNewLayout) return undefined;
+    const id = setInterval(() => setPerfSnap(BATTLE_PERF.snapshot()), 1000);
+    return () => clearInterval(id);
+  }, [perfOn, tacticsNewLayout]);
   // いま動いている技(data-enemy-skill)。ムーは丸枠ではなく枠の外の大きな絵が動く
   const enemyIsMoo = isMooBoss(enemy?.id);
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill
@@ -638,6 +817,15 @@ function BattleScreen({
   };
   // 上の2つ(ガードのまとめ・先に選んだカードの補正)は、1回の描画のなかでは入力が同じで
   // 返り値も読むだけなので、枠ごと・発ごとに作り直さず最初の1回を使い回す
+  // ガードのバリアを構えているか。タクティクスは枠ごと(全体ガードで丈夫さぶんが付く子も含む・倒れた子は除く)、
+  // 既存5モードはガードがパーティ全体なので、ガードのカードを選んでいれば全員の枠
+  const partyGuardSelected = !Array.isArray(tacticsUnits) && selectedCards.some(idx => guardCardWeight(hand[idx]) > 0);
+  const guardBarrierOnAt = (slotIdx) => {
+    if (!Array.isArray(tacticsUnits)) return partyGuardSelected;
+    const unit = tacticsUnits[slotIdx];
+    if (!unit || !(Number(unit.hp) > 0)) return false;
+    return tacticsSlotGuardValue(guardPlanOnce(), slotIdx) > 0;
+  };
   let guardPlanOnceCache;
   const guardPlanOnce = () => (guardPlanOnceCache === undefined ? (guardPlanOnceCache = plannedGuardBySlot()) : guardPlanOnceCache);
   const previewBoostsOnceCache = new Map();
@@ -662,6 +850,21 @@ function BattleScreen({
   //   分かりにくい ガード入れても合算計算だし うまくバラバラでわかるようにしたい」)。
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
   //   ガードで止めた発は通らないので、**通る発の数だけ**に割る(数字の数＝これから食らう回数)
+  // 大樹の加護(ユグドラシル・メルホイップの固有技)は使ったターンから効くので、選んだ時点で予告にも掛ける。
+  //   既存5モードはパーティ全体、タクティクスはその固有技を使う子の枠だけ(実際の計算と同じ分け方)
+  const plannedLifeTreeMult = (slotIdx) => {
+    const counter = makeCardHalveCounter();
+    let mult = 1;
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.take(card, owner);
+      if (!isLifeTreeGuardCard(card)) return;
+      if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+    });
+    return mult;
+  };
   const plannedHitFor = (slotIdx) => {
     const none = { taken: 0, parts: [], raw: 0 };
     if (!enemyIntent) return none;
@@ -695,6 +898,9 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
+    // 大樹の加護を選んでいれば、ガードのあとの通る量へ使ったターンぶんを掛ける(実処理の applyImmediateTakenReduction と同じ順)。
+    //   hit は毎回作り直される入れ物なので、ここで書き換えてよい
+    if (hit.taken > 0) hit.taken *= plannedLifeTreeMult(slotIdx);
     const taken = applyTurnDamageReduction(hit.taken, slotIdx);
     if (!(taken > 0)) return { taken: 0, parts: [], raw };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
@@ -750,7 +956,17 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-enemy-down={enemyDefeating?'true':undefined} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined} data-fx-auto={autoLoadOn?'watch':undefined}>
+        {/* 性能計測(デバッグ限定)。デバッグ設定で ON にしたときだけ出る。触っても戦闘の邪魔をしないよう、指は素通りさせる */}
+        {perfOn&&tacticsNewLayout&&perfSnap&&(
+          <div data-battle-perf-panel className="pointer-events-none fixed left-1 z-[65000] rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold leading-tight text-amber-100" style={{top:'calc(env(safe-area-inset-top) + 2px)'}}>
+            <div>{perfSnap.fps}fps 平均{perfSnap.avgMs}ms 最長{perfSnap.maxMs}ms</div>
+            <div>遅いコマ{perfSnap.slowPct}% 50ms超{perfSnap.over50} 100ms超{perfSnap.over100}</div>
+            <div>長い処理{perfSnap.longTasks}回/{perfSnap.longTaskMs}ms 動き続け{perfSnap.infinite??'?'}</div>
+            <div>軽さ {fxLoad}{autoLoadOn?'(見張り中)':''}{fxRestEnabled&&fxRest?' 休止中':''}</div>
+            {perfSnap.autoSteps.map((st,i)=><div key={i}>自動 {st.from}→{st.to} {st.slow}/{st.frames}</div>)}
+          </div>
+        )}
         {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
             イメージ画みたいにかっこよくできないかな？」)。
             ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない
@@ -791,7 +1007,7 @@ function BattleScreen({
                   <div className="flex items-center justify-between gap-2 text-[10px] font-black"><span className="min-w-0 truncate text-red-200">{enemy.name}</span><span className="shrink-0 font-mono text-red-300">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-red-600" style={{width:`${(Math.max(0,enemy.hp)/enemy.maxHp)*100}%`}}/></div>
                   <div className="mt-1 flex items-center justify-center gap-3">
-                    <div className="h-[clamp(82px,16dvh,132px)] w-[clamp(82px,16dvh,132px)] flex items-center justify-center">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} className="w-full h-full object-contain"/>:<span style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}}>{enemy.emoji}</span>}</div>
+                    {/* 超省エネは敵の絵を出さない(2026-10-01・ユーザー指示「もっと画面情報減らしてエコに」)。名前・ライフ・距離・技名の文字だけ */}
                     <div className="text-center"><div className="text-[10px] font-black text-slate-400">現在距離</div><div className={`mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}距離</div></div>
                   </div>
                   <div data-ultra-enemy-log className="mt-1 h-[42px] overflow-hidden rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center leading-tight">{enemySkillName&&<div className="truncate text-[11px] font-black text-red-200">{enemySkillName.label}</div>}{popups.filter(p=>p.side==='enemy').map(p=><div key={p.id} className={`${p.color} truncate text-sm font-black`}>{p.text}</div>)}</div>
@@ -1039,37 +1255,8 @@ function BattleScreen({
               </div>,document.body
             )}
             </>)}
-            {!ecoBattleView&&guardFx&&(
-              <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:64000}}>
-                <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
-                  <div className="text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]">🛡️</div>
-                </div>
-                {[0,1,2,3,4,5].map(k=>(
-                  <div key={k} className="absolute" style={{transform:`rotate(${k*60}deg)`}}>
-                    <div className="rounded-full border-4 border-cyan-200" style={{width:'36px',height:'36px',animation:`guardSpark 500ms ease-out ${k*25}ms forwards`}}></div>
-                  </div>
-                ))}
-                <div className="absolute font-black text-cyan-100 text-4xl tracking-widest drop-shadow-[0_0_16px_rgba(56,189,248,1)]" style={{top:'34%',animation:'guardShine 550ms ease-out forwards'}}>キーン!</div>
-                <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',animation:'guardFlash 350ms ease-out forwards'}}></div>
-              </div>
-            )}
-            {!ecoBattleView&&teachingFx&&TEACHING_FX_STYLE[teachingFx.id]&&(()=>{
-              const fx=TEACHING_FX_STYLE[teachingFx.id];
-              return (
-                <div key={teachingFx.fxId} className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:63000}}>
-                  <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
-                    <div className="text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]">{cardIconNode(fx.icon,110)}</div>
-                  </div>
-                  {[0,1,2,3,4,5,6,7].map(k=>(
-                    <div key={k} className="absolute" style={{transform:`rotate(${k*45}deg)`}}>
-                      <div className={`rounded-full border-4 ${fx.ring}`} style={{width:'30px',height:'30px',animation:`guardSpark 550ms ease-out ${k*20}ms forwards`}}></div>
-                    </div>
-                  ))}
-                  <div className={`absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`} style={{top:'32%',animation:'guardShine 550ms ease-out forwards'}}>{fx.label}</div>
-                  <div className="absolute inset-0" style={{background:`radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,animation:'guardFlash 400ms ease-out forwards'}}></div>
-                </div>
-              );
-            })()}
+            {/* ★ガードの「🛡 キーン!」とアシストカードの全画面演出は、2026-09-29 のユーザー選択で置き換えた。
+                ガードは枠のバリア(GuardBarrier・guardImpact)、アシストカードはカットイン(TacticsExCutin の assist)で出す */}
             {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
               <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                 {/* ★技の動き・やられの動き・待機の威圧(data-em-body / data-enemy-hurt / data-moo-stage)は CSS が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
@@ -1077,7 +1264,9 @@ function BattleScreen({
                 {/* data-moo-body: 絵と光(後ろの光の輪・絵の形の光の板)をひとまとめにして、動きはこの箱に掛ける(光が絵について動く) */}
                 <div data-moo-body={emSet?'true':undefined} className="relative w-full h-full">
                 {emSet&&<i aria-hidden="true" data-enemy-glow/>}
-                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+                {/* ★ふちをぼかすマスクは外した(2026-09-28 battle-fx-lint-check)。絵はもともと切り抜きで、マスクで薄くなっていたのは
+                    翼の先など2%ほど。大きな絵のマスクはメモリが足りないと外れ、そのたびに描き直しで固まる原因になる */}
+                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
                 {emSet&&enemyFlashNode}
                 </div>
               </div>
@@ -1131,6 +1320,7 @@ function BattleScreen({
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
               {!ecoBattleView&&attackAnim&&<AttackTargetFx anim={attackAnim} attackerId={slots[attackAnim.slotIndex]?.id}/>}
               <TacticsExCutin cutin={tacticsExCutin}/>
+              {!ecoBattleView&&!liteBattleView&&slotSkill&&slotSkill.type==='unique'&&attackAnim&&<SpecialMoveFx slotSkill={slotSkill} attackAnim={attackAnim} mon={slots[slotSkill.slotIndex]} ownerId={slotSkill.ownerId}/>}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
               {!ecoBattleView&&isMooBoss(enemy?.id)&&(
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" style={{zIndex:1}}>
@@ -1433,7 +1623,7 @@ function BattleScreen({
                   <button type="button" data-battle-buff-toggle={buffDetail?'close':'open'} onClick={()=>setBuffDetail(v=>!v)}
                     aria-label={buffDetail?'強化の詳細を閉じる':`強化の詳細を見る（${chips.length}件）`}
                     className="shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center">
-                    {buffDetail?'とじる':`詳細 ${chips.length}`}
+                    {buffDetail?'閉じる':`詳細 ${chips.length}`}
                   </button>
                 </div>
           {(()=>{
@@ -1457,7 +1647,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -1507,7 +1697,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i); break;
+                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -1570,7 +1760,7 @@ function BattleScreen({
             (2026-09-24 ユーザー指摘「スネグーラチカも消えてる・ほかもあやしい」)。
             攻撃モーションは枠の外へ飛び出して敵まで届くので、z-10 のままだとライフの帯や強化の札の
             裏を通り、パンドラの分身・突進する子・斬り込む子がその間だけ隠れていた */}
-        <div data-tactics-board-band className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...((tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)))||(attackAnim&&!ecoBattleView)?{zIndex:60}:{})}}>
+        <div data-tactics-board-band className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...((tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)))?{zIndex:60}:(attackAnim&&!ecoBattleView)?{zIndex:6450}:{})}}>
           {/* ★新しい盤面(2×2)では、ここ(盤面のまんなか)へ出すと4枠の境目に乗り、
               どの子のライフも読めなくなっていた(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
               味方への効果は対象の味方や使ったモンスター」)。
@@ -1694,7 +1884,7 @@ function BattleScreen({
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
                 const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
-                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i);
+                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i,isSecondOrLater);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
               } else if(s){
@@ -1707,7 +1897,7 @@ function BattleScreen({
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
                     const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
-                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i);
+                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i,halved);
                   }
                 });
               }
@@ -1747,6 +1937,25 @@ function BattleScreen({
               const slotAimHit=slotAimed?plannedHitWithCover(i):null;
               // この子のEXスキル(タクティクスだけ。持っていなければ null)
               const slotExInfo=tacticsExInfo?tacticsExInfo(i):null;
+              // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
+              // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
+              const pandoraForm = s && s.id === 'Pandora' ? (tacticsPandoraForms && tacticsPandoraForms[i]) : null;
+              const pandoraArt = (s && s.id === 'Pandora' && slotExInfo && slotExInfo.active && slotExInfo.def && slotExInfo.def.effect === 'pandoraBox') ? (() => {
+                const ph = tacticsNewLayout ? 58 : 64, pw = Math.round(ph * 2 / 3);
+                // 攻撃モーションは、いま攻撃している側(1枚目=悪魔・2枚目以降=天使)の1体にだけ掛ける。もう片方はその場に残る
+                const fig = (url, form, left) => {
+                  const front = pandoraForm === form, dim = !!pandoraForm && !front, attacker = front && isAnimating;
+                  const imgNode = <img data-pandora-form={form} src={url} alt="" draggable={false} className="object-contain drop-shadow-md"
+                    style={{ display: 'block', width: pw, height: ph, transform: front && !attacker ? 'scale(1.12)' : 'none', filter: dim ? 'brightness(.5)' : 'none', transition: 'transform .15s, filter .15s' }}/>;
+                  const moving = !attacker ? imgNode
+                    : (s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder') ? <PandoraDualThunder image={imgNode}/>
+                    : themedAttack ? <ThemedAttackMotion kind={themedAttack} lunge={attackAnim.charge === false} image={imgNode}/>
+                    : imgNode;
+                  const moveStyle = attacker ? { zIndex: 9999, animation: themedAttack ? undefined : attackMotionAnimation(attackAnim), ...attackAimStyle } : null;
+                  return <span data-pandora-fig={form} style={{ position: 'absolute', bottom: 0, left, width: pw, height: ph, zIndex: front ? 3 : (form === 'angel' ? 2 : 1), ...moveStyle }}>{moving}</span>;
+                };
+                return <span data-pandora-pair className="relative inline-block" style={{ width: ph, height: ph }}>{fig(PANDORA_DEVIL_IMG, 'devil', 0)}{fig(PANDORA_ANGEL_IMG, 'angel', ph - pw)}</span>;
+              })() : null;
               return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
@@ -1763,7 +1972,7 @@ function BattleScreen({
                   // 自分で開けたなら、使い方案内はもう要らない
                   if(tacticsExIntroVisible&&dismissTacticsExIntro) dismissTacticsExIntro();
                 }
-              }} disabled={isBusy||autoBattle} className={`relative ${tacticsNewLayout?'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]':'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${tacticsNewLayout?'':RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':tacticsNewLayout?'border-white/[.10]':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500/80':''} ${tacticsNewLayout&&!s?'opacity-65 shadow-none border-white/[.06]':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={{...((isAnimating&&!tacticsNewLayout?{zIndex:9999, animation:themedAttack?undefined:attackMotionAnimation(attackAnim), ...attackAimStyle}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined))))||{}), ...(isAnimating&&tacticsNewLayout?{zIndex:30}:{})}}>
+              }} disabled={isBusy||autoBattle} className={`relative ${tacticsNewLayout?'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]':'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${tacticsNewLayout?'':RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':tacticsNewLayout?'border-white/[.10]':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500/80':''} ${tacticsNewLayout&&!s?'opacity-65 shadow-none border-white/[.06]':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={{...((isAnimating&&!tacticsNewLayout?{zIndex:9999, animation:themedAttack?undefined:attackMotionAnimation(attackAnim), ...attackAimStyle}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined))))||{}), ...(isAnimating&&tacticsNewLayout?{zIndex:6500}:{})}}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
                     輪ではなく枠の内側の線で出す(BREAKと同じ出し方)。全体攻撃なら全員に付く */}
                 {/* ★食らった子の枠そのものを光らせる。数字は一瞬で読み取れないので、
@@ -1771,8 +1980,9 @@ function BattleScreen({
                     「食らったモンスターにエフェクトなどがつくようにしたい」)。
                     数字(z-[70])より下へ重ねて、数字が読めなくならないようにする */}
                 {/* EXスキルを使った子の枠の光(カットインと同じ色。TacticsExCutin と同じ時間で消える) */}
-                {tacticsExCutin&&tacticsExCutin.slotIndex===i&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
-                  style={{'--ex-c1':tacticsExCutinTheme(tacticsExCutin.effect).c1,'--ex-c2':tacticsExCutinTheme(tacticsExCutin.effect).c2}}><i/><i/></span>}
+                {/* アシストカード・緊急回復のカットインは、効き目が乗る枠をまとめて光らせる(slotIndexes) */}
+                {tacticsExCutin&&(tacticsExCutin.slotIndex===i||(tacticsExCutin.slotIndexes||[]).includes(i))&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
+                  style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -1974,7 +2184,7 @@ function BattleScreen({
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
-                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{})}}>{s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
+                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
@@ -1996,6 +2206,14 @@ function BattleScreen({
                       :slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
+                  {/* ガードのバリア(2026-09-29 ユーザー選択「案A バリア」)。構えているあいだは idle、敵の攻撃を受けたら
+                      受け止めきった(block)・割れた(break)。画面を軽くする設定では出さない */}
+                  {s&&!ecoBattleView&&(()=>{
+                    const tier=guardBarrierTierOf(guardLevel);
+                    const impact=guardImpact?.bySlot?.[i];
+                    if(impact) return <GuardBarrier key={`gi-${guardImpact.key}`} tier={tier} state={impact}/>;
+                    return !isBusy&&guardBarrierOnAt(i)?<GuardBarrier tier={tier} state="idle"/>:null;
+                  })()}
                   {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                   {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
                   {isAnimating&&attackAnim.sakura&&<EikiSakuraPetals/>}</div>
@@ -2228,17 +2446,32 @@ function BattleScreen({
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
                 <dt className="font-bold text-slate-400">使える回数</dt>
-                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（このラン）`}</dd>
+                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
                 {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+                {(exPanel.statusLines||[]).map((t,i)=><React.Fragment key={i}><dt className="font-bold text-slate-400">いまの状態</dt><dd data-tactics-ex-status className="font-black text-fuchsia-200">{t}</dd></React.Fragment>)}
                 {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
-              {exChoosing&&exPanel.styleOptions?(
+              {exChoosing&&exPanel.targetOptions?(
+                // ★味方を選んで使う(2026-10-03 ウンディーネの「生命の泉」)。自分も選べる。ダウン中の子は赤で出す
+                <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
+                  <div className="text-[11px] font-black text-slate-300">だれに使う？</div>
+                  {exPanel.targetOptions.map(t=>(
+                    <button key={t.slot} type="button" data-tactics-ex-target={t.slot} data-tactics-ex-target-downed={t.downed?'yes':'no'} disabled={!exPanel.check.ok}
+                      onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot,t.slot)) setExPanelSlot(null); }}
+                      className={`min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${t.downed?'border-rose-300 bg-rose-900/60 text-white':'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`}>
+                      <span className="block text-[13px] font-black">{t.name}{t.downed?'（ダウン中）':''}</span>
+                      <span className="block text-[10px] font-bold leading-snug opacity-80">ライフ {t.hp.toLocaleString()} / {t.maxHp.toLocaleString()}</span>
+                    </button>
+                  ))}
+                  <button type="button" data-tactics-ex-choice-back onClick={()=>setExChoosing(false)} className="min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">戻る</button>
+                </div>
+              ):exChoosing&&exPanel.styleOptions?(
                 // ★スタイルを選ぶ(2026-09-25 ユーザー指示)。いまのスタイルは選べない
                 <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
                   <div className="text-[11px] font-black text-slate-300">どのスタイルにする？</div>
@@ -2255,7 +2488,7 @@ function BattleScreen({
               ):(
               <div className="mt-3 flex gap-2">
                 <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
-                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions||exPanel.targetOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
               )}
             </div>
@@ -2268,7 +2501,7 @@ function BattleScreen({
               <button data-auto-bgm-button type="button" onClick={()=>{setShowBattleMenu(false);setShowAutoBgmPicker(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-indigo-400/50 bg-indigo-950/60 px-2 text-[12px] font-black text-indigo-100 active:scale-95"><span className="text-[14px] leading-none">🎵</span>BGM・音量</button>
               <button type="button" onClick={()=>{setShowBattleMenu(false);openHelp();}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-emerald-400/50 bg-emerald-950/60 px-2 text-[12px] font-black text-emerald-100 active:scale-95"><HelpCircle size={14}/>ヘルプ</button>
               <button data-battle-quit type="button" disabled={!!battleTutorial} onClick={()=>{setShowBattleMenu(false);setShowQuitConfirm(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-red-400/50 bg-red-950/60 px-2 text-[12px] font-black text-red-100 active:scale-95 disabled:opacity-30"><Flag size={14}/>あきらめる</button>
-              <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">とじる</button>
+              <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
             </div>
           </div>
         ), document.body)}

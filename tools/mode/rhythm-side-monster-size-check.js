@@ -41,13 +41,8 @@ const pickBlock = (startsWith) => {
 };
 
 const pieces = [
-  pickLine('const RHYTHM_LANE_COUNT = '),
-  pickLine('const RHYTHM_PROJECTION_TOP_SCALE='),
-  pickLine('const rhythmClamp01='),
-  // rhythmProjectionScale は複数行で、RHYTHM_PROJECTION_CURVE も使う(道を深くした 2026-09-25 から。1行目だけを取ると途中で切れて読み込めなかった)
-  pickLine('const RHYTHM_PROJECTION_CURVE='),
-  pickBlock('const rhythmProjectionScale='),
-  pickBlock('const rhythmProjectBoundary='),
+  // 道の遠近の計算は丸ごと切り出す(rhythm-projection-source.js。名前ごとに切り出すと、計算を分けるたびに壊れた)
+  require('./rhythm-projection-source.js').rhythmProjectionSource(src),
   pickLine('const RHYTHM_SIDE_MONSTER_ANCHORS='),
   pickLine('const RHYTHM_SIDE_MONSTER_FILL='),
   pickLine('const RHYTHM_SIDE_MONSTER_MAX_RATIO='),

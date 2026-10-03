@@ -111,9 +111,24 @@ const normalizeBattleFxSettings = (value) => {
     // 操作が無いときの一時停止(2026-09-25 ユーザー指示「それも設定で作って」)。
     // ★既定は OFF(休ませない)。5秒で止まるのが「動きが止まった」ように見えていたため、選んだ人だけ休ませる
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
+    // 重いときに画面の軽さを自動で下げる(2026-09-28 ユーザー指示「モンビーみたいに重さチェックやその他点検ツールを取り入れて
+    // 軽くて見た目が良く出来る仕組みを作って」)。モンヒロビートの「重いときは演出を自動で控えめに」と同じ考え方。
+    // ★既定は OFF(下げない)(2026-10-01 ユーザー指示「デフォルトはオフにして」)。自動で下げると敵の待機の動きなどが止まり、
+    //   「動いていない」ように見えていたため、使いたい人だけ ON にする。すでに ON で保存していた人は、60-app.jsx の一度きりの移行で OFF にする
+    //   下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
+    autoLoad: v.autoLoad === 'ON' ? 'ON' : 'OFF',
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
+    // バトルの合間・始まり・終わりの演出(2026-10-01 ユーザー指示「設定で色々変えられるようにして」)。
+    // ★足す前に保存した人(項目が無い)は、すべて既定(出す)で始まる。見た目だけに効き、戦闘の計算・進行・ランキングには触れない
+    phaseBanner: v.phaseBanner === 'OFF' ? 'OFF' : 'ON',
+    waveIntro: v.waveIntro === 'OFF' ? 'OFF' : 'ON',
+    defeatFx: v.defeatFx === 'OFF' ? 'OFF' : 'ON',
+    // 成長・合流・アシストカードの結果の演出。FULL=ふつう / SHORT=短め(半分の長さ) / OFF=出さない
+    resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
+    countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
+    endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -126,6 +141,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
       { id:'LIGHT', label:'軽め', note:'待機の動きも止める' },
       { id:'MINIMAL', label:'最軽量', note:'いちばん軽い表示' },
     ] },
+  { key:'autoLoad', title:'重いときは自動で軽く',
+    desc:'タクティクス新画面で動きのかくつきが続いたとき、画面の軽さを一段ずつ自動で下げます（「軽め」まで）。下げたぶんは、アプリを開き直すか画面の軽さを選び直すと元に戻ります。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'自動で下げる', note:'かくつきを防ぐ' }, { id:'OFF', label:'下げない', note:'選んだ軽さのまま' }] },
   { key:'restPause', title:'操作がないときの一時停止',
     desc:'タクティクス新画面で、5秒ほど何も操作せず戦闘も進んでいないあいだ、飾りやモンスターの動きを一時停止してスマホを休ませます。画面に触れるか戦闘が進むと、止まったところからすぐに動き出します。',
     options:[{ id:'OFF', label:'止めない', note:'いつも動かす' }, { id:'ON', label:'5秒で止める', note:'スマホが熱くなりにくい' }] },
@@ -138,13 +156,31 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'specialMovie', title:'必殺技ムービー',
     desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
     options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
+  { key:'phaseBanner', title:'場面切り替えの帯',
+    desc:'WAVEのあとの強化の画面や、ラン開始時の勇者モン選び・配置・アシストカードへ切り替わるとき、画面の真ん中を横切る帯を出します。操作は止まりません。',
+    options:[{ id:'ON', label:'出す', note:'何の画面か知らせる' }, { id:'OFF', label:'出さない', note:'すぐ画面だけ出す' }] },
+  { key:'waveIntro', title:'WAVEのはじまりの演出',
+    desc:'バトルが始まるたびに、画面の真ん中へ「WAVE ○」と相手の名前を出します。最後のWAVEは「FINAL BOSS」です。操作は止まりません。',
+    options:[{ id:'ON', label:'出す', note:'WAVEと相手を見せる' }, { id:'OFF', label:'出さない', note:'すぐバトルへ' }] },
+  { key:'defeatFx', title:'敵を倒したときの演出',
+    desc:'敵を倒した瞬間に、白い閃光とともに敵が消え、そのあとに「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
+    options:[{ id:'ON', label:'出す', note:'VICTORY!を見せる' }, { id:'OFF', label:'出さない', note:'すぐリザルトへ' }] },
+  { key:'resultFx', title:'成長・合流・アシストカードの結果',
+    desc:'トレーニング・供モンの合流・アシストカードのあとに出る、結果の画面の長さです。「短め」は半分の長さ、「出さない」は結果の画面を飛ばして先へ進みます。結果は強化の画面やステータスで確認できます。',
+    options:[{ id:'FULL', label:'ふつう', note:'じっくり見せる' }, { id:'SHORT', label:'短め', note:'半分の長さ' }, { id:'OFF', label:'出さない', note:'すぐ先へ進む' }] },
+  { key:'countUp', title:'数字が増える動き',
+    desc:'トレーニングの結果・WAVEリザルト・勝敗の画面などで、数字が元の値から新しい値へ増えていく動きです。オフにすると、最初から新しい値を出します。',
+    options:[{ id:'ON', label:'増える', note:'駆け上がる' }, { id:'OFF', label:'すぐ出す', note:'最初から最後の値' }] },
+  { key:'endFx', title:'ラン終了の飾り',
+    desc:'CHAMPIONの紙ふぶきや王冠、敗北・リタイアの演出などの飾りです。スコアなどの内容はそのまま出ます。',
+    options:[{ id:'ON', label:'出す', note:'紙ふぶきなど' }, { id:'OFF', label:'出さない', note:'内容だけ出す' }] },
 ]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 00:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 00:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない

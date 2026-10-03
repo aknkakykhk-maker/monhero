@@ -39,10 +39,14 @@ const slice = (from, to) => {
 const incomingBody = slice(
   'const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {',
   '  }, [effectiveDef,');
+// 勇者特性「生命の源」(1〜5ターン目の被ダメ軽減)の決めごとも本体から持ち込む。ターン数は既定で0(効かない)
+const lifeSourceSrc = `const LIFE_SOURCE_MONSTER_IDS${slice('const LIFE_SOURCE_MONSTER_IDS', '// 固有技「大樹の加護」')}`;
 const makeIncoming = (deps) => new Function('d', `
   const {getWaveBuff,mainHero,isTacticsMode,runMode,heroDist,tacticsUnitsRef,
     resolveEffectiveMaxStat,normalizeTacticsUnit,effectiveDef,getPermaBuff,
     soulBattleParty,iceLockEnemyDamageMult} = d;
+  const turnCount = d.turnCount ?? 0;
+  ${lifeSourceSrc}
   // 新モードの1体ぶんは tacticsBattleUnit で読む(EXスキルの上乗せはここでは無いものとして盤面の値を返す)
   const tacticsBattleUnit = d.tacticsBattleUnit || ((slot) => (tacticsUnitsRef.current || [])[slot]);
   return (intent, targetSlot=null) => {${incomingBody}};
@@ -180,7 +184,7 @@ check('特殊防御の抽選は既存モードだと従来の表を通る',
   has('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
     && has('const aimedSlots = isTacticsMode(runMode)'));
 check('自動回復の率は既存モードだと従来のまま',
-  has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate)'));
+  has('tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
 check('威圧は既存モードだと編成から決まる',
   has("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,"));
 // 2026-09-22: タクティクスは「1＋その子の👑＋きき＋連携」で数えるようになった。

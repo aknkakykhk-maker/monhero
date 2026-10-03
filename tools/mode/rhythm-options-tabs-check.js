@@ -73,8 +73,8 @@ check('項目は枠に入れ、頭に帯のラベルを置く',
   && options.includes('rounded-lg bg-cyan-700/70 px-2 text-center'));
 check('説明は畳んでおく(消してはいない)',
   options.includes('<details data-rhythm-option-help')
-  && options.includes('▸ くわしく')
-  && /<summary[^>]*>▸ くわしく<\/summary>\s*\n\s*<p className=\{`mt-1 \$\{note\}`\}>\{description\}<\/p>/.test(options));
+  && options.includes('▸ 詳しく')
+  && /<summary[^>]*>▸ 詳しく<\/summary>\s*\n\s*<p className=\{`mt-1 \$\{note\}`\}>\{description\}<\/p>/.test(options));
 
 // ---- 数値は粗く/細かくの4つ ----
 check('数値は粗く動かす／細かく動かすの4つのボタンで変えられる',
@@ -122,7 +122,8 @@ check('選択肢のボタンは名前の定数を渡している',
 
 // ---- 画面から変えられる設定が、どこかのタブに置いてあるか ----
 // 置き忘れると「保存はされるのに変える場所が無い」設定ができる。
-const SCREENLESS = new Set(['displayTimingOffsetMs', 'judgmentTextPosition', 'holdSlideOpacity', 'livePartnerVisible']);
+// multiLightLook と multiLook(対戦の演出の段階)はオプションではなく、みんなで対戦の難易度えらびの画面で切り替える(77-screen-rhythm-multi.jsx)
+const SCREENLESS = new Set(['displayTimingOffsetMs', 'judgmentTextPosition', 'holdSlideOpacity', 'livePartnerVisible', 'multiLightLook', 'multiLook']);
 const defaults = grab('const DEFAULT_RHYTHM_SETTINGS = Object.freeze({', '});');
 const settingKeys = [...defaults.matchAll(/(?:^|[\s{,])([a-zA-Z][a-zA-Z0-9]*)\s*:/g)].map(m => m[1]);
 const missing = settingKeys.filter(key => !SCREENLESS.has(key) && !options.includes(`'${key}'`));
@@ -145,7 +146,7 @@ const tabClass = 'min-h-[44px] rounded-xl border text-[13px] font-black';
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const field = (title, control, wide) => `<div class="${wide ? 'col-span-2' : ''} ${fieldClass}">
       <p class="mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center ${labelClass}">${title}</p>${control}
-      <details class="mt-2"><summary class="min-h-[24px] list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ くわしく</summary></details></div>`;
+      <details class="mt-2"><summary class="min-h-[24px] list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 詳しく</summary></details></div>`;
     const stepperCols = classOf(/className="(grid grid-cols-\[[^"]*?\]) items-center gap-1"/) || 'grid grid-cols-3';
     const stepper = value => `<div class="space-y-1.5"><div class="${stepperCols} items-center gap-1">
       ${['-10', '-1', value, '+1', '+10'].map((t, i) => i === 2
@@ -164,7 +165,7 @@ const tabClass = 'min-h-[44px] rounded-xl border text-[13px] font-black';
       <nav class="z-10 grid shrink-0 grid-cols-3 gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 pb-2 pt-2">${['ライブ', '音量', 'システム'].map(t => `<button class="relative ${tabClass} border-white/15 bg-slate-800 text-slate-300">${t}</button>`).join('')}</nav>
       <div id="scroll" class="flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3"><div id="stack" class="space-y-4">
       <section class="${cardClass}"><h3 class="${headClass}">🔊 音量</h3><div class="mt-3">${body}</div>
-      <details class="mt-3"><summary class="min-h-[24px] list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量についてくわしく</summary></details></section>
+      <details class="mt-3"><summary class="min-h-[24px] list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量について詳しく</summary></details></section>
       <p class="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>
       </div></div>
       <footer class="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2" style="padding-bottom:.5rem"><div class="grid grid-cols-[.9fr_1.1fr] gap-3"><button class="min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black">デフォルトに戻す</button><button class="min-h-[52px] rounded-xl bg-amber-600 px-3 font-black">保存</button></div></footer>

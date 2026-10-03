@@ -12,6 +12,8 @@ const MOCCHI_PET_ICON = "images/breeder-icons/mocchi-pet.png?v=b0e61758fca4";
 const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
+// ももすけのカード用の顔アイコン。助手の表情画像(小さい)をそのまま使う
+const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=567b7baa59e9";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // マーケットのアイコン商品だけで使う立ち絵。
@@ -35,6 +37,9 @@ const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=adee72203d0a";
 const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 // 剣士モッチーの円盤石。絵は node tools/image/make-disc-icon.js が共通の土台へ重ねて作ったもの
 const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
+// 近日公開予定のユグドラシル・メルホイップの円盤石(2026-09-28)。作り方は剣士モッチーと同じ
+const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=16a7bd3b4eed";
+const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
@@ -45,7 +50,8 @@ const BREEDER_EVO_NAMES = {
   myaru: ["みゃるの薬", "みゃるの怪薬", "みゃるの禁薬"],
   kiki: ["ききの応援", "ききの本気", "ききの全力全開"],
   meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"],
-  poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"]
+  poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
+  momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -87,7 +93,10 @@ const TEACHING_CARDS = [
   { id:'meloso',  baseName:"メロソの解析",      icon:MELOPANMAN_ICON,   type:'heal',   subType:'heal_guard_meloso', baseValue:0.3, step:0,  desc:"緊急回復相当・現在ガード・次ターン予約", evoLevel:0, guts:20 },
   // ポルツの効果量はレベルで変わる部分をすべて POLTZ_TIERS に置いてあるので、
   // baseValue は1回あたりの回復割合(表示・検査用)だけを持ち、step は増えない意味の 0 を明示する
-  { id:'poltz',   baseName:"ポルツの弁当",      icon:POLTZ_FACE_ICON,   type:'buff',   subType:'buff_poltz', baseValue:0.2, step:0,  desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ", evoLevel:0, guts:20 }
+  { id:'poltz',   baseName:"ポルツの弁当",      icon:POLTZ_FACE_ICON,   type:'buff',   subType:'buff_poltz', baseValue:0.2, step:0,  desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ", evoLevel:0, guts:20 },
+  // ももすけは「みゅあのガッツ回復版」。回復と上限アップの量は60-app.jsxのmomosuke分岐と
+  // getDynamicDescの2か所に同じ表がある。攻撃アップの代わりに丈夫さ(defPct)を上げる
+  { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -202,9 +211,10 @@ const DRA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
-  { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
-  { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
-  { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:1500, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
+  { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:150000, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
+  { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:150000, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
+  { id:'momosuke', name:"アシストカード「ももすけ」", type:'assist', icon:MOMOSUKE_FACE_ICON, cost:150000, desc:"ガッツ回復・ライフ/ガッツ上限と丈夫さが永続アップ" },
+  { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:150000, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },
@@ -218,16 +228,16 @@ const BREEDER_MARKET_ITEMS = [
   // (きき/kiki_icon と同じ作り)。顔が中央にある正方形の絵なので寄せ調整は不要
   { id:'poltz_icon', name:"ポルツのアイコン",      type:'icon', icon:POLTZ_FACE_ICON,   cost:1 },
   { id:'zan_icon', name:"ザンのアイコン", type:'icon', icon:ZAN_FACE_ICON, cost:1 },
-  { id:'Zan', name:"ザンの円盤石", type:'disc', icon:ZAN_DISC_ICON, cost:1500 },
+  { id:'Zan', name:"ザンの円盤石", type:'disc', icon:ZAN_DISC_ICON, cost:150000 },
   { id:'mitarashi_icon', name:"ミタラシのアイコン", type:'icon', icon:MITARASHI_FACE_ICON, cost:1 },
-  { id:'Mitarashi', name:"ミタラシの円盤石", type:'disc', icon:MITARASHI_DISC_ICON, cost:500 },
+  { id:'Mitarashi', name:"ミタラシの円盤石", type:'disc', icon:MITARASHI_DISC_ICON, cost:150000 },
   { id:'ark_icon', name:"アークのアイコン", type:'icon', icon:ARK_FACE_ICON, cost:1 },
-  { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:1500 },
+  { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:150000 },
   { id:'iblis_icon', name:"イブリースのアイコン", type:'icon', icon:IBLIS_FACE_ICON, cost:1 },
-  { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
+  { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:150000 },
   { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:SNEGUROCHKA_MARKET_ICON, cost:1 },
   { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:SNEGUROCHKA_AWAKENED_MARKET_ICON, cost:1 },
-  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:1500 },
+  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:150000 },
   // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
   // アイコンは立ち絵/円盤石の絵をそのまま使い、丸い枠での見え方は
   // MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せる(画像は複製しない)
@@ -236,35 +246,46 @@ const BREEDER_MARKET_ITEMS = [
   // どちらかにしかならなかった(2026-09-19)。エイキ・剣士モッチーと同じ扱い。
   { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:UNDINE_FACE_ICON, cost:1 },
   { id:'undine_disc_icon', name:"ウンディーネの円盤石アイコン", type:'icon', icon:UNDINE_DISC_ICON, cost:1 },
-  { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:1500 },
+  { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:150000 },
   // ヤオビクニ
   // ウンディーネと同じ理由で顔クロップを使う
   { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:YAOBIKUNI_FACE_ICON, cost:1 },
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
-  { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
+  { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:150000 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
   { id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1 },
   { id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1 },
-  { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:1500 },
+  { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000 },
   // ミーア。正式な本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
   { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_IMG, cost:1 },
   { id:'mia_disc_icon', name:"ミーアの円盤石アイコン", type:'icon', icon:MIA_DISC_ICON, cost:1 },
-  { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:1500 },
+  { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:150000 },
   // パンドラ。保存済みの本体・円盤石画像を各商品で共用する。
   { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_IMG, cost:1 },
   { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:PANDORA_DISC_ICON, cost:1 },
-  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:PANDORA_DISC_ICON, cost:3000 },
+  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:PANDORA_DISC_ICON, cost:300000 },
   // エイキ。ザン・ミタラシ・アーク・イブリースと同じく専用の顔クロップ(EIKI_FACE_ICON)を
   // 商品アイコンにも使うため、パンドラ・ミーアのような MARKET_PROFILE_ICON_STYLES の
   // 拡大・位置調整は不要(元から丸枠向けに切り出し済み)。
   { id:'eiki_icon', name:"エイキのアイコン", type:'icon', icon:EIKI_FACE_ICON, cost:1 },
   { id:'eiki_disc_icon', name:"エイキの円盤石アイコン", type:'icon', icon:EIKI_DISC_ICON, cost:1 },
-  { id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:3000 },
+  { id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:300000 },
   // 剣士モッチー。エイキと同じく専用の顔クロップ(KENSHI_MOCCHI_FACE_ICON)を商品アイコンにも使うため、
   // 本人アイコン側の MARKET_PROFILE_ICON_STYLES は不要(元から丸枠向けに切り出し済み)。
   { id:'kenshi_mocchi_icon', name:"剣士モッチーのアイコン", type:'icon', icon:KENSHI_MOCCHI_FACE_ICON, cost:1 },
   { id:'kenshi_mocchi_disc_icon', name:"剣士モッチーの円盤石アイコン", type:'icon', icon:KENSHI_MOCCHI_DISC_ICON, cost:1 },
-  { id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:3000 },
+  { id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:300000 },
+  // ユグドラシル(新しい血統・ユグドラシル×ユグドラシル)とメルホイップ(ユグドラシル×？？？のレア)。
+  // 2026-09-28 ユーザー指示「近日公開予定でマーケットにおいて」で、3件とも available:false(「近日追加」)で並べた。
+  // 2026-09-29 に本体を入れ、円盤石はビートP交換所で先に交換できるようにした(data/rhythm-event.js・各1,500P)。
+  // 同じ日のユーザー指示「アイコンはもう販売開始してok」で、アイコン2種(本人・円盤石)の available:false を外した。
+  // ダイヤショップの円盤石(150,000ダイヤ)は、まだ available:false のまま(「近日追加」)。
+  { id:'yggdrasil_icon', name:"ユグドラシルのアイコン", type:'icon', icon:YGGDRASIL_FACE_ICON, cost:1 },
+  { id:'yggdrasil_disc_icon', name:"ユグドラシルの円盤石アイコン", type:'icon', icon:YGGDRASIL_DISC_ICON, cost:1 },
+  { id:'Yggdrasil', name:"ユグドラシルの円盤石", type:'disc', icon:YGGDRASIL_DISC_ICON, cost:150000, available:false },
+  { id:'mel_whip_icon', name:"メルホイップのアイコン", type:'icon', icon:MEL_WHIP_FACE_ICON, cost:1 },
+  { id:'mel_whip_disc_icon', name:"メルホイップの円盤石アイコン", type:'icon', icon:MEL_WHIP_DISC_ICON, cost:1 },
+  { id:'MelWhip', name:"メルホイップの円盤石", type:'disc', icon:MEL_WHIP_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
@@ -331,6 +352,20 @@ const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';
 //   ドラ(2026-09-17に加入)のぶんは**まだ無い**。後日対応と決めてある(ユーザー指示)。
 //   無くても画面は壊れない(nextProfileFrameForAssistant が null を返し、
 //   プロフィールの「次にもらえる枠」ボタンが出ないだけ)。足すときはここへ3枠。
+// モンスターの3枚の値段(2026-10-03・ユーザー指示「ブリーダーポイント 1、ビートポイント 100」)。どちらの交換所でも買える
+const PROFILE_FRAME_MONSTER_SHOPS = Object.freeze([
+  Object.freeze({ shop:'breederPoint', cost:1 }),
+  Object.freeze({ shop:'beatPoint', cost:100 }),
+]);
+// ラグナロクの枠はビートPだけ高い(1000P・ユーザー指示)。ブリーダーPは1P
+const PROFILE_FRAME_RAGNAROK_SHOPS = Object.freeze([
+  Object.freeze({ shop:'breederPoint', cost:1 }),
+  Object.freeze({ shop:'beatPoint', cost:1000 }),
+]);
+// モンヒロビートの通算クリア回数(「これからの回数」を数える専用キー・2026-10-03)。
+// ★既存の mh_rhythm_best_v1 は「曲×難易度ごとにクリアしたか」しか持たないので、回数は別に数える。
+//   公開より前の記録は入れない(0から数える・ユーザー選択)。
+const RHYTHM_CLEAR_TOTAL_KEY = 'mh_rhythm_clear_total_v1';
 const PROFILE_FRAMES = [
   { id:'none',   name:'フレームなし', kind:'none', released:true,
     desc:'飾り枠を付けません。これまでと同じ見た目です。' },
@@ -373,17 +408,56 @@ const PROFILE_FRAMES = [
   //   unlock   … **自分が選べるか**。書いてあるものは条件を満たすまで選べない
   //               (描くのは自由。持っている人の枠は、他人の画面でもちゃんと出る)
   //   ★ここを一緒にすると「解放した人の枠が他人の画面で消える」ので、必ず分けること。
-  // モンスターの3枚は助手とは無関係。配り方を決めていないので未公開のまま
-  // (released:false。選択画面に出ず、他人の記録に入っていても描かれない)
-  { id:'frame_mocchi', name:'モッチー', kind:'image', released:false, hole:0.656,
+  // モンスターの3枚は助手とは無関係。条件を達成すると、ブリーダーP交換所かビートP交換所で買える
+  // (2026-10-03・ユーザー指示。値段は ブリーダーP 1 / ビートP 100)。
+  //   unlock.shops     … どの交換所で何Pか(両方に並ぶ)。下の「売るフレーム」の節を見る
+  //   unlock.condition … 買えるようになる条件。達成するまでは交換所で鍵つき(買えない)
+  // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る(mh_profile_frame_owned_v1)。
+  { id:'frame_mocchi', name:'モッチー', kind:'image', released:true, hole:0.656,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'speciesRebirth', lineage:'mocchi', count:1, text:'モッチー種(モッチー・ミタラシ・剣士モッチー)を1回以上限界突破する' } },
     src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf',
     desc:'桜の花びらと桜もちをあしらった、モッチーの和風フレーム。' },
-  { id:'frame_moo', name:'ムー', kind:'image', released:false, hole:0.682,
+  { id:'frame_moo', name:'ムー', kind:'image', released:true, hole:0.682,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'Master', text:'バトルの難易度マスター以上をクリアする' } },
     src:'images/profile-frames/moo.png?v=fc64f9da9806',
     desc:'紫の宝玉と金の角をいただく、ラスボス「ムー」のフレーム。' },
-  { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:false, hole:0.724,
+  { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:true, hole:0.724,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'rhythmClears', count:10, text:'モンヒロビートを10回以上クリアする' } },
     src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
     desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
+  // ==================== モンスターの枠7枚(2026-10-03) ====================
+  // ユーザーから受け取った透過PNG(1254px → 384pxへ軽くした。ASSETS.md)。
+  // 7枚。スエゾー・ゴーレム・ライガー・ハム・ピクシー・ミーアはそのモンスターを1回「転生」すると、ブリーダーP交換所で買える(ビートP交換所は条件なし)。
+  // ラグナロクはバトルの難易度ラグナロクをクリアすると、ブリーダーP交換所で買える(ビートP交換所は条件なし・1000P)。
+  // ★条件に shops:['breederPoint'] と書いたぶん、ビートP交換所では条件なしで買える。
+  { id:'frame_suezo', name:'スエゾー', kind:'image', released:true, hole:0.573,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Suezo', count:1, shops:['breederPoint'], text:'スエゾーを1回転生する' } },
+    src:'images/profile-frames/suezo.png?v=6f617e7aa00a',
+    desc:'黄金の輪に、スエゾーがぺろりと顔を出す、きらめくフレーム。' },
+  { id:'frame_golem', name:'ゴーレム', kind:'image', released:true, hole:0.755,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Golem', count:1, shops:['breederPoint'], text:'ゴーレムを1回転生する' } },
+    src:'images/profile-frames/golem.png?v=84bc05c75f8d',
+    desc:'ごつごつした白い岩が、ぐるりと連なる、ゴーレムの輪。' },
+  { id:'frame_tiger', name:'ライガー', kind:'image', released:true, hole:0.703,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Tiger', count:1, shops:['breederPoint'], text:'ライガーを1回転生する' } },
+    src:'images/profile-frames/tiger.png?v=3ced385df138',
+    desc:'蒼い結晶と金の飾りをまとった、ライガーの輪。' },
+  { id:'frame_ham', name:'ハム', kind:'image', released:true, hole:0.792,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Ham', count:1, shops:['breederPoint'], text:'ハムを1回転生する' } },
+    src:'images/profile-frames/ham.png?v=0d4103bbbab8',
+    desc:'ふわふわの毛並みと肉球、桃色の耳をあしらった、ハムの輪。' },
+  { id:'frame_pixie', name:'ピクシー', kind:'image', released:true, hole:0.750,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Pixie', count:1, shops:['breederPoint'], text:'ピクシーを1回転生する' } },
+    src:'images/profile-frames/pixie.png?v=a9a36e085925',
+    desc:'ハートの宝石とこうもりの羽が並ぶ、ピクシーの輪。' },
+  { id:'frame_mia', name:'ミーア', kind:'image', released:true, hole:0.734,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Mia', count:1, shops:['breederPoint'], text:'ミーアを1回転生する' } },
+    src:'images/profile-frames/mia.png?v=fc46dfb38806',
+    desc:'白い羽と色とりどりのリボンで飾った、ミーアの輪。' },
+  { id:'frame_ragnarok', name:'ラグナロク', kind:'image', released:true, hole:0.672,
+    unlock:{ shops:PROFILE_FRAME_RAGNAROK_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'RAGNAROK', shops:['breederPoint'], text:'バトルの難易度ラグナロクをクリアする' } },
+    src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece',
+    desc:'燃えさかる炎をまとう黒い竜が、ぐるりと取り巻く輪。' },
   // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
   // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
   // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
@@ -500,9 +574,77 @@ const profileFrameUnlock = (frame) => {
 const profileFrameOwned = (id, owned) => {
   const frame = profileFrameById(id);
   if (!frame || frame.released !== true) return false;
-  if (!profileFrameUnlock(frame)) return true;
+  // もらう条件(仲良し度)か売り値が付いている枠は、手に入れた記録がなければ選べない。どちらも無い枠は最初から選べる
+  if (!profileFrameUnlock(frame) && !profileFrameSale(frame)) return true;
   return normalizeOwnedProfileFrames(owned).includes(frame.id);
 };
+// ==== 売るフレーム(2026-10-03 ユーザー指示「フレームも販売実装を予定してるから、ブリーダーポイントとビートポイントのとこに実装できる準備をしといて」) ====
+// ★まだ売り物は無い。ここは「枠に売り値を書けば、交換所に並んで買える」ための土台だけ。
+// 売る枠は `unlock:{ shop:'breederPoint'|'beatPoint', cost:1500 }` を書く。
+//   shop … どの交換所で売るか(PROFILE_FRAME_SHOPS)。breederPoint=ブリーダーP交換所 / beatPoint=ビートP交換所
+//   cost … 値段(その交換所の通貨で)。1以上の整数
+// ★助手の仲良し度でもらう枠(unlock:{assistantId,bondLevel})とは別の種類。同じ枠に両方は書かない。
+// ★「unlock が無い枠は最初から全員が選べる」という決まりは変えない。だから売る枠を unlock なしにして
+//   released:true にすると全員に無料で出てしまう。売る枠は必ず shop と cost を書く(検査が見張る)。
+// ★買うと mh_profile_frame_owned_v1 にidが入る(助手の仲良し度でもらったときと同じ入れ物。新しい保存キーは作らない)。
+const PROFILE_FRAME_SHOPS = Object.freeze({
+  breederPoint: Object.freeze({ label:'ブリーダーP交換所', currency:'breederPoint' }),
+  beatPoint:    Object.freeze({ label:'ビートP交換所',     currency:'beatPoint' }),
+});
+// その枠の売り値の一覧。`unlock:{shop,cost}`(1か所だけ) と `unlock:{shops:[{shop,cost},…]}`(複数の交換所) のどちらも読める。
+// 値段が正しくないものは入れない
+const profileFrameSales = (frame) => {
+  const unlock = frame && frame.unlock;
+  if (!unlock || typeof unlock !== 'object') return [];
+  const list = Array.isArray(unlock.shops) ? unlock.shops : (unlock.shop !== undefined ? [unlock] : []);
+  const seen = new Set();
+  return list.map(entry => {
+    const shop = entry && PROFILE_FRAME_SHOPS[entry.shop] ? entry.shop : '';
+    const cost = Math.floor(Number(entry && entry.cost));
+    return (shop && Number.isFinite(cost) && cost >= 1) ? { shop, cost, currency: PROFILE_FRAME_SHOPS[shop].currency } : null;
+  }).filter(sale => sale && !seen.has(sale.shop) && seen.add(sale.shop));
+};
+// その枠の売り値(最初の1つ)。売り物でなければ null
+const profileFrameSale = (frame) => profileFrameSales(frame)[0] || null;
+// 指定の交換所での売り値。そこで売っていなければ null
+const profileFrameSaleIn = (frame, shop) => profileFrameSales(frame).find(sale => sale.shop === shop) || null;
+// 指定の交換所で売っている枠(公開済みだけ。並びは PROFILE_FRAMES のとおり)
+const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => !!profileFrameSaleIn(frame, shop));
+// 買える条件(2026-10-03)。条件が無ければ null(いつでも買える)。形は { kind, text, … }
+//   kind:'speciesRebirth'  … lineage の種(主血統)のモンスターを count 回以上限界突破
+//   kind:'monsterReincarnate' … monsterId のモンスター(マスモン)を count 回以上「転生」(reincarnateCount。限界突破とは別の仕組み)
+//   kind:'difficultyCleared' … difficulty 以上の難易度をクリア
+//   kind:'rhythmClears'    … モンヒロビートを count 回以上クリア(通算。RHYTHM_CLEAR_TOTAL_KEY)
+const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears']);
+const profileFrameCondition = (frame) => {
+  const condition = frame && frame.unlock && frame.unlock.condition;
+  return (condition && PROFILE_FRAME_CONDITION_KINDS.includes(condition.kind)) ? condition : null;
+};
+// その交換所で買うときに必要な条件。条件に `shops:['breederPoint']` と書いてあれば、その交換所だけ条件つき
+// (書いていなければどの交換所でも条件つき)。条件が無い・その交換所には条件が無いときは null(いつでも買える)
+const profileFrameConditionFor = (frame, shop) => {
+  const condition = profileFrameCondition(frame);
+  if (!condition) return null;
+  return (Array.isArray(condition.shops) && !condition.shops.includes(shop)) ? null : condition;
+};
+// 売る枠として書かれているのに、売り値が正しくない(shop だけ・cost が0など)枠のid。検査用
+const profileFramesWithBrokenSale = () => PROFILE_FRAMES
+  .filter(frame => frame.unlock && (frame.unlock.shop !== undefined || frame.unlock.shops !== undefined)
+    && (profileFrameSales(frame).length === 0
+      || (Array.isArray(frame.unlock.shops) && profileFrameSales(frame).length !== frame.unlock.shops.length)
+      || (frame.unlock.condition !== undefined && !profileFrameCondition(frame))))
+  .map(frame => frame.id);
+// ブリーダーP交換所で売る枠は、PROFILE_FRAMES の売り値(unlock.shop / unlock.shops の breederPoint)から商品を**自動で**作る
+// (2026-10-03・手で書き写さない。枠に売り値を書けば並ぶ)。type:'frame' はプロフィールのフレーム。
+// 買う処理(buyMarketItem)・所持の判定(isMarketItemOwned)・見た目(MarketProductCard)がこの type を扱う。
+// ★ビートP交換所で売る枠(beatPoint)は data/rhythm-event.js が RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS を作る。
+// ★profileFrameSales を使うので、その定義より後ろに置く(const は宣言より前に呼べない)。
+PROFILE_FRAMES
+  .filter(frame => frame.released === true && profileFrameSaleIn(frame, 'breederPoint'))
+  .forEach(frame => {
+    const sale = profileFrameSaleIn(frame, 'breederPoint');
+    BREEDER_MARKET_ITEMS.push({ id:frame.id, name:`${frame.name}のフレーム`, type:'frame', cost:sale.cost, desc:frame.desc || '' });
+  });
 // その助手の枠を、もらえるLvの小さい順に返す(助手の画面・ヘルプの表で使う)
 const profileFramesForAssistant = (assistantId) => releasedProfileFrames()
   .filter(frame => (profileFrameUnlock(frame) || {}).assistantId === assistantId)

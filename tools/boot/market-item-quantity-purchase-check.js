@@ -24,19 +24,22 @@ const check = (name, ok, detail = '') => {
 };
 
 // --- ① 画面側のトリガー条件 ---
-// 2026-09-10(STEP 6-6)にマーケット画面を BreederMarketScreen へ切り出したので、
-// この判断は「本体が画面へ渡す onBuy」の側にある。画面はどの商品かを渡すだけ
+// 2026-09-28「ショップの作りを全部統一して」から、価格タップはどの品でも確認の窓(MarketPurchaseSheet)を開く。
+// 数を選べるのは type:'item' 全体(円盤石・アシスト・アイコンは1つずつ)。窓は画面(BreederMarketScreen)が持ち、
+// 本体の buyMarketItem は買えたら true を返す。窓はそれを見て閉じる
 check('価格タップで個数選択シートを開く対象が type:\'item\' 全体になっている',
-  source.includes("onBuy={(item)=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}")
-  && source.includes("onBuy={()=>onBuy(item)}"));
-check('購入完了時にシートを閉じる対象も type:\'item\' 全体になっている',
-  source.includes("if (item.type === 'item') setMarketQuantityItem(null);"));
+  source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),")
+  && source.includes("onBuy={buyMarketItem}"));
+check('購入できたら窓を閉じる(どの品でも)',
+  /if\(result===true\|\|result\?\.ok\)\{[\s\S]{0,300}?setSheet\(null\);/.test(source)
+  && /const buyMarketItem = async[\s\S]*?saveMissionProgress\('market'\);\n    return true;/.test(source));
 
 // --- ② 個数選択シートの通貨切り替え ---
 check('個数選択シートはプシュケー以外(ダイヤ)を選べる',
-  source.includes("const balance=usesPsyche?ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID):gold;"));
+  source.includes("const balanceOf = (currency) => currency==='psyche' ? psycheHave :")
+  && source.includes("balance={balanceOf(marketCurrencyOf(sheet.item))}"));
 check('個数選択シートの単位表示もダイヤに切り替わる',
-  source.includes("const unit=usesPsyche?'プシュケー':'ダイヤ';"));
+  api.marketPriceText ? api.marketPriceText(BREEDER_MARKET_ITEMS.find(i => i.id === 'unique_skill_reset_ticket')).endsWith('ダイヤ') : false);
 
 // --- ③ ダイヤ商品でも複数個購入の計算が正しい ---
 // スキルポイントリセット券(cost:1000・ダイヤ)を3個まとめ買いする想定

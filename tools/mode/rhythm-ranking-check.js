@@ -157,7 +157,11 @@ check('sbInsertRhythmScore/sbFetchRhythmRankingsは、既存モードが必ず�
 check('既存モードのランキングキー一覧(RANKING_DIFFICULTY_KEYS)にRhythmを混ぜていない(検証を緩めていない)',
   !/RANKING_DIFFICULTY_KEYS = Object\.freeze\(\[[\s\S]{0,400}Rhythm/.test(game));
 
-check('送信の呼び出し(submitRhythmRankingScore)を持つ',game.includes('const submitRhythmRankingScore = useCallback(async (song, difficulty, result) => {'));
+// 2026-09-29: 本体は submitRhythmRankingScoreBody。submitRhythmRankingScore は、直前の送信を覚える薄い包み
+// (ランキングを開くとき、その送信が終わるのを待つため)。呼び出し側の名前は変えていない
+check('送信の呼び出し(submitRhythmRankingScore)を持つ',
+  game.includes('const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {')
+  &&/const submitRhythmRankingScore = useCallback\(\(song, difficulty, result\) => \{\s*const task = submitRhythmRankingScoreBody\(song, difficulty, result\);/.test(game));
 check('送信はpersistRankingScoreを再利用し、insertScoreだけモンビー専用に差し替える(送受信の共通の失敗処理は増やさない)',
   /persistRankingScore\(\{\s*row, insertScore: sbInsertRhythmScore,/.test(game));
 check('送信に失敗したときだけ専用キー(mh_rhythm_rank_pending_v1)へ退避する。BEST記録のキーとは別',
@@ -167,8 +171,10 @@ check('送信に失敗したときだけ専用キー(mh_rhythm_rank_pending_v1)�
 check('退避する記録に上限があり、際限なく増やさない',
   game.includes('const RHYTHM_RANKING_PENDING_MAX = 20;')
   &&game.includes('list.slice(-RHYTHM_RANKING_PENDING_MAX)'));
-check('体験版から始めたプレイ(from===demo)のときだけ送信し、デバッグプレイは送信しない',
-  /if\(rhythmPlay\.from==='demo'\)submitRhythmRankingScore\(rhythmPlay\.song,rhythmPlay\.difficulty,result\);/.test(game));
+// みんなで対戦(from===multi)も、2026-10-02 のユーザー指示「ランキングにも反映するようにして」で送る側に入った
+check('体験版(from===demo)とみんなで対戦(from===multi)のプレイだけ送信し、デバッグプレイは送信しない',
+  /if\(rhythmPlay\.from==='demo'\|\|rhythmPlay\.from==='multi'\)submitRhythmRankingScore\(rhythmPlay\.song,rhythmPlay\.difficulty,result\);/.test(game)
+  &&!/rhythmPlay\.from==='debug'[^;]{0,40}submitRhythmRankingScore/.test(game));
 check('BEST記録の保存(saveRhythmBestRecord)は送信の有無に関わらず必ず行う(先に呼んでいる)',(()=>{
   const idx=game.indexOf("const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId");
   const submitIdx=game.indexOf("submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result)");

@@ -53,7 +53,7 @@ const openProfile = async (page) => {
   await page.waitForTimeout(3000);
   for (let i = 0; i < 8; i++) {
     const clicked = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|つぎへ|OK)$/.test(x.textContent.trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|OK)$/.test(x.textContent.trim()));
       if (b) b.click();
       return !!b;
     });
@@ -87,9 +87,10 @@ async function run() {
   const lowFrames = await readFrames(low);
   check('選択画面に枠が並ぶ', lowFrames.length >= 20, `${lowFrames.length}件`);
   const lockedLow = lowFrames.filter(f => f.locked);
-  check('Lv1では助手の枠が9枚とも鍵つきで並ぶ', lockedLow.length === 9, `${lockedLow.length}枚`);
+  // 助手の枠9枚 + マーケットで買うモンスターの枠10枚(2026-10-03)
+  check('Lv1では助手の枠9枚とマーケットで買う枠10枚が鍵つきで並ぶ', lockedLow.length === 19, `${lockedLow.length}枚`);
   check('鍵つきの枠にも、もらえる条件が出ている',
-    lockedLow.every(f => /Lv\d/.test(f.text)), lockedLow.slice(0, 2).map(f => f.text).join(' / '));
+    lockedLow.every(f => /Lv\d|マーケットで購入/.test(f.text)), lockedLow.slice(0, 2).map(f => f.text).join(' / '));
   check('色の枠は鍵が付かない', lowFrames.filter(f => !f.locked).length >= 13, `${lowFrames.filter(f => !f.locked).length}枚`);
   // 鍵を押すと条件が出る
   await low.evaluate(() => document.querySelector('[data-profile-frame-option="frame_mua_1"]')?.click());
@@ -109,7 +110,7 @@ async function run() {
   const closeAll = async (page) => {
     for (let i = 0; i < 12; i++) {
       const clicked = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|つぎへ|OK)$/.test(x.textContent.trim()));
+        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|OK)$/.test(x.textContent.trim()));
         if (b) b.click();
         return !!b;
       });
@@ -125,7 +126,7 @@ async function run() {
     noticeText = await high.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     if (/新しい飾り枠をもらったよ/.test(noticeText)) { sawFrameNotice = true; break; }
     const clicked = await high.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|つぎへ|閉じる)$/.test(x.textContent.trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|閉じる)$/.test(x.textContent.trim()));
       if (b) b.click();
       return !!b;
     });
@@ -161,7 +162,7 @@ async function run() {
     }));
   for (let i = 0; i < 8; i++) {
     const more = await high.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|つぎへ|閉じる)$/.test(x.textContent.trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|閉じる)$/.test(x.textContent.trim()));
       if (b) b.click();
       return !!b;
     });

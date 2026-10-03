@@ -20,7 +20,7 @@ function UpgradeSkillScreen({
 
     // mh-phase … 背の低い器(横持ち)で説明を畳む目印(70-bootstrap.jsx の @container)
     // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'245,158,11'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'245,158,11'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
       <div className="mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5">
         <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic uppercase">固有技の強化</h2></div>
         {/* このあと何枚の画面を通ってバトルへ戻るのか */}
@@ -101,10 +101,15 @@ function WaveResultScreen({
        見出しと内訳を min-h-0 の入れ物にまとめ、あふれたときだけそこが縮んで
        内側をスクロールさせる。ボタンは shrink-0 なので必ず画面内に残り、
        収まっているときは今までどおり全体が中央に寄る */
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-center p-3 text-center overflow-hidden">
+    // mh-phase / mh-ph-* … 強化フェーズの画面と同じ飾り(濃紺の地・金の縁)。--ph はこの画面の識別色
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden">
       <div className="w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll">
-      <div className="mb-2 shrink-0"><Trophy className="text-yellow-400 mx-auto mb-1" size={32}/><h2 className="text-xl font-black italic uppercase tracking-tighter text-white">WAVE {waveResult.wave} リザルト</h2></div>
-      <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-1.5 mb-3 shadow-2xl shrink-0">
+      <div className="mb-2 shrink-0 flex flex-col items-center gap-1">
+        <span className="mh-ph-plate mh-train-sub">WAVE {waveResult.wave} CLEAR</span>
+        <Trophy className="mh-train-title text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.8)]" size={34}/>
+        <div className="mh-ph-heading"><h2 className="mh-ph-title mh-train-title text-xl font-black italic uppercase tracking-tighter">WAVE {waveResult.wave} リザルト</h2></div>
+      </div>
+      <div className="mh-wave-rows mh-ph-panel w-full max-w-sm p-3 space-y-1.5 mb-3 shrink-0">
         <div className="grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1">
           <span className="text-[10px] font-black text-indigo-200">今回：<b className="font-mono text-sm text-white">{waveResult.turn}</b>ターン</span>
           <span className="text-[10px] font-black text-amber-200">累計：<b className="font-mono text-sm text-white">{waveResult.totalTurnCount}</b>ターン</span>
@@ -115,7 +120,7 @@ function WaveResultScreen({
           return <div data-quick-ultimate-growth className="rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">自動成長</span>　通常 +{compactPercent(normalRate)} <span className="text-slate-500">→</span> 今回 +{compactPercent(effectiveRate)}<span className="block text-[8px] text-purple-300">WAVE {waveResult.turn}T / ULTIMATE補正 -{compactPercent(normalRate-effectiveRate)}</span></div>;
         })()}
         {waveResult.pendingUltimateDistanceBreak&&<div data-ultimate-distance-break-warning className="rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200">⚠ 次WAVEで距離弱体化が発動</div>}
-        <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE 与ダメージ</span><span className="text-red-400 font-mono font-black text-base">{waveResult.totalDamage.toLocaleString()}</span></div>
+        <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE 与ダメージ</span><span className="text-red-400 font-mono font-black text-base"><TrainingCountUp from={0} to={waveResult.totalDamage} delay={250} duration={900} format={v=>v.toLocaleString()}/></span></div>
         {waveResult.totalAllDamage!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">全WAVE累計ダメージ</span><span className="text-orange-400 font-mono font-black text-base">{waveResult.totalAllDamage.toLocaleString()}</span></div>)}
         {waveResult.distDamage&&(<div className="border-b border-white/10 pb-1.5">
           <div className="text-cyan-400 font-black uppercase tracking-widest mb-1 text-left" style={{fontSize:'9px'}}>距離別ダメージ（味方位置）& 補正値(永続)</div>
@@ -136,8 +141,8 @@ function WaveResultScreen({
         {!isQuickMode(runMode)&&(<>
         <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE ボーナス ({waveResult.wave} WAVE)</span><span className="text-yellow-400 font-mono font-black text-base">x{waveResult.waveMult.toFixed(2)}</span></div>
         <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">残りターン数ボーナス ({waveResult.remainingTurns})</span><span className="text-blue-400 font-mono font-black text-base">x{waveResult.turnMult.toFixed(2)}</span></div>
-        <div className="pt-1 flex flex-col gap-0.5 text-right"><div className="text-[9px] text-slate-500 font-bold uppercase italic">難易度ボーナス ({extremeRun?extremeDifficulty:difficulty}): x{scoreMultiplier}</div><div className="flex justify-between items-end"><span className="text-indigo-400 text-xs font-black uppercase">獲得スコア</span><span className="text-white font-mono font-black text-xl">{waveResult.roundScore.toLocaleString()}</span></div></div>
-        <div className="pt-1 flex justify-between items-end border-t border-white/20"><span className="text-amber-500 text-[11px] font-black uppercase">累計スコア</span><span className="text-amber-400 font-mono font-black text-lg">{waveResult.totalScore.toLocaleString()}</span></div>
+        <div className="pt-1 flex flex-col gap-0.5 text-right"><div className="text-[9px] text-slate-500 font-bold uppercase italic">難易度ボーナス ({extremeRun?extremeDifficulty:difficulty}): x{scoreMultiplier}</div><div className="flex justify-between items-end"><span className="text-indigo-400 text-xs font-black uppercase">獲得スコア</span><span className="text-white font-mono font-black text-xl"><TrainingCountUp from={0} to={waveResult.roundScore} delay={600} duration={1000} format={v=>v.toLocaleString()}/></span></div></div>
+        <div className="pt-1 flex justify-between items-end border-t border-white/20"><span className="text-amber-500 text-[11px] font-black uppercase">累計スコア</span><span className="text-amber-400 font-mono font-black text-lg"><TrainingCountUp from={Math.max(0,waveResult.totalScore-waveResult.roundScore)} to={waveResult.totalScore} delay={900} duration={1000} format={v=>v.toLocaleString()}/></span></div>
         </>)}
       </div>
       </div>
@@ -199,6 +204,14 @@ function RewardPickScreen({
     const trainingOptions=trainingOptionsFor(runMode);
     const optionById=(id)=>trainingOptions.find(option=>option.id===id);
     const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
+    // 「だれを強化するのか」を顔で見せるための絵(立っている子ごと)
+    const trainingFace=(slotIdx)=>{
+      const mon=slots?.[slotIdx];
+      if(!mon) return <span className="text-lg">？</span>;
+      return mon.imgUrl
+        ? <DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="" masuColors={mon.colors} className="h-full w-full object-contain"/>
+        : <span className="text-xl">{mon.emoji}</span>;
+    };
     // 「1回目」「2回目」の枠を押すと、その1回だけを取り消す。以前は「選び直す」で
     // 2つとも消すしかなく、2回目だけ変えたいときも1回目から選び直していた
     const removePick=(index)=>setTrainingPicks(prev=>{
@@ -213,7 +226,7 @@ function RewardPickScreen({
     return (
     // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
     // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center p-3 overflow-hidden" data-screen="training">
       <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
         {/* どのWAVEを抜けたごほうびなのかを見出しの上に出す */}
         {waveResult?.wave>0&&<div className="mb-1 flex justify-center">
@@ -227,7 +240,26 @@ function RewardPickScreen({
         {phasePlan&&<PhaseSteps plan={phasePlan} current="training" nextWave={waveResult?.wave>0?waveResult.wave+1:null} className="mt-1.5"/>}
         {/* 「4種類から2つ選ぶ」ことと、いま何を選んだかを一目で分かるようにする。
             点だけだと何を選んだのかは各カードの×1を探すしかなかったので、枠に中身を入れる */}
-        <div className="mh-phase-tall mt-1.5 text-center text-[10px] font-black text-slate-300">{tacticsMode?(pickable?`${currentName||'全員'}のトレーニング`:'全員ぶん決まりました'):'4種類から2つ選ぶ'}</div>
+        {tacticsMode
+          ? (<div data-tactics-training-target className="mt-2 w-full">
+              {pickable&&currentSlot!=null
+                ? (<div key={currentSlot} className="mh-phase-pop mh-ph-panel flex items-center gap-3 px-3 py-2 text-left">
+                    <span className="mh-ph-medal relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/40">{trainingFace(currentSlot)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="rounded-full bg-amber-400 px-2 py-px text-[9px] font-black text-slate-900">いま強化する子</span>
+                        <span className="text-[9px] font-black text-slate-400">{RANGE_LABELS[currentSlot]}距離</span>
+                      </div>
+                      <div className="mt-0.5 truncate text-[17px] font-black leading-tight text-white">{`${currentName||'全員'}のトレーニング`}</div>
+                    </div>
+                    <div className="shrink-0 text-center font-mono leading-none">
+                      <span className="block text-[8px] font-black text-slate-400">選んだ数</span>
+                      <b className="text-[20px] text-amber-300">{activePicks.length}</b><span className="text-[11px] text-slate-500">/{TRAINING_PICK_COUNT}</span>
+                    </div>
+                  </div>)
+                : (<div className="mh-ph-panel px-3 py-2 text-center text-[12px] font-black text-emerald-300">全員ぶん決まりました。「決定する」を押してください</div>)}
+            </div>)
+          : <div className="mh-phase-tall mt-1.5 text-center text-[10px] font-black text-slate-300">4種類から2つ選ぶ</div>}
         <div className="mt-1 flex items-center justify-center gap-1.5">
           {Array.from({length:TRAINING_PICK_COUNT}).map((_,i)=>{
             const picked=optionById(activePicks[i]);
@@ -253,21 +285,23 @@ function RewardPickScreen({
         {/* 何体ぶん終わったか。1体ずつ選ぶので、どこまで進んだのかが分からないと迷子になる。
             名前の札を並べ、いま選んでいる子を光らせる */}
         {tacticsMode&&<div data-tactics-training-progress={`${doneSlots}/${trainableSlots.length}`}
-          className="mt-1.5 flex flex-wrap items-center justify-center gap-1 text-center text-[10px] font-black text-indigo-300">
-          <span className="shrink-0">{doneSlots} / {trainableSlots.length} 体ぶん決定ずみ</span>
-          {trainableSlots.length>1&&<>
+          className="mt-2 flex flex-col items-center gap-1 text-center">
+          <span className="text-[10px] font-black text-indigo-300">{doneSlots} / {trainableSlots.length} 体ぶん決定ずみ</span>
+          {trainableSlots.length>1&&<div className="flex flex-wrap items-stretch justify-center gap-1.5">
             {trainableSlots.map(slotIdx=>{
               const count=picksOf(slotIdx).length;
               const done=count>=TRAINING_PICK_COUNT;
               const active=slotIdx===currentSlot&&pickable;
               return (
-                <span key={slotIdx} className={`flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'mh-ph-step-now':done?'border-emerald-400/60 bg-emerald-950/60 text-emerald-200':'mh-ph-step-todo'}`}>
-                  <span className="truncate">{unitName(slotIdx)}</span>
-                  <span className="shrink-0 font-mono">{done?'✓':`${count}/${TRAINING_PICK_COUNT}`}</span>
+                <span key={slotIdx} className={`relative flex w-[62px] flex-col items-center rounded-xl border px-1 py-1 ${active?'mh-ph-step-now':done?'border-emerald-400/60 bg-emerald-950/60 text-emerald-200':'mh-ph-step-todo'}`}>
+                  {active&&<span aria-hidden="true" className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] leading-none text-amber-300">▼</span>}
+                  <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-black/40">{trainingFace(slotIdx)}</span>
+                  <span className="mt-0.5 w-full truncate text-[9px] font-black leading-tight text-white">{unitName(slotIdx)}</span>
+                  <span className="shrink-0 font-mono text-[9px] font-black leading-tight">{done?'✓ 済':`${count}/${TRAINING_PICK_COUNT}`}</span>
                 </span>
               );
             })}
-          </>}
+          </div>}
         </div>}
         {extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null&&(()=>{
           const turns=waveResult?.turn||0;
@@ -281,7 +315,7 @@ function RewardPickScreen({
       {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
           各項目のカードは自分のステータスしか出さないので、ここで全体を見比べられるようにする */}
       {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-sm px-2 py-1.5 mt-2" data-training-status>
-        <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
+        <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">{tacticsMode&&currentName?`${currentName}の`:''}現在のステータス{activePicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
         <div className="grid grid-cols-4 gap-1">
           {trainingOptions.map(option=>{
             const st=STYLES[option.id]||STYLES.hp;
@@ -405,7 +439,7 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef, speciesChallengeBattleRunRef,
 }) {
   return (
-<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
+<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div><div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
 {speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
   );
 }
@@ -415,7 +449,7 @@ function GameOverScreen({
   runHighlights, runMode, runResultActionOnce, score,
 }) {
   return (
-<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
+<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><span aria-hidden="true" className="mh-end-vignette"/><div className="mh-game-over-head relative z-10 shrink-0 flex flex-col items-center"><Skull size={48} className="mh-end-skull text-red-700 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
   );
 }
 
@@ -424,7 +458,7 @@ function GaveUpScreen({
   runMode, runResultActionOnce, score,
 }) {
   return (
-<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
+<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="mh-end-flag text-slate-400 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
   );
 }
 

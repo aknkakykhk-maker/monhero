@@ -998,12 +998,36 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   heroInitialStyle … true なら、勇者モンに選んだときだけ配置の画面で初期スタイルを選べる
 //   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
 //   conditionText … 条件を画面に出すときの文(任意)
+//   partyTakenRate … 効いているあいだ、味方全員の被ダメージを何割減らすか(0.3 なら30%軽減。ほかの軽減と掛け算で重なる)
+//   partyRegenRate … 効いているあいだ、ターンの終わりに味方全員(立っている子)のライフを上限の何割ぶん多く回復するか
+//   extraCombos … { count, rate } 効いているあいだ、その子の攻撃へ与ダメージ rate の連撃を count 回足す
+//   dmgRate   … (multiBuff) 効いているあいだ、その子の与ダメージを何割上げるか(0.3 なら×1.3。最終ダメージへの乗算)
+//   selfTakenRate … (multiBuff) 効いているあいだ、その子が受けるダメージを何割減らすか(0.2 なら×0.8。ほかの軽減と掛け算で重なる)
+//   critRateRate … (multiBuff) 会心率を何割増やすか(0.5 なら×1.5。足し算ではなく、いまの会心率にかける)
+//   critDmgRate  … (multiBuff) 会心ダメージを何割増やすか(0.3 なら×1.3。足し算ではなく、いまの会心ダメージ倍率にかける)
+//   distMult  … (multiBuff) 効いているあいだ、その子の攻撃の距離補正をこの値に固定する(0なら変えない。1.5 なら敵と同じ距離のときと同じ)
+//   guaranteeUnique … true なら、効いているあいだ毎ターン、その子の固有技カードが手札に必ず出る(ピクシー)
+//   cardBonus … (stage) 効いているあいだ、1ターンに使えるカード枚数(盤面ぜんぶ・その子自身)を何枚増やすか
+//   voltage   … (stage) { max, dmg, heal, guts, hp } 味方がカードを1枚使うたびに1たまる。1段階ごとに 与ダメ+dmg・回復量+heal・ガッツの自動回復+guts(全員)
+//   pandoraBox … (pandoraBox) パンドラの箱。{ costRate(ターン終わりに払う最大ライフの割合), selfCardBonus(パンドラ自身が使えるカード+), devilDmg(1枚目の与ダメ倍率), devilCombo{count,rate}(1枚目に付く連撃), angelRate(2枚目で味方全員のライフ・ガッツ上限の何割戻すか), hopeGutsRate(最後の希望で戻すガッツ) }
+//   target    … 'ally' なら、使うとき味方1体(自分も含む)を選ぶ。選んだ枠は applyTacticsExUse の target に入る
+//   lifeSpring … (lifeSpring) { maxUpRate, gutsRate } 選んだ子が立っていればライフ上限を maxUpRate 上げて(効果のあいだ)満タンに、ダウン中なら立たせて満タンに。どちらもガッツを上限の gutsRate 戻す
+//   usesPerWave … true なら、回数がWAVEのはじめに戻る(maxUses は1WAVEぶん)
+//   present   … (present) スネグーラチカのプレゼントの数字。fixedGuts=必ず入る全員のガッツ(上限の割合) / jackpot=大当たりの確率 / dmg・taken・crit・heal・guts=ランダム1種の効き目 / combo={count,rate}
+//   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
+//   dodgeComboRate … 回避するたびに増える連撃の rate(0.1 なら、回避1回ごとに与ダメージ10%の連撃が1回増える)
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
   wave: '発動したWAVEが終わるまで',
   style: 'もう一度使って選び直すまで',
 });
+// 緋桜瞬歩(distMatch)が効いているあいだの距離補正。ふだんは敵との距離の差 0/1/2/3 で ×1.5/1.3/1.1/0.9
+const TACTICS_EX_DIST_MATCH_MULT = 1.7;
+// 緋桜瞬歩(エイキ)・血踊(ザン)が効いている子が、敵と同じ距離の枠にいるとき、敵の攻撃を完全に回避するか
+// (枠の番号がそのまま距離なので、枠の番号と敵の距離が同じかどうかで見る)
+const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) =>
+  (effect === 'distMatch' || effect === 'dodgeCombo') && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -1043,6 +1067,120 @@ const TACTICS_EX_SKILLS = Object.freeze({
     regenRates: Object.freeze({ hp: 0.2, guts: 0.4 }),
     effect: 'statBoost',
   }),
+  // ★2026-10-02 ユーザー指示(エイキのEX)。「EX中は敵と距離があってる分のダメージになる」。
+  //   getDmg の距離補正(敵との距離の差 0/1/2/3 で ×1.5/1.3/1.1/0.9)を、効いているあいだは
+  //   差0(×1.5)で数える。どの距離枠にいても、敵と同じ距離から殴ったことになる。
+  //   間合い適性(その枠に立っている子の適性)は変えない。
+  // ★2026-10-02 ユーザー指示で 3ターン・ラン2回・併用できる・距離補正×1.5 → 5ターン・ラン3回・併用できない・
+  //   距離補正×1.7、さらに敵と同じ距離の枠にいるときは敵の攻撃を完全に回避する
+  //   (使ったターンは、エイキだけほかのカードを使えない。ほかの子は使える)
+  Eiki: Object.freeze({
+    id: 'eiki_dist_match',
+    name: '緋桜瞬歩',
+    desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
+    effect: 'distMatch',
+  }),
+  // ★2026-10-02 ユーザー指示(ザンのEX)。「敵と同じ距離の場合は完全回避、回避するごとに10%連撃付与
+  //   (与ダメ10%連撃が増えてく) 5ターン、ラン5回 併用あり」。名前はユーザー指定「血踊」(最初は仮に「見切り連斬」)。
+  //   回避の判定はエイキの緋桜瞬歩と同じ(tacticsExDistMatchDodges)。回避した数(effects[slot].dodges)だけ、
+  //   その子の攻撃へ与ダメージ10%の連撃が1回ずつ増える(tacticsExExtraCombosAt)。効果が切れたら数も消える
+  Zan: Object.freeze({
+    id: 'zan_dodge_combo',
+    name: '血踊',
+    desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    dodgeComboRate: 0.1,
+    effect: 'dodgeCombo',
+  }),
+  // ★2026-10-02 ユーザー指示(アークのEX)。「抗えぬ宿命を追え、5ターン、5回、与ダメ30%アップ、連撃10%、被ダメ20%低下」。
+  //   カードとの併用は指定が無かったので「併用できる」(自己強化なので、使ったターンも殴れないと意味が薄い)
+  Ark: Object.freeze({
+    id: 'ark_chase_fate',
+    name: '抗えぬ宿命を追え',
+    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
+    effect: 'multiBuff',
+  }),
+  // ★2026-10-02 ユーザー指示(イブリースのEX)。「堕天の烙印、5ターン、5回、5%連撃×5、クリ率50%アップ(乗算)、
+  //   クリダメ30%アップ(乗算)、丈夫さ30%アップ」。併用は指定が無かったので「併用できる」
+  Iblis: Object.freeze({
+    id: 'iblis_fallen_brand',
+    name: '堕天の烙印',
+    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
+    lifeCostRate: 0.3, conditionText: 'ライフが最大の30%より多いときだけ使える',
+    rates: Object.freeze({ def: 0.3 }), critRateRate: 0.5, critDmgRate: 0.3, extraCombos: Object.freeze({ count: 5, rate: 0.05 }),
+    effect: 'multiBuff',
+  }),
+  // ★2026-10-03 ユーザーの案(数字は仮。「決め打ちしないで細かい数値は調整したい」)。ピクシー「お気に入りの魔法」。
+  //   毎ターン固有技が手札に必ず出る。魔法空間(次ターンの使用ガッツ0)がその子の枠だけに効くので、連発できる。
+  //   距離補正は ×1.5 に固定(敵と同じ距離から攻撃したときと同じ。エイキの ×1.7 より低い)。併用は指定が無かったので「できる」
+  Pixie: Object.freeze({
+    id: 'pixie_favorite_magic',
+    name: 'お気に入りの魔法',
+    desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    distMult: 1.5, guaranteeUnique: true,
+    effect: 'multiBuff',
+  }),
+  // ★2026-10-03 ミーア「オン・ステージ！」(数字は仮)。ボルテージは味方がカードを使うたびに1たまる(最大10)。
+  //   1段階ごとに 味方全員の与ダメージ+3%・回復カードの回復量+5%・ターン終わりのガッツ自動回復+2%・ライフ自動回復+3%。終わると0に戻る
+  Mia: Object.freeze({
+    id: 'mia_on_stage',
+    name: 'オン・ステージ！',
+    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
+    cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02, hp: 0.03 }),
+    effect: 'stage',
+  }),
+  // ★2026-10-03 スネグーラチカ「クリスマスプレゼント」(数字は仮)。各WAVE1回。必ず全員のガッツが少し戻り、
+  //   そのうえランダムで6種のうち1つ(低確率の大当たりは6つ全部)。持続のある効果は2ターン
+  Snegurochka: Object.freeze({
+    id: 'snegurochka_present',
+    name: 'クリスマスプレゼント',
+    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 2,
+    present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
+    effect: 'present',
+  }),
+  // ★2026-10-03 ウンディーネ「生命の泉」(ユーザーの案・数字は仮)。味方1体を選んで使う回復のEX。
+  //   ダウン中の子はすぐ立ち上がってライフ満タン、立っている子はライフ満タン＋3ターンのライフ上限アップ。どちらもガッツが戻る
+  Undine: Object.freeze({
+    id: 'undine_spring_of_life',
+    name: '生命の泉',
+    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
+    // ★2026-10-03 ユーザー指示で 3回 → 5回
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
+    effect: 'lifeSpring',
+  }),
+  // ★2026-10-03 ヤオビクニ「悠久の刻」(ユーザーの案・回数2回)。時間を止める。使ったターンは敵が行動せず、
+  //   そのターンはWAVEの20ターン制限にも数えない(ターン数が進まない)。止めたターンのあとの「同じターン」では、もう一度は使えない
+  Yaobikuni: Object.freeze({
+    id: 'yaobikuni_eternal_moment',
+    name: '悠久の刻',
+    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
+    effect: 'timeStop',
+  }),
+  // ★2026-10-03 パンドラ「パンドラの箱」(ユーザーの案・数字は仮。見た目の分離(悪魔側・天使側の画像)と3枚の染色は、あとの段階で入れる)。
+  //   天使側と悪魔側に分かれて3ターン戦う(システム上は1体のまま)。毎ターン終わりにライフを削り(1・2ターン目)、
+  //   自分が使えるカード+1。1枚目は悪魔側(与ダメ+50%・与ダメ30%の連撃×1)、2枚目は天使側(味方全員のライフ・ガッツ上限の10%回復)。
+  //   3ターン生き残ると「最後の希望」(自分はダウン・ダウン中の味方は復活・味方全員ライフ満タン・ガッツ上限の50%)。
+  //   途中で倒れると、倒れたときのガッツが生きている味方へ均等に分けられる
+  Pandora: Object.freeze({
+    id: 'pandora_box',
+    name: 'パンドラの箱',
+    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
+    effect: 'pandoraBox',
+    // ラン3回のあいだ、箱が効いている途中でもう一度使うことはできない(重ね掛けで3ターンが延びないように)
+    conditions: Object.freeze(['notActive']),
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1073,6 +1211,26 @@ const TACTICS_EX_SKILLS = Object.freeze({
     heroInitialStyle: true,
     effect: 'weaponChange',
   }),
+  // ★2026-09-29 ユーザー指示「世界樹の守り。回復は20%、回数は5回」。
+  //   3ターンのあいだ味方全員の被ダメージ30%軽減＋ターン終わりに味方全員のライフを上限の20%回復。
+  //   カードとの併用はモッチー・ミタラシと同じく「できる」
+  Yggdrasil: Object.freeze({
+    id: 'yggdrasil_world_tree',
+    name: '世界樹の守り',
+    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    partyTakenRate: 0.3, partyRegenRate: 0.2,
+    effect: 'partyGuard',
+  }),
+  // ★2026-09-29 ユーザー指示「スイーツパラダイス。連撃30%×4にして」。効くのは発動したターンだけ、1ラン3回
+  MelWhip: Object.freeze({
+    id: 'melwhip_sweets_paradise',
+    name: 'スイーツパラダイス',
+    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
+    effect: 'comboBurst',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
@@ -1083,7 +1241,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1131,6 +1289,41 @@ const normalizeTacticsExDef = (raw) => {
       return acc;
     }, {}),
     fullRecover: raw.fullRecover === true,
+    partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
+    partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
+    dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
+    distMult: Math.max(0, Number.isFinite(Number(raw.distMult)) ? Number(raw.distMult) : 0),
+    guaranteeUnique: raw.guaranteeUnique === true,
+    cardBonus: Math.min(3, Math.max(0, tacticsSafeInt(raw.cardBonus, 0))),
+    voltage: raw.voltage && typeof raw.voltage === 'object' && tacticsSafeInt(raw.voltage.max, 0) > 0
+      ? { max: Math.min(99, tacticsSafeInt(raw.voltage.max, 0)),
+        dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
+    usesPerWave: raw.usesPerWave === true,
+    target: raw.target === 'ally' ? 'ally' : null,
+    pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
+      const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
+      const c = raw.pandoraBox.devilCombo;
+      return { costRate: Math.min(0.9, n(raw.pandoraBox.costRate)), selfCardBonus: Math.min(3, tacticsSafeInt(raw.pandoraBox.selfCardBonus, 0)),
+        devilDmg: Math.max(1, n(raw.pandoraBox.devilDmg) || 1), angelRate: n(raw.pandoraBox.angelRate), hopeGutsRate: n(raw.pandoraBox.hopeGutsRate),
+        devilCombo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate) } : null };
+    })() : null,
+    lifeSpring: raw.lifeSpring && typeof raw.lifeSpring === 'object'
+      ? { maxUpRate: Math.max(0, Number(raw.lifeSpring.maxUpRate) || 0), gutsRate: Math.max(0, Number(raw.lifeSpring.gutsRate) || 0) } : null,
+    present: raw.present && typeof raw.present === 'object' ? (() => {
+      const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
+      const c = raw.present.combo;
+      return { fixedGuts: n(raw.present.fixedGuts), jackpot: Math.min(1, n(raw.present.jackpot)), dmg: n(raw.present.dmg), taken: Math.min(0.9, n(raw.present.taken)),
+        crit: n(raw.present.crit), heal: n(raw.present.heal), guts: n(raw.present.guts),
+        combo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate) } : null };
+    })() : null,
+    lifeCostRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.lifeCostRate)) ? Number(raw.lifeCostRate) : 0)),
+    dmgRate: Math.max(0, Number.isFinite(Number(raw.dmgRate)) ? Number(raw.dmgRate) : 0),
+    selfTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.selfTakenRate)) ? Number(raw.selfTakenRate) : 0)),
+    critRateRate: Math.max(0, Number.isFinite(Number(raw.critRateRate)) ? Number(raw.critRateRate) : 0),
+    critDmgRate: Math.max(0, Number.isFinite(Number(raw.critDmgRate)) ? Number(raw.critDmgRate) : 0),
+    extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object'
+      && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0
+      ? { count: tacticsSafeInt(raw.extraCombos.count, 0), rate: Number(raw.extraCombos.rate) } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
@@ -1208,7 +1401,10 @@ const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsEx
 //   alive         … その子が立っているか(倒れた子はカードと同じくEXも使えない)
 //   selectedCount … このターンに**その子へ**置いたカードの枚数(ほかの子へ置いたカードは数えない)
 //   busy          … 行動中・AUTO中
-const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false } = {}) => {
+// 使うときに払うライフ(最大ライフの lifeCostRate。切り捨て)。払わないEXは0
+const tacticsExLifeCost = (def, maxHp) => (def && def.lifeCostRate > 0 ? Math.floor(Math.max(0, Number(maxHp) || 0) * def.lifeCostRate) : 0);
+// hp / maxHp … 使う子のいまのライフと最大ライフ(ライフを払うEXの判定に使う。渡さなければ見ない)
+const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false, hp = null, maxHp = null } = {}) => {
   if (!def) return { ok: false, reason: 'EXスキルを持っていない' };
   if (busy) return { ok: false, reason: '行動中は使えない' };
   if (!alive) return { ok: false, reason: '倒れているあいだは使えない' };
@@ -1218,6 +1414,9 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
   if (sameTacticsExTurn(safe.lastUse[slot], now)) return { ok: false, reason: 'このターンはもう使った' };
   if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
     return { ok: false, reason: 'この子にカードを置いていると使えないEX。先にこの子のカードを外す' };
+  }
+  if (def.lifeCostRate > 0 && hp != null && maxHp != null && Number.isFinite(Number(hp)) && Number.isFinite(Number(maxHp)) && Number(hp) <= tacticsExLifeCost(def, maxHp)) {
+    return { ok: false, reason: `ライフが足りない（最大ライフの${Math.round(def.lifeCostRate * 100)}%を払うので、それより多く残っているときだけ使える）` };
   }
   const active = isTacticsExEffectActive(safe, slot, monId, now);
   for (const key of def.conditions || []) {
@@ -1230,7 +1429,8 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
 // choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
-const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null } = {}) => {
+// target … 味方を選んで使うEX(生命の泉)で、選んだ味方の枠
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
   // スタイル式は、選べないスタイル(いまのもの・知らないもの)なら何もしない(回数も減らさない)
@@ -1245,6 +1445,15 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       style,
       turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
       rates: def.rates ? { ...def.rates } : null, regenRates: def.regenRates ? { ...def.regenRates } : null,
+      partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
+      extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
+      dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
+      dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
+      distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, cardBonus: def.cardBonus || 0,
+      voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
+      presentCfg: def.present ? { ...def.present } : null, present: null,
+      target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
+      pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1305,6 +1514,236 @@ const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 };
+// 世界樹の守り(partyGuard)。味方全員の被ダメージへ掛ける倍率。効いている子が複数いれば掛け算で重なる。
+// ★使った子が倒れても効果は残る(守りは場に張られたもの)。WAVEが変わると切れる
+const tacticsExPartyTakenMult = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((mult, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return mult;
+    const rate = Number(effects[key].partyTakenRate);
+    return Number.isFinite(rate) && rate > 0 ? mult * (1 - Math.min(0.9, rate)) : mult;
+  }, 1);
+};
+// 世界樹の守りの、ターン終わりのライフ回復(味方全員へ足す率)
+const tacticsExPartyRegenRate = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return sum;
+    const rate = Number(effects[key].partyRegenRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// スイーツパラダイス(comboBurst)。その子の攻撃へ足す連撃 { count, rate }。効いていなければ null
+const tacticsExExtraCombosAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit) return null;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  // 血踊(dodgeCombo): 回避した数だけ、与ダメージ rate の連撃が1回ずつ増える
+  if (kind === 'dodgeCombo') {
+    const mine = normalizeTacticsExState(state).effects[slot];
+    const dodges = tacticsSafeInt(mine && mine.dodges, 0), rate = Number(mine && mine.dodgeComboRate);
+    return dodges > 0 && Number.isFinite(rate) && rate > 0 ? { count: dodges, rate, label: '血踊' } : null;
+  }
+  if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
+  const own = normalizeTacticsExState(state).effects[slot].extraCombos;
+  const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
+  if (!(count > 0 && Number.isFinite(rate) && rate > 0)) return null;
+  // 連撃の名前は、アーク・イブリース(multiBuff)ではそのEXの名前(スイーツパラダイスは、これまでどおり名前を渡さない)
+  return kind === 'multiBuff' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
+};
+// アーク・イブリース(multiBuff)が効いている子の、与ダメージ・被ダメージ・会心の倍率(効いていなければ全部1)
+const tacticsExMultiBuffOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
+  const own = normalizeTacticsExState(state).effects[slot];
+  const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critDmg: 1 + num(own.critDmgRate), distMult: num(own.distMult) };
+};
+// ---- ピクシー(guaranteeUnique): 効いているあいだ、毎ターン固有技カードを手札へ出す ----
+// 出す子の枠(効いていなければ null)。次のターンに効くかを見たいときは、now にそのターンを渡す
+const tacticsExUniqueGuaranteeSlot = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const hit = Object.keys(effects).map(Number).find(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && effects[slot].guaranteeUnique === true && tacticsExActiveEffect(state, slot, unit.id, now) === 'multiBuff';
+  });
+  return hit == null ? null : hit;
+};
+// 手札に predicate を満たすカードが無ければ、山札→捨て札の順で探して手札へ入れる。
+// 手札がいっぱい(5枚)なら、いちばん後ろの別のカードを山札の底へ戻して入れ替える。見つからなければそのまま
+const ensureTacticsExUniqueInHand = ({ hand, deck, graveyard }, predicate, handMax = 5) => {
+  const h = Array.isArray(hand) ? hand.slice() : [], d = Array.isArray(deck) ? deck.slice() : [], g = Array.isArray(graveyard) ? graveyard.slice() : [];
+  if (h.some(predicate)) return { hand: h, deck: d, graveyard: g, moved: false };
+  let card = null;
+  let at = d.findIndex(predicate);
+  if (at >= 0) card = d.splice(at, 1)[0];
+  else { at = g.findIndex(predicate); if (at >= 0) card = g.splice(at, 1)[0]; }
+  if (!card) return { hand: h, deck: d, graveyard: g, moved: false };
+  if (h.length >= handMax) { const out = h.pop(); if (out) d.push(out); }
+  h.push(card);
+  return { hand: h, deck: d, graveyard: g, moved: true };
+};
+// ---- ミーア(stage): カード枚数+1・ボルテージ ----
+const tacticsExStageEntries = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).map(Number).filter(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'stage';
+  }).map(slot => ({ slot, mine: effects[slot] }));
+};
+// 1ターンに使えるカード枚数(盤面ぜんぶ)へ足す数
+// ★パンドラの箱(selfCardBonus)も、盤面の枚数に足す(少人数のとき、パンドラ自身の+1が盤面の上限に止められないように)
+const tacticsExCardBonusTotal = (state, units, now) => tacticsExStageEntries(state, units, now).reduce((sum, e) => sum + tacticsSafeInt(e.mine.cardBonus, 0), 0)
+  + Object.keys(normalizeTacticsExState(state).effects).map(Number).reduce((sum, slot) => {
+    const box = tacticsExPandoraBoxOf(state, units, slot, now);
+    return sum + (box ? tacticsSafeInt(box.selfCardBonus, 0) : 0);
+  }, 0);
+// その子自身が1ターンに使えるカード枚数へ足す数(効果を使った子だけ)
+const tacticsExCardBonusAt = (state, units, slot, now) => {
+  const hit = tacticsExStageEntries(state, units, now).find(e => e.slot === slot);
+  const box = tacticsExPandoraBoxOf(state, units, slot, now);
+  return (hit ? tacticsSafeInt(hit.mine.cardBonus, 0) : 0) + (box ? tacticsSafeInt(box.selfCardBonus, 0) : 0);
+};
+// いまのボルテージと、その強化(効いていなければ null)。dmgMult/healMult は掛け算、gutsAdd はガッツ・hpAdd はライフの自動回復率へ足す
+const tacticsExVoltageOf = (state, units, now) => {
+  const hit = tacticsExStageEntries(state, units, now).find(e => e.mine.voltageCfg);
+  if (!hit) return null;
+  const cfg = hit.mine.voltageCfg, v = Math.min(tacticsSafeInt(cfg.max, 0), Math.max(0, tacticsSafeInt(hit.mine.voltage, 0)));
+  return { voltage: v, max: tacticsSafeInt(cfg.max, 0), dmgMult: 1 + v * (Number(cfg.dmg) || 0), healMult: 1 + v * (Number(cfg.heal) || 0), gutsAdd: v * (Number(cfg.guts) || 0), hpAdd: v * (Number(cfg.hp) || 0) };
+};
+// 味方がカードを n 枚使ったぶん、ボルテージをためる(上限まで。効いていなければ状態をそのまま返す)
+const addTacticsExVoltage = (state, units, now, n) => {
+  const safe = normalizeTacticsExState(state);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  const entries = tacticsExStageEntries(safe, units, now).filter(e => e.mine.voltageCfg);
+  if (!entries.length || add <= 0) return safe;
+  const effects = { ...safe.effects };
+  entries.forEach(e => { effects[e.slot] = { ...e.mine, voltage: Math.min(tacticsSafeInt(e.mine.voltageCfg.max, 0), tacticsSafeInt(e.mine.voltage, 0) + add) }; });
+  return { ...safe, effects };
+};
+// ---- スネグーラチカ(present): クリスマスプレゼント ----
+const TACTICS_EX_PRESENT_KINDS = Object.freeze(['dmg', 'taken', 'combo', 'heal', 'guts', 'crit']);
+const TACTICS_EX_PRESENT_LABELS = Object.freeze({ dmg: '与ダメージアップ', taken: '被ダメージダウン', combo: '連撃付与', heal: 'ライフ回復', guts: 'ガッツ追加回復', crit: '会心率アップ' });
+// 乱数2つ(0以上1未満)から中身を決める。r1 が大当たりの確率より小さければ全部、そうでなければ r2 で1種類
+const rollTacticsExPresent = (r1, r2, jackpot = 0.1) => (Number(r1) < jackpot
+  ? { jackpot: true, kinds: TACTICS_EX_PRESENT_KINDS.slice() }
+  : { jackpot: false, kinds: [TACTICS_EX_PRESENT_KINDS[Math.min(TACTICS_EX_PRESENT_KINDS.length - 1, Math.max(0, Math.floor(Number(r2) * TACTICS_EX_PRESENT_KINDS.length)))]] });
+// 決まった中身を、使った子の効果へ控える(持続のある4種(与ダメ・被ダメ・連撃・会心率)は効いているあいだ見る。回復・ガッツはその場で入れる)
+const setTacticsExPresent = (state, slot, roll) => {
+  const safe = normalizeTacticsExState(state);
+  const mine = safe.effects[slot];
+  if (!mine || !roll || !Array.isArray(roll.kinds)) return safe;
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, present: { jackpot: roll.jackpot === true, kinds: roll.kinds.filter(k => TACTICS_EX_PRESENT_KINDS.includes(k)) } } } };
+};
+// いま効いているプレゼントの、味方全員への効き目(効いていなければ全部1・連撃は null)
+const tacticsExPresentOf = (state, units, now) => {
+  const out = { dmg: 1, taken: 1, critRate: 1, combo: null, kinds: [], jackpot: false };
+  const effects = normalizeTacticsExState(state).effects;
+  Object.keys(effects).map(Number).forEach(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    const mine = effects[slot];
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'present' || !mine.present || !mine.presentCfg) return;
+    const cfg = mine.presentCfg, kinds = mine.present.kinds || [];
+    out.kinds = kinds.slice(); out.jackpot = mine.present.jackpot === true;
+    if (kinds.includes('dmg')) out.dmg *= 1 + (Number(cfg.dmg) || 0);
+    if (kinds.includes('taken')) out.taken *= 1 - Math.min(0.9, Number(cfg.taken) || 0);
+    if (kinds.includes('crit')) out.critRate *= 1 + (Number(cfg.crit) || 0);
+    if (kinds.includes('combo') && cfg.combo && cfg.combo.count > 0 && cfg.combo.rate > 0) out.combo = { count: tacticsSafeInt(cfg.combo.count, 0), rate: Number(cfg.combo.rate), label: 'クリスマスプレゼント' };
+  });
+  return out;
+};
+// WAVEのはじめに、「各WAVEで回数が戻る」EX(スネグーラチカ)の回数を0へ戻す(変わらなければ同じ state を返す)
+const resetTacticsExWaveUses = (state) => {
+  const safe = normalizeTacticsExState(state);
+  const uses = { ...safe.uses };
+  let changed = false;
+  Object.keys(uses).forEach(key => {
+    const rec = uses[key];
+    const def = rec && TACTICS_EX_SKILLS[rec.monId];
+    if (def && def.usesPerWave && tacticsSafeInt(rec.count, 0) > 0) { uses[key] = { ...rec, count: 0 }; changed = true; }
+  });
+  return changed ? { ...safe, uses } : state;
+};
+// ---- 味方を選んで使うEX(生命の泉) ----
+// 選べる味方の一覧(立っている子もダウン中の子も。自分も含む)。選ぶEXでなければ null
+const tacticsExTargetOptions = (def, units) => (def && def.target === 'ally'
+  ? (Array.isArray(units) ? units : []).map((unit, slot) => ({ unit: normalizeTacticsUnit(unit), slot })).filter(e => e.unit)
+    .map(e => ({ slot: e.slot, hp: e.unit.hp, maxHp: e.unit.maxHp, downed: e.unit.downed === true })) : null);
+// 選んだ味方が使えるか。使えれば null、使えなければ理由
+const checkTacticsExTarget = (def, units, target) => {
+  if (!def || def.target !== 'ally') return null;
+  if (!Number.isInteger(target)) return 'どの味方に使うか選ぶ';
+  return Array.isArray(units) && units[target] ? null : 'そこには味方がいない';
+};
+// ---- パンドラ(pandoraBox): パンドラの箱 ----
+// その枠で「パンドラの箱」が効いているときの数字(効いていなければ null)
+const tacticsExPandoraBoxOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'pandoraBox') return null;
+  const cfg = normalizeTacticsExState(state).effects[slot].pandoraBoxCfg;
+  return cfg && typeof cfg === 'object' ? cfg : null;
+};
+// 1枚目(「同じ子の2枚目」ではないほう)の悪魔側の力。与ダメ倍率と連撃。2枚目以降・効いていなければ null
+const tacticsExPandoraDevil = (state, units, slot, now, halved = false) => {
+  const cfg = halved ? null : tacticsExPandoraBoxOf(state, units, slot, now);
+  if (!cfg) return null;
+  const c = cfg.devilCombo;
+  return { dmg: Math.max(1, Number(cfg.devilDmg) || 1), combo: c && c.count > 0 && c.rate > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate), label: '悪魔の力' } : null };
+};
+// ターンの終わりに、パンドラの箱がどうなるか。cost=ライフを払う / hope=最後の希望(最後のターン) / died=倒れていた(ガッツを分ける)。
+// 箱が効いていなければ null。slot=パンドラの枠、cfg=数字
+const tacticsExPandoraTurnEnd = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const slot = Object.keys(effects).map(Number).find(s => {
+    const unit = Array.isArray(units) ? units[s] : null;
+    return unit && tacticsExActiveEffect(state, s, unit.id, now) === 'pandoraBox';
+  });
+  if (slot == null) return null;
+  const mine = effects[slot], unit = normalizeTacticsUnit(units[slot]);
+  if (!unit || !mine.pandoraBoxCfg) return null;
+  const last = tacticsSafeInt(mine.turn, 0) + tacticsSafeInt(mine.turns, 0) - 1;
+  return { slot, cfg: mine.pandoraBoxCfg, phase: unit.downed ? 'died' : (tacticsSafeInt(now && now.turn, 0) >= last ? 'hope' : 'cost') };
+};
+// 箱の始末(最後の希望・倒れた)が済んだことにする。これ以降は何も起きない(同じターンの数字が続いても)。効いていなければ同じ state
+const spendTacticsExPandoraBox = (state) => {
+  const safe = normalizeTacticsExState(state);
+  const keys = Object.keys(safe.effects).filter(k => safe.effects[k] && safe.effects[k].effect === 'pandoraBox');
+  if (!keys.length) return state;
+  const effects = { ...safe.effects };
+  keys.forEach(k => { effects[k] = { ...effects[k], effect: 'pandoraBoxSpent' }; });
+  return { ...safe, effects };
+};
+// ---- ヤオビクニ(timeStop): 使ったターンは敵が行動せず、ターン数も進まない ----
+// いま時間が止まっている枠(まだ敵の番を止めていないもの)。なければ null
+const tacticsExTimeStopSlot = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const hit = Object.keys(effects).map(Number).find(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'timeStop';
+  });
+  return hit == null ? null : hit;
+};
+// 敵の番を止めたあと、時間停止を「使い終わった」ことにする(同じターンの数字が続いても、止め続けない)。止まっていなければ同じ state を返す
+const spendTacticsExTimeStop = (state) => {
+  const safe = normalizeTacticsExState(state);
+  const keys = Object.keys(safe.effects).filter(k => safe.effects[k] && safe.effects[k].effect === 'timeStop');
+  if (!keys.length) return state;
+  const effects = { ...safe.effects };
+  keys.forEach(k => { effects[k] = { ...effects[k], effect: 'timeStopSpent' }; });
+  return { ...safe, effects };
+};
+// 血踊が効いている子が敵の攻撃を回避したことを数える(効いていなければ状態をそのまま返す)
+const recordTacticsExDodge = (state, units, slot, now) => {
+  const safe = normalizeTacticsExState(state);
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(safe, slot, unit.id, now) !== 'dodgeCombo') return safe;
+  const mine = safe.effects[slot];
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, dodges: tacticsSafeInt(mine.dodges, 0) + 1 } } };
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
@@ -1315,7 +1754,7 @@ const applyTacticsExStats = (unit, state, slot, now) => {
   }
   // ステータスアップ(ガッツ全開っちー・ドラゴンだっちー): 力と丈夫さを上げる(切り捨て)。
   // 上げ幅は rates の項目、無ければ statRate(力・丈夫さ共通)
-  if (kind === 'statBoost') {
+  if (kind === 'statBoost' || kind === 'multiBuff') {
     const effect = normalizeTacticsExState(state).effects[slot];
     const rateOf = (key) => {
       const own = Number(effect.rates && effect.rates[key]);
@@ -1342,12 +1781,24 @@ const applyTacticsExStats = (unit, state, slot, now) => {
 const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArray(units) ? units : [])
   .map((unit, i) => (unit && i === slot
     ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0), exMaxGutsRate: Math.max(0, Number(gutsRate) || 0) } : unit));
+// ライフの上限だけを rate 上げる(すでに上がっていれば大きいほうを残す。ガッツの上限は触らない)
+const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot
+    // ★ガッツの上限の率は、いまの値のまま明示する(書かないと、ライフの率がガッツの上限にまで効いてしまう)
+    ? { ...unit, exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'), exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0)) } : unit));
 // 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
+  // ★生命の泉(lifeSpring)は、使った子ではなく選んだ味方のライフ上限を上げる。その子は泉が効いているあいだ戻さない
+  const springEffects = normalizeTacticsExState(state).effects;
+  const springTargets = new Set(Object.keys(springEffects).map(Number).filter(from => {
+    const caster = Array.isArray(units) ? units[from] : null;
+    return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
+  }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
     if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
+    if (springTargets.has(slot)) return unit; // 生命の泉の対象(効いているあいだ)
     changed = true;
     return { ...unit, exMaxRate: 0, exMaxGutsRate: 0 };
   });

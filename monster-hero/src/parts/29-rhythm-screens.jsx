@@ -98,7 +98,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
     </button>)}
   </div>;
   // onPick … 選んだ直後に呼ぶ(タップ音の種類は、選んだその場で鳴らして聞き比べられるようにする)
-  const segments=(key,items,onPick=null)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  // 6つ(タップ音のセット)は3つずつ2段。5つ並べると1つだけ次の段へこぼれる
+  const segments=(key,items,onPick=null)=><div className={`grid ${items.length===6?'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10':items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
   // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
@@ -111,7 +112,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
     <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`}>{title}</p>
     {control}
     {description&&!wide&&<details data-rhythm-option-help className="mt-2">
-      <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ くわしく</summary>
+      <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 詳しく</summary>
       <p className={`mt-1 ${note}`}>{description}</p>
     </details>}
   </div>;
@@ -133,7 +134,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
     if(dirty){const saved=await onSave(draft);setDraft(saved);}
     onCalibrate();
   };
-  return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
+  return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)'}}>
     {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
@@ -162,7 +163,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
                 <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
                 {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
-                <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">とじる</button>
+                <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">閉じる</button>
               </div>}
             </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
             {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
@@ -201,9 +202,14 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。')}
             {field('フルコンボ表示',toggle('comboStatusDisplay'),
               'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。')}
+            {/* 判定の文字を叩いた場所にも(2026-09-29・参考動画から)。既定は OFF */}
+            {field('叩いた場所に判定',toggle('judgmentAtTap'),
+              'ノーツを叩いたとき、判定ラインのその場所にも小さく判定の文字（MARVELOUS・GREAT など）を出します。既定は「OFF」です。\nいつもの真ん中の大きな判定はそのまま出ます。左右どちらの手がずれているかを見分けたいときに使います。判定・スコアは変わりません。')}
             {field('自己ベスト比',toggle('paceDisplay'),
               'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。')}
             {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
+            {field('道の幅（横向き）',segments('roadWidth',RHYTHM_ROAD_WIDTH_LABELS),
+              '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。',{full:true})}
             {/* ★出す/出さないと置き場所は**同じ枠にまとめる**(2026-09-13・ユーザー指摘
                 「オプションの配置もコンボを出すとコンボの位置選択から隣り合わせにないのも
                  意味わからない」)。別々の枠に置くと、あいだに関係ない項目が挟まる。 */}
@@ -234,18 +240,36 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
           <div className={wide?grid:`mt-3 ${grid}`}>
             {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
             {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_NOTE_SE_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
-            {/* タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」)。
-                選んだその場で1回鳴らす(タップ音がOFFでも、聞き比べのために鳴らす) */}
-            {field('タップ音の種類',segments('noteSeType',RHYTHM_NOTE_SE_TYPES.map(item=>[item.id,item.label]),id=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeType:id,noteSeEnabled:true})),
-              `ノーツを叩いたときの音です。${RHYTHM_NOTE_SE_TYPES.map(item=>`${item.label}＝${item.note}`).join('／')}。取り終えたとき・モンスターノーツ・フルコンボの音は変わりません。`,{full:true})}
+            {/* タップ音のセット(2026-09-26 に種類を選べるようにし、2026-09-27 にタップ・フリック・ロングの終わりの3つの音を持つセットにした。
+                ユーザー指示「タップ音を他の音ゲーを見習ってほしい / それを設定で色々変えれるようにしてほしい」)。
+                同じ日の夜に音そのものを作り直し、これまでの音は「クラシック」に残した。
+                選んだその場でタップの音を1回鳴らす(タップ音がOFFでも、聞き比べのために鳴らす) */}
+            {field('タップ音のセット',segments('noteSeType',RHYTHM_NOTE_SE_TYPES.map(item=>[item.id,item.label]),id=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeType:id,noteSeEnabled:true},'tap')),
+              `ノーツを叩いたとき・フリックしたとき・ロングを取り終えたときの音が、セットごとにそろって変わります。${RHYTHM_NOTE_SE_TYPES.map(item=>`${item.label}＝${item.note}`).join('／')}。`,{full:true})}
+            {field('判定で音を変える',toggle('noteSeJudgeVary'),
+              'ONのときは、MARVELOUS・EXCELLENTできらめく音が重なり、GREAT・GOOD・BADとずれるほど小さく・低く・短く鳴ります。耳でも当たり具合が分かります。')}
+            {field('空打ちの音',toggle('noteSeEmptyEnabled'),'ノーツの無いところを叩いたときの「シャッ」という音です。')}
+            {field('フリック音の大きさ',stepper('noteSeFlickVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
+              'タップ音量に対する大きさです。フリックは触れた瞬間ではなく、払えたときに「シュッ」と鳴ります。0%で鳴らしません。',{full:true})}
+            {field('ロングの終わりの音の大きさ',stepper('noteSeEndVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
+              'ホールド・スライドを最後まで取れたときの音です。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
+            {field('押さえている間の音の大きさ',stepper('noteSeHoldVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
+              'ホールド・スライドを押さえているあいだ、高く細かい「シャラシャラ」ときらめく音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
             {field('タップ音',toggle('noteSeEnabled'))}
             <div className="grid gap-2">
               <button type="button" onClick={previewBgm} className="min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button>
-              <button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button>
+              <button type="button" data-rhythm-se-preview="tap" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft,'tap')} className="min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button>
+            </div>
+            {/* 音ごとの試聴。判定ごとは MARVELOUS → GREAT → GOOD の順に続けて鳴らす */}
+            <div data-rhythm-se-previews className={`grid grid-cols-2 gap-2 ${wide?'col-span-3':'col-span-2'}`}>
+              <button type="button" data-rhythm-se-preview="flick" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'flick')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">フリック音</button>
+              <button type="button" data-rhythm-se-preview="end" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'end')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">ロングの終わり</button>
+              <button type="button" data-rhythm-se-preview="hold" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'hold')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">押さえている間</button>
+              <button type="button" data-rhythm-se-preview="judge" onClick={()=>{['MARVELOUS','GREAT','GOOD'].forEach((id,i)=>setTimeout(()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'tap',id),i*260));}} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100">判定ごと<span className="block text-[10px] text-fuchsia-300">良い順に3回</span></button>
             </div>
           </div>
           <details data-rhythm-option-help className="mt-3">
-            <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量についてくわしく</summary>
+            <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量について詳しく</summary>
             <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
             {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
             <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
@@ -288,6 +312,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
             {field('コンボの節目',toggle('comboMilestoneFx'),
               'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。')}
+            {/* 盛り上がりの光(2026-09-29・ユーザー指示「最初は OFF・オプションで出せる」)。既定は OFF */}
+            {field('盛り上がりの光',toggle('climaxFx'),
+              'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。')}
             {field('描く回数',segments('frameRateMode',RHYTHM_FRAME_RATE_LABELS),
               '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
             {/* 画質(2026-09-26・ユーザー指示「画質の設定を入れて」)。既定は「高」(これまでの細かさ) */}
@@ -334,7 +361,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
         {!wide&&<p className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>}
       </div>
     </div>
-    <footer data-rhythm-options-actions className={`z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide?'pt-1.5':'pt-2'}`} style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
+    <footer data-rhythm-options-actions className={`z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide?'pt-1.5':'pt-2'}`} style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>
       {message&&<p role="status" className="mb-1 text-center text-[11px] font-black text-amber-300">{message}</p>}
       {/* 横持ちでは中央寄せで細くする(横いっぱいのボタンは押しにくいだけで、場所も食う) */}
       <div className={`mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 ${wide?'max-w-[520px]':''}`}><button type="button" onClick={resetDraft} className={`rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black ${wide?'min-h-[42px]':'min-h-[52px]'}`}>デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`rounded-xl px-3 font-black ${wide?'min-h-[42px]':'min-h-[52px]'} ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
@@ -557,7 +584,8 @@ const RHYTHM_PREVIEW_DELAY_MS=350;
 //   ・オプション(RHYTHM_OPTIONS) … 「♪ BGM試聴」と重なるので無音のまま(ユーザー指示)
 //   ・演奏中(RHYTHM_PLAY)         … 自分で曲を鳴らす
 //   ・モンビーの外               … HOMEなどへ戻るので止める
-const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING']);
+//   ・みんなで対戦(RHYTHM_MULTI) … 選曲中は見ている曲、シャッフル・難易度選択では決まった曲(2026-10-03・ユーザー報告「曲選択のときに音楽がなってない」)
+const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_MULTI']);
 // spotClass … チュートリアルで光らせる場所に付けるクラスを返す関数(省略時は光らせない)。
 // 画面側が知っているキー: songList / songLevel / achievement / difficulty
 // 選んでいる曲・難易度は**画面の外(App本体)**で持つ。
@@ -566,8 +594,10 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
+  // 演奏へ入る前に、タップ音を作り置きしておく
+  useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
   const [sortOpen,setSortOpen]=React.useState(false);
@@ -639,6 +669,33 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
   const list=rhythmSortSongs(playable.filter(genreMatches),
     {sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
+  // ★同じ曲の別の版はまとめて1行にする(2026-10-03・RHYTHM_SONG_VERSION_GROUPS)。見え方だけで、遊べる曲も選んでいる曲も変えない。
+  //   絞り込みのあとで組ごとに1行へまとめ、行に出す版を決めてから、その版で並び替える
+  //   (Lv.や長さの順は、行に出ている数字どおりに並ぶ)。決着がつかないときと入手順は「組の最初の版の位置」なので、
+  //   入手順のまま版を切り替えても行は動かない。
+  //   行に出す版: 選んでいる曲がその組ならその版、そうでなければ原曲(絞り込みで原曲が外れていれば最初に当たった版)。
+  //   押したとき: その行が選んでいる組ならそのまま、ほかの組なら**いつも原曲**(ユーザー判断)
+  const versionsOf=entry=>{
+    const head=rhythmSongVersionHead(entry.songId);
+    return playable.filter(item=>rhythmSongVersionHead(item.songId)===head)
+      .sort((a,b)=>rhythmSongVersionIndex(a.songId)-rhythmSongVersionIndex(b.songId));
+  };
+  const rows=(()=>{
+    const out=[],at=new Map();
+    for(const entry of playable.filter(genreMatches)){
+      const head=rhythmSongVersionHead(entry.songId);
+      if(at.has(head)){out[at.get(head)].members.push(entry);continue;}
+      at.set(head,out.length);out.push({head,members:[entry]});
+    }
+    const built=out.map(row=>{
+      const current=song?row.members.find(item=>item.songId===song.songId):null;
+      const original=row.members.find(item=>item.songId===row.head)||row.members[0];
+      return {...row,entry:current||original,pick:original,versions:versionsOf(original).length};
+    });
+    const byEntry=new Map(built.map(row=>[row.entry.songId,row]));
+    return rhythmSortSongs(built.map(row=>row.entry),{sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties})
+      .map(entry=>byEntry.get(entry.songId));
+  })();
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
   // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
@@ -669,7 +726,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   // 戻すのは指が離れてスクロールが止まってからにする。
   //
   // 曲が1曲しかないときは輪にしない(同じ行が3つ並ぶだけで、かえって分かりにくい)。
-  const loopEnabled=list.length>=2;
+  const loopEnabled=rows.length>=2;
   const listRef=React.useRef(null);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
@@ -708,7 +765,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       try{observer=new ResizeObserver(()=>put());observer.observe(el);}catch(e){observer=null;}
     }
     return ()=>{if(observer)observer.disconnect();loopReadyRef.current=false;};
-  },[loopEnabled,list.length,state.sort,state.desc]);
+  },[loopEnabled,rows.length,state.sort,state.desc]);
   const handleListScroll=()=>{
     const el=listRef.current;
     rememberTop();
@@ -775,7 +832,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         <button type="button" data-rhythm-song-sort onClick={()=>setSortOpen(true)}
           className="flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200 landscape:min-h-[52px] landscape:flex-none landscape:px-2">
           <span className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
-            <small className="text-[11px] font-black landscape:text-[9px] landscape:text-slate-400">並び替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
+            <small className="text-[11px] font-black landscape:text-[9px] landscape:text-slate-400">並べ替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
           </span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
@@ -785,20 +842,25 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${state.noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{state.noticeOpen?'▲':'▼'}</span>
         </button>}
+        {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
+        {toolbarExtra}
       </div>
     <div ref={listRef} onScroll={handleListScroll}
       data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
       className={`min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`}>
       {list.length===0
         ?<p data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?'お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。':genre&&genre.id!=='all'?'このジャンルの曲はまだありません。':emptyText}</p>
-        :<ul className="space-y-0.5">{blocks.map(copy=>list.map(entry=>{
+        :<ul className="space-y-0.5">{blocks.map(copy=>rows.map(row=>{
+          const entry=row.entry;
           const main=copy===1;
           const selected=!!song&&entry.songId===song.songId;
-          const eventSong=eventSongIds.has(entry.songId);
-          return <li key={`${copy}-${entry.songId}`} aria-hidden={main?undefined:'true'}>
+          // イベントの印は、組のどれかが対象なら出す(切り替えた先の版にも分かるよう、版のボタンにも出す)
+          const eventSong=row.members.some(item=>eventSongIds.has(item.songId));
+          return <li key={`${copy}-${row.head}`} aria-hidden={main?undefined:'true'}>
             <button type="button" {...(main?{'data-rhythm-song-row':entry.songId}:{'data-rhythm-song-row-loop':entry.songId})}
               tabIndex={main?undefined:-1} aria-pressed={selected}
-              onClick={()=>setSongId(entry.songId)}
+              data-rhythm-song-row-versions={row.versions}
+              onClick={()=>setSongId(selected?entry.songId:row.pick.songId)}
               className={`flex w-full min-h-[58px] items-center gap-2.5 rounded-xl border px-2 py-1 text-left [container-type:inline-size] ${selected?'border-sky-200/90 bg-gradient-to-r from-sky-400/40 to-sky-400/5 shadow-[0_0_12px_rgba(56,189,248,.25)]':eventSong?'border-amber-300/50 bg-amber-500/[0.07]':'border-transparent border-b-white/10 bg-transparent'}`}>
               <RhythmSongArt song={entry} marked={main}/>
               {/* 曲名は**1行**で高さを固定する(はみ出すぶんは「…」)。行の高さがそろい、枠がずれない
@@ -849,6 +911,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                         :<span className="truncate">未プレイ</span>}
                     </small>;
                   })()}
+                  {/* 版がいくつあるか(押したあと難易度の上で切り替えられる) */}
+                  {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-count':row.versions}:{})}
+                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象</small>}
@@ -863,7 +928,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     {/* 選んでいる曲 */}
     <aside data-rhythm-song-detail
       className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2"
-      style={{paddingBottom:'calc(0.5rem + env(safe-area-inset-bottom))'}}>
+      style={{paddingBottom:'calc(0.5rem + var(--mh-sa-bottom))'}}>
       {!song||!difficulty
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
         :<>
@@ -908,7 +973,18 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           </div>
 
           {/* 難易度をえらぶ。高さは固定(ロック中だけ「◯◯で解放」が2行になって、その曲だけ高くならないように) */}
-          <div data-rhythm-difficulty-row className={`flex gap-1${spot('difficulty')}`} style={{gridArea:'diff'}}>
+          <div className="min-w-0" style={{gridArea:'diff'}}>
+          {/* 版の切り替え(2026-10-03)。版が2つ以上ある曲だけ出す。押すと選んでいる曲がその版に変わり、
+              難易度は同じものがあればそのまま(無ければ上の「選び直し」がいちばん下の難易度へ戻す) */}
+          {(()=>{const versions=versionsOf(song);if(versions.length<2)return null;
+            return <div data-rhythm-song-versions className="mb-1 flex gap-1">{versions.map(item=>{
+              const on=item.songId===song.songId,eventVersion=eventSongIds.has(item.songId);
+              return <button key={item.songId} type="button" data-rhythm-song-version={item.songId} aria-pressed={on}
+                onClick={()=>setSongId(item.songId)}
+                className={`flex min-h-[30px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[11px] font-black leading-none landscape:min-h-[26px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
+              </button>;})}</div>;})()}
+          <div data-rhythm-difficulty-row className={`flex gap-1${spot('difficulty')}`}>
           {available.map(item=>{
             const tone=rhythmDifficultyTone(item.id);
             const open=unlocked(item);
@@ -934,12 +1010,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             </button>;
           })}
           </div>
+          </div>
           <div className="flex gap-2" style={{gridArea:'act'}}>
-            <button type="button" data-rhythm-song-random onClick={pickRandom}
-              className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>
-            <button type="button" data-rhythm-demo-start={difficulty.id}
+            {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
+              className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
+            <button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
-              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white landscape:min-h-[42px]">決定</button>
+              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>
           </div>
           {footer&&<div data-rhythm-song-footer className="min-w-0" style={{gridArea:'foot'}}>{typeof footer==='function'?footer(song,difficulty):footer}</div>}
         </div>
@@ -977,11 +1054,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         onClick={e=>e.stopPropagation()}
         className="mt-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-sky-300/40 bg-sky-500/15 px-4 text-[11px] font-black text-sky-200"
         style={{minHeight:'44px'}}>
-        {(song.credit.link&&song.credit.link.label)||'くわしく見る'} ↗
+        {(song.credit.link&&song.credit.link.label)||'詳しく見る'} ↗
       </a>}
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
-        style={{minHeight:'52px'}}>とじる</button>
+        style={{minHeight:'52px'}}>閉じる</button>
       </div>
     </div>;})()}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
@@ -990,7 +1067,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       onClick={()=>setGenreOpen(false)}>
       <section onClick={e=>e.stopPropagation()} role="dialog" aria-label="ジャンル"
         className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-cyan-300/60 bg-slate-900 p-4"
-        style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+        style={{paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
         <h3 className="text-sm font-black text-white">ジャンル</h3>
         <p className="mt-1 text-[10px] font-bold text-slate-400">選んだジャンルの曲だけを一覧に出します。</p>
         <div data-rhythm-genre-tabs className="mt-3 space-y-1.5">
@@ -1009,7 +1086,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           })}
         </div>
         <button type="button" data-rhythm-genre-close onClick={()=>setGenreOpen(false)}
-          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">とじる</button>
+          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">閉じる</button>
       </section>
     </div>}
     {sortOpen&&<div data-rhythm-sort-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
@@ -1017,8 +1094,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       onClick={()=>setSortOpen(false)}>
       <section onClick={e=>e.stopPropagation()}
         className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-fuchsia-400/60 bg-slate-900 p-4"
-        style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-        <h3 className="text-sm font-black text-white">曲の並び替え</h3>
+        style={{paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
+        <h3 className="text-sm font-black text-white">曲の並べ替え</h3>
         <p className="mt-1 text-[10px] font-bold text-slate-400">並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。</p>
         <div className="mt-3 space-y-1.5">
           {RHYTHM_SORT_ORDERS.map(item=>{
@@ -1037,7 +1114,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span>逆から並べる</span><span>{state.desc?'ON':'OFF'}</span>
         </button>
         <button type="button" data-rhythm-sort-close onClick={()=>setSortOpen(false)}
-          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">とじる</button>
+          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">閉じる</button>
       </section>
     </div>}
   </div>;

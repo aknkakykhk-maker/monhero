@@ -22,7 +22,7 @@ assert(/id:'meloso',[^\n]*step:0[,\s]/.test(breeder), 'メロソに step が無�
 assert(breeder.includes(`icon:MELOPANMAN_ICON`) && breeder.includes(`subType:'heal_guard_meloso'`));
 const starter = breeder.match(/const STARTER_TEACHING_IDS = \[([^\n]+)\]/)[1];
 assert(!starter.includes('meloso') && starter.split(',').length === 6);
-assert(breeder.includes(`id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500`));
+assert(breeder.includes(`id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:150000`));
 
 // ---- 実処理 ----
 // ガッツは共通の gainGutsByRateAll(率) で全員へ戻す形になった(タクティクスでも1体ずつ効くように)
@@ -33,7 +33,7 @@ assert(game.includes(`liveEffectiveMaxHp()*0.3*effMul`) && (game.includes(`liveE
 // stateから作った effectiveMaxHp はレンダー時点の値なので、進行中のターンには反映されない。
 // そのまま使うと回復が古い上限で頭打ちになり、新しい上限で描かれるゲージが満タンにならない
 // (「みゅあ＋メロソ(3枚)で次ターン全回復にならない」不具合)。
-assert(game.includes(`const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));`));
+assert(game.includes(`const liveEffectiveMaxHp = () => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct')), allyMaxHpRateRef.current);`));
 assert(game.includes(`const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));`));
 {
   // handleEnemyTurn の先頭から handleNextWave の手前まで(=ターン処理の本体)には、
@@ -114,13 +114,17 @@ assert(game.includes(`Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))`)
 assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining))`),
   '永続軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // タクティクスでは「狙われた子だけ」のぶん(tacticsSlotRate)も掛ける形になった。ふだんのバトルは bySlot を渡さないので 1.0 で今までと同じ
+// ふだんのバトルでは追加の掛け算がすべて 1 のままで、今までと同じ式。タクティクスだけ「狙われた子のぶん」と、EXの被ダメ軽減(世界樹の守り・複数効果・パーティ効果)が最後に掛かる。
+// 後ろへ足されるEXの掛け算の中身までは固定せず、「isTacticsMode のときだけ掛け、そうでなければ :1」の形を見る(2026-10)
 assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`)
-  || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`),
+  || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`)
+  || /\? Math\.max\(1,Math\.floor\(damage\*getTurnBuff\('takenDamageMult',1\.0\)\s*\*tacticsSlotRate\(isTacticsMode\(runMode\)\?turnBuffs\.bySlot:null,slotIdx,'takenDamageMult',1\.0\)\s*\*\(isTacticsMode\(runMode\)\?[^:]+:1\)\)\)/.test(game),
   '次ターン被ダメージ軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // 予測表示は1発ずつ数えるため、ガードを引いた値(hit.taken)を resolveTacticsGuardedHit で出してから軽減を掛ける形になった(順番は同じ)
 assert(game.includes(`applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)))`)
   || (game.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);') && game.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);')));
-assert(game.includes(`const fd=applyTurnDamageReduction(Math.abs(diff))`));
+// 2026-09-29: 敵の番の被ダメは applyImmediateTakenReduction(大樹の加護の「使ったターンぶん」を掛けてから applyTurnDamageReduction)を通す
+assert(game.includes(`const fd=applyTurnDamageReduction(Math.abs(diff))`) || game.includes(`const fd=applyImmediateTakenReduction(Math.abs(diff))`));
 
 // getIncomingDamageBeforeTurnReduction と同じ計算(丈夫さ→固定軽減→割合軽減→永続軽減)
 const enemyDamageBeforeTurnReduction = ({ attack, defense, permanentReduction=0 }) => {

@@ -215,7 +215,7 @@ const extremeTabInfo = () => {
     // 勇者モンを1体選んでバトルへ
     await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => b.textContent.includes('モッチー'))?.click(); });
     await page.waitForTimeout(900);
-    await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => /この子を|決定|えらぶ|選ぶ/.test(b.textContent))?.click(); });
+    await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => /この子を|決定|選ぶ|選ぶ/.test(b.textContent))?.click(); });
     await page.waitForTimeout(2500);
     // 供モン・教えカードの選択が続く場合は先頭を選び続けてバトルまで進める
     for (let i = 0; i < 18; i++) {
@@ -230,7 +230,7 @@ const extremeTabInfo = () => {
         if (confirm) { confirm.click(); return; }
         const teaching = [...document.querySelectorAll('button')].find(x => !x.disabled && /新規習得|強化後/.test(x.textContent));
         if (teaching) { teaching.click(); return; }
-        const b = [...document.querySelectorAll('button')].find(x => /この子を|決定|えらぶ|選ぶ|はじめる|OK|閉じる|スキップ/.test(x.textContent) && !x.disabled);
+        const b = [...document.querySelectorAll('button')].find(x => /この子を|決定|選ぶ|選ぶ|はじめる|OK|閉じる|スキップ/.test(x.textContent) && !x.disabled);
         if (b) { b.click(); return; }
         const card = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent);
         card && card.click();

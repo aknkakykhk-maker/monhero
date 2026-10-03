@@ -150,7 +150,10 @@ const check = (name, ok, detail = '') => {
     await speciesCard.getByRole('button', { name: '種族を選ぶ' }).dispatchEvent('click');
     await page.getByRole('heading', { name: '種族選択' }).waitFor({ timeout: 20000 });
     const speciesRows = page.locator('[data-species-row]');
-    check('主血統が1行1種族で並ぶ', await speciesRows.count() === 11, `${await speciesRows.count()}種族`);
+    // 種族は血統を足すたびに増える(2026-09: ユグドラシルで12)。数の決め打ちはやめ、「11以上で、行が重複しない」を見る
+    const speciesRowCount = await speciesRows.count();
+    const speciesRowIds = await speciesRows.evaluateAll(els => els.map(e => e.getAttribute('data-species-row')));
+    check('主血統が1行1種族で並ぶ', speciesRowCount >= 11 && new Set(speciesRowIds).size === speciesRowCount, `${speciesRowCount}種族`);
     check('「◯◯種 限定」と名乗る', (await speciesRows.first().textContent()).includes('種 限定'));
     await checkNoSideScroll('種族選択');
     // 使えるモンスターがいちばん多い種族を選ぶ(供モンの重複拒否まで見たいため)。
@@ -197,8 +200,8 @@ const check = (name, ok, detail = '') => {
     await page.locator('[data-species-rank-tabs]').waitFor({ timeout: 20000 });
     check('種族チャレンジのランキングを開ける', true);
     const rankTabs = page.locator('[data-species-rank-tabs] button');
-    // 全種族(1) + 種族別(11) + 自己ベスト(1)
-    check('全種族＋種族別＋「自己ベスト」のタブが並ぶ', await rankTabs.count() === 13, `${await rankTabs.count()}タブ`);
+    // 全種族(1) + 種族別(選べる種族の数) + 自己ベスト(1)
+    check('全種族＋種族別＋「自己ベスト」のタブが並ぶ', await rankTabs.count() === speciesRowCount + 2, `${await rankTabs.count()}タブ / 種族${speciesRowCount}`);
     check('先頭のタブが「全種族」', String(await rankTabs.first().textContent()).trim() === '全種族', String(await rankTabs.first().textContent()).trim());
     check('最後のタブが「自己ベスト」', String(await rankTabs.last().textContent()).trim() === '自己ベスト', String(await rankTabs.last().textContent()).trim());
     const selectedTab = await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent();

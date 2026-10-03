@@ -8,6 +8,7 @@
 //   node tools/run-checks.js --changed              … いま変更しているファイルから、要る検査だけを選んで回す
 //   node tools/run-checks.js --changed --plan       … 選んだ検査を出すだけ(実行しない)
 //   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
+//   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
 //
 // 【なぜ要るか】
@@ -150,6 +151,12 @@ const FORCE_CHECKS = [
   // バトルの演出は「出す→待つ→消す」。ランを片付けると**消すほうへ到達しない**ので、
   // 片付けで捨て忘れると次のランの画面に残る(2026-09-20・誰もいない間合いに技名が出た)
   { re: /^monster-hero\/src\/parts\/60-app\.jsx$/, checks: ['battle/run-abandon-fx-check.js'], why: 'ランを片付けたときの演出' },
+  // バトル画面の重さ(2026-09-28)。飾りの CSS は 70-bootstrap に、見張りは 71-screen-battle にある。
+  // 描き直しになる書き方・マスクは手元の速い端末では分からず、iPhone で熱くなってから気づく(2026-09-24〜25 に踏んだ)
+  { re: /^monster-hero\/src\/parts\/(10-core|13-bgm-and-rhythm-settings|70-bootstrap|71-screen-battle)\.jsx$/,
+    checks: ['battle/battle-fx-lint-check.js'], why: 'バトルの飾りの書き方(描き直し・マスク)と重さの見張り' },
+  { re: /^monster-hero\/src\/parts\/(10-core|60-app|67-screen-pick|68-screen-run-result|70-bootstrap|71-screen-battle)\.jsx$/,
+    checks: ['battle/battle-perf-budget-check.js'], why: 'バトル画面の重さの予算と「重いときは自動で軽く」' },
   // 入力の割り当て(rhythmMatchInputBatch)は、片側を直すともう片側が静かに壊れる。
   // 2026-09-18、持ち替えの直しが「押さえている上に重なるノーツを叩けない」を生んだ
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-tap-during-hold-check.js', 'mode/rhythm-finger-swap-check.js'], why: '押さえながら叩く・指の持ち替え' },
@@ -247,6 +254,7 @@ function parseArgs(argv) {
     else if (a === '--area') opts.areas.push(...String(argv[++i] || '').split(',').filter(Boolean));
     else if (a === '--timeout') opts.timeoutSec = Number(argv[++i]) || opts.timeoutSec;
     else if (a === '--json') opts.json = argv[++i];
+    else if (a === '--skip-file') opts.skipFile = String(argv[++i] || '');
     else if (a === '--script') opts.scripts = (opts.scripts || []).concat(String(argv[++i] || '').split(',').filter(Boolean));
     else if (a.startsWith('--area=')) opts.areas.push(...a.slice(7).split(',').filter(Boolean));
     else if (!a.startsWith('--')) opts.areas.push(a);
@@ -372,6 +380,10 @@ async function main() {
   const commands = [];
   for (const a of wanted) for (const c of areas.get(a)) if (!commands.includes(c)) commands.push(c);
   for (const c of opts.scripts || []) if (!commands.includes(c)) commands.push(c);
+  if (opts.skipFile) {
+    const skip = new Set(fs.readFileSync(opts.skipFile, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')));
+    for (let i = commands.length - 1; i >= 0; i--) if (skip.has(commands[i])) commands.splice(i, 1);
+  }
 
   const hasPlaywright = canResolve('playwright');
   const hasCanvas = canResolve('canvas');

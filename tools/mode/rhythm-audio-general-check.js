@@ -156,7 +156,7 @@ function main(){
       const audioFile=path.join(tempDir,`${song.track.replace(/_/g,'-')}-v3-audio.json`);
       const audio=JSON.parse(fs.readFileSync(audioFile,'utf8'));
       check(`${song.track}: テンポを自動で決められた`,
-        audio.timing.source==='detected'&&audio.timing.bpm>=70&&audio.timing.bpm<=210,
+        (audio.timing.source==='detected'||audio.timing.source==='auto-corrected')&&audio.timing.bpm>=70&&audio.timing.bpm<=210,
         `${audio.timing.bpm.toFixed(2)} BPM / ${audio.timing.beatsPerBar}拍子 / ${audio.timing.subdivisionsPerBeat}分割`);
       // 打点が格子へどれだけ乗るかは曲の作りにもよる（打ち込みでない曲はゆるい）。
       // ここで見たいのは「テンポを大きく外していないか」なので、8割を下限にする。

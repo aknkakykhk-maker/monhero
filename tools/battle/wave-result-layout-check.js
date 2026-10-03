@@ -48,6 +48,8 @@ const app = `
 const Trophy = ({className,size}) => <span className={className} style={{fontSize:size,display:'block'}}>T</span>;
 const ChevronRight = ({className,size}) => <span className={className} style={{fontSize:size}}>></span>;
 const Loader2 = ({className,size}) => <span className={className} style={{fontSize:size}}>o</span>;
+// 数字が駆け上がる部品。ここでは最後の値をそのまま出す(寸法を測るため)
+const TrainingCountUp = ({to,format}) => <>{format?format(to):to}</>;
 const isQuickMode = () => QUICK;
 const battleTutorialSpotClass = () => '';
 const handleNextWave = () => {};

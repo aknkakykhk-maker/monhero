@@ -276,8 +276,8 @@ check('みゅあの顔と吹き出しは共通のものを使う',
   has('<AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>')
     // 呼び方(さん付け・呼び捨て)と選んでいる助手も渡すようになった
     && has('assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)'));
-check('つぎへとスキップ(やめる)がある',
-  has("{last?'おわる':'つぎへ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
+check('次へとスキップ(やめる)がある',
+  has("{last?'終わる':'次へ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
 // 押してほしいものだけを押せるようにする。枠全体を光らせると
 // 「どれを押すのか」が分からず、他が押せると台本から外れてしまう
 // (2026-09-24 配置画面を作り直し、押せない枠の薄さは disabled: ではなく枠ごとの条件で付けるようにした)
@@ -338,7 +338,7 @@ check('カードを使う操作の番はACTIONも光らせる',
 // 勇者モン選択はカード1枚ずつを光らせる
 // カードが共通実装になり、光らせるクラスは extraButtonClass で1枚ずつ渡す形になった
 check('勇者モンはカード1枚ずつを光らせる',
-  has("extraButtonClass: scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''")
+  has("isDisabled={m=>!scenarioPicksHero(m.id)}") && has("spotClassFor={m=>battleTutorialSpotClass('monCards')}")
     && !has("battleTutorialSpotClass('monList')"));
 // 詳細を開くと画面いっぱいのモーダルが出るので、上のみゅあの帯と名前が重ならないようにする
 check('詳細と吹き出しが重ならない',

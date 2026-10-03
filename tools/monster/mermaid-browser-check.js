@@ -25,18 +25,19 @@ const seed = () => {
   put('mh_battle_tutorial_seen_v1', true);
   put('mh_battle_tutorial_guide_shown_v1', true);
   put('mh_masu_migrated', true);
-  put('mh_gold', 99999);
+  // 円盤石は2026-09-28に150000ダイヤへ値上がりした。2体ぶん買えるだけ持たせる
+  put('mh_gold', 999999);
   put('mh_breeder_points', 50);
 };
 
 // [商品名, マーケットのタブ, 購入ボタンのaria-label]
 const MARKET_ITEMS = [
   ['ウンディーネのアイコン', 'アイコン', 'ウンディーネのアイコンを1ptで購入'],
-  ['ウンディーネの円盤石アイコン', 'アイコン', 'ウンディーネの円盤石アイコンを1ptで購入'],
-  ['ウンディーネの円盤石', '円盤石', 'ウンディーネの円盤石を1500ダイヤで購入'],
+  ['ウンディーネの円盤石アイコン', '円盤石アイコン', 'ウンディーネの円盤石アイコンを1ptで購入'],
+  ['ウンディーネの円盤石', '円盤石', 'ウンディーネの円盤石を150000ダイヤで購入'],
   ['ヤオビクニのアイコン', 'アイコン', 'ヤオビクニのアイコンを1ptで購入'],
-  ['ヤオビクニの円盤石アイコン', 'アイコン', 'ヤオビクニの円盤石アイコンを1ptで購入'],
-  ['ヤオビクニの円盤石', '円盤石', 'ヤオビクニの円盤石を1500ダイヤで購入'],
+  ['ヤオビクニの円盤石アイコン', '円盤石アイコン', 'ヤオビクニの円盤石アイコンを1ptで購入'],
+  ['ヤオビクニの円盤石', '円盤石', 'ヤオビクニの円盤石を150000ダイヤで購入'],
 ];
 
 (async () => {
@@ -73,7 +74,7 @@ const MARKET_ITEMS = [
           const inner = [...dialog.querySelectorAll('button')];
           if (inner.length) { inner[inner.length - 1].click(); return true; }
         }
-        const b = [...document.querySelectorAll('button')].find(x => /^(受け取る|閉じる|とじる|あとで|スキップ|次へ|つぎへ|確認|OK|今は見ない)$/.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
+        const b = [...document.querySelectorAll('button')].find(x => /^(受け取る|閉じる|あとで|スキップ|次へ|確認|OK|今は見ない)$/.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
         if (b) b.click();
         return !!b;
       });
@@ -105,13 +106,15 @@ const MARKET_ITEMS = [
   const openSection = async (tab) => {
     await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
     await page.waitForTimeout(600);
-    const entry = tab === 'アイコン' ? 'ブリーダーP' : 'ダイヤショップ';
+    const entry = tab === 'アイコン' || tab === '円盤石アイコン' ? 'ブリーダーP' : 'ダイヤショップ';
     await page.evaluate((e) => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText || '').includes(e)); if (b) b.click(); }, entry);
     await page.waitForTimeout(1000);
-    if (tab === '円盤石') await clickText('円盤石');
+    // ブリーダーP交換所は「アイコン」「円盤石アイコン」のタブに分かれた(2026-10-01・マーケット全体をタブでそろえた)
+    // 売り場を出入りしてもタブは覚えているので、毎回目的のタブを押す
+    await clickText(tab);
   };
   const marketByTab = {};
-  for (const tab of ['アイコン', '円盤石']) { await openSection(tab); marketByTab[tab] = await text(); }
+  for (const tab of ['アイコン', '円盤石アイコン', '円盤石']) { await openSection(tab); marketByTab[tab] = await text(); }
   for (const [name, tab] of MARKET_ITEMS) check(`マーケットの「${tab}」に「${name}」がある`, marketByTab[tab].includes(name));
 
   for (const [name, tab, buyLabel] of MARKET_ITEMS) {
@@ -124,8 +127,18 @@ const MARKET_ITEMS = [
       b.click();
       return 'ok';
     }, buyLabel);
+    await page.waitForTimeout(600);
+    // 2026-09-28「ショップの作りを全部統一して」から、どの品も確認の窓を通して買う。窓の「購入する」を押す
+    const confirmed = found === 'ok' ? await page.evaluate((n) => {
+      const dialog = document.querySelector(`[role="dialog"][aria-label="${n}の購入"]`);
+      const b = dialog && [...dialog.querySelectorAll('button')].find(x => (x.textContent || '').trim() === '購入する');
+      if (!b) return '確認の窓なし';
+      if (b.disabled) return '確認の窓で購入不可';
+      b.click();
+      return 'ok';
+    }, name) : found;
     await page.waitForTimeout(900);
-    if (found !== 'ok') check(`「${name}」の購入ボタンを押せる`, false, found);
+    if (confirmed !== 'ok') check(`「${name}」の購入ボタンを押せる`, false, confirmed);
   }
 
   const store = await page.evaluate(() => ({
@@ -151,15 +164,17 @@ const MARKET_ITEMS = [
   await boot();
   await clickAria('プロフィールを開く');
   await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find(x => /アイコンを選ぶ|✓ アイコン/.test(x.textContent))
+    // プロフィールの顔の丸いボタン(aria-label付き)から、アイコン選びの窓(PickerSheet)が開く(2026-10に作り直し)
+    const b = document.querySelector('button[aria-label="ブリーダーアイコンを変える"]')
+      || [...document.querySelectorAll('button')].find(x => /アイコンを選ぶ|✓ アイコン/.test(x.textContent))
       || [...document.querySelectorAll('button')].find(x => x.className.includes('rounded-full') && x.querySelector('img'));
     if (b) b.click();
   });
   await page.waitForTimeout(1500);
   const picker = await page.evaluate(() => {
-    const modal = [...document.querySelectorAll('div')].find(d => d.textContent.includes('アイコンを選択') && d.querySelector('.grid'));
+    const modal = document.querySelector('[data-picker-sheet="icon"]');
     if (!modal) return null;
-    return [...modal.querySelectorAll('button')].map(b => b.querySelector('img')?.getAttribute('alt') || b.textContent.trim());
+    return [...modal.querySelectorAll('button[data-icon-option]')].map(b => b.querySelector('img')?.getAttribute('alt') || b.textContent.trim());
   });
   check('アイコン選択ダイアログが開く', Array.isArray(picker), String(picker));
   const hasIcon = (n) => Array.isArray(picker) && picker.includes(n);

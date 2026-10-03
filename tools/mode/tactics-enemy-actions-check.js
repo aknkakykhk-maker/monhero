@@ -280,8 +280,9 @@ check('反射は狙われた子ごとに数え直す',
     && has('? tacticsTargetsNow(intent,actingEnemyDist) : null;\n          const reflectDmg=reflectSlots'));
 // ★間合いをずらされた技は威力が落ちた actingIntent を見る(intent のままだと
 //   距離撃でずらしてもフルの量を返してしまう。2026-09-22 に直した)
+// ★敵の番の被ダメは applyImmediateTakenReduction(大樹の加護の「使ったターンぶん」を掛けてから applyTurnDamageReduction へ渡す)を通す
 check('反射は狙われた全員ぶんを足して返す',
-  has('reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)'));
+  has('reflectSlots.reduce((sum,slotIdx)=>sum+applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)'));
 check('反射は返す量でスコアも撃破も決める',
   has('setCurrentWaveDamage(p=>p+reflectDmg);')
     && has('resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectDmg})')
@@ -298,17 +299,20 @@ check('味方全体の反射は確定バフか既存モードのときだけ',
 check('新モードは回避を「回避！」の枝へ落とさない',
   has('} else if (isEvasion && !isTacticsMode(runMode)) {'));
 // ★避けた子・反射した子は、受ける計算へ進まずそこで抜ける(枠へ出す印だけ控える)
+//   エイキの緋桜瞬歩・ザンの血踊(敵と同じ距離なら完全回避)で避けた子も同じ枝を通る(exDodge)。そのとき evadedSlot は空なので、
+//   「無傷！」は evadedName でも止める
 check('避けた子・反射した子はダメージ処理を飛ばす',
-  has('if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
+  has('const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);')
+    && has('if(slotIdx===evadedSlot||exDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
     && has('if(slotIdx===reflectedSlot){') && has('slotFx[slotIdx]={reflect:true};'));
 check('確率で出た反射は、その子が受けるはずだった量を返す',
-  has('reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);'));
+  has('reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);'));
 check('返すのは味方の増減を確定させてから',
   src.indexOf('currentHp=commitTacticsUnits(units);\n            if(dealt>0)') < src.indexOf('if(reflectBack>0){'));
 check('確率で出た反射でも撃破を確定できる',
   has('if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;'));
 check('避けた子・反射した子がいるときは「無傷！」を出さない',
-  has("if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！'"));
+  has("if(dealt<=0&&saved<=0&&evadedSlot==null&&!evadedName&&reflectedSlot==null) addPopup('無傷！'"));
 
 // --- 勇者特性は「その札を出した／狙われた、その子の能力」(2026-09-20 ユーザー提案) ---
 // ★被弾側(もち肌・中二病・俊足・反射・吸収)と攻撃側(怪力・魔力開放・禁忌解錠の+50%)は
@@ -392,12 +396,12 @@ check('氷海の支配者は、持っている子ごとに敵と同じ距離か�
     && has('const withIce=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,id,iceLockActive,slotIdx,enemyDist);')
     && has('const extra=iceExtraRateAt(slotIdx);'));
 check('全員へ配る自動回復には氷海ぶんを混ぜない',
-  has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate)'));
+  has('tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
 // ★ハムの「同時使用可能枚数+1」とスエゾーの「眼力」は、狙われた／攻撃した の枠に収まらないので別に見る
 // ★2026-09-22: 1体ぶんの上限に baseCardLimit(そのターンの総数)を使っていたので、
 //   盤面に👑が2体いると5枚まで使えていた。「1 ＋ その子の👑 ＋ きき ＋ その枠の連携」で数える
 check('札の枚数ボーナスは持っている子だけが1枚多く使える',
-  has('const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0);')
+  has('const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0)')
     && has('      return Math.min(cardLimit,own);'));
 check('盤面にいる持ち主の人数ぶんを heroCardBonus に数える',
   has('? tacticsAliveSlots(tacticsUnits).filter(i => heroCardBonusOf(tacticsUnits[i]?.id) > 0).length'));

@@ -48,7 +48,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION,'
-  +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,'
+  +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,rhythmEventPointLengthSteps,'
   +'RHYTHM_EVENT_POINT_SHOP_OFFERS,rhythmEventPointExchangePreview,'
   +'rhythmPreviousLimitedEvent,rhythmNextLimitedEvent,rhythmHistoryEvents};',context);
 const O=context.out;
@@ -624,9 +624,17 @@ check('曲えらびの案内は週ごとに1度だけ',
   &&app.includes('rhythmEventNoticeSeen !== rhythmSongSelectEvent.id'));
 
 // --- ビートP STEP2（獲得式・保存・二重付与防止） ---
+// 2026-09-28: 80万〜100万点を「上ほど伸びる曲線」へ(ユーザー指示「80万から100万までの増え幅を上げたい / 100万での200P最大のまま」)
 check('ビートPの基本式は確定仕様どおり',
-  [[800000,80],[850000,85],[900000,90],[950000,95],[960000,116],[970000,137],[980000,158],[990000,179],[1000000,200]]
+  [[700000,70],[800000,80],[810000,81],[850000,88],[900000,110],[930000,131],[950000,148],[970000,167],[980000,177],[990000,188],[1000000,200]]
     .every(([score,want])=>O.rhythmEventPointBaseForScore(score)===want));
+{
+  const old=s=>Math.floor(s/10000+Math.max(0,s-950000)/500);
+  let worse=0,drop=0;for(let s=0;s<=1000000;s+=10){if(O.rhythmEventPointBaseForScore(s)<old(s))worse++;if(s&&O.rhythmEventPointBaseForScore(s)<O.rhythmEventPointBaseForScore(s-10))drop++;}
+  check('曲線にしても、どの点数でも以前の式より減らない',worse===0,`${worse}か所`);
+  check('点数が上がってビートPが減るところが無い',drop===0,`${drop}か所`);
+  check('100万点で200Pが最大のまま',O.rhythmEventPointBaseForScore(1000000)===200&&O.rhythmEventPointBaseForScore(1200000)===200);
+}
 check('壊れたスコアは0Pへ倒す',
   O.rhythmEventPointBaseForScore(null)===0&&O.rhythmEventPointBaseForScore('x')===0&&O.rhythmEventPointBaseForScore(-100)===0);
 if(limited.length){
@@ -642,7 +650,25 @@ if(limited.length){
     const off=O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,1000000);
     const off95=O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,950000);
     check('イベント期間外は開催中(通常曲)の1/5のビートPを出す',!!off&&off.amount===40&&off.offEvent===true&&off.target===false
-      &&off.eventId===null&&!!off95&&off95.amount===19,off?`100万点→${off.amount}P / 95万点→${off95&&off95.amount}P`:'null');
+      &&off.eventId===null&&!!off95&&off95.amount===29,off?`100万点→${off.amount}P / 95万点→${off95&&off95.amount}P`:'null');
+    // 2026-09-28: 2分を超えたぶんの10秒ごとに +10%(ユーザー指示「2分以上の曲は10秒毎に10%の補正が掛かるようにして」)
+    check('曲の長さの補正は、2分を超えたぶんの10秒ごとに1段',
+      [[0,0],[119000,0],[120000,0],[129000,0],[130000,1],[145000,2],[180000,6],[274000,15],[NaN,0],[-5,0]]
+        .every(([ms,want])=>O.rhythmEventPointLengthSteps(ms)===want));
+    {
+      const at=Date.parse(e.endAt);
+      const offLong=O.rhythmEventPointAwardAt(at,target,1000000,180000);   // 3分: +60%
+      const tLong=O.rhythmEventPointAwardAt(mid,target,1000000,145000);    // 2分25秒: +20%
+      const nLong=normal?O.rhythmEventPointAwardAt(mid,normal,950000,274000):null; // 4分34秒: +150%
+      const plain=O.rhythmEventPointAwardAt(mid,target,1000000,120000);
+      check('長さの補正はイベント外(1/5)・対象曲(1.5倍)・通常曲に掛かる',
+        !!offLong&&offLong.amount===64&&offLong.lengthBonusPercent===60
+        &&!!tLong&&tLong.amount===360&&tLong.lengthBonusPercent===20
+        &&(!normal||!!nLong&&nLong.amount===370&&nLong.lengthBonusPercent===150),
+        `${offLong&&offLong.amount} / ${tLong&&tLong.amount} / ${nLong&&nLong.amount}`);
+      check('2分ちょうど・長さ不明の曲は補正なし(これまでと同じ値)',!!plain&&plain.amount===300&&plain.lengthBonusPercent===0
+        &&O.rhythmEventPointAwardAt(mid,target,1000000).amount===300);
+    }
     check('開催中の付与は期間外の印を持たない',!!targetAward&&targetAward.offEvent===false);
     check('期間外の倍率は0.2',O.RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER===0.2);
   }
@@ -656,7 +682,8 @@ check('ビートPは既存の後方互換キーへ保存する',
 check('イベント終了でビートPを0へ戻す処理を持たない',!game.includes('storeSet(RHYTHM_EVENT_POINTS_KEY,0'));
 check('正常リザルトのfinishでだけビートP付与を判定する',
   game.includes('const eventPointAward=(!debugPlay&&!tutorial&&!calibrating')
-  &&game.includes('rhythmEventPointAwardAt(Date.now(),song.songId,score)')
+  // 2026-09-28 から曲の長さ(4つめ)も渡す
+  &&game.includes('rhythmEventPointAwardAt(Date.now(),song.songId,score,Number(song.playDurationMs)||Number(rawChart&&rawChart.durationMs)||0)')
   &&game.includes('void addRhythmEventPoints(eventPointAward.amount)'));
 check('STEP4でビートP公開フラグをONにする',
   /const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;/.test(flags)
@@ -725,11 +752,15 @@ check('ビートP交換所はイベント非開催中・0Pでも常設表示す�
   &&marketScreen.includes('所持ビートP')
   &&!marketScreen.includes("marketSection==='event'&&!eventPointReleased")
   &&!marketScreen.includes('ビートP交換所は準備中'));
+// 2026-09-28「ショップの作りを全部統一して」から、数量選択はマーケット共通の窓(MarketPurchaseSheet)。
+// ビートPの品は「回」で数え、MAX・受け取り・交換後の残りをその窓が出す
 check('ビートP交換所は数量選択とMAX・交換後残高を出す',
   marketScreen.includes('data-event-point-shop')
-  &&marketScreen.includes('MAX（{Math.max(0,maxQuantity).toLocaleString()}回）')
-  &&marketScreen.includes('交換後')
-  &&marketScreen.includes('onExchangeEventPoints(eventQuantityOffer,quantity)'));
+  &&marketScreen.includes("openSheet({ item, stackable:true, countUnit:'回', grantAmount:offer.grantAmount, grantUnit:offer.unit,")
+  &&marketScreen.includes('onExchangeEventPoints(offer,count)')
+  &&game.includes('MAX（{safeMax.toLocaleString()}{unit}）')
+  &&game.includes("beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換'")
+  &&game.includes('<span className="text-slate-400">{meta.verb}後</span>'));
 check('STEP3の更新履歴も開発メモとして隠す',(()=>{
   const at=changelog.indexOf('イベントP交換所の基盤を実装しました');
   if(at<0)return false;

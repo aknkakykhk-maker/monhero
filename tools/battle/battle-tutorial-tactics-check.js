@@ -111,7 +111,7 @@ const check = (name, ok, detail = '') => {
       return box ? box.textContent.replace(/\s+/g, ' ').trim() : null;
     });
     const tapNext = async () => {
-      const next = page.locator('button').filter({ hasText: /^つぎへ$/ });
+      const next = page.locator('button').filter({ hasText: /^次へ$/ });
       if (await next.count() === 0) return false;
       await next.first().dispatchEvent('click');
       await page.waitForTimeout(220);
@@ -203,7 +203,7 @@ const check = (name, ok, detail = '') => {
     await page.locator('button').filter({ hasText: /^ニコラオの力/ }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^習得する$/ }).first().dispatchEvent('click');
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(3000);
     check('練習のままバトル画面まで進む', await page.locator('[data-battle-action]').count() >= 1);
     // ★このモードの盤面。1体ずつのライフとガッツを持つ枠が出ていること
     //   (2026-09-22 に上の段をやめ、枠そのものの中へ入れた)
@@ -231,7 +231,7 @@ const check = (name, ok, detail = '') => {
       const el = document.querySelector('[data-enemy-intent]') || document.body;
       return (el.textContent || '').replace(/\s+/g, ' ').trim();
     });
-    // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「つぎへ」も無くなる
+    // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「次へ」も無くなる
     for (let i = 0; i < 12; i++) if (!(await tapNext())) break;
     const doSpots = await spots();
     check('ガードを使う番はカードとACTIONが光る',

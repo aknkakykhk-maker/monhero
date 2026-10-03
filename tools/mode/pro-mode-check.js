@@ -106,11 +106,13 @@ const check = (name, ok, detail = '') => {
       await page.getByText('プロモードはベースモンだけで挑みます').count() === 1);
     check('育てたマスモンは勇者モンの一覧に出ない',
       await page.getByText('プロ検査マスモン').count() === 0);
-    // 勇者モン・供モンのカードは共通の横長カード(renderProMonsterRow)で、
-    // 押すところに「◯◯を勇者モンに選ぶ」「◯◯を供モンNに選ぶ」というラベルが付いている
+    // 勇者モン・供モンの一覧は共通のグリッド(ProMonsterGridPicker)で、
+    // 下の決定ボタンに「◯◯を勇者モンに選ぶ」「◯◯を供モンNに選ぶ」というラベルが付いている
     const heroCards = page.getByRole('button', { name: /を勇者モンに選ぶ$/ });
-    const heroCount = await heroCards.count();
+    // 一覧は顔アイコンのグリッド(押すと下の詳細パネルに出る)。決定ボタンは選んでいる1体ぶんだけ
+    const heroCount = await page.getByRole('button', { name: /を見る$/ }).count();
     check('解放済みのベースモンが並ぶ', heroCount >= 6, `${heroCount}体`);
+    check('開いた直後から1体ぶんの詳細と決定ボタンが出ている', await heroCards.count() === 1);
 
     // --- ② 勇者モンを決めてプロモード編成の画面へ ---
     const heroName = await heroCards.first().getAttribute('aria-label');
@@ -129,7 +131,7 @@ const check = (name, ok, detail = '') => {
       `変更ボタン ${await page.getByRole('button', { name: '変更' }).count()}個`);
 
     // --- ③④ 5体そろうまで始められない ---
-    const startButton = page.getByRole('button', { name: /この編成で開始|あと\d体えらんでください/ });
+    const startButton = page.getByRole('button', { name: /この編成で開始|あと\d体選んでください/ });
     check('そろうまでは始められない', await startButton.isDisabled());
 
     // 供モンの枠を1つずつ開いて選ぶ。枠ごとに開くのが現在の作り
@@ -139,20 +141,21 @@ const check = (name, ok, detail = '') => {
       await page.getByRole('button', { name: '変更' }).nth(i + 1).dispatchEvent('click');
       await page.getByRole('heading', { name: `供モン${i + 1}を変更` }).waitFor({ timeout: 15000 });
       const poolCards = page.getByRole('button', { name: new RegExp(`を供モン${i + 1}に選ぶ$`) });
+      const poolTiles = page.getByRole('button', { name: /を見る$/ });
       if (i === 0) {
-        poolCount = await poolCards.count();
+        poolCount = await poolTiles.count();
         check('候補にもマスモンは出ない', await page.getByText('プロ検査マスモン').count() === 0);
         check('勇者モンにした種は候補から外れる', poolCount === heroCount - 1, `${heroCount} → ${poolCount}体`);
       } else {
         // すでに他の枠へ入れた子は候補から消える
-        check(`供モン${i + 1}の候補は選んだぶんだけ減る`, await poolCards.count() === poolCount - i, `${await poolCards.count()}体`);
+        check(`供モン${i + 1}の候補は選んだぶんだけ減る`, await poolTiles.count() === poolCount - i, `${await poolTiles.count()}体`);
       }
       const label = await poolCards.first().getAttribute('aria-label');
       picked.push(String(label).replace(/を供モン\d+に選ぶ$/, '').slice(0, 12));
       await poolCards.first().dispatchEvent('click');
       await page.getByRole('heading', { name: 'プロモード編成' }).waitFor({ timeout: 15000 });
     }
-    check('5体えらぶと始められる', await page.getByRole('button', { name: 'この編成で開始' }).isEnabled());
+    check('5体選ぶと始められる', await page.getByRole('button', { name: 'この編成で開始' }).isEnabled());
     // 「押しても反応しない」を拾うための確認。
     // dispatchEvent はDOMへ直接イベントを送るので、他の層の下敷きになっていても通ってしまう。
     // 実際の指タップは重なりの判定を通るので、画面のかぶせ方(position/z-index)が抜けていると押せない。
@@ -194,7 +197,7 @@ const check = (name, ok, detail = '') => {
 
     // --- ⑥ 実行時エラー ---
     check('実行時エラーが出ていない', errors.length === 0, errors[0] || '');
-    console.log(`  えらんだ供モン候補: ${picked.join(' / ')}`);
+    console.log(`  選んだ供モン候補: ${picked.join(' / ')}`);
     console.log(`  勇者モン: ${String(heroName).replace(/を勇者モンに選ぶ$/, '').slice(0, 12)}`);
 
     console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

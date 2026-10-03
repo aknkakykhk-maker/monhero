@@ -83,7 +83,8 @@ check('保存済みの進捗で判定し直す', has('const targets=(missionList
 // 編成の戻り先
 check('モンスター編成の決定でモンスタータブへ戻る', has("setManagementTab('monster');\n    setGameState('MB_MANAGEMENT');"));
 check('アシストカード編成の決定でアシストカードタブへ戻る', has("setManagementTab('assist');\n    setGameState('MB_MANAGEMENT');"));
-check('編成画面の戻るボタンも同じ導線', has("onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'assist');setGameState('MB_MANAGEMENT');}}"));
+// 2026-10-01 に編成画面の頭も共通の ScreenHead にした(戻るは onBack で渡す)
+check('編成画面の戻るボタンも同じ導線', has("onBack={()=>{setManagementTab(rosterTab==='monster'?'monster':'assist');setGameState('MB_MANAGEMENT');}}"));
 check('古いFORMATION_MENUが残っていない', !source.includes('FORMATION_MENU'));
 
 // ランキング

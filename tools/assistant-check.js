@@ -236,8 +236,8 @@ check('初回は助手選択から始まり、プロフィールへ続く',
   has("setGameState(needsAssistantChoice ? 'ASSISTANT_SELECT' : (onboarded ? 'HOME' : 'PROFILE'));")
     && !has("gameState==='ONBOARDING'"));
 check('プロフィールで名前・アイコン・決定がそろっている',
-  has('findAssistantOnboarding(hasName,hasIcon,selectedAssistantId)') && has('なまえを決める') && has('アイコンを選ぶ')
-    && has('けってい！</button>') && has('disabled={!ready} onClick={finishOnboarding}'));
+  has('findAssistantOnboarding(hasName,hasIcon,selectedAssistantId)') && has('名前を決める') && has('アイコンを選ぶ')
+    && has('決定！</button>') && has('disabled={!ready} onClick={finishOnboarding}'));
 check('決め終わるまでは戻るボタンを出さない',
   has('{/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}'));
 check('名前とアイコンを決めたことを覚える',
@@ -264,7 +264,7 @@ check('助手を選んだあとにあいさつが始まる',
   has("if (!onboarded && !needsAssistantChoice) { setTutorialKind('intro'); setTutorialStep(0); }"));
 check('あいさつを読み終えるとプロフィールへ進む',
   has("if (kind === 'intro') { setGameState('PROFILE'); return; }")
-    && has("{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}"));
+    && has("{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'次へ'}"));
 // 独立した初回案内から同じバトル練習へ入れる(断ってもヘルプから始められる)
 check('案内の最後からバトルの練習へ入れる',
   has("{page.offer==='battleGuide'&&(") && has("startBattleTutorial('HOME')")
@@ -415,7 +415,7 @@ check('セリフは場面と条件が変わったときだけ選び直す',
 check('画面から条件を渡せる', has('condition=null') && /condition=\{[^}]+\}/.test(source));
 // 顔をタップすると次のセリフへ。詳細は吹き出し側なので、操作が分かれている
 check('顔をタップすると次のセリフへ送れる',
-  has('const onFaceTap = () => {') && has("aria-label={`${who.name}にはなしかける`}") && has('if (typeof pickAssistantLine === \'function\') setTapped(pickAssistantLine(scene, condition, bond.level, who.id));'));
+  has('const onFaceTap = () => {') && has("aria-label={`${who.name}に話しかける`}") && has('if (typeof pickAssistantLine === \'function\') setTapped(pickAssistantLine(scene, condition, bond.level, who.id));'));
 check('詳細は吹き出し側の操作のまま', has("onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く`"));
 check('連打には専用のリアクションを出す',
   has('const spamLine = spam ? (spam.recovering ? spamRecover : spamLines[spam.step]) : null;')

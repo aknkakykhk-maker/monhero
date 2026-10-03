@@ -103,12 +103,20 @@
       "pure": true
     },
     {
+      "file": "34-friends-api.jsx",
+      "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
     {
       "file": "41-screen-ui.jsx",
       "role": "画面の共通ガワ(頭・説明文・空状態・タブ・小見出しと、根/パネル/一覧の型)"
+    },
+    {
+      "file": "42-picker-sheet.jsx",
+      "role": "共通部品: 一覧から選ぶ窓(PickerSheet)。アイコン・フレーム・好きなモンスターなど、増えていく一覧から選ぶ窓の共通の形(いまの選択を固定・検索・絞り込み・一覧だけスクロール)"
     },
     {
       "file": "50-error-boundary.jsx",
@@ -203,8 +211,16 @@
       "role": "画面: 新モンスター確認(MONSTER_CHECK_DEBUG。デバッグ専用)。所持・解放に関係なく全種を並べ、画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を1枚で見る"
     },
     {
+      "file": "75-screen-friends.jsx",
+      "role": "画面: フレンド(FRIENDS)。一覧・申請・コードでの追加・ブロック・プロフィール閲覧。保存データには触れず、状態はサーバーが持つ"
+    },
+    {
       "file": "76-screen-debug-data.jsx",
       "role": "画面: データを用意する(DEBUG_DATA_SETUP。デバッグ専用)。条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)をすぐ試せる状態にする"
+    },
+    {
+      "file": "77-screen-rhythm-multi.jsx",
+      "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
     },
     {
       "file": "60-app.jsx",

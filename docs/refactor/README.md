@@ -12,6 +12,7 @@
 | [`REFACTOR_MASTER_PLAN.md`](REFACTOR_MASTER_PLAN.md) | STEP 0〜10 の明細(目的・対象・変更内容・変更しないもの・依存・リスク・検査・完了条件)と着手順 | 次にやる PR を決めるとき |
 | [`BATTLE_DAMAGE_MAP.md`](BATTLE_DAMAGE_MAP.md) | 予測ダメージと実ダメージの分岐の対応表と、一本化の形(STEP 5 の作業表) | STEP 5 に着手するとき |
 | [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md) | STEP 6 の引き継ぎ1枚。終わった画面・残った画面・この日に分かった型(props の洗い出し方、移してはいけないもの3つ、検査が静かに壊れること) | **STEP 6 を続けるとき最初に** |
+| [`UI_UNIFY_HANDOVER.md`](UI_UNIFY_HANDOVER.md) | 画面の統一(2026-10-01〜)の引き継ぎ1枚。済んだもの・残り(強化画面のタブとダイヤ行 / バトル画面の余白 / 残りの窓の枠)・踏んだ落とし穴 | **画面の統一を続けるとき最初に** |
 | [`SCREEN_EFFECTS_MAP.md`](SCREEN_EFFECTS_MAP.md) | `setTimeout` 62 箇所を「画面専用 / 進行 / 対象外」に仕分けた表(STEP 6 の作業表)。移すときはここから引く | STEP 6 の画面切り出しに着手するとき |
 | [`EXECUTION_PLAN.md`](EXECUTION_PLAN.md) | STEP ごとの担当モデル(Sonnet 5 / Opus 5)と effort、切り出し順、コピペ用の指示文 | **新しいチャットを始めるとき** |
 | [`BASELINE_2026-09.md`](BASELINE_2026-09.md) | 変更前に全検査を回した結果(OK / NG の一覧と分類)。ここに無い NG が出たら「その変更で壊した」 | 検査が落ちたとき |

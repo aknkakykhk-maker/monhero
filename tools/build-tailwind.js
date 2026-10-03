@@ -38,6 +38,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
+const { withHalloweenTheme } = require('./theme/halloween-theme-css');
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'monster-hero', 'tailwind.css');
@@ -63,6 +64,7 @@ module.exports = {
   theme: { extend: {} },
   // landscape: は Tailwind が最初から持っている(@media (orientation: landscape))。
   // 自前で回したとき用の写しは build-tailwind.js の withRotationCopy が足す(rotation-copy v1)
+  // 画面テーマ「ハロウィン」の色の置き換えは tools/theme/halloween-theme-css.js が足す(halloween-theme v1)
   plugins: [],
 };
 `;
@@ -85,6 +87,8 @@ function contentFiles() {
 function fingerprint() {
   const h = crypto.createHash('sha256');
   h.update(CONFIG_SOURCE);
+  // ハロウィンの色の置き換え規則も tailwind.css の一部。ここを直したら作り直す（指紋に入れないと古いまま残る）
+  h.update(fs.readFileSync(path.join(__dirname, 'theme', 'halloween-theme-css.js'), 'utf8'));
   for (const file of contentFiles()) {
     h.update(path.basename(file));
     h.update(normalize(fs.readFileSync(file, 'utf8')));
@@ -159,7 +163,7 @@ function generate(fp) {
   fs.writeFileSync(CONFIG, CONFIG_SOURCE);
   fs.writeFileSync(INPUT, '@tailwind base;\n@tailwind components;\n@tailwind utilities;\n');
   execFileSync(BIN, ['-c', CONFIG, '-i', INPUT, '-o', OUT, '--minify'], { stdio: ['ignore', 'ignore', 'inherit'] });
-  const css = withRotationCopy(fs.readFileSync(OUT, 'utf8'));
+  const css = withHalloweenTheme(withRotationCopy(fs.readFileSync(OUT, 'utf8')));
   fs.writeFileSync(OUT, `/*! ${MARK}: ${fp} — tools/build-tailwind.js が作った生成物。直接編集しないこと */\n${css}`);
   return fs.statSync(OUT).size;
 }

@@ -139,7 +139,7 @@ check('商品アイコンはタップで拡大できる',
 check('拡大表示は実際に使われる形(丸／角丸)で出す',
   has("const round=item.type==='icon'||item.type==='assist';"));
 check('商品アイコンの大きさを1か所で決めている',
-  has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };")
+  has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9', frame: 'w-10 h-10' };")
     && has("${MARKET_ICON_SIZE[item.type]||'w-10 h-10'}"));
 check('所持数は0でも消さずに出す', has('×{ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
 // 「詳細」のすぐ下に買うボタンがあると、押し間違えて買ってしまう。
@@ -159,7 +159,8 @@ check('購入ボタンの通貨表示がカード内に収まる',
     && has('usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>')
     // 勇者の証は名前が長いので、字を小さくして1行(whitespace-nowrap)に収めている
     && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
-check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
+// 予告の札は既定で「近日追加」。ビートP交換所の円盤石だけ「先行公開予定」と書く(札の形は同じ)
+check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">{comingSoonLabel}</div>') && has("comingSoonLabel='近日追加'") && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
 check('ききの拡大量を1か所の表で持ち、縦横比と円形クリップを保つ',
@@ -198,6 +199,7 @@ check('画面が数えられている', screens.length > 20, `${screens.length}�
 const COMPONENT_OWNED_SCREENS = {
   RHYTHM_PLAY: 'RhythmTapTest（演奏中。BATTLEと同じくスクロールさせない設計）',
   RHYTHM_OPTIONS: 'RhythmOptions',
+  RHYTHM_MULTI: 'RhythmMultiScreen（みんなで対戦の部屋。中身の領域が overflow-y-auto で縦スクロールする）',
   RHYTHM_DEMO_HOME: 'RhythmSongSelect（曲の一覧の中でスクロールする）',
   // 攻撃アクションを大きく見せるための専用画面。中身は1画面に収まる作りで、
   // 元からスクロール領域を持たない。2026-09-10 に画面を切り出して初めてそれが見えた

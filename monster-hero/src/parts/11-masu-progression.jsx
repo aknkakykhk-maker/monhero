@@ -1054,8 +1054,8 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
   desc:`モンヒロビートの週間ランキングと、クイックモードGODのクリアでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
 });
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
-  extreme:Object.freeze({ GOD:1, RAGNAROK:2 }),
-  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2 }),
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
   pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
 });
 const heroProofClearReward = ({
@@ -2714,8 +2714,9 @@ const buildAutoRepeatBreakthroughs = ({
 // 転生: 絆Lv100以上の個体を、レベル99ぶん引き換えに白紙から育て直す。
 // 振った強化はすべて戻り、強化ポイントは「新しいレベルぶん + これまでの限界突破ぶん + 10」で
 // 配り直す(限界突破で得たポイントも振り直しの対象に含める、というユーザー指定に合わせる)。
-const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
+const buildMasuReincarnation = ({ masu, skillKey, gold, lockedIds = [] }) => {
   if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
+  if (isMasuLocked(lockedIds, masu.id)) return { ok:false, reason:`「${masu.name}」は転生ロック(🔁)中なので転生できません。マスモン詳細でロックを外してから転生してください。` };
   const normalized = normalizeMasuProgression(masu);
   const level = masuBondLevelInfo(normalized).level;
   if (level < REINCARNATE_MIN_LEVEL) return { ok:false, reason:`Lv.${REINCARNATE_MIN_LEVEL}到達後に転生できます。` };
@@ -2830,9 +2831,34 @@ const normalizeHomePastureIds = (savedIds, masuMons, validBaseIds) => {
   return [...new Set(savedIds.map(String))].filter(id=>owned.has(id)).slice(0,5);
 };
 
-const buildMasuDonation = ({ masuMons, targetId, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds, requiredCount }) => {
+// ==== マスモンのお気に入り(ロック)(2026-10-01 ユーザー指示「マスモンのロック機能がほしい。
+// お気に入りにすると売却や合体等いなくなるやつができなくなる」) ====
+// 印は新しい保存キー mh_masu_locked_v1 にマスモンIDの並びだけを持つ(mh_masu_mons には触らない。CLAUDE.md ⑦)。
+// 保存値が無い・壊れているときは「お気に入りなし」。いなくなる操作(削除・合体の副・寄付)は、
+// 画面でボタンを押せなくするだけでなく、処理そのもの(buildMasuDonation / executeMasuFusion / deleteMasuMon)でも止める。
+const MASU_LOCK_KEY = 'mh_masu_locked_v1';
+// ロックの種類(2026-10-01 ユーザー指示「転生もしたくない場合もあるからロックにも種類を分けたい」)。
+//   keep    … お気に入り: 削除・合体の副・寄付を防ぐ(いなくなる操作)。保存は上の MASU_LOCK_KEY(公開済みなので意味を変えない)
+//   rebirth … 転生ロック: 転生を防ぐ(レベルが下がり、強化を振り直す操作)。保存は新しい MASU_REBIRTH_LOCK_KEY
+// 2つは独立。片方だけ・両方・どちらもなし、を選べる。
+const MASU_REBIRTH_LOCK_KEY = 'mh_masu_lock_rebirth_v1';
+const MASU_LOCK_KINDS = Object.freeze({
+  keep:    Object.freeze({ key:MASU_LOCK_KEY,         label:'お気に入り', emoji:'🔒', blocks:'削除・合体の副・寄付' }),
+  rebirth: Object.freeze({ key:MASU_REBIRTH_LOCK_KEY, label:'転生ロック', emoji:'🔁', blocks:'転生' }),
+});
+const normalizeMasuLockIds = (saved) => Array.isArray(saved)
+  ? [...new Set(saved.filter(v => (typeof v === 'string' && v) || Number.isFinite(v)).map(String))]
+  : [];
+const isMasuLocked = (lockedIds, masuId) => Array.isArray(lockedIds) && masuId != null && lockedIds.includes(String(masuId));
+const toggleMasuLockIds = (lockedIds, masuId) => {
+  const ids = normalizeMasuLockIds(lockedIds), id = String(masuId);
+  return ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id];
+};
+
+const buildMasuDonation = ({ masuMons, targetId, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds, requiredCount, lockedIds = [] }) => {
   const donated = masuMons.find(m => String(m.id) === String(targetId));
   if (!donated) return { ok: false, reason: '対象のマスモンはすでに所持していません。' };
+  if (isMasuLocked(lockedIds, targetId)) return { ok: false, reason: `「${donated.name}」はお気に入り(🔒)なので寄付できません。お気に入りを外してから寄付してください。` };
   const nextMasuMons = masuMons.filter(m => String(m.id) !== String(targetId));
   const active = repairRosterAfterDonation(monsterRosterIds, donated, nextMasuMons, unlockedMonsterIds, validBaseIds, requiredCount);
   if (!active.ok) return active;

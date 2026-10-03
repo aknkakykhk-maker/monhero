@@ -6,7 +6,7 @@
 //
 // 見ているもの:
 //   ① M/B管理 → AUTO設定 に項目が出る
-//   ② 勇者モン・距離・難易度をえらんで決定できる
+//   ② 勇者モン・距離・難易度を選んで決定できる
 //   ③ 読み込み直しても残っている(既存の mh_auto_settings_v1 へ足した項目が保存されている)
 //   ④ 既存の項目(AUTO方針・供モン)を巻き込んで消していない
 const { chromium } = require('playwright');
@@ -53,7 +53,7 @@ const seed = () => {
   const dismissOverlays = async () => {
     for (let i = 0; i < 12; i++) {
       const closed = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK)$/.test((x.innerText || '').trim()));
+        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         const dialog = document.querySelector('[role="dialog"]');
         if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }
@@ -104,7 +104,7 @@ const seed = () => {
       options.some(o => o.value === 'ULTIMATE' && o.disabled) && options.some(o => o.value === 'Beginner' && !o.disabled),
       options.filter(o => ['Beginner', 'ULTIMATE'].includes(o.value)).map(o => `${o.value}:${o.disabled ? '選べない' : '選べる'}`).join(' / '));
 
-    // 勇者モン・距離・難易度をえらぶ
+    // 勇者モン・距離・難易度を選ぶ
     await page.evaluate(() => {
       const s = document.querySelector('#auto-quick-hero');
       const option = [...s.options].find(o => o.value === 'Suezo') || [...s.options].find(o => o.value);

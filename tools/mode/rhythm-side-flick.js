@@ -57,7 +57,7 @@ const sideFlickContexts=(notes,timing,options={})=>{
   const sign=value=>Math.abs(value)>=SIDE_FLICK_MIN_SHIFT_LANES?Math.sign(value):0;
   const out=[];
   hits.forEach((hit,position)=>{
-    if(hit.note.type!=='FLICK'||hit.note.chord)return;
+    if(hit.note.type!=='FLICK'||hit.note.chord||hit.note.mirrorFlick)return;
     const sameFinger=other=>hit.finger!=null&&other.finger===hit.finger;
     const next=hits.slice(position+1).find(other=>other.ms>hit.ms+1e-6&&sameFinger(other));
     const prev=hits.slice(0,position).reverse().find(other=>other.ms<hit.ms-1e-6&&sameFinger(other));
@@ -84,7 +84,8 @@ const chooseSideFlickDir=context=>{
 
 // 譜面の FLICK に向きを付け直す(もとの向きは消す)。ノーツの数・時刻・位置は変えない。
 const assignSideFlickDirs=(notes,timing,options={})=>{
-  for(const note of notes)if(note.type==='FLICK')delete note.flickDir;
+  // Rev.24 の左右対称の同時フリック(mirrorFlick)は、生成器が決めた外向きのまま残す
+  for(const note of notes)if(note.type==='FLICK'&&!note.mirrorFlick)delete note.flickDir;
   let left=0,right=0,plain=0,blocked=0;
   for(const context of sideFlickContexts(notes,timing,options)){
     const choice=chooseSideFlickDir(context);

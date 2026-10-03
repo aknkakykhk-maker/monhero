@@ -42,7 +42,8 @@ const ultra=between('data-ultra-battle-view','):(<>');
 for(const token of ['hand.map((c,i)=>','enemyAttackFx?.kind','attackAnim &&','animate-pulse','transition-all','drop-shadow'])if(ultra.includes(token))fail(`ultra軽量表示へ通常の重い描画 ${token} が混入しています`);
 if(!battle.includes('):(<>' ))fail('ultraと通常/liteのBATTLE描画ツリーが分離されていません');
 for(const token of [
-  '!ecoBattleView&&guardFx','!ecoBattleView&&teachingFx',
+  // 2026-09-29: ガードは枠のバリア、アシストカードはカットインへ置き換えた(どちらも省エネでは出さない)
+  's&&!ecoBattleView&&(()=>{',
   "!ecoBattleView&&enemyAttackFx?.kind==='move'",
   "!ecoBattleView&&enemyAttackFx?.kind==='normal'",
   "!ecoBattleView&&enemyAttackFx?.kind==='special'",
@@ -81,7 +82,8 @@ const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','// 特
 if(!repeatToggle.includes('const next=!!enabled&&isQuickMode(runMode)'))fail('∞周回のクイック限定が維持されていません');
 if(!repeatToggle.includes("if(!next)setEcoModeSafe('off')"))fail('AUTO∞ OFF時に省エネをOFFにしていません');
 for(const token of ['flex-1 min-w-0 flex flex-wrap','min-h-[44px] min-w-[84px] shrink-0'])if(!battle.includes(token))fail('ACTION見切れ防止レイアウトが維持されていません');
-if(/['"]mh_[^'"]*eco/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
+// 「eco」は単語として見る。mh_rhythm_multi_record の「…reco…」まで拾っていた(2026-10)
+if(/['"]mh_(?:[^'"]*_)?eco(?:_[^'"]*)?['"]/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
 const controlsFrom=battle.indexOf('<span className={`flex-1 min-w-0 flex flex-wrap');
 const controlsTo=battle.indexOf('{/* 使うカードが決まっている番は',controlsFrom);
 if(controlsFrom<0||controlsTo<0)fail('省エネ切替UIの範囲を取得できません');

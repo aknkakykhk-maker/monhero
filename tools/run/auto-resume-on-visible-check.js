@@ -66,7 +66,7 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
   const dismissOverlays = async () => {
     for (let i = 0; i < 12; i++) {
       const closed = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK)$/.test((x.innerText || '').trim()));
+        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         const dialog = document.querySelector('[role="dialog"]');
         if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }
@@ -125,7 +125,7 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
     await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /新規習得/.test(x.textContent))?.click(); });
     await page.waitForTimeout(900);
     await clickExact('習得する');
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(3500);
     await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
     for (let i = 0; i < 3 && (await autoLabel()) !== 'AUTO ∞'; i++) {
       await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
@@ -148,6 +148,11 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
 
     // ---- ② モンヒロビートを開いたまま 裏に回す → 戻る ----
     await page.evaluate(() => document.querySelector('[data-quick-to-rhythm]')?.click());
+    // 入るとまずモードえらび(2026-10-03)。ソロライブで曲えらびへ
+    await page.waitForFunction(() => !!document.querySelector('[data-rhythm-mode-solo]'), { timeout: 15000 }).catch(() => {});
+    await page.evaluate(() => document.querySelector('[data-rhythm-mode-solo]')?.click());
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
     await dismissOverlays();
     check('②モンヒロビートを開けている', await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]')));
@@ -162,6 +167,9 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
 
     // ---- ③ 自分でAUTO∞を切ったあとは、戻っても始まらない ----
     //      (負けたときに始めないのと同じ分かれ道＝止まった理由が 'hidden' 以外)
+    // 曲えらびの「←」でモードえらびへ、モードえらびの「⏹ 終了」で周回を締めてHOMEへ(2026-10-03)
+    await page.evaluate(() => document.querySelector('[data-rhythm-song-select-back]')?.click());
+    await page.waitForFunction(() => !!document.querySelector('[data-rhythm-back]'), { timeout: 10000 }).catch(() => {});
     await page.evaluate(() => document.querySelector('[data-rhythm-back]')?.click());
     await page.waitForTimeout(2000);
     for (let i = 0; i < 4 && (await autoLabel()) === 'AUTO ∞'; i++) {

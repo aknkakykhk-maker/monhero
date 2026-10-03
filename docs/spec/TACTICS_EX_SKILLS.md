@@ -7,6 +7,7 @@
 - **何を作るか（決まった仕様）** は [TACTICS_EX_SKILLS_DRAFT.md](TACTICS_EX_SKILLS_DRAFT.md)（ユーザーと相談した仮仕様）が正本。
 - この文書は **いまコードに入っているもの** と、**次の段階で何をどこへ足せばよいか** だけを書く。
 - タクティクス本体の仕様は [BATTLE_NEW_MODE_PLAN.md](BATTLE_NEW_MODE_PLAN.md)。
+- **決まったEXの一覧と1体ずつの仕様（数字・併用・長さ）は [TACTICS_EX_LIST.md](TACTICS_EX_LIST.md)。** この文書は実装の置き場所の話。
 
 ## 1. いまの状態
 
@@ -15,7 +16,7 @@
 
 | | 入っているもの |
 | --- | --- |
-| 定義 | 5体（モノリス・ゴーレム・剣士モッチー・モッチー・ミタラシ） |
+| 定義 | 11体（モノリス・モッチー・ミタラシ・エイキ・ザン・アーク・イブリース・ゴーレム・剣士モッチー・ユグドラシル・メルホイップ）。**一覧と仕様のまとめは [TACTICS_EX_LIST.md](TACTICS_EX_LIST.md)** |
 | 距離枠 → 詳細 | タップで開くだけ。発動は「EXスキルを使用」だけ |
 | 回数（1ラン） | WAVEで戻らない・新しいランで初期値・無制限 |
 | 通常カードとの併用 | 併用不可なら、そのターンは**使った子だけ**カードを使えない（ほかの子・緊急回復は使える。2026-09-23 ユーザー指示）。EXを使ったターンはカードを出さずに「ターンを進める」で送れる |
@@ -54,6 +55,16 @@
 | --- | --- | --- | --- | --- | --- |
 | モノリス（`Monol`） | みんなをかばう | ラン10回 | 併用できる | 発動ターン | `coverAll` |
 | モッチー（`Mocchi`） | ガッツ全開っちー | ラン3回 | 併用できる | 使ったターンから5ターン（WAVEが変わると切れる） | `statBoost` |
+| アーク（`Ark`） | 抗えぬ宿命を追え | ラン5回 | 併用できる | 使ったターンから5ターン（WAVEが変わると切れる） | `multiBuff` |
+| イブリース（`Iblis`） | 堕天の烙印 | ラン5回（最大ライフの30%を払う） | 併用できる | 使ったターンから5ターン（WAVEが変わると切れる） | `multiBuff` |
+| ピクシー（`Pixie`） | お気に入りの魔法 | ラン3回 | 併用できる | 使ったターンから3ターン | `multiBuff`（`distMult`・`guaranteeUnique`） |
+| ミーア（`Mia`） | オン・ステージ！ | ラン3回 | 併用できる | 使ったターンから4ターン | `stage`（`cardBonus`・`voltage`） |
+| スネグーラチカ（`Snegurochka`） | クリスマスプレゼント | **各WAVE1回** | 併用できる | 使ったターンから2ターン（持続のある中身だけ） | `present`（`usesPerWave`・`present`） |
+| パンドラ（`Pandora`） | パンドラの箱 | ラン3回 | 併用できる | 使ったターンから3ターン | `pandoraBox` |
+| ウンディーネ（`Undine`） | 生命の泉 | ラン5回 | 併用できる | 使ったターンから3ターン（ライフ上限アップのあいだ） | `lifeSpring`（`target:'ally'`） |
+| ヤオビクニ（`Yaobikuni`） | 悠久の刻 | ラン2回 | 併用できる | 発動ターン | `timeStop` |
+| ザン（`Zan`） | 血踊 | ラン5回 | 併用できる | 使ったターンから3ターン（WAVEが変わると切れる） | `dodgeCombo` |
+| エイキ（`Eiki`） | 緋桜瞬歩 | ラン3回 | 使ったターンはその子だけ不可 | 使ったターンから3ターン（WAVEが変わると切れる） | `distMatch` |
 | ゴーレム（`Golem`） | 捨て身 | ラン3回 | 使ったターンはその子だけ不可 | 発動WAVE | `allIn` |
 | 剣士モッチー（`KenshiMocchi`） | ソード・コンバージョン | 無制限 | 使ったターンはその子だけ不可 | 再使用まで（片手剣・片手盾・二刀流の3択。既定は片手剣） | `weaponChange` |
 
@@ -102,7 +113,18 @@ cardLock[slot]= { wave, turn }                             このターン、そ
 | `allIn`（捨て身） | 1体ぶんの読み取り `tacticsBattleUnit` → `applyTacticsExStats` | **使ったときの丈夫さ**（盤面の値。丈夫さ%のバフはかける前）を控え、丈夫さ0・力＋その50%。盤面の値は書き換えず読むときに乗せるので、次のWAVEで何もしなくても元に戻る。効果中は再使用不可（`conditions:['notActive']`） |
 | `statBoost`（ガッツ全開っちー） | 1体ぶんの読み取り `tacticsBattleUnit` → `applyTacticsExStats`＋使った瞬間の回復 | 2026-09-25 ユーザー指示。使った瞬間に、その子のライフとガッツの上限を×(1+`statRate`)（ユニットの `exMaxRate` に入れて `scaleTacticsUnitMaxHp` 系で上限を数え直す）にしてから、上がった上限まで満タン（`fullRecover`。2026-09-25 ユーザー指示「上限も上げてさらに全回復」）。使ったターンから `turns`（5）ターンのあいだ、力と丈夫さ×(1+`statRate`)（30%・切り捨て。はじめ20%、2026-09-25 ユーザー指示で30%）。同じあいだ、ターン終わりの自動回復（`tacticsRegen`）で、その子だけ上限の `regenRate`（0.3）ぶんを `rateHealTacticsAt` で上乗せする（倍率ではなく固定値。ユーザー指示「1.3倍じゃなくて30%固定値でプラス」）（`tacticsExRegenRateAt`。倒れた子の10%の戻りには乗せない。2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」）。**WAVEはまたがない**（ユーザー指示「WAVE跨ぎはなし」。`duration:'turns'` は同じWAVEの中だけ数える）。効果が切れたら `expireTacticsExMaxRates` が `exMaxRate` を0へ戻し、上限を元に戻す（今のライフ・ガッツは元の上限で頭打ち）。カードとの併用は指定が無かったので制限なし |
 | `statBoost`（ドラゴンだっちー・ミタラシ） | ガッツ全開っちーと同じ | 2026-09-27 ユーザー指示「ガッツ全開だっちーの上がるステが違う版　同じようなバランスで少し攻撃寄りに」。3案からユーザーが「ちから＋ガッツ」を選んだ。定義の `rates:{atk:0.4,def:0.2,hp:0.2,guts:0.4}` と `regenRates:{hp:0.2,guts:0.4}` で、ステータスごとに上げ幅を変える（書いていない項目は `statRate` / `regenRate`。ガッツ全開っちーは書いていないので4つとも30%のまま）。ガッツの上限は `exMaxGutsRate` を別に持ち（無ければ `exMaxRate`）、`setTacticsExMaxRate(units, slot, hp率, ガッツ率)` で入れる。自動回復は `tacticsExRegenRateAt(…, 'hp' / 'guts')` で別々に取る。回数・ターン・併用・全回復はモッチーと同じ |
+| `multiBuff`（抗えぬ宿命を追え・アーク／堕天の烙印・イブリース） | 与ダメ＝`getDmg` の `totalBuffMult`、被ダメ＝`applyTurnDamageReduction`、会心率＝攻撃時の `rollCrit`、会心ダメ＝`buildAttackHits` の `critDmgMult`（いずれも `tacticsExMultiBuffNow(slotIdx)`＝純関数 `tacticsExMultiBuffOf`）、連撃＝`tacticsExExtraCombosAt`、丈夫さ＝`applyTacticsExStats`（`rates`） | 2026-10-02 ユーザー指示。1つの効果で複数の強化をまとめて持つ。アーク: 与ダメ+30%（`dmgRate`・最終ダメージへ乗算）・被ダメ−20%（`selfTakenRate`・ほかの軽減と掛け算）・与ダメ10%の連撃×1。イブリース: 使うとき最大ライフの30%を払う（`lifeCostRate`。`checkTacticsExUse` が「いまのライフ＞払う量」のときだけ使えるようにするので、払って倒れない。払う量は `tacticsExLifeCost`＝最大ライフ×30%切り捨て。使った直後に `damageTacticsTargets` で減らし、枠へ減った量を出す）・与ダメ5%の連撃×5・会心率×1.5（`critRateRate`・「いまの会心率」にかける乗算）・会心ダメ×1.3（`critDmgRate`・(1.5＋補正)にかける乗算）・丈夫さ+30%（`rates.def`）。どちらも5ターン（同じWAVEの中だけ）・ラン5回・併用可（併用は指定が無かったので「できる」）。連撃の名前は各EXの名前 |
+| `stage`（オン・ステージ！・ミーア） | カード枚数＝`60-app.jsx` の `cardLimit`（`exCardBonus`＝`tacticsExCardBonusTotal`）と `slotMaxUses`（`tacticsExCardBonusAt`）。ボルテージ＝ターン終わりに `addTacticsExVoltage`（使ったカード枚数ぶん）。効き目＝`tacticsExVoltageOf` を `tacticsExPartyBuffNow` 経由で、与ダメ（`getDmg`）・回復カード・ガッツ自動回復へ | 2026-10-03 ユーザーの案（数字は仮）。盤面の枚数+1・ミーア自身+1（上限5は変えない）。ボルテージ最大10、1段階ごとに味方全員の与ダメ+3%・回復カード+5%・ガッツ自動回復+2%。切れたら0に戻る。**これまでの「EXは枚数の計算に入らない」の例外はこのEXだけ** |
+| `present`（クリスマスプレゼント・スネグーラチカ） | 使うとき `rollTacticsExPresent` で中身を決め（`setTacticsExPresent`）、必ず全員のガッツ＋ライフ回復/ガッツ追加はその場で入れる。持続4種は `tacticsExPresentOf` を `tacticsExPartyBuffNow` 経由で与ダメ・被ダメ（`applyTurnDamageReduction`）・会心率・連撃（`tacticsExCombosAt` が配列で返す）へ。回数は `resetTacticsExWaveUses` がWAVEの変わり目に0へ戻す（`usesPerWave`） | 2026-10-03 ユーザーの案（数字は仮）。全員のガッツ+20%（必ず）＋ランダム1つ（与ダメ+20%／被ダメ−20%／連撃10%×2／ライフ+20%／ガッツ+20%／会心率×1.3）。10%で全部（大当たり）。持続は2ターン |
+| `multiBuff`（お気に入りの魔法・ピクシー） | 距離補正＝`getDmg` の `exDistMult`（`distMult`）。固有技カード＝ターン終わり（次のターンも効くなら）と使った瞬間に `ensureTacticsExUniqueInHand`（`tacticsExUniqueGuaranteeSlot`） | 2026-10-03 ユーザーの案（数字は仮）。3ターン・距離補正×1.5固定・毎ターン固有技が手札に出る（手札がいっぱいなら、いちばん後ろの別のカードを山札へ戻す） |
+| `pandoraBox`（パンドラの箱・パンドラ） | 悪魔側＝`getDmg` の `tacticsExPandoraDevilNow(slotIdx, 「同じ子の2枚目」か)`（与ダメ）と `tacticsExCombosAt(slotIdx, halved)`（連撃。予測表示 `getAttackPredictedDmg` にも `halved` を渡す）。天使側＝カードを処理するループの `pandoraCardNo`（パンドラの2枚目で `tacticsRateHeal`）。カード+1＝`tacticsExCardBonusAt`（自分）と `tacticsExCardBonusTotal`（盤面）。ターン終わり＝`handleEnemyTurn` が `tacticsExPandoraTurnEnd` を見て `settleTacticsExPandoraBox`（cost / hope / died）。終わったら `spendTacticsExPandoraBox` | 2026-10-03 ユーザーの案（数字は仮）。**見た目の分離（悪魔側・天使側の2枚の画像）と、本体・悪魔・天使の3枚の染色は、まだ入っていない**（画像の透過は受け取り済み）。1・2ターン目の終わりに最大ライフの30%を払う（ほかに立っている味方がいないときは倒れない）。1枚目＝与ダメ×1.5＋与ダメ30%の連撃×1、2枚目＝味方全員のライフ・ガッツ上限の10%回復。最後のターンの終わりに生きていれば「最後の希望」（自分はダウン・ダウン中の味方は復活・全員ライフ満タン・ガッツ上限の50%。助ける味方がいなければダウンしない）。倒れていたら、そのときのガッツを生きている味方へ均等に分ける。時間停止（悠久の刻）のターンは箱も進めない。WAVEが変わると切れる（最後の希望は起きない） |
+| `lifeSpring`（生命の泉・ウンディーネ） | 使うとき味方を選ぶ（`target:'ally'`。選べる一覧＝`tacticsExTargetOptions`、確認＝`checkTacticsExTarget`、選んだ枠＝`effects[slot].target`）。本体は `activateTacticsEx` の `def.lifeSpring` の枝。ライフ上限＝`setTacticsExMaxHpRate`＋`scaleTacticsUnits`、戻すのは `expireTacticsExMaxRates`（泉の対象は泉が効いているあいだ戻さない） | 2026-10-03 ユーザーの案（数字は仮）。ダウン中の子: すぐ立ち上がってライフ満タン。立っている子: ライフ上限+30%（3ターン）のうえ満タン。どちらもガッツ上限の30%。自分も選べる。**ガッツの上限へライフの率が効かないよう、`exMaxGutsRate` を明示している** |
+| `timeStop`（悠久の刻・ヤオビクニ） | `handleEnemyTurn` の `timeStopSlot`（`tacticsExTimeStopSlot`）。敵の行動を止め（スタンと同じ「何もしなかった」扱い）、`setTurnCount` を進めず、`spendTacticsExTimeStop` で使い終わりにする | 2026-10-03 ユーザーの案（回数2回）。使ったターンは敵が行動せず、20ターン制限にも数えない。ターン終わりの自動回復は入る。ターン数が進まないので、止めたあとの同じターンの数字では、ヤオビクニはもう一度使えない（連続で止め続けられない）。同じターンの数字に残るEXの「使ったターン」の記録（ほかのEXの併用不可の止め）も、次のターンへ持ち越される |
+| `dodgeCombo`（血踊・ザン） | 回避は `tacticsExDistMatchDodges`（エイキと同じ判定。敵の攻撃の当たり先ごと）。数えるのは `recordTacticsExDodge`、連撃は `tacticsExExtraCombosAt` → `buildAttackHits` の `exCombos`（`label` に技名） | 2026-10-02 ユーザー指示「敵と同じ距離の場合は完全回避、回避するごとに10%連撃付与（与ダメ10%連撃が増えてく） 5ターン、ラン5回 併用あり」、名前は「血踊」。効いているあいだ、その子の枠の番号が敵の距離と同じなら、狙われたとき抽選なしで完全に回避し、`effects[slot].dodges` を1つ増やす。回避した数だけ、その子の攻撃へ与ダメージ10%（`dodgeComboRate`）の連撃が1回ずつ増える。効果が切れる・WAVEが変わる・もう一度使うと数は0に戻る。1回の敵の攻撃で数えるのは1回（連撃の敵の攻撃でも1回）。回避した枠への倒れた子の10%戻りなどには関係ない |
+| `distMatch`（緋桜瞬歩・エイキ） | `getDmg` の距離補正（差0/1/2/3 で ×1.5/1.3/1.1/0.9）の入口 `tacticsExEffectAt(slotIdx)==='distMatch'` と、敵の攻撃の回避（`tacticsExDistMatchDodges`） | 2026-10-02 ユーザー指示。効いているあいだ、距離補正を差に関係なく `TACTICS_EX_DIST_MATCH_MULT`（×1.7）にする。間合い適性（`aptForSlot`）は変えない。さらに、その子の枠の番号が敵の距離（`actingEnemyDist`）と同じなら、狙われたとき抽選なしで完全に回避する（ほかの子が狙われたときは関係ない）。`duration:'turns'`（5ターン・同じWAVEの中だけ）・ラン3回・併用不可（使ったターンはエイキだけカード不可）。はじめは3ターン・2回・併用可・×1.5だった |
 | `weaponChange`（ソード・コンバージョン） | 1体ぶんの読み取り＋ヒット列＋固有技の処理 | 2026-09-25 ユーザー指示で3択。**片手剣**＝いつもどおり。**片手盾**＝丈夫さ＋いまの力、本人の固有技でソードスキル（20%×2・連撃+3%・連撃パワー）が出ない（`swordSkill:false`）。**二刀流**＝丈夫さ半分（切り捨て）、本人の攻撃の**連撃だけ**がもう1回ぶん入る。メインのダメージは1回のまま（2026-09-25 ユーザー指示「二刀流はメインダメじゃなくて、連撃分のみね」。`buildAttackHits` の `hitRepeat:2`。2回目は同じ値のまま連撃として足す）。どれも盤面の元の値から数え直すので積み重ならない。勇者モンなら配置の画面で初期スタイルを選べ、置いた瞬間に `setTacticsExInitialStyle` で記録へ書く（回数も「このターン」も数えない） |
+| `partyGuard`（世界樹の守り・ユグドラシル） | 被ダメの最後 `applyTurnDamageReduction`（`tacticsExPartyTakenMult`）＋ターン終わりの `tacticsRegen`（`tacticsExPartyRegenRate`） | 2026-09-29 ユーザー指示「世界樹の守り。回復は20%、回数は5回」。使ったターンから3ターン（WAVEをまたがない）、**味方全員**の被ダメージを30%軽減（ほかの軽減と掛け算で重なる。2体いれば0.7×0.7）、ターンの終わりに味方全員（立っている子）のライフを上限の20%ずつ多く回復（ガッツには足さない）。1ラン5回・カードと併用できる。使った子が倒れても効果は残る |
+| `comboBurst`（スイーツパラダイス・メルホイップ） | ヒット列 `buildAttackHits` の `exCombos`（`tacticsExExtraCombosAt`） | 2026-09-29 ユーザー指示「スイーツパラダイス。連撃30%×4にして」。**発動したターンだけ**、その子の攻撃（通常・距離・固有・あつの挑発）へ与ダメージ30%の連撃を4回足す（連撃ダメージ補正も乗る。演出は数字だけ `noAnim`）。1ラン3回・カードと併用できる |
 
 - 読み取り口は **被ダメ（`getIncomingDamageBeforeTurnReduction`）・ガード（`guardDefFor`）・与ダメ（`getDmg`）** の3か所。
   これらは `useCallback` で古い描画の関数が残ることがあるので、EXの「いま」と有効かどうかは `tacticsExLiveRef` から読む

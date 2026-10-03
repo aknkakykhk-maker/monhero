@@ -463,6 +463,12 @@ const createAnimationStyle = () => {
       opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
       animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
     }
+    /* 技ごとの動き(SkillFxMotion)で出す音楽系のマイク。ミーアの歌モーションと同じ絵を、技の長さに合わせて出す */
+    .skfx-mic {
+      position:absolute; left:9%; bottom:2%; width:25%; height:60%; z-index:6; pointer-events:none;
+      opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
+      animation:miaSongMicPop var(--thm-ms,760ms) cubic-bezier(.2,1.4,.36,1) forwards;
+    }
     @keyframes miaSongMicPop {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
@@ -609,7 +615,7 @@ const createAnimationStyle = () => {
       .mia-song-notes__monster,
       .mia-song-notes--lunge .mia-song-notes__monster,
       .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
-      .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
+      .mia-song-notes__mic, .skfx-mic { animation:miaSongMicReduced 760ms ease-out forwards; }
       .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
       .mia-song-notes__stage i, .mia-song-notes__spark, .mia-song-notes__waves { display:none; }
       .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }
@@ -1440,11 +1446,748 @@ const createAnimationStyle = () => {
       100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx)),calc(var(--atk-dy) + var(--fy)),0) scale(2); }
     }
 
+    /* ==== ユグドラシル種の技ごとの動き(24-battle-fx.jsx の SkillFxMotion / SKILL_FX_SPECS) ====
+       型の組み合わせ(本体の動き・帯・飛ぶもの・敵に重ねる絵)は SKILL_FX_SPECS。ここは部品ごとの動き。
+       尺は --thm-ms(23-rpg-debug.jsx の THEMED_ATTACK_MS)、着弾は --hit-at。敵の位置は --atk-dx/dy */
+    .skfx .thm-atk__monster { animation-duration:var(--thm-ms); }
+    .skfx-body--bash .thm-atk__monster { animation-name:skfxBash; }
+    @keyframes skfxBash {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      18% { transform:translate3d(calc(var(--atk-dx) * -.08),calc(var(--atk-dy) * -.08 + 4px),0) scale(1.1,.9) rotate(8deg); }
+      44% { transform:translate3d(calc(var(--atk-dx) * .86),calc(var(--atk-dy) * .86),0) scale(1.05) rotate(-18deg); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.18,.86) rotate(-6deg); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .25),calc(var(--atk-dy) * .25 - 16px),0) scale(.96,1.04); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--dive .thm-atk__monster { animation-name:skfxDive; }
+    @keyframes skfxDive {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      12% { transform:translate3d(0,6px,0) scale(1.15,.82) rotate(0deg); }
+      34% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 150px),0) scale(.9) rotate(-120deg); }
+      50% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 140px),0) scale(1) rotate(-180deg); }
+      60% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 6px),0) scale(1.05,.9) rotate(-180deg); }
+      64% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.3,.72) rotate(-180deg); }
+      76% { transform:translate3d(calc(var(--atk-dx) * .8),calc(var(--atk-dy) * .8 - 70px),0) scale(1) rotate(-270deg); }
+      90% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 10px),0) scale(1) rotate(-350deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(-360deg); }
+    }
+    .skfx-body--roll .thm-atk__monster { animation-name:skfxRoll; transform-origin:50% 50%; }
+    @keyframes skfxRoll {
+      0% { transform:translate3d(0,0,0) rotate(0deg); }
+      10% { transform:translate3d(calc(var(--atk-dx) * -.06),calc(var(--atk-dy) * -.06 + 4px),0) scale(1.1,.9) rotate(-30deg); }
+      50% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1) rotate(720deg); }
+      56% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92 - 18px),0) scale(1.1,.9) rotate(760deg); }
+      80% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3 - 8px),0) scale(1) rotate(900deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(1080deg); }
+    }
+    .skfx-body--flip .thm-atk__monster { animation-name:skfxFlip; transform-origin:50% 50%; }
+    @keyframes skfxFlip {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      10% { transform:translate3d(0,6px,0) scale(1.16,.82) rotate(0deg); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .4),calc(var(--atk-dy) * .4 - 120px),0) scale(.92) rotate(-180deg); }
+      48% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 90px),0) scale(1) rotate(-360deg); }
+      62% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.4,.66) rotate(-360deg); }
+      70% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 10px),0) scale(1.1,.92) rotate(-360deg); }
+      86% { transform:translate3d(calc(var(--atk-dx) * .2),calc(var(--atk-dy) * .2 - 20px),0) scale(1) rotate(-360deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(-360deg); }
+    }
+    .skfx-body--toss .thm-atk__monster { animation-name:skfxToss; }
+    @keyframes skfxToss {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      15% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 + 3px),0) scale(1.05,.95) rotate(10deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .08),calc(var(--atk-dy) * .08),0) scale(1.08) rotate(-12deg); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .03),calc(var(--atk-dy) * .03),0) scale(1.02) rotate(4deg); }
+      60%, 100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+    .skfx-body--lick .thm-atk__monster { animation-name:skfxLick; }
+    @keyframes skfxLick {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      20% { transform:translate3d(calc(var(--atk-dx) * .04),calc(var(--atk-dy) * .04),0) scale(1.06,.96); }
+      35% { transform:translate3d(calc(var(--atk-dx) * .08),calc(var(--atk-dy) * .08),0) scale(1.1); }
+      60% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05),0) scale(1.04); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--slash .thm-atk__monster { animation-name:skfxSlashBody; }
+    @keyframes skfxSlashBody {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      14% { transform:translate3d(calc(var(--atk-dx) * -.08),calc(var(--atk-dy) * -.08 - 8px),0) scale(1.08) rotate(10deg); }
+      38% { transform:translate3d(calc(var(--atk-dx) * .8),calc(var(--atk-dy) * .8 - 30px),0) scale(1.1) rotate(-8deg); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 + 10px),0) scale(1.15,.9) rotate(-16deg); }
+      62% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7),0) scale(1.02) rotate(-6deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+    .skfx-body--cast .thm-atk__monster { animation-name:skfxCast; }
+    @keyframes skfxCast {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      15% { transform:translate3d(0,5px,0) scale(1.1,.9); filter:drop-shadow(0 0 10px var(--c2)); }
+      30% { transform:translate3d(calc(var(--atk-dx) * -.04),calc(var(--atk-dy) * -.04),0) scale(1.08); filter:drop-shadow(0 0 22px var(--c2)) drop-shadow(0 0 6px #fff); }
+      40% { transform:translate3d(calc(var(--atk-dx) * -.04 + 2px),calc(var(--atk-dy) * -.04),0) scale(1.08); }
+      50% { transform:translate3d(calc(var(--atk-dx) * -.04 - 2px),calc(var(--atk-dy) * -.04),0) scale(1.08); filter:drop-shadow(0 0 18px var(--c2)); }
+      70% { transform:translate3d(0,0,0) scale(1.03); filter:drop-shadow(0 0 10px var(--c2)); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    /* 帯(本体から敵へ) */
+    .skfx-line--beam i { width:14px; left:-7px; border-radius:999px;
+      background:linear-gradient(90deg,rgba(74,222,128,0),#86efac 22%,#fff 50%,#86efac 78%,rgba(74,222,128,0));
+      box-shadow:0 0 12px #4ade80,0 0 26px rgba(74,222,128,.85); animation-name:skfxBeam; }
+    @keyframes skfxBeam {
+      0%,28% { opacity:0; transform:scaleY(0) scaleX(.4); }
+      36% { opacity:1; transform:scaleY(1) scaleX(1.5); }
+      46% { opacity:1; transform:scaleY(1) scaleX(.8); }
+      58% { opacity:1; transform:scaleY(1) scaleX(1.2); }
+      70% { opacity:1; transform:scaleY(1) scaleX(1); }
+      82%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
+    }
+    .skfx-line--tongue i { width:18px; left:-9px; border-radius:999px;
+      background:linear-gradient(90deg,#be185d,#f472b6 30%,#fbcfe8 50%,#f472b6 70%,#be185d);
+      box-shadow:0 0 8px rgba(244,114,182,.8); animation-name:skfxTongue; animation-timing-function:ease-in-out; }
+    @keyframes skfxTongue {
+      0%,16% { opacity:0; transform:scaleY(0); }
+      22% { opacity:1; transform:scaleY(.2); }
+      42% { opacity:1; transform:scaleY(1); }
+      50% { opacity:1; transform:scaleY(.94) scaleX(1.15); }
+      72% { opacity:1; transform:scaleY(.15); }
+      80%,100% { opacity:0; transform:scaleY(0); }
+    }
+    .skfx-line--arc i { width:44px; left:-22px; border-radius:999px;
+      background:linear-gradient(90deg,rgba(245,158,11,0),#fcd34d 18%,#fff7d6 42%,#fff 50%,#fff7d6 58%,#fcd34d 82%,rgba(245,158,11,0));
+      box-shadow:0 0 18px #fbbf24,0 0 40px rgba(245,158,11,.8); animation-name:skfxArc; }
+    @keyframes skfxArc {
+      0%,26% { opacity:0; transform:scaleY(0) scaleX(.3); }
+      34% { opacity:1; transform:scaleY(1) scaleX(1.8); }
+      44% { opacity:1; transform:scaleY(1) scaleX(1); }
+      60% { opacity:1; transform:scaleY(1) scaleX(1.5); }
+      72% { opacity:1; transform:scaleY(1) scaleX(1); }
+      90%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
+    }
+    /* 飛ぶもの。道すじ(path)と形(shape)を組み合わせる */
+    .skfx-p { position:absolute; left:50%; top:40%; width:16px; height:16px; margin:-8px 0 0 -8px; opacity:0;
+      scale:calc(var(--ps,1) * 1.35); animation-fill-mode:forwards; animation-timing-function:linear; }
+    .skfx-path--shot { animation-name:skfxShot; animation-timing-function:ease-in; }
+    @keyframes skfxShot {
+      0% { opacity:0; transform:translate3d(calc(var(--px) * .6),calc(var(--py) * .6 - 10px),0) scale(.4); }
+      15% { opacity:1; transform:translate3d(var(--px),calc(var(--py) - 14px),0) scale(1); }
+      90% { opacity:1; }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) * .3),calc(var(--atk-dy) + var(--py) * .3),0) scale(1.4); }
+    }
+    .skfx-path--lob { animation-name:skfxLob; }
+    @keyframes skfxLob {
+      0% { opacity:0; transform:translate3d(var(--px),var(--py),0) scale(.6) rotate(0deg); }
+      10% { opacity:1; }
+      50% { transform:translate3d(calc(var(--atk-dx) * .5 + var(--px)),calc(var(--atk-dy) * .5 - 100px),0) scale(1.1) rotate(180deg); }
+      96% { opacity:1; }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px)),calc(var(--atk-dy) + var(--py)),0) scale(1.2) rotate(360deg); }
+    }
+    .skfx-path--fall { animation-name:skfxFall; animation-timing-function:ease-in; }
+    @keyframes skfxFall {
+      0% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) - 44px),calc(var(--atk-dy) + var(--py) - 120px),0); }
+      12% { opacity:1; }
+      90% { opacity:1; }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px)),calc(var(--atk-dy) + var(--py)),0); }
+    }
+    .skfx-path--rise { animation-name:skfxRise; animation-timing-function:ease-out; }
+    @keyframes skfxRise {
+      0% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) * .2),calc(var(--atk-dy) + 20px),0) scale(.5) rotate(0deg); }
+      15% { opacity:1; }
+      55% { opacity:1; transform:translate3d(calc(var(--atk-dx) + var(--px)),calc(var(--atk-dy) + var(--py) - 120px),0) scale(1.1) rotate(90deg); }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) * 1.3),calc(var(--atk-dy) + var(--py) - 60px),0) scale(.9) rotate(200deg); }
+    }
+    .skfx-path--orbit { animation-name:skfxOrbit; animation-timing-function:ease-in-out; }
+    @keyframes skfxOrbit {
+      0% { opacity:0; transform:translate3d(0,-10px,0) scale(.3); }
+      15% { opacity:1; transform:translate3d(var(--px),calc(var(--py) - 10px),0) scale(1); }
+      35% { transform:translate3d(calc(var(--py) * -1),calc(var(--px) - 10px),0) scale(1); }
+      55% { transform:translate3d(calc(var(--px) * -1),calc(var(--py) * -1 - 10px),0) scale(1); }
+      92% { opacity:1; transform:translate3d(calc(var(--atk-dx) + var(--px) * .2),calc(var(--atk-dy) + var(--py) * .2),0) scale(1.2); }
+      100% { opacity:0; transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(.6); }
+    }
+    /* 形。着弾で飛び散る小片(.skfx-bit)にも同じ形を使う */
+    .skfx-bit { left:0; top:0; }
+    .skfx-p--star { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:0; box-shadow:none;
+      background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f59e0b);
+      clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+    .skfx-p--flame { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
+      background:radial-gradient(circle at 50% 70%,#fff 0 15%,#bef264 35%,#65a30d 70%,rgba(101,163,13,0)); box-shadow:0 0 10px #84cc16; }
+    .skfx-p--leaf { width:16px; height:9px; margin:-4px 0 0 -8px; border-radius:0 100% 0 100%;
+      background:linear-gradient(135deg,#bbf7d0,#22c55e 60%,#15803d); box-shadow:0 0 6px rgba(34,197,94,.8); }
+    .skfx-p--rice { width:6px; height:10px; margin:-5px 0 0 -3px; border-radius:50%; background:#fffdf5; box-shadow:0 0 4px #fde68a; }
+    .skfx-p--petal { width:10px; height:7px; margin:-3px 0 0 -5px; border-radius:0 100% 0 100%; background:#fbcfe8; box-shadow:0 0 4px #f9a8d4; }
+    .skfx-p--meteor { width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%;
+      background:radial-gradient(circle at 60% 60%,#fff 0 18%,#fdba74 40%,#ea580c 70%,rgba(234,88,12,0)); box-shadow:0 0 14px #f97316; }
+    .skfx-p--meteor::before { content:''; position:absolute; left:5px; bottom:9px; width:8px; height:46px; border-radius:999px;
+      background:linear-gradient(to top,rgba(253,186,116,.9),rgba(234,88,12,0)); transform-origin:50% 100%; transform:rotate(-20deg); }
+    .skfx-p--drop { width:4px; height:28px; margin:-14px 0 0 -2px; border-radius:999px; rotate:-20deg;
+      background:linear-gradient(to bottom,rgba(191,219,254,0),#93c5fd 50%,#eff6ff); box-shadow:0 0 4px rgba(147,197,253,.8); }
+    .skfx-p--water { width:9px; height:11px; margin:-5px 0 0 -4px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:radial-gradient(circle at 40% 35%,#fff 0 15%,#bae6fd 40%,#38bdf8 80%); box-shadow:0 0 6px #7dd3fc; }
+    .skfx-p--berry { width:16px; height:18px; margin:-9px 0 0 -8px; border-radius:50% 50% 45% 45% / 40% 40% 60% 60%;
+      background:radial-gradient(circle at 35% 35%,#fff 0 8%,rgba(255,255,255,0) 9%),radial-gradient(circle at 60% 60%,#fb7185,#e11d48 60%,#9f1239);
+      box-shadow:0 0 8px rgba(244,63,94,.8); }
+    .skfx-p--berry::before { content:''; position:absolute; top:-4px; left:3px; width:10px; height:6px; border-radius:50%; background:#22c55e; }
+    .skfx-p--candy { width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%;
+      background:conic-gradient(hsl(var(--ph) 90% 70%) 0 25%,#fff 0 50%,hsl(var(--ph) 90% 70%) 0 75%,#fff 0);
+      box-shadow:0 0 8px hsl(var(--ph) 90% 65%); }
+    .skfx-p--ghost { width:22px; height:26px; margin:-13px 0 0 -11px; border-radius:50% 50% 35% 35% / 60% 60% 40% 40%;
+      background:radial-gradient(circle at 50% 35%,#a78bfa 0 12%,#4c1d95 45%,rgba(30,10,60,.85) 75%); box-shadow:0 0 12px #7c3aed; }
+    .skfx-p--ghost::before { content:''; position:absolute; left:6px; top:9px; width:3px; height:4px; border-radius:50%;
+      background:#f5f3ff; box-shadow:7px 0 #f5f3ff; }
+    .skfx-p--butterfly { width:22px; height:16px; margin:-8px 0 0 -11px; background:none; border-radius:0; box-shadow:none; }
+    .skfx-p--butterfly::before, .skfx-p--butterfly::after { content:''; position:absolute; top:0; width:11px; height:16px;
+      background:radial-gradient(circle at 50% 40%,#fff 0 12%,hsl(var(--ph) 85% 70%) 40%,hsl(var(--ph) 80% 45%) 80%);
+      box-shadow:0 0 8px hsl(var(--ph) 90% 70%); animation:skfxFlap 110ms ease-in-out infinite alternate; }
+    .skfx-p--butterfly::before { left:0; border-radius:80% 20% 70% 30%; transform-origin:100% 50%; }
+    .skfx-p--butterfly::after { right:0; border-radius:20% 80% 30% 70%; transform-origin:0 50%; }
+    @keyframes skfxFlap { 0% { transform:scaleX(1); } 100% { transform:scaleX(.35); } }
+    .skfx-p--fruit { width:15px; height:15px; margin:-7px 0 0 -7px; border-radius:50%;
+      background:radial-gradient(circle at 35% 35%,#fff 0 12%,hsl(var(--ph) 85% 65%) 40%,hsl(var(--ph) 75% 40%) 85%);
+      box-shadow:0 0 10px hsl(var(--ph) 90% 65%); }
+    .skfx-p--heart { width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:0; box-shadow:none; background:#f472b6;
+      clip-path:polygon(50% 90%,10% 50%,0 25%,15% 5%,35% 5%,50% 20%,65% 5%,85% 5%,100% 25%,90% 50%); }
+    .skfx-p--dust { width:12px; height:12px; margin:-6px 0 0 -6px; background:radial-gradient(circle,#fde68a,#a16207 60%,rgba(161,98,7,0)); box-shadow:none; }
+    .skfx-p--cream { width:12px; height:12px; margin:-6px 0 0 -6px; background:radial-gradient(circle,#fff 30%,#fecdd3 70%,rgba(254,205,211,0)); box-shadow:0 0 6px #fff; }
+    /* 敵に重ねる大きな絵 */
+    .skfx-over i { position:absolute; opacity:0; pointer-events:none; }
+    .skfx-over--slash i:first-child { left:-5px; top:-80px; width:10px; height:160px; border-radius:999px;
+      background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 30%,#fda4af 50%,#fff 70%,rgba(255,255,255,0));
+      box-shadow:0 0 16px #fda4af,0 0 30px #fff; animation:skfxSlash 280ms ease-out forwards; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--slash i:not(:first-child) { display:none; }
+    @keyframes skfxSlash {
+      0% { opacity:0; transform:rotate(-18deg) scaleY(0); }
+      30% { opacity:1; transform:rotate(-18deg) scaleY(1.05); }
+      70% { opacity:1; transform:rotate(-18deg) scaleY(1) scaleX(.6); }
+      100% { opacity:0; transform:rotate(-18deg) scaleY(1) scaleX(.1); }
+    }
+    .skfx-over--aurora i { left:-70px; top:-95px; width:140px; height:150px; border-radius:50% / 30%; filter:blur(6px); mix-blend-mode:screen;
+      background:linear-gradient(to bottom,rgba(0,0,0,0),hsl(var(--ah,160) 90% 60% / .75) 40%,hsl(calc(var(--ah,160) + 40) 90% 60% / .5) 70%,rgba(0,0,0,0));
+      animation:skfxAurora var(--thm-ms) ease-in-out forwards; }
+    .skfx-over--aurora i:nth-child(2) { --ah:270; left:-95px; animation-delay:60ms; }
+    .skfx-over--aurora i:nth-child(3) { --ah:110; left:-45px; animation-delay:120ms; }
+    @keyframes skfxAurora {
+      0%,20% { opacity:0; transform:translateY(-30px) skewX(0deg) scaleY(.4); }
+      45% { opacity:.9; transform:translateY(0) skewX(-14deg) scaleY(1); }
+      62% { opacity:.9; transform:translateY(0) skewX(12deg) scaleY(1.05); }
+      80% { opacity:.75; transform:translateY(4px) skewX(-8deg) scaleY(1); }
+      100% { opacity:0; transform:translateY(10px) skewX(0deg) scaleY(1.1); }
+    }
+    .skfx-over--shadow i { left:-10px; top:-50px; width:20px; height:70px; border-radius:50% 50% 20% 20%; transform-origin:50% 100%;
+      background:linear-gradient(to top,rgba(46,16,101,0),#4c1d95 40%,#1e1b4b); box-shadow:0 0 12px #6d28d9;
+      animation:skfxShadowHand 380ms ease-out forwards; animation-delay:calc(var(--hit-at) - 180ms); }
+    .skfx-over--shadow i:nth-child(1) { translate:-26px 10px; rotate:-18deg; }
+    .skfx-over--shadow i:nth-child(2) { translate:0 20px; animation-delay:calc(var(--hit-at) - 140ms); }
+    .skfx-over--shadow i:nth-child(3) { translate:26px 10px; rotate:18deg; animation-delay:calc(var(--hit-at) - 100ms); }
+    @keyframes skfxShadowHand {
+      0% { opacity:0; transform:scaleY(0); }
+      40% { opacity:.95; transform:scaleY(1.1); }
+      70% { opacity:.9; transform:scaleY(1); }
+      100% { opacity:0; transform:scaleY(.3); }
+    }
+
+    /* ==== 全モンスターの技ごとの動き(2026-09-29 ユーザー指示「全モンスターも技別の攻撃アクション作って」) ====
+       24-battle-fx.jsx の SKILL_MOTION_SETS が、下の部品を組み合わせて使う。色は --c1(明)/--c2(濃)、
+       飛ぶものの色相は --ph。着弾は --hit-at、尺は --thm-ms */
+    /* 本体の動き(追加) */
+    .skfx-body--kick .thm-atk__monster { animation-name:skfxKick; }
+    @keyframes skfxKick {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      14% { transform:translate3d(0,6px,0) scale(1.14,.86) rotate(0deg); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 50px),0) scale(1) rotate(-25deg); }
+      44% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.08) rotate(28deg); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .84),calc(var(--atk-dy) * .84 - 8px),0) scale(1) rotate(10deg); }
+      76% { transform:translate3d(calc(var(--atk-dx) * .25),calc(var(--atk-dy) * .25 - 30px),0) scale(1) rotate(-200deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(-360deg); }
+    }
+    .skfx-body--spin .thm-atk__monster { animation-name:skfxSpin; transform-origin:50% 50%; }
+    @keyframes skfxSpin {
+      0% { transform:translate3d(0,0,0) scale(1,1); }
+      8% { transform:translate3d(0,0,0) scale(-1,1); }
+      16% { transform:translate3d(0,0,0) scale(1,1); }
+      24% { transform:translate3d(0,0,0) scale(-1,1); }
+      32% { transform:translate3d(0,-6px,0) scale(1,1); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5),0) scale(-1.05,1.05); }
+      /* 当たる前後(着弾は尺の54%)は正面を向いたまま。裏返りの途中で当てると絵が細く見える */
+      48% { transform:translate3d(calc(var(--atk-dx) * .88),calc(var(--atk-dy) * .88),0) scale(1.1,1.1); }
+      60% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.08,1.08); }
+      70% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7),0) scale(-1,1); }
+      82% { transform:translate3d(calc(var(--atk-dx) * .2),calc(var(--atk-dy) * .2),0) scale(1,1); }
+      100% { transform:translate3d(0,0,0) scale(1,1); }
+    }
+    .skfx-body--jump .thm-atk__monster { animation-name:skfxJump; }
+    @keyframes skfxJump {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      12% { transform:translate3d(0,8px,0) scale(1.18,.8); }
+      36% { transform:translate3d(calc(var(--atk-dx) * .55),calc(var(--atk-dy) * .55 - 130px),0) scale(.94,1.08); }
+      52% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 6px),0) scale(1); }
+      58% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.35,.68); }
+      74% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 60px),0) scale(1); }
+      92% { transform:translate3d(0,6px,0) scale(1.1,.9); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--float .thm-atk__monster { animation-name:skfxFloat; }
+    @keyframes skfxFloat {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      30% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 110px),0) scale(1.05); filter:drop-shadow(0 0 12px var(--c2)); }
+      50% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 124px),0) scale(1.1); filter:drop-shadow(0 0 20px var(--c2)); }
+      58% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.3,.72); filter:drop-shadow(0 0 20px var(--c2)); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7 - 50px),0) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--dash .thm-atk__monster { animation-name:skfxDash; }
+    @keyframes skfxDash {
+      0% { transform:translate3d(0,0,0) scale(1) skewX(0deg); filter:none; opacity:1; }
+      12% { transform:translate3d(calc(var(--atk-dx) * -.08),calc(var(--atk-dy) * -.08 + 4px),0) scale(1.1,.9) skewX(12deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * 1.02),calc(var(--atk-dy) * 1.02),0) scale(1.05,.95) skewX(-18deg); filter:drop-shadow(-18px 0 6px var(--c2)); }
+      34% { transform:translate3d(calc(var(--atk-dx) * 1.2),calc(var(--atk-dy) * 1.2),0) scale(1) skewX(-6deg); opacity:.85; }
+      48% { transform:translate3d(calc(var(--atk-dx) * 1.2),calc(var(--atk-dy) * 1.2),0) scale(1) skewX(0deg); opacity:0; }
+      60% { transform:translate3d(0,-10px,0) scale(.9); opacity:0; filter:none; }
+      80%,100% { transform:translate3d(0,0,0) scale(1); opacity:1; }
+    }
+    .skfx-body--shake .thm-atk__monster { animation-name:skfxShake; }
+    @keyframes skfxShake {
+      0%,100% { transform:translate3d(0,0,0) rotate(0deg); filter:none; }
+      10% { transform:translate3d(-6px,0,0) rotate(-12deg); }
+      20% { transform:translate3d(6px,-4px,0) rotate(12deg); filter:drop-shadow(0 0 10px var(--c2)); }
+      30% { transform:translate3d(-6px,0,0) rotate(-14deg); }
+      40% { transform:translate3d(6px,-6px,0) rotate(14deg); }
+      50% { transform:translate3d(0,4px,0) rotate(0deg) scale(1.1,.9); filter:drop-shadow(0 0 16px var(--c2)); }
+      62% { transform:translate3d(-4px,0,0) rotate(-8deg); }
+      74% { transform:translate3d(4px,0,0) rotate(8deg); }
+    }
+    .skfx-body--hop .thm-atk__monster { animation-name:skfxHop; }
+    @keyframes skfxHop {
+      0%,100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      12% { transform:translate3d(0,4px,0) scale(1.1,.9); }
+      24% { transform:translate3d(0,-26px,0) scale(.95,1.06); filter:drop-shadow(0 0 12px var(--c2)); }
+      36% { transform:translate3d(0,2px,0) scale(1.08,.92); }
+      50% { transform:translate3d(0,-20px,0) scale(.96,1.05) rotate(-6deg); filter:drop-shadow(0 0 16px var(--c2)); }
+      62% { transform:translate3d(0,2px,0) scale(1.06,.94) rotate(0deg); }
+      76% { transform:translate3d(0,-12px,0) scale(1) rotate(6deg); }
+      88% { transform:translate3d(0,0,0) scale(1.04,.96); }
+    }
+    .skfx-body--warp .thm-atk__monster { animation-name:skfxWarp; }
+    @keyframes skfxWarp {
+      0% { transform:translate3d(0,0,0) scale(1); opacity:1; filter:none; }
+      16% { transform:translate3d(0,0,0) scale(.3,1.6); opacity:0; filter:drop-shadow(0 0 16px var(--c2)); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 30px),0) scale(.3,1.6); opacity:0; }
+      42% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 20px),0) scale(1.1); opacity:1; filter:drop-shadow(0 0 18px var(--c2)); }
+      50% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.2,.85); opacity:1; }
+      64% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 10px),0) scale(.3,1.6); opacity:0; }
+      80% { transform:translate3d(0,0,0) scale(.3,1.6); opacity:0; }
+      100% { transform:translate3d(0,0,0) scale(1); opacity:1; filter:none; }
+    }
+    .skfx-body--jab .thm-atk__monster { animation-name:skfxJab; }
+    @keyframes skfxJab {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      14% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7),0) scale(1.05) rotate(-6deg); }
+      22% { transform:translate3d(calc(var(--atk-dx) * .88),calc(var(--atk-dy) * .88),0) scale(1.12,.92) rotate(8deg); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .74),calc(var(--atk-dy) * .74),0) scale(1) rotate(-4deg); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.14,.9) rotate(-10deg); }
+      50% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1) rotate(4deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+    /* 本体から敵へのびる帯(追加)。色は --c1/--c2 */
+    .skfx-line--ray i { width:16px; left:-8px; border-radius:999px;
+      background:linear-gradient(90deg,var(--c3),var(--c2) 22%,var(--c1) 40%,#fff 50%,var(--c1) 60%,var(--c2) 78%,var(--c3));
+      box-shadow:0 0 12px var(--c2),0 0 26px var(--c2); animation-name:skfxBeam; }
+    .skfx-line--bolt i { width:26px; left:-13px; border-radius:0; background:linear-gradient(90deg,var(--c2),#fff 50%,var(--c2));
+      clip-path:polygon(40% 0,70% 0,52% 22%,78% 22%,40% 50%,62% 50%,24% 100%,38% 58%,14% 58%,44% 28%,20% 28%);
+      filter:drop-shadow(0 0 6px var(--c2)); animation-name:skfxBeam; }
+    .skfx-line--whip i { width:10px; left:-5px; border-radius:999px; background:linear-gradient(90deg,var(--c2),var(--c1) 50%,var(--c2));
+      box-shadow:0 0 8px var(--c2); animation-name:skfxTongue; animation-timing-function:ease-in-out; }
+    /* 飛ぶもの(追加)。色相は --ph */
+    .skfx-p--note { width:18px; height:22px; margin:-11px 0 0 -9px; background:none; box-shadow:none; }
+    .skfx-p--note::before { content:'♪'; position:absolute; inset:0; font:900 20px/22px sans-serif; text-align:center;
+      color:hsl(var(--ph) 90% 72%); text-shadow:0 0 6px hsl(var(--ph) 90% 60%),0 0 2px #fff; }
+    .skfx-p--bolt { width:12px; height:22px; margin:-11px 0 0 -6px; background:linear-gradient(#fff,#fde047 40%,#facc15);
+      clip-path:polygon(55% 0,100% 0,62% 42%,90% 42%,20% 100%,40% 55%,8% 55%); filter:drop-shadow(0 0 5px #facc15); }
+    .skfx-p--ice { width:12px; height:20px; margin:-10px 0 0 -6px; background:linear-gradient(135deg,#fff,#bae6fd 45%,#38bdf8);
+      clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); filter:drop-shadow(0 0 5px #7dd3fc); }
+    .skfx-p--rock { width:16px; height:14px; margin:-7px 0 0 -8px; background:radial-gradient(circle at 35% 30%,#d6d3d1,#78716c 60%,#44403c);
+      clip-path:polygon(20% 0,75% 8%,100% 45%,82% 100%,25% 92%,0 50%); }
+    .skfx-p--seed { width:9px; height:13px; margin:-6px 0 0 -4px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:radial-gradient(circle at 40% 35%,#fef3c7,#a16207 55%,#713f12); box-shadow:0 0 4px rgba(161,98,7,.7); }
+    .skfx-p--needle { width:3px; height:24px; margin:-12px 0 0 -1px; border-radius:999px; background:linear-gradient(#fff,#cbd5e1 50%,#64748b);
+      box-shadow:0 0 4px #e2e8f0; rotate:var(--atk-rot); }
+    .skfx-p--orb { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 18%,hsl(var(--ph) 90% 70%) 45%,hsl(var(--ph) 85% 50% / 0) 72%); box-shadow:0 0 12px hsl(var(--ph) 90% 60%); }
+    .skfx-p--feather { width:8px; height:22px; margin:-11px 0 0 -4px; border-radius:50% 50% 50% 50% / 80% 80% 20% 20%;
+      background:linear-gradient(90deg,#e2e8f0,#fff 50%,#cbd5e1); box-shadow:0 0 4px #fff; rotate:25deg; }
+    .skfx-p--gas { width:24px; height:20px; margin:-10px 0 0 -12px; border-radius:50%; filter:blur(2px);
+      background:radial-gradient(circle,hsl(var(--ph) 70% 60% / .9),hsl(var(--ph) 60% 45% / .5) 55%,hsl(var(--ph) 60% 45% / 0) 75%); }
+    .skfx-p--blade { width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:none;
+      border-top:4px solid var(--c1); border-right:2px solid var(--c2); box-shadow:none; filter:drop-shadow(0 0 5px var(--c2)); rotate:-30deg; }
+    .skfx-p--snow { width:14px; height:14px; margin:-7px 0 0 -7px; background:#f8fafc;
+      clip-path:polygon(50% 0,58% 36%,93% 25%,64% 50%,93% 75%,58% 64%,50% 100%,42% 64%,7% 75%,36% 50%,7% 25%,42% 36%); filter:drop-shadow(0 0 4px #bae6fd); }
+    .skfx-p--bubble { width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff 0 12%,rgba(186,230,253,.25) 30%,rgba(125,211,252,.5) 90%);
+      border:1.5px solid rgba(224,242,254,.9); box-shadow:0 0 6px rgba(125,211,252,.7); }
+    .skfx-p--cross { width:14px; height:18px; margin:-9px 0 0 -7px; background:linear-gradient(#fff,#fde68a 40%,#f59e0b);
+      clip-path:polygon(38% 0,62% 0,62% 28%,100% 28%,100% 48%,62% 48%,62% 100%,38% 100%,38% 48%,0 48%,0 28%,38% 28%); filter:drop-shadow(0 0 6px #fbbf24); }
+    .skfx-p--ring { width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:none;
+      border:3px solid hsl(var(--ph) 90% 72%); box-shadow:0 0 8px hsl(var(--ph) 90% 60%),inset 0 0 6px hsl(var(--ph) 90% 60%); }
+    .skfx-p--spark { width:10px; height:10px; margin:-5px 0 0 -5px; background:hsl(var(--ph) 95% 75%);
+      clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%); filter:drop-shadow(0 0 5px hsl(var(--ph) 90% 60%)); }
+    .skfx-p--sakura { width:12px; height:9px; margin:-4px 0 0 -6px; border-radius:0 100% 0 100%;
+      background:linear-gradient(135deg,#fff,hsl(var(--ph) 85% 82%) 50%,hsl(var(--ph) 75% 66%)); box-shadow:0 0 4px hsl(var(--ph) 80% 75%); }
+    .skfx-p--fire { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
+      background:radial-gradient(circle at 50% 70%,#fff 0 15%,hsl(calc(var(--ph) + 20) 100% 65%) 35%,hsl(var(--ph) 95% 50%) 70%,hsl(var(--ph) 95% 50% / 0));
+      box-shadow:0 0 10px hsl(var(--ph) 95% 55%); }
+    .skfx-p--sword { width:6px; height:30px; margin:-15px 0 0 -3px; border-radius:40% 40% 2px 2px / 20% 20% 2px 2px;
+      background:linear-gradient(90deg,#94a3b8,#fff 50%,#cbd5e1); box-shadow:0 0 6px var(--c2); rotate:var(--atk-rot); }
+    .skfx-p--sword::after { content:''; position:absolute; left:-4px; bottom:6px; width:14px; height:3px; background:#b45309; border-radius:2px; }
+    /* 敵に重ねる大きな絵(追加)。色は --c1/--c2 */
+    .skfx-over--thunder i:first-child { left:-16px; top:-170px; width:32px; height:180px; background:linear-gradient(to bottom,var(--c3),var(--c1) 30%,#fff 60%,var(--c1));
+      clip-path:polygon(45% 0,75% 0,55% 30%,85% 30%,35% 64%,58% 64%,20% 100%,38% 66%,12% 66%,44% 32%,22% 32%);
+      filter:drop-shadow(0 0 10px var(--c2)); animation:skfxThunder 300ms ease-out forwards; animation-delay:calc(var(--hit-at) - 80ms); }
+    .skfx-over--thunder i:not(:first-child) { display:none; }
+    @keyframes skfxThunder { 0% { opacity:0; transform:scaleY(.2); transform-origin:50% 0; } 25% { opacity:1; transform:scaleY(1); } 45% { opacity:.4; } 60% { opacity:1; } 100% { opacity:0; transform:scaleY(1); } }
+    .skfx-over--xslash i { left:-5px; top:-70px; width:10px; height:140px; border-radius:999px;
+      background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 30%,var(--c1) 50%,#fff 70%,rgba(255,255,255,0));
+      box-shadow:0 0 14px var(--c2),0 0 26px #fff; animation:skfxXslashA 260ms ease-out forwards; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--xslash i:nth-child(2) { animation-name:skfxXslashB; animation-delay:calc(var(--hit-at) + 40ms); }
+    .skfx-over--xslash i:nth-child(3) { display:none; }
+    @keyframes skfxXslashA { 0% { opacity:0; transform:rotate(-40deg) scaleY(0); } 35% { opacity:1; transform:rotate(-40deg) scaleY(1.05); } 100% { opacity:0; transform:rotate(-40deg) scaleY(1) scaleX(.1); } }
+    @keyframes skfxXslashB { 0% { opacity:0; transform:rotate(40deg) scaleY(0); } 35% { opacity:1; transform:rotate(40deg) scaleY(1.05); } 100% { opacity:0; transform:rotate(40deg) scaleY(1) scaleX(.1); } }
+    .skfx-over--claw i { left:-4px; top:-50px; width:7px; height:100px; border-radius:999px; background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 35%,var(--c1) 55%,rgba(255,255,255,0));
+      box-shadow:0 0 10px var(--c2); animation:skfxClawMark 260ms ease-out forwards; animation-delay:calc(var(--hit-at) - 50ms); }
+    .skfx-over--claw i:nth-child(1) { translate:-18px 0; } .skfx-over--claw i:nth-child(3) { translate:18px 0; }
+    @keyframes skfxClawMark { 0% { opacity:0; transform:rotate(28deg) scaleY(0); } 35% { opacity:1; transform:rotate(28deg) scaleY(1); } 100% { opacity:0; transform:rotate(28deg) scaleY(1) scaleX(.2); } }
+    .skfx-over--pillar i:first-child { left:-26px; top:-190px; width:52px; height:230px; border-radius:40% 40% 20% 20%;
+      background:linear-gradient(90deg,var(--c3),var(--c2) 20%,var(--c1) 40%,#fff 50%,var(--c1) 60%,var(--c2) 80%,var(--c3));
+      filter:blur(1px); mix-blend-mode:screen; animation:skfxPillar 420ms ease-out forwards; animation-delay:calc(var(--hit-at) - 120ms); }
+    .skfx-over--pillar i:not(:first-child) { display:none; }
+    @keyframes skfxPillar { 0% { opacity:0; transform:scaleX(.1); } 30% { opacity:1; transform:scaleX(1.1); } 70% { opacity:.9; transform:scaleX(.8); } 100% { opacity:0; transform:scaleX(.1); } }
+    .skfx-over--tornado i { left:-40px; top:-110px; width:80px; height:130px; border-radius:50% 50% 45% 45% / 30% 30% 70% 70%;
+      background:repeating-linear-gradient(170deg,rgba(255,255,255,0) 0 8px,var(--c1) 9px 12px,rgba(255,255,255,0) 13px 22px);
+      -webkit-mask-image:linear-gradient(to bottom,#000,#000 60%,transparent); mask-image:linear-gradient(to bottom,#000,#000 60%,transparent);
+      clip-path:polygon(0 0,100% 0,62% 100%,38% 100%); filter:drop-shadow(0 0 8px var(--c2)); animation:skfxTornado 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 200ms); }
+    .skfx-over--tornado i:nth-child(2) { animation-delay:calc(var(--hit-at) - 140ms); scale:.8 1; }
+    .skfx-over--tornado i:nth-child(3) { display:none; }
+    @keyframes skfxTornado { 0% { opacity:0; transform:scaleY(.3) rotateY(0deg); } 30% { opacity:1; } 70% { opacity:1; transform:scaleY(1) rotateY(540deg); } 100% { opacity:0; transform:scaleY(1.1) rotateY(720deg); } }
+    .skfx-over--ice i:first-child { left:-36px; top:-60px; width:72px; height:84px; background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(186,230,253,.55) 40%,rgba(56,189,248,.45));
+      clip-path:polygon(20% 0,80% 6%,100% 40%,88% 100%,12% 94%,0 38%); border:2px solid #e0f2fe; filter:drop-shadow(0 0 10px #7dd3fc);
+      animation:skfxIce 480ms ease-out forwards; animation-delay:calc(var(--hit-at) - 40ms); }
+    .skfx-over--ice i:not(:first-child) { display:none; }
+    @keyframes skfxIce { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; transform:scale(1.05); } 75% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.25); } }
+    .skfx-over--bite i { left:-36px; width:72px; height:30px; background:#f8fafc; box-shadow:0 0 8px var(--c2);
+      animation-duration:300ms; animation-fill-mode:forwards; animation-timing-function:ease-in; animation-delay:calc(var(--hit-at) - 120ms); }
+    .skfx-over--bite i:nth-child(1) { top:-46px; clip-path:polygon(0 0,100% 0,100% 40%,92% 100%,84% 40%,75% 100%,67% 40%,58% 100%,50% 40%,42% 100%,33% 40%,25% 100%,17% 40%,8% 100%,0 40%); animation-name:skfxBiteTop; }
+    .skfx-over--bite i:nth-child(2) { top:16px; clip-path:polygon(0 60%,8% 0,17% 60%,25% 0,33% 60%,42% 0,50% 60%,58% 0,67% 60%,75% 0,84% 60%,92% 0,100% 60%,100% 100%,0 100%); animation-name:skfxBiteBottom; }
+    .skfx-over--bite i:nth-child(3) { display:none; }
+    @keyframes skfxBiteTop { 0% { opacity:0; transform:translateY(-24px); } 30% { opacity:1; } 70% { opacity:1; transform:translateY(16px); } 100% { opacity:0; transform:translateY(14px); } }
+    @keyframes skfxBiteBottom { 0% { opacity:0; transform:translateY(24px); } 30% { opacity:1; } 70% { opacity:1; transform:translateY(-16px); } 100% { opacity:0; transform:translateY(-14px); } }
+    .skfx-over--boom i { left:-60px; top:-60px; width:120px; height:120px; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 12%,var(--c1) 26%,var(--c2) 48%,var(--c3) 70%); animation:skfxBoom 420ms ease-out forwards; animation-delay:var(--hit-at); }
+    .skfx-over--boom i:nth-child(2) { background:none; border:5px solid var(--c1); box-shadow:0 0 16px var(--c2); animation-name:skfxBoomRing; animation-delay:calc(var(--hit-at) + 40ms); }
+    .skfx-over--boom i:nth-child(3) { display:none; }
+    @keyframes skfxBoom { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; transform:scale(1.1); } 100% { opacity:0; transform:scale(1.6); } }
+    @keyframes skfxBoomRing { 0% { opacity:0; transform:scale(.2); } 30% { opacity:1; } 100% { opacity:0; transform:scale(2); } }
+
+    /* パンドラ(2026-10-02 設定資料 PAGE 3)。エクリプスノヴァ=魔力集束→相反爆発 / ダイスキライライ=分裂→手を取り合う→反発雷撃。
+       gather: 左に闇(紫)・右に光(金)のオーラをまとって溜め、hit の時刻で反動。split: 本体が薄くなり、光と闇の2体が左右へ分かれて、
+       中央で手を取り合い、ぶつかって弾かれる。2体の絵は SkillFxMotion が本体と同じ画像をもう2枚描く(.skfx-twin)。 */
+    .skfx-body--gather .thm-atk__monster { animation-name:skfxGather; }
+    @keyframes skfxGather {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      14% { transform:translate3d(0,6px,0) scale(1.06,.94); filter:drop-shadow(-8px 0 10px #7c3aed) drop-shadow(8px 0 10px #fde68a); }
+      40% { transform:translate3d(0,-8px,0) scale(1.12); filter:drop-shadow(-14px 0 18px #7c3aed) drop-shadow(14px 0 18px #fef3c7) drop-shadow(0 0 6px #fff); }
+      48% { transform:translate3d(-2px,-8px,0) scale(1.14); }
+      52% { transform:translate3d(2px,-8px,0) scale(1.14); filter:drop-shadow(-18px 0 24px #7c3aed) drop-shadow(18px 0 24px #fef3c7) drop-shadow(0 0 10px #fff); }
+      58% { transform:translate3d(0,4px,0) scale(.94,1.04); filter:brightness(1.7) drop-shadow(0 0 14px #fff); }
+      75% { transform:translate3d(0,0,0) scale(1.02); filter:drop-shadow(0 0 8px #c4b5fd); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    .skfx-body--split .thm-atk__monster { animation-name:skfxSplitBody; }
+    @keyframes skfxSplitBody {
+      0% { transform:translate3d(0,0,0) scale(1); opacity:1; filter:none; }
+      14% { transform:translate3d(0,0,0) scale(1.04); opacity:.9; filter:drop-shadow(0 0 12px #e9d5ff); }
+      30% { opacity:.35; filter:drop-shadow(-8px 0 10px #7c3aed) drop-shadow(8px 0 10px #fde68a); }
+      60% { opacity:.4; }
+      66% { opacity:1; transform:translate3d(0,-4px,0) scale(1.08); filter:brightness(1.6) drop-shadow(0 0 16px #fff); }
+      82% { opacity:1; transform:translate3d(0,0,0) scale(1.02); filter:drop-shadow(0 0 8px #c4b5fd); }
+      100% { opacity:1; transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    .skfx-twin { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:0; pointer-events:none;
+      transform-origin:50% 80%; animation-duration:var(--thm-ms,1200ms); animation-fill-mode:forwards; animation-timing-function:ease-in-out; }
+    .skfx-twin--dark { filter:brightness(.5) contrast(1.25) saturate(1.3) drop-shadow(0 0 10px #7c3aed); animation-name:skfxTwinDark; }
+    .skfx-twin--light { filter:brightness(1.35) saturate(.7) drop-shadow(0 0 10px #fde68a); animation-name:skfxTwinLight; }
+    @keyframes skfxTwinDark {
+      0% { opacity:0; transform:translate3d(0,0,0); }
+      12% { opacity:.8; transform:translate3d(0,0,0); }
+      30% { opacity:.9; transform:translate3d(-62%,2px,0); }
+      44% { opacity:.9; transform:translate3d(-62%,-4px,0); }
+      56% { opacity:.95; transform:translate3d(-14%,0,0); }
+      60% { opacity:1; transform:translate3d(-4%,0,0) scale(1.06); }
+      72% { opacity:.85; transform:translate3d(-42%,-6px,0) scale(1.02); }
+      100% { opacity:0; transform:translate3d(-66%,0,0); }
+    }
+    @keyframes skfxTwinLight {
+      0% { opacity:0; transform:translate3d(0,0,0); }
+      12% { opacity:.8; transform:translate3d(0,0,0); }
+      30% { opacity:.9; transform:translate3d(62%,2px,0); }
+      44% { opacity:.9; transform:translate3d(62%,-4px,0); }
+      56% { opacity:.95; transform:translate3d(14%,0,0); }
+      60% { opacity:1; transform:translate3d(4%,0,0) scale(1.06); }
+      72% { opacity:.85; transform:translate3d(42%,-6px,0) scale(1.02); }
+      100% { opacity:0; transform:translate3d(66%,0,0); }
+    }
+    /* 相反爆発: 黒い核(闇)がふくらみ、白い閃光の輪とトゲが広がる。色は固定(黒・紫・白・金) */
+    .skfx-over--eclipse i:nth-child(1) { left:-52px; top:-52px; width:104px; height:104px; border-radius:50%;
+      background:radial-gradient(circle,#000 0 30%,#1e1b4b 42%,#6d28d9 58%,rgba(109,40,217,0) 74%); animation:skfxEclipseCore 520ms ease-out forwards; animation-delay:var(--hit-at); }
+    .skfx-over--eclipse i:nth-child(2) { left:-40px; top:-40px; width:80px; height:80px; border-radius:50%; border:6px solid #fff;
+      box-shadow:0 0 22px #fde68a,0 0 44px #fff,inset 0 0 16px #fde68a; animation:skfxEclipseRing 520ms ease-out forwards; animation-delay:calc(var(--hit-at) + 30ms); }
+    .skfx-over--eclipse i:nth-child(3) { left:-110px; top:-110px; width:220px; height:220px; border-radius:50%;
+      background:repeating-conic-gradient(#fff 0 5deg,rgba(255,255,255,0) 5deg 22deg);
+      -webkit-mask-image:radial-gradient(circle,transparent 18%,#000 38%,transparent 70%); mask-image:radial-gradient(circle,transparent 18%,#000 38%,transparent 70%);
+      animation:skfxEclipseRays 520ms ease-out forwards; animation-delay:calc(var(--hit-at) + 20ms); }
+    @keyframes skfxEclipseCore { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; transform:scale(1.05); } 60% { opacity:1; transform:scale(1.25); } 100% { opacity:0; transform:scale(1.7); } }
+    @keyframes skfxEclipseRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    @keyframes skfxEclipseRays { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 30% { opacity:.95; } 100% { opacity:0; transform:scale(1.3) rotate(40deg); } }
+    /* 反発雷撃: 紫と金の雷が敵の真上から交差して落ち、白い閃光が出る */
+    .skfx-over--twinThunder i:nth-child(1), .skfx-over--twinThunder i:nth-child(2) { top:-170px; width:30px; height:180px;
+      clip-path:polygon(45% 0,75% 0,55% 30%,85% 30%,35% 64%,58% 64%,20% 100%,38% 66%,12% 66%,44% 32%,22% 32%); transform-origin:50% 100%; }
+    .skfx-over--twinThunder i:nth-child(1) { left:-30px; background:linear-gradient(to bottom,rgba(139,92,246,0),#c4b5fd 30%,#fff 60%,#8b5cf6); filter:drop-shadow(0 0 10px #7c3aed);
+      rotate:-9deg; animation:skfxTwinThunder 320ms ease-out forwards; animation-delay:calc(var(--hit-at) - 80ms); }
+    .skfx-over--twinThunder i:nth-child(2) { left:0; background:linear-gradient(to bottom,rgba(250,204,21,0),#fde68a 30%,#fff 60%,#f59e0b); filter:drop-shadow(0 0 10px #f59e0b);
+      rotate:9deg; animation:skfxTwinThunder 320ms ease-out forwards; animation-delay:calc(var(--hit-at) - 40ms); }
+    .skfx-over--twinThunder i:nth-child(3) { left:-46px; top:-46px; width:92px; height:92px; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 14%,#e9d5ff 30%,rgba(250,204,21,.65) 52%,rgba(124,58,237,0) 74%); animation:skfxBoom 420ms ease-out forwards; animation-delay:var(--hit-at); }
+    @keyframes skfxTwinThunder { 0% { opacity:0; transform:scaleY(.2); transform-origin:50% 0; } 25% { opacity:1; transform:scaleY(1); } 45% { opacity:.4; } 60% { opacity:1; } 100% { opacity:0; transform:scaleY(1); } }
+    .skfx-over--wave i { left:-30px; top:-30px; width:60px; height:60px; border-radius:50%; border:4px solid var(--c1); box-shadow:0 0 10px var(--c2),inset 0 0 8px var(--c2);
+      animation:skfxWaveRing 420ms ease-out forwards; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--wave i:nth-child(2) { animation-delay:calc(var(--hit-at) + 40ms); }
+    .skfx-over--wave i:nth-child(3) { animation-delay:calc(var(--hit-at) + 140ms); }
+    @keyframes skfxWaveRing { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.4); } }
+    .skfx-over--bloom i { left:-14px; top:-56px; width:28px; height:56px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; transform-origin:50% 100%;
+      background:linear-gradient(to top,var(--c2),var(--c1) 60%,#fff); box-shadow:0 0 10px var(--c2); animation:skfxBloom 460ms ease-out forwards; animation-delay:calc(var(--hit-at) - 100ms); }
+    .skfx-over--bloom i:nth-child(1) { --br:-60deg; } .skfx-over--bloom i:nth-child(2) { --br:0deg; } .skfx-over--bloom i:nth-child(3) { --br:60deg; }
+    @keyframes skfxBloom { 0% { opacity:0; transform:rotate(0deg) scale(.2); } 35% { opacity:1; transform:rotate(var(--br)) scale(1.1); } 80% { opacity:1; transform:rotate(calc(var(--br) * 1.3)) scale(1); } 100% { opacity:0; transform:rotate(calc(var(--br) * 1.5)) scale(1.2); } }
+    .skfx-over--gas i { left:-44px; top:-36px; width:88px; height:64px; border-radius:50%; filter:blur(5px);
+      background:radial-gradient(circle,var(--c1),var(--c2) 55%,var(--c3) 75%); animation:skfxGas 600ms ease-out forwards; animation-delay:calc(var(--hit-at) - 120ms); }
+    .skfx-over--gas i:nth-child(2) { translate:-26px 14px; scale:.7; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--gas i:nth-child(3) { translate:28px 10px; scale:.75; animation-delay:var(--hit-at); }
+    @keyframes skfxGas { 0% { opacity:0; transform:scale(.3); } 30% { opacity:.95; transform:scale(1); } 100% { opacity:0; transform:scale(1.5) translateY(-20px); } }
+    .skfx-over--cross i:first-child { left:-40px; top:-80px; width:80px; height:120px; background:linear-gradient(#fff,var(--c1) 45%,var(--c2));
+      clip-path:polygon(40% 0,60% 0,60% 28%,100% 28%,100% 44%,60% 44%,60% 100%,40% 100%,40% 44%,0 44%,0 28%,40% 28%);
+      filter:drop-shadow(0 0 14px var(--c2)); animation:skfxCrossBig 460ms ease-out forwards; animation-delay:calc(var(--hit-at) - 100ms); }
+    .skfx-over--cross i:not(:first-child) { display:none; }
+    @keyframes skfxCrossBig { 0% { opacity:0; transform:translateY(-40px) scale(.6); } 35% { opacity:1; transform:translateY(0) scale(1); } 80% { opacity:1; } 100% { opacity:0; transform:scale(1.3); } }
+    .skfx-over--sword i:first-child { left:-9px; top:-160px; width:18px; height:150px; border-radius:40% 40% 4px 4px / 12% 12% 4px 4px;
+      background:linear-gradient(90deg,#94a3b8,#fff 50%,#cbd5e1); box-shadow:0 0 16px var(--c2),0 0 30px var(--c1); animation:skfxBigSword 380ms ease-in forwards; animation-delay:calc(var(--hit-at) - 200ms); }
+    .skfx-over--sword i:nth-child(2) { left:-24px; top:-22px; width:48px; height:8px; border-radius:4px; background:#d97706; box-shadow:0 0 8px var(--c2);
+      animation:skfxBigSword 380ms ease-in forwards; animation-delay:calc(var(--hit-at) - 200ms); }
+    .skfx-over--sword i:nth-child(3) { display:none; }
+    @keyframes skfxBigSword { 0% { opacity:0; transform:translateY(-120px); } 50% { opacity:1; transform:translateY(0); } 80% { opacity:1; transform:translateY(8px); } 100% { opacity:0; transform:translateY(8px); } }
+    .skfx-over--eye i:first-child { left:-46px; top:-60px; width:92px; height:44px; border-radius:50%; background:radial-gradient(circle,#111 0 16%,var(--c2) 18% 34%,#fff 36%);
+      box-shadow:0 0 16px var(--c2); animation:skfxEye 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 260ms); }
+    .skfx-over--eye i:not(:first-child) { display:none; }
+    @keyframes skfxEye { 0% { opacity:0; transform:scaleY(0); } 30% { opacity:1; transform:scaleY(1); } 70% { opacity:1; transform:scaleY(1) scale(1.1); } 100% { opacity:0; transform:scaleY(0); } }
+    /* 拳が当たった衝撃(漫画の「ドン!」のようなギザギザ) */
+    .skfx-over--fist i:first-child { left:-46px; top:-46px; width:92px; height:92px;
+      background:radial-gradient(circle,#fff 0 18%,var(--c1) 36%,var(--c2) 70%);
+      clip-path:polygon(50% 0,58% 30%,82% 8%,72% 36%,100% 30%,78% 50%,100% 70%,72% 64%,82% 92%,58% 70%,50% 100%,42% 70%,18% 92%,28% 64%,0 70%,22% 50%,0 30%,28% 36%,18% 8%,42% 30%);
+      filter:drop-shadow(0 0 10px var(--c2));
+      animation:skfxFist 300ms ease-in forwards; animation-delay:calc(var(--hit-at) - 140ms); }
+    .skfx-over--fist i:not(:first-child) { display:none; }
+    @keyframes skfxFist { 0% { opacity:0; transform:scale(2.2); } 45% { opacity:1; transform:scale(1); } 60% { transform:scale(1.15,.9); } 100% { opacity:0; transform:scale(1.1); } }
     /* 動きを減らす設定: 本体は光るだけ、飛ぶもの・線は出さず、着弾の光だけ */
     @media (prefers-reduced-motion: reduce) {
       .thm-atk__monster { animation:thmReduced var(--thm-ms,450ms) ease-out forwards !important; }
-      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit { display:none; }
+      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over, .skfx-twin { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
+    }
+    /* ==== 固有技の格上げ(24-battle-fx.jsx の UniqueFxExtras / UniqueFxImpact。2026-10-02 ユーザー指示「固有技はもっとかっこよくしてほしい」)====
+       固有技(thm-atk--lunge / .uex)だけに足す。使う子のオーラ・残像と、敵の上の光柱・地割れ・閃光。
+       色は --c1(明)/--c2(濃)。着弾の時刻は --hit-at。敵の位置は --atk-dx/dy(.thm-atk__hit が translate する) */
+    .uex-aura { position:absolute; inset:-14%; z-index:2; border-radius:50%; pointer-events:none; opacity:0;
+      background:radial-gradient(circle, color-mix(in srgb, var(--c1,#fff) 85%, transparent) 0 18%, color-mix(in srgb, var(--c2,#c026d3) 70%, transparent) 42%, transparent 70%);
+      animation:uexAura 640ms ease-out forwards; }
+    .uex-aura i { position:absolute; inset:8%; border-radius:50%; border:3px solid var(--c1,#fff); box-shadow:0 0 12px var(--c2,#c026d3); opacity:0;
+      animation:uexAuraRing 620ms ease-out forwards; animation-delay:calc(var(--n,0) * 140ms); }
+    .uex-aura i:nth-child(2) { --n:1; } .uex-aura i:nth-child(3) { --n:2; }
+    @keyframes uexAura { 0% { opacity:0; transform:scale(.5); } 25% { opacity:1; transform:scale(1.05); } 70% { opacity:.8; transform:scale(1.2); } 100% { opacity:0; transform:scale(1.5); } }
+    @keyframes uexAuraRing { 0% { opacity:0; transform:scale(.4); } 30% { opacity:1; } 100% { opacity:0; transform:scale(1.9); } }
+    .uex-ghost { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:.34; pointer-events:none;
+      transform-origin:50% 80%; animation-duration:var(--thm-ms,500ms); animation-fill-mode:both; animation-timing-function:ease-in-out; mix-blend-mode:screen; }
+    .uex-ghost--1 { animation-delay:45ms; }
+    .uex-ghost--2 { animation-delay:90ms; opacity:.2; }
+    .skfx-body--bash .uex-ghost { animation-name:skfxBash; }
+    .skfx-body--dive .uex-ghost { animation-name:skfxDive; }
+    .skfx-body--roll .uex-ghost { animation-name:skfxRoll; }
+    .skfx-body--flip .uex-ghost { animation-name:skfxFlip; }
+    .skfx-body--toss .uex-ghost { animation-name:skfxToss; }
+    .skfx-body--lick .uex-ghost { animation-name:skfxLick; }
+    .skfx-body--slash .uex-ghost { animation-name:skfxSlashBody; }
+    .skfx-body--cast .uex-ghost { animation-name:skfxCast; }
+    .skfx-body--kick .uex-ghost { animation-name:skfxKick; }
+    .skfx-body--spin .uex-ghost { animation-name:skfxSpin; }
+    .skfx-body--jump .uex-ghost { animation-name:skfxJump; }
+    .skfx-body--float .uex-ghost { animation-name:skfxFloat; }
+    .skfx-body--dash .uex-ghost { animation-name:skfxDash; }
+    .skfx-body--shake .uex-ghost { animation-name:skfxShake; }
+    .skfx-body--hop .uex-ghost { animation-name:skfxHop; }
+    .skfx-body--warp .uex-ghost { animation-name:skfxWarp; }
+    .skfx-body--jab .uex-ghost { animation-name:skfxJab; }
+    .skfx-body--gather .uex-ghost { animation-name:skfxGather; }
+    .skfx-body--split .uex-ghost { animation-name:skfxSplitBody; }
+    .thm-atk--stomp .uex-ghost { animation-name:thmStomp; }
+    .thm-atk--beam .uex-ghost { animation-name:thmBeamBody; }
+    .thm-atk--rocks .uex-ghost { animation-name:thmRocksBody; }
+    .thm-atk--punch .uex-ghost { animation-name:thmPunchBody; }
+    .thm-atk--magic .uex-ghost { animation-name:thmMagicBody; }
+    .thm-atk--crush .uex-ghost { animation-name:thmCrush; }
+    .thm-atk--petals .uex-ghost { animation-name:thmPetalsBody; }
+    .thm-atk--vine .uex-ghost { animation-name:thmVineBody; }
+    .thm-atk--fire .uex-ghost { animation-name:thmFireBody; }
+    .uex-impact { z-index:9; }
+    .uex-pillar { position:absolute; left:-30px; bottom:-6px; width:60px; height:78vh; opacity:0; transform-origin:50% 100%;
+      background:linear-gradient(0deg, #fff 0, var(--c1,#fff) 14%, color-mix(in srgb, var(--c2,#c026d3) 85%, transparent) 55%, transparent 100%);
+      -webkit-mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+      filter:drop-shadow(0 0 10px var(--c2,#c026d3)); animation:uexPillar 420ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexPillar { 0% { opacity:0; transform:scaleX(.2) scaleY(.4); } 18% { opacity:1; transform:scaleX(1.2) scaleY(1); } 60% { opacity:.85; transform:scaleX(.8) scaleY(1); } 100% { opacity:0; transform:scaleX(.1) scaleY(1); } }
+    .uex-crack { position:absolute; left:-100px; top:-4px; width:200px; height:44px; border-radius:50%; opacity:0; z-index:-1;
+      border:4px solid var(--c1,#fff); box-shadow:0 0 14px var(--c2,#c026d3), inset 0 0 18px var(--c2,#c026d3);
+      animation:uexCrack 520ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexCrack { 0% { opacity:0; transform:scale(.2); } 20% { opacity:1; } 100% { opacity:0; transform:scale(1.9,1.5); } }
+    .uex-flash { position:absolute; left:-120px; top:-120px; width:240px; height:240px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle, #fff 0 14%, color-mix(in srgb, var(--c1,#fff) 75%, transparent) 36%, transparent 70%);
+      animation:uexFlash 340ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexFlash { 0% { opacity:0; transform:scale(.3); } 22% { opacity:1; } 100% { opacity:0; transform:scale(1.5); } }
+    /* 専用モーション(ミーア・アーク・水など)の固有技は、敵の側の着弾へ光柱と地割れを足す */
+    .atk-target-fx .uex-pillar, .atk-target-fx .uex-crack { animation-delay:170ms; }
+    .atk-target-fx { --c1:#fff7d6; --c2:#c026d3; }
+    @media (prefers-reduced-motion: reduce) { .uex-ghost, .uex-crack, .uex-aura i { display:none; } }
+    /* ==== 固有技(必殺技)に必ず乗る共通の演出(24-battle-fx.jsx の SpecialMoveFx)====
+       タメ(650ms)=暗転+光が集まる+帯に「必殺技/技名」。放った瞬間=閃光+敵の上の衝撃の輪。色は --spm-c1(明)/--spm-c2(濃)。
+       EXスキルのカットイン(.ex-cutin・z-index:9600)より下、押せる場所は塞がない */
+    .spm { position:fixed; inset:0; z-index:9550; pointer-events:none; overflow:hidden; }
+    .spm > * { position:absolute; pointer-events:none; }
+    .spm--compact { position:absolute; z-index:60; }
+    .spm__shade { inset:0; background:radial-gradient(ellipse at var(--spm-fx) var(--spm-fy), rgba(0,0,0,.2), rgba(2,2,10,.78) 70%); opacity:0; }
+    .spm--charge .spm__shade { animation:spmShadeIn 260ms ease-out forwards; }
+    .spm--release .spm__shade { opacity:1; animation:spmShadeOut 520ms ease-in 180ms forwards; }
+    @keyframes spmShadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes spmShadeOut { from { opacity:1; } to { opacity:0; } }
+    /* 使う子へ集まる光 */
+    .spm__gather { left:var(--spm-fx); top:var(--spm-fy); width:0; height:0; }
+    .spm__ring { position:absolute; left:-70px; top:-70px; width:140px; height:140px; border-radius:50%; opacity:0;
+      border:3px solid var(--spm-c1); box-shadow:0 0 14px var(--spm-c2), inset 0 0 14px var(--spm-c2);
+      animation:spmRing 650ms ease-in forwards; animation-delay:calc(var(--i) * 130ms); }
+    @keyframes spmRing { 0% { opacity:0; transform:scale(2.4); } 30% { opacity:1; } 100% { opacity:0; transform:scale(.25); } }
+    .spm__spark { position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle, #fff, var(--spm-c1) 55%, var(--spm-c2)); box-shadow:0 0 8px var(--spm-c2);
+      rotate:var(--a); animation:spmSpark 600ms ease-in forwards; animation-delay:calc(var(--i) * 45ms); }
+    @keyframes spmSpark { 0% { opacity:0; transform:translateX(130px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(1.3); } }
+    /* 斜めの帯 */
+    .spm__band { left:-10%; right:-10%; top:var(--spm-by,42%); height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
+      background:linear-gradient(90deg, rgba(6,8,18,.2), rgba(8,10,24,.92) 16%, rgba(8,10,24,.92) 84%, rgba(6,8,18,.2));
+      border-top:2px solid var(--spm-c1); border-bottom:2px solid var(--spm-c1);
+      box-shadow:0 0 16px var(--spm-c2), inset 0 0 22px color-mix(in srgb, var(--spm-c2) 45%, transparent);
+      transform:translateX(-115%) skewY(-5deg); }
+    .spm--charge .spm__band { animation:spmBandIn 280ms cubic-bezier(.2,.8,.2,1) forwards; }
+    .spm--release .spm__band { transform:translateX(0) skewY(-5deg); animation:spmBandOut 260ms ease-in 320ms forwards; }
+    @keyframes spmBandIn { from { transform:translateX(-115%) skewY(-5deg); } to { transform:translateX(0) skewY(-5deg); } }
+    @keyframes spmBandOut { from { transform:translateX(0) skewY(-5deg); opacity:1; } to { transform:translateX(115%) skewY(-5deg); opacity:0; } }
+    .spm__face { flex:0 0 auto; width:52px; height:52px; margin-top:-6px; transform:skewY(5deg); filter:drop-shadow(0 0 8px var(--spm-c2)); }
+    .spm__text { display:flex; flex-direction:column; min-width:0; transform:skewY(5deg); }
+    .spm__tag { font:900 10px/1 system-ui, sans-serif; letter-spacing:.4em; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .spm__name { margin-top:3px; font:italic 900 22px/1.1 system-ui, sans-serif; color:#fff; white-space:nowrap;
+      text-shadow:0 0 2px var(--spm-c2), 2px 2px 0 var(--spm-c2), 0 0 14px var(--spm-c2); }
+    /* 放った瞬間 */
+    .spm__flash { inset:0; background:radial-gradient(circle at var(--spm-tx) var(--spm-ty), #fff 0 6%, color-mix(in srgb, var(--spm-c1) 70%, transparent) 30%, transparent 75%); opacity:0;
+      animation:spmFlash 360ms ease-out 140ms forwards; }
+    @keyframes spmFlash { 0% { opacity:0; } 20% { opacity:.95; } 100% { opacity:0; } }
+    .spm__shock { left:var(--spm-tx); top:var(--spm-ty); width:0; height:0; }
+    .spm__shock i { position:absolute; left:-40px; top:-40px; width:80px; height:80px; border-radius:50%; opacity:0;
+      border:5px solid var(--spm-c1); box-shadow:0 0 18px var(--spm-c2), 0 0 36px var(--spm-c2); animation:spmShock 520ms ease-out 200ms forwards; }
+    .spm__shock i + i { animation-delay:300ms; border-width:3px; }
+    @keyframes spmShock { 0% { opacity:0; transform:scale(.3); } 20% { opacity:1; } 100% { opacity:0; transform:scale(4.6); } }
+    .spm__shock b { position:absolute; left:-110px; top:-110px; width:220px; height:220px; opacity:0;
+      background:repeating-conic-gradient(from 0deg, var(--spm-c1) 0 4deg, transparent 4deg 20deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 20%, transparent 62%); mask-image:radial-gradient(circle, #000 0 20%, transparent 62%);
+      animation:spmRays 460ms ease-out 200ms forwards; }
+    @keyframes spmRays { 0% { opacity:0; transform:scale(.4) rotate(0deg); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(1.6) rotate(24deg); } }
+    /* ==== 固有技のフィニッシュ(24-battle-fx.jsx の SpecialFinish / SPECIAL_FINISH)====
+       敵の上(--spm-tx/ty)を原点に、斬撃・輪・粒・柱・落下物・大波を重ねる。遅れは --d。色は --spm-c1(明)/--spm-c2(濃)。 */
+    .spm__finish { left:var(--spm-tx); top:var(--spm-ty); width:0; height:0; }
+    .spm__finish > i { position:absolute; opacity:0; pointer-events:none; }
+    .fin-blade { left:calc(var(--len) / -2 + var(--x)); top:calc(var(--w) / -2); width:var(--len); height:var(--w); border-radius:999px; rotate:var(--a); transform-origin:50% 50%;
+      background:linear-gradient(90deg, transparent, var(--spm-c1) 22%, #fff 50%, var(--spm-c1) 78%, transparent); box-shadow:0 0 12px var(--spm-c2), 0 0 28px var(--spm-c2);
+      animation:finBlade 460ms cubic-bezier(.2,.8,.2,1) var(--d) forwards; }
+    @keyframes finBlade { 0% { opacity:0; transform:scaleX(0); } 22% { opacity:1; transform:scaleX(1.06); } 70% { opacity:.9; transform:scaleX(1) scaleY(.7); } 100% { opacity:0; transform:scaleX(1) scaleY(.1); } }
+    .fin-blade--vine { background:linear-gradient(90deg, transparent, #14532d 14%, #22c55e 50%, #14532d 86%, transparent); box-shadow:0 0 10px #22c55e; animation-name:finVine; }
+    @keyframes finVine { 0% { opacity:0; transform:scaleX(0) scaleY(1.6); } 30% { opacity:1; transform:scaleX(1) scaleY(1.4); } 75% { opacity:1; transform:scaleX(1) scaleY(1); } 100% { opacity:0; transform:scaleX(1) scaleY(.3); } }
+    .fin-ring { left:-40px; top:calc(-40px * var(--flat)); width:80px; height:calc(80px * var(--flat)); border-radius:50%; border:4px solid var(--spm-c1);
+      box-shadow:0 0 16px var(--spm-c2), 0 0 34px var(--spm-c2), inset 0 0 14px var(--spm-c2); animation:finRing 560ms ease-out var(--d) forwards; }
+    @keyframes finRing { 0% { opacity:0; transform:scale(.3); } 18% { opacity:1; } 100% { opacity:0; transform:scale(var(--r)); } }
+    .fin-ring--flat { top:calc(10px - 40px * var(--flat)); }
+    .fin-ring--rune { border-style:dashed; border-width:3px; animation-name:finRune; }
+    @keyframes finRune { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 22% { opacity:1; } 80% { opacity:.9; } 100% { opacity:0; transform:scale(var(--r)) rotate(200deg); } }
+    .fin-col { left:calc(var(--w) / -2 + var(--x)); bottom:-10px; width:var(--w); height:var(--h); border-radius:50% 50% 30% 30%; transform-origin:50% 100%;
+      background:linear-gradient(0deg, #fff 0, var(--spm-c1) 16%, color-mix(in srgb, var(--spm-c2) 80%, transparent) 58%, transparent 100%);
+      filter:drop-shadow(0 0 10px var(--spm-c2)); animation:finCol 560ms ease-out var(--d) forwards; }
+    @keyframes finCol { 0% { opacity:0; transform:scaleY(.2) scaleX(.5); } 22% { opacity:1; transform:scaleY(1) scaleX(1.1); } 70% { opacity:.8; transform:scaleY(1.06) scaleX(.85); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.2); } }
+    .fin-col--sky { animation-name:finColSky; }
+    @keyframes finColSky { 0% { opacity:0; transform:translateY(-140%) scaleX(.6); } 25% { opacity:1; transform:translateY(0) scaleX(1.1); } 75% { opacity:.85; transform:translateY(0) scaleX(.8); } 100% { opacity:0; transform:translateY(0) scaleX(.2); } }
+    .fin-col--soft { filter:blur(3px) drop-shadow(0 0 10px var(--spm-c2)); opacity:0; }
+    .fin-col--flame { border-radius:50% 50% 40% 40%; background:radial-gradient(ellipse at 50% 88%, #fff9 0 8%, var(--spm-c1) 20%, var(--spm-c2) 48%, transparent 72%); filter:blur(1.5px) drop-shadow(0 0 10px var(--spm-c2)); }
+    .fin-wave { left:-150px; top:-26px; width:300px; height:52px; border-radius:50%; transform-origin:0 50%;
+      background:linear-gradient(90deg, transparent, var(--spm-c1) 20%, var(--spm-c2) 60%, transparent); box-shadow:0 0 16px var(--spm-c2); animation:finWave 600ms ease-out var(--d) forwards; }
+    @keyframes finWave { 0% { opacity:0; transform:translateX(-160px) scaleY(.4); } 30% { opacity:1; transform:translateX(-30px) scaleY(1.3); } 100% { opacity:0; transform:translateX(220px) scaleY(.6); } }
+    .fin-bit { left:-6px; top:-6px; width:12px; height:12px; opacity:0; position:absolute; pointer-events:none; rotate:var(--a);
+      background:radial-gradient(circle, #fff, var(--spm-c1) 55%, var(--spm-c2)); box-shadow:0 0 8px var(--spm-c2); border-radius:50%;
+      animation:finBit 620ms ease-out var(--d) forwards; }
+    @keyframes finBit {
+      0% { opacity:0; transform:translateX(0) rotate(0deg) scale(.5); }
+      20% { opacity:1; }
+      100% { opacity:0; transform:translateX(var(--dist)) rotate(calc(var(--spin) * 240deg)) scale(1.3); }
+    }
+    .fin-bit--rise { animation-name:finBitRise; rotate:0deg; left:calc(-6px + (var(--i) - 5) * 14px); }
+    @keyframes finBitRise { 0% { opacity:0; transform:translateY(20px) scale(.5); } 25% { opacity:1; } 100% { opacity:0; transform:translateY(calc(var(--dist) * -1.6)) scale(1.2); } }
+    .fin-bit--fall { animation-name:finBitFall; rotate:0deg; left:calc(-6px + (var(--i) - 5) * 14px); top:-200px; }
+    @keyframes finBitFall { 0% { opacity:0; transform:translateY(0) rotate(0deg); } 20% { opacity:1; } 100% { opacity:0; transform:translateY(240px) rotate(160deg); } }
+    .fin-shape--spark { border-radius:50%; } /* 既定の丸い光(.fin-bit) */
+    .fin-shape--petal { width:16px; height:10px; border-radius:80% 10% 80% 10%; background:linear-gradient(135deg, #fff, var(--spm-c1) 55%, var(--spm-c2)); }
+    .fin-shape--feather { width:8px; height:22px; border-radius:50% 50% 50% 50% / 80% 80% 20% 20%; background:linear-gradient(180deg, #fff, var(--spm-c1)); }
+    .fin-shape--star { width:20px; height:20px; border-radius:0; clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); background:radial-gradient(circle,#fff 0 30%,var(--spm-c1) 60%,var(--spm-c2)); box-shadow:none; }
+    .fin-shape--dust { width:14px; height:14px; background:radial-gradient(circle, #e7d7c1, #a8865f 60%, transparent 72%); box-shadow:none; }
+    .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
+    .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
+    .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--note::before { content:'♪'; }
+    .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--heart::before { content:'♥'; }
+    .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
+    .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
+    .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
+      animation:finFall 420ms ease-in var(--d) forwards; }
+    .fin-fall.fin-shape--rock { border-radius:25%; clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%); background:linear-gradient(135deg,#efe2cf,#a8865f 55%,#5c4330); box-shadow:none; }
+    .fin-fall.fin-shape--slab { left:-46px; width:92px; height:150px; border-radius:6px; clip-path:none; background:linear-gradient(135deg,#312e81,#0f0a2a 70%); box-shadow:0 0 20px var(--spm-c2), inset 0 0 14px var(--spm-c2); }
+    @keyframes finFall { 0% { opacity:1; transform:translateY(0); } 78% { opacity:1; transform:translateY(410px); } 100% { opacity:0; transform:translateY(420px) scale(1.3); } }
+    /* ==== 固有技の着弾の型(24-battle-fx.jsx の UNIQUE_IMPACT_FORMS)の新しい部品 ==== */
+    /* 氷柱・つるのとげ: 足元から突き出す三角 */
+    .fin-spike { left:calc(var(--w) / -2 + var(--x)); bottom:-8px; width:var(--w); height:var(--h); transform-origin:50% 100%;
+      clip-path:polygon(50% 0, 100% 100%, 0 100%); background:linear-gradient(0deg, var(--spm-c2), var(--spm-c1) 55%, #fff);
+      filter:drop-shadow(0 0 8px var(--spm-c2)); animation:finSpike 540ms cubic-bezier(.2,.9,.3,1) var(--d) forwards; }
+    @keyframes finSpike { 0% { opacity:0; transform:scaleY(0); } 24% { opacity:1; transform:scaleY(1.1); } 72% { opacity:.95; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(.9) translateY(8px); } }
+    .fin-spike--thorn { clip-path:polygon(38% 0, 66% 32%, 100% 100%, 0 100%, 20% 44%); background:linear-gradient(0deg, #14532d, #22c55e 55%, #bbf7d0); filter:drop-shadow(0 0 6px #22c55e); }
+    /* 稲妻: 空から落ちるギザギザ(チカチカまたたく) */
+    .fin-bolt { left:calc(var(--w) / -2 + var(--x)); bottom:-6px; width:var(--w); height:var(--h); transform-origin:50% 100%;
+      clip-path:polygon(44% 100%, 14% 86%, 74% 72%, 19% 58%, 69% 44%, 24% 30%, 64% 16%, 44% 0, 56% 0, 76% 16%, 36% 30%, 81% 44%, 31% 58%, 86% 72%, 26% 86%, 56% 100%);
+      background:linear-gradient(0deg, #fff, var(--spm-c1) 40%, var(--spm-c2)); filter:drop-shadow(0 0 10px var(--spm-c2)); animation:finBolt 460ms linear var(--d) forwards; }
+    @keyframes finBolt { 0% { opacity:0; } 8% { opacity:1; } 22% { opacity:.25; } 36% { opacity:1; } 52% { opacity:.4; } 68% { opacity:1; } 100% { opacity:0; } }
+    /* 水柱 */
+    .fin-col--water { border-radius:45% 45% 12% 12%; background:linear-gradient(0deg, #fff, var(--spm-c1) 18%, color-mix(in srgb, var(--spm-c2) 80%, transparent) 70%, transparent); }
+    /* 黒い渦: 中心へ吸い込まれる粒(.fin-bit--in)と、縮みながら回る黒い輪 */
+    .fin-bit--in { animation-name:finBitIn; }
+    @keyframes finBitIn { 0% { opacity:0; transform:translateX(var(--dist)) scale(1.2); } 30% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(.3); } }
+    .fin-ring--void { border-color:var(--spm-c2); background:radial-gradient(circle, rgba(0,0,0,.92) 0 46%, color-mix(in srgb, var(--spm-c2) 50%, transparent) 62%, transparent 72%);
+      box-shadow:0 0 18px var(--spm-c2), inset 0 0 18px #000; animation-name:finVoid; animation-duration:640ms; }
+    @keyframes finVoid { 0% { opacity:0; transform:scale(var(--r)) rotate(0deg); } 30% { opacity:1; } 80% { opacity:1; transform:scale(.7) rotate(160deg); } 100% { opacity:0; transform:scale(.2) rotate(220deg); } }
+    /* 光の技だけ、共通の衝撃の放射線を出す */
+    .spm:not(.spm--form-light) .spm__shock b { display:none; }
+    @media (prefers-reduced-motion: reduce) { .spm__finish { display:none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .spm__gather, .spm__shock, .spm__flash { display:none; }
     }
     /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====
        暗転 → 斜めの帯が左から入る(立ち絵・EX SKILL・名前)→ 効果ごとの模様 → 帯が右へ抜ける。色は --ex-c1(明)/--ex-c2(濃)。
@@ -1521,6 +2264,60 @@ const createAnimationStyle = () => {
       border:3px solid var(--ex-c1); box-shadow:0 0 12px var(--ex-c2); animation:exAuraRing 800ms ease-out forwards; }
     .ex-aura i + i { animation-delay:260ms; }
     @keyframes exAuraRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    /* ==== アシストカード・緊急回復のカットイン(2026-09-29 ユーザー選択。24-battle-fx.jsx の TacticsExCutin の variant) ====
+       assist … 細い帯を画面の上のほうに。暗くしすぎない・光の筋と白い光は出さない。尺は --cut-ms(バトルの速さで縮む)
+       emergency … EXと同じ帯を緑で。絵は 💊 */
+    .ex-cutin--assist .ex-cutin__shade, .ex-cutin--assist .ex-cutin__band, .ex-cutin--assist .ex-cutin__art, .ex-cutin--assist .ex-cutin__tag,
+    .ex-cutin--assist .ex-cutin__name, .ex-cutin--assist .ex-cutin__sub, .ex-cutin--assist .ex-cutin__flash, .ex-cutin--assist .ex-cutin__rays,
+    .ex-cutin--emergency .ex-cutin__shade, .ex-cutin--emergency .ex-cutin__band, .ex-cutin--emergency .ex-cutin__art, .ex-cutin--emergency .ex-cutin__tag,
+    .ex-cutin--emergency .ex-cutin__name, .ex-cutin--emergency .ex-cutin__sub, .ex-cutin--emergency .ex-cutin__flash, .ex-cutin--emergency .ex-cutin__rays
+      { animation-duration:var(--cut-ms,1300ms); }
+    .ex-cutin--assist .ex-cutin__shade { background:radial-gradient(ellipse at 50% 30%, rgba(8,6,20,.15), rgba(2,2,8,.4)); }
+    .ex-cutin--assist .ex-cutin__rays, .ex-cutin--assist .ex-cutin__flash { display:none; }
+    .ex-cutin--assist .ex-cutin__band { top:27%; height:100px; margin-top:-50px; }
+    .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
+    .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
+    .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
+    .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
+    .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }
+    /* ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」。24-battle-fx.jsx の GuardBarrier) ====
+       色は段階ごと(--gb1 明 / --gb2 濃)。金から内側の六角、水晶から回る輪、虹は色が巡る */
+    .guard-barrier { position:absolute; inset:-8%; z-index:56; pointer-events:none; display:block; --gb1:#fde68a; --gb2:#b45309; }
+    .guard-barrier--silver { --gb1:#f1f5f9; --gb2:#64748b; }
+    .guard-barrier--gold { --gb1:#fef3c7; --gb2:#f59e0b; }
+    .guard-barrier--crystal { --gb1:#cffafe; --gb2:#06b6d4; }
+    .guard-barrier--rainbow { --gb1:#fce7f3; --gb2:#d946ef; animation:gbRainbow 2400ms linear infinite; }
+    @keyframes gbRainbow { to { filter:hue-rotate(360deg); } }
+    .guard-barrier__svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; transform-origin:50% 50%; }
+    .guard-barrier__hex { fill:color-mix(in srgb, var(--gb1) 16%, transparent); stroke:var(--gb1); stroke-width:2.4; vector-effect:non-scaling-stroke;
+      filter:drop-shadow(0 0 3px var(--gb2)) drop-shadow(0 0 7px var(--gb2)); }
+    .guard-barrier__hex2 { display:none; fill:none; stroke:color-mix(in srgb, var(--gb1) 70%, transparent); stroke-width:1.2; stroke-dasharray:5 3; vector-effect:non-scaling-stroke; }
+    .guard-barrier--gold .guard-barrier__hex2, .guard-barrier--crystal .guard-barrier__hex2, .guard-barrier--rainbow .guard-barrier__hex2 { display:inline; }
+    .guard-barrier__ring { display:none; position:absolute; inset:18%; border-radius:50%; border:2px dashed color-mix(in srgb, var(--gb1) 75%, transparent);
+      box-shadow:0 0 8px var(--gb2); animation:gbSpin 3200ms linear infinite; }
+    .guard-barrier--crystal.guard-barrier--idle .guard-barrier__ring, .guard-barrier--rainbow.guard-barrier--idle .guard-barrier__ring { display:block; }
+    @keyframes gbSpin { to { transform:rotate(360deg); } }
+    .guard-barrier--idle .guard-barrier__svg { animation:gbAppear 320ms ease-out both, gbIdle 1800ms ease-in-out 320ms infinite; }
+    @keyframes gbAppear { 0% { opacity:0; transform:scale(.55); } 70% { opacity:1; transform:scale(1.07); } 100% { opacity:1; transform:scale(1); } }
+    @keyframes gbIdle { 0%,100% { opacity:.8; } 50% { opacity:1; filter:brightness(1.3); } }
+    /* 受け止めきった: 白く光って少しふくらみ、火花が外へ跳ね返る */
+    .guard-barrier--block .guard-barrier__svg { animation:gbBlock 560ms ease-out forwards; }
+    @keyframes gbBlock { 0% { opacity:1; transform:scale(1); } 18% { transform:scale(1.14); filter:brightness(2.4); } 55% { opacity:1; transform:scale(1.02); filter:brightness(1.4); } 100% { opacity:0; transform:scale(1.12); } }
+    .guard-barrier__spark { position:absolute; left:50%; top:50%; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:#fff;
+      box-shadow:0 0 6px #fff, 0 0 12px var(--gb2); opacity:0; animation:gbSpark 460ms ease-out 60ms forwards; }
+    @keyframes gbSpark { 0% { opacity:1; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(20px) scale(1); } 100% { opacity:0; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(58px) scale(.4); } }
+    /* 受けきれなかった: ひびが入ったように瞬いて消え、破片が飛び散って落ちる */
+    .guard-barrier--break .guard-barrier__svg { animation:gbBreak 420ms ease-in forwards; }
+    @keyframes gbBreak { 0% { opacity:1; transform:scale(1); } 20% { opacity:1; transform:scale(1.06) rotate(-2deg); filter:brightness(2); } 35% { opacity:.4; } 50% { opacity:1; transform:scale(1.02) rotate(2deg); } 100% { opacity:0; transform:scale(.8); } }
+    .guard-barrier__shard { position:absolute; left:50%; top:50%; width:14px; height:12px; margin:-6px 0 0 -7px; opacity:0;
+      background:linear-gradient(135deg,#fff,var(--gb1) 40%,var(--gb2)); clip-path:polygon(0 0,100% 30%,40% 100%); filter:drop-shadow(0 0 4px var(--gb2));
+      animation:gbShard 640ms cubic-bezier(.2,.7,.4,1) 120ms forwards; }
+    @keyframes gbShard { 0% { opacity:1; transform:rotate(calc(var(--k) * 45deg)) translateX(18px) rotate(0deg); } 100% { opacity:0; transform:rotate(calc(var(--k) * 45deg)) translateX(64px) translateY(26px) rotate(220deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .guard-barrier, .guard-barrier__svg, .guard-barrier__ring { animation:none !important; }
+      .guard-barrier__spark, .guard-barrier__shard { display:none; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .ex-cutin__rays, .ex-cutin__motif, .ex-cutin__lines, .ex-aura i { display:none; }
       .ex-cutin__band { animation:exShade 1600ms ease-out forwards; transform:skewY(-7deg); }
@@ -1780,7 +2577,9 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-notice] { outline: 1.5px solid rgba(243,210,122,.9); outline-offset: 1px;
       background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 50%) !important; }
     /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
-    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards;
+      /* ★赤い光は動かさず一定にする(キーフレームで filter を動かすと毎コマ描き直しになる。2026-09-28 battle-fx-lint-check) */
+      filter: drop-shadow(0 0 16px rgba(239,68,68,.85)); }
     [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
     /* ==== 敵ごとの動き(2026-09-24 ユーザー指示「待機時間も動いてる感じに」「実際に動いてるように」「まずはカワズモー」)。
        絵は1枚のまま。支点は足元(transform-origin 50% 92%)にして、伸び縮み・傾き・重心移動で「生きている」ように見せる。
@@ -2617,18 +3416,42 @@ const createAnimationStyle = () => {
     /* スプラッター: 3本の爪あと */
     [data-impact="claw"]::before { border-radius: 0; transform: rotate(-30deg);
       background: linear-gradient(90deg, transparent 18%, #fff 20%, #dc2626 22.5%, transparent 25%, transparent 46%, #fff 48%, #dc2626 50.5%, transparent 53%, transparent 74%, #fff 76%, #dc2626 78.5%, transparent 81%); }
+    /* ---- 敵の技の格上げ(71-screen-battle.jsx の TacticsEnemyStageFx。覚醒ムー以外の大技)----
+       技名の帯・当たる瞬間の閃光。色は敵の色(--em-c)。フィニッシュは固有技と同じ .spm__finish / .fin-*(.spm--enemy の中) */
+    [data-enemy-banner] { left: 0; right: 0; top: 42%; height: 0; }
+    [data-enemy-banner-band] { position: absolute; left: -10%; right: -10%; top: -30px; height: 60px; transform: skewY(-5deg);
+      background: linear-gradient(90deg, rgba(8,8,16,.2), rgba(10,10,24,.94) 16%, rgba(10,10,24,.94) 84%, rgba(8,8,16,.2));
+      border-top: 2px solid rgb(var(--em-c)); border-bottom: 2px solid rgb(var(--em-c));
+      box-shadow: 0 0 18px rgba(var(--em-c),.85), inset 0 0 22px rgba(var(--em-c),.35);
+      display: flex; align-items: center; justify-content: center; gap: 12px; animation: enBanner var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
+    [data-enemy-banner="special"] [data-enemy-banner-band] { top: -38px; height: 76px; border-width: 3px; box-shadow: 0 0 28px rgba(var(--em-c),.95), 0 0 60px rgba(var(--em-c),.5), inset 0 0 30px rgba(var(--em-c),.45); }
+    [data-enemy-banner-tag] { transform: skewY(5deg); font: 900 10px/1 system-ui, sans-serif; letter-spacing: .4em; color: color-mix(in srgb, rgb(var(--em-c)) 40%, #fff);
+      text-shadow: 0 0 8px rgb(var(--em-c)); white-space: nowrap; }
+    [data-enemy-banner-name] { transform: skewY(5deg); font-family: system-ui, sans-serif; font-style: italic; font-weight: 900; line-height: 1.1; color: #fff; white-space: nowrap; letter-spacing: .06em;
+      text-shadow: 0 0 2px rgb(var(--em-c)), 2px 2px 0 rgb(var(--em-c)), 0 0 16px rgb(var(--em-c)); }
+    @keyframes enBanner {
+      0% { opacity: 0; transform: translateX(-112%) skewY(-5deg); }
+      10% { opacity: 1; transform: translateX(0) skewY(-5deg); }
+      56% { opacity: 1; transform: translateX(1.5%) skewY(-5deg); }
+      70%, 100% { opacity: 0; transform: translateX(112%) skewY(-5deg); }
+    }
+    [data-enemy-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 62%, #fff 0 8%, rgba(var(--em-c),.55) 34%, transparent 72%); animation: enFlash 380ms ease-out both; }
+    @keyframes enFlash { 0% { opacity: 0; } 18% { opacity: .85; } 100% { opacity: 0; } }
+    .spm--enemy { z-index: 1; }
+    @media (prefers-reduced-motion: reduce) { [data-enemy-flash] { display: none; } }
     /* ---- 覚醒ムー ---- */
     [data-moo-cutin] { left: 0; right: 0; top: 50%; height: 0; }
     [data-moo-cutin-band] { position: absolute; left: -10%; right: -10%; top: -44px; height: 88px; transform: skewY(-7deg);
       background: linear-gradient(90deg, rgba(20,0,10,.95), rgba(88,10,30,.96) 30%, rgba(40,0,15,.96) 70%, rgba(20,0,10,.95));
       border-top: 3px solid #facc15; border-bottom: 3px solid #facc15; box-shadow: 0 0 40px rgba(250,204,21,.6), 0 0 90px rgba(220,38,38,.5);
       display: flex; align-items: center; justify-content: center; overflow: hidden; animation: mooCutinBand var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
-    [data-moo-cutin-band]::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(250,204,21,.08) 40px 44px); animation: mooCutinStreak 400ms linear infinite; }
+    [data-moo-cutin-band]::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; right: -88px; background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(250,204,21,.08) 40px 44px); animation: mooCutinStreak 400ms linear infinite; }
     [data-moo-cutin-band] > span { position: relative; font-weight: 900; font-size: clamp(30px, 10vw, 48px); letter-spacing: .12em; color: #fff; white-space: nowrap;
       text-shadow: 0 0 10px #facc15, 0 0 24px #dc2626, 0 3px 0 #7f1d1d; -webkit-text-stroke: 1px #facc15; animation: mooCutinText var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
     @keyframes mooCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 6% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 10%, 38% { opacity: 1; transform: skewY(-7deg) scaleY(1); } 46%, 100% { opacity: 0; transform: skewY(-7deg) scaleY(0); } }
     @keyframes mooCutinText { 0% { transform: translateX(120vw); } 10% { transform: translateX(-4vw); } 14%, 34% { transform: translateX(0); } 44%, 100% { transform: translateX(-130vw); } }
-    @keyframes mooCutinStreak { to { background-position: -88px 0; } }
+    /* 流れる筋は、88px 広げた板を横へずらして作る(背景の位置を動かすと毎コマ描き直しになる) */
+    @keyframes mooCutinStreak { to { transform: translateX(-88px); } }
     [data-moo-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 55%, #fff, rgba(255,240,200,.9) 40%, rgba(250,204,21,.4) 75%); animation: mooFlash 420ms ease-out both; }
     @keyframes mooFlash { 0% { opacity: 0; } 10% { opacity: .7; } 100% { opacity: 0; } }
     [data-moo-crack] { left: 0; top: 0; opacity: 0; overflow: visible; animation: mooCrack 900ms ease-out both; }
@@ -2838,19 +3661,15 @@ const createAnimationStyle = () => {
     @keyframes enemyAttackFly {
       0% {
         transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 6px rgba(239,68,68,0.5));
       }
       45% {
         transform: translateY(90px) scale(1.18);
-        filter: drop-shadow(0 0 20px rgba(239,68,68,0.9));
       }
       60% {
         transform: translateY(90px) scale(1.18);
-        filter: drop-shadow(0 0 28px rgba(220,38,38,1));
       }
       100% {
         transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
     @keyframes enemyMoveSlide {
@@ -3047,6 +3866,115 @@ const createAnimationStyle = () => {
     /* 選んだ瞬間の弾み(×1 の札・伸びる量など)。key を変えて付け直すと毎回鳴る */
     .mh-phase-pop { animation: mhPhasePop .34s cubic-bezier(.2,1.6,.4,1) backwards; }
     @keyframes mhPhasePop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    /* ==== トレーニング完了の演出(TrainingResultFx / 41-screen-ui.jsx)。すべて1回きりで、動き続けるものは無い。
+       --d に「いつ始めるか」を入れる。fill-mode は backwards(始まる前は隠し、終わったら素の状態へ戻す) */
+    .mh-train-title { animation: mhTrainTitle .6s cubic-bezier(.2,1.5,.4,1) backwards; }
+    @keyframes mhTrainTitle { 0% { transform: scale(.6); opacity: 0; filter: brightness(2.4); } 100% { transform: none; opacity: 1; filter: none; } }
+    .mh-train-sub { animation: mhPhaseEnter .5s ease-out .25s backwards; }
+    .mh-train-card { animation: mhTrainCard .5s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainCard { from { opacity: 0; transform: translateY(18px) scale(.95); } to { opacity: 1; transform: none; } }
+    /* 数字が最後の値へ着いた瞬間の光 */
+    .mh-train-num { animation: mhTrainNum .8s ease-out backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainNum {
+      0% { transform: scale(1); text-shadow: none; }
+      35% { transform: scale(1.35); text-shadow: 0 0 14px rgba(var(--glow, 251,191,36), .95), 0 0 4px #fff; }
+      100% { transform: scale(1); text-shadow: 0 0 6px rgba(var(--glow, 251,191,36), .45); }
+    }
+    .mh-train-gain { animation: mhTrainGain .5s cubic-bezier(.2,1.6,.4,1) backwards; animation-delay: var(--d, 0ms); }
+    /* WAVEリザルトの内訳が上から順に出てくる */
+    .mh-wave-rows > * { animation: mhPhaseEnter .42s cubic-bezier(.2,.8,.3,1) backwards; }
+    .mh-wave-rows > *:nth-child(1) { animation-delay: .1s; } .mh-wave-rows > *:nth-child(2) { animation-delay: .2s; } .mh-wave-rows > *:nth-child(3) { animation-delay: .3s; }
+    .mh-wave-rows > *:nth-child(4) { animation-delay: .4s; } .mh-wave-rows > *:nth-child(5) { animation-delay: .5s; } .mh-wave-rows > *:nth-child(6) { animation-delay: .6s; }
+    .mh-wave-rows > *:nth-child(n+7) { animation-delay: .7s; }
+    @media (prefers-reduced-motion: reduce) { .mh-wave-rows > * { animation: none !important; } }
+    @keyframes mhTrainGain { 0% { opacity: 0; transform: translateY(10px) scale(.4); } 100% { opacity: 1; transform: none; } }
+    /* カードを一度だけ横切る光の筋 */
+    .mh-train-sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: linear-gradient(105deg, transparent 35%, rgba(255,244,214,.38) 50%, transparent 65%);
+      animation: mhTrainSweep .9s ease-out backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainSweep { 0% { opacity: 1; transform: translateX(-110%); } 100% { opacity: 1; transform: translateX(110%); } }
+    /* ==== WAVEのはじまり(WaveIntro)。中央へ大きく出て、止まって、上へ抜ける。1回きり・操作は止めない ==== */
+    .mh-waveintro { position: fixed; left: 0; right: 0; top: 34%; z-index: 69000; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 8px;
+      animation: mhWaveIntro 1.5s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-waveintro-line { height: 2px; width: 78%; background: linear-gradient(90deg, transparent, #f3d27a, transparent); box-shadow: 0 0 12px rgba(243,210,122,.8); }
+    .mh-waveintro-body { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .mh-waveintro-sub { font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #f3d27a; }
+    .mh-waveintro-title { font-size: 46px; font-weight: 900; font-style: italic; letter-spacing: .06em; line-height: 1;
+      background: linear-gradient(180deg, #fff6d8, #f3d27a 55%, #c58a28); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 3px 0 rgba(0,0,0,.75)) drop-shadow(0 0 14px rgba(243,210,122,.6)); }
+    .mh-waveintro-name { font-size: 13px; font-weight: 900; color: #e2e8f0; text-shadow: 0 2px 4px rgba(0,0,0,.9); }
+    .mh-waveintro-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #f87171, transparent); box-shadow: 0 0 14px rgba(248,113,113,.9); }
+    .mh-waveintro-boss .mh-waveintro-sub { color: #fca5a5; }
+    .mh-waveintro-boss .mh-waveintro-title { font-size: 52px; background: linear-gradient(180deg, #fff1f1, #fca5a5 50%, #dc2626); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 18px rgba(248,113,113,.8)); }
+    @keyframes mhWaveIntro {
+      0% { opacity: 0; transform: scale(1.7); filter: blur(6px); }
+      18% { opacity: 1; transform: scale(1); filter: none; }
+      72% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: translateY(-24px) scale(.96); }
+    }
+    /* ==== 敵を倒した瞬間(EnemyDefeatFx)。白い閃光と大きな文字。1回きり・操作は止めない ==== */
+    /* 敵が消えてから「VICTORY!」を出す(2026-10-02・ユーザー指示「倒した演出と敵が消えてからビクトリーがあっていい」)。
+       敵は閃光のあいだに白く光って縮みながら消え(.6秒)、文字はそのあとに出る(delay .6秒)。 */
+    .mh-defeat { top: 38%; animation-duration: 1s; animation-delay: .6s; }
+    @keyframes mhEnemyDown {
+      0% { opacity: 1; transform: scale(1); }
+      28% { opacity: 1; transform: scale(1.06); }
+      100% { opacity: 0; transform: translateY(-16px) scale(.6); }
+    }
+    [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: mhEnemyDown .6s ease-in both !important; }
+    .mh-defeat .mh-waveintro-title { font-size: 50px; }
+    .mh-defeat-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #fde68a, transparent); }
+    .mh-defeat-boss .mh-waveintro-title { font-size: 54px; background: linear-gradient(180deg, #ffffff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 22px rgba(253,230,138,.95)); }
+    .mh-defeat-flash { position: fixed; inset: 0; z-index: 68000; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.85), rgba(255,255,255,0) 65%); animation: mhDefeatFlash .5s ease-out both; }
+    @keyframes mhDefeatFlash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-end-flag { animation: mhEndFlag 1s cubic-bezier(.3,.9,.3,1) backwards; transform-origin: 20% 100%; }
+    @keyframes mhEndFlag { 0% { opacity: 0; transform: translateY(-30px) rotate(-70deg) scale(1.4); } 60% { opacity: 1; transform: rotate(10deg); } 80% { transform: rotate(-5deg); } 100% { transform: none; } }
+    /* ==== ラン終了の演出。紙ふぶきは1回だけ降る。王冠・どくろ・題字・赤い縁も1回きり ==== */
+    .mh-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+    .mh-confetti > i { position: absolute; top: -4%; left: var(--x); width: 8px; height: 14px; border-radius: 2px; background: var(--c); opacity: 0;
+      animation: mhConfetti 2.6s ease-in var(--d) 1 both; }
+    @keyframes mhConfetti { 0% { opacity: 1; transform: translateY(0) rotate(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(110vh) rotate(var(--r, 360deg)) translateX(24px); } }
+    .mh-end-crown { animation: mhEndCrown .9s cubic-bezier(.2,1.6,.4,1) backwards; filter: drop-shadow(0 0 16px rgba(255,255,255,.85)); }
+    @keyframes mhEndCrown { 0% { opacity: 0; transform: translateY(-40px) scale(.3) rotate(-18deg); } 100% { opacity: 1; transform: none; } }
+    .mh-end-title { animation: mhEndTitle .8s cubic-bezier(.2,.9,.3,1) .25s backwards; }
+    @keyframes mhEndTitle { 0% { opacity: 0; letter-spacing: .6em; transform: scale(1.3); } 100% { opacity: 1; letter-spacing: normal; transform: none; } }
+    .mh-end-score { animation: mhPhasePop .5s cubic-bezier(.2,1.6,.4,1) .45s backwards; }
+    .mh-end-skull { animation: mhEndSkull 1s cubic-bezier(.3,.9,.3,1) backwards; }
+    @keyframes mhEndSkull { 0% { opacity: 0; transform: translateY(-50px) scale(1.8); } 55% { opacity: 1; transform: translateY(0) scale(1); } 65% { transform: translateX(-6px); } 75% { transform: translateX(6px); } 85% { transform: translateX(-3px); } 100% { transform: none; } }
+    .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
+    @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
+    /* バトル設定の「ラン終了の飾り」がオフのとき。紙ふぶき・王冠や題字の登場・赤い縁などを出さない(スコアなどの内容はそのまま) */
+    [data-mh-end-fx="OFF"] .mh-confetti, [data-mh-end-fx="OFF"] .mh-end-vignette { display: none; }
+    [data-mh-end-fx="OFF"] :is(.mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-flag) { animation: none !important; }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
+      .mh-defeat-flash { display: none; }
+      [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: none !important; opacity: 0; }
+      .mh-confetti { display: none; }
+    }
+    /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */
+    .mh-banner { position: fixed; left: 0; right: 0; top: 40%; z-index: 69000; pointer-events: none; overflow: hidden; height: 84px; }
+    .mh-banner-band { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      background: linear-gradient(90deg, rgba(2,6,23,0) 0%, rgba(6,8,22,.94) 18%, rgba(6,8,22,.94) 82%, rgba(2,6,23,0) 100%);
+      border-top: 1px solid rgba(243,210,122,.75); border-bottom: 1px solid rgba(243,210,122,.75);
+      box-shadow: 0 0 22px rgba(var(--ph, 251,191,36), .45);
+      animation: mhBanner .95s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-banner-title { font-size: 28px; font-weight: 900; font-style: italic; letter-spacing: .08em; line-height: 1;
+      background: linear-gradient(180deg, #fff6d8, #f3d27a 55%, #c58a28); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 2px 0 rgba(0,0,0,.7)); }
+    .mh-banner-sub { font-size: 10px; font-weight: 900; letter-spacing: .3em; color: rgb(var(--ph, 251,191,36)); }
+    @keyframes mhBanner {
+      0% { transform: translateX(-100%); opacity: 0; }
+      22% { transform: translateX(0); opacity: 1; }
+      78% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(100%); opacity: 0; }
+    }
+    .mh-train-guard { animation: mhTrainCard .5s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: var(--d, 0ms); }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-train-title, .mh-train-sub, .mh-train-card, .mh-train-num, .mh-train-gain, .mh-train-sweep, .mh-train-guard { animation: none !important; }
+      .mh-banner-band { animation: none !important; }
+      .mh-train-sweep { display: none; }
+    }
     /* 決定できるようになったボタンの呼吸 */
     .mh-phase-ready { animation: mhPhaseReady 1.6s ease-in-out infinite; }
     @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
@@ -3167,18 +4095,21 @@ const createAnimationStyle = () => {
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
     /* 絵の後ろで回るルーンの輪 */
     .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
-      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
-      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
+      /* ★マスクは使わない(メモリが足りないと外れて、円すいの模様が丸ごと見える。2026-09-28 battle-fx-lint-check)。
+         2本の輪の刻みを SVG の破線で描く(破線の端は円の中心へ向くので、円すいを輪で切り抜いた形と同じになる) */
+      background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g transform='rotate(-90 50 50)' fill='none'><circle cx='50' cy='50' r='42.75' stroke='rgba(243,210,122,.85)' stroke-width='3.5' stroke-dasharray='2.238 8.953'/><circle cx='50' cy='50' r='49.75' stroke='rgba(243,210,122,.85)' stroke-width='.5' stroke-dasharray='2.605 10.42'/></g></svg>") center / 100% 100% no-repeat,
+        radial-gradient(circle, transparent 58%, rgba(var(--ph,243,210,122),.14) 59%, rgba(var(--ph,243,210,122),.14) 63%, transparent 64%, transparent 70%, rgba(var(--ph,243,210,122),.14) 71%, rgba(var(--ph,243,210,122),.14) 72.5%, transparent 73.5%);
+      filter: drop-shadow(0 0 1.5px rgba(var(--ph,243,210,122),.9)); }
     [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
     /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
     .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
       transform: rotateX(68deg);
       background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
-        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
-      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
+        url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.15' fill='none' stroke='rgba(255,240,200,.8)' stroke-width='15.5' stroke-dasharray='3.012 19.58' transform='rotate(-90 50 50)'/></svg>") center / 100% 100% no-repeat,
+        radial-gradient(circle, transparent 50%, rgba(var(--ph,243,210,122),.2) 51%, rgba(var(--ph,243,210,122),.2) 72%, transparent 73%);
+      /* ★マスクは使わない。放射の刻みは輪の中だけに SVG で描く(上の .mh-ph-rune と同じ理由)。
+         以前は光(drop-shadow)もマスクで輪の中に収まっていたので、輪の地を薄く塗り、外へのにじみは弱くする */
+      filter: drop-shadow(0 0 1.5px rgba(var(--ph,243,210,122),1)); }
     [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
     @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
     /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */
@@ -3329,7 +4260,37 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    /* 円盤石を買ったときの「円盤石から再生」(2026-10-01)。DiscRebirthFx(20-market-notices-help.jsx)が使う。
+       0〜1.5秒 円盤石が光りながら回る → 1.5〜1.8秒 割れて光があふれる・火の粉が散る → 1.8〜2.6秒 立ち絵と名前が出る。
+       .is-done(押したとき・2.6秒たったとき)はどの段も最後の形で止める。動きを減らす設定の端末も同じ。 */
+    .mh-disc-rebirth{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 45%,#3b1d6e,#0b0820 62%,#020617)}
+    .mh-disc-rebirth-rays{position:absolute;left:50%;top:42%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(from 0deg,rgba(253,230,138,.16) 0 7deg,transparent 7deg 22deg);opacity:0;-webkit-mask:radial-gradient(circle,#000 8%,transparent 46%);mask:radial-gradient(circle,#000 8%,transparent 46%);animation:mhDiscRays 1s 1.55s ease-out forwards,mhDiscRaysSpin 24s 1.55s linear infinite}
+    .mh-disc-rebirth-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,#fff 0,#fde68a 18%,rgba(253,230,138,0) 58%);opacity:0;pointer-events:none;animation:mhDiscFlash .75s 1.45s ease-out forwards}
+    .mh-disc-rebirth-disc{position:absolute;left:50%;top:42%;width:min(46vw,190px);height:min(46vw,190px);margin:calc(min(46vw,190px) / -2) 0 0 calc(min(46vw,190px) / -2);object-fit:contain;filter:drop-shadow(0 0 10px rgba(253,230,138,.55));animation:mhDiscSpin 1.8s cubic-bezier(.45,0,.75,.4) forwards}
+    .mh-disc-rebirth-sparks{position:absolute;left:50%;top:42%;width:0;height:0}
+    .mh-disc-rebirth-sparks i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:#fde68a;box-shadow:0 0 10px #fbbf24,0 0 18px #f472b6;opacity:0;transform:rotate(var(--a)) translateX(0);animation:mhDiscSpark .8s calc(1.55s + var(--d)) ease-out forwards}
+    .mh-disc-rebirth-body{position:relative;z-index:1;width:min(340px,100%);display:flex;flex-direction:column;align-items:center;text-align:center}
+    .mh-disc-rebirth-plate{opacity:0;border:1px solid rgba(253,230,138,.6);border-radius:999px;background:rgba(15,23,42,.75);padding:3px 12px;font-size:11px;font-weight:900;color:#fde68a;letter-spacing:.08em;animation:mhDiscUp .45s 1.85s ease-out forwards}
+    .mh-disc-rebirth-art{width:min(62vw,240px);aspect-ratio:1;margin-top:8px;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.35);filter:drop-shadow(0 0 24px rgba(253,230,138,.75)) brightness(2.2);animation:mhDiscBorn .8s 1.6s cubic-bezier(.2,1.4,.4,1) forwards}
+    .mh-disc-rebirth-art img{width:100%;height:100%;object-fit:contain}
+    .mh-disc-rebirth-name{opacity:0;margin-top:6px;font-size:24px;font-weight:1000;line-height:1.2;color:#fff;text-shadow:0 2px 0 #7c3aed,0 0 18px rgba(244,114,182,.7);animation:mhDiscUp .45s 2.05s ease-out forwards}
+    .mh-disc-rebirth-name span{font-size:15px;color:#fbcfe8;margin-left:2px}
+    .mh-disc-rebirth-note{opacity:0;margin-top:6px;font-size:11px;font-weight:700;line-height:1.6;color:#cbd5e1;animation:mhDiscUp .45s 2.25s ease-out forwards}
+    .mh-disc-rebirth-close{width:100%;margin-top:14px;opacity:0;pointer-events:none;animation:mhDiscUp .4s 2.45s ease-out forwards}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-close{pointer-events:auto}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-disc,.mh-disc-rebirth.is-done .mh-disc-rebirth-flash,.mh-disc-rebirth.is-done .mh-disc-rebirth-sparks i{animation:none;opacity:0}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-rays{animation:mhDiscRaysSpin 24s linear infinite;opacity:1}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-plate,.mh-disc-rebirth.is-done .mh-disc-rebirth-name,.mh-disc-rebirth.is-done .mh-disc-rebirth-note,.mh-disc-rebirth.is-done .mh-disc-rebirth-close{animation:none;opacity:1;transform:none}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-art{animation:none;opacity:1;transform:none;filter:drop-shadow(0 0 18px rgba(253,230,138,.55))}
+    @keyframes mhDiscSpin{0%{transform:rotate(0) scale(.6);opacity:0;filter:drop-shadow(0 0 6px rgba(253,230,138,.4)) brightness(1)}12%{opacity:1}80%{transform:rotate(1080deg) scale(1.08);filter:drop-shadow(0 0 30px #fde68a) brightness(1.7)}100%{transform:rotate(1260deg) scale(1.5);opacity:0;filter:drop-shadow(0 0 40px #fff) brightness(3)}}
+    @keyframes mhDiscFlash{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+    @keyframes mhDiscRays{to{opacity:1}}
+    @keyframes mhDiscRaysSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    @keyframes mhDiscSpark{0%{opacity:0;transform:rotate(var(--a)) translateX(0) scale(1)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateX(min(42vw,170px)) scale(.3)}}
+    @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
+    @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -3540,6 +4501,22 @@ const createAnimationStyle = () => {
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
+    /* 横画面のタイトル。横長の絵は左上にロゴがあるので、VERSION の札を左下へ逃がし、絵は上を切らない位置で見せる */
+    @media(orientation:landscape){.mh-title-visual,.mh-entering>img{object-position:50% 12%}.mh-title-build{position:fixed;left:calc(12px + env(safe-area-inset-left));top:auto;bottom:calc(10px + env(safe-area-inset-bottom))}.mh-title-actions{margin-left:auto}}
+    /* 背景の大きさ合わせ(2026-09-30・ユーザー指示「いろんな端末を見て」)。
+       ・タイトル: ふつうは画面いっぱい(cover)。ほぼ正方形の画面(縦横比 3:4〜7:5。Foldの内側・4:3のタブレットの横持ち)だけは
+         上下や左右が大きく切れてロゴが欠けるので、絵全体を出し(contain)、余りは同じ絵をぼかして埋める
+       ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
+    .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
+    @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
+    /* ハロウィンのタイトルの絵は、縦長・ほぼ正方形・横長の3枚(2026-10-03)。ゲームが画面の縦横比に近い1枚を選ぶので、
+       どの画面でも画面いっぱい(cover)で出して、切れるのはわずかな端だけにする(帯も出さない)。
+       横向きの画面(1:1 以上)は、左上のロゴが切れないよう、少し上寄りに合わせる。クラシックの絵の見え方は変えない */
+    .mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 50%}
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-position:50% 40%}}
+    /* ほぼ正方形の絵は、ロゴが下にあるので、縦に切れるとき(横向きの 4:3 など)は下寄りに合わせる */
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween-square"],.mh-entering>img[src*="halloween-square"]{object-position:50% 80%}}
+    @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}

@@ -8,6 +8,27 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 **参照実装は「ミーア」(`Mia`)。** 必要なものがひととおり揃っている唯一の例なので、
 新しい子を足すときは `grep -n "Mia" <ファイル>` で当たりを取ってから同じ場所へ1行ずつ足す。
 
+## 0-1. 案が出た段階で、デバッグの確認画面へ先に入れる
+
+2026-09-28・ユーザー指示「新モンスターの案が出た段階でデバッグには追加して、いま入れられるぶんは入れて。
+確認しやすいように。そこで足りないのも確認して補完できるし、いまの現状も見れるから」。
+
+絵が届いたら、能力値や技が決まる前でも `data/ally-monsters.js` の **`UPCOMING_MONSTER_DRAFTS`** へ1件足す。
+`ALL_PLAYER_MONSTERS` には入れない(図鑑・ロースター・マーケットの解放・保存のどこにも出ない)。
+デバッグ設定 →「新モンスター確認」の一覧のいちばん後ろに並び、決まっていない項目が「未設定」と赤く出る。
+
+```js
+Yggdrasil: Object.freeze({ id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_IMG,
+  faceIconUrl:YGGDRASIL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'yggdrasil' }) }),
+```
+
+- 入れられるものは先に入れる: 立ち絵・顔アイコン・円盤石(`available:false`)・染色マスク(`EXACT_DYE_MASKS`)・図鑑の文
+- 待機アニメのリグ(§6)も先に書ける。`idle-rig-build.js` の `RIGS` へ足せば、確認画面の「待機アニメ」の枠で動く。
+  `idle-rig-preview.js` も案の子を読める。`monster-check-debug-check.js` が「案の子にもリグがある」ことを見る
+- 血統は `draftLineage` に書く(`MONSTER_LINEAGE_MAP` へ本体より先に書くと lineage-dex-check.js が止める)
+- 正式に実装したら `ALL_PLAYER_MONSTERS` へ移し、`UPCOMING_MONSTER_DRAFTS` からは消す
+- `tools/monster/monster-check-debug-check.js` が「案の子も一覧に並び、要確認になっている」ことを見る
+
 ## 0. 数値を決めてもらう(比較を出してから聞く)
 
 **絵はユーザーが用意する。** 数値のほうは勝手に決めない。
@@ -53,7 +74,7 @@ node tools/monster/monster-stats-table.js --hp 420 --guts 140 --atk 200 --def 40
 | 勇者特性と説明 | 魔力開放 / 固有技のダメージが2倍 | **選択肢を2〜3案**出して選んでもらう |
 | 固有技の名前・倍率・消費ガッツ・効果 | バン / 2.1倍 / 42 / 次ターン、カード消費ガッツ0 | 倍率と消費は連動する(下記) |
 | 血統(`main`/`sub`)と区分 | `pixie` / `unknown` | 既存の血統一覧を見せて |
-| 円盤石の値段 | 1500 | だいたい1500で固定 |
+| 円盤石の値段 | 150000 | だいたい150000で固定(2026-09-28に100倍へ) |
 
 **答えが分かれそうなもの・好みで決まるもの(特性の方向性、固有技の効果、名前)は
 選択肢を並べて質問の形で聞く。** 数値は②の表を添えて聞く。
@@ -96,8 +117,8 @@ Mia: { id:'Mia', name:"ミーア", emoji:"🧚", imgUrl:MIA_IMG, iconUrl:MIA_ICO
   baseHp:300, baseGuts:180, baseAtk:175, baseDef:60,
   plusStats:{hp:120,atk:30,def:10,guts:65},
   distAptitude:['G','C','A','B'],
-  unique:{ name:"バン", icon:MIA_ICON, monId:"Mia", baseMult:2.1, baseGuts:42, evoLevel:0,
-    names:["バン","ギガレイ","ギガサンダー","ビッグバン","ギガライトニング","コズミッグバン","テラレイ","テラバン","ドラゴ・ノヴァ"],
+  unique:{ name:"ボイスバン", icon:MIA_ICON, monId:"Mia", baseMult:2.1, baseGuts:42, evoLevel:0,
+    names:["ボイスバン","ギガメロディ","ギガサンダー","ビッグバンライブ","ギガライトニング","コズミックライブ","テラメロディ","テラボイスバン","ノヴァ・フィナーレ"],
     effectDesc:"魔法空間：次ターン、カード消費ガッツ0" } },
 ```
 
@@ -141,7 +162,8 @@ node tools/image/monster-image-quality-check.js
 ## 3. 通常技・固有技の名前
 
 `HERO_ATK_NAMES[id]` に**9つ**。同じ系統の子とそろえてよい
-(ミーアはピクシーと同じ並び。パンドラは同じ系統だが独自の名前を持っている)。
+(ミーアは最初ピクシーと同じ並びだったが、2026-09-29 に歌う動きへ合わせた名前へ変えた。
+名前を動きに合わせたいときは、同じ系統と分かる言葉を残して足す形がユーザーの好み。パンドラは同じ系統だが独自の名前を持っている)。
 
 ## 4. 染色(いちばん手が要る)
 
@@ -164,6 +186,23 @@ node tools/image/monster-image-quality-check.js
 - 承認済みのマスクを取り込むときは `node tools/image/convert-dye-mask.js <入力> <出力> --snap`
   (本番と同じ判定で純色へそろえる。953KB→37KB になった例がある)
 - 境目に元の色の筋が出るなら `noEdgeGuard:true`、輪郭が荒れるなら `MASU_COLOR_SMOOTH[id]` を調整
+- **手で塗ったマスクは仕上げてから配信する**(2026-09-28・ユーザー指示「染色はこのゲームの重要な部分だから本気で仕上げて」)。
+  位置を合わせただけのマスクを `tools/art-sources/dye-masks/<名前>-dye-mask-aligned.png` に置き、
+  `node tools/image/finish-dye-mask.js <名前>` で仕上げる(輪郭線の塗り残し・暗い線・境目のずれを直す)。
+  設定はモンスターごとに `CONFIGS` へ書く。仕上げたら白・黒・パステル・濃い色で染めて全身を見る
+- **届いたマスクは元の絵をなぞったものか確かめる**。描き直された絵から作ったマスクは、位置を合わせても
+  果物やひだの形が合わない(メルホイップの1回目)。白背景で作ったマスクは、絵のいちばん白い所を
+  背景と同じ扱いで抜いていることがある(3回目)。そのときは前のマスクと組み合わせる
+- **いちばんきれいに仕上がるのは「部位ごとに色を塗った指示図」**(2026-09-28・メルホイップの5回目)。
+  元の絵の上に、部位ごとにはっきりした単色(赤・緑・青・黄・紫・水色・灰)を塗り、凡例を添えてもらう。
+  **絵だけから機械で作るのは無理**(同じ黄緑の髪・傘・服・ブドウ、同じ白のフリル・ケーキ・タイツは、色では
+  分けられない。分け方は意味で決まる)。指示図は `tools/art-sources/dye-masks/<名前>-dye-mask-received-vN.png` に置き、
+  `node tools/image/finish-dye-mask-guide.js <名前>` で仕上げる(色相で部位を読み、境目を元の絵の色にそろえ、
+  立ち絵の大きさへ多数決で縮める)。指示図と変えたい所(目を髪と同じにする、など)は `moves` に書く。
+  3部位を超えるときは `MASU_COLOR_REGION_HUES` を5つ(赤・緑・青・黄・マゼンタ)にする(剣士モッチーと同じ)
+- **部位ごとの染め方(`MASU_COLOR_REGION_DYE`)も決める**。gloss を付けないと、青や紫に染めたとき髪のハイライトや
+  体の光沢が消えて1色に潰れる。gloss はその部位の元の彩度の中央値〜上のほうに合わせる。
+  白・クリームの部位は元の彩度がほぼ0なので gloss を付けない(付けると色が乗らない)
 - 正解見本と画素単位で比べる検査を1本足す(`tools/image/<id>-dye-mask-check.js`。
   ミーア・永輝・モッチー・プラント・ウンディーネ・ヤオビクニに前例がある)
 
@@ -188,6 +227,29 @@ node tools/where.js --text "monId==='Pixie'"      # 似た効果の子を探し�
 node tools/where.js --text "Eiki"                 # 専用演出を持つ子が、どこに何行あるか
 ```
 
+### 技ごとの動き(全モンスター必須・2026-09-29〜)
+
+**どの子も、通常技9つ・固有技9つのそれぞれに攻撃の動きを持つ**(ユーザー指示「全モンスターも技別の攻撃アクション作って」)。
+`24-battle-fx.jsx` の `SKILL_MOTION_SETS` へ、技の**段階の順**に9つずつ書く(技の名前ではなく段階で持つので、あとで名前を変えても動きはついてくる)。
+
+```js
+Mia: {
+  normal:[SKM_SIG,                                   // 'sig' = その子の見せ場の動き(atkMotion・型)をそのまま使う段階
+    skm('hop', { c:'pink', fx:skmFx('shot', 'note', 4), line:'ray' }),   // 本体の動き・飛ぶもの・帯・色
+    …],
+  unique:[SKM_SIG, skm('float', { c:'holy', fx:skmFx('fall', 'meteor', 3), over:'boom' }), …],
+},
+```
+
+- 部品は `body`(bash 突進 / kick 跳び蹴り / spin 回転 / jump 跳び乗り / float 浮いて落下 / dash 高速ダッシュ / warp 瞬間移動 / jab 連続パンチ / cast その場で放つ / hop 跳ねて歌う / shake 揺れる / toss 投げる / lick 舌 / dive / roll / flip / slash)、
+  `line`(ray 光線 / bolt 稲妻 / whip むち / beam / tongue / arc)、`fx`(`skmFx(道すじ, 形, 数)`)、`over`(thunder / xslash / claw / pillar / tornado / ice / bite / boom / wave / bloom / gas / cross / sword / eye / fist / slash / aurora / shadow / eclipse / twinThunder)、`burst`、色 `c`(`SKM_COLOR` の名前)
+- **着弾の時刻と尺は書かない**(`skillFxSpecOf` が本体の動きと飛ぶものから決める。1.2秒を超えない)
+- 専用の動き(`atkMotion` が `default` 以外)を持つ子は、見せ場の動きを**どれか1つの技**に `SKM_SIG` で残す(ユーザー選択「技ごとに全部別の動きにする」)
+- 同じ名前の技を持つ子は `skmRecolor`(色だけ変える)・`skmWithSig`(見せ場の段階だけ変える)で写してよい
+- `node tools/battle/skill-motion-check.js`(全モンスターが9つずつ持つか・CSSがあるか)と
+  `node tools/battle/attack-preview-parity-check.js`(バトルと図鑑のプレビューで動きと尺が同じか)が見張る
+- ユグドラシル種だけは技の名前で持つ古い形(`23-rpg-debug.jsx` の `SKILL_ATTACK_THEMES`)。新しい子はこちらを使わない
+
 ### 専用モーションを作るとき
 
 **最低4か所。子によってもっと増える。** ミーアの `miaSongNotes` が手本。
@@ -201,6 +263,14 @@ node tools/where.js --text "Eiki"                 # 専用演出を持つ子が�
 | `71-screen-battle.jsx` | 画面へ差し込む必要がある演出のとき(パンドラ・永輝はここにもある) |
 
 専用モーションを作らないなら `atkMotion:'default'` と書くだけでよい。
+**技ごとに動きを変えることもできる**(ユグドラシル種が最初。2026-09-29)。`23-rpg-debug.jsx` の
+`SKILL_ATTACK_THEME_MONSTERS` へ id を、`SKILL_ATTACK_THEMES` へ「技の名前 → 型」を足し、型ごとの見た目を
+`24-battle-fx.jsx` の `SKILL_FX_SPECS`(本体の動き・帯・飛ぶもの・敵に重ねる絵の組み合わせ)で決める。
+部品の動きは `70-bootstrap.jsx` の `.skfx-◯◯` にそろっているので、組み合わせだけで新しい技を作れる。
+`node tools/battle/skill-motion-check.js` がつながりを見る。例は `docs/spec/YGGDRASIL_SKILLS.md`。
+`SKILL_ATTACK_THEME_MONSTERS` へ足した子は、図鑑とデバッグ画面の「攻撃アクション」に技を1つずつ選ぶ行
+(`SkillMotionPicker`)が自動で出る。画面の側は触らない。
+
 `'default'` のままでも、`src/parts/23-rpg-debug.jsx` の `DEFAULT_ATTACK_THEMES` へ1行足せば
 用意済みの型(`stomp` 押しつぶし＋ビーム / `beam` ビーム / `rocks` 殴って岩が飛び散る / `claw` カクカク高速ひっかき＋角から雷撃 /
 `punch` ワンツーパンチ / `magic` 魔法の玉 / `crush` 押しつぶし / `petals` 花びら / `vine` つる / `fire` 炎のビーム)
@@ -302,9 +372,23 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
   「今回は書かなくてよい」と判断する前に、似た効果の子がどう書かれているかを必ず見る。ミーアには「ミーアの歌う攻撃モーション」という
   囲み(`{t:'note'}`)があり、固有技の説明にも「ピクシー・ミーアの『次ターン消費0』」と
   名指しで入っている。`grep -n "ミーア" monster-hero/data/help.js` で実例を見てから書く
+- 新しいモンスター・新しい血統のお知らせには `group:'monster'` を書く（更新情報の「🐣 新モンスター」にまとまる。
+  書かないと本文の言葉で見当が付き、モンヒロビートやマーケットの下へ入ってしまう。2026-09-28 ユーザー指示）
 - マーケットに円盤石を並べたので、更新履歴へ
   `assistantNotice:{id:'update_notice_◯◯_v1', type:'market'}` を**必ず**付ける
   (`node tools/boot/market-notice-check.js` が見張る)
+- **公開のお知らせには、絵を3種類付ける**(2026-09-29 ユーザー指示「更新情報に画像付きのモンスター説明」
+  「新モンスター実装時にまた染色イメージも一緒につけて」)。
+  1. `image` … キー画像1枚(助手の告知にも出る)
+  2. `gallery` … その子の紹介カード(能力値の棒・間合い適性・勇者特性・固有技・EX・モンヒロビートの能力)
+  3. `gallery` … **染色イメージ**(いつもの姿 → 染めた姿)。caption に「染色イメージ」と入れる
+
+  手本はユグドラシル種: `tools/image/make-yggdrasil-release-notice.js`(1と2)と
+  `tools/image/make-yggdrasil-dye-preview.js`(3。ゲームと同じ染め方で作る。手で塗らない)。
+  新しい子の分は、この2本を写して id・色・文言を差し替える。数字はデータから読ませる(手で書かない)。
+  フォントは M PLUS Rounded 1c を Google Fonts から一時的に取る(リポジトリには入れない)。
+  `node tools/changelog/new-monster-gallery-check.js` が、新モンスターのお知らせに紹介と染色イメージがあるかを見張る
+  (タイトルに「新モンスター」と入れる。アイコンだけのお知らせは対象外)
 
 ## 9. 登録漏れを機械的に見つける
 

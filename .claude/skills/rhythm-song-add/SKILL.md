@@ -112,6 +112,8 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 
 `monster-hero/data/rhythm-mode.js` の `RHYTHM_SONG_BEATS` にも1行足す（道の演出の拍の線が使う）。
 値は解析ファイルの `timing` の `[beatMs, beatZeroMs, beatsPerBar]`。`node tools/mode/rhythm-song-beats-check.js` が抜けと写し間違いを見つける。
+続けて `node tools/mode/rhythm-song-climax.js --write` を打つ（盛り上がる区間の表 `RHYTHM_SONG_CLIMAX`。オプション「盛り上がりの光」が使う）。
+抜けると `node tools/mode/rhythm-climax-fx-check.js` が落ちる。
 
 ---
 
@@ -122,7 +124,7 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 ```
 
-初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-26 時点で 15）が自動で入る。
+初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-10-03 時点で 26。遊んだ記録から学んだ調整値が書き足されると、それより大きい番号になる。`docs/spec/RHYTHM_PLAY_LOG.md`）が自動で入る。
 Rev.9 からは、パイプライン（`--write`）が生成の前に音の層の解析 `authoring/<曲>-v3-layers.json` を作る（主役の追跡の材料。**コミットに含める**）。
 生成のときに `主役の追跡: ドラム◯小節・歌や主旋律◯小節…` と出ていれば効いている（`効かない` と出たら層の解析を作り直す）。
 Rev.12 からは、パイプラインが生成の直後に区間の差し替え（`rhythm-chart-v3-splice.js --apply`）を通す。難易度ごとに `差し替えた` / `差し替えない（理由）` と出る。
@@ -139,6 +141,10 @@ Rev.12 からは、パイプラインが生成の直後に区間の差し替え�
 
 `meter-doubt`（3拍子と判定したが、強い打点が4拍子の位置に多い）が出たら、**示された代わりの候補（4/3倍の BPM・4拍子）を最初に試す**
 （2026-09-26。人が直した crossing_field・freedom_dive は、どちらもこの代わりの候補が正解だった。`node tools/mode/rhythm-audio-meter-opinion.js` で全曲を見られる）。
+2026-09-29 からは、止める警告の強さ(1.8以上)なら**解析が自動でその候補に直す**（`meter-corrected` の注意が出る・`timing.source` は `auto-corrected`）。
+直った値のまま進めてよいが、聞いてずれていれば `--no-auto-meter` か `--bpm` で決め直す。やや疑わしい(1.5〜1.8)ときは今までどおり `meter-doubt` の注意だけ。
+`meter-rare`（5拍子・7拍子と判定した）が出たら、まず4拍子（`--beats-per-bar 4`）を試す（only my railgun は5拍子と読んでいた）。
+テンポが途中で揺れる曲は、Rev.21 から生成器が自動で合わせる（なめらかに揺れ、半分の区間で確かめられたときだけ。`node tools/mode/rhythm-chart-tempo-warp.js` で見られる）。
 `tempo-ambiguous`（ほかの候補と拮抗）が出たら、**必ず候補を比べる**。
 このスキルで足した3曲は**全部これが出た**。
 
@@ -160,6 +166,23 @@ done
 正しくは 222.22BPM / 4拍子）。`--beats-per-bar 4` と `--beat-zero <ms>` も指定できる。
 
 倍テンポを疑うときは「拍に音が乗る率」を**偶数拍と奇数拍に分けて**見るのが早い。
+
+### すでにある曲の short ver. ・切り貼りした版（2026-10-03・Rev.26）
+
+元の曲の録音を途中で切ってつないだ版は、**つなぎ目から先の拍が、前の格子から一定の量だけずれる**。
+1つのテンポのままだと、後ろ半分のノーツが音より最大で16分の半分ほど早い・遅いになる。
+
+1. 元の曲の音源と5秒ごとに相関で突き合わせ、ショートのどこが元のどこかを出す（前半は頭を切った34.5msぶん遅れて並ぶ）
+2. テンポと拍の頭は**元の曲の登録値を引き継ぐ**（拍の頭は前半のずれを足す。例 440 → 474）
+3. つなぎ目の時刻を0.5秒刻みの相関で探し、ずれを「小節の頭がそろう量」で出す（飛ばした長さを小節の長さで割った余りを負にしたもの）
+4. 音源の一覧へ `"splices":[{"atMs":<つなぎ目>,"shiftMs":<ずれ>}]` を書き、ゲームの拍の表 `RHYTHM_SONG_BEATS` の4つ目にも `[[atMs,shiftMs]]` を書く
+5. `node tools/mode/rhythm-chart-rev26-check.js` が、2つの値の一致と、つなぎ目の前後でノーツがそれぞれの格子に乗ることを見る
+
+ジャケットは元の曲のものを使い回す（`artwork` に同じ絵）。`displayName` は元の曲と同じにして、`subtitle` に「～◯◯～ short ver.」と書く。
+
+**既存の曲の別の版（short ver.・remix・-Another- など）を足したら、`RHYTHM_SONG_VERSION_GROUPS`（`data/rhythm-mode.js`）のその曲の組の末尾へ `['<songId>','short ver.']` を1行足す**（2026-10-03）。
+曲えらびでは版がまとめて1行になり、難易度ボタンの上で切り替わる。組に入れ忘れると別の行に並び、`node tools/mode/rhythm-song-version-check.js`
+（表示名が同じ公開曲が同じ組に入っているか）が落ちる。`RHYTHM_DEMO_SONG_IDS` には今までどおり末尾へ足す（公開の範囲・ランキング送信はこちら）。
 
 ---
 
@@ -222,9 +245,17 @@ console.log('最密4秒',best+'打  最短',g[0]+'ms');"
 
 上だけを尖らせたいときは `challengeFactor` ではなく **`chartIntensity:'extreme'`** を使う
 （書いた曲にしか効かない。詳しくは `docs/spec/RHYTHM_MODE.md`「19曲目 FREEDOM DiVE↓」）。
+`extreme` は全難易度が大きく上がる（Stay With Me short ver. で MASTER 20 → 34）。**中間がほしいときは `chartIntensity:'strong'`**
+（extreme の倍率の平方根・16分裏は65%まで残す。同じ曲で 26。2026-10-03）。
+音が格子に乗りにくい曲は `challengeFactor` を上げても MASTER が増えず、EXPERT が MASTER を追い越して「難易度の順が崩れている」で止まる。
+そのときは `challengeFactor` ではなく `chartIntensity` を使う。
 
 決まったら `challengeFactor` に書く。**測り方（`CHALLENGE_*`）は触らない**（ほかの曲まで変わる）。
 決めた理由は `docs/spec/RHYTHM_MODE.md` に残す（`rhythm-song-challenge-check.js` が見張る）。
+
+Rev.20 から、自動の歯ごたえはテンポを0.35乗・拍のはっきりさを0.15乗でしか数えない（それまでは0.7乗・0.55乗。
+量がすでにテンポに比例しているのに二重に数えていた。`rhythm-chart-rev20-check.js`）。遅い曲・拍の立ちが弱い曲を
+人が重く直す必要は、前より少ないはず。まず自動のまま出して、帯の中の位置を見てから決める。
 
 ---
 

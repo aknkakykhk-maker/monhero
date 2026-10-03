@@ -18,11 +18,11 @@ function RhythmInfoScreen({
 }) {
   return (
       <main data-rhythm-info className="flex h-full flex-1 flex-col bg-slate-950 text-white">
-        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="HOMEへ戻る" onClick={returnToHome} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <div className="min-w-0"><small className="block text-[8px] font-black text-cyan-300">COMING SOON</small><h2 className="text-sm font-black tracking-widest text-cyan-200">モンヒロビート</h2></div>
         </header>
-        <div className="flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+        <div className="flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
           <div className="my-6 text-center text-6xl">🎵</div>
           <h3 className="text-center text-xl font-black text-cyan-200">モンヒロビートは準備中です</h3>
           <p className="mt-3 text-[11px] leading-relaxed text-slate-300">
@@ -45,14 +45,14 @@ function RhythmInfoScreen({
 
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
-  onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
+  onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
   repeatTemplateForNewRun, resultProcessing, resumeQuickRunFromRhythm, returnToBackgroundRun, returnToHome,
   rhythmBackgroundRun, rhythmBestRecords, rhythmSettings, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
   rhythmSongListScrollRef, runStage, runStageRef, saveRhythmSelectView, setQuickRunDetailOpen,
   setQuickRunStartError, setQuickRunStopConfirm, setRhythmSelectedDifficultyId, setRhythmSelectedSongId, spotClass,
-  startQuickRunFromRhythm, wave,
+  startQuickRunFromRhythm, wave, monsterSlots=[],
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
       const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
@@ -67,6 +67,32 @@ function RhythmSongSelectScreen({
       const beatPointReleased=RELEASE_FLAGS.rhythmEventPoints===true;
       const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;
       const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
+      // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
+      // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
+      const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
+      const beatPointSideCard=beatPointCampaign
+        ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
+          <span className="block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+          <span className="mt-0.5 block">キャンペーン中</span>
+          <span className="block text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        </div>
+        :beatPointEvent
+          ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
+            <span className="block">🎟️ ビートP獲得期間中</span>
+            <span className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?'選択中のイベント対象曲は1.5倍':'公開曲なら獲得できます'}</span>
+          </div>
+          :null;
+      // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
+      // 題名の下に小さく1行だけ出す。ヘッダーの高さはボタン(44px)で決まっているので、この1行を足しても高さは変わらず、曲の一覧も減らない。
+      // 画面を開くたびに保存値から読み直す(演奏から戻るとこの部品は作り直されるので、そのたびに最新になる)。読めないあいだは出さない
+      const [beatPointBalance,setBeatPointBalance]=React.useState(null);
+      React.useEffect(()=>{
+        if(!beatPointReleased)return undefined;
+        let alive=true;
+        loadRhythmEventPoints().then(value=>{if(alive)setBeatPointBalance(value);}).catch(()=>{});
+        return ()=>{alive=false;};
+      },[beatPointReleased]);
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -83,9 +109,12 @@ function RhythmSongSelectScreen({
           //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)
           : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`)
         : '';
+      // ★縦の帯は1行の文字(10px)だけなので、高さは30pxにする(2026-09-28・ユーザー指示
+      //   「クイック周回の帯が縦に無駄に広いから狭くして縦幅の確保して」。以前は44pxで、そのぶん曲の一覧が狭かった)。
+      //   横幅いっぱいのボタンなので、30pxでも押し損ねにくい
       const quickRunBandButton = quickRunProgress
-        ? <button type="button" onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
-            className="flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]">
+        ? <button type="button" data-quick-run-band onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
+            className="flex min-h-[30px] w-full items-center gap-2 px-3 py-0.5 text-left active:scale-[.995]">
             <span className={`shrink-0 text-[10px] font-black ${quickRunProgress.finished?'text-amber-200':'text-fuchsia-200'}`}>{quickRunProgress.finished?'⏹':'⚔'}</span>
             <span className="min-w-0 flex-1 truncate text-[10px] font-black text-slate-200">{quickRunBandLabel}</span>
             <span className="shrink-0 text-[9px] font-black text-slate-400">{quickRunDetailOpen?'▲':'▼'}</span>
@@ -121,7 +150,7 @@ function RhythmSongSelectScreen({
           className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center">
           <b className="text-sm font-black text-amber-200">周回を終えています…</b>
         </div>}
-        <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+        <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           {/* ★裏でクイック∞周回が回っていても、ここからHOMEへ戻れる
               (2026-09-13・ユーザー指摘「止めないでもホームに戻れて自動的に周回も
                終わるようにしたい」)。それまでは「⚔ バトルへ戻る」しかできず、
@@ -132,34 +161,35 @@ function RhythmSongSelectScreen({
               ★バトルを見に行きたいときは、周回の帯の詳細にある「⚔ バトルへ戻って…」から。 */}
           {/* ★押したあとはHOMEへ抜けるまで数秒かかる(報酬の付与・送信・バトルの演出の終わり待ち)。
               そのあいだは押せなくし、何を待っているのかを畫面で言う(2026-09-13) */}
-          <button data-rhythm-back data-quick-run-finishing={rhythmBackgroundRun?'1':undefined}
-            data-quick-run-exiting={exitingQuickRun?'1':undefined} disabled={!!exitingQuickRun}
-            aria-label={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
+          {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
+          <button data-rhythm-song-select-back type="button" aria-label="モードえらびへ戻る" title="モードえらびへ戻る"
             onClick={onExit}
-            className={`min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun?'text-amber-300/60':rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
+            className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
-            <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
-            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 楽曲選択</h2>
+            {/* 「体験版」の札は、右のボタンの幅を空けるためこの小さな行へ入れた(2026-10-01)。
+                題名はヘルプや案内と同じ呼び名「曲えらび」にそろえた(以前は「楽曲選択」) */}
+            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT<span data-rhythm-demo-badge className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">体験版</span></small>
+            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 曲えらび</h2>
+            {beatPointReleased&&Number.isFinite(beatPointBalance)&&<small data-rhythm-beat-point-balance aria-label={`所持ビートP ${beatPointBalance.toLocaleString()}`}
+              className="block truncate text-[9px] font-black leading-tight text-violet-200/90">🎟️ {beatPointBalance.toLocaleString()} <span className="text-violet-300/80">ビートP</span></small>}
           </div>
           {/* 横持ちはここに余白があるので、周回の帯をヘッダーへ入れる(縦持ちでは出さない) */}
           {quickRunProgress&&<div data-quick-run-progress-header className="min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70">{quickRunBandButton}</div>}
           {/* 周回していないときの入口も、横持ちではここへ入れる(縦持ちでは出さない) */}
           {quickRunStartNode&&<div data-quick-run-start-header className="min-w-0 max-w-[260px] flex-1">{quickRunStartNode}</div>}
-          <span data-rhythm-demo-badge className="shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
           {/* 縦⇄横の切り替え。端末の回転ロックを解除しに行かなくても横画面で遊べるようにする
               (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
           <RhythmOrientationButton/>
-          <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
-            onClick={onOpenHelp}
-            className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`}>📖</button>
-          <button data-rhythm-demo-monsters aria-label="マスモン設定" title="マスモン設定"
-            onClick={onOpenMonsterSlots}
-            className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`}>👾</button>
+          {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
+              分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
+              マスモンのボタンは、設定中の子の顔を重ねて並べる(何体入っているかもひと目で分かる)。幅は前と同じくらい */}
+          {/* 対戦・遊びかた・マスモン設定は、モードえらびの画面へ移した(2026-10-03・ユーザー指示「これによって曲選択画面の
+              上の帯にスペースができる」)。オプションは曲を選びながら速さなどを変えたいので、ここに残す */}
           <button data-rhythm-demo-options aria-label="オプション" title="オプション"
             onClick={onOpenOptions}
-            className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`}>⚙️</button>
+            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`}><span aria-hidden="true" className="text-base leading-none">⚙️</span><span className="text-[9px] font-black leading-none">設定</span></button>
         </header>
         {/* ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
             常に出すのは1行だけ。曲の一覧を押し下げないよう、詳細はタップで開く。
@@ -254,7 +284,21 @@ function RhythmSongSelectScreen({
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
-        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
+        {/* ビートPアップキャンペーン中の帯。2行に折り返して曲の一覧を押し下げていた
+            (2026-09-28 ユーザー指摘「縦スペース取られてるし文字列が悪い」)。
+            いちばん知りたい「ビートP×5」を札にして左へ、終わりの時刻を右へ置き、必ず1行に収める。
+            「公開曲なら」などの細かい条件は交換所の知らせとヘルプに任せる */}
+        {/* 横持ちでは、この帯が右の列(難易度・決定)まで押し下げ、高さ360pxの端末で「決定」が画面の下へ5pxはみ出していた
+            (2026-09-28)。縦持ちだけここへ置き、横持ちは曲の一覧の左の細い列へ小さな札として移す(beatPointSideCard)。
+            出し分けは index.html の素のCSS(見た目の案内・クイック周回の帯と同じ考え方) */}
+        {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
+          {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
+            <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+            <span className="min-w-0 truncate">キャンペーン中</span>
+            <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+          </div>}
+          {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
+        </div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
             同じことはヘルプとリザルト(獲得したとき)で分かる。開催中の帯だけ残す */}
@@ -324,6 +368,7 @@ function RhythmSongSelectScreen({
           spotClass={spotClass}
           onPlay={onPlaySong}
           notice={<AssistantBubble scene="rhythmHome" compact/>}
+          toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}
           onView={saveRhythmSelectView}
           listScrollTop={rhythmSongListScrollRef.current}
@@ -369,14 +414,14 @@ function RhythmHelpScreen({
       const nextTopic=topicIndex>=0?topics[topicIndex+1]:null;
       return (
       <main data-rhythm-demo-help className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
-        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" data-rhythm-demo-help-back onClick={()=>{if(topic)setRhythmHelpTopicId(null);else onBackToSongSelect();}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <div className="min-w-0 flex-1">
             <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
             <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">{topic?`${topic.emoji} ${topic.title}`:'📖 遊びかた'}</h2>
           </div>
         </header>
-        <div data-rhythm-demo-help-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+        <div data-rhythm-demo-help-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
           <RhythmLandscapeHint className="mb-3"/>
           {!topic&&(<>
             <AssistantBubble scene="rhythmHelp"/>
@@ -428,7 +473,7 @@ function RhythmMonstersScreen({
 }) {
   return (
       <main data-rhythm-demo-monsters-screen className="flex h-full flex-1 flex-col bg-slate-950 text-white">
-        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" onClick={()=>{setRhythmMonsterPickerOpen(false);onBackToSongSelect();}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-fuchsia-200">👾 マスモン設定</h2>
         </header>
@@ -437,7 +482,7 @@ function RhythmMonstersScreen({
             枠を並べるだけだったのを、①助手のひとこと ②設定枠(何番目・何の能力が出るか)
             ③モンスターノーツの説明と能力の一覧、の3段に分けた。
             能力の一覧はデータから作るので、値を変えてもここが古くならない */}
-        <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+        <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
           <RhythmLandscapeHint/>
           <AssistantBubble scene="rhythmMonsters" compact/>
           <RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/>
@@ -500,6 +545,7 @@ function RhythmRankingScreen({
   loadRhythmEventRanking, loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
   rankingBreederIcon, rhythmEventDivision, rhythmEventRanking, rhythmRanking, rhythmRankingDetail,
   rhythmRankingTab, rhythmTotalRanking,
+  rhythmRankingPending=null, onResendRhythmRankingPending=null,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
 }) {
       // イベント詳細(告知画像と報酬の表)を開いているか。
@@ -721,7 +767,7 @@ function RhythmRankingScreen({
       const eventRow=(entry,rank,mine)=>eventSongId?eventSongRow(entry,rank,mine):eventTotalRow(entry,rank,mine);
       return (
       <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
-        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+        <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
@@ -735,7 +781,18 @@ function RhythmRankingScreen({
             </button>
           ))}
         </div>}
-        <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+        {/* 送れていない記録があるときだけ出す(2026-09-29・ユーザー報告「スコアがランキングに反映されない」)。
+            電波が弱くて送れなかった記録は端末に取ってあり、つながれば自動で送る。それが画面のどこにも出ていなかった。
+            ふだんは出ない。件数と、送れなかった理由（番号）を短く見せ、その場で送り直せるようにする */}
+        {rhythmRankingPending&&rhythmRankingPending.count>0&&<div data-rhythm-ranking-pending className="flex shrink-0 items-center gap-2 border-b border-amber-300/25 bg-amber-500/10 px-3 py-1.5">
+          <p className="min-w-0 flex-1 text-[10px] font-black leading-tight text-amber-100">
+            まだ届いていない記録が{rhythmRankingPending.count}件あります
+            <span className="block text-[9px] font-bold text-amber-200/70">つながると自動で送ります{rhythmRankingPending.status?`（エラー ${rhythmRankingPending.status}）`:'（通信がつながらなかったようです）'}</span>
+          </p>
+          <button type="button" data-rhythm-ranking-pending-send onClick={async()=>{if(onResendRhythmRankingPending)await onResendRhythmRankingPending();refresh();}}
+            className="min-h-[44px] shrink-0 rounded-lg border border-amber-300/50 bg-amber-500/20 px-3 text-[10px] font-black text-amber-50 active:scale-[.98]">いま送る</button>
+        </div>}
+        <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
           {/* ★ここには説明を置かない(2026-09-11・ユーザー指摘
               「ランキングページに余計な説明が多くて見にくい／横画面対応、ページ説明みたいの、
               助手のコメント、これはなくしていいとおもう」)。
@@ -757,7 +814,7 @@ function RhythmRankingScreen({
               {total.self&&total.self.songCount<totalSongCount&&(
                 <button data-rhythm-total-remaining onClick={onGoToSongSelect}
                   className="mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
-                  まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
+                  まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲を選ぶ
                 </button>
               )}
               {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">まだあなたの記録がありません。1曲でも遊ぶとここに載ります。</p>}
@@ -951,12 +1008,12 @@ function RhythmRankingScreen({
         {boardTab&&eventDetailOpen&&(
         <div data-rhythm-event-detail role="dialog" aria-modal="true" aria-label="イベント詳細"
           className="fixed inset-0 z-[80000] flex items-center justify-center bg-slate-950/95 p-4"
-          style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+          style={{paddingTop:'calc(1rem + var(--mh-sa-top))',paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
           {/* ★高さは --mh-vh から引いて決める。%(max-h-full)に頼ると、端末によっては
               画面より高い箱になり「とじる」が下へはみ出す(2026-09-11・ユーザー指摘「下にずれてる？」)。
               --mh-vh はiPhoneのアドレスバーを除いた実際の高さを入れてあるもの */}
           <div className="w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4"
-            style={{maxHeight:'calc(var(--mh-vh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))'}}>
+            style={{maxHeight:'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'}}>
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">{eventWeekly?'WEEKLY':'EVENT'}</p>
             {/* 告知画像。開いたときだけ読むので、ここへ置いても起動は重くならない */}
             <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
@@ -1026,7 +1083,7 @@ function RhythmRankingScreen({
               </p>
             </div>}
             <button type="button" data-rhythm-event-detail-close onClick={()=>setEventDetailOpen(false)}
-              className="mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95">とじる</button>
+              className="mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95">閉じる</button>
           </div>
         </div>
       )}

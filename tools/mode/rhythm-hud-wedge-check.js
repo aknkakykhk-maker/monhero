@@ -29,14 +29,8 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
 // ── レーンの台形(遠近)は実装から取り出してそのまま使う ──────────────────────────
-const projectionSource=[
-  rhythm.match(/const RHYTHM_LANE_COUNT\s*=[^\n]*/)[0],
-  rhythm.match(/const RHYTHM_PROJECTION_TOP_SCALE=[^\n]*/)[0],
-  rhythm.match(/const rhythmClamp01=[^\n]*/)[0],
-  // rhythmProjectionScale は複数行で、RHYTHM_PROJECTION_CURVE も使う(2026-09-27 に追従。1行目だけを取ると途中で切れて読み込めなかった)
-  rhythm.match(/const RHYTHM_PROJECTION_CURVE=[^\n]*/)[0],
-  rhythm.match(/const rhythmProjectionScale=[\s\S]*?\n\};/)[0],
-].join('\n');
+// 道の遠近の計算は丸ごと切り出す(rhythm-projection-source.js。名前ごとに切り出すと、計算を分けるたびに壊れた)
+const projectionSource=require('./rhythm-projection-source.js').rhythmProjectionSource(rhythm);
 const rhythmProjectionScale=new Function(`${projectionSource}\nreturn rhythmProjectionScale;`)();
 
 // ── HUDのJSXを取り出してHTMLへ写す ──────────────────────────────────────────
@@ -110,6 +104,9 @@ const headerHtml=headerJsx
   .replace(/\{lifeState==='down'\?'DOWN':view\.life\}/g,'DOWN')
   .replace(/\{view\.life\}/g,SAMPLE.life)
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
+  // ランクの札は部品(RhythmHudScore)へ移り、本文は {rank}、S以上の演出は {rankFx&&<>…</>}(絶対配置の飾りで、測る箱には入らない)になった(2026-09-29)
+  .replace(/\{rank\}/g,SAMPLE.rank)
+  .replace(/\{rankFx&&<>[\s\S]*?<\/>\}/g,'')
   // プレイヤーの画面は譜面のLv.、デバッグから始めたときだけ HOLD TEST / TAP TEST
   // (2026-09-05・実機の指摘でデバッグ表記を出し分けた)
   .replace(/\{calibrating\?'タイミング合わせ':tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')

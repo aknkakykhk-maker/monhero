@@ -100,7 +100,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
           if (inner.length) { inner[inner.length - 1].click(); return true; }
           dialog.click(); return true;
         }
-        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK|つぎへ|次へ|はじめる|今は見ない|あとで|スキップ|やめる)$/.test((x.innerText || '').trim()));
+        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK|次へ|はじめる|今は見ない|あとで|スキップ|やめる)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         return false;
       });
@@ -134,7 +134,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   // アシストカードを1枚習得してバトルへ
   // アシストカードは2026-09-18に「おりょうの力」から「ニコラオの力」へ名前が変わった
   await clickText('ニコラオの力'); await page.waitForTimeout(700);
-  await clickText('習得する'); await page.waitForTimeout(1800);
+  // 覚えたカードの演出(約1.9秒)のあとでバトルへ進む
+  await clickText('習得する'); await page.waitForTimeout(3500);
 
   const inBattle = (await bodyText()).includes('WAVE 1/');
   check('バトルが始まる', inBattle);

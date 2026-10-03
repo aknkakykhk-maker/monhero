@@ -159,31 +159,106 @@ const RHYTHM_EVENTS = Object.freeze([
 // ===== イベントP（docs/spec/RHYTHM_EVENT_POINTS.md） =====
 // 初期実装の正式式。ランキング用スコアや回数ボーナスとは完全に分離する。
 const RHYTHM_EVENT_POINT_TARGET_MULTIPLIER = 1.5;
+// ===== 80万〜100万点は「上ほど伸びる曲線」(2026-09-28・ユーザー指示「80万から100万までの増え幅を上げたい / 100万での200P最大のまま」) =====
+// 以前の式(スコア÷1万 ＋ 95万点を超えたぶん÷500)は、80万〜95万のあいだが1万点で1Pしか増えず、差がほとんど付かなかった。
+//   80万〜100万点: 80 ＋ 120 ×((スコア − 80万) ÷ 20万)² を四捨五入(80万で80P・90万で110P・95万で148P・100万で200P)
+//   80万点より下: これまでどおり スコア÷1万 の切り捨て
+// ★どの点数でも以前の式より減らない(80万〜100万は同じか多い)。100万点=200Pは変えない。
+// ★2乗は整数のまま計算する(x² は最大 4×10¹⁰ で、小数の誤差が出ない範囲)
+const RHYTHM_EVENT_POINT_CURVE_FROM = 800000;
+const RHYTHM_EVENT_POINT_CURVE_SPAN = 200000;
 const rhythmEventPointBaseForScore = (score) => {
   const n = Number(score);
   const safe = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  return Math.floor(safe / 10000 + Math.max(0, safe - 950000) / 500);
+  if (safe < RHYTHM_EVENT_POINT_CURVE_FROM) return Math.floor(safe / 10000);
+  const x = Math.min(RHYTHM_EVENT_POINT_CURVE_SPAN, safe - RHYTHM_EVENT_POINT_CURVE_FROM);
+  // 曲線の出だし(81万〜82万点台)は スコア÷1万 より1P低くなるので、そこを下限にする
+  return Math.max(Math.floor(safe / 10000), 80 + Math.round(120 * x * x / (RHYTHM_EVENT_POINT_CURVE_SPAN * RHYTHM_EVENT_POINT_CURVE_SPAN)));
 };
 // ★イベントが開いていない期間も、イベント中の1/5だけ貯まる(2026-09-24・ユーザー指示
 //   「イベント限定でもらえるポイントをいつでももらえるように。ただしイベント時の1/5」)。
-//   基本ビートPへ 0.2 を掛けて切り捨てる(100万点で40P・95万点で19P)。
+//   基本ビートPへ 0.2 を掛けて切り捨てる(100万点で40P・95万点で29P。2026-09-28 の曲線から)。
 //   イベント中の計算(通常曲1.0倍・対象曲1.5倍)は変えない。
 //   ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
 const RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER = 0.2;
-const rhythmEventPointAwardAt = (nowMs, songId, score) => {
+
+// ===== ビートPアップキャンペーン(2026-09-28) =====
+// 2026-09-28・ユーザー指示「今日の18時から来週の月曜までビートポイントアップキャンペーンみたいので
+// 通常の5倍もらえるイベントを実施」。ランキングは開かず、ビートPの貯まり方だけを上げる。
+//   boost … イベントが無い日の貯まり方(上の0.2)に掛ける倍率。5なら「いつもの5倍」で、
+//           ちょうどランキングイベント開催中(通常曲)と同じ貯まり方になる(100万点で40P→200P)
+// ★ランキングイベント(kind:'limited')と重なったときは、イベントの計算を使う(重ねがけしない)。
+// ★終わりは週の区切り(月曜5:00)に合わせる。ランキングイベントと同じ決めごと。
+// ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
+// id はイベント会話の既読の記録にも使うので、あとから変えない。
+const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
+  // ユグドラシル・メルホイップをビートP交換所で先行公開するのに合わせた、貯めるための1週間
+  Object.freeze({
+    id: 'beat_point_up_2026_09_28',
+    name: 'ビートPアップキャンペーン',
+    startAt: '2026-09-28T18:00:00+09:00',
+    endAt: '2026-10-05T05:00:00+09:00',
+    boost: 5,
+  }),
+]);
+const rhythmEventPointCampaignAt = (nowMs) => {
+  const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
+  if (!Number.isFinite(now)) return null;
+  return RHYTHM_EVENT_POINT_CAMPAIGNS.find(campaign => {
+    const startMs = Date.parse(campaign.startAt);
+    const endMs = Date.parse(campaign.endAt);
+    const boost = Number(campaign.boost);
+    return Number.isFinite(startMs) && Number.isFinite(endMs) && Number.isFinite(boost) && boost > 0
+      && now >= startMs && now < endMs;
+  }) || null;
+};
+// ビートPが「いつもの1/5」ではなく満額で貯まる時間か(ランキングイベント開催中か、キャンペーン中か)。
+// ラッキーラッシュのおまけビートPも、これを見て1/5にするかどうかを決める
+const rhythmEventPointFullRateAt = (nowMs) => !!(rhythmLimitedEventAt(nowMs) || rhythmEventPointCampaignAt(nowMs));
+
+// ===== 曲の長さの補正(2026-09-28・ユーザー指示「2分以上の曲は10秒毎に10%の補正が掛かるようにして」) =====
+// 長い曲は1回に時間がかかるので、2分を超えたぶんの10秒ごとに +10%。上限は付けない(4分34秒なら +150%)。
+// 長さは曲えらびに出ている長さと同じ(曲の再生時間。無ければ譜面の長さ)を、秒へ四捨五入してから数える。
+//   2分00秒 → +0% / 2分09秒 → +0% / 2分10秒 → +10% / 2分25秒 → +20% / 3分00秒 → +60%
+// ★倍率は「10 + 段数」を10で割った整数の比で掛け、小数の誤差で1つ少なく切り捨てないようにする
+const RHYTHM_EVENT_POINT_LENGTH_FROM_SEC = 120;
+const RHYTHM_EVENT_POINT_LENGTH_STEP_SEC = 10;
+const RHYTHM_EVENT_POINT_LENGTH_STEP_PERCENT = 10;
+const rhythmEventPointLengthSteps = (durationMs) => {
+  const ms = Number(durationMs);
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  const sec = Math.round(ms / 1000);
+  return sec > RHYTHM_EVENT_POINT_LENGTH_FROM_SEC ? Math.floor((sec - RHYTHM_EVENT_POINT_LENGTH_FROM_SEC) / RHYTHM_EVENT_POINT_LENGTH_STEP_SEC) : 0;
+};
+const rhythmEventPointAwardAt = (nowMs, songId, score, durationMs = 0) => {
   const published = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : [];
   const id = typeof songId === 'string' ? songId : '';
   if (!id || !published.includes(id)) return null;
   const event = rhythmLimitedEventAt(nowMs);
   const base = rhythmEventPointBaseForScore(score);
+  const lengthSteps = rhythmEventPointLengthSteps(durationMs);
+  const lengthBonusPercent = lengthSteps * RHYTHM_EVENT_POINT_LENGTH_STEP_PERCENT;
+  // 長さの倍率 = L ÷ 10(L = 10 + 段数)。補正が無いとき(L=10)は、これまでとまったく同じ値になる
+  const L = 10 + lengthSteps;
+  const length = { lengthSteps, lengthBonusPercent };
   if (!event) {
+    const campaign = rhythmEventPointCampaignAt(nowMs);
+    if (campaign) {
+      const boost = Number(campaign.boost);
+      // 0.2×boost を先に掛けると2進数の誤差で1つ少なく切り捨てることがあるので、boost倍してから5で割る
+      // floor(base × boost × L ÷ 50)。boost が小数のときの誤差に備えて、ごく小さい値を足してから切り捨てる
+      // (分母は50なので、整数でない答えの端数は 0.02 より小さくならない)
+      return Object.freeze({ eventId:null, campaignId:campaign.id, campaign:true, boost, base, target:false, offEvent:false, ...length,
+        multiplier:RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER * boost, amount:Math.floor(base * boost * L / 50 + 1e-9) });
+    }
     const multiplier = RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER;
     // 0.2 は2進数で割り切れないので、先に5で割って切り捨てる(floor(base×0.2)と同じ値)
-    return Object.freeze({ eventId:null, base, target:false, offEvent:true, multiplier, amount:Math.floor(base / 5) });
+    return Object.freeze({ eventId:null, base, target:false, offEvent:true, ...length, multiplier, amount:Math.floor(base * L / 50) });
   }
   const target = Array.isArray(event.songIds) && event.songIds.includes(id);
   const multiplier = target ? RHYTHM_EVENT_POINT_TARGET_MULTIPLIER : 1;
-  return Object.freeze({ eventId:event.id, base, target, offEvent:false, multiplier, amount:Math.floor(base * multiplier) });
+  // 対象曲1.5倍は 3/2 として整数で掛ける: floor(base × (3 or 2) × L ÷ 20)
+  return Object.freeze({ eventId:event.id, base, target, offEvent:false, ...length, multiplier, amount:Math.floor(base * (target ? 3 : 2) * L / 20) });
 };
 
 // ===== イベントP交換所 STEP3 =====
@@ -208,7 +283,64 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:5000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:10000 }),
 ]);
-const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1 } = {}) => {
+// 近日公開予定の商品(2026-09-28 ユーザー指示「ビートポイントの方にも追加で、どっちも1500P」)。
+// ★同じ日に「円盤石交換のビートポイントは仮に10000に変更しといて」と指示があり、10,000Pにした(仮の値)。
+// ★さらに同じ日に「新モンスターの予定販売ビートポイントはやっぱり1500に変更しといて」と指示があり、1,500Pへ戻した。
+// ★2026-09-29 ユーザー指示「進めて」で本体(能力値・技・特性)が入ったので、予告から**交換できる円盤石**へ移した。
+//   ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)。
+// 円盤石は1体につき1回だけ交換できる(持っていれば交換できない)。交換するとモンスターが解放される
+// (保存先はダイヤショップで買ったときと同じ mh_unlocked_monsters。保存の形は変えない)。
+// ★消耗品の一覧(RHYTHM_EVENT_POINT_SHOP_OFFERS)とは分けて持つ。個数を選べず、渡すものが「解放」なので
+// 絵はここに書かない。画面が monsterId と同じidの円盤石(data/breeder.js の BREEDER_MARKET_ITEMS)から引く
+// (このファイルは検査で単独で読まれることがあり、breeder.js の定数を参照すると落ちるため)。
+// ★2026-10-03 ユーザー指示「ビート交換所に実装されてる円盤石と全アシカも追加して。全部1500ビートポイント」。
+//   ダイヤショップに並んでいる実装済みの円盤石12体を、ここにも並べた(全部1,500P)。並びはダイヤショップと同じ。
+//   アシストカードは下の RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS。
+const RHYTHM_EVENT_POINT_DISC_COST = 1500;
+const rhythmEventDiscOffer = (monsterId, name) => Object.freeze({ id:`disc_${monsterId.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()}`, name:`${name}の円盤石`, kind:'disc', monsterId, grantAmount:1, unit:'個', cost:RHYTHM_EVENT_POINT_DISC_COST });
+const RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS = Object.freeze([
+  rhythmEventDiscOffer('Yggdrasil', 'ユグドラシル'),
+  rhythmEventDiscOffer('MelWhip', 'メルホイップ'),
+  rhythmEventDiscOffer('Zan', 'ザン'),
+  rhythmEventDiscOffer('Mitarashi', 'ミタラシ'),
+  rhythmEventDiscOffer('Ark', 'アーク'),
+  rhythmEventDiscOffer('Iblis', 'イブリース'),
+  rhythmEventDiscOffer('Snegurochka', 'スネグーラチカ'),
+  rhythmEventDiscOffer('Undine', 'ウンディーネ'),
+  rhythmEventDiscOffer('Yaobikuni', 'ヤオビクニ'),
+  rhythmEventDiscOffer('Plant', 'プラント'),
+  rhythmEventDiscOffer('Mia', 'ミーア'),
+  rhythmEventDiscOffer('Pandora', 'パンドラ'),
+  rhythmEventDiscOffer('Eiki', 'エイキ'),
+  rhythmEventDiscOffer('KenshiMocchi', '剣士モッチー'),
+]);
+// アシストカード(2026-10-03)。1枚につき1回だけ交換できる(持っていれば交換できない)。
+// 交換するとアシストカードが解放される(保存先はダイヤショップで買ったときと同じ mh_unlocked_teachings)。
+// 絵と効果は、画面が cardId と同じidのアシストカード商品(data/breeder.js の BREEDER_MARKET_ITEMS)から引く。
+// ★足す・減らすのは、ダイヤショップに並ぶアシストカードと同じ(BREEDER_MARKET_ITEMS の type:'assist')。
+const RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS = Object.freeze([
+  Object.freeze({ id:'assist_kiki', name:'アシストカード「きき」', kind:'assist', cardId:'kiki', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
+  Object.freeze({ id:'assist_meloso', name:'アシストカード「メロソ」', kind:'assist', cardId:'meloso', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
+  Object.freeze({ id:'assist_momosuke', name:'アシストカード「ももすけ」', kind:'assist', cardId:'momosuke', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
+  Object.freeze({ id:'assist_poltz', name:'アシストカード「ポルツ」', kind:'assist', cardId:'poltz', grantAmount:1, unit:'枚', cost:RHYTHM_EVENT_POINT_DISC_COST }),
+]);
+// プロフィールフレーム(2026-10-03 ユーザー指示「フレームも販売実装を予定してるから、ブリーダーポイントとビートポイントのとこに実装できる準備をしといて」)。
+// ★まだ売る枠は無い。枠(data/breeder.js の PROFILE_FRAMES)に `unlock:{ shop:'beatPoint', cost:◯◯ }` を書くと、
+//   ここへ自動で並ぶ(手で書き写さない)。1枠につき1回、持っていれば交換できない。
+//   交換すると mh_profile_frame_owned_v1 にidが入る(助手の仲良し度でもらったときと同じ入れ物)。
+// ★breeder.js が読み込まれていない環境(この定義だけを取り出す検査)では空になる。
+const RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS = Object.freeze(
+  (typeof PROFILE_FRAMES !== 'undefined' && typeof profileFrameSaleIn === 'function')
+    ? PROFILE_FRAMES.filter(frame => frame.released === true && profileFrameSaleIn(frame, 'beatPoint'))
+        .map(frame => Object.freeze({ id:`frame_${frame.id}`, name:`${frame.name}のフレーム`, kind:'frame', frameId:frame.id, grantAmount:1, unit:'枚', cost:profileFrameSaleIn(frame, 'beatPoint').cost }))
+    : []);
+// 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
+// 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す
+const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
+// unlockedMonsterIds … 解放済みのモンスターid(円盤石の交換のときだけ使う)
+// unlockedTeachingIds … 解放済みのアシストカードid(アシストカードの交換のときだけ使う)
+// ownedProfileFrames … 持っているフレームid(フレームの交換のときだけ使う)
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[] } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {
     const n = Number(value);
@@ -220,8 +352,38 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
   const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const unitCost = safeInt(offer?.cost);
   const grantAmount = safeInt(offer?.grantAmount);
-  if (!offer || !unitCost || !grantAmount || !['diamond','item'].includes(offer.kind)) {
+  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame'].includes(offer.kind)) {
     return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+  }
+  // 円盤石: 1回に1つ。持っているモンスターは交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'disc') {
+    const monsterId = typeof offer.monsterId === 'string' ? offer.monsterId : '';
+    const unlocked = Array.isArray(unlockedMonsterIds) ? unlockedMonsterIds.filter(id => typeof id === 'string') : [];
+    if (!monsterId || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (unlocked.includes(monsterId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      monsterId, unlockedMonsterIds:[...unlocked, monsterId] };
+  }
+  // アシストカード: 1回に1枚。持っているカードは交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'assist') {
+    const cardId = typeof offer.cardId === 'string' ? offer.cardId : '';
+    const unlocked = Array.isArray(unlockedTeachingIds) ? unlockedTeachingIds.filter(id => typeof id === 'string') : [];
+    if (!cardId || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (unlocked.includes(cardId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      cardId, unlockedTeachingIds:[...unlocked, cardId] };
+  }
+  // フレーム: 1回に1枚。持っているフレームは交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'frame') {
+    const frameId = typeof offer.frameId === 'string' ? offer.frameId : '';
+    const owned = Array.isArray(ownedProfileFrames) ? ownedProfileFrames.filter(id => typeof id === 'string') : [];
+    if (!frameId || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (owned.includes(frameId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      frameId, ownedProfileFrames:[...owned, frameId] };
   }
   const totalCost = Math.min(max, unitCost * q);
   if (points < totalCost) {

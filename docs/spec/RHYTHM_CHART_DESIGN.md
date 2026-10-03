@@ -1955,6 +1955,15 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.27 旋律の有無 | `rhythm-chart-focus.js` の `melodyPresence`・生成器の Rev.13 | `rhythm-chart-rev13-check.js` |
 | 3.1.28 手と種類の仕上げ | 生成器の `rev14`（終点フリック・HOLD の太さ・候補の同点崩し）＋ 手のモデルの `setHandModelFlags` / `handModelFlagsForRevision` ＋ 自動修正の曲線の確かめ | `rhythm-chart-rev14-check.js` |
 | 3.1.29 旋律の上下に沿って動かす | 生成器の `rev15`（`againstMelodyMove`・継ぎ目の費用・写しと形の向き） | `rhythm-chart-rev15-check.js` |
+| 遊んだ記録で学ぶ調整値（Rev.17） | 生成器の `playTuning`（`lowLagOf` で低音の遅れを差し引く・`phraseLineByBar` で1本の線を追う）＋ `rhythm-chart-play-tuning.js` ＋ `rhythm-play-log.js`（`docs/spec/RHYTHM_PLAY_LOG.md`） | `rhythm-play-log-check.js` |
+| 繰り返しの見分け（Rev.18） | `rhythm-chart-repeats.js` の `detectRepeats` ＋ 生成器の `extraRepeat`（解析の繰り返しが無い小節だけ） | `rhythm-chart-rev18-check.js` |
+| 仮想プレイヤー（Rev.18 の差し替え） | `rhythm-virtual-player.js` の `playChart` / `segmentCost` ＋ `rhythm-chart-v3-splice.js` の `virtualParams` | `rhythm-virtual-player-check.js` |
+| 写した小節のリズム（Rev.19） | 生成器の `rev19`（`barPool`・元の小節で拾った位置の音を候補へ加える） | `rhythm-chart-rev19-check.js` |
+| 歯ごたえをテンポの数字から切り離す（Rev.20） | 生成器の `CHALLENGE_EXPONENT_REV20`（テンポ0.35乗・拍のはっきりさ0.15乗） | `rhythm-chart-rev20-check.js` |
+| 曲の終わりの余韻（Rev.22） | `rhythm-chart-ending.js` の `fadingEnding` ＋ 生成器の `ending`（最後の一発を太い長押しにし、その後は置かない） | `rhythm-chart-rev22-check.js` |
+| テンポの揺れ（Rev.21） | `rhythm-chart-tempo-warp.js` の `tempoWarp` ＋ 生成器の `warpCorrected`・パイプラインの `gridTimeMs`・仮想プレイヤーの `timeOf` | `rhythm-chart-rev21-check.js` |
+| 3連符が混ざる曲の注意（解析） | `rhythm-audio-triplet-mix.js` ＋ 警告 `triplet-mixed` | `rhythm-audio-triplet-mix-check.js` |
+| 拍子の読み違いの自動修正（解析） | `rhythm-audio-analyze-v3.js` の 7b（`meter-doubt` が止める強さなら 4/3倍・4拍子で解析し直す） | `rhythm-audio-meter-autofix-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |

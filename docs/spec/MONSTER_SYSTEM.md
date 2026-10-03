@@ -14,7 +14,7 @@
 
 ## 2. 現在の種
 
-`ALL_PLAYER_MONSTERS` には20種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Pandora、Monol、Oboro、Plant、Zan、Mitarashi、KenshiMocchi、Ark、Iblis、Snegurochka、Undine、Yaobikuni、Eiki）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、MiaとPandoraを含む残り12種は初期解放されず、マーケットで対応する円盤石を購入すると解放される。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
+`ALL_PLAYER_MONSTERS` には22種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Pandora、Monol、Oboro、Plant、Zan、Mitarashi、KenshiMocchi、Ark、Iblis、Snegurochka、Undine、Yaobikuni、Eiki、Yggdrasil、MelWhip）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、MiaとPandoraを含む残り14種は初期解放されず、マーケットで対応する円盤石を購入すると解放される。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
 
 各定義の必須実装項目は次のとおり。
 
@@ -86,7 +86,7 @@
 | 勇者特性 | 二刀流 |
 | 固有技 | ソニック・リープ（`baseMult` 2.4 / `baseGuts` 48） |
 | 固有効果 | ソードスキル |
-| 円盤石 | 3000ダイヤ（`STARTER_MONSTER_IDS` には入れない） |
+| 円盤石 | 300000ダイヤ（`STARTER_MONSTER_IDS` には入れない） |
 
 「高火力・低耐久・近接向けの攻撃特化型」。基礎総合力はエイキ付近で、エイキより攻撃へ寄せてある。
 勇者特性・固有効果の戦闘上の扱い（ヒット列・連撃パワー・永久追加連撃）は

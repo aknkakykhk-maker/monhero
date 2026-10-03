@@ -85,9 +85,13 @@ const VIEW={width:390,height:844};
     // 「お詫びの配布」などのモーダルは、押す場所を奪うので先に全部閉じる。
     // 「確認」を入れ忘れていて、これが開いたまま測っていたことがある(2026-09-06)
     // 「確認」は前後に何も付かないものだけを狙う。緩めると別のボタンまで押してしまう
-    for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|とじる|^確認$')))break;await page.waitForTimeout(250);}
+    for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる|^確認$')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
+    // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     // 「決定」は目印で押す。文字で探すと、みゅあの吹き出しのセリフを拾うことがある
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
     await page.addStyleTag({content:LAYOUT_CSS});
 
@@ -147,7 +151,7 @@ const VIEW={width:390,height:844};
         },[angle,INSET]);
         await page.waitForTimeout(300);
         const measured=await page.evaluate(()=>{
-          const back=document.querySelector('[data-rhythm-back]');
+          const back=document.querySelector('[data-rhythm-song-select-back]');
           if(!back)return null;
           const r=back.getBoundingClientRect();          // 回したあと=画面上の実寸
           const cx=r.left+r.width/2,cy=r.top+r.height/2;
@@ -167,6 +171,18 @@ const VIEW={width:390,height:844};
           // 回転のぶん当たり判定がずれていないか(押した場所にその要素が居るか)
           ok(`  ${angle}度: 「戻る」の真ん中を押すとその要素に当たる`,measured.reachable);
         }
+        // 器がもう四方の余白を取っているので、中のヘッダーが端末の上端の余白(59px)をもう一度足さない
+        // (2026-09-28・ユーザー指摘「横画面ボタンで切り替えたときの表示だけど上部が空いてて」)。
+        // 回した器の上は端末の右端で、そこに余白は要らない
+        const headPad=await page.evaluate(()=>{const h=document.querySelector('[data-rhythm-song-select-back]')?.closest('header');return h?parseFloat(getComputedStyle(h).paddingTop):null;});
+        ok(`  ${angle}度: 曲えらびのヘッダーの上に端末の上端の余白を二重に足さない`,headPad!==null&&headPad<=8,`padding-top=${headPad}px`);
+      }
+      {
+        // 回していないときは、これまでどおりヘッダーが端末の上端の余白を取る
+        await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));
+        await page.waitForTimeout(300);
+        const headPad=await page.evaluate(()=>{const h=document.querySelector('[data-rhythm-song-select-back]')?.closest('header');return h?parseFloat(getComputedStyle(h).paddingTop):null;});
+        ok('  回していないときは曲えらびのヘッダーが端末の上端の余白を取る',headPad!==null&&headPad>=INSET.top,`padding-top=${headPad}px`);
       }
       await page.evaluate(()=>{
         const root=document.documentElement.style;

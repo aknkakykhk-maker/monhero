@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -116,6 +116,12 @@ check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.ta
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
 check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX_SKILLS)
   .every(id => !!ex.tacticsExDurationText(ex.tacticsExDefOf(id))));
+// 説明文の言い回し(2026-10-03 ユーザー指摘「ガッツの上限のなん%が戻るって回復のことだよね？ 文言おかしくない？」)。
+// ライフ・ガッツが増えるのは「回復する」と書く(「戻る」は別の意味に読める)。「最大ライフ」の語順も崩さない
+{
+  const bad = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id)).filter(d => /上限の[0-9]+%戻|ライフを最大の/.test(d.desc || '')).map(d => d.name);
+  check('どの説明文も「上限の◯%戻る」「ライフを最大の」を使わない(回復と書く)', bad.length === 0, bad.join(','));
+}
 const ids = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id).id);
 check('EXのidが重ならない', new Set(ids).size === ids.length, ids.join(','));
 // STEP1 では効果の中身がまだ無い。入れたら TACTICS_EX_IMPLEMENTED_EFFECTS へ足すので、ここも合わせて変わる
@@ -345,7 +351,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExRegenRateAt(late, [unit], 0, A(3, 1)) === 0);
   check('ほかの子に入れ替わっていたら上乗せしない', ex.tacticsExRegenRateAt(g, [{ ...unit, id: 'Golem' }], 0, A(2, 3)) === 0);
   check('自動回復は1体ずつ「上限の30%」を固定値で足す(率への倍率ではない・ライフとガッツは別々の率・倒れている子の戻りには乗せない)',
-    /const hpBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'hp'\);[\s\S]{0,160}const gutsBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'guts'\);[\s\S]{0,160}rateHealTacticsAt\(units, slotIdx, hpBoost, gutsBoost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
+    /const hpBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'hp'\);[\s\S]{0,160}const gutsBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'guts'\);[\s\S]{0,160}rateHealTacticsAt\(units, slotIdx, hpBoost \+ partyHpBoost, gutsBoost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
 }
 
 // ---------- ⑪-2 ミタラシ「ドラゴンだっちー」(2026-09-27 ユーザー指示) ----------
@@ -390,6 +396,362 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('ガッツの率を持っていない子は、ライフと同じ率でガッツの上限を上げる', ex.scaleTacticsUnits([legacyUnit], 0, 0)[0].maxGuts === 130);
 }
 
+// ---------- ⑪-3 ユグドラシル「世界樹の守り」・メルホイップ「スイーツパラダイス」(2026-09-29 ユーザー指示) ----------
+// 世界樹の守り: 3ターンのあいだ味方全員の被ダメ30%軽減＋ターン終わりに味方全員のライフを上限の20%回復、1ラン5回。
+// スイーツパラダイス: 発動したターンだけ、その子の攻撃へ与ダメ30%の連撃×4、1ラン3回。どちらもカードと併用できる
+{
+  const A = (wave, turn) => ({ wave, turn });
+  const yg = ex.tacticsExDefOf('Yggdrasil');
+  check('ユグドラシル「世界樹の守り」: ラン5回・併用できる・3ターン・効果は partyGuard(実装済み)', !!yg && yg.name === '世界樹の守り'
+    && yg.maxUses === 5 && !yg.unlimited && yg.withCards && yg.duration === 'turns' && yg.turns === 3
+    && yg.partyTakenRate === 0.3 && yg.partyRegenRate === 0.2 && yg.effect === 'partyGuard' && ex.isTacticsExEffectImplemented(yg), JSON.stringify(yg));
+  const ygUnit = { id: 'Yggdrasil', hp: 500, maxHp: 1000 }, other = { id: 'Mocchi', hp: 300, maxHp: 600 };
+  const g = ex.applyTacticsExUse(ex.createTacticsExState(), { def: yg, slot: 0, monId: 'Yggdrasil', now: A(2, 3) });
+  const units = [ygUnit, other];
+  check('世界樹の守り: 使ったターンから3ターン(3〜5ターン目)、味方全員の被ダメ倍率0.7。6ターン目・次のWAVEでは1',
+    ex.tacticsExPartyTakenMult(g, units, A(2, 3)) === 0.7 && ex.tacticsExPartyTakenMult(g, units, A(2, 5)) === 0.7
+    && ex.tacticsExPartyTakenMult(g, units, A(2, 6)) === 1 && ex.tacticsExPartyTakenMult(g, units, A(3, 1)) === 1
+    && ex.tacticsExPartyTakenMult(g, units, A(2, 2)) === 1);
+  check('世界樹の守り: 効いているあいだ、ターン終わりのライフ回復へ味方全員0.2を足す(ガッツには足さない)',
+    ex.tacticsExPartyRegenRate(g, units, A(2, 4)) === 0.2 && ex.tacticsExPartyRegenRate(g, units, A(2, 6)) === 0
+    && ex.tacticsExRegenRateAt(g, units, 0, A(2, 4), 'guts') === 0);
+  check('世界樹の守り: 2体が同時に効いていれば掛け算で重なる(0.7×0.7)',
+    Math.abs(ex.tacticsExPartyTakenMult(ex.applyTacticsExUse(g, { def: yg, slot: 1, monId: 'Yggdrasil', now: A(2, 3) }), [ygUnit, ygUnit], A(2, 3)) - 0.49) < 1e-9);
+  check('世界樹の守り: 枠の子が入れ替わっていたら効かない', ex.tacticsExPartyTakenMult(g, [other, other], A(2, 3)) === 1);
+  check('世界樹の守り: 使ったターンもその子を含め全員がカードを使える', !ex.isTacticsExCardLocked(g, 0, A(2, 3)));
+
+  const mw = ex.tacticsExDefOf('MelWhip');
+  check('メルホイップ「スイーツパラダイス」: ラン3回・併用できる・発動ターンだけ・効果は comboBurst(実装済み)', !!mw && mw.name === 'スイーツパラダイス'
+    && mw.maxUses === 3 && !mw.unlimited && mw.withCards && mw.duration === 'turn'
+    && JSON.stringify(mw.extraCombos) === JSON.stringify({ count: 4, rate: 0.3 }) && mw.effect === 'comboBurst' && ex.isTacticsExEffectImplemented(mw), JSON.stringify(mw));
+  const melUnit = { id: 'MelWhip', hp: 500, maxHp: 1000 };
+  const m = ex.applyTacticsExUse(ex.createTacticsExState(), { def: mw, slot: 1, monId: 'MelWhip', now: A(1, 2) });
+  check('スイーツパラダイス: 発動したターンだけ、使った子の枠に{4回, 30%}。次のターン・ほかの枠は null',
+    JSON.stringify(ex.tacticsExExtraCombosAt(m, [other, melUnit], 1, A(1, 2))) === JSON.stringify({ count: 4, rate: 0.3 })
+    && ex.tacticsExExtraCombosAt(m, [other, melUnit], 1, A(1, 3)) === null
+    && ex.tacticsExExtraCombosAt(m, [other, melUnit], 0, A(1, 2)) === null);
+  const card = { type: 'atk', monId: 'MelWhip' };
+  const plain = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'MelWhip', heroId: 'Mocchi' });
+  const burst = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'MelWhip', heroId: 'Mocchi', exCombos: { count: 4, rate: 0.3 } });
+  const extra = burst.slice(plain.length);
+  check('スイーツパラダイス: ヒット列に与ダメ30%(300)の連撃が4本だけ足される(メインは変わらない)',
+    extra.length === 4 && extra.every(h => h.kind === 'combo' && h.dmg === 300 && h.skillName === 'スイーツパラダイス') && burst[0].dmg === plain[0].dmg,
+    JSON.stringify(extra));
+  check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
+    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken:1\)/.test(app)
+    && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\) : 0;/.test(app)
+    && (app.match(/exCombos:tacticsExCombosAt\(slotIdx(,halved|,true)?\)/g) || []).length === 3);
+}
+
+// ---------- ⑫ エイキ「緋桜瞬歩」(2026-10-02 ユーザー指示) ----------
+{
+  const ek = ex.tacticsExDefOf('Eiki');
+  check('エイキ「緋桜瞬歩」: ラン3回・カードと併用できない・3ターン・距離一致', !!ek && ek.name === '緋桜瞬歩'
+    && ek.maxUses === 3 && !ek.unlimited && !ek.withCards && ek.duration === 'turns' && ek.turns === 3
+    && ek.effect === 'distMatch' && ex.isTacticsExEffectImplemented(ek), JSON.stringify(ek));
+  const A = (wave, turn) => ({ wave, turn });
+  const e = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ek, slot: 2, monId: 'Eiki', now: A(1, 4) });
+  check('使ったターンから3ターン(4〜6ターン目)だけ distMatch が効き、7ターン目には切れる',
+    ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 4)) === 'distMatch' && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 6)) === 'distMatch'
+    && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 7)) === null);
+  check('使ったターンは、エイキだけがカードを使えない(ほかの枠は使える)', ex.isTacticsExCardLocked(e, 2, A(1, 4)) && !ex.isTacticsExCardLocked(e, 1, A(1, 4)));
+  check('WAVEが変わったら切れる・ほかの子には効かない', ex.tacticsExActiveEffect(e, 2, 'Eiki', A(2, 4)) === null
+    && ex.tacticsExActiveEffect(e, 2, 'Golem', A(1, 4)) === null && ex.tacticsExActiveEffect(e, 1, 'Eiki', A(1, 4)) === null);
+  check('距離補正の定数は ×1.7', ex.TACTICS_EX_DIST_MATCH_MULT === 1.7);
+  check('getDmg の距離補正は、distMatch が効いているあいだだけ距離の差に関係なく ×1.7',
+    /const distMult = tacticsExEffectAt\(slotIdx\)==='distMatch' \? TACTICS_EX_DIST_MATCH_MULT : \(exDistMult>0 \? exDistMult : \(\[1\.5,1\.3,1\.1,0\.9\]\[distDiff\]\|\|1\.0\)\);/.test(app));
+  check('敵と同じ距離の枠にいるときだけ完全に回避する(ほかの距離・ほかの効果・距離が不明なら回避しない)',
+    ex.tacticsExDistMatchDodges('distMatch', 2, 2) && !ex.tacticsExDistMatchDodges('distMatch', 2, 1)
+    && !ex.tacticsExDistMatchDodges('statBoost', 2, 2) && !ex.tacticsExDistMatchDodges(null, 2, 2)
+    && !ex.tacticsExDistMatchDodges('distMatch', 2, undefined) && !ex.tacticsExDistMatchDodges('distMatch', null, 2));
+  check('敵の攻撃の当たり先ごとの判定に、その子の距離と敵の距離を渡している',
+    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,420}if\(slotIdx===evadedSlot\|\|exDodge\)\{ evadedName=/.test(app));
+}
+
+// ---------- ⑬ ザン「血踊」(2026-10-02 ユーザー指示) ----------
+{
+  const zn = ex.tacticsExDefOf('Zan');
+  check('ザン「血踊」: ラン5回・カードと併用できる・3ターン・回避1回で連撃10%', !!zn && zn.name === '血踊'
+    && zn.maxUses === 5 && !zn.unlimited && zn.withCards && zn.duration === 'turns' && zn.turns === 3
+    && zn.effect === 'dodgeCombo' && zn.dodgeComboRate === 0.1 && ex.isTacticsExEffectImplemented(zn), JSON.stringify(zn));
+  const A = (wave, turn) => ({ wave, turn });
+  const units = [null, { id: 'Zan' }, { id: 'Eiki' }];
+  let z = ex.applyTacticsExUse(ex.createTacticsExState(), { def: zn, slot: 1, monId: 'Zan', now: A(1, 2) });
+  check('使った直後は連撃が増えていない(回避0回)', ex.tacticsExExtraCombosAt(z, units, 1, A(1, 2)) === null);
+  check('敵と同じ距離の枠にいるときだけ完全に回避する(エイキと同じ判定)', ex.tacticsExDistMatchDodges(ex.tacticsExActiveEffect(z, 1, 'Zan', A(1, 2)), 1, 1)
+    && !ex.tacticsExDistMatchDodges(ex.tacticsExActiveEffect(z, 1, 'Zan', A(1, 2)), 1, 2));
+  z = ex.recordTacticsExDodge(z, units, 1, A(1, 3));
+  const c1 = ex.tacticsExExtraCombosAt(z, units, 1, A(1, 3));
+  check('1回回避すると、与ダメ10%の連撃が1回', !!c1 && c1.count === 1 && Math.abs(c1.rate - 0.1) < 1e-9 && c1.label === '血踊', JSON.stringify(c1));
+  z = ex.recordTacticsExDodge(ex.recordTacticsExDodge(z, units, 1, A(1, 4)), units, 1, A(1, 4));
+  const c3 = ex.tacticsExExtraCombosAt(z, units, 1, A(1, 4));
+  check('回避するごとに連撃が1回ずつ増えていく(3回回避 → 10%の連撃が3回)', !!c3 && c3.count === 3 && Math.abs(c3.rate - 0.1) < 1e-9, JSON.stringify(c3));
+  check('3ターン目(4ターン目)まで続き、切れたら連撃も消える', ex.tacticsExExtraCombosAt(z, units, 1, A(1, 4)).count === 3 && ex.tacticsExExtraCombosAt(z, units, 1, A(1, 5)) === null);
+  check('WAVEが変わったら切れる', ex.tacticsExExtraCombosAt(z, units, 1, A(2, 3)) === null);
+  const same = ex.recordTacticsExDodge(ex.createTacticsExState(), units, 1, A(1, 3));
+  check('効いていない子の回避は数えない(使っていない・別の効果・別の子)', ex.tacticsExExtraCombosAt(same, units, 1, A(1, 3)) === null
+    && ex.tacticsExExtraCombosAt(ex.recordTacticsExDodge(ex.applyTacticsExUse(ex.createTacticsExState(), { def: ex.tacticsExDefOf('Eiki'), slot: 2, monId: 'Eiki', now: A(1, 2) }), units, 2, A(1, 3)), units, 2, A(1, 3)) === null);
+  const again = ex.applyTacticsExUse(z, { def: zn, slot: 1, monId: 'Zan', now: A(1, 8) });
+  check('もう一度使うと、回避の数は0からやり直し', ex.tacticsExExtraCombosAt(again, units, 1, A(1, 8)) === null);
+  const card = { type: 'unique', monId: 'Zan' };
+  const hits = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi', exCombos: c3 });
+  const base = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi' });
+  check('ヒット列に与ダメ10%(100)の連撃が回避した数だけ足される', hits.length - base.length === 3 && hits.slice(base.length).every(h => h.dmg === 100) , `${base.length}→${hits.length}`);
+  check('本体: 回避したら数える(結線)・連撃の名前を渡す', /const exDodge=tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,260}recordTacticsExDodge\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)[\s\S]{0,40}if\(slotIdx===evadedSlot\|\|exDodge\)/.test(app)
+    && readPart('22-enemy-and-bond-entries.jsx').includes("ec.label || 'スイーツパラダイス'"));
+}
+
+// ---------- ⑭ アーク「抗えぬ宿命を追え」・イブリース「堕天の烙印」(2026-10-02 ユーザー指示) ----------
+{
+  const ak = ex.tacticsExDefOf('Ark'), ib = ex.tacticsExDefOf('Iblis');
+  check('アーク「抗えぬ宿命を追え」: ラン5回・5ターン・併用できる・与ダメ+30%・被ダメ-20%・連撃10%×1', !!ak && ak.name === '抗えぬ宿命を追え'
+    && ak.maxUses === 5 && !ak.unlimited && ak.withCards && ak.duration === 'turns' && ak.turns === 5 && ak.effect === 'multiBuff'
+    && ak.dmgRate === 0.3 && ak.selfTakenRate === 0.2 && ak.extraCombos && ak.extraCombos.count === 1 && ak.extraCombos.rate === 0.1
+    && ex.isTacticsExEffectImplemented(ak), JSON.stringify(ak));
+  check('イブリース「堕天の烙印」: ラン5回・5ターン・併用できる・5%連撃×5・会心率×1.5・会心ダメ×1.3・丈夫さ+30%', !!ib && ib.name === '堕天の烙印'
+    && ib.maxUses === 5 && !ib.unlimited && ib.withCards && ib.duration === 'turns' && ib.turns === 5 && ib.effect === 'multiBuff'
+    && ib.extraCombos && ib.extraCombos.count === 5 && ib.extraCombos.rate === 0.05 && ib.critRateRate === 0.5 && ib.critDmgRate === 0.3
+    && ib.rates && ib.rates.def === 0.3 && ex.isTacticsExEffectImplemented(ib), JSON.stringify(ib));
+  check('イブリースは使うとき最大ライフの30%を払う(ほかのEXは払わない)', ib.lifeCostRate === 0.3 && ex.tacticsExLifeCost(ib, 360) === 108 && ex.tacticsExLifeCost(ak, 440) === 0
+    && ex.tacticsExLifeCost(ib, 0) === 0 && /最大ライフの30%/.test(ib.desc) && /30%より多い/.test(ib.conditionText || ''));
+  {
+    const base = { def: ib, state: ex.createTacticsExState(), slot: 1, monId: 'Iblis', alive: true, now: { wave: 1, turn: 1 } };
+    const full = ex.checkTacticsExUse({ ...base, hp: 360, maxHp: 360 });
+    const just = ex.checkTacticsExUse({ ...base, hp: 109, maxHp: 360 });
+    const edge = ex.checkTacticsExUse({ ...base, hp: 108, maxHp: 360 });
+    const low = ex.checkTacticsExUse({ ...base, hp: 50, maxHp: 360 });
+    check('ライフが払う量(108)より多いときだけ使える(払って倒れない)', full.ok && just.ok && !edge.ok && !low.ok && /ライフが足りない/.test(edge.reason || ''), JSON.stringify([full.ok, just.ok, edge.ok, low.ok]));
+    check('ライフを渡さなければ見ない・払わないEXはライフが少なくても使える', ex.checkTacticsExUse(base).ok
+      && ex.checkTacticsExUse({ def: ak, state: ex.createTacticsExState(), slot: 0, monId: 'Ark', alive: true, now: { wave: 1, turn: 1 }, hp: 1, maxHp: 440 }).ok);
+    check('本体: 判定にライフを渡し、使うときに払って枠へ出す', (app.match(/hp:lifeUnit\?lifeUnit\.hp:null, maxHp:lifeUnit\?lifeUnit\.maxHp:null/g) || []).length === 1
+      && /hp:lifeNow\?lifeNow\.hp:null, maxHp:lifeNow\?lifeNow\.maxHp:null/.test(app)
+      && /commitTacticsUnits\(damageTacticsTargets\(tacticsUnitsRef\.current,\[slotIdx\],cost\)\);/.test(app));
+  }
+  const A = (wave, turn) => ({ wave, turn });
+  const units = [{ id: 'Ark', atk: 130, def: 90 }, { id: 'Iblis', atk: 145, def: 100 }];
+  const s = ex.applyTacticsExUse(ex.applyTacticsExUse(ex.createTacticsExState(), { def: ak, slot: 0, monId: 'Ark', now: A(1, 2) }), { def: ib, slot: 1, monId: 'Iblis', now: A(1, 2) });
+  const mA = ex.tacticsExMultiBuffOf(s, units, 0, A(1, 2)), mI = ex.tacticsExMultiBuffOf(s, units, 1, A(1, 2));
+  check('アーク: 与ダメ×1.3・被ダメ×0.8(会心は変わらない)', !!mA && Math.abs(mA.dmg - 1.3) < 1e-9 && Math.abs(mA.taken - 0.8) < 1e-9 && mA.critRate === 1 && mA.critDmg === 1, JSON.stringify(mA));
+  check('イブリース: 会心率×1.5・会心ダメ×1.3(与ダメ・被ダメは変わらない)', !!mI && mI.dmg === 1 && mI.taken === 1 && Math.abs(mI.critRate - 1.5) < 1e-9 && Math.abs(mI.critDmg - 1.3) < 1e-9, JSON.stringify(mI));
+  check('5ターン(2〜6ターン目)だけ効き、7ターン目には切れる・WAVEが変わったら切れる・ほかの子には効かない',
+    !!ex.tacticsExMultiBuffOf(s, units, 0, A(1, 6)) && ex.tacticsExMultiBuffOf(s, units, 0, A(1, 7)) === null
+    && ex.tacticsExMultiBuffOf(s, units, 0, A(2, 2)) === null && ex.tacticsExMultiBuffOf(s, [{ id: 'Golem' }, units[1]], 0, A(1, 2)) === null
+    && ex.tacticsExMultiBuffOf(ex.createTacticsExState(), units, 0, A(1, 2)) === null);
+  check('イブリースの丈夫さ+30%(アークは力も丈夫さも変わらない)', ex.applyTacticsExStats(units[1], s, 1, A(1, 2)).def === 130 && ex.applyTacticsExStats(units[1], s, 1, A(1, 2)).atk === 145
+    && ex.applyTacticsExStats(units[0], s, 0, A(1, 2)).atk === 130 && ex.applyTacticsExStats(units[0], s, 0, A(1, 2)).def === 90);
+  const cA = ex.tacticsExExtraCombosAt(s, units, 0, A(1, 2)), cI = ex.tacticsExExtraCombosAt(s, units, 1, A(1, 2));
+  check('連撃: アークは10%を1回、イブリースは5%を5回(名前はそのEXの名前)', !!cA && cA.count === 1 && cA.rate === 0.1 && cA.label === '抗えぬ宿命を追え'
+    && !!cI && cI.count === 5 && cI.rate === 0.05 && cI.label === '堕天の烙印', JSON.stringify([cA, cI]));
+  const card = { type: 'unique', monId: 'Iblis' };
+  const plain = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi', guaranteedCrit: true });
+  const crit = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi', guaranteedCrit: true, critDmgMult: 1.3 });
+  check('会心ダメージは(1.5+補正)にかける乗算(1.5 → 1.95)', plain[0].crit && crit[0].crit && crit[0].dmg === Math.floor(plain[0].dmg * 1.3), `${plain[0].dmg}→${crit[0].dmg}`);
+  const withCombos = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi', exCombos: cI });
+  const noCombos = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi' });
+  check('ヒット列に与ダメ5%(50)の連撃が5本だけ足される', withCombos.length - noCombos.length === 5 && withCombos.slice(noCombos.length).every(h => h.dmg === 50 && h.skillName === '堕天の烙印'), `${noCombos.length}→${withCombos.length}`);
+  check('本体: 与ダメ(getDmg)・会心率・会心ダメ(3か所)・被ダメ(applyTurnDamageReduction)へ結線してある',
+    /const totalBuffMult=traitMult\*tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
+    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
+    && (app.match(/critDmgMult:tacticsExMultiBuffNow\(slotIdx\)\.critDmg/g) || []).length === 3);
+}
+
+// ---------- ⑮ ピクシー・ミーア・スネグーラチカ(2026-10-03 ユーザーの案・数字は仮) ----------
+{
+  const px = ex.tacticsExDefOf('Pixie'), mi = ex.tacticsExDefOf('Mia'), sn = ex.tacticsExDefOf('Snegurochka');
+  check('ピクシー「お気に入りの魔法」: 3回・併用できる・3ターン・距離補正×1.5・固有技が必ず出る', !!px && px.name === 'お気に入りの魔法' && px.maxUses === 3 && px.withCards
+    && px.duration === 'turns' && px.turns === 3 && px.distMult === 1.5 && px.guaranteeUnique && px.effect === 'multiBuff' && ex.isTacticsExEffectImplemented(px), JSON.stringify(px));
+  check('ミーア「オン・ステージ！」: 3回・併用できる・4ターン・枚数+1・ボルテージ(最大10・与ダメ3%・回復5%・ガッツ2%)', !!mi && mi.name === 'オン・ステージ！' && mi.maxUses === 3 && mi.withCards
+    && mi.turns === 4 && mi.cardBonus === 1 && mi.voltage && mi.voltage.max === 10 && mi.voltage.dmg === 0.03 && mi.voltage.heal === 0.05 && mi.voltage.guts === 0.02 && mi.voltage.hp === 0.03
+    && mi.effect === 'stage' && ex.isTacticsExEffectImplemented(mi), JSON.stringify(mi));
+  check('スネグーラチカ「クリスマスプレゼント」: 各WAVE1回・併用できる・2ターン・ガッツ20%・大当たり10%', !!sn && sn.name === 'クリスマスプレゼント' && sn.maxUses === 1 && sn.usesPerWave && sn.withCards
+    && sn.turns === 2 && sn.present && sn.present.fixedGuts === 0.2 && sn.present.jackpot === 0.1 && sn.present.combo.count === 2 && sn.effect === 'present' && ex.isTacticsExEffectImplemented(sn), JSON.stringify(sn));
+  const A = (wave, turn) => ({ wave, turn });
+  const units = [{ id: 'Pixie' }, { id: 'Mia' }, { id: 'Snegurochka' }, { id: 'Golem' }];
+  const use = (state, def, slot, id, now) => ex.applyTacticsExUse(state, { def, slot, monId: id, now });
+  // --- ピクシー ---
+  const sp = use(ex.createTacticsExState(), px, 0, 'Pixie', A(1, 2));
+  const mbP = ex.tacticsExMultiBuffOf(sp, units, 0, A(1, 2));
+  check('ピクシー: 効いているあいだ距離補正が×1.5(与ダメ・被ダメ・会心は変わらない)・3ターンで切れる', !!mbP && mbP.distMult === 1.5 && mbP.dmg === 1 && mbP.taken === 1
+    && !!ex.tacticsExMultiBuffOf(sp, units, 0, A(1, 4)) && ex.tacticsExMultiBuffOf(sp, units, 0, A(1, 5)) === null && ex.tacticsExMultiBuffOf(sp, units, 0, A(2, 2)) === null);
+  check('ピクシー: 固有技を出す子の枠は、効いているあいだだけ(次のターンまで見られる)', ex.tacticsExUniqueGuaranteeSlot(sp, units, A(1, 4)) === 0 && ex.tacticsExUniqueGuaranteeSlot(sp, units, A(1, 5)) === null
+    && ex.tacticsExUniqueGuaranteeSlot(ex.createTacticsExState(), units, A(1, 2)) === null
+    && ex.tacticsExUniqueGuaranteeSlot(use(ex.createTacticsExState(), ex.tacticsExDefOf('Eiki'), 2, 'Eiki', A(1, 2)), [{}, {}, { id: 'Eiki' }], A(1, 2)) === null);
+  {
+    const isFav = (c) => c.type === 'unique' && c.monId === 'Pixie' && c.ownerSlotIdx === 0;
+    const fav = { uid: 'fav', type: 'unique', monId: 'Pixie', ownerSlotIdx: 0 }, other = { uid: 'o', type: 'unique', monId: 'Pixie', ownerSlotIdx: 1 };
+    const c = (n) => ({ uid: 'c' + n, type: 'atk' });
+    const inHand = ex.ensureTacticsExUniqueInHand({ hand: [c(1), fav], deck: [c(2)], graveyard: [] }, isFav);
+    check('手札に固有技がすでにあれば何も動かさない', !inHand.moved && inHand.hand.length === 2);
+    const fromDeck = ex.ensureTacticsExUniqueInHand({ hand: [c(1), c(2)], deck: [c(3), fav], graveyard: [] }, isFav);
+    check('山札にあれば手札へ移す(手札に空きがあるとき)', fromDeck.moved && fromDeck.hand.length === 3 && fromDeck.hand.includes(fav) && !fromDeck.deck.includes(fav));
+    const fromGrave = ex.ensureTacticsExUniqueInHand({ hand: [c(1)], deck: [c(2)], graveyard: [fav] }, isFav);
+    check('山札になければ捨て札から探して手札へ移す', fromGrave.moved && fromGrave.hand.includes(fav) && fromGrave.graveyard.length === 0);
+    const full = ex.ensureTacticsExUniqueInHand({ hand: [c(1), c(2), c(3), c(4), c(5)], deck: [fav], graveyard: [] }, isFav);
+    check('手札がいっぱい(5枚)なら、いちばん後ろの別のカードを山札へ戻して入れ替える(枚数は5のまま・カードは消えない)',
+      full.moved && full.hand.length === 5 && full.hand[4] === fav && full.deck.length === 1 && full.deck[0].uid === 'c5');
+    const none = ex.ensureTacticsExUniqueInHand({ hand: [c(1)], deck: [c(2), other], graveyard: [] }, isFav);
+    check('見つからなければそのまま(別の子の固有技は出さない)', !none.moved && none.hand.length === 1 && none.deck.length === 2);
+    const input = { hand: [c(1)], deck: [fav], graveyard: [] };
+    ex.ensureTacticsExUniqueInHand(input, isFav);
+    check('渡した配列は書き換えない', input.hand.length === 1 && input.deck.length === 1);
+  }
+  // --- ミーア ---
+  let sm = use(ex.createTacticsExState(), mi, 1, 'Mia', A(1, 3));
+  check('ミーア: 効いているあいだ、盤面の枚数+1・ミーア自身+1(ほかの子の自身は+0)。4ターン(3〜6)で切れる',
+    ex.tacticsExCardBonusTotal(sm, units, A(1, 3)) === 1 && ex.tacticsExCardBonusAt(sm, units, 1, A(1, 3)) === 1 && ex.tacticsExCardBonusAt(sm, units, 0, A(1, 3)) === 0
+    && ex.tacticsExCardBonusTotal(sm, units, A(1, 6)) === 1 && ex.tacticsExCardBonusTotal(sm, units, A(1, 7)) === 0 && ex.tacticsExCardBonusTotal(sm, units, A(2, 3)) === 0
+    && ex.tacticsExCardBonusTotal(ex.createTacticsExState(), units, A(1, 3)) === 0);
+  const v0 = ex.tacticsExVoltageOf(sm, units, A(1, 3));
+  check('ミーア: はじめのボルテージは0(強化なし)', !!v0 && v0.voltage === 0 && v0.max === 10 && v0.dmgMult === 1 && v0.healMult === 1 && v0.gutsAdd === 0 && v0.hpAdd === 0, JSON.stringify(v0));
+  sm = ex.addTacticsExVoltage(sm, units, A(1, 3), 5);
+  const v5 = ex.tacticsExVoltageOf(sm, units, A(1, 4));
+  check('ミーア: カード5枚でボルテージ5 → 与ダメ×1.15・回復×1.25・ガッツ自動回復+10%・ライフ自動回復+15%', !!v5 && v5.voltage === 5 && Math.abs(v5.dmgMult - 1.15) < 1e-9 && Math.abs(v5.healMult - 1.25) < 1e-9 && Math.abs(v5.gutsAdd - 0.1) < 1e-9 && Math.abs(v5.hpAdd - 0.15) < 1e-9, JSON.stringify(v5));
+  sm = ex.addTacticsExVoltage(sm, units, A(1, 4), 30);
+  check('ミーア: ボルテージは最大10で止まる(与ダメ×1.30・回復×1.50・ガッツ+20%)', ex.tacticsExVoltageOf(sm, units, A(1, 5)).voltage === 10 && Math.abs(ex.tacticsExVoltageOf(sm, units, A(1, 5)).dmgMult - 1.3) < 1e-9
+    && Math.abs(ex.tacticsExVoltageOf(sm, units, A(1, 5)).healMult - 1.5) < 1e-9);
+  check('ミーア: 効果が切れたらボルテージは消える・もう一度使うと0から・効いていないときは何もたまらない',
+    ex.tacticsExVoltageOf(sm, units, A(1, 7)) === null && ex.tacticsExVoltageOf(use(sm, mi, 1, 'Mia', A(1, 8)), units, A(1, 8)).voltage === 0
+    && ex.tacticsExVoltageOf(ex.addTacticsExVoltage(ex.createTacticsExState(), units, A(1, 3), 3), units, A(1, 3)) === null
+    && ex.tacticsExVoltageOf(ex.addTacticsExVoltage(sm, units, A(1, 7), 3), units, A(1, 7)) === null);
+  // --- スネグーラチカ ---
+  let ss = use(ex.createTacticsExState(), sn, 2, 'Snegurochka', A(1, 2));
+  check('スネグーラチカ: 使うと回数が0 / 1。WAVEのはじめに戻る(1 / 1)・ほかのEXの回数は戻さない',
+    ex.tacticsExRemaining(sn, ex.tacticsExUsesOf(ss, 2, 'Snegurochka')).left === 0
+    && ex.tacticsExRemaining(sn, ex.tacticsExUsesOf(ex.resetTacticsExWaveUses(ss), 2, 'Snegurochka')).left === 1
+    && ex.tacticsExUsesOf(ex.resetTacticsExWaveUses(use(ss, ex.tacticsExDefOf('Monol'), 3, 'Monol', A(1, 3))), 3, 'Monol') === 1);
+  check('回数を戻す必要がなければ、同じ state をそのまま返す', ex.resetTacticsExWaveUses(ex.createTacticsExState()) === ex.createTacticsExState() || (() => { const st = ex.createTacticsExState(); return ex.resetTacticsExWaveUses(st) === st; })());
+  const kinds = ex.TACTICS_EX_PRESENT_KINDS;
+  check('プレゼント: 6種(与ダメ・被ダメ・連撃・ライフ・ガッツ・会心率)', kinds.length === 6 && ['dmg', 'taken', 'combo', 'heal', 'guts', 'crit'].every(k => kinds.includes(k)));
+  const jp = ex.rollTacticsExPresent(0.05, 0.5, 0.1), r0 = ex.rollTacticsExPresent(0.5, 0, 0.1), r5 = ex.rollTacticsExPresent(0.5, 0.999, 0.1), edge = ex.rollTacticsExPresent(0.1, 0.5, 0.1);
+  check('プレゼント: 乱数が0.1より小さければ大当たり(6つ全部)・そうでなければ1つ(乱数0で最初・0.999で最後)・ちょうど0.1は大当たりではない',
+    jp.jackpot && jp.kinds.length === 6 && !r0.jackpot && r0.kinds.length === 1 && r0.kinds[0] === 'dmg' && r5.kinds[0] === 'crit' && !edge.jackpot);
+  const allKinds = new Set(Array.from({ length: 60 }, (_, i) => ex.rollTacticsExPresent(0.5, i / 60, 0.1).kinds[0]));
+  check('乱数を均等に振ると6種ぜんぶ出る', allKinds.size === 6);
+  const gift = (roll) => ex.tacticsExPresentOf(ex.setTacticsExPresent(ss, 2, roll), units, A(1, 2));
+  const gD = gift({ jackpot: false, kinds: ['dmg'] }), gT = gift({ jackpot: false, kinds: ['taken'] }), gC = gift({ jackpot: false, kinds: ['combo'] }), gK = gift({ jackpot: false, kinds: ['crit'] }), gH = gift({ jackpot: false, kinds: ['heal'] });
+  check('プレゼントの持続4種: 与ダメ×1.2・被ダメ×0.8・連撃(10%×2回)・会心率×1.3。回復・ガッツはその場だけで持続しない',
+    Math.abs(gD.dmg - 1.2) < 1e-9 && gD.taken === 1 && Math.abs(gT.taken - 0.8) < 1e-9 && gC.combo && gC.combo.count === 2 && gC.combo.rate === 0.1 && gC.combo.label === 'クリスマスプレゼント'
+    && Math.abs(gK.critRate - 1.3) < 1e-9 && gH.dmg === 1 && gH.taken === 1 && gH.critRate === 1 && gH.combo === null);
+  const gJ = gift({ jackpot: true, kinds: kinds.slice() });
+  check('大当たりは持続4種がぜんぶ重なる', gJ.jackpot && Math.abs(gJ.dmg - 1.2) < 1e-9 && Math.abs(gJ.taken - 0.8) < 1e-9 && Math.abs(gJ.critRate - 1.3) < 1e-9 && !!gJ.combo);
+  check('プレゼントは2ターンで切れる・WAVEが変わったら切れる・中身を決める前は何も起きない',
+    ex.tacticsExPresentOf(ex.setTacticsExPresent(ss, 2, { jackpot: false, kinds: ['dmg'] }), units, A(1, 4)).dmg === 1
+    && ex.tacticsExPresentOf(ex.setTacticsExPresent(ss, 2, { jackpot: false, kinds: ['dmg'] }), units, A(2, 2)).dmg === 1
+    && ex.tacticsExPresentOf(ss, units, A(1, 2)).dmg === 1);
+  const ecA = { count: 1, rate: 0.1, label: 'A' }, ecB = { count: 2, rate: 0.05, label: 'B' };
+  const hitsBoth = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'Ark' }, attackerId: 'Ark', heroId: 'Mocchi', exCombos: [ecA, ecB] });
+  const hitsNone = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'Ark' }, attackerId: 'Ark', heroId: 'Mocchi' });
+  check('連撃は配列で渡すと、自分のぶんとプレゼントのぶんが別々に足される(100×1 + 50×2)', hitsBoth.length - hitsNone.length === 3
+    && hitsBoth.slice(hitsNone.length).map(h => h.dmg).join(',') === '100,50,50' && hitsBoth.slice(hitsNone.length).map(h => h.skillName).join(',') === 'A,B,B');
+  check('本体: 距離補正・味方全員ぶんの倍率・連撃(配列)・回復カード・ガッツ自動回復へ結線してある',
+    /const exDistMult = tacticsExMultiBuffNow\(slotIdx\)\.distMult;/.test(app)
+    && /out\.dmg\*=party\.dmg; out\.critRate\*=party\.critRate;/.test(app)
+    && /const list=\[own,gift,devil\]\.filter\(Boolean\);\n\s*return list\.length===0\?null:\(list\.length===1\?list\[0\]:list\);/.test(app)
+    && /tacticsRateHeal\(cardHealRate\*tacticsExPartyBuffNow\(\)\.heal,0\)/.test(app)
+    && /baseGutsRecoveryRate\+tacticsExPartyBuffNow\(\)\.gutsAdd/.test(app));
+  check('本体: ターン終わりにボルテージをため、次のターンも効くならピクシーの固有技を手札へ出す・使ったときにも出す',
+    /addTacticsExVoltage\(stNow,tacticsUnitsRef\.current,\{ wave, turn:turnCount \},usedCardEntries\.length\)/.test(app)
+    && /tacticsExUniqueGuaranteeSlot\(tacticsExStateRef\.current,tacticsUnitsRef\.current,\{ wave, turn:turnCount\+1 \}\)/.test(app)
+    && /if\(def\.guaranteeUnique&&\(hand\.length<5\|\|!selectedCards\.includes\(hand\.length-1\)\)\)/.test(app));
+  check('本体: 使ったときにプレゼントの中身を決めて(必ず全員のガッツ)・WAVEが変わったら回数を戻す・詳細に状態を出す',
+    /rollTacticsExPresent\(Math\.random\(\),Math\.random\(\),def\.present\.jackpot\)/.test(app) && /tacticsRateHeal\(0,def\.present\.fixedGuts,false\)/.test(app)
+    && /resetTacticsExWaveUses\(tacticsExStateRef\.current\)[\s\S]{0,160}\}, \[wave, runMode\]\);/.test(app)
+    && /statusLines:\(\(\)=>\{/.test(app) && /data-tactics-ex-status/.test(screen));
+}
+
+// ---------- ⑯ ウンディーネ「生命の泉」・ヤオビクニ「悠久の刻」(2026-10-03 ユーザーの案) ----------
+{
+  const un = ex.tacticsExDefOf('Undine'), yb = ex.tacticsExDefOf('Yaobikuni');
+  check('ウンディーネ「生命の泉」: 5回・併用できる・3ターン・味方を選ぶ・上限+30%・ガッツ30%', !!un && un.name === '生命の泉' && un.maxUses === 5 && un.withCards && un.duration === 'turns' && un.turns === 3
+    && un.target === 'ally' && un.lifeSpring && un.lifeSpring.maxUpRate === 0.3 && un.lifeSpring.gutsRate === 0.3 && un.effect === 'lifeSpring' && ex.isTacticsExEffectImplemented(un), JSON.stringify(un));
+  check('ヤオビクニ「悠久の刻」: 回数2回・併用できる・発動ターンだけ・時間停止', !!yb && yb.name === '悠久の刻' && yb.maxUses === 2 && !yb.unlimited && yb.withCards && yb.duration === 'turn'
+    && yb.effect === 'timeStop' && ex.isTacticsExEffectImplemented(yb), JSON.stringify(yb));
+  const A = (wave, turn) => ({ wave, turn });
+  const units = [
+    { id: 'Undine', hp: 100, maxHp: 350, baseMaxHp: 350, atk: 1, def: 1, guts: 10, maxGuts: 170, baseMaxGuts: 170, downed: false },
+    { id: 'Golem', hp: 40, maxHp: 600, baseMaxHp: 600, atk: 1, def: 1, guts: 10, maxGuts: 70, baseMaxGuts: 70, downed: true },
+    null,
+    { id: 'Yaobikuni', hp: 450, maxHp: 450, baseMaxHp: 450, atk: 1, def: 1, guts: 10, maxGuts: 125, baseMaxGuts: 125, downed: false },
+  ];
+  const opts = ex.tacticsExTargetOptions(un, units);
+  check('選べる味方は、立っている子もダウン中の子も(自分も)。選ばないEXは null', opts.length === 3 && opts.map(o => o.slot).join(',') === '0,1,3' && opts[1].downed && !opts[0].downed
+    && ex.tacticsExTargetOptions(yb, units) === null && ex.tacticsExTargetOptions(null, units) === null);
+  check('味方を選んでいなければ使えない・選んだ枠に味方がいなければ使えない・選ぶEXでなければ確認しない',
+    !!ex.checkTacticsExTarget(un, units, null) && !!ex.checkTacticsExTarget(un, units, 2) && ex.checkTacticsExTarget(un, units, 1) === null && ex.checkTacticsExTarget(un, units, 0) === null
+    && ex.checkTacticsExTarget(yb, units, null) === null);
+  const used = ex.applyTacticsExUse(ex.createTacticsExState(), { def: un, slot: 0, monId: 'Undine', now: A(1, 2), target: 3 });
+  check('使うと選んだ味方の枠を覚える(選ぶEXでなければ null)', used.effects[0].target === 3 && ex.applyTacticsExUse(ex.createTacticsExState(), { def: yb, slot: 3, monId: 'Yaobikuni', now: A(1, 2) }).effects[3].target === null);
+  // ライフ上限: 対象の子は泉が効いているあいだ戻さない
+  const withRate = ex.scaleTacticsUnits(ex.setTacticsExMaxHpRate(units, 3, 0.3), 0, 0);
+  check('ライフの上限だけが上がる(450 → 585・ガッツ125のまま)。すでに上がっていれば大きいほうを残す', withRate[3].maxHp === 585 && withRate[3].maxGuts === 125
+    && ex.setTacticsExMaxHpRate(ex.setTacticsExMaxHpRate(units, 3, 0.5), 3, 0.3)[3].exMaxRate === 0.5);
+  check('生命の泉の対象は、泉が効いているあいだ(2〜4ターン目)は上限を戻さない・5ターン目には戻す・WAVEが変わったら戻す',
+    !ex.expireTacticsExMaxRates(withRate, used, A(1, 2)).changed && !ex.expireTacticsExMaxRates(withRate, used, A(1, 4)).changed
+    && ex.expireTacticsExMaxRates(withRate, used, A(1, 5)).changed && ex.expireTacticsExMaxRates(withRate, used, A(2, 2)).changed);
+  check('泉の対象ではない子の上限アップは、これまでどおり(自分のガッツ全開っちーが効いていなければ戻す)',
+    ex.expireTacticsExMaxRates(ex.setTacticsExMaxHpRate(withRate, 0, 0.3), used, A(1, 2)).changed);
+  // 時間停止
+  const ts = ex.applyTacticsExUse(ex.createTacticsExState(), { def: yb, slot: 3, monId: 'Yaobikuni', now: A(1, 4) });
+  check('時間停止: 使ったターンだけ止まっている枠が見つかる(次のターン・別のWAVE・使う前は null)', ex.tacticsExTimeStopSlot(ts, units, A(1, 4)) === 3 && ex.tacticsExTimeStopSlot(ts, units, A(1, 5)) === null
+    && ex.tacticsExTimeStopSlot(ts, units, A(2, 4)) === null && ex.tacticsExTimeStopSlot(ex.createTacticsExState(), units, A(1, 4)) === null);
+  const spent = ex.spendTacticsExTimeStop(ts);
+  check('敵の番を止めたあとは「使い終わった」ことにする(同じターンの数字が続いても止まらない)・止まっていなければ同じ state', ex.tacticsExTimeStopSlot(spent, units, A(1, 4)) === null
+    && ex.isTacticsExEffectActive(spent, 3, 'Yaobikuni', A(1, 4)) && (() => { const st = ex.createTacticsExState(); return ex.spendTacticsExTimeStop(st) === st; })());
+  check('使ったターンは、もう一度使えない(止めたあとの同じターンの数字でも)', !ex.checkTacticsExUse({ def: yb, state: spent, slot: 3, monId: 'Yaobikuni', alive: true, now: A(1, 4) }).ok);
+  check('本体: 使う前の確認・選んだ味方の記録・生命の泉・選べる一覧・時間停止(敵の番・ターン数)へ結線してある',
+    /if\(checkTacticsExTarget\(def,tacticsUnitsRef\.current,choice\)\) return false;/.test(app)
+    && /choice, target:def\.target==='ally'\?choice:null \}\);/.test(app)
+    && /if\(def\.lifeSpring&&Number\.isInteger\(choice\)\)\{/.test(app) && /setTacticsExMaxHpRate\(units,choice,def\.lifeSpring\.maxUpRate\)/.test(app)
+    && /targetOptions:\(\(\)=>\{ const opts=tacticsExTargetOptions\(def,tacticsUnits\)/.test(app)
+    && /const timeStopSlot = isTacticsMode\(runMode\)&&tacticsExEnabled \? tacticsExTimeStopSlot\(/.test(app)
+    && /if \(timeStopSlot!=null\) \{\n\s*addPopup\('⏳ 時間停止！/.test(app)
+    && /const nextTurn=timeStopSlot!=null\?turnCount:turnCount\+1; setTurnCount\(nextTurn\);/.test(app)
+    && /data-tactics-ex-target=\{t\.slot\}/.test(screen));
+}
+
+// ---------- ⑰ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮) ----------
+{
+  const pd = ex.tacticsExDefOf('Pandora');
+  check('パンドラ「パンドラの箱」: ラン3回・併用できる・3ターン・ライフ30%・自分+1枚・悪魔側 与ダメ×1.5と連撃30%×1・天使側10%・最後の希望ガッツ50%', !!pd && pd.name === 'パンドラの箱' && pd.maxUses === 3 && pd.withCards
+    && pd.duration === 'turns' && pd.turns === 3 && pd.effect === 'pandoraBox' && ex.isTacticsExEffectImplemented(pd) && !!pd.pandoraBox
+    && pd.pandoraBox.costRate === 0.3 && pd.pandoraBox.selfCardBonus === 1 && pd.pandoraBox.devilDmg === 1.5 && pd.pandoraBox.devilCombo.count === 1 && pd.pandoraBox.devilCombo.rate === 0.3
+    && pd.pandoraBox.angelRate === 0.1 && pd.pandoraBox.hopeGutsRate === 0.5, JSON.stringify(pd));
+  const A = (wave, turn) => ({ wave, turn });
+  const mk = (id, hp, downed = false) => ({ id, hp, maxHp: 400, baseMaxHp: 400, atk: 1, def: 1, guts: 50, maxGuts: 135, baseMaxGuts: 135, downed });
+  const units = [mk('Pandora', 400), mk('Golem', 400), mk('Mocchi', 200, true)];
+  const st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: pd, slot: 0, monId: 'Pandora', now: A(2, 3) });
+  check('箱が効いているのは使ったターンから3ターン(3〜5ターン目)・次のWAVEでは切れる・パンドラの枠だけ',
+    !!ex.tacticsExPandoraBoxOf(st, units, 0, A(2, 3)) && !!ex.tacticsExPandoraBoxOf(st, units, 0, A(2, 5)) && ex.tacticsExPandoraBoxOf(st, units, 0, A(2, 6)) === null
+    && ex.tacticsExPandoraBoxOf(st, units, 0, A(3, 3)) === null && ex.tacticsExPandoraBoxOf(st, units, 1, A(2, 3)) === null
+    && ex.tacticsExPandoraBoxOf(ex.createTacticsExState(), units, 0, A(2, 3)) === null);
+  const dv = ex.tacticsExPandoraDevil(st, units, 0, A(2, 3), false);
+  check('悪魔側の力: 1枚目だけ 与ダメ×1.5・連撃30%×1(名前「悪魔の力」)。「同じ子の2枚目」・箱が無いときは null',
+    !!dv && dv.dmg === 1.5 && dv.combo.count === 1 && dv.combo.rate === 0.3 && dv.combo.label === '悪魔の力'
+    && ex.tacticsExPandoraDevil(st, units, 0, A(2, 3), true) === null && ex.tacticsExPandoraDevil(ex.createTacticsExState(), units, 0, A(2, 3), false) === null);
+  check('パンドラ自身が使えるカードが+1(自分の枠+1・盤面の枚数も+1・ほかの子の枠は+0)', ex.tacticsExCardBonusAt(st, units, 0, A(2, 3)) === 1 && ex.tacticsExCardBonusAt(st, units, 1, A(2, 3)) === 0
+    && ex.tacticsExCardBonusTotal(st, units, A(2, 3)) === 1 && ex.tacticsExCardBonusTotal(st, units, A(2, 6)) === 0);
+  const t1 = ex.tacticsExPandoraTurnEnd(st, units, A(2, 3)), t2 = ex.tacticsExPandoraTurnEnd(st, units, A(2, 4)), t3 = ex.tacticsExPandoraTurnEnd(st, units, A(2, 5));
+  check('ターン終わり: 1・2ターン目はライフを払う(cost)・3ターン目は最後の希望(hope)・箱が無ければ null', !!t1 && t1.slot === 0 && t1.phase === 'cost' && t2.phase === 'cost' && t3.phase === 'hope'
+    && ex.tacticsExPandoraTurnEnd(st, units, A(2, 6)) === null && ex.tacticsExPandoraTurnEnd(ex.createTacticsExState(), units, A(2, 3)) === null);
+  const downedUnits = [mk('Pandora', 0, true), mk('Golem', 400), mk('Mocchi', 200, true)];
+  check('パンドラが倒れていたら died(最後の希望は起きない)', ex.tacticsExPandoraTurnEnd(st, downedUnits, A(2, 4)).phase === 'died' && ex.tacticsExPandoraTurnEnd(st, downedUnits, A(2, 5)).phase === 'died');
+  const spent = ex.spendTacticsExPandoraBox(st);
+  check('始末が済むと何も起きない(同じターンの数字が続いても)・効いていなければ同じ state',
+    ex.tacticsExPandoraTurnEnd(spent, units, A(2, 5)) === null && ex.tacticsExPandoraBoxOf(spent, units, 0, A(2, 4)) === null && ex.tacticsExPandoraDevil(spent, units, 0, A(2, 4), false) === null
+    && (() => { const e = ex.createTacticsExState(); return ex.spendTacticsExPandoraBox(e) === e; })());
+  check('箱が効いているあいだは、もう一度使えない(ラン3回のうち、切れたあとなら使える)', !ex.checkTacticsExUse({ def: pd, state: st, slot: 0, monId: 'Pandora', alive: true, now: A(2, 4) }).ok && ex.checkTacticsExUse({ def: pd, state: ex.spendTacticsExPandoraBox(st), slot: 0, monId: 'Pandora', alive: true, now: A(3, 1) }).ok);
+  check('本体: 悪魔側(与ダメ・連撃・予測)・天使側(2枚目)・ターン終わりの始末へ結線してある',
+    /tacticsExPandoraDevilNow\(slotIdx,isSecondOrLaterAtk\)\.dmg\*/.test(app)
+    && /const devil=tacticsExPandoraDevilNow\(slotIdx,halved\)\.combo;/.test(app)
+    && /getAttackPredictedDmg = useCallback\(\(card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null, halved=false\)/.test(app)
+    && (screen.match(/getAttackPredictedDmg\([^;]*,(halved|pendingHalved|isSecondOrLater)\)/g) || []).length === 4
+    && /pandoraCardNo\[entry\.slotIdx\]===2\?tacticsExPandoraBoxOf\(/.test(app) && /tacticsRateHeal\(boxNow\.angelRate,boxNow\.angelRate,false\)/.test(app)
+    && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'devil'\}\)/.test(app) && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'angel'\}\)/.test(app) && /setTacticsPandoraForms\(\{\}\);/.test(app)
+    && /data-pandora-pair/.test(screen) && /\{pandoraArt\?pandoraArt:s\?\.imgUrl\?/.test(screen) && /tacticsPandoraForms=\{tacticsPandoraForms\}/.test(app)
+    && /const boxStep=tacticsExPandoraTurnEnd\(tacticsExStateRef\.current,tacticsUnitsRef\.current,tacticsExLiveRef\.current\.now\);\s*if\(boxStep\) await settleTacticsExPandoraBox\(boxStep\);/.test(app)
+    && /if\(timeStopSlot==null&&isTacticsMode\(runMode\)&&tacticsExEnabled\)\{\s*const boxStep/.test(app));
+}
+
 // ---------- ⑧ 壊れた値 ----------
 {
   let fine = true;
@@ -419,8 +781,12 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('EXを出すかは tacticsExSkillsEnabled 1か所で決める', /const tacticsExEnabled = tacticsExSkillsEnabled\(runMode/.test(app)
     && (app.match(/tacticsExSkillsEnabled\(/g) || []).length === 1);
   // EXは枚数(cardLimit)の計算に入らない
-  const limitBlock = app.slice(app.indexOf('const baseCardLimit'), app.indexOf('const slotMaxUses'));
-  check('EXは1ターンに選べる枚数(cardLimit・👑の+1)の計算に入っていない', !/tacticsEx/.test(limitBlock));
+  //   ★2026-10-03 例外はミーアの「オン・ステージ！」だけ(盤面の枚数+1と、ミーア自身の+1)。元の計算(baseCardLimit)には入れない
+  const limitBlock = app.slice(app.indexOf('const baseCardLimit'), app.indexOf('const exCardBonus'));
+  check('EXは元の枚数の計算(baseCardLimit・👑の+1)に入っていない', !/tacticsEx/.test(limitBlock));
+  check('ミーアの「オン・ステージ！」だけが cardLimit・ミーア自身の枚数へ足される',
+    /const exCardBonus = isTacticsMode\(runMode\) \? tacticsExCardBonusTotal\(tacticsExState,tacticsUnits,\{ wave, turn:turnCount \}\) : 0;\n\s*const cardLimit = Math\.min\(5,baseCardLimit\+soulCoordinationCardBonus\+exCardBonus\);/.test(app)
+    && /tacticsExCardBonusAt\(tacticsExState,tacticsUnits,slotIdx,\{ wave, turn:turnCount \}\)/.test(app));
   // ★止めるのは使った子だけ。置ける子の一覧(tacticsUsableSlots)から外すので、手動の選択・スワイプ・枠のタップが一度に止まる
   check('併用できないEXを使った子は、置ける子の一覧(手動・スワイプ・枠のタップ)から外れる',
     /if\(tacticsExLocked\.includes\(slotIdx\)\) return;\n\s*if\(countsTowardTacticsSlotLimit\(card\)/.test(app)
@@ -463,9 +829,10 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /const result = expireTacticsExMaxRates\(tacticsUnitsRef\.current, tacticsExStateRef\.current, \{ wave, turn:turnCount \}\);/.test(app));
   check('発動は詳細パネルの「EXスキルを使用」(スタイル式はその先の選択肢)からだけ',
     (screen.match(/activateTacticsEx\(/g) || []).length === (panelSrc.match(/activateTacticsEx\(/g) || []).length
-    && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 2
+    && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 3 // 使う・スタイルを選ぶ・味方を選ぶ(生命の泉。2026-10-03)
     && /data-tactics-ex-use disabled=\{!exPanel\.check\.ok\}/.test(screen)
-    && /data-tactics-ex-choice=\{st\.id\} disabled=\{st\.current\|\|!exPanel\.check\.ok\}/.test(screen));
+    && /data-tactics-ex-choice=\{st\.id\} disabled=\{st\.current\|\|!exPanel\.check\.ok\}/.test(screen)
+    && /data-tactics-ex-target=\{t\.slot\} data-tactics-ex-target-downed=\{t\.downed\?'yes':'no'\} disabled=\{!exPanel\.check\.ok\}/.test(screen));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

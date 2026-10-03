@@ -148,10 +148,12 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
       const backToDetail=()=>{onStopPreview();onBackToDetail();};
       // 再生そのもの(コマ送りのタイマーと世代管理)は MonsterHeroGame 側に残してある。
       // 進行中の setTimeout を画面のライフサイクルで止めると、演出が途中で固まるため
-      const playAttackPreview=async(kind)=>{
+      const playAttackPreview=async(kind,skillName=null)=>{
         if(playingKind)return;
-        await onPlayPreview(mon,kind,atkMotion);
+        await onPlayPreview(mon,kind,atkMotion,skillName);
       };
+      // 技ごとに動きが違う子は、技を1つずつ選んで見られる(デバッグ画面と同じ部品。対象の子が増えれば自動で出る)
+      const skillMotionLists=skillMotionListsOf(mon);
       const kindButton=(kind,label)=>(
         <button key={kind} type="button" data-attack-preview-play={kind} onClick={()=>{Audio_.se.tap();playAttackPreview(kind);}} disabled={!!playingKind}
           className={`flex-1 min-w-0 min-h-[52px] rounded-xl border px-2 text-[12px] font-black active:scale-95 disabled:opacity-40 ${playingKind===kind?'border-cyan-200 bg-cyan-700 text-white':'border-cyan-400/60 bg-slate-900 text-cyan-100'}`}>
@@ -170,6 +172,8 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
             {/* 待機アニメ(翼の羽ばたきなど)もバトルと同じ場面で重ねる。持たない子は今までどおり1枚の絵 */}
             <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} baseId={mon.id}/>
           </div>
+          {/* 固有技の再生には、バトルと同じ「必殺技の共通演出」(暗転・帯・閃光・フィニッシュ)も舞台の中へ重ねる */}
+          {playingKind==='unique'&&previewAnim&&<SpecialMoveFx compact slotSkill={{slotIndex:-1,name:playing.skillName||mon.unique?.names?.[0]||'必殺技',type:'unique',sig:!playing.skillName}} attackAnim={previewAnim} mon={mon} ownerId={mon.id}/>}
           <span className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
@@ -177,6 +181,7 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
             {kindButton('normal','通常攻撃')}
             {kindButton('unique','固有技')}
           </div>
+          <SkillMotionPicker lists={skillMotionLists} playingName={playing?.skillName||null} disabled={!!playingKind} onPlay={(kind,name)=>playAttackPreview(kind,name)}/>
         </div>
       </div>;}
 
@@ -194,7 +199,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
           <span className="text-[10px] font-black text-amber-300 shrink-0">図鑑登録数</span>
           <span className="text-[15px] font-mono font-black text-amber-100 tabular-nums">{unlockedCount}<span className="text-slate-400 text-[10px]"> / {monsters.length}</span></span>
         </div>
-        <div className="shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="主血統でしぼりこむ">
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="主血統で絞り込む">
           <button type="button" aria-pressed={dexLineageFilter==='all'} onClick={()=>onSelectLineage('all')} className={chipClass(dexLineageFilter==='all')}>すべて</button>
           {filters.map(lineage=>(
             <button key={lineage.id} type="button" aria-pressed={dexLineageFilter===lineage.id} onClick={()=>onSelectLineage(lineage.id)} className={chipClass(dexLineageFilter===lineage.id)}>{lineage.name}</button>
@@ -408,7 +413,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
                     const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
                     if(!exDef)return null;
                     const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
-                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
+                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.usesPerWave?'各WAVE ':'ラン'}${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
                   })()}
                 </div>)}
               </div>

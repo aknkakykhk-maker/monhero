@@ -33,6 +33,10 @@
 | `mh_se_volume` | number / `1` | SE音量0～100 |
 | `mh_bgm_volume` | number / `1` | BGM音量0～100 |
 | `mh_bgm_arrangement` | object / 既定の組み合わせ | 場面ごとに選んだBGMのtrack ID。読み込み時に正規化し、知らない項目・不正なIDは既定値で補う |
+| `mh_title_art` | string / `'auto'` | タイトル画像アレンジ。`'auto'`(おまかせ)・`'halloween'`・`'classic'`。無い・知らない値は `'auto'`。起動時の先読み(index.html)もこのキーを読む |
+| `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
+| `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
+| `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
 | `mh_breeder_xp` | number / `0` | 累計ブリーダーXP |
@@ -49,6 +53,13 @@
 | `mh_unlocked_teachings` | string[] / 初期6枚 | 解放済み教えID |
 | `mh_teaching_roster` | string[] / 解放済み一覧 | 教え候補編成 |
 | `mh_masu_mons` | object[] / `[]` | マスモン個体一覧。AUTO∞自動限界突破は個体ごとに `autoRepeatBreakthroughMode`（`off` / `fixed` / `follow`）と既存の `autoRepeatBreakthroughLevel` を持つ。旧データで数値Lvがあれば `fixed` として保持する。旧仕様で保存できたLv405以上の5刻み値は、通常限界突破の実上限と同じLv400へ丸めて意味を保つ。旧boolean・欠損・不正値はOFFへ落とす。`uniqueSkillPoints`（未使用の固有技ポイント）など後から足した項目も既定値へ正規化する |
+| `mh_masu_locked_v1` | string[] / `[]` | マスモンのお気に入り(ロック)のIDの並び(2026-10-01)。お気に入りの子は削除・合体の副・寄付ができない。壊れた値は「お気に入りなし」(`normalizeMasuLockIds`)。`mh_masu_mons` には書かない |
+| `mh_favorite_masu_v1` | string / `null` | 「好きなモンスター」にしたマスモン1体のID(フレンド機能・プロフィールで選ぶ。フレンドにだけ見える)。マスモンのロックの「お気に入り」(`mh_masu_locked_v1`)とは**別のもの** |
+| `mh_profile_message_v1` | string / `''` | フレンドのプロフィールに出る「ひとこと」(30文字まで。`friendsCleanMessage` を通した文) |
+| `mh_friend_favorites_v1` | string[] / `[]` | フレンド一覧で「お気に入り」にしたフレンドのID(`friendsNormalizeFavorites` を通す) |
+| `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
+| `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
+| `mh_masu_lock_rebirth_v1` | string[] / `[]` | マスモンの転生ロックのIDの並び(2026-10-01)。転生ロックの子は転生できない。お気に入り(`mh_masu_locked_v1`)とは別々に付け外しできる。壊れた値は「ロックなし」。`mh_masu_mons` には書かない |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
 | `mh_kiki_intro_seen_v1` | boolean / `false` | きき加入の会話を見たか。既存プレイヤーへ1回だけ流すための判定に使う |
@@ -105,7 +116,7 @@
 | `mh_battle_speed_v1` | string | バトル速度(`normalizeBattleSpeed` で既定へ) |
 | `mh_battle_screen_style_v1` | string / `'TACTICS_NEW'` | タクティクス画面の表示設定（`TACTICS_OLD` / `TACTICS_NEW`）。未保存・旧`CLASSIC`値・不正値は新タクティクスUIへ正規化。通常のクラシックバトルには影響しない |
 | `mh_dex_idle_motion_v1` | boolean / `true` | モンスター図鑑の立ち絵を動かすか(図鑑のページの「動きを止める／動かす」)。無い・`false` 以外は動かす。見た目だけ |
-| `mh_battle_fx_v1` | object / `{idleMotion:'ON', shake:'ON'}` | バトル設定の「待機中の動き」「画面の揺れ」(`normalizeBattleFxSettings` で既定へ。項目が無い・不正値は `'ON'`)。見た目だけで戦闘には影響しない |
+| `mh_battle_fx_v1` | object / `{idleMotion:'ON', shake:'ON', autoLoad:'OFF'}`(`autoLoad` の既定は 2026-10-01 に ON→OFF。以前 ON で保存していた人は一度きりの移行で OFF にし、済みの印は `mh_battle_fx_autoload_default_off_v1`) | バトル設定の「待機中の動き」「画面の揺れ」(`normalizeBattleFxSettings` で既定へ。項目が無い・不正値は `'ON'`)。見た目だけで戦闘には影響しない |
 | `mh_login_bonus` | object / `LOGIN_BONUS_DEFAULT` | ログインボーナスの受取状況(期間キーと日数) |
 | `mh_playtime_v1` | object | プレイ時間の累計と日別(`normalizePlaytime`) |
 | `mh_player_id` | string | ランキング送信に使う端末ID。`localStorage` 直接アクセス(`storeGet` を通さない) |
@@ -113,6 +124,7 @@
 | `mh_bond_live_sync_v1` | object / `{version:1,sent:{}}` | 絆Lv・総合力ランキング(`bond_levels`)へリアルタイムで送った行の指紋。見出しは「ブリーダー名＋個体ID」、値は行の内容から作った短い文字列。前と同じ行は送らないために使うだけで、壊れていたら空から数え直す(全員を1回送り直すだけで記録は壊れない)。送れた行だけ覚える(2026-09-27) |
 | `mh_battle_score_shrink_migrated_v1` | boolean / `false` | スコアを全モード 1/1000 にした(2026-10-03)ときの、端末に残した数字の一度きりの移行が済んだか。縮めるのは `mh_hs_*` / `mh_quick_hs_*` / `mh_pro_hs_*` / `mh_extreme_hs_*` / `mh_species_challenge_progress_v1` の `bestScore` / 送信待ちの `mh_rank_<難易度>`(タクティクス・モンヒロビートは除く)。`mh_ranking_cache` は捨てて取り直させる。縮めた値とこのフラグは1つの取引で書く(途中で止まっても二重に縮まない)。ランキング側の数字は `docs/sql/rankings/SCORE_SHRINK_*.sql` で別に縮める |
 | `mh_pro_last_party` | object / `EMPTY_PRO_LAST_PARTY` | プロモードで最後に使った編成(`normalizeProLastParty`) |
+| `mh_pro_pick_prefs_v1` | object / `{recent:[],fav:[]}` | プロモードの勇者モン・供モンえらびの「前回使った子」(`recent`・最大8)と「お気に入り」(`fav`)。モンスターIDの配列。壊れている・無いときは空で読む(`readProPickPrefs`) |
 | `mh_home_pasture_ids` | string[] / `[]` | HOME の牧場に出すマスモンの個体ID(`normalizeHomePastureIds`) |
 | `mh_monster_roster_sets_v1` | object | 編成セット(`normalizeMonsterPartySets`)。`mh_monster_roster` は現在のセットの写し |
 | `mh_monster_list_settings` | object / `DEFAULT_MONSTER_LIST_SETTINGS` | マスモン一覧の並び・絞り込み |
@@ -132,13 +144,17 @@
 | `mh_assistant_call_style` / `mh_assistant_call_style_<id>` | string | 助手の呼び方(さん付けなど)。みゅあは無印(`assistantCallStyleKeyFor`) |
 | `mh_assistant_unlock_seen_v1` | object / `{}` | 助手の解放告知を見たか(`data/assistants.js` の `normalizeAssistantUnlockSeen`) |
 | `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD`)のハイスコアと完走回数 |
-| `mh_rhythm_settings_v1` | object / `DEFAULT_RHYTHM_SETTINGS` | モンビーの演奏設定(`normalizeRhythmSettings`) |
+| `mh_rhythm_settings_v1` | object / `DEFAULT_RHYTHM_SETTINGS` | モンビーの演奏設定(`normalizeRhythmSettings`)。2026-09-27 に `roadWidth`(`WIDE`/`STANDARD`/`NARROW`、横画面の道の幅)を足した。無い・知らない値は `WIDE`(それまでと同じ幅)へ補う。2026-09-28 に `noteSeHoldVolume`(押さえている間の溜める音の大きさ・0〜200・既定100)を足した 2026-10-03 に `multiLightLook`(boolean・既定 `true`。みんなで対戦のライブだけ見た目を「軽さ優先」に重ねる)を追加。無い既存の保存値は既定値で補う。2026-10-03 に `multiLook`(`LIGHT`/`STANDARD`/`VIVID`/`OWN`・既定 `LIGHT`。対戦の演出の段階)を追加。無い保存値は `multiLightLook` から決める(ON→LIGHT・OFF→OWN)。選び直すときは `multiLightLook` も合わせて書く |
 | `mh_rhythm_select_v1` | object / `DEFAULT_RHYTHM_SELECT_VIEW` | 曲えらび画面の見え方(並び順など) |
 | `mh_rhythm_best_v1` | object | 曲×難易度ごとの BEST(`normalizeRhythmBestRecords`) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
+| `mh_rhythm_multi_penalty_v1` | object / `null` | みんなで対戦(マルチ)で、公開ルームのライブを途中でやめたときの入室待ち `{ until: 時刻(ms) }`。3分を超える値・壊れた値は0扱い(`rhythmMultiPenaltyLeftMs`)。2026-10-02 追加 |
+| `mh_rhythm_multi_record_v1` | object / `null` | みんなで対戦の記録(2026-10-03 追加)。`{ lives, mvp, bestAvg, bestStreak, lastRound, recent:[{at, round, songId, avg, score, n, streak, mvp, quit, names}] }`。最近は30回ぶん。読むときは `rhythmMultiNormalizeRecord` を通し(無い・壊れた値は0から)、同じ回(`round`)は2度数えない(`rhythmMultiAddRecord`) |
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_chart_notes_v1` | object / `{}` | 譜面メモ(デバッグ限定・2026-09-26)。`曲id|難易度` → 区間ごとの 👍/👎 とひとことメモ。譜面の作り直しを見分ける `fingerprint` 付き(`normalizeRhythmChartNotes`) |
+| `mh_rhythm_play_log_device_v1` | string / 無し | 遊んだ記録(2026-09-28)の端末ごとのでたらめなID(英小文字と数字20文字)。記録の送信(`rhythmPlayLogSend`)だけが使い、無い・形が違うときは作り直す。名前・ブリーダーIDとは結び付かない(`docs/spec/RHYTHM_PLAY_LOG.md`) |
+| `mh_rhythm_touch_diag_v1` | array / `[]` | タッチの診断(2026-09-30・`docs/spec/RHYTHM_TOUCH_DIAG.md`)。演奏1曲ごとに、ポインタとタッチの突き合わせ・遅れ・取り消し・入力の無いMISSの数をまとめたもの。直近20曲だけ持つ。配列でない・要素がオブジェクトでないものは読まずに捨てる。判定・スコア・ランキングには使わない。2026-10-01から、要素の `stats` に `playId`(1曲ごとの番号)と `fixes`(効いていた直し方)が入り、リザルトの「押したのに反応しないことがあった」を押した曲には `reported:true` が付く(どれも項目を足しただけ。無い古い要素はそのまま読む) |
 | `mh_rhythm_event_notice_v1` | string / `''` | 曲えらびで「今週の対象曲」の案内を見たイベントのID(週が変わると新しいIDになり、その週の初回にもう一度だけ出る。`docs/spec/RHYTHM_RANKING.md` §10.2) |
 | `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |
@@ -159,6 +175,7 @@
 | `mh_masu_auto_enhance_intro_seen_v1` | boolean / `true` | マスモンの自動強化の案内を見たか。**既定値は `true`**(保存が無いときに「見た」扱いにすると案内が誰にも出ないため、読み込み側で未保存を判別してから出す) |
 | `mh_profile_frame_owned_v1` | string[] / `[]` | 手に入れたプロフィールフレームのid。**一度もらったら外さない**(条件を変えても取り上げにならないよう、「いまのLv」ではなく「もらった記録」を持つ)。`normalizeOwnedProfileFrames` を通す |
 | `mh_profile_frame_notice_v1` | string[] / `[]` | フレームをもらったことを知らせ終えたid。枠ごとに覚える(1つのidで既読にすると2枚目以降が知らされない) |
+| `mh_rhythm_clear_total_v1` | number / `0` | モンヒロビートの通算クリア回数(2026-10-03・スエゾービートのフレームを買える条件「10回クリア」に使う)。**この更新から数えはじめる**(既存の `mh_rhythm_best_v1` は曲×難易度ごとのクリア有無しか持たず、回数が分からないため。過去の分は入れない)。ライフを残して終えた演奏だけ+1(練習・アシストモード・失敗は数えない)。`normalizeRhythmClearTotal` を通す。減らさない・消さない |
 | `mh_update_notice_style_v1` | `'FULL'` / `'MINI'` / `'OFF'` / 既定 `'FULL'` | 更新のお知らせの出し方(`normalizeUpdateNoticeStyle` で既定へ倒す) |
 | `mh_rhythm_strip_v1` | object / `{}` | モンヒロビートの見た目をデバッグ画面で間引く設定。ふだんは空で、通常プレイでは何も起きない(既存の音ゲー設定・BESTには触らない別キー) |
 

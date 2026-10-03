@@ -74,13 +74,13 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
       return list.filter((n) => n.marks.some((m) => m && text.includes(m))).map((n) => n.id);
     }, news);
 
-    // --- 助手えらび → 名前とアイコン → けってい ---
+    // --- 助手えらび → 名前とアイコン → 決定 ---
     await clickText('^確認$');
     await page.waitForTimeout(400);
     const chose = await clickText('この子にする');
     check('助手をえらべる', chose);
     await page.waitForTimeout(1200);
-    await clickText('なまえを決める');
+    await clickText('名前を決める');
     await page.waitForTimeout(600);
     await page.fill('input[type=text], input:not([type])', 'テスト');
     await clickText('^保存$');
@@ -90,11 +90,11 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
     // アイコンの一覧から最初の1つを選ぶ(画像のボタン)
     await page.evaluate(() => {
       // 一覧のアイコンは正方形の画像ボタン(プロフィールの顔の「アイコンを変える」ボタンは aria-label 付きなので除く)
-      const b = [...document.querySelectorAll('button.aspect-square')].find((x) => x.offsetParent && x.querySelector('img') && !x.getAttribute('aria-label'));
+      const b = [...document.querySelectorAll('button[data-icon-option]')].find((x) => x.offsetParent) /* アイコン選びは窓へ作り直された */;
       if (b) b.click();
     });
     await page.waitForTimeout(800);
-    const decided = await clickText('^けってい');
+    const decided = await clickText('^決定！');
     check('名前とアイコンを決められる', decided);
     await page.waitForTimeout(1500);
 
@@ -106,7 +106,7 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
     while (Date.now() < deadline) {
       (await shownNews()).forEach((id) => seen.add(id));
       if (await page.evaluate(() => document.body.innerText.includes('継承固有技Lv不具合修正のお詫び'))) apologyShown = true;
-      const moved = await clickText('^(つぎへ|次へ|とじる|閉じる|OK|スキップ|はじめる|さっそく|わかった|うん)');
+      const moved = await clickText('^(次へ|閉じる|OK|スキップ|はじめる|さっそく|わかった|うん)');
       if (!moved) atHome = atHome || await page.evaluate(() => document.body.innerText.includes('モンヒロバトル'));
       await page.waitForTimeout(moved ? 400 : 2000);
     }

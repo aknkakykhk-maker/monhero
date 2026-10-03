@@ -134,13 +134,13 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
     <>
       <div className="w-full flex items-end gap-2">
         {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
-        <button type="button" onClick={onFaceTap} aria-label={`${who.name}にはなしかける`} className="shrink-0 active:scale-90 transition-transform">
+        <button type="button" onClick={onFaceTap} aria-label={`${who.name}に話しかける`} className="shrink-0 active:scale-90 transition-transform">
           <AssistantFace who={who} size={size} accent={color} expression={face}/>
         </button>
         <Wrapper
           {...(hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
           className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
-          style={{ borderColor:color, backgroundColor:'rgba(15,23,42,0.92)' }}>
+          style={{ borderColor:color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>
           {/* 吹き出しのしっぽ(左向き) */}
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
@@ -165,8 +165,8 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
                 ? renderHelpBlocks(topic.blocks, color)
                 : (paragraphs || []).map((x,i)=><p key={i} className="text-[12px] text-slate-200 leading-relaxed">{x}</p>)}
             </div>
-            <div className="shrink-0 p-4 pt-2" style={{ paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }}>
-              <button onClick={()=>setOpen(false)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{ backgroundColor:color }}>とじる</button>
+            <div className="shrink-0 p-4 pt-2" style={{ paddingBottom:'calc(1rem + var(--mh-sa-bottom))' }}>
+              <button onClick={()=>setOpen(false)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{ backgroundColor:color }}>閉じる</button>
             </div>
           </div>
         </div>

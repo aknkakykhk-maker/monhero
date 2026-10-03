@@ -57,7 +57,7 @@ const openRhythmFromHome = async (page) => {
   // ログインボーナスなどの重なりを閉じる
   for (let i = 0; i < 12; i++) {
     const closed = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK)$/.test((x.innerText || '').trim()));
+      const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
       if (b) { b.click(); return true; }
       const dialog = document.querySelector('[role="dialog"]');
       if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }
@@ -68,6 +68,8 @@ const openRhythmFromHome = async (page) => {
   }
   // HOMEの施設からモンヒロビートを開く(ここから先は何も押さない)
   await page.evaluate(() => document.querySelector('button[aria-label="モンヒロビート"]')?.click());
+  // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+  await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
   await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 20000 }).catch(() => {});
 };
 

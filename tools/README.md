@@ -71,6 +71,7 @@ node tools/build.js --check
 
 | コマンド | 何をするか |
 | --- | --- |
+| `node maintenance.js` | **定期メンテナンスの点検**。全領域の検査(週次は重い4本を除く約65分)と、ワークフロー数・肥大・孤立画像・溜まったブランチの衛生チェックを回して報告する(直さない)。`--full` で月次(全検査)、`--quick` で1〜2分の手早い版、`--write` で `docs/ops/maintenance/latest.md` へ書く。運用は [`docs/ops/MAINTENANCE.md`](../docs/ops/MAINTENANCE.md)。 |
 | `node ctx.js brief` | いまの状態(ブランチ・未コミットの変更・次に打つもの)を数行で出す。作業の入口。 |
 | `node ctx.js find <語>` / `text <語>` | 定義／本文を探す(`where.js` へ委譲。生成物は対象外)。 |
 | `node ctx.js read <ファイル> <名前>` | **その定義の本体だけ**を切り出す。終わりの行は、文字列・コメント・テンプレート文字列・正規表現を飛ばしながら括弧を数えて決める(JSXの `…}/>` を正規表現と取り違えないようにしてある)。`parts/*.jsx` のトップレベル定義1437件すべてで終端が取れることを確認済み。長すぎる定義は上限で切ったうえで**中にある定義の地図**を出すので、`sed` の範囲を当て推量しなくてよい。 |
@@ -86,6 +87,7 @@ node tools/build.js --check
 | `node where.js` | 場所だけを知る道具(`--screens` / `--outline` / `--text`)。`ctx.js` が内部で呼ぶ。 |
 | `node check-drift.js <検査>` | **落ちた検査が探している本体の文字の並びのうち、今は無いものと、本体でいちばん似ている行を並べる。**「書き方が変わっただけ」か「本当に消えた」かの見分けに使う(読むだけ)。 |
 | `node mode/rhythm-gpu-estimate.js [--check]` | **実機が無くても GPU の重さを見積もる。**「おまかせ」4つが画面いっぱいを何回塗ったのと同じかを測り、機種の帯ごとの GPU の時間と fps の目安に直す。`--check` で `mode/gpu-budget.json` の上限を超えていないかを見る(1回5分ほど)。 |
+| `node mode/rhythm-slowmo-shot.js` | **演奏画面を「コマ送り」で撮る。** ブラウザの仮想の時間で、遅い環境でも本来の速さで遊んだときの 0.083秒ごとの画面を撮る(自動で叩く・叩いたときの光も写る)。参考動画と同じ間隔で並べて見比べるときに使う。 |
 | `node run-checks.js --changed` | **変更したファイルから、要る検査だけを選んで回す。** `--plan` で選んだ検査と理由だけ出す。上限は既定40本で、切ったぶんは本数を必ず出す(`--limit` / `--wide` で広げる)。 |
 | `node rules-index-check.js` | `CLAUDE.md` の大きさ・`docs/rules/` とのリンク・**要のことばが消えていないか**を見る。CIでも回す。 |
 
@@ -226,7 +228,29 @@ node tools/build.js --check
 
 `node mode/rhythm-chart-rev15-check.js` は、Rev.15(旋律の上下に沿って動かす)を見張る。2曲×5難易度を Rev.14 と Rev.15 で作り、旋律と逆向きの動きが半分以下になること、押せない配置が無いこと、ノーツ数が1%以内で変わらないことを確かめる。
 
-`node mode/rhythm-audio-meter-opinion.js` は、テンポ・拍子の二つ目の意見(2026-09-26)。自動判定が3拍子の曲で、強い打点(低音と大きな一発)が小節の4等分と3等分のどちらに多いかを比べ、4拍子の読み違い(正しいテンポの 3/4 で3拍子と読む)を疑う。解析の警告 `meter-doubt` にもなる(1.8以上で止める・1.5以上で注意、4/3倍の BPM・4拍子を代わりの候補として示す)。自動では書き換えない。引数なしで一覧の曲を全部見る。`node mode/rhythm-audio-meter-opinion-check.js` が見張る。
+`node mode/rhythm-play-log.js --fetch --report --learn --write` は、モンヒロビートの遊んだ記録(サーバーの rhythm_play_logs)を読み、譜面ごとの押す時刻のばらつき・ミス・低音の聞こえ方を測って、生成器の調整値(`authoring/chart-play-tuning.json`)を学ぶ(2026-09-28・MHB CHART ENGINE Rev.17)。`--import <file>` で JSON / JSONL からも取り込める。仕組みは `docs/spec/RHYTHM_PLAY_LOG.md`。`mode/rhythm-chart-low-lag.js` は低音の打点の遅れを測り、`mode/rhythm-chart-play-tuning.js` はリビジョンごとの調整値を読む。`node mode/rhythm-play-log-check.js` が、ゲームの送り方・SQL・学び方(作り物の記録で)・調整値0の Rev.17 が Rev.16 と同じ譜面になることを見張る。
+
+`node supabase-apply.js <SQLの名前>` は、`docs/sql/` に用意した3本組(`*_APPLY_TEST.sql` → `*_APPLY.sql` → `*_VERIFY.sql`)を、Supabase の Management API で順に流す(2026-09-30)。予行演習が通らなければ本番は流さない。`drop table` / `truncate` / `delete from` / `drop column` などの消す操作を含むSQLは流さない。鍵は環境変数 `SUPABASE_ACCESS_TOKEN`、通信先は `api.supabase.com`(環境のネットワーク設定で許可)。`--dry` で流す順だけ、`--query "select ..."` で読み取りだけの問い合わせ。見張りは `supabase-apply-check.js`。
+
+`node mode/rhythm-touch-diag.js --fetch --report` は、モンヒロビートのタッチの診断(サーバーの rhythm_touch_diagnostics・2026-09-30)を読み、iPhone と Android を比べて、指がどの段階で消えているか(ブラウザがタッチを落とした・ブラウザより手前で消えた・同時5本・取り消し・処理の遅れ・道の外)を判定する。つながらないときは `--import <file>`。見張りは `mode/rhythm-touch-diag-check.js`(SQLを手元の PostgreSQL 16 で流す)と `mode/rhythm-touch-bridge-check.js`(実際に曲を流し、タッチを落とした状況を作って取り戻しと二重防止を見る)。仕組みは `docs/spec/RHYTHM_TOUCH_DIAG.md`。
+
+`node mode/rhythm-virtual-player.js --track <曲id> [--difficulty MASTER] [--runs 200]` は、仮想プレイヤーに作者用の譜面を遊ばせ、ミスの見込み・押す時刻のばらつき・いちばんつまずく区間を出す(2026-09-28・Rev.18 の区間の差し替えも使う)。`node mode/rhythm-virtual-player-check.js` が見張る。`mode/rhythm-chart-repeats.js` は4つの手がかりの多数決で繰り返しを見つけ(Rev.18)、`node mode/rhythm-chart-rev18-check.js` が見張る。写した小節のリズムをそろえる Rev.19 は `node mode/rhythm-chart-rev19-check.js`、歯ごたえをテンポの数字から切り離す Rev.20 は `node mode/rhythm-chart-rev20-check.js` が見張る。`node mode/rhythm-chart-tempo-warp.js` は、テンポの揺れ(Rev.21)に合わせる曲と揺れの幅を一覧する(なめらかに揺れ、半分の区間で確かめた曲だけ。`node mode/rhythm-chart-rev21-check.js` が見張る。Rev.23 の読み方 v2 は `node mode/rhythm-chart-rev23-check.js`)。`node mode/rhythm-chart-ending.js` は、曲の終わりの余韻(Rev.22)で締める曲と最後の一発を一覧する(`node mode/rhythm-chart-rev22-check.js` が見張る)。`node mode/rhythm-check-spots.js --all --write` は、曲ごとの「ここを確かめて」リスト(`docs/spec/RHYTHM_CHECK_SPOTS.md`)を作る(2026-09-29・気になり点・仮想プレイヤーのつまずき・弱い音・音から離れたノーツ・急に詰まる所・出だしと終わりを秒数付きで)。`node mode/rhythm-robot-play.js --all --parallel 3`(`python3 tools/serve.py` を立てた状態で)は、ロボットに本物のゲームで全曲・全難易度を通しで遊ばせ、ノーツの時刻ぴったりのタッチで MARVELOUS にならないノーツを探す。`node mode/rhythm-visual-sync-check.js`(`python3 tools/serve.py` を立てた状態で)は、本物のゲームをブラウザで遊ばせ、縦・端末ごと横・横画面ボタンで回す、の3つで、ノーツが判定ラインに見える時刻と曲の時刻のずれを1コマずつ測る(2026-09-29・どれも中央 ±1ms)。
+
+`node mode/rhythm-chart-rev24-check.js` は、MHB CHART ENGINE Rev.24(大きな一発を左右対称の同時フリックに・2026-09-29)を見張る。Dullahan を Rev.23 と Rev.24 で作り、EASY〜HARD が同じノーツであること、EXPERT・MASTER に同じ時刻・道の真ん中をはさんで左右対称の FLICK 2本の組があること(MASTER は外向きに払う)、組の前後が空いていること、向きの付け直しと自動修正(step7)のあとも位置と向きが変わらないことを確かめる。
+
+`node mode/rhythm-chart-rev25-check.js` は、MHB CHART ENGINE Rev.25(サビ前後の密度を保つ・長いノーツを増やす・2026-09-30・CHUNITHM の譜面との比べ合わせから)を見張る。Rising Hope を Rev.24 と Rev.25 で作り、曲全体のノーツ数が ±3% 以内のまま、MASTER のサビに入る前後(50〜60秒)と終盤(70〜80秒)の密度が上がること、EXPERT・MASTER の HOLD・SLIDE が増えること(ベースの伸びも材料にする)、自動修正(step7)のあとも同じ時刻・同じ場所に重なるノーツが無いことを確かめる。
+
+`node mode/rhythm-chart-rev26-check.js` は、MHB CHART ENGINE Rev.26(曲のつなぎ目の段差・2026-10-03)と、激しさの中間 `strong` を見張る。音源の一覧の `splices` を書いた曲だけつなぎ目から先に一定のずれを返すこと、ゲームの拍の表(`RHYTHM_SONG_BEATS` の4つ目)が同じ値であること、拍の線の計算がつなぎ目の前後で正しいこと、譜面のノーツがつなぎ目の前は格子・後ろは格子+ずれに乗ること、`strong` が `extreme` の倍率の平方根で作られていることを確かめる。
+
+`node mode/rhythm-song-version-check.js` は、曲えらびで同じ曲の別の版をまとめる表(`RHYTHM_SONG_VERSION_GROUPS`・2026-10-03)を見張る。表の曲がどれも公開中で1曲が2つの組に入っていないこと、表示名が同じ公開曲が同じ組に入っていること(版を足したときの入れ忘れ)、実際の曲えらびで一覧の行が組ごとに1つ・行を押すといつも原曲・難易度の上の切り替えで選んでいる曲がその版になることを確かめる。
+
+`node mode/rhythm-song-climax.js [--write|--check]` は、曲ごとの盛り上がる区間の表(`RHYTHM_SONG_CLIMAX`・data/rhythm-mode.js の `<rhythm-song-climax>` の間)を、解析ファイルの区切りの強さ(structure.sections の intensity)から作る(2026-09-29・オプション「盛り上がりの光」)。曲を足したら `--write` を打つ。`node mode/rhythm-climax-fx-check.js` が表の古さ・設定の既定値・CSS・叩いた場所の判定の部品の使い回し・ランクの演出の条件を見張る。
+
+`node mode/rhythm-robot-play.js --song <曲id> --difficulty <難易度> --settings '{"climaxFx":true}' --shots 20000,60000 --shot-dir <dir>` は、ロボットに演奏の設定を渡して遊ばせ、曲のその時刻で画面を撮る(2026-09-29)。盛り上がりの光が点いた・消えた時刻、叩いた場所の判定の数、ランクが上がったときの文字も最後に出す。
+
+`node mode/rhythm-audio-meter-opinion.js` は、テンポ・拍子の二つ目の意見(2026-09-26)。自動判定が3拍子の曲で、強い打点(低音と大きな一発)が小節の4等分と3等分のどちらに多いかを比べ、4拍子の読み違い(正しいテンポの 3/4 で3拍子と読む)を疑う。解析の警告 `meter-doubt` にもなる(1.8以上で止める・1.5以上で注意、4/3倍の BPM・4拍子を代わりの候補として示す)。止める警告の強さなら、解析(`rhythm-audio-analyze-v3.js`)がその候補で自動で解析し直す(2026-09-29・`timing.source` が `auto-corrected`・注意 `meter-corrected`・格子への乗りが悪くなるときと `--no-auto-meter` のときは直さない。`node mode/rhythm-audio-meter-autofix-check.js` が見張る)。引数なしで一覧の曲を全部見る。`node mode/rhythm-audio-meter-opinion-check.js` が見張る。
+
+`node mode/rhythm-audio-triplet-mix.js` は、16分の曲に3連符が混ざっていないかを見る(2026-09-29)。3連の位置(拍の1/3・2/3)に乗る打点の割合を偶然の割合と比べ(2.5倍以上)、3連が集まる小節が全体の8%・6小節以上あれば、解析の警告 `triplet-mixed`(軽い注意・止めない)を出す。譜面は16分へ丸めるので、その小節は聞いて確かめる。いまの曲には3連が混ざる曲が無い(多くて1.8倍)ので、3連の位置へ寄せる生成は作っていない。引数なしで解析済みの曲を全部見る。`node mode/rhythm-audio-triplet-mix-check.js` が見張る。
 
 `node mode/rhythm-chart-v3-splice.js --track <曲id> [--count 4] [--chart-revision <版>] [--output-dir <dir>]` は、区間ごとに良い候補を継ぎ合わせる(2026-09-26・段5)。生成器の `--variant` で候補を作り、曲の区切りごとに気になり点(気持ちよさの物差しと同じ数え方)を数えて、同じ名札の区切りはまとめて同じ候補を採る。継ぎ目で押せない所が出た区切りは候補0へ戻す。Rev.14 以降の曲では、差し替えたあとも気になり点の高い区切りが残れば候補を4本足して選び直す(二段目)。authoring/ も公開データも書き換えない(書き出すのは `--output-dir` を渡したときの自動修正前の譜面だけ)。`--apply` はパイプラインが Rev.12 以降の曲で生成の直後に呼び、関門(押せない配置が無い・品質の6軸の合計が下がらない・気になり点が減る)を通った難易度だけ authoring/ の生成結果を差し替える(`--chart-dir` で書き出し先、`--chart-revision` で試すリビジョンを変えられる)。`node mode/rhythm-chart-v3-splice-check.js` が見張る。
 

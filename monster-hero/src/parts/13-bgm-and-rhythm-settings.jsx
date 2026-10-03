@@ -54,6 +54,13 @@ const BGM_TRACKS = [
   { id:'melo_the_city_beneath_the_comets', name:'The City Beneath the Comets', creator:'オリジナル', src:'audio/bgm-the-city-beneath-the-comets.mp3', gain:1, loop:true },
   // 「ドラ」さんのゲーム「CREATE MONSTERS」の曲(2026-09-14)。本人の許可を得て入れている
   { id:'melo_mou_hitotsu_no_sekai_e', name:'もう一つの世界へ', creator:'ドラ', src:'audio/bgm-mou-hitotsu-no-sekai-e.mp3', gain:1, loop:true },
+  // モンビーの新曲(2026-09-28)。mp4で受け取った音源から映像とタグを落として入れたもの
+  { id:'melo_only_my_railgun', name:'only my railgun', creator:'オリジナル', src:'audio/bgm-only-my-railgun.mp3', gain:1, loop:true },
+  { id:'melo_big_bridge_no_shitou', name:'ビッグブリッヂの死闘', creator:'オリジナル', src:'audio/bgm-big-bridge-no-shitou.mp3', gain:1, loop:true },
+  { id:'melo_rising_hope', name:'Rising Hope', creator:'オリジナル', src:'audio/bgm-rising-hope.mp3', gain:1, loop:true },
+  { id:'melo_haruka', name:'ハルカ', creator:'オリジナル', src:'audio/bgm-haruka.mp3', gain:1, loop:true },
+  { id:'melo_stay_with_me_short', name:'Stay With Me ～Locked Fate～ short ver.', creator:'オリジナル', src:'audio/bgm-stay-with-me-short.mp3', gain:1, loop:true },
+  { id:'melo_kiki_issen_short', name:'綺季一閃 ～花雪に舞う詠姫～ short ver.', creator:'オリジナル', src:'audio/bgm-kiki-issen-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -303,6 +310,8 @@ const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
+// 横向きの道の幅(2026-09-27)。値の倍率は RHYTHM_ROAD_WIDTHS(data/rhythm-mode.js)
+const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE','広い'],['STANDARD','ふつう'],['NARROW','細い']]);
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
@@ -354,26 +363,28 @@ const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE','VIVID','CALM','SIMPLE']);
 // (音・判定・操作・画質・描画方式には触らない)。いまの設定がどれかにぴったり当てはまるときは、そのボタンを光らせる。
 // image … その見た目で演奏しているところの見本(同じ曲・同じ場面を撮って、幅240の JPEG に縮めたもの。オプションを開いたときだけ読む)
 const RHYTHM_LOOK_PRESETS = Object.freeze([
-  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v2.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
-  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v2.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
-  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v2.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false}},
-  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v2.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true}},
+  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v2.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false,climaxFx:false}},
+  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v2.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false,climaxFx:false}},
+  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v2.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false,climaxFx:true}},
+  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v2.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true,climaxFx:true}},
 ]);
 // 演出の自動調整(設定「重いときは演出を自動で控えめに」・2026-09-27)で下げる順番。重いものから。
 // 段 n では 1〜n 番目を当てる(当てるものが無い段は飛ばす)。演奏中の見た目だけを変え、保存してある設定は変えない
 const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
   s=>s.noteBloom?{noteBloom:false}:null,
   s=>s.stageEffect==='LIVE'?{stageEffect:'VIVID'}:null,
-  s=>s.roadFx||s.noteMotionFx?{roadFx:false,noteMotionFx:false}:null,
+  s=>s.roadFx||s.noteMotionFx||s.climaxFx?{roadFx:false,noteMotionFx:false,climaxFx:false}:null,
   s=>s.judgmentFx||s.comboMilestoneFx?{judgmentFx:false,comboMilestoneFx:false}:null,
   s=>s.stageEffect==='VIVID'?{stageEffect:'CALM'}:null,
   s=>s.stageEffect==='CALM'?{stageEffect:'SIMPLE'}:null,
 ]);
 const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Math.min(Number(level)||0,RHYTHM_AUTO_EFFECT_STEPS.length);i++){const patch=RHYTHM_AUTO_EFFECT_STEPS[i](out);if(patch)out={...out,...patch};}return out;};
 // 段ごとの名前(デバッグの性能計測に「何を下げたか」を出すためだけに使う。並びは RHYTHM_AUTO_EFFECT_STEPS と同じ)
-const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル']);
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き・盛り上がりの光','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル']);
 // 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
 const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
+// 対戦の演出の段階。見た目のおまかせの id と、自分の設定のまま(OWN)
+const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'OWN']);
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
@@ -482,6 +493,7 @@ const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],
 const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
+const RHYTHM_ROAD_WIDTH_LEVELS = Object.freeze(['WIDE','STANDARD','NARROW']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色。
 // このゲームは間合い適性(DIST_APTITUDE_COLOR)でも同じ G〜M の記号を使っていて、
@@ -501,8 +513,20 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   monsterNoteEffect:'LIGHT',
   judgmentLineHeight:20,
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
+  // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
+  // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
+  multiLightLook:true,
+  // 対戦の演出の段階(2026-10-03・ユーザー指示「マルチでの演出量を完全に軽くじゃないやつも切り替えられるようにして」)。
+  // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
+  // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
+  multiLook:'LIGHT',
   // タップ音の種類(2026-09-26)。新しい項目なので、保存値に無い人は「標準」(これまでの音)で補う
   noteSeType:'STANDARD',
+  // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
+  // 保存値に無い人は既定で補う。判定で音を変える=する、フリック音・ロングの終わりの音=タップ音量の100%、空打ちの音=鳴らす
+  noteSeJudgeVary:true, noteSeFlickVolume:100, noteSeEndVolume:100, noteSeEmptyEnabled:true,
+  // ホールド・スライドを押さえている間の音(はじめは「ウィーン」、同じ日に鈴の「シャラララ」を経て、見本の録画をまねた高い「シャラシャラ」になった。きらめく音へ作り替えた)の大きさ。タップ音量に対する%。0で鳴らさない(2026-09-28)
+  noteSeHoldVolume:100,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -531,6 +555,11 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   noteMotionFx … フリックの矢印と SLIDE の帯に流れる光
   //   comboMilestoneFx … 100コンボごとに「100 COMBO!」の帯と光の輪
   judgmentFx:false, noteMotionFx:false, comboMilestoneFx:false,
+  // 盛り上がりの光(2026-09-29・参考動画から。ユーザー指示「最初は OFF・オプションで出せる」)。
+  // サビなど曲が盛り上がる区間(RHYTHM_SONG_CLIMAX)に入ると、道の両側に光の筋が流れる。既存の保存値には無いので、読み込み時は既定(OFF)で補われる
+  climaxFx:false,
+  // 判定の文字を叩いた場所にも小さく出す(2026-09-29・参考動画から)。いつもの真ん中の大きな判定はそのまま。既定は OFF
+  judgmentAtTap:false,
   // 演奏中は左上の曲名とジャケットを薄くする(2026-09-27)。始まって4秒で薄くなり、ポーズ中は元に戻る。目線を道に集めるため。既定は ON
   hudSongFade:true,
   // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
@@ -540,6 +569,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
   stageEffect:'SIMPLE',
   // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
+  // 横向きの道の幅(2026-09-27)。既定は「広い」(=これまでの幅)。既存の保存値には無いので、読み込み時は既定で補われる
+  roadWidth:'WIDE',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode:false, mirrorChart:false,
@@ -580,12 +611,18 @@ const normalizeRhythmSettings = value => {
     monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
+    roadWidth:RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth)?source.roadWidth:DEFAULT_RHYTHM_SETTINGS.roadWidth,
     // タップ音量だけ上限を400へ広げた(2026-09-26)。広げただけなので、保存してある0〜200はそのまま読める
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_NOTE_SE_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType:rhythmNoteSeTypeOf(source.noteSeType),
+    noteSeJudgeVary:bool('noteSeJudgeVary'), noteSeEmptyEnabled:bool('noteSeEmptyEnabled'),
+    noteSeFlickVolume:rhythmFiniteStep(source.noteSeFlickVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
+    noteSeEndVolume:rhythmFiniteStep(source.noteSeEndVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
+    noteSeHoldVolume:rhythmFiniteStep(source.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'),
+    multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
@@ -600,6 +637,8 @@ const normalizeRhythmSettings = value => {
     judgmentFx:typeof source.judgmentFx==='boolean'?source.judgmentFx:DEFAULT_RHYTHM_SETTINGS.judgmentFx,
     noteMotionFx:typeof source.noteMotionFx==='boolean'?source.noteMotionFx:DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
     comboMilestoneFx:typeof source.comboMilestoneFx==='boolean'?source.comboMilestoneFx:DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
+    climaxFx:typeof source.climaxFx==='boolean'?source.climaxFx:DEFAULT_RHYTHM_SETTINGS.climaxFx,
+    judgmentAtTap:typeof source.judgmentAtTap==='boolean'?source.judgmentAtTap:DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
     autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
@@ -670,7 +709,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -702,7 +741,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -746,3 +785,84 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
+
+
+// 画面テーマ(2026-09-30・ユーザー要望「他画面もハロウィン仕様に」「画面の種類ごとに細かく」「11月になったら自動でクラシックへ」)。
+// 画面の種類ごとに 'auto'(おまかせ) / 'halloween' / 'classic' を選ぶ。保存は新しいキー mh_screen_theme_v1 に
+// { menu, market, temple, battle, rhythm } の形で持つ。タイトルとホームの絵は既存の mh_title_art / mh_home_art のまま。
+// ★'auto' は見るたびに今の時刻で決める(読み込み時に1回だけ決めると、開きっぱなしの端末で11月になっても戻らない)
+const SCREEN_THEME_STORAGE_KEY = 'mh_screen_theme_v1';
+const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse('2026-11-01T00:00:00+09:00');
+const SCREEN_THEME_CHOICES = [
+  { id: 'auto', label: 'おまかせ' },
+  { id: 'halloween', label: 'ハロウィン' },
+  { id: 'classic', label: 'クラシック' },
+];
+const SCREEN_THEME_CATEGORIES = [
+  { id: 'menu', label: 'メニュー画面', desc: '設定・ミッション・ギフト・図鑑・M/B管理など' },
+  { id: 'market', label: 'マーケット', desc: 'マーケット' },
+  { id: 'temple', label: '神殿', desc: '神殿と、マスモンの再生・合体・転生など' },
+  // バトルとモンヒロビートは、見やすさを1画面ずつ確かめてから出す(ready:false のあいだは設定に並べず、クラシックのまま)
+  { id: 'battle', label: 'モンヒロバトル', desc: 'バトル選択・バトル中・リザルト' },
+  { id: 'rhythm', label: 'モンヒロビート', desc: '曲えらび・演奏画面' },
+];
+const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);
+// いまの画面に出すテーマ('halloween' / 'classic')。まだ仕上げていない種類はクラシック
+const screenThemeFor = (screenTheme, category, now = Date.now()) => SCREEN_THEME_READY_CATEGORIES.some(c => c.id === category) ? resolveScreenTheme(screenTheme && screenTheme[category], now) : 'classic';
+const resolveScreenTheme = (value, now = Date.now()) => value === 'halloween' || value === 'classic' ? value : (now < SCREEN_THEME_HALLOWEEN_UNTIL ? 'halloween' : 'classic');
+const normalizeScreenThemeChoice = value => SCREEN_THEME_CHOICES.some(choice => choice.id === value) ? value : 'auto';
+const normalizeScreenTheme = value => Object.fromEntries(SCREEN_THEME_CATEGORIES.map(category => [category.id, normalizeScreenThemeChoice(value && typeof value === 'object' ? value[category.id] : null)]));
+// いま描いている画面(gameState)がどの種類か
+const SCREEN_THEME_BATTLE_STATES = new Set(['BATTLE','BATTLE_TUTORIAL','BATTLE_MENU','BATTLE_MODE_SELECT','BATTLE_SYSTEM_SELECT','BATTLE_DIFFICULTY_SELECT','EXTREME_DIFFICULTY_SELECT','SPECIES_CHALLENGE_SELECT','BATTLE_SCORE_RANKING','PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN','SKIP_PICK','SKIP_RESULT','AUTO_SETTINGS']);
+const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE','MASU_REGENERATION','MASU_REGENERATION_DETAIL','MASU_DONATION','MASU_FUSION','MASU_REBIRTH','MASU_REINCARNATE','MASU_TRANSCENDENCE','MASU_SOUL_RANK','MASU_SOUL_TRAITS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE']);
+const screenThemeCategory = (gameState, rhythmOpen = false) => {
+  if (rhythmOpen || String(gameState || '').startsWith('RHYTHM_')) return 'rhythm';
+  if (SCREEN_THEME_BATTLE_STATES.has(gameState)) return 'battle';
+  if (gameState === 'BREEDER_MARKET') return 'market';
+  if (SCREEN_THEME_TEMPLE_STATES.has(gameState)) return 'temple';
+  return 'menu';
+};
+
+// タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
+// 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
+// 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
+// squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
+const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+const TITLE_ART_OPTIONS = [
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', squareSrc: 'data/images/title-screen-halloween-square.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
+  { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
+];
+// 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
+const DEFAULT_TITLE_ART = 'auto';
+const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+// 画面の縦横比から、出す絵の形を決める。縦長(941x1672 = 0.56)・ほぼ正方形(1354x1162 = 1.17)・横長(1672x941 = 1.78)の3枚のうち、
+// 比が近いほうを選ぶ(境目は、隣り合う2枚の比の相乗平均。0.81 と 1.44)。折りたたみの横開きの内側(約0.9)は「ほぼ正方形」になる
+// ★index.html の先読みも同じ境目を持っている。変えるときは両方そろえる
+const titleArtShapeOf = (width, height) => {
+  const ratio = Number(width) > 0 && Number(height) > 0 ? width / height : 0.5;
+  return ratio < 0.81 ? 'portrait' : ratio < 1.44 ? 'square' : 'wide';
+};
+const titleArtSrc = (value, shape = 'portrait') => {
+  const option = TITLE_ART_OPTIONS.find(item => item.id === resolveTitleArt(value));
+  const kind = shape === true ? 'wide' : shape;
+  if (kind === 'wide' && option.wideSrc) return option.wideSrc;
+  if (kind === 'square' && option.squareSrc) return option.squareSrc;
+  return option.src;
+};
+
+// ホーム画面の背景アレンジ(2026-09-30・ユーザー要望)。タイトル画像アレンジと同じ作り。
+// 保存は新しいキー mh_home_art に id だけ。横画面では wideSrc を画面いっぱいに出す
+const HOME_ART_STORAGE_KEY = 'mh_home_art';
+const HOME_ART_OPTIONS = [
+  { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
+  { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg' },
+];
+const DEFAULT_HOME_ART = 'auto';
+const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const resolveHomeArt = (value, now = Date.now()) => { const v = normalizeHomeArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+const homeArtSrc = (value, landscape = false) => {
+  const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
+  return landscape && option.wideSrc ? option.wideSrc : option.src;
+};
+const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);

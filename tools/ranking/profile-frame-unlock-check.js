@@ -32,11 +32,11 @@ const check = (name, ok, detail = '') => {
 const start = breederSrc.indexOf('const PROFILE_FRAME_NONE_ID');
 const end = breederSrc.indexOf('// ==================== ブリーダーの教え', start);
 const block = end > start ? breederSrc.slice(start, end) : breederSrc.slice(start);
-const ctx = { console };
+const ctx = { console, BREEDER_MARKET_ITEMS: [] };
 vm.createContext(ctx);
 vm.runInContext(`${block}
 globalThis.__f = { PROFILE_FRAMES, releasedProfileFrames, profileFrameById, normalizeProfileFrameId,
-  profileFrameOwned, profileFrameUnlock, profileFramesForAssistant, profileFramesEarnedAt,
+  profileFrameOwned, profileFrameUnlock, profileFrameSale, profileFramesForAssistant, profileFramesEarnedAt,
   nextProfileFrameForAssistant, normalizeOwnedProfileFrames, PROFILE_FRAME_OWNED_KEY, PROFILE_FRAME_NONE_ID };`, ctx);
 const F = ctx.__f;
 
@@ -71,7 +71,7 @@ check('もらっていない枠は自分では選べない',
 check('もらえば選べる',
   unlockable.every(f => F.profileFrameOwned(f.id, [f.id]) === true));
 check('条件の無い枠(色)は最初から選べる',
-  F.releasedProfileFrames().filter(f => !F.profileFrameUnlock(f)).every(f => F.profileFrameOwned(f.id, []) === true));
+  F.releasedProfileFrames().filter(f => !F.profileFrameUnlock(f) && !F.profileFrameSale(f)).every(f => F.profileFrameOwned(f.id, []) === true));
 check('未公開の枠は描かないし選べない',
   F.PROFILE_FRAMES.filter(f => f.released !== true)
     .every(f => F.normalizeProfileFrameId(f.id) === F.PROFILE_FRAME_NONE_ID && F.profileFrameOwned(f.id, []) === false));
@@ -134,8 +134,8 @@ check('本文へLvを直接書かない(データから作る)',
 // --- ⑧ ヘルプ ---
 const help = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/20-market-notices-help.jsx'), 'utf8');
 check('ヘルプの表がもらう条件を実データから作る',
-  /case 'profileFrames':[\s\S]{0,700}profileFrameUnlock/.test(help)
-  && /case 'profileFrames':[\s\S]{0,700}仲良し度 Lv/.test(help));
+  /case 'profileFrames':[\s\S]{0,1500}profileFrameUnlock/.test(help)
+  && /case 'profileFrames':[\s\S]{0,1500}仲良し度 Lv/.test(help));
 
 // --- ⑨ 配信用JSにも入っている ---
 // ★保存キーと案内の文面は data/*.js 側にあり、そちらは配信用JSへは入らない(別ファイルのまま配る)。

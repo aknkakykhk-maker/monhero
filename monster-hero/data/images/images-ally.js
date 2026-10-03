@@ -79,17 +79,25 @@ const IDLE_YAOBIKUNI_BODY_MASK = "images/monsters/idle/yaobikuni-body.png?v=9b2b
 const IDLE_KENSHI_MOCCHI_SWORD_L_MASK = "images/monsters/idle/kenshi-mocchi-sword-l.png?v=f8c00ae74cb6";
 const IDLE_KENSHI_MOCCHI_SWORD_R_MASK = "images/monsters/idle/kenshi-mocchi-sword-r.png?v=12c5dc690c0f";
 const IDLE_KENSHI_MOCCHI_BODY_MASK = "images/monsters/idle/kenshi-mocchi-body.png?v=a0b84fe94ad6";
+const IDLE_YGGDRASIL_LEAF_TOP_MASK = "images/monsters/idle/yggdrasil-leaf-top.png?v=c467be4a9cca";
+const IDLE_YGGDRASIL_LEAF_SIDE_MASK = "images/monsters/idle/yggdrasil-leaf-side.png?v=4aa91a581ac5";
+const IDLE_YGGDRASIL_BODY_MASK = "images/monsters/idle/yggdrasil-body.png?v=af0d075f168e";
+const IDLE_MEL_WHIP_UMBRELLA_MASK = "images/monsters/idle/mel-whip-umbrella.png?v=591894879058";
+const IDLE_MEL_WHIP_BODY_MASK = "images/monsters/idle/mel-whip-body.png?v=819b121a5e2d";
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
+// パンドラの箱(タクティクスEX)の間だけ出す、悪魔・天使の姿。起動時には読まない(箱を使うときに先読みする)
+const PANDORA_DEVIL_IMG = "images/monsters/pandora-devil.PNG?v=5ce010729f00";
+const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
 const MONOL_IMG = "images/monsters/monol.png?v=b5fb70799e42";
 const OBORO_IMG = "images/monsters/oboro.png?v=fb0ab6eb992f";
 const PLANT_IMG = "images/monsters/plant.PNG?v=398cacbadab3";
 const PLANT_DYE_MASK = "images/monsters/plant-dye-mask.PNG?v=cad1fda53cf2";
-const ZAN_IMG = "images/monsters/zan.png?v=2293b346833c";
-const MITARASHI_IMG = "images/monsters/mitarashi.png?v=192d9cc253d8";
+const ZAN_IMG = "images/monsters/zan.png?v=4a2cee9000f3";
+const MITARASHI_IMG = "images/monsters/mitarashi.png?v=b9c0850e77ce";
 const ARK_IMG = "images/monsters/ark.png?v=a9dce68b24d4";
 const IBLIS_IMG = "images/monsters/iblis.png?v=c3ce989b339d";
 const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=9843be5ed231";
@@ -112,6 +120,16 @@ const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
 // 描き直していない原本は tools/art-sources/dye-masks/kenshi-mocchi-dye-mask.PNG に置いてある
 const KENSHI_MOCCHI_IMG = "images/monsters/kenshi-mocchi.png?v=63509132e701";
 const KENSHI_MOCCHI_DYE_MASK = "images/monsters/kenshi-mocchi-dye-mask.PNG?v=25a6a1282265";
+// 2026年9月に近日公開予定として絵だけ先に入れた2体(2026-09-28)。能力値・技はまだ決まっていないので
+// ALL_PLAYER_MONSTERS には入れていない。マーケットとビートP交換所には近日公開(available:false)で並ぶ。
+//   ユグドラシル … 新しい血統(ユグドラシル×ユグドラシル)
+//   メルホイップ … ユグドラシル×？？？のレア
+// 染色マスクは、いただいた3色マスクを立ち絵と同じ座標へ合わせて純色へそろえたもの
+// (赤=① / 緑=② / 青=③。原本は tools/art-sources/dye-masks/ に置いてある)
+const YGGDRASIL_IMG = "images/monsters/yggdrasil.png?v=8dddbfc4328f";
+const YGGDRASIL_DYE_MASK = "images/monsters/yggdrasil-dye-mask.PNG?v=296998e6622f";
+const MEL_WHIP_IMG = "images/monsters/mel-whip.png?v=629452e35b02";
+const MEL_WHIP_DYE_MASK = "images/monsters/mel-whip-dye-mask.PNG?v=b7353a79a018";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -154,7 +172,9 @@ const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=8ef71840d1d5";
 const MONOL_FACE_ICON = MONOL_ICON;
 const OBORO_FACE_ICON = OBORO_ICON;
 const PLANT_FACE_ICON = PLANT_IMG;
-const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=a1486779c37f";
+const YGGDRASIL_ICON = YGGDRASIL_IMG;
+const MEL_WHIP_ICON = MEL_WHIP_IMG;
+const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=f341b74babb9";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=1ddd19baef6b";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=9663afec97f9";
@@ -165,3 +185,5 @@ const YAOBIKUNI_FACE_ICON = "images/monster-icons/face/yaobikuni.png?v=32838d8bd
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
+const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
+const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";

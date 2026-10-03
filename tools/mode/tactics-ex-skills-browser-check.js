@@ -66,7 +66,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
       // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
-      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi']));
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora']));
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     await page.route(/supabase\.co/, (route) => route.abort());
@@ -88,7 +88,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await closePopups();
     const text = () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
 
-    // 難易度えらび → 勇者モン(名前で名指し) → 配置 → アシストカード → バトル
+    // 難易度選択 → 勇者モン(名前で名指し) → 配置 → アシストカード → バトル
     // ★見つからなければその場で止める(押せるものを押して進めない。設計 11.2)
     // heroStyle … 配置の画面で選ぶ初期スタイル(剣士モッチーのとき)
     const startTacticsPro = async (heroName, heroStyle = null) => {
@@ -110,10 +110,16 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.waitForTimeout(1500);
       const hero = await page.evaluate((name) => {
         const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent
-          && /ライフ\s*\d+/.test(x.textContent) && x.textContent.trim().startsWith(name) && !/DEBUG/.test(x.textContent));
+          && x.textContent.trim().replace(/^前回/, '') === name && !/DEBUG/.test(x.textContent)); // 勇者えらびは顔アイコンのグリッド。タイルの文字は名前だけ(上の絞り込みタブは名前+数、前回使った子には「前回」が付く)
         if (b) b.click(); return !!b;
       }, heroName);
       if (!hero) return `勇者モンに ${heroName} が並んでいない: ` + await page.evaluate(() => [...document.querySelectorAll('button')].filter(x=>x.offsetParent).map(x=>x.textContent.trim().slice(0,30)).join(' | ').slice(0,1500));
+      // 顔アイコンのグリッドは、タイルを押すと下の詳細パネルが開き、「この子で挑む」で確定する
+      await page.waitForTimeout(500);
+      await page.evaluate(() => {
+        const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent && /^この子で挑む$/.test(x.textContent.trim()));
+        if (b) b.click();
+      });
       await page.waitForTimeout(1200);
       if (heroStyle) {
         const b = page.locator(`[data-hero-style="${heroStyle}"]`);
@@ -129,7 +135,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         const step = await page.evaluate((heroName) => {
           const live = [...document.querySelectorAll('button')].filter(x => !x.disabled && x.offsetParent);
           const pick = (re) => live.find(x => re.test(x.textContent.trim()));
-          const go = pick(/出撃|バトル開始|この編成で|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
+          const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
           const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
           const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
           const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
@@ -480,6 +486,150 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await closePanel();
     await tapFirstCard();
     check('使ったターンもモッチーはカードを使える', (await selectedCount()) > 0);
+
+    // --- ⑥〜⑧ ピクシー・ミーア・スネグーラチカ(2026-10-03 ユーザーの案・数字は仮) ---
+    const startWith = async (name) => {
+      await boot();
+      await closePopups();
+      await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+      await page.waitForTimeout(600);
+      await page.locator('[data-battle-system="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
+      const r = await startTacticsPro(name);
+      check(`${name}を勇者モンにしてタクティクスプロを始められる`, r === 'ok', r);
+      if (r !== 'ok') throw new Error(r);
+      return heroSlot();
+    };
+    const limitOf = () => page.evaluate(() => { const m = document.body.innerText.match(/Action Cards\s*(\d+)\/(\d+)/i); return m ? Number(m[2]) : null; });
+    const partyOf = (slot) => page.evaluate((sl) => {
+      const el = document.querySelector(`[data-tactics-party-slot="${sl}"]`);
+      return el ? { hp: el.getAttribute('data-tactics-hp'), guts: el.getAttribute('data-tactics-guts') } : null;
+    }, slot);
+    const gutsNow = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return m ? Number(m[1]) : -1; };
+
+    // ピクシー「お気に入りの魔法」: 使うと固有技のカードが手札に出る
+    const pxSlot = await startWith('ピクシー');
+    // バトルの始まりでは、手札の配り直し(initBattle)が少し遅れてもう一度走ることがある。落ち着いてから使う
+    await page.waitForTimeout(2500);
+    await tapSlot(pxSlot);
+    p = await panel();
+    check('「お気に入りの魔法」: 3/3・カードと併用できる・3ターン', !!p && p.name === 'お気に入りの魔法' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const handTypes = await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].map(c => c.getAttribute('data-card-type')));
+    const uniqueInHand = handTypes.filter(t => /unique/.test(t || '')).length;
+    check('使うと固有技のカードが手札に出ている', uniqueInHand >= 1, `固有技 ${uniqueInHand}枚 / 手札 ${handTypes.join(',')}`);
+    check('枠の札が「あと3ターン」になる', await page.locator(`[data-tactics-ex-mark="${pxSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと3ターン');
+
+    // ミーア「オン・ステージ！」: 使うと選べるカード枚数が1枚増え、ボルテージが出る
+    const miSlot = await startWith('ミーア');
+    const limit0 = await limitOf();
+    await tapSlot(miSlot);
+    p = await panel();
+    check('「オン・ステージ！」: 3/3・カードと併用できる・4ターン', !!p && p.name === 'オン・ステージ！' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /4ターン/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const limit1 = await limitOf();
+    check('使うと1ターンに選べるカードが1枚増える', Number.isInteger(limit0) && limit1 === limit0 + 1, `${limit0} → ${limit1}`);
+    await tapSlot(miSlot);
+    p = await panel();
+    check('詳細に「ボルテージ 0 / 10」が出る', !!p && /ボルテージ 0 \/ 10/.test(p.text), p && p.text.slice(0, 260));
+    await closePanel();
+
+    // スネグーラチカ「クリスマスプレゼント」: 各WAVE1回・必ず全員のガッツが戻り、中身が決まる
+    const snSlot = await startWith('スネグーラチカ');
+    const snBefore = await partyOf(snSlot);
+    await tapSlot(snSlot);
+    p = await panel();
+    check('「クリスマスプレゼント」: 1/1(このWAVE)・カードと併用できる', !!p && p.name === 'クリスマスプレゼント' && /1 \/ 1/.test(p.uses) && /このWAVE/.test(p.uses) && p.withCards === 'yes', p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const snAfter = await partyOf(snSlot);
+    check('使うとガッツが増える(必ず上限の20%・満タンなら変わらない)', !!snBefore && !!snAfter && gutsNow(snAfter.guts) >= gutsNow(snBefore.guts), `${JSON.stringify(snBefore)} → ${JSON.stringify(snAfter)}`);
+    await tapSlot(snSlot);
+    p = await panel();
+    check('使ったあとは 0 / 1(このWAVE)・詳細に「プレゼントの中身」が出る', !!p && /0 \/ 1/.test(p.uses) && /プレゼントの中身/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
+    // --- ⑨⑩ ウンディーネ「生命の泉」・ヤオビクニ「悠久の刻」(2026-10-03 ユーザーの案) ---
+    const unSlot = await startWith('ウンディーネ');
+    const unBefore = await partyOf(unSlot);
+    await tapSlot(unSlot);
+    p = await panel();
+    check('「生命の泉」: 5/5・カードと併用できる・3ターン', !!p && p.name === '生命の泉' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(500);
+    const targets = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-ex-target]')].map(b => ({ slot: b.getAttribute('data-tactics-ex-target'), downed: b.getAttribute('data-tactics-ex-target-downed'), text: b.textContent.trim().slice(0, 40) })));
+    check('「EXスキルを使用」で「だれに使う？」の一覧が出る(WAVE1は自分だけ)', targets.length === 1 && String(targets[0].slot) === String(unSlot) && targets[0].downed === 'no', JSON.stringify(targets));
+    await page.locator(`[data-tactics-ex-target="${unSlot}"]`).click();
+    await page.waitForTimeout(900);
+    const unAfter = await partyOf(unSlot);
+    const maxOf = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return m ? Number(m[2]) : -1; };
+    check('選んだ味方のライフが上限アップ(+30%)のうえ満タンになり、ガッツも戻る', !!unBefore && !!unAfter && maxOf(unAfter.hp) === Math.floor(maxOf(unBefore.hp) * 1.3)
+      && unAfter.hp === `${maxOf(unAfter.hp)}/${maxOf(unAfter.hp)}` && gutsNow(unAfter.guts) > gutsNow(unBefore.guts), `${JSON.stringify(unBefore)} → ${JSON.stringify(unAfter)}`);
+    await tapSlot(unSlot);
+    p = await panel();
+    check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
+    // --- ⑪ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮。ひとりだけの盤面) ---
+    const pdSlot = await startWith('パンドラ');
+    const pdLimit0 = await limitOf();
+    const pdBefore = await partyOf(pdSlot);
+    await tapSlot(pdSlot);
+    p = await panel();
+    check('「パンドラの箱」: 3/3・カードと併用できる・3ターン', !!p && p.name === 'パンドラの箱' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const pdLimit1 = await limitOf();
+    // 悪魔・天使の姿の絵は、箱を使ったときに先読みされ、実際に読める(読めないと切り替えで絵が消える)
+    const pdArt = await page.evaluate(async () => {
+      const urls = [typeof PANDORA_DEVIL_IMG === 'string' ? PANDORA_DEVIL_IMG : '', typeof PANDORA_ANGEL_IMG === 'string' ? PANDORA_ANGEL_IMG : ''];
+      const out = [];
+      for (const u of urls) { try { const r = u ? await fetch(u) : null; out.push(!!r && r.ok); } catch (e) { out.push(false); } }
+      return out;
+    });
+    check('悪魔・天使の姿の絵が読める', pdArt.length === 2 && pdArt.every(Boolean), JSON.stringify(pdArt));
+    const pdPair = await page.evaluate((sl) => { const el = document.querySelector(`[data-slot-index="${sl}"] [data-pandora-pair], [data-tactics-attack-image="${sl}"] [data-pandora-pair]`) || document.querySelector('[data-pandora-pair]'); return el ? el.querySelectorAll('img').length : 0; }, pdSlot);
+    check('箱のあいだ、パンドラの枠に悪魔と天使の2体が並ぶ', pdPair === 2, `img ${pdPair}`);
+    check('使うと1ターンに選べるカードが1枚増える(パンドラ自身が2枚使える)', Number.isInteger(pdLimit0) && pdLimit1 === pdLimit0 + 1, `${pdLimit0} → ${pdLimit1}`);
+    check('枠の札が「あと3ターン」になる', await page.locator(`[data-tactics-ex-mark="${pdSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと3ターン');
+    const pdPass = page.locator('[data-tactics-ex-pass]');
+    check('「ターンを進める」が出る', await pdPass.count() === 1);
+    await pdPass.click();
+    for (let k = 0; k < 30; k += 1) {
+      if (/TURN 2\/20/.test(await text())) break;
+      await page.waitForTimeout(500);
+    }
+    await page.waitForTimeout(1500);
+    const pdAfter = await partyOf(pdSlot);
+    const pdMax = maxOf(pdBefore.hp), pdCost = Math.floor(pdMax * 0.3);
+    check('1ターン目の終わりに、最大ライフの30%ぶん(以上)ライフが減っている', !!pdAfter && Number(pdAfter.hp.split('/')[0]) <= pdMax - pdCost, `${JSON.stringify(pdBefore)} → ${JSON.stringify(pdAfter)}(払う ${pdCost})`);
+    check('2ターン目になり、枠の札が「あと2ターン」になる', /TURN 2\/20/.test(await text())
+      && await page.locator(`[data-tactics-ex-mark="${pdSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと2ターン', (await text()).slice(0, 80));
+
+    const ybSlot = await startWith('ヤオビクニ');
+    await tapSlot(ybSlot);
+    p = await panel();
+    check('「悠久の刻」: 2/2・カードと併用できる', !!p && p.name === '悠久の刻' && /2 \/ 2/.test(p.uses) && p.withCards === 'yes', p && p.text.slice(0, 220));
+    check('使う前は TURN 1/20', /TURN 1\/20/.test(await text()), (await text()).slice(0, 80));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const ybPass = page.locator('[data-tactics-ex-pass]');
+    check('「ターンを進める」が出る', await ybPass.count() === 1);
+    await ybPass.click();
+    let sawStop = false;
+    for (let k = 0; k < 24; k += 1) {
+      if (/時間停止/.test(await text())) sawStop = true;
+      if (!(await page.locator('[data-tactics-ex-pass]').count()) === false && k > 4) break;
+      await page.waitForTimeout(500);
+    }
+    await page.waitForTimeout(2500);
+    const ybText = await text();
+    check('時間が止まったターンは数えない(使ったあとも TURN 1/20 のまま)', /TURN 1\/20/.test(ybText) && !/TURN 2\/20/.test(ybText), ybText.slice(0, 80));
+    await tapSlot(ybSlot);
+    p = await panel();
+    check('使ったあとは 1 / 2・同じターンの数字ではもう一度使えない', !!p && /1 \/ 2/.test(p.uses) && /このターンはもう使った/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 200));

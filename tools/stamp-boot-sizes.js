@@ -18,7 +18,8 @@ const INDEX = path.join(WEB_ROOT, 'index.html');
 // スクリプト以外で、起動が終わるまでに必ず読み込むもの
 const EXTRA_FILES = [
   'game-system.compiled.js',
-  'data/images/title-screen-clean.jpg',
+  // タイトル画像。タイトル画像アレンジで別の絵も選べるが、ゲージの重みは既定の絵1枚ぶんで数える
+  'data/images/title-screen-halloween.jpg',
   // タイトルBGM。BGMアレンジで別の曲に差し替えられるが、どの曲もおおよそ同じ大きさなので
   // ゲージの重みとしてはこの1曲ぶんで足りる
   'audio/bgm-title-theme.mp3',

@@ -258,7 +258,10 @@ check('タクティクスプロはプロ扱い・タクティクス種族は種�
     && !m.isSpeciesChallengeMode('tactics'));
 // 既存のランキングデータは1行も書き換えない(移行・変換・削除をしない)
 check('既存のランキング行を書き換える処理を足していない',
-  !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source) && !has('PATCH') && !has('DELETE FROM') && !has('migrateRanking'));
+  !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source)
+    // フレンド機能(friendsPatchLink)の PATCH は、フレンドの申請の表を書き換えるもの。ランキングの表ではない(2026-10)
+    && !/method:\s*'PATCH'/.test(source.replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, ''))
+    && !has('DELETE FROM') && !has('migrateRanking'));
 
 // --- ③ WAVEごとの自動成長 ---
 check('成長倍率は10%', m.QUICK_GROWTH_MULT === 1.10);
@@ -395,9 +398,10 @@ check('モードカードの最高スコアは全難易度の自己ベスト最�
     && m.highestModeScore({}, Object.keys(m.DIFFICULTY_SETTINGS)) === 0);
 // クイックはスコアを競わないので、バトル中もリザルトもスコアを出さない
 check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div data-battle-score'));
+// スコアの数字は TrainingCountUp でカウントアップする形になった。枠は mh-end-score(クリア・敗北・リタイアの3画面)
 check('最終リザルト3画面のスコア枠をクイックでは出さない',
-  (source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length === 3,
-  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length}か所`);
+  (source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length === 3,
+  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length}か所`);
 check('WAVEリザルトのスコア内訳をクイックでは出さない',
   has('{/* スコアの内訳。クイックモードはスコアを競わないので出さない */}') && has('{!isQuickMode(runMode)&&(<>'));
 check('WAVE別ログのスコア列もクイックでは出さない',
@@ -439,7 +443,7 @@ check('倍率の下の補足行はどちらのモードでも出す',
 check('ランキングの導線は助手コメントより前にある', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 // ランキングを見ているときの戻るは、ホームではなく難易度の画面へ戻す
 check('ランキングからの戻るはバトルの画面へ',
-  has("onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
+  has("onBack={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
 // 勇者モン選択はバトルを始める前なので、戻るときは来た場所(難易度の画面)へ返す
 // 戻る先の判断は MonsterHeroGame 側に残し、画面へは onBack だけを渡している
 // (67-screen-pick.jsx への切り出し)。本体の中身と画面の結線を2段で見る
@@ -718,23 +722,24 @@ check('チャレンジ・クイックの供モン一覧はこれまでどおり2
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) {") && has("advanceRunStage('PICK_PRO_ALLIES');")
     && has("{gameState==='PICK_PRO_ALLIES'&&(") && has('<PickProAlliesScreen'));
+// 勇者えらびは顔アイコンのグリッド(ProMonsterGridPicker・67-screen-pick.jsx)へ、確定ボタンは「前回使った子」を記録してから confirmProParty を呼ぶ形へ作り替わった
 check('プロ開始時は有効な前回編成を初期表示に使うが、勇者の配置距離は毎回選び直す',
   has('setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);')
     && has('lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id)')
-    && has('selected: proHeroPreset?.heroBaseId===m.id')
-    && has("onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},")
+    && has('selectedId={proHeroPreset?.heroBaseId||null}')
+    && has("onSelect={m=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');}}")
     && !has('setupMon(m,proHeroPreset.heroDistance)'));
 check('勇者を変更しても有効な前回供モンを残し、同じ種だけ外す',
   has('setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));'));
 check('候補が5体そろうまで始められない',
   has('const ready=!!mainHero&&proAllyPool.length===need;') && has('<button disabled={!ready}')
-    && has('onClick={confirmProParty}') && has("advanceRunStage('PICK_TEACHING');"));
+    && has('confirmProParty();}}') && has("advanceRunStage('PICK_TEACHING');"));
 check('現在の6枠を一覧にして1枠ずつ変更できる',
   has('[["勇者モン",mainHero],...Array.from({length:need}') && has('setProEditingAllyIndex(i-1)')
     && has('変えたい枠だけ「変更」を押してください'));
 check('この編成で開始した時点で前回編成を更新する',
   has('const confirmProParty = () => {') && has('storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);')
-    && has('onClick={confirmProParty}') && has("ready?'この編成で開始'"));
+    && has('confirmProParty();}}') && has("ready?'この編成で開始'"));
 check('勇者モンにした種は候補から外す',
   has('const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);'));
 // ラン中の画面は「全画面のかぶせ方」で出す。これが抜けるとふだんの画面の下敷きになり、

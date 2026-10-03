@@ -81,7 +81,7 @@ async function run() {
   const closeModals = async (n = 8) => {
     for (let i = 0; i < n; i++) {
       const c = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|つぎへ|OK)$/.test(x.textContent.trim()));
+        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|OK)$/.test(x.textContent.trim()));
         if (b) b.click();
         return !!b;
       });

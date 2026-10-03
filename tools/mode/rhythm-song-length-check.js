@@ -93,5 +93,22 @@ ok('デュラハンの音源はバトルと同じファイルのまま（モン�
   &&!fs.readdirSync(path.join(ROOT,'monster-hero/audio'))
     .some(name=>/dullahan.*(beat|short)/i.test(name)));
 
+// 譜面の長さ(曲の時計の「/」の右)が、いまの音源の長さと合っているか(2026-09-29)。
+// ビッグブリッヂの死闘は音源の余韻を切って 148.3秒 → 144.6秒にしたが、譜面の長さの定数が古いままで、
+// 曲の時計が「/2:28」と出ていた(ロボットに遊ばせて気づいた)。playEndMs で途中までにしている曲は上で見ているので除く
+{
+  const stale=[];
+  for(const songId of RHYTHM_DEMO_SONG_IDS){
+    const song=RHYTHM_SONGS.find(entry=>entry.songId===songId);
+    const trackId=RELEASED_TRACKS[songId],entry=trackId&&registry.songs[trackId];
+    if(!song||!entry||Number.isFinite(Number(entry.playEndMs))||!Number.isFinite(Number(entry.durationMs)))continue;
+    for(const [difficulty,chart] of Object.entries(song.difficulties||{})){
+      if(!chart||!Number.isFinite(Number(chart.durationMs)))continue;
+      if(Math.abs(Number(chart.durationMs)-Number(entry.durationMs))>100)stale.push(`${song.displayName} ${difficulty} ${seconds(chart.durationMs)}(音源 ${seconds(entry.durationMs)})`);
+    }
+  }
+  ok('譜面の長さが、いまの音源の長さと合っている',!stale.length,stale.slice(0,6).join(' / '));
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

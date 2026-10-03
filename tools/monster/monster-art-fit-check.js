@@ -115,9 +115,9 @@ check('プロモードの横長カードが共通部品にまとまっている'
   check('カード本体のJSXが1か所だけ(画面ごとに複製していない)', rowMarkup === 1, `${rowMarkup}か所`);
 }
 check('勇者モンを選択が共通部品を使い、前回勇者でも配置距離へ進む',
-  has("onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},"));
+  has("onSelect={m=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');}}") && has('<ProMonsterGridPicker'));
 check('供モンの候補が共通部品を使っている',
-  has('onSelect:()=>changeAlly(m)') && has('onDetail:()=>setProAllyDetail(m)'));
+  has('onSelect={changeAlly} onDetail={setProAllyDetail}/>'));
 
 const PICK_HERO_BOX = (() => {
   const m = source.match(/const PRO_MON_ROW_ART_BOX = \{ width: '(\d+)px', height: '(\d+)px' \};/);

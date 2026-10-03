@@ -29,8 +29,9 @@ const probe = () => new Promise((done) => {
   const Probe = ({ scope }) => {
     const effects = useScreenEffects(scope);
     React.useEffect(() => {
-      effects.timeout(() => log.push('screen:' + scope), 40, 'screen');
-      effects.timeout(() => log.push('progress:' + scope), 40, 'progress');
+      // 遅い環境では描画の切り替えが20msに収まらず、止める前にタイマーが先に鳴ってしまう。余裕を持たせて400msにする
+      effects.timeout(() => log.push('screen:' + scope), 400, 'screen');
+      effects.timeout(() => log.push('progress:' + scope), 400, 'progress');
       log.push('mounted:' + scope + ':' + effects.scope);
     }, [scope]);
     return null;
@@ -40,7 +41,7 @@ const probe = () => new Promise((done) => {
     root.render(React.createElement(Probe, { scope: 'BATTLE' })); // 画面を移る
     setTimeout(() => {
       root.render(null); // 画面そのものが外れる(アンマウント)
-      setTimeout(() => { root.unmount(); host.remove(); done(log); }, 120);
+      setTimeout(() => { root.unmount(); host.remove(); done(log); }, 800);
     }, 20);
   }, 20);
 });

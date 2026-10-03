@@ -177,14 +177,14 @@ if (from >= 0 && to > from) {
   check('話していないほうの助手も並ぶ', kikiCast.every(id => first.includes(`data-face="${id}"`)));
   check('その会話に出てこない助手は並ばない',
     ASSISTANTS.filter(w => !kikiCast.includes(w.id)).every(w => !first.includes(`data-face="${w.id}"`)));
-  check('タップで次へ進める', /aria-label="次へ"/.test(first) && /つぎへ/.test(text(first)));
+  check('タップで次へ進める', /aria-label="次へ"/.test(first) && /次へ/.test(text(first)));
   check('どのセリフでも発言者と顔が一致する(何度描画しても同じ)', kikiScript.every((l, i) => {
     const html = render(i);
     return html.includes(`data-face="${l.who}"`) && html.includes(`data-expression="${l.e}"`)
       && text(html).includes(l.t.replace(/\s+/g, ' '));
   }));
   const lastHtml = render(kikiScript.length - 1);
-  check('最後は「とじる」で終わる', /とじる/.test(text(lastHtml)));
+  check('最後は「閉じる」で終わる', /閉じる/.test(text(lastHtml)));
   check('進み具合が分かる', /1 \/ /.test(text(first)));
   check('縦画面で見切れない作りになっている',
     /max-h-\[calc\(var\(--mh-vh\)-env\(safe-area-inset-top\)\)\]/.test(first)
@@ -233,7 +233,7 @@ check('スキップは既読フラグを立てない(最後まで見ていない
     const body = source.slice(i, source.indexOf('};', i));
     return !/markMomosukeIntroSeen|markKikiIntroSeen/.test(body);
   })());
-check('最後の1枚ではスキップを出さない(そこは「とじる」だけ)',
+check('最後の1枚ではスキップを出さない(そこは「閉じる」だけ)',
   /\{!last&&<button [^>]*onClick=\{\(e\)=>\{e\.stopPropagation\(\);skip\(\);\}\}/.test(source));
 
 // --- 更新履歴とヘルプ ---

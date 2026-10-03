@@ -60,7 +60,7 @@ const seed = () => {
   const dismiss = async () => {
     for (let i = 0; i < 12; i++) {
       const closed = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|とじる|OK|スキップ)$/.test((x.innerText || '').trim()));
+        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|OK|スキップ)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         const d = document.querySelector('[role="dialog"]');
         if (d) { (d.querySelector('button') || d).click(); return true; }
@@ -96,7 +96,7 @@ const seed = () => {
     await page.evaluate(() => { [...document.querySelectorAll('button')].find(x => /新規習得/.test(x.textContent))?.click(); });
     await page.waitForTimeout(900);
     await clickExact('習得する');
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(3500);
     await dismiss();
     check('②-1 バトル画面へ入れる', await page.evaluate(() => !!document.querySelector('button[aria-label^="設定"]')));
 

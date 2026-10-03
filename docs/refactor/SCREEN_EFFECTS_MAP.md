@@ -1,4 +1,4 @@
-# 画面ライフサイクルの分類表 — setTimeout 68 箇所を「画面専用 / 進行 / 対象外」に仕分ける
+# 画面ライフサイクルの分類表 — setTimeout 87 箇所を「画面専用 / 進行 / 対象外」に仕分ける
 
 2026-09-10 作成(STEP 6-1)。対象は `monster-hero/src/parts/60-app.jsx`(`MonsterHeroGame`)。
 `tools/ui/screen-effects-check.js` がこの表を読み、目印が本体にちょうど1つあることと、
@@ -53,7 +53,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(recenterModeL` | screen | 投げっぱなし | モード選びの横スクロールを中央へ寄せ直す |
 | `setTimeout(()=>setReinca` | screen | 投げっぱなし | 転生演出の見本(デバッグ)を消す |
 | `battleMs(Math.round(fxMs*0.12))` | screen | 投げっぱなし | ムーのムービーのあと、技が当たる瞬間に画面を揺らす。止めても揺れないだけ |
-| `battleMs(Math.round(fxMs*tacticsEnemyHitFrac(` | screen | 投げっぱなし | タクティクスの敵の動きに合わせて、当たる瞬間に揺らす。止めても揺れないだけ |
+| `setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(` | screen | 投げっぱなし | タクティクスの敵の動きに合わせて、当たる瞬間に揺らす。止めても揺れないだけ |
 | `setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS)` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーを長さの上限で打ち切る。部品が閉じるときは後片付けが `finish(false)` で待っている側を起こす |
 | `setTimeout(() => setCanSkip(true), 900)` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーのスキップを出す |
 | `if (!started) finish(false); }, BOSS_MOVIE_START_TIMEOUT_MS` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーが始まらないときに打ち切る。部品が閉じるときは後片付けが待っている側を起こす |
@@ -83,17 +83,16 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(()=>{ setRein` | progress | 投げっぱなし | 転生の演出終了と `reincarnateProcessingRef=false`。止めると二度と転生できない |
 | `setResultActionPending(false)` | progress | 投げっぱなし | リザルトの連打防止を戻す。止めると次の周回を始められない |
 | `setTimeout(()=>setPopups` | progress | 投げっぱなし | バトルのダメージ表示を1件消す。止めると溜まり続ける |
-| `setTimeout(()=>setTeachi` | progress | 投げっぱなし | 教えカードの演出を消す。止めると出たまま |
-| `setTimeout(()=>advanceRu` | progress | 投げっぱなし | WAVE リザルトへ進む。止めるとバトルが終わらない |
+| `advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn` | progress | 投げっぱなし | 撃破演出を消して WAVE リザルトへ進む。止めるとバトルが終わらない |
 | `setTimeout(()=>{setUltim` | progress | 投げっぱなし | 極限の距離開放の表示を消し `setIsBusy(false)`。止めると操作を受け付けない |
-| `setTimeout(()=>{setEffec` | progress | 投げっぱなし | 合流演出のあと固有技強化へ進む。止めると進行が止まる |
-| `setTimeout(()=>{setOwned` | progress | 投げっぱなし | 教えを反映して次の WAVE を始める。止めると次の WAVE が来ない |
+| `advanceRunStage('UPGRADE_SKILL');},battleMs(joinBaseMs` | progress | 投げっぱなし | 合流演出のあと固有技強化へ進む。止めると進行が止まる |
+| `setEffect(null); setOwnedTeachings(nextTeachings)` | progress | 投げっぱなし | 教えを反映して次の WAVE を始める。止めると次の WAVE が来ない |
 | `setEffect({type:'heal',label:guardLevelUp?` | progress | 投げっぱなし | トレーニング後に供モン合流・次の WAVE へ。止めると進行が止まる |
 | `setTimeout(resolve,step.ms)` | progress | await | 図鑑の攻撃プレビューの1コマ待ち。打ち切りは `dexAttackPreviewRunRef` が持っている |
 | `setTimeout(()=>setEffect(null),1200)` | progress | 投げっぱなし(65-screen-masu-enhance.jsx へ移動済み) | まとめて強化の演出を消す。止めると出たまま |
 | `setSlotSettle(i);` | progress | 投げっぱなし | タップで入れた枠の光を戻す。止めると光ったまま |
 | `}, TACTICS_SLOT_FX_MS);` | progress | 止める(次を出すとき) | タクティクスの枠の出来事の札を消す。止めると出たまま |
-| `setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS` | progress | 止める(次を出すとき) | EXのカットインを消す。止めると出たまま |
+| `setTacticsExCutin(null); }, ms` | progress | 止める(次を出すとき) | EXのカットイン(教えカードの演出もここへまとまった)を消す。止めると出たまま |
 | `setEffect(null), TRANSCEND_ENHANCE_FX_MS` | progress | 投げっぱなし | 超越強化の演出を消す。止めると出たまま |
 
 ## 対象外 — 16 箇所
@@ -118,7 +117,27 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => preload('score'` | 対象外 | 投げっぱなし | ランキングの裏での先読み(スコア) |
 | `setTimeout(() => preload('breeder'` | 対象外 | 投げっぱなし | ランキングの裏での先読み(ブリーダー Lv) |
 | `setTimeout(() => preload('bond',` | 対象外 | 投げっぱなし | ランキングの裏での先読み(絆 Lv) |
-| `resendPendingRankingScores(); }, RANKING_RESEND_DELAY_MS` | 対象外 | 止める | 送れなかったランキングの記録を、HOMEに落ち着いてから1回だけ送り直す(アプリ全体で1回) |
+| `refreshRhythmRankingPending(); }, RANKING_RESEND_DELAY_MS` | 対象外 | 止める | 送れなかったランキングの記録を、HOMEに落ち着いてから1回だけ送り直す(アプリ全体で1回) |
+| `const timer = setTimeout(resolve, ms)` | 対象外 | await | ランキング送信を待つ時間切れ(`withRhythmRankingTimeout`)。送信が終われば `clearTimeout` で消す |
+| `RHYTHM_RANKING_RETRY_DELAYS_MS.map(ms => setTimeout(` | 対象外 | 止める | 送れなかった音ゲーのランキング記録を、開いたまま何度か送り直す。次の予約のたびに前の分を `clearTimeout` |
+| `void syncBondLevelsLive(); }, wait` | 対象外 | 止める | 絆Lv・総合力ランキングへの送信。effect の後始末で `clearTimeout` |
+| `setGuardImpact(p => (p && p.key === key ? null : p)), battleMs(820)` | progress | 投げっぱなし | ガードの衝撃演出を消す。止めると出たまま |
+| `setShown(null), 950` | progress | 投げっぱなし | 小さな表示(1回ぶん)を消す。止めると出たまま |
+| `setShown(null), 1500` | progress | 投げっぱなし | 小さな表示(1回ぶん)を消す。止めると出たまま |
+| `triggerShake(true), battleMs(240)` | screen | 投げっぱなし | 当たった瞬間の画面の揺れ。止めても揺れないだけ |
+| `triggerShake(big); if(big) Audio_.se.crit(); }, hitAt` | screen | 投げっぱなし | 敵の技が当たる瞬間の揺れと会心音。止めても揺れないだけ |
+| `setEffect(null); proceedAfterUniqueUpgrade(); }, ms` | progress | 投げっぱなし | 固有技の強化結果(SKILL UP!)を消して次の画面へ進む。止めると進行が止まる |
+| `setTimeout(publishFriendProfile, wait)` | 対象外 | 止める | フレンドに見せる自分のプロフィールの公開。アプリ全体で1回(effect の後始末で止める) |
+| `if (!closed) onClose(); }, 0` | 対象外 | 止める | 通信を作れなかったとき、呼び出し側へ閉じたことを知らせる(音ゲーのマルチ) |
+| `reconnectTimer = setTimeout(` | 対象外 | 止める | 通信が切れたとき2.5秒後に繋ぎ直す。閉じたら止める(音ゲーのマルチ) |
+| `resolve(rhythmMultiBestRoom(rooms, '')); }, RHYTHM_MULTI_LOBBY_LISTEN_MS` | 対象外 | await | ロビーの部屋一覧を待つ時間切れ。待っている Promise を resolve する |
+| `setFlash(null), 900` | screen | 止める | 画面のフラッシュ演出を消す(音ゲーのマルチ) |
+| `setBubbleTick((n) => n + 1), wait + 50` | screen | 止める | 吹き出しを時間で更新する(音ゲーのマルチ) |
+| `setCountdown((c) => (c ? { ...c, left: c.left - 1 } : c)), 1000` | screen | 止める | 開始までのカウントダウンを1つ減らす(音ゲーのマルチ) |
+| `setShuffleStopped(true); }, RHYTHM_MULTI_SHUFFLE_MS - 800` | screen | 止める | シャッフル演出を止める(音ゲーのマルチ) |
+| `RHYTHM_MULTI.markShuffleShown(shuffleRound), RHYTHM_MULTI_SHUFFLE_MS` | progress | 投げっぱなし | シャッフルを見せた印を付ける。止めると同じ演出がまた出る |
+| `setCopied(false), 2000` | progress | 投げっぱなし | 「コピーしました」の表示を戻す。止めると出たまま |
+| `if (reduce || from === to) { setValue(to); return undefined; }` | screen | 止める | 数字のカウントアップ演出(画面を離れたら止める) |
 
 ## 次の本でやること
 

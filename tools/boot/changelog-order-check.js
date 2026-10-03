@@ -49,7 +49,26 @@ const nowJst = (() => {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 })();
-const future = entries.filter(e => e.date > nowJst);
+// ★例外は「時刻で出し入れする項目」だけ。visibleFrom を持ち、date がその時刻とぴったり同じもの
+//   (RHYTHM_EVENT_PLAYBOOK.md §3「date も出はじめる時刻にする」・§8「開始時刻より前に公開してよい」)。
+//   一覧に出はじめるのは visibleFrom の時刻なので、それまで先頭に居座ることはない。
+//   date と visibleFrom が1分でも違えば例外にしない(書いた時刻をごまかす逃げ道にしない)。
+//   2026-09-28 にビートPアップキャンペーン(18:00開始)を16時台に公開するときに足した
+const toJstText = (iso) => {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const d = new Date(t + 9 * 3600 * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+};
+const scheduledAt = (at) => {
+  const end = changelog.indexOf('\n  },', at);
+  const body = changelog.slice(at, end < 0 ? undefined : end);
+  const v = body.match(/visibleFrom:\s*'([^']+)'/);
+  return v ? toJstText(v[1]) : null;
+};
+const isScheduled = (e) => scheduledAt(e.at) === e.date;
+const future = entries.filter(e => e.date > nowJst && !isScheduled(e));
 check('未来の日時がない', future.length === 0,
   `${future.length}件${future.length ? `(例: ${future[0].date} / いまは ${nowJst})` : ''}`);
 
@@ -104,6 +123,8 @@ try {
     //   タイトルで見分けると「新しく書いた項目」に見えてしまう。日時・種類・話題まで同じ行が
     //   公開済みにあれば、それは前からある項目なので照合しない(2026-09-26 に踏んだ)
     if (published && published.includes(head)) continue;
+    // 時刻で出し入れする項目は、date が出はじめる時刻(visibleFrom)なので書いた時刻とは比べない(上の説明)
+    if (scheduledAt(m2.index) === date) continue;
     const gap = Math.abs(new Date(`${date}:00`) - new Date(`${real}:00`)) / 3600000;
     if (gap >= 1) drift.push(`${date}(実際 ${real}) ${title.slice(0, 20)}`);
   }

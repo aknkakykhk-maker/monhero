@@ -32,17 +32,19 @@ const {RHYTHM_SONGS,RHYTHM_DEMO_SONG_IDS,RHYTHM_DEMO_DIFFICULTY_IDS:DIFFS}=ctx.o
 
 // 曲名 → いまのレベルとノーツ数。**長い名前から当てる**。
 // 「Monster Hero -Another-」を「Monster Hero」と取り違えると、正しい記述を誤りだと言い出す。
+// 副題のある曲は「表示名 副題」でも当てる(2026-10-03・同じ表示名の short ver. が増えた。
+// 題名に副題まで書いたお知らせだけがその版に結び付き、表示名だけの題名の当て方は今までどおり)
 const songs=RHYTHM_DEMO_SONG_IDS
-  .map(id=>{
+  .flatMap(id=>{
     const song=RHYTHM_SONGS.find(entry=>entry.songId===id);
-    if(!song)return null;
-    return {
+    if(!song)return [];
+    const row={
       id,name:song.displayName,
       levels:DIFFS.map(d=>Number(song.difficulties[d]&&song.difficulties[d].level)),
       notes:DIFFS.map(d=>((song.difficulties[d]||{}).notes||[]).length),
     };
+    return song.subtitle?[{...row,name:`${song.displayName} ${song.subtitle}`},row]:[row];
   })
-  .filter(Boolean)
   .sort((a,b)=>b.name.length-a.name.length);
 
 const changelogCtx={};

@@ -101,8 +101,9 @@ check('対象曲すべてが1.5倍', SONGS.every(id => award(id, 1000000)?.multi
 check('期間中なら公開中の通常曲でも1.0倍で獲得できる',
   award('monster_hero', 1000000)?.amount === 200 && award('monster_hero', 1000000)?.target === false,
   `100万点 → ${award('monster_hero', 1000000)?.amount}P`);
-check('既存の計算式を変えていない(80万→80P / 95万→95P)',
-  award('monster_hero', 800000)?.amount === 80 && award('monster_hero', 950000)?.amount === 95);
+// 2026-09-28 に基本式を「上ほど伸びる曲線」へ変えた(95万→148P)。80万→80P は変わらない
+check('基本式どおり(80万→80P / 95万→148P)',
+  award('monster_hero', 800000)?.amount === 80 && award('monster_hero', 950000)?.amount === 148);
 
 // ---- ④ イベント会話と助手ドラ ----
 const assistantsSrc = read('monster-hero/data/assistants.js');
