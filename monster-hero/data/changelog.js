@@ -34,6 +34,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-04 ユーザー指示(mp4とジャケット)。ハロウィンナイトのイベントと同時に公開する。歯ごたえ1.3はユーザーが決めた
+    // ★公開するときに date をそのときの実時刻へ付け直す(コミット時刻と1時間以上ずれると changelog-order-check が落ちる)
+    date: "2026-10-04 03:15", type:'update', title:'モンヒロビート：新曲「Crazy Party Night ～ぱんぷきんの逆襲～」を追加しました', status:'new',
+    image: 'images/song-art/crazy-party-night.jpg?v=cc3f31ed7b0d',
+    items:[
+      'モンヒロビートに「Crazy Party Night ～ぱんぷきんの逆襲～」（1分34秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.11 ／ EXPERT Lv.17 ／ MASTER Lv.23 です。',
+      'ノーツ数は 140 ／ 158 ／ 219 ／ 267 ／ 307 です。',
+    ],
+    assistantNotice: { id:'update_notice_crazy_party_night_v1', type:'content' },
+  },
+  {
     date: "2026-10-04 02:45", type:'update', title:'あつの表情アイコンが増え、ももすけの絵が新しくなりました', status:'new',
     items:[
       'マーケットの「ブリーダーP交換所」に、あつの表情アイコン8種（ふつう・笑顔・ウィンク・ごきげん・びっくり・困り顔・おこ・なみだ）が並びました。「あつのアイコン」の中身として1つにまとまっていて、「詳細」で見られます。',
