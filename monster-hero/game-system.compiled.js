@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4104297a1f96248c
+// source-sha256: 5c3d905c7023c9b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 18:05";
+const BUILD_DATE = "2026-10-03 18:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36147,6 +36147,108 @@ const PhaseSteps = ({
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-[#c9ae6a]"
   }, "⚔ WAVE ", nextWave)));
 };
+const PickerSheet = ({
+  title,
+  note = '',
+  preview = null,
+  search = '',
+  onSearch = null,
+  searchPlaceholder = '名前でさがす',
+  chips = null,
+  chip = null,
+  onChip = null,
+  footerExtra = null,
+  onClose,
+  accent = 'border-indigo-500',
+  dataPicker = '',
+  children
+}) => React.createElement("div", _extends({}, dataPicker ? {
+  'data-picker-sheet': dataPicker
+} : {}, {
+  className: "fixed inset-0 flex items-end justify-center",
+  role: "dialog",
+  "aria-modal": "true",
+  "aria-label": title,
+  onClick: onClose,
+  style: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    zIndex: 90000
+  }
+}), React.createElement("div", {
+  onClick: event => event.stopPropagation(),
+  className: `flex w-full max-w-md flex-col rounded-t-3xl border-2 border-b-0 ${accent} bg-slate-900 shadow-2xl`,
+  style: {
+    maxHeight: '94%',
+    paddingBottom: 'max(12px, env(safe-area-inset-bottom))'
+  }
+}, React.createElement("div", {
+  className: "shrink-0 px-4 pb-2 pt-4"
+}, React.createElement("h3", {
+  className: "text-center text-lg font-black text-white"
+}, title), note ? React.createElement("p", {
+  className: "mt-0.5 text-center text-[10px] font-bold leading-tight text-slate-400"
+}, note) : null, preview ? React.createElement("div", {
+  "data-picker-preview": true,
+  className: "mt-3 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-3 py-2"
+}, preview) : null, onSearch ? React.createElement("input", {
+  type: "search",
+  value: search,
+  onChange: event => onSearch(event.target.value.slice(0, 20)),
+  "data-picker-search": true,
+  placeholder: searchPlaceholder,
+  "aria-label": searchPlaceholder,
+  autoComplete: "off",
+  spellCheck: false,
+  className: "mt-3 min-h-[44px] w-full rounded-xl border border-white/15 bg-black/40 px-3 text-[13px] font-bold text-white placeholder:text-slate-500"
+}) : null, Array.isArray(chips) && chips.length > 0 ? React.createElement("div", {
+  role: "tablist",
+  className: "mt-2 flex gap-1.5 overflow-x-auto pb-0.5 mh-scroll"
+}, chips.map(c => {
+  const on = c.id === chip;
+  return React.createElement("button", {
+    key: c.id,
+    type: "button",
+    role: "tab",
+    "aria-selected": on,
+    "data-picker-chip": c.id,
+    onClick: () => onChip && onChip(c.id),
+    className: `min-h-[36px] shrink-0 whitespace-nowrap rounded-full border px-3 text-[11px] font-black active:scale-95 ${on ? 'border-amber-300 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-300'}`
+  }, c.label, typeof c.count === 'number' ? React.createElement("span", {
+    className: `ml-1 text-[10px] ${on ? 'text-slate-800' : 'text-slate-500'}`
+  }, c.count) : null);
+})) : null), React.createElement("div", {
+  className: "min-h-0 flex-1 overflow-y-auto px-4 pb-2 mh-scroll",
+  "data-picker-body": true
+}, children), footerExtra ? React.createElement("div", {
+  className: "shrink-0 px-4 pt-1"
+}, footerExtra) : null, React.createElement("div", {
+  className: "shrink-0 px-4 pt-2"
+}, React.createElement("button", {
+  type: "button",
+  onClick: onClose,
+  className: "min-h-[48px] w-full rounded-xl bg-slate-800 py-3 text-xs font-bold text-slate-300 active:scale-[.98]"
+}, "閉じる"))));
+const PickerGroupLabel = ({
+  children,
+  count = null
+}) => React.createElement("div", {
+  className: "col-span-full flex items-baseline gap-2 px-0.5 pt-2 first:pt-0"
+}, React.createElement("h4", {
+  className: "text-[11px] font-black tracking-wider text-amber-300"
+}, children), typeof count === 'number' ? React.createElement("span", {
+  className: "text-[10px] font-bold text-slate-500"
+}, count) : null, React.createElement("span", {
+  className: "h-px flex-1 bg-white/10",
+  "aria-hidden": "true"
+}));
+const PickerCheckMark = () => React.createElement("span", {
+  "aria-hidden": "true",
+  className: "absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow"
+}, React.createElement(Check, {
+  size: 12
+}));
 class MhErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -37487,34 +37589,15 @@ function ProfileScreen({
     }, "決定！"), React.createElement("div", {
       className: "text-[10px] text-slate-400 text-center mt-1.5"
     }, "名前もアイコンも、あとからこの画面でいつでも変えられます"));
-  })(), onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
-    type: "button",
-    "data-profile-friends": true,
-    "data-friend-requests": Number(friendRequestCount) || 0,
-    onClick: onOpenFriends,
-    className: `relative mb-3 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount) > 0 ? 'border-rose-400/80 bg-rose-950/50' : 'border-pink-400/40 bg-pink-950/40'}`
-  }, React.createElement(Users, {
-    size: 16,
-    className: "text-pink-300 shrink-0"
-  }), React.createElement("span", {
-    className: "flex-1 min-w-0 text-left"
-  }, React.createElement("b", {
-    className: "block text-[13px] font-black text-pink-100"
-  }, "フレンド"), React.createElement("small", {
-    className: `block text-[10px] ${Number(friendRequestCount) > 0 ? 'font-black text-rose-200' : 'text-pink-300'}`
-  }, Number(friendRequestCount) > 0 ? `フレンド申請が${Number(friendRequestCount)}件届いています` : 'フレンドコードで申請して、プロフィールを見せ合えます')), Number(friendRequestCount) > 0 && React.createElement("span", {
-    "data-friend-badge": true,
-    "aria-hidden": "true",
-    className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
-  }, Math.min(99, Number(friendRequestCount))), React.createElement(ChevronRight, {
-    size: 16,
-    className: "shrink-0 text-pink-400"
-  })), React.createElement("div", {
-    className: `${SCREEN_PANEL_CLASS} mb-4 flex flex-col items-center gap-3`
+  })(), React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} mb-3`,
+    "data-profile-card": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-3"
   }, React.createElement("button", {
     onClick: onOpenIconPicker,
     "aria-label": "ブリーダーアイコンを変える",
-    className: `relative w-20 h-20 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId) ? 'border-transparent' : 'border-indigo-400/50'}`
+    className: `relative h-20 w-20 shrink-0 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId) ? 'border-transparent' : 'border-indigo-400/50'}`
   }, React.createElement(ProfileAvatar, {
     src: resolveIconUrl(breederIcon),
     id: breederIcon,
@@ -37531,34 +37614,25 @@ function ProfileScreen({
       size: 12,
       className: "text-white"
     }))
-  })), React.createElement("button", {
-    onClick: onOpenFramePicker,
-    className: "flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-3 py-1.5 active:scale-95 group"
-  }, React.createElement(Sparkles, {
-    size: 12,
-    className: "text-amber-300"
-  }), React.createElement("span", {
-    className: "text-[11px] font-black text-slate-200"
-  }, "フレーム：", (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし'), React.createElement(Edit3, {
-    size: 12,
-    className: "text-slate-400 group-hover:text-white"
-  })), React.createElement("button", {
-    onClick: () => onOpenNameEdit(breederName),
-    className: "flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 active:scale-95 group"
-  }, React.createElement("span", {
-    className: "font-black text-base text-white"
-  }, breederName), React.createElement(Edit3, {
-    size: 12,
-    className: "text-slate-400 group-hover:text-white"
   })), React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "min-w-0 flex-1"
+  }, React.createElement("button", {
+    onClick: () => onOpenNameEdit(breederName),
+    className: "flex min-h-[40px] max-w-full items-center gap-1.5 active:scale-95"
+  }, React.createElement("span", {
+    className: "truncate text-lg font-black text-white"
+  }, breederName), React.createElement(Edit3, {
+    size: 13,
+    className: "shrink-0 text-slate-400"
+  })), React.createElement("div", {
+    className: "flex items-center gap-1.5"
   }, React.createElement(Crown, {
-    size: 16,
+    size: 14,
     className: "text-amber-300"
   }), React.createElement("span", {
-    className: "text-lg font-black text-indigo-200"
+    className: "text-base font-black text-indigo-200"
   }, "LV.", breederLevel.level)), React.createElement("div", {
-    className: "w-full max-w-[240px]"
+    className: "mt-1.5"
   }, React.createElement("div", {
     className: "h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"
   }, React.createElement("div", {
@@ -37567,47 +37641,112 @@ function ProfileScreen({
       width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
     }
   })), React.createElement("div", {
-    className: "text-[10px] text-slate-400 font-mono text-center mt-1"
-  }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")), React.createElement("div", {
-    className: "grid w-full grid-cols-2 gap-2"
+    className: "mt-0.5 text-[10px] text-slate-400 font-mono"
+  }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")))), (() => {
+    const frameName = (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし';
+    const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
+    const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
+    const showFriendTiles = onboarded && !onboardingPreview && friendsEnabled;
+    const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+    return React.createElement("div", {
+      className: "mt-3 grid grid-cols-2 gap-2",
+      "data-profile-settings": true
+    }, React.createElement("button", {
+      type: "button",
+      "data-profile-tile": "icon",
+      onClick: onOpenIconPicker,
+      className: tile
+    }, React.createElement("span", {
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      "aria-hidden": "true"
+    }, "🖼️"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black text-indigo-300"
+    }, "アイコン"), React.createElement("b", {
+      className: "block truncate text-[11px] font-black text-white"
+    }, "えらびなおす"))), React.createElement("button", {
+      type: "button",
+      "data-profile-tile": "frame",
+      onClick: onOpenFramePicker,
+      className: tile
+    }, React.createElement(Sparkles, {
+      size: 18,
+      className: "mx-1.5 shrink-0 text-amber-300"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black text-amber-300"
+    }, "フレーム"), React.createElement("b", {
+      className: "block break-words text-[11px] font-black leading-tight text-white"
+    }, "フレーム：", frameName))), showFriendTiles && React.createElement("button", {
+      type: "button",
+      "data-profile-message": true,
+      onClick: onOpenMessageEditor,
+      className: tile
+    }, React.createElement("span", {
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      "aria-hidden": "true"
+    }, "💬"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black text-pink-300"
+    }, "ひとこと"), React.createElement("b", {
+      className: "block break-words text-[11px] font-black leading-tight text-white"
+    }, profileMessage || 'まだ書いていません'))), showFriendTiles && React.createElement("button", {
+      type: "button",
+      "data-profile-favorite-masu": true,
+      onClick: onOpenFavoritePicker,
+      className: tile
+    }, face ? React.createElement(ProfileAvatar, {
+      src: face.src,
+      id: face.id,
+      className: "h-8 w-8 shrink-0"
+    }) : React.createElement("span", {
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      "aria-hidden": "true"
+    }, "💗"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black text-pink-300"
+    }, "好きなモンスター"), React.createElement("b", {
+      className: "block break-words text-[11px] font-black leading-tight text-white"
+    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : 'まだ選んでいません'))));
+  })()), React.createElement("div", {
+    className: "mb-3 grid grid-cols-3 gap-2",
+    "data-profile-stats": true
   }, React.createElement("div", {
-    className: "flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2"
+    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
   }, React.createElement(Gem, {
-    size: 12,
-    className: "shrink-0 text-amber-400"
-  }), React.createElement("span", {
-    className: "text-[12px] font-black text-amber-300 font-mono"
-  }, gold.toLocaleString()), React.createElement("span", {
-    className: "text-[10px] font-bold text-amber-400"
-  }, "ダイヤ")), React.createElement("div", {
-    className: "flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2"
+    size: 11
+  }), "ダイヤ"), React.createElement("span", {
+    className: "text-[13px] font-black text-amber-300 font-mono"
+  }, gold.toLocaleString())), React.createElement("div", {
+    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
   }, React.createElement(Coins, {
-    size: 12,
-    className: "shrink-0 text-amber-400"
-  }), React.createElement("span", {
-    className: "text-[12px] font-black text-amber-200 font-mono"
-  }, breederPoints.toLocaleString()), React.createElement("span", {
-    className: "text-[10px] font-bold text-amber-400"
-  }, "ブリーダーP"))), React.createElement("button", {
-    onClick: onOpenItems,
-    className: "flex w-full min-h-[52px] items-center justify-center gap-2 rounded-xl border border-teal-500/40 bg-teal-950/40 px-4 py-2.5 active:scale-[.98]"
-  }, React.createElement(Package, {
-    size: 14,
-    className: "text-teal-400"
-  }), React.createElement("span", {
-    className: "text-[12px] font-black text-teal-200"
-  }, "アイテム（", Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "個）")), React.createElement("div", {
-    className: "w-full flex flex-col items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-xl"
-  }, React.createElement("div", {
-    className: "flex items-center gap-2"
+    size: 11
+  }), "ブリーダーP"), React.createElement("span", {
+    className: "text-[13px] font-black text-amber-200 font-mono"
+  }, breederPoints.toLocaleString())), React.createElement("div", {
+    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1 text-[9px] font-bold text-indigo-300"
   }, React.createElement(Timer, {
-    size: 13,
-    className: "text-indigo-300"
-  }), React.createElement("span", {
-    className: "text-[11px] font-black text-indigo-200"
-  }, "プレイ時間"), React.createElement("span", {
-    className: "text-[12px] font-black text-white font-mono"
-  }, formatPlaytime(playtimeView.totalMs))), React.createElement("div", {
+    size: 11
+  }), "プレイ時間"), React.createElement("span", {
+    className: "text-[13px] font-black text-white font-mono"
+  }, formatPlaytime(playtimeView.totalMs)))), React.createElement("details", {
+    "data-profile-playtime": true,
+    className: "mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2"
+  }, React.createElement("summary", {
+    className: "cursor-pointer text-[11px] font-black text-indigo-200"
+  }, "プレイ時間のくわしい記録"), React.createElement("div", {
+    className: "mt-2 flex flex-col items-center gap-1"
+  }, React.createElement("div", {
     className: "flex items-center gap-2 text-[11px] font-black text-indigo-300"
   }, React.createElement("span", null, "今日 ", React.createElement("span", {
     className: "text-white font-mono"
@@ -37619,49 +37758,43 @@ function ProfileScreen({
     className: "text-[10px] text-slate-400 font-bold"
   }, "いちばん長かった日 ", formatPlaytime(playtimeView.longest.ms), "（", playtimeView.longest.day, "）"), React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold"
-  }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), onboarded && !onboardingPreview && friendsEnabled && (() => {
-    const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
-    const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
-    return React.createElement("button", {
-      type: "button",
-      "data-profile-favorite-masu": true,
-      onClick: onOpenFavoritePicker,
-      className: "mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]"
-    }, face ? React.createElement(ProfileAvatar, {
-      src: face.src,
-      id: face.id,
-      className: "h-10 w-10 shrink-0"
-    }) : React.createElement("span", {
-      className: "flex h-10 w-10 shrink-0 items-center justify-center text-2xl",
-      "aria-hidden": "true"
-    }, "💗"), React.createElement("span", {
-      className: "min-w-0 flex-1 text-left"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-black text-pink-300"
-    }, "好きなモンスター（フレンドに見えます）"), React.createElement("b", {
-      className: "block truncate text-[13px] font-black text-white"
-    }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : 'まだ選んでいません')), React.createElement(ChevronRight, {
-      size: 16,
-      className: "shrink-0 text-pink-400"
-    }));
-  })(), onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
+  }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), React.createElement("div", {
+    className: `mb-4 grid gap-2 ${onboarded && !onboardingPreview && friendsEnabled ? 'grid-cols-2' : 'grid-cols-1'}`,
+    "data-profile-links": true
+  }, onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
     type: "button",
-    "data-profile-message": true,
-    onClick: onOpenMessageEditor,
-    className: "mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]"
-  }, React.createElement("span", {
-    className: "flex h-10 w-10 shrink-0 items-center justify-center text-2xl",
-    "aria-hidden": "true"
-  }, "💬"), React.createElement("span", {
-    className: "min-w-0 flex-1 text-left"
-  }, React.createElement("small", {
-    className: "block text-[10px] font-black text-pink-300"
-  }, "ひとこと（フレンドに見えます）"), React.createElement("b", {
-    className: "block truncate text-[13px] font-black text-white"
-  }, profileMessage || 'まだ書いていません')), React.createElement(Edit3, {
-    size: 15,
-    className: "shrink-0 text-pink-400"
-  })), onboarded && !onboardingPreview && (() => {
+    "data-profile-friends": true,
+    "data-friend-requests": Number(friendRequestCount) || 0,
+    onClick: onOpenFriends,
+    className: `relative flex min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount) > 0 ? 'border-rose-400/80 bg-rose-950/50' : 'border-pink-400/40 bg-pink-950/40'}`
+  }, React.createElement(Users, {
+    size: 18,
+    className: "text-pink-300 shrink-0"
+  }), React.createElement("span", {
+    className: "flex-1 min-w-0 text-left"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-pink-100"
+  }, "フレンド"), React.createElement("small", {
+    className: `block truncate text-[10px] ${Number(friendRequestCount) > 0 ? 'font-black text-rose-200' : 'text-pink-300'}`
+  }, Number(friendRequestCount) > 0 ? `申請が${Number(friendRequestCount)}件届いています` : '申請・プロフィール')), Number(friendRequestCount) > 0 && React.createElement("span", {
+    "data-friend-badge": true,
+    "aria-hidden": "true",
+    className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
+  }, Math.min(99, Number(friendRequestCount)))), React.createElement("button", {
+    onClick: onOpenItems,
+    className: "flex min-h-[64px] items-center gap-2 rounded-2xl border border-teal-500/40 bg-teal-950/40 px-3 py-2.5 active:scale-[.98]"
+  }, React.createElement(Package, {
+    size: 18,
+    className: "shrink-0 text-teal-400"
+  }), React.createElement("span", {
+    className: "flex-1 min-w-0 text-left"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-teal-200"
+  }, "アイテム"), React.createElement("small", {
+    className: "block truncate text-[10px] text-teal-300"
+  }, Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "個")))), onboarded && !onboardingPreview && React.createElement("div", {
+    className: "mb-2"
+  }, React.createElement(ScreenSectionLabel, null, "助手")), onboarded && !onboardingPreview && (() => {
     const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
     const next = typeof assistantBondNext === 'function' ? assistantBondNext(assistantBond.points) : null;
     const from = stage ? stage.need : 0;
@@ -37811,7 +37944,7 @@ function ProfileScreen({
       className: "mb-4",
       "data-profile-battle-records": true
     }, React.createElement(ScreenSectionLabel, null, "バトル記録"), React.createElement(ScreenLead, null, "モードをタップすると詳しい記録を確認できます"), !selected ? React.createElement("div", {
-      className: "grid grid-cols-1 gap-2"
+      className: "grid grid-cols-2 gap-2"
     }, modes.map(mode => {
       const species = isSpeciesChallengeMode(mode.id);
       return React.createElement("button", {
@@ -37819,19 +37952,19 @@ function ProfileScreen({
         type: "button",
         "data-profile-mode": mode.id,
         onClick: () => species ? onOpenSpeciesRecords(mode.id) : onSelectBattleMode(mode.id),
-        className: "w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]",
+        className: `w-full min-h-[72px] rounded-2xl border bg-slate-900/70 px-2.5 py-2.5 text-left active:scale-[.98] ${species ? 'col-span-2' : ''}`,
         style: {
           borderColor: `${mode.color}66`
         }
       }, React.createElement("span", {
-        className: "flex items-center gap-2"
+        className: "flex items-center gap-1.5"
       }, React.createElement("span", {
         className: "text-xl",
         "aria-hidden": "true"
       }, mode.emoji), React.createElement("span", {
         className: "min-w-0 flex-1"
       }, React.createElement("b", {
-        className: "block text-[13px] text-white"
+        className: "block whitespace-nowrap text-[12px] text-white"
       }, mode.label), React.createElement("small", {
         className: "block text-[11px] font-black",
         style: {
@@ -37841,10 +37974,7 @@ function ProfileScreen({
         className: "block truncate text-[10px] font-black text-cyan-100"
       }, "最高記録: ", speciesSummary.bestScore > 0 ? `${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}` : '記録なし'), React.createElement("small", {
         className: "block text-[10px] font-black text-emerald-300"
-      }, "クリア: ", speciesSummary.clearedCount, " / ", speciesSummary.totalCount))), React.createElement(ChevronRight, {
-        size: 16,
-        className: "shrink-0 text-slate-400"
-      })));
+      }, "クリア: ", speciesSummary.clearedCount, " / ", speciesSummary.totalCount)))));
     })) : React.createElement("div", {
       className: SCREEN_PANEL_CLASS,
       style: {
@@ -58312,6 +58442,12 @@ function MonsterHeroGame() {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
   const [showFramePicker, setShowFramePicker] = useState(false);
+  const [iconQuery, setIconQuery] = useState('');
+  const [iconChip, setIconChip] = useState('all');
+  const [frameQuery, setFrameQuery] = useState('');
+  const [frameChip, setFrameChip] = useState('all');
+  const [favQuery, setFavQuery] = useState('');
+  const [favSort, setFavSort] = useState('bond');
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
   const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
   const ownedProfileFramesRef = useRef([]);
@@ -81452,76 +81588,96 @@ function MonsterHeroGame() {
     })), React.createElement("button", {
       onClick: () => setShowEventReplayList(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showIconPicker && React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 90000
-      }
-    }, React.createElement("div", {
-      className: "bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
-    }, React.createElement("h3", {
-      className: "text-lg font-black text-white mb-2 text-center"
-    }, "アイコンを選択"), React.createElement("div", {
-      className: "flex flex-col items-center gap-1 mb-4"
-    }, React.createElement(ProfileAvatar, {
-      src: resolveIconUrl(breederIcon),
-      id: breederIcon,
-      frameId: profileFrameId,
-      alt: "いまの見た目",
-      className: "w-16 h-16",
-      fallback: React.createElement(User, {
-        size: 28,
-        className: "text-indigo-400"
-      })
-    }), React.createElement("span", {
-      className: "text-[9px] font-black text-slate-500"
-    }, "フレーム：", (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし')), React.createElement("div", {
-      className: "grid grid-cols-4 gap-3 mb-4"
-    }, breederIconOptions().filter(m => m.source === 'starter').map(m => React.createElement("button", {
-      key: m.id,
-      onClick: () => {
+    }, "閉じる"))), showIconPicker && (() => {
+      const closeIcon = () => {
+        setShowIconPicker(false);
+        setIconQuery('');
+        setIconChip('all');
+      };
+      const all = breederIconOptions({
+        ownedMarketIconIds: ownedMarketIcons
+      });
+      const label = m => String(m.name || '').replace(/のアイコン$/, '');
+      const q = iconQuery.trim().toLowerCase();
+      const matches = all.filter(m => (iconChip === 'all' || m.source === iconChip) && (!q || label(m).toLowerCase().includes(q)));
+      const starters = matches.filter(m => m.source === 'starter');
+      const markets = matches.filter(m => m.source === 'market');
+      const pick = m => {
         setBreederIcon(m.id);
         setOnboardingIcon(m.id);
         if (!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);
-        setShowIconPicker(false);
-      },
-      className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-indigo-400 ring-2 ring-indigo-400' : 'border-slate-700'}`
-    }, React.createElement(BreederIcon, {
-      src: m.src,
-      id: m.id,
-      alt: m.name,
-      roundedClass: "rounded-2xl",
-      className: "w-full h-full"
-    })))), ownedMarketIcons.length > 0 && React.createElement(React.Fragment, null, React.createElement("h4", {
-      className: "text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"
-    }, React.createElement(ShoppingBag, {
-      size: 10
-    }), "マーケット購入アイコン"), React.createElement("div", {
-      className: "grid grid-cols-4 gap-3 mb-4"
-    }, breederIconOptions({
-      ownedMarketIconIds: ownedMarketIcons
-    }).filter(m => m.source === 'market').map(m => React.createElement("button", {
-      key: m.id,
-      onClick: () => {
-        setBreederIcon(m.id);
-        setOnboardingIcon(m.id);
-        if (!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);
-        setShowIconPicker(false);
-      },
-      className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-amber-400 ring-2 ring-amber-400' : 'border-slate-700'}`
-    }, React.createElement(BreederIcon, {
-      src: m.src,
-      id: m.id,
-      alt: m.name,
-      roundedClass: "rounded-2xl",
-      className: "w-full h-full"
-    }))))), React.createElement("button", {
-      onClick: () => setShowIconPicker(false),
-      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showMessageEditor && React.createElement("div", {
+        closeIcon();
+      };
+      const cell = m => {
+        const selected = breederIcon === m.id;
+        return React.createElement("button", {
+          key: m.id,
+          type: "button",
+          "data-icon-option": m.id,
+          "aria-pressed": selected,
+          onClick: () => pick(m),
+          className: `relative flex flex-col items-center gap-1 rounded-2xl border-2 p-1.5 active:scale-95 ${selected ? 'border-amber-400 bg-amber-950/30' : 'border-slate-700 bg-slate-950/40'}`
+        }, React.createElement(BreederIcon, {
+          src: m.src,
+          id: m.id,
+          alt: m.name,
+          roundedClass: "rounded-xl",
+          className: "aspect-square w-full"
+        }), selected && React.createElement(PickerCheckMark, null), React.createElement("span", {
+          className: "w-full truncate text-center text-[9px] font-black leading-tight text-slate-200"
+        }, label(m)));
+      };
+      const ownedMarket = all.filter(m => m.source === 'market').length;
+      return React.createElement(PickerSheet, {
+        title: "アイコンを選ぶ",
+        note: "タップで決まります。フレームは、プロフィールの「フレーム」から変えられます。",
+        onClose: closeIcon,
+        preview: React.createElement(React.Fragment, null, React.createElement(ProfileAvatar, {
+          src: resolveIconUrl(breederIcon),
+          id: breederIcon,
+          frameId: profileFrameId,
+          alt: "いまの見た目",
+          className: "h-14 w-14 shrink-0",
+          fallback: React.createElement(User, {
+            size: 26,
+            className: "text-indigo-400"
+          })
+        }), React.createElement("span", {
+          className: "min-w-0"
+        }, React.createElement("b", {
+          className: "block text-[12px] font-black text-white"
+        }, "いまのアイコン"), React.createElement("small", {
+          className: "block truncate text-[10px] font-bold text-slate-400"
+        }, "フレーム：", (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし'))),
+        search: iconQuery,
+        onSearch: all.length > 8 ? setIconQuery : null,
+        searchPlaceholder: "アイコンを名前でさがす",
+        chips: ownedMarket > 0 ? [{
+          id: 'all',
+          label: 'すべて',
+          count: all.length
+        }, {
+          id: 'starter',
+          label: 'はじめから',
+          count: all.length - ownedMarket
+        }, {
+          id: 'market',
+          label: '購入ずみ',
+          count: ownedMarket
+        }] : null,
+        chip: iconChip,
+        onChip: setIconChip,
+        dataPicker: "icon"
+      }, matches.length === 0 && React.createElement("p", {
+        className: "py-8 text-center text-[11px] font-bold text-slate-500"
+      }, "当てはまるアイコンがありません"), React.createElement("div", {
+        className: "grid grid-cols-4 gap-2"
+      }, starters.length > 0 && iconChip === 'all' && ownedMarket > 0 && React.createElement(PickerGroupLabel, {
+        count: starters.length
+      }, "はじめから"), starters.map(cell), markets.length > 0 && iconChip === 'all' && React.createElement(PickerGroupLabel, {
+        count: markets.length
+      }, "マーケットで買ったアイコン"), markets.map(cell)));
+    })(), showMessageEditor && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -81562,149 +81718,230 @@ function MonsterHeroGame() {
     }, "ひとことを消す"), React.createElement(ModalCloseButton, {
       onClick: () => setShowMessageEditor(false),
       label: "キャンセル"
-    })))), showFavoritePicker && React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 90000
-      }
-    }, React.createElement("div", {
-      className: "bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col"
-    }, React.createElement("h3", {
-      className: "text-lg font-black text-white mb-1 text-center"
-    }, "好きなモンスター"), React.createElement("p", {
-      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "フレンドがあなたのプロフィールを開いたとき、この子が見えます。"), React.createElement("div", {
-      className: "min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5",
-      "data-favorite-picker": true
-    }, React.createElement("button", {
-      type: "button",
-      "data-favorite-option": "none",
-      onClick: () => selectFavoriteMasu(null),
-      "aria-pressed": favoriteMasuId == null,
-      className: `min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${favoriteMasuId == null ? 'border-pink-400 bg-pink-950/60 text-pink-100' : 'border-slate-700 bg-slate-950/40 text-slate-300'}`
-    }, "設定しない"), masuMons.filter(m => m && ALL_PLAYER_MONSTERS[m.baseId]).slice().sort((a, b) => masuBondLevelInfo(b).level - masuBondLevelInfo(a).level).slice(0, 200).map(m => {
-      const base = ALL_PLAYER_MONSTERS[m.baseId];
-      const chosen = favoriteMasuId != null && String(m.id) === String(favoriteMasuId);
-      return React.createElement("button", {
-        key: m.id,
+    })))), showFavoritePicker && (() => {
+      const closeFav = () => {
+        setShowFavoritePicker(false);
+        setFavQuery('');
+        setFavSort('bond');
+      };
+      const q = favQuery.trim().toLowerCase();
+      const list = masuMons.filter(m => m && ALL_PLAYER_MONSTERS[m.baseId] && (!q || String(ALL_PLAYER_MONSTERS[m.baseId].name || '').toLowerCase().includes(q))).map(m => ({
+        m,
+        base: ALL_PLAYER_MONSTERS[m.baseId],
+        bond: masuBondLevelInfo(m).level,
+        power: favSort === 'power' ? Math.round(Number(masuPowerOf(m)) || 0) : 0
+      }));
+      list.sort((a, b2) => favSort === 'name' ? String(a.base.name).localeCompare(String(b2.base.name), 'ja') || b2.bond - a.bond : favSort === 'power' ? b2.power - a.power || b2.bond - a.bond : b2.bond - a.bond || String(a.base.name).localeCompare(String(b2.base.name), 'ja'));
+      const shown = list.slice(0, 200);
+      const cur = favoriteMasuId != null ? masuMons.find(m => String(m.id) === String(favoriteMasuId)) : null;
+      const curBase = cur ? ALL_PLAYER_MONSTERS[cur.baseId] : null;
+      const curFace = curBase ? friendsFaceIconOf(cur.baseId) : null;
+      return React.createElement(PickerSheet, {
+        title: "好きなモンスター",
+        note: "フレンドがあなたのプロフィールを開いたとき、この子が見えます。",
+        onClose: closeFav,
+        accent: "border-pink-500",
+        preview: React.createElement(React.Fragment, null, curFace ? React.createElement(ProfileAvatar, {
+          src: curFace.src,
+          id: curFace.id,
+          className: "h-14 w-14 shrink-0"
+        }) : React.createElement("span", {
+          className: "flex h-14 w-14 shrink-0 items-center justify-center text-3xl",
+          "aria-hidden": "true"
+        }, "💗"), React.createElement("span", {
+          className: "min-w-0"
+        }, React.createElement("b", {
+          className: "block truncate text-[12px] font-black text-white"
+        }, curBase ? curBase.name : 'まだ選んでいません'), React.createElement("small", {
+          className: "block text-[10px] font-bold text-pink-300"
+        }, curBase ? `絆Lv.${masuBondLevelInfo(cur).level}` : '下から選んでください'))),
+        search: favQuery,
+        onSearch: masuMons.length > 6 ? setFavQuery : null,
+        searchPlaceholder: "モンスターを名前でさがす",
+        chips: masuMons.length > 1 ? [{
+          id: 'bond',
+          label: '絆Lvが高い順'
+        }, {
+          id: 'power',
+          label: '総合力が高い順'
+        }, {
+          id: 'name',
+          label: '名前順'
+        }] : null,
+        chip: favSort,
+        onChip: setFavSort,
+        dataPicker: "favorite"
+      }, React.createElement("div", {
+        className: "flex flex-col gap-1.5",
+        "data-favorite-picker": true
+      }, React.createElement("button", {
         type: "button",
-        "data-favorite-option": String(m.id),
-        onClick: () => selectFavoriteMasu(m.id),
-        "aria-pressed": chosen,
-        className: `flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen ? 'border-pink-400 bg-pink-950/60' : 'border-slate-700 bg-slate-950/40'}`
-      }, (() => {
+        "data-favorite-option": "none",
+        onClick: () => {
+          selectFavoriteMasu(null);
+          setFavQuery('');
+          setFavSort('bond');
+        },
+        "aria-pressed": favoriteMasuId == null,
+        className: `min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${favoriteMasuId == null ? 'border-pink-400 bg-pink-950/60 text-pink-100' : 'border-slate-700 bg-slate-950/40 text-slate-300'}`
+      }, "設定しない"), shown.map(({
+        m,
+        base,
+        bond,
+        power
+      }) => {
+        const chosen = favoriteMasuId != null && String(m.id) === String(favoriteMasuId);
         const face = friendsFaceIconOf(m.baseId);
-        return face ? React.createElement(ProfileAvatar, {
+        return React.createElement("button", {
+          key: m.id,
+          type: "button",
+          "data-favorite-option": String(m.id),
+          onClick: () => {
+            selectFavoriteMasu(m.id);
+            setFavQuery('');
+            setFavSort('bond');
+          },
+          "aria-pressed": chosen,
+          className: `relative flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen ? 'border-pink-400 bg-pink-950/60' : 'border-slate-700 bg-slate-950/40'}`
+        }, face ? React.createElement(ProfileAvatar, {
           src: face.src,
           id: face.id,
           className: "h-9 w-9 shrink-0"
         }) : React.createElement("span", {
           className: "h-9 w-9 shrink-0 text-center text-xl"
-        }, "❓");
-      })(), React.createElement("span", {
-        className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
-      }, base.name), React.createElement("span", {
-        className: "shrink-0 text-[10px] font-black text-pink-300"
-      }, "絆Lv.", masuBondLevelInfo(m).level));
-    }), masuMons.length === 0 && React.createElement("p", {
-      className: "py-4 text-center text-[11px] font-bold text-slate-400"
-    }, "まだマスモンがいません")), React.createElement("div", {
-      className: "mt-3"
-    }, React.createElement(ModalCloseButton, {
-      onClick: () => setShowFavoritePicker(false)
-    })))), showFramePicker && React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 90000
-      }
-    }, React.createElement("div", {
-      className: "bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll"
-    }, React.createElement("h3", {
-      className: "text-lg font-black text-white mb-1 text-center"
-    }, "プロフィールフレーム"), React.createElement("p", {
-      className: "text-[9px] text-slate-500 text-center mb-4 leading-tight"
-    }, "アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。"), React.createElement("div", {
-      className: "flex flex-col items-center gap-1 mb-4"
-    }, React.createElement(ProfileAvatar, {
-      src: resolveIconUrl(breederIcon),
-      id: breederIcon,
-      frameId: profileFrameId,
-      alt: "いまの見た目",
-      className: "w-20 h-20",
-      fallback: React.createElement(User, {
-        size: 36,
-        className: "text-indigo-400"
-      })
-    }), React.createElement("span", {
-      className: "text-[9px] font-black text-slate-500"
-    }, "いまの見た目")), React.createElement("div", {
-      className: "grid grid-cols-3 gap-3 mb-4"
-    }, releasedProfileFrames().map(frame => {
-      const owned = profileFrameOwned(frame.id, ownedProfileFrames);
-      const unlock = profileFrameUnlock(frame);
-      const who = unlock ? assistantById(unlock.assistantId) : null;
-      const selected = normalizeProfileFrameId(profileFrameId) === frame.id;
-      return React.createElement("button", {
-        key: frame.id,
-        "data-profile-frame-option": frame.id,
-        "data-profile-frame-locked": owned ? 'no' : 'yes',
-        onClick: () => {
-          if (owned) selectProfileFrame(frame.id);else setFrameLockedInfo(frame.id);
-        },
-        "aria-pressed": selected,
-        "aria-disabled": !owned,
-        className: `relative flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${selected ? 'border-indigo-400 bg-indigo-950/50' : 'border-slate-700 bg-slate-950/40'}`
-      }, React.createElement("span", {
-        className: `relative block ${owned ? '' : 'opacity-45'}`
-      }, React.createElement(ProfileAvatar, {
-        src: resolveIconUrl(breederIcon),
-        id: breederIcon,
-        frameId: frame.id,
-        alt: frame.name,
-        className: "w-12 h-12",
-        fallback: React.createElement(User, {
-          size: 22,
-          className: "text-indigo-400"
-        })
-      }), !owned && React.createElement(Lock, {
-        size: 14,
-        className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
-      })), React.createElement("span", {
-        className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
-      }, frame.name), !owned && unlock && React.createElement("span", {
-        className: "text-[8px] font-black leading-tight text-center text-amber-400"
-      }, who && who.name || '', " Lv", unlock.bondLevel));
-    })), frameLockedInfo && (() => {
-      const frame = profileFrameById(frameLockedInfo);
-      const unlock = frame ? profileFrameUnlock(frame) : null;
-      if (!frame || !unlock) return null;
-      const who = assistantById(unlock.assistantId);
-      const points = normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
-      const level = assistantBondLevelOf(points);
-      const needPoints = (assistantBondLevelsOf(unlock.assistantId).find(st => st.level === unlock.bondLevel) || {}).need;
-      const remain = Number.isFinite(needPoints) ? Math.max(0, needPoints - points) : null;
-      return React.createElement("div", {
-        "data-profile-frame-locked-info": true,
-        className: "mb-3 rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
-      }, React.createElement("p", {
-        className: "text-[10px] font-black text-amber-300 leading-tight text-center"
-      }, who && who.name || '', "との仲良し度 Lv", unlock.bondLevel, " でもらえます"), React.createElement("p", {
-        className: "text-[9px] text-slate-400 leading-tight text-center mt-1"
-      }, "いまは Lv", level, remain != null && remain > 0 ? ` ／ あと ${remain}` : ''), React.createElement("p", {
-        className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
-      }, frame.desc || ''));
-    })(), React.createElement("p", {
-      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).desc || ''), React.createElement("button", {
-      onClick: () => setShowFramePicker(false),
-      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showBackup && React.createElement("div", {
+        }, "❓"), React.createElement("span", {
+          className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+        }, base.name), React.createElement("span", {
+          className: "shrink-0 text-right text-[10px] font-black text-pink-300"
+        }, "絆Lv.", bond, favSort === 'power' && power > 0 ? React.createElement("small", {
+          className: "block text-[9px] text-amber-300"
+        }, "総合力 ", power.toLocaleString()) : null), chosen && React.createElement(PickerCheckMark, null));
+      }), masuMons.length === 0 && React.createElement("p", {
+        className: "py-4 text-center text-[11px] font-bold text-slate-400"
+      }, "まだマスモンがいません"), masuMons.length > 0 && shown.length === 0 && React.createElement("p", {
+        className: "py-6 text-center text-[11px] font-bold text-slate-500"
+      }, "当てはまるモンスターがいません")));
+    })(), showFramePicker && (() => {
+      const closeFrame = () => {
+        setShowFramePicker(false);
+        setFrameQuery('');
+        setFrameChip('all');
+      };
+      const frames = releasedProfileFrames();
+      const q = frameQuery.trim().toLowerCase();
+      const ownedOf = frame => profileFrameOwned(frame.id, ownedProfileFrames);
+      const matches = frames.filter(frame => (!q || String(frame.name || '').toLowerCase().includes(q)) && (frameChip === 'all' || (frameChip === 'owned' ? ownedOf(frame) : !ownedOf(frame))));
+      const colorFrames = matches.filter(frame => !profileFrameUnlock(frame));
+      const assistantFrames = matches.filter(frame => !!profileFrameUnlock(frame));
+      const ownedCount = frames.filter(ownedOf).length;
+      const currentFrame = profileFrameById(normalizeProfileFrameId(profileFrameId)) || {};
+      const cell = frame => {
+        const owned = ownedOf(frame);
+        const unlock = profileFrameUnlock(frame);
+        const who = unlock ? assistantById(unlock.assistantId) : null;
+        const selected = normalizeProfileFrameId(profileFrameId) === frame.id;
+        return React.createElement("button", {
+          key: frame.id,
+          "data-profile-frame-option": frame.id,
+          "data-profile-frame-locked": owned ? 'no' : 'yes',
+          onClick: () => {
+            if (owned) selectProfileFrame(frame.id);else setFrameLockedInfo(frame.id);
+          },
+          "aria-pressed": selected,
+          "aria-disabled": !owned,
+          className: `relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected ? 'border-amber-400 bg-amber-950/30' : 'border-slate-700 bg-slate-950/40'}`
+        }, React.createElement("span", {
+          className: `relative block ${owned ? '' : 'opacity-45'}`
+        }, React.createElement(ProfileAvatar, {
+          src: resolveIconUrl(breederIcon),
+          id: breederIcon,
+          frameId: frame.id,
+          alt: frame.name,
+          className: "w-12 h-12",
+          fallback: React.createElement(User, {
+            size: 22,
+            className: "text-indigo-400"
+          })
+        }), !owned && React.createElement(Lock, {
+          size: 14,
+          className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
+        })), selected && React.createElement(PickerCheckMark, null), React.createElement("span", {
+          className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
+        }, frame.name), !owned && unlock && React.createElement("span", {
+          className: "text-[8px] font-black leading-tight text-center text-amber-400"
+        }, who && who.name || '', " Lv", unlock.bondLevel));
+      };
+      const lockedInfo = frameLockedInfo && (() => {
+        const frame = profileFrameById(frameLockedInfo);
+        const unlock = frame ? profileFrameUnlock(frame) : null;
+        if (!frame || !unlock) return null;
+        const who = assistantById(unlock.assistantId);
+        const points = normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
+        const level = assistantBondLevelOf(points);
+        const needPoints = (assistantBondLevelsOf(unlock.assistantId).find(st => st.level === unlock.bondLevel) || {}).need;
+        const remain = Number.isFinite(needPoints) ? Math.max(0, needPoints - points) : null;
+        return React.createElement("div", {
+          "data-profile-frame-locked-info": true,
+          className: "rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
+        }, React.createElement("p", {
+          className: "text-[10px] font-black text-amber-300 leading-tight text-center"
+        }, who && who.name || '', "との仲良し度 Lv", unlock.bondLevel, " でもらえます"), React.createElement("p", {
+          className: "text-[9px] text-slate-400 leading-tight text-center mt-1"
+        }, "いまは Lv", level, remain != null && remain > 0 ? ` ／ あと ${remain}` : ''), React.createElement("p", {
+          className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
+        }, frame.desc || ''));
+      })();
+      return React.createElement(PickerSheet, {
+        title: "プロフィールフレーム",
+        note: "アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。",
+        onClose: closeFrame,
+        preview: React.createElement(React.Fragment, null, React.createElement(ProfileAvatar, {
+          src: resolveIconUrl(breederIcon),
+          id: breederIcon,
+          frameId: profileFrameId,
+          alt: "いまの見た目",
+          className: "h-14 w-14 shrink-0",
+          fallback: React.createElement(User, {
+            size: 26,
+            className: "text-indigo-400"
+          })
+        }), React.createElement("span", {
+          className: "min-w-0"
+        }, React.createElement("b", {
+          className: "block truncate text-[12px] font-black text-white"
+        }, currentFrame.name || 'フレームなし'), React.createElement("small", {
+          className: "block text-[10px] font-bold leading-tight text-slate-400"
+        }, currentFrame.desc || 'いまの見た目'))),
+        search: frameQuery,
+        onSearch: frames.length > 9 ? setFrameQuery : null,
+        searchPlaceholder: "フレームを名前でさがす",
+        chips: ownedCount < frames.length ? [{
+          id: 'all',
+          label: 'すべて',
+          count: frames.length
+        }, {
+          id: 'owned',
+          label: '使える',
+          count: ownedCount
+        }, {
+          id: 'locked',
+          label: 'もらう前',
+          count: frames.length - ownedCount
+        }] : null,
+        chip: frameChip,
+        onChip: setFrameChip,
+        footerExtra: lockedInfo,
+        dataPicker: "frame"
+      }, matches.length === 0 && React.createElement("p", {
+        className: "py-8 text-center text-[11px] font-bold text-slate-500"
+      }, "当てはまるフレームがありません"), React.createElement("div", {
+        className: "grid grid-cols-3 gap-2.5"
+      }, colorFrames.length > 0 && assistantFrames.length > 0 && React.createElement(PickerGroupLabel, {
+        count: colorFrames.length
+      }, "色の枠"), colorFrames.map(cell), assistantFrames.length > 0 && React.createElement(PickerGroupLabel, {
+        count: assistantFrames.length
+      }, "助手の枠（仲良し度でもらえます）"), assistantFrames.map(cell)));
+    })(), showBackup && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
