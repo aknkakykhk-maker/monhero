@@ -84,6 +84,7 @@ const Audio_ = (() => {
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
     "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",
+    "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
     "audio/bgm-dullahan-clockwork.mp3": "e87bd8466b2c",

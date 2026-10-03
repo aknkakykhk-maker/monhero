@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 02:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 04:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -564,7 +564,12 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
 // 対象曲なら3倍、それ以外は2倍。
 // ★イベントは引数で受け取る。ここで時刻を1回だけ見て決め打ちにすると、開きっぱなしの
 //   端末で「開催したのに倍率が上がらない／終わったのに上がったまま」になる(CLAUDE.md ⑥-4)。
-const rhythmPlayRunLoopScale = (songId, event) => {
+// campaign … 開催中のビートPキャンペーン(rhythmEventPointCampaignAt で引いたもの)。loopScale を持つものは、
+//   曲を問わず**その倍率に置き換える**(ハロウィン・ナイトは全曲5倍。ランキングイベントの対象曲の3倍とも重ねない)。
+//   loopScale を書いていないキャンペーンは、今までどおり何も変えない
+const rhythmPlayRunLoopScale = (songId, event, campaign) => {
+  const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
+  if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
   const ids = (event && Array.isArray(event.songIds)) ? event.songIds : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;

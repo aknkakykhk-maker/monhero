@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c0b0bc569839d57
+// source-sha256: 85998b8ccd230757
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 02:51";
+const BUILD_DATE = "2026-10-04 04:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -537,7 +537,9 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
   const base = Math.max(RHYTHM_PLAY_RUN_LOOP_MIN, Math.floor(ms / 60000));
   return Math.floor(base * safeMult);
 };
-const rhythmPlayRunLoopScale = (songId, event) => {
+const rhythmPlayRunLoopScale = (songId, event, campaign) => {
+  const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
+  if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
   const ids = event && Array.isArray(event.songIds) ? event.songIds : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return id && ids && ids.includes(id) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
@@ -4739,6 +4741,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_crazy_party_night',
+  name: 'Crazy Party Night ～ぱんぷきんの逆襲～',
+  creator: 'オリジナル',
+  src: 'audio/bgm-crazy-party-night.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -5478,6 +5487,7 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   monbeatCupEvent: 'kaze_ga_soyogu',
   symphonyEvent: 'melo_mou_hitotsu_no_sekai_e',
   rhythmMultiEvent: 'melo_haruka',
+  halloweenNightEvent: 'melo_crazy_party_night',
   rhythmModeSelect: 'pandora_boss_remix'
 });
 const BGM_BATTLE_MODE_TABS = Object.freeze([{
@@ -5526,7 +5536,12 @@ const EVENT_BGM_SCENES = Object.freeze({
   beat_point_always_2026_09_24: 'monbeatCupEvent',
   rhythm_six_lane_2026_09_26: 'monbeatCupEvent',
   beat_point_up_2026_09_28: 'monbeatCupEvent',
-  rhythm_multi_friends_2026_10_03: 'rhythmMultiEvent'
+  rhythm_multi_friends_2026_10_03: 'rhythmMultiEvent',
+  halloween_night_2026_part1: 'halloweenNightEvent',
+  halloween_night_2026_part2: 'halloweenNightEvent',
+  halloween_night_2026_part3: 'halloweenNightEvent',
+  halloween_night_2026_part4: 'halloweenNightEvent',
+  halloween_night_2026_part5: 'halloweenNightEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -5788,6 +5803,7 @@ const Audio_ = (() => {
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
     "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",
+    "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
     "audio/bgm-dullahan-clockwork.mp3": "e87bd8466b2c",
@@ -31559,7 +31575,7 @@ const RhythmTapTest = ({
         className: "text-[15px] font-black leading-none text-white"
       }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-amber-200"
-      }, "🏆 イベント対象曲 ×", quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
+      }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-cyan-200"
       }, "👥 対戦ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-slate-300"
@@ -31870,7 +31886,7 @@ const RhythmTapTest = ({
     }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
       "data-rhythm-result-quick-run-event": true,
       className: "mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200"
-    }, "🏆 イベント対象曲 ×", quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
+    }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
       "data-rhythm-result-quick-run-multi": true,
       className: "mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200"
     }, "👥 みんなで対戦のボーナス(人数・連続) ×", quickRunAward.multiScale), React.createElement("div", {
@@ -37422,7 +37438,7 @@ function BreederMarketScreen({
       }, ...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length ? [{
         key: 'frame',
         label: 'フレーム'
-      }] : []), ...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.length ? [{
+      }] : []), ...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer => offer.available !== false) ? [{
         key: 'costume',
         label: '着替え'
       }] : []), {
@@ -37708,7 +37724,7 @@ function BreederMarketScreen({
     return campaign ? React.createElement(MarketNotice, {
       tone: "info",
       "data-event-point-campaign": true
-    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopScale) > 0 ? `。演奏でのクイック周回も${campaign.loopScale}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
   })(), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     value: activeDiamondTab,
     onChange: onSelectTab,
@@ -37870,7 +37886,7 @@ function BreederMarketScreen({
       detail: teaching,
       onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
     });
-  }), eventTab === 'costume' && RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.map(offer => {
+  }), eventTab === 'costume' && RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer => offer.available !== false).map(offer => {
     const costume = assistantCostumeById(offer.costumeId);
     const who = assistantById(offer.assistantId);
     const item = {
@@ -39496,7 +39512,9 @@ function RhythmSongSelectScreen({
     className: "block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "mt-0.5 block"
-  }, "キャンペーン中"), React.createElement("span", {
+  }, "キャンペーン中"), Number(beatPointCampaign.loopScale) > 0 && React.createElement("span", {
+    className: "block"
+  }, "周回 ×", beatPointCampaign.loopScale), React.createElement("span", {
     className: "block text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
     "data-rhythm-beat-band-landscape": true,
@@ -39745,7 +39763,7 @@ function RhythmSongSelectScreen({
     className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "min-w-0 truncate"
-  }, "キャンペーン中"), React.createElement("span", {
+  }, beatPointCampaign.name, Number(beatPointCampaign.loopScale) > 0 ? `・クイック周回 ×${beatPointCampaign.loopScale}` : '中'), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
@@ -61494,7 +61512,8 @@ function MonsterHeroGame() {
     return Number.isFinite(ms) && ms > 0 ? ms : 0;
   };
   const rhythmPlayRunLoopEventNow = () => RELEASE_FLAGS.rhythmWeeklyRanking === true && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
-  const rhythmPlayRunLoopScaleFor = song => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow());
+  const rhythmPlayRunLoopCampaignNow = () => RELEASE_FLAGS.rhythmEventPoints === true && typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const rhythmPlayRunLoopScaleFor = song => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow(), rhythmPlayRunLoopCampaignNow());
   const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
     if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
@@ -61698,7 +61717,8 @@ function MonsterHeroGame() {
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
   const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
   const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
+  const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -61785,14 +61805,15 @@ function MonsterHeroGame() {
       const multiFriendsStoryReady = RELEASE_FLAGS.rhythmMulti === true && notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID);
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
+      const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true ? halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
       if (!liveEvent) {
-        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -64222,6 +64243,7 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
+    ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
@@ -74182,7 +74204,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',

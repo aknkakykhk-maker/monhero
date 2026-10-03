@@ -44,7 +44,10 @@ for (const [rel, src] of sources) {
   check(`${rel}: 倍率は呼ばれるたびにイベントを引き直す`,
     compact.includes('constrhythmPlayRunLoopEventNow=()=>')
     && compact.includes('rhythmLimitedEventAt(Date.now()):null;')
-    && /rhythmPlayRunLoopScaleFor=\(?song\)?=>rhythmPlayRunLoopScale\(song\?song\.songId:null,rhythmPlayRunLoopEventNow\(\)\)/.test(compact));
+    && /rhythmPlayRunLoopScaleFor=\(?song\)?=>rhythmPlayRunLoopScale\(song\?song\.songId:null,rhythmPlayRunLoopEventNow\(\),rhythmPlayRunLoopCampaignNow\(\)\)/.test(compact)
+    // キャンペーン(ハロウィン・ナイトの5倍)も呼ばれるたびに引き直す(2026-10-04)
+    && compact.includes('constrhythmPlayRunLoopCampaignNow=()=>')
+    && compact.includes('rhythmEventPointCampaignAt(Date.now()):null;'));
   // 曲の長さは、見た目の「2分25秒」と同じ求め方
   check(`${rel}: 曲の長さは曲の指定→譜面の順に見る`,
     compact.includes('constown=Number(song?.playDurationMs);')
