@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 912370145abb7a31
+// source-sha256: 8c4a4bb85c36510c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 23:42";
+const BUILD_DATE = "2026-10-04 02:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -69960,6 +69960,12 @@ function MonsterHeroGame() {
     const attackHits = [];
     const halveCounter = makeHalveCounter();
     const pandoraCardNo = {};
+    let pdTagFrom = 0,
+      pdTagForm = null;
+    const pdTag = () => {
+      if (pdTagForm) for (let k = pdTagFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].pandoraForm == null) attackHits[k].pandoraForm = pdTagForm;
+      pdTagFrom = attackHits.length;
+    };
     for (const entry of usedCardEntries) {
       const card = entry.card;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
@@ -69983,11 +69989,19 @@ function MonsterHeroGame() {
       if (isTacticsMode(runMode) && !isBreeder && entry.slotIdx != null) {
         pandoraCardNo[entry.slotIdx] = (pandoraCardNo[entry.slotIdx] || 0) + 1;
         const boxNow = pandoraCardNo[entry.slotIdx] === 2 ? tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now) : null;
-        if (pandoraCardNo[entry.slotIdx] === 1 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) setTacticsPandoraForms({
-          [entry.slotIdx]: 'devil'
-        });else if (boxNow || pandoraCardNo[entry.slotIdx] > 2 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) setTacticsPandoraForms({
-          [entry.slotIdx]: 'angel'
-        });
+        pdTag();
+        pdTagForm = null;
+        if (pandoraCardNo[entry.slotIdx] === 1 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) {
+          pdTagForm = 'devil';
+          setTacticsPandoraForms({
+            [entry.slotIdx]: 'devil'
+          });
+        } else if (boxNow || pandoraCardNo[entry.slotIdx] > 2 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) {
+          pdTagForm = 'angel';
+          setTacticsPandoraForms({
+            [entry.slotIdx]: 'angel'
+          });
+        }
         if (boxNow && boxNow.angelRate > 0) {
           const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
           if (angel) hpBeforeEnemyAttack = angel.total;
@@ -70389,6 +70403,7 @@ function MonsterHeroGame() {
       await battleWait(250);
     }
     popupSlotRef.current = null;
+    pdTag();
     if (totalDmg > 0) {
       if (totalDmg > 0) {
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
@@ -70396,6 +70411,9 @@ function MonsterHeroGame() {
         let hitIdx = 0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          setTacticsPandoraForms(hit && hit.pandoraForm && hit.slotIdx != null ? {
+            [hit.slotIdx]: hit.pandoraForm
+          } : {});
           const hitMotion = hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[hit.slotIdx]?.atkMotion;
           const themeHit = hit.themeOf || hit;
           const hitSkillOwner = themeHit.isUnique && themeHit.monId ? themeHit.monId : slots[hit.slotIdx]?.id;
