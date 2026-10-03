@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 357cae9af1a1b532
+// source-sha256: 5058534e05070a26
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 23:05";
+const BUILD_DATE = "2026-10-03 23:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33319,23 +33319,23 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    desc: '5ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
     maxUses: 3,
     unlimited: false,
     withCards: false,
     duration: 'turns',
-    turns: 5,
+    turns: 3,
     effect: 'distMatch'
   }),
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
-    desc: '5ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
     maxUses: 5,
     unlimited: false,
     withCards: true,
     duration: 'turns',
-    turns: 5,
+    turns: 3,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo'
   }),

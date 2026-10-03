@@ -440,14 +440,14 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 // ---------- ⑫ エイキ「緋桜瞬歩」(2026-10-02 ユーザー指示) ----------
 {
   const ek = ex.tacticsExDefOf('Eiki');
-  check('エイキ「緋桜瞬歩」: ラン3回・カードと併用できない・5ターン・距離一致', !!ek && ek.name === '緋桜瞬歩'
-    && ek.maxUses === 3 && !ek.unlimited && !ek.withCards && ek.duration === 'turns' && ek.turns === 5
+  check('エイキ「緋桜瞬歩」: ラン3回・カードと併用できない・3ターン・距離一致', !!ek && ek.name === '緋桜瞬歩'
+    && ek.maxUses === 3 && !ek.unlimited && !ek.withCards && ek.duration === 'turns' && ek.turns === 3
     && ek.effect === 'distMatch' && ex.isTacticsExEffectImplemented(ek), JSON.stringify(ek));
   const A = (wave, turn) => ({ wave, turn });
   const e = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ek, slot: 2, monId: 'Eiki', now: A(1, 4) });
-  check('使ったターンから5ターン(4〜8ターン目)だけ distMatch が効き、9ターン目には切れる',
-    ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 4)) === 'distMatch' && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 8)) === 'distMatch'
-    && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 9)) === null);
+  check('使ったターンから3ターン(4〜6ターン目)だけ distMatch が効き、7ターン目には切れる',
+    ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 4)) === 'distMatch' && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 6)) === 'distMatch'
+    && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 7)) === null);
   check('使ったターンは、エイキだけがカードを使えない(ほかの枠は使える)', ex.isTacticsExCardLocked(e, 2, A(1, 4)) && !ex.isTacticsExCardLocked(e, 1, A(1, 4)));
   check('WAVEが変わったら切れる・ほかの子には効かない', ex.tacticsExActiveEffect(e, 2, 'Eiki', A(2, 4)) === null
     && ex.tacticsExActiveEffect(e, 2, 'Golem', A(1, 4)) === null && ex.tacticsExActiveEffect(e, 1, 'Eiki', A(1, 4)) === null);
@@ -465,8 +465,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 // ---------- ⑬ ザン「血踊」(2026-10-02 ユーザー指示) ----------
 {
   const zn = ex.tacticsExDefOf('Zan');
-  check('ザン「血踊」: ラン5回・カードと併用できる・5ターン・回避1回で連撃10%', !!zn && zn.name === '血踊'
-    && zn.maxUses === 5 && !zn.unlimited && zn.withCards && zn.duration === 'turns' && zn.turns === 5
+  check('ザン「血踊」: ラン5回・カードと併用できる・3ターン・回避1回で連撃10%', !!zn && zn.name === '血踊'
+    && zn.maxUses === 5 && !zn.unlimited && zn.withCards && zn.duration === 'turns' && zn.turns === 3
     && zn.effect === 'dodgeCombo' && zn.dodgeComboRate === 0.1 && ex.isTacticsExEffectImplemented(zn), JSON.stringify(zn));
   const A = (wave, turn) => ({ wave, turn });
   const units = [null, { id: 'Zan' }, { id: 'Eiki' }];
@@ -477,10 +477,10 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   z = ex.recordTacticsExDodge(z, units, 1, A(1, 3));
   const c1 = ex.tacticsExExtraCombosAt(z, units, 1, A(1, 3));
   check('1回回避すると、与ダメ10%の連撃が1回', !!c1 && c1.count === 1 && Math.abs(c1.rate - 0.1) < 1e-9 && c1.label === '血踊', JSON.stringify(c1));
-  z = ex.recordTacticsExDodge(ex.recordTacticsExDodge(z, units, 1, A(1, 4)), units, 1, A(1, 5));
-  const c3 = ex.tacticsExExtraCombosAt(z, units, 1, A(1, 5));
+  z = ex.recordTacticsExDodge(ex.recordTacticsExDodge(z, units, 1, A(1, 4)), units, 1, A(1, 4));
+  const c3 = ex.tacticsExExtraCombosAt(z, units, 1, A(1, 4));
   check('回避するごとに連撃が1回ずつ増えていく(3回回避 → 10%の連撃が3回)', !!c3 && c3.count === 3 && Math.abs(c3.rate - 0.1) < 1e-9, JSON.stringify(c3));
-  check('5ターン目(6ターン目)まで続き、切れたら連撃も消える', ex.tacticsExExtraCombosAt(z, units, 1, A(1, 6)).count === 3 && ex.tacticsExExtraCombosAt(z, units, 1, A(1, 7)) === null);
+  check('3ターン目(4ターン目)まで続き、切れたら連撃も消える', ex.tacticsExExtraCombosAt(z, units, 1, A(1, 4)).count === 3 && ex.tacticsExExtraCombosAt(z, units, 1, A(1, 5)) === null);
   check('WAVEが変わったら切れる', ex.tacticsExExtraCombosAt(z, units, 1, A(2, 3)) === null);
   const same = ex.recordTacticsExDodge(ex.createTacticsExState(), units, 1, A(1, 3));
   check('効いていない子の回避は数えない(使っていない・別の効果・別の子)', ex.tacticsExExtraCombosAt(same, units, 1, A(1, 3)) === null
