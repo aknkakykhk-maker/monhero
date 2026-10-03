@@ -141,8 +141,9 @@ const tick=game.slice(game.indexOf('const accumulate = () => {'),game.indexOf('c
 check('数える処理の中でsetStateを呼ばない',!/set[A-Z]/.test(tick));
 
 // --- 7. プロフィールに出る ---
+// ラベルの要素の書き方(クラス名・アイコンの有無)は、画面の作り直しで変わってよい。見るのは「プレイ時間」という見出しと、合計の時間を出していること
 check('プロフィールにプレイ時間が出る',
-  /<span className="text-\[\d+px\] font-black text-indigo-200">プレイ時間<\/span>/.test(game)
+  /プレイ時間<\/span>/.test(game)
   &&game.includes('{formatPlaytime(playtimeView.totalMs)}'));
 check('今日のぶんと遊んだ日数も出る',
   game.includes('{formatPlaytime(playtimeTodayMs(playtimeView))}')
