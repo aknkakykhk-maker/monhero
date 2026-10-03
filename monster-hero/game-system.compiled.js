@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88cd96f0c0c124eb
+// source-sha256: 357cae9af1a1b532
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 22:37";
+const BUILD_DATE = "2026-10-03 23:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -20698,6 +20698,8 @@ const SpecialMoveFx = ({
     x: vw / 2,
     y: vh * 0.3
   };
+  const enemyBarEl = !compact && typeof document !== 'undefined' ? document.querySelector('[data-enemy-bar]') : null;
+  const bandTop = enemyBarEl ? enemyBarEl.getBoundingClientRect().bottom + 10 : vh * 0.14;
   const style = compact ? {
     '--spm-c1': c1,
     '--spm-c2': c2,
@@ -20711,7 +20713,8 @@ const SpecialMoveFx = ({
     '--spm-fx': `${Math.round(from.x)}px`,
     '--spm-fy': `${Math.round(from.y)}px`,
     '--spm-tx': `${Math.round(to.x)}px`,
-    '--spm-ty': `${Math.round(to.y)}px`
+    '--spm-ty': `${Math.round(to.y)}px`,
+    '--spm-by': `${Math.round(bandTop)}px`
   };
   const body = React.createElement("div", {
     "data-special-move-fx": phase,
@@ -50584,8 +50587,10 @@ function BattleScreen({
     className: "shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative",
     style: {
       backgroundImage: 'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',
-      ...(tacticsNewLayout && popups.some(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)) || attackAnim && !ecoBattleView ? {
+      ...(tacticsNewLayout && popups.some(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)) ? {
         zIndex: 60
+      } : attackAnim && !ecoBattleView ? {
+        zIndex: 6450
       } : {})
     }
   }, tacticsNewLayout ? React.createElement("div", {
@@ -87703,7 +87708,7 @@ const createAnimationStyle = () => {
       rotate:var(--a); animation:spmSpark 600ms ease-in forwards; animation-delay:calc(var(--i) * 45ms); }
     @keyframes spmSpark { 0% { opacity:0; transform:translateX(130px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(1.3); } }
     /* 斜めの帯 */
-    .spm__band { left:-10%; right:-10%; top:42%; height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
+    .spm__band { left:-10%; right:-10%; top:var(--spm-by,42%); height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
       background:linear-gradient(90deg, rgba(6,8,18,.2), rgba(8,10,24,.92) 16%, rgba(8,10,24,.92) 84%, rgba(6,8,18,.2));
       border-top:2px solid var(--spm-c1); border-bottom:2px solid var(--spm-c1);
       box-shadow:0 0 16px var(--spm-c2), inset 0 0 22px color-mix(in srgb, var(--spm-c2) 45%, transparent);
