@@ -609,6 +609,7 @@ function MonsterHeroGame() {
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
   const [graveyard, setGraveyard] = useState([]);
+  const [tacticsPandoraForms, setTacticsPandoraForms] = useState({}); // パンドラの箱: 枠ごとの「いま見せている姿」('devil'|'angel')。カードを切っている間だけ入る
   const handPileRef = useRef({ hand: [], deck: [], graveyard: [] }); // EXスキルが「いまの」手札・山札・墓地を読むための控え(毎回の描画で更新)
   handPileRef.current = { hand, deck, graveyard };
   const [enemy, setEnemy] = useState(null);
@@ -11288,6 +11289,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       pushBattleLog(`🎁 プレゼントの中身: ${roll.jackpot?'大当たり！ 全部':names.join('・')}`,'ally');
       addPopup(roll.jackpot?'🎁 大当たり！ 全部入り':`🎁 ${names[0]}`,'hero','text-amber-300 font-black text-2xl drop-shadow-md',undefined,slotIdx);
     }
+    // パンドラの箱: 悪魔・天使の絵は起動時に読まないので、使った瞬間に先読みして、カードを切るときに出遅れないようにする
+    if(def.effect==='pandoraBox') [PANDORA_DEVIL_IMG,PANDORA_ANGEL_IMG].forEach(u=>{ try{ const im=new Image(); im.src=u; }catch(e){} });
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
@@ -11418,6 +11421,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(isTacticsMode(runMode)&&!isBreeder&&entry.slotIdx!=null){
         pandoraCardNo[entry.slotIdx]=(pandoraCardNo[entry.slotIdx]||0)+1;
         const boxNow=pandoraCardNo[entry.slotIdx]===2?tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now):null;
+        // 1枚目は悪魔、2枚目は天使の姿に変える(3枚目以降は天使のまま)
+        if(pandoraCardNo[entry.slotIdx]===1&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now)) setTacticsPandoraForms({[entry.slotIdx]:'devil'});
+        else if(boxNow||(pandoraCardNo[entry.slotIdx]>2&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now))) setTacticsPandoraForms({[entry.slotIdx]:'angel'});
         if(boxNow&&boxNow.angelRate>0){
           const angel=tacticsRateHeal(boxNow.angelRate,boxNow.angelRate,false);
           if(angel) hpBeforeEnemyAttack=angel.total;
@@ -11824,6 +11830,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else { await battleWait(100); }
 
     const drawCount=usedCards.filter(c=>c.type==='draw').length;
+    setTacticsPandoraForms({}); // カードを切り終えたら本体の姿へ戻す
     const usedHandIndexes=new Set(usedCardEntries.map(entry=>entry.handIndex));
     let nextHand=hand.filter((_,i)=>!usedHandIndexes.has(i));
     let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards];
@@ -18065,7 +18072,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5acd1efb6ac877aa
+// source-sha256: 13c2d19c06234c63
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 20:37";
+const BUILD_DATE = "2026-10-03 21:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -48991,6 +48991,7 @@ function BattleScreen({
   tacticsCoverSlot,
   tacticsExIntroVisible,
   dismissTacticsExIntro,
+  tacticsPandoraForms,
   teachingFx,
   totalTurnCount,
   turnCount,
@@ -50802,6 +50803,9 @@ function BattleScreen({
       });
     }
     const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
+    const pandoraForm = s && s.id === 'Pandora' ? tacticsPandoraForms && tacticsPandoraForms[i] : null;
+    const slotImgUrl = pandoraForm === 'devil' ? PANDORA_DEVIL_IMG : pandoraForm === 'angel' ? PANDORA_ANGEL_IMG : s && s.imgUrl;
+    const slotImgColors = pandoraForm ? undefined : s && s.colors;
     const attackAimStyle = isAnimating && attackAim && attackAim.slotIndex === i ? attackAimVars(attackAim.dx, attackAim.dy) : null;
     const slotArt = img => !ecoBattleView && !idleMotionOff ? React.createElement(MonsterIdleArt, {
       baseId: s?.id,
@@ -51233,9 +51237,9 @@ function BattleScreen({
     }, s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
       image: React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: s.imgUrl,
+        src: slotImgUrl,
         alt: s.name,
-        masuColors: s.colors,
+        masuColors: slotImgColors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51245,9 +51249,9 @@ function BattleScreen({
     }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? React.createElement(ArkHolyRainMotion, {
       image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: s.imgUrl,
+        src: slotImgUrl,
         alt: s.name,
-        masuColors: s.colors,
+        masuColors: slotImgColors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51259,9 +51263,9 @@ function BattleScreen({
     }) : isAnimating && attackAnim.motion === 'waterBurst' ? React.createElement(WaterBurstMotion, {
       image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: s.imgUrl,
+        src: slotImgUrl,
         alt: s.name,
-        masuColors: s.colors,
+        masuColors: slotImgColors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51273,9 +51277,9 @@ function BattleScreen({
     }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? React.createElement(MiaSongNotesMotion, {
       image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: s.imgUrl,
+        src: slotImgUrl,
         alt: s.name,
-        masuColors: s.colors,
+        masuColors: slotImgColors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51289,9 +51293,9 @@ function BattleScreen({
       lunge: attackAnim.charge === false,
       image: slotArt(React.createElement(DyedMonsterImage, {
         baseId: s.id,
-        src: s.imgUrl,
+        src: slotImgUrl,
         alt: s.name,
-        masuColors: s.colors,
+        masuColors: slotImgColors,
         style: {
           width: tacticsNewLayout ? '58px' : '64px',
           height: tacticsNewLayout ? '58px' : '64px'
@@ -51300,9 +51304,9 @@ function BattleScreen({
       }))
     }) : slotArt(React.createElement(DyedMonsterImage, {
       baseId: s.id,
-      src: s.imgUrl,
+      src: slotImgUrl,
       alt: s.name,
-      masuColors: s.colors,
+      masuColors: slotImgColors,
       style: {
         width: tacticsNewLayout ? '58px' : '64px',
         height: tacticsNewLayout ? '58px' : '64px'
@@ -57983,6 +57987,7 @@ function MonsterHeroGame() {
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
   const [graveyard, setGraveyard] = useState([]);
+  const [tacticsPandoraForms, setTacticsPandoraForms] = useState({});
   const handPileRef = useRef({
     hand: [],
     deck: [],
@@ -69749,6 +69754,12 @@ function MonsterHeroGame() {
       pushBattleLog(`🎁 プレゼントの中身: ${roll.jackpot ? '大当たり！ 全部' : names.join('・')}`, 'ally');
       addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${names[0]}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
     }
+    if (def.effect === 'pandoraBox') [PANDORA_DEVIL_IMG, PANDORA_ANGEL_IMG].forEach(u => {
+      try {
+        const im = new Image();
+        im.src = u;
+      } catch (e) {}
+    });
     const onUse = TACTICS_EX_ON_USE[def.effect];
     if (isTacticsExEffectImplemented(def)) {
       addPopup(`EX ${def.name}！${toggled}`, 'hero', 'text-fuchsia-300 font-black text-xl drop-shadow-md', undefined, slotIdx);
@@ -69884,6 +69895,11 @@ function MonsterHeroGame() {
       if (isTacticsMode(runMode) && !isBreeder && entry.slotIdx != null) {
         pandoraCardNo[entry.slotIdx] = (pandoraCardNo[entry.slotIdx] || 0) + 1;
         const boxNow = pandoraCardNo[entry.slotIdx] === 2 ? tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now) : null;
+        if (pandoraCardNo[entry.slotIdx] === 1 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) setTacticsPandoraForms({
+          [entry.slotIdx]: 'devil'
+        });else if (boxNow || pandoraCardNo[entry.slotIdx] > 2 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) setTacticsPandoraForms({
+          [entry.slotIdx]: 'angel'
+        });
         if (boxNow && boxNow.angelRate > 0) {
           const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
           if (angel) hpBeforeEnemyAttack = angel.total;
@@ -70483,6 +70499,7 @@ function MonsterHeroGame() {
       await battleWait(100);
     }
     const drawCount = usedCards.filter(c => c.type === 'draw').length;
+    setTacticsPandoraForms({});
     const usedHandIndexes = new Set(usedCardEntries.map(entry => entry.handIndex));
     let nextHand = hand.filter((_, i) => !usedHandIndexes.has(i));
     let nextDeck = [...deck],
@@ -82714,6 +82731,7 @@ function MonsterHeroGame() {
       tacticsExCutin: tacticsExCutin,
       tacticsExIntroVisible: tacticsExIntroVisible,
       dismissTacticsExIntro: dismissTacticsExIntro,
+      tacticsPandoraForms: tacticsPandoraForms,
       tacticsExTurnUsed: tacticsExTurnUsed,
       passTacticsTurn: passTacticsTurn,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
