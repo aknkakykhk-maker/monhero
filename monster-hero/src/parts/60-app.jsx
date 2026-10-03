@@ -1717,6 +1717,19 @@ function MonsterHeroGame() {
   const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
+  // ひとこと(フレンドのプロフィールに出る自己紹介。30文字まで)。新しい保存キー。選んだ文は friendsCleanMessage を通してから覚える
+  const PROFILE_MESSAGE_KEY = 'mh_profile_message_v1';
+  const [profileMessage, setProfileMessage] = useState('');
+  const [showMessageEditor, setShowMessageEditor] = useState(false);
+  const [tempMessage, setTempMessage] = useState('');
+  const saveProfileMessage = (text) => {
+    const next = friendsCleanMessage(text);
+    setProfileMessage(next);
+    setShowMessageEditor(false);
+    Promise.resolve(storeSet(PROFILE_MESSAGE_KEY, next, false)).catch(error => {
+      console.error('[friends] message save failed:', error && error.message ? error.message : error);
+    });
+  };
   const selectFavoriteMasu = (id) => {
     const next = id == null ? null : String(id);
     setFavoriteMasuId(next);
@@ -1744,7 +1757,6 @@ function MonsterHeroGame() {
   // 「いまの場所」「プレイ時間」「最高絆Lv」などをフレンド用の表へ送る。端末には何も保存しない。
   // 画面が変わる・手持ちが変わるたびに送るが、送る間隔の下限(15秒)を守る。開いているあいだは2分ごとにも送る(ログイン中の印)
   const friendLatestRef = useRef({});
-  friendLatestRef.current = { gameState, masuMons, favoriteMasuId };
   const friendPublishRef = useRef(0);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
@@ -1752,9 +1764,22 @@ function MonsterHeroGame() {
     if (!id) return;
     const latest = friendLatestRef.current;
     friendPublishRef.current = Date.now();
+    // 曲ごとのベストは、ゲームを開いたあと一度もモンヒロビートを開いていなくても出せるよう、端末の保存から直接読む
+    let rhythmBest = null;
+    try { rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false)); } catch (error) { rhythmBest = null; }
+    let records = null;
+    try {
+      records = friendsBuildRecords({
+        highScores: latest.highScores, proHighScores: latest.proHighScores, quickHighestWaves: latest.quickHighestWaves,
+        extremeBestScores: latest.extremeBestScores, speciesProgressOf: latest.speciesProgressOf, tacticsHsOf: (modeId) => (latest.tacticsRecordsOf(modeId) || {}).hs || {},
+        rhythmBest, masuMons: latest.masuMons, unlockedMonsterIds: latest.unlockedMonsterIds,
+        ownedIconIds: latest.ownedMarketIcons, ownedFrameIds: latest.ownedProfileFrames,
+      });
+    } catch (error) { console.error('[friends] records build failed:', error && error.message ? error.message : error); }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState), masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
+      message: latest.profileMessage, records,
     }));
   }, [friendsActive]);
   useEffect(() => {
@@ -1762,7 +1787,7 @@ function MonsterHeroGame() {
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
-  }, [friendsActive, gameState, masuMons, favoriteMasuId, publishFriendProfile]);
+  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);
@@ -1795,6 +1820,9 @@ function MonsterHeroGame() {
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
+  // フレンドへ送る内容の「最新の値」。送信は少し遅れて走るので、その時点の値をここから読む(宣言のあとに置く)
+  friendLatestRef.current = { gameState, masuMons, favoriteMasuId, profileMessage, highScores, proHighScores, quickHighestWaves, extremeBestScores,
+    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons, ownedProfileFrames };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
@@ -5058,6 +5086,7 @@ function MonsterHeroGame() {
       // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
       // 好きなモンスター(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
+      { const savedMessage = await storeGet(PROFILE_MESSAGE_KEY, '', false); setProfileMessage(friendsCleanMessage(savedMessage)); }
       { const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false); setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null); }
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
@@ -16440,6 +16469,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             friendRequestCount={friendRequestInfo.count}
             favoriteMasu={(favoriteMasuId!=null&&masuMons.find(m=>String(m.id)===String(favoriteMasuId)))||null}
             onOpenFavoritePicker={()=>setShowFavoritePicker(true)}
+            profileMessage={profileMessage}
+            onOpenMessageEditor={()=>{setTempMessage(profileMessage);setShowMessageEditor(true);}}
           />
         )}
 
@@ -17491,6 +17522,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ・候補は「いまのブリーダーアイコン＋そのフレーム」を重ねて見せる
             ・押したその場で反映して保存する(閉じるまで見比べられるよう、モーダルは開いたまま)
             ・並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない */}
+        {showMessageEditor&&(
+          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl">
+              <h3 className="text-lg font-black text-white mb-1 text-center">ひとこと</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">フレンドがあなたのプロフィールを開いたとき、名前の下に出ます。{FRIEND_MESSAGE_MAX}文字までです。</p>
+              <input type="text" data-message-input value={tempMessage} maxLength={FRIEND_MESSAGE_MAX} autoComplete="off" spellCheck={false}
+                onChange={e=>setTempMessage(e.target.value)} placeholder="例: 音ゲーすきです"
+                className="w-full min-h-[48px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-[14px] font-bold text-white placeholder:text-slate-600"/>
+              <div className="mt-1 text-right text-[10px] font-bold text-slate-500">{friendsCleanMessage(tempMessage).length}/{FRIEND_MESSAGE_MAX}</div>
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <button type="button" data-message-save onClick={()=>saveProfileMessage(tempMessage)} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存する</button>
+                {profileMessage&&<button type="button" data-message-clear onClick={()=>saveProfileMessage('')} className="min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-[.98]">ひとことを消す</button>}
+                <ModalCloseButton onClick={()=>setShowMessageEditor(false)} label="キャンセル"/>
+              </div>
+            </div>
+          </div>
+        )}
         {showFavoritePicker&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">

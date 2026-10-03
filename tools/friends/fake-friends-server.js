@@ -5,7 +5,8 @@
 //   ・DELETE は常に403(権限が無い)
 const pairKey = (a, b) => [a, b].sort().join('|');
 
-const createFakeFriendsServer = () => {
+// options.missingProfileExtra … friend_profiles に message / records の列がまだ無い環境(第3弾のSQL未適用)を真似る
+const createFakeFriendsServer = (options = {}) => {
   const db = { friend_codes: [], friend_links: [], friend_invites: [], friend_profiles: [], breeder_profiles: [] };
   const calls = { methods: [], deletes: 0, sqlRejects: 0 };
   // 時刻は「いま」を起点に1秒ずつ進める(招待の有効期限の判定が実際の時計で動くように)
@@ -46,6 +47,8 @@ const createFakeFriendsServer = () => {
     if (!db[table]) return { status: 404, body: { code: 'PGRST205', message: `Could not find the table 'public.${table}'` } };
     const rows = db[table];
     if (method === 'DELETE') { calls.deletes += 1; return { status: 403, body: { message: 'permission denied' } }; }
+    const columnMissing = () => ({ status: 400, body: { code: 'PGRST204', message: "Could not find the 'records' column of 'friend_profiles' in the schema cache" } });
+    if (table === 'friend_profiles' && options.missingProfileExtra && method === 'GET' && /select=[^&]*(message|records)/.test(u.search)) return columnMissing();
     if (method === 'GET') {
       let out = rows.filter(parseFilter(u.searchParams));
       const limit = Number(u.searchParams.get('limit'));
@@ -56,6 +59,9 @@ const createFakeFriendsServer = () => {
     if (method === 'POST') {
       for (const item of body) {
         const row = { ...item };
+        if (table === 'friend_profiles' && options.missingProfileExtra && ('message' in row || 'records' in row)) return columnMissing();
+        if (table === 'friend_profiles' && row.message != null && String(row.message).length > 40) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
+        if (table === 'friend_profiles' && row.records != null && JSON.stringify(row.records).length > 12000) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
         if (table === 'friend_codes') {
           if (rows.some((r) => r.breeder_id === row.breeder_id || r.friend_code === row.friend_code)) { calls.sqlRejects += 1; return { status: 409, body: { code: '23505' } }; }
           if (!/^[A-HJ-NP-Z2-9]{8}$/.test(row.friend_code)) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }

@@ -28,6 +28,8 @@ function ProfileScreen({
   friendsEnabled = false, onOpenFriends, friendRequestCount = 0,
   // フレンドに見せる「好きなモンスター」(選んでいなければ null)と、選ぶ画面を開く操作
   favoriteMasu = null, onOpenFavoritePicker,
+  // フレンドのプロフィールに出る「ひとこと」(自由入力・30文字まで)と、書き換える画面を開く操作
+  profileMessage = '', onOpenMessageEditor,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
@@ -146,6 +148,16 @@ function ProfileScreen({
             <ChevronRight size={16} className="shrink-0 text-pink-400"/>
           </button>);
         })()}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(
+          <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💬</span>
+            <span className="min-w-0 flex-1 text-left">
+              <small className="block text-[10px] font-black text-pink-300">ひとこと（フレンドに見えます）</small>
+              <b className="block truncate text-[13px] font-black text-white">{profileMessage||'まだ書いていません'}</b>
+            </span>
+            <Edit3 size={15} className="shrink-0 text-pink-400"/>
+          </button>
+        )}
         {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
             助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
         {onboarded&&!onboardingPreview&&(()=>{

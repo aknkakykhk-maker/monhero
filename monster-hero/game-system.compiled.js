@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b07c8af6ae4f5671
+// source-sha256: 0280695f2e8b2c3b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 11:55";
+const BUILD_DATE = "2026-10-03 13:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33779,6 +33779,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;
 let _friendsUnavailable = false;
+let _friendProfileExtraUnavailable = false;
 let _friendProfilesUnavailable = false;
 let _friendCodeCache = null;
 const friendsUnavailable = () => _friendsUnavailable;
@@ -33828,6 +33829,43 @@ const friendsFaceIconOf = baseId => {
     src: faceSrc,
     id: baseId
   };
+};
+const FRIEND_FAVORITES_KEY = 'mh_friend_favorites_v1';
+const FRIEND_FAVORITES_MAX = 100;
+const friendsNormalizeFavorites = raw => {
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  list.forEach(id => {
+    const safe = friendsSafeId(id);
+    if (safe && !out.includes(safe)) out.push(safe);
+  });
+  return out.slice(0, FRIEND_FAVORITES_MAX);
+};
+const friendsArrangeList = ({
+  views,
+  looks,
+  summaries,
+  favorites,
+  query,
+  nowMs
+}) => {
+  const fav = new Set(Array.isArray(favorites) ? favorites : []);
+  const text = String(query == null ? '' : query).trim().toLowerCase();
+  const rows = (Array.isArray(views) ? views : []).map(view => {
+    const look = looks && looks[view.otherId] || {};
+    const sum = summaries && summaries[view.otherId] || null;
+    const at = Math.max(sum ? sum.updatedAt || 0 : 0, look.lastSeenAt || 0);
+    const seen = friendsPresenceText(sum ? sum.place : null, at, nowMs);
+    return {
+      view,
+      name: look.userName || '名無しのブリーダー',
+      favorite: fav.has(view.otherId),
+      online: seen.online,
+      seenAt: at
+    };
+  }).filter(row => !text || row.name.toLowerCase().includes(text));
+  rows.sort((a, b) => Number(b.favorite) - Number(a.favorite) || Number(b.online) - Number(a.online) || b.seenAt - a.seenAt || a.name.localeCompare(b.name, 'ja'));
+  return rows;
 };
 const friendsStatusOf = value => Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED;
 const friendLinkView = (selfId, row) => {
@@ -34270,11 +34308,151 @@ const friendsPlaytimeText = seconds => {
   return minutes > 0 ? `${minutes}分` : '1分未満';
 };
 const FRIEND_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const FRIEND_MESSAGE_MAX = 30;
+const friendsCleanMessage = value => String(value == null ? '' : value).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, FRIEND_MESSAGE_MAX);
+const FRIEND_RECORD_SONG_MAX = 15;
+const friendsBattleModeLabels = () => {
+  const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE, TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE];
+  return Object.fromEntries(modes.filter(Boolean).map(mode => [mode.id, {
+    emoji: mode.emoji || '⚔️',
+    label: mode.label || mode.id
+  }]));
+};
+const friendsInt = value => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+const friendsBattleSummary = src => {
+  const s = src || {};
+  const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
+  const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE, ...[TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE].filter(mode => battleModePlayable(mode.id))];
+  const out = [];
+  modes.forEach(mode => {
+    try {
+      let entry = null;
+      if (isSpeciesChallengeMode(mode.id)) {
+        const progress = typeof s.speciesProgressOf === 'function' ? s.speciesProgressOf(mode.id) : null;
+        entry = {
+          id: mode.id,
+          k: 's',
+          v: friendsInt(speciesChallengeProfileSummary(progress).bestScore)
+        };
+      } else if (isQuickMode(mode.id)) {
+        entry = {
+          id: mode.id,
+          k: 'w',
+          v: friendsInt(highestModeWave(s.quickHighestWaves, difficultyIds))
+        };
+      } else {
+        const tactics = isTacticsMode(mode.id);
+        const scores = mode.id === EXTREME_MODE.id ? s.extremeBestScores : tactics ? typeof s.tacticsHsOf === 'function' ? s.tacticsHsOf(mode.id) : {} : isProMode(mode.id) ? s.proHighScores : s.highScores;
+        const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(item => item.id) : tactics ? TACTICS_DIFFICULTY_IDS : difficultyIds;
+        entry = {
+          id: mode.id,
+          k: 's',
+          v: friendsInt(highestModeScore(scores, ids))
+        };
+      }
+      if (entry && entry.v > 0) out.push(entry);
+    } catch (error) {}
+  });
+  return out;
+};
+const friendsRhythmSummary = bestRecords => {
+  const songs = [];
+  let played = 0;
+  (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).forEach(song => {
+    const byDifficulty = bestRecords && bestRecords[song.songId];
+    if (!byDifficulty) return;
+    let pick = null;
+    RHYTHM_DIFFICULTIES.forEach(({
+      id
+    }, index) => {
+      const rec = byDifficulty[id];
+      if (rec && rec.played) pick = {
+        s: song.songId,
+        d: id,
+        sc: friendsInt(rec.bestScore),
+        f: rec.allMarvelous ? 3 : rec.allExcellent ? 2 : rec.fullCombo ? 1 : 0,
+        order: index
+      };
+    });
+    if (pick) {
+      played += 1;
+      songs.push(pick);
+    }
+  });
+  songs.sort((a, b) => b.sc - a.sc);
+  return {
+    played,
+    songs: songs.slice(0, FRIEND_RECORD_SONG_MAX).map(({
+      order,
+      ...rest
+    }) => rest)
+  };
+};
+const friendsCollectionSummary = ({
+  masuMons,
+  unlockedMonsterIds,
+  ownedIconIds,
+  ownedFrameIds
+}) => {
+  const list = (Array.isArray(masuMons) ? masuMons : []).filter(m => m && ALL_PLAYER_MONSTERS[m.baseId]);
+  return {
+    masu: list.length,
+    dex: (Array.isArray(unlockedMonsterIds) ? unlockedMonsterIds : []).filter(id => ALL_PLAYER_MONSTERS[id]).length,
+    dexTotal: Object.keys(ALL_PLAYER_MONSTERS).length,
+    transcended: list.filter(m => m.transcended).length,
+    reincarnated: list.filter(m => friendsInt(m.reincarnateCount) > 0).length,
+    icons: Array.isArray(ownedIconIds) ? ownedIconIds.length : 0,
+    frames: Array.isArray(ownedFrameIds) ? ownedFrameIds.length : 0
+  };
+};
+const friendsBuildRecords = src => ({
+  v: 1,
+  battle: friendsBattleSummary(src),
+  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  collection: friendsCollectionSummary(src || {})
+});
+const friendsNormalizeRecords = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const battle = (Array.isArray(raw.battle) ? raw.battle : []).map(e => e && typeof e.id === 'string' && (e.k === 's' || e.k === 'w') && friendsInt(e.v) > 0 ? {
+    id: e.id.slice(0, 40),
+    k: e.k,
+    v: friendsInt(e.v)
+  } : null).filter(Boolean).slice(0, 20);
+  const songsRaw = raw.rhythm && Array.isArray(raw.rhythm.songs) ? raw.rhythm.songs : [];
+  const songs = songsRaw.map(e => e && typeof e.s === 'string' && typeof e.d === 'string' ? {
+    s: e.s.slice(0, 80),
+    d: e.d.slice(0, 20),
+    sc: friendsInt(e.sc),
+    f: [0, 1, 2, 3].includes(e.f) ? e.f : 0
+  } : null).filter(Boolean).slice(0, FRIEND_RECORD_SONG_MAX);
+  const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
+  return {
+    battle,
+    rhythm: {
+      played: friendsInt(raw.rhythm && raw.rhythm.played),
+      songs
+    },
+    collection: {
+      masu: friendsInt(c.masu),
+      dex: friendsInt(c.dex),
+      dexTotal: friendsInt(c.dexTotal),
+      transcended: friendsInt(c.transcended),
+      reincarnated: friendsInt(c.reincarnated),
+      icons: friendsInt(c.icons),
+      frames: friendsInt(c.frames)
+    }
+  };
+};
 const friendsBuildSummary = ({
   place,
   masuMons,
   favoriteMasuId,
-  playtime
+  playtime,
+  message = '',
+  records = null
 }) => {
   let bestBond = 0,
     bestBondMon = '',
@@ -34319,29 +34497,46 @@ const friendsBuildSummary = ({
     bestBondMon: bestBondMon || null,
     bestPower: bestPower > 0 ? bestPower : null,
     bestPowerMon: bestPowerMon || null,
-    favorite
+    favorite,
+    message: friendsCleanMessage(message) || null,
+    records: records && typeof records === 'object' ? records : null
   };
 };
 const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   const id = friendsSafeId(breederIdRaw);
   if (!id || !summary) return false;
+  const base = {
+    breeder_id: id,
+    place: summary.place,
+    started_on: summary.startedOn,
+    play_seconds: summary.playSeconds,
+    best_bond: summary.bestBond,
+    best_bond_mon: summary.bestBondMon,
+    best_power: summary.bestPower,
+    best_power_mon: summary.bestPowerMon,
+    favorite: summary.favorite
+  };
+  const send = row => friendsRequest('friend_profiles?on_conflict=breeder_id', {
+    method: 'POST',
+    soft: true,
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: [row]
+  });
   try {
-    await friendsRequest('friend_profiles?on_conflict=breeder_id', {
-      method: 'POST',
-      soft: true,
-      prefer: 'resolution=merge-duplicates,return=minimal',
-      body: [{
-        breeder_id: id,
-        place: summary.place,
-        started_on: summary.startedOn,
-        play_seconds: summary.playSeconds,
-        best_bond: summary.bestBond,
-        best_bond_mon: summary.bestBondMon,
-        best_power: summary.bestPower,
-        best_power_mon: summary.bestPowerMon,
-        favorite: summary.favorite
-      }]
-    });
+    if (_friendProfileExtraUnavailable) await send(base);else {
+      try {
+        await send({
+          ...base,
+          message: summary.message,
+          records: summary.records
+        });
+      } catch (error) {
+        if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
+          _friendProfileExtraUnavailable = true;
+          await send(base);
+        } else throw error;
+      }
+    }
     return true;
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
@@ -34353,9 +34548,21 @@ const sbFetchFriendSummaries = async ids => {
   const byId = {};
   if (!safe.length) return byId;
   try {
-    const rows = await friendsRequest(`friend_profiles?select=breeder_id,place,started_on,play_seconds,best_bond,best_bond_mon,best_power,best_power_mon,favorite,updated_at&breeder_id=in.(${safe.join(',')})`, {
+    const baseCols = 'breeder_id,place,started_on,play_seconds,best_bond,best_bond_mon,best_power,best_power_mon,favorite,updated_at';
+    const fetchRows = cols => friendsRequest(`friend_profiles?select=${cols}&breeder_id=in.(${safe.join(',')})`, {
       soft: true
     });
+    let rows;
+    if (_friendProfileExtraUnavailable) rows = await fetchRows(baseCols);else {
+      try {
+        rows = await fetchRows(`${baseCols},message,records`);
+      } catch (error) {
+        if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST/i.test(String(error.message))) {
+          _friendProfileExtraUnavailable = true;
+          rows = await fetchRows(baseCols);
+        } else throw error;
+      }
+    }
     (Array.isArray(rows) ? rows : []).forEach(row => {
       if (!row || typeof row.breeder_id !== 'string') return;
       const at = Date.parse(row.updated_at);
@@ -34370,7 +34577,9 @@ const sbFetchFriendSummaries = async ids => {
         bestPower: num(row.best_power),
         bestPowerMon: typeof row.best_power_mon === 'string' ? row.best_power_mon : null,
         favorite: fav,
-        updatedAt: Number.isFinite(at) ? at : 0
+        updatedAt: Number.isFinite(at) ? at : 0,
+        message: friendsCleanMessage(row.message),
+        records: friendsNormalizeRecords(row.records)
       };
     });
   } catch (error) {
@@ -36748,6 +36957,8 @@ function ProfileScreen({
   friendRequestCount = 0,
   favoriteMasu = null,
   onOpenFavoritePicker,
+  profileMessage = '',
+  onOpenMessageEditor,
   unlockedAssistants
 }) {
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST;
@@ -36956,7 +37167,24 @@ function ProfileScreen({
       size: 16,
       className: "shrink-0 text-pink-400"
     }));
-  })(), onboarded && !onboardingPreview && (() => {
+  })(), onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
+    type: "button",
+    "data-profile-message": true,
+    onClick: onOpenMessageEditor,
+    className: "mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "flex h-10 w-10 shrink-0 items-center justify-center text-2xl",
+    "aria-hidden": "true"
+  }, "💬"), React.createElement("span", {
+    className: "min-w-0 flex-1 text-left"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-black text-pink-300"
+  }, "ひとこと（フレンドに見えます）"), React.createElement("b", {
+    className: "block truncate text-[13px] font-black text-white"
+  }, profileMessage || 'まだ書いていません')), React.createElement(Edit3, {
+    size: 15,
+    className: "shrink-0 text-pink-400"
+  })), onboarded && !onboardingPreview && (() => {
     const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
     const next = typeof assistantBondNext === 'function' ? assistantBondNext(assistantBond.points) : null;
     const from = stage ? stage.need : 0;
@@ -52341,10 +52569,27 @@ function FriendsScreen({
   });
   const [confirm, setConfirm] = React.useState(null);
   const [targetAsk, setTargetAsk] = React.useState(target);
+  const [favorites, setFavorites] = React.useState([]);
+  const [query, setQuery] = React.useState('');
+  const [profileTab, setProfileTab] = React.useState('overview');
   const aliveRef = React.useRef(true);
   React.useEffect(() => () => {
     aliveRef.current = false;
   }, []);
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(storeGet(FRIEND_FAVORITES_KEY, [], false)).then(saved => {
+      if (!cancelled && aliveRef.current) setFavorites(friendsNormalizeFavorites(saved));
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const toggleFavorite = id => {
+    const next = favorites.includes(id) ? favorites.filter(x => x !== id) : friendsNormalizeFavorites([id, ...favorites]);
+    setFavorites(next);
+    Promise.resolve(storeSet(FRIEND_FAVORITES_KEY, next, false)).catch(() => {});
+  };
   const say = key => {
     const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
     setNotice({
@@ -52475,6 +52720,7 @@ function FriendsScreen({
   };
   const openProfile = async view => {
     setSelected(view);
+    setProfileTab('overview');
     setSummary({
       status: 'loading',
       entry: null
@@ -52577,8 +52823,28 @@ function FriendsScreen({
       }, look.userName), React.createElement("span", {
         "data-friend-presence": seen.online ? 'online' : 'offline',
         className: `text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`
-      }, seen.online ? '● ' : '', seen.text)), React.createElement("div", {
-        className: "mt-3"
+      }, seen.online ? '● ' : '', seen.text), sum && sum.message ? React.createElement("p", {
+        "data-friend-message": true,
+        className: "max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100"
+      }, "「", sum.message, "」") : null), React.createElement(ScreenTabs, {
+        className: "mt-3",
+        value: profileTab,
+        onChange: setProfileTab,
+        items: [{
+          id: 'overview',
+          label: '概要'
+        }, {
+          id: 'battle',
+          label: 'バトル'
+        }, {
+          id: 'songs',
+          label: '曲のベスト'
+        }, {
+          id: 'collection',
+          label: '集めたもの'
+        }]
+      }), profileTab === 'overview' && React.createElement(React.Fragment, null, React.createElement("div", {
+        className: "mt-1"
       }, React.createElement(ScreenSectionLabel, null, "遊んだ記録")), React.createElement("div", {
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1`
       }, !sum && React.createElement("p", {
@@ -52638,7 +52904,76 @@ function FriendsScreen({
           colors: Array.isArray(fav.colors) ? fav.colors : []
         }),
         className: `${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`
-      }, "詳細 ›"))));
+      }, "詳細 ›")))), profileTab !== 'overview' && !(sum && sum.records) && React.createElement("div", {
+        className: `${SCREEN_PANEL_FLAT_CLASS} mt-2`,
+        "data-friend-records-missing": true
+      }, React.createElement("p", {
+        className: "text-[11px] font-bold leading-relaxed text-slate-400"
+      }, "この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。")), profileTab === 'battle' && sum && sum.records && (() => {
+        const labels = friendsBattleModeLabels();
+        const rows = sum.records.battle.filter(e => labels[e.id]);
+        return React.createElement("div", {
+          "data-friend-battle": true,
+          className: "mt-2 flex flex-col gap-2"
+        }, rows.length === 0 && React.createElement("p", {
+          className: "px-1 py-4 text-center text-[11px] font-bold text-slate-500"
+        }, "まだバトルの記録がありません"), rows.map(e => React.createElement("div", {
+          key: e.id,
+          className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`
+        }, React.createElement("span", {
+          className: "text-xl",
+          "aria-hidden": "true"
+        }, labels[e.id].emoji), React.createElement("b", {
+          className: "min-w-0 flex-1 truncate text-[12px] font-black text-white"
+        }, labels[e.id].label), React.createElement("strong", {
+          className: "shrink-0 text-[13px] font-black text-amber-200"
+        }, e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`))), React.createElement("p", {
+          className: "px-1 text-[10px] font-bold text-slate-500"
+        }, "モードごとの、いちばん良い記録です。"));
+      })(), profileTab === 'songs' && sum && sum.records && (() => {
+        const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
+        const songs = sum.records.rhythm.songs.map(e => ({
+          e,
+          song: RHYTHM_SONGS.find(x => x.songId === e.s)
+        })).filter(x => x.song);
+        return React.createElement("div", {
+          "data-friend-songs": true,
+          className: "mt-2 flex flex-col gap-2"
+        }, React.createElement("p", {
+          className: "px-1 text-[10px] font-black text-slate-400"
+        }, "遊んだ曲 ", sum.records.rhythm.played, "曲（スコアの高い順に", FRIEND_RECORD_SONG_MAX, "曲まで）"), songs.length === 0 && React.createElement("p", {
+          className: "px-1 py-4 text-center text-[11px] font-bold text-slate-500"
+        }, "まだ曲の記録がありません"), songs.map(({
+          e,
+          song
+        }) => React.createElement("div", {
+          key: e.s,
+          className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`
+        }, React.createElement("div", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("b", {
+          className: "block truncate text-[12px] font-black text-white"
+        }, rhythmSongFullName(song)), React.createElement("small", {
+          className: "block text-[9px] font-bold text-slate-400"
+        }, e.d, e.f > 0 ? `　★${flagText[e.f]}` : '')), React.createElement("strong", {
+          className: "shrink-0 text-[13px] font-black tabular-nums text-pink-200"
+        }, e.sc.toLocaleString()))), React.createElement("p", {
+          className: "px-1 text-[10px] font-bold text-slate-500"
+        }, "曲ごとに、遊んだいちばん上の難易度の記録です。"));
+      })(), profileTab === 'collection' && sum && sum.records && (() => {
+        const c = sum.records.collection;
+        const cell = (label, value, color) => React.createElement("div", {
+          className: `${SCREEN_PANEL_FLAT_CLASS} text-center`
+        }, React.createElement("dt", {
+          className: "text-[9px] font-bold text-slate-400"
+        }, label), React.createElement("dd", {
+          className: `text-base font-black ${color}`
+        }, value));
+        return React.createElement("dl", {
+          "data-friend-collection": true,
+          className: "mt-2 grid grid-cols-2 gap-2"
+        }, cell('マスモン', `${c.masu}体`, 'text-pink-200'), cell('図鑑', c.dexTotal > 0 ? `${c.dex} / ${c.dexTotal}` : `${c.dex}`, 'text-sky-200'), cell('超越した子', `${c.transcended}体`, 'text-amber-200'), cell('転生した子', `${c.reincarnated}体`, 'text-emerald-200'), cell('アイコン', `${c.icons}個`, 'text-indigo-200'), cell('フレーム', `${c.frames}個`, 'text-indigo-200'));
+      })());
     })(), React.createElement("div", {
       className: "mt-4 grid grid-cols-2 gap-2"
     }, React.createElement("button", {
@@ -52666,12 +53001,22 @@ function FriendsScreen({
       onCancel: () => setConfirm(null)
     }));
   }
-  const person = (view, right) => {
+  const arranged = friendsArrangeList({
+    views: groups.friends,
+    looks: profiles,
+    summaries,
+    favorites,
+    query,
+    nowMs: now
+  });
+  const onlineCount = arranged.filter(row => row.online).length;
+  const person = (view, right, extra = null) => {
     const look = lookOf(view.otherId);
-    return React.createElement("div", {
-      key: view.otherId,
-      className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`
-    }, avatar(view.otherId, 'h-10 w-10'), React.createElement("div", {
+    return React.createElement("div", _extends({
+      key: view.otherId
+    }, extra || {}, {
+      className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2 ${extra ? 'cursor-pointer active:scale-[.99]' : ''}`
+    }), avatar(view.otherId, 'h-10 w-10'), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("b", {
       className: "block truncate text-[12px] font-black text-white"
@@ -52717,11 +53062,52 @@ function FriendsScreen({
     }, "フレンドを追加する")
   }) : React.createElement("div", {
     className: "flex flex-col gap-2"
-  }, groups.friends.map(view => person(view, React.createElement("button", {
+  }, groups.friends.length >= 6 && React.createElement("input", {
+    type: "search",
+    value: query,
+    onChange: event => setQuery(event.target.value.slice(0, 20)),
+    "data-friend-search": true,
+    placeholder: "名前でさがす",
+    "aria-label": "フレンドを名前でさがす",
+    autoComplete: "off",
+    spellCheck: false,
+    className: "min-h-[44px] w-full rounded-xl border border-white/15 bg-black/40 px-3 text-[13px] font-bold text-white placeholder:text-slate-500"
+  }), React.createElement("p", {
+    "data-friend-online-count": true,
+    className: "px-1 text-[10px] font-black text-slate-400"
+  }, onlineCount > 0 ? React.createElement("span", {
+    className: "text-emerald-300"
+  }, "● ログイン中 ", onlineCount, "人") : 'ログイン中の人はいません', React.createElement("span", {
+    className: "ml-2 text-slate-500"
+  }, "／ ★でお気に入り(上に並びます)")), arranged.length === 0 && React.createElement("p", {
+    className: "px-1 py-6 text-center text-[11px] font-bold text-slate-500"
+  }, "「", query, "」に当てはまるフレンドはいません"), arranged.map(row => person(row.view, React.createElement("div", {
+    className: "flex shrink-0 items-center gap-1"
+  }, React.createElement("button", {
     type: "button",
-    onClick: () => openProfile(view),
-    className: `${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`
-  }, "プロフィール ›"))))), tab === 'requests' && React.createElement("div", {
+    "data-friend-star": row.favorite ? 'on' : 'off',
+    "aria-pressed": row.favorite,
+    "aria-label": row.favorite ? 'お気に入りをやめる' : 'お気に入りにする',
+    onClick: event => {
+      event.stopPropagation();
+      toggleFavorite(row.view.otherId);
+    },
+    className: `flex h-11 w-11 items-center justify-center rounded-xl border text-lg active:scale-90 ${row.favorite ? 'border-amber-400/70 bg-amber-500/20 text-amber-300' : 'border-white/15 bg-black/30 text-slate-500'}`
+  }, row.favorite ? '★' : '☆'), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-slate-500"
+  }, "›")), {
+    role: 'button',
+    tabIndex: 0,
+    'data-friend-row': row.view.otherId,
+    onClick: () => openProfile(row.view),
+    onKeyDown: event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openProfile(row.view);
+      }
+    }
+  })))), tab === 'requests' && React.createElement("div", {
     className: "flex flex-col gap-3"
   }, React.createElement("div", null, React.createElement(ScreenSectionLabel, null, "届いている申請"), groups.incoming.length === 0 ? React.createElement("p", {
     className: "px-1 py-2 text-[11px] font-bold text-slate-500"
@@ -56662,6 +57048,18 @@ function MonsterHeroGame() {
   const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
+  const PROFILE_MESSAGE_KEY = 'mh_profile_message_v1';
+  const [profileMessage, setProfileMessage] = useState('');
+  const [showMessageEditor, setShowMessageEditor] = useState(false);
+  const [tempMessage, setTempMessage] = useState('');
+  const saveProfileMessage = text => {
+    const next = friendsCleanMessage(text);
+    setProfileMessage(next);
+    setShowMessageEditor(false);
+    Promise.resolve(storeSet(PROFILE_MESSAGE_KEY, next, false)).catch(error => {
+      console.error('[friends] message save failed:', error && error.message ? error.message : error);
+    });
+  };
   const selectFavoriteMasu = id => {
     const next = id == null ? null : String(id);
     setFavoriteMasuId(next);
@@ -56692,11 +57090,6 @@ function MonsterHeroGame() {
     return () => clearInterval(timer);
   }, [friendsActive, refreshFriendRequests]);
   const friendLatestRef = useRef({});
-  friendLatestRef.current = {
-    gameState,
-    masuMons,
-    favoriteMasuId
-  };
   const friendPublishRef = useRef(0);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
@@ -56704,11 +57097,37 @@ function MonsterHeroGame() {
     if (!id) return;
     const latest = friendLatestRef.current;
     friendPublishRef.current = Date.now();
+    let rhythmBest = null;
+    try {
+      rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    } catch (error) {
+      rhythmBest = null;
+    }
+    let records = null;
+    try {
+      records = friendsBuildRecords({
+        highScores: latest.highScores,
+        proHighScores: latest.proHighScores,
+        quickHighestWaves: latest.quickHighestWaves,
+        extremeBestScores: latest.extremeBestScores,
+        speciesProgressOf: latest.speciesProgressOf,
+        tacticsHsOf: modeId => (latest.tacticsRecordsOf(modeId) || {}).hs || {},
+        rhythmBest,
+        masuMons: latest.masuMons,
+        unlockedMonsterIds: latest.unlockedMonsterIds,
+        ownedIconIds: latest.ownedMarketIcons,
+        ownedFrameIds: latest.ownedProfileFrames
+      });
+    } catch (error) {
+      console.error('[friends] records build failed:', error && error.message ? error.message : error);
+    }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState),
       masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId,
-      playtime: playtimeRef.current
+      playtime: playtimeRef.current,
+      message: latest.profileMessage,
+      records
     }));
   }, [friendsActive]);
   useEffect(() => {
@@ -56716,7 +57135,7 @@ function MonsterHeroGame() {
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
-  }, [friendsActive, gameState, masuMons, favoriteMasuId, publishFriendProfile]);
+  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => {
@@ -56746,6 +57165,21 @@ function MonsterHeroGame() {
   const [breederPoints, setBreederPoints] = useState(0);
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]);
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS);
+  friendLatestRef.current = {
+    gameState,
+    masuMons,
+    favoriteMasuId,
+    profileMessage,
+    highScores,
+    proHighScores,
+    quickHighestWaves,
+    extremeBestScores,
+    speciesProgressOf: speciesChallengeProgressOf,
+    tacticsRecordsOf,
+    unlockedMonsterIds,
+    ownedMarketIcons,
+    ownedProfileFrames
+  };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS);
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
@@ -60060,6 +60494,10 @@ function MonsterHeroGame() {
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
+      {
+        const savedMessage = await storeGet(PROFILE_MESSAGE_KEY, '', false);
+        setProfileMessage(friendsCleanMessage(savedMessage));
+      }
       {
         const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false);
         setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null);
@@ -77752,7 +78190,12 @@ function MonsterHeroGame() {
       onOpenFriends: () => openFriends(null),
       friendRequestCount: friendRequestInfo.count,
       favoriteMasu: favoriteMasuId != null && masuMons.find(m => String(m.id) === String(favoriteMasuId)) || null,
-      onOpenFavoritePicker: () => setShowFavoritePicker(true)
+      onOpenFavoritePicker: () => setShowFavoritePicker(true),
+      profileMessage: profileMessage,
+      onOpenMessageEditor: () => {
+        setTempMessage(profileMessage);
+        setShowMessageEditor(true);
+      }
     }), gameState === 'FRIENDS' && RELEASE_FLAGS.friends === true && React.createElement(FriendsScreen, {
       resolveIconUrl: resolveIconUrl,
       target: friendsTarget,
@@ -79609,7 +80052,48 @@ function MonsterHeroGame() {
     }))))), React.createElement("button", {
       onClick: () => setShowIconPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showFavoritePicker && React.createElement("div", {
+    }, "閉じる"))), showMessageEditor && React.createElement("div", {
+      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 90000
+      }
+    }, React.createElement("div", {
+      className: "bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl"
+    }, React.createElement("h3", {
+      className: "text-lg font-black text-white mb-1 text-center"
+    }, "ひとこと"), React.createElement("p", {
+      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
+    }, "フレンドがあなたのプロフィールを開いたとき、名前の下に出ます。", FRIEND_MESSAGE_MAX, "文字までです。"), React.createElement("input", {
+      type: "text",
+      "data-message-input": true,
+      value: tempMessage,
+      maxLength: FRIEND_MESSAGE_MAX,
+      autoComplete: "off",
+      spellCheck: false,
+      onChange: e => setTempMessage(e.target.value),
+      placeholder: "例: 音ゲーすきです",
+      className: "w-full min-h-[48px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-[14px] font-bold text-white placeholder:text-slate-600"
+    }), React.createElement("div", {
+      className: "mt-1 text-right text-[10px] font-bold text-slate-500"
+    }, friendsCleanMessage(tempMessage).length, "/", FRIEND_MESSAGE_MAX), React.createElement("div", {
+      className: "mt-3 grid grid-cols-1 gap-2"
+    }, React.createElement("button", {
+      type: "button",
+      "data-message-save": true,
+      onClick: () => saveProfileMessage(tempMessage),
+      className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]"
+    }, "保存する"), profileMessage && React.createElement("button", {
+      type: "button",
+      "data-message-clear": true,
+      onClick: () => saveProfileMessage(''),
+      className: "min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-[.98]"
+    }, "ひとことを消す"), React.createElement(ModalCloseButton, {
+      onClick: () => setShowMessageEditor(false),
+      label: "キャンセル"
+    })))), showFavoritePicker && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',

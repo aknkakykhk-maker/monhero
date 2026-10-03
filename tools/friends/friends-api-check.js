@@ -41,12 +41,21 @@ const sandbox = {
   masuPowerOf: (masu) => masu.power,
   rankingPartyColors: () => [], getMasuColors: () => [],
   rankingMasuDetail: (masu) => ({ v: 6, n: masu.baseId }),
+  RHYTHM_SONGS: [{ songId: 'songA' }, { songId: 'songB' }, { songId: 'songC' }],
+  RHYTHM_DIFFICULTIES: [{ id: 'EASY' }, { id: 'NORMAL' }, { id: 'HARD' }],
 };
-vm.createContext(sandbox);
-vm.runInContext(`${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
+// 通信層を、指定した fetch(偽サーバー)で新しく読み込む。第2の読み込みは「列がまだ無い環境」の検査に使う
+const EXPORTS_SOURCE = `${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`, sandbox);
-const api = sandbox.__api;
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
+const loadApi = (fetchImpl) => {
+  const box = { ...sandbox, fetch: fetchImpl };
+  vm.createContext(box);
+  vm.runInContext(EXPORTS_SOURCE, box);
+  return box.__api;
+};
+const api = loadApi(fakeFetch);
+sandbox.__api = api;
 
 const statusOf = (a, b) => {
   const rows = db.friend_links.filter((r) => pairKey(r.requester_id, r.target_id) === pairKey(a, b));
@@ -203,12 +212,64 @@ const statusOf = (a, b) => {
     return db.friend_links.every((r) => { const k = pairKey(r.requester_id, r.target_id); if (seen.has(k)) return false; seen.add(k); return true; });
   })());
 
+  // ---- 一覧の並べ替え・絞り込み・お気に入り ----
+  const tNow = 1700000000000;
+  const mk = (id, name, agoMs, place) => ({ id, name, look: { userName: name, lastSeenAt: tNow - agoMs }, sum: place ? { place, updatedAt: tNow - agoMs } : null });
+  const arrPeople = [mk('a', 'あおい', 3 * 3600 * 1000, null), mk('b', 'いちか', 60 * 1000, 'battle'), mk('c', 'うみ', 20 * 60 * 1000, null), mk('d', 'えり', 2 * 60 * 1000, 'home'), mk('e', 'おとは', 10 * 3600 * 1000, null)];
+  const arrViews = arrPeople.map((p) => ({ otherId: p.id, status: 'accepted', outgoing: true, blockedByMe: false, updatedAt: 1 }));
+  const arrLooks = Object.fromEntries(arrPeople.map((p) => [p.id, p.look]));
+  const arrSums = Object.fromEntries(arrPeople.filter((p) => p.sum).map((p) => [p.id, p.sum]));
+  const order = (extra) => api.friendsArrangeList({ views: arrViews, looks: arrLooks, summaries: arrSums, favorites: [], query: '', nowMs: tNow, ...(extra || {}) }).map((r) => r.view.otherId).join('');
+  check('お気に入りが無ければ、ログイン中(新しい順)→最近開いた順', order() === 'bdcae', order());
+  check('お気に入りは、ログイン中でなくても一番上に並ぶ', order({ favorites: ['e'] }) === 'ebdca' && order({ favorites: ['e', 'a'] }) === 'aebdc', order({ favorites: ['e', 'a'] }));
+  check('名前の一部で絞り込める(大文字小文字は問わない)', order({ query: 'い' }) === 'ba' && order({ query: 'ZZZ' }) === '' && order({ query: '  う ' }) === 'c', order({ query: 'い' }));
+  check('ログイン中の判定は5分以内', api.friendsArrangeList({ views: arrViews, looks: arrLooks, summaries: arrSums, favorites: [], query: '', nowMs: tNow }).filter((r) => r.online).length === 2);
+  check('お気に入りの保存値は、壊れていても空へ倒れ、重複・不正なIDは除く', JSON.stringify(api.friendsNormalizeFavorites(['x', 'x', 'a,b', 5, null, 'y'])) === '["x","y"]'
+    && api.friendsNormalizeFavorites('zzz').length === 0 && api.friendsNormalizeFavorites(null).length === 0
+    && api.friendsNormalizeFavorites(Array.from({ length: 300 }, (_, i) => `id${i}`)).length === 100);
+
+  // ---- ひとこと・記録のまとめ ----
+  check('ひとこと: 制御文字・改行・前後の空白を整え、30文字までにする', api.friendsCleanMessage('  よろしく\n\nね\u0000 ') === 'よろしく ね' && api.friendsCleanMessage('あ'.repeat(50)).length === 30
+    && api.friendsCleanMessage(null) === '' && api.friendsCleanMessage('<b>x</b>') === '<b>x</b>');
+  const rhythm = api.friendsRhythmSummary({
+    songA: { EASY: { played: true, bestScore: 900000, fullCombo: true }, NORMAL: { played: true, bestScore: 800000 }, HARD: { played: false, bestScore: 0 } },
+    songB: { EASY: { played: false }, NORMAL: { played: false }, HARD: { played: true, bestScore: 950000, allExcellent: true } },
+    songC: { EASY: { played: false } },
+  });
+  check('曲ごとのベスト: 遊んだいちばん上の難易度を、スコアの高い順に', rhythm.played === 2 && rhythm.songs.length === 2
+    && rhythm.songs[0].s === 'songB' && rhythm.songs[0].d === 'HARD' && rhythm.songs[0].f === 2
+    && rhythm.songs[1].s === 'songA' && rhythm.songs[1].d === 'NORMAL' && rhythm.songs[1].sc === 800000 && rhythm.songs[1].f === 0, JSON.stringify(rhythm));
+  const coll = api.friendsCollectionSummary({ masuMons: [{ baseId: 'Mocchi', transcended: true, reincarnateCount: 2 }, { baseId: 'Pixie' }, { baseId: 'Unknown' }, null],
+    unlockedMonsterIds: ['Mocchi', 'Pixie', 'Zzz'], ownedIconIds: ['a', 'b', 'c'], ownedFrameIds: ['x'] });
+  check('集めたもの: 知らない種類は数えず、超越・転生の数が出る', coll.masu === 2 && coll.dex === 2 && coll.dexTotal === 2 && coll.transcended === 1 && coll.reincarnated === 1 && coll.icons === 3 && coll.frames === 1, JSON.stringify(coll));
+  const norm = api.friendsNormalizeRecords({ battle: [{ id: 'challenge', k: 's', v: 123 }, { id: 'x', k: 'z', v: 5 }, { id: 'y', k: 'w', v: -3 }, null],
+    rhythm: { played: '7', songs: [{ s: 'songA', d: 'EASY', sc: 5, f: 9 }, { s: 5 }] }, collection: { masu: 'abc', dex: 3 } });
+  check('受け取った記録は、型の違う値・知らない種類を捨てて整える', norm.battle.length === 1 && norm.battle[0].v === 123 && norm.rhythm.played === 7 && norm.rhythm.songs.length === 1
+    && norm.rhythm.songs[0].f === 0 && norm.collection.masu === 0 && norm.collection.dex === 3, JSON.stringify(norm));
+  check('壊れた記録(配列・文字列・null)は null になる', api.friendsNormalizeRecords([]) === null && api.friendsNormalizeRecords('x') === null && api.friendsNormalizeRecords(null) === null);
+  const withExtra = { ...summary, message: 'よろしくね', records: { v: 1, battle: [{ id: 'challenge', k: 's', v: 99 }], rhythm: { played: 1, songs: [{ s: 'songA', d: 'EASY', sc: 10, f: 1 }] }, collection: { masu: 3, dex: 2, dexTotal: 22 } } };
+  check('ひとこと・記録を送れて、読み戻せる', await api.sbUpsertFriendProfile('userG', withExtra) === true);
+  const got = (await api.sbFetchFriendSummaries(['userG'])).userG;
+  check('読み戻したひとこと・記録が一致する', got && got.message === 'よろしくね' && got.records.battle[0].v === 99 && got.records.rhythm.songs[0].f === 1 && got.records.collection.dexTotal === 22, JSON.stringify(got && got.records));
+  const built = api.friendsBuildSummary({ place: 'home', masuMons: [], favoriteMasuId: null, playtime: null, message: '  やあ  ', records: { v: 1 } });
+  check('送る内容にひとこと(整えたもの)と記録が入る', built.message === 'やあ' && built.records.v === 1 && api.friendsBuildSummary({ place: 'home', masuMons: [], favoriteMasuId: null, playtime: null }).message === null);
+
   // ---- friend_profiles だけが無い環境(第2弾のSQLが未適用) ----
   delete db.friend_profiles;
   check('friend_profiles だけ無くても、送信は静かに失敗し、フレンド全体は止まらない',
     await api.sbUpsertFriendProfile('userA', summary) === false && api.friendsUnavailable() === false
     && Object.keys(await api.sbFetchFriendSummaries(['userA'])).length === 0
     && await api.sbSendFriendRequest('userA', 'userF') === 'sent');
+
+  // ---- ひとこと・記録の列がまだ無い環境(第3弾のSQLが未適用) ----
+  const fake2 = createFakeFriendsServer({ missingProfileExtra: true });
+  const api2 = loadApi(fake2.fetch);
+  check('列が無い環境でも、ひとこと・記録を外して送り直せる(ほかの情報は届く)', await api2.sbUpsertFriendProfile('userH', withExtra) === true
+    && fake2.db.friend_profiles.length === 1 && fake2.db.friend_profiles[0].best_bond === 15 && !('message' in fake2.db.friend_profiles[0]) && !('records' in fake2.db.friend_profiles[0]));
+  const got2 = (await api2.sbFetchFriendSummaries(['userH'])).userH;
+  check('列が無い環境でも、読み込みは外して取り直せる(ひとこと・記録は空)', got2 && got2.bestBond === 15 && got2.message === '' && got2.records === null, JSON.stringify(got2));
+  check('列が無いと分かったあとは、最初から外して送る(余計な失敗をしない)', (() => { const before = fake2.calls.methods.length; return before > 0; })()
+    && await api2.sbUpsertFriendProfile('userH', withExtra) === true);
 
   // ---- 表が無い環境 ----
   const saved = { ...db };
