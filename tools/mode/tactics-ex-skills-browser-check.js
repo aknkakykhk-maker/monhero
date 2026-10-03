@@ -508,6 +508,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
 
     // ピクシー「お気に入りの魔法」: 使うと固有技のカードが手札に出る
     const pxSlot = await startWith('ピクシー');
+    // バトルの始まりでは、手札の配り直し(initBattle)が少し遅れてもう一度走ることがある。落ち着いてから使う
+    await page.waitForTimeout(2500);
     await tapSlot(pxSlot);
     p = await panel();
     check('「お気に入りの魔法」: 3/3・カードと併用できる・3ターン', !!p && p.name === 'お気に入りの魔法' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
@@ -579,6 +581,14 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(900);
     const pdLimit1 = await limitOf();
+    // 悪魔・天使の姿の絵は、箱を使ったときに先読みされ、実際に読める(読めないと切り替えで絵が消える)
+    const pdArt = await page.evaluate(async () => {
+      const urls = [typeof PANDORA_DEVIL_IMG === 'string' ? PANDORA_DEVIL_IMG : '', typeof PANDORA_ANGEL_IMG === 'string' ? PANDORA_ANGEL_IMG : ''];
+      const out = [];
+      for (const u of urls) { try { const r = u ? await fetch(u) : null; out.push(!!r && r.ok); } catch (e) { out.push(false); } }
+      return out;
+    });
+    check('悪魔・天使の姿の絵が読める', pdArt.length === 2 && pdArt.every(Boolean), JSON.stringify(pdArt));
     check('使うと1ターンに選べるカードが1枚増える(パンドラ自身が2枚使える)', Number.isInteger(pdLimit0) && pdLimit1 === pdLimit0 + 1, `${pdLimit0} → ${pdLimit1}`);
     check('枠の札が「あと3ターン」になる', await page.locator(`[data-tactics-ex-mark="${pdSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと3ターン');
     const pdPass = page.locator('[data-tactics-ex-pass]');

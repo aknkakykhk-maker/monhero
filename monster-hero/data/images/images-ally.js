@@ -87,6 +87,9 @@ const IDLE_MEL_WHIP_BODY_MASK = "images/monsters/idle/mel-whip-body.png?v=819b12
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
+// パンドラの箱(タクティクスEX)の間だけ出す、悪魔・天使の姿。起動時には読まない(箱を使うときに先読みする)
+const PANDORA_DEVIL_IMG = "images/monsters/pandora-devil.PNG?v=5ce010729f00";
+const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
 const MONOL_IMG = "images/monsters/monol.png?v=b5fb70799e42";
