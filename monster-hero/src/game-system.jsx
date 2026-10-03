@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 74bab559421bb90e
+// generated-sha256: f02acf51a10c818c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 11:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 12:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21474,6 +21474,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;           // 最後に開いてから5分以内は「いま」
 let _friendsUnavailable = false;                   // 表が無いと分かったら、ページを閉じるまで使わない
+let _friendProfileExtraUnavailable = false;        // friend_profiles に message / records の列がまだ無いとき(第3弾のSQL未適用)。外して送り直す
 let _friendProfilesUnavailable = false;           // friend_profiles だけ無いと分かったとき(SQL未適用)。フレンド本体は止めない
 let _friendCodeCache = null;                       // { breederId, code }
 const friendsUnavailable = () => _friendsUnavailable;
@@ -21942,9 +21943,104 @@ const friendsPlaytimeText = (seconds) => {
   return minutes > 0 ? `${minutes}分` : '1分未満';
 };
 const FRIEND_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+// ---- ひとこと / 記録のまとめ ----
+const FRIEND_MESSAGE_MAX = 30;
+// 自由入力のひとこと。制御文字を除き、空白を1つにまとめ、30文字までにする(表示は React が文字として出すので、HTMLとしては解釈されない)
+const friendsCleanMessage = (value) => String(value == null ? '' : value)
+  .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, FRIEND_MESSAGE_MAX);
+const FRIEND_RECORD_SONG_MAX = 15;
+// バトル記録の見出し(モードid → 絵文字と名前)。プロフィールの「バトル記録」と同じモードの並び
+const friendsBattleModeLabels = () => {
+  const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE, TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE];
+  return Object.fromEntries(modes.filter(Boolean).map((mode) => [mode.id, { emoji: mode.emoji || '⚔️', label: mode.label || mode.id }]));
+};
+const friendsInt = (value) => { const n = Math.floor(Number(value)); return Number.isFinite(n) && n > 0 ? n : 0; };
+// プロフィールの「バトル記録」と同じ並び・同じ数字(代表の1つ)を、モードごとに数だけにして返す。[{ id, k:'s'(スコア)|'w'(WAVE), v }]
+const friendsBattleSummary = (src) => {
+  const s = src || {};
+  const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
+  const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE,
+    ...[TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE].filter((mode) => battleModePlayable(mode.id))];
+  const out = [];
+  modes.forEach((mode) => {
+    try {
+      let entry = null;
+      if (isSpeciesChallengeMode(mode.id)) {
+        const progress = typeof s.speciesProgressOf === 'function' ? s.speciesProgressOf(mode.id) : null;
+        entry = { id: mode.id, k: 's', v: friendsInt(speciesChallengeProfileSummary(progress).bestScore) };
+      } else if (isQuickMode(mode.id)) {
+        entry = { id: mode.id, k: 'w', v: friendsInt(highestModeWave(s.quickHighestWaves, difficultyIds)) };
+      } else {
+        const tactics = isTacticsMode(mode.id);
+        const scores = mode.id === EXTREME_MODE.id ? s.extremeBestScores
+          : tactics ? (typeof s.tacticsHsOf === 'function' ? s.tacticsHsOf(mode.id) : {})
+          : isProMode(mode.id) ? s.proHighScores : s.highScores;
+        const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map((item) => item.id)
+          : tactics ? TACTICS_DIFFICULTY_IDS : difficultyIds;
+        entry = { id: mode.id, k: 's', v: friendsInt(highestModeScore(scores, ids)) };
+      }
+      if (entry && entry.v > 0) out.push(entry);
+    } catch (error) { /* 1モードの失敗で、ほかの記録まで送れなくならないようにする */ }
+  });
+  return out;
+};
+// モンヒロビートの曲ごとのベスト(曲ごとに、遊んだいちばん上の難易度の記録)。スコアの高い順に15曲まで。
+// f … 0:なし 1:フルコンボ 2:オールエクセレント 3:オールマーベラス
+const friendsRhythmSummary = (bestRecords) => {
+  const songs = [];
+  let played = 0;
+  (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).forEach((song) => {
+    const byDifficulty = bestRecords && bestRecords[song.songId];
+    if (!byDifficulty) return;
+    let pick = null;
+    RHYTHM_DIFFICULTIES.forEach(({ id }, index) => {
+      const rec = byDifficulty[id];
+      if (rec && rec.played) pick = { s: song.songId, d: id, sc: friendsInt(rec.bestScore), f: rec.allMarvelous ? 3 : rec.allExcellent ? 2 : rec.fullCombo ? 1 : 0, order: index };
+    });
+    if (pick) { played += 1; songs.push(pick); }
+  });
+  songs.sort((a, b) => b.sc - a.sc);
+  return { played, songs: songs.slice(0, FRIEND_RECORD_SONG_MAX).map(({ order, ...rest }) => rest) };
+};
+// 持っているもの・図鑑の進み(数だけ)
+const friendsCollectionSummary = ({ masuMons, unlockedMonsterIds, ownedIconIds, ownedFrameIds }) => {
+  const list = (Array.isArray(masuMons) ? masuMons : []).filter((m) => m && ALL_PLAYER_MONSTERS[m.baseId]);
+  return {
+    masu: list.length,
+    dex: (Array.isArray(unlockedMonsterIds) ? unlockedMonsterIds : []).filter((id) => ALL_PLAYER_MONSTERS[id]).length,
+    dexTotal: Object.keys(ALL_PLAYER_MONSTERS).length,
+    transcended: list.filter((m) => m.transcended).length,
+    reincarnated: list.filter((m) => friendsInt(m.reincarnateCount) > 0).length,
+    icons: Array.isArray(ownedIconIds) ? ownedIconIds.length : 0,
+    frames: Array.isArray(ownedFrameIds) ? ownedFrameIds.length : 0,
+  };
+};
+// 送る記録のまとめ全体(サーバーの records 列へ入るJSON)
+const friendsBuildRecords = (src) => ({
+  v: 1,
+  battle: friendsBattleSummary(src),
+  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  collection: friendsCollectionSummary(src || {}),
+});
+// 受け取った records を、安全な形へ整える(型を確かめ、ありえない値は捨てる。未知のモード・曲は読まない)
+const friendsNormalizeRecords = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const battle = (Array.isArray(raw.battle) ? raw.battle : []).map((e) => (e && typeof e.id === 'string' && (e.k === 's' || e.k === 'w') && friendsInt(e.v) > 0)
+    ? { id: e.id.slice(0, 40), k: e.k, v: friendsInt(e.v) } : null).filter(Boolean).slice(0, 20);
+  const songsRaw = raw.rhythm && Array.isArray(raw.rhythm.songs) ? raw.rhythm.songs : [];
+  const songs = songsRaw.map((e) => (e && typeof e.s === 'string' && typeof e.d === 'string')
+    ? { s: e.s.slice(0, 80), d: e.d.slice(0, 20), sc: friendsInt(e.sc), f: [0, 1, 2, 3].includes(e.f) ? e.f : 0 } : null).filter(Boolean).slice(0, FRIEND_RECORD_SONG_MAX);
+  const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
+  return {
+    battle,
+    rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs },
+    collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
+      reincarnated: friendsInt(c.reincarnated), icons: friendsInt(c.icons), frames: friendsInt(c.frames) },
+  };
+};
 // 端末の持ち物から、フレンドに見せる情報を作る(書く内容はここで決まる)
 //  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなモンスター」に選んだ個体のid / playtime … normalizePlaytime の形
-const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
+const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, message = '', records = null }) => {
   let bestBond = 0, bestBondMon = '', bestPower = 0, bestPowerMon = '', favorite = null;
   (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
     try {
@@ -21971,21 +22067,33 @@ const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
     bestBond: bestBond > 0 ? bestBond : null, bestBondMon: bestBondMon || null,
     bestPower: bestPower > 0 ? bestPower : null, bestPowerMon: bestPowerMon || null,
     favorite,
+    message: friendsCleanMessage(message) || null,
+    records: records && typeof records === 'object' ? records : null,
   };
 };
 // 自分の分を上書きする。失敗しても進行は止めない(呼ぶ側は結果を見なくてよい)
 const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   const id = friendsSafeId(breederIdRaw);
   if (!id || !summary) return false;
+  const base = {
+    breeder_id: id, place: summary.place, started_on: summary.startedOn, play_seconds: summary.playSeconds,
+    best_bond: summary.bestBond, best_bond_mon: summary.bestBondMon, best_power: summary.bestPower,
+    best_power_mon: summary.bestPowerMon, favorite: summary.favorite,
+  };
+  const send = (row) => friendsRequest('friend_profiles?on_conflict=breeder_id', {
+    method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal', body: [row] });
   try {
-    await friendsRequest('friend_profiles?on_conflict=breeder_id', {
-      method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal',
-      body: [{
-        breeder_id: id, place: summary.place, started_on: summary.startedOn, play_seconds: summary.playSeconds,
-        best_bond: summary.bestBond, best_bond_mon: summary.bestBondMon, best_power: summary.bestPower,
-        best_power_mon: summary.bestPowerMon, favorite: summary.favorite,
-      }],
-    });
+    // message / records の列がまだ無い環境(SQL未適用)では、その2つを外して送る。ほかの情報は今までどおり届く
+    if (_friendProfileExtraUnavailable) await send(base);
+    else {
+      try { await send({ ...base, message: summary.message, records: summary.records }); }
+      catch (error) {
+        if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
+          _friendProfileExtraUnavailable = true;
+          await send(base);
+        } else throw error;
+      }
+    }
     return true;
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
@@ -21998,9 +22106,19 @@ const sbFetchFriendSummaries = async (ids) => {
   const byId = {};
   if (!safe.length) return byId;
   try {
-    const rows = await friendsRequest(
-      `friend_profiles?select=breeder_id,place,started_on,play_seconds,best_bond,best_bond_mon,best_power,best_power_mon,favorite,updated_at&breeder_id=in.(${safe.join(',')})`,
-      { soft: true });
+    const baseCols = 'breeder_id,place,started_on,play_seconds,best_bond,best_bond_mon,best_power,best_power_mon,favorite,updated_at';
+    const fetchRows = (cols) => friendsRequest(`friend_profiles?select=${cols}&breeder_id=in.(${safe.join(',')})`, { soft: true });
+    let rows;
+    if (_friendProfileExtraUnavailable) rows = await fetchRows(baseCols);
+    else {
+      try { rows = await fetchRows(`${baseCols},message,records`); }
+      catch (error) {
+        if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST/i.test(String(error.message))) {
+          _friendProfileExtraUnavailable = true;
+          rows = await fetchRows(baseCols);
+        } else throw error;
+      }
+    }
     (Array.isArray(rows) ? rows : []).forEach((row) => {
       if (!row || typeof row.breeder_id !== 'string') return;
       const at = Date.parse(row.updated_at);
@@ -22013,6 +22131,7 @@ const sbFetchFriendSummaries = async (ids) => {
         bestBond: num(row.best_bond), bestBondMon: typeof row.best_bond_mon === 'string' ? row.best_bond_mon : null,
         bestPower: num(row.best_power), bestPowerMon: typeof row.best_power_mon === 'string' ? row.best_power_mon : null,
         favorite: fav, updatedAt: Number.isFinite(at) ? at : 0,
+        message: friendsCleanMessage(row.message), records: friendsNormalizeRecords(row.records),
       };
     });
   } catch (error) {
@@ -23527,6 +23646,8 @@ function ProfileScreen({
   friendsEnabled = false, onOpenFriends, friendRequestCount = 0,
   // フレンドに見せる「好きなモンスター」(選んでいなければ null)と、選ぶ画面を開く操作
   favoriteMasu = null, onOpenFavoritePicker,
+  // フレンドのプロフィールに出る「ひとこと」(自由入力・30文字まで)と、書き換える画面を開く操作
+  profileMessage = '', onOpenMessageEditor,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
@@ -23645,6 +23766,16 @@ function ProfileScreen({
             <ChevronRight size={16} className="shrink-0 text-pink-400"/>
           </button>);
         })()}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(
+          <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💬</span>
+            <span className="min-w-0 flex-1 text-left">
+              <small className="block text-[10px] font-black text-pink-300">ひとこと（フレンドに見えます）</small>
+              <b className="block truncate text-[13px] font-black text-white">{profileMessage||'まだ書いていません'}</b>
+            </span>
+            <Edit3 size={15} className="shrink-0 text-pink-400"/>
+          </button>
+        )}
         {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
             助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
         {onboarded&&!onboardingPreview&&(()=>{
@@ -32068,6 +32199,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   const [targetAsk, setTargetAsk] = React.useState(target);
   const [favorites, setFavorites] = React.useState([]);   // お気に入りのフレンド(端末だけに覚える。サーバーには送らない)
   const [query, setQuery] = React.useState('');
+  const [profileTab, setProfileTab] = React.useState('overview');   // フレンドのプロフィールの中のタブ(概要 / バトル / 曲 / 集めたもの)
   const aliveRef = React.useRef(true);
   React.useEffect(() => () => { aliveRef.current = false; }, []);
   React.useEffect(() => {
@@ -32182,6 +32314,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   };
   const openProfile = async (view) => {
     setSelected(view);
+    setProfileTab('overview');
     setSummary({ status: 'loading', entry: null });
     const entry = await sbFetchFriendRhythmSummary(view.otherId);
     if (aliveRef.current) setSummary({ status: 'done', entry });
@@ -32246,8 +32379,12 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                 {avatar(selected.otherId, 'h-20 w-20', 'text-4xl')}
                 <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
                 <span data-friend-presence={seen.online ? 'online' : 'offline'} className={`text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>
+                {sum && sum.message ? <p data-friend-message className="max-w-full break-words rounded-xl bg-black/30 px-3 py-1.5 text-[12px] font-bold leading-snug text-pink-100">「{sum.message}」</p> : null}
               </div>
-              <div className="mt-3"><ScreenSectionLabel>遊んだ記録</ScreenSectionLabel></div>
+              <ScreenTabs className="mt-3" value={profileTab} onChange={setProfileTab} items={[
+                { id: 'overview', label: '概要' }, { id: 'battle', label: 'バトル' }, { id: 'songs', label: '曲のベスト' }, { id: 'collection', label: '集めたもの' }]}/>
+              {profileTab === 'overview' && (<>
+              <div className="mt-1"><ScreenSectionLabel>遊んだ記録</ScreenSectionLabel></div>
               <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
                 {!sum && <p className="text-[11px] font-bold text-slate-400">この人はまだ記録を公開していません（ゲームを開き直すと出ます）</p>}
                 {sum && (
@@ -32286,6 +32423,59 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   )}
                 </>)}
               </div>
+              </>)}
+              {profileTab !== 'overview' && !(sum && sum.records) && (
+                <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-2`} data-friend-records-missing>
+                  <p className="text-[11px] font-bold leading-relaxed text-slate-400">この人の記録のまとめは、まだ見られません。相手がゲームを開き直すと出ます。</p>
+                </div>
+              )}
+              {profileTab === 'battle' && sum && sum.records && (() => {
+                const labels = friendsBattleModeLabels();
+                const rows = sum.records.battle.filter((e) => labels[e.id]);
+                return (
+                  <div data-friend-battle className="mt-2 flex flex-col gap-2">
+                    {rows.length === 0 && <p className="px-1 py-4 text-center text-[11px] font-bold text-slate-500">まだバトルの記録がありません</p>}
+                    {rows.map((e) => (
+                      <div key={e.id} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
+                        <span className="text-xl" aria-hidden="true">{labels[e.id].emoji}</span>
+                        <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{labels[e.id].label}</b>
+                        <strong className="shrink-0 text-[13px] font-black text-amber-200">{e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`}</strong>
+                      </div>))}
+                    <p className="px-1 text-[10px] font-bold text-slate-500">モードごとの、いちばん良い記録です。</p>
+                  </div>);
+              })()}
+              {profileTab === 'songs' && sum && sum.records && (() => {
+                const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
+                const songs = sum.records.rhythm.songs.map((e) => ({ e, song: RHYTHM_SONGS.find((x) => x.songId === e.s) })).filter((x) => x.song);
+                return (
+                  <div data-friend-songs className="mt-2 flex flex-col gap-2">
+                    <p className="px-1 text-[10px] font-black text-slate-400">遊んだ曲 {sum.records.rhythm.played}曲（スコアの高い順に{FRIEND_RECORD_SONG_MAX}曲まで）</p>
+                    {songs.length === 0 && <p className="px-1 py-4 text-center text-[11px] font-bold text-slate-500">まだ曲の記録がありません</p>}
+                    {songs.map(({ e, song }) => (
+                      <div key={e.s} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
+                        <div className="min-w-0 flex-1">
+                          <b className="block truncate text-[12px] font-black text-white">{rhythmSongFullName(song)}</b>
+                          <small className="block text-[9px] font-bold text-slate-400">{e.d}{e.f > 0 ? `　★${flagText[e.f]}` : ''}</small>
+                        </div>
+                        <strong className="shrink-0 text-[13px] font-black tabular-nums text-pink-200">{e.sc.toLocaleString()}</strong>
+                      </div>))}
+                    <p className="px-1 text-[10px] font-bold text-slate-500">曲ごとに、遊んだいちばん上の難易度の記録です。</p>
+                  </div>);
+              })()}
+              {profileTab === 'collection' && sum && sum.records && (() => {
+                const c = sum.records.collection;
+                const cell = (label, value, color) => (
+                  <div className={`${SCREEN_PANEL_FLAT_CLASS} text-center`}><dt className="text-[9px] font-bold text-slate-400">{label}</dt><dd className={`text-base font-black ${color}`}>{value}</dd></div>);
+                return (
+                  <dl data-friend-collection className="mt-2 grid grid-cols-2 gap-2">
+                    {cell('マスモン', `${c.masu}体`, 'text-pink-200')}
+                    {cell('図鑑', c.dexTotal > 0 ? `${c.dex} / ${c.dexTotal}` : `${c.dex}`, 'text-sky-200')}
+                    {cell('超越した子', `${c.transcended}体`, 'text-amber-200')}
+                    {cell('転生した子', `${c.reincarnated}体`, 'text-emerald-200')}
+                    {cell('アイコン', `${c.icons}個`, 'text-indigo-200')}
+                    {cell('フレーム', `${c.frames}個`, 'text-indigo-200')}
+                  </dl>);
+              })()}
             </>);
           })()}
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -35701,6 +35891,19 @@ function MonsterHeroGame() {
   const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
+  // ひとこと(フレンドのプロフィールに出る自己紹介。30文字まで)。新しい保存キー。選んだ文は friendsCleanMessage を通してから覚える
+  const PROFILE_MESSAGE_KEY = 'mh_profile_message_v1';
+  const [profileMessage, setProfileMessage] = useState('');
+  const [showMessageEditor, setShowMessageEditor] = useState(false);
+  const [tempMessage, setTempMessage] = useState('');
+  const saveProfileMessage = (text) => {
+    const next = friendsCleanMessage(text);
+    setProfileMessage(next);
+    setShowMessageEditor(false);
+    Promise.resolve(storeSet(PROFILE_MESSAGE_KEY, next, false)).catch(error => {
+      console.error('[friends] message save failed:', error && error.message ? error.message : error);
+    });
+  };
   const selectFavoriteMasu = (id) => {
     const next = id == null ? null : String(id);
     setFavoriteMasuId(next);
@@ -35728,7 +35931,6 @@ function MonsterHeroGame() {
   // 「いまの場所」「プレイ時間」「最高絆Lv」などをフレンド用の表へ送る。端末には何も保存しない。
   // 画面が変わる・手持ちが変わるたびに送るが、送る間隔の下限(15秒)を守る。開いているあいだは2分ごとにも送る(ログイン中の印)
   const friendLatestRef = useRef({});
-  friendLatestRef.current = { gameState, masuMons, favoriteMasuId };
   const friendPublishRef = useRef(0);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
@@ -35736,9 +35938,22 @@ function MonsterHeroGame() {
     if (!id) return;
     const latest = friendLatestRef.current;
     friendPublishRef.current = Date.now();
+    // 曲ごとのベストは、ゲームを開いたあと一度もモンヒロビートを開いていなくても出せるよう、端末の保存から直接読む
+    let rhythmBest = null;
+    try { rhythmBest = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false)); } catch (error) { rhythmBest = null; }
+    let records = null;
+    try {
+      records = friendsBuildRecords({
+        highScores: latest.highScores, proHighScores: latest.proHighScores, quickHighestWaves: latest.quickHighestWaves,
+        extremeBestScores: latest.extremeBestScores, speciesProgressOf: latest.speciesProgressOf, tacticsHsOf: (modeId) => (latest.tacticsRecordsOf(modeId) || {}).hs || {},
+        rhythmBest, masuMons: latest.masuMons, unlockedMonsterIds: latest.unlockedMonsterIds,
+        ownedIconIds: latest.ownedMarketIcons, ownedFrameIds: latest.ownedProfileFrames,
+      });
+    } catch (error) { console.error('[friends] records build failed:', error && error.message ? error.message : error); }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState), masuMons: latest.masuMons,
       favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
+      message: latest.profileMessage, records,
     }));
   }, [friendsActive]);
   useEffect(() => {
@@ -35746,7 +35961,7 @@ function MonsterHeroGame() {
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
-  }, [friendsActive, gameState, masuMons, favoriteMasuId, publishFriendProfile]);
+  }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);
@@ -35779,6 +35994,9 @@ function MonsterHeroGame() {
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
+  // フレンドへ送る内容の「最新の値」。送信は少し遅れて走るので、その時点の値をここから読む(宣言のあとに置く)
+  friendLatestRef.current = { gameState, masuMons, favoriteMasuId, profileMessage, highScores, proHighScores, quickHighestWaves, extremeBestScores,
+    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons, ownedProfileFrames };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
@@ -39041,6 +39259,7 @@ function MonsterHeroGame() {
       // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
       // 好きなモンスター(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
+      { const savedMessage = await storeGet(PROFILE_MESSAGE_KEY, '', false); setProfileMessage(friendsCleanMessage(savedMessage)); }
       { const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false); setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null); }
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
@@ -50400,6 +50619,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             friendRequestCount={friendRequestInfo.count}
             favoriteMasu={(favoriteMasuId!=null&&masuMons.find(m=>String(m.id)===String(favoriteMasuId)))||null}
             onOpenFavoritePicker={()=>setShowFavoritePicker(true)}
+            profileMessage={profileMessage}
+            onOpenMessageEditor={()=>{setTempMessage(profileMessage);setShowMessageEditor(true);}}
           />
         )}
 
@@ -51451,6 +51672,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ・候補は「いまのブリーダーアイコン＋そのフレーム」を重ねて見せる
             ・押したその場で反映して保存する(閉じるまで見比べられるよう、モーダルは開いたまま)
             ・並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない */}
+        {showMessageEditor&&(
+          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl">
+              <h3 className="text-lg font-black text-white mb-1 text-center">ひとこと</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">フレンドがあなたのプロフィールを開いたとき、名前の下に出ます。{FRIEND_MESSAGE_MAX}文字までです。</p>
+              <input type="text" data-message-input value={tempMessage} maxLength={FRIEND_MESSAGE_MAX} autoComplete="off" spellCheck={false}
+                onChange={e=>setTempMessage(e.target.value)} placeholder="例: 音ゲーすきです"
+                className="w-full min-h-[48px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-[14px] font-bold text-white placeholder:text-slate-600"/>
+              <div className="mt-1 text-right text-[10px] font-bold text-slate-500">{friendsCleanMessage(tempMessage).length}/{FRIEND_MESSAGE_MAX}</div>
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <button type="button" data-message-save onClick={()=>saveProfileMessage(tempMessage)} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存する</button>
+                {profileMessage&&<button type="button" data-message-clear onClick={()=>saveProfileMessage('')} className="min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-[.98]">ひとことを消す</button>}
+                <ModalCloseButton onClick={()=>setShowMessageEditor(false)} label="キャンセル"/>
+              </div>
+            </div>
+          </div>
+        )}
         {showFavoritePicker&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">

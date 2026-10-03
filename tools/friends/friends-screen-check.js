@@ -113,6 +113,26 @@ const serve = (flagOn) => new Promise(resolve => {
       result.favoriteRow = await page.evaluate(() => (document.querySelector('[data-profile-favorite-masu]') || {}).innerText || '');
       result.friendsFirst = await page.evaluate(() => { const f = document.querySelector('[data-profile-friends]'); const b = document.querySelector('[data-profile-battle-records]'); return !!(f && b && (f.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)); });
       if (!result.hasEntry) { result.errors = errors; return { result, fake }; }
+      // 相手(other-friend)のひとこと・記録のまとめを仕込む(曲・モードのidは、実際のゲームのものを使う)
+      const ids = await page.evaluate(() => ({ song: RHYTHM_SONGS[0].songId, songName: rhythmSongFullName(RHYTHM_SONGS[0]), modes: BATTLE_MODES.map(m => ({ id: m.id, label: m.label })) }));
+      const quickMode = ids.modes.find(m => /quick/i.test(m.id)) || ids.modes[1] || ids.modes[0];
+      const scoreMode = ids.modes.find(m => m.id !== quickMode.id) || ids.modes[0];
+      result.battleLabels = [scoreMode.label, quickMode.label];
+      result.songName = ids.songName;
+      const row = fake.db.friend_profiles.find(r => r.breeder_id === 'other-friend');
+      row.message = '音ゲーすきです';
+      row.records = { v: 1, battle: [{ id: scoreMode.id, k: 's', v: 1234567 }, { id: quickMode.id, k: 'w', v: 25 }],
+        rhythm: { played: 2, songs: [{ s: ids.song, d: 'HARD', sc: 987654, f: 1 }] },
+        collection: { masu: 30, dex: 18, dexTotal: 22, transcended: 3, reincarnated: 2, icons: 10, frames: 4 } };
+      // ひとこと: プロフィールの行から書いて保存する(端末に保存され、サーバーへも送られる)
+      result.messageRow = await page.evaluate(() => (document.querySelector('[data-profile-message]') || {}).innerText || '');
+      await page.evaluate(() => document.querySelector('[data-profile-message]').click());
+      await page.waitForSelector('[data-message-input]', { timeout: 5000 });
+      await page.fill('[data-message-input]', '  よろしく\nね  ');
+      await page.evaluate(() => document.querySelector('[data-message-save]').click());
+      await page.waitForTimeout(500);
+      result.savedMessage = await page.evaluate(() => localStorage.getItem('mh_profile_message_v1'));
+      result.messageRowAfter = await page.evaluate(() => (document.querySelector('[data-profile-message]') || {}).innerText || '');
       await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
       await page.waitForSelector('[data-friends-phase]', { timeout: 15000 });
       await page.waitForFunction(() => document.querySelector('[data-friends-phase]')?.getAttribute('data-friends-phase') !== 'loading', { timeout: 15000 });
@@ -171,9 +191,22 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.waitForSelector('[data-friends-profile]', { timeout: 5000 });
       await shot('4-profile');
       result.profileText = await bodyText();
+      result.friendMessage = await page.evaluate(() => (document.querySelector('[data-friend-message]') || {}).innerText || '');
+      const tabText = async (label, selector) => {
+        await page.evaluate((l) => [...document.querySelectorAll('[role=tab]')].find(t => (t.innerText || '').trim() === l)?.click(), label);
+        await page.waitForTimeout(250);
+        return page.evaluate((sel) => (document.querySelector(sel) || {}).innerText || '', selector);
+      };
+      result.battleTab = await tabText('バトル', '[data-friend-battle]');
+      result.songsTab = await tabText('曲のベスト', '[data-friend-songs]');
+      result.collectionTab = await tabText('集めたもの', '[data-friend-collection]');
+      await shot('4b-collection');
+      await page.evaluate(() => [...document.querySelectorAll('[role=tab]')].find(t => (t.innerText || '').trim() === '概要')?.click());
+      await page.waitForTimeout(250);
       result.favoriteDetailButton = await page.evaluate(() => !!document.querySelector('[data-friend-favorite-detail]'));
       // 自分の「見せる情報」が、起動してしばらくすると送られている(最初の送信は3秒以上あと)
-      for (let i = 0; i < 48 && !fake.db.friend_profiles.find(r => r.breeder_id === 'self-user'); i++) await page.waitForTimeout(250);
+      // ひとことを保存したあとの送信は、間隔の下限(15秒)のぶん遅れることがあるので、ひとことが載るまで待つ
+      for (let i = 0; i < 160 && (fake.db.friend_profiles.find(r => r.breeder_id === 'self-user') || {}).message !== 'よろしく ね'; i++) await page.waitForTimeout(250);
       result.selfRow = fake.db.friend_profiles.find(r => r.breeder_id === 'self-user') || null;
       await clickText('フレンドを解除');
       await page.waitForSelector('[data-confirm-sheet]', { timeout: 5000 });
@@ -221,6 +254,14 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('フレンド一覧に、いまの場所(モンヒロビートで遊び中)が出る', /モンヒロビートで遊び中/.test(r.presenceOnline || ''), `${r.presenceOnline}`);
   ok('プロフィールにプレイ時間・遊びはじめ・最高絆Lv・最高総合力が出る', /5時間00分/.test(r.profileText || '') && /2026年9月1日/.test(r.profileText || '') && /Lv\.20/.test(r.profileText || '') && /12,345/.test(r.profileText || '') && /ピクシー/.test(r.profileText || ''));
   ok('プロフィールに好きなモンスターと「詳細」が出る', /好きなモンスター/.test(r.profileText || '') && /モッチー/.test(r.profileText || '') && r.favoriteDetailButton === true);
+  ok('プロフィールに「ひとこと」の行があり、最初は未入力', /ひとこと/.test(r.messageRow || '') && /まだ書いていません/.test(r.messageRow || ''), `${r.messageRow}`);
+  ok('ひとこと: 改行・余分な空白を整えて端末に保存し、行にも出る', r.savedMessage === JSON.stringify('よろしく ね') && /よろしく ね/.test(r.messageRowAfter || ''), `${r.savedMessage} / ${r.messageRowAfter}`);
+  ok('自分のひとことと記録のまとめ(バトル・曲・集めたもの)が friend_profiles へ送られる', !!r.selfRow && r.selfRow.message === 'よろしく ね' && r.selfRow.records && r.selfRow.records.v === 1
+    && Array.isArray(r.selfRow.records.battle) && r.selfRow.records.rhythm && Array.isArray(r.selfRow.records.rhythm.songs) && r.selfRow.records.collection && typeof r.selfRow.records.collection.masu === 'number', JSON.stringify(r.selfRow && r.selfRow.records).slice(0, 200));
+  ok('フレンドのプロフィールに、相手のひとことが出る', /音ゲーすきです/.test(r.friendMessage || ''), `${r.friendMessage}`);
+  ok('「バトル」タブにモードごとの記録が出る', (r.battleLabels || []).every(l => (r.battleTab || '').includes(l)) && /1,234,567 pt/.test(r.battleTab || '') && /WAVE 25/.test(r.battleTab || ''), `${r.battleTab}`);
+  ok('「曲のベスト」タブに曲・難易度・スコア・フルコンボが出る', (r.songsTab || '').includes(r.songName || '#') && /HARD/.test(r.songsTab || '') && /987,654/.test(r.songsTab || '') && /フルコンボ/.test(r.songsTab || ''), `${r.songsTab}`);
+  ok('「集めたもの」タブにマスモン数・図鑑・超越・転生などが出る', /30体/.test(r.collectionTab || '') && /18 \/ 22/.test(r.collectionTab || '') && /3体/.test(r.collectionTab || '') && /2体/.test(r.collectionTab || '') && /10個/.test(r.collectionTab || '') && /4個/.test(r.collectionTab || ''), `${r.collectionTab}`);
   ok('自分の見せる情報が、起動後に friend_profiles へ送られる', !!r.selfRow && ['home','battle','rhythm','multi','masu','market','other'].includes(r.selfRow.place), JSON.stringify(r.selfRow && r.selfRow.place));
   ok('解除すると removed になり、行は消えない', r.removedCount >= 1, `${r.removedCount}件`);
   ok('解除後は一覧に戻る', r.afterRemoveRows >= 1 || (r.afterRemoveText || '').includes('まだフレンドがいません'), `${r.afterRemoveRows}行`);
