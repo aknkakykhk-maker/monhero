@@ -66,7 +66,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
       // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
-      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi']));
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka']));
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     await page.route(/supabase\.co/, (route) => route.abort());
@@ -486,6 +486,66 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await closePanel();
     await tapFirstCard();
     check('使ったターンもモッチーはカードを使える', (await selectedCount()) > 0);
+
+    // --- ⑥〜⑧ ピクシー・ミーア・スネグーラチカ(2026-10-03 ユーザーの案・数字は仮) ---
+    const startWith = async (name) => {
+      await boot();
+      await closePopups();
+      await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+      await page.waitForTimeout(600);
+      await page.locator('[data-battle-system="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
+      const r = await startTacticsPro(name);
+      check(`${name}を勇者モンにしてタクティクスプロを始められる`, r === 'ok', r);
+      if (r !== 'ok') throw new Error(r);
+      return heroSlot();
+    };
+    const limitOf = () => page.evaluate(() => { const m = document.body.innerText.match(/Action Cards\s*(\d+)\/(\d+)/i); return m ? Number(m[2]) : null; });
+    const partyOf = (slot) => page.evaluate((sl) => {
+      const el = document.querySelector(`[data-tactics-party-slot="${sl}"]`);
+      return el ? { hp: el.getAttribute('data-tactics-hp'), guts: el.getAttribute('data-tactics-guts') } : null;
+    }, slot);
+    const gutsNow = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return m ? Number(m[1]) : -1; };
+
+    // ピクシー「お気に入りの魔法」: 使うと固有技のカードが手札に出る
+    const pxSlot = await startWith('ピクシー');
+    await tapSlot(pxSlot);
+    p = await panel();
+    check('「お気に入りの魔法」: 3/3・カードと併用できる・3ターン', !!p && p.name === 'お気に入りの魔法' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const uniqueInHand = await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].filter(c => /unique/.test(c.getAttribute('data-card-type') || '')).length);
+    check('使うと固有技のカードが手札に出ている', uniqueInHand >= 1, `固有技 ${uniqueInHand}枚`);
+    check('枠の札が「あと3ターン」になる', await page.locator(`[data-tactics-ex-mark="${pxSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと3ターン');
+
+    // ミーア「オン・ステージ！」: 使うと選べるカード枚数が1枚増え、ボルテージが出る
+    const miSlot = await startWith('ミーア');
+    const limit0 = await limitOf();
+    await tapSlot(miSlot);
+    p = await panel();
+    check('「オン・ステージ！」: 3/3・カードと併用できる・4ターン', !!p && p.name === 'オン・ステージ！' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /4ターン/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const limit1 = await limitOf();
+    check('使うと1ターンに選べるカードが1枚増える', Number.isInteger(limit0) && limit1 === limit0 + 1, `${limit0} → ${limit1}`);
+    await tapSlot(miSlot);
+    p = await panel();
+    check('詳細に「ボルテージ 0 / 10」が出る', !!p && /ボルテージ 0 \/ 10/.test(p.text), p && p.text.slice(0, 260));
+    await closePanel();
+
+    // スネグーラチカ「クリスマスプレゼント」: 各WAVE1回・必ず全員のガッツが戻り、中身が決まる
+    const snSlot = await startWith('スネグーラチカ');
+    const snBefore = await partyOf(snSlot);
+    await tapSlot(snSlot);
+    p = await panel();
+    check('「クリスマスプレゼント」: 1/1(このWAVE)・カードと併用できる', !!p && p.name === 'クリスマスプレゼント' && /1 \/ 1/.test(p.uses) && /このWAVE/.test(p.uses) && p.withCards === 'yes', p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const snAfter = await partyOf(snSlot);
+    check('使うとガッツが増える(必ず上限の20%・満タンなら変わらない)', !!snBefore && !!snAfter && gutsNow(snAfter.guts) >= gutsNow(snBefore.guts), `${JSON.stringify(snBefore)} → ${JSON.stringify(snAfter)}`);
+    await tapSlot(snSlot);
+    p = await panel();
+    check('使ったあとは 0 / 1(このWAVE)・詳細に「プレゼントの中身」が出る', !!p && /0 \/ 1/.test(p.uses) && /プレゼントの中身/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 200));

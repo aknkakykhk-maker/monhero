@@ -545,8 +545,11 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   // ★exCombos … タクティクスのEX「スイーツパラダイス」(2026-09-29 ユーザー指示「連撃30%×4」)。
   //   使ったターンのその子の攻撃へ { rate } の連撃を count 回足す。連撃ダメージ補正も乗る。
   //   4本ぶん専用モーションを繰り返すと長くなるので、数字だけを続けて出す(noAnim)。ほかのモードは渡さないので常に null
-  if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
-    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, exCombos.label || 'スイーツパラダイス', true);
+  //   2026-10-03: 配列でも渡せる(自分のEXの連撃と、スネグーラチカのプレゼントの連撃を別々に重ねる)
+  for (const ec of (Array.isArray(exCombos) ? exCombos : [exCombos])) {
+    if (ec && ec.count > 0 && ec.rate > 0) {
+      for (let i = 0; i < ec.count; i++) combo(ec.rate + comboDmgBonus, ec.label || 'スイーツパラダイス', true);
+    }
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
