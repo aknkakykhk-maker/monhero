@@ -45,10 +45,10 @@ check('各イベントが日付(YYYY-MM-DD HH:MM)を持つ(足すときの書き
   (list || []).filter(ev => !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(ev.date || '')).map(ev => ev.id).join(', '));
 {
   const core = fs.readFileSync(path.join(root, 'monster-hero/src/parts/10-core.jsx'), 'utf8');
-  const from = core.indexOf('const eventReplayDateMs'), to = core.indexOf('.map(row => row.event);', from);
+  const from = core.indexOf('const eventReplayDateMs'), to = core.indexOf('const eventReplayList = () => eventReplaySorted(eventReplayReleased);', from);
   const c2 = { EVENT_REPLAYS: list };
   vm.createContext(c2);
-  vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + '.map(row => row.event);'.length)}\nglobalThis.__o={order:eventReplayList().map(e=>e.id),text:eventReplayDateText(EVENT_REPLAYS[0]),bad:eventReplayDateText({date:'x'})};`, c2);
+  vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + 'const eventReplayList = () => eventReplaySorted(eventReplayReleased);'.length)}\nglobalThis.__o={order:eventReplayList().map(e=>e.id),text:eventReplayDateText(EVENT_REPLAYS[0]),bad:eventReplayDateText({date:'x'})};`, c2);
   const order = c2.__o.order;
   const ms = order.map(id => Date.parse(list.find(ev => ev.id === id).date.replace(' ', 'T') + ':00+09:00'));
   check('一覧は日付の新しい順に並ぶ', order.length === list.length && ms.every((v, i) => i === 0 || ms[i - 1] >= v), order.join(' > '));
