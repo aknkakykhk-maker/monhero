@@ -28,7 +28,7 @@ vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS,ASSISTANTS,STOR
 const e = ctx.__e;
 
 // ① 台本の本数
-const want = [['第1.5部', e.RAID_JACK_STORY_1B, 15], ['第2部', e.RAID_JACK_STORY_2, 16], ['第3部', e.RAID_JACK_STORY_3, 19], ['第4部', e.RAID_JACK_STORY_4, 21],
+const want = [['第1.5部', e.RAID_JACK_STORY_1B, 34], ['第2部', e.RAID_JACK_STORY_2, 16], ['第3部', e.RAID_JACK_STORY_3, 19], ['第4部', e.RAID_JACK_STORY_4, 21],
   ['第5部', e.RAID_JACK_STORY_5, 20], ['第6部', e.RAID_JACK_STORY_6, 19], ['終章(大王まで倒せた)', e.RAID_JACK_ENDING_CLEARED, 29], ['終章(倒せなかった)', e.RAID_JACK_ENDING_NOTCLEARED, 29]];
 want.forEach(([n, s, c]) => check(`${n}の台詞は ${c} 行`, Array.isArray(s) && s.length === c, String(s && s.length)));
 const allScripts = want.map(([, s]) => s);
@@ -129,6 +129,43 @@ check('助手(みゅあ)の台詞は今までどおり助手の名前で出る',
 let ok = true; let bad = '';
 for (const [n, s] of want) { const id = ids[want.findIndex((w) => w[0] === n)]; for (let i = 0; i < s.length; i++) { try { render(id, i); } catch (err) { ok = false; bad = `${n} ${i}: ${err.message}`; break; } } if (!ok) break; }
 check('全部の台詞を最後まで再生しても、画面が落ちない', ok, bad);
+
+// ⑦ 画面の出し方(2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」「敵側上部にコメント」「画面演出」)
+{
+  const s1 = e.RAID_JACK_STORY_1B;
+  const firstPumpkin = s1.findIndex((l) => l.who === 'pumpkin');
+  const transformIdx = s1.findIndex((l) => l.fx === 'transform');
+  check('第1.5部の最初の5行は助手だけで、ぱんぷきんはまだ画面に出ていない(上のステージが無い)', firstPumpkin === 5 && s1.slice(0, firstPumpkin).every((l) => l.who !== 'pumpkin' && l.who !== 'jack')
+    && [0, 1, 4].every((i) => !render('raid_jack_story_1b', i).includes('data-story-stage')));
+  const sp = render('raid_jack_story_1b', firstPumpkin);
+  check('ぱんぷきんが初めて話す行から、画面の上部のステージに出て、台詞は上の吹き出しに出る', sp.includes('data-story-stage') && sp.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble[^>]*>[^]*?だ、だれ/.test(sp));
+  check('ぱんぷきんが話している行でも、下の助手の列にぱんぷきんは並ばない(助手の顔だけ)', !/data-face="pumpkin"[^]*data-face="pumpkin"/.test(sp) && ['mua', 'kiki', 'momosuke', 'dra'].every((id) => sp.includes(`data-face="${id}"`)));
+  check('ぱんぷきんが話している行の下の箱は、直前の助手の台詞を薄く残す', /opacity:0\.5/.test(sp) || /opacity:\.5/.test(sp));
+  const sAfter = render('raid_jack_story_1b', firstPumpkin + 1);
+  check('助手が話す行では、ステージのぱんぷきんは残り(吹き出しは薄くなる)', sAfter.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble[^>]*opacity:0\.45/.test(sAfter));
+  check('ぱんぷきんがジャックになる行に、変身の演出(光・帯)があり、ステージの顔がジャックへ替わる', transformIdx > firstPumpkin
+    && render('raid_jack_story_1b', transformIdx).includes('data-story-fx-flash="transform"') && render('raid_jack_story_1b', transformIdx).includes('ぱんぷきんが、ふくれあがった')
+    && render('raid_jack_story_1b', transformIdx).includes('data-story-guest="jack"') && !render('raid_jack_story_1b', transformIdx - 1).includes('data-story-fx-flash'));
+  const rank = [[e.RAID_JACK_STORY_2, '子爵'], [e.RAID_JACK_STORY_3, '伯爵'], [e.RAID_JACK_STORY_4, '公爵'], [e.RAID_JACK_STORY_5, '大王']];
+  const rankIds = ['raid_jack_story_2', 'raid_jack_story_3', 'raid_jack_story_4', 'raid_jack_story_5'];
+  check('第2〜5部の「次の爵位が出る行」に、爵位あがりの演出(帯の文言つき)がある', rank.every(([sc, t], i) => { const idx = sc.findIndex((l) => l.fx === 'rankup'); return idx > 0 && sc[idx].name === `ジャック(${t})` && render(rankIds[i], idx).includes(`ジャック(${t})があらわれた`) && render(rankIds[i], idx).includes('data-story-fx-flash="rankup"'); }));
+  const shrinkIdx = e.RAID_JACK_STORY_6.findIndex((l) => l.fx === 'shrink');
+  const s6s = shrinkIdx >= 0 ? render('raid_jack_story_6', shrinkIdx) : '';
+  check('第6部の「小さくなる」行で、ステージがぱんぷきんへ替わる(しぼむ演出・助手が話しているので吹き出しは出さない)', shrinkIdx > 0 && s6s.includes('data-story-guest="pumpkin"') && s6s.includes('data-story-fx-flash="shrink"') && !s6s.includes('data-story-guest-bubble'));
+  check('第2部の最初の行(ジャックが話す)では、ジャックが上のステージに出て、下には「上のことばを読んでね」の案内が出る', render('raid_jack_story_2', 0).includes('data-story-guest="jack"') && render('raid_jack_story_2', 0).includes('上のことばを読んでね'));
+  const cssSrc = read('monster-hero/src/parts/70-bootstrap.jsx');
+  check('演出の動き(storyFlash・storyGrow・storyShrink・storyBanner・揺れ)が定義され、動きを減らす設定では止まる', ['storyStageIn', 'storyFlash', 'storyGrow', 'storyShrink', 'storyBanner', 'storyShakeA', 'storyShakeB'].every((k) => new RegExp(`@keyframes ${k}`).test(cssSrc)) && /prefers-reduced-motion: reduce\) \{\s*\[data-story-shake\]/.test(cssSrc));
+  // 助手だけの会話(ジャックが出ない話)は、今までと同じ見た目のまま
+  const mia = e.EVENT_REPLAYS.find((r) => r.id === 'halloween_night_2026_part1');
+  const htm = ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.Screen, {
+    eventReplay: { id: 'halloween_night_2026_part1', step: 3 }, setEventReplay: () => {}, EVENT_REPLAYS: e.EVENT_REPLAYS, eventReplayList: () => e.EVENT_REPLAYS,
+    ASSISTANT_LIST: e.ASSISTANTS, assistantById: byId, storyCastOf: castOf, AssistantFace: Face,
+    normalizeAssistantBond: (v) => ({ points: 0, ...(v && typeof v === 'object' ? v : {}) }), assistantBonds: {}, assistantCallStyles: {},
+    assistantSpeakText: (t) => t, assistantBondLevelOf: () => 1, breederName: 'テスト', markRhythmEventStorySeen: () => {},
+    markMomosukeIntroSeen: () => {}, markTacticsIntroSeen: () => {}, RHYTHM_EVENT_STORY_IDS: ids,
+  }));
+  check('ジャックが出ない会話(ハロウィン第1部)には、上のステージも演出も出ない', !!mia && !htm.includes('data-story-stage') && !htm.includes('data-story-fx-flash') && !htm.includes('上のことばを読んでね') && htm.includes('data-face="mua"'));
+}
 
 // 段階を倒したあと・期間が終わったあとに流す話の選び方(raidJackStoryCandidates)
 {

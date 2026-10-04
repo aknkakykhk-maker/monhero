@@ -3005,6 +3005,20 @@ const createAnimationStyle = () => {
     [data-jack-aura="5"] [data-ja="wave"] { animation-duration: 1.5s; border-width: 5px; border-color: rgba(253,224,71,.95); }
     @keyframes jackAuraEmber { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -420%) scale(.3); } }
     @keyframes jackAuraWave { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.45); } }
+    /* ジャックのストーリーの演出(2026-10-04・ユーザー指示「ぱんぷきん→ジャックや次の爵位で画面演出」)。動かすのは transform / opacity / filter だけ。
+       ステージ(画面の上部)へ出る → 変身・爵位アップでは光る・揺れる・ふくらむ・帯が出る / ジャックがぱんぷきんへ戻るときはしぼむ */
+    @keyframes storyStageIn { 0% { opacity: 0; transform: translateY(-26px) scale(.88); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes storyGrow { 0% { opacity: 0; transform: scale(.5); filter: brightness(2.4); } 40% { opacity: 1; transform: scale(1.3); filter: brightness(1.7); } 70% { transform: scale(.96); filter: brightness(1.15); } 100% { transform: scale(1); filter: brightness(1); } }
+    @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
+    @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
+    @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
+    @keyframes storyShakeB { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
+    [data-story-shake="0"] { animation: storyShakeA .7s ease-in-out both; }
+    [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
+    @media (prefers-reduced-motion: reduce) {
+      [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner] { animation: none !important; }
+    }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
     @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
