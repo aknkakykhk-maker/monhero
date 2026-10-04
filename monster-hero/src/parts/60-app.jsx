@@ -2320,6 +2320,8 @@ function MonsterHeroGame() {
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
+  // デバッグ戦で自分で選んだパーティー(編成の入れ物と同じ書き方: 'masu:<id>' か モンスターid)。空なら、いつもの編成のまま
+  const [debugPartyIds, setDebugPartyIds] = useState([]);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
   // ---------- イベント・レイドボス「ジャック」の専用の1戦(docs/spec/RAID_BOSS_JACK.md) ----------
@@ -13083,7 +13085,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const startDebugBattle = (extreme=false) => {
     stopAllAuto();
     const option = getDebugEnemyOptions(debugBattleModeId).find(item => item.key === debugEnemyKey);
-    const savedParty = getActiveMonsterList();
+    // 自分で選んでいればそのパーティー(選んだ順。先頭が勇者モン)、選んでいなければいつもの編成
+    const pickedParty = debugPartyIds.map(resolveRosterEntryToMon).filter(Boolean);
+    const savedParty = pickedParty.length > 0 ? pickedParty : getActiveMonsterList();
     const party = (debugStrongestHero
       ? [makeDebugStrongestMonster(),...savedParty.filter(mon=>mon?.id!=='Mocchi')]
       : savedParty).slice(0, 4);
@@ -16787,8 +16791,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section data-debug-battle-difficulties><div className="text-[10px] text-slate-500 font-black mb-2">2. 難易度</div><div className="grid grid-cols-3 gap-2">{debugBattleDifficultyIds(debugBattleModeId).map(key=>{const setting=debugBattleDifficultySetting(key);const selected=debugBattleDifficultyId===key;return <button key={key} type="button" data-debug-battle-difficulty={key} aria-pressed={selected} onClick={()=>selectDebugBattle(debugBattleModeId,key)} className={`min-h-[48px] rounded-xl text-[9px] font-black ${selected?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle({bg:'#475569',text:'#cbd5e1',...setting},selected)}>{setting.label||key}</button>;})}</div></section>
               <section data-debug-battle-enemies><div className="text-[10px] text-slate-500 font-black mb-2">3. 敵<small className="ml-1 font-bold text-slate-600">（その敵が出てくるWAVEとして戦う）</small></div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(debugBattleModeId).map(({key,wave:debugWave,enemy:debugEnemy})=><button key={key} type="button" data-debug-battle-enemy={key} aria-pressed={debugEnemyKey===key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black text-left ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><small className="block text-[8px] opacity-70">WAVE {debugWave}</small>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">4. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
+              <section data-debug-party>
+                <div className="text-[10px] text-slate-500 font-black mb-2">5. パーティー<small className="ml-1 font-bold text-slate-600">（選んだ順。1番目が勇者モン・4体まで）</small></div>
+                {(()=>{
+                  const pool=[...masuMons.map(m=>({entry:`masu:${m.id}`,mon:resolveRosterEntryToMon(`masu:${m.id}`),sub:`絆Lv.${masuBondLevelInfo(m).level}`})),
+                    ...Object.keys(ALL_PLAYER_MONSTERS).map(id=>({entry:id,mon:ALL_PLAYER_MONSTERS[id],sub:'図鑑'}))].filter(x=>x.mon);
+                  const toggle=entry=>setDebugPartyIds(cur=>cur.includes(entry)?cur.filter(x=>x!==entry):cur.length>=4?cur:[...cur,entry]);
+                  return <>
+                    <div className="mb-2 flex items-center gap-2">
+                      <small data-debug-party-count className="flex-1 text-[10px] font-black text-slate-300">{debugPartyIds.length>0?`${debugPartyIds.length}体を選択中`:'選んでいません（いつもの編成で戦います）'}</small>
+                      <button type="button" data-debug-party-clear disabled={debugPartyIds.length===0} onClick={()=>setDebugPartyIds([])} className="min-h-[36px] rounded-xl border border-white/15 bg-slate-900 px-3 text-[10px] font-black text-slate-300 disabled:opacity-30">選びなおす</button>
+                    </div>
+                    <div className="grid max-h-[22rem] grid-cols-2 gap-2 overflow-y-auto mh-scroll">
+                      {pool.map(({entry,mon,sub})=>{const order=debugPartyIds.indexOf(entry);const on=order>=0;return (
+                        <button key={entry} type="button" data-debug-party-option={entry} aria-pressed={on} onClick={()=>toggle(entry)} className={`relative min-h-[52px] rounded-2xl border-2 px-3 py-1.5 text-left font-black ${on?'border-fuchsia-300 bg-fuchsia-900 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}>
+                          <span className="block truncate text-[11px]">{mon.name}</span><small className="block text-[8px] opacity-70">{sub}</small>
+                          {on&&<span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-300 text-[10px] font-black text-fuchsia-950">{order+1}</span>}
+                        </button>);})}
+                    </div>
+                  </>;
+                })()}
+              </section>
               {/* ★開始の関数をそのまま onClick へ渡すと、押したときのイベントが「極限か」の引数へ入ってしまう */}
-              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">5. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
+              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">6. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
             </div>
           </main>
         )}
