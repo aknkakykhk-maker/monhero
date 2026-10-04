@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a289668a69cb0cbd
+// source-sha256: 06da10c3ce7774a7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 00:12";
+const BUILD_DATE = "2026-10-05 00:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -396,11 +396,13 @@ const eventReplayDateText = event => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(typeof event?.date === 'string' ? event.date : '');
   return m ? `${m[1]}/${m[2]}/${m[3]}` : '';
 };
-const eventReplayList = () => (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).filter(eventReplayReleased).map((event, index) => ({
+const eventReplaySorted = keep => (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).filter(keep).map((event, index) => ({
   event,
   index,
   ms: eventReplayDateMs(event)
 })).sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index).map(row => row.event);
+const eventReplayList = () => eventReplaySorted(eventReplayReleased);
+const eventReplayAllList = () => eventReplaySorted(() => true);
 const SPECIES_CHALLENGE_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const SPECIES_CHALLENGE_UNLOCK_TEXT = 'チャレンジ Master以上クリアで解放';
 const isSpeciesChallengeUnlocked = clearCounts => SPECIES_CHALLENGE_UNLOCK_DIFFICULTIES.some(key => (Number(clearCounts?.[key]) || 0) > 0);
@@ -61893,7 +61895,8 @@ function MonsterHeroGame() {
   const [newPlayerCampaignEligible, setNewPlayerCampaignEligible] = useState(false);
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplay, setEventReplay] = useState(null);
-  setAssistantCostumeStoryNow(eventReplay ? (eventReplayList().find(ev => ev.id === eventReplay.id) || {}).costumes || null : null);
+  const [showDebugStoryList, setShowDebugStoryList] = useState(false);
+  setAssistantCostumeStoryNow(eventReplay ? ((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null : null);
   const [breederPoints, setBreederPoints] = useState(0);
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]);
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS);
@@ -83148,7 +83151,13 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "🎼 モンヒロビート 体験版（正式導線）", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度")), React.createElement("div", {
+    }, "公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度")), React.createElement("button", {
+      "data-debug-story-list": true,
+      onClick: () => setShowDebugStoryList(true),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "📖 全ストーリーを確認", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-fuchsia-200/80"
+    }, "公開前・未閲覧のものも含め、すべてのイベント回想を日付順に開けます(見たことにはしません)")), React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, React.createElement("button", {
       "data-debug-rhythm-event-intro": true,
@@ -85868,6 +85877,53 @@ function MonsterHeroGame() {
     })), React.createElement("button", {
       onClick: () => setShowAssistantPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+    }, "閉じる"))), showDebugStoryList && React.createElement("div", {
+      "data-debug-story-overlay": true,
+      className: "fixed inset-0 flex flex-col items-center justify-center p-5",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 90000
+      }
+    }, React.createElement("div", {
+      className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-sm shadow-2xl max-h-full overflow-y-auto mh-scroll"
+    }, React.createElement("h3", {
+      className: "text-base font-black text-white mb-1 text-center"
+    }, "全ストーリーを確認(デバッグ)"), React.createElement("p", {
+      className: "text-[9px] text-slate-400 text-center mb-3 leading-tight"
+    }, "公開前・未閲覧も含めて全部開けます。見たことにはしません。"), React.createElement("div", {
+      className: "space-y-2 mb-3"
+    }, eventReplayAllList().map(event => React.createElement("button", {
+      key: event.id,
+      type: "button",
+      "data-debug-story-item": event.id,
+      onClick: () => {
+        setEventReplay({
+          id: event.id,
+          step: 0,
+          debug: true,
+          debugList: true
+        });
+        setShowDebugStoryList(false);
+      },
+      className: "w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30"
+    }, React.createElement(Play, {
+      size: 16,
+      className: "text-fuchsia-300 shrink-0"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-white"
+    }, event.title), React.createElement("small", {
+      className: "block text-[9px] text-fuchsia-300/70"
+    }, eventReplayDateText(event) && React.createElement("span", {
+      className: "tabular-nums"
+    }, eventReplayDateText(event), "・"), Array.isArray(event.script) ? event.script.length : 0, "場面", eventReplayReleased(event) ? '' : '・公開前'))))), React.createElement("button", {
+      type: "button",
+      "data-debug-story-close": true,
+      onClick: () => setShowDebugStoryList(false),
+      className: "w-full bg-slate-800 text-slate-300 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showEventReplayList && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-5",
       style: {
@@ -87089,7 +87145,7 @@ function MonsterHeroGame() {
       },
       onLater: () => setFriendNoticeDismissed((friendRequestInfo.ids || []).join(','))
     }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
-      const list = eventReplayList();
+      const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
       const event = list.find(ev => ev.id === eventReplay.id);
       const script = event && event.script || [];
       if (script.length === 0) return null;
@@ -87107,16 +87163,18 @@ function MonsterHeroGame() {
           });
           return;
         }
-        if (event && event.id === 'momosuke_intro') markMomosukeIntroSeen();
-        if (event && event.id === 'tactics_intro') markTacticsIntroSeen();
+        if (event && event.id === 'momosuke_intro' && !eventReplay.debug) markMomosukeIntroSeen();
+        if (event && event.id === 'tactics_intro' && !eventReplay.debug) markTacticsIntroSeen();
         if (event && RHYTHM_EVENT_STORY_IDS.includes(event.id) && !eventReplay.debug) void markRhythmEventStorySeen(event.id);
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        if (eventReplay.debugList) setShowDebugStoryList(true);
         setEventReplay(null);
       };
       const skip = () => {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
+        if (eventReplay.debugList) setShowDebugStoryList(true);
         setEventReplay(null);
       };
       return React.createElement("div", {

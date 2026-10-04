@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 07af2399b1d9fb8f
+// generated-sha256: be85430d8388f0e3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 00:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -310,11 +310,15 @@ const eventReplayDateText = (event) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(typeof event?.date === 'string' ? event.date : '');
   return m ? `${m[1]}/${m[2]}/${m[3]}` : '';
 };
-const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || [])
-  .filter(eventReplayReleased)
+const eventReplaySorted = (keep) => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || [])
+  .filter(keep)
   .map((event, index) => ({ event, index, ms: eventReplayDateMs(event) }))
   .sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index)
   .map(row => row.event);
+const eventReplayList = () => eventReplaySorted(eventReplayReleased);
+// デバッグ専用(2026-10-04・ユーザー指示「デバッグでストーリー全部の確認」)。公開前のものも含めて全部を同じ並びで返す。
+// 通常の画面(プロフィールの回想)は使わない。デバッグ設定の「全ストーリーを確認」だけが読む
+const eventReplayAllList = () => eventReplaySorted(() => true);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -39032,8 +39036,9 @@ function MonsterHeroGame() {
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplay, setEventReplay] = useState(null);
+  const [showDebugStoryList, setShowDebugStoryList] = useState(false);   // デバッグ設定の「全ストーリーを確認」の一覧(公開前も含めて全部。見たことにはしない)
   // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
-  setAssistantCostumeStoryNow(eventReplay ? ((eventReplayList().find(ev => ev.id === eventReplay.id) || {}).costumes || null) : null);
+  setAssistantCostumeStoryNow(eventReplay ? (((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null) : null);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -54159,6 +54164,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* モンヒロビートのイベント(週末ゲリラ杯)の確認。開催の時刻を待たずに見られる。
                       どれも「見た」にしないので、本番のときにちゃんと出る。
                       デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
+                  {/* 全ストーリーの確認(2026-10-04)。公開フラグ・見たかどうかに関係なく、すべてのイベント回想を開ける。見たことにはしない */}
+                  <button data-debug-story-list onClick={()=>setShowDebugStoryList(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">📖 全ストーリーを確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-fuchsia-200/80">公開前・未閲覧のものも含め、すべてのイベント回想を日付順に開けます(見たことにはしません)</small></button>
                   <div className="grid grid-cols-2 gap-2">
                     <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
                     <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベント会話だけ再生</button>
@@ -55485,6 +55492,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
+        {/* デバッグ設定の「全ストーリーを確認」。公開フラグ・閲覧済みに関係なく全部を開ける。再生しても何も保存しない(debug)。
+            終わる・スキップするとこの一覧へ戻る(debugList) */}
+        {showDebugStoryList&&(
+          <div data-debug-story-overlay className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-sm shadow-2xl max-h-full overflow-y-auto mh-scroll">
+              <h3 className="text-base font-black text-white mb-1 text-center">全ストーリーを確認(デバッグ)</h3>
+              <p className="text-[9px] text-slate-400 text-center mb-3 leading-tight">公開前・未閲覧も含めて全部開けます。見たことにはしません。</p>
+              <div className="space-y-2 mb-3">
+                {eventReplayAllList().map(event=>(
+                  <button key={event.id} type="button" data-debug-story-item={event.id} onClick={()=>{setEventReplay({id:event.id,step:0,debug:true,debugList:true});setShowDebugStoryList(false);}}
+                    className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
+                    <Play size={16} className="text-fuchsia-300 shrink-0"/>
+                    <span className="min-w-0 flex-1">
+                      <b className="block text-[12px] font-black text-white">{event.title}</b>
+                      <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span className="tabular-nums">{eventReplayDateText(event)}・</span>}{Array.isArray(event.script)?event.script.length:0}場面{eventReplayReleased(event)?'':'・公開前'}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" data-debug-story-close onClick={()=>setShowDebugStoryList(false)} className="w-full bg-slate-800 text-slate-300 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            </div>
+          </div>
+        )}
+
         {/* イベント回想の一覧。未閲覧のイベントは「？？？」で伏せ、タップできない。
             ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
         {showEventReplayList&&(
@@ -56212,7 +56243,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           (初回閲覧フラグ・助手選択・仲良し度・アップデート通知のどれも変えない)。
           gameStateを問わず(プロフィールから開くため)eventReplayの有無だけで出す */}
       {eventReplay!=null&&(()=>{
-        const list=eventReplayList();
+        const list=eventReplay.debug?eventReplayAllList():eventReplayList();
         const event=list.find(ev=>ev.id===eventReplay.id);
         const script=(event&&event.script)||[];
         if(script.length===0) return null;
@@ -56227,8 +56258,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // あとから本編で同じ会話が重ねて流れることもなくなる
         const next=()=>{
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
-          if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();
-          if(event&&event.id==='tactics_intro') markTacticsIntroSeen();
+          if(event&&event.id==='momosuke_intro'&&!eventReplay.debug) markMomosukeIntroSeen();
+          if(event&&event.id==='tactics_intro'&&!eventReplay.debug) markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
           if(event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)&&!eventReplay.debug) void markRhythmEventStorySeen(event.id);
           // 順番は 第1部 → 第1.5部(ふくれあがる影) → レイドの遊び方。本編で見終えたら、次を続けて流す
@@ -56237,6 +56268,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_STORY_START_ID);
           if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
+          if(eventReplay.debugList) setShowDebugStoryList(true);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
@@ -56248,6 +56280,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const skip=()=>{
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
+          if(eventReplay.debugList) setShowDebugStoryList(true);
           setEventReplay(null);
         };
         return(

@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 00:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -303,11 +303,15 @@ const eventReplayDateText = (event) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(typeof event?.date === 'string' ? event.date : '');
   return m ? `${m[1]}/${m[2]}/${m[3]}` : '';
 };
-const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || [])
-  .filter(eventReplayReleased)
+const eventReplaySorted = (keep) => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || [])
+  .filter(keep)
   .map((event, index) => ({ event, index, ms: eventReplayDateMs(event) }))
   .sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index)
   .map(row => row.event);
+const eventReplayList = () => eventReplaySorted(eventReplayReleased);
+// デバッグ専用(2026-10-04・ユーザー指示「デバッグでストーリー全部の確認」)。公開前のものも含めて全部を同じ並びで返す。
+// 通常の画面(プロフィールの回想)は使わない。デバッグ設定の「全ストーリーを確認」だけが読む
+const eventReplayAllList = () => eventReplaySorted(() => true);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
