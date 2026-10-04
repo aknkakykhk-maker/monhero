@@ -115,6 +115,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
 
     // ① HOME
+    // 既存の検査は本番どおりの回数・解放で確かめる(既定は何度でも・全段階)
+    await page.locator('[data-raid-real-rules-toggle]').click();
+    check('本番どおりの回数・解放がONになる', /本番どおりの回数・解放で確認: ON/.test(await page.locator('[data-raid-jack-debug]').innerText()));
     await page.locator('[data-raid-force-toggle]').click();
     check('強制表示がONになる', /HOMEに出す: ON/.test(await page.locator('[data-raid-jack-debug]').innerText()));
     await page.locator('[data-raid-go-home]').click();
@@ -206,6 +209,24 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('B: 累計ダメージランキング(5段階の合計)に数字が出る', /累計ダメージランキング/.test(await raidText()) && /3,000,000/.test(await raidText()));
     check('B: 自分の累計(70,000)が出る', /あなた 70,000/.test(await page.locator('[data-raid-jack-mine]').innerText()));
     if (SHOT) await page.screenshot({ path: `${SHOT}/raid-b.png` });
+    // ⑥ デバッグの既定(本番どおりをOFF): 何度でも・全段階を選べる
+    await page.locator('button[aria-label="戻る"]').first().click();
+    await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    await page.locator('[data-raid-real-rules-toggle]').click();
+    check('本番どおりの回数・解放がOFFになる', /本番どおりの回数・解放で確認: OFF/.test(await page.locator('[data-raid-jack-debug]').innerText()));
+    await page.locator('[data-raid-open]').click();
+    await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
+    await page.getByRole('tab', { name: 'ダメージ競争' }).click();
+    await page.waitForFunction(() => /無制限/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    t = await raidText();
+    check('B: 回数は無制限と出て、買い足しは押せない', /今日の残り\s*無制限/.test(t) && await page.locator('[data-raid-jack-buy]').isDisabled());
+    check('B: 全段階が「挑戦できる」(未解放が1つも無い)', !/未解放/.test(t) && /5\. 極級ジャック\s*挑戦できる/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
+    await page.locator('[data-raid-jack-tier="b5"]').click();
+    check('B: 極級でも挑戦ボタンが押せる', await page.locator('[data-raid-jack-challenge]').isEnabled());
+    await page.getByRole('tab', { name: 'みんなで討伐' }).click();
+    await page.waitForFunction(() => /無制限/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    t = await raidText();
+    check('A: 全段階が「挑戦できる」(未解放が1つも無い)', !/未解放/.test(t) && /5\. ジャック大王\s*挑戦できる/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     check('画面が横にはみ出さない', size.s <= size.c + 1, `${size.s} / ${size.c}`);
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));
