@@ -4206,8 +4206,8 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   // ハロウィン・ナイト(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり、週ごとに更新の5部構成」)。
-  // 5部のidと出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。**時刻が来た部を、古いほうから1つずつ**HOMEで流す
-  // (期間の内か外かは見ない。第5部は閉幕の時刻に出る)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
+  // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
+  // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
   const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
