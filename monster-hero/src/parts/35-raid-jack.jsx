@@ -171,6 +171,7 @@ const raidJackDefaultState = () => ({
   claimed: [],
   pending: [],
   repaired: false,   // デバッグで付いた「倒した」印をサーバーの記録と突き合わせて直したか(1回だけ・raidJackRepairState)
+  giftsChecked: false,   // 倒していない段階の初討伐報酬(ギフト・受け取り済みの印)を取り下げたか(1回だけ・raidJackRevokeUnearned)
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -201,6 +202,7 @@ const raidJackNormalizeState = (raw) => {
     claimed: Array.isArray(src.claimed) ? src.claimed.filter((v) => typeof v === 'string').slice(0, 64) : [],
     pending: raidJackNormalizePending(src.pending),
     repaired: src.repaired === true,
+    giftsChecked: src.giftsChecked === true,
   };
 };
 
