@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dea5cff29e309893
+// generated-sha256: 01ccc1d76bebc9f7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 12:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9935,8 +9935,12 @@ const MarketDetailChip = ({ label, onClick }) => (
 //   検索・保存はこれまでどおり(U+200B は幅0で、コピーしても見た目に出ない)。
 // ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
+// 全角のかっこ「（…）」は、かっこの中を途中で割らない(2026-10-04・ユーザー指摘「文字列が悪い」。
+// 「みゅあ（ハロウィン／）のアイコン」と、閉じかっこだけが次の行へ落ちていた)。
+// 「（」の前と「）」の後ろにも印を入れ、「みゅあ／（ハロウィン）」のようにかっこのかたまりで折る。
 const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
-  (text, word) => text.split(word).join(`​${word}`), String(name || ''));
+  (text, word) => text.split(word).join(`​${word}`), String(name || ''))
+  .split('（').join('​（').split('）').join('）​');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
@@ -9965,7 +9969,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -23057,9 +23061,12 @@ const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
 //   静的CSS(tailwind.css)に入らないので効かない(UIルール「動的クラスだけに依存しない」)。
 // ★選ばれている側の背景も style で直に持たせる。同じ理由。
 const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
+// 6つ以上は2段に並べる(2026-10-04・ユーザー指摘「文字列が悪い」。7つを1段に並べると「アシス／ト」「アイコ／ン」と
+// タブの文字が途中で割れていた)。4つまでは今までどおり1段、5つも1段のまま。
+const tabColumnCount = (count) => (count > 5 ? Math.ceil(count / 2) : Math.max(1, count));
 const ScreenTabs = ({ items = [], value, onChange, className = '' }) => (
   <div role="tablist" className={`mb-2 grid shrink-0 gap-2 ${className}`}
-    style={{gridTemplateColumns:`repeat(${Math.max(1, items.length)},minmax(0,1fr))`}}>
+    style={{gridTemplateColumns:`repeat(${tabColumnCount(items.length)},minmax(0,1fr))`}}>
     {items.map(tab => {
       const on = tab.id === value;
       return (

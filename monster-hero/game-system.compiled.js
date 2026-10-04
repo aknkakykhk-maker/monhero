@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ecf30722d347bda8
+// source-sha256: f476d9237b5205b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:28";
+const BUILD_DATE = "2026-10-04 12:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14039,7 +14039,7 @@ const MarketDetailChip = ({
   size: 10
 }), "詳細");
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
-const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || ''));
+const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​');
 const marketNameNodes = name => marketNameForWrap(name).split('​').map((seg, index) => React.createElement(React.Fragment, {
   key: index
 }, index > 0 && React.createElement("wbr", null), seg));
@@ -14072,7 +14072,7 @@ const MarketProductCard = ({
     disabled: disabled,
     previewIcon: previewIcon
   }), React.createElement("div", {
-    className: `w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
+    className: `w-full flex items-start justify-center text-center ${/（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
       minHeight: '36px',
       wordBreak: 'keep-all',
@@ -35769,6 +35769,7 @@ const ScreenEmpty = ({
   className: "mt-2 w-full"
 }, action));
 const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
+const tabColumnCount = count => count > 5 ? Math.ceil(count / 2) : Math.max(1, count);
 const ScreenTabs = ({
   items = [],
   value,
@@ -35778,7 +35779,7 @@ const ScreenTabs = ({
   role: "tablist",
   className: `mb-2 grid shrink-0 gap-2 ${className}`,
   style: {
-    gridTemplateColumns: `repeat(${Math.max(1, items.length)},minmax(0,1fr))`
+    gridTemplateColumns: `repeat(${tabColumnCount(items.length)},minmax(0,1fr))`
   }
 }, items.map(tab => {
   const on = tab.id === value;

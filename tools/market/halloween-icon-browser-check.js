@@ -146,6 +146,24 @@ const seed = ({ conditions }) => {
     await goShop(page, 'ビートP');
     check('② ビートP交換所に「アイコン」タブが出る', (await tabs(page)).includes('アイコン'));
     await clickText(page, 'アイコン');
+    // 2026-10-04 ユーザー指摘「文字列が悪い」: タブの文字が途中で割れない / 商品名の「（…）」が行をまたがない
+    const wraps = await page.evaluate(() => {
+      const linesOf = (el) => { const tops = new Set(); const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+        while ((n = w.nextNode())) { for (let i = 0; i < n.data.length; i++) { if (/\u200b/.test(n.data[i])) continue; const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); const b = r.getBoundingClientRect(); if (b.width) tops.add(Math.round(b.top)); } } return tops.size; };
+      const tabs = [...document.querySelectorAll('[role="tab"]')].map(b => ({ label: (b.innerText || '').trim(), lines: linesOf(b) }));
+      const cut = [];
+      document.querySelectorAll('[data-event-point-icon]').forEach(card => {
+        const name = [...card.querySelectorAll('div')].find(d => /ハロウィン/.test(d.innerText || '') && d.className.toString().includes('font-black') && d.className.toString().includes('text-center'));
+        if (!name) return;
+        const chars = []; const w = document.createTreeWalker(name, NodeFilter.SHOW_TEXT); let n;
+        while ((n = w.nextNode())) for (let i = 0; i < n.data.length; i++) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); const b = r.getBoundingClientRect(); if (b.width) chars.push({ c: n.data[i], top: Math.round(b.top) }); }
+        const open = chars.find(x => x.c === '（'), close = chars.find(x => x.c === '）');
+        if (!open || !close || open.top !== close.top) cut.push((name.innerText || '').replace(/\s+/g, ' '));
+      });
+      return { tabs, cut };
+    });
+    check('② タブの文字が途中で割れない(どのタブも1行)', wraps.tabs.length >= 7 && wraps.tabs.every(t => t.lines === 1), JSON.stringify(wraps.tabs));
+    check('② 商品名の「（…）」が行をまたがない', wraps.cut.length === 0, wraps.cut.join(' | '));
     let cards = await iconCards(page);
     check('② 4キャラが並ぶ', cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
     check('② 4キャラとも1000Pで買える', cards.every(c => c.buyEnabled && /1,?000/.test(c.text)), cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
@@ -178,6 +196,8 @@ const seed = ({ conditions }) => {
     await goShop(page, 'ビートP');
     check('③ 終わったあとは、ビートP交換所に「アイコン」タブが無い', !(await tabs(page)).includes('アイコン'));
     await goShop(page, 'ブリーダー');
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText||'').trim() === '確認'); if (b) b.click(); });
+    await page.waitForTimeout(600);
     const cards = await iconCards(page);
     check('③ ブリーダーP交換所に4キャラ(ハロウィン)が1ptで並び、買える', cards.every(c => c.found && c.buyEnabled && /\b1\b/.test(c.text)), cards.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 40)}`).join(' | '));
     await ctx.close();
