@@ -330,6 +330,8 @@
 
 勇者の証 `hero_proof` と魂格再編の書 `soul_rank_respec_scroll` は、既存 `mh_owned_items` の個数として保存する。専用保存キーは作らない。
 
+(2026-10-04・決定・未実装)イベント報酬の「魂格の結晶(仮)」も同じく `mh_owned_items` の個数で持つ。使うと `mh_masu_mons` の個体へ足す `soulBonusPoints`(0以上の整数・欠損は0・0のときは保存しない)が+1される。仕様は SOUL_RANK_SYSTEM.md §5.3.1。
+
 ランキング個体詳細は `RANKING_DETAIL_VERSION = 6` で、記録時の `soulRankStage` / `soulTraitLevels` / `soulSpentPoints` を既存detail内へ追加する。未使用魂格Pはランキングへ保存しない。旧ランキングは魂格なし・特性なし・使用済み0Pとして読む。
 
 既存バックアップは `mh_*` の生文字列を丸ごと保存するため、`mh_masu_mons` 内の魂格項目と `mh_owned_items` 内の勇者の証・再編の書も同じ仕組みで往復する。回帰確認は `node tools/boot/soul-rank-backup-check.js`。
