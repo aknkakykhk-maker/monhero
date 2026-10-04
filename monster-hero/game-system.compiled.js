@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cc197b8e10bc8bf1
+// source-sha256: 09778ed3afe97f0e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 18:27";
+const BUILD_DATE = "2026-10-04 18:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -692,6 +692,18 @@ const battleModeInfo = mode => {
   if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
   if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
   if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
+  if (mode === BATTLE_MODE_RAID_JACK_A) return {
+    id: mode,
+    short: 'レイドバトル',
+    label: 'レイドバトル',
+    color: '#fb923c'
+  };
+  if (mode === BATTLE_MODE_RAID_JACK_B) return {
+    id: mode,
+    short: 'グランドスラム',
+    label: 'グランドスラム',
+    color: '#fbbf24'
+  };
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 const PUBLIC_BATTLE_MODES = BATTLE_MODES;
@@ -35535,10 +35547,12 @@ const RAID_JACK_BASE = Object.freeze({
   atk: 700
 });
 const RAID_JACK_LIFE_MULTIPLIER = 10;
-const RAID_JACK_TURNS = 10;
+const RAID_JACK_TURNS = 20;
 const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night';
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
 const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
@@ -35658,6 +35672,7 @@ const raidJackMakeEnemy = (kind, tierIndex, mode) => {
   if (!enemy) return null;
   return {
     ...enemy,
+    name: tier.name,
     maxHp: tier.hp,
     hp: tier.hp,
     atk: tier.atk,
@@ -50429,7 +50444,7 @@ function BattleScreen({
     className: `flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`
   }, debugBattle && React.createElement("span", {
     className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest"
-  }, "DEBUG"), React.createElement("span", {
+  }, "DEBUG"), !isRaidJackMode(runMode) && React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), React.createElement("span", {
     className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
@@ -50438,7 +50453,7 @@ function BattleScreen({
       borderColor: `${battleModeInfo(runMode).color}66`,
       backgroundColor: 'rgba(0,0,0,.35)'
     }
-  }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), React.createElement("div", {
+  }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : isRaidJackMode(runMode) ? React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", enemy?.name || '') : React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), React.createElement("div", {
     "data-battle-metrics": true,
     className: "shrink-0 flex items-center gap-1 px-1 leading-none"
   }, React.createElement("div", {
@@ -59235,7 +59250,7 @@ const RaidJackPrepScreen = ({
   onStart
 }) => {
   const isB = kind === 'b';
-  const maxTeach = isB ? 3 : 1;
+  const maxTeach = 3;
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = mon => String(mon.masuId || mon.id);
@@ -59278,7 +59293,7 @@ const RaidJackPrepScreen = ({
     icon: "🎃",
     accent: "text-orange-200",
     onBack: onBack,
-    note: `${isB ? 'マスモン' : 'ベースモン'}で編成・10ターン勝負`
+    note: `${isB ? 'マスモン' : 'ベースモン'}で編成・20ターン勝負`
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-3`
   }, React.createElement("section", {
@@ -59312,7 +59327,7 @@ const RaidJackPrepScreen = ({
     className: "ml-1 text-[9px] text-slate-300"
   }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
     className: "text-[9px] text-slate-300"
-  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります'), React.createElement("div", {
+  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
   }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
     type: "button",
@@ -59324,7 +59339,7 @@ const RaidJackPrepScreen = ({
     className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
   }, t.baseName))))), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300"
-  }, "ライフ ", tier.hp.toLocaleString(), " / 技 ", tier.actionCount, "本 / 10ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。")), React.createElement("div", {
+  }, "ライフ ", tier.hp.toLocaleString(), " / 技 ", tier.actionCount, "本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。")), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
@@ -63781,13 +63796,16 @@ function MonsterHeroGame() {
   const bgmSuspendedByRhythmRef = useRef(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     if (eventBgmScene) return bgmArrangement[eventBgmScene];
+    if (RAID_JACK_BGM_STATES.includes(state) || state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BGM_TRACK;
+    const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
       return bgmArrangement.clear;
     }
     if (BGM_SILENT_STATES.includes(state)) return null;
-    if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
+    if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
+    if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
     if (state === 'BATTLE') {
@@ -73842,7 +73860,7 @@ function MonsterHeroGame() {
       ...mon.unique,
       evoLevel: isB ? Math.max(0, mon.unique?.evoLevel || 0) : 0
     }));
-    const cards = TEACHING_CARDS.filter(t => (Array.isArray(req.teachingIds) ? req.teachingIds : []).includes(t.id)).slice(0, isB ? 3 : 1);
+    const cards = TEACHING_CARDS.filter(t => (Array.isArray(req.teachingIds) ? req.teachingIds : []).includes(t.id)).slice(0, 3);
     const teachings = cards.map(card => isB ? {
       ...card,
       evoLevel: 2,
@@ -73910,8 +73928,8 @@ function MonsterHeroGame() {
     setRaidJackStartRequest(null);
     startRaidJackBattle(req);
   }, [raidJackStartRequest, runMode]);
-  const RAID_JACK_TURN_GROWTH = 1.10;
-  const RAID_JACK_TURN_REGEN_STEP = 0.03;
+  const RAID_JACK_TURN_GROWTH = 1.05;
+  const RAID_JACK_TURN_REGEN_STEP = 0.015;
   const raidJackTurnGrowth = turn => {
     const before = tacticsUnitsRef.current || [];
     const grown = before.map(unit => {
@@ -73944,8 +73962,9 @@ function MonsterHeroGame() {
       ...p,
       autoHpRecovery: (p.autoHpRecovery ?? 0.1) + RAID_JACK_TURN_REGEN_STEP
     }));
-    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 100);
-    pushBattleLog(`${turn}ターン目: 味方の全ステータスが10%上がった！自動回復はライフ${lifeRate}%・ガッツ${lifeRate - 5}%`, 'up');
+    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 1000) / 10;
+    const gutsRate = Math.round((lifeRate - 5) * 10) / 10;
+    pushBattleLog(`${turn}ターン目: 味方の全ステータスが5%上がった！自動回復はライフ${lifeRate}%・ガッツ${gutsRate}%`, 'up');
     addPopup('全ステータス UP!', 'ally', 'text-emerald-300 font-black text-2xl drop-shadow-[0_0_14px_rgba(52,211,153,0.9)]');
   };
   const raidJackLevelUp = turn => {
@@ -82209,7 +82228,7 @@ function MonsterHeroGame() {
         const mode = isB ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
         const list = isB ? getActiveMonsterList() : getUnlockedBaseMonsterList();
         if (!list.length) return false;
-        const teachingIds = getActiveTeachingCards().map(c => c.id).slice(0, isB ? 3 : 1);
+        const teachingIds = getActiveTeachingCards().map(c => c.id).slice(0, 3);
         setRunMode(mode);
         setDifficulty('Normal');
         setExtremeRun(false);
@@ -87919,7 +87938,7 @@ function MonsterHeroGame() {
       const r = raidJackResult;
       const reasonLabel = {
         defeated: 'ジャックを倒した！',
-        turns: '10ターンを使い切った',
+        turns: '20ターンを使い切った',
         wipe: '全滅した',
         giveup: 'リタイアした'
       }[r.reason] || '';

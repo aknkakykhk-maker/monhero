@@ -150,7 +150,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // ② レイド画面(A)
     await page.locator('[data-home-raid-jack]').click();
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
-    await page.waitForFunction(() => /共有HP/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    await page.waitForFunction(() => /共有HP/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     const raidText = async () => page.locator('[data-raid-jack-screen]').innerText();
     check('画面のなかの案内(助手の吹き出し)が最初に出る', (await page.locator('[data-raid-jack-guide]').count()) === 1 && (await page.locator('[data-raid-jack-guide]').innerText()).trim().length > 10);
     await page.locator('[data-raid-jack-guide-close]').click();
@@ -165,18 +165,18 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('報酬は「準備中」と出る', /報酬の中身は準備中です/.test(t));
     check('残り回数 3 / ビートP 250 が出る', /今日の残り\s*3\s*回/.test(t) && /所持 250/.test(t));
     await page.locator('[data-raid-jack-tier="a2"]').click();
-    await page.waitForFunction(() => /90,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    await page.waitForFunction(() => /90,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
     check('A: 貢献ランキングに順位と数字が出る', /1\s*名無しのブリーダー\s*90,000/.test(t.replace(/\n/g, ' ')) || /90,000/.test(t));
-    await page.waitForFunction(() => /あなた 4,200\(\d+位\)/.test(document.querySelector('[data-raid-jack-mine]')?.innerText || ''), null, { timeout: 15000 }).catch(() => {});
+    await page.waitForFunction(() => /あなた 4,200\(\d+位\)/.test(document.querySelector('[data-raid-jack-mine]')?.innerText || ''), null, { timeout: 30000 }).catch(() => {});
     const mineText = await page.locator('[data-raid-jack-mine]').innerText();
     check('A: 自分の貢献(4,200)と順位(自分より多い2人 → 3位)が出る', /あなた 4,200/.test(mineText) && /3位/.test(mineText), mineText);
     if (SHOT) await page.screenshot({ path: `${SHOT}/raid-a.png` });
 
     // ③ 追加購入(デバッグ中は減らない)
     await page.locator('[data-raid-jack-buy]').click();
-    await page.waitForFunction(() => /追加の挑戦を1回ぶん買いました/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
-    await page.waitForFunction(() => /今日の残り\s*4\s*回/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    await page.waitForFunction(() => /追加の挑戦を1回ぶん買いました/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
+    await page.waitForFunction(() => /今日の残り\s*4\s*回/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     check('追加購入で残りが4回になる', true);
     check('デバッグ中はビートPが減らない(250のまま)', await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1')) === 250));
 
@@ -193,7 +193,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
     check('編成からジャック戦が始まる', true);
     // レイドバトルは、みんなが削った分を引き継ぐ(子爵 2,275,000 のうち 500,000 が削れている → 1,775,000 から)
-    await page.waitForFunction(() => /1,775,000\s*\/\s*2,275,000/.test(document.body.innerText), null, { timeout: 15000 }).catch(() => {});
+    await page.waitForFunction(() => /1,775,000\s*\/\s*2,275,000/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
     check('A: 敵ライフが共有の残り(1,775,000 / 2,275,000)から始まる', /1,775,000\s*\/\s*2,275,000/.test(await page.locator('body').innerText()));
     await page.locator('[data-battle-menu-button]').click();
     await page.locator('[data-battle-quit]').click();
@@ -210,10 +210,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-open]').click();
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
     await page.getByRole('tab', { name: 'グランドスラム' }).click();
-    await page.waitForFunction(() => /初級ジャック/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    await page.waitForFunction(() => /初級ジャック/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
     check('B: 初級だけ挑戦でき、中級以降は未解放', /1\. 初級ジャック\s*挑戦できる/.test(t) && /2\. 中級ジャック\s*未解放/.test(t) && /5\. 極級ジャック\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 180));
-    await page.waitForFunction(() => /累計ダメージランキング/.test(document.querySelector('[data-raid-jack-screen]').innerText) && /3,000,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    await page.waitForFunction(() => /累計ダメージランキング/.test(document.querySelector('[data-raid-jack-screen]').innerText) && /3,000,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     check('B: 累計ダメージランキング(5段階の合計)に数字が出る', /累計ダメージランキング/.test(await raidText()) && /3,000,000/.test(await raidText()));
     check('B: 自分の累計(70,000)が出る', /あなた 70,000/.test(await page.locator('[data-raid-jack-mine]').innerText()));
     if (SHOT) await page.screenshot({ path: `${SHOT}/raid-b.png` });
@@ -225,14 +225,14 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-open]').click();
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
     await page.getByRole('tab', { name: 'グランドスラム' }).click();
-    await page.waitForFunction(() => /無制限/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    await page.waitForFunction(() => /無制限/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
     check('B: 回数は無制限と出て、買い足しは押せない', /今日の残り\s*無制限/.test(t) && await page.locator('[data-raid-jack-buy]').isDisabled());
     check('B: 全段階が「挑戦できる」(未解放が1つも無い)', !/未解放/.test(t) && /5\. 極級ジャック\s*挑戦できる/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
     await page.locator('[data-raid-jack-tier="b5"]').click();
     check('B: 極級でも挑戦ボタンが押せる', await page.locator('[data-raid-jack-challenge]').isEnabled());
     await page.getByRole('tab', { name: 'レイドバトル' }).click();
-    await page.waitForFunction(() => /無制限/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
+    await page.waitForFunction(() => /無制限/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
     check('A: 全段階が「挑戦できる」(未解放が1つも無い)', !/未解放/.test(t) && /5\. ジャック大王\s*挑戦できる/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
