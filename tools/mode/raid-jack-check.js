@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
-vm.runInContext(`${src}\nthis.o={RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
 const o = ctx.o;
 
 // ① 段階
@@ -33,6 +33,26 @@ const bWant = [['初級ジャック', 70000, 3], ['中級ジャック', 700000, 
 aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 check('A のライフの倍率(power)は 5/6.5/8/10/13(ライフはそのまま)', o.RAID_JACK_A_TIERS.map((t) => t.power).join() === '5,6.5,8,10,13');
+// ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は子爵と同じ / 技名はそのまま)
+{
+  const p = o.RAID_JACK_PUMPKIN;
+  const tier5 = o.RAID_JACK_A_TIERS[4], tier2 = o.RAID_JACK_A_TIERS[1];
+  check('ぱんぷきん: 名前は「ぱんぷきん」、ライフは大王と同じ設定、技は5本', p.name === 'ぱんぷきん' && p.hp === tier5.hp && p.actionCount === 5, `hp=${p.hp}`);
+  check('ぱんぷきん: 攻撃力は子爵と同じ(Normal=700)', p.atk === tier2.atk && p.atk === 700, `atk=${p.atk} / 子爵 ${tier2.atk}`);
+  const totals = (n) => ({ a: { 5: { total: n } } });
+  check('大王を倒したか: 共有の合計が大王のライフ以上', o.raidJackBossDown(totals(tier5.hp)) === true && o.raidJackBossDown(totals(tier5.hp - 1)) === false && o.raidJackBossDown(null) === false && o.raidJackBossDown({ a: {} }) === false);
+  check('技の名前は今までのまま(ぱんぷきんでも変えない)', Object.keys(o.RAID_JACK_SKILL_NAMES).length === 7 && o.RAID_JACK_SKILL_NAMES.normal === 'カボチャ張り手' && o.RAID_JACK_SKILL_NAMES.allout === 'おばけパレード');
+  // 敵を作る(createBattleEnemy は別の部品なので、中身だけ仮に渡す)
+  const c2 = { ...ctx, createBattleEnemy: () => ({ id: 'Jack', name: 'カボチャの大王', imgUrl: 'jack.png', poseImgUrl: 'pose.png', hp: 1, maxHp: 1, atk: 1 }), PUMPKIN_ICON_IMG: 'pumpkin.png' };
+  vm.createContext(c2);
+  vm.runInContext(`${src}\nthis.mk=raidJackMakeEnemy;`, c2);
+  const e5 = c2.mk('a', 4, 'raidJackA', { pumpkin: true });
+  const jack5 = c2.mk('a', 4, 'raidJackA');
+  check('ぱんぷきんの敵: 名前・攻撃力・ライフ・絵(ポーズ絵なし)・id はジャックのまま', e5.name === 'ぱんぷきん' && e5.atk === 700 && e5.hp === tier5.hp && e5.maxHp === tier5.hp && e5.imgUrl === 'pumpkin.png' && e5.poseImgUrl === null && e5.raidJackPumpkin === true && e5.id === 'Jack' && e5.raidJackTier === 'a5');
+  check('ぱんぷきんにならない: 大王(ふつう)・大王以外の段階・グランドスラム', jack5.name === 'ジャック大王' && jack5.atk === tier5.atk && !jack5.raidJackPumpkin
+    && !c2.mk('a', 1, 'raidJackA', { pumpkin: true }).raidJackPumpkin && !c2.mk('b', 4, 'raidJackB', { pumpkin: true }).raidJackPumpkin);
+  check('ぱんぷきんの絵は、ジャックの通常絵(0.5)より小さい', o.RAID_JACK_PUMPKIN_ART_SCALE < 0.5 && o.RAID_JACK_PUMPKIN_ART_SCALE > 0.2);
+}
 // レイドバトルの攻撃力は、通常バトルの Easy / Normal / Hard / Expert / Master の攻撃倍率(DIFFICULTY_SETTINGS の power)と同じ(2026-10-04)
 const diffSrc = read('monster-hero/src/parts/19-difficulties-and-rules.jsx');
 const diffPower = (id) => Number((new RegExp(`${id}:\\s*\\{[^}]*?power:\\s*([0-9.]+)`).exec(diffSrc) || [])[1]);

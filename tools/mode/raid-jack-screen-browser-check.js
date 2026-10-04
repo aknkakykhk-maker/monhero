@@ -139,6 +139,16 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await next.click({ timeout: 3000, force: true }).catch(() => {});
       await page.waitForTimeout(250);
     }
+    // ひとこと(吹き出し): 爵位の話し方(段階2=子爵)・残り77%なので full の場面。押すと次のセリフへ。吹き出しを押してもレイド画面は開かない
+    await page.locator('[data-home-raid-say]').waitFor({ timeout: 20000 });
+    const sayA = (await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim();
+    const FULL2 = ['ほっほっほ。わたくしを止められるとお思いですかな？', '優雅に参りましょう。ランタンは、ぜんぶ割ってさしあげますぞ', '男爵などと一緒にされては困りますな。わたくしは子爵ですぞ', 'おや、また挑戦者ですかな。ご苦労なことですぞ'];
+    check('HOMEのジャックが、子爵の話し方で、残りライフが多い(full)ときのひとことを話す', FULL2.includes(sayA), sayA);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/home-say.png` });
+    const seen = new Set([sayA]);
+    for (let k = 0; k < 4; k++) { await page.locator('[data-home-raid-say]').click(); await page.waitForTimeout(120); seen.add((await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim()); }
+    check('吹き出しを押すと、次のセリフに切り替わる(4回押して4種類すべてを回る)', seen.size === 4 && [...seen].every((t) => FULL2.includes(t)), [...seen].join(' | '));
+    check('吹き出しを押してもレイド画面は開かない(ジャック本体を押したときだけ開く)', (await page.locator('[data-raid-jack-screen]').count()) === 0 && (await page.locator('[data-home-raid-jack]').count()) === 1);
     check('強制表示でHOMEの真ん中にジャックが出る', true);
     const jackBox = await page.locator('[data-home-raid-jack]').boundingBox();
     const vp = page.viewportSize();
@@ -271,6 +281,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
     await page.locator('[data-raid-jack-all-toggle]').waitFor({ timeout: 30000 });
     check('大王が倒れると、「大王への貢献/累計ダメージ」の切り替えが出る', /大王への貢献/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()) && /累計ダメージ/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()));
+    // 大王を倒したあとの段階5は、小さなぱんぷきん(共有ライフは無限・毎回ぜんかいから)
+    check('大王を倒したあと、段階5の絵がぱんぷきんになり、オーラは付かない', (await page.locator('[data-raid-pumpkin="true"]').count()) === 1 && (await page.locator('[data-raid-jack-tier="a5"] [data-jack-aura]').count()) === 0 && /pumpkin-icon/.test((await page.locator('[data-raid-pumpkin="true"] img').getAttribute('src')) || ''));
+    const tile5 = await page.locator('[data-raid-jack-tier="a5"]').innerText();
+    check('段階5は「ぱんぷきん」「あそびに来た」と、共有ライフは無限の説明が出る(共有HPバーは出ない)', /5\. ぱんぷきん/.test(tile5) && /あそびに来た/.test(tile5) && /共有ライフは無限/.test(tile5) && !/共有HP/.test(tile5), tile5.replace(/\s+/g, ' ').slice(0, 120));
+    check('ほかの段階(男爵〜公爵)は今までどおりジャックの絵・討伐済み', /1\. ジャック男爵\s*討伐済み/.test(await page.locator('[data-raid-jack-screen]').innerText()));
     await page.locator('[data-raid-jack-all-mode="all"]').click();
     await page.waitForFunction(() => /8,800,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
@@ -279,6 +294,15 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-all-mode="tier"]').click();
     await page.waitForFunction(() => /への貢献ランキング/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     check('「大王への貢献」へ戻せる', /への貢献ランキング/.test(await raidText()));
+    // HOME のジャックも、大王を倒したあとは小さなぱんぷきん(オーラ・ポーズ絵なし)
+    await page.locator('button[aria-label="戻る"]').first().click();
+    await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    await page.locator('[data-raid-go-home]').click();
+    await page.locator('[data-home-raid-pumpkin="true"]').waitFor({ timeout: 30000 });
+    const homeBtn = await page.locator('[data-home-raid-jack]').innerText();
+    check('HOME: 大王を倒したあとは「ぱんぷきんが遊びに来た！」と出て、共有HPバーは出ない', /ぱんぷきんが遊びに来た/.test(homeBtn) && !/共有HP/.test(homeBtn), homeBtn.replace(/\s+/g, ' ').slice(0, 100));
+    check('HOME: ぱんぷきんの絵が出て、ジャックの絵・オーラは出ない', (await page.locator('[data-home-raid-jack] img[src*="pumpkin-icon"]').count()) === 1 && (await page.locator('[data-home-raid-jack] img[src*="jack.png"], [data-home-raid-jack] img[src*="jack-pose"]').count()) === 0 && (await page.locator('[data-home-raid-jack] [data-jack-aura-el]').count()) === 0);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/home-pumpkin.png` });
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     check('画面が横にはみ出さない', size.s <= size.c + 1, `${size.s} / ${size.c}`);
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));
