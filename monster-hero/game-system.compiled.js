@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ce65af3c99762001
+// source-sha256: 65e5113914733a2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 21:05";
+const BUILD_DATE = "2026-10-04 21:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -1006,7 +1006,17 @@ const normalizeSoulTraitLevels = value => {
   });
   return out;
 };
-const soulPointEarned = masu => Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL));
+const normalizeSoulBonusPoints = value => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 1000000000) : 0;
+};
+const soulBonusPointsPatch = masu => {
+  const n = normalizeSoulBonusPoints(masu?.soulBonusPoints);
+  return n > 0 ? {
+    soulBonusPoints: n
+  } : {};
+};
+const soulPointEarned = masu => Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL)) + normalizeSoulBonusPoints(masu?.soulBonusPoints);
 const soulTraitLevel = (masu, traitId) => Math.max(0, Math.floor(Number(normalizeSoulTraitLevels(masu?.soulTraitLevels)[traitId]) || 0));
 const soulTraitEffectValue = (masu, traitId) => {
   const trait = SOUL_TRAIT_BY_ID[traitId];
@@ -1950,6 +1960,46 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
   usage: 'heroProofShard',
   desc: `モンヒロビートの週間ランキングと、クイックモードGODのクリアでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`
 });
+const SOUL_CRYSTAL_ITEM_ID = 'soul_crystal';
+const SOUL_CRYSTAL_ITEM = Object.freeze({
+  id: SOUL_CRYSTAL_ITEM_ID,
+  name: '魂格の結晶',
+  emoji: '🔮',
+  usage: 'soulCrystal',
+  desc: 'マスモンの魂格特性で使うと、そのマスモンの魂格Pが1個につき+1される。ハロウィンのレイドボス「ジャック」の報酬。'
+});
+const buildSoulCrystalUse = (masu, ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  if (!masu || typeof masu !== 'object') return {
+    ok: false,
+    reason: 'noMasu',
+    quantity: 0,
+    ownedItems: before
+  };
+  const have = ownedItemCount(before, SOUL_CRYSTAL_ITEM_ID);
+  const count = Math.min(have, Math.max(1, Math.floor(Number(quantity) || 1)));
+  if (count <= 0) return {
+    ok: false,
+    reason: 'noItem',
+    quantity: 0,
+    ownedItems: before
+  };
+  const bonusBefore = normalizeSoulBonusPoints(masu.soulBonusPoints);
+  return {
+    ok: true,
+    quantity: count,
+    bonusBefore,
+    bonusAfter: bonusBefore + count,
+    nextMasu: {
+      ...masu,
+      soulBonusPoints: bonusBefore + count
+    },
+    ownedItems: {
+      ...before,
+      [SOUL_CRYSTAL_ITEM_ID]: have - count
+    }
+  };
+};
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme: Object.freeze({
     GOD: 1,
@@ -2263,7 +2313,17 @@ const transferableReincarnateBonus = masu => ({
   points: ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu),
   count: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)) + inheritedReincarnateCountOf(masu)
 });
-const normalizeMasuProgression = masu => ({
+const withNormalizedSoulBonus = (obj, source) => {
+  const {
+    soulBonusPoints: _drop,
+    ...rest
+  } = obj;
+  return {
+    ...rest,
+    ...soulBonusPointsPatch(source)
+  };
+};
+const normalizeMasuProgression = masu => withNormalizedSoulBonus({
   ...masu,
   autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
   autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
@@ -2285,7 +2345,7 @@ const normalizeMasuProgression = masu => ({
     ...masu.uniqueSkillLevels
   } : {},
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0))
-});
+}, masu);
 const buildAutoRepeatBreakthroughSettingUpdate = (masu, mode, level = 0) => {
   const normalizedMode = mode === 'follow' ? 'follow' : mode === 'fixed' ? 'fixed' : 'off';
   const normalizedLevel = normalizedMode === 'fixed' ? normalizeAutoRepeatBreakthroughLevel(level) : 0;
@@ -2381,6 +2441,7 @@ const resetMasuForRebirth = (masu, {
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
     soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
+    ...soulBonusPointsPatch(masu),
     transcended: isTranscended(masu),
     transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
     transcendStatPoints: normalizeTranscendStatPoints(masu?.transcendStatPoints),
@@ -11180,6 +11241,7 @@ const giftItemRewardInfo = itemId => {
   if (typeof HERO_PROOF_ITEM !== 'undefined' && id === HERO_PROOF_ITEM.id) return HERO_PROOF_ITEM;
   if (typeof HERO_PROOF_SHARD_ITEM !== 'undefined' && id === HERO_PROOF_SHARD_ITEM.id) return HERO_PROOF_SHARD_ITEM;
   if (typeof RAINBOW_TRANSCEND_FRUIT_ITEM !== 'undefined' && id === RAINBOW_TRANSCEND_FRUIT_ITEM.id) return RAINBOW_TRANSCEND_FRUIT_ITEM;
+  if (typeof SOUL_CRYSTAL_ITEM !== 'undefined' && id === SOUL_CRYSTAL_ITEM.id) return SOUL_CRYSTAL_ITEM;
   if (typeof speciesTranscendFruitItems === 'function') {
     const found = Object.values(speciesTranscendFruitItems()).find(item => item && item.id === id);
     if (found) return found;
@@ -11302,6 +11364,10 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'rhythmEvent') return {
     label: 'ランキング報酬',
+    title
+  };
+  if (gift?.source === 'raidJack') return {
+    label: 'ジャック報酬',
     title
   };
   if (gift?.source !== 'mission') return {
@@ -35684,6 +35750,294 @@ const raidJackMakeEnemy = (kind, tierIndex, mode) => {
     raidJackTier: tier.id
   };
 };
+const raidJackReward = ({
+  diamond = 0,
+  psyche = 0,
+  crystal = 0,
+  fruit = 0,
+  proof = 0
+} = {}) => Object.freeze({
+  diamond,
+  psyche,
+  crystal,
+  fruit,
+  proof
+});
+const RAID_JACK_REWARDS = Object.freeze({
+  participation: raidJackReward({
+    diamond: 30000,
+    psyche: 50
+  }),
+  aClear: Object.freeze([raidJackReward({
+    diamond: 100000,
+    psyche: 50
+  }), raidJackReward({
+    diamond: 200000,
+    psyche: 60
+  }), raidJackReward({
+    diamond: 300000,
+    psyche: 70
+  }), raidJackReward({
+    diamond: 400000,
+    psyche: 80
+  }), raidJackReward({
+    diamond: 1000000,
+    psyche: 100,
+    proof: 5
+  })]),
+  aRank: Object.freeze([Object.freeze([raidJackReward({
+    diamond: 1000000,
+    psyche: 3000,
+    crystal: 3,
+    fruit: 50
+  }), raidJackReward({
+    diamond: 800000,
+    psyche: 2500,
+    crystal: 2,
+    fruit: 40
+  }), raidJackReward({
+    diamond: 600000,
+    psyche: 2000,
+    crystal: 2,
+    fruit: 30
+  }), raidJackReward({
+    diamond: 400000,
+    psyche: 1500,
+    crystal: 1,
+    fruit: 20
+  }), raidJackReward({
+    diamond: 200000,
+    psyche: 1000,
+    crystal: 1,
+    fruit: 10
+  })]), Object.freeze([raidJackReward({
+    diamond: 2000000,
+    psyche: 6000,
+    crystal: 6,
+    fruit: 100
+  }), raidJackReward({
+    diamond: 1600000,
+    psyche: 5000,
+    crystal: 4,
+    fruit: 80
+  }), raidJackReward({
+    diamond: 1200000,
+    psyche: 4000,
+    crystal: 4,
+    fruit: 60
+  }), raidJackReward({
+    diamond: 800000,
+    psyche: 3000,
+    crystal: 2,
+    fruit: 40
+  }), raidJackReward({
+    diamond: 400000,
+    psyche: 2000,
+    crystal: 2,
+    fruit: 20
+  })]), Object.freeze([raidJackReward({
+    diamond: 3000000,
+    psyche: 8000,
+    crystal: 8,
+    fruit: 150,
+    proof: 5
+  }), raidJackReward({
+    diamond: 2400000,
+    psyche: 6500,
+    crystal: 6,
+    fruit: 120,
+    proof: 4
+  }), raidJackReward({
+    diamond: 1800000,
+    psyche: 5000,
+    crystal: 5,
+    fruit: 100,
+    proof: 3
+  }), raidJackReward({
+    diamond: 1200000,
+    psyche: 4000,
+    crystal: 3,
+    fruit: 80,
+    proof: 2
+  }), raidJackReward({
+    diamond: 600000,
+    psyche: 3000,
+    crystal: 2,
+    fruit: 60,
+    proof: 1
+  })]), Object.freeze([raidJackReward({
+    diamond: 5000000,
+    psyche: 12000,
+    crystal: 12,
+    fruit: 250,
+    proof: 10
+  }), raidJackReward({
+    diamond: 4000000,
+    psyche: 10000,
+    crystal: 10,
+    fruit: 200,
+    proof: 8
+  }), raidJackReward({
+    diamond: 3000000,
+    psyche: 8000,
+    crystal: 8,
+    fruit: 150,
+    proof: 6
+  }), raidJackReward({
+    diamond: 2000000,
+    psyche: 6000,
+    crystal: 6,
+    fruit: 100,
+    proof: 4
+  }), raidJackReward({
+    diamond: 1000000,
+    psyche: 4000,
+    crystal: 4,
+    fruit: 50,
+    proof: 2
+  })]), Object.freeze([raidJackReward({
+    diamond: 6000000,
+    psyche: 14000,
+    crystal: 15,
+    fruit: 300,
+    proof: 15
+  }), raidJackReward({
+    diamond: 5000000,
+    psyche: 12000,
+    crystal: 12,
+    fruit: 250,
+    proof: 12
+  }), raidJackReward({
+    diamond: 4000000,
+    psyche: 10000,
+    crystal: 10,
+    fruit: 200,
+    proof: 9
+  }), raidJackReward({
+    diamond: 3000000,
+    psyche: 8000,
+    crystal: 8,
+    fruit: 150,
+    proof: 6
+  }), raidJackReward({
+    diamond: 2000000,
+    psyche: 6000,
+    crystal: 6,
+    fruit: 100,
+    proof: 3
+  })])]),
+  bClear: Object.freeze([raidJackReward({
+    diamond: 1000000,
+    psyche: 5000,
+    crystal: 1,
+    fruit: 20
+  }), raidJackReward({
+    diamond: 2000000,
+    psyche: 7000,
+    crystal: 2,
+    fruit: 40,
+    proof: 5
+  }), raidJackReward({
+    diamond: 3000000,
+    psyche: 9000,
+    crystal: 3,
+    fruit: 60,
+    proof: 10
+  }), raidJackReward({
+    diamond: 4000000,
+    psyche: 11000,
+    crystal: 4,
+    fruit: 80,
+    proof: 15
+  }), raidJackReward({
+    diamond: 5000000,
+    psyche: 13000,
+    crystal: 5,
+    fruit: 100,
+    proof: 20
+  })]),
+  bFinal: Object.freeze([raidJackReward({
+    crystal: 25,
+    fruit: 100,
+    proof: 10
+  }), raidJackReward({
+    crystal: 20,
+    fruit: 90,
+    proof: 8
+  }), raidJackReward({
+    crystal: 15,
+    fruit: 80,
+    proof: 6
+  }), raidJackReward({
+    crystal: 10,
+    fruit: 70,
+    proof: 4
+  }), raidJackReward({
+    crystal: 5,
+    fruit: 60,
+    proof: 2
+  })])
+});
+const RAID_JACK_REWARD_RANKS = 5;
+const raidJackRewardParts = reward => {
+  const r = reward && typeof reward === 'object' ? reward : {};
+  const defs = [['diamond', '💎', 'ダイヤ'], ['psyche', '💗', '虹のプシュケー'], ['crystal', '🔮', '魂格の結晶'], ['fruit', '🌈', '虹の超越の実'], ['proof', '🏅', '勇者の証']];
+  return defs.map(([key, emoji, label]) => ({
+    key,
+    emoji,
+    label,
+    amount: Math.max(0, Math.floor(Number(r[key]) || 0))
+  })).filter(p => p.amount > 0);
+};
+const raidJackRewardText = reward => raidJackRewardParts(reward).map(p => `${p.emoji} ${p.label}×${p.amount.toLocaleString()}`).join(' ／ ');
+const raidJackRewardGiftItems = reward => {
+  const r = reward && typeof reward === 'object' ? reward : {};
+  const out = [];
+  const add = item => {
+    if (item.amount > 0) out.push(item);
+  };
+  add({
+    type: 'diamond',
+    amount: Math.max(0, Math.floor(Number(r.diamond) || 0))
+  });
+  add({
+    type: 'rainbowPsyche',
+    amount: Math.max(0, Math.floor(Number(r.psyche) || 0))
+  });
+  add({
+    type: 'gameItem',
+    itemId: SOUL_CRYSTAL_ITEM_ID,
+    amount: Math.max(0, Math.floor(Number(r.crystal) || 0))
+  });
+  add({
+    type: 'gameItem',
+    itemId: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
+    amount: Math.max(0, Math.floor(Number(r.fruit) || 0))
+  });
+  add({
+    type: 'gameItem',
+    itemId: HERO_PROOF_ITEM_ID,
+    amount: Math.max(0, Math.floor(Number(r.proof) || 0))
+  });
+  return out;
+};
+const raidJackClaimId = (kind, tierIndex, rank) => {
+  const n = Math.floor(Number(tierIndex)) + 1;
+  if (kind === 'part_a' || kind === 'part_b') return kind;
+  if (kind === 'final_b') return 'final_b';
+  return `${kind}${n}`;
+};
+const raidJackNoneId = id => `${id}_none`;
+const raidJackRewardTitle = (kind, tierIndex, rank) => {
+  const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
+  const bName = RAID_JACK_B_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
+  if (kind === 'part_a') return 'ジャック レイドバトル 参加賞';
+  if (kind === 'part_b') return 'ジャック グランドスラム 参加賞';
+  if (kind === 'clear_a') return `${aName} 討伐報酬`;
+  if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
+  if (kind === 'clear_b') return `${bName} 初討伐報酬`;
+  return `グランドスラム 累計ダメージ${rank}位の報酬`;
+};
 const RAID_JACK_TIMEOUT_MS = 8000;
 let _raidJackUnavailable = false;
 const raidJackUnavailable = () => _raidJackUnavailable;
@@ -35881,6 +36235,66 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
   const m = /\/(\d+)$/.exec(String(range || ''));
   return m ? Number(m[1]) : null;
+};
+const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
+  const none = {
+    ok: false,
+    due: [],
+    noneIds: []
+  };
+  const id = raidJackSafeId(breederId);
+  if (!id) return none;
+  const windowState = raidJackWindowAt(nowMs);
+  if (windowState === 'before') return {
+    ok: true,
+    due: [],
+    noneIds: []
+  };
+  const norm = raidJackNormalizeState(state);
+  const claimed = new Set(norm.claimed);
+  const [totals, self] = await Promise.all([sbFetchRaidJackTierTotals(eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!totals || !self) return none;
+  const due = [];
+  const noneIds = [];
+  const add = (claimId, title, reward) => {
+    if (!claimed.has(claimId)) due.push({
+      id: claimId,
+      title,
+      reward
+    });
+  };
+  const mineA = i => self.a[i + 1] || 0;
+  if (Object.values(self.a).some(v => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
+  if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
+  for (let i = 0; i < RAID_JACK_A_TIERS.length; i += 1) {
+    const total = totals.a[i + 1] ? totals.a[i + 1].total : 0;
+    const defeated = total >= RAID_JACK_A_TIERS[i].hp;
+    if (!defeated || mineA(i) <= 0) continue;
+    add(raidJackClaimId('clear_a', i), raidJackRewardTitle('clear_a', i), RAID_JACK_REWARDS.aClear[i]);
+    const rankId = raidJackClaimId('rank_a', i);
+    if ((i < RAID_JACK_A_TIERS.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
+      const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
+      if (!top) continue;
+      const place = top.findIndex(r => r.breederId === id);
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);else noneIds.push(raidJackNoneId(rankId));
+    }
+  }
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), raidJackRewardTitle('clear_b', i), RAID_JACK_REWARDS.bClear[i]);
+  });
+  const finalId = raidJackClaimId('final_b');
+  if (windowState === 'after' && self.bTotal > 0 && !claimed.has(finalId) && !claimed.has(raidJackNoneId(finalId))) {
+    const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
+    if (top) {
+      const place = top.findIndex(r => r.breederId === id);
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);else noneIds.push(raidJackNoneId(finalId));
+    }
+  }
+  return {
+    ok: true,
+    due,
+    noneIds
+  };
 };
 const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
 const RAID_JACK_AURA_EMBERS = Object.freeze([0, 0, 6, 12, 20]);
@@ -37801,7 +38215,7 @@ function ItemInventoryScreen({
   onBack,
   onUseItem
 }) {
-  const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...((ownedItems[HERO_PROOF_SHARD_ITEM_ID] || 0) > 0 ? [HERO_PROOF_SHARD_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
+  const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...((ownedItems[HERO_PROOF_SHARD_ITEM_ID] || 0) > 0 ? [HERO_PROOF_SHARD_ITEM] : []), ...((ownedItems[SOUL_CRYSTAL_ITEM_ID] || 0) > 0 ? [SOUL_CRYSTAL_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
   const usageNoteClass = 'shrink-0 w-[84px] text-center text-[10px] font-black leading-tight text-slate-400';
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -37860,7 +38274,7 @@ function ItemInventoryScreen({
     className: usageNoteClass
   }, "神殿の", React.createElement("br", null), "魂格進化で", React.createElement("br", null), "使用") : item.usage === 'heroProofShard' ? React.createElement("div", {
     className: usageNoteClass
-  }, "マーケットで", React.createElement("br", null), HERO_PROOF_SHARD_PER_PROOF, "個→", React.createElement("br", null), "勇者の証1個") : item.usage === 'soulRankRespec' ? React.createElement("div", {
+  }, "マーケットで", React.createElement("br", null), HERO_PROOF_SHARD_PER_PROOF, "個→", React.createElement("br", null), "勇者の証1個") : item.usage === 'soulRankRespec' || item.usage === 'soulCrystal' ? React.createElement("div", {
     className: usageNoteClass
   }, "マスモン詳細の", React.createElement("br", null), "魂格特性で", React.createElement("br", null), "使用") : React.createElement("button", {
     onClick: () => onUseItem(item.id),
@@ -42891,6 +43305,9 @@ function MasuDonationAnimation({
   }, "神殿へ寄付中…"));
 }
 function MasuSoulTraitsScreen({
+  commitSoulCrystalUse,
+  setSoulCrystalOpen,
+  soulCrystalOpen,
   commitSoulTraitRespec,
   commitSoulTraitUpgrade,
   getMasuMon,
@@ -42922,6 +43339,8 @@ function MasuSoulTraitsScreen({
   const spent = soulTraitSpentPoints(masu);
   const available = soulTraitAvailablePoints(masu);
   const scrollHave = ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID);
+  const crystalHave = ownedItemCount(ownedItems, SOUL_CRYSTAL_ITEM_ID);
+  const bonusPoints = normalizeSoulBonusPoints(masu.soulBonusPoints);
   const traits = SOUL_TRAIT_DEFINITIONS.filter(trait => trait.category === soulTraitTab);
   const selected = soulTraitSelectedId ? SOUL_TRAIT_BY_ID[soulTraitSelectedId] : null;
   const maxUpgrade = selected ? maxSoulTraitUpgradeLevels(masu, selected.id) : 0;
@@ -43139,6 +43558,23 @@ function MasuSoulTraitsScreen({
   }, "+", spent * 10), React.createElement("br", null), "実戦での合成後効果・攻撃予測への反映は、戦闘接続時に同じ特性データから計算します。")), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
+    className: "mb-2 flex items-center gap-2"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"
+  }, React.createElement("div", {
+    className: "text-[10px] font-black text-slate-400"
+  }, SOUL_CRYSTAL_ITEM.emoji, " ", SOUL_CRYSTAL_ITEM.name), React.createElement("div", {
+    className: `text-[11px] font-black ${crystalHave > 0 ? 'text-fuchsia-300' : 'text-slate-400'}`
+  }, "所持 ", crystalHave, "個", bonusPoints > 0 ? `(使った分 +${bonusPoints}P)` : '')), React.createElement("button", {
+    type: "button",
+    "data-soul-crystal-open": true,
+    disabled: crystalHave <= 0 || soulTraitProcessingRef.current,
+    onClick: () => {
+      setSoulTraitError('');
+      setSoulCrystalOpen(true);
+    },
+    className: "min-h-[48px] shrink-0 rounded-xl bg-fuchsia-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "結晶を使う")), React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("div", {
     className: "min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"
@@ -43289,7 +43725,58 @@ function MasuSoulTraitsScreen({
     disabled: draft <= 0 || soulTraitProcessingRef.current,
     onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, draft),
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30"
-  }, "強化を決定")))), soulTraitRespecOpen && React.createElement("div", {
+  }, "強化を決定")))), soulCrystalOpen && React.createElement("div", {
+    className: "fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "魂格の結晶を使う確認"
+  }, React.createElement("div", {
+    "data-soul-crystal-sheet": true,
+    className: "w-full max-w-sm rounded-2xl border-2 border-fuchsia-500/60 bg-slate-950 p-5"
+  }, React.createElement("div", {
+    className: "text-center text-xl mb-1"
+  }, SOUL_CRYSTAL_ITEM.emoji), React.createElement("h3", {
+    className: "text-center text-base font-black text-fuchsia-200"
+  }, "魂格の結晶を使う"), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-300"
+  }, "「", masu.name, "」の魂格Pが、使った結晶1個につき +1 されます。使った結晶はもとに戻せません。"), React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "総獲得 魂格P"), React.createElement("span", {
+    className: "text-amber-300"
+  }, "いま ", earned, "P")), React.createElement("div", {
+    className: "mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "結晶の所持"), React.createElement("span", {
+    className: "text-fuchsia-300"
+  }, crystalHave, "個")), React.createElement("div", {
+    className: "mt-4 grid grid-cols-1 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-soul-crystal-use-1": true,
+    disabled: soulTraitProcessingRef.current || crystalHave < 1,
+    onClick: () => commitSoulCrystalUse(masu.id, 1),
+    className: "mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
+  }, "1個使う(+1P)"), crystalHave >= 10 && React.createElement("button", {
+    type: "button",
+    "data-soul-crystal-use-10": true,
+    disabled: soulTraitProcessingRef.current,
+    onClick: () => commitSoulCrystalUse(masu.id, 10),
+    className: "mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
+  }, "10個使う(+10P)"), crystalHave > 1 && React.createElement("button", {
+    type: "button",
+    "data-soul-crystal-use-all": true,
+    disabled: soulTraitProcessingRef.current,
+    onClick: () => commitSoulCrystalUse(masu.id, crystalHave),
+    className: "mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
+  }, "ぜんぶ使う(", crystalHave, "個・+", crystalHave, "P)"), React.createElement("button", {
+    type: "button",
+    disabled: soulTraitProcessingRef.current,
+    onClick: () => setSoulCrystalOpen(false),
+    className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
+  }, "やめる")))), soulTraitRespecOpen && React.createElement("div", {
     className: "fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4",
     role: "dialog",
     "aria-modal": "true",
@@ -59027,7 +59514,6 @@ const RaidJackDebugScreen = ({
     className: "text-[10px] text-slate-300"
   }, l)))));
 };
-const RAID_JACK_REWARD_NOTE = '報酬の中身は準備中です(決まりしだいここに出ます)';
 const raidJackNameOf = breederId => {
   const profile = typeof latestBreederProfileFor === 'function' ? latestBreederProfileFor({
     breederId
@@ -59054,10 +59540,155 @@ const RaidJackHpBar = ({
     }
   }));
 };
+const RaidJackRewardChips = ({
+  reward
+}) => React.createElement("span", {
+  className: "flex flex-wrap gap-x-2 gap-y-0.5"
+}, raidJackRewardParts(reward).map(p => React.createElement("span", {
+  key: p.key,
+  className: "whitespace-nowrap text-[10px] font-black text-slate-100"
+}, p.emoji, p.label, React.createElement("b", {
+  className: "ml-0.5 text-amber-200"
+}, "×", p.amount.toLocaleString()))));
+const RaidJackRewardRow = ({
+  label,
+  note,
+  reward,
+  got,
+  dataKey
+}) => React.createElement("div", {
+  "data-raid-jack-reward-row": dataKey,
+  className: "flex items-start gap-2 border-b border-white/5 py-1.5 last:border-b-0"
+}, React.createElement("div", {
+  className: "w-[68px] shrink-0"
+}, React.createElement("div", {
+  className: "text-[10px] font-black leading-tight text-orange-200"
+}, label), note && React.createElement("div", {
+  className: "text-[8px] leading-tight text-slate-400"
+}, note)), React.createElement("div", {
+  className: "min-w-0 flex-1"
+}, React.createElement(RaidJackRewardChips, {
+  reward: reward
+})), got && React.createElement("span", {
+  className: "shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white"
+}, "受け取り済み"));
+const RaidJackTierRewards = ({
+  kind,
+  index,
+  claimed
+}) => {
+  const have = Array.isArray(claimed) ? claimed : [];
+  if (kind === 'a') {
+    return React.createElement("div", {
+      "data-raid-jack-tier-rewards": "a"
+    }, React.createElement(RaidJackRewardRow, {
+      dataKey: "clear",
+      label: "討伐報酬",
+      note: "参加した全員",
+      reward: RAID_JACK_REWARDS.aClear[index],
+      got: have.includes(raidJackClaimId('clear_a', index))
+    }), RAID_JACK_REWARDS.aRank[index].map((r, k) => React.createElement(RaidJackRewardRow, {
+      key: k,
+      dataKey: `rank-${k + 1}`,
+      label: `貢献${k + 1}位`,
+      reward: r,
+      got: k === 0 && have.includes(raidJackClaimId('rank_a', index))
+    })), React.createElement("div", {
+      className: "mt-1 text-[9px] text-slate-400"
+    }, index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。倒したあとも貢献は続きます。' : '倒したときに順位が確定して、ギフトで届きます。'));
+  }
+  return React.createElement("div", {
+    "data-raid-jack-tier-rewards": "b"
+  }, React.createElement(RaidJackRewardRow, {
+    dataKey: "clear",
+    label: "初めて倒したとき",
+    note: "1回だけ",
+    reward: RAID_JACK_REWARDS.bClear[index],
+    got: have.includes(raidJackClaimId('clear_b', index))
+  }), React.createElement("div", {
+    className: "mt-1 text-[9px] text-slate-400"
+  }, "倒した直後にギフトで届きます。順位の報酬は、全難易度の累計ダメージで決まります(報酬一覧)。"));
+};
+const RaidJackRewardList = ({
+  onClose,
+  claimed,
+  initialTab = 'a'
+}) => {
+  const [tab, setTab] = useState(initialTab);
+  const have = Array.isArray(claimed) ? claimed : [];
+  return React.createElement("div", {
+    "data-raid-jack-reward-list": true,
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "ジャックの報酬一覧",
+    style: {
+      paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+    }
+  }, React.createElement("div", {
+    className: "mb-2 flex shrink-0 items-center justify-between"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-orange-200"
+  }, "🎃 ジャックの報酬一覧"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-reward-close": true,
+    onClick: onClose,
+    "aria-label": "報酬一覧を閉じる",
+    className: "min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95"
+  }, "閉じる")), React.createElement(ScreenTabs, {
+    items: [{
+      id: 'a',
+      label: 'レイドバトル'
+    }, {
+      id: 'b',
+      label: 'グランドスラム'
+    }],
+    value: tab,
+    onChange: setTab
+  }), React.createElement("div", {
+    className: "min-h-0 flex-1 space-y-2 overflow-y-auto"
+  }, React.createElement("div", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 text-[11px] font-black text-orange-200"
+  }, "参加賞(1回でも挑戦した全員・", tab === 'a' ? 'レイドバトル' : 'グランドスラム', "で1回)"), React.createElement(RaidJackRewardRow, {
+    dataKey: "participation",
+    label: "参加賞",
+    reward: RAID_JACK_REWARDS.participation,
+    got: have.includes(raidJackClaimId(tab === 'a' ? 'part_a' : 'part_b'))
+  })), raidJackTiers(tab).map((t, i) => React.createElement("div", {
+    key: t.id,
+    "data-raid-jack-reward-tier": t.id,
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 text-[12px] font-black text-white"
+  }, i + 1, ". ", t.name), React.createElement(RaidJackTierRewards, {
+    kind: tab,
+    index: i,
+    claimed: have
+  }))), tab === 'b' && React.createElement("div", {
+    "data-raid-jack-reward-final": true,
+    className: "rounded-2xl border border-orange-300/30 bg-orange-950/20 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 text-[12px] font-black text-orange-200"
+  }, "累計ダメージの最終順位(全難易度の合計)"), RAID_JACK_REWARDS.bFinal.map((r, k) => React.createElement(RaidJackRewardRow, {
+    key: k,
+    dataKey: `final-${k + 1}`,
+    label: `${k + 1}位`,
+    reward: r,
+    got: k === 0 && have.includes(raidJackClaimId('final_b'))
+  })), React.createElement("div", {
+    className: "mt-1 text-[9px] text-slate-400"
+  }, "期間の終わり(11/1 4:00)に確定して、ギフトで届きます。")), React.createElement("div", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-300"
+  }, "🔮 魂格の結晶は、マスモンの魂格特性の画面で使うと、そのマスモンの魂格Pが1個につき+1されます。", React.createElement("br", null), "🌈 虹の超越の実は、超越強化で超越ポイント+1に変えられます。")));
+};
 const RaidJackScreen = ({
   onBack,
   onChallenge,
   onPurchase,
+  onClaimRewards,
   beatPoints = 0,
   eventId,
   forced = false,
@@ -59082,14 +59713,21 @@ const RaidJackScreen = ({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
+  const [showRewards, setShowRewards] = useState(false);
   const nowMs = Date.now();
   const windowState = raidJackWindowAt(nowMs);
   const open = forced || windowState === 'open';
   useEffect(() => {
     let alive = true;
     (async () => {
-      const loaded = await raidJackLoadState();
+      let loaded = await raidJackLoadState();
       if (!alive) return;
+      const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
+      if (!alive) return;
+      if (granted > 0) {
+        loaded = await raidJackLoadState();
+        setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
+      }
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
@@ -59143,7 +59781,8 @@ const RaidJackScreen = ({
       setBusy(false);
     }
   };
-  const challengeLabel = !open ? windowState === 'before' ? 'まだ始まっていません' : '終了しました' : !isOpenTier ? '前の段階を倒すと開きます' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
+  const closedTier = tab === 'a' && !unlimited && current < tiers.length - 1 && aDefeated(current);
+  const challengeLabel = !open ? windowState === 'before' ? 'まだ始まっていません' : '終了しました' : !isOpenTier ? '前の段階を倒すと開きます' : closedTier ? 'この段階は倒されました(次の段階へ)' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
     "data-raid-jack-screen": true
@@ -59249,14 +59888,22 @@ const RaidJackScreen = ({
       className: "text-[10px] text-slate-300"
     }, "ライフ ", t.hp.toLocaleString(), " / 技 ", t.actionCount, "本", isOpen ? '' : '(前の段階を倒すと開く)')));
   }), React.createElement("div", {
+    "data-raid-jack-rewards": true,
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100"
   }, React.createElement("div", {
-    className: "mb-1 font-black text-orange-200"
-  }, tier.name, "の報酬"), React.createElement("div", {
-    className: "text-[10px] text-slate-300"
-  }, RAID_JACK_REWARD_NOTE), React.createElement("div", {
-    className: "mt-2 text-[10px] text-slate-300"
-  }, tab === 'a' ? '討伐報酬(参加者全員)・貢献ランキング1〜5位の報酬' : '初めて倒したときの報酬・累計ダメージ上位の報酬')), React.createElement("div", {
+    className: "mb-1 flex items-center justify-between gap-2"
+  }, React.createElement("span", {
+    className: "font-black text-orange-200"
+  }, tier.name, "の報酬"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-reward-list-open": true,
+    onClick: () => setShowRewards(true),
+    className: "min-h-[32px] shrink-0 rounded-xl border border-orange-300/50 bg-orange-950/40 px-3 text-[10px] font-black text-orange-100 active:scale-95"
+  }, "報酬一覧")), React.createElement(RaidJackTierRewards, {
+    kind: tab,
+    index: current,
+    claimed: state.claimed
+  })), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 flex items-baseline justify-between text-[11px]"
@@ -59305,10 +59952,14 @@ const RaidJackScreen = ({
   }, React.createElement("button", {
     type: "button",
     "data-raid-jack-challenge": true,
-    disabled: !open || !isOpenTier || remaining <= 0,
+    disabled: !open || !isOpenTier || closedTier || remaining <= 0,
     onClick: () => onChallenge(tab, current),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-  }, challengeLabel)));
+  }, challengeLabel)), showRewards && React.createElement(RaidJackRewardList, {
+    claimed: state.claimed,
+    initialTab: tab,
+    onClose: () => setShowRewards(false)
+  }));
 };
 const RaidJackPrepScreen = ({
   kind,
@@ -60792,6 +61443,7 @@ function MonsterHeroGame() {
   const [soulTraitReturnState, setSoulTraitReturnState] = useState('MASU_MONS');
   const [soulTraitError, setSoulTraitError] = useState('');
   const [soulTraitRespecOpen, setSoulTraitRespecOpen] = useState(false);
+  const [soulCrystalOpen, setSoulCrystalOpen] = useState(false);
   const soulTraitProcessingRef = useRef(false);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
@@ -61571,6 +62223,8 @@ function MonsterHeroGame() {
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
   const raidJackRunRef = useRef(null);
+  const raidJackClaimingRef = useRef(false);
+  const raidJackLastClaimRef = useRef(0);
   const raidJackDamageRef = useRef(0);
   const raidExDefOf = monId => {
     const def = tacticsExDefOf(monId);
@@ -66708,6 +67362,45 @@ function MonsterHeroGame() {
       return reset;
     } catch {
       setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      return null;
+    } finally {
+      soulTraitProcessingRef.current = false;
+    }
+  };
+  const commitSoulCrystalUse = async (masuId, quantity) => {
+    if (soulTraitProcessingRef.current) return null;
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeItems = ownedItemsRef.current;
+    const masu = beforeMasuMons.find(m => String(m.id) === String(masuId));
+    const used = buildSoulCrystalUse(masu, beforeItems, quantity);
+    if (!used.ok) {
+      setSoulTraitError('魂格の結晶を所持していません。');
+      return null;
+    }
+    const nextMasuMons = beforeMasuMons.map(m => String(m.id) === String(masuId) ? used.nextMasu : m);
+    soulTraitProcessingRef.current = true;
+    setSoulTraitError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_masu_mons',
+        before: beforeMasuMons,
+        next: nextMasuMons
+      }, {
+        key: 'mh_owned_items',
+        before: beforeItems,
+        next: used.ownedItems
+      }], storeGet, storeSet);
+      if (!saved) throw new Error('soul crystal save failed');
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = used.ownedItems;
+      setMasuMons(nextMasuMons);
+      setOwnedItems(used.ownedItems);
+      setMasuMonDetail(prev => prev && String(prev.id) === String(masuId) ? used.nextMasu : prev);
+      setSoulCrystalOpen(false);
+      Audio_.se.levelUp();
+      return used;
+    } catch {
+      setSoulTraitError('魂格の結晶を使えませんでした。結晶と魂格Pは変更していません。');
       return null;
     } finally {
       soulTraitProcessingRef.current = false;
@@ -74140,11 +74833,73 @@ function MonsterHeroGame() {
   const exitRaidJack = (toDebug = false) => {
     raidJackRunRef.current = null;
     raidJackDamageRef.current = 0;
+    raidJackLastClaimRef.current = 0;
     setRaidJackResult(null);
     returnToHome();
     setRunMode(BATTLE_MODE_CHALLENGE);
     if (toDebug) setGameState('RAID_JACK_DEBUG');
   };
+  const claimRaidJackRewards = async () => {
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return 0;
+    if (raidJackClaimingRef.current) return 0;
+    raidJackClaimingRef.current = true;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return 0;
+      const state = await raidJackLoadState();
+      const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
+      if (!found.ok || found.due.length === 0 && found.noneIds.length === 0) return 0;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      let nextGifts = beforeGifts;
+      let granted = 0;
+      found.due.forEach(entry => {
+        const gift = {
+          id: `${RAID_JACK_EVENT.id}_${entry.id}`,
+          title: entry.title,
+          source: 'raidJack',
+          rewards: raidJackRewardGiftItems(entry.reward)
+        };
+        const result = grantGiftOnce(nextGifts, gift);
+        if (result.granted) {
+          nextGifts = result.gifts;
+          granted += 1;
+        }
+      });
+      const nextState = raidJackNormalizeState({
+        ...state,
+        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.noneIds]
+      });
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: nextGifts
+      }, {
+        key: RAID_JACK_STORAGE_KEY,
+        before: state,
+        next: nextState
+      }], storeGet, storeSet);
+      if (!saved) {
+        console.error('[raid-jack-reward] save failed');
+        return 0;
+      }
+      if (granted > 0) setGifts(nextGifts);
+      return granted;
+    } catch (error) {
+      return 0;
+    } finally {
+      raidJackClaimingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (gameState !== 'HOME') return;
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return;
+    const now = Date.now();
+    if (raidJackWindowAt(now) === 'before') return;
+    if (now - raidJackLastClaimRef.current < 300000) return;
+    raidJackLastClaimRef.current = now;
+    void claimRaidJackRewards();
+  }, [gameState]);
   const openRaidJack = async () => {
     setRhythmEventPoints(await loadRhythmEventPoints());
     try {
@@ -82324,6 +83079,7 @@ function MonsterHeroGame() {
         setGameState('RAID_JACK_PREP');
       },
       onPurchase: purchaseRaidJackExtra,
+      onClaimRewards: claimRaidJackRewards,
       beatPoints: rhythmEventPoints,
       eventId: raidJackEventId,
       forced: raidJackDebugForce,
@@ -84306,8 +85062,11 @@ function MonsterHeroGame() {
         }, masuNorm.soulRankStage >= 1 ? `未使用 ${soulTraitAvailablePoints(masuNorm)}P` : '未解放')))
       });
     })(), gameState === 'MASU_SOUL_TRAITS' && React.createElement(MasuSoulTraitsScreen, {
+      commitSoulCrystalUse: commitSoulCrystalUse,
       commitSoulTraitRespec: commitSoulTraitRespec,
       commitSoulTraitUpgrade: commitSoulTraitUpgrade,
+      soulCrystalOpen: soulCrystalOpen,
+      setSoulCrystalOpen: setSoulCrystalOpen,
       getMasuMon: getMasuMon,
       masuMonDetail: masuMonDetail,
       monsterRosterIds: monsterRosterIds,
@@ -84316,6 +85075,7 @@ function MonsterHeroGame() {
         setSoulTraitDraftLevels(0);
         setSoulTraitError('');
         setSoulTraitRespecOpen(false);
+        setSoulCrystalOpen(false);
         setGameState(soulTraitReturnState || 'MASU_MONS');
       },
       ownedItems: ownedItems,

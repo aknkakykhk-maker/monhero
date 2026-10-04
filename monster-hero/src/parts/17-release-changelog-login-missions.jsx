@@ -648,6 +648,7 @@ const giftItemRewardInfo = (itemId) => {
   if (typeof HERO_PROOF_ITEM !== 'undefined' && id === HERO_PROOF_ITEM.id) return HERO_PROOF_ITEM;
   if (typeof HERO_PROOF_SHARD_ITEM !== 'undefined' && id === HERO_PROOF_SHARD_ITEM.id) return HERO_PROOF_SHARD_ITEM;
   if (typeof RAINBOW_TRANSCEND_FRUIT_ITEM !== 'undefined' && id === RAINBOW_TRANSCEND_FRUIT_ITEM.id) return RAINBOW_TRANSCEND_FRUIT_ITEM;
+  if (typeof SOUL_CRYSTAL_ITEM !== 'undefined' && id === SOUL_CRYSTAL_ITEM.id) return SOUL_CRYSTAL_ITEM;
   if (typeof speciesTranscendFruitItems === 'function') {
     const found = Object.values(speciesTranscendFruitItems()).find(item => item && item.id === id);
     if (found) return found;
@@ -714,6 +715,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'campaign') return { label:'キャンペーン', title };
   // モンヒロビートのイベント・週間ランキングの報酬(2026-09-14)
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
+  // イベント・レイドボス「ジャック」の報酬(2026-10-04)
+  if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
