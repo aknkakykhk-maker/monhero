@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33e3844eaf919a9a
+// source-sha256: 5a9d6adfeaeb6ece
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 13:45";
+const BUILD_DATE = "2026-10-04 13:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -56593,7 +56593,8 @@ function RhythmMultiScreen({
   onBack,
   onStartPlay,
   modeSelect = null,
-  onRoomEntered = null
+  onRoomEntered = null,
+  rankingSupport = null
 }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
@@ -56645,6 +56646,7 @@ function RhythmMultiScreen({
   };
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
+  const [rankingOpen, setRankingOpen] = React.useState(false);
   const [recordOpen, setRecordOpen] = React.useState(false);
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
@@ -56740,6 +56742,7 @@ function RhythmMultiScreen({
       left: RHYTHM_MULTI_START_COUNTDOWN_SEC
     });
     setChatOpen(false);
+    setRankingOpen(false);
   }), []);
   React.useEffect(() => {
     if (!countdown) return undefined;
@@ -56834,6 +56837,7 @@ function RhythmMultiScreen({
     RHYTHM_MULTI.leave();
     setCountdown(null);
     setChatOpen(false);
+    setRankingOpen(false);
     setSearching(null);
   };
   const inRoom = !!view;
@@ -56889,7 +56893,7 @@ function RhythmMultiScreen({
   }, opts.advance), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && chatButton());
+  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && rankingButton(), view && chatButton());
   const chatButton = (extra = '') => React.createElement("button", {
     "data-rhythm-multi-chat-open": true,
     type: "button",
@@ -56900,6 +56904,25 @@ function RhythmMultiScreen({
     "data-rhythm-multi-chat-unread": true,
     className: "absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white"
   }, chatUnread > 9 ? '9+' : chatUnread));
+  const rankingSongId = room && room.phase !== 'select' && room.songId ? room.songId : selSongId || (songs[0] ? songs[0].songId : '');
+  const openRanking = () => {
+    const song = songById(rankingSongId);
+    if (!song || !rankingSupport) return;
+    rankingSupport.open(song);
+    setChatOpen(false);
+    setRankingOpen(true);
+  };
+  const rankingButton = (extra = '') => rankingSupport && React.createElement("button", {
+    "data-rhythm-multi-ranking": true,
+    type: "button",
+    "aria-label": "全国ランキング",
+    onClick: openRanking,
+    className: `min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`
+  }, "🏆");
+  const rankingLayer = rankingOpen && rankingSupport && view && React.createElement("div", {
+    "data-rhythm-multi-ranking-layer": true,
+    className: "absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950"
+  }, rankingSupport.render(() => setRankingOpen(false)));
   const chatLatestButton = () => {
     const last = chatList.length ? chatList[chatList.length - 1] : null;
     return React.createElement("button", {
@@ -57365,7 +57388,7 @@ function RhythmMultiScreen({
       onClick: leaveRoom
     }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
-    }, message)))), chatSheet);
+    }, message)))), chatSheet, rankingLayer);
   }
   if (showResult) {
     const fill = Math.min(1, Math.max(0, team.average / 1000000));
@@ -57498,7 +57521,7 @@ function RhythmMultiScreen({
       big: true,
       limit: 6,
       className: "min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
-    }), chatLatestButton()), React.createElement("div", {
+    }), rankingButton(), chatLatestButton()), React.createElement("div", {
       className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1",
       style: {
         paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))'
@@ -57607,7 +57630,7 @@ function RhythmMultiScreen({
       className: "px-1 tabular-nums"
     }, r.res && !r.res.quit && r.res.j ? r.res.j[k] : '—')), React.createElement("td", {
       className: "rounded-r-lg px-1 tabular-nums"
-    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))), chatSheet);
+    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))), chatSheet, rankingLayer);
   }
   if (phase === 'playing' || phase === 'result') {
     return React.createElement("main", {
@@ -57649,7 +57672,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} bg-slate-700 landscape:w-48`,
       onClick: leaveRoom
-    }, "ルームを出る")), chatSheet, countdownLayer);
+    }, "ルームを出る")), chatSheet, rankingLayer, countdownLayer);
   }
   if (shuffleRound) {
     const picked = members.map(m => ({
@@ -57793,7 +57816,7 @@ function RhythmMultiScreen({
       className: "min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]"
     }, iAmReady ? '準備完了!' : '準備完了', iAmReady && React.createElement("small", {
       className: "block text-[9px] font-bold"
-    }, "ほかのメンバーを待っています"))), chatSheet, countdownLayer);
+    }, "ほかのメンバーを待っています"))), chatSheet, rankingLayer, countdownLayer);
   }
   const myPick = me && me.pickRound === room.round ? me.pick : '';
   const pickLabel = m => {
@@ -57858,7 +57881,7 @@ function RhythmMultiScreen({
       onClick: leaveRoom,
       className: "flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300"
     }, "ルームを出る"))
-  }), chatSheet, countdownLayer);
+  }), chatSheet, rankingLayer, countdownLayer);
 }
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -79387,6 +79410,30 @@ function MonsterHeroGame() {
       } : null,
       onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
       onRoomEntered: () => setGameState('RHYTHM_MULTI'),
+      rankingSupport: {
+        open: song => {
+          loadRhythmRanking(song);
+        },
+        render: onClose => React.createElement(RhythmRankingScreen, {
+          loadRhythmEventRanking: loadRhythmEventRanking,
+          loadRhythmRanking: loadRhythmRanking,
+          loadRhythmTotalRanking: loadRhythmTotalRanking,
+          onBackToSongSelect: onClose,
+          onGoToSongSelect: onClose,
+          rankingBreederIcon: rankingBreederIcon,
+          rhythmEventDivision: rhythmEventDivision,
+          rhythmEventRanking: rhythmEventRanking,
+          rhythmRanking: rhythmRanking,
+          rhythmRankingPending: rhythmRankingPending,
+          onResendRhythmRankingPending: resendRhythmRankingPendingNow,
+          rhythmRankingDetail: rhythmRankingDetail,
+          rhythmRankingTab: rhythmRankingTab,
+          rhythmTotalRanking: rhythmTotalRanking,
+          setRhythmEventDivision: setRhythmEventDivision,
+          setRhythmRankingDetail: setRhythmRankingDetail,
+          setRhythmRankingTab: setRhythmRankingTab
+        })
+      },
       modeSelect: gameState === 'RHYTHM_MODE_SELECT' ? {
         multi: RELEASE_FLAGS.rhythmMulti === true,
         onExit: exitRhythmSongSelect,

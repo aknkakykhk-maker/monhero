@@ -16274,6 +16274,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          rankingSupport={{
+            // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
+            // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
+            open:(song)=>{loadRhythmRanking(song);},
+            render:(onClose)=>(
+              <RhythmRankingScreen
+                loadRhythmEventRanking={loadRhythmEventRanking}
+                loadRhythmRanking={loadRhythmRanking}
+                loadRhythmTotalRanking={loadRhythmTotalRanking}
+                onBackToSongSelect={onClose}
+                onGoToSongSelect={onClose}
+                rankingBreederIcon={rankingBreederIcon}
+                rhythmEventDivision={rhythmEventDivision}
+                rhythmEventRanking={rhythmEventRanking}
+                rhythmRanking={rhythmRanking}
+                rhythmRankingPending={rhythmRankingPending}
+                onResendRhythmRankingPending={resendRhythmRankingPendingNow}
+                rhythmRankingDetail={rhythmRankingDetail}
+                rhythmRankingTab={rhythmRankingTab}
+                rhythmTotalRanking={rhythmTotalRanking}
+                setRhythmEventDivision={setRhythmEventDivision}
+                setRhythmRankingDetail={setRhythmRankingDetail}
+                setRhythmRankingTab={setRhythmRankingTab}
+              />
+            ),
+          }}
           modeSelect={gameState==='RHYTHM_MODE_SELECT'?{
             multi:RELEASE_FLAGS.rhythmMulti===true,
             onExit:exitRhythmSongSelect, backgroundRun:rhythmBackgroundRun, exiting:rhythmExitingRun,

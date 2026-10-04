@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 890332802acb422b
+// generated-sha256: 713ed69cd7b8dce6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 13:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 13:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -34833,7 +34833,7 @@ function RhythmModeSelectStage() {
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
@@ -34881,6 +34881,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
+  const [rankingOpen, setRankingOpen] = React.useState(false);
   const [recordOpen, setRecordOpen] = React.useState(false);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
@@ -34962,6 +34963,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   React.useEffect(() => RHYTHM_MULTI.onStart((info) => {
     setCountdown({ info, left: RHYTHM_MULTI_START_COUNTDOWN_SEC });
     setChatOpen(false);
+    setRankingOpen(false);
   }), []);
   React.useEffect(() => {
     if (!countdown) return undefined;
@@ -35034,7 +35036,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     });
     return () => { alive = false; };
   }, [searching]);
-  const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); setChatOpen(false); setSearching(null); };
+  const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); setChatOpen(false); setRankingOpen(false); setSearching(null); };
   // モードえらび(modeSelect あり)で部屋に入れたら、対戦の画面(RHYTHM_MULTI)へ移る。
   // 対戦の画面で部屋が無くなったら(出た・満員で抜けた)、モードえらびへ戻る
   const inRoom = !!view;
@@ -35074,6 +35076,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
       {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
       <RhythmOrientationButton/>
+      {view && rankingButton()}
       {view && chatButton()}
     </header>
   );
@@ -35084,6 +35087,26 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       💬
       {chatUnread > 0 && <b data-rhythm-multi-chat-unread className="absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white">{chatUnread > 9 ? '9+' : chatUnread}</b>}
     </button>
+  );
+  // 🏆 全国ランキング(部屋の中。2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
+  // 見る曲は、選曲中なら見ている曲、決まったあと(難易度えらび・結果)ならその曲、まだ無ければ一覧の先頭
+  const rankingSongId = (room && room.phase !== 'select' && room.songId) ? room.songId : (selSongId || (songs[0] ? songs[0].songId : ''));
+  const openRanking = () => {
+    const song = songById(rankingSongId);
+    if (!song || !rankingSupport) return;
+    rankingSupport.open(song);
+    setChatOpen(false);
+    setRankingOpen(true);
+  };
+  const rankingButton = (extra = '') => rankingSupport && (
+    <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
+      className={`min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`}>🏆</button>
+  );
+  // ランキングは対戦の画面の上へ重ねる(画面を移すと、ライブ開始の合図を受ける側が外れて取り逃すため)
+  const rankingLayer = rankingOpen && rankingSupport && view && (
+    <div data-rhythm-multi-ranking-layer className="absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950">
+      {rankingSupport.render(() => setRankingOpen(false))}
+    </div>
   );
   // 最新の発言を添えた💬(結果画面用)。押すとチャット欄が開く
   const chatLatestButton = () => {
@@ -35335,7 +35358,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </div>
             </div>
           </>}
-        {chatSheet}
+        {chatSheet}{rankingLayer}
       </main>
     );
   }
@@ -35415,6 +35438,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               ★折り返さない。実機の横画面は左右と下に余白(切り欠き・ホームバー)があって狭く、2段になるとカードが押しつぶされて
               アイコンと難易度が切れた(2026-10-03・ユーザー報告)。入りきらないぶんは横にすべらせる */}
           <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} big limit={6} className="min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap" />
+          {rankingButton()}
           {chatLatestButton()}
         </div>
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
@@ -35469,7 +35493,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             </div>
           </div>
         )}
-        {chatSheet}
+        {chatSheet}{rankingLayer}
       </main>
     );
   }
@@ -35486,7 +35510,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <p className="min-w-0 flex-1 text-sm font-black text-amber-200">{phase === 'playing' ? 'いまライブ中です。次の曲から参加できます' : 'ホストが次へ進むのを待っています'}{drawnSong ? <small className="block truncate text-[11px] font-bold text-slate-300">{rhythmSongFullName(drawnSong)}</small> : null}</p>
           <button data-rhythm-multi-leave type="button" className={`${btn} bg-slate-700 landscape:w-48`} onClick={leaveRoom}>ルームを出る</button>
         </div>
-        {chatSheet}
+        {chatSheet}{rankingLayer}
         {countdownLayer}
       </main>
     );
@@ -35568,7 +35592,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <button data-rhythm-multi-ready type="button" disabled={iAmReady} onClick={() => { if (onUserGesture) onUserGesture(); if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
             className="min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]">{iAmReady ? '準備完了!' : '準備完了'}{iAmReady && <small className="block text-[9px] font-bold">ほかのメンバーを待っています</small>}</button>
         </div>
-        {chatSheet}
+        {chatSheet}{rankingLayer}
         {countdownLayer}
       </main>
     );
@@ -35607,7 +35631,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300">ルームを出る</button>
           </div>
         )} />
-      {chatSheet}
+      {chatSheet}{rankingLayer}
       {countdownLayer}
     </main>
   );
@@ -51890,6 +51914,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          rankingSupport={{
+            // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
+            // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
+            open:(song)=>{loadRhythmRanking(song);},
+            render:(onClose)=>(
+              <RhythmRankingScreen
+                loadRhythmEventRanking={loadRhythmEventRanking}
+                loadRhythmRanking={loadRhythmRanking}
+                loadRhythmTotalRanking={loadRhythmTotalRanking}
+                onBackToSongSelect={onClose}
+                onGoToSongSelect={onClose}
+                rankingBreederIcon={rankingBreederIcon}
+                rhythmEventDivision={rhythmEventDivision}
+                rhythmEventRanking={rhythmEventRanking}
+                rhythmRanking={rhythmRanking}
+                rhythmRankingPending={rhythmRankingPending}
+                onResendRhythmRankingPending={resendRhythmRankingPendingNow}
+                rhythmRankingDetail={rhythmRankingDetail}
+                rhythmRankingTab={rhythmRankingTab}
+                rhythmTotalRanking={rhythmTotalRanking}
+                setRhythmEventDivision={setRhythmEventDivision}
+                setRhythmRankingDetail={setRhythmRankingDetail}
+                setRhythmRankingTab={setRhythmRankingTab}
+              />
+            ),
+          }}
           modeSelect={gameState==='RHYTHM_MODE_SELECT'?{
             multi:RELEASE_FLAGS.rhythmMulti===true,
             onExit:exitRhythmSongSelect, backgroundRun:rhythmBackgroundRun, exiting:rhythmExitingRun,
