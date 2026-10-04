@@ -162,7 +162,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('A: 共有HPと参加人数が出る(子爵 2,275,000 のうち 500,000 を削った)', /共有HP 1,775,000 \/ 2,275,000/.test(t) && /7人が参加/.test(t));
     const silhouettes = await page.locator('[data-raid-jack-tier] img').evaluateAll((els) => els.map((e) => e.style.filter));
     check('A: 未解放の段階はシルエット(黒塗り)で見せる', silhouettes.slice(2).every((f) => /brightness\(0\)/.test(f)) && !/brightness\(0\)/.test(silhouettes[1]), JSON.stringify(silhouettes));
-    check('報酬は「準備中」と出る', /報酬の中身は準備中です/.test(t));
+    // 報酬の中身が決まったので、「準備中」ではなく、討伐報酬と貢献ランキングの報酬が出る(2026-10-04・#2129)
+    check('報酬が出る(討伐報酬・参加した全員)', /討伐報酬/.test(t) && /参加した全員/.test(t));
     check('残り回数 3 / ビートP 250 が出る', /今日の残り\s*3\s*回/.test(t) && /所持 250/.test(t));
     await page.locator('[data-raid-jack-tier="a2"]').click();
     await page.waitForTimeout(1200);   // 段階を替えた直後は前の段階のランキングが残っているので、読み直しが始まるのを待つ

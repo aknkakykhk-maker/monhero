@@ -25,6 +25,21 @@ const RAID_JACK_TURNS = 20;   // 1回の戦闘のターン数(2026-10-04・ユ�
 const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+// ぱんぷきん×ジャックのストーリー(台本は docs/spec/RAID_JACK_STORY.md、データは data/assistants.js の EVENT_REPLAYS)。
+// 第1.5部=レイド開始 / 第2〜6部=段階(男爵〜大王)を倒したあと / 終章=期間終了後(大王まで倒せたかで2本)。
+// 見たかどうかは、既存のイベント会話と同じ配列(rhythmEventStorySeen)へこの id を入れて持つ。新しい保存キーは作らない。
+const RAID_JACK_STORY_START_ID = 'raid_jack_story_1b';
+// 段階を倒したあとのストーリー。段階 a1(男爵)を倒すと第2部、a5(大王)を倒すと第6部
+const RAID_JACK_STORY_AFTER_TIER = Object.freeze({
+  a1: 'raid_jack_story_2', a2: 'raid_jack_story_3', a3: 'raid_jack_story_4', a4: 'raid_jack_story_5', a5: 'raid_jack_story_6',
+});
+const RAID_JACK_ENDING_CLEARED_ID = 'raid_jack_ending_cleared';
+const RAID_JACK_ENDING_NOTCLEARED_ID = 'raid_jack_ending_notcleared';
+const RAID_JACK_STORY_IDS = Object.freeze([
+  RAID_JACK_STORY_START_ID, ...Object.values(RAID_JACK_STORY_AFTER_TIER), RAID_JACK_ENDING_CLEARED_ID, RAID_JACK_ENDING_NOTCLEARED_ID,
+]);
+// EVENT_REPLAYS の unlockedKey(例: raid_jack_story_2 → raidJackStory2Seen / raid_jack_ending_cleared → raidJackEndingClearedSeen)
+const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'raidJack_').replace(/_([a-z0-9])/g, (m, c) => c.toUpperCase()).replace(/^raidJack(\w)/, (m, c) => 'raidJack' + c.toUpperCase())}Seen`;
 // イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night';   // Crazy Party Night ～ぱんぷきんの逆襲～

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fb67eb8d76230e4d
+// generated-sha256: c9d585375d939d34
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 22:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 22:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -291,7 +291,8 @@ const TACTICS_BETA_PRO_RELEASE = true;
 // その名前→公開しているか の対応をここで持つ。イベントを増やすときはここへ1行足す
 const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
-  // レイドの遊び方(ジャック)。RELEASE_FLAGS は後ろの部品で作られるので、読み込み時ではなく見るたびに引く
+  // ジャックのストーリーと遊び方の話(releaseFlag: 'raidJack')。RELEASE_FLAGS は後ろの部品で作られるので、読み込み時ではなく見るたびに引く。
+  // ★値で書くと、あとの部品の const を読み込み時に触って「初期化の前に使っている」で画面が真っ白になる(2026-10-04に実際に起きた)
   get raidJack() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidJack === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -10651,9 +10652,15 @@ const HELP_DATA_TITLES = {
 const ASSISTANT_LIST = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
 const ASSISTANT_SCENE_MAP = (typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES) || {};
 const ASSISTANT_FALLBACK = { id:'', name:'助手', image:null, emoji:'💬', accent:'#f472b6', greeting:'' };
+// 再生のときだけ話し手として出る登場人物(ジャックなど)。助手ではないので ASSISTANT_LIST には入れない
+const STORY_GUEST_LIST = (typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS)) ? STORY_GUEST_SPEAKERS : [];
+// 助手を先に探し、いなければ登場人物、それもなければ今までどおり既定の助手へ
 const assistantById = (id) => ASSISTANT_LIST.find(a => a.id === id)
+  || STORY_GUEST_LIST.find(a => a.id === id)
   || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : ''))
   || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
+// 台本に出てくる話し手(顔を並べる人)。助手に加えて、台本に出てくる登場人物も並べる
+const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
 const assistantSceneById = (key) => (key && ASSISTANT_SCENE_MAP[key]) || null;
 // ---- 親密度(みゅあとの仲良し度)を各画面へ配る ----
 // 吹き出しはどの画面にも置くので、画面ごとに props を渡さずに済むよう Context で配る。
@@ -22895,6 +22902,21 @@ const RAID_JACK_TURNS = 20;   // 1回の戦闘のターン数(2026-10-04・ユ�
 const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+// ぱんぷきん×ジャックのストーリー(台本は docs/spec/RAID_JACK_STORY.md、データは data/assistants.js の EVENT_REPLAYS)。
+// 第1.5部=レイド開始 / 第2〜6部=段階(男爵〜大王)を倒したあと / 終章=期間終了後(大王まで倒せたかで2本)。
+// 見たかどうかは、既存のイベント会話と同じ配列(rhythmEventStorySeen)へこの id を入れて持つ。新しい保存キーは作らない。
+const RAID_JACK_STORY_START_ID = 'raid_jack_story_1b';
+// 段階を倒したあとのストーリー。段階 a1(男爵)を倒すと第2部、a5(大王)を倒すと第6部
+const RAID_JACK_STORY_AFTER_TIER = Object.freeze({
+  a1: 'raid_jack_story_2', a2: 'raid_jack_story_3', a3: 'raid_jack_story_4', a4: 'raid_jack_story_5', a5: 'raid_jack_story_6',
+});
+const RAID_JACK_ENDING_CLEARED_ID = 'raid_jack_ending_cleared';
+const RAID_JACK_ENDING_NOTCLEARED_ID = 'raid_jack_ending_notcleared';
+const RAID_JACK_STORY_IDS = Object.freeze([
+  RAID_JACK_STORY_START_ID, ...Object.values(RAID_JACK_STORY_AFTER_TIER), RAID_JACK_ENDING_CLEARED_ID, RAID_JACK_ENDING_NOTCLEARED_ID,
+]);
+// EVENT_REPLAYS の unlockedKey(例: raid_jack_story_2 → raidJackStory2Seen / raid_jack_ending_cleared → raidJackEndingClearedSeen)
+const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'raidJack_').replace(/_([a-z0-9])/g, (m, c) => c.toUpperCase()).replace(/^raidJack(\w)/, (m, c) => 'raidJack' + c.toUpperCase())}Seen`;
 // イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night';   // Crazy Party Night ～ぱんぷきんの逆襲～
@@ -41278,7 +41300,7 @@ function MonsterHeroGame() {
   // 5部のidと出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。**時刻が来た部を、古いほうから1つずつ**HOMEで流す
   // (期間の内か外かは見ない。第5部は閉幕の時刻に出る)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -41397,13 +41419,17 @@ function MonsterHeroGame() {
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       // レイドの遊び方。第1部を見終えていて、まだ見ていなければ、ほかの部より先に続けて流す
+      // 順番は 第1部 → 第1.5部(ふくれあがる影) → 遊び方。遊び方は、第1.5部を見終えてから流す(2026-10-04・ユーザー指示)
+      const raidStartStoryReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_STORY_START_ID);
       const raidHowtoReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
-        && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
+        && !notPlayedYet(RAID_JACK_STORY_START_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
-        if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
+        else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
@@ -41416,6 +41442,7 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
       else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -43895,6 +43922,8 @@ function MonsterHeroGame() {
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
+    ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
@@ -56108,7 +56137,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const speaker=assistantById(line.who);
         const last=step===script.length-1;
         const calls=(event&&event.calls)||{};
-        const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
+        const cast=storyCastOf(script);
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
@@ -56118,8 +56147,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id==='tactics_intro') markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
           if(event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)&&!eventReplay.debug) void markRhythmEventStorySeen(event.id);
-          // 第1部を本編で見終えたら、レイドの遊び方を続けて流す(公開前・見たあと・回想からのときは流さない)
+          // 順番は 第1部 → 第1.5部(ふくれあがる影) → レイドの遊び方。本編で見終えたら、次を続けて流す
+          // (公開前・見たあと・回想からのときは流さない)
           if(event&&event.id===RAID_JACK_HOWTO_AFTER_STORY_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
+            &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_STORY_START_ID);
+          if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           setEventReplay(null);
         };
@@ -56154,13 +56186,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 return(
                   <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
                     <AssistantFace who={who} size={talking?84:64} accent={who.accent} expression={talking?line.e:'normal'}/>
-                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{who.name}</span>
+                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
                   </div>
                 );
               })}
             </div>
             <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
-              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
+              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{line.name||speaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。

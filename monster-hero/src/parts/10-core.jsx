@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 22:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 22:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -284,7 +284,8 @@ const TACTICS_BETA_PRO_RELEASE = true;
 // その名前→公開しているか の対応をここで持つ。イベントを増やすときはここへ1行足す
 const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
-  // レイドの遊び方(ジャック)。RELEASE_FLAGS は後ろの部品で作られるので、読み込み時ではなく見るたびに引く
+  // ジャックのストーリーと遊び方の話(releaseFlag: 'raidJack')。RELEASE_FLAGS は後ろの部品で作られるので、読み込み時ではなく見るたびに引く。
+  // ★値で書くと、あとの部品の const を読み込み時に触って「初期化の前に使っている」で画面が真っ白になる(2026-10-04に実際に起きた)
   get raidJack() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidJack === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
