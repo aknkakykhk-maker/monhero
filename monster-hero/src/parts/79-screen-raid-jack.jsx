@@ -27,7 +27,7 @@ const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
   );
 };
 
-const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, guideVisible = false, onDismissGuide }) => {
+const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({ a: 0, b: 0 });
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -72,11 +72,12 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
   }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
 
   const side = tab === 'a' ? state.a : state.b;
-  const remaining = raidJackRemaining(side, nowMs);
+  // デバッグの強制表示中は、回数は無制限・全段階を最初から選べる
+  const remaining = unlimited ? Infinity : raidJackRemaining(side, nowMs);
   const tiers = raidJackTiers(tab);
   const aTotalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
   const aDefeated = (i) => totals ? aTotalOf(i) >= tiers[i].hp : false;
-  const unlocked = tab === 'a'
+  const unlocked = unlimited ? () => true : tab === 'a'
     ? (i) => i === 0 || aDefeated(i - 1)
     : (i) => i < raidJackUnlockedCount('b', state.b.defeated);
   const current = Math.min(sel[tab], tiers.length - 1);
@@ -111,9 +112,9 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
       <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
         <div>
           <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
-          <div data-raid-jack-remaining>今日の残り <b className="text-white">{remaining}</b> 回(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</div>
+          <div data-raid-jack-remaining>{unlimited ? <>今日の残り <b className="text-white">無制限</b>(デバッグ・全段階を選べます)</> : <>今日の残り <b className="text-white">{remaining}</b> 回(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</>}</div>
         </div>
-        <button type="button" data-raid-jack-buy disabled={busy || !open} onClick={buy}
+        <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
           className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
           1回追加<br /><small className="text-[9px] opacity-80">ビートP {RAID_JACK_EXTRA_COST_BEAT_P}(所持 {beatPoints})</small>
         </button>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a315ae3cb15a3fd4
+// generated-sha256: 0073209cac026aa8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 16:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 16:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36150,7 +36150,7 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
   { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
 ]);
 
-const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, onOpenRaid, onGoHome }) => {
+const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
   const [log, setLog] = useState([]);
@@ -36269,9 +36269,10 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
 
         <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">
           <div className="mb-1 font-black text-orange-200">⑦ HOMEのジャックとレイド画面(公開フラグ・期間を待たずに)</div>
-          <div className="text-[10px] text-slate-300">強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。</div>
+          <div className="text-[10px] text-slate-300">強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。初めは何度でも挑め、全段階を選べます(本番どおりの回数・解放で見たいときは下のボタン)。</div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             <button data-raid-force-toggle className={`${btn} ${raidForce ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`} onClick={() => onToggleRaidForce && onToggleRaidForce()}>HOMEに出す: {raidForce ? 'ON' : 'OFF'}</button>
+            <button data-raid-real-rules-toggle className={`${btn} col-span-2 ${realRules ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`} onClick={() => onToggleRealRules && onToggleRealRules()}>本番どおりの回数・解放で確認: {realRules ? 'ON' : 'OFF'}(OFFは何度でも・全段階)</button>
             <button data-raid-open className={`${btn} border-orange-400/60 bg-orange-950/40`} onClick={() => onOpenRaid && onOpenRaid()}>レイド画面を開く</button>
             <button data-raid-go-home className={`${btn} col-span-2 border-orange-400/60 bg-orange-950/40`} onClick={() => onGoHome && onGoHome()}>HOMEを見る(ジャックが出ているか確認)</button>
           </div>
@@ -36343,7 +36344,7 @@ const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
   );
 };
 
-const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, guideVisible = false, onDismissGuide }) => {
+const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({ a: 0, b: 0 });
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -36388,11 +36389,12 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
   }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
 
   const side = tab === 'a' ? state.a : state.b;
-  const remaining = raidJackRemaining(side, nowMs);
+  // デバッグの強制表示中は、回数は無制限・全段階を最初から選べる
+  const remaining = unlimited ? Infinity : raidJackRemaining(side, nowMs);
   const tiers = raidJackTiers(tab);
   const aTotalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
   const aDefeated = (i) => totals ? aTotalOf(i) >= tiers[i].hp : false;
-  const unlocked = tab === 'a'
+  const unlocked = unlimited ? () => true : tab === 'a'
     ? (i) => i === 0 || aDefeated(i - 1)
     : (i) => i < raidJackUnlockedCount('b', state.b.defeated);
   const current = Math.min(sel[tab], tiers.length - 1);
@@ -36427,9 +36429,9 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
       <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
         <div>
           <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
-          <div data-raid-jack-remaining>今日の残り <b className="text-white">{remaining}</b> 回(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</div>
+          <div data-raid-jack-remaining>{unlimited ? <>今日の残り <b className="text-white">無制限</b>(デバッグ・全段階を選べます)</> : <>今日の残り <b className="text-white">{remaining}</b> 回(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</>}</div>
         </div>
-        <button type="button" data-raid-jack-buy disabled={busy || !open} onClick={buy}
+        <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
           className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
           1回追加<br /><small className="text-[9px] opacity-80">ビートP {RAID_JACK_EXTRA_COST_BEAT_P}(所持 {beatPoints})</small>
         </button>
@@ -38922,6 +38924,7 @@ function MonsterHeroGame() {
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
   const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);    // デバッグ: 公開フラグ・期間を待たずに HOME へ出す(記録は別のイベントID)
+  const [raidJackDebugRealRules, setRaidJackDebugRealRules] = useState(false);   // デバッグ: 本番どおりの回数・解放で確認する(既定はオフ = 何度でも・全段階)
   // 本番は RAID_JACK_EVENT.id。デバッグで強制表示しているあいだは、本番の集計を汚さない別のIDを使う
   const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
 
@@ -49842,13 +49845,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!prep || !Array.isArray(party) || party.length === 0) return;
     const key = prep.kind === 'b' ? 'b' : 'a';
     const nowMs = Date.now();
-    const state = await raidJackLoadState();
-    const side = state[key];
-    const today = raidJackDayKey(nowMs);
-    if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
-    if (raidJackRemaining(side, nowMs) <= 0) { setGameState('RAID_JACK'); return; }
-    side.used += 1;
-    if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    // デバッグの強制表示中は回数を数えない(何度でも挑める・端末の記録 mh_raid_jack_v1 も変えない)
+    if (!raidJackDebugForce || raidJackDebugRealRules) {
+      const state = await raidJackLoadState();
+      const side = state[key];
+      const today = raidJackDayKey(nowMs);
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      if (raidJackRemaining(side, nowMs) <= 0) { setGameState('RAID_JACK'); return; }
+      side.used += 1;
+      if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    }
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
     setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
     setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId });
@@ -53454,14 +53460,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RAID_JACK'&&(<RaidJackScreen
           onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
           onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
-          onPurchase={purchaseRaidJackExtra} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce}
+          onPurchase={purchaseRaidJackExtra} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
           guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}/>)}
         {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
           kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
           candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
           teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
           onBack={()=>setGameState('RAID_JACK')} onStart={startRaidJackFromPrep}/>)}
-        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();

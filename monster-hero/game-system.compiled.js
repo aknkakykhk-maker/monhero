@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05987f16c14e42e7
+// source-sha256: 34a3a10fdd66d395
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 16:18";
+const BUILD_DATE = "2026-10-04 16:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -58597,6 +58597,8 @@ const RaidJackDebugScreen = ({
   onStartBattle,
   raidForce = false,
   onToggleRaidForce,
+  realRules = false,
+  onToggleRealRules,
   onOpenRaid,
   onGoHome
 }) => {
@@ -58852,13 +58854,17 @@ const RaidJackDebugScreen = ({
     className: "mb-1 font-black text-orange-200"
   }, "⑦ HOMEのジャックとレイド画面(公開フラグ・期間を待たずに)"), React.createElement("div", {
     className: "text-[10px] text-slate-300"
-  }, "強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。"), React.createElement("div", {
+  }, "強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。初めは何度でも挑め、全段階を選べます(本番どおりの回数・解放で見たいときは下のボタン)。"), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-1.5"
   }, React.createElement("button", {
     "data-raid-force-toggle": true,
     className: `${btn} ${raidForce ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`,
     onClick: () => onToggleRaidForce && onToggleRaidForce()
   }, "HOMEに出す: ", raidForce ? 'ON' : 'OFF'), React.createElement("button", {
+    "data-raid-real-rules-toggle": true,
+    className: `${btn} col-span-2 ${realRules ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`,
+    onClick: () => onToggleRealRules && onToggleRealRules()
+  }, "本番どおりの回数・解放で確認: ", realRules ? 'ON' : 'OFF', "(OFFは何度でも・全段階)"), React.createElement("button", {
     "data-raid-open": true,
     className: `${btn} border-orange-400/60 bg-orange-950/40`,
     onClick: () => onOpenRaid && onOpenRaid()
@@ -58976,6 +58982,7 @@ const RaidJackScreen = ({
   beatPoints = 0,
   eventId,
   forced = false,
+  unlimited = false,
   guideVisible = false,
   onDismissGuide
 }) => {
@@ -59030,11 +59037,11 @@ const RaidJackScreen = ({
     };
   }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
   const side = tab === 'a' ? state.a : state.b;
-  const remaining = raidJackRemaining(side, nowMs);
+  const remaining = unlimited ? Infinity : raidJackRemaining(side, nowMs);
   const tiers = raidJackTiers(tab);
   const aTotalOf = i => totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0;
   const aDefeated = i => totals ? aTotalOf(i) >= tiers[i].hp : false;
-  const unlocked = tab === 'a' ? i => i === 0 || aDefeated(i - 1) : i => i < raidJackUnlockedCount('b', state.b.defeated);
+  const unlocked = unlimited ? () => true : tab === 'a' ? i => i === 0 || aDefeated(i - 1) : i => i < raidJackUnlockedCount('b', state.b.defeated);
   const current = Math.min(sel[tab], tiers.length - 1);
   const tier = tiers[current];
   const isOpenTier = unlocked(current);
@@ -59089,12 +59096,14 @@ const RaidJackScreen = ({
     className: "font-black text-orange-200"
   }, tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'), React.createElement("div", {
     "data-raid-jack-remaining": true
-  }, "今日の残り ", React.createElement("b", {
+  }, unlimited ? React.createElement(React.Fragment, null, "今日の残り ", React.createElement("b", {
     className: "text-white"
-  }, remaining), " 回(無料", RAID_JACK_FREE_PER_DAY, "回+買い足し)")), React.createElement("button", {
+  }, "無制限"), "(デバッグ・全段階を選べます)") : React.createElement(React.Fragment, null, "今日の残り ", React.createElement("b", {
+    className: "text-white"
+  }, remaining), " 回(無料", RAID_JACK_FREE_PER_DAY, "回+買い足し)"))), React.createElement("button", {
     type: "button",
     "data-raid-jack-buy": true,
-    disabled: busy || !open,
+    disabled: busy || !open || unlimited,
     onClick: buy,
     className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
   }, "1回追加", React.createElement("br", null), React.createElement("small", {
@@ -61456,6 +61465,7 @@ function MonsterHeroGame() {
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
   const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);
+  const [raidJackDebugRealRules, setRaidJackDebugRealRules] = useState(false);
   const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
   const rpgDefaultAlly = index => {
     const list = rpgMonsterList();
@@ -74030,20 +74040,22 @@ function MonsterHeroGame() {
     if (!prep || !Array.isArray(party) || party.length === 0) return;
     const key = prep.kind === 'b' ? 'b' : 'a';
     const nowMs = Date.now();
-    const state = await raidJackLoadState();
-    const side = state[key];
-    const today = raidJackDayKey(nowMs);
-    if (side.day !== today) {
-      side.day = today;
-      side.used = 0;
-      side.extra = 0;
+    if (!raidJackDebugForce || raidJackDebugRealRules) {
+      const state = await raidJackLoadState();
+      const side = state[key];
+      const today = raidJackDayKey(nowMs);
+      if (side.day !== today) {
+        side.day = today;
+        side.used = 0;
+        side.extra = 0;
+      }
+      if (raidJackRemaining(side, nowMs) <= 0) {
+        setGameState('RAID_JACK');
+        return;
+      }
+      side.used += 1;
+      if (!(await raidJackSaveState(state))) return;
     }
-    if (raidJackRemaining(side, nowMs) <= 0) {
-      setGameState('RAID_JACK');
-      return;
-    }
-    side.used += 1;
-    if (!(await raidJackSaveState(state))) return;
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
     setRunMode(mode);
     setDifficulty('Normal');
@@ -82071,6 +82083,7 @@ function MonsterHeroGame() {
       beatPoints: rhythmEventPoints,
       eventId: raidJackEventId,
       forced: raidJackDebugForce,
+      unlimited: raidJackDebugForce && !raidJackDebugRealRules,
       guideVisible: (RELEASE_FLAGS.raidJack === true || raidJackDebugForce) && !raidJackGuideSeen,
       onDismissGuide: dismissRaidJackGuide
     }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(RaidJackPrepScreen, {
@@ -82087,6 +82100,8 @@ function MonsterHeroGame() {
       onBack: () => setGameState('DEBUG_SETTINGS'),
       raidForce: raidJackDebugForce,
       onToggleRaidForce: () => setRaidJackDebugForce(v => !v),
+      realRules: raidJackDebugRealRules,
+      onToggleRealRules: () => setRaidJackDebugRealRules(v => !v),
       onOpenRaid: async () => {
         setRaidJackDebugForce(true);
         await openRaidJack();
