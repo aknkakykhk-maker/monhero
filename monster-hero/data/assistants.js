@@ -6787,11 +6787,11 @@ const RAID_JACK_ENDING_NOTCLEARED = [...RAID_JACK_ENDING_B_HEAD, ...RAID_JACK_EN
 // 公開フラグ(RELEASE_FLAGS.raidJack)が立つまでは流れず、回想にも出ない。そのあとは回想から見返せる。
 // 遊び方の数字は help.js の raid-jack と同じ(変えたら両方直す)
 const ASSISTANT_RAID_JACK_HOWTO = [
-  // SCENE 1 ジャックの登場
-  { who:'kiki',     e:'surprise', t:'みゅあちん、HOMEの真ん中を見てほしいでつ。……大きなかぼちゃがいまつ！' },
-  { who:'mua',      e:'surprise', t:'えっ、なにあれ！ ランタンの何十倍もあるじゃん！ しかもこっち睨んでる！' },
-  { who:'dra',      e:'normal',   t:'あれが「カボチャの大王ジャック」だ。さっきの小さい影の、親玉らしいぞ' },
-  { who:'momosuke', e:'wink',     t:'夜祭で暴れてるんだって。みんなで力を合わせて倒しちゃお♡' },
+  // SCENE 1 ジャックを止める(第1.5部「ふくれあがる影」のあとに続く。ジャック=ふくれあがったぱんぷきん)
+  { who:'kiki',     e:'normal',   t:'みゅあちん、HOMEの真ん中を見てほしいでつ。男爵ジャックが、まだそこで暴れていまつ。' },
+  { who:'mua',      e:'troubled', t:'ほんとだ……。ぱんぷきんが、あんなに大きくなっちゃって' },
+  { who:'dra',      e:'normal',   t:'おまえら、気持ちは分かる。でも、止めないと街がめちゃくちゃになる。まずは暴れるのを止めるぞ' },
+  { who:'momosuke', e:'wink',     t:'みんなで力を合わせて止めようね♡ ジャックの中のぱんぷきんにも、きっと届くよ' },
   { who:'mua',      e:'excited',  t:'よーし、やってやろうじゃん！ で、どうやって戦うの？' },
   // SCENE 2 入り方と2つの遊び方
   { who:'kiki',     e:'normal',   t:'HOMEの真ん中のジャックをタップすると、レイド画面が開きまつ。' },

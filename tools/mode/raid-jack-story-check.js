@@ -71,6 +71,17 @@ check('見たかの記録は、既存の配列(rhythmEventStorySeen)へ id を�
   /RHYTHM_EVENT_STORY_IDS = \[\.\.\.HALLOWEEN_NIGHT_STORY_IDS, \.\.\.RAID_JACK_STORY_IDS,/.test(app) && !/mh_raid_jack_story/.test(app + defs));
 check('段階を倒したあとの話は a1→第2部 … a5→第6部', /a1: 'raid_jack_story_2', a2: 'raid_jack_story_3', a3: 'raid_jack_story_4', a4: 'raid_jack_story_5', a5: 'raid_jack_story_6'/.test(defs));
 
+// ⑥ 流す順番: 第1部 → 第1.5部 → 遊び方(2026-10-04・ユーザー指示「第1.5部を先に流して、そのあと遊び方を続ける」)
+check('第1.5部は、第1部を見終えていて、まだ見ていないときに並べる(公開フラグ・ビートPの公開が前提)',
+  /const raidStartStoryReady = RELEASE_FLAGS\.raidJack === true && RELEASE_FLAGS\.rhythmEventPoints === true\s*&& !notPlayedYet\(RAID_JACK_HOWTO_AFTER_STORY_ID\) && notPlayedYet\(RAID_JACK_STORY_START_ID\);/.test(app));
+check('遊び方は、第1.5部を見終えてから並べる(第1部を見終えただけでは出ない)',
+  /const raidHowtoReady = RELEASE_FLAGS\.raidJack === true && RELEASE_FLAGS\.rhythmEventPoints === true\s*&& !notPlayedYet\(RAID_JACK_STORY_START_ID\) && notPlayedYet\(RAID_JACK_HOWTO_STORY_ID\);/.test(app));
+check('HOMEの見回りは、第1.5部を遊び方より先に並べる(2か所とも)',
+  (app.match(/raidStartStoryReady\) setRhythmEventStoryPending\(prev => prev \|\| RAID_JACK_STORY_START_ID\);\s*\n\s*else if \(raidHowtoReady\)/g) || []).length === 2);
+check('本編で第1部を見終えたら第1.5部へ、第1.5部を見終えたら遊び方へ、続けて流す(公開前・回想からのときは流さない)',
+  /event\.id===RAID_JACK_HOWTO_AFTER_STORY_ID&&eventReplay\.live&&!eventReplay\.debug&&RELEASE_FLAGS\.raidJack===true[\s\S]{0,200}setRhythmEventStoryPending\(prev=>prev\|\|RAID_JACK_STORY_START_ID\)/.test(app)
+  && /event\.id===RAID_JACK_STORY_START_ID&&eventReplay\.live&&!eventReplay\.debug&&RELEASE_FLAGS\.raidJack===true[\s\S]{0,200}setRhythmEventStoryPending\(prev=>prev\|\|RAID_JACK_HOWTO_STORY_ID\)/.test(app));
+
 // ④ 再生画面(60-app.jsx の eventReplay の部分だけを切り出して動かす)
 // 既存の回想の検査(tools/boot/event-replay-check.js)と同じ切り出し方。ソースは連結後の game-system.jsx
 const gameSource = read('monster-hero/src/game-system.jsx');

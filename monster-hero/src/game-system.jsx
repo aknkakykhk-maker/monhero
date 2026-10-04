@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b4b53b25575ef33e
+// generated-sha256: a9cca64f03076cc7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 22:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 22:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41419,13 +41419,17 @@ function MonsterHeroGame() {
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       // レイドの遊び方。第1部を見終えていて、まだ見ていなければ、ほかの部より先に続けて流す
+      // 順番は 第1部 → 第1.5部(ふくれあがる影) → 遊び方。遊び方は、第1.5部を見終えてから流す(2026-10-04・ユーザー指示)
+      const raidStartStoryReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_STORY_START_ID);
       const raidHowtoReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
-        && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
+        && !notPlayedYet(RAID_JACK_STORY_START_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
-        if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
+        else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
@@ -41438,6 +41442,7 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
       else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -56142,8 +56147,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id==='tactics_intro') markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
           if(event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)&&!eventReplay.debug) void markRhythmEventStorySeen(event.id);
-          // 第1部を本編で見終えたら、レイドの遊び方を続けて流す(公開前・見たあと・回想からのときは流さない)
+          // 順番は 第1部 → 第1.5部(ふくれあがる影) → レイドの遊び方。本編で見終えたら、次を続けて流す
+          // (公開前・見たあと・回想からのときは流さない)
           if(event&&event.id===RAID_JACK_HOWTO_AFTER_STORY_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
+            &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_STORY_START_ID);
+          if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           setEventReplay(null);
         };
