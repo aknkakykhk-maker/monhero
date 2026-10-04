@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 462dc006af2a9e94
+// generated-sha256: 501d34570567b817
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 06:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 06:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12939,6 +12939,7 @@ const TacticsExCutin = ({ cutin }) => {
           {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
           <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
           <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
+          {cutin.note ? <div data-ex-cutin-note className="ex-cutin__note">{cutin.note}</div> : null}
         </div>
       </div>
       <div className="ex-cutin__flash"/>
@@ -21308,6 +21309,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
+    useNote: '敵の攻撃を全部モノリスが受ける',
     desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
     // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
     maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
@@ -21322,6 +21324,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mocchi: Object.freeze({
     id: 'mocchi_guts_full',
     name: 'ガッツ全開っちー',
+    useNote: '5ターン 全ステータス+30%・満タン・自動回復+30%',
     // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
     //   上限も20%上げ、その上がった上限まで満タンにする
     desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
@@ -21336,6 +21339,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mitarashi: Object.freeze({
     id: 'mitarashi_dragon',
     name: 'ドラゴンだっちー',
+    useNote: '5ターン 力・ガッツ+40% 丈夫さ・ライフ+20%・満タン',
     desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.2, regenRate: 0.2, fullRecover: true,
@@ -21353,6 +21357,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
+    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
     desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
     maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
     effect: 'distMatch',
@@ -21364,6 +21369,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
+    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
     desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     dodgeComboRate: 0.1,
@@ -21374,6 +21380,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ark: Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
+    useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
     desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
@@ -21384,6 +21391,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Iblis: Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
+    useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
     desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
@@ -21397,6 +21405,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pixie: Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
+    useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
     desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     distMult: 1.5, guaranteeUnique: true,
@@ -21407,6 +21416,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mia: Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
+    useNote: '4ターン カード+1・使うほどボルテージ上昇',
     desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
     cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02, hp: 0.03 }),
@@ -21417,6 +21427,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Snegurochka: Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
+    useNote: '全員のガッツ回復＋ランダムで1つ',
     desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 2,
     present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
@@ -21427,6 +21438,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Undine: Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
+    useNote: '選んだ味方が満タンに・ガッツ30%回復',
     desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
     // ★2026-10-03 ユーザー指示で 3回 → 5回
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
@@ -21438,6 +21450,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yaobikuni: Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
+    useNote: '時間停止 このターン敵は動かない',
     desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
     maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
     effect: 'timeStop',
@@ -21450,6 +21463,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pandora: Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
+    useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
     desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
@@ -21460,6 +21474,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
+    useNote: '丈夫さが0になり、その50%が力へ',
     desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
     maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
     // ★効果中にもう一度使っても何も変わらない(丈夫さはもう0)。回数だけ減るのを防ぐ
@@ -21469,6 +21484,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
+    useNote: '戦い方を切り替えた',
     // ★2026-09-25 ユーザー指示で3択にした(片手剣・片手盾・二刀流。既定は片手剣)。
     //   スタイルの効き目は、いつも「元のステータス」から数え直す(切り替えても積み重ならない)
     // ★説明だけで3つの効き目が分かるように、スタイルごとに1行ずつ書く(2026-09-25 ユーザー指摘
@@ -21494,6 +21510,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yggdrasil: Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
+    useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
     desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     partyTakenRate: 0.3, partyRegenRate: 0.2,
@@ -21503,6 +21520,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   MelWhip: Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
+    useNote: 'このターン 連撃30%×4・先にカードで攻撃',
     desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
     extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
@@ -21541,6 +21559,7 @@ const normalizeTacticsExDef = (raw) => {
     id: raw.id,
     name: String(raw.name || raw.id),
     desc: String(raw.desc || ''),
+    useNote: String(raw.useNote || ''),
     maxUses: unlimited ? 0 : Math.max(0, tacticsSafeInt(raw.maxUses, 0)),
     unlimited,
     // ★併用できるかが書かれていなければ「併用できない」へ倒す(強すぎる側へ倒さない)
@@ -21905,6 +21924,26 @@ const addTacticsExVoltage = (state, units, now, n) => {
 // ---- スネグーラチカ(present): クリスマスプレゼント ----
 const TACTICS_EX_PRESENT_KINDS = Object.freeze(['dmg', 'taken', 'combo', 'heal', 'guts', 'crit']);
 const TACTICS_EX_PRESENT_LABELS = Object.freeze({ dmg: '与ダメージアップ', taken: '被ダメージダウン', combo: '連撃付与', heal: 'ライフ回復', guts: 'ガッツ追加回復', crit: '会心率アップ' });
+// 中身を、数字つきの短い言い方にする(使った直後のカットイン・ログ・詳細に出す。cfg は def.present)
+const tacticsExPresentKindText = (kind, cfg, turns = 2) => {
+  const c = cfg || {}, pct = (v) => Math.round((Number(v) || 0) * 100);
+  switch (kind) {
+    case 'dmg': return `与ダメージ+${pct(c.dmg)}%（${turns}ターン）`;
+    case 'taken': return `被ダメージ−${pct(c.taken)}%（${turns}ターン）`;
+    case 'combo': return c.combo ? `連撃 与ダメ${pct(c.combo.rate)}%×${c.combo.count}回（${turns}ターン）` : '連撃付与';
+    case 'heal': return `全員のライフが上限の${pct(c.heal)}%回復`;
+    case 'guts': return `全員のガッツがさらに上限の${pct(c.guts)}%回復`;
+    case 'crit': return `会心率×${(Number(c.crit) || 0) + 1}（${turns}ターン）`;
+    default: return '';
+  }
+};
+const tacticsExPresentNote = (roll, cfg, turns = 2) => {
+  if (!roll || !Array.isArray(roll.kinds)) return '';
+  const c = cfg || {};
+  const head = `全員のガッツが上限の${Math.round((Number(c.fixedGuts) || 0) * 100)}%回復`;
+  const body = roll.kinds.map(k => tacticsExPresentKindText(k, c, turns)).filter(Boolean).join('・');
+  return `${head}＋${roll.jackpot ? '大当たり！ ' : ''}${body}`;
+};
 // 乱数2つ(0以上1未満)から中身を決める。r1 が大当たりの確率より小さければ全部、そうでなければ r2 で1種類
 const rollTacticsExPresent = (r1, r2, jackpot = 0.1) => (Number(r1) < jackpot
   ? { jackpot: true, kinds: TACTICS_EX_PRESENT_KINDS.slice() }
@@ -48610,6 +48649,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
         // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
         if(def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
+        // プレゼントは、決まった中身を札に出す(何が効いているかが距離枠から分かる)
+        if(def.effect==='present'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+          const pr=tacticsExPresentOf(state,tacticsUnits,tacticsExNow);
+          if(pr&&pr.kinds.length) return { text:pr.jackpot?'大当たり！':TACTICS_EX_PRESENT_LABELS[pr.kinds[0]], active:true };
+        }
         if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
@@ -48621,7 +48665,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
           const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
           if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
-          if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり（全部）':pres.kinds.map(k=>TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
+          // ザンの血踊: いま何回避けて、連撃がいくつ付いているか
+          if(def.effect==='dodgeCombo'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+            const zc=tacticsExExtraCombosAt(state,tacticsUnits,slotIdx,tacticsExNow);
+            out.push(zc?`回避 ${zc.count}回 → 与ダメ${Math.round(zc.rate*100)}%の連撃が${zc.count}回付いている`:'回避 0回（回避するたびに連撃が1回ずつ増える）');
+          }
+          // パンドラの箱: 悪魔側・天使側の力と、あと何ターンか
+          if(def.effect==='pandoraBox'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+            const pb=def.pandoraBox;
+            out.push(`1枚目＝悪魔（与ダメ×${pb.devilDmg}・連撃${Math.round(pb.devilCombo.rate*100)}%×${pb.devilCombo.count}）／2枚目＝天使（味方全員のライフ・ガッツが上限の${Math.round(pb.angelRate*100)}%回復）`);
+            out.push(`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン（ターン終わりに最大ライフの${Math.round(pb.costRate*100)}%を払う）`);
+          }
+          if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり！ ':''}${pres.kinds.map(k=>tacticsExPresentKindText(k,def.present,def.turns)).join('・')}`);
           return out;
         })(),
         stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
@@ -48771,24 +48826,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(ens.moved){ setHand(ens.hand); setDeck(ens.deck); setGraveyard(ens.graveyard); }
     }
     // スネグーラチカの「クリスマスプレゼント」: 中身をランダムで決める。必ず全員のガッツが戻り、決まった中身が起きる
+    let presentNote=null; // 決まった中身(数字つき)。カットインにも出す
     if(def.effect==='present'&&def.present){
       const roll=rollTacticsExPresent(Math.random(),Math.random(),def.present.jackpot);
       commitTacticsExState(setTacticsExPresent(tacticsExStateRef.current,slotIdx,roll));
       tacticsRateHeal(0,def.present.fixedGuts,false);
       if(roll.kinds.includes('heal')) tacticsRateHeal(def.present.heal,0,false);
       if(roll.kinds.includes('guts')) tacticsRateHeal(0,def.present.guts,false);
-      const names=roll.kinds.map(k=>TACTICS_EX_PRESENT_LABELS[k]);
-      pushBattleLog(`🎁 プレゼントの中身: ${roll.jackpot?'大当たり！ 全部':names.join('・')}`,'ally');
-      addPopup(roll.jackpot?'🎁 大当たり！ 全部入り':`🎁 ${names[0]}`,'hero','text-amber-300 font-black text-2xl drop-shadow-md',undefined,slotIdx);
+      presentNote=tacticsExPresentNote(roll,def.present,def.turns);
+      pushBattleLog(`🎁 プレゼントの中身: ${presentNote}`,'ally');
+      addPopup(roll.jackpot?'🎁 大当たり！ 全部入り':`🎁 ${tacticsExPresentKindText(roll.kinds[0],def.present,def.turns)}`,'hero','text-amber-300 font-black text-2xl drop-shadow-md',undefined,slotIdx);
     }
     // パンドラの箱: 悪魔・天使の絵は起動時に読まないので、使った瞬間に先読みして、カードを切るときに出遅れないようにする
     if(def.effect==='pandoraBox') [PANDORA_DEVIL_IMG,PANDORA_ANGEL_IMG].forEach(u=>{ try{ const im=new Image(); im.src=u; }catch(e){} });
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
+      // 使った直後に「何が起きたか」を、カットインの下の行とログへ出す(2026-10-04 ユーザー指摘「何の効果が出たか分かるように」)
+      const useNote=presentNote||(def.duration==='style'?`戦い方を${tacticsExStyleLabel(def,next,slotIdx,mon.id)}に切り替えた`:def.useNote)||'';
+      if(useNote&&!presentNote) pushBattleLog(`　→ ${useNote}`,'ally');
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
       Audio_.se.special();
       showTacticsExCutin({ slotIndex:slotIdx, effect:def.effect, monId:mon.id, imgUrl:mon.imgUrl, colors:mon.colors, monName:mon.masuName||mon.name, exName:def.name,
-        styleLabel:def.duration==='style'?tacticsExStyleLabel(def,next,slotIdx,mon.id):'' });
+        styleLabel:def.duration==='style'?tacticsExStyleLabel(def,next,slotIdx,mon.id):'', note:useNote });
       if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
     }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
@@ -59820,6 +59879,8 @@ const createAnimationStyle = () => {
     @keyframes exName { 0%,12% { opacity:0; translate:46px 0; scale:1.35; } 24% { opacity:1; translate:0 0; scale:.96; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; translate:-20px 0; } }
     .ex-cutin__sub { margin-top:6px; font:800 11px/1.2 system-ui, sans-serif; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       opacity:0; animation:exTag 1600ms ease-out 60ms forwards; }
+    .ex-cutin__note { margin-top:4px; font:800 10px/1.35 system-ui, sans-serif; color:#fde68a; max-width:100%; white-space:normal; text-shadow:0 1px 3px rgba(0,0,0,.8);
+      opacity:0; animation:exName 1600ms cubic-bezier(.2,.8,.2,1) 80ms forwards; }
     .ex-cutin__flash { inset:0; background:#fff; opacity:0; animation:exFlash 1600ms linear forwards; }
     @keyframes exFlash { 0% { opacity:0; } 5% { opacity:.7; } 15% { opacity:0; } 84% { opacity:0; } 90% { opacity:.3; } 100% { opacity:0; } }
     .ex-cutin__motif { inset:0; }

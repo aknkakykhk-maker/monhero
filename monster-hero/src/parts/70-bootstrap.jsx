@@ -2230,6 +2230,8 @@ const createAnimationStyle = () => {
     @keyframes exName { 0%,12% { opacity:0; translate:46px 0; scale:1.35; } 24% { opacity:1; translate:0 0; scale:.96; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; translate:-20px 0; } }
     .ex-cutin__sub { margin-top:6px; font:800 11px/1.2 system-ui, sans-serif; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       opacity:0; animation:exTag 1600ms ease-out 60ms forwards; }
+    .ex-cutin__note { margin-top:4px; font:800 10px/1.35 system-ui, sans-serif; color:#fde68a; max-width:100%; white-space:normal; text-shadow:0 1px 3px rgba(0,0,0,.8);
+      opacity:0; animation:exName 1600ms cubic-bezier(.2,.8,.2,1) 80ms forwards; }
     .ex-cutin__flash { inset:0; background:#fff; opacity:0; animation:exFlash 1600ms linear forwards; }
     @keyframes exFlash { 0% { opacity:0; } 5% { opacity:.7; } 15% { opacity:0; } 84% { opacity:0; } 90% { opacity:.3; } 100% { opacity:0; } }
     .ex-cutin__motif { inset:0; }
