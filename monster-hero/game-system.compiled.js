@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1ba3dae42cf3751c
+// source-sha256: 7e337220bf918a0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 06:47";
+const BUILD_DATE = "2026-10-05 06:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -59888,6 +59888,168 @@ const RaidJackRewardList = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-300"
   }, "🔮 魂格の結晶は、マスモンの魂格特性の画面で使うと、そのマスモンの魂格Pが1個につき+1されます。", React.createElement("br", null), "🌈 虹の超越の実は、超越強化で超越ポイント+1に変えられます。")));
 };
+const RaidJackRankingRows = ({
+  rows,
+  myId,
+  renderPlace,
+  renderIcon,
+  cardClass,
+  limit = 100
+}) => {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return React.createElement("ol", {
+    "data-raid-jack-ranking": true,
+    className: "space-y-1.5"
+  }, rows.slice(0, limit).map((r, i) => {
+    const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    }) : {
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    };
+    const mineRow = !!myId && r.breederId === myId;
+    return React.createElement("li", {
+      key: `${r.breederId}-${i}`,
+      "data-raid-jack-ranking-row": true,
+      "data-ranking-kind": "raid-jack",
+      "aria-current": mineRow ? 'true' : undefined,
+      className: `${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`
+    }, typeof renderPlace === 'function' ? renderPlace(i) : React.createElement("span", {
+      className: "w-7 shrink-0 text-center text-[10px] font-black text-amber-200"
+    }, i + 1), typeof renderIcon === 'function' && renderIcon(entry), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+    }, entry.userName || '名無しのブリーダー', mineRow && React.createElement("span", {
+      className: "ml-1 text-[8px] text-orange-200"
+    }, "(あなた)")), React.createElement("b", {
+      className: "shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200"
+    }, r.total.toLocaleString(), React.createElement("small", {
+      className: "ml-0.5 text-[8px] text-slate-400"
+    }, "ダメージ")));
+  }));
+};
+const RaidJackRankingList = ({
+  onClose,
+  eventId,
+  initialTab = 'a',
+  initialTier = 0,
+  bossDown = false,
+  renderPlace,
+  renderIcon,
+  cardClass
+}) => {
+  const [tab, setTab] = useState(initialTab);
+  const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
+  const [allMode, setAllMode] = useState(false);
+  const [rows, setRows] = useState(undefined);
+  const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
+  const [ahead, setAhead] = useState(null);
+  const useAll = tab === 'a' && allMode && bossDown;
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setRows(undefined);
+      setAhead(null);
+      const meId = await ensureBreederId();
+      if (!alive) return;
+      setMyId(meId || null);
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
+      if (!alive) return;
+      setSelf(mine);
+      const list = useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      if (!alive) return;
+      if (list) {
+        try {
+          await ensureBreederProfiles('raid-jack');
+        } catch (e) {}
+      }
+      if (!alive) return;
+      setRows(list);
+      if (list && mine) {
+        const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? mine.a[tierIdx + 1] || 0 : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, tierIdx + 1, myTotal, eventId) : null;
+        if (alive) setAhead(count);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [tab, tierIdx, useAll, eventId]);
+  const myTotal = self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
+  const title = useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  return React.createElement("div", {
+    "data-raid-jack-ranking-list": true,
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "ジャックのランキング",
+    style: {
+      paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+    }
+  }, React.createElement("div", {
+    className: "mb-2 flex shrink-0 items-center justify-between"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-orange-200"
+  }, "🏆 ジャックのランキング"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-close": true,
+    onClick: onClose,
+    "aria-label": "ランキングを閉じる",
+    className: "min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95"
+  }, "閉じる")), React.createElement(ScreenTabs, {
+    items: [{
+      id: 'a',
+      label: 'レイドバトル'
+    }, {
+      id: 'b',
+      label: 'グランドスラム'
+    }],
+    value: tab,
+    onChange: setTab
+  }), tab === 'a' && React.createElement("div", {
+    "data-raid-jack-ranking-tiers": true,
+    className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
+  }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
+    type: "button",
+    key: t.id,
+    "data-raid-jack-ranking-tier": t.id,
+    onClick: () => {
+      setTierIdx(i);
+      setAllMode(false);
+    },
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, t.name.replace('ジャック', ''))), bossDown && React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-all": true,
+    onClick: () => setAllMode(true),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, "累計ダメージ")), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 flex items-baseline justify-between gap-2 text-[11px]"
+  }, React.createElement("span", {
+    className: "font-black text-orange-200"
+  }, title), myTotal > 0 && React.createElement("span", {
+    "data-raid-jack-ranking-mine": true,
+    className: "shrink-0 text-[10px] text-slate-200"
+  }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
+    className: "mb-2 text-[9px] text-slate-400"
+  }, useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "読み込み中…"), rows === null && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+    rows: rows,
+    myId: myId,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass
+  })));
+};
 const RaidJackScreen = ({
   onBack,
   onChallenge,
@@ -59918,6 +60080,7 @@ const RaidJackScreen = ({
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
   const [showRewards, setShowRewards] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
   const [aAll, setAAll] = useState(false);
   const nowMs = Date.now();
   const windowState = raidJackWindowAt(nowMs);
@@ -60040,7 +60203,19 @@ const RaidJackScreen = ({
     className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
   }, "1回追加", React.createElement("br", null), React.createElement("small", {
     className: "text-[9px] opacity-80"
-  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), message && React.createElement("div", {
+  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), React.createElement("div", {
+    className: "mb-2 grid shrink-0 grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-open": true,
+    onClick: () => setShowRanking(true),
+    className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
+  }, "🏆 ランキング"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-reward-list-open-top": true,
+    onClick: () => setShowRewards(true),
+    className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
+  }, "🎁 報酬一覧")), message && React.createElement("div", {
     className: "mb-2 shrink-0 text-center text-[11px] font-black text-amber-200",
     role: "status"
   }, message), totals === null && React.createElement("div", {
@@ -60136,36 +60311,13 @@ const RaidJackScreen = ({
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
-  }, "まだ記録がありません。いちばんのりを目指そう！"), Array.isArray(rows) && rows.length > 0 && React.createElement("ol", {
-    "data-raid-jack-ranking": true,
-    className: "space-y-1.5"
-  }, rows.slice(0, 100).map((r, i) => {
-    const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({
-      breederId: r.breederId,
-      userName: raidJackNameOf(r.breederId)
-    }) : {
-      breederId: r.breederId,
-      userName: raidJackNameOf(r.breederId)
-    };
-    const mineRow = !!myId && r.breederId === myId;
-    return React.createElement("li", {
-      key: `${r.breederId}-${i}`,
-      "data-raid-jack-ranking-row": true,
-      "data-ranking-kind": "raid-jack",
-      "aria-current": mineRow ? 'true' : undefined,
-      className: `${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`
-    }, typeof renderPlace === 'function' ? renderPlace(i) : React.createElement("span", {
-      className: "w-7 shrink-0 text-center text-[10px] font-black text-amber-200"
-    }, i + 1), typeof renderIcon === 'function' && renderIcon(entry), React.createElement("span", {
-      className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
-    }, entry.userName || '名無しのブリーダー', mineRow && React.createElement("span", {
-      className: "ml-1 text-[8px] text-orange-200"
-    }, "(あなた)")), React.createElement("b", {
-      className: "shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200"
-    }, r.total.toLocaleString(), React.createElement("small", {
-      className: "ml-0.5 text-[8px] text-slate-400"
-    }, "ダメージ")));
-  })))), React.createElement("div", {
+  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+    rows: rows,
+    myId: myId,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass
+  }))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
@@ -60173,7 +60325,16 @@ const RaidJackScreen = ({
     disabled: !open || !isOpenTier || closedTier || remaining <= 0,
     onClick: () => onChallenge(tab, current),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-  }, challengeLabel)), showRewards && React.createElement(RaidJackRewardList, {
+  }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
+    eventId: eventId,
+    initialTab: tab,
+    initialTier: current,
+    bossDown: bossDownNow,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass,
+    onClose: () => setShowRanking(false)
+  }), showRewards && React.createElement(RaidJackRewardList, {
     claimed: state.claimed,
     initialTab: tab,
     onClose: () => setShowRewards(false)
