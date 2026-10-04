@@ -463,27 +463,27 @@ const PhaseBanner = ({ phase, enabled }) => {
 // ==== WAVEのはじまりの演出 ====
 // 敵が出てバトルが始まるたびに、画面の真ん中へ「WAVE ○」を一瞬だけ出す。最後のWAVE(10)はボス戦として赤く出す。
 // 操作は止めない(pointer-events: none)。約1.5秒で、動き続けるものは無い。
-const WaveIntro = ({ enabled, wave, enemyName }) => {
+const WaveIntro = ({ enabled, wave, enemyName, title = '' }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
     // 出している途中で設定が切れたとき(超省エネに入ったときなど)は、表示を消すタイマーも一緒に止まるので、ここで消す
     if (!enabled || !(wave > 0)) { lastRef.current = null; setShown(null); return undefined; }
-    const key = `${wave}:${enemyName || ''}`;
+    const key = `${wave}:${enemyName || ''}:${title}`;
     if (lastRef.current === key) return undefined;
     lastRef.current = key;
-    setShown({ wave, name: enemyName || '', key: Date.now() });
+    setShown({ wave, name: enemyName || '', title, key: Date.now() });
     const timer = setTimeout(() => setShown(null), 1500);
     return () => clearTimeout(timer);
-  }, [enabled, wave, enemyName]);
+  }, [enabled, wave, enemyName, title]);
   if (!shown) return null;
-  const boss = shown.wave >= 10;
+  const boss = !shown.title && shown.wave >= 10;
   return (
     <div key={shown.key} data-wave-intro={shown.wave} aria-hidden="true" className={`mh-waveintro${boss ? ' mh-waveintro-boss' : ''}`}>
       <div className="mh-waveintro-line"/>
       <div className="mh-waveintro-body">
         <span className="mh-waveintro-sub">{boss ? 'FINAL BOSS' : 'BATTLE START'}</span>
-        <b className="mh-waveintro-title">WAVE {shown.wave}</b>
+        <b className="mh-waveintro-title">{shown.title || `WAVE ${shown.wave}`}</b>
         {shown.name && <span className="mh-waveintro-name">VS {shown.name}</span>}
       </div>
       <div className="mh-waveintro-line"/>

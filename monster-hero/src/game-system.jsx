@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7f77db54c81239e4
+// generated-sha256: e20f64dcfa2b74d1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 19:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 19:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23826,27 +23826,27 @@ const PhaseBanner = ({ phase, enabled }) => {
 // ==== WAVEのはじまりの演出 ====
 // 敵が出てバトルが始まるたびに、画面の真ん中へ「WAVE ○」を一瞬だけ出す。最後のWAVE(10)はボス戦として赤く出す。
 // 操作は止めない(pointer-events: none)。約1.5秒で、動き続けるものは無い。
-const WaveIntro = ({ enabled, wave, enemyName }) => {
+const WaveIntro = ({ enabled, wave, enemyName, title = '' }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
     // 出している途中で設定が切れたとき(超省エネに入ったときなど)は、表示を消すタイマーも一緒に止まるので、ここで消す
     if (!enabled || !(wave > 0)) { lastRef.current = null; setShown(null); return undefined; }
-    const key = `${wave}:${enemyName || ''}`;
+    const key = `${wave}:${enemyName || ''}:${title}`;
     if (lastRef.current === key) return undefined;
     lastRef.current = key;
-    setShown({ wave, name: enemyName || '', key: Date.now() });
+    setShown({ wave, name: enemyName || '', title, key: Date.now() });
     const timer = setTimeout(() => setShown(null), 1500);
     return () => clearTimeout(timer);
-  }, [enabled, wave, enemyName]);
+  }, [enabled, wave, enemyName, title]);
   if (!shown) return null;
-  const boss = shown.wave >= 10;
+  const boss = !shown.title && shown.wave >= 10;
   return (
     <div key={shown.key} data-wave-intro={shown.wave} aria-hidden="true" className={`mh-waveintro${boss ? ' mh-waveintro-boss' : ''}`}>
       <div className="mh-waveintro-line"/>
       <div className="mh-waveintro-body">
         <span className="mh-waveintro-sub">{boss ? 'FINAL BOSS' : 'BATTLE START'}</span>
-        <b className="mh-waveintro-title">WAVE {shown.wave}</b>
+        <b className="mh-waveintro-title">{shown.title || `WAVE ${shown.wave}`}</b>
         {shown.name && <span className="mh-waveintro-name">VS {shown.name}</span>}
       </div>
       <div className="mh-waveintro-line"/>
@@ -49382,7 +49382,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
-    pushBattleLog(`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
+    pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
@@ -56660,7 +56660,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         const inPlan=!!enemy&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId==='ally'?'ally':phaseId);
         const atRunStart=!enemy&&(phaseId==='hero'||phaseId==='slot'||phaseId==='teaching');
         return <PhaseBanner phase={phaseId} enabled={battleFxEffective.phaseBanner!=='OFF'&&(inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy))}/>;})()}
-      <WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name}/>
+      <WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={isRaidJackMode(runMode)?battleModeInfo(runMode).short:''}/>
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(

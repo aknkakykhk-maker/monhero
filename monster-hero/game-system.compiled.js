@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c7158dc0bddf9e9
+// source-sha256: da756a1dc8b80f62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 19:12";
+const BUILD_DATE = "2026-10-04 19:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36871,7 +36871,8 @@ const PhaseBanner = ({
 const WaveIntro = ({
   enabled,
   wave,
-  enemyName
+  enemyName,
+  title = ''
 }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
@@ -36881,19 +36882,20 @@ const WaveIntro = ({
       setShown(null);
       return undefined;
     }
-    const key = `${wave}:${enemyName || ''}`;
+    const key = `${wave}:${enemyName || ''}:${title}`;
     if (lastRef.current === key) return undefined;
     lastRef.current = key;
     setShown({
       wave,
       name: enemyName || '',
+      title,
       key: Date.now()
     });
     const timer = setTimeout(() => setShown(null), 1500);
     return () => clearTimeout(timer);
-  }, [enabled, wave, enemyName]);
+  }, [enabled, wave, enemyName, title]);
   if (!shown) return null;
-  const boss = shown.wave >= 10;
+  const boss = !shown.title && shown.wave >= 10;
   return React.createElement("div", {
     key: shown.key,
     "data-wave-intro": shown.wave,
@@ -36907,7 +36909,7 @@ const WaveIntro = ({
     className: "mh-waveintro-sub"
   }, boss ? 'FINAL BOSS' : 'BATTLE START'), React.createElement("b", {
     className: "mh-waveintro-title"
-  }, "WAVE ", shown.wave), shown.name && React.createElement("span", {
+  }, shown.title || `WAVE ${shown.wave}`), shown.name && React.createElement("span", {
     className: "mh-waveintro-name"
   }, "VS ", shown.name)), React.createElement("div", {
     className: "mh-waveintro-line"
@@ -73438,7 +73440,7 @@ function MonsterHeroGame() {
       setBattleLog([]);
       battleLogSeqRef.current = 0;
     }
-    pushBattleLog(`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
+    pushBattleLog(isRaidJackMode(runMode) ? `── ${battleModeInfo(runMode).short}：${newEnemy.name} ──` : `── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1);
     setSelectedCards([]);
     setLastActionSlot(null);
@@ -88175,7 +88177,8 @@ function MonsterHeroGame() {
     })(), React.createElement(WaveIntro, {
       enabled: battleFxEffective.waveIntro !== 'OFF' && gameState === 'BATTLE' && !!enemy,
       wave: wave,
-      enemyName: enemy?.name
+      enemyName: enemy?.name,
+      title: isRaidJackMode(runMode) ? battleModeInfo(runMode).short : ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
     }), effect && !rhythmScreenOpen && React.createElement("div", {
