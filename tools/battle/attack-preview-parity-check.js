@@ -55,6 +55,7 @@ const battleAnims = (atkMotion, isUnique, monId = 'TestMon', skillName = null) =
     setAttackAnim: (a) => { if(a) { anims.push({...a}); anims.motionWaitAt = waits.length; } },
     setSlotSkill: ()=>{}, setEnemy: ()=>{}, setEnemyDist: ()=>{}, syncAtkTierForDist: ()=>{},
     addPopup: ()=>{}, triggerShake: ()=>{}, battleWait: async(ms)=>{ waits.push(ms); },
+    setTacticsPandoraForms: ()=>{},   // パンドラの箱(タクティクスEX)の姿の切り替え。この検査では見ない(2026-10)
     // ★戦いの記録(ログ)は表示だけ。切り出したループが呼ぶので、素通しのスタブを置く
     pushBattleLog: ()=>{}, battleActorName: ()=>'テスト',
     Audio_: { se: new Proxy({}, { get: () => () => {} }) },

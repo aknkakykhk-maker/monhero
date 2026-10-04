@@ -821,8 +821,9 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && (app.match(/hitRepeat:tacticsExStyleAt\(slotIdx\)==='dual'\?TACTICS_EX_DUAL_HIT_REPEAT:1/g) || []).length === 2
     && /card\.monId==='KenshiMocchi'&&tacticsExStyleAt\(slotIdx\)==='shield'/.test(app)
     && /if \(swordSkill && isUniqueOf\('KenshiMocchi'\)\)/.test(source));
+  // 定義の取り方は、ジャックのレイドバトルでEXの回数を2回にする包み(raidExDefOf)を通る形になった(2026-10)
   check('勇者モンを置いた瞬間に初期スタイルを書き込む(タクティクスだけ)',
-    /if \(isTacticsMode\(runMode\)\) \{\n\s*const heroExDef=tacticsExDefOf\(m\.id\);/.test(app)
+    /if \(isTacticsMode\(runMode\)\) \{\n\s*const heroExDef=(?:tacticsExDefOf|raidExDefOf)\(m\.id\);/.test(app)
     && /setTacticsHeroStyle\(null\);/.test(app.slice(app.indexOf('const resetTacticsJoinCatchUp'), app.indexOf('const resetTacticsJoinCatchUp') + 800)));
   check('効き目は ref から「いま」を読む(useCallback の古い関数から呼ばれても同じ答え)',
     /const tacticsExEffectAt = \(slotIdx\) => \{\n\s*const live=tacticsExLiveRef\.current;/.test(app));

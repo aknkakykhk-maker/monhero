@@ -45,7 +45,9 @@ for (const name of screens) {
 
   // 1ファイルに複数の画面を置くことがある(図鑑は 一覧・詳細・攻撃プレビューの3つで1組)。
   // 定義したものが全部使われていることまで見る
-  const components = [...src.matchAll(/^function ([A-Z][A-Za-z0-9]*)\(/gm)].map((m) => m[1]);
+  // 画面は `function 名前(` で書く決まりだったが、ジャックの画面(78・79)は `const 名前Screen = (` の形で書かれた(2026-10)。
+  // 画面の名前(…Screen)で終わる const も画面として数える(中の小さな部品までは数えない)
+  const components = [...src.matchAll(/^(?:function ([A-Z][A-Za-z0-9]*)\(|const ([A-Z][A-Za-z0-9]*Screen) = )/gm)].map((m) => m[1] || m[2]);
   if (!SHARED_SCREEN_PARTS.has(name)) check(`${label}: 画面コンポーネントを定義している`, components.length > 0, components.join(' / ') || '見つからない');
   // 画面の中だけで使う小さな部品(結果画面の RankingFailedNote など)は、同じファイルの中で使われていればよい
   const unused = components.filter((c) => !app.includes(`<${c}`) && !code.includes(`<${c}`));

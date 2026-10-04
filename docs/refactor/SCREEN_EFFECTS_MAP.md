@@ -1,4 +1,4 @@
-# 画面ライフサイクルの分類表 — setTimeout 87 箇所を「画面専用 / 進行 / 対象外」に仕分ける
+# 画面ライフサイクルの分類表 — setTimeout 92 箇所を「画面専用 / 進行 / 対象外」に仕分ける
 
 2026-09-10 作成(STEP 6-1)。対象は `monster-hero/src/parts/60-app.jsx`(`MonsterHeroGame`)。
 `tools/ui/screen-effects-check.js` がこの表を読み、目印が本体にちょうど1つあることと、
@@ -138,6 +138,11 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `RHYTHM_MULTI.markShuffleShown(shuffleRound), RHYTHM_MULTI_SHUFFLE_MS` | progress | 投げっぱなし | シャッフルを見せた印を付ける。止めると同じ演出がまた出る |
 | `setCopied(false), 2000` | progress | 投げっぱなし | 「コピーしました」の表示を戻す。止めると出たまま |
 | `if (reduce || from === to) { setValue(to); return undefined; }` | screen | 止める | 数字のカウントアップ演出(画面を離れたら止める) |
+| `const raidTotals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id)` | 対象外 | await | HOMEの見回りで、ジャックの段階の合計を取る通信の時間切れ(4秒で null を返して今回は出さない) |
+| `const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId)` | 対象外 | await | レイド画面の段階の合計を取る通信の時間切れ(4秒で null を返す) |
+| `const loop = () => { timer = setTimeout(` | screen | 止める | HOMEのジャックが「ときどき両腕ポーズ」を取る間隔(約5.6秒おき)。画面を離れたら止める(`alive`・`clearTimeout`) |
+| `setPose(false); loop(); }, 1400)` | screen | 止める | 両腕ポーズを戻して次の間隔へ(1.4秒)。画面を離れたら止める |
+| `setRaidGrowthBanner(null), 3200` | screen | 止める | レイドバトルの「強化が入ったターン」の帯を消す(3.2秒)。後始末で `clearTimeout` |
 
 ## 次の本でやること
 

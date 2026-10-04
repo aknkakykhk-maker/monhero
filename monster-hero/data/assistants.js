@@ -6665,13 +6665,15 @@ const EVENT_REPLAYS = [
   //   第1.5部=レイド開始(公開後に初めてHOMEを開いたとき) / 第2〜6部=段階を倒したあと / 終章=期間終了後
   //   終章は「大王まで倒せたか」で2本(raid_jack_ending_cleared / raid_jack_ending_notcleared)。
   // date は回想の並び順にだけ使う(第1部の 10/4 08:00 のあとに並ぶよう、同じ日の少しあとにしてある)。
+  //   物語の順(第1部 08:00 → 第1.5部 08:01 → 遊び方 08:02 → 第2部 08:03 … 第6部 08:07)に、同じ時刻を使い回さず1分ずつ振る。回想の一覧は新しい順で、
+  //   同じ時刻だと書いた順に並ぶので、遊び方が第1.5部と同じ 08:01 だと一覧で「遊び方」が第1.5部より前(古い側)に出てしまっていた(2026-10-05に確認)。
   // 見たかどうかは unlockedKey(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS)で引く
   { id: 'raid_jack_story_1b', date: '2026-10-04 08:01', title: 'ハロウィン・ナイト 第1.5部 ～ふくれあがる影～', script: RAID_JACK_STORY_1B, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory1bSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_2', date: '2026-10-04 08:02', title: 'ハロウィン・ナイト 第2部 ～吠えるカボチャ～', script: RAID_JACK_STORY_2, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_3', date: '2026-10-04 08:03', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: RAID_JACK_STORY_3, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_4', date: '2026-10-04 08:04', title: 'ハロウィン・ナイト 第4部 ～ドラの気持ち～', script: RAID_JACK_STORY_4, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_5', date: '2026-10-04 08:05', title: 'ハロウィン・ナイト 第5部 ～すれ違い～', script: RAID_JACK_STORY_5, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_6', date: '2026-10-04 08:06', title: 'ハロウィン・ナイト 第6部 ～ただ、遊びたかっただけ～', script: RAID_JACK_STORY_6, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory6Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_2', date: '2026-10-04 08:03', title: 'ハロウィン・ナイト 第2部 ～吠えるカボチャ～', script: RAID_JACK_STORY_2, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_3', date: '2026-10-04 08:04', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: RAID_JACK_STORY_3, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_4', date: '2026-10-04 08:05', title: 'ハロウィン・ナイト 第4部 ～ドラの気持ち～', script: RAID_JACK_STORY_4, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_5', date: '2026-10-04 08:06', title: 'ハロウィン・ナイト 第5部 ～すれ違い～', script: RAID_JACK_STORY_5, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_6', date: '2026-10-04 08:07', title: 'ハロウィン・ナイト 第6部 ～ただ、遊びたかっただけ～', script: RAID_JACK_STORY_6, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory6Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
   { id: 'raid_jack_ending_cleared', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王まで倒せた)～', script: RAID_JACK_ENDING_CLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingClearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
   { id: 'raid_jack_ending_notcleared', date: '2026-11-01 04:01', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王には届かなかった)～', script: RAID_JACK_ENDING_NOTCLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingNotclearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
   // タクティクスバトルの導入(2026-09-21)。**公開するまでは回想にも出さない**
@@ -6708,7 +6710,7 @@ const EVENT_REPLAYS = [
   // (出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。id はそこと同じ)
   { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
   // レイドの遊び方(2026-10-04)。第1部を見終えたあとにHOMEで1度だけ続けて流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
-  { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:01', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

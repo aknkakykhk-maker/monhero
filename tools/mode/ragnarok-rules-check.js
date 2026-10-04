@@ -17,7 +17,7 @@ vm.runInContext([
   "const BATTLE_MODE_CHALLENGE='challenge',BATTLE_MODE_QUICK='quick',BATTLE_MODE_PRO='pro',BATTLE_MODE_SPECIES_CHALLENGE='speciesChallenge',"
   + "BATTLE_MODE_TACTICS='tactics',BATTLE_MODE_TACTICS_SPECIES='tacticsSpecies',BATTLE_MODE_TACTICS_PRO='tacticsPro';"
   // この検査は極限チャレンジのぶんだけを見る。タクティクス側の分岐は通らない
-  + "const isTacticsMode=()=>false,isSpeciesChallengeMode=(m)=>m===BATTLE_MODE_SPECIES_CHALLENGE;",
+  + "const isTacticsMode=()=>false,isSpeciesChallengeMode=(m)=>m===BATTLE_MODE_SPECIES_CHALLENGE,isRaidJackMode=()=>false;",
   slice('const EXTREME_DIFFICULTIES = Object.freeze([','// ===== トレーニング'),
   slice('const TRAINING_PICK_COUNT','// 極限チャレンジの説明には'),
   slice('const EXTREME_RANKING_PREFIX','// ランキングの難易度キーから'),
