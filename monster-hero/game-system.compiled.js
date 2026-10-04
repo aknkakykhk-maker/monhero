@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 93147b082b1b3f5e
+// source-sha256: 90627e415919330d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 18:02";
+const BUILD_DATE = "2026-10-04 18:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -692,6 +692,18 @@ const battleModeInfo = mode => {
   if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
   if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
   if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
+  if (mode === BATTLE_MODE_RAID_JACK_A) return {
+    id: mode,
+    short: 'レイドバトル',
+    label: 'レイドバトル',
+    color: '#fb923c'
+  };
+  if (mode === BATTLE_MODE_RAID_JACK_B) return {
+    id: mode,
+    short: 'グランドスラム',
+    label: 'グランドスラム',
+    color: '#fbbf24'
+  };
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 const PUBLIC_BATTLE_MODES = BATTLE_MODES;
@@ -35660,6 +35672,7 @@ const raidJackMakeEnemy = (kind, tierIndex, mode) => {
   if (!enemy) return null;
   return {
     ...enemy,
+    name: tier.name,
     maxHp: tier.hp,
     hp: tier.hp,
     atk: tier.atk,
@@ -50431,7 +50444,7 @@ function BattleScreen({
     className: `flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`
   }, debugBattle && React.createElement("span", {
     className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest"
-  }, "DEBUG"), React.createElement("span", {
+  }, "DEBUG"), !isRaidJackMode(runMode) && React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), React.createElement("span", {
     className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
@@ -50440,7 +50453,7 @@ function BattleScreen({
       borderColor: `${battleModeInfo(runMode).color}66`,
       backgroundColor: 'rgba(0,0,0,.35)'
     }
-  }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), React.createElement("div", {
+  }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : isRaidJackMode(runMode) ? React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", enemy?.name || '') : React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), React.createElement("div", {
     "data-battle-metrics": true,
     className: "shrink-0 flex items-center gap-1 px-1 leading-none"
   }, React.createElement("div", {

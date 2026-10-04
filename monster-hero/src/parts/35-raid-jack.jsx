@@ -162,5 +162,6 @@ const raidJackMakeEnemy = (kind, tierIndex, mode) => {
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, { mode, actionCount: tier.actionCount });
   if (!enemy) return null;
-  return { ...enemy, maxHp: tier.hp, hp: tier.hp, atk: tier.atk, raidJackTier: tier.id };
+  // 名前は段階の名前(ジャック男爵・初級ジャックなど)。バトル画面のボスバーやログにそのまま出る
+  return { ...enemy, name: tier.name, maxHp: tier.hp, hp: tier.hp, atk: tier.atk, raidJackTier: tier.id };
 };

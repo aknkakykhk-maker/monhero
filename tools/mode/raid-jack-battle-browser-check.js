@@ -123,6 +123,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (process.env.RAID_SHOT_DIR) { await page.waitForTimeout(1500); await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/battle-start.png` }); }
     const bodyText = await page.locator('body').innerText();
     check('バトル画面にジャックの名前が出る', bodyText.includes('ジャック'));
+    // 敵の名前は段階の名前、上部のバッジは「レイドバトル / 段階名」(チャレンジ・WAVE・Normal は出さない)
+    check('敵の名前が段階の名前(ジャック男爵)になる', /ジャック男爵/.test(bodyText), bodyText.replace(/\s+/g, ' ').slice(0, 160));
+    check('上部のバッジが「レイドバトル / ジャック男爵」になり、チャレンジ・WAVE は出ない', /レイドバトル\s*\/\s*ジャック男爵/.test(bodyText) && !/チャレンジ\s*\/\s*Normal/.test(bodyText) && !/WAVE\s*1\/10/.test(bodyText));
     // 味方のライフ・ガッツは全快からはじまる(GUTS の現在値と上限が同じ)
     const gutsPairs = [...bodyText.matchAll(/GUTS\s*(\d+)\s*\/\s*(\d+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
     check('味方のガッツが全快からはじまる', gutsPairs.length > 0 && gutsPairs.every(([a, b]) => a === b && b > 0), JSON.stringify(gutsPairs));
