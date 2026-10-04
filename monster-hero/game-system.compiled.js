@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1c3aac77942f908
+// source-sha256: 09bd972c4aa7c6f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:25";
+const BUILD_DATE = "2026-10-04 12:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -367,6 +367,10 @@ const BATTLE_MODE_TACTICS_SPECIES = 'tacticsSpecies';
 const BATTLE_MODE_TACTICS_PRO = 'tacticsPro';
 const TACTICS_BATTLE_MODES = Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO]);
 const TACTICS_SCORE_MODES = Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_PRO]);
+const BATTLE_MODE_RAID_JACK_A = 'raidJackA';
+const BATTLE_MODE_RAID_JACK_B = 'raidJackB';
+const RAID_JACK_BATTLE_MODES = Object.freeze([BATTLE_MODE_RAID_JACK_A, BATTLE_MODE_RAID_JACK_B]);
+const isRaidJackMode = mode => RAID_JACK_BATTLE_MODES.includes(mode);
 const EMPTY_TACTICS_RECORD = Object.freeze({
   hs: Object.freeze({}),
   clears: Object.freeze({}),
@@ -485,7 +489,7 @@ const resolveQuickGrowthStats = ({
 const isQuickMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
 const isProMode = mode => mode === BATTLE_MODE_TACTICS_PRO || normalizeBattleMode(mode) === BATTLE_MODE_PRO;
 const isSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE || mode === BATTLE_MODE_TACTICS_SPECIES;
-const isTacticsMode = mode => TACTICS_BATTLE_MODES.includes(mode);
+const isTacticsMode = mode => TACTICS_BATTLE_MODES.includes(mode) || isRaidJackMode(mode);
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
 const QUICK_REWARD_POLICY_PSYCHE = 'psyche';
 const QUICK_REWARD_POLICY_DIAMOND = 'diamond';
@@ -515,7 +519,7 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveBondXpGainInMode(w, mult, mode);
   return sum;
 };
-const modeKeyPrefix = mode => mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_' : isTacticsMode(mode) ? 'mh_tactics_' : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
+const modeKeyPrefix = mode => isRaidJackMode(mode) ? 'mh_raid_jack_unused_' : mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_' : isTacticsMode(mode) ? 'mh_tactics_' : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
@@ -644,12 +648,13 @@ const battleModePlayable = (id, {
   if (debugBattle) return true;
   if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
   if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
+  if (isRaidJackMode(id)) return typeof RAID_JACK_PUBLIC_RELEASE !== 'undefined' && RAID_JACK_PUBLIC_RELEASE === true;
   if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
   return true;
 };
 const battleModeComingSoon = (id, {
   debugBattle = false
-} = {}) => !debugBattle && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE && isTacticsMode(id) && !battleModePlayable(id, {
+} = {}) => !debugBattle && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE && isTacticsMode(id) && !isRaidJackMode(id) && !battleModePlayable(id, {
   debugBattle
 });
 const battleSystemModes = (systemId, {
@@ -690,7 +695,7 @@ const battleModeInfo = mode => {
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 const PUBLIC_BATTLE_MODES = BATTLE_MODES;
-const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE) && (!isTacticsMode(mode) || battleModePlayable(mode));
+const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE) && !isRaidJackMode(mode) && (!isTacticsMode(mode) || battleModePlayable(mode));
 const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
 const battleModeAssistantScene = mode => mode === EXTREME_MODE.id ? 'extremeChallenge' : isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
 const isClassicSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE;
@@ -22509,6 +22514,7 @@ const speciesRankingLabel = difficultyKey => {
 };
 const normalizeExtremeDifficulty = value => ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === value) ? value : EXTREME_SETTING.id;
 const rankingDifficultyForMode = (mode, diff, speciesId = null) => {
+  if (isRaidJackMode(mode)) throw new Error(`raid jack has no ranking difficulty: ${String(mode)}`);
   if (isSpeciesChallengeMode(mode)) {
     const key = speciesChallengeRankingDifficulty(speciesId, diff, mode);
     if (!key) throw new Error(`unknown species challenge ranking: ${String(speciesId)}/${String(diff)}`);
@@ -64141,6 +64147,7 @@ function MonsterHeroGame() {
     if (debugBattleRef.current) return;
     if (runHasDebugOnlyMonster()) return;
     if (speciesChallengeBattleRunRef.current) return submitSpeciesChallengeScoreOnce();
+    if (isRaidJackMode(runMode)) return;
     if (isTacticsMode(runMode)) return submitTacticsScoreOnce();
     scoreSubmittedRef.current = true;
     if (isQuickMode(runMode)) {

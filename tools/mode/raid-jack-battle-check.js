@@ -7,6 +7,7 @@
 //   ③ 使う技の本数が段階ごとに 3/4/5/5/5、再生なし、落とす順は 攻撃力アップ → うしろから
 //   ④ 敵のライフ・攻撃が、段階の倍率で決まった値(RAID_JACK_*_TIERS の hp / atk)と一致する
 //   ⑤ ほかの敵の技の本数が変わっていない(回帰)
+//   ⑥ モードの隔離: ジャックのモードは盤面だけタクティクスと同じで、自己ベスト・ランキング・通常の送信へ一切つながらない
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
@@ -81,6 +82,40 @@ check('ほかの敵には actionCount が付かない(回帰)', !('actionCount' 
 const expectBase = { Kawazumo: 1, Metalner: 1, Inari: 2, Koinobori: 2, Delpiero: 2, Dokudoku: 3, Lamia: 2, Nyarlathotep: 3, Splatter: 4, AwakenedMoo: 6 };
 check('ほかの敵の技の本数は変わっていない', Object.entries(expectBase).every(([k, v]) => api.tacticsEnemyActionIds(k, 'Normal').length === v));
 check('ドクドクは難易度でこれまでどおり増える(Legend=+3)', api.tacticsEnemyActionIds('Dokudoku', 'Legend').length === 6);
+
+// ⑥ モードの隔離
+const core = read('monster-hero/src/parts/10-core.jsx');
+const sup = read('monster-hero/src/parts/26-supabase.jsx');
+const app = read('monster-hero/src/parts/60-app.jsx');
+const slice = (text, from, to) => { const i = text.indexOf(from); if (i < 0) return ''; const j = text.indexOf(to, i); return text.slice(i, j < 0 ? undefined : j + to.length); };
+const lineOf = (text, from) => slice(text, from, '\n');
+const coreCtx = { Object, Array, Math, Number, RAID_JACK_PUBLIC_RELEASE: false, TACTICS_MODE_PUBLIC_RELEASE: true, TACTICS_BETA_PRO_RELEASE: true, SPECIES_CHALLENGE_PUBLIC_RELEASE: true,
+  isQuickMode: () => false, isProMode: () => false, normalizeBattleMode: (m) => m };
+vm.createContext(coreCtx);
+vm.runInContext([
+  ...(core.match(/^const BATTLE_MODE_[A-Z_]+ = '[^']+';$/gm) || []),
+  slice(core, 'const TACTICS_BATTLE_MODES', ']);'),
+  lineOf(core, 'const RAID_JACK_BATTLE_MODES'), lineOf(core, 'const isRaidJackMode'), lineOf(core, 'const isTacticsMode'),
+  slice(core, 'const modeKeyPrefix', "'mh_';"),
+  slice(core, 'const battleModePlayable', '\n};'),
+  slice(core, 'const modeHasRanking', 'battleModePlayable(mode));'),
+  'globalThis.m={isRaidJackMode,isTacticsMode,modeKeyPrefix,battleModePlayable,modeHasRanking,TACTICS_BATTLE_MODES};',
+].join('\n'), coreCtx);
+const m = coreCtx.m;
+const RAID = ['raidJackA', 'raidJackB'];
+check('ジャックのモードは2つ(raidJackA / raidJackB)', RAID.every((id) => m.isRaidJackMode(id)) && !m.isRaidJackMode('tactics') && !m.isRaidJackMode('tacticsPro'));
+check('盤面はタクティクスと同じ(isTacticsMode が真)', RAID.every((id) => m.isTacticsMode(id)));
+check('TACTICS_BATTLE_MODES は通常の3つのまま', m.TACTICS_BATTLE_MODES.join() === 'tactics,tacticsSpecies,tacticsPro');
+check('記録の接頭辞が通常タクティクスと重ならない(mh_tactics_ にならない)', RAID.every((id) => m.modeKeyPrefix(id) === 'mh_raid_jack_unused_') && m.modeKeyPrefix('tactics') === 'mh_tactics_' && m.modeKeyPrefix('tacticsPro') === 'mh_tactics_pro_');
+check('全国ランキングの対象ではない(公開後も)', RAID.every((id) => m.modeHasRanking(id) === false) && m.modeHasRanking('tactics') === true);
+check('公開フラグが偽のあいだは遊べない。デバッグ戦だけは遊べる', RAID.every((id) => m.battleModePlayable(id) === false && m.battleModePlayable(id, { debugBattle: true }) === true));
+coreCtx.RAID_JACK_PUBLIC_RELEASE = true;
+check('公開フラグを立てると遊べる(タクティクスの公開とは別に決まる)', RAID.every((id) => m.battleModePlayable(id) === true));
+check('rankingDifficultyForMode はジャックを例外で止める(通常タクティクスの行を汚さない)',
+  /const rankingDifficultyForMode[\s\S]{0,400}if \(isRaidJackMode\(mode\)\) throw new Error/.test(sup));
+check('submitRunScoreOnce はジャックを手前で return する(submitTacticsScoreOnce より前)',
+  /if \(isRaidJackMode\(runMode\)\) return;\n\s*if \(isTacticsMode\(runMode\)\) return submitTacticsScoreOnce\(\);/.test(app));
+check('TACTICS_SCORE_MODES(自己ベストを持つモード)にジャックを入れていない', !/const TACTICS_SCORE_MODES = [^\n]*RAID/.test(core));
 
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべて OK');

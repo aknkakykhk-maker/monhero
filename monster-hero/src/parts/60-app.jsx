@@ -5939,6 +5939,8 @@ function MonsterHeroGame() {
     // ★タクティクスバトルも専用の送信処理だけを通す。ここから下のどの分岐へも落とさない。
     //   落とすと、極限ぶんは極限チャレンジの mh_extreme_hs_* を、それ以外は
     //   チャレンジの mh_hs_<難易度> を上書きしてしまう(実際にそうなっていた)
+    // ジャック戦は通常のスコア送信・自己ベスト・ランキングのどれにも触らない(結果は finishRaidJack が raid_jack_hits へ別に送る)
+    if (isRaidJackMode(runMode)) return;
     if (isTacticsMode(runMode)) return submitTacticsScoreOnce();
     scoreSubmittedRef.current = true;
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
