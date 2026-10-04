@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a014dbd2826ccc41
+// generated-sha256: 02728c227b2ad07d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 14:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 14:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30567,8 +30567,6 @@ function BattleScreen({
   const emSet = enemyMotion ? (TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null) : null;
   const emSpec = emSet && enemySkillNow ? (emSet.skills[enemySkillNow] || null) : null;
   // ジャックは「腕を振る・両腕を上げる・必殺技」のとき、両腕を上げたポーズの絵に切り替わる
-  // ボスの絵を収める四角。ムーの絵は横長(1024x598)だが、ジャックはほぼ正方形に近い(1024x880)ので、同じ枠だと画面を覆ってしまう
-  const enemyBossBox = enemy?.id === 'Jack' ? 'min(70vw,360px)' : 'min(108vw,560px)';
   const enemyBossImgSrc = (enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow)) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? { '--em-e': JSON.stringify(emSpec[2]) } : undefined;
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
@@ -31070,7 +31068,7 @@ function BattleScreen({
             {/* ★ガードの「🛡 キーン!」とアシストカードの全画面演出は、2026-09-29 のユーザー選択で置き換えた。
                 ガードは枠のバリア(GuardBarrier・guardImpact)、アシストカードはカットイン(TacticsExCutin の assist)で出す */}
             {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
-              <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:enemyBossBox,height:enemyBossBox}}>
+              <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                 {/* ★技の動き・やられの動き・待機の威圧(data-em-body / data-enemy-hurt / data-moo-stage)は CSS が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
                 {emSet&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
                 {/* data-moo-body: 絵と光(後ろの光の輪・絵の形の光の板)をひとまとめにして、動きはこの箱に掛ける(光が絵について動く) */}
@@ -59431,6 +59429,9 @@ const createAnimationStyle = () => {
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
+    /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠だと画面を覆うので、ボスの枠だけ小さくする。
+       大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
+    [data-moo-stage="true"][data-enemy-motion="jack"] { width: min(70vw, 360px) !important; height: min(70vw, 360px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02d68b688450f556
+// source-sha256: cefdb14fba34fe12
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 14:08";
+const BUILD_DATE = "2026-10-04 14:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50099,7 +50099,6 @@ function BattleScreen({
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen' || enemyIsMoo && !!enemyAttackAnim) ? enemyAttackFx.skill : null;
   const emSet = enemyMotion ? TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null : null;
   const emSpec = emSet && enemySkillNow ? emSet.skills[enemySkillNow] || null : null;
-  const enemyBossBox = enemy?.id === 'Jack' ? 'min(70vw,360px)' : 'min(108vw,560px)';
   const enemyBossImgSrc = enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? {
     '--em-e': JSON.stringify(emSpec[2])
@@ -50759,8 +50758,8 @@ function BattleScreen({
       top: '30%',
       transform: 'translate(-50%,-50%)',
       zIndex: focusedCard ? 5 : 30,
-      width: enemyBossBox,
-      height: enemyBossBox
+      width: 'min(108vw,560px)',
+      height: 'min(108vw,560px)'
     }
   }, emSet && React.createElement("i", {
     "aria-hidden": "true",
@@ -90955,6 +90954,9 @@ const createAnimationStyle = () => {
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
+    /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠だと画面を覆うので、ボスの枠だけ小さくする。
+       大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
+    [data-moo-stage="true"][data-enemy-motion="jack"] { width: min(70vw, 360px) !important; height: min(70vw, 360px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

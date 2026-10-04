@@ -86,7 +86,7 @@ for (const file of files) {
   check(`${label}: 技の吹き出しはラスボス用に画面へ固定して出す`,
     /data-enemy-notice-moo[\s\S]{0,40}className[:=]"fixed/.test(compact));
   // ★重なり順は本体から読む(検査へ数字を書き写すと、本体を変えたとき検査だけ古くなる)
-  const mooArtZ = Number((compact.match(/zIndex:focusedCard\?5:(\d+),width:(?:enemyBossBox|'min\(108vw,560px\)')/) || [])[1]);
+  const mooArtZ = Number((compact.match(/zIndex:focusedCard\?5:(\d+),width:'min\(108vw,560px\)'/) || [])[1]);
   const mooNoticeZ = Number((compact.match(/data-enemy-notice-moo[\s\S]{0,240}?zIndex:focusedCard\?5:(\d+)\}/) || [])[1]);
   check(`${label}: 吹き出しは立ち絵より上に出す`,
     Number.isFinite(mooArtZ) && Number.isFinite(mooNoticeZ) && mooNoticeZ > mooArtZ,
