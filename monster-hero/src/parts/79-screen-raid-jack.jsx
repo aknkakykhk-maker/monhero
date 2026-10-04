@@ -27,13 +27,16 @@ const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
   );
 };
 
-const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide }) => {
+// renderPlace / renderIcon / cardClass … 通常バトルの全国ランキングと同じ部品(60-app.jsx の rankingPlace / rankingBreederIcon / rankingCardClass)。
+//   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
+const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({ a: 0, b: 0 });
   const [state, setState] = useState(() => raidJackDefaultState());
   const [totals, setTotals] = useState(undefined);       // undefined=読み込み中 / null=準備中 / object
   const [rows, setRows] = useState(undefined);           // 選択中のランキング(A=その段階の貢献 / B=累計)
   const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
   const [ahead, setAhead] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -49,11 +52,12 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
       const loaded = await raidJackLoadState();
       if (!alive) return;
       setState(loaded);
-      const myId = await ensureBreederId();
+      const meId = await ensureBreederId();
+      if (alive) setMyId(meId || null);
       const t = await sbFetchRaidJackTierTotals(eventId);
       if (!alive) return;
       setTotals(t);
-      const mine = myId ? await sbFetchRaidJackSelf(myId, eventId) : null;
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
       if (!alive) return;
       setSelf(mine);
       setRows(undefined); setAhead(null);
@@ -174,14 +178,21 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
           {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
           {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
           {Array.isArray(rows) && rows.length > 0 && (
-            <ol data-raid-jack-ranking className="space-y-1">
-              {rows.slice(0, 100).map((r, i) => (
-                <li key={`${r.breederId}-${i}`} className="flex items-center gap-2 rounded-lg bg-slate-900/60 px-2 py-1 text-[11px] text-slate-100">
-                  <span className="w-7 shrink-0 text-right font-black text-amber-200">{i + 1}</span>
-                  <span className="min-w-0 flex-1 truncate">{raidJackNameOf(r.breederId)}</span>
-                  <b className="shrink-0 text-white">{r.total.toLocaleString()}</b>
-                </li>
-              ))}
+            <ol data-raid-jack-ranking className="space-y-1.5">
+              {rows.slice(0, 100).map((r, i) => {
+                // 名前・アイコン・プロフィール枠は、通常バトルのランキングと同じ「いまの設定」をかぶせる
+                const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({ breederId: r.breederId, userName: raidJackNameOf(r.breederId) }) : { breederId: r.breederId, userName: raidJackNameOf(r.breederId) };
+                const mineRow = !!myId && r.breederId === myId;
+                return (
+                  <li key={`${r.breederId}-${i}`} data-raid-jack-ranking-row data-ranking-kind="raid-jack" aria-current={mineRow ? 'true' : undefined}
+                    className={`${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`}>
+                    {typeof renderPlace === 'function' ? renderPlace(i) : <span className="w-7 shrink-0 text-center text-[10px] font-black text-amber-200">{i + 1}</span>}
+                    {typeof renderIcon === 'function' && renderIcon(entry)}
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{entry.userName || '名無しのブリーダー'}{mineRow && <span className="ml-1 text-[8px] text-orange-200">(あなた)</span>}</span>
+                    <b className="shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200">{r.total.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">ダメージ</small></b>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </div>
