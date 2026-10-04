@@ -18,7 +18,7 @@
 | 攻撃モーション(7技)・ボス表示・ボスBGM | `src/parts/71-screen-battle.jsx` `70-bootstrap.jsx` | 済(見た目は実機で調整) |
 | 更新履歴・ヘルプ・助手の告知・案内のセリフ | `data/changelog.js` `data/help.js` `data/assistants.js` | 済(公開フラグが立つまで出ない) |
 | デバッグ確認(定義・期間・回数・サーバー・戦闘・HOME強制表示) | `src/parts/78-screen-raid-jack-debug.jsx`(デバッグ設定の「ジャック確認」) | 済 |
-| **報酬の中身・個数** | 下の「報酬の表」 | **決定済み(2026-10-04)。実装は未(魂格の結晶・ボーナス魂格P・ギフト配布・受け取り)。画面はいまも「準備中」と出す** |
+| 報酬(表・受け取り判定・ギフト配布・結晶・報酬一覧の画面) | `src/parts/35-raid-jack.jsx`(`RAID_JACK_REWARDS`)・`36-raid-jack-api.jsx`(`raidJackCollectDueRewards`)・`60-app.jsx`(`claimRaidJackRewards`)・`79-screen-raid-jack.jsx`・`11-masu-progression.jsx`(結晶) | 済(2026-10-04・下の「報酬の表」。公開フラグが立つまで動かない) |
 | **第2〜5部のお話(ジャックが暴れる・倒せた段階数で台本が変わる)** | — | **未(台本の内容をユーザーと決めて作る)** |
 | 攻撃モーションの見た目の調整 | — | 実機で見てから |
 
@@ -188,6 +188,15 @@
 通貨・アイテムは**既存のものだけ**(ダイヤ・虹のプシュケー・勇者の証・虹の超越の実)+新アイテム**魂格の結晶**。
 **勇者の証片は使わない**(勇者の証そのものを配る)。**限定アイコン・称号は付けない**。
 届けるのは**ギフト**(`RHYTHM_EVENT_PLAYBOOK.md` §8-3 と同じ。IDを固定して `grantGiftOnce` で二重に作らない)。
+
+### 受け取りの仕組み(実装済み)
+
+- 受け取れる報酬は `raidJackCollectDueRewards` が、サーバーの合計・自分の貢献・上位5人を読んで決める。レイド画面を開いたとき・HOMEへ戻ったとき(5分あける。戦闘のあとはすぐ)に確かめ、`claimRaidJackRewards` がギフトで届ける。期間が終わると入口は消えるが、HOMEで確かめるので終了後の順位報酬も届く。
+- ギフトのIDは `raid_jack_2026_<印>`。受け取り済みの印は `mh_raid_jack_v1` の `claimed`(`clear_a1`・`rank_a1`・`clear_b1`・`final_b`・`part_a` など)。「上位5人に入っていなかった」印は `rank_a1_none` のように残し、問い合わせ直さない。ギフトと印は取引保存(`saveStoredValuesOrRollback`)。
+- 参加賞は、サーバーに自分の与ダメージが1回でも記録されていれば。Bの討伐は端末の「倒した」記録で判定する。
+- **倒したA段階(男爵〜公爵)には挑めない**(順位が倒れた時点で固まるため)。大王だけは倒したあとも続く。倒す直前に始まった戦いの与ダメージが少し遅れて届くと、5位の入れ替わりが起きうる(許容)。
+- デバッグの強制表示中(別のイベントID)は報酬を一切配らない。
+- 検査: `tools/mode/raid-jack-reward-check.js`(表の数字・受け取り判定・結晶)、`raid-jack-reward-browser-check.js`(報酬一覧)、`tools/masu/soul-crystal-browser-check.js`(結晶を使う画面)。
 
 ### 魂格の結晶(新アイテム)
 
