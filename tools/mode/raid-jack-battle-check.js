@@ -130,5 +130,15 @@ check('finishRaidJack は一度しか動かない(finished)', /if\(!run\|\|run\.
 check('ジャック戦は debugBattleRef を立てて始まる(報酬・絆・記録へつながらない)', /raidJackRunRef\.current=\{kind:isB\?'b':'a'[\s\S]{0,900}debugBattleRef\.current=true;/.test(app));
 check('ジャック戦の敵は段階の値で作る(編成の総合力の補正を掛けない)', /const raidRun=isRaidJackMode\(runMode\)\?raidJackRunRef\.current:null;[\s\S]{0,200}isTacticsMode\(runMode\)&&!raidRun/.test(app));
 
+// ⑧ レイドバトル(A)専用ルール(2026-10-04)。EXの回数はコードの形で固定する(実機で通しにくいため)
+check('A: 1ターンごとに味方全員の全ステータスが10%ずつ(掛け算)・自動回復の割合が3%ずつ上がる',
+  /RAID_JACK_TURN_GROWTH = 1\.10;/.test(app) && /RAID_JACK_TURN_REGEN_STEP = 0\.03;/.test(app)
+  && /raidJackRunRef\.current\.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount\) raidJackTurnGrowth\(nextTurn\)/.test(app));
+check('A: EXスキルは、持つ味方ごとに1回だけ(raidExDefOf が maxUses:1 にする。Bと通常戦は今までどおり)',
+  /const raidExDefOf = \(monId\) => \{[\s\S]{0,260}kind === 'a' \? \{ \.\.\.def, unlimited:false, maxUses:1 \} : def;/.test(app)
+  && !/[^a-zA-Z]tacticsExDefOf\(/.test(app.replace(/const def = tacticsExDefOf\(monId\);/, '')));
+check('AもBも、味方のライフ・ガッツは全快からはじまる(追いつき補正のあとで満タンにする)',
+  /fullGuts: isRaidJackMode\(mode\)[\s\S]{0,500}isRaidJackMode\(mode\) && joined \? normalizeTacticsUnit\(\{ \.\.\.joined, hp: joined\.maxHp, guts: joined\.maxGuts \}\)/.test(app));
+
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべて OK');

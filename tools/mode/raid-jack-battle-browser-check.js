@@ -123,6 +123,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (process.env.RAID_SHOT_DIR) { await page.waitForTimeout(1500); await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/battle-start.png` }); }
     const bodyText = await page.locator('body').innerText();
     check('バトル画面にジャックの名前が出る', bodyText.includes('ジャック'));
+    // 味方のライフ・ガッツは全快からはじまる(GUTS の現在値と上限が同じ)
+    const gutsPairs = [...bodyText.matchAll(/GUTS\s*(\d+)\s*\/\s*(\d+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+    check('味方のガッツが全快からはじまる', gutsPairs.length > 0 && gutsPairs.every(([a, b]) => a === b && b > 0), JSON.stringify(gutsPairs));
 
     // ② リタイア
     await page.locator('[data-battle-menu-button]').click();
@@ -183,6 +186,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-fight-tier]').selectOption('1');
     await page.locator('[data-raid-fight-start]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
+    // レイドバトル専用: ターンが進むたびに「全ステータス UP!」が出る(出た瞬間を拾うため、画面の変化を見張っておく)
+    await page.evaluate(() => { window.__raidGrowthSeen = false; new MutationObserver(() => { if (document.body.innerText.includes('全ステータス UP')) window.__raidGrowthSeen = true; }).observe(document.body, { childList: true, subtree: true, characterData: true }); });
     // バトル速度を最大にして、AUTOを入れる
     for (let i = 0; i < 3; i++) { await page.locator('[data-battle-controls] button').first().click().catch(() => {}); }
     await page.locator('button[aria-label^="AUTO"]').first().click();
@@ -193,6 +198,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const turnsUsed = turnsMatch ? Number(turnsMatch[1]) : -1;
     check('AUTOで結果が出る(倒した/10ターン/全滅のどれか)', /ジャックを倒した|10ターンを使い切った|全滅した/.test(autoText), autoText.replace(/\s+/g, ' ').slice(0, 140));
     check('使ったターンは10以内', turnsUsed >= 1 && turnsUsed <= 10, String(turnsUsed));
+    const growths = Number(await page.locator('[data-raid-jack-growths]').first().evaluate((e) => e.textContent).catch(() => -1));
+    check('A: ターンが進むたびに味方が成長する(使ったターン-1 回)', growths === Math.max(0, Math.min(turnsUsed, 10) - 1), `${growths} / ターン${turnsUsed}`);
     await page.waitForTimeout(800);
     check('与ダメージが1回だけ送られる', posts.length === 1, String(posts.length));
     const autoRow = JSON.parse((posts[0] || {}).body || '{}');
