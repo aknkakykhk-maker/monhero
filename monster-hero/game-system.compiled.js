@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4075779c30ec4fc9
+// source-sha256: 5dc007cbd2bcce63
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:38";
+const BUILD_DATE = "2026-10-04 13:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -47809,6 +47809,183 @@ const HOME_EVENT_BADGE_CSS = `
   .mh-home-event-badge{animation:none;transform:none}
   .mh-home-event-badge::after{display:none}}
 `;
+const HOME_RAID_JACK_CSS = `
+.mh-home-raid-jack-img{animation:mhRaidJackHop 1.15s cubic-bezier(.3,.1,.4,1) infinite;transform-origin:50% 100%}
+.mh-home-raid-jack-shadow{animation:mhRaidJackShadow 1.15s cubic-bezier(.3,.1,.4,1) infinite}
+@keyframes mhRaidJackHop{
+  0%,100%{transform:translateY(0) scale(1.06,.92)}
+  18%{transform:translateY(0) scale(.96,1.06)}
+  50%{transform:translateY(-16px) scale(1,1) rotate(-2deg)}
+  82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
+@keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
+@media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+`;
+const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+  position: 'absolute',
+  left: '50%',
+  top: '44%',
+  transform: 'translate(-50%,-50%)',
+  zIndex: 6,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  width: '44%',
+  maxWidth: '190px',
+  minWidth: '120px',
+  background: 'transparent',
+  border: '0',
+  padding: '0',
+  cursor: 'pointer'
+});
+const HomeRaidJack = ({
+  eventId,
+  onOpen
+}) => {
+  const [totals, setTotals] = React.useState(undefined);
+  const [pose, setPose] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-home-raid-jack-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-home-raid-jack-css';
+    tag.textContent = HOME_RAID_JACK_CSS;
+    document.head.appendChild(tag);
+  }, []);
+  React.useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const t = await sbFetchRaidJackTierTotals(eventId);
+      if (alive) setTotals(t);
+    };
+    load();
+    const id = setInterval(load, 60000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [eventId]);
+  React.useEffect(() => {
+    let alive = true;
+    let timer = null;
+    const loop = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        setPose(true);
+        timer = setTimeout(() => {
+          if (!alive) return;
+          setPose(false);
+          loop();
+        }, 1400);
+      }, 5600);
+    };
+    loop();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, []);
+  const tiers = RAID_JACK_A_TIERS;
+  const totalOf = i => totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0;
+  const currentIndex = totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
+  const allDone = !!totals && currentIndex < 0;
+  const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
+  const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
+  const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
+  return React.createElement("button", {
+    type: "button",
+    "data-home-raid-jack": true,
+    onClick: onOpen,
+    "aria-label": `${tier.name}があらわれた！タップでレイド画面を開く`,
+    style: HOME_RAID_JACK_BUTTON_STYLE
+  }, React.createElement("span", {
+    style: {
+      position: 'relative',
+      display: 'block',
+      width: '100%'
+    }
+  }, React.createElement("img", {
+    className: "mh-home-raid-jack-img",
+    src: pose ? JACK_POSE_IMG : JACK_IMG,
+    alt: "",
+    draggable: false,
+    style: {
+      display: 'block',
+      width: '100%',
+      height: 'auto',
+      filter: 'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)',
+      pointerEvents: 'none'
+    }
+  })), React.createElement("span", {
+    className: "mh-home-raid-jack-shadow",
+    "aria-hidden": "true",
+    style: {
+      display: 'block',
+      width: '70%',
+      height: '8px',
+      marginTop: '-6px',
+      borderRadius: '50%',
+      background: '#0008',
+      filter: 'blur(3px)'
+    }
+  }), React.createElement("span", {
+    style: {
+      display: 'block',
+      width: '100%',
+      marginTop: '6px',
+      padding: '3px 6px',
+      borderRadius: '10px',
+      border: '1px solid #fdba74aa',
+      background: '#1c0a02d9',
+      color: '#ffedd5',
+      fontSize: '10px',
+      fontWeight: 900,
+      textAlign: 'center',
+      lineHeight: 1.3
+    }
+  }, React.createElement("span", {
+    style: {
+      display: 'block'
+    }
+  }, allDone ? 'ジャックを倒した！みんなありがとう' : `${tier.name}があらわれた！`), React.createElement("span", {
+    style: {
+      display: 'block',
+      height: '7px',
+      marginTop: '3px',
+      borderRadius: '999px',
+      overflow: 'hidden',
+      background: '#000a',
+      border: '1px solid #fff3'
+    },
+    role: "progressbar",
+    "aria-valuemin": 0,
+    "aria-valuemax": tier.hp,
+    "aria-valuenow": left
+  }, React.createElement("span", {
+    style: {
+      display: 'block',
+      height: '100%',
+      width: `${rate * 100}%`,
+      background: allDone ? '#10b981' : '#f97316'
+    }
+  })), totals === null ? React.createElement("span", {
+    style: {
+      display: 'block',
+      fontSize: '8px',
+      opacity: .8
+    }
+  }, "準備中") : totals === undefined ? React.createElement("span", {
+    style: {
+      display: 'block',
+      fontSize: '8px',
+      opacity: .8
+    }
+  }, "…") : React.createElement("span", {
+    style: {
+      display: 'block',
+      fontSize: '8px',
+      opacity: .85
+    }
+  }, "共有HP ", left.toLocaleString())));
+};
 function HomeScreen({
   assistantBondUp,
   friendRequestCount = 0,
@@ -47836,7 +48013,10 @@ function HomeScreen({
   openMissions,
   profileFrameId,
   resolveIconUrl,
-  spotClass
+  spotClass,
+  raidJackVisible = false,
+  raidJackEventId,
+  onOpenRaidJack
 }) {
   const homeSceneRef = React.useRef(null);
   const [homeSceneWide, setHomeSceneWide] = React.useState(false);
@@ -47897,7 +48077,10 @@ function HomeScreen({
     masuColors: getMasuColors(masu),
     index: index,
     count: homePastureMasumons.length
-  }))), React.createElement("header", {
+  }))), raidJackVisible && React.createElement(HomeRaidJack, {
+    eventId: raidJackEventId,
+    onOpen: onOpenRaidJack
+  }), React.createElement("header", {
     className: `mh-home-status${spotClass('settings')}`
   }, React.createElement("button", {
     type: "button",
@@ -58205,7 +58388,11 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
 }]);
 const RaidJackDebugScreen = ({
   onBack,
-  onStartBattle
+  onStartBattle,
+  raidForce = false,
+  onToggleRaidForce,
+  onOpenRaid,
+  onGoHome
 }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -58457,6 +58644,26 @@ const RaidJackDebugScreen = ({
     className: "rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100"
   }, React.createElement("div", {
     className: "mb-1 font-black text-orange-200"
+  }, "⑦ HOMEのジャックとレイド画面(公開フラグ・期間を待たずに)"), React.createElement("div", {
+    className: "text-[10px] text-slate-300"
+  }, "強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    "data-raid-force-toggle": true,
+    className: `${btn} ${raidForce ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`,
+    onClick: () => onToggleRaidForce && onToggleRaidForce()
+  }, "HOMEに出す: ", raidForce ? 'ON' : 'OFF'), React.createElement("button", {
+    "data-raid-open": true,
+    className: `${btn} border-orange-400/60 bg-orange-950/40`,
+    onClick: () => onOpenRaid && onOpenRaid()
+  }, "レイド画面を開く"), React.createElement("button", {
+    "data-raid-go-home": true,
+    className: `${btn} col-span-2 border-orange-400/60 bg-orange-950/40`,
+    onClick: () => onGoHome && onGoHome()
+  }, "HOMEを見る(ジャックが出ているか確認)"))), React.createElement("section", {
+    className: "rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100"
+  }, React.createElement("div", {
+    className: "mb-1 font-black text-orange-200"
   }, "⑥ ジャックと戦う(回数は使わない・別のイベントIDで送る)"), React.createElement("div", {
     className: "flex flex-wrap items-center gap-1.5"
   }, React.createElement("select", {
@@ -58528,6 +58735,351 @@ const RaidJackDebugScreen = ({
     key: i,
     className: "text-[10px] text-slate-300"
   }, l)))));
+};
+const RAID_JACK_REWARD_NOTE = '報酬の中身は準備中です(決まりしだいここに出ます)';
+const raidJackNameOf = breederId => {
+  const profile = typeof latestBreederProfileFor === 'function' ? latestBreederProfileFor({
+    breederId
+  }) : null;
+  return profile && profile.userName || '名無しのブリーダー';
+};
+const RaidJackHpBar = ({
+  left,
+  max,
+  tone = 'orange'
+}) => {
+  const rate = max > 0 ? Math.max(0, Math.min(1, left / max)) : 0;
+  const color = tone === 'emerald' ? 'bg-emerald-500' : 'bg-orange-500';
+  return React.createElement("div", {
+    className: "h-3 w-full overflow-hidden rounded-full border border-white/20 bg-black/50",
+    role: "progressbar",
+    "aria-valuemin": 0,
+    "aria-valuemax": max,
+    "aria-valuenow": Math.max(0, left)
+  }, React.createElement("div", {
+    className: `h-full ${color} transition-all`,
+    style: {
+      width: `${rate * 100}%`
+    }
+  }));
+};
+const RaidJackScreen = ({
+  onBack,
+  onChallenge,
+  onPurchase,
+  beatPoints = 0,
+  eventId,
+  forced = false
+}) => {
+  const [tab, setTab] = useState('a');
+  const [sel, setSel] = useState({
+    a: 0,
+    b: 0
+  });
+  const [state, setState] = useState(() => raidJackDefaultState());
+  const [totals, setTotals] = useState(undefined);
+  const [rows, setRows] = useState(undefined);
+  const [self, setSelf] = useState(null);
+  const [ahead, setAhead] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [tick, setTick] = useState(0);
+  const nowMs = Date.now();
+  const windowState = raidJackWindowAt(nowMs);
+  const open = forced || windowState === 'open';
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const loaded = await raidJackLoadState();
+      if (!alive) return;
+      setState(loaded);
+      const myId = await ensureBreederId();
+      const t = await sbFetchRaidJackTierTotals(eventId);
+      if (!alive) return;
+      setTotals(t);
+      const mine = myId ? await sbFetchRaidJackSelf(myId, eventId) : null;
+      if (!alive) return;
+      setSelf(mine);
+      setRows(undefined);
+      setAhead(null);
+      const list = tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      if (!alive) return;
+      if (list) {
+        try {
+          await ensureBreederProfiles('raid-jack');
+        } catch (e) {}
+      }
+      if (!alive) return;
+      setRows(list);
+      if (list && mine) {
+        const myTotal = tab === 'a' ? mine.a[sel.a + 1] || 0 : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(tab, sel.a + 1, myTotal, eventId) : null;
+        if (alive) setAhead(count);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
+  const side = tab === 'a' ? state.a : state.b;
+  const remaining = raidJackRemaining(side, nowMs);
+  const tiers = raidJackTiers(tab);
+  const aTotalOf = i => totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0;
+  const aDefeated = i => totals ? aTotalOf(i) >= tiers[i].hp : false;
+  const unlocked = tab === 'a' ? i => i === 0 || aDefeated(i - 1) : i => i < raidJackUnlockedCount('b', state.b.defeated);
+  const current = Math.min(sel[tab], tiers.length - 1);
+  const tier = tiers[current];
+  const isOpenTier = unlocked(current);
+  const myTotalHere = self ? tab === 'a' ? self.a[current + 1] || 0 : self.bTotal : 0;
+  const buy = async () => {
+    setBusy(true);
+    setMessage('');
+    try {
+      const result = await onPurchase(tab);
+      if (result && result.ok) {
+        setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${RAID_JACK_EXTRA_COST_BEAT_P})`);
+        setTick(n => n + 1);
+      } else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度ためしてください');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const challengeLabel = !open ? windowState === 'before' ? 'まだ始まっていません' : '終了しました' : !isOpenTier ? '前の段階を倒すと開きます' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
+  return React.createElement("div", {
+    className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
+    "data-raid-jack-screen": true
+  }, React.createElement(ScreenHead, {
+    title: "カボチャの大王ジャック",
+    icon: "🎃",
+    accent: "text-orange-200",
+    onBack: onBack,
+    note: forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'
+  }), React.createElement(ScreenTabs, {
+    items: [{
+      id: 'a',
+      label: 'みんなで討伐'
+    }, {
+      id: 'b',
+      label: 'ダメージ競争'
+    }],
+    value: tab,
+    onChange: setTab
+  }), React.createElement("div", {
+    className: "mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "font-black text-orange-200"
+  }, tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'), React.createElement("div", {
+    "data-raid-jack-remaining": true
+  }, "今日の残り ", React.createElement("b", {
+    className: "text-white"
+  }, remaining), " 回(無料", RAID_JACK_FREE_PER_DAY, "回+買い足し)")), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-buy": true,
+    disabled: busy || !open,
+    onClick: buy,
+    className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
+  }, "1回追加", React.createElement("br", null), React.createElement("small", {
+    className: "text-[9px] opacity-80"
+  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), message && React.createElement("div", {
+    className: "mb-2 shrink-0 text-center text-[11px] font-black text-amber-200",
+    role: "status"
+  }, message), totals === null && React.createElement("div", {
+    className: "mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100"
+  }, "サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)"), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-2`
+  }, tiers.map((t, i) => {
+    const isOpen = unlocked(i);
+    const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
+    const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);
+    const on = i === current;
+    return React.createElement("button", {
+      type: "button",
+      key: t.id,
+      "data-raid-jack-tier": t.id,
+      onClick: () => setSel(prev => ({
+        ...prev,
+        [tab]: i
+      })),
+      className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
+    }, React.createElement("img", {
+      src: JACK_IMG,
+      alt: "",
+      className: "h-14 w-16 shrink-0 object-contain",
+      style: isOpen ? undefined : {
+        filter: 'brightness(0)',
+        opacity: 0.5
+      }
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("span", {
+      className: "truncate text-[13px] font-black text-white"
+    }, i + 1, ". ", t.name), React.createElement("span", {
+      className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
+    }, done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isOpen ? React.createElement(React.Fragment, null, React.createElement(RaidJackHpBar, {
+      left: left,
+      max: t.hp,
+      tone: done ? 'emerald' : 'orange'
+    }), React.createElement("div", {
+      className: "mt-0.5 text-[9px] text-slate-300"
+    }, "共有HP ", left.toLocaleString(), " / ", t.hp.toLocaleString(), totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : '')) : React.createElement("div", {
+      className: "text-[10px] text-slate-400"
+    }, "前の段階のジャックを倒すと姿をあらわします") : React.createElement("div", {
+      className: "text-[10px] text-slate-300"
+    }, "ライフ ", t.hp.toLocaleString(), " / 技 ", t.actionCount, "本", isOpen ? '' : '(前の段階を倒すと開く)')));
+  }), React.createElement("div", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100"
+  }, React.createElement("div", {
+    className: "mb-1 font-black text-orange-200"
+  }, tier.name, "の報酬"), React.createElement("div", {
+    className: "text-[10px] text-slate-300"
+  }, RAID_JACK_REWARD_NOTE), React.createElement("div", {
+    className: "mt-2 text-[10px] text-slate-300"
+  }, tab === 'a' ? '討伐報酬(参加者全員)・貢献ランキング1〜5位の報酬' : '初めて倒したときの報酬・累計ダメージ上位の報酬')), React.createElement("div", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 flex items-baseline justify-between text-[11px]"
+  }, React.createElement("span", {
+    className: "font-black text-orange-200"
+  }, tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
+    "data-raid-jack-mine": true,
+    className: "text-[10px] text-slate-200"
+  }, "あなた ", myTotalHere.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), rows === undefined && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "読み込み中…"), rows === null && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "まだ記録がありません。いちばんのりを目指そう！"), Array.isArray(rows) && rows.length > 0 && React.createElement("ol", {
+    "data-raid-jack-ranking": true,
+    className: "space-y-1"
+  }, rows.slice(0, 100).map((r, i) => React.createElement("li", {
+    key: `${r.breederId}-${i}`,
+    className: "flex items-center gap-2 rounded-lg bg-slate-900/60 px-2 py-1 text-[11px] text-slate-100"
+  }, React.createElement("span", {
+    className: "w-7 shrink-0 text-right font-black text-amber-200"
+  }, i + 1), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate"
+  }, raidJackNameOf(r.breederId)), React.createElement("b", {
+    className: "shrink-0 text-white"
+  }, r.total.toLocaleString())))))), React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-jack-challenge": true,
+    disabled: !open || !isOpenTier || remaining <= 0,
+    onClick: () => onChallenge(tab, current),
+    className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
+  }, challengeLabel)));
+};
+const RaidJackPrepScreen = ({
+  kind,
+  tierIndex,
+  candidates,
+  teachings,
+  onBack,
+  onStart
+}) => {
+  const isB = kind === 'b';
+  const maxTeach = isB ? 3 : 1;
+  const tier = raidJackTierAt(kind, tierIndex);
+  const list = Array.isArray(candidates) ? candidates : [];
+  const keyOf = mon => String(mon.masuId || mon.id);
+  const [heroKey, setHeroKey] = useState(null);
+  const [allyKeys, setAllyKeys] = useState([]);
+  const [teachIds, setTeachIds] = useState(() => (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map(t => t.id));
+  const hero = list.find(m => keyOf(m) === heroKey) || null;
+  const allies = allyKeys.map(k => list.find(m => keyOf(m) === k)).filter(Boolean);
+  const toggleAlly = mon => setAllyKeys(prev => {
+    const k = keyOf(mon);
+    if (prev.includes(k)) return prev.filter(x => x !== k);
+    return prev.length >= 3 ? prev : [...prev, k];
+  });
+  const toggleTeach = id => setTeachIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length >= maxTeach ? maxTeach === 1 ? [id] : prev : [...prev, id]);
+  const tile = (mon, on, onClick, attrs) => React.createElement("button", _extends({
+    type: "button",
+    key: keyOf(mon),
+    onClick: onClick
+  }, attrs, {
+    className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
+  }), React.createElement("img", {
+    src: mon.faceIconUrl || mon.iconUrl || mon.imgUrl,
+    alt: "",
+    className: "h-12 w-12 rounded-full object-cover"
+  }), React.createElement("span", {
+    className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
+  }, mon.name));
+  return React.createElement("div", {
+    className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
+    "data-raid-jack-prep": true
+  }, React.createElement(ScreenHead, {
+    title: `${tier.name}に挑む`,
+    icon: "🎃",
+    accent: "text-orange-200",
+    onBack: onBack,
+    note: `${isB ? 'マスモン' : 'ベースモン'}で編成・10ターン勝負`
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-3`
+  }, React.createElement("section", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 text-[11px] font-black text-orange-200"
+  }, "勇者モン(1体)"), React.createElement("div", {
+    className: "grid grid-cols-5 gap-1.5"
+  }, list.map(mon => tile(mon, heroKey === keyOf(mon), () => {
+    setHeroKey(keyOf(mon));
+    setAllyKeys(prev => prev.filter(x => x !== keyOf(mon)));
+  }, {
+    'data-raid-hero': keyOf(mon)
+  }))), list.length === 0 && React.createElement("div", {
+    className: "py-2 text-center text-[10px] text-slate-400"
+  }, "編成できるモンスターがいません")), React.createElement("section", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 text-[11px] font-black text-orange-200"
+  }, "供モン(最大3体)", React.createElement("span", {
+    className: "ml-1 text-[9px] text-slate-300"
+  }, allies.length, " / 3")), React.createElement("div", {
+    className: "grid grid-cols-5 gap-1.5"
+  }, list.filter(m => keyOf(m) !== heroKey).map(mon => tile(mon, allyKeys.includes(keyOf(mon)), () => toggleAlly(mon), {
+    'data-raid-ally': keyOf(mon)
+  })))), React.createElement("section", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 text-[11px] font-black text-orange-200"
+  }, "アシカ(", maxTeach, "つまで)", React.createElement("span", {
+    className: "ml-1 text-[9px] text-slate-300"
+  }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
+    className: "text-[9px] text-slate-300"
+  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります'), React.createElement("div", {
+    className: "mt-1 grid grid-cols-4 gap-1.5"
+  }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
+    type: "button",
+    key: t.id,
+    "data-raid-teach": t.id,
+    onClick: () => toggleTeach(t.id),
+    className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
+  }, React.createElement("img", {
+    src: t.icon,
+    alt: "",
+    className: "h-10 w-10 rounded-full object-cover"
+  }), React.createElement("span", {
+    className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
+  }, t.baseName))))), React.createElement("div", {
+    className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300"
+  }, "ライフ ", tier.hp.toLocaleString(), " / 技 ", tier.actionCount, "本 / 10ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。")), React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-prep-start": true,
+    disabled: !hero,
+    onClick: () => onStart({
+      party: [hero, ...allies],
+      teachingIds: teachIds
+    }),
+    className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
+  }, hero ? 'この編成で挑戦する' : '勇者モンを選んでください')));
 };
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -60674,6 +61226,9 @@ function MonsterHeroGame() {
   const raidJackDamageRef = useRef(0);
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackPrep, setRaidJackPrep] = useState(null);
+  const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);
+  const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
   const rpgDefaultAlly = index => {
     const list = rpgMonsterList();
     const mon = list[index % Math.max(1, list.length)] || list[0];
@@ -62180,6 +62735,8 @@ function MonsterHeroGame() {
     MISSIONS: 'home',
     RHYTHM_HISTORY: 'home',
     RHYTHM_MODE_SELECT: 'rhythmModeSelect',
+    RAID_JACK: 'home',
+    RAID_JACK_PREP: 'home',
     FRIENDS: 'home',
     BATTLE_MENU: 'enhance',
     BATTLE_SYSTEM_SELECT: 'enhance',
@@ -73177,6 +73734,92 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_CHALLENGE);
     if (toDebug) setGameState('RAID_JACK_DEBUG');
   };
+  const openRaidJack = async () => {
+    setRhythmEventPoints(await loadRhythmEventPoints());
+    setGameState('RAID_JACK');
+  };
+  const purchaseRaidJackExtra = async kind => {
+    if (marketPurchaseProcessingRef.current) return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    try {
+      const key = kind === 'b' ? 'b' : 'a';
+      const before = await loadRhythmEventPoints();
+      const free = raidJackDebugForce;
+      if (!free && before < RAID_JACK_EXTRA_COST_BEAT_P) return {
+        ok: false,
+        reason: 'short'
+      };
+      const state = await raidJackLoadState();
+      const today = raidJackDayKey(Date.now());
+      const side = state[key];
+      if (side.day !== today) {
+        side.day = today;
+        side.used = 0;
+        side.extra = 0;
+      }
+      side.extra += 1;
+      const nextPoints = free ? before : before - RAID_JACK_EXTRA_COST_BEAT_P;
+      if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, nextPoints, false);
+      const saved = await raidJackSaveState(state);
+      if (!saved) {
+        if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, before, false);
+        return {
+          ok: false,
+          reason: 'error'
+        };
+      }
+      setRhythmEventPoints(nextPoints);
+      return {
+        ok: true,
+        points: nextPoints
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: 'error'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const startRaidJackFromPrep = async ({
+    party,
+    teachingIds
+  }) => {
+    const prep = raidJackPrep;
+    if (!prep || !Array.isArray(party) || party.length === 0) return;
+    const key = prep.kind === 'b' ? 'b' : 'a';
+    const nowMs = Date.now();
+    const state = await raidJackLoadState();
+    const side = state[key];
+    const today = raidJackDayKey(nowMs);
+    if (side.day !== today) {
+      side.day = today;
+      side.used = 0;
+      side.extra = 0;
+    }
+    if (raidJackRemaining(side, nowMs) <= 0) {
+      setGameState('RAID_JACK');
+      return;
+    }
+    side.used += 1;
+    if (!(await raidJackSaveState(state))) return;
+    const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+    setRunMode(mode);
+    setDifficulty('Normal');
+    setExtremeRun(false);
+    setRaidJackStartRequest({
+      mode,
+      kind: key,
+      tierIndex: prep.tierIndex,
+      party,
+      teachingIds,
+      eventId: raidJackEventId
+    });
+  };
   const setupMon = (m, slotIdx) => {
     if (!m) return;
     const isHero = !mainHero;
@@ -76116,7 +76759,10 @@ function MonsterHeroGame() {
       openMissions: openMissions,
       profileFrameId: profileFrameId,
       resolveIconUrl: resolveIconUrl,
-      spotClass: spotClass
+      spotClass: spotClass,
+      raidJackVisible: RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce,
+      raidJackEventId: raidJackEventId,
+      onOpenRaidJack: openRaidJack
     }), gameState === 'RHYTHM_INFO' && React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
     }), gameState === 'TRAINING_INFO' && React.createElement("main", {
@@ -81076,8 +81722,38 @@ function MonsterHeroGame() {
       "data-debug-screen-error": true,
       onClick: () => setDebugThrowScreenError(true),
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null))))), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
+    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null))))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
+      onBack: () => setGameState(raidJackDebugForce && !RELEASE_FLAGS.raidJack ? 'RAID_JACK_DEBUG' : 'HOME'),
+      onChallenge: (kind, tierIndex) => {
+        setRaidJackPrep({
+          kind,
+          tierIndex
+        });
+        setGameState('RAID_JACK_PREP');
+      },
+      onPurchase: purchaseRaidJackExtra,
+      beatPoints: rhythmEventPoints,
+      eventId: raidJackEventId,
+      forced: raidJackDebugForce
+    }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(RaidJackPrepScreen, {
+      kind: raidJackPrep.kind,
+      tierIndex: raidJackPrep.tierIndex,
+      candidates: raidJackPrep.kind === 'b' ? getActiveMonsterList() : getUnlockedBaseMonsterList(),
+      teachings: (() => {
+        const unlocked = TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
+        return unlocked.length > 0 ? unlocked : getActiveTeachingCards();
+      })(),
+      onBack: () => setGameState('RAID_JACK'),
+      onStart: startRaidJackFromPrep
+    }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
+      raidForce: raidJackDebugForce,
+      onToggleRaidForce: () => setRaidJackDebugForce(v => !v),
+      onOpenRaid: async () => {
+        setRaidJackDebugForce(true);
+        await openRaidJack();
+      },
+      onGoHome: returnToHome,
       onStartBattle: (kind, tierIndex) => {
         const isB = kind === 'b';
         const mode = isB ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;

@@ -236,6 +236,10 @@
       "role": "画面: ジャック確認(RAID_JACK_DEBUG。デバッグ専用)。定義・期間と回数・端末の記録・サーバー(別イベントID)を、公開フラグや時刻を待たずに確かめる"
     },
     {
+      "file": "79-screen-raid-jack.jsx",
+      "role": "画面: イベント・レイドボス「ジャック」(RAID_JACK=A協力戦・B累計ダメージ・残り回数・追加購入・ランキング / RAID_JACK_PREP=編成とアシカえらび)。表示と選択だけで、回数・ビートP・戦闘開始は本体側"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5b2b37f7166a9d5d
+// generated-sha256: 463bc4619b4513a4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 12:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 13:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29469,11 +29469,81 @@ const HOME_EVENT_BADGE_CSS = `
   .mh-home-event-badge{animation:none;transform:none}
   .mh-home-event-badge::after{display:none}}
 `;
+// ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
+//   タップでレイド画面を開く。近くに、いま挑める段階の共有HPバーを出す。ときどき両腕を上げたポーズに変わる(HPとは連動しない)。
+// ★位置・大きさ・見た目は style で直に持たせ、クラスは「動き」だけを足す係にする(配置の検査はこのCSSを読まないため)。
+// ★CSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、配置の検査が数える要素の数がずれる。
+// ★動きを減らす設定の人には跳ねさせない(prefers-reduced-motion)。
+const HOME_RAID_JACK_CSS = `
+.mh-home-raid-jack-img{animation:mhRaidJackHop 1.15s cubic-bezier(.3,.1,.4,1) infinite;transform-origin:50% 100%}
+.mh-home-raid-jack-shadow{animation:mhRaidJackShadow 1.15s cubic-bezier(.3,.1,.4,1) infinite}
+@keyframes mhRaidJackHop{
+  0%,100%{transform:translateY(0) scale(1.06,.92)}
+  18%{transform:translateY(0) scale(.96,1.06)}
+  50%{transform:translateY(-16px) scale(1,1) rotate(-2deg)}
+  82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
+@keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
+@media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+`;
+const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:6,
+  display:'flex', flexDirection:'column', alignItems:'center', width:'44%', maxWidth:'190px', minWidth:'120px',
+  background:'transparent', border:'0', padding:'0', cursor:'pointer',
+});
+const HomeRaidJack = ({ eventId, onOpen }) => {
+  const [totals, setTotals] = React.useState(undefined);
+  const [pose, setPose] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-home-raid-jack-css')) return;
+    const tag = document.createElement('style'); tag.id = 'mh-home-raid-jack-css'; tag.textContent = HOME_RAID_JACK_CSS; document.head.appendChild(tag);
+  }, []);
+  React.useEffect(() => {
+    let alive = true;
+    const load = async () => { const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
+    load();
+    const id = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(id); };
+  }, [eventId]);
+  // ときどき両腕ポーズ(約7秒に1回、1.4秒だけ)
+  React.useEffect(() => {
+    let alive = true; let timer = null;
+    const loop = () => { timer = setTimeout(() => { if (!alive) return; setPose(true); timer = setTimeout(() => { if (!alive) return; setPose(false); loop(); }, 1400); }, 5600); };
+    loop();
+    return () => { alive = false; clearTimeout(timer); };
+  }, []);
+  // いま挑める段階 = まだ共有HPが残っている最初の段階。全部倒していたら「討伐おめでとう」
+  const tiers = RAID_JACK_A_TIERS;
+  const totalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
+  const currentIndex = totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
+  const allDone = !!totals && currentIndex < 0;
+  const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
+  const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
+  const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
+  return (
+    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={`${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
+      <span style={{ position:'relative', display:'block', width:'100%' }}>
+        <img className="mh-home-raid-jack-img" src={pose ? JACK_POSE_IMG : JACK_IMG} alt="" draggable={false}
+          style={{ display:'block', width:'100%', height:'auto', filter:'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)', pointerEvents:'none' }} />
+      </span>
+      <span className="mh-home-raid-jack-shadow" aria-hidden="true" style={{ display:'block', width:'70%', height:'8px', marginTop:'-6px', borderRadius:'50%', background:'#0008', filter:'blur(3px)' }} />
+      <span style={{ display:'block', width:'100%', marginTop:'6px', padding:'3px 6px', borderRadius:'10px', border:'1px solid #fdba74aa', background:'#1c0a02d9', color:'#ffedd5', fontSize:'10px', fontWeight:900, textAlign:'center', lineHeight:1.3 }}>
+        <span style={{ display:'block' }}>{allDone ? 'ジャックを倒した！みんなありがとう' : `${tier.name}があらわれた！`}</span>
+        <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
+          <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:allDone ? '#10b981' : '#f97316' }} />
+        </span>
+        {totals === null ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>準備中</span>
+          : totals === undefined ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>…</span>
+          : <span style={{ display:'block', fontSize:'8px', opacity:.85 }}>共有HP {left.toLocaleString()}</span>}
+      </span>
+    </button>
+  );
+};
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
+  raidJackVisible = false, raidJackEventId, onOpenRaidJack,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -29514,6 +29584,7 @@ function HomeScreen({
         <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
+        {raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
         <header className={`mh-home-status${spotClass('settings')}`}>
           <button type="button" className="mh-home-player relative" onClick={onOpenProfile} aria-label="プロフィールを開く">
             <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
@@ -35939,6 +36010,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
 //   ② 期間と回数: 「いま」を前・中・後に動かしたときの判定、今日の残り回数
 //   ③ 端末の記録(mh_raid_jack_v1): 回数・倒した段階・再送待ちの確認と初期化(★保存します)
 //   ⑤ 絵と技: バトルの立ち絵2枚・顔アイコン、段階ごとに使う技(実際の行動表 tacticsActionDefinitions)
+//   ⑦ 画面: HOMEのジャック(強制表示)・レイド画面を、公開フラグと期間を待たずに開く(記録は別のイベントID)
 //   ⑥ 戦う: ジャック戦(専用の1戦)を、段階を選んで始める。回数は使わず、送る記録も別のイベントID(raid_jack_debug)
 //   ④ サーバー: 本番の集計(raid_jack_2026)を汚さない別のイベントID(raid_jack_debug)で、
 //      テスト送信・段階ごとの合計・Bの上位・再送待ちの送り直しを試す
@@ -35949,7 +36021,7 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
   { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
 ]);
 
-const RaidJackDebugScreen = ({ onBack, onStartBattle }) => {
+const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, onOpenRaid, onGoHome }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
   const [log, setLog] = useState([]);
@@ -36067,6 +36139,16 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle }) => {
         </section>
 
         <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-orange-200">⑦ HOMEのジャックとレイド画面(公開フラグ・期間を待たずに)</div>
+          <div className="text-[10px] text-slate-300">強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。</div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <button data-raid-force-toggle className={`${btn} ${raidForce ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`} onClick={() => onToggleRaidForce && onToggleRaidForce()}>HOMEに出す: {raidForce ? 'ON' : 'OFF'}</button>
+            <button data-raid-open className={`${btn} border-orange-400/60 bg-orange-950/40`} onClick={() => onOpenRaid && onOpenRaid()}>レイド画面を開く</button>
+            <button data-raid-go-home className={`${btn} col-span-2 border-orange-400/60 bg-orange-950/40`} onClick={() => onGoHome && onGoHome()}>HOMEを見る(ジャックが出ているか確認)</button>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">
           <div className="mb-1 font-black text-orange-200">⑥ ジャックと戦う(回数は使わない・別のイベントIDで送る)</div>
           <div className="flex flex-wrap items-center gap-1.5">
             <select data-raid-fight-kind value={fightKind} onChange={(e) => setFightKind(e.target.value)} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]"><option value="a">A(ベースモン・協力戦)</option><option value="b">B(マスモン・累計ダメージ)</option></select>
@@ -36097,6 +36179,266 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle }) => {
           <div className="mb-1 text-[11px] font-black text-slate-200">ログ</div>
           {log.length === 0 ? <div className="text-[10px] text-slate-400">まだ何もしていません</div> : log.map((l, i) => <div key={i} className="text-[10px] text-slate-300">{l}</div>)}
         </section>
+      </div>
+    </div>
+  );
+};
+
+// ---- part: 79-screen-raid-jack.jsx ----
+// ==================== イベント・レイドボス「ジャック」(レイド画面と編成画面) ====================
+// 設計の正本: docs/spec/RAID_BOSS_JACK.md
+//   RAID_JACK      … A(ベースモン協力戦・段階ごとの共有HP)とB(マスモンの累計ダメージ)。残り回数・追加購入・ランキング
+//   RAID_JACK_PREP … 編成(勇者1体+供モン最大3体)とアシカえらび。始めると専用の1戦(60-app.jsx の startRaidJackBattle)へ
+//
+// 決めごと:
+//  ・この画面は表示と選択だけ。回数を使う・ビートPを払う・戦闘を始めるのは本体側(onChallenge / onPurchase / onStart)。
+//  ・サーバー(36-raid-jack-api.jsx)が準備中(SQL未適用)・通信できないときも、画面は壊さず「準備中」と出す。
+//  ・A の段階は「前の段階の共有HPが0になったら開く」。未解放はシルエットで見せる(報酬も見えるようにする)。
+//  ・B の段階は「自分が前の段階を倒したら開く」。解放した段階にはいつでも戻れる。
+//  ・報酬の中身はまだ決まっていないので「準備中」と出す(決まったらここへ差し込む)。
+const RAID_JACK_REWARD_NOTE = '報酬の中身は準備中です(決まりしだいここに出ます)';
+
+// ランキングの1行ぶんの名前(ブリーダー名)。プロフィールが引けない人は「名無しのブリーダー」
+const raidJackNameOf = (breederId) => {
+  const profile = typeof latestBreederProfileFor === 'function' ? latestBreederProfileFor({ breederId }) : null;
+  return (profile && profile.userName) || '名無しのブリーダー';
+};
+
+const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
+  const rate = max > 0 ? Math.max(0, Math.min(1, left / max)) : 0;
+  const color = tone === 'emerald' ? 'bg-emerald-500' : 'bg-orange-500';
+  return (
+    <div className="h-3 w-full overflow-hidden rounded-full border border-white/20 bg-black/50" role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.max(0, left)}>
+      <div className={`h-full ${color} transition-all`} style={{ width: `${rate * 100}%` }} />
+    </div>
+  );
+};
+
+const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false }) => {
+  const [tab, setTab] = useState('a');
+  const [sel, setSel] = useState({ a: 0, b: 0 });
+  const [state, setState] = useState(() => raidJackDefaultState());
+  const [totals, setTotals] = useState(undefined);       // undefined=読み込み中 / null=準備中 / object
+  const [rows, setRows] = useState(undefined);           // 選択中のランキング(A=その段階の貢献 / B=累計)
+  const [self, setSelf] = useState(null);
+  const [ahead, setAhead] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [tick, setTick] = useState(0);
+  const nowMs = Date.now();
+  const windowState = raidJackWindowAt(nowMs);
+  const open = forced || windowState === 'open';
+
+  // 読み込み(サーバーの合計・自分の状態・ランキング)。タブや段階を変えるたびに、そのぶんだけ読み直す
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const loaded = await raidJackLoadState();
+      if (!alive) return;
+      setState(loaded);
+      const myId = await ensureBreederId();
+      const t = await sbFetchRaidJackTierTotals(eventId);
+      if (!alive) return;
+      setTotals(t);
+      const mine = myId ? await sbFetchRaidJackSelf(myId, eventId) : null;
+      if (!alive) return;
+      setSelf(mine);
+      setRows(undefined); setAhead(null);
+      const list = tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      if (!alive) return;
+      if (list) { try { await ensureBreederProfiles('raid-jack'); } catch (e) { /* 名前が引けなくても順位は出る */ } }
+      if (!alive) return;
+      setRows(list);
+      if (list && mine) {
+        const myTotal = tab === 'a' ? (mine.a[sel.a + 1] || 0) : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(tab, sel.a + 1, myTotal, eventId) : null;
+        if (alive) setAhead(count);
+      }
+    })();
+    return () => { alive = false; };
+  }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
+
+  const side = tab === 'a' ? state.a : state.b;
+  const remaining = raidJackRemaining(side, nowMs);
+  const tiers = raidJackTiers(tab);
+  const aTotalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
+  const aDefeated = (i) => totals ? aTotalOf(i) >= tiers[i].hp : false;
+  const unlocked = tab === 'a'
+    ? (i) => i === 0 || aDefeated(i - 1)
+    : (i) => i < raidJackUnlockedCount('b', state.b.defeated);
+  const current = Math.min(sel[tab], tiers.length - 1);
+  const tier = tiers[current];
+  const isOpenTier = unlocked(current);
+  const myTotalHere = self ? (tab === 'a' ? (self.a[current + 1] || 0) : self.bTotal) : 0;
+
+  const buy = async () => {
+    setBusy(true); setMessage('');
+    try {
+      const result = await onPurchase(tab);
+      if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${RAID_JACK_EXTRA_COST_BEAT_P})`); setTick((n) => n + 1); }
+      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度ためしてください');
+    } finally { setBusy(false); }
+  };
+
+  const challengeLabel = !open ? (windowState === 'before' ? 'まだ始まっていません' : '終了しました')
+    : !isOpenTier ? '前の段階を倒すと開きます' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
+
+  return (
+    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-screen>
+      <ScreenHead title="カボチャの大王ジャック" icon="🎃" accent="text-orange-200" onBack={onBack}
+        note={forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'} />
+      <ScreenTabs items={[{ id: 'a', label: 'みんなで討伐' }, { id: 'b', label: 'ダメージ競争' }]} value={tab} onChange={setTab} />
+      <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
+        <div>
+          <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
+          <div data-raid-jack-remaining>今日の残り <b className="text-white">{remaining}</b> 回(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</div>
+        </div>
+        <button type="button" data-raid-jack-buy disabled={busy || !open} onClick={buy}
+          className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
+          1回追加<br /><small className="text-[9px] opacity-80">ビートP {RAID_JACK_EXTRA_COST_BEAT_P}(所持 {beatPoints})</small>
+        </button>
+      </div>
+      {message && <div className="mb-2 shrink-0 text-center text-[11px] font-black text-amber-200" role="status">{message}</div>}
+      {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
+
+      <div className={`${SCREEN_LIST_CLASS} space-y-2`}>
+        {tiers.map((t, i) => {
+          const isOpen = unlocked(i);
+          const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
+          const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);
+          const on = i === current;
+          return (
+            <button type="button" key={t.id} data-raid-jack-tier={t.id} onClick={() => setSel((prev) => ({ ...prev, [tab]: i }))}
+              className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`}>
+              <img src={JACK_IMG} alt="" className="h-14 w-16 shrink-0 object-contain"
+                style={isOpen ? undefined : { filter: 'brightness(0)', opacity: 0.5 }} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-[13px] font-black text-white">{i + 1}. {t.name}</span>
+                  <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                    {done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放'}
+                  </span>
+                </div>
+                {tab === 'a' ? (
+                  isOpen ? (
+                    <>
+                      <RaidJackHpBar left={left} max={t.hp} tone={done ? 'emerald' : 'orange'} />
+                      <div className="mt-0.5 text-[9px] text-slate-300">共有HP {left.toLocaleString()} / {t.hp.toLocaleString()}{totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : ''}</div>
+                    </>
+                  ) : <div className="text-[10px] text-slate-400">前の段階のジャックを倒すと姿をあらわします</div>
+                ) : (
+                  <div className="text-[10px] text-slate-300">ライフ {t.hp.toLocaleString()} / 技 {t.actionCount}本{isOpen ? '' : '(前の段階を倒すと開く)'}</div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-orange-200">{tier.name}の報酬</div>
+          <div className="text-[10px] text-slate-300">{RAID_JACK_REWARD_NOTE}</div>
+          <div className="mt-2 text-[10px] text-slate-300">{tab === 'a' ? '討伐報酬(参加者全員)・貢献ランキング1〜5位の報酬' : '初めて倒したときの報酬・累計ダメージ上位の報酬'}</div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 flex items-baseline justify-between text-[11px]">
+            <span className="font-black text-orange-200">{tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
+            {myTotalHere > 0 && <span data-raid-jack-mine className="text-[10px] text-slate-200">あなた {myTotalHere.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
+          </div>
+          {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
+          {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
+          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
+          {Array.isArray(rows) && rows.length > 0 && (
+            <ol data-raid-jack-ranking className="space-y-1">
+              {rows.slice(0, 100).map((r, i) => (
+                <li key={`${r.breederId}-${i}`} className="flex items-center gap-2 rounded-lg bg-slate-900/60 px-2 py-1 text-[11px] text-slate-100">
+                  <span className="w-7 shrink-0 text-right font-black text-amber-200">{i + 1}</span>
+                  <span className="min-w-0 flex-1 truncate">{raidJackNameOf(r.breederId)}</span>
+                  <b className="shrink-0 text-white">{r.total.toLocaleString()}</b>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+
+      <div className={SCREEN_FOOTER_CLASS}>
+        <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || remaining <= 0}
+          onClick={() => onChallenge(tab, current)}
+          className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+          {challengeLabel}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
+const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart }) => {
+  const isB = kind === 'b';
+  const maxTeach = isB ? 3 : 1;
+  const tier = raidJackTierAt(kind, tierIndex);
+  const list = Array.isArray(candidates) ? candidates : [];
+  const keyOf = (mon) => String(mon.masuId || mon.id);
+  const [heroKey, setHeroKey] = useState(null);
+  const [allyKeys, setAllyKeys] = useState([]);
+  const [teachIds, setTeachIds] = useState(() => (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
+  const hero = list.find((m) => keyOf(m) === heroKey) || null;
+  const allies = allyKeys.map((k) => list.find((m) => keyOf(m) === k)).filter(Boolean);
+  const toggleAlly = (mon) => setAllyKeys((prev) => {
+    const k = keyOf(mon);
+    if (prev.includes(k)) return prev.filter((x) => x !== k);
+    return prev.length >= 3 ? prev : [...prev, k];
+  });
+  const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
+  const tile = (mon, on, onClick, attrs) => (
+    <button type="button" key={keyOf(mon)} onClick={onClick} {...attrs}
+      className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
+      <img src={mon.faceIconUrl || mon.iconUrl || mon.imgUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+      <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
+    </button>
+  );
+  return (
+    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep>
+      <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={onBack}
+        note={`${isB ? 'マスモン' : 'ベースモン'}で編成・10ターン勝負`} />
+      <div className={`${SCREEN_LIST_CLASS} space-y-3`}>
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">勇者モン(1体)</div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {list.map((mon) => tile(mon, heroKey === keyOf(mon), () => { setHeroKey(keyOf(mon)); setAllyKeys((prev) => prev.filter((x) => x !== keyOf(mon))); }, { 'data-raid-hero': keyOf(mon) }))}
+          </div>
+          {list.length === 0 && <div className="py-2 text-center text-[10px] text-slate-400">編成できるモンスターがいません</div>}
+        </section>
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">供モン(最大3体)<span className="ml-1 text-[9px] text-slate-300">{allies.length} / 3</span></div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {list.filter((m) => keyOf(m) !== heroKey).map((mon) => tile(mon, allyKeys.includes(keyOf(mon)), () => toggleAlly(mon), { 'data-raid-ally': keyOf(mon) }))}
+          </div>
+        </section>
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span></div>
+          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります'}</div>
+          <div className="mt-1 grid grid-cols-4 gap-1.5">
+            {(Array.isArray(teachings) ? teachings : []).map((t) => (
+              <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
+                className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
+                <img src={t.icon} alt="" className="h-10 w-10 rounded-full object-cover" />
+                <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{t.baseName}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300">
+          ライフ {tier.hp.toLocaleString()} / 技 {tier.actionCount}本 / 10ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。
+        </div>
+      </div>
+      <div className={SCREEN_FOOTER_CLASS}>
+        <button type="button" data-raid-prep-start disabled={!hero}
+          onClick={() => onStart({ party: [hero, ...allies], teachingIds: teachIds })}
+          className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+          {hero ? 'この編成で挑戦する' : '勇者モンを選んでください'}
+        </button>
       </div>
     </div>
   );
@@ -38433,6 +38775,10 @@ function MonsterHeroGame() {
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
+  const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);    // デバッグ: 公開フラグ・期間を待たずに HOME へ出す(記録は別のイベントID)
+  // 本番は RAID_JACK_EVENT.id。デバッグで強制表示しているあいだは、本番の集計を汚さない別のIDを使う
+  const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
 
   // ---------- ダンジョンRPG戦闘テスト(デバッグ専用) ----------
   // すべてメモリ上だけの状態。画面を抜けたり再読込すると消える(保存も送信もしない)。
@@ -39711,6 +40057,7 @@ function MonsterHeroGame() {
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
+    RAID_JACK: 'home', RAID_JACK_PREP: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
@@ -49308,6 +49655,56 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setRunMode(BATTLE_MODE_CHALLENGE);
     if(toDebug) setGameState('RAID_JACK_DEBUG');
   };
+  // ---- レイド画面・編成・追加購入(docs/spec/RAID_BOSS_JACK.md) ----
+  const openRaidJack = async () => {
+    setRhythmEventPoints(await loadRhythmEventPoints());
+    setGameState('RAID_JACK');
+  };
+  // 追加の挑戦を1回ぶん買う。ビートP(1回100P)を払って mh_raid_jack_v1 の extra を増やす。
+  // 払ったあとに記録が保存できなければ、ビートPを戻す(払っただけで回数が増えない事故を作らない)。
+  // デバッグの強制表示中は、実際のビートPを減らさない
+  const purchaseRaidJackExtra = async (kind) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    try {
+      const key = kind === 'b' ? 'b' : 'a';
+      const before = await loadRhythmEventPoints();
+      const free = raidJackDebugForce;
+      if (!free && before < RAID_JACK_EXTRA_COST_BEAT_P) return { ok:false, reason:'short' };
+      const state = await raidJackLoadState();
+      const today = raidJackDayKey(Date.now());
+      const side = state[key];
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      side.extra += 1;
+      const nextPoints = free ? before : before - RAID_JACK_EXTRA_COST_BEAT_P;
+      if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, nextPoints, false);
+      const saved = await raidJackSaveState(state);
+      if (!saved) { if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, before, false); return { ok:false, reason:'error' }; }
+      setRhythmEventPoints(nextPoints);
+      return { ok:true, points:nextPoints };
+    } catch (error) {
+      return { ok:false, reason:'error' };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
+  const startRaidJackFromPrep = async ({ party, teachingIds }) => {
+    const prep = raidJackPrep;
+    if (!prep || !Array.isArray(party) || party.length === 0) return;
+    const key = prep.kind === 'b' ? 'b' : 'a';
+    const nowMs = Date.now();
+    const state = await raidJackLoadState();
+    const side = state[key];
+    const today = raidJackDayKey(nowMs);
+    if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+    if (raidJackRemaining(side, nowMs) <= 0) { setGameState('RAID_JACK'); return; }
+    side.used += 1;
+    if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+    setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId });
+  };
 
   const setupMon = (m, slotIdx) => {
     if (!m) return;
@@ -50887,6 +51284,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
             profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
+            raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
+            raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
           />
         )}
 
@@ -52862,7 +53261,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} onStartBattle={(kind,tierIndex)=>{
+        {gameState==='RAID_JACK'&&(<RaidJackScreen
+          onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
+          onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
+          onPurchase={purchaseRaidJackExtra} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce}/>)}
+        {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
+          kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
+          candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
+          teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
+          onBack={()=>setGameState('RAID_JACK')} onStart={startRaidJackFromPrep}/>)}
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();

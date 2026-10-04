@@ -2075,6 +2075,9 @@ const HELP_SCREEN_COVERAGE = {
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
   RAID_JACK_DEBUG: null,
+  // イベント・レイドボス「ジャック」(公開フラグ RAID_JACK_PUBLIC_RELEASE が偽のあいだは出ない)。公開前にヘルプの項目へつなぐ(段階5)
+  RAID_JACK: null,
+  RAID_JACK_PREP: null,
   BREEDER_ICON_DEBUG:'home/profile',
   TRAINING_INFO:    null,
   RHYTHM_INFO:      'rhythm/rhythm-coming-soon',

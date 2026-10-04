@@ -8,6 +8,7 @@
 //   ② 期間と回数: 「いま」を前・中・後に動かしたときの判定、今日の残り回数
 //   ③ 端末の記録(mh_raid_jack_v1): 回数・倒した段階・再送待ちの確認と初期化(★保存します)
 //   ⑤ 絵と技: バトルの立ち絵2枚・顔アイコン、段階ごとに使う技(実際の行動表 tacticsActionDefinitions)
+//   ⑦ 画面: HOMEのジャック(強制表示)・レイド画面を、公開フラグと期間を待たずに開く(記録は別のイベントID)
 //   ⑥ 戦う: ジャック戦(専用の1戦)を、段階を選んで始める。回数は使わず、送る記録も別のイベントID(raid_jack_debug)
 //   ④ サーバー: 本番の集計(raid_jack_2026)を汚さない別のイベントID(raid_jack_debug)で、
 //      テスト送信・段階ごとの合計・Bの上位・再送待ちの送り直しを試す
@@ -18,7 +19,7 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
   { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
 ]);
 
-const RaidJackDebugScreen = ({ onBack, onStartBattle }) => {
+const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, onOpenRaid, onGoHome }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
   const [log, setLog] = useState([]);
@@ -133,6 +134,16 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle }) => {
           {Array.isArray(ranking) && (
             <div className="mt-2">Bの上位(デバッグ分): {ranking.length === 0 ? 'まだありません' : ranking.slice(0, 10).map((r, i) => `${i + 1}位 ${r.breederId.slice(0, 6)}… ${r.total.toLocaleString()}`).join(' / ')}</div>
           )}
+        </section>
+
+        <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-orange-200">⑦ HOMEのジャックとレイド画面(公開フラグ・期間を待たずに)</div>
+          <div className="text-[10px] text-slate-300">強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。</div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <button data-raid-force-toggle className={`${btn} ${raidForce ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`} onClick={() => onToggleRaidForce && onToggleRaidForce()}>HOMEに出す: {raidForce ? 'ON' : 'OFF'}</button>
+            <button data-raid-open className={`${btn} border-orange-400/60 bg-orange-950/40`} onClick={() => onOpenRaid && onOpenRaid()}>レイド画面を開く</button>
+            <button data-raid-go-home className={`${btn} col-span-2 border-orange-400/60 bg-orange-950/40`} onClick={() => onGoHome && onGoHome()}>HOMEを見る(ジャックが出ているか確認)</button>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">

@@ -2328,6 +2328,10 @@ function MonsterHeroGame() {
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
+  const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);    // デバッグ: 公開フラグ・期間を待たずに HOME へ出す(記録は別のイベントID)
+  // 本番は RAID_JACK_EVENT.id。デバッグで強制表示しているあいだは、本番の集計を汚さない別のIDを使う
+  const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
 
   // ---------- ダンジョンRPG戦闘テスト(デバッグ専用) ----------
   // すべてメモリ上だけの状態。画面を抜けたり再読込すると消える(保存も送信もしない)。
@@ -3606,6 +3610,7 @@ function MonsterHeroGame() {
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
+    RAID_JACK: 'home', RAID_JACK_PREP: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
@@ -13203,6 +13208,56 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setRunMode(BATTLE_MODE_CHALLENGE);
     if(toDebug) setGameState('RAID_JACK_DEBUG');
   };
+  // ---- レイド画面・編成・追加購入(docs/spec/RAID_BOSS_JACK.md) ----
+  const openRaidJack = async () => {
+    setRhythmEventPoints(await loadRhythmEventPoints());
+    setGameState('RAID_JACK');
+  };
+  // 追加の挑戦を1回ぶん買う。ビートP(1回100P)を払って mh_raid_jack_v1 の extra を増やす。
+  // 払ったあとに記録が保存できなければ、ビートPを戻す(払っただけで回数が増えない事故を作らない)。
+  // デバッグの強制表示中は、実際のビートPを減らさない
+  const purchaseRaidJackExtra = async (kind) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    try {
+      const key = kind === 'b' ? 'b' : 'a';
+      const before = await loadRhythmEventPoints();
+      const free = raidJackDebugForce;
+      if (!free && before < RAID_JACK_EXTRA_COST_BEAT_P) return { ok:false, reason:'short' };
+      const state = await raidJackLoadState();
+      const today = raidJackDayKey(Date.now());
+      const side = state[key];
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      side.extra += 1;
+      const nextPoints = free ? before : before - RAID_JACK_EXTRA_COST_BEAT_P;
+      if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, nextPoints, false);
+      const saved = await raidJackSaveState(state);
+      if (!saved) { if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, before, false); return { ok:false, reason:'error' }; }
+      setRhythmEventPoints(nextPoints);
+      return { ok:true, points:nextPoints };
+    } catch (error) {
+      return { ok:false, reason:'error' };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
+  const startRaidJackFromPrep = async ({ party, teachingIds }) => {
+    const prep = raidJackPrep;
+    if (!prep || !Array.isArray(party) || party.length === 0) return;
+    const key = prep.kind === 'b' ? 'b' : 'a';
+    const nowMs = Date.now();
+    const state = await raidJackLoadState();
+    const side = state[key];
+    const today = raidJackDayKey(nowMs);
+    if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+    if (raidJackRemaining(side, nowMs) <= 0) { setGameState('RAID_JACK'); return; }
+    side.used += 1;
+    if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+    setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId });
+  };
 
   const setupMon = (m, slotIdx) => {
     if (!m) return;
@@ -14782,6 +14837,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
             profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
+            raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
+            raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
           />
         )}
 
@@ -16757,7 +16814,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} onStartBattle={(kind,tierIndex)=>{
+        {gameState==='RAID_JACK'&&(<RaidJackScreen
+          onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
+          onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
+          onPurchase={purchaseRaidJackExtra} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce}/>)}
+        {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
+          kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
+          candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
+          teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
+          onBack={()=>setGameState('RAID_JACK')} onStart={startRaidJackFromPrep}/>)}
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
