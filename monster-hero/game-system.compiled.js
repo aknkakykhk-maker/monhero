@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87e6f8777df6db98
+// source-sha256: 05987f16c14e42e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 15:50";
+const BUILD_DATE = "2026-10-04 16:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35862,6 +35862,53 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const m = /\/(\d+)$/.exec(String(range || ''));
   return m ? Number(m[1]) : null;
 };
+const RAID_JACK_AURA_TONGUES = Object.freeze([5, 8, 11, 15, 20]);
+const raidJackAuraTongues = count => Array.from({
+  length: count
+}, (_, i) => {
+  const r = n => {
+    const v = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  return {
+    x: i % 2 ? 3 + r(1) * 28 : 69 + r(1) * 28,
+    w: 6 + r(2) * 6,
+    h: 30 + r(3) * 26,
+    d: -r(4) * 1.6,
+    t: 0.9 + r(5) * 0.7,
+    s: (r(6) - 0.5) * 36,
+    b: 16 + r(7) * 28,
+    c: i % 5
+  };
+});
+const RAID_JACK_AURA_TONGUE_SETS = Object.freeze(RAID_JACK_AURA_TONGUES.map(raidJackAuraTongues));
+const JackAuraLayer = ({
+  tier
+}) => {
+  const n = Math.min(Math.max(Math.floor(Number(tier) || 0), 0), 5);
+  if (n < 1) return null;
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    "data-jack-aura-el": true
+  }, React.createElement("i", {
+    "data-ja": "base"
+  }), React.createElement("i", {
+    "data-ja": "ring"
+  }), RAID_JACK_AURA_TONGUE_SETS[n - 1].map((t, k) => React.createElement("ins", {
+    key: k,
+    "data-ja": "tongue",
+    "data-ja-c": t.c,
+    style: {
+      '--x': `${t.x.toFixed(1)}%`,
+      '--w': `${t.w.toFixed(1)}%`,
+      '--h': `${t.h.toFixed(1)}%`,
+      '--b': `${t.b.toFixed(1)}%`,
+      '--d': `${t.d.toFixed(2)}s`,
+      '--t': `${t.t.toFixed(2)}s`,
+      '--s': `${t.s.toFixed(1)}deg`
+    }
+  })));
+};
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
   PROGRESS: 'progress'
@@ -47921,13 +47968,16 @@ const HomeRaidJack = ({
     "aria-label": `${tier.name}があらわれた！タップでレイド画面を開く`,
     style: HOME_RAID_JACK_BUTTON_STYLE
   }, React.createElement("span", {
+    "data-jack-aura": Number(String(tier.id).slice(1)) || undefined,
     style: {
       position: 'relative',
       display: 'block',
       width: '100%',
       aspectRatio: '1024 / 640'
     }
-  }, React.createElement("img", {
+  }, React.createElement(JackAuraLayer, {
+    tier: Number(String(tier.id).slice(1)) || 0
+  }), React.createElement("img", {
     className: "mh-home-raid-jack-img",
     src: JACK_IMG,
     alt: "",
@@ -50154,6 +50204,7 @@ function BattleScreen({
     height: '100%',
     marginTop: '-6%'
   };
+  const jackAuraTier = enemy?.id === 'Jack' ? Number(String(enemy.raidJackTier || '').slice(1)) || 0 : 0;
   const enemyBossImgSrc = enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? {
     '--em-e': JSON.stringify(emSpec[2])
@@ -50801,6 +50852,7 @@ function BattleScreen({
     className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
   }, slotSkill.name)), document.body)), isMooBoss(enemy?.id) && enemy?.imgUrl && React.createElement("div", {
     "data-enemy-motion": enemyMotion || undefined,
+    "data-jack-aura": jackAuraTier || undefined,
     "data-moo-stage": enemyMotion ? 'true' : undefined,
     "data-enemy-skill": enemySkillNow || undefined,
     "data-em-body": emSpec?.[0] || undefined,
@@ -50826,6 +50878,8 @@ function BattleScreen({
   }, emSet && React.createElement("i", {
     "aria-hidden": "true",
     "data-enemy-glow": true
+  }), jackAuraTier > 0 && React.createElement(JackAuraLayer, {
+    tier: jackAuraTier
   }), React.createElement("img", {
     src: enemyBossImgSrc,
     alt: enemy?.name || "ムー",
@@ -91139,6 +91193,45 @@ const createAnimationStyle = () => {
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
+    /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
+    [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+    [data-jack-aura="1"] { --ja-c: 251,146,60; --ja-d: 253,186,116; }
+    [data-jack-aura="2"] { --ja-c: 251,191,36; --ja-d: 249,115,22; }
+    [data-jack-aura="3"] { --ja-c: 192,132,252; --ja-d: 251,146,60; }
+    [data-jack-aura="4"] { --ja-c: 248,113,113; --ja-d: 251,191,36; }
+    [data-jack-aura="5"] { --ja-c: 250,204,21; --ja-d: 244,114,182; }
+    [data-jack-aura-el] > i[data-ja="base"] { opacity: .55; background: radial-gradient(closest-side, rgba(var(--ja-c),.0) 42%, rgba(var(--ja-c),.55) 78%, rgba(var(--ja-c),0) 100%); animation: jackAuraPulse 3.2s ease-in-out infinite; }
+    [data-jack-aura="2"] [data-ja="base"] { opacity: .8; animation-duration: 2.6s; }
+    [data-jack-aura="3"] [data-ja="base"] { opacity: .9; animation-duration: 2.2s; }
+    [data-jack-aura="4"] [data-ja="base"] { opacity: 1; animation-duration: 1.7s; inset: 0 -2% -2%; }
+    [data-jack-aura="5"] [data-ja="base"] { opacity: 1; animation-duration: 1.2s; inset: -8% -8% -8%; }
+    [data-jack-aura="5"] [data-ja="ring"] { inset: -6%; }
+    [data-jack-aura="1"] [data-ja="ring"], [data-jack-aura="2"] [data-ja="ring"] { display: none; }
+    [data-jack-aura-el] > i[data-ja="ring"] { inset: 0; opacity: .75; background: conic-gradient(from 0deg, rgba(var(--ja-c),0), rgba(var(--ja-c),.8), rgba(var(--ja-d),0) 35%, rgba(var(--ja-d),.7) 55%, rgba(var(--ja-c),0) 80%, rgba(var(--ja-c),.8)); -webkit-mask: radial-gradient(closest-side, transparent 78%, #000 80%, #000 90%, transparent 92%); mask: radial-gradient(closest-side, transparent 78%, #000 80%, #000 90%, transparent 92%); animation: jackAuraSpin 7s linear infinite; }
+    [data-jack-aura="4"] [data-ja="ring"] { animation-duration: 4.5s; opacity: .9; }
+    [data-jack-aura="5"] [data-ja="ring"] { animation-duration: 2.6s; opacity: 1; background: conic-gradient(from 0deg, #fde047, #f472b6, #a78bfa, #38bdf8, #4ade80, #fde047); }
+    /* 炎の舌(モンヒロビートのフリックの炎を参考): 根元から立ちのぼり、細く伸びて消える。本数は段階で増える(5/8/11/15/20本) */
+    [data-jack-aura-el] > ins[data-ja="tongue"] { position: absolute; display: block; text-decoration: none; left: var(--x); bottom: var(--b); width: var(--w); height: var(--h); margin-left: calc(var(--w) / -2); opacity: 0; pointer-events: none; transform-origin: 50% 100%; border-radius: 50% 50% 46% 46% / 85% 85% 15% 15%; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255,247,200,1) 0%, rgba(var(--ja-d),.95) 30%, rgba(var(--ja-c),.8) 62%, rgba(var(--ja-c),0) 92%); animation: jackAuraTongue var(--t) cubic-bezier(.25,.7,.35,1) var(--d) infinite both; will-change: transform, opacity; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="0"] { --ja-c: 244,114,182; --ja-d: 253,224,71; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="1"] { --ja-c: 163,230,53; --ja-d: 253,224,71; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="2"] { --ja-c: 56,189,248; --ja-d: 255,255,255; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="3"] { --ja-c: 167,139,250; --ja-d: 244,114,182; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="4"] { --ja-c: 251,146,60; --ja-d: 253,224,71; }
+    [data-jack-aura="3"] ins[data-ja="tongue"]:nth-of-type(odd) { --ja-c: 251,146,60; --ja-d: 253,224,71; }
+    [data-jack-aura="2"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(251,191,36,.9)); }
+    [data-jack-aura="3"] > [data-moo-body] > img { filter: drop-shadow(0 0 46px rgba(192,132,252,.95)); }
+    [data-jack-aura="4"] > [data-moo-body] > img { filter: drop-shadow(0 0 52px rgba(248,113,113,1)); }
+    [data-jack-aura="5"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(250,204,21,1)) drop-shadow(0 0 70px rgba(244,114,182,.9)); }
+    @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
+    @keyframes jackAuraSpin { to { transform: rotate(360deg); } }
+    @keyframes jackAuraTongue {
+      0% { opacity: 0; transform: translateY(0) rotate(var(--s)) scale(.7,.4); }
+      15% { opacity: 1; }
+      55% { opacity: .85; }
+      100% { opacity: 0; transform: translateY(-48%) rotate(calc(var(--s) * -1.4)) scale(.55,1.3); }
+    }
+    @media (prefers-reduced-motion: reduce) { [data-jack-aura-el] > i { animation: none !important; } }
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */

@@ -116,6 +116,10 @@
       "role": "イベント・レイドボス「ジャック」の通信層(Supabase の raid_jack_hits とビュー3つ)。1戦の与ダメージを1行送り、同じ hit_id は二重に数えない。送れなければ再送待ちへ。既存の保存データ・ランキングには書き込まない"
     },
     {
+      "file": "37-raid-jack-aura.jsx",
+      "role": "ジャックのオーラ(段階1〜5で派手になる炎の舌)。バトルとHOMEで共通の部品 JackAuraLayer。見た目は 70-bootstrap.jsx の data-jack-aura"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },

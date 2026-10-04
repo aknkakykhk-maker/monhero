@@ -155,6 +155,28 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     check('デバッグ起動の結果は「もどる」でジャック確認の画面へ戻る', true);
+    // オーラ: 段階1〜5で data-jack-aura が段階の数字になり、オーラの部品(4枚)が出る。RAID_SHOT_DIR があれば段階ごとに撮る
+    for (let t = 1; t <= 5; t++) {
+      await page.locator('[data-raid-fight-kind]').selectOption('a');
+      await page.locator('[data-raid-fight-tier]').selectOption(String(t));
+      await page.locator('[data-raid-fight-start]').click();
+      await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
+      await page.waitForTimeout(1200);
+      const aura = await page.evaluate(() => {
+        const el = document.querySelector('[data-jack-aura]');
+        return el ? { tier: el.getAttribute('data-jack-aura'), glow: el.querySelectorAll('[data-jack-aura-el] > i').length, tongues: el.querySelectorAll('[data-jack-aura-el] > ins').length } : null;
+      });
+      check(`オーラ: 段階${t}で data-jack-aura=${t}・光2枚・炎の舌${[5, 8, 11, 15, 20][t - 1]}本`, !!aura && aura.tier === String(t) && aura.glow === 2 && aura.tongues === [5, 8, 11, 15, 20][t - 1], JSON.stringify(aura));
+      if (process.env.RAID_AURA_DEBUG) console.log('INFO tongue', JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('[data-jack-aura-el] > ins')].slice(0, 6).map((e) => { const c = getComputedStyle(e), r = e.getBoundingClientRect(); return { op: c.opacity, w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top), left: Math.round(r.left), bg: c.backgroundImage.slice(0, 30) }; }))));
+      if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/aura-${t}.png` }).catch(() => {});
+      await page.locator('[data-battle-menu-button]').click();
+      await page.locator('[data-battle-quit]').click();
+      await page.getByText('降参しますか？').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: /降参|あきらめる|リタイア/ }).filter({ hasText: /降参|あきらめる|リタイア/ }).last().click();
+      await page.locator('[data-raid-jack-result]').waitFor({ timeout: 30000 });
+      await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+      await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    }
     // ④ AUTOで最後まで進める(A・段階1)。どんな終わり方でも結果が1回だけ出て、与ダメージが1回だけ送られる
     posts.length = 0;
     await page.locator('[data-raid-fight-kind]').selectOption('a');
