@@ -46,6 +46,8 @@ const modeConsts = source.match(/^const BATTLE_MODE_[A-Z_]+ = '[^']+';$/gm) || [
 vm.runInContext([
   ...modeConsts,
   slice('const TACTICS_BATTLE_MODES', ']);') + ']);',
+  line('const RAID_JACK_BATTLE_MODES'),
+  line('const isRaidJackMode'),
   line('const isTacticsMode'),
   line('const TACTICS_EX_SKILLS_RELEASE'),
   slice('const tacticsExSkillsEnabled', ';\n') + ';',
@@ -86,7 +88,8 @@ const { gate, modes, ex, hitsApi } = sandbox;
   }
   check('タクティクス以外のモードと練習では、どの組み合わせでもEXが出ない', leaks.length === 0, leaks.join(', '));
   const tacticsModes = all.filter(m => gate.isTacticsMode(m));
-  check('タクティクスのモードが3つ見えている(検査が空回りしていない)', tacticsModes.length === 3, tacticsModes.join(','));
+  // 通常の3つ(tactics / tacticsSpecies / tacticsPro)に、ジャック戦の2つ(raidJackA / raidJackB)が加わる(2026-10-04)
+  check('タクティクスのモードが5つ見えている(通常3つ+ジャック戦2つ。検査が空回りしていない)', tacticsModes.length === 5, tacticsModes.join(','));
   check('デバッグのバトルでは、タクティクスの3モードすべてでEXが出る',
     tacticsModes.every(m => gate.tacticsExSkillsEnabled(m, { debugBattle: true })));
   check('公開フラグが立っていないあいだは、本番(デバッグでない)のタクティクスへ出ない',

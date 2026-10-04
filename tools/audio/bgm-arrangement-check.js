@@ -114,7 +114,7 @@ for (const file of files) {
       compact.includes(`normal:'${normal}',dullahan:'${dullahan}',moo:'${moo}'`));
   }
   check(`${file}: ムー→デュラハン→通常戦の優先順位と敵ID・WAVE判定`,
-    source.indexOf("enemyId === 'Moo' || currentWave === 10") < source.indexOf("enemyId === 'Durahan' || currentWave === 9") &&
+    source.indexOf("enemyId === 'Moo' || enemyId === 'Jack' || currentWave === 10") < source.indexOf("enemyId === 'Durahan' || currentWave === 9") &&
     /return bgmArrangement\[modeBgm\.moo\]/.test(source) && /return bgmArrangement\[modeBgm\.dullahan\]/.test(source) &&
     /return bgmArrangement\[modeBgm\.normal\]/.test(source));
   check(`${file}: BGM画面は4カテゴリと4モードの2段タブ`,

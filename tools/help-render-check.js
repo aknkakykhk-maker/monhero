@@ -66,6 +66,8 @@ const dataTablePrelude = [
   grab(source, 'const HERO_PROOF_SHARD_ITEM = Object.freeze({', 'const HERO_PROOF_CLEAR_REWARDS'),
   // プロモードで入るクイック周回数の表は、この換算をそのまま使う(2026-09-21)
   grab(source, 'const PRO_RUN_QUICK_LOOP_SCALE =', 'const rhythmPlayRunLoopsForResult ='),
+  // ジャック(イベント・レイドボス)の段階の表は 35-raid-jack.jsx の定義から作る(純粋な部品なので、まるごと持ち込む)
+  fs.readFileSync(path.join(root, 'monster-hero/src/parts/35-raid-jack.jsx'), 'utf8'),
   // タクティクスバトルの敵の技の表。倍率と行動表を実データから作るので、その材料も持ち込む
   // (持ち込まないと helpDataRows が空の表を返し、「本文が最後まで描けない」で落ちる)
   grab(source, 'const TACTICS_SWEEP_MULT', 'const TACTICS_ENEMY_ACTION_IDS'),

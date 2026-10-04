@@ -21,7 +21,7 @@ assert(source.includes('const sequence = tactics ? TACTICS_ENEMY_SEQUENCE : ENEM
 assert(source.includes('const table = tactics ? TACTICS_ENEMY_DATA : ENEMY_DATA;') && source.includes('enemy: table[key]'), 'debug enemies must reuse existing enemy definitions');
 assert(enemySource.includes('Durahan:') && enemySource.includes('Moo:'), 'Dullahan and Moo must remain valid enemy definitions');
 assert(source.includes("if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];"), 'Dullahan must use its mode-specific BGM route');
-assert(source.includes("if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];"), 'debug Moo and normal WAVE 10 must use the mode-specific Moo BGM');
+assert(source.includes("if (enemyId === 'Moo' || enemyId === 'Jack' || currentWave === 10) return bgmArrangement[modeBgm.moo];"), 'debug Moo and normal WAVE 10 must use the mode-specific Moo BGM');
 assert(/!debugBattleRef\.current\s*&&\s*currentWave\s*===\s*10/.test(source), 'debug victory must remain excluded from the clear BGM route');
 assert(source.includes("hp <= 0 || gaveUp"), 'defeat and give-up must use the game-over BGM route');
 

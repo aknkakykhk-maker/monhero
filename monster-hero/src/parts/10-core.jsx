@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 13:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 14:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -236,6 +236,17 @@ const TACTICS_BATTLE_MODES = Object.freeze([
 // 難易度ごとの自己ベスト・クリア回数・最高到達WAVEを持つモード。
 // 種族チャレンジは「種族×難易度」で持つので、ここには入れない
 const TACTICS_SCORE_MODES = Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_PRO]);
+// イベント・レイドボス「ジャック」の専用の1戦(docs/spec/RAID_BOSS_JACK.md)。A=ベースモン協力戦 / B=マスモンの累計ダメージ。
+// 盤面・行動表はタクティクスと同じ(isTacticsMode が真になる)が、**既存の記録には一切書かない**:
+//   ・自己ベスト・クリア回数・最高到達WAVE(TACTICS_SCORE_MODES に入れない・modeKeyPrefix は使われない接頭辞を返す)
+//   ・全国ランキング(modeHasRanking は false・submitRunScoreOnce は手前で return・rankingDifficultyForMode は例外)
+//   ・絆経験値・ゴールド・クリア報酬(ラン進行を持たない専用の1戦なので、結果は raidJackSubmitHit だけが送る)
+// 与ダメージは新しい表 raid_jack_hits へ、端末の記録は新しいキー mh_raid_jack_v1 へだけ書く。
+// TACTICS_BATTLE_MODES は3つのまま触らない(tactics-modes-check.js が3つを固定で見ている)。
+const BATTLE_MODE_RAID_JACK_A = 'raidJackA';
+const BATTLE_MODE_RAID_JACK_B = 'raidJackB';
+const RAID_JACK_BATTLE_MODES = Object.freeze([BATTLE_MODE_RAID_JACK_A, BATTLE_MODE_RAID_JACK_B]);
+const isRaidJackMode = (mode) => RAID_JACK_BATTLE_MODES.includes(mode);
 const EMPTY_TACTICS_RECORD = Object.freeze({ hs: Object.freeze({}), clears: Object.freeze({}), waves: Object.freeze({}) });
 // 種族チャレンジを一般公開するかどうかの1つのスイッチ。
 // false のあいだは
@@ -459,7 +470,7 @@ const isSpeciesChallengeMode = (mode) => mode === BATTLE_MODE_SPECIES_CHALLENGE
   || mode === BATTLE_MODE_TACTICS_SPECIES;
 // 新モードも normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、idそのものを見る。
 // ここを normalizeBattleMode 経由にすると、記録の置き場がチャレンジと同じ mh_ になってしまう
-const isTacticsMode = (mode) => TACTICS_BATTLE_MODES.includes(mode);
+const isTacticsMode = (mode) => TACTICS_BATTLE_MODES.includes(mode) || isRaidJackMode(mode);
 // クイックの報酬方針は画面内だけで選び、保存データには増やさない。
 // 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
@@ -502,7 +513,10 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
 // プロは mh_pro_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)のキーには一切触らない
 // 新モードは mh_tactics_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)・プロ(mh_pro_*)の
 // キーには一切触らない。id と同じく、公開後はこの接頭辞も変えない
-const modeKeyPrefix = (mode) => mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_'
+// ★ジャックは isTacticsMode より前に見る。あとに置くと mh_tactics_ になり、通常タクティクスの自己ベストと同じキーを指す。
+//   ジャック戦は記録を書かないので、この接頭辞は使われない(万一書いても通常の記録とは別のキーへ行く保険)
+const modeKeyPrefix = (mode) => isRaidJackMode(mode) ? 'mh_raid_jack_unused_'
+  : mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_'
   : isTacticsMode(mode) ? 'mh_tactics_'
   : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
@@ -824,6 +838,8 @@ const battleModePlayable = (id, { debugBattle = false } = {}) => {
   if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
   // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
   if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
+  // ジャックは専用の公開フラグだけで決める(タクティクスの公開とは別。typeof は検査の切り出しで未定義になるため)
+  if (isRaidJackMode(id)) return typeof RAID_JACK_PUBLIC_RELEASE !== 'undefined' && RAID_JACK_PUBLIC_RELEASE === true;
   if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
   return true;
 };
@@ -831,7 +847,7 @@ const battleModePlayable = (id, { debugBattle = false } = {}) => {
 // (ユーザー指示「3つ並べてプロ以外は準備中」)。デバッグからは今までどおり全部遊べる
 const battleModeComingSoon = (id, { debugBattle = false } = {}) => !debugBattle
   && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE
-  && isTacticsMode(id) && !battleModePlayable(id, { debugBattle });
+  && isTacticsMode(id) && !isRaidJackMode(id) && !battleModePlayable(id, { debugBattle });
 // 仕組みの中で実際に画面へ並べるモード。遊べないものは落とすが、
 // 「準備中」として見せるものだけは残す
 const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
@@ -890,6 +906,7 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 //   β版ではタクティクスプロだけが true になり、送り先もβ版専用の行になる
 const modeHasRanking = (mode) => !isQuickMode(mode)
   && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE)
+  && !isRaidJackMode(mode)
   && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
