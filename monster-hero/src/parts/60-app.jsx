@@ -4648,7 +4648,10 @@ function MonsterHeroGame() {
     if (RAID_JACK_BGM_STATES.includes(state) || (state === 'BATTLE' && raidJackRunRef.current)) return RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
     // 開催中かは見るたびに数え直す(読み込み時に1回だけ決めない)
-    const homeBgm = (((RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open') || raidJackDebugForce)
+    // ハロウィン・ナイト(10/4〜11/1)のあいだも同じ曲にする(2026-10-04・ユーザー指摘「ホーム音楽がぱんぷきんのはずなのにデフォルトでもならない」。
+    // 更新履歴には「イベント中はHOMEのBGMもこの曲」と書いていたのに、ジャックの開催中しか切り替えていなかった)
+    const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
+    const homeBgm = (((RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open') || raidJackDebugForce || halloweenNightOpen)
       && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
