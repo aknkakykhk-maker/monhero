@@ -13328,17 +13328,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let outcome='error';
     let next=raidJackDefaultState();
     let opened=false;
+    // ★デバッグの強制表示(別のイベントID)の戦いは、本番の端末記録(倒した段階・累計・再送待ち)に一切書かない。
+    //   書くと、グランドスラムが倒していないのに「討伐済み」になり、初討伐の報酬の判定にも使われる(2026-10-05・ユーザー指摘)。
+    //   デバッグの与ダメージはデバッグ用のイベントIDでサーバーへ送るだけにする(送れなくても再送待ちには残さない)
+    const isDebugRun=run.eventId!==RAID_JACK_EVENT.id;
     try {
-      next=await raidJackLoadState();
-      const side=next[run.kind];
-      const before=raidJackUnlockedCount(run.kind,side.defeated);
-      if(defeated&&!side.defeated.includes(tier.id)) side.defeated=[...side.defeated,tier.id];
-      if(run.kind==='b') side.total=(side.total||0)+damage;
-      opened=raidJackUnlockedCount(run.kind,side.defeated)>before;
-      const breederId=await ensureBreederId();
-      const sent=await raidJackSubmitHit(next,hit,breederId,run.eventId);
-      next=sent.state; outcome=sent.outcome;
-      await raidJackSaveState(next);
+      if(isDebugRun){
+        const breederId=await ensureBreederId();
+        outcome=await sbSendRaidJackHit(hit,breederId,run.eventId);
+      } else {
+        next=await raidJackLoadState();
+        const side=next[run.kind];
+        const before=raidJackUnlockedCount(run.kind,side.defeated);
+        if(defeated&&!side.defeated.includes(tier.id)) side.defeated=[...side.defeated,tier.id];
+        if(run.kind==='b') side.total=(side.total||0)+damage;
+        opened=raidJackUnlockedCount(run.kind,side.defeated)>before;
+        const breederId=await ensureBreederId();
+        const sent=await raidJackSubmitHit(next,hit,breederId,run.eventId);
+        next=sent.state; outcome=sent.outcome;
+        await raidJackSaveState(next);
+      }
     } catch (error) { outcome='error'; }
     setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
       lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
@@ -13363,7 +13372,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     try {
       const breederId = await ensureBreederId();
       if (!breederId) return 0;
-      const state = await raidJackLoadState();
+      let state = await raidJackLoadState();
+      // 先に、デバッグで付いてしまった「倒した」印をサーバーの記録と突き合わせて直す(初討伐の報酬を、倒していない段階へ出さないため)
+      const repaired = await raidJackRepairState(state, breederId, RAID_JACK_EVENT.id);
+      if (repaired.state.repaired && !state.repaired) {
+        if (!(await raidJackSaveState(repaired.state))) return 0;
+        state = repaired.state;
+      }
       const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
       if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
       const savedGifts = await storeGet('mh_gifts', [], false);

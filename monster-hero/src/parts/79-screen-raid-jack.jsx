@@ -231,7 +231,9 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       // 受け取れる報酬があればギフトで届け(本体側)、届いたら受け取り済みの印を読み直す
       const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
       if (!alive) return;
-      if (granted > 0) { loaded = await raidJackLoadState(); setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`); }
+      // 受け取り(と、端末の印の修復)で記録が変わっていることがあるので、読み直す
+      loaded = await raidJackLoadState();
+      if (granted > 0) setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
