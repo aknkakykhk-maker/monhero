@@ -1568,6 +1568,7 @@ function MonsterHeroGame() {
   const [soulTraitReturnState, setSoulTraitReturnState] = useState('MASU_MONS');
   const [soulTraitError, setSoulTraitError] = useState('');
   const [soulTraitRespecOpen, setSoulTraitRespecOpen] = useState(false);
+  const [soulCrystalOpen, setSoulCrystalOpen] = useState(false);   // 魂格の結晶を使う確認(魂格特性の画面)
   const soulTraitProcessingRef = useRef(false);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
@@ -2329,11 +2330,13 @@ function MonsterHeroGame() {
   // 自己ベスト・クリア回数・絆・ゴールド・クリア報酬・全国ランキングのどれにもつながらない。
   // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
   const raidJackRunRef = useRef(null);
+  const raidJackClaimingRef = useRef(false);    // 報酬の受け取りを同時に2つ走らせない
+  const raidJackLastClaimRef = useRef(0);       // HOMEへ戻るたびに問い合わせ直さない(5分あける。戦闘のあとは0に戻して今すぐ確かめる)
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
-  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに1回だけ(専用ルール)。ほかの戦いは今までどおり
+  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
   const raidExDefOf = (monId) => {
     const def = tacticsExDefOf(monId);
-    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:1 } : def;
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:2 } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
@@ -4198,11 +4201,15 @@ function MonsterHeroGame() {
   // 6レーンの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   // (新しいキーは作らない)。みんなで対戦の公開フラグが立っているときだけ並べる
   const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
+  // レイドの遊び方(2026-10-04・ユーザー指示「最初のストーリーを終了後にレイドの遊び方説明をいれて」)。
+  // ハロウィン・ナイト第1部を見終えたら続けて1度だけ流す。公開フラグ(raidJack)が立つまでは流さない
+  const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
+  const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   // ハロウィン・ナイト(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり、週ごとに更新の5部構成」)。
   // 5部のidと出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。**時刻が来た部を、古いほうから1つずつ**HOMEで流す
   // (期間の内か外かは見ない。第5部は閉幕の時刻に出る)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -4320,11 +4327,15 @@ function MonsterHeroGame() {
       // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
+      // レイドの遊び方。第1部を見終えていて、まだ見ていなければ、ほかの部より先に続けて流す
+      const raidHowtoReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
-        if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
+        if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
         else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
@@ -4336,6 +4347,7 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
@@ -6817,6 +6829,7 @@ function MonsterHeroGame() {
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
+    raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -7368,6 +7381,38 @@ function MonsterHeroGame() {
       return reset;
     } catch {
       setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      return null;
+    } finally { soulTraitProcessingRef.current = false; }
+  };
+
+  // 魂格の結晶を使い、その個体のボーナス魂格Pを増やす(2026-10-04)。
+  // 個体(mh_masu_mons)と所持品(mh_owned_items)を取引保存するので、結晶だけ減る・Pだけ増える状態を作らない。
+  const commitSoulCrystalUse = async (masuId, quantity) => {
+    if (soulTraitProcessingRef.current) return null;
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeItems = ownedItemsRef.current;
+    const masu = beforeMasuMons.find(m=>String(m.id)===String(masuId));
+    const used = buildSoulCrystalUse(masu, beforeItems, quantity);
+    if (!used.ok) { setSoulTraitError('魂格の結晶を所持していません。'); return null; }
+    const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(masuId)?used.nextMasu:m);
+    soulTraitProcessingRef.current = true;
+    setSoulTraitError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons },
+        { key:'mh_owned_items', before:beforeItems, next:used.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('soul crystal save failed');
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = used.ownedItems;
+      setMasuMons(nextMasuMons);
+      setOwnedItems(used.ownedItems);
+      setMasuMonDetail(prev=>prev&&String(prev.id)===String(masuId)?used.nextMasu:prev);
+      setSoulCrystalOpen(false);
+      Audio_.se.levelUp();
+      return used;
+    } catch {
+      setSoulTraitError('魂格の結晶を使えませんでした。結晶と魂格Pは変更していません。');
       return null;
     } finally { soulTraitProcessingRef.current = false; }
   };
@@ -13179,8 +13224,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
   // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
   // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
-  const RAID_JACK_TURN_GROWTH = 1.05;   // 20ターンになったので、1ターンぶんの上がり方は半分(10%→5%)
-  const RAID_JACK_TURN_REGEN_STEP = 0.015;   // 同じく半分(3%→1.5%)
   const raidJackTurnGrowth = (turn) => {
     const before = tacticsUnitsRef.current || [];
     const grown = before.map((unit) => {
@@ -13261,11 +13304,56 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
   const exitRaidJack = (toDebug=false) => {
     raidJackRunRef.current=null; raidJackDamageRef.current=0;
+    raidJackLastClaimRef.current=0;   // 倒した直後の報酬を、HOMEへ戻ったらすぐ確かめる
     setRaidJackResult(null);
     returnToHome();
     setRunMode(BATTLE_MODE_CHALLENGE);
     if(toDebug) setGameState('RAID_JACK_DEBUG');
   };
+  // ジャックの報酬を受け取れるぶんだけギフトで届ける(設計書「報酬の表」)。
+  // ★先に「ギフト」と「受け取り済みの印(mh_raid_jack_v1 の claimed)」を取引保存する。同じIDのギフトは
+  //   grantGiftOnce が二重に作らないので、途中で止まっても二重には届かない(CLAUDE.md ⑦)。
+  // ★公開フラグが偽・デバッグの強制表示(別のイベントID)のあいだは何もしない。戻り値は届けた件数
+  const claimRaidJackRewards = async () => {
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return 0;
+    if (raidJackClaimingRef.current) return 0;
+    raidJackClaimingRef.current = true;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return 0;
+      const state = await raidJackLoadState();
+      const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
+      if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      let nextGifts = beforeGifts;
+      let granted = 0;
+      found.due.forEach((entry) => {
+        const gift = { id:`${RAID_JACK_EVENT.id}_${entry.id}`, title:entry.title, source:'raidJack', rewards:raidJackRewardGiftItems(entry.reward) };
+        const result = grantGiftOnce(nextGifts, gift);
+        if (result.granted) { nextGifts = result.gifts; granted += 1; }
+      });
+      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.noneIds] });
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_gifts', before:beforeGifts, next:nextGifts },
+        { key:RAID_JACK_STORAGE_KEY, before:state, next:nextState },
+      ], storeGet, storeSet);
+      if (!saved) { console.error('[raid-jack-reward] save failed'); return 0; }
+      if (granted > 0) setGifts(nextGifts);
+      return granted;
+    } catch (error) { return 0; }
+    finally { raidJackClaimingRef.current = false; }
+  };
+  // HOMEにいるとき、報酬を受け取れるか確かめる(期間が終わると入口が消えるので、終了後の順位報酬もここで届く)
+  useEffect(() => {
+    if (gameState !== 'HOME') return;
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return;
+    const now = Date.now();
+    if (raidJackWindowAt(now) === 'before') return;
+    if (now - raidJackLastClaimRef.current < 300000) return;
+    raidJackLastClaimRef.current = now;
+    void claimRaidJackRewards();
+  }, [gameState]);
   // ---- レイド画面・編成・追加購入(docs/spec/RAID_BOSS_JACK.md) ----
   const openRaidJack = async () => {
     setRhythmEventPoints(await loadRhythmEventPoints());
@@ -16954,8 +17042,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RAID_JACK'&&(<RaidJackScreen
           onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
           onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
-          onPurchase={purchaseRaidJackExtra} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
-          guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}/>)}
+          onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidJackRewards} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
+          guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}
+          renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
         {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
           kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
           candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
@@ -17879,12 +17968,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 魂格特性STEP3: 小さなモーダルへ詰めず独立全画面。戦闘への反映はSTEP4で接続する。 */}
         {gameState==='MASU_SOUL_TRAITS'&&(
           <MasuSoulTraitsScreen
+            commitSoulCrystalUse={commitSoulCrystalUse}
             commitSoulTraitRespec={commitSoulTraitRespec}
             commitSoulTraitUpgrade={commitSoulTraitUpgrade}
+            soulCrystalOpen={soulCrystalOpen}
+            setSoulCrystalOpen={setSoulCrystalOpen}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}
             monsterRosterIds={monsterRosterIds}
-            onClose={()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState(soulTraitReturnState||'MASU_MONS');}}
+            onClose={()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setSoulCrystalOpen(false);setGameState(soulTraitReturnState||'MASU_MONS');}}
             ownedItems={ownedItems}
             setSoulTraitDraftLevels={setSoulTraitDraftLevels}
             setSoulTraitError={setSoulTraitError}
@@ -18959,6 +19051,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id==='tactics_intro') markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
           if(event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)&&!eventReplay.debug) void markRhythmEventStorySeen(event.id);
+          // 第1部を本編で見終えたら、レイドの遊び方を続けて流す(公開前・見たあと・回想からのときは流さない)
+          if(event&&event.id===RAID_JACK_HOWTO_AFTER_STORY_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
+            &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない

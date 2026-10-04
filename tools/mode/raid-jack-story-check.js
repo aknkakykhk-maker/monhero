@@ -62,9 +62,9 @@ const reg = ids.map((id) => e.EVENT_REPLAYS.find((x) => x.id === id));
 check('回想に8本とも登録されている', reg.every(Boolean));
 check('どれも公開フラグ(releaseFlag: raidJack)がついている(公開するまで回想にも出さない)', reg.every((x) => x && x.releaseFlag === 'raidJack'));
 const core = read('monster-hero/src/parts/10-core.jsx');
-check('公開フラグの対応表に raidJack がある(RAID_JACK_PUBLIC_RELEASE で決まる)', /get raidJack\(\) \{ return typeof RAID_JACK_PUBLIC_RELEASE !== 'undefined' && RAID_JACK_PUBLIC_RELEASE === true; \}/.test(core));
+check('公開フラグの対応表に raidJack がある(RELEASE_FLAGS.raidJack = RAID_JACK_PUBLIC_RELEASE で決まる)', /get raidJack\(\) \{ return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS\.raidJack === true; \}/.test(core));
 // ★getter(読むたびに調べる)であること。値で書くと、あとの部品の const を読み込み時に触って画面が真っ白になる
-check('raidJack の公開フラグは getter で、読み込み時に RAID_JACK_PUBLIC_RELEASE を触らない(初期化前の参照を作らない)', !/^\s+raidJack: typeof RAID_JACK_PUBLIC_RELEASE/m.test(core));
+check('raidJack の公開フラグは getter で、読み込み時にあとの部品の定数を触らない(初期化前の参照を作らない)', !/^\s+raidJack: typeof (RAID_JACK_PUBLIC_RELEASE|RELEASE_FLAGS)/m.test(core));
 const defs = read('monster-hero/src/parts/35-raid-jack.jsx');
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('見たかの記録は、既存の配列(rhythmEventStorySeen)へ id を入れる。新しい保存キーを作らない',

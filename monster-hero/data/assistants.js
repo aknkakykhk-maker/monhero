@@ -6782,6 +6782,49 @@ const RAID_JACK_ENDING_COMMON = [
 const RAID_JACK_ENDING_CLEARED = [...RAID_JACK_ENDING_A_HEAD, ...RAID_JACK_ENDING_COMMON];
 const RAID_JACK_ENDING_NOTCLEARED = [...RAID_JACK_ENDING_B_HEAD, ...RAID_JACK_ENDING_COMMON];
 
+// ---- レイドの遊び方(カボチャの大王ジャック) ----
+// ハロウィン・ナイト第1部を見終えたあとに、HOMEで1度だけ続けて流れる(2026-10-04・ユーザー指示「最初のストーリーを終了後にレイドの遊び方説明をいれて」)。
+// 公開フラグ(RELEASE_FLAGS.raidJack)が立つまでは流れず、回想にも出ない。そのあとは回想から見返せる。
+// 遊び方の数字は help.js の raid-jack と同じ(変えたら両方直す)
+const ASSISTANT_RAID_JACK_HOWTO = [
+  // SCENE 1 ジャックの登場
+  { who:'kiki',     e:'surprise', t:'みゅあちん、HOMEの真ん中を見てほしいでつ。……大きなかぼちゃがいまつ！' },
+  { who:'mua',      e:'surprise', t:'えっ、なにあれ！ ランタンの何十倍もあるじゃん！ しかもこっち睨んでる！' },
+  { who:'dra',      e:'normal',   t:'あれが「カボチャの大王ジャック」だ。さっきの小さい影の、親玉らしいぞ' },
+  { who:'momosuke', e:'wink',     t:'夜祭で暴れてるんだって。みんなで力を合わせて倒しちゃお♡' },
+  { who:'mua',      e:'excited',  t:'よーし、やってやろうじゃん！ で、どうやって戦うの？' },
+  // SCENE 2 入り方と2つの遊び方
+  { who:'kiki',     e:'normal',   t:'HOMEの真ん中のジャックをタップすると、レイド画面が開きまつ。' },
+  { who:'kiki',     e:'normal',   t:'遊び方は2つ。「レイドバトル」と「グランドスラム」でつ。' },
+  { who:'momosuke', e:'happy',    t:'レイドバトルは、ベースモンで挑む協力戦だよ。ジャックのライフはみんなで共有！ みんなのダメージが合わさって減っていくの♪' },
+  { who:'mua',      e:'surprise', t:'みんなで1体を削るんだ！ ライフが0になったら？' },
+  { who:'dra',      e:'normal',   t:'次の段階のジャックが出てくる。男爵、子爵、伯爵、公爵、大王の5段階だ' },
+  { who:'momosuke', e:'wink',     t:'段階ごとに、がんばった人の貢献ランキングが並ぶよ。上位には報酬があるかもね♡' },
+  { who:'kiki',     e:'normal',   t:'グランドスラムは、育てたマスモンで挑む個人戦でつ。ジャックのライフは減りませんが、与えたダメージの合計で、みんなとランキングを競いまつ。' },
+  { who:'mua',      e:'happy',    t:'協力のレイドバトルと、腕試しのグランドスラムかぁ。どっちも燃えるね！' },
+  // SCENE 3 挑戦のしかた
+  { who:'kiki',     e:'normal',   t:'挑むときは、段階を選んで、勇者モン・供モン(3体まで)・アシカを選んで、編成して始めまつ。' },
+  { who:'dra',      e:'normal',   t:'1回の挑戦は20ターン。そのあいだにジャックへダメージを与えるんだ' },
+  { who:'mua',      e:'troubled', t:'20ターンかぁ。短いようで長いね' },
+  { who:'momosuke', e:'normal',   t:'挑戦は1日3回まで無料。毎朝5:00に回復するよ。レイドバトルとグランドスラムは、別々に数えるの' },
+  { who:'kiki',     e:'surprise', t:'足りないときは、ビートPで1回100Pずつ追加できまつ。1日に買える回数に上限はありませんよ。' },
+  { who:'momosuke', e:'wink',     t:'モンビーでビートPをいっぱい貯めておけば、何回でも挑めちゃうね♡' },
+  { who:'dra',      e:'troubled', t:'ただし気をつけろ。始めた時点で1回使う。途中でやめても、アプリを閉じても、回数は戻らないぞ' },
+  { who:'kiki',     e:'normal',   t:'リタイアしても、そこまでのダメージは記録されまつ。' },
+  // SCENE 4 レイドバトルのコツ
+  { who:'momosuke', e:'excited',  t:'ここからはレイドバトルのコツ！ 1ターン進むごとに、味方みんなの全ステータスが5%ずつ上がっていくの♡' },
+  { who:'mua',      e:'excited',  t:'長引くほど強くなるんだ！ ライフとガッツの自動回復も、少しずつ上がるんだよね' },
+  { who:'kiki',     e:'normal',   t:'3ターン目・5ターン目・8ターン目には、編成全員の固有技と、選んだアシカが1段階ずつ強くなりまつ。' },
+  { who:'dra',      e:'normal',   t:'EXスキルは、持ってるやつごとに2回までだ。使いどころを考えろよ' },
+  { who:'mua',      e:'happy',    t:'味方のライフとガッツは、全快からスタート。ジャックの攻撃は、段階が上がるほど強くなるよ' },
+  { who:'kiki',     e:'normal',   t:'男爵は通常バトルのEasy、子爵はNormal、伯爵はHard、公爵はExpert、大王はMasterと同じ強さでつ。' },
+  { who:'momosuke', e:'wink',     t:'迷ったらヘルプの「カボチャの大王ジャック」を読んでね。ここで話したことは全部載ってるよ♪' },
+  // SCENE 5 開幕
+  { who:'dra',      e:'happy',    t:'よし、準備はいいか？ 夜祭を荒らすかぼちゃ、懲らしめてやろうぜ' },
+  { who:'mua',      e:'excited',  t:'いくよ、みんな！ ジャックを倒して、ハロウィン・ナイトを取り戻そう！' },
+];
+const ASSISTANT_RAID_JACK_HOWTO_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -6830,6 +6873,8 @@ const EVENT_REPLAYS = [
   // ハロウィン・ナイト(2026-10-04〜11-01)の5部構成。第1部が開幕、第5部が閉幕。**時刻が来た部から**HOMEで1度ずつ流れ、そのあとは回想から見返せる
   // (出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。id はそこと同じ)
   { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  // レイドの遊び方(2026-10-04)。第1部を見終えたあとにHOMEで1度だけ続けて流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
+  { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:01', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
   { id: 'halloween_night_2026_part2', date: '2026-10-11 08:00', title: 'ハロウィン・ナイト 第2部 ～消えたランタン～', script: ASSISTANT_HALLOWEEN_NIGHT_2, calls: ASSISTANT_HALLOWEEN_NIGHT_2_CALLS, unlockedKey: 'halloweenNightPart2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
   { id: 'halloween_night_2026_part3', date: '2026-10-18 08:00', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: ASSISTANT_HALLOWEEN_NIGHT_3, calls: ASSISTANT_HALLOWEEN_NIGHT_3_CALLS, unlockedKey: 'halloweenNightPart3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
   { id: 'halloween_night_2026_part4', date: '2026-10-25 08:00', title: 'ハロウィン・ナイト 第4部 ～届け、ビート～', script: ASSISTANT_HALLOWEEN_NIGHT_4, calls: ASSISTANT_HALLOWEEN_NIGHT_4_CALLS, unlockedKey: 'halloweenNightPart4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },

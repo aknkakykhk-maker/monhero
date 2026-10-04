@@ -149,3 +149,58 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const m = /\/(\d+)$/.exec(String(range || ''));
   return m ? Number(m[1]) : null;
 };
+
+// ---- 報酬の受け取り判定(2026-10-04) ----
+// いま受け取れる報酬を集める。サーバーの合計・自分の貢献・上位5人を読み、受け取り済みの印(state.claimed)にないものだけを返す。
+//   ・参加賞: A・Bそれぞれ、自分の与ダメージが1回でも記録されていれば。
+//   ・A 討伐: その段階が倒れていて(合計 >= ライフ)、自分がその段階へ与えていれば。
+//   ・A 順位: 男爵〜公爵は倒れたとき、大王は期間が終わったとき、貢献の上位5人に自分が入っていれば。
+//   ・B 討伐: 端末の記録で、その難易度を倒していれば(初めて倒したときの1回だけ)。
+//   ・B 順位: 期間が終わったとき、累計ダメージの上位5人に自分が入っていれば。
+// 上位5人に入っていなかった人は「入っていなかった」印(_none)を残し、毎回問い合わせ直さない。
+// 返り値 { ok, due:[{id,title,reward}], noneIds:[...] }。通信できないとき ok:false(何も配らない)
+const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
+  const none = { ok: false, due: [], noneIds: [] };
+  const id = raidJackSafeId(breederId);
+  if (!id) return none;
+  const windowState = raidJackWindowAt(nowMs);
+  if (windowState === 'before') return { ok: true, due: [], noneIds: [] };
+  const norm = raidJackNormalizeState(state);
+  const claimed = new Set(norm.claimed);
+  const [totals, self] = await Promise.all([sbFetchRaidJackTierTotals(eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!totals || !self) return none;
+  const due = [];
+  const noneIds = [];
+  const add = (claimId, title, reward) => { if (!claimed.has(claimId)) due.push({ id: claimId, title, reward }); };
+  const mineA = (i) => self.a[i + 1] || 0;
+  if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
+  if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
+  for (let i = 0; i < RAID_JACK_A_TIERS.length; i += 1) {
+    const total = totals.a[i + 1] ? totals.a[i + 1].total : 0;
+    const defeated = total >= RAID_JACK_A_TIERS[i].hp;
+    if (!defeated || mineA(i) <= 0) continue;
+    add(raidJackClaimId('clear_a', i), raidJackRewardTitle('clear_a', i), RAID_JACK_REWARDS.aClear[i]);
+    // 順位は、男爵〜公爵=倒れたとき / 大王=期間が終わったとき(大王は倒れたあとも貢献が続く)
+    const rankId = raidJackClaimId('rank_a', i);
+    if ((i < RAID_JACK_A_TIERS.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
+      const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
+      if (!top) continue;
+      const place = top.findIndex((r) => r.breederId === id);
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);
+      else noneIds.push(raidJackNoneId(rankId));
+    }
+  }
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), raidJackRewardTitle('clear_b', i), RAID_JACK_REWARDS.bClear[i]);
+  });
+  const finalId = raidJackClaimId('final_b');
+  if (windowState === 'after' && self.bTotal > 0 && !claimed.has(finalId) && !claimed.has(raidJackNoneId(finalId))) {
+    const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
+    if (top) {
+      const place = top.findIndex((r) => r.breederId === id);
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);
+      else noneIds.push(raidJackNoneId(finalId));
+    }
+  }
+  return { ok: true, due, noneIds };
+};

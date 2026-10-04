@@ -8,8 +8,8 @@
 //  ・サーバー(36-raid-jack-api.jsx)が準備中(SQL未適用)・通信できないときも、画面は壊さず「準備中」と出す。
 //  ・A の段階は「前の段階の共有HPが0になったら開く」。未解放はシルエットで見せる(報酬も見えるようにする)。
 //  ・B の段階は「自分が前の段階を倒したら開く」。解放した段階にはいつでも戻れる。
-//  ・報酬の中身はまだ決まっていないので「準備中」と出す(決まったらここへ差し込む)。
-const RAID_JACK_REWARD_NOTE = '報酬の中身は準備中です(決まりしだいここに出ます)';
+//  ・報酬の表は 35-raid-jack.jsx の RAID_JACK_REWARDS(設計書「報酬の表」)。画面は読むだけで、数字を書き写さない。
+//    難易度ごとの報酬は各段階のカードの下、モード別・難易度別の一覧は「報酬一覧」から開く。受け取りは本体側(onClaimRewards)がギフトで届ける。
 
 // ランキングの1行ぶんの名前(ブリーダー名)。プロフィールが引けない人は「名無しのブリーダー」
 const raidJackNameOf = (breederId) => {
@@ -27,17 +27,101 @@ const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
   );
 };
 
-const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide }) => {
+// 報酬1つぶんの中身(ダイヤ・虹のプシュケー・魂格の結晶・虹の超越の実・勇者の証。0のものは出さない)
+const RaidJackRewardChips = ({ reward }) => (
+  <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+    {raidJackRewardParts(reward).map((p) => (
+      <span key={p.key} className="whitespace-nowrap text-[10px] font-black text-slate-100">{p.emoji}{p.label}<b className="ml-0.5 text-amber-200">×{p.amount.toLocaleString()}</b></span>
+    ))}
+  </span>
+);
+const RaidJackRewardRow = ({ label, note, reward, got, dataKey }) => (
+  <div data-raid-jack-reward-row={dataKey} className="flex items-start gap-2 border-b border-white/5 py-1.5 last:border-b-0">
+    <div className="w-[68px] shrink-0">
+      <div className="text-[10px] font-black leading-tight text-orange-200">{label}</div>
+      {note && <div className="text-[8px] leading-tight text-slate-400">{note}</div>}
+    </div>
+    <div className="min-w-0 flex-1"><RaidJackRewardChips reward={reward} /></div>
+    {got && <span className="shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white">受け取り済み</span>}
+  </div>
+);
+// 1つの段階の報酬(難易度別)。A=討伐報酬+貢献1〜5位 / B=初めて倒したとき。未解放の段階も見える
+const RaidJackTierRewards = ({ kind, index, claimed }) => {
+  const have = Array.isArray(claimed) ? claimed : [];
+  if (kind === 'a') {
+    return (
+      <div data-raid-jack-tier-rewards="a">
+        <RaidJackRewardRow dataKey="clear" label="討伐報酬" note="参加した全員" reward={RAID_JACK_REWARDS.aClear[index]} got={have.includes(raidJackClaimId('clear_a', index))} />
+        {RAID_JACK_REWARDS.aRank[index].map((r, k) => (
+          <RaidJackRewardRow key={k} dataKey={`rank-${k + 1}`} label={`貢献${k + 1}位`} reward={r} got={k === 0 && have.includes(raidJackClaimId('rank_a', index))} />
+        ))}
+        <div className="mt-1 text-[9px] text-slate-400">{index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。倒したあとも貢献は続きます。' : '倒したときに順位が確定して、ギフトで届きます。'}</div>
+      </div>
+    );
+  }
+  return (
+    <div data-raid-jack-tier-rewards="b">
+      <RaidJackRewardRow dataKey="clear" label="初めて倒したとき" note="1回だけ" reward={RAID_JACK_REWARDS.bClear[index]} got={have.includes(raidJackClaimId('clear_b', index))} />
+      <div className="mt-1 text-[9px] text-slate-400">倒した直後にギフトで届きます。順位の報酬は、全難易度の累計ダメージで決まります(報酬一覧)。</div>
+    </div>
+  );
+};
+// 報酬一覧(モード別・難易度別)。レイド画面の「報酬一覧」から開く
+const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a' }) => {
+  const [tab, setTab] = useState(initialTab);
+  const have = Array.isArray(claimed) ? claimed : [];
+  return (
+    <div data-raid-jack-reward-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3" role="dialog" aria-modal="true" aria-label="ジャックの報酬一覧"
+      style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+      <div className="mb-2 flex shrink-0 items-center justify-between">
+        <div className="text-[14px] font-black text-orange-200">🎃 ジャックの報酬一覧</div>
+        <button type="button" data-raid-jack-reward-close onClick={onClose} aria-label="報酬一覧を閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
+      </div>
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">参加賞(1回でも挑戦した全員・{tab === 'a' ? 'レイドバトル' : 'グランドスラム'}で1回)</div>
+          <RaidJackRewardRow dataKey="participation" label="参加賞" reward={RAID_JACK_REWARDS.participation} got={have.includes(raidJackClaimId(tab === 'a' ? 'part_a' : 'part_b'))} />
+        </div>
+        {raidJackTiers(tab).map((t, i) => (
+          <div key={t.id} data-raid-jack-reward-tier={t.id} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+            <div className="mb-1 text-[12px] font-black text-white">{i + 1}. {t.name}</div>
+            <RaidJackTierRewards kind={tab} index={i} claimed={have} />
+          </div>
+        ))}
+        {tab === 'b' && (
+          <div data-raid-jack-reward-final className="rounded-2xl border border-orange-300/30 bg-orange-950/20 p-3">
+            <div className="mb-1 text-[12px] font-black text-orange-200">累計ダメージの最終順位(全難易度の合計)</div>
+            {RAID_JACK_REWARDS.bFinal.map((r, k) => (
+              <RaidJackRewardRow key={k} dataKey={`final-${k + 1}`} label={`${k + 1}位`} reward={r} got={k === 0 && have.includes(raidJackClaimId('final_b'))} />
+            ))}
+            <div className="mt-1 text-[9px] text-slate-400">期間の終わり(11/1 4:00)に確定して、ギフトで届きます。</div>
+          </div>
+        )}
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-300">
+          🔮 魂格の結晶は、マスモンの魂格特性の画面で使うと、そのマスモンの魂格Pが1個につき+1されます。<br />
+          🌈 虹の超越の実は、超越強化で超越ポイント+1に変えられます。
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// renderPlace / renderIcon / cardClass … 通常バトルの全国ランキングと同じ部品(60-app.jsx の rankingPlace / rankingBreederIcon / rankingCardClass)。
+//   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
+const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({ a: 0, b: 0 });
   const [state, setState] = useState(() => raidJackDefaultState());
   const [totals, setTotals] = useState(undefined);       // undefined=読み込み中 / null=準備中 / object
   const [rows, setRows] = useState(undefined);           // 選択中のランキング(A=その段階の貢献 / B=累計)
   const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
   const [ahead, setAhead] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
+  const [showRewards, setShowRewards] = useState(false);
   const nowMs = Date.now();
   const windowState = raidJackWindowAt(nowMs);
   const open = forced || windowState === 'open';
@@ -46,14 +130,19 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
   useEffect(() => {
     let alive = true;
     (async () => {
-      const loaded = await raidJackLoadState();
+      let loaded = await raidJackLoadState();
       if (!alive) return;
+      // 受け取れる報酬があればギフトで届け(本体側)、届いたら受け取り済みの印を読み直す
+      const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
+      if (!alive) return;
+      if (granted > 0) { loaded = await raidJackLoadState(); setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`); }
       setState(loaded);
-      const myId = await ensureBreederId();
+      const meId = await ensureBreederId();
+      if (alive) setMyId(meId || null);
       const t = await sbFetchRaidJackTierTotals(eventId);
       if (!alive) return;
       setTotals(t);
-      const mine = myId ? await sbFetchRaidJackSelf(myId, eventId) : null;
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
       if (!alive) return;
       setSelf(mine);
       setRows(undefined); setAhead(null);
@@ -94,8 +183,10 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
     } finally { setBusy(false); }
   };
 
+  // 倒した段階(男爵〜公爵)には挑めない。貢献順位が倒れたときに固まり、報酬がその場で決まるため。大王だけは倒したあとも続く
+  const closedTier = tab === 'a' && !unlimited && current < tiers.length - 1 && aDefeated(current);
   const challengeLabel = !open ? (windowState === 'before' ? 'まだ始まっていません' : '終了しました')
-    : !isOpenTier ? '前の段階を倒すと開きます' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
+    : !isOpenTier ? '前の段階を倒すと開きます' : closedTier ? 'この段階は倒されました(次の段階へ)' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
 
   return (
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-screen>
@@ -159,10 +250,13 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
           );
         })}
 
-        <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
-          <div className="mb-1 font-black text-orange-200">{tier.name}の報酬</div>
-          <div className="text-[10px] text-slate-300">{RAID_JACK_REWARD_NOTE}</div>
-          <div className="mt-2 text-[10px] text-slate-300">{tab === 'a' ? '討伐報酬(参加者全員)・貢献ランキング1〜5位の報酬' : '初めて倒したときの報酬・累計ダメージ上位の報酬'}</div>
+        <div data-raid-jack-rewards className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="font-black text-orange-200">{tier.name}の報酬</span>
+            <button type="button" data-raid-jack-reward-list-open onClick={() => setShowRewards(true)}
+              className="min-h-[32px] shrink-0 rounded-xl border border-orange-300/50 bg-orange-950/40 px-3 text-[10px] font-black text-orange-100 active:scale-95">報酬一覧</button>
+          </div>
+          <RaidJackTierRewards kind={tab} index={current} claimed={state.claimed} />
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
@@ -174,26 +268,34 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
           {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
           {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
           {Array.isArray(rows) && rows.length > 0 && (
-            <ol data-raid-jack-ranking className="space-y-1">
-              {rows.slice(0, 100).map((r, i) => (
-                <li key={`${r.breederId}-${i}`} className="flex items-center gap-2 rounded-lg bg-slate-900/60 px-2 py-1 text-[11px] text-slate-100">
-                  <span className="w-7 shrink-0 text-right font-black text-amber-200">{i + 1}</span>
-                  <span className="min-w-0 flex-1 truncate">{raidJackNameOf(r.breederId)}</span>
-                  <b className="shrink-0 text-white">{r.total.toLocaleString()}</b>
-                </li>
-              ))}
+            <ol data-raid-jack-ranking className="space-y-1.5">
+              {rows.slice(0, 100).map((r, i) => {
+                // 名前・アイコン・プロフィール枠は、通常バトルのランキングと同じ「いまの設定」をかぶせる
+                const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({ breederId: r.breederId, userName: raidJackNameOf(r.breederId) }) : { breederId: r.breederId, userName: raidJackNameOf(r.breederId) };
+                const mineRow = !!myId && r.breederId === myId;
+                return (
+                  <li key={`${r.breederId}-${i}`} data-raid-jack-ranking-row data-ranking-kind="raid-jack" aria-current={mineRow ? 'true' : undefined}
+                    className={`${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`}>
+                    {typeof renderPlace === 'function' ? renderPlace(i) : <span className="w-7 shrink-0 text-center text-[10px] font-black text-amber-200">{i + 1}</span>}
+                    {typeof renderIcon === 'function' && renderIcon(entry)}
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{entry.userName || '名無しのブリーダー'}{mineRow && <span className="ml-1 text-[8px] text-orange-200">(あなた)</span>}</span>
+                    <b className="shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200">{r.total.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">ダメージ</small></b>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </div>
       </div>
 
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || remaining <= 0}
+        <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
           onClick={() => onChallenge(tab, current)}
           className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
           {challengeLabel}
         </button>
       </div>
+      {showRewards && <RaidJackRewardList claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
     </div>
   );
 };

@@ -50,6 +50,28 @@ const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 // Aは、このターンになった時に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+// レイドバトル(A)のターンごとの強化。2ターン目から、1ターン進むごとに味方全員の全ステータスが5%ずつ(掛け算で)上がり、
+// ライフ・ガッツの自動回復の割合が1.5%ずつ上がる(ライフの初期値10%・ガッツはそれより5%低い)。
+// 戦闘の中身(60-app.jsx の raidJackTurnGrowth)と、画面の「強化」の表示(71-screen-battle.jsx)が同じ数字を見る
+const RAID_JACK_TURN_GROWTH = 1.05;
+const RAID_JACK_TURN_REGEN_STEP = 0.015;
+// turn ターン目にいるときの強化の状況。turn は 1 始まり。次の固有技・アシカの強化が無ければ nextLevelUpTurn は null
+const raidJackGrowthAt = (turn) => {
+  const t = Math.max(1, Math.floor(Number(turn) || 1));
+  const steps = t - 1;
+  const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * steps) * 1000) / 10;
+  const levelUps = RAID_JACK_LEVEL_UP_TURNS.filter((n) => n <= t).length;
+  const next = RAID_JACK_LEVEL_UP_TURNS.find((n) => n > t);
+  return {
+    turn: t, steps,
+    statPct: Math.round((Math.pow(RAID_JACK_TURN_GROWTH, steps) - 1) * 1000) / 10,   // ここまでの全ステータスの上がり(合計%)
+    stepPct: Math.round((RAID_JACK_TURN_GROWTH - 1) * 1000) / 10,                      // 1ターンぶん(%)
+    lifeRate, gutsRate: Math.round((lifeRate - 5) * 10) / 10,
+    levelUps, levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
+    nextLevelUpTurn: next === undefined ? null : next,
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+  };
+};
 
 // 技の種類(再生なし)。増やす順は既存の TACTICS_EXTRA_ACTION_ORDER に合わせ、
 // 減らすときは攻撃力アップ(roar)から先に落とす。
@@ -184,4 +206,124 @@ const raidJackMakeEnemy = (kind, tierIndex, mode) => {
   if (!enemy) return null;
   // 名前は段階の名前(ジャック男爵・初級ジャックなど)。バトル画面のボスバーやログにそのまま出る
   return { ...enemy, name: tier.name, maxHp: tier.hp, hp: tier.hp, atk: tier.atk, raidJackTier: tier.id };
+};
+
+// ===== 報酬の表(2026-10-04・ユーザーが1つずつ決めた。設計書「報酬の表」と同じ数字) =====
+// 中身は 5 つ: diamond=ダイヤ / psyche=虹のプシュケー / crystal=魂格の結晶 / fruit=虹の超越の実 / proof=勇者の証。
+// 勇者の証片・限定アイコン・称号は使わない。届け方はギフト(raidJackRewardGiftItems)。
+// 配りすぎていないかは公開後に見て、表をここで直せる形にしてある(受け取り済みIDは数字に依らない)。
+const raidJackReward = ({ diamond = 0, psyche = 0, crystal = 0, fruit = 0, proof = 0 } = {}) =>
+  Object.freeze({ diamond, psyche, crystal, fruit, proof });
+const RAID_JACK_REWARDS = Object.freeze({
+  // A・Bそれぞれ、1回でも挑戦した全員へ1回
+  participation: raidJackReward({ diamond: 30000, psyche: 50 }),
+  // A 討伐: その段階が倒れたとき、その段階に1回でも与えた全員へ(男爵→大王)
+  aClear: Object.freeze([
+    raidJackReward({ diamond: 100000, psyche: 50 }),
+    raidJackReward({ diamond: 200000, psyche: 60 }),
+    raidJackReward({ diamond: 300000, psyche: 70 }),
+    raidJackReward({ diamond: 400000, psyche: 80 }),
+    raidJackReward({ diamond: 1000000, psyche: 100, proof: 5 }),
+  ]),
+  // A 順位: 段階ごとの貢献1〜5位(男爵〜公爵は倒れたとき・大王は期間終了のとき)
+  aRank: Object.freeze([
+    Object.freeze([
+      raidJackReward({ diamond: 1000000, psyche: 3000, crystal: 3, fruit: 50 }),
+      raidJackReward({ diamond: 800000, psyche: 2500, crystal: 2, fruit: 40 }),
+      raidJackReward({ diamond: 600000, psyche: 2000, crystal: 2, fruit: 30 }),
+      raidJackReward({ diamond: 400000, psyche: 1500, crystal: 1, fruit: 20 }),
+      raidJackReward({ diamond: 200000, psyche: 1000, crystal: 1, fruit: 10 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 2000000, psyche: 6000, crystal: 6, fruit: 100 }),
+      raidJackReward({ diamond: 1600000, psyche: 5000, crystal: 4, fruit: 80 }),
+      raidJackReward({ diamond: 1200000, psyche: 4000, crystal: 4, fruit: 60 }),
+      raidJackReward({ diamond: 800000, psyche: 3000, crystal: 2, fruit: 40 }),
+      raidJackReward({ diamond: 400000, psyche: 2000, crystal: 2, fruit: 20 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 3000000, psyche: 8000, crystal: 8, fruit: 150, proof: 5 }),
+      raidJackReward({ diamond: 2400000, psyche: 6500, crystal: 6, fruit: 120, proof: 4 }),
+      raidJackReward({ diamond: 1800000, psyche: 5000, crystal: 5, fruit: 100, proof: 3 }),
+      raidJackReward({ diamond: 1200000, psyche: 4000, crystal: 3, fruit: 80, proof: 2 }),
+      raidJackReward({ diamond: 600000, psyche: 3000, crystal: 2, fruit: 60, proof: 1 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 5000000, psyche: 12000, crystal: 12, fruit: 250, proof: 10 }),
+      raidJackReward({ diamond: 4000000, psyche: 10000, crystal: 10, fruit: 200, proof: 8 }),
+      raidJackReward({ diamond: 3000000, psyche: 8000, crystal: 8, fruit: 150, proof: 6 }),
+      raidJackReward({ diamond: 2000000, psyche: 6000, crystal: 6, fruit: 100, proof: 4 }),
+      raidJackReward({ diamond: 1000000, psyche: 4000, crystal: 4, fruit: 50, proof: 2 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 6000000, psyche: 14000, crystal: 15, fruit: 300, proof: 15 }),
+      raidJackReward({ diamond: 5000000, psyche: 12000, crystal: 12, fruit: 250, proof: 12 }),
+      raidJackReward({ diamond: 4000000, psyche: 10000, crystal: 10, fruit: 200, proof: 9 }),
+      raidJackReward({ diamond: 3000000, psyche: 8000, crystal: 8, fruit: 150, proof: 6 }),
+      raidJackReward({ diamond: 2000000, psyche: 6000, crystal: 6, fruit: 100, proof: 3 }),
+    ]),
+  ]),
+  // B 討伐: 各難易度を初めて倒したとき1回(初級→極級)
+  bClear: Object.freeze([
+    raidJackReward({ diamond: 1000000, psyche: 5000, crystal: 1, fruit: 20 }),
+    raidJackReward({ diamond: 2000000, psyche: 7000, crystal: 2, fruit: 40, proof: 5 }),
+    raidJackReward({ diamond: 3000000, psyche: 9000, crystal: 3, fruit: 60, proof: 10 }),
+    raidJackReward({ diamond: 4000000, psyche: 11000, crystal: 4, fruit: 80, proof: 15 }),
+    raidJackReward({ diamond: 5000000, psyche: 13000, crystal: 5, fruit: 100, proof: 20 }),
+  ]),
+  // B 順位: 期間中の累計ダメージ(5難易度の合算)の最終1〜5位。期間終了のときに確定
+  bFinal: Object.freeze([
+    raidJackReward({ crystal: 25, fruit: 100, proof: 10 }),
+    raidJackReward({ crystal: 20, fruit: 90, proof: 8 }),
+    raidJackReward({ crystal: 15, fruit: 80, proof: 6 }),
+    raidJackReward({ crystal: 10, fruit: 70, proof: 4 }),
+    raidJackReward({ crystal: 5, fruit: 60, proof: 2 }),
+  ]),
+});
+const RAID_JACK_REWARD_RANKS = 5;
+
+// 報酬1つぶんの中身を、表示用の行にする(ダイヤ・プシュケー・結晶・虹の超越の実・勇者の証。0は出さない)
+const raidJackRewardParts = (reward) => {
+  const r = reward && typeof reward === 'object' ? reward : {};
+  const defs = [
+    ['diamond', '💎', 'ダイヤ'],
+    ['psyche', '💗', '虹のプシュケー'],
+    ['crystal', '🔮', '魂格の結晶'],
+    ['fruit', '🌈', '虹の超越の実'],
+    ['proof', '🏅', '勇者の証'],
+  ];
+  return defs.map(([key, emoji, label]) => ({ key, emoji, label, amount: Math.max(0, Math.floor(Number(r[key]) || 0)) })).filter((p) => p.amount > 0);
+};
+const raidJackRewardText = (reward) => raidJackRewardParts(reward).map((p) => `${p.emoji} ${p.label}×${p.amount.toLocaleString()}`).join(' ／ ');
+// ギフト1件ぶんの中身(既存の diamond / rainbowPsyche と、アイテムidそのままの gameItem)
+const raidJackRewardGiftItems = (reward) => {
+  const r = reward && typeof reward === 'object' ? reward : {};
+  const out = [];
+  const add = (item) => { if (item.amount > 0) out.push(item); };
+  add({ type: 'diamond', amount: Math.max(0, Math.floor(Number(r.diamond) || 0)) });
+  add({ type: 'rainbowPsyche', amount: Math.max(0, Math.floor(Number(r.psyche) || 0)) });
+  add({ type: 'gameItem', itemId: SOUL_CRYSTAL_ITEM_ID, amount: Math.max(0, Math.floor(Number(r.crystal) || 0)) });
+  add({ type: 'gameItem', itemId: RAINBOW_TRANSCEND_FRUIT_ITEM_ID, amount: Math.max(0, Math.floor(Number(r.fruit) || 0)) });
+  add({ type: 'gameItem', itemId: HERO_PROOF_ITEM_ID, amount: Math.max(0, Math.floor(Number(r.proof) || 0)) });
+  return out;
+};
+// 受け取り済みの印(mh_raid_jack_v1 の claimed)に入れるid。1つの報酬に1つ。数字を変えても変わらない
+const raidJackClaimId = (kind, tierIndex, rank) => {
+  const n = Math.floor(Number(tierIndex)) + 1;
+  if (kind === 'part_a' || kind === 'part_b') return kind;
+  if (kind === 'final_b') return 'final_b';
+  return `${kind}${n}`;   // clear_a1 / rank_a1 / clear_b1
+};
+// 受け取り済みの印のうち、「順位に入っていなかった」ことを覚えておく印(毎回サーバーへ問い合わせ直さないため)
+const raidJackNoneId = (id) => `${id}_none`;
+// 1つの報酬の題名(ギフトの見出し)
+const raidJackRewardTitle = (kind, tierIndex, rank) => {
+  const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
+  const bName = RAID_JACK_B_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
+  if (kind === 'part_a') return 'ジャック レイドバトル 参加賞';
+  if (kind === 'part_b') return 'ジャック グランドスラム 参加賞';
+  if (kind === 'clear_a') return `${aName} 討伐報酬`;
+  if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
+  if (kind === 'clear_b') return `${bName} 初討伐報酬`;
+  return `グランドスラム 累計ダメージ${rank}位の報酬`;
 };

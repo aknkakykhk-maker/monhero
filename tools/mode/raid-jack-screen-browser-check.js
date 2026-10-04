@@ -165,9 +165,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('報酬は「準備中」と出る', /報酬の中身は準備中です/.test(t));
     check('残り回数 3 / ビートP 250 が出る', /今日の残り\s*3\s*回/.test(t) && /所持 250/.test(t));
     await page.locator('[data-raid-jack-tier="a2"]').click();
-    await page.waitForFunction(() => /90,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
+    await page.waitForTimeout(1200);   // 段階を替えた直後は前の段階のランキングが残っているので、読み直しが始まるのを待つ
+    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-row]').length >= 2 && /あなた 4,200/.test(document.querySelector('[data-raid-jack-screen]').innerText) && !/読み込み中/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
     check('A: 貢献ランキングに順位と数字が出る', /1\s*名無しのブリーダー\s*90,000/.test(t.replace(/\n/g, ' ')) || /90,000/.test(t));
+    check('A: ランキングは通常バトルと同じ部品(順位メダル・アイコン枠つきのカード)で出る', (await page.locator('[data-raid-jack-ranking-row]').count()) === 2 && (await page.locator('[data-raid-jack-ranking-row] [data-profile-avatar], [data-raid-jack-ranking-row] img, [data-raid-jack-ranking-row] span.rounded-full').count()) >= 2);
     await page.waitForFunction(() => /あなた 4,200\(\d+位\)/.test(document.querySelector('[data-raid-jack-mine]')?.innerText || ''), null, { timeout: 30000 }).catch(() => {});
     const mineText = await page.locator('[data-raid-jack-mine]').innerText();
     check('A: 自分の貢献(4,200)と順位(自分より多い2人 → 3位)が出る', /あなた 4,200/.test(mineText) && /3位/.test(mineText), mineText);
