@@ -46,3 +46,5 @@ const AWAKENED_MOO_IMG = "images/enemies/awakened-moo.png?v=59ab671d8033";
 const JACK_IMG = "images/enemies/jack.png?v=9814dccba5a2";
 const JACK_POSE_IMG = "images/enemies/jack-pose.png?v=b566f028caa6";
 const JACK_ICON_IMG = "images/raid/jack-icon.png?v=03c637e855ac";
+// 素のぱんぷきん(爵位を脱いだ小さな姿)の顔アイコン。ジャックの顔アイコンの目をやさしい丸い目に描き替えたもの(ストーリーの話し手 pumpkin)
+const PUMPKIN_ICON_IMG = "images/raid/pumpkin-icon.png?v=f836641ae5ca";

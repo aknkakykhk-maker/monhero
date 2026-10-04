@@ -6395,9 +6395,10 @@ const ASSISTANT_HALLOWEEN_NIGHT_COSTUMES = Object.freeze({ mua:'mua_halloween_20
 // ===== 再生のときだけ話し手として出る登場人物(助手ではない。助手の選択画面などには出さない) =====
 // ジャック(ぱんぷきん)。ASSISTANT_LIST には入れず、assistantById が助手のあとに探す。
 // 行の name を書くと表示名を上書きする(爵位ごとの「ジャック(男爵)」・素の「ぱんぷきん」)。
-// 画像は仮(顔アイコン)。小さなぱんぷきんの絵が用意できたら image を差し替える
+// 素のぱんぷきん(第1.5部のふくれる前・第6部以降)は、別の話し手 pumpkin(やさしい目の顔アイコン)
 const STORY_GUEST_SPEAKERS = [
   { id: 'jack', name: 'ジャック', role: 'ゲスト', emoji: '🎃', accent: '#fb923c', image: (typeof JACK_ICON_IMG !== 'undefined' ? JACK_ICON_IMG : null), expressions: [], defaultExpression: 'normal' },
+  { id: 'pumpkin', name: 'ぱんぷきん', role: 'ゲスト', emoji: '🎃', accent: '#fdba74', image: (typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : null), expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====
@@ -6413,7 +6414,7 @@ const RAID_JACK_STORY_1B = [
   { who:'mua', e:'normal', t:'ぱんぷきんが盗んだビートの瓶……あれ、ずっと光ってたよね' },
   { who:'dra', e:'normal', t:'ああ。あんなに音を詰め込んで、体が持つのか。気になるな' },
   { who:'momosuke', e:'excited', t:'見て、広場のほう！ 屋根の上に、おっきな影が……！' },
-  { who:'jack', name:'ぱんぷきん', e:'normal', t:'……ぼくだって……ぼくだって、ここにいるのに……！' },
+  { who:'pumpkin', e:'normal', t:'……ぼくだって……ぼくだって、ここにいるのに……！' },
   { who:'kiki', e:'normal', t:'瓶が割れそうなくらい光っていまつ！ ぱんぷきんが……ふくれて……！' },
   { who:'mua', e:'surprise', t:'ぱんぷきん！？ 待って、落ち着いて！' },
   { who:'jack', name:'ジャック(男爵)', e:'normal', t:'ぐおおお……！ 吾輩は……吾輩は男爵ジャックであるぞ！' },
@@ -6525,19 +6526,19 @@ const RAID_JACK_STORY_6 = [
   { who:'mua', e:'normal', t:'……ジャック？ 大丈夫？' },
   { who:'momosuke', e:'excited', t:'あっ、体がしぼんでいく！ ちっちゃく……！' },
   { who:'kiki', e:'normal', t:'元の、ぱんぷきんでつ。光るおなかも、そのままでつ。' },
-  { who:'jack', name:'ぱんぷきん', e:'troubled', t:'……ごめんなさい' },
-  { who:'jack', name:'ぱんぷきん', e:'normal', t:'ぼく、ほんとうは大王なんかじゃないんだ。爵位も、ぜんぶ飾りなんだ' },
-  { who:'jack', name:'ぱんぷきん', e:'normal', t:'ハロウィン・ナイトが始まると、みんなの楽しそうな声が聞こえてきて……' },
-  { who:'jack', name:'ぱんぷきん', e:'normal', t:'ぼくも仲間に入りたかったのに、どう言えばいいか分からなくて。強そうにして、暴れちゃったんだ' },
+  { who:'pumpkin', e:'troubled', t:'……ごめんなさい' },
+  { who:'pumpkin', e:'normal', t:'ぼく、ほんとうは大王なんかじゃないんだ。爵位も、ぜんぶ飾りなんだ' },
+  { who:'pumpkin', e:'normal', t:'ハロウィン・ナイトが始まると、みんなの楽しそうな声が聞こえてきて……' },
+  { who:'pumpkin', e:'normal', t:'ぼくも仲間に入りたかったのに、どう言えばいいか分からなくて。強そうにして、暴れちゃったんだ' },
   { who:'kiki', e:'troubled', t:'……ずっと、さみしかったんでつね。' },
   { who:'dra', e:'troubled', t:'おで、ドラっていう。こいつらの仲間だ。おまえ、さびしかったんだろ' },
-  { who:'jack', name:'ぱんぷきん', e:'troubled', t:'……うん。みんなと、ただ遊びたかっただけなんだ。ごめんなさい' },
+  { who:'pumpkin', e:'troubled', t:'……うん。みんなと、ただ遊びたかっただけなんだ。ごめんなさい' },
   { who:'mua', e:'excited', t:'なーんだ！ それなら最初から言ってくれればよかったのに！' },
   { who:'momosuke', e:'happy', t:'だいじょうぶだよ♡ ももたち、もう怒ってないもん。ねえ、ぱんぷきん。ももたちと一緒に、パーティー、やらない？' },
-  { who:'jack', name:'ぱんぷきん', e:'normal', t:'ほんとう……？ また、遊んでくれる……？' },
+  { who:'pumpkin', e:'normal', t:'ほんとう……？ また、遊んでくれる……？' },
   { who:'mua', e:'excited', t:'もちろん！ 今度はみんなで、思いっきり遊ぼう！' },
   { who:'dra', e:'normal', t:'いくらでも相手になるぞ。ぱんぷきんが疲れるまでな' },
-  { who:'jack', name:'ぱんぷきん', e:'happy', t:'やった……！ ありがとう！ ぼく、いくらでも遊ぶよ！ 元気いっぱいだから、ぜんぜん倒れないよ！' },
+  { who:'pumpkin', e:'happy', t:'やった……！ ありがとう！ ぼく、いくらでも遊ぶよ！ 元気いっぱいだから、ぜんぜん倒れないよ！' },
   { who:'kiki', e:'normal', t:'それは頼もしいでつ。ここからは、ぱんぷきんと思いきり遊ぶ時間でつね。' },
 ];
 
@@ -6548,7 +6549,7 @@ const RAID_JACK_ENDING_A_HEAD = [
   { who:'momosuke', e:'happy', t:'あとは主役が来るのを待つだけだよ♡' },
   { who:'dra', e:'normal', t:'来るかな、ぱんぷきん' },
   { who:'mua', e:'normal', t:'来るよ。だって、ビートはちゃんと届いたもん' },
-  { who:'jack', name:'ぱんぷきん', e:'normal', t:'……来たよ。みんな、ぼくの仲間も連れてきたんだ' },
+  { who:'pumpkin', e:'normal', t:'……来たよ。みんな、ぼくの仲間も連れてきたんだ' },
   { who:'dra', e:'normal', t:'畑にいた、ランタンになれなかったかぼちゃたちが、みんな来たんだな' },
   { who:'mua', e:'excited', t:'来てくれた……！ ようこそ、ぱんぷきん！ ハロウィン・ナイトへ！' },
 ];
@@ -6560,7 +6561,7 @@ const RAID_JACK_ENDING_B_HEAD = [
   { who:'kiki', e:'normal', t:'それでも、ビートは届いていたはずでつ。ジャックの笑い声が、前より優しくなっていまつ。' },
   { who:'dra', e:'normal', t:'ああ。ここまで食い下がったんだ。胸を張っていい' },
   { who:'jack', name:'ジャック(大王)', e:'normal', t:'……フン。なかなか、楽しかったぞ。だから……もう、暴れなくてよいのじゃ' },
-  { who:'jack', name:'ぱんぷきん', e:'happy', t:'……ありがとう。みんなのビート、ちゃんと聞こえたよ。ぼくも、パーティーに入れてほしいんだ' },
+  { who:'pumpkin', e:'happy', t:'……ありがとう。みんなのビート、ちゃんと聞こえたよ。ぼくも、パーティーに入れてほしいんだ' },
   { who:'momosuke', e:'happy', t:'もちろんだよ♡ ぱんぷきんも、後ろのみんなも、ようこそ！' },
   { who:'mua', e:'excited', t:'来年こそ、大王のジャックまで止めて、もっとたくさん遊ぼうね！ ようこそ、ハロウィン・ナイトへ！' },
 ];
@@ -6573,7 +6574,7 @@ const RAID_JACK_ENDING_COMMON = [
   { who:'momosuke', e:'happy', t:'かわいい〜♡ 光るおなかが、リズムに合わせてぴかぴかしてる' },
   { who:'dra', e:'normal', t:'おでも、負けてられないな。……あ、足がもつれた' },
   { who:'mua', e:'normal', t:'ドラケン、またぁｗ' },
-  { who:'jack', name:'ぱんぷきん', e:'troubled', t:'あのね、これ。……ぼくが盗んじゃった音の、瓶。ごめんなさい。中身は、もう空っぽなんだ' },
+  { who:'pumpkin', e:'troubled', t:'あのね、これ。……ぼくが盗んじゃった音の、瓶。ごめんなさい。中身は、もう空っぽなんだ' },
   { who:'momosuke', e:'troubled', t:'ううん、もう怒ってないよ。ももたちこそ、ぱんぷきんの気持ち、気づくのが遅れてごめんね' },
   { who:'mua', e:'normal', t:'来年も、再来年も、ぱんぷきんが一番前で踊れる夜にしようね' },
   { who:'kiki', e:'normal', t:'約束でつ。ぱんぷきんも、うれしそうに跳ねていまつ。' },
@@ -6585,7 +6586,7 @@ const RAID_JACK_ENDING_COMMON = [
   { who:'kiki', e:'normal', t:'ビートP交換所に並んでいたぶんは、ここまでになりまつ。着たかった人は、ダイヤショップをのぞいてほしいでつ。' },
   { who:'mua', e:'excited', t:'もう持ってる子は、ずっと着てていいよ！ 魔女のみゅあを、これからもよろしくね！' },
   { who:'dra', e:'normal', t:'最後に、遊んでくれた全員にお礼だ。おまえたちのビートのおかげで、ぱんぷきんは笑えた' },
-  { who:'jack', name:'ぱんぷきん', e:'happy', t:'ありがとう、みんな！ また来年、いっしょに遊ぼうね！' },
+  { who:'pumpkin', e:'happy', t:'ありがとう、みんな！ また来年、いっしょに遊ぼうね！' },
   { who:'momosuke', e:'happy', t:'ありがとう〜♡ また次のイベントで会おうね！' },
   { who:'mua', e:'happy', t:'ハッピー・ハロウィン！' },
 ];

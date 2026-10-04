@@ -38,22 +38,23 @@ check('台詞に {name} が残っていない(ジャックの台本は名前を�
 
 // ② 話し手
 check('ジャックは助手の一覧に入っていない(助手の選択画面などに出さない)', !e.ASSISTANTS.some((a) => a.id === 'jack'));
-check('ジャックは STORY_GUEST_SPEAKERS に1人だけいる', Array.isArray(e.STORY_GUEST_SPEAKERS) && e.STORY_GUEST_SPEAKERS.length === 1 && e.STORY_GUEST_SPEAKERS[0].id === 'jack');
+check('話し手(STORY_GUEST_SPEAKERS)は ジャック と 素のぱんぷきん(pumpkin)の2人', Array.isArray(e.STORY_GUEST_SPEAKERS) && e.STORY_GUEST_SPEAKERS.length === 2 && e.STORY_GUEST_SPEAKERS[0].id === 'jack' && e.STORY_GUEST_SPEAKERS[1].id === 'pumpkin');
+check('ぱんぷきんの顔アイコンは、ジャックとは別の絵(images/raid/pumpkin-icon.png)', fs.existsSync(path.join(root, 'monster-hero/images/raid/pumpkin-icon.png')) && /const PUMPKIN_ICON_IMG = "images\/raid\/pumpkin-icon\.png\?v=[0-9a-f]+"/.test(read('monster-hero/data/images/images-enemy.js')) && !/\?v=0"/.test(read('monster-hero/data/images/images-enemy.js').match(/const PUMPKIN_ICON_IMG = .*/)[0]));
 const assistantIds = new Set(e.ASSISTANTS.map((a) => a.id));
-check('台本の話し手は 助手(みゅあ・きき・もも・ドラ)か jack だけ', allScripts.every((s) => s.every((l) => assistantIds.has(l.who) || l.who === 'jack')));
+check('台本の話し手は 助手(みゅあ・きき・もも・ドラ)か jack・pumpkin だけ', allScripts.every((s) => s.every((l) => assistantIds.has(l.who) || l.who === 'jack' || l.who === 'pumpkin')));
 
 // ③ 爵位ごとの名前
 const jackNames = new Set();
 allScripts.forEach((s) => s.forEach((l) => { if (l.who === 'jack') jackNames.add(l.name); }));
-const wantNames = ['ジャック(男爵)', 'ジャック(子爵)', 'ジャック(伯爵)', 'ジャック(公爵)', 'ジャック(大王)', 'ぱんぷきん'];
-check('ジャックの名前は 男爵・子爵・伯爵・公爵・大王・ぱんぷきん の6種類', wantNames.every((n) => jackNames.has(n)) && jackNames.size === wantNames.length, [...jackNames].join(' / '));
+const wantNames = ['ジャック(男爵)', 'ジャック(子爵)', 'ジャック(伯爵)', 'ジャック(公爵)', 'ジャック(大王)'];
+check('ジャックの名前は 男爵・子爵・伯爵・公爵・大王 の5種類(素のぱんぷきんは別の話し手 pumpkin)', wantNames.every((n) => jackNames.has(n)) && jackNames.size === wantNames.length, [...jackNames].join(' / '));
 check('ジャックの台詞は、ぜんぶ name を持つ', allScripts.every((s) => s.every((l) => l.who !== 'jack' || (typeof l.name === 'string' && l.name))));
 // 各部で出る爵位(解放のきっかけに合う爵位が出る)
 const namesOf = (s) => [...new Set(s.filter((l) => l.who === 'jack').map((l) => l.name))].join(',');
 check('第2部は男爵→子爵、第3部は子爵→伯爵、第4部は伯爵→公爵、第5部は公爵→大王、第6部は大王→ぱんぷきん',
   namesOf(e.RAID_JACK_STORY_2) === 'ジャック(男爵),ジャック(子爵)' && namesOf(e.RAID_JACK_STORY_3) === 'ジャック(子爵),ジャック(伯爵)'
   && namesOf(e.RAID_JACK_STORY_4) === 'ジャック(伯爵),ジャック(公爵)' && namesOf(e.RAID_JACK_STORY_5) === 'ジャック(公爵),ジャック(大王)'
-  && /ジャック\(大王\)/.test(namesOf(e.RAID_JACK_STORY_6)) && /ぱんぷきん/.test(namesOf(e.RAID_JACK_STORY_6)),
+  && /ジャック\(大王\)/.test(namesOf(e.RAID_JACK_STORY_6)) && e.RAID_JACK_STORY_6.some((l) => l.who === 'pumpkin'),
   [e.RAID_JACK_STORY_2, e.RAID_JACK_STORY_3, e.RAID_JACK_STORY_4, e.RAID_JACK_STORY_5, e.RAID_JACK_STORY_6].map(namesOf).join(' | '));
 
 // ⑤ 回想の登録
