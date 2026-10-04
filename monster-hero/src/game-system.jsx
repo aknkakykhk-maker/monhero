@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a6277b6a56c78ea
+// generated-sha256: a50745ea61cf6375
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 10:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24381,14 +24381,15 @@ function BreederMarketScreen({
 function RhythmAchievementPanel({ rows, who = 'self' }) {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length === 0) return null;
-  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  // 見出しは言葉の切れ目で2行に分ける(列が狭く、自動の折り返しだと「オールエクセレン/ト」のように切れる)
+  const heads = [[['クリア'], 'text-emerald-300'], [['フル', 'コンボ'], 'text-sky-300'], [['オール', 'エクセレント'], 'text-amber-300'], [['オール', 'マーベラス'], 'text-pink-300']];
   return (
     <section data-rhythm-achievements={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
       <b className="block text-[12px] font-black text-amber-100">モンヒロビートの実績</b>
       <small className="mb-2 block text-[9px] font-bold text-slate-400">難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）</small>
       <div className="grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center">
         <span></span>
-        {heads.map(([t, c]) => <span key={t} className={`text-[8px] font-black leading-tight ${c}`}>{t}</span>)}
+        {heads.map(([t, c]) => <span key={t.join('')} data-rhythm-achievement-head className={`text-[9px] font-black leading-tight ${c}`}>{t.map((line) => <span key={line} className="block whitespace-nowrap">{line}</span>)}</span>)}
         {list.map((r) => (
           <React.Fragment key={r.d}>
             <b data-rhythm-achievement-row={r.d} className="pr-1 text-left text-[10px] font-black text-white">{r.d}</b>
