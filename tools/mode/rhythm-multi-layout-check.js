@@ -131,7 +131,32 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         return a.top >= b.top - 1 && a.bottom <= b.bottom + 1 && a.height > 0;
       });
       check(`モードえらび ${w}×${h}: 助手の吹き出しが立ち絵の枠の中に出る`, line);
+      // ★立ち絵とコメントは重ならない(コメントは絵の下に出る。2026-10-04・ユーザー指摘「助手コメントが助手に被ってる」)
+      const apart = await A.evaluate(() => {
+        const art = document.querySelector('[data-rhythm-mode-assistant-art-box]');
+        const bubble = document.querySelector('[data-rhythm-mode-assistant-line]');
+        if (!art || !bubble) return '(絵かコメントが無い)';
+        const a = art.getBoundingClientRect(); const b = bubble.getBoundingClientRect();
+        return b.top >= a.bottom - 1 ? '' : `コメント(上${Math.round(b.top)})が絵(下${Math.round(a.bottom)})に重なっている`;
+      });
+      check(`モードえらび ${w}×${h}: 助手のコメントが立ち絵に重ならない`, apart === '', apart);
     }
+    // 助手のオン・オフ(立ち絵とコメントを別々に。両方オフで枠ごと消える。2026-10-04・ユーザー指示)
+    await A.setViewportSize({ width: 390, height: 844 });
+    await A.waitForTimeout(400);
+    const has = (sel) => A.evaluate((q) => !!document.querySelector(q), sel);
+    await A.locator('[data-rhythm-mode-toggle-comment]').click();
+    check('コメントをオフにすると、絵だけが残る', (await has('[data-rhythm-mode-assistant-art-box]')) && !(await has('[data-rhythm-mode-assistant-line]')));
+    await A.locator('[data-rhythm-mode-toggle-comment]').click();
+    await A.locator('[data-rhythm-mode-toggle-art]').click();
+    check('立ち絵をオフにすると、コメントだけが残る', !(await has('[data-rhythm-mode-assistant-art-box]')) && (await has('[data-rhythm-mode-assistant-line]')));
+    await A.locator('[data-rhythm-mode-toggle-comment]').click();
+    check('両方オフにすると、助手の枠ごと消える(切り替えの札は残る)', !(await has('[data-rhythm-mode-assistant]')) && (await has('[data-rhythm-mode-assistant-toggles]')));
+    const offOut = await overflowing(A, '[data-rhythm-mode-select]');
+    check('両方オフでも、ボタンが画面の外へはみ出さない', offOut.length === 0, offOut.join(' / '));
+    await A.locator('[data-rhythm-mode-toggle-art]').click();
+    await A.locator('[data-rhythm-mode-toggle-comment]').click();
+    check('もう一度オンにすると、絵もコメントも戻る', (await has('[data-rhythm-mode-assistant-art-box]')) && (await has('[data-rhythm-mode-assistant-line]')));
     // ももすけの絵は、表情ごとに体の真ん中へ合わせて広げる(かけらを枠の外へ出す)
     const art = await A.evaluate(() => {
       const img = document.querySelector('[data-rhythm-mode-assistant-art]');

@@ -860,7 +860,11 @@ const normalizeWornAssistantCostumes = (value, owned) => {
 // (assistants.js の画像の出し口が参照する。読み込み前は空 = どの助手も元の服)
 let ASSISTANT_COSTUME_WORN_NOW = {};
 const setAssistantCostumeWornNow = (worn) => { ASSISTANT_COSTUME_WORN_NOW = (worn && typeof worn === 'object') ? worn : {}; };
-const assistantCostumeWornFor = (assistantId) => assistantCostumeById(ASSISTANT_COSTUME_WORN_NOW[assistantId]);
+// イベントの会話(EVENT_REPLAYS の costumes)が、会話のあいだだけ着せる服 { 助手id: 服id }。持っていなくても着る(会話の絵はその回の演出なので)。
+// 会話を閉じたら空へ戻る。アプリが描くたびに入れ直す(2026-10-04・ユーザー指摘「コスプレ版になってない」)
+let ASSISTANT_COSTUME_STORY_NOW = {};
+const setAssistantCostumeStoryNow = (map) => { ASSISTANT_COSTUME_STORY_NOW = (map && typeof map === 'object') ? map : {}; };
+const assistantCostumeWornFor = (assistantId) => assistantCostumeById(ASSISTANT_COSTUME_STORY_NOW[assistantId] || ASSISTANT_COSTUME_WORN_NOW[assistantId]);
 // 服の絵のパス。kind は 'face'(吹き出しの丸い顔)か 'full'(立ち絵)。服の絵が決まらないときは null(呼ぶ側が元の服へ落とす)
 const assistantCostumeImage = (who, expression, kind) => {
   const costume = who && assistantCostumeWornFor(who.id);

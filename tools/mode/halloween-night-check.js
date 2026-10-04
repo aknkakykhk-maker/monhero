@@ -101,6 +101,7 @@ if (replays) {
     check(`第${story.part}部: 回想に登録されている`, !!rp && rp.unlockedKey === `halloweenNightPart${story.part}Seen`);
     const lines = (rp && rp.script) || [];
     check(`第${story.part}部: 30行以上で、表情と話し手が正しい`, lines.length >= 30 && lines.every((l) => WHO.includes(l.who) && EXPR.includes(l.e) && typeof l.t === 'string' && l.t.length > 0), `${lines.length}行`);
+    check(`第${story.part}部: 持っていなくても3人が衣装で出る(costumes)`, !!rp && rp.costumes && rp.costumes.mua === 'mua_halloween_2026' && rp.costumes.kiki === 'kiki_halloween_2026' && rp.costumes.momosuke === 'momosuke_halloween_2026');
     check(`第${story.part}部: ドラが話す`, lines.some((l) => l.who === 'dra'));
     check(`第${story.part}部: 回想の日時が出る時刻と同じ`, !!rp && Date.parse(rp.date.replace(' ', 'T') + ':00+09:00') === Date.parse(story.at));
     check(`第${story.part}部: BGMの場面が決まっている`, new RegExp(`${story.id}:'halloweenNightEvent'`).test(bgm));
@@ -116,6 +117,7 @@ if (replays) {
 check('見たかどうかは既存の保存キーの配列に入れる(新しいキーを作らない)', /HALLOWEEN_NIGHT_STORY_IDS\s*=\s*HALLOWEEN_NIGHT_STORIES\.map/.test(app) && /const RHYTHM_EVENT_STORY_IDS = \[\.\.\.HALLOWEEN_NIGHT_STORY_IDS/.test(app));
 check('時刻が来た部を古いほうから1つずつ流す(見回りのたびに数え直す)', /halloweenNightStoryIdsAt\(Date\.now\(\)\)\.find\(id => notPlayedYet\(id\)\)/.test(app));
 check('回想の「見た」判定が5部ぶん結線されている', /halloweenNightPart\$\{story\.part\}Seen/.test(app));
+check('会話のあいだだけ衣装を着せる(setAssistantCostumeStoryNow)', /setAssistantCostumeStoryNow\(eventReplay/.test(app));
 check('BGMの既定が新曲', /halloweenNightEvent:'melo_crazy_party_night'/.test(bgm));
 
 // ⑤ 新曲

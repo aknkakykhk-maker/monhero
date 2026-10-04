@@ -1869,6 +1869,8 @@ function MonsterHeroGame() {
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplay, setEventReplay] = useState(null);
+  // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
+  setAssistantCostumeStoryNow(eventReplay ? ((eventReplayList().find(ev => ev.id === eventReplay.id) || {}).costumes || null) : null);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -16259,6 +16261,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             monsterCount:rhythmMonsterSlots.length, monsterMax:RHYTHM_MONSTER_SLOT_MAX,
             monsterFaces:rhythmMonsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return {id:masu.id,src:base?(base.faceIconUrl||base.iconUrl):''};}),
             assistant:rhythmModeAssistant,
+            showArt:rhythmSettings.modeSelectArt!==false, showComment:rhythmSettings.modeSelectComment!==false,
+            onToggleAssistant:async(key)=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:rhythmSettings[key]===false});setRhythmSettings(saved);},
           }:null}
           onStartPlay={(song,difficulty,startId,count,streak)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak});setGameState('RHYTHM_PLAY');}}/>}
 
