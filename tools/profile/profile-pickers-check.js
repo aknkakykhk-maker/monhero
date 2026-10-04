@@ -103,8 +103,9 @@ const serve = () => new Promise(resolve => {
     const achSelf = await page.evaluate(() => {
       const panel = document.querySelector('[data-rhythm-achievements=self]');
       const row = panel && panel.querySelector('[data-rhythm-achievement-row=EASY]');
-      return { panel: !!panel, text: panel ? panel.innerText.replace(/\s+/g, ' ') : '', row: !!row, overflow: document.documentElement.scrollWidth > window.innerWidth };
+      return { panel: !!panel, text: panel ? panel.innerText.replace(/\s+/g, ' ') : '', heads: [...panel.querySelectorAll('[data-rhythm-achievement-head] > span')].map(x => ({ t: x.innerText, wrapped: x.getBoundingClientRect().height > parseFloat(getComputedStyle(x).lineHeight) * 1.5 })), row: !!row, overflow: document.documentElement.scrollWidth > window.innerWidth };
     });
+    ok('実績の見出しが言葉の途中で折り返されない(オールエクセレント・オールマーベラスなど)', achSelf.heads && achSelf.heads.length === 7 && achSelf.heads.every(h => !h.wrapped), JSON.stringify(achSelf.heads));
     ok('モンヒロビートの実績が出る(EASY の行に クリア・FC・AE・AM が 1/◯)', achSelf.panel && achSelf.row && /EASY( 1\/\d+){4}/.test(achSelf.text) && !achSelf.overflow, achSelf.text);
 
     // ② アイコン選択

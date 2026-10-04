@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 51f6e4d34cfc7fea
+// source-sha256: ef5c0ee8c934ec10
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:08";
+const BUILD_DATE = "2026-10-04 12:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -38112,7 +38112,7 @@ function RhythmAchievementPanel({
 }) {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length === 0) return null;
-  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  const heads = [[['クリア'], 'text-emerald-300'], [['フル', 'コンボ'], 'text-sky-300'], [['オール', 'エクセレント'], 'text-amber-300'], [['オール', 'マーベラス'], 'text-pink-300']];
   return React.createElement("section", {
     "data-rhythm-achievements": who,
     className: `${SCREEN_PANEL_FLAT_CLASS} mb-3`
@@ -38123,9 +38123,13 @@ function RhythmAchievementPanel({
   }, "難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）"), React.createElement("div", {
     className: "grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center"
   }, React.createElement("span", null), heads.map(([t, c]) => React.createElement("span", {
-    key: t,
-    className: `text-[8px] font-black leading-tight ${c}`
-  }, t)), list.map(r => React.createElement(React.Fragment, {
+    key: t.join(''),
+    "data-rhythm-achievement-head": true,
+    className: `text-[9px] font-black leading-tight ${c}`
+  }, t.map(line => React.createElement("span", {
+    key: line,
+    className: "block whitespace-nowrap"
+  }, line)))), list.map(r => React.createElement(React.Fragment, {
     key: r.d
   }, React.createElement("b", {
     "data-rhythm-achievement-row": r.d,
