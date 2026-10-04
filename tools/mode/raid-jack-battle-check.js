@@ -147,8 +147,10 @@ check('ジャックの戦い・レイド画面・段階えらび・編成はぱ�
   /RAID_JACK_BGM_STATES\.includes\(state\) \|\| \(state === 'BATTLE' && raidJackRunRef\.current\)\) return RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
   && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night'/.test(defs35) && /id:'melo_crazy_party_night'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
 check('HOMEの曲は、イベント中かつ曲を選んでいないときだけぱんぷきん(開催中は見るたびに数え直す)',
-  /raidJackWindowAt\(Date\.now\(\)\) === 'open'\) \|\| raidJackDebugForce\)\s*&& bgmArrangement\.home === DEFAULT_BGM_ARRANGEMENT\.home\) \? RAID_JACK_BGM_TRACK : bgmArrangement\.home;/.test(app)
+  /raidJackWindowAt\(Date\.now\(\)\) === 'open'\) \|\| raidJackDebugForce \|\| halloweenNightOpen\)\s*&& bgmArrangement\.home === DEFAULT_BGM_ARRANGEMENT\.home\) \? RAID_JACK_BGM_TRACK : bgmArrangement\.home;/.test(app)
   && /state === 'HOME' \|\| state === 'PROFILE' \|\| state === 'ITEM_INVENTORY'\) return homeBgm;/.test(app));
+check('ハロウィン・ナイトの期間中も(曲を選んでいなければ)HOMEの曲がぱんぷきんになる。期間は見るたびに数え直す',
+  /const halloweenNightOpen = Date\.now\(\) >= Date\.parse\(HALLOWEEN_NIGHT_START_AT\) && Date\.now\(\) < Date\.parse\(HALLOWEEN_NIGHT_END_AT\);/.test(app));
 
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべて OK');
