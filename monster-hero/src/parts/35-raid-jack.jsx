@@ -139,6 +139,24 @@ const raidJackWindowAt = (nowMs) => {
   return 'open';
 };
 
+// 段階を倒したあと・期間が終わったあとに、みんなへ1回ずつ流すストーリーの候補(古い順)。
+// totals は sbFetchRaidJackTierTotals の返り値({ a:{1:{total},...} })。取れていない(null)ときは段階の話を出さない。
+// 段階を倒した = その段階の共有ライフ(hp)ぶん以上のダメージが集まった。
+// 終章は期間が終わってから。大王(a5)まで倒せていれば「倒せた」、倒せていなければ「倒せなかった」。
+// 見たかどうかの判定は呼ぶ側(まだ見ていない最初の1本を選ぶ)。読み込み時に決めず、見るたびに数え直す
+const raidJackStoryCandidates = (totals, nowMs) => {
+  const out = [];
+  const a = totals && totals.a ? totals.a : null;
+  const defeatedAt = (i) => !!a && !!a[i + 1] && (Number(a[i + 1].total) || 0) >= RAID_JACK_A_TIERS[i].hp;
+  if (a) {
+    RAID_JACK_A_TIERS.forEach((t, i) => { if (defeatedAt(i)) out.push(RAID_JACK_STORY_AFTER_TIER[t.id]); });
+  }
+  if (raidJackWindowAt(nowMs) === 'after' && a) {
+    out.push(defeatedAt(RAID_JACK_A_TIERS.length - 1) ? RAID_JACK_ENDING_CLEARED_ID : RAID_JACK_ENDING_NOTCLEARED_ID);
+  }
+  return out.filter(Boolean);
+};
+
 // 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。
 const raidJackDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;

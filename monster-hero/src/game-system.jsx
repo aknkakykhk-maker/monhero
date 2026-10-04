@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4b0438320e1a0b57
+// generated-sha256: d4574b8898c5209c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 23:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 23:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23037,6 +23037,24 @@ const raidJackWindowAt = (nowMs) => {
   return 'open';
 };
 
+// 段階を倒したあと・期間が終わったあとに、みんなへ1回ずつ流すストーリーの候補(古い順)。
+// totals は sbFetchRaidJackTierTotals の返り値({ a:{1:{total},...} })。取れていない(null)ときは段階の話を出さない。
+// 段階を倒した = その段階の共有ライフ(hp)ぶん以上のダメージが集まった。
+// 終章は期間が終わってから。大王(a5)まで倒せていれば「倒せた」、倒せていなければ「倒せなかった」。
+// 見たかどうかの判定は呼ぶ側(まだ見ていない最初の1本を選ぶ)。読み込み時に決めず、見るたびに数え直す
+const raidJackStoryCandidates = (totals, nowMs) => {
+  const out = [];
+  const a = totals && totals.a ? totals.a : null;
+  const defeatedAt = (i) => !!a && !!a[i + 1] && (Number(a[i + 1].total) || 0) >= RAID_JACK_A_TIERS[i].hp;
+  if (a) {
+    RAID_JACK_A_TIERS.forEach((t, i) => { if (defeatedAt(i)) out.push(RAID_JACK_STORY_AFTER_TIER[t.id]); });
+  }
+  if (raidJackWindowAt(nowMs) === 'after' && a) {
+    out.push(defeatedAt(RAID_JACK_A_TIERS.length - 1) ? RAID_JACK_ENDING_CLEARED_ID : RAID_JACK_ENDING_NOTCLEARED_ID);
+  }
+  return out.filter(Boolean);
+};
+
 // 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。
 const raidJackDayKey = (nowMs) => {
   const now = Number.isFinite(nowMs) ? nowMs : 0;
@@ -41452,12 +41470,25 @@ function MonsterHeroGame() {
         && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_STORY_START_ID);
       const raidHowtoReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
         && !notPlayedYet(RAID_JACK_STORY_START_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
+      // 段階を倒したあと(第2〜6部)と、期間が終わったあと(終章)。みんなに1回ずつ。
+      // 順番は 第1部 → 第1.5部 → 遊び方 → 第2部… 。共有の合計は1分おきの見回りのたびに取り直す(取れなければ今回は出さない)
+      let raidProgressStoryId = null;
+      if (RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_HOWTO_STORY_ID) && !notPlayedYet(RAID_JACK_STORY_START_ID)
+        // 全部見終えていれば、共有の合計を取りにいかない
+        && (Object.values(RAID_JACK_STORY_AFTER_TIER).some(notPlayedYet) || (notPlayedYet(RAID_JACK_ENDING_CLEARED_ID) && notPlayedYet(RAID_JACK_ENDING_NOTCLEARED_ID)))) {
+        try {
+          const raidTotals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+          raidProgressStoryId = raidJackStoryCandidates(raidTotals, Date.now()).find(id => notPlayedYet(id)) || null;
+        } catch (e) { raidProgressStoryId = null; }
+      }
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
         if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
@@ -41472,6 +41503,7 @@ function MonsterHeroGame() {
       }
       else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
       else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+      else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
