@@ -753,9 +753,10 @@ check('モーションは敵の丸枠と味方の顔アイコンへ当てる',
   rpgUi.includes("const motionOf=(side,index)=>")
   && rpgUi.includes('style={motionOf(\'enemy\',index)}')
   && rpgUi.includes("?undefined:motionOf('ally',index)"));
+// 分身描画(PandoraDualThunder)を使う場所は、パンドラの箱(タクティクスEX)が増えて4か所になった。「本番・DEBUG・図鑑の3つとも共通部品」を見るので、3か所以上とする(2026-10)
 check('パンドラは本番・DEBUG・図鑑で同じ分身描画を使う',
   source.includes('const PandoraDualThunder = ({image, compact=false})')
-  && (source.match(/<PandoraDualThunder/g)||[]).length===3
+  && (source.match(/<PandoraDualThunder/g)||[]).length>=3
   && source.includes("rpgActing.atkMotion==='pandoraDualThunder'?900:480"));
 // モーションの対応表は同じ塊の末尾に置いてあるので、そこより前(計算と進行の本体)だけを見る
 const rpgEngineSource = grab(rpgSource, 'const RPG_MAX_LEVEL = 50;', '// ---------- RPG戦闘の攻撃モーション(表示だけ) ----------');

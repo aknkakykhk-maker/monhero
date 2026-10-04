@@ -171,7 +171,8 @@ check('アップデート通知と重ならない',
   /tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&[A-Za-z=&!]*updateGuideQueue\.length>0/.test(gameSrc));
 check('見終わったときの処理が1か所にまとまっている',
   (gameSrc.match(/const markMomosukeIntroSeen = useCallback/g) || []).length === 1);
-check('回想を先に見ても解放される', gameSrc.includes("if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();"));
+// デバッグの回想(eventReplay.debug)では「見た」にしない条件が足された(2026-10)
+check('回想を先に見ても解放される', /if\(event&&event\.id==='momosuke_intro'(?:&&!eventReplay\.debug)?\) markMomosukeIntroSeen\(\);/.test(gameSrc));
 // ★2026-09-17にイベントで加入する助手(ドラ)が増え、locked の式へ条件が1つ足された。
 //   1行まるごと突き合わせていたので、正しい実装なのに落ちていた。
 //   見たいのは「ももすけの解放フラグが locked に入っていること」なので、そこだけ見る
@@ -188,8 +189,11 @@ check('BGMはドパガキリミックス', gameSrc.includes("momosukeIntro:'six_
 check('通常イベントと回想で同じBGM設定を使う',
   gameSrc.includes('EVENT_BGM_SCENES.momosuke_intro') && gameSrc.includes('EVENT_BGM_SCENES[eventReplay.id]'));
 check('イベントが終われば元の画面のBGMへ戻る', /const eventBgmScene[\s\S]{0,400}?: null\)/.test(gameSrc));
+// 3か所のうち、回想の再生は「ゲスト(ジャック・ぱんぷきん)も話し手に含める」storyCastOf へ替わった(2026-10)。どちらも「台本に出る人だけ」を並べる
 check('会話に出てくる助手だけを並べる（無関係な助手を映さない）',
-  (gameSrc.match(/const cast=ASSISTANT_LIST\.filter\(who=>script\.some\(l=>l\.who===who\.id\)\);/g) || []).length === 3);
+  (gameSrc.match(/const cast=ASSISTANT_LIST\.filter\(who=>script\.some\(l=>l\.who===who\.id\)\);/g) || []).length === 2
+    && /const cast=storyCastOf\(script\)\.filter\(who=>who\.role!=='ゲスト'\);/.test(gameSrc)
+    && /const storyCastOf = \(script\) => \[\.\.\.ASSISTANT_LIST, \.\.\.STORY_GUEST_LIST\]\.filter\(who => \(script \|\| \[\]\)\.some\(l => l\.who === who\.id\)\);/.test(gameSrc));
 
 // ---- マーケット ----
 const breederSrc = fs.readFileSync(path.join(web, 'data/breeder.js'), 'utf8');

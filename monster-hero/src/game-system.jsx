@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 41aac3f9220da30d
+// generated-sha256: b3846e3e339c7f29
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 06:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 06:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7588,6 +7588,11 @@ const FRIENDS_PUBLIC_RELEASE = true;
 //   画面を確かめるまでは false。false のあいだは入口・ヘルプ・更新履歴・助手の告知もまとめて隠す。
 // ★2026-10-05・ユーザー指示「10/5 4:00公開」で true にした。ただし RELEASE_FLAGS.raidJack は、下で開始日時(RAID_JACK_EVENT.startAt)になるまで偽を返す。
 //   先に配信しても、入口・ヘルプ・更新履歴・お話・回想は4:00ちょうどまで出ない(見るたびに数え直す getter)
+// ジャックの開始日時。RELEASE_FLAGS.raidJack の判定は、更新履歴や助手の告知を作るとき(このファイルが読み込まれるとき)にも
+// 呼ばれる。そのとき RAID_JACK_EVENT(35-raid-jack.jsx・あとに読み込まれる)はまだ無く、触ると例外になって「いつも偽」になり、
+// 開始を過ぎても更新履歴に出なかった(2026-10-05・ユーザー指摘「もう公開してるのに更新情報に出てない」)。
+// 開始日時はここにも置く(35-raid-jack.jsx の RAID_JACK_EVENT.startAt と同じ値。食い違いは tools/mode/raid-jack-check.js が見る)。
+const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
@@ -7621,7 +7626,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_EVENT.startAt); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -22919,7 +22924,7 @@ const sbCountIncomingFriendRequests = async (breederIdRaw) => {
 const RAID_JACK_EVENT = Object.freeze({
   id: 'raid_jack_2026',
   name: 'カボチャの大王ジャック',
-  startAt: '2026-10-05T04:00:00+09:00',
+  startAt: '2026-10-05T04:00:00+09:00',   // 17-release-changelog-login-missions.jsx の RAID_JACK_START_AT と同じ値(更新履歴の公開判定が先に読むため、そちらにも置いてある。食い違いは raid-jack-check.js が見る)
   endAt: '2026-11-01T04:00:00+09:00',
 });
 
@@ -23269,8 +23274,13 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
 //  ・表がまだ無い環境(SQL未適用)は「準備中」として扱う。エラー扱いにして画面を壊さない。
 //  ・このファイルは公開フラグ(RELEASE_FLAGS.raidJack)を見ない。呼ぶ側が見る。
 const RAID_JACK_TIMEOUT_MS = 8000;
-let _raidJackUnavailable = false;                  // 表が無いと分かったら、ページを閉じるまで使わない
+let _raidJackUnavailable = false;                  // 土台の表(raid_jack_hits)・段階の合計が無いと分かったら、ページを閉じるまで全部使わない
 const raidJackUnavailable = () => _raidJackUnavailable;
+// 後から足した「ランキングのビュー」だけが無いときは、そのビューだけを「準備中」にして、与ダメージの送信・段階の合計・報酬の受け取りは止めない。
+// (以前は、どれか1つでも無いと全部が止まった。大王のあとの累計ダメージのビュー raid_jack_a_ranking が未適用のとき、一覧を開いただけで通信が全部止まる)
+const _raidJackUnavailableScopes = new Set();
+const RAID_JACK_ESSENTIAL_SCOPES = Object.freeze(['raid_jack_hits', 'raid_jack_tier_totals']);
+const raidJackScopeOf = (pathAndQuery) => String(pathAndQuery || '').split('?')[0];
 
 const raidJackSafeId = (value) => (typeof value === 'string' && /^[0-9A-Za-z_-]{8,100}$/.test(value)) ? value : '';
 // 端末が作る一意のID(8〜64文字の英数字と - _)。同じ1戦の再送には同じIDを使い回す
@@ -23285,7 +23295,8 @@ const raidJackEventParam = (eventId) => `event_id=eq.${encodeURIComponent(raidJa
 
 // 通信の共通部分。返り値 { ok, status, body, notReady, error }
 const raidJackRequest = async (pathAndQuery, init = {}) => {
-  if (_raidJackUnavailable) return { ok: false, status: 0, body: '', notReady: true, error: null };
+  const scope = raidJackScopeOf(pathAndQuery);
+  if (_raidJackUnavailable || _raidJackUnavailableScopes.has(scope)) return { ok: false, status: 0, body: '', notReady: true, error: null };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), RAID_JACK_TIMEOUT_MS);
   try {
@@ -23294,7 +23305,7 @@ const raidJackRequest = async (pathAndQuery, init = {}) => {
     });
     const body = await res.text();
     if (!res.ok && (_isMissingTableError(res.status, body) || res.status === 404)) {
-      _raidJackUnavailable = true;
+      if (RAID_JACK_ESSENTIAL_SCOPES.includes(scope)) _raidJackUnavailable = true; else _raidJackUnavailableScopes.add(scope);
       return { ok: false, status: res.status, body, notReady: true, error: null };
     }
     return { ok: res.ok, status: res.status, body, notReady: false, error: null, headers: res.headers };
@@ -50373,7 +50384,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ---- イベント・レイドボス「ジャック」の専用の1戦 ----
   // 呼び出し側は setRunMode(mode) と setRaidJackStartRequest({mode,kind,tierIndex,party,teachingIds,eventId}) を同時に行う。
   // runMode は state で、開始の処理(applySlots・spawnEnemy)がそれを読むので、反映された次の描画で開始する(下の useEffect)。
-  // 編成: 勇者1体+供モン(最大4体)。A=ベースモン / B=マスモン。アシカ: Aは1枚(Lv0から)、Bは3枚まで(最大Lvから)。
+  // 編成: 勇者1体+供モン(最大3体=RAID_JACK_ALLY_MAX)。A=ベースモン / B=マスモン。アシカ: どちらも3枚まで(RAID_JACK_TEACHING_MAX)。Aは固有技・アシカをLv0から(3/5/8ターン目に+1)、Bは最大のレベルから(成長しない)。
   const startRaidJackBattle = (req) => {
     stopAllAuto();
     const party=(Array.isArray(req.party)?req.party:[]).filter(Boolean).slice(0,1+RAID_JACK_ALLY_MAX);
@@ -50418,8 +50429,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   },[raidJackStartRequest,runMode]);
   // 3 / 5 / 8 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)と、選んだアシカ(上限Lv2)を1段階ずつ上げる。
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
-  // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
-  // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
+  // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが5%ずつ(RAID_JACK_TURN_GROWTH・掛け算で)上がり、
+  // ライフ・ガッツの自動回復の割合が1.5%ずつ(RAID_JACK_TURN_REGEN_STEP)上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
   const raidJackTurnGrowth = (turn) => {
     const before = tacticsUnitsRef.current || [];
     const grown = before.map((unit) => {

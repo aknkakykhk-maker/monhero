@@ -60,6 +60,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    // ジャックは 2026-10-05 4:00 に公開された。この検査は「公開前(フラグが偽)」の表示を確かめるので、時計を公開前へ固定して流す(2026-10-05に確認)
+    await page.clock.install({ time: new Date('2026-10-04T12:00:00+09:00') });
+    await page.clock.resume();
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));

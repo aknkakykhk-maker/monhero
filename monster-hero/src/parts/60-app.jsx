@@ -13199,7 +13199,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ---- イベント・レイドボス「ジャック」の専用の1戦 ----
   // 呼び出し側は setRunMode(mode) と setRaidJackStartRequest({mode,kind,tierIndex,party,teachingIds,eventId}) を同時に行う。
   // runMode は state で、開始の処理(applySlots・spawnEnemy)がそれを読むので、反映された次の描画で開始する(下の useEffect)。
-  // 編成: 勇者1体+供モン(最大4体)。A=ベースモン / B=マスモン。アシカ: Aは1枚(Lv0から)、Bは3枚まで(最大Lvから)。
+  // 編成: 勇者1体+供モン(最大3体=RAID_JACK_ALLY_MAX)。A=ベースモン / B=マスモン。アシカ: どちらも3枚まで(RAID_JACK_TEACHING_MAX)。Aは固有技・アシカをLv0から(3/5/8ターン目に+1)、Bは最大のレベルから(成長しない)。
   const startRaidJackBattle = (req) => {
     stopAllAuto();
     const party=(Array.isArray(req.party)?req.party:[]).filter(Boolean).slice(0,1+RAID_JACK_ALLY_MAX);
@@ -13244,8 +13244,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   },[raidJackStartRequest,runMode]);
   // 3 / 5 / 8 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)と、選んだアシカ(上限Lv2)を1段階ずつ上げる。
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
-  // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
-  // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
+  // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが5%ずつ(RAID_JACK_TURN_GROWTH・掛け算で)上がり、
+  // ライフ・ガッツの自動回復の割合が1.5%ずつ(RAID_JACK_TURN_REGEN_STEP)上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
   const raidJackTurnGrowth = (turn) => {
     const before = tacticsUnitsRef.current || [];
     const grown = before.map((unit) => {

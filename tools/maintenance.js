@@ -106,6 +106,8 @@ function hygiene() {
     };
     const orphans = imgs.filter(p => !corpus.includes(path.basename(p)) && !viaTemplate(p)
       && !allow.some(re => re.test(path.relative(imgRoot, p).split(path.sep).join('/'))));
+    // 候補が無くなったら、前に書いた全件リストは古くなるので消す(月次のときだけ)
+    if (has('--full') && !orphans.length) { try { fs.unlinkSync(path.join(OUT_DIR, 'orphan-images.txt')); } catch (e) { /* 無くてよい */ } }
     if (has('--full') && orphans.length) {
       fs.mkdirSync(OUT_DIR, { recursive: true });
       fs.writeFileSync(path.join(OUT_DIR, 'orphan-images.txt'), orphans.map(p => path.relative(path.join(ROOT, 'monster-hero/images'), p)).sort().join('\n') + '\n');

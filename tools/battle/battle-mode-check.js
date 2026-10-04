@@ -459,7 +459,8 @@ check('ヘルプにバトルモードの説明がある', helpSrc.includes("id: 
 for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) {
   const flat = code.replace(/\s+/g, '');
   check(`${label}: 通常戦の曲をモードで切り替える`, flat.includes('returnbgmArrangement[modeBgm.normal]'));
-  check(`${label}: 専用戦の曲もモードで切り替える`, flat.includes("enemyId==='Durahan'||currentWave===9)returnbgmArrangement[modeBgm.dullahan]") && flat.includes("enemyId==='Moo'||currentWave===10)returnbgmArrangement[modeBgm.moo]"));
+  // ムー戦の曲の条件へ、ジャック(ボス)が加わった(2026-10)。ジャック戦そのものは、手前で「Crazy Party Night」に固定される
+  check(`${label}: 専用戦の曲もモードで切り替える`, flat.includes("enemyId==='Durahan'||currentWave===9)returnbgmArrangement[modeBgm.dullahan]") && (flat.includes("enemyId==='Moo'||currentWave===10)returnbgmArrangement[modeBgm.moo]") || flat.includes("enemyId==='Moo'||enemyId==='Jack'||currentWave===10)returnbgmArrangement[modeBgm.moo]")));
 }
 // ★2026-09-05にモードごとの既定曲を入れ替えた(クイックは原曲・極限はいちか)。
 //   検査は「4モード×3用途ぶんの既定が全部ある」ことを見るのが目的なので、その値へ追随する

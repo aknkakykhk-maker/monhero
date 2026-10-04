@@ -58,6 +58,7 @@ vm.runInContext([
   flags,
   // RELEASE_FLAGS.raidJack は開始日時まで偽を返す getter(2026-10-05)。ここで見たいのは更新履歴自身の時刻の判定なので、旗は「開始済み」にしておく
   "const RAID_JACK_EVENT = { startAt: '1970-01-01T00:00:00Z' };",
+  "const RAID_JACK_START_AT = '1970-01-01T00:00:00Z';",
   gate,
   'globalThis.x={CHANGELOG,changelogForPlayers,CHANGELOG_ENTRIES,changelogEntriesOfTab,HIDDEN_UPDATE_NOTICE_IDS,ASSISTANT_UPDATE_NOTICES};',
 ].join('\n'), context);

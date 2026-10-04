@@ -15,7 +15,7 @@
 const RAID_JACK_EVENT = Object.freeze({
   id: 'raid_jack_2026',
   name: 'カボチャの大王ジャック',
-  startAt: '2026-10-05T04:00:00+09:00',
+  startAt: '2026-10-05T04:00:00+09:00',   // 17-release-changelog-login-missions.jsx の RAID_JACK_START_AT と同じ値(更新履歴の公開判定が先に読むため、そちらにも置いてある。食い違いは raid-jack-check.js が見る)
   endAt: '2026-11-01T04:00:00+09:00',
 });
 

@@ -14,6 +14,13 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
+// 開始日時は 17-release-changelog-login-missions.jsx(更新履歴の公開判定)と 35-raid-jack.jsx の2か所にある。食い違うと、更新履歴だけ出ない・出すぎる
+{
+  const a = /RAID_JACK_START_AT = '([^']+)'/.exec(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx'));
+  const b = /startAt: '([^']+)'/.exec(read('monster-hero/src/parts/35-raid-jack.jsx'));
+  console.log(`${a && b && a[1] === b[1] ? 'OK' : 'NG'}: 開始日時が 17(RAID_JACK_START_AT)と 35(RAID_JACK_EVENT.startAt)で同じ — ${a && a[1]} / ${b && b[1]}`);
+  if (!(a && b && a[1] === b[1])) process.exitCode = 1;
+}
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
@@ -66,7 +73,7 @@ check('全部倒しても5段階まで', o.raidJackUnlockedCount('b', ['b1', 'b2
 // ⑤ 公開フラグ
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJack は開始日時までは偽を返す(見るたびに数え直す getter・読み込み時に touch しても落ちない)',
-  /const RAID_JACK_PUBLIC_RELEASE = true;/.test(rel) && /get raidJack\(\) \{ try \{ return RAID_JACK_PUBLIC_RELEASE === true && Date\.now\(\) >= Date\.parse\(RAID_JACK_EVENT\.startAt\); \} catch \(e\) \{ return false; \} \}/.test(rel));
+  /const RAID_JACK_PUBLIC_RELEASE = true;/.test(rel) && /get raidJack\(\) \{ try \{ return RAID_JACK_PUBLIC_RELEASE === true && Date\.now\(\) >= Date\.parse\(RAID_JACK_START_AT\); \} catch \(e\) \{ return false; \} \}/.test(rel));
 // 公開の瞬間(開始日時)の前後で、実際に旗が切り替わることを、本物の定義で確かめる
 {
   const vm2 = require('vm');
@@ -76,11 +83,13 @@ check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJa
   const at = (ms, withEvent = true) => {
     const c = { ...base, Date: class extends Date { static now() { return ms; } }, Object, Number, Math, Array };
     vm2.createContext(c);
-    const pre = withEvent ? "const RAID_JACK_EVENT = { startAt: '2026-10-05T04:00:00+09:00' };\n" : '';
+    const pre = withEvent ? "const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';\n" : '';
     return vm2.runInContext(`${pre}${fl}\nRELEASE_FLAGS.raidJack`, c);
   };
   check('開始の1ミリ秒前は旗が偽、開始の時刻から真(4:00ちょうどに公開される)', at(Date.parse('2026-10-05T03:59:59.999+09:00')) === false && at(Date.parse('2026-10-05T04:00:00+09:00')) === true);
-  check('開始日時の定義より前に旗を読んでも落ちない(初期化前の参照は偽になる)', (() => { try { const c = { ...base, Object, Number, Math, Array }; vm2.createContext(c); return vm2.runInContext(`${fl}\nRELEASE_FLAGS.raidJack`, c) === false; } catch (e) { return false; } })());
+  // 旗の判定は、更新履歴を作るとき(17が読み込まれるとき)にも呼ばれる。そのとき 35 の RAID_JACK_EVENT はまだ無いので、触ってはいけない
+  // (触ると例外 → 「いつも偽」になり、開始を過ぎても更新履歴に出なかった・2026-10-05)
+  check('旗の判定は、あとに読み込まれる RAID_JACK_EVENT に頼らない(17の中の RAID_JACK_START_AT だけを見る)', !/get raidJack\(\)[^}]*RAID_JACK_EVENT/.test(rel) && /const RAID_JACK_START_AT = '/.test(rel));
 }
 
 // ⑥ 公開の準備(更新履歴・告知・ヘルプ・案内が公開フラグで隠れる)
