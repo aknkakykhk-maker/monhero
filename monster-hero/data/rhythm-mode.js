@@ -188,18 +188,33 @@ const sanitizeRhythmMonsterSlotIds=value=>{
   }
   return ids;
 };
-// 実際に使う並び。手元にいないマスモンと、同じベースモンスターの重複をここで落とす。
-// 落とすのは「使うとき」だけで、保存値そのものは書き換えない。
+// 同じ能力(元気・無敵・我慢・根性・必死)のマスモンを編成できる数(2026-10-04・ユーザー指示「モンビーのマスモンで状態変化の被りを2つまでに」)。
+// 能力は主血統で決まる(§4.5)ので、血統が違っても能力が同じなら被りに数える。能力の無いマスモンは数えない
+const RHYTHM_MONSTER_SAME_ABILITY_MAX=2;
+// そのマスモンの能力の名前(無ければ '')。能力の表(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)と血統の引き方は、
+// 呼ぶときに初めて使う(この下で定義される・血統の表は別ファイル)。引けない場面では '' を返して、被りを数えない
+const rhythmMonsterSlotAbilityId=masu=>{
+  try{
+    if(!masu||!masu.baseId||typeof monsterLineageOf!=='function'||typeof rhythmMonsterAbilityForLineage!=='function')return '';
+    const ability=rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id);
+    return ability&&ability.id?String(ability.id):'';
+  }catch{return '';}
+};
+// 実際に使う並び。手元にいないマスモンと、同じベースモンスターの重複、同じ能力の3体目以降をここで落とす。
+// 落とすのは「使うとき」だけで、保存値そのものは書き換えない(前からの保存で3体以上そろえていても、並びの先の2体が残る)。
 const resolveRhythmMonsterSlots=(value,masuMons)=>{
   const owned=Array.isArray(masuMons)?masuMons:[];
   const byId=new Map(owned.filter(masu=>masu&&masu.id!=null).map(masu=>[String(masu.id),masu]));
-  const slots=[],usedBaseIds=new Set();
+  const slots=[],usedBaseIds=new Set(),abilityCounts=new Map();
   for(const id of sanitizeRhythmMonsterSlotIds(value)){
     const masu=byId.get(id);
     if(!masu)continue;
     const baseId=String(masu.baseId||'');
     if(!baseId||usedBaseIds.has(baseId))continue;
+    const abilityId=rhythmMonsterSlotAbilityId(masu);
+    if(abilityId&&(abilityCounts.get(abilityId)||0)>=RHYTHM_MONSTER_SAME_ABILITY_MAX)continue;
     usedBaseIds.add(baseId);slots.push(masu);
+    if(abilityId)abilityCounts.set(abilityId,(abilityCounts.get(abilityId)||0)+1);
     if(slots.length>=RHYTHM_MONSTER_SLOT_MAX)break;
   }
   return slots;
@@ -212,8 +227,10 @@ const rhythmMonsterSlotAddIssue=(value,masuId,masuMons)=>{
   const ids=sanitizeRhythmMonsterSlotIds(value);
   if(ids.length>=RHYTHM_MONSTER_SLOT_MAX)return 'full';
   if(ids.includes(String(masuId)))return 'duplicate-id';
-  const usedBaseIds=resolveRhythmMonsterSlots(ids,owned).map(masu=>String(masu.baseId||''));
-  if(usedBaseIds.includes(String(target.baseId)))return 'duplicate-base';
+  const inUse=resolveRhythmMonsterSlots(ids,owned);
+  if(inUse.map(masu=>String(masu.baseId||'')).includes(String(target.baseId)))return 'duplicate-base';
+  const abilityId=rhythmMonsterSlotAbilityId(target);
+  if(abilityId&&inUse.filter(masu=>rhythmMonsterSlotAbilityId(masu)===abilityId).length>=RHYTHM_MONSTER_SAME_ABILITY_MAX)return 'duplicate-ability';
   return null;
 };
 const RHYTHM_MONSTER_SLOT_ISSUE_TEXT=Object.freeze({
@@ -221,6 +238,7 @@ const RHYTHM_MONSTER_SLOT_ISSUE_TEXT=Object.freeze({
   full:`設定できるのは${RHYTHM_MONSTER_SLOT_MAX}体までです`,
   'duplicate-id':'すでに設定しています',
   'duplicate-base':'同じモンスターは重ねて設定できません',
+  'duplicate-ability':`同じ能力は${RHYTHM_MONSTER_SAME_ABILITY_MAX}体までです`,
 });
 const addRhythmMonsterSlot=(value,masuId,masuMons)=>{
   const ids=sanitizeRhythmMonsterSlotIds(value);

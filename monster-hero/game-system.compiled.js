@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 39f7e5e22caadc7a
+// source-sha256: cc197b8e10bc8bf1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 17:59";
+const BUILD_DATE = "2026-10-04 18:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28071,7 +28071,7 @@ const RhythmMonsterSlotsPanel = ({
     className: "block text-base leading-none"
   }, "✨"), RHYTHM_MONSTER_ABILITY_JUDGMENTS[RHYTHM_MONSTER_ABILITY_JUDGMENTS.length - 1], "以上で", React.createElement("br", null), "取ると能力")), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80"
-  }, "上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。", RHYTHM_MONSTER_SLOT_MAX, "体そろえる必要はなく、1〜3体でも遊べます。"), React.createElement("ol", {
+  }, "上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。同じ能力は", RHYTHM_MONSTER_SAME_ABILITY_MAX, "体までです。", RHYTHM_MONSTER_SLOT_MAX, "体そろえる必要はなく、1〜3体でも遊べます。"), React.createElement("ol", {
     className: "mt-3 space-y-2"
   }, Array.from({
     length: RHYTHM_MONSTER_SLOT_MAX
