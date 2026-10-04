@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0073209cac026aa8
+// generated-sha256: f1f1dac7cb90785c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 16:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 16:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -49262,6 +49262,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const newEnemy=raidRun
       ? raidJackMakeEnemy(raidRun.kind,raidRun.tierIndex,runMode)
       : createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
+    // みんなで討伐は、いまの共有ライフの残りからはじめる(みんなが削った分を引き継ぐ。maxHp はそのままなのでバーの割合に出る)
+    if (raidRun&&newEnemy&&Number.isFinite(raidRun.startLife)&&raidRun.startLife>0&&raidRun.startLife<newEnemy.maxHp) newEnemy.hp=Math.floor(raidRun.startLife);
     if (!newEnemy) return null;
     // 敵の基礎ライフ・攻撃力への上乗せ(HELHEIMのライフ10倍・デュラハンの専用倍率)。
     // 難易度名ではなく「上乗せを持っているか」で見るので、持たない難易度では何も変わらない
@@ -49713,7 +49715,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const teachings=cards.map(card=>isB
       ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
       :{...card,evoLevel:0,uid:Math.random()});
-    raidJackRunRef.current={kind:isB?'b':'a',tierIndex:Math.min(Math.max(Math.floor(Number(req.tierIndex)||0),0),4),hitId:raidJackMakeHitId(),eventId:raidJackSafeEventId(req.eventId),turns:1,finished:false};
+    raidJackRunRef.current={kind:isB?'b':'a',tierIndex:Math.min(Math.max(Math.floor(Number(req.tierIndex)||0),0),4),hitId:raidJackMakeHitId(),eventId:raidJackSafeEventId(req.eventId),turns:1,finished:false,startLife:(!isB&&Number.isFinite(req.startLife)&&req.startLife>0)?Math.floor(req.startLife):null};
     raidJackDamageRef.current=0;
     setRaidJackResult(null);
     speciesChallengeBattleRunRef.current=null; battleScenarioRef.current=null;
@@ -49793,7 +49795,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       await raidJackSaveState(next);
     } catch (error) { outcome='error'; }
     setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,outcome,opened,eventId:run.eventId,
-      lifeLeft:Math.max(0,tier.hp-damage)});
+      lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
   };
   // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
   const exitRaidJack = (toDebug=false) => {
@@ -49856,8 +49858,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
     }
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+    // みんなで討伐: いまの共有ライフの残りを取って、そこからはじめる(取れない・すでに0なら満タンから)
+    let startLife = null;
+    if (key === 'a') {
+      try {
+        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+        const tierDef = raidJackTierAt('a', prep.tierIndex);
+        const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
+        if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+      } catch (e) { startLife = null; }
+    }
     setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
-    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId });
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId, startLife });
   };
 
   const setupMon = (m, slotIdx) => {
@@ -56460,7 +56472,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <div className="w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3">
             <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
             <div data-raid-jack-damage className="text-3xl font-black text-white text-right">{r.damage.toLocaleString()}</div>
-            <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(あなただけの計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b></>}</div>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b></>}</div>
           </div>
           {r.opened&&<div className="mb-2 text-sm font-black text-emerald-300">次の段階が開きました！</div>}
           <div className="mb-4 text-[10px] text-slate-300">{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>

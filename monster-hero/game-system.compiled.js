@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 34a3a10fdd66d395
+// source-sha256: d9b7040ecf61fad9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 16:29";
+const BUILD_DATE = "2026-10-04 16:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -73303,6 +73303,7 @@ function MonsterHeroGame() {
     const newEnemy = raidRun ? raidJackMakeEnemy(raidRun.kind, raidRun.tierIndex, runMode) : createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost, {
       mode: runMode
     });
+    if (raidRun && newEnemy && Number.isFinite(raidRun.startLife) && raidRun.startLife > 0 && raidRun.startLife < newEnemy.maxHp) newEnemy.hp = Math.floor(raidRun.startLife);
     if (!newEnemy) return null;
     const enemyAdjust = raidRun ? {
       lifeRate: 1,
@@ -73821,7 +73822,8 @@ function MonsterHeroGame() {
       hitId: raidJackMakeHitId(),
       eventId: raidJackSafeEventId(req.eventId),
       turns: 1,
-      finished: false
+      finished: false,
+      startLife: !isB && Number.isFinite(req.startLife) && req.startLife > 0 ? Math.floor(req.startLife) : null
     };
     raidJackDamageRef.current = 0;
     setRaidJackResult(null);
@@ -73961,7 +73963,7 @@ function MonsterHeroGame() {
       outcome,
       opened,
       eventId: run.eventId,
-      lifeLeft: Math.max(0, tier.hp - damage)
+      lifeLeft: Math.max(0, (Number.isFinite(run.startLife) && run.startLife > 0 ? run.startLife : tier.hp) - damage)
     });
   };
   const exitRaidJack = (toDebug = false) => {
@@ -74057,6 +74059,17 @@ function MonsterHeroGame() {
       if (!(await raidJackSaveState(state))) return;
     }
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+    let startLife = null;
+    if (key === 'a') {
+      try {
+        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+        const tierDef = raidJackTierAt('a', prep.tierIndex);
+        const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
+        if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+      } catch (e) {
+        startLife = null;
+      }
+    }
     setRunMode(mode);
     setDifficulty('Normal');
     setExtremeRun(false);
@@ -74066,7 +74079,8 @@ function MonsterHeroGame() {
       tierIndex: prep.tierIndex,
       party,
       teachingIds,
-      eventId: raidJackEventId
+      eventId: raidJackEventId,
+      startLife
     });
   };
   const setupMon = (m, slotIdx) => {
@@ -87858,7 +87872,7 @@ function MonsterHeroGame() {
         className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
       }, React.createElement("span", null, "使ったターン"), React.createElement("b", {
         className: "text-right"
-      }, r.turns, " / ", RAID_JACK_TURNS), r.kind === 'a' && React.createElement(React.Fragment, null, React.createElement("span", null, "ジャックの残りライフ(あなただけの計算)"), React.createElement("b", {
+      }, r.turns, " / ", RAID_JACK_TURNS), r.kind === 'a' && React.createElement(React.Fragment, null, React.createElement("span", null, "ジャックの残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
         className: "text-right"
       }, r.lifeLeft.toLocaleString()), React.createElement("span", null, "固有技とアシカの成長"), React.createElement("b", {
         "data-raid-jack-levelups": true,

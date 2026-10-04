@@ -187,6 +187,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-prep-start]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
     check('編成からジャック戦が始まる', true);
+    // みんなで討伐は、みんなが削った分を引き継ぐ(子爵 2,275,000 のうち 500,000 が削れている → 1,775,000 から)
+    await page.waitForFunction(() => /1,775,000\s*\/\s*2,275,000/.test(document.body.innerText), null, { timeout: 15000 }).catch(() => {});
+    check('A: 敵ライフが共有の残り(1,775,000 / 2,275,000)から始まる', /1,775,000\s*\/\s*2,275,000/.test(await page.locator('body').innerText()));
     await page.locator('[data-battle-menu-button]').click();
     await page.locator('[data-battle-quit]').click();
     await page.getByText('降参しますか？').waitFor({ timeout: 10000 });
