@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 51882a773e22134d
+// generated-sha256: 4feb02dafb508126
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 23:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 23:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23358,6 +23358,13 @@ const sbFetchRaidJackBRanking = async (limit = 100, eventId) => {
   const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
+// A: 大王を倒したあとの「累計ダメージ」ランキング(全段階の与ダメージの合計・上位 limit)。
+// サーバーのビュー raid_jack_a_ranking(docs/sql/raid/RAID_JACK_A_RANKING.sql)。まだ無い間は null を返し、画面は「準備中」にする
+const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_a_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
+};
 // 自分の貢献(A: 段階ごと / B: 累計)。圏外でも自分の数字と順位(=自分より多い人数+1)が出せる
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
@@ -23374,8 +23381,8 @@ const sbFetchRaidJackSelf = async (breederId, eventId) => {
 // 自分より多い人数(順位 = これ + 1)。Content-Range の総数を使う
 const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const mine = Math.max(0, Math.floor(Number(myTotal)) || 0);
-  const view = kind === 'b' ? 'raid_jack_b_ranking' : 'raid_jack_contributions';
-  const extra = kind === 'b' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
+  const view = kind === 'b' ? 'raid_jack_b_ranking' : kind === 'a_all' ? 'raid_jack_a_ranking' : 'raid_jack_contributions';
+  const extra = (kind === 'b' || kind === 'a_all') ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
   const result = await raidJackRequest(`${view}?${raidJackEventParam(eventId)}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
   if (!result.ok) return null;
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
@@ -36857,6 +36864,8 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
   const [showRewards, setShowRewards] = useState(false);
+  // 大王を倒したあと、レイドバトルのランキングを「大王への貢献」から「累計ダメージ(全段階の合計)」へ切り替えられる
+  const [aAll, setAAll] = useState(false);
   const nowMs = Date.now();
   const windowState = raidJackWindowAt(nowMs);
   const open = forced || windowState === 'open';
@@ -36881,19 +36890,23 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       if (!alive) return;
       setSelf(mine);
       setRows(undefined); setAhead(null);
-      const list = tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      // 大王を倒したか(共有の合計が大王のライフ以上)。倒したあとだけ「累計ダメージ」のランキングを選べる
+      const bossDown = !!t && !!t.a && !!t.a[RAID_JACK_A_TIERS.length] && t.a[RAID_JACK_A_TIERS.length].total >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
+      const useAll = tab === 'a' && aAll && bossDown;
+      const list = useAll ? await sbFetchRaidJackARanking(100, eventId)
+        : tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
       if (!alive) return;
       if (list) { try { await ensureBreederProfiles('raid-jack'); } catch (e) { /* 名前が引けなくても順位は出る */ } }
       if (!alive) return;
       setRows(list);
       if (list && mine) {
-        const myTotal = tab === 'a' ? (mine.a[sel.a + 1] || 0) : mine.bTotal;
-        const count = myTotal > 0 ? await sbCountRaidJackAhead(tab, sel.a + 1, myTotal, eventId) : null;
+        const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (mine.a[sel.a + 1] || 0) : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, sel.a + 1, myTotal, eventId) : null;
         if (alive) setAhead(count);
       }
     })();
     return () => { alive = false; };
-  }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
+  }, [tab, tab === 'a' ? sel.a : 0, tick, eventId, aAll]);
 
   const side = tab === 'a' ? state.a : state.b;
   // デバッグの強制表示中は、回数は無制限・全段階を最初から選べる
@@ -36907,7 +36920,9 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
   const current = Math.min(sel[tab], tiers.length - 1);
   const tier = tiers[current];
   const isOpenTier = unlocked(current);
-  const myTotalHere = self ? (tab === 'a' ? (self.a[current + 1] || 0) : self.bTotal) : 0;
+  const bossDownNow = tab === 'a' && !!totals && aDefeated(tiers.length - 1);
+  const showAll = bossDownNow && aAll;
+  const myTotalHere = self ? (showAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[current + 1] || 0) : self.bTotal) : 0;
 
   const buy = async () => {
     setBusy(true); setMessage('');
@@ -36996,9 +37011,17 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
 
         <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 flex items-baseline justify-between text-[11px]">
-            <span className="font-black text-orange-200">{tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
+            <span className="font-black text-orange-200">{showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
             {myTotalHere > 0 && <span data-raid-jack-mine className="text-[10px] text-slate-200">あなた {myTotalHere.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
           </div>
+          {bossDownNow && (
+            <div data-raid-jack-all-toggle className="mb-2 flex gap-1.5 text-[10px] font-black">
+              {[[false, '大王への貢献'], [true, '累計ダメージ']].map(([v, label]) => (
+                <button type="button" key={label} data-raid-jack-all-mode={v ? 'all' : 'tier'} onClick={() => setAAll(v)}
+                  className={`min-h-[32px] flex-1 rounded-xl border px-2 active:scale-95 ${aAll === v ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{label}</button>
+              ))}
+            </div>
+          )}
           {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
           {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
           {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}

@@ -125,6 +125,13 @@ const sbFetchRaidJackBRanking = async (limit = 100, eventId) => {
   const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
+// A: 大王を倒したあとの「累計ダメージ」ランキング(全段階の与ダメージの合計・上位 limit)。
+// サーバーのビュー raid_jack_a_ranking(docs/sql/raid/RAID_JACK_A_RANKING.sql)。まだ無い間は null を返し、画面は「準備中」にする
+const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_a_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
+};
 // 自分の貢献(A: 段階ごと / B: 累計)。圏外でも自分の数字と順位(=自分より多い人数+1)が出せる
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
@@ -141,8 +148,8 @@ const sbFetchRaidJackSelf = async (breederId, eventId) => {
 // 自分より多い人数(順位 = これ + 1)。Content-Range の総数を使う
 const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const mine = Math.max(0, Math.floor(Number(myTotal)) || 0);
-  const view = kind === 'b' ? 'raid_jack_b_ranking' : 'raid_jack_contributions';
-  const extra = kind === 'b' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
+  const view = kind === 'b' ? 'raid_jack_b_ranking' : kind === 'a_all' ? 'raid_jack_a_ranking' : 'raid_jack_contributions';
+  const extra = (kind === 'b' || kind === 'a_all') ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
   const result = await raidJackRequest(`${view}?${raidJackEventParam(eventId)}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
   if (!result.ok) return null;
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';

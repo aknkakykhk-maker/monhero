@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 201c7196ddbb4854
+// source-sha256: 97a65ce50439fc03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 23:31";
+const BUILD_DATE = "2026-10-04 23:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36263,6 +36263,14 @@ const sbFetchRaidJackBRanking = async (limit = 100, eventId) => {
     total: Number(r.total_damage) || 0
   })) : null;
 };
+const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_a_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map(r => ({
+    breederId: String(r.breeder_id),
+    total: Number(r.total_damage) || 0
+  })) : null;
+};
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   if (!id) return null;
@@ -36280,8 +36288,8 @@ const sbFetchRaidJackSelf = async (breederId, eventId) => {
 };
 const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const mine = Math.max(0, Math.floor(Number(myTotal)) || 0);
-  const view = kind === 'b' ? 'raid_jack_b_ranking' : 'raid_jack_contributions';
-  const extra = kind === 'b' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
+  const view = kind === 'b' ? 'raid_jack_b_ranking' : kind === 'a_all' ? 'raid_jack_a_ranking' : 'raid_jack_contributions';
+  const extra = kind === 'b' || kind === 'a_all' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
   const result = await raidJackRequest(`${view}?${raidJackEventParam(eventId)}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, {
     headers: {
       'Prefer': 'count=exact'
@@ -59868,6 +59876,7 @@ const RaidJackScreen = ({
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
   const [showRewards, setShowRewards] = useState(false);
+  const [aAll, setAAll] = useState(false);
   const nowMs = Date.now();
   const windowState = raidJackWindowAt(nowMs);
   const open = forced || windowState === 'open';
@@ -59893,7 +59902,9 @@ const RaidJackScreen = ({
       setSelf(mine);
       setRows(undefined);
       setAhead(null);
-      const list = tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      const bossDown = !!t && !!t.a && !!t.a[RAID_JACK_A_TIERS.length] && t.a[RAID_JACK_A_TIERS.length].total >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
+      const useAll = tab === 'a' && aAll && bossDown;
+      const list = useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
       if (!alive) return;
       if (list) {
         try {
@@ -59903,15 +59914,15 @@ const RaidJackScreen = ({
       if (!alive) return;
       setRows(list);
       if (list && mine) {
-        const myTotal = tab === 'a' ? mine.a[sel.a + 1] || 0 : mine.bTotal;
-        const count = myTotal > 0 ? await sbCountRaidJackAhead(tab, sel.a + 1, myTotal, eventId) : null;
+        const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? mine.a[sel.a + 1] || 0 : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, sel.a + 1, myTotal, eventId) : null;
         if (alive) setAhead(count);
       }
     })();
     return () => {
       alive = false;
     };
-  }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
+  }, [tab, tab === 'a' ? sel.a : 0, tick, eventId, aAll]);
   const side = tab === 'a' ? state.a : state.b;
   const remaining = unlimited ? Infinity : raidJackRemaining(side, nowMs);
   const tiers = raidJackTiers(tab);
@@ -59921,7 +59932,9 @@ const RaidJackScreen = ({
   const current = Math.min(sel[tab], tiers.length - 1);
   const tier = tiers[current];
   const isOpenTier = unlocked(current);
-  const myTotalHere = self ? tab === 'a' ? self.a[current + 1] || 0 : self.bTotal : 0;
+  const bossDownNow = tab === 'a' && !!totals && aDefeated(tiers.length - 1);
+  const showAll = bossDownNow && aAll;
+  const myTotalHere = self ? showAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[current + 1] || 0 : self.bTotal : 0;
   const buy = async () => {
     setBusy(true);
     setMessage('');
@@ -60063,10 +60076,19 @@ const RaidJackScreen = ({
     className: "mb-1 flex items-baseline justify-between text-[11px]"
   }, React.createElement("span", {
     className: "font-black text-orange-200"
-  }, tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
+  }, showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
     "data-raid-jack-mine": true,
     className: "text-[10px] text-slate-200"
-  }, "あなた ", myTotalHere.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), rows === undefined && React.createElement("div", {
+  }, "あなた ", myTotalHere.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), bossDownNow && React.createElement("div", {
+    "data-raid-jack-all-toggle": true,
+    className: "mb-2 flex gap-1.5 text-[10px] font-black"
+  }, [[false, '大王への貢献'], [true, '累計ダメージ']].map(([v, label]) => React.createElement("button", {
+    type: "button",
+    key: label,
+    "data-raid-jack-all-mode": v ? 'all' : 'tier',
+    onClick: () => setAAll(v),
+    className: `min-h-[32px] flex-1 rounded-xl border px-2 active:scale-95 ${aAll === v ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, label))), rows === undefined && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "読み込み中…"), rows === null && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"

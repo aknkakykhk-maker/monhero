@@ -37,7 +37,7 @@ const make = () => {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(`${defs}\n${api}\nthis.o={RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackSelf,sbCountRaidJackAhead};`, ctx);
+  vm.runInContext(`${defs}\n${api}\nthis.o={RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackARanking,sbFetchRaidJackSelf,sbCountRaidJackAhead};`, ctx);
   return { o: ctx.o, calls, store, setResponder: (f) => { responder = f; } };
 };
 
@@ -113,6 +113,16 @@ const make = () => {
     check('自分の貢献(A段階別・B累計)', self && self.a[1] === 100 && self.bTotal === 100);
     t.setResponder(() => ({ ok: true, status: 206, body: '[]', headers: { 'content-range': '0-0/17' } }));
     check('自分より多い人数を Content-Range から読む', (await t.o.sbCountRaidJackAhead('b', 1, 500)) === 17);
+    // 大王を倒したあとの累計ダメージ(全段階の合計)。kind と tier では絞らず、専用のビューを読む
+    t.setResponder(() => ({ ok: true, status: 200, body: JSON.stringify([{ breeder_id: 'y1', total_damage: 777 }]) }));
+    const callsBefore = t.calls.length;
+    const allRank = await t.o.sbFetchRaidJackARanking();
+    check('A累計は raid_jack_a_ranking を累計の多い順に100件', /raid_jack_a_ranking\?event_id=eq\.raid_jack_2026/.test(t.calls[callsBefore].url) && /limit=100/.test(t.calls[callsBefore].url) && /order=total_damage\.desc,last_hit_at\.asc/.test(t.calls[callsBefore].url) && allRank[0].total === 777 && allRank[0].breederId === 'y1');
+    t.setResponder(() => ({ ok: true, status: 206, body: '[]', headers: { 'content-range': '0-0/4' } }));
+    const callsBefore2 = t.calls.length;
+    check('A累計の自分より多い人数も、専用のビューで数える(段階では絞らない)', (await t.o.sbCountRaidJackAhead('a_all', 3, 500)) === 4 && /raid_jack_a_ranking\?/.test(t.calls[callsBefore2].url) && !/tier=eq/.test(t.calls[callsBefore2].url));
+    t.setResponder(() => ({ ok: true, status: 404, body: '' }));
+    check('ビューがまだ無い(404)ときは null(画面は準備中)', (await t.o.sbFetchRaidJackARanking()) === null);
     t.setResponder(() => ({ ok: true, status: 200, body: 'こわれた' }));
     check('壊れた返事は null(画面は準備中)', (await t.o.sbFetchRaidJackTierTotals()) === null && (await t.o.sbFetchRaidJackBRanking()) === null);
     t.setResponder(() => 'throw');
