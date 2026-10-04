@@ -14216,7 +14216,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const rows = changelogRowsOfTab(changelogTab);
             const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
-            return rows.map(row=>{
+            // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
+            // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
+            // 開催中かは描くたびに数え直す(changelogEventLive)。押すと中身(告知画像・本文)が開く
+            const pinnedEvents = changelogTab==='update' ? CHANGELOG_ENTRIES.filter(entry=>changelogEventLive(entry)) : [];
+            return [...pinnedEvents.map(c=>(
+              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned" open
+                style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
+                <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
+                  <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>🎃 開催中</span>
+                  <span style={{flex:1,minWidth:0}}>{c.title}</span>
+                </summary>
+                {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
+                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
+              </details>)),
+            ...rows.map(row=>{
               const open=changelogOpenId===row.key;
               const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
@@ -14245,7 +14259,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
-                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
@@ -14273,7 +14287,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>}
                 </article>
               </React.Fragment>);
-            });
+            })];
           })()}</div>
       </div>
     </div>
