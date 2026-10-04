@@ -6783,6 +6783,20 @@ const RAID_JACK_ENDING_CLEARED = [...RAID_JACK_ENDING_A_HEAD, ...RAID_JACK_ENDIN
 const RAID_JACK_ENDING_NOTCLEARED = [...RAID_JACK_ENDING_B_HEAD, ...RAID_JACK_ENDING_COMMON];
 
 const EVENT_REPLAYS = [
+  // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
+  // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
+  //   第1.5部=レイド開始(公開後に初めてHOMEを開いたとき) / 第2〜6部=段階を倒したあと / 終章=期間終了後
+  //   終章は「大王まで倒せたか」で2本(raid_jack_ending_cleared / raid_jack_ending_notcleared)。
+  // date は回想の並び順にだけ使う(第1部の 10/4 08:00 のあとに並ぶよう、同じ日の少しあとにしてある)。
+  // 見たかどうかは unlockedKey(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS)で引く
+  { id: 'raid_jack_story_1b', date: '2026-10-04 08:01', title: 'ハロウィン・ナイト 第1.5部 ～ふくれあがる影～', script: RAID_JACK_STORY_1B, unlockedKey: 'raidJackStory1bSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_2', date: '2026-10-04 08:02', title: 'ハロウィン・ナイト 第2部 ～吠えるカボチャ～', script: RAID_JACK_STORY_2, unlockedKey: 'raidJackStory2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_3', date: '2026-10-04 08:03', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: RAID_JACK_STORY_3, unlockedKey: 'raidJackStory3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_4', date: '2026-10-04 08:04', title: 'ハロウィン・ナイト 第4部 ～ドラの気持ち～', script: RAID_JACK_STORY_4, unlockedKey: 'raidJackStory4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_5', date: '2026-10-04 08:05', title: 'ハロウィン・ナイト 第5部 ～すれ違い～', script: RAID_JACK_STORY_5, unlockedKey: 'raidJackStory5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_6', date: '2026-10-04 08:06', title: 'ハロウィン・ナイト 第6部 ～ただ、遊びたかっただけ～', script: RAID_JACK_STORY_6, unlockedKey: 'raidJackStory6Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_ending_cleared', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王まで倒せた)～', script: RAID_JACK_ENDING_CLEARED, unlockedKey: 'raidJackEndingClearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_ending_notcleared', date: '2026-11-01 04:01', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王には届かなかった)～', script: RAID_JACK_ENDING_NOTCLEARED, unlockedKey: 'raidJackEndingNotclearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
   // タクティクスバトルの導入(2026-09-21)。**公開するまでは回想にも出さない**
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
