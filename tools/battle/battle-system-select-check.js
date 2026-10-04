@@ -57,6 +57,8 @@ const MODE_IDS = {
 // 盤面がタクティクス側のモードかどうか。本体と同じ並びを検査からも渡す
 MODE_IDS.isTacticsMode = (mode) => [MODE_IDS.BATTLE_MODE_TACTICS,
   MODE_IDS.BATTLE_MODE_TACTICS_SPECIES, MODE_IDS.BATTLE_MODE_TACTICS_PRO].includes(mode);
+// ジャック戦のモード(2026-10-04)は、モード選択の一覧には並ばない。判定だけ本体の関数が呼ぶので、偽を返す形で渡す
+MODE_IDS.isRaidJackMode = (mode) => mode === 'raidJackA' || mode === 'raidJackB';
 const api = run({ ...MODE_IDS, SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: false });
 
 // ===== ① 仕組みの定義 =====

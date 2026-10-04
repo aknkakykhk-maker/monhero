@@ -25,6 +25,8 @@ const RAID_JACK_TURNS = 10;
 const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+// Aは、このターンになった時に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
 
 // 技の種類(再生なし)。増やす順は既存の TACTICS_EXTRA_ACTION_ORDER に合わせ、
 // 減らすときは攻撃力アップ(roar)から先に落とす。
@@ -144,4 +146,13 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
     else break;
   }
   return n;
+};
+
+// 戦闘に出すジャック本体。ライフ・攻撃は段階の値をそのまま使う(35,000×倍率×10 の端数ずれを避けるため上書きする)。
+// 技の本数は actionCount で直接指定する(再生なし。3/4/5/5/5)。createBattleEnemy は 22-enemy-and-bond-entries.jsx
+const raidJackMakeEnemy = (kind, tierIndex, mode) => {
+  const tier = raidJackTierAt(kind, tierIndex);
+  const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, { mode, actionCount: tier.actionCount });
+  if (!enemy) return null;
+  return { ...enemy, maxHp: tier.hp, hp: tier.hp, atk: tier.atk, raidJackTier: tier.id };
 };

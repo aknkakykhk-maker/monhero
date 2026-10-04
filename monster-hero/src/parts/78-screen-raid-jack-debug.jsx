@@ -8,6 +8,7 @@
 //   ② 期間と回数: 「いま」を前・中・後に動かしたときの判定、今日の残り回数
 //   ③ 端末の記録(mh_raid_jack_v1): 回数・倒した段階・再送待ちの確認と初期化(★保存します)
 //   ⑤ 絵と技: バトルの立ち絵2枚・顔アイコン、段階ごとに使う技(実際の行動表 tacticsActionDefinitions)
+//   ⑥ 戦う: ジャック戦(専用の1戦)を、段階を選んで始める。回数は使わず、送る記録も別のイベントID(raid_jack_debug)
 //   ④ サーバー: 本番の集計(raid_jack_2026)を汚さない別のイベントID(raid_jack_debug)で、
 //      テスト送信・段階ごとの合計・Bの上位・再送待ちの送り直しを試す
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
@@ -17,7 +18,7 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
   { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
 ]);
 
-const RaidJackDebugScreen = ({ onBack }) => {
+const RaidJackDebugScreen = ({ onBack, onStartBattle }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
   const [log, setLog] = useState([]);
@@ -27,6 +28,8 @@ const RaidJackDebugScreen = ({ onBack }) => {
   const [testDamage, setTestDamage] = useState(1000);
   const [testKind, setTestKind] = useState('a');
   const [testTier, setTestTier] = useState(1);
+  const [fightKind, setFightKind] = useState('a');
+  const [fightTier, setFightTier] = useState(1);
   const say = (text) => setLog((prev) => [`${new Date().toLocaleTimeString('ja-JP')} ${text}`, ...prev].slice(0, 12));
 
   useEffect(() => {
@@ -130,6 +133,18 @@ const RaidJackDebugScreen = ({ onBack }) => {
           {Array.isArray(ranking) && (
             <div className="mt-2">Bの上位(デバッグ分): {ranking.length === 0 ? 'まだありません' : ranking.slice(0, 10).map((r, i) => `${i + 1}位 ${r.breederId.slice(0, 6)}… ${r.total.toLocaleString()}`).join(' / ')}</div>
           )}
+        </section>
+
+        <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-orange-200">⑥ ジャックと戦う(回数は使わない・別のイベントIDで送る)</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select data-raid-fight-kind value={fightKind} onChange={(e) => setFightKind(e.target.value)} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]"><option value="a">A(ベースモン・協力戦)</option><option value="b">B(マスモン・累計ダメージ)</option></select>
+            <select data-raid-fight-tier value={fightTier} onChange={(e) => setFightTier(Number(e.target.value))} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]">
+              {raidJackTiers(fightKind).map((t, i) => <option key={t.id} value={i + 1}>{i + 1}: {t.name}</option>)}
+            </select>
+          </div>
+          <div className="mt-1 text-[10px] text-slate-300">{(() => { const t = raidJackTierAt(fightKind, fightTier - 1); return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / 10ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
+          <button data-raid-fight-start className={`${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`} onClick={() => { if (onStartBattle && onStartBattle(fightKind, fightTier - 1) === false) say('編成できるモンスターがいません'); }}>この条件でジャックと戦う</button>
         </section>
 
         <section className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">

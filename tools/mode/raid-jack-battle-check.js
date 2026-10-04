@@ -117,5 +117,18 @@ check('submitRunScoreOnce はジャックを手前で return する(submitTactic
   /if \(isRaidJackMode\(runMode\)\) return;\n\s*if \(isTacticsMode\(runMode\)\) return submitTacticsScoreOnce\(\);/.test(app));
 check('TACTICS_SCORE_MODES(自己ベストを持つモード)にジャックを入れていない', !/const TACTICS_SCORE_MODES = [^\n]*RAID/.test(core));
 
+// ⑦ 戦闘の終わり方(実機で通しにくい経路は、コードの形で固定する)
+check('10ターンを超えたら finishRaidJack("turns")(全滅にはしない)・通常は今までどおり20ターン',
+  /if\(raidJackRunRef\.current\)\{\s*raidJackRunRef\.current\.turns=Math\.min\(nextTurn,RAID_JACK_TURNS\);\s*if\(nextTurn>RAID_JACK_TURNS\)\{ finishRaidJack\('turns'\); return; \}/.test(app)
+  && /\} else if\(nextTurn>20\)\{ if\(tacticsWipe\(\)===null\) setHp\(0\); \}/.test(app));
+check('Aだけ 3/5/8 ターン目に成長する(RAID_JACK_LEVEL_UP_TURNS)', /raidJackRunRef\.current\.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS\.includes\(nextTurn\)/.test(app));
+const defs35 = read('monster-hero/src/parts/35-raid-jack.jsx');
+check('成長のターンは 3 / 5 / 8', /RAID_JACK_LEVEL_UP_TURNS = Object\.freeze\(\[3, 5, 8\]\)/.test(defs35));
+check('撃破は resolveEnemyDefeat の先頭(WAVE報酬より前)で終わる', /enemyDefeatResolvedRef\.current = true;\n\s*\/\/ ★ジャック戦はここで終わり[^\n]*\n\s*if \(raidJackRunRef\.current\) \{ await finishRaidJack\('defeated'\); return true; \}/.test(app));
+check('全滅・リタイアも finishRaidJack を通る', /if \(raidJackRunRef\.current\) \{ finishRaidJack\('wipe'\); return; \}/.test(app) && /finishRaidJack\('giveup'\)/.test(app));
+check('finishRaidJack は一度しか動かない(finished)', /if\(!run\|\|run\.finished\) return;\n\s*run\.finished=true;/.test(app));
+check('ジャック戦は debugBattleRef を立てて始まる(報酬・絆・記録へつながらない)', /raidJackRunRef\.current=\{kind:isB\?'b':'a'[\s\S]{0,900}debugBattleRef\.current=true;/.test(app));
+check('ジャック戦の敵は段階の値で作る(編成の総合力の補正を掛けない)', /const raidRun=isRaidJackMode\(runMode\)\?raidJackRunRef\.current:null;[\s\S]{0,200}isTacticsMode\(runMode\)&&!raidRun/.test(app));
+
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべて OK');
