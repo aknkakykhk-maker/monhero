@@ -26,6 +26,10 @@ for (const file of files) {
     compact.includes("id:'pandora_boss',name:'StayWithMe～LockedFate～',creator:'オリジナル',src:'audio/bgm-pandora-boss.mp3'") &&
     compact.includes('Audio_.previewBGM(trackId)') &&
     compact.includes('BGM_TRACK_BY_ID[saved]'));
+  // 生成物(compiled)は JSX が変換されているので、書き方に依らない部分だけを見る
+  check(`${file}: 場面ごとの「デフォルト」ボタンと、選択肢の「（デフォルト）」表記がある`,
+    source.includes('data-bgm-scene-default') && source.includes('（デフォルト）') &&
+    /changeBgmArrangement\(scene,\s*DEFAULT_BGM_ARRANGEMENT\[scene\]\)/.test(source));
   check(`${file}: 5モード×通常・デュラハン・ムーの15設定を定義`,
     Object.values(routes).flat().every(key => Object.hasOwn(defaults, key)));
   // チャレンジ・クイック・種族はオリジナル3曲。極限は旧クイックの3曲

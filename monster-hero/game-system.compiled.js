@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef5c0ee8c934ec10
+// source-sha256: 9db8e35876b640cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:12";
+const BUILD_DATE = "2026-10-04 17:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -74527,12 +74527,19 @@ function MonsterHeroGame() {
     }, BGM_TRACKS.map(track => React.createElement("option", {
       key: track.id,
       value: track.id
-    }, track.name))), React.createElement("button", {
+    }, track.name, track.id === DEFAULT_BGM_ARRANGEMENT[scene] ? '（デフォルト）' : ''))), React.createElement("button", {
       type: "button",
       "aria-label": `${label}を試聴`,
       onClick: () => toggleBgmPreview(bgmArrangement[scene]),
       className: "shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black"
-    }, previewTrackId === bgmArrangement[scene] ? '停止' : '試聴'))))));
+    }, previewTrackId === bgmArrangement[scene] ? '停止' : '試聴'), React.createElement("button", {
+      type: "button",
+      "data-bgm-scene-default": scene,
+      "aria-label": `${label}をデフォルトの曲にする`,
+      disabled: bgmArrangement[scene] === DEFAULT_BGM_ARRANGEMENT[scene],
+      onClick: () => changeBgmArrangement(scene, DEFAULT_BGM_ARRANGEMENT[scene]),
+      className: "shrink-0 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:opacity-40"
+    }, "デフォルト"))))));
   })(), React.createElement("button", {
     className: "mh-dialog-choice mt-4",
     onClick: () => setBgmArrangement({
