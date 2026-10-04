@@ -21,10 +21,14 @@ const RAID_JACK_EVENT = Object.freeze({
 
 const RAID_JACK_BASE = Object.freeze({ hp: 35000, atk: 700 });
 const RAID_JACK_LIFE_MULTIPLIER = 10;
-const RAID_JACK_TURNS = 10;
+const RAID_JACK_TURNS = 20;   // 1回の戦闘のターン数(2026-10-04・ユーザー指示でレイドバトルもグランドスラムも20ターン)
 const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+// イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
+// HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
+const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night';   // Crazy Party Night ～ぱんぷきんの逆襲～
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 // 絵の大きさ合わせ(2026-10-04・ユーザー指示「本体を2枚目(両腕ポーズ)ぐらいのサイズ感に」)。
 // 両腕ポーズの絵は腕が左右へ広がるので、同じ枠に収めると本体は幅の約49%。通常絵は本体が幅の約99%。
 // ポーズ絵は枠いっぱい(1倍)、通常絵は半分(0.5倍)で描くと、切り替わっても本体の大きさがそろう。

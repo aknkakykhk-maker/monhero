@@ -194,12 +194,12 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (process.env.RAID_SHOT_DIR) { for (let k = 0; k < 6; k++) { await page.waitForTimeout(1200); await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/battle-auto-${k}.png` }).catch(() => {}); } }
     await page.locator('[data-raid-jack-result]').waitFor({ timeout: 240000 });
     const autoText = await page.locator('[data-raid-jack-result]').innerText();
-    const turnsMatch = /使ったターン\s*(\d+)\s*\/\s*10/.exec(autoText);
+    const turnsMatch = /使ったターン\s*(\d+)\s*\/\s*20/.exec(autoText);
     const turnsUsed = turnsMatch ? Number(turnsMatch[1]) : -1;
-    check('AUTOで結果が出る(倒した/10ターン/全滅のどれか)', /ジャックを倒した|10ターンを使い切った|全滅した/.test(autoText), autoText.replace(/\s+/g, ' ').slice(0, 140));
-    check('使ったターンは10以内', turnsUsed >= 1 && turnsUsed <= 10, String(turnsUsed));
+    check('AUTOで結果が出る(倒した/20ターン/全滅のどれか)', /ジャックを倒した|20ターンを使い切った|全滅した/.test(autoText), autoText.replace(/\s+/g, ' ').slice(0, 140));
+    check('使ったターンは20以内', turnsUsed >= 1 && turnsUsed <= 20, String(turnsUsed));
     const growths = Number(await page.locator('[data-raid-jack-growths]').first().evaluate((e) => e.textContent).catch(() => -1));
-    check('A: ターンが進むたびに味方が成長する(使ったターン-1 回)', growths === Math.max(0, Math.min(turnsUsed, 10) - 1), `${growths} / ターン${turnsUsed}`);
+    check('A: ターンが進むたびに味方が成長する(使ったターン-1 回)', growths === Math.max(0, Math.min(turnsUsed, 20) - 1), `${growths} / ターン${turnsUsed}`);
     await page.waitForTimeout(800);
     check('与ダメージが1回だけ送られる', posts.length === 1, String(posts.length));
     const autoRow = JSON.parse((posts[0] || {}).body || '{}');

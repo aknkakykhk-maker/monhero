@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b94e644188fbeb8
+// generated-sha256: 7274d0724bf4e32b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 17:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 17:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22835,10 +22835,14 @@ const RAID_JACK_EVENT = Object.freeze({
 
 const RAID_JACK_BASE = Object.freeze({ hp: 35000, atk: 700 });
 const RAID_JACK_LIFE_MULTIPLIER = 10;
-const RAID_JACK_TURNS = 10;
+const RAID_JACK_TURNS = 20;   // 1回の戦闘のターン数(2026-10-04・ユーザー指示でレイドバトルもグランドスラムも20ターン)
 const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+// イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
+// HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
+const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night';   // Crazy Party Night ～ぱんぷきんの逆襲～
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 // 絵の大きさ合わせ(2026-10-04・ユーザー指示「本体を2枚目(両腕ポーズ)ぐらいのサイズ感に」)。
 // 両腕ポーズの絵は腕が左右へ広がるので、同じ枠に収めると本体は幅の約49%。通常絵は本体が幅の約99%。
 // ポーズ絵は枠いっぱい(1倍)、通常絵は半分(0.5倍)で描くと、切り替わっても本体の大きさがそろう。
@@ -36569,7 +36573,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   return (
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep>
       <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={onBack}
-        note={`${isB ? 'マスモン' : 'ベースモン'}で編成・10ターン勝負`} />
+        note={`${isB ? 'マスモン' : 'ベースモン'}で編成・20ターン勝負`} />
       <div className={`${SCREEN_LIST_CLASS} space-y-3`}>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 text-[11px] font-black text-orange-200">勇者モン(1体)</div>
@@ -36599,7 +36603,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           </div>
         </section>
         <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300">
-          ライフ {tier.hp.toLocaleString()} / 技 {tier.actionCount}本 / 10ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。
+          ライフ {tier.hp.toLocaleString()} / 技 {tier.actionCount}本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。
         </div>
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
@@ -41258,6 +41262,12 @@ function MonsterHeroGame() {
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
     if (eventBgmScene) return bgmArrangement[eventBgmScene];
+    // イベント・レイドボス「ジャック」: ジャック戦・レイド画面・段階えらび・編成は、ぱんぷきんの曲に固定する
+    if (RAID_JACK_BGM_STATES.includes(state) || (state === 'BATTLE' && raidJackRunRef.current)) return RAID_JACK_BGM_TRACK;
+    // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
+    // 開催中かは見るたびに数え直す(読み込み時に1回だけ決めない)
+    const homeBgm = (((RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open') || raidJackDebugForce)
+      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
@@ -41267,7 +41277,8 @@ function MonsterHeroGame() {
     // ★鳴らさないと決めた画面はここで終わり。下まで落ちて null になるのと結果は同じだが、
     //   「決め忘れて無音」と「決めたうえで無音」をコードの上で見分けられるようにしておく
     if (BGM_SILENT_STATES.includes(state)) return null;
-    if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
+    if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
+    if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
     // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
@@ -49779,8 +49790,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
   // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
   // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
-  const RAID_JACK_TURN_GROWTH = 1.10;
-  const RAID_JACK_TURN_REGEN_STEP = 0.03;
+  const RAID_JACK_TURN_GROWTH = 1.05;   // 20ターンになったので、1ターンぶんの上がり方は半分(10%→5%)
+  const RAID_JACK_TURN_REGEN_STEP = 0.015;   // 同じく半分(3%→1.5%)
   const raidJackTurnGrowth = (turn) => {
     const before = tacticsUnitsRef.current || [];
     const grown = before.map((unit) => {
@@ -49799,8 +49810,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (raidJackRunRef.current) raidJackRunRef.current.growths = (raidJackRunRef.current.growths || 0) + 1;
     commitTacticsUnits(next);
     writePermaBuffs(p => ({ ...p, autoHpRecovery: (p.autoHpRecovery ?? 0.1) + RAID_JACK_TURN_REGEN_STEP }));
-    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 100);
-    pushBattleLog(`${turn}ターン目: 味方の全ステータスが10%上がった！自動回復はライフ${lifeRate}%・ガッツ${lifeRate - 5}%`, 'up');
+    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 1000) / 10;
+    const gutsRate = Math.round((lifeRate - 5) * 10) / 10;
+    pushBattleLog(`${turn}ターン目: 味方の全ステータスが5%上がった！自動回復はライフ${lifeRate}%・ガッツ${gutsRate}%`, 'up');
     addPopup('全ステータス UP!', 'ally', 'text-emerald-300 font-black text-2xl drop-shadow-[0_0_14px_rgba(52,211,153,0.9)]');
   };
   const raidJackLevelUp = (turn) => {
@@ -56523,7 +56535,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
 
       {raidJackResult&&(()=>{
         const r=raidJackResult;
-        const reasonLabel={defeated:'ジャックを倒した！',turns:'10ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
+        const reasonLabel={defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
         const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(あとで自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした(あとで自動で送り直します)'}[r.outcome]||'';
         return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
           <div className="text-[10px] font-black text-orange-300 tracking-[.35em] mb-2">{r.kind==='b'?'マスモン':'ベースモン'}</div>
