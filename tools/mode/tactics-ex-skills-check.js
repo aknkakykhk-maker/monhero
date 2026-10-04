@@ -99,6 +99,8 @@ const { gate, modes, ex, hitsApi } = sandbox;
 const monol = ex.tacticsExDefOf('Monol');
 const golem = ex.tacticsExDefOf('Golem');
 const kenshi = ex.tacticsExDefOf('KenshiMocchi');
+// いまは無制限のEXが無いので、無制限の決まり(減らない・1ターン1回)は剣士モッチーの定義から作った無制限版で確かめる
+const unlimitedDef = ex.normalizeTacticsExDef({ ...kenshi, unlimited: true, maxUses: 0 });
 check('モノリス「みんなをかばう」: ラン10回・併用できる・発動ターン',
   monol && monol.name === 'みんなをかばう' && monol.maxUses === 10 && !monol.unlimited && monol.withCards && monol.duration === 'turn',
   JSON.stringify(monol));
@@ -106,8 +108,8 @@ check('ゴーレム「捨て身」: ラン3回・使ったターンは他カー�
   golem && golem.name === '捨て身' && golem.maxUses === 3 && !golem.unlimited && !golem.withCards && golem.duration === 'wave'
     && golem.conditions.includes('notActive'),
   JSON.stringify(golem));
-check('剣士モッチー「ソード・コンバージョン」: 無制限・使ったターンは他カード不可・再使用まで続く',
-  kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'style'
+check('剣士モッチー「ソード・コンバージョン」: ラン5回・カードと併用できる・再使用まで続く',
+  kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.maxUses === 5 && !kenshi.unlimited && kenshi.withCards && kenshi.duration === 'style'
     && kenshi.styles.map(st => st.label).join('/') === '片手剣/片手盾/二刀流' && kenshi.defaultStyle === 'sword' && kenshi.heroInitialStyle,
   JSON.stringify(kenshi));
 check('ソード・コンバージョンの説明だけで3つのスタイルの効き目が分かる', ['片手剣：', '片手盾：', '二刀流：', '丈夫さ', 'ソードスキル', '連撃', 'メイン']
@@ -158,14 +160,14 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const fresh = ex.createTacticsExState();
   check('新しいランを作り直すと初期値に戻る', ex.tacticsExUsesOf(fresh, 1, 'Monol') === 0
     && !ex.isTacticsExCardLocked(fresh, 1, T(1, 1)) && !ex.isTacticsExTurnUsed(fresh, T(1, 1)));
-  // 無制限
+  // 無制限(いまは無制限のEXが無いので、剣士モッチーの定義から無制限版を作って確かめる)
   let k = ex.createTacticsExState();
   let okAll = true;
   for (let turn = 1; turn <= 30; turn += 1) {
-    const rr = use(k, kenshi, 0, 'KenshiMocchi', T(1 + Math.floor(turn / 10), turn));
+    const rr = use(k, unlimitedDef, 0, 'KenshiMocchi', T(1 + Math.floor(turn / 10), turn));
     okAll = okAll && rr.check.ok; k = rr.state;
   }
-  const rem = ex.tacticsExRemaining(kenshi, ex.tacticsExUsesOf(k, 0, 'KenshiMocchi'));
+  const rem = ex.tacticsExRemaining(unlimitedDef, ex.tacticsExUsesOf(k, 0, 'KenshiMocchi'));
   check('無制限EXは何回使っても減らない(30回)', okAll && rem.unlimited && rem.left === Infinity, JSON.stringify(rem));
 }
 
@@ -188,8 +190,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && !ex.isTacticsExTurnUsed(m.state, T(1, 4)));
   const again = ex.checkTacticsExUse({ def: monol, state: m.state, slot: 1, monId: 'Monol', alive: true, now: T(1, 3) });
   check('同じ子のEXは1ターンに1回まで', !again.ok, again.reason);
-  const k2 = use(ex.createTacticsExState(), kenshi, 0, 'KenshiMocchi', T(1, 1)).state;
-  const againK = ex.checkTacticsExUse({ def: kenshi, state: k2, slot: 0, monId: 'KenshiMocchi', alive: true, now: T(1, 1) });
+  const k2 = use(ex.createTacticsExState(), unlimitedDef, 0, 'KenshiMocchi', T(1, 1)).state;
+  const againK = ex.checkTacticsExUse({ def: unlimitedDef, state: k2, slot: 0, monId: 'KenshiMocchi', alive: true, now: T(1, 1) });
   check('無制限でも同じターンに2回は使えない', !againK.ok);
   const down = ex.checkTacticsExUse({ def: monol, state: s0, slot: 1, monId: 'Monol', alive: false, now: T(1, 1) });
   check('倒れている子のEXは使えない(カードと同じ)', !down.ok && /倒れ/.test(down.reason), down.reason);
