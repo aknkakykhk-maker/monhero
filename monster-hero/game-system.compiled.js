@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7dd758f87875a89
+// source-sha256: da9ac1c13a48b58d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 23:07";
+const BUILD_DATE = "2026-10-04 23:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5623,10 +5623,14 @@ const EVENT_BGM_SCENES = Object.freeze({
   beat_point_up_2026_09_28: 'monbeatCupEvent',
   rhythm_multi_friends_2026_10_03: 'rhythmMultiEvent',
   halloween_night_2026_part1: 'halloweenNightEvent',
-  halloween_night_2026_part2: 'halloweenNightEvent',
-  halloween_night_2026_part3: 'halloweenNightEvent',
-  halloween_night_2026_part4: 'halloweenNightEvent',
-  halloween_night_2026_part5: 'halloweenNightEvent'
+  raid_jack_story_1b: 'halloweenNightEvent',
+  raid_jack_story_2: 'halloweenNightEvent',
+  raid_jack_story_3: 'halloweenNightEvent',
+  raid_jack_story_4: 'halloweenNightEvent',
+  raid_jack_story_5: 'halloweenNightEvent',
+  raid_jack_story_6: 'halloweenNightEvent',
+  raid_jack_ending_cleared: 'halloweenNightEvent',
+  raid_jack_ending_notcleared: 'halloweenNightEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
