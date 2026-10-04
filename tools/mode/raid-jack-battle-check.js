@@ -147,7 +147,7 @@ check('1回の戦闘は20ターン(レイドバトルもグランドスラムも
   /const RAID_JACK_TURNS = 20;/.test(defs35) && /RAID_JACK_TURN_GROWTH = 1\.05;/.test(defs35) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(defs35));
 check('ジャックの戦い・レイド画面・段階えらび・編成はぱんぷきんの曲に固定(isGameOver より前で決める)',
   /RAID_JACK_BGM_STATES\.includes\(state\) \|\| \(state === 'BATTLE' && raidJackRunRef\.current\)\) return RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
-  && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night'/.test(defs35) && /id:'melo_crazy_party_night'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
+  && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full'/.test(defs35) && /id:'melo_crazy_party_night_full'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
 check('HOMEの曲は、イベント中かつ曲を選んでいないときだけぱんぷきん(開催中は見るたびに数え直す)',
   /raidJackWindowAt\(Date\.now\(\)\) === 'open'\) \|\| raidJackDebugForce \|\| halloweenNightOpen\)\s*&& bgmArrangement\.home === DEFAULT_BGM_ARRANGEMENT\.home\) \? RAID_JACK_BGM_TRACK : bgmArrangement\.home;/.test(app)
   && /state === 'HOME' \|\| state === 'PROFILE' \|\| state === 'ITEM_INVENTORY'\) return homeBgm;/.test(app));

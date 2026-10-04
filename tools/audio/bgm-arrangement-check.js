@@ -93,7 +93,7 @@ for (const file of files) {
     !Object.values(defaults).includes('original_event_02') && /id:'original_event_02'/.test(compact));
   check(`${file}: 会話イベント中は画面より優先してイベントBGMを鳴らす`,
     /EVENT_BGM_SCENES/.test(source) && /kiki_intro:'kikiIntro'/.test(compact) &&
-    /if \(eventBgmScene\) return bgmArrangement\[eventBgmScene\];/.test(source) &&
+    /if \(eventBgmScene\) return bgmArrangementWithEventDefault\(bgmArrangement, eventBgmScene\);/.test(source) &&
     // 2026-09-07。敗北BGMも設定から引くようにしたので、比べる相手を
     // 'gameOver' 直書きから bgmArrangement.gameOver へ変えた（前後関係を見る意図は同じ）
     source.indexOf('if (eventBgmScene) return bgmArrangement[eventBgmScene];') < source.indexOf('if (isGameOver) return bgmArrangement.gameOver;'));
@@ -110,7 +110,7 @@ for (const file of files) {
   check(`${file}: mh_bgm_arrangementを同じ保存領域で維持`, /mh_bgm_arrangement/.test(source));
   check(`${file}: M\/B管理・マーケット・神殿へ選択曲をルーティング`,
     /MB_MANAGEMENT:\s*['"]management/.test(source) && /BREEDER_MARKET:\s*['"]market/.test(source) &&
-    /TEMPLE:\s*['"]temple/.test(source) && /bgmArrangement\[BGM_STATE_MAP\[state\]\]/.test(source));
+    /TEMPLE:\s*['"]temple/.test(source) && /bgmArrangementWithEventDefault\(bgmArrangement, BGM_STATE_MAP\[state\]\)/.test(source));
   check(`${file}: 最終WAVEリザルトとCHAMPIONだけクリア曲へルーティング`,
     /!debugBattleRef\.current\s*&&\s*currentWave\s*===\s*10/.test(source) && /WAVE_RESULT/.test(source) && /bgmArrangement\.clear/.test(source));
   for (const [mode, [normal, dullahan, moo]] of Object.entries(routes)) {

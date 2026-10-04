@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 97a65ce50439fc03
+// source-sha256: c07fef039722838c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 23:45";
+const BUILD_DATE = "2026-10-04 23:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4829,6 +4829,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_crazy_party_night_full',
+  name: 'Crazy Party Night ～ぱんぷきんの逆襲～ full',
+  creator: 'オリジナル',
+  src: 'audio/bgm-crazy-party-night-full.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -5572,7 +5579,7 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   monbeatCupEvent: 'kaze_ga_soyogu',
   symphonyEvent: 'melo_mou_hitotsu_no_sekai_e',
   rhythmMultiEvent: 'melo_haruka',
-  halloweenNightEvent: 'melo_crazy_party_night',
+  halloweenNightEvent: 'melo_crazy_party_night_full',
   rhythmModeSelect: 'pandora_boss_remix'
 });
 const BGM_BATTLE_MODE_TABS = Object.freeze([{
@@ -5674,6 +5681,26 @@ const BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS = Object.freeze({
 });
 const migrateQuickExtremeBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS);
 const BGM_TOGGLE_SCENES = new Set(['autoVictoryJingle', 'autoPostWaveBgm', 'autoRepeatResultBgm']);
+const BGM_EVENT_DEFAULT_OVERRIDES = Object.freeze([Object.freeze({
+  scene: 'halloweenNightEvent',
+  track: 'melo_crazy_party_night_full',
+  replaces: Object.freeze(['melo_crazy_party_night'])
+}), Object.freeze({
+  scene: 'management',
+  track: 'melo_crazy_party_night_full',
+  replaces: Object.freeze(['original_profile']),
+  campaignId: 'halloween_night_2026'
+})]);
+const bgmArrangementWithEventDefault = (arrangement, scene, nowMs = Date.now()) => {
+  const value = arrangement ? arrangement[scene] : undefined;
+  const rule = BGM_EVENT_DEFAULT_OVERRIDES.find(item => item.scene === scene);
+  if (!rule || !rule.replaces.includes(value) || !BGM_TRACK_BY_ID[rule.track]) return value;
+  if (rule.campaignId) {
+    const campaign = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(nowMs) : null;
+    if (!campaign || campaign.id !== rule.campaignId) return value;
+  }
+  return rule.track;
+};
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TOGGLE_SCENES.has(scene)) return [scene, saved === 'on' || saved === 'off' ? saved : fallback];
@@ -5892,6 +5919,7 @@ const Audio_ = (() => {
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
     "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",
+    "audio/bgm-crazy-party-night-full.mp3": "88a00b2a4fa0",
     "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
@@ -35641,7 +35669,7 @@ const RAID_JACK_ENDING_CLEARED_ID = 'raid_jack_ending_cleared';
 const RAID_JACK_ENDING_NOTCLEARED_ID = 'raid_jack_ending_notcleared';
 const RAID_JACK_STORY_IDS = Object.freeze([RAID_JACK_STORY_START_ID, ...Object.values(RAID_JACK_STORY_AFTER_TIER), RAID_JACK_ENDING_CLEARED_ID, RAID_JACK_ENDING_NOTCLEARED_ID]);
 const raidJackStoryUnlockKey = id => `${String(id).replace(/^raid_jack_/, 'raidJack_').replace(/_([a-z0-9])/g, (m, c) => c.toUpperCase()).replace(/^raidJack(\w)/, (m, c) => 'raidJack' + c.toUpperCase())}Seen`;
-const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night';
+const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';
 const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
@@ -64708,7 +64736,7 @@ function MonsterHeroGame() {
   const eventBgmScene = kikiIntroPlaying ? EVENT_BGM_SCENES.kiki_intro : momosukeIntroPlaying ? EVENT_BGM_SCENES.momosuke_intro : eventReplay ? EVENT_BGM_SCENES[eventReplay.id] || null : null;
   const bgmSuspendedByRhythmRef = useRef(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
-    if (eventBgmScene) return bgmArrangement[eventBgmScene];
+    if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
     if (RAID_JACK_BGM_STATES.includes(state) || state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BGM_TRACK;
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
@@ -64720,8 +64748,8 @@ function MonsterHeroGame() {
     if (BGM_SILENT_STATES.includes(state)) return null;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
-    if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
-    if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
+    if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];
+    if (PROFILE_BGM_STATES.includes(state)) return bgmArrangementWithEventDefault(bgmArrangement, 'management');
     if (state === 'BATTLE') {
       const eikiBossBgm = eikiBossBgmForBattle(mainHero?.id, currentWave, enemyId);
       if (eikiBossBgm) return eikiBossBgm;

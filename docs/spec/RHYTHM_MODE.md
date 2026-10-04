@@ -8254,3 +8254,19 @@ songId `crazy_party_night` / bgmTrackId `melo_crazy_party_night` / 譜面は MHB
   - レベル EASY 7 / NORMAL 8 / HARD 11 / EXPERT 17 / MASTER 23、ノーツ 140 / 158 / 219 / 267 / 307
 - **公開の仕方はユーザーが決めた: 作業ブランチに置いておく。** ハロウィンナイトのイベント（まだ `data/rhythm-event.js` に無い）を作るときに一緒に公開する。
   公開するときは、更新履歴の項目の日時をそのときの実時刻に付け直す（`changelog-order-check.js` がコミット時刻と1時間以上ずれていないかを見る）
+
+## 「Crazy Party Night ～ぱんぷきんの逆襲～」の全編版を足した（2026-10-04）
+
+ユーザー指示「Crazy Party Night ～ぱんぷきんの逆襲～ full を実装。ハロウィンイベント関連はこの曲をイベント時のみデフォルトに変更。MB管理もデフォルトに変更」。
+mp4（4分5秒）から音を取り、songId `crazy_party_night_full` / bgmTrackId `melo_crazy_party_night_full` / 譜面は MHB CHART ENGINE Rev.26。
+曲えらびでは1分34秒の版（`crazy_party_night`）と1行にまとまり、全編版が原曲（`RHYTHM_SONG_VERSION_GROUPS`）。ジャケットは同じ絵。
+
+- **音量**: -14.47 LUFS / -3.17 dBTP → +0.47dB で **-14.00 LUFS / -1.52 dBTP**
+- **テンポ**: 127.992 BPM（短い版の登録値）／拍の頭 456ms。自動判定は 128.41 BPM・拍の頭 941ms で格子に乗る率が低かったので、
+  短い版と同じテンポで拍の頭を ±15ms の乗りが最大になる位置（456）に決めた。15秒ごとの局所テンポは 127.9〜128.4 で揺れていない
+- **歯ごたえは短い版と同じ `challengeFactor` 1.3 を引き継いだ（ユーザーが確認して決めた）。**
+  - レベル EASY 7 / NORMAL 8 / HARD 14 / EXPERT 19 / MASTER 25、ノーツ 358 / 411 / 572 / 699 / 792
+  - MASTER 25 は既存33曲の中央値(26)のすぐ下。最密4秒 25打・最短 117ms
+- **BGMの初期値**: `halloweenNightEvent`（ハロウィン・ナイトのお話）は全編版が初期値。`BGM_EVENT_DEFAULT_OVERRIDES` で、
+  設定を変えていない人の「M/B管理」BGM（原曲の `original_profile` のまま）だけ、ハロウィン・ナイトの期間中に全編版へ差し替える
+  （鳴らす瞬間だけ。保存値は書き換えない。終わると元の曲へ戻る）
