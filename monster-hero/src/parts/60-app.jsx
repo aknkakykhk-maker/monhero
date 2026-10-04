@@ -10868,7 +10868,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const fxSkill = intent.variant || (intent.type==='SPECIAL' ? 'special' : 'normal');
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
-        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? enemy?.id : null;
+        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? (enemy?.raidJackPumpkin?'Pumpkin':enemy?.id) : null;
         // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
         //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
         //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
@@ -12759,7 +12759,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。モードを渡して選ばせる
     // ジャック戦は、段階のライフ・攻撃力(35-raid-jack.jsx)をそのまま使う
     const newEnemy=raidRun
-      ? raidJackMakeEnemy(raidRun.kind,raidRun.tierIndex,runMode)
+      ? raidJackMakeEnemy(raidRun.kind,raidRun.tierIndex,runMode,{pumpkin:raidRun.pumpkin===true})
       : createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
     // レイドバトルは、いまの共有ライフの残りからはじめる(みんなが削った分を引き継ぐ。maxHp はそのままなのでバーの割合に出る)
     if (raidRun&&newEnemy&&Number.isFinite(raidRun.startLife)&&raidRun.startLife>0&&raidRun.startLife<newEnemy.maxHp) newEnemy.hp=Math.floor(raidRun.startLife);
@@ -13216,7 +13216,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const teachings=cards.map(card=>isB
       ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
       :{...card,evoLevel:0,uid:Math.random()});
-    raidJackRunRef.current={kind:isB?'b':'a',tierIndex:Math.min(Math.max(Math.floor(Number(req.tierIndex)||0),0),4),hitId:raidJackMakeHitId(),eventId:raidJackSafeEventId(req.eventId),turns:1,finished:false,startLife:(!isB&&Number.isFinite(req.startLife)&&req.startLife>0)?Math.floor(req.startLife):null};
+    raidJackRunRef.current={kind:isB?'b':'a',tierIndex:Math.min(Math.max(Math.floor(Number(req.tierIndex)||0),0),4),hitId:raidJackMakeHitId(),eventId:raidJackSafeEventId(req.eventId),turns:1,finished:false,startLife:(!isB&&Number.isFinite(req.startLife)&&req.startLife>0)?Math.floor(req.startLife):null,pumpkin:!isB&&req.pumpkin===true};
     raidJackDamageRef.current=0;
     setRaidJackResult(null);
     speciesChallengeBattleRunRef.current=null; battleScenarioRef.current=null;
@@ -13320,7 +13320,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       next=sent.state; outcome=sent.outcome;
       await raidJackSaveState(next);
     } catch (error) { outcome='error'; }
-    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
+    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
       lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
   };
   // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
@@ -13431,16 +13431,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
     // レイドバトル: いまの共有ライフの残りを取って、そこからはじめる(取れない・すでに0なら満タンから)
     let startLife = null;
+    let pumpkin = false;   // 大王を倒したあとは、敵が小さなぱんぷきんになる(共有ライフは無限・毎回ぜんかいのライフから)
     if (key === 'a') {
       try {
         const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
         const tierDef = raidJackTierAt('a', prep.tierIndex);
         const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
         if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+        pumpkin = prep.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
       } catch (e) { startLife = null; }
     }
     setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
-    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId, startLife });
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId, startLife, pumpkin });
   };
 
   const setupMon = (m, slotIdx) => {
@@ -17081,14 +17083,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
-        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
           if(!list.length) return false;
           const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,RAID_JACK_TEACHING_MAX);
           setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
-          setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,1+RAID_JACK_ALLY_MAX),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID});
+          setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,1+RAID_JACK_ALLY_MAX),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID,pumpkin:!isB&&opts&&opts.pumpkin===true});
           return true;
         }}/>)}
         {gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{

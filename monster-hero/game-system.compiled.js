@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec61303fd6ea1bf7
+// source-sha256: bc733c8e0c9bab7a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 06:53";
+const BUILD_DATE = "2026-10-05 07:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35682,6 +35682,7 @@ const raidJackStoryUnlockKey = id => `${String(id).replace(/^raid_jack_/, 'raidJ
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';
 const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
+const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
 const RAID_JACK_TURN_GROWTH = 1.05;
 const RAID_JACK_TURN_REGEN_STEP = 0.015;
@@ -35725,6 +35726,8 @@ const raidJackTier = (id, name, power, actionCount, atkPower = power) => Object.
 });
 const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
 const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0]), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1]), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2]), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3]), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4])]);
+const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, RAID_JACK_A_ATK_POWERS[1]);
+const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
 const raidJackTiers = kind => kind === 'b' ? RAID_JACK_B_TIERS : RAID_JACK_A_TIERS;
 const raidJackTierAt = (kind, index) => {
@@ -35828,13 +35831,27 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
   }
   return n;
 };
-const raidJackMakeEnemy = (kind, tierIndex, mode) => {
+const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, {
     mode,
     actionCount: tier.actionCount
   });
   if (!enemy) return null;
+  if (opts.pumpkin === true && kind === 'a' && tierIndex === RAID_JACK_A_TIERS.length - 1) {
+    const p = RAID_JACK_PUMPKIN;
+    return {
+      ...enemy,
+      name: p.name,
+      maxHp: p.hp,
+      hp: p.hp,
+      atk: p.atk,
+      raidJackTier: tier.id,
+      raidJackPumpkin: true,
+      imgUrl: typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : enemy.imgUrl,
+      poseImgUrl: null
+    };
+  }
   return {
     ...enemy,
     name: tier.name,
@@ -48619,8 +48636,8 @@ const HomeRaidJack = ({
   }, []);
   const tiers = RAID_JACK_A_TIERS;
   const totalOf = i => totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0;
-  const currentIndex = totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
-  const allDone = !!totals && currentIndex < 0;
+  const allDone = raidJackBossDown(totals);
+  const currentIndex = allDone ? -1 : totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
@@ -48628,17 +48645,18 @@ const HomeRaidJack = ({
     type: "button",
     "data-home-raid-jack": true,
     onClick: onOpen,
-    "aria-label": `${tier.name}があらわれた！タップでレイド画面を開く`,
+    "aria-label": allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`,
     style: HOME_RAID_JACK_BUTTON_STYLE
   }, React.createElement("span", {
-    "data-jack-aura": Number(String(tier.id).slice(1)) || undefined,
+    "data-jack-aura": allDone ? undefined : Number(String(tier.id).slice(1)) || undefined,
+    "data-home-raid-pumpkin": allDone ? 'true' : undefined,
     style: {
       position: 'relative',
       display: 'block',
       width: '100%',
       aspectRatio: '1024 / 640'
     }
-  }, React.createElement("span", {
+  }, !allDone && React.createElement("span", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -48647,7 +48665,21 @@ const HomeRaidJack = ({
     }
   }, React.createElement(JackAuraLayer, {
     tier: Number(String(tier.id).slice(1)) || 0
-  })), React.createElement("img", {
+  })), allDone ? React.createElement("img", {
+    className: "mh-home-raid-jack-img",
+    src: PUMPKIN_ICON_IMG,
+    alt: "",
+    draggable: false,
+    style: {
+      position: 'absolute',
+      left: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`,
+      bottom: 0,
+      width: `${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`,
+      height: 'auto',
+      filter: 'drop-shadow(0 6px 10px #000a)',
+      pointerEvents: 'none'
+    }
+  }) : React.createElement(React.Fragment, null, React.createElement("img", {
     className: "mh-home-raid-jack-img",
     src: JACK_IMG,
     alt: "",
@@ -48678,7 +48710,7 @@ const HomeRaidJack = ({
       filter: `drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`,
       pointerEvents: 'none'
     }
-  })), React.createElement("span", {
+  }))), React.createElement("span", {
     className: "mh-home-raid-jack-shadow",
     "aria-hidden": "true",
     style: {
@@ -48709,7 +48741,15 @@ const HomeRaidJack = ({
     style: {
       display: 'block'
     }
-  }, allDone ? 'ジャックを倒した！みんなありがとう' : `${tier.name}があらわれた！`), React.createElement("span", {
+  }, allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！` : `${tier.name}があらわれた！`), allDone ? React.createElement("span", {
+    "data-home-raid-pumpkin-note": true,
+    style: {
+      display: 'block',
+      marginTop: '2px',
+      fontSize: '8px',
+      opacity: .9
+    }
+  }, "ジャックを倒した！あそんでダメージを競おう") : React.createElement(React.Fragment, null, React.createElement("span", {
     style: {
       display: 'block',
       height: '7px',
@@ -48728,7 +48768,7 @@ const HomeRaidJack = ({
       display: 'block',
       height: '100%',
       width: `${rate * 100}%`,
-      background: allDone ? '#10b981' : '#f97316'
+      background: '#f97316'
     }
   })), totals === null ? React.createElement("span", {
     style: {
@@ -48748,7 +48788,7 @@ const HomeRaidJack = ({
       fontSize: '8px',
       opacity: .85
     }
-  }, "共有HP ", left.toLocaleString())));
+  }, "共有HP ", left.toLocaleString()))));
 };
 function HomeScreen({
   assistantBondUp,
@@ -49457,6 +49497,7 @@ const BATTLE_PERF = (() => {
 })();
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Kawazumo: 'kawazumo',
+  Pumpkin: 'pumpkin',
   Metalner: 'metalner',
   Inari: 'inari',
   Koinobori: 'koinobori',
@@ -49649,6 +49690,21 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
       pierceCharge: ['stance', 'lock']
     }
   },
+  pumpkin: {
+    idle: 'hop',
+    skills: {
+      normal: ['lunge', 'burst', '🎃', 'shoot'],
+      sweep: ['lunge', null, '👻', 'shoot'],
+      rush: ['flurry', 'burst', '🎃', 'shoot'],
+      pierce: ['spin', 'slash'],
+      special: ['leap', 'ring', '🍬', 'rain'],
+      allout: ['dash', 'widebeam', '👻', 'shoot'],
+      roar: ['rise', 'aura', '🌙', 'rise'],
+      regen: ['heal', 'sparkle'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
   awakenedMoo: {
     idle: null,
     skills: {
@@ -49703,6 +49759,10 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
     impact: 'nova'
   },
   jack: {
+    impact: 'stamp',
+    mark: '🎃'
+  },
+  pumpkin: {
     impact: 'stamp',
     mark: '🎃'
   }
@@ -50297,6 +50357,47 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
       flat: .45
     }]
   },
+  pumpkin: {
+    special: [{
+      t: 'bits',
+      n: 14,
+      shape: 'star',
+      dist: 140,
+      d: 280
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'flame',
+      dist: 110,
+      d: 330,
+      fall: true
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.4
+    }],
+    allout: [{
+      t: 'blade',
+      a: 0,
+      len: 420,
+      w: 16,
+      d: 240
+    }, {
+      t: 'bits',
+      n: 16,
+      shape: 'spark',
+      dist: 130,
+      d: 260
+    }, {
+      t: 'wave',
+      d: 300
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.6,
+      flat: .45
+    }]
+  },
   splatter: {
     special: [{
       t: 'blade',
@@ -50777,7 +50878,7 @@ function BattleScreen({
   const idleMotionOff = battleFx.idleMotion === 'OFF' || fxLoad === 'LIGHT';
   const shakeOff = battleFx.shake === 'OFF';
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
-  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.id] || null : null;
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id] || null : null;
   const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
   useEffect(() => {
     if (bossMovieSrc) preloadBossMovie(bossMovieSrc);
@@ -50890,7 +50991,13 @@ function BattleScreen({
     height: '100%',
     marginTop: '-6%'
   };
-  const jackAuraTier = enemy?.id === 'Jack' ? Number(String(enemy.raidJackTier || '').slice(1)) || 0 : 0;
+  const PUMPKIN_BATTLE_STYLE = {
+    width: `${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`,
+    height: `${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`,
+    marginLeft: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`,
+    marginTop: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`
+  };
+  const jackAuraTier = enemy?.id === 'Jack' && !enemy.raidJackPumpkin ? Number(String(enemy.raidJackTier || '').slice(1)) || 0 : 0;
   const enemyBossImgSrc = enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? {
     '--em-e': JSON.stringify(emSpec[2])
@@ -50898,13 +51005,14 @@ function BattleScreen({
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
   const enemyFlashOn = !!(enemyMotion && enemy?.imgUrl && (enemySkillNow || enemyHurtNow));
   const enemyFlashIsJack = enemy?.id === 'Jack';
+  const enemyJackArtStyle = enemy?.raidJackPumpkin ? PUMPKIN_BATTLE_STYLE : enemyBossImgSrc !== enemy?.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE;
   const enemyFlashNode = enemyFlashOn ? React.createElement("img", {
     "data-enemy-flash": true,
     src: enemyFlashIsJack ? enemyBossImgSrc : enemy.imgUrl,
     alt: "",
     "aria-hidden": "true",
     draggable: false,
-    style: enemyFlashIsJack ? enemyBossImgSrc !== enemy.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE : undefined
+    style: enemyFlashIsJack ? enemyJackArtStyle : undefined
   }) : null;
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? {
     '--em-dur': `${enemyAttackFx.ms}ms`
@@ -51554,7 +51662,7 @@ function BattleScreen({
     fx: enemyAttackFx,
     motion: enemyMotion,
     isMoo: enemyIsMoo,
-    enemyId: enemy?.id,
+    enemyId: enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id,
     skillLabel: enemySkillName?.label || null,
     lite: fxLoad === 'LIGHT'
   }), enemySkillName && !(enemyIsMoo && emSet && enemyAttackFx?.skill && TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill)) && ReactDOM.createPortal(React.createElement("div", {
@@ -51656,7 +51764,7 @@ function BattleScreen({
     style: {
       width: '100%',
       height: '100%',
-      ...(enemy?.id === 'Jack' ? enemyBossImgSrc !== enemy?.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE : null),
+      ...(enemy?.id === 'Jack' ? enemyJackArtStyle : null),
       animation: liteBattleView || emSpec || enemyHurtNow || emSet && !enemyAttackAnim ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
       imageRendering: 'auto'
     },
@@ -59665,16 +59773,22 @@ const RaidJackDebugScreen = ({
   }, raidJackTiers(fightKind).map((t, i) => React.createElement("option", {
     key: t.id,
     value: i + 1
-  }, i + 1, ": ", t.name)))), React.createElement("div", {
+  }, i + 1, ": ", t.name)), fightKind === 'a' && React.createElement("option", {
+    value: RAID_JACK_A_TIERS.length + 1
+  }, RAID_JACK_A_TIERS.length + 1, ": ", RAID_JACK_PUMPKIN.name, "(大王を倒したあと)"))), React.createElement("div", {
     className: "mt-1 text-[10px] text-slate-300"
   }, (() => {
-    const t = raidJackTierAt(fightKind, fightTier - 1);
-    return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
+    const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1;
+    const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1);
+    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
   })()), React.createElement("button", {
     "data-raid-fight-start": true,
     className: `${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`,
     onClick: () => {
-      if (onStartBattle && onStartBattle(fightKind, fightTier - 1) === false) say('編成できるモンスターがいません');
+      const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1;
+      if (onStartBattle && (pk ? onStartBattle('a', RAID_JACK_A_TIERS.length - 1, {
+        pumpkin: true
+      }) : onStartBattle(fightKind, fightTier - 1)) === false) say('編成できるモンスターがいません');
     }
   }, "この条件でジャックと戦う")), React.createElement("section", {
     className: "space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
@@ -60051,6 +60165,7 @@ const RaidJackScreen = ({
     const isOpen = unlocked(i);
     const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
     const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);
+    const isPumpkin = tab === 'a' && i === tiers.length - 1 && done;
     const on = i === current;
     return React.createElement("button", {
       type: "button",
@@ -60062,12 +60177,17 @@ const RaidJackScreen = ({
       })),
       className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
     }, React.createElement("span", {
-      "data-jack-aura": isOpen ? i + 1 : undefined,
+      "data-jack-aura": isOpen && !isPumpkin ? i + 1 : undefined,
+      "data-raid-pumpkin": isPumpkin ? 'true' : undefined,
       className: "relative block h-14 w-16 shrink-0"
-    }, isOpen && React.createElement(JackAuraLayer, {
+    }, isOpen && !isPumpkin && React.createElement(JackAuraLayer, {
       tier: i + 1,
       limit: 8
-    }), React.createElement("img", {
+    }), isPumpkin ? React.createElement("img", {
+      src: PUMPKIN_ICON_IMG,
+      alt: "",
+      className: "relative mx-auto h-14 w-14 object-contain"
+    }) : React.createElement("img", {
       src: JACK_IMG,
       alt: "",
       className: "relative h-14 w-16 object-contain",
@@ -60083,9 +60203,12 @@ const RaidJackScreen = ({
       className: "flex items-center gap-2"
     }, React.createElement("span", {
       className: "truncate text-[13px] font-black text-white"
-    }, i + 1, ". ", t.name), React.createElement("span", {
-      className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
-    }, done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isOpen ? React.createElement(React.Fragment, null, React.createElement(RaidJackHpBar, {
+    }, i + 1, ". ", isPumpkin ? RAID_JACK_PUMPKIN.name : t.name), React.createElement("span", {
+      className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
+    }, isPumpkin ? 'あそびに来た' : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isPumpkin ? React.createElement("div", {
+      "data-raid-pumpkin-note": true,
+      className: "text-[10px] leading-snug text-amber-100"
+    }, "共有ライフは無限です。毎回ぜんかいのライフから戦い、与えたダメージが累計に足されます", totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : '') : isOpen ? React.createElement(React.Fragment, null, React.createElement(RaidJackHpBar, {
       left: left,
       max: t.hp,
       tone: done ? 'emerald' : 'orange'
@@ -72124,7 +72247,7 @@ function MonsterHeroGame() {
         let tookEnemyAttack = false;
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
         const fxSkill = intent.variant || (intent.type === 'SPECIAL' ? 'special' : 'normal');
-        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? enemy?.id : null;
+        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id : null;
         const specialMovieSrc = fxSkill === 'special' && motionEnemyId && typeof enemy?.specialMovie === 'string' && normalizeBattleFxSettings(battleFxSettings).specialMovie === 'ON' && !(catchUpUntilRef.current > Date.now()) ? enemy.specialMovie : null;
         const movieShown = specialMovieSrc ? await playBossMovie(specialMovieSrc, {
           label: intent.label || enemy?.special || '',
@@ -74370,7 +74493,9 @@ function MonsterHeroGame() {
     const stagedEnemyMultiplier = extremeWaveEnemyMultiplier(specialRuleDifficulty, w);
     const raidRun = isRaidJackMode(runMode) ? raidJackRunRef.current : null;
     const tacticsEnemyBoost = isTacticsMode(runMode) && !raidRun ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now) : 1;
-    const newEnemy = raidRun ? raidJackMakeEnemy(raidRun.kind, raidRun.tierIndex, runMode) : createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost, {
+    const newEnemy = raidRun ? raidJackMakeEnemy(raidRun.kind, raidRun.tierIndex, runMode, {
+      pumpkin: raidRun.pumpkin === true
+    }) : createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost, {
       mode: runMode
     });
     if (raidRun && newEnemy && Number.isFinite(raidRun.startLife) && raidRun.startLife > 0 && raidRun.startLife < newEnemy.maxHp) newEnemy.hp = Math.floor(raidRun.startLife);
@@ -74894,7 +75019,8 @@ function MonsterHeroGame() {
       eventId: raidJackSafeEventId(req.eventId),
       turns: 1,
       finished: false,
-      startLife: !isB && Number.isFinite(req.startLife) && req.startLife > 0 ? Math.floor(req.startLife) : null
+      startLife: !isB && Number.isFinite(req.startLife) && req.startLife > 0 ? Math.floor(req.startLife) : null,
+      pumpkin: !isB && req.pumpkin === true
     };
     raidJackDamageRef.current = 0;
     setRaidJackResult(null);
@@ -75062,7 +75188,7 @@ function MonsterHeroGame() {
     setRaidJackResult({
       kind: run.kind,
       tierIndex: run.tierIndex,
-      tierName: tier.name,
+      tierName: run.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
       reason,
       damage,
       defeated,
@@ -75231,12 +75357,14 @@ function MonsterHeroGame() {
     }
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
     let startLife = null;
+    let pumpkin = false;
     if (key === 'a') {
       try {
         const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
         const tierDef = raidJackTierAt('a', prep.tierIndex);
         const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
         if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+        pumpkin = prep.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
       } catch (e) {
         startLife = null;
       }
@@ -75251,7 +75379,8 @@ function MonsterHeroGame() {
       party,
       teachingIds,
       eventId: raidJackEventId,
-      startLife
+      startLife,
+      pumpkin
     });
   };
   const setupMon = (m, slotIdx) => {
@@ -83375,7 +83504,7 @@ function MonsterHeroGame() {
         await openRaidJack();
       },
       onGoHome: returnToHome,
-      onStartBattle: (kind, tierIndex) => {
+      onStartBattle: (kind, tierIndex, opts) => {
         const isB = kind === 'b';
         const mode = isB ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
         const list = isB ? getActiveMonsterList() : getUnlockedBaseMonsterList();
@@ -83390,7 +83519,8 @@ function MonsterHeroGame() {
           tierIndex,
           party: list.slice(0, 1 + RAID_JACK_ALLY_MAX),
           teachingIds,
-          eventId: RAID_JACK_DEBUG_EVENT_ID
+          eventId: RAID_JACK_DEBUG_EVENT_ID,
+          pumpkin: !isB && opts && opts.pumpkin === true
         });
         return true;
       }
@@ -92712,6 +92842,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
+    [data-enemy-motion="pumpkin"] { --em-c: 253,186,116; }
     /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
     [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
@@ -92788,7 +92919,7 @@ const createAnimationStyle = () => {
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
-    [data-moo-stage="true"][data-enemy-motion="jack"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
+    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

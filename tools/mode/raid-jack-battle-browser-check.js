@@ -198,6 +198,29 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
       await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     }
+    // 大王を倒したあとの「ぱんぷきん」(2026-10-05): 名前・絵・オーラ無し・攻撃力は子爵・ライフは大王と同じ・降参したら与えたダメージだけ送る
+    {
+      await page.locator('[data-raid-fight-kind]').selectOption('a');
+      await page.locator('[data-raid-fight-tier]').selectOption('6');
+      await page.locator('[data-raid-fight-start]').click();
+      await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
+      await page.waitForTimeout(1500);
+      const pk = await page.evaluate(() => {
+        const stage = document.querySelector('[data-enemy-motion]');
+        const img = stage ? stage.querySelector('img:not([data-enemy-flash])') : null;
+        return { motion: stage && stage.getAttribute('data-enemy-motion'), aura: !!document.querySelector('[data-jack-aura]'), src: img ? img.getAttribute('src') : '', alt: img ? img.getAttribute('alt') : '', body: document.body.innerText.slice(0, 4000) };
+      });
+      check('ぱんぷきん: 動きは pumpkin・オーラは出ない・絵は小さなぱんぷきん(pumpkin-icon)・名前は「ぱんぷきん」', pk.motion === 'pumpkin' && pk.aura === false && /pumpkin-icon/.test(pk.src) && pk.alt === 'ぱんぷきん', JSON.stringify({ m: pk.motion, a: pk.aura, s: pk.src.slice(-30), alt: pk.alt }));
+      if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/pumpkin-battle.png` }).catch(() => {});
+      await page.locator('[data-battle-menu-button]').click();
+      await page.locator('[data-battle-quit]').click();
+      await page.getByText('降参しますか？').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: /降参|あきらめる|リタイア/ }).filter({ hasText: /降参|あきらめる|リタイア/ }).last().click();
+      await page.locator('[data-raid-jack-result]').waitFor({ timeout: 30000 });
+      check('ぱんぷきん: 結果の見出しも「ぱんぷきん」', /ぱんぷきん/.test(await page.locator('[data-raid-jack-result]').innerText()));
+      await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+      await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    }
     // ④ AUTOで最後まで進める(A・段階1)。どんな終わり方でも結果が1回だけ出て、与ダメージが1回だけ送られる
     posts.length = 0;
     await page.locator('[data-raid-fight-kind]').selectOption('a');

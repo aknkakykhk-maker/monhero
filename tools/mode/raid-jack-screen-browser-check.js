@@ -271,6 +271,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
     await page.locator('[data-raid-jack-all-toggle]').waitFor({ timeout: 30000 });
     check('大王が倒れると、「大王への貢献/累計ダメージ」の切り替えが出る', /大王への貢献/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()) && /累計ダメージ/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()));
+    // 大王を倒したあとの段階5は、小さなぱんぷきん(共有ライフは無限・毎回ぜんかいから)
+    check('大王を倒したあと、段階5の絵がぱんぷきんになり、オーラは付かない', (await page.locator('[data-raid-pumpkin="true"]').count()) === 1 && (await page.locator('[data-raid-jack-tier="a5"] [data-jack-aura]').count()) === 0 && /pumpkin-icon/.test((await page.locator('[data-raid-pumpkin="true"] img').getAttribute('src')) || ''));
+    const tile5 = await page.locator('[data-raid-jack-tier="a5"]').innerText();
+    check('段階5は「ぱんぷきん」「あそびに来た」と、共有ライフは無限の説明が出る(共有HPバーは出ない)', /5\. ぱんぷきん/.test(tile5) && /あそびに来た/.test(tile5) && /共有ライフは無限/.test(tile5) && !/共有HP/.test(tile5), tile5.replace(/\s+/g, ' ').slice(0, 120));
+    check('ほかの段階(男爵〜公爵)は今までどおりジャックの絵・討伐済み', /1\. ジャック男爵\s*討伐済み/.test(await page.locator('[data-raid-jack-screen]').innerText()));
     await page.locator('[data-raid-jack-all-mode="all"]').click();
     await page.waitForFunction(() => /8,800,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
@@ -279,6 +284,15 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-all-mode="tier"]').click();
     await page.waitForFunction(() => /への貢献ランキング/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     check('「大王への貢献」へ戻せる', /への貢献ランキング/.test(await raidText()));
+    // HOME のジャックも、大王を倒したあとは小さなぱんぷきん(オーラ・ポーズ絵なし)
+    await page.locator('button[aria-label="戻る"]').first().click();
+    await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    await page.locator('[data-raid-go-home]').click();
+    await page.locator('[data-home-raid-pumpkin="true"]').waitFor({ timeout: 30000 });
+    const homeBtn = await page.locator('[data-home-raid-jack]').innerText();
+    check('HOME: 大王を倒したあとは「ぱんぷきんが遊びに来た！」と出て、共有HPバーは出ない', /ぱんぷきんが遊びに来た/.test(homeBtn) && !/共有HP/.test(homeBtn), homeBtn.replace(/\s+/g, ' ').slice(0, 100));
+    check('HOME: ぱんぷきんの絵が出て、ジャックの絵・オーラは出ない', (await page.locator('[data-home-raid-jack] img[src*="pumpkin-icon"]').count()) === 1 && (await page.locator('[data-home-raid-jack] img[src*="jack.png"], [data-home-raid-jack] img[src*="jack-pose"]').count()) === 0 && (await page.locator('[data-home-raid-jack] [data-jack-aura-el]').count()) === 0);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/home-pumpkin.png` });
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     check('画面が横にはみ出さない', size.s <= size.c + 1, `${size.s} / ${size.c}`);
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));
