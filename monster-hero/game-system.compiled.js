@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3b11145570d2fffd
+// source-sha256: e999ebc599f56a36
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 01:23";
+const BUILD_DATE = "2026-10-05 06:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -60180,7 +60180,8 @@ const RaidJackPrepScreen = ({
   candidates,
   teachings,
   onBack,
-  onStart
+  onStart,
+  onOpenDetail
 }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;
@@ -60198,12 +60199,14 @@ const RaidJackPrepScreen = ({
     return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
   const toggleTeach = id => setTeachIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length >= maxTeach ? maxTeach === 1 ? [id] : prev : [...prev, id]);
-  const tile = (mon, on, onClick, attrs) => React.createElement("button", _extends({
-    type: "button",
+  const tile = (mon, on, onClick, attrs) => React.createElement("div", {
     key: keyOf(mon),
+    className: "relative"
+  }, React.createElement("button", _extends({
+    type: "button",
     onClick: onClick
   }, attrs, {
-    className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
+    className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
   }), (() => {
     const face = friendsFaceIconOf(mon.baseId || mon.id);
     return face ? React.createElement(BreederIcon, {
@@ -60217,7 +60220,16 @@ const RaidJackPrepScreen = ({
     });
   })(), React.createElement("span", {
     className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-  }, mon.name));
+  }, mon.name)), typeof onOpenDetail === 'function' && React.createElement("button", {
+    type: "button",
+    "data-raid-detail": keyOf(mon),
+    "aria-label": `${mon.name}の詳細を見る`,
+    onClick: e => {
+      e.stopPropagation();
+      onOpenDetail(mon);
+    },
+    className: "absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
+  }, "i"));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
     "data-raid-jack-prep": true
@@ -60233,7 +60245,11 @@ const RaidJackPrepScreen = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-orange-200"
-  }, "勇者モン(1体)"), React.createElement("div", {
+  }, "勇者モン(1体)", React.createElement("span", {
+    className: "ml-1 text-[9px] font-normal text-slate-300"
+  }, "右上の ", React.createElement("b", {
+    className: "text-sky-200"
+  }, "i"), " でモンスターの詳細が見られます")), React.createElement("div", {
     className: "grid grid-cols-5 gap-1.5"
   }, list.map(mon => tile(mon, heroKey === keyOf(mon), () => {
     setHeroKey(keyOf(mon));
@@ -62450,6 +62466,7 @@ function MonsterHeroGame() {
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
@@ -83318,7 +83335,7 @@ function MonsterHeroGame() {
       renderPlace: rankingPlace,
       renderIcon: rankingBreederIcon,
       cardClass: rankingCardClass
-    }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(RaidJackPrepScreen, {
+    }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(React.Fragment, null, React.createElement(RaidJackPrepScreen, {
       kind: raidJackPrep.kind,
       tierIndex: raidJackPrep.tierIndex,
       candidates: raidJackPrep.kind === 'b' ? getActiveMonsterList() : getUnlockedBaseMonsterList(),
@@ -83326,9 +83343,23 @@ function MonsterHeroGame() {
         const unlocked = TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
         return unlocked.length > 0 ? unlocked : getActiveTeachingCards();
       })(),
-      onBack: () => setGameState('RAID_JACK'),
-      onStart: startRaidJackFromPrep
-    }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
+      onOpenDetail: mon => setRaidJackDetailMon(mon),
+      onBack: () => {
+        setRaidJackDetailMon(null);
+        setGameState('RAID_JACK');
+      },
+      onStart: args => {
+        setRaidJackDetailMon(null);
+        return startRaidJackFromPrep(args);
+      }
+    }), raidJackDetailMon && renderMonsterDetailModal({
+      mon: raidJackDetailMon,
+      masu: raidJackDetailMon.masuId ? getMasuMon(raidJackDetailMon.masuId) : null,
+      onClose: () => setRaidJackDetailMon(null),
+      accent: 'indigo',
+      readOnly: true,
+      label: `${raidJackDetailMon.name}の詳細`
+    })), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
       raidForce: raidJackDebugForce,
       onToggleRaidForce: () => setRaidJackDebugForce(v => !v),

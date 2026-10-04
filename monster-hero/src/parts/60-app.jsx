@@ -2341,6 +2341,7 @@ function MonsterHeroGame() {
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);       // 編成画面で詳細を見ているモンスター(確認専用)
   const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
   // 画面のなかの案内(助手の吹き出し)は、レイド画面を開いた最初の1度だけ。保存キーは新しく足す(CLAUDE.md ⑦)
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
@@ -17068,11 +17069,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidJackRewards} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
           guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}
           renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
-        {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
+        {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<><RaidJackPrepScreen
           kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
           candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
           teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
-          onBack={()=>setGameState('RAID_JACK')} onStart={startRaidJackFromPrep}/>)}
+          onOpenDetail={(mon)=>setRaidJackDetailMon(mon)}
+          onBack={()=>{setRaidJackDetailMon(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);return startRaidJackFromPrep(args);}}/>
+          {raidJackDetailMon&&renderMonsterDetailModal({
+            mon:raidJackDetailMon,
+            masu:raidJackDetailMon.masuId?getMasuMon(raidJackDetailMon.masuId):null,
+            onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
+            label:`${raidJackDetailMon.name}の詳細`,
+          })}</>)}
         {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;

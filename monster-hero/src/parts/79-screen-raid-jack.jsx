@@ -317,7 +317,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
 };
 
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
-const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart }) => {
+const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, onOpenDetail }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
@@ -334,9 +334,12 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
   const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
+  // 選ぶときにモンスターの詳細(ステータス・技・適性など)を見られる(2026-10-05・ユーザー指示)。
+  // 詳細のボタンは、選ぶボタンの入れ子にならないよう、外側のdivの右上に重ねて置く(押しても選択は変わらない)
   const tile = (mon, on, onClick, attrs) => (
-    <button type="button" key={keyOf(mon)} onClick={onClick} {...attrs}
-      className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
+    <div key={keyOf(mon)} className="relative">
+    <button type="button" onClick={onClick} {...attrs}
+      className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
       {(() => {
         // 本番のプロフィールのアイコンと同じ見え方(拡大・位置の調整つき)にそろえる
         const face = friendsFaceIconOf(mon.baseId || mon.id);
@@ -346,6 +349,11 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       })()}
       <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
     </button>
+    {typeof onOpenDetail === 'function' && (
+      <button type="button" data-raid-detail={keyOf(mon)} aria-label={`${mon.name}の詳細を見る`} onClick={(e) => { e.stopPropagation(); onOpenDetail(mon); }}
+        className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90">i</button>
+    )}
+    </div>
   );
   return (
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep>
@@ -353,7 +361,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         note={`${isB ? 'マスモン' : 'ベースモン'}で編成・20ターン勝負`} />
       <div className={`${SCREEN_LIST_CLASS} space-y-3`}>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
-          <div className="mb-1 text-[11px] font-black text-orange-200">勇者モン(1体)</div>
+          <div className="mb-1 text-[11px] font-black text-orange-200">勇者モン(1体)<span className="ml-1 text-[9px] font-normal text-slate-300">右上の <b className="text-sky-200">i</b> でモンスターの詳細が見られます</span></div>
           <div className="grid grid-cols-5 gap-1.5">
             {list.map((mon) => tile(mon, heroKey === keyOf(mon), () => { setHeroKey(keyOf(mon)); setAllyKeys((prev) => prev.filter((x) => x !== keyOf(mon))); }, { 'data-raid-hero': keyOf(mon) }))}
           </div>

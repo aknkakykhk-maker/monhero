@@ -34,6 +34,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-05 06:48", type:'update', title:'ジャックに挑む編成で、モンスターの詳細が見られるようになりました', status:'new', releaseFlag:'raidJack',
+    items:[
+      'レイドバトル・グランドスラムの編成画面で、勇者モンや供モンを選ぶときに、モンスターの右上の「i」を押すと詳細が開きます。',
+      'ステータス・適性・技などを見比べてから選べます。詳細は見るだけで、開いても選んだ編成は変わりません。',
+    ],
+  },
+  {
     date: "2026-10-05 04:00", type:'content', title:'カボチャの大王ジャックがあらわれました', status:'new', releaseFlag:'raidJack', visibleFrom:'2026-10-05T04:00:00+09:00',
     image:'images/enemies/jack.png?v=9814dccba5a2',
     assistantNotice:{ id:'update_notice_raid_jack_v1', type:'content', notifyFrom:'2026-10-05T04:00:00+09:00', notifyUntil:'2026-11-01T04:00:00+09:00' },

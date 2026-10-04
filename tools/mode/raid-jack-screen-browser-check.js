@@ -96,6 +96,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
+    // 公開前の画面を確かめる検査なので、時計を開始日時(2026-10-05 4:00)より前に固定する(公開後の本物の時刻だと、旗が立って前提が変わる)
+    await page.clock.setFixedTime(new Date('2026-10-05T03:00:00+09:00'));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
@@ -194,6 +196,20 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-hero]').first().click();
     await page.locator('[data-raid-ally]').nth(0).click();
     check('勇者と供モンを選ぶと始められる', !(await page.locator('[data-raid-prep-start]').isDisabled()));
+    // モンスターの詳細を、選ぶ画面から見られる(確認専用。選択は変わらない・閉じると編成画面に戻る)
+    const detailBtn = page.locator('[data-raid-detail]').first();
+    check('各モンスターの右上に詳細ボタンがある', (await page.locator('[data-raid-detail]').count()) >= 2);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-prep.png` });
+    const heroBefore = await page.locator('[data-raid-hero]').first().getAttribute('class');
+    await detailBtn.click();
+    await page.locator('[role="dialog"][aria-label$="の詳細"]').waitFor({ timeout: 20000 });
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-prep-detail.png` });
+    const dlg = await page.locator('[role="dialog"][aria-label$="の詳細"]').innerText();
+    check('詳細にステータス・適性などが出る', /ステータス|HP|適性|固有技/.test(dlg) && dlg.length > 60, dlg.replace(/\s+/g, ' ').slice(0, 120));
+    check('詳細は確認専用(名前の変更ボタンが無い)', (await page.locator('[role="dialog"][aria-label$="の詳細"] [aria-label*="名前"]').count()) === 0);
+    await page.locator('[role="dialog"][aria-label$="の詳細"]').getByRole('button', { name: '閉じる' }).last().click();
+    await page.locator('[role="dialog"][aria-label$="の詳細"]').waitFor({ state: 'detached', timeout: 10000 });
+    check('詳細を閉じると編成画面に戻り、選んだ状態は変わらない', (await page.locator('[data-raid-jack-prep]').count()) === 1 && (await page.locator('[data-raid-hero]').first().getAttribute('class')) === heroBefore && !(await page.locator('[data-raid-prep-start]').isDisabled()));
     posts.length = 0;
     await page.locator('[data-raid-prep-start]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
