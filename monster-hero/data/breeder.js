@@ -231,6 +231,38 @@ const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// ハロウィン・ナイトの衣装のアイコン(2026-10-04・ユーザー指示「みゅあ、きき、もものアイコンの販売。ハロウィンみたいな名称。
+// 同じキャラだけど通常のみゅあとかとは混ぜずに販売。ただし表情とかはまとめる。ブリーダーポイント1(イベント後販売)、ビートポイント1000」)。
+//   ・通常のアイコン(myua_* / kiki_* / momosuke_*)とは別のまとめ(mua_halloween など)。id が違うので、持っているかも別々に数える
+//   ・イベント中(10/4 8:00〜11/1 3:59)はビートP交換所で1000P、終わったあとはブリーダーP交換所で1pt(下の halloweenIconSale が決める)
+//   ・どちらで買っても8表情ぜんぶ手に入る(まとめの中身が mh_market_icons に全部入る。新しい保存キーは作らない)
+//   ・絵は衣装の顔アイコンをそのまま使う(images/assistant/halloween/face/)。別のファイルを作らない
+const HALLOWEEN_ICON_SETS = Object.freeze([
+  ['mua', 'myua', 'みゅあ'],
+  ['kiki', 'kiki', 'きき'],
+  ['momosuke', 'momosuke', 'ももすけ'],
+].map(([assistantId, prefix, who]) => Object.freeze({
+  groupId: `${assistantId}_halloween`,
+  assistantId,
+  name: `${who}（ハロウィン）`,
+  memberIds: Object.freeze(MYUA_ICON_EXPRESSIONS.map(([key]) => `${prefix}_halloween_${key}`)),
+  prefix,
+})));
+// いまの売り場。'beatPoint'(ビートP交換所)・'breederPoint'(ブリーダーP交換所)・null(まだ売らない)。見るたびに数え直す
+const halloweenIconSale = (nowMs = Date.now()) => {
+  if (nowMs < Date.parse(ASSISTANT_COSTUME_HALLOWEEN_START_AT)) return null;
+  return nowMs < Date.parse(ASSISTANT_COSTUME_HALLOWEEN_END_AT) ? 'beatPoint' : 'breederPoint';
+};
+const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `${set.prefix}_halloween_${key}`,
+  name: `${set.name}（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/halloween/face/${set.prefix}_${key}.PNG`,
+  cost: 1,
+  // ブリーダーP交換所に並ぶのはイベントが終わってから(それまでは false で出ない)
+  get shop() { return halloweenIconSale() === 'breederPoint' ? undefined : false; },
+})));
+
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -344,7 +376,8 @@ const BREEDER_MARKET_ITEMS = [
   ...MOMOSUKE_MARKET_ICONS,
   // 助手ドラの表情アイコン(8種)
   ...DRA_MARKET_ICONS,
-  ...ATSU_MARKET_ICONS
+  ...ATSU_MARKET_ICONS,
+  ...HALLOWEEN_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
 // 同じキャラのアイコンが何種類もある(助手の8表情・モンスターの顔と円盤石など)。
@@ -358,6 +391,9 @@ const BREEDER_MARKET_ITEMS = [
 //   「どれとどれが同じキャラか」だけをここで決める。
 const breederIconGroupKeyOf = (id) => {
   const key = String(id || '');
+  // ハロウィンのアイコンは通常のアイコンと混ぜない(下の通常の判定より先に見る)
+  const halloween = /^(myua|kiki|momosuke)_halloween_/.exec(key);
+  if (halloween) return `${halloween[1] === 'myua' ? 'mua' : halloween[1]}_halloween`;
   if (key === 'mua' || /^myua_/.test(key)) return 'mua';
   if (key === 'dra' || /^dra_/.test(key)) return 'dra';
   if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
@@ -365,7 +401,8 @@ const breederIconGroupKeyOf = (id) => {
   if (key === 'atsu' || /^atsu_/.test(key)) return 'atsu';
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
-const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ' });
+const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ',
+  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）' });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
   const order = [];

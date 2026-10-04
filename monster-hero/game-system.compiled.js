@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e6899146814e93d
+// source-sha256: d912d42e805e3706
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 10:04";
+const BUILD_DATE = "2026-10-04 10:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37445,6 +37445,9 @@ function BreederMarketScreen({
       }] : []), ...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer => offer.available !== false) ? [{
         key: 'costume',
         label: '着替え'
+      }] : []), ...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer => offer.available !== false) ? [{
+        key: 'icon',
+        label: 'アイコン'
       }] : []), {
         key: 'item',
         label: 'アイテム'
@@ -37927,6 +37930,42 @@ function BreederMarketScreen({
         label: `${offer.name}の説明を見る`,
         onClick: () => onOpenItemDetail(item)
       }) : null
+    });
+  }), eventTab === 'icon' && RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.filter(offer => offer.available !== false).map(offer => {
+    const members = offer.memberIds.map(id => BREEDER_MARKET_ITEMS.find(m => m.id === id)).filter(Boolean);
+    const item = {
+      ...members[0],
+      name: offer.name,
+      groupMembers: members,
+      groupId: offer.groupId,
+      type: 'icon',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    const owned = isItemOwned({
+      id: members[0]?.id,
+      type: 'icon'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-icon': offer.id
+      },
+      previewIcon: previewIcon,
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      middle: React.createElement(MarketDetailChip, {
+        label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      })
     });
   }), eventTab === 'frame' && RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer => {
     const frame = profileFrameById(offer.frameId);
@@ -64607,6 +64646,9 @@ function MonsterHeroGame() {
       const isCostume = offer?.kind === 'costume';
       const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
       const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
+      const isIcon = offer?.kind === 'icon';
+      const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
+      const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
         if (frameStatus && !frameStatus.met) {
@@ -64626,10 +64668,11 @@ function MonsterHeroGame() {
         unlockedMonsterIds: beforeUnlocked,
         unlockedTeachingIds: beforeTeachings,
         ownedProfileFrames: beforeFrames,
-        ownedAssistantCostumes: beforeCostumes
+        ownedAssistantCostumes: beforeCostumes,
+        ownedMarketIcons: expandOwnedMarketIcons(beforeIcons)
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isIcon ? 'このアイコンはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -64660,6 +64703,10 @@ function MonsterHeroGame() {
         key: ASSISTANT_COSTUME_OWNED_KEY,
         before: storedCostumes,
         next: exchange.ownedAssistantCostumes
+      }] : []), ...(isIcon ? [{
+        key: 'mh_market_icons',
+        before: storedIcons,
+        next: exchange.ownedMarketIcons
       }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -64687,6 +64734,7 @@ function MonsterHeroGame() {
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
       }
+      if (isIcon) setOwnedMarketIcons(prev => [...new Set([...prev, ...exchange.ownedMarketIcons])]);
       if (isCostume) {
         ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
         setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
