@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3bef9128c1254b74
+// source-sha256: ecf30722d347bda8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:24";
+const BUILD_DATE = "2026-10-04 12:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37785,7 +37785,7 @@ function BreederMarketScreen({
     return campaign ? React.createElement(MarketNotice, {
       tone: "info",
       "data-event-point-campaign": true
-    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopScale) > 0 ? `。演奏でのクイック周回も${campaign.loopScale}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt)), "まで）") : null;
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopBoost) > 0 ? `。演奏でのクイック周回も${campaign.loopBoost}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt)), "まで）") : null;
   })(), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     value: activeDiamondTab,
     onChange: onSelectTab,
@@ -39660,9 +39660,9 @@ function RhythmSongSelectScreen({
     className: "block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "mt-0.5 block"
-  }, "キャンペーン中"), Number(beatPointCampaign.loopScale) > 0 && React.createElement("span", {
+  }, "キャンペーン中"), Number(beatPointCampaign.loopBoost) > 0 && React.createElement("span", {
     className: "block"
-  }, "周回 ×", beatPointCampaign.loopScale), React.createElement("span", {
+  }, "周回 ", beatPointCampaign.loopBoost, "倍"), React.createElement("span", {
     className: "block text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
     "data-rhythm-beat-band-landscape": true,
@@ -39911,7 +39911,7 @@ function RhythmSongSelectScreen({
     className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "min-w-0 truncate"
-  }, beatPointCampaign.name, Number(beatPointCampaign.loopScale) > 0 ? `・周回 ×${beatPointCampaign.loopScale}` : '中'), React.createElement("span", {
+  }, beatPointCampaign.name, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中'), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,

@@ -38,7 +38,7 @@ const o = ctx.out;
 
 // ① ビートP
 const hw = o.RHYTHM_EVENT_POINT_CAMPAIGNS.find((c) => c.id === 'halloween_night_2026');
-check('キャンペーンが1件ある(期間は10/4 8:00〜11/1 4:00の前・5倍)', !!hw && hw.startAt === START && hw.endAt === END && hw.boost === 5 && hw.loopScale === 5);
+check('キャンペーンが1件ある(期間は10/4 8:00〜11/1 4:00の前・5倍)', !!hw && hw.startAt === START && hw.endAt === END && hw.boost === 5 && hw.loopScale === 10 && hw.loopBoost === 5);
 const at = (text) => jst(text);
 check('開始の1ミリ秒前はハロウィンではない', o.rhythmEventPointCampaignAt(at(START) - 1)?.id !== 'halloween_night_2026');
 check('開始の時刻からハロウィン', o.rhythmEventPointCampaignAt(at(START))?.id === 'halloween_night_2026');
@@ -66,11 +66,12 @@ vm.runInContext(`${core.slice(sStart, sEnd)}\nthis.out={rhythmPlayRunLoops,rhyth
 const { rhythmPlayRunLoops, rhythmPlayRunLoopScale } = c2.out;
 const hwCampaign = o.rhythmEventPointCampaignAt(jst('2026-10-10T12:00:00+09:00'));
 const ranking = { songIds: ['monster_hero'] };
-check('期間中は全曲5倍(対象外の曲も)', rhythmPlayRunLoopScale('crazy_party_night', null, hwCampaign) === 5 && rhythmPlayRunLoopScale('monster_hero', null, hwCampaign) === 5);
-check('ランキングイベントの対象曲の3倍とは重ねず、5倍に置き換える', rhythmPlayRunLoopScale('monster_hero', ranking, hwCampaign) === 5);
+// ふだん(2倍)の5倍=10。ユーザー指示「クイック無限周回は普段の5倍にして」
+check('期間中は全曲、ふだん(2倍)の5倍=10(対象外の曲も)', rhythmPlayRunLoopScale('crazy_party_night', null, hwCampaign) === 10 && rhythmPlayRunLoopScale('monster_hero', null, hwCampaign) === 10 && hwCampaign.loopBoost * 2 === 10);
+check('ランキングイベントの対象曲の3倍とは重ねず、10に置き換える', rhythmPlayRunLoopScale('monster_hero', ranking, hwCampaign) === 10);
 check('期間の外は今までどおり(2倍・イベント対象曲は3倍)', rhythmPlayRunLoopScale('monster_hero', null, null) === 2 && rhythmPlayRunLoopScale('monster_hero', ranking, null) === 3);
 check('loopScale を書いていないキャンペーンは周回を変えない', rhythmPlayRunLoopScale('monster_hero', null, { boost: 5 }) === 2 && rhythmPlayRunLoopScale('monster_hero', null, { loopScale: 'x' }) === 2 && rhythmPlayRunLoopScale('monster_hero', null, { loopScale: 0 }) === 2);
-check('3分の曲は、ふだん6周・期間中15周', rhythmPlayRunLoops(180000, 2) === 6 && rhythmPlayRunLoops(180000, 5) === 15);
+check('3分の曲は、ふだん6周・期間中30周(5倍)', rhythmPlayRunLoops(180000, 2) === 6 && rhythmPlayRunLoops(180000, 10) === 30);
 
 // ③ ストーリー
 const stories = o.HALLOWEEN_NIGHT_STORIES;
