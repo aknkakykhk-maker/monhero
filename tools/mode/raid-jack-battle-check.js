@@ -73,7 +73,9 @@ vm.createContext(ceCtx);
 vm.runInContext(`${ceChunk}\nglobalThis.createBattleEnemy=createBattleEnemy;`, ceCtx);
 counts.forEach((t) => {
   const e = ceCtx.createBattleEnemy(1, 'Normal', 'Jack', t.power, 1, { mode: 'raid', actionCount: t.actionCount });
-  check(`${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()}`, e.maxHp === t.hp && e.hp === t.hp && e.atk === t.atk && e.actionCount === t.actionCount && e.id === 'Jack', `hp=${e.hp} atk=${e.atk}`);
+  // 実際の戦闘は raidJackMakeEnemy が、ライフ・攻撃力を段階の値で上書きする(攻撃力はレイドバトルだけ別の倍率・2026-10-04)。
+  // ここでは createBattleEnemy が出す技の本数・敵idと、段階の値(上書き後)を見る
+  check(`${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()}`, t.hp === Math.round(35000 * t.power * 10) && t.atk === Math.round(700 * t.atkPower) && e.actionCount === t.actionCount && e.id === 'Jack', `hp=${e.hp} atk=${e.atk}`);
 });
 const plain = ceCtx.createBattleEnemy(1, 'Normal', 'Dokudoku', 1, 1, { mode: 'tactics' });
 check('ほかの敵には actionCount が付かない(回帰)', !('actionCount' in plain));

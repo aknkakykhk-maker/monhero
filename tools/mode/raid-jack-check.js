@@ -25,7 +25,14 @@ const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 227500
 const bWant = [['初級ジャック', 70000, 3], ['中級ジャック', 700000, 4], ['上級ジャック', 3500000, 5], ['超級ジャック', 14000000, 5], ['極級ジャック', 35000000, 5]];
 aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
-check('A の攻撃倍率は 5/6.5/8/10/13', o.RAID_JACK_A_TIERS.map((t) => t.power).join() === '5,6.5,8,10,13');
+check('A のライフの倍率(power)は 5/6.5/8/10/13(ライフはそのまま)', o.RAID_JACK_A_TIERS.map((t) => t.power).join() === '5,6.5,8,10,13');
+// レイドバトルの攻撃力は、通常バトルの Easy / Normal / Hard / Expert / Master の攻撃倍率(DIFFICULTY_SETTINGS の power)と同じ(2026-10-04)
+const diffSrc = read('monster-hero/src/parts/19-difficulties-and-rules.jsx');
+const diffPower = (id) => Number((new RegExp(`${id}:\\s*\\{[^}]*?power:\\s*([0-9.]+)`).exec(diffSrc) || [])[1]);
+const aAtkWant = ['Easy', 'Normal', 'Hard', 'Expert', 'Master'].map(diffPower);
+check('A の攻撃倍率は Easy/Normal/Hard/Expert/Master と同じ(0.5/1/1.5/3/5)', o.RAID_JACK_A_TIERS.map((t) => t.atkPower).join() === aAtkWant.join() && aAtkWant.join() === '0.5,1,1.5,3,5', `${o.RAID_JACK_A_TIERS.map((t) => t.atkPower).join()} / 難易度表 ${aAtkWant.join()}`);
+check('A の攻撃力は 基礎700 × その倍率 = 350/700/1050/2100/3500', o.RAID_JACK_A_TIERS.map((t) => t.atk).join() === '350,700,1050,2100,3500', o.RAID_JACK_A_TIERS.map((t) => t.atk).join());
+check('B の攻撃力は変えない(段階の power のまま)', o.RAID_JACK_B_TIERS.every((t) => t.atkPower === t.power && t.atk === Math.round(700 * t.power)));
 check('B の倍率は 0.2/2/10/40/100', o.RAID_JACK_B_TIERS.map((t) => t.power).join() === '0.2,2,10,40,100');
 check('技に「再生」が無い', !o.RAID_JACK_ACTION_IDS.includes('regen') && o.RAID_JACK_ACTION_IDS.length === 5);
 check('技名がそろっている', ['normal', 'special', 'sweep', 'rush', 'pierce', 'roar', 'allout'].every((k) => typeof o.RAID_JACK_SKILL_NAMES[k] === 'string' && o.RAID_JACK_SKILL_NAMES[k].length >= 5));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c64096ea3e2d6d8
+// source-sha256: 84c07df897121ee3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 19:06";
+const BUILD_DATE = "2026-10-04 19:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35565,15 +35565,17 @@ const RAID_JACK_SKILL_NAMES = Object.freeze({
   roar: 'ハロウィンナイト',
   allout: 'おばけパレード'
 });
-const raidJackTier = (id, name, power, actionCount) => Object.freeze({
+const raidJackTier = (id, name, power, actionCount, atkPower = power) => Object.freeze({
   id,
   name,
   power,
   actionCount,
+  atkPower,
   hp: Math.round(RAID_JACK_BASE.hp * power * RAID_JACK_LIFE_MULTIPLIER),
-  atk: Math.round(RAID_JACK_BASE.atk * power)
+  atk: Math.round(RAID_JACK_BASE.atk * atkPower)
 });
-const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3), raidJackTier('a2', 'ジャック子爵', 6.5, 4), raidJackTier('a3', 'ジャック伯爵', 8.0, 5), raidJackTier('a4', 'ジャック公爵', 10.0, 5), raidJackTier('a5', 'ジャック大王', 13.0, 5)]);
+const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
+const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0]), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1]), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2]), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3]), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4])]);
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
 const raidJackTiers = kind => kind === 'b' ? RAID_JACK_B_TIERS : RAID_JACK_A_TIERS;
 const raidJackTierAt = (kind, index) => {
