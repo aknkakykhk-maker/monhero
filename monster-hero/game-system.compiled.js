@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec881811e867d5ac
+// source-sha256: b493bf3e84b5c49b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 03:10";
+const BUILD_DATE = "2026-10-05 06:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36134,6 +36134,9 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
 const RAID_JACK_TIMEOUT_MS = 8000;
 let _raidJackUnavailable = false;
 const raidJackUnavailable = () => _raidJackUnavailable;
+const _raidJackUnavailableScopes = new Set();
+const RAID_JACK_ESSENTIAL_SCOPES = Object.freeze(['raid_jack_hits', 'raid_jack_tier_totals']);
+const raidJackScopeOf = pathAndQuery => String(pathAndQuery || '').split('?')[0];
 const raidJackSafeId = value => typeof value === 'string' && /^[0-9A-Za-z_-]{8,100}$/.test(value) ? value : '';
 const raidJackMakeHitId = (nowMs = Date.now()) => {
   const rand = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
@@ -36143,7 +36146,8 @@ const RAID_JACK_DEBUG_EVENT_ID = 'raid_jack_debug';
 const raidJackSafeEventId = id => typeof id === 'string' && /^[0-9A-Za-z_-]{1,40}$/.test(id) ? id : RAID_JACK_EVENT.id;
 const raidJackEventParam = eventId => `event_id=eq.${encodeURIComponent(raidJackSafeEventId(eventId))}`;
 const raidJackRequest = async (pathAndQuery, init = {}) => {
-  if (_raidJackUnavailable) return {
+  const scope = raidJackScopeOf(pathAndQuery);
+  if (_raidJackUnavailable || _raidJackUnavailableScopes.has(scope)) return {
     ok: false,
     status: 0,
     body: '',
@@ -36164,7 +36168,7 @@ const raidJackRequest = async (pathAndQuery, init = {}) => {
     });
     const body = await res.text();
     if (!res.ok && (_isMissingTableError(res.status, body) || res.status === 404)) {
-      _raidJackUnavailable = true;
+      if (RAID_JACK_ESSENTIAL_SCOPES.includes(scope)) _raidJackUnavailable = true;else _raidJackUnavailableScopes.add(scope);
       return {
         ok: false,
         status: res.status,
