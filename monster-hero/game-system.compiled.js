@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 806af4e3b47aeb21
+// source-sha256: 5e5c265798b52e88
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 09:39";
+const BUILD_DATE = "2026-10-04 09:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5268,6 +5268,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   lightweightMode: false,
   multiLightLook: true,
   multiLook: 'LIGHT',
+  modeSelectArt: true,
+  modeSelectComment: true,
   noteSeType: 'STANDARD',
   noteSeJudgeVary: true,
   noteSeFlickVolume: 100,
@@ -5347,6 +5349,8 @@ const normalizeRhythmSettings = value => {
     lightweightMode: bool('lightweightMode'),
     livePartnerVisible: bool('livePartnerVisible'),
     multiLightLook: bool('multiLightLook'),
+    modeSelectArt: bool('modeSelectArt'),
+    modeSelectComment: bool('modeSelectComment'),
     multiLook: RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook) ? source.multiLook : source.multiLightLook === false ? 'OWN' : 'LIGHT',
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
@@ -56286,6 +56290,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
 .mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
+.mhms-bubble-alone::before{display:none}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -56831,9 +56836,12 @@ function RhythmMultiScreen({
       className: "text-sm font-black text-amber-200"
     }, "周回を終えています…")), React.createElement("div", {
       className: "relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden"
-    }, ms.assistant && React.createElement("div", {
+    }, ms.assistant && (ms.showArt || ms.showComment) && React.createElement("div", {
       "data-rhythm-mode-assistant": true,
-      className: "mhms-glass mhms-in-left relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none"
+      className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${ms.showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
+    }, ms.showArt && React.createElement("div", {
+      "data-rhythm-mode-assistant-art-box": true,
+      className: "relative min-h-0 flex-1 overflow-hidden"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-glow"
@@ -56863,9 +56871,9 @@ function RhythmMultiScreen({
       alt: "",
       draggable: false,
       className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
-    })), React.createElement("p", {
+    }))), ms.showComment && React.createElement("p", {
       "data-rhythm-mode-assistant-line": true,
-      className: "mhms-bubble absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]",
+      className: `mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-2 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:text-[12px]`,
       style: {
         borderColor: ms.assistant.accent
       }
@@ -57032,7 +57040,21 @@ function RhythmMultiScreen({
       className: "text-lg leading-none"
     }, "⚙️"), React.createElement("span", {
       className: "text-[11px] font-black"
-    }, "オプション"))))), React.createElement("div", {
+    }, "オプション"))), ms.onToggleAssistant && React.createElement("div", {
+      "data-rhythm-mode-assistant-toggles": true,
+      role: "group",
+      "aria-label": "助手の表示",
+      className: "flex items-center justify-end gap-1.5"
+    }, React.createElement("small", {
+      className: "mr-auto text-[10px] font-black text-slate-400"
+    }, "助手 ", ms.assistant ? ms.assistant.name : ''), [['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
+      key: key,
+      type: "button",
+      [attr]: '',
+      "aria-pressed": on,
+      onClick: () => ms.onToggleAssistant(key),
+      className: `min-h-[34px] rounded-full border px-3 text-[11px] font-black ${on ? 'border-emerald-300 bg-emerald-600/90 text-white' : 'border-white/20 bg-slate-800/80 text-slate-300'}`
+    }, label, " ", on ? 'ON' : 'OFF'))))), React.createElement("div", {
       "aria-hidden": "true",
       className: "shrink-0",
       style: {
@@ -79149,7 +79171,16 @@ function MonsterHeroGame() {
             src: base ? base.faceIconUrl || base.iconUrl : ''
           };
         }),
-        assistant: rhythmModeAssistant
+        assistant: rhythmModeAssistant,
+        showArt: rhythmSettings.modeSelectArt !== false,
+        showComment: rhythmSettings.modeSelectComment !== false,
+        onToggleAssistant: async key => {
+          const saved = await saveRhythmSettings({
+            ...rhythmSettings,
+            [key]: rhythmSettings[key] === false
+          });
+          setRhythmSettings(saved);
+        }
       } : null,
       onStartPlay: (song, difficulty, startId, count, streak) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();

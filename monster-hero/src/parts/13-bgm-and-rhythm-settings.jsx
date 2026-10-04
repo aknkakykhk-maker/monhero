@@ -521,6 +521,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
   // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
   multiLook:'LIGHT',
+  // モードえらびの助手の見せ方(2026-10-04・ユーザー指示「助手コメントが助手に被ってる 位置を変えて、あとはオンオフもつけてほしい」)。
+  // 立ち絵とコメントを別々に出し入れできる。新しい項目なので、保存値に無い人は ON(これまでの見え方)で補われる
+  modeSelectArt:true, modeSelectComment:true,
   // タップ音の種類(2026-09-26)。新しい項目なので、保存値に無い人は「標準」(これまでの音)で補う
   noteSeType:'STANDARD',
   // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
@@ -622,7 +625,7 @@ const normalizeRhythmSettings = value => {
     noteSeHoldVolume:rhythmFiniteStep(source.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
     multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
