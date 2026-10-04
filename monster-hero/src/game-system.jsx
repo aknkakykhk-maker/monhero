@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b3846e3e339c7f29
+// generated-sha256: 462dc006af2a9e94
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 06:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 06:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36887,6 +36887,99 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a' }) => {
   );
 };
 
+// ランキングの行(レイド画面の中と、ランキング画面で同じ見た目にする)。名前・アイコン・プロフィール枠は、通常バトルのランキングと同じ「いまの設定」をかぶせる
+const RaidJackRankingRows = ({ rows, myId, renderPlace, renderIcon, cardClass, limit = 100 }) => {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return (
+    <ol data-raid-jack-ranking className="space-y-1.5">
+      {rows.slice(0, limit).map((r, i) => {
+        const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({ breederId: r.breederId, userName: raidJackNameOf(r.breederId) }) : { breederId: r.breederId, userName: raidJackNameOf(r.breederId) };
+        const mineRow = !!myId && r.breederId === myId;
+        return (
+          <li key={`${r.breederId}-${i}`} data-raid-jack-ranking-row data-ranking-kind="raid-jack" aria-current={mineRow ? 'true' : undefined}
+            className={`${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`}>
+            {typeof renderPlace === 'function' ? renderPlace(i) : <span className="w-7 shrink-0 text-center text-[10px] font-black text-amber-200">{i + 1}</span>}
+            {typeof renderIcon === 'function' && renderIcon(entry)}
+            <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{entry.userName || '名無しのブリーダー'}{mineRow && <span className="ml-1 text-[8px] text-orange-200">(あなた)</span>}</span>
+            <b className="shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200">{r.total.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">ダメージ</small></b>
+          </li>
+        );
+      })}
+    </ol>
+  );
+};
+// ランキング画面(レイド画面の「ランキング」ボタンから開く)。モード別(レイドバトル/グランドスラム)・レイドバトルは段階別。
+//   レイドバトルは、大王が倒れたあとだけ「累計ダメージ(全段階の合計)」も見られる。上位100位まで。自分の記録と順位は圏外でも出る
+const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier = 0, bossDown = false, renderPlace, renderIcon, cardClass }) => {
+  const [tab, setTab] = useState(initialTab);
+  const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
+  const [allMode, setAllMode] = useState(false);   // A の「累計ダメージ(全段階の合計)」。大王が倒れたあとだけ選べる
+  const [rows, setRows] = useState(undefined);     // undefined=読み込み中 / null=準備中 / 配列
+  const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
+  const [ahead, setAhead] = useState(null);
+  const useAll = tab === 'a' && allMode && bossDown;
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setRows(undefined); setAhead(null);
+      const meId = await ensureBreederId();
+      if (!alive) return;
+      setMyId(meId || null);
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
+      if (!alive) return;
+      setSelf(mine);
+      const list = useAll ? await sbFetchRaidJackARanking(100, eventId)
+        : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      if (!alive) return;
+      if (list) { try { await ensureBreederProfiles('raid-jack'); } catch (e) { /* 名前が引けなくても順位は出る */ } }
+      if (!alive) return;
+      setRows(list);
+      if (list && mine) {
+        const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (mine.a[tierIdx + 1] || 0) : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, tierIdx + 1, myTotal, eventId) : null;
+        if (alive) setAhead(count);
+      }
+    })();
+    return () => { alive = false; };
+  }, [tab, tierIdx, useAll, eventId]);
+  const myTotal = self ? (useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[tierIdx + 1] || 0) : self.bTotal) : 0;
+  const title = useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  return (
+    <div data-raid-jack-ranking-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3" role="dialog" aria-modal="true" aria-label="ジャックのランキング"
+      style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+      <div className="mb-2 flex shrink-0 items-center justify-between">
+        <div className="text-[14px] font-black text-orange-200">🏆 ジャックのランキング</div>
+        <button type="button" data-raid-jack-ranking-close onClick={onClose} aria-label="ランキングを閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
+      </div>
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
+      {tab === 'a' && (
+        <div data-raid-jack-ranking-tiers className="mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black">
+          {RAID_JACK_A_TIERS.map((t, i) => (
+            <button type="button" key={t.id} data-raid-jack-ranking-tier={t.id} onClick={() => { setTierIdx(i); setAllMode(false); }}
+              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name.replace('ジャック', '')}</button>
+          ))}
+          {bossDown && (
+            <button type="button" data-raid-jack-ranking-all onClick={() => setAllMode(true)}
+              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>累計ダメージ</button>
+          )}
+        </div>
+      )}
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-3">
+        <div className="mb-1 flex items-baseline justify-between gap-2 text-[11px]">
+          <span className="font-black text-orange-200">{title}</span>
+          {myTotal > 0 && <span data-raid-jack-ranking-mine className="shrink-0 text-[10px] text-slate-200">あなた {myTotal.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
+        </div>
+        <div className="mb-2 text-[9px] text-slate-400">{useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
+        {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
+        {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
+        {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
+        <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
+      </div>
+    </div>
+  );
+};
+
 // renderPlace / renderIcon / cardClass … 通常バトルの全国ランキングと同じ部品(60-app.jsx の rankingPlace / rankingBreederIcon / rankingCardClass)。
 //   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
 const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
@@ -36902,6 +36995,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
   const [showRewards, setShowRewards] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
   // 大王を倒したあと、レイドバトルのランキングを「大王への貢献」から「累計ダメージ(全段階の合計)」へ切り替えられる
   const [aAll, setAAll] = useState(false);
   const nowMs = Date.now();
@@ -36998,6 +37092,12 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
           1回追加<br /><small className="text-[9px] opacity-80">ビートP {RAID_JACK_EXTRA_COST_BEAT_P}(所持 {beatPoints})</small>
         </button>
       </div>
+      <div className="mb-2 grid shrink-0 grid-cols-2 gap-2">
+        <button type="button" data-raid-jack-ranking-open onClick={() => setShowRanking(true)}
+          className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🏆 ランキング</button>
+        <button type="button" data-raid-jack-reward-list-open-top onClick={() => setShowRewards(true)}
+          className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🎁 報酬一覧</button>
+      </div>
       {message && <div className="mb-2 shrink-0 text-center text-[11px] font-black text-amber-200" role="status">{message}</div>}
       {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
 
@@ -37063,24 +37163,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
           {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
           {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
           {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
-          {Array.isArray(rows) && rows.length > 0 && (
-            <ol data-raid-jack-ranking className="space-y-1.5">
-              {rows.slice(0, 100).map((r, i) => {
-                // 名前・アイコン・プロフィール枠は、通常バトルのランキングと同じ「いまの設定」をかぶせる
-                const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({ breederId: r.breederId, userName: raidJackNameOf(r.breederId) }) : { breederId: r.breederId, userName: raidJackNameOf(r.breederId) };
-                const mineRow = !!myId && r.breederId === myId;
-                return (
-                  <li key={`${r.breederId}-${i}`} data-raid-jack-ranking-row data-ranking-kind="raid-jack" aria-current={mineRow ? 'true' : undefined}
-                    className={`${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`}>
-                    {typeof renderPlace === 'function' ? renderPlace(i) : <span className="w-7 shrink-0 text-center text-[10px] font-black text-amber-200">{i + 1}</span>}
-                    {typeof renderIcon === 'function' && renderIcon(entry)}
-                    <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{entry.userName || '名無しのブリーダー'}{mineRow && <span className="ml-1 text-[8px] text-orange-200">(あなた)</span>}</span>
-                    <b className="shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200">{r.total.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">ダメージ</small></b>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
+          <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
         </div>
       </div>
 
@@ -37091,6 +37174,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
           {challengeLabel}
         </button>
       </div>
+      {showRanking && <RaidJackRankingList eventId={eventId} initialTab={tab} initialTier={current} bossDown={bossDownNow} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
       {showRewards && <RaidJackRewardList claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
     </div>
   );
