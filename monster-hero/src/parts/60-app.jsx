@@ -13222,8 +13222,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
   // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
   // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
-  const RAID_JACK_TURN_GROWTH = 1.05;   // 20ターンになったので、1ターンぶんの上がり方は半分(10%→5%)
-  const RAID_JACK_TURN_REGEN_STEP = 0.015;   // 同じく半分(3%→1.5%)
   const raidJackTurnGrowth = (turn) => {
     const before = tacticsUnitsRef.current || [];
     const grown = before.map((unit) => {

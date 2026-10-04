@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65e5113914733a2e
+// source-sha256: 0f61b166bb716cf6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 21:16";
+const BUILD_DATE = "2026-10-04 21:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35624,6 +35624,27 @@ const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night';
 const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+const RAID_JACK_TURN_GROWTH = 1.05;
+const RAID_JACK_TURN_REGEN_STEP = 0.015;
+const raidJackGrowthAt = turn => {
+  const t = Math.max(1, Math.floor(Number(turn) || 1));
+  const steps = t - 1;
+  const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * steps) * 1000) / 10;
+  const levelUps = RAID_JACK_LEVEL_UP_TURNS.filter(n => n <= t).length;
+  const next = RAID_JACK_LEVEL_UP_TURNS.find(n => n > t);
+  return {
+    turn: t,
+    steps,
+    statPct: Math.round((Math.pow(RAID_JACK_TURN_GROWTH, steps) - 1) * 1000) / 10,
+    stepPct: Math.round((RAID_JACK_TURN_GROWTH - 1) * 1000) / 10,
+    lifeRate,
+    gutsRate: Math.round((lifeRate - 5) * 10) / 10,
+    levelUps,
+    levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
+    nextLevelUpTurn: next === undefined ? null : next,
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t)
+  };
+};
 const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
 const RAID_JACK_SKILL_NAMES = Object.freeze({
   normal: 'カボチャ張り手',
@@ -50634,6 +50655,22 @@ function BattleScreen({
   wave
 }) {
   const [buffDetail, setBuffDetail] = useState(false);
+  const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
+  const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
+  const [raidGrowthOpen, setRaidGrowthOpen] = useState(false);
+  const [raidGrowthBanner, setRaidGrowthBanner] = useState(null);
+  useEffect(() => {
+    if (!raidGrowthOn || turnCount < 2) {
+      setRaidGrowthBanner(null);
+      return undefined;
+    }
+    setRaidGrowthBanner({
+      turn: turnCount,
+      key: `${turnCount}-${Date.now()}`
+    });
+    const timer = setTimeout(() => setRaidGrowthBanner(null), 3200);
+    return () => clearTimeout(timer);
+  }, [raidGrowthOn, turnCount]);
   const [attackAim, setAttackAim] = useState(null);
   React.useLayoutEffect(() => {
     if (!attackAnim || ecoBattleView) return;
@@ -51241,7 +51278,89 @@ function BattleScreen({
     style: {
       background: 'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'
     }
-  }))), React.createElement("main", {
+  })), raidGrowth && React.createElement("button", {
+    type: "button",
+    "data-raid-growth-chip": true,
+    onClick: () => setRaidGrowthOpen(true),
+    "aria-label": "レイドバトルのターンごとの強化の内訳を開く",
+    className: "mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]"
+  }, React.createElement("span", {
+    className: "shrink-0 text-emerald-300"
+  }, "⬆ 強化"), React.createElement("span", {
+    className: "shrink-0"
+  }, "全ステ ", React.createElement("b", {
+    className: "text-emerald-200"
+  }, "+", raidGrowth.statPct, "%")), React.createElement("span", {
+    className: "shrink-0 text-amber-200"
+  }, "技・アシカ ", raidGrowth.levelUps, "/", raidGrowth.levelUpMax), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-right text-slate-300"
+  }, raidGrowth.nextLevelUpTurn ? `次の技強化 ${raidGrowth.nextLevelUpTurn}ターン目` : '技強化は出そろった'), React.createElement("span", {
+    className: "shrink-0 text-slate-400"
+  }, "詳細›"))), raidGrowth && raidGrowthBanner && React.createElement("div", {
+    key: raidGrowthBanner.key,
+    "data-raid-growth-banner": true,
+    "aria-live": "polite",
+    className: "pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center",
+    style: {
+      zIndex: 60000,
+      transform: 'translateX(-50%)',
+      animation: 'raidGrowthBanner 3.2s ease-out forwards'
+    }
+  }, React.createElement("div", {
+    className: "text-[13px] font-black text-emerald-300"
+  }, "⬆ ", raidGrowth.turn, "ターン目 強化！"), React.createElement("div", {
+    className: "mt-0.5 text-[11px] font-black text-white"
+  }, "味方の全ステータス +", raidGrowth.stepPct, "%", React.createElement("span", {
+    className: "text-slate-300"
+  }, "(ここまで合計 +", raidGrowth.statPct, "%)")), React.createElement("div", {
+    className: "text-[10px] font-black text-sky-200"
+  }, "自動回復 ライフ", raidGrowth.lifeRate, "%・ガッツ", raidGrowth.gutsRate, "%"), raidGrowth.levelUpNow && React.createElement("div", {
+    className: "mt-0.5 text-[11px] font-black text-amber-300"
+  }, "固有技とアシカが1段階アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
+    "data-raid-growth-detail": true,
+    className: "fixed inset-0 flex items-center justify-center bg-black/70 px-4",
+    style: {
+      zIndex: 80000
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "レイドバトルの強化",
+    onClick: () => setRaidGrowthOpen(false)
+  }, React.createElement("div", {
+    className: "w-full max-w-[340px] rounded-2xl border-2 border-emerald-300/60 bg-slate-950 p-3 text-slate-100",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-center text-[13px] font-black text-emerald-300"
+  }, "レイドバトルの強化(いま ", raidGrowth.turn, "/", RAID_JACK_TURNS, "ターン目)"), React.createElement("dl", {
+    className: "mt-2 space-y-1.5 text-[11px]"
+  }, React.createElement("div", {
+    className: "rounded-lg bg-slate-900 px-2 py-1.5"
+  }, React.createElement("dt", {
+    className: "font-black text-emerald-200"
+  }, "全ステータス"), React.createElement("dd", null, "2ターン目から、1ターンごとに味方全員が +", raidGrowth.stepPct, "%(掛け算)。いまは", React.createElement("b", {
+    className: "text-white"
+  }, " 合計 +", raidGrowth.statPct, "%"), "。ライフ・ガッツの上限が増えたぶんは、いまの値にも足されます")), React.createElement("div", {
+    className: "rounded-lg bg-slate-900 px-2 py-1.5"
+  }, React.createElement("dt", {
+    className: "font-black text-sky-200"
+  }, "自動回復"), React.createElement("dd", null, "1ターンごとに +1.5%。いまは", React.createElement("b", {
+    className: "text-white"
+  }, " ライフ ", raidGrowth.lifeRate, "%・ガッツ ", raidGrowth.gutsRate, "%"))), React.createElement("div", {
+    className: "rounded-lg bg-slate-900 px-2 py-1.5"
+  }, React.createElement("dt", {
+    className: "font-black text-amber-200"
+  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。", React.createElement("b", {
+    className: "text-white"
+  }, " ", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回"), "済み", raidGrowth.nextLevelUpTurn ? `(次は${raidGrowth.nextLevelUpTurn}ターン目)` : '(これで最後)')), React.createElement("div", {
+    className: "rounded-lg bg-slate-900 px-2 py-1.5"
+  }, React.createElement("dt", {
+    className: "font-black text-rose-200"
+  }, "EXスキル"), React.createElement("dd", null, "持っている味方ごとに2回まで"))), React.createElement("button", {
+    type: "button",
+    "data-raid-growth-close": true,
+    onClick: () => setRaidGrowthOpen(false),
+    className: "mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-white active:scale-95"
+  }, "閉じる"))), React.createElement("main", {
     className: "flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
     style: {
       justifyContent: 'safe center',
@@ -74697,8 +74816,6 @@ function MonsterHeroGame() {
     setRaidJackStartRequest(null);
     startRaidJackBattle(req);
   }, [raidJackStartRequest, runMode]);
-  const RAID_JACK_TURN_GROWTH = 1.05;
-  const RAID_JACK_TURN_REGEN_STEP = 0.015;
   const raidJackTurnGrowth = turn => {
     const before = tacticsUnitsRef.current || [];
     const grown = before.map(unit => {
@@ -92267,6 +92384,8 @@ const createAnimationStyle = () => {
     [data-jack-aura="5"] [data-ja="wave"] { animation-duration: 1.5s; border-width: 5px; border-color: rgba(253,224,71,.95); }
     @keyframes jackAuraEmber { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -420%) scale(.3); } }
     @keyframes jackAuraWave { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.45); } }
+    /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
+    @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
     @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
     @keyframes jackAuraSpin { to { transform: rotate(360deg); } }
     @keyframes jackAuraTongue {
