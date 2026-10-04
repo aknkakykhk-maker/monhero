@@ -435,7 +435,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     if (process.env.EX_SHOT_KENSHI) await page.screenshot({ path: process.env.EX_SHOT_KENSHI });
     // 説明だけで3つのスタイルの効き目が読める(2026-09-25 ユーザー指摘「説明があれじゃ効果が分からない」)
     check('剣士モッチーの詳細に、3つのスタイルの効き目が1行ずつ出る', !!p && ['片手剣：', '片手盾：', '二刀流：'].every(w => p.text.includes(w)), p && p.text.slice(0, 260));
-    check('二刀流: 力135/丈夫さ75 → 135／37 で、回数は使っていない', !!p && /135／37/.test(p.text) && /無制限/.test(p.uses), p && p.text.slice(0, 220));
+    check('二刀流: 力135/丈夫さ75 → 135／37 で、回数は使っていない(5 / 5)', !!p && /135／37/.test(p.text) && /5 \/ 5/.test(p.uses), p && p.text.slice(0, 220));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(300);
     const choices = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-ex-choice]')]
