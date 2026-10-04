@@ -92,6 +92,7 @@ const raidJackDefaultState = () => ({
   a: { day: '', used: 0, extra: 0, defeated: [] },
   b: { day: '', used: 0, extra: 0, defeated: [], total: 0 },
   claimed: [],
+  pending: [],
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -104,12 +105,23 @@ const raidJackNormalizeSide = (raw, withTotal) => {
   if (withTotal) out.total = Number.isFinite(src.total) && src.total >= 0 ? Math.floor(src.total) : 0;
   return out;
 };
+// 送れなかった与ダメージ(再送待ち)。同じ hit_id で何度送っても二重に数えられない(サーバー側が1行にする)
+const raidJackNormalizePending = (raw) => (Array.isArray(raw) ? raw : []).map((h) => {
+  const x = h && typeof h === 'object' ? h : {};
+  const tier = Number.isFinite(x.tier) ? Math.floor(x.tier) : 0;
+  const damage = Number.isFinite(x.damage) ? Math.floor(x.damage) : -1;
+  if (typeof x.hitId !== 'string' || !/^[0-9A-Za-z_-]{8,64}$/.test(x.hitId)) return null;
+  if (x.kind !== 'a' && x.kind !== 'b') return null;
+  if (tier < 1 || tier > 5 || damage < 0 || damage > 100000000) return null;
+  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true };
+}).filter(Boolean).slice(0, 30);
 const raidJackNormalizeState = (raw) => {
   const src = raw && typeof raw === 'object' ? raw : {};
   return {
     a: raidJackNormalizeSide(src.a, false),
     b: raidJackNormalizeSide(src.b, true),
     claimed: Array.isArray(src.claimed) ? src.claimed.filter((v) => typeof v === 'string').slice(0, 64) : [],
+    pending: raidJackNormalizePending(src.pending),
   };
 };
 

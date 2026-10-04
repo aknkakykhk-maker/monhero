@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f6e525a63d5796aa
+// source-sha256: ac69bf1a9d29ead9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:04";
+const BUILD_DATE = "2026-10-04 12:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35564,7 +35564,8 @@ const raidJackDefaultState = () => ({
     defeated: [],
     total: 0
   },
-  claimed: []
+  claimed: [],
+  pending: []
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -35577,12 +35578,28 @@ const raidJackNormalizeSide = (raw, withTotal) => {
   if (withTotal) out.total = Number.isFinite(src.total) && src.total >= 0 ? Math.floor(src.total) : 0;
   return out;
 };
+const raidJackNormalizePending = raw => (Array.isArray(raw) ? raw : []).map(h => {
+  const x = h && typeof h === 'object' ? h : {};
+  const tier = Number.isFinite(x.tier) ? Math.floor(x.tier) : 0;
+  const damage = Number.isFinite(x.damage) ? Math.floor(x.damage) : -1;
+  if (typeof x.hitId !== 'string' || !/^[0-9A-Za-z_-]{8,64}$/.test(x.hitId)) return null;
+  if (x.kind !== 'a' && x.kind !== 'b') return null;
+  if (tier < 1 || tier > 5 || damage < 0 || damage > 100000000) return null;
+  return {
+    hitId: x.hitId,
+    kind: x.kind,
+    tier,
+    damage,
+    defeated: x.defeated === true
+  };
+}).filter(Boolean).slice(0, 30);
 const raidJackNormalizeState = raw => {
   const src = raw && typeof raw === 'object' ? raw : {};
   return {
     a: raidJackNormalizeSide(src.a, false),
     b: raidJackNormalizeSide(src.b, true),
-    claimed: Array.isArray(src.claimed) ? src.claimed.filter(v => typeof v === 'string').slice(0, 64) : []
+    claimed: Array.isArray(src.claimed) ? src.claimed.filter(v => typeof v === 'string').slice(0, 64) : [],
+    pending: raidJackNormalizePending(src.pending)
   };
 };
 const raidJackRemaining = (side, nowMs) => {
@@ -35600,6 +35617,202 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
     if (defeated.includes(list[i].id)) n = i + 2;else break;
   }
   return n;
+};
+const RAID_JACK_TIMEOUT_MS = 8000;
+let _raidJackUnavailable = false;
+const raidJackUnavailable = () => _raidJackUnavailable;
+const raidJackSafeId = value => typeof value === 'string' && /^[0-9A-Za-z_-]{8,100}$/.test(value) ? value : '';
+const raidJackMakeHitId = (nowMs = Date.now()) => {
+  const rand = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+  return `rj${Math.floor(nowMs).toString(36)}${rand}`.slice(0, 64);
+};
+const raidJackEventParam = () => `event_id=eq.${encodeURIComponent(RAID_JACK_EVENT.id)}`;
+const raidJackRequest = async (pathAndQuery, init = {}) => {
+  if (_raidJackUnavailable) return {
+    ok: false,
+    status: 0,
+    body: '',
+    notReady: true,
+    error: null
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), RAID_JACK_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathAndQuery}`, {
+      cache: 'no-store',
+      ...init,
+      headers: {
+        ...SB_HEADERS,
+        ...(init.headers || {})
+      },
+      signal: controller.signal
+    });
+    const body = await res.text();
+    if (!res.ok && (_isMissingTableError(res.status, body) || res.status === 404)) {
+      _raidJackUnavailable = true;
+      return {
+        ok: false,
+        status: res.status,
+        body,
+        notReady: true,
+        error: null
+      };
+    }
+    return {
+      ok: res.ok,
+      status: res.status,
+      body,
+      notReady: false,
+      error: null,
+      headers: res.headers
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      body: '',
+      notReady: false,
+      error
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const raidJackParseRows = result => {
+  if (!result || !result.ok) return null;
+  try {
+    const rows = JSON.parse(result.body);
+    return Array.isArray(rows) ? rows : null;
+  } catch (e) {
+    return null;
+  }
+};
+const sbSendRaidJackHit = async (hit, breederId) => {
+  const id = raidJackSafeId(breederId);
+  const [clean] = raidJackNormalizePending([hit]);
+  if (!id || !clean) return 'invalid';
+  const row = {
+    hit_id: clean.hitId,
+    event_id: RAID_JACK_EVENT.id,
+    kind: clean.kind,
+    tier: clean.tier,
+    breeder_id: id,
+    damage: clean.damage,
+    defeated: clean.defeated,
+    app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : ''
+  };
+  const result = await raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
+    method: 'POST',
+    headers: {
+      'Prefer': 'resolution=ignore-duplicates,return=minimal'
+    },
+    body: JSON.stringify(row)
+  });
+  if (result.ok) return 'sent';
+  if (result.notReady) return 'notready';
+  if ([400, 409, 422].includes(result.status)) return 'invalid';
+  return 'error';
+};
+const raidJackLoadState = async () => {
+  try {
+    return raidJackNormalizeState(await storeGet(RAID_JACK_STORAGE_KEY, null, false));
+  } catch (e) {
+    return raidJackDefaultState();
+  }
+};
+const raidJackSaveState = async state => {
+  try {
+    await storeSet(RAID_JACK_STORAGE_KEY, raidJackNormalizeState(state), false);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const raidJackSubmitHit = async (state, hit, breederId) => {
+  const next = raidJackNormalizeState(state);
+  const outcome = await sbSendRaidJackHit(hit, breederId);
+  if (outcome === 'error' || outcome === 'notready') {
+    const [clean] = raidJackNormalizePending([hit]);
+    if (clean && !next.pending.some(p => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
+  }
+  return {
+    state: next,
+    outcome
+  };
+};
+const raidJackFlushPending = async (state, breederId) => {
+  const next = raidJackNormalizeState(state);
+  if (!next.pending.length || !raidJackSafeId(breederId)) return next;
+  const keep = [];
+  for (const hit of next.pending) {
+    const outcome = await sbSendRaidJackHit(hit, breederId);
+    if (outcome === 'error' || outcome === 'notready') keep.push(hit);
+  }
+  next.pending = keep;
+  return next;
+};
+const sbFetchRaidJackTierTotals = async () => {
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_tier_totals?${raidJackEventParam()}&select=kind,tier,total_damage,player_count,any_defeated`));
+  if (!rows) return null;
+  const out = {
+    a: {},
+    b: {}
+  };
+  rows.forEach(r => {
+    if (r.kind !== 'a' && r.kind !== 'b' || !Number.isFinite(Number(r.tier))) return;
+    out[r.kind][Number(r.tier)] = {
+      total: Number(r.total_damage) || 0,
+      players: Number(r.player_count) || 0,
+      defeated: r.any_defeated === true
+    };
+  });
+  return out;
+};
+const sbFetchRaidJackContributions = async (tier, limit = 100) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const t = Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5);
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam()}&kind=eq.a&tier=eq.${t}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map(r => ({
+    breederId: String(r.breeder_id),
+    total: Number(r.total_damage) || 0
+  })) : null;
+};
+const sbFetchRaidJackBRanking = async (limit = 100) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam()}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map(r => ({
+    breederId: String(r.breeder_id),
+    total: Number(r.total_damage) || 0
+  })) : null;
+};
+const sbFetchRaidJackSelf = async breederId => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam()}&breeder_id=eq.${id}&select=kind,tier,total_damage`));
+  if (!rows) return null;
+  const out = {
+    a: {},
+    bTotal: 0
+  };
+  rows.forEach(r => {
+    const total = Number(r.total_damage) || 0;
+    if (r.kind === 'a') out.a[Number(r.tier)] = total;else if (r.kind === 'b') out.bTotal += total;
+  });
+  return out;
+};
+const sbCountRaidJackAhead = async (kind, tier, myTotal) => {
+  const mine = Math.max(0, Math.floor(Number(myTotal)) || 0);
+  const view = kind === 'b' ? 'raid_jack_b_ranking' : 'raid_jack_contributions';
+  const extra = kind === 'b' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
+  const result = await raidJackRequest(`${view}?${raidJackEventParam()}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, {
+    headers: {
+      'Prefer': 'count=exact'
+    }
+  });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
 };
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
