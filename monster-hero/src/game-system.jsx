@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f8539fadfeabdfb9
+// generated-sha256: 118ce04b8690e95a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 00:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 00:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41371,8 +41371,8 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   // ハロウィン・ナイト(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり、週ごとに更新の5部構成」)。
-  // 5部のidと出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。**時刻が来た部を、古いほうから1つずつ**HOMEで流す
-  // (期間の内か外かは見ない。第5部は閉幕の時刻に出る)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
+  // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
+  // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
   const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
