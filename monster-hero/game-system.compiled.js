@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9af48ff3113b4d23
+// source-sha256: aedc1cd5e7f93c7f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 10:24";
+const BUILD_DATE = "2026-10-04 10:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35224,6 +35224,36 @@ const friendsRhythmSummary = bestRecords => {
     }) => rest)
   };
 };
+const friendsRhythmAchievements = bestRecords => {
+  const songs = rhythmDemoSongs(RHYTHM_SONGS);
+  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  return list.map(({
+    id
+  }) => {
+    const row = {
+      d: id,
+      total: 0,
+      clear: 0,
+      fc: 0,
+      ae: 0,
+      am: 0
+    };
+    songs.forEach(song => {
+      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some(x => x.id === id)) return;
+      row.total += 1;
+      const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
+      if (!rec) return;
+      const am = rec.allMarvelous === true,
+        ae = am || rec.allExcellent === true,
+        fc = ae || rec.fullCombo === true;
+      if (rec.clear === true || fc) row.clear += 1;
+      if (fc) row.fc += 1;
+      if (ae) row.ae += 1;
+      if (am) row.am += 1;
+    });
+    return row;
+  }).filter(row => row.total > 0);
+};
 const friendsCollectionSummary = ({
   masuMons,
   unlockedMonsterIds,
@@ -35244,9 +35274,25 @@ const friendsCollectionSummary = ({
 const friendsBuildRecords = src => ({
   v: 1,
   battle: friendsBattleSummary(src),
-  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  rhythm: {
+    ...friendsRhythmSummary(src && src.rhythmBest),
+    ach: friendsRhythmAchievements(src && src.rhythmBest).map(r => [r.d, r.total, r.clear, r.fc, r.ae, r.am])
+  },
   collection: friendsCollectionSummary(src || {})
 });
+const friendsNormalizeAchievements = raw => (Array.isArray(raw) ? raw : []).map(e => {
+  if (!Array.isArray(e) || typeof e[0] !== 'string') return null;
+  const total = Math.min(friendsInt(e[1]), 999);
+  const n = v => Math.min(friendsInt(v), total);
+  return {
+    d: e[0].slice(0, 20),
+    total,
+    clear: n(e[2]),
+    fc: n(e[3]),
+    ae: n(e[4]),
+    am: n(e[5])
+  };
+}).filter(r => r && r.total > 0).slice(0, 8);
 const friendsNormalizeRecords = raw => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const battle = (Array.isArray(raw.battle) ? raw.battle : []).map(e => e && typeof e.id === 'string' && (e.k === 's' || e.k === 'w') && friendsInt(e.v) > 0 ? {
@@ -35266,7 +35312,8 @@ const friendsNormalizeRecords = raw => {
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
-      songs
+      songs,
+      ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach)
     },
     collection: {
       masu: friendsInt(c.masu),
@@ -38052,6 +38099,37 @@ function BreederMarketScreen({
     onClose: () => setRebirth(null)
   }));
 }
+function RhythmAchievementPanel({
+  rows,
+  who = 'self'
+}) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length === 0) return null;
+  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  return React.createElement("section", {
+    "data-rhythm-achievements": who,
+    className: `${SCREEN_PANEL_FLAT_CLASS} mb-3`
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-amber-100"
+  }, "モンヒロビートの実績"), React.createElement("small", {
+    className: "mb-2 block text-[9px] font-bold text-slate-400"
+  }, "難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）"), React.createElement("div", {
+    className: "grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center"
+  }, React.createElement("span", null), heads.map(([t, c]) => React.createElement("span", {
+    key: t,
+    className: `text-[8px] font-black leading-tight ${c}`
+  }, t)), list.map(r => React.createElement(React.Fragment, {
+    key: r.d
+  }, React.createElement("b", {
+    "data-rhythm-achievement-row": r.d,
+    className: "pr-1 text-left text-[10px] font-black text-white"
+  }, r.d), [r.clear, r.fc, r.ae, r.am].map((n, i) => React.createElement("span", {
+    key: i,
+    className: `rounded-lg bg-black/30 py-1 text-[11px] font-black tabular-nums ${n >= r.total ? 'text-amber-200' : n > 0 ? 'text-white' : 'text-slate-500'}`
+  }, n, React.createElement("span", {
+    className: "text-[8px] font-bold text-slate-400"
+  }, "/", r.total)))))));
+}
 function ProfileScreen({
   activeAssistant,
   assistantBond,
@@ -38110,6 +38188,19 @@ function ProfileScreen({
   onOpenMessageEditor,
   unlockedAssistants
 }) {
+  const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
+      } catch (error) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST;
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -38634,7 +38725,10 @@ function ProfileScreen({
         className: "mt-2 text-center text-[11px] font-black text-slate-400"
       }, "未記録"));
     }))));
-  })(), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  })(), onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
+    rows: rhythmAchRows,
+    who: "self"
+  }), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -54369,7 +54463,10 @@ function FriendsScreen({
           className: "mt-2 flex flex-col gap-2"
         }, React.createElement("p", {
           className: "px-1 text-[10px] font-black text-slate-400"
-        }, "遊んだ曲 ", sum.records.rhythm.played, "曲（スコアの高い順に", FRIEND_RECORD_SONG_MAX, "曲まで）"), songs.length > 0 && React.createElement("div", {
+        }, "遊んだ曲 ", sum.records.rhythm.played, "曲（スコアの高い順に", FRIEND_RECORD_SONG_MAX, "曲まで）"), React.createElement(RhythmAchievementPanel, {
+          rows: sum.records.rhythm.ach,
+          who: "friend"
+        }), songs.length > 0 && React.createElement("div", {
           "data-friend-versus": true,
           className: `${SCREEN_PANEL_FLAT_CLASS} text-center`
         }, React.createElement("small", {
