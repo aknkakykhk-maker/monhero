@@ -7,6 +7,7 @@
 //   ① 定義: 5段階×2種類の名前・倍率・ライフ・技の本数・技名(35-raid-jack.jsx をそのまま表にする)
 //   ② 期間と回数: 「いま」を前・中・後に動かしたときの判定、今日の残り回数
 //   ③ 端末の記録(mh_raid_jack_v1): 回数・倒した段階・再送待ちの確認と初期化(★保存します)
+//   ⑤ 絵と技: バトルの立ち絵2枚・顔アイコン、段階ごとに使う技(実際の行動表 tacticsActionDefinitions)
 //   ④ サーバー: 本番の集計(raid_jack_2026)を汚さない別のイベントID(raid_jack_debug)で、
 //      テスト送信・段階ごとの合計・Bの上位・再送待ちの送り直しを試す
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
@@ -129,6 +130,21 @@ const RaidJackDebugScreen = ({ onBack }) => {
           {Array.isArray(ranking) && (
             <div className="mt-2">Bの上位(デバッグ分): {ranking.length === 0 ? 'まだありません' : ranking.slice(0, 10).map((r, i) => `${i + 1}位 ${r.breederId.slice(0, 6)}… ${r.total.toLocaleString()}`).join(' / ')}</div>
           )}
+        </section>
+
+        <section className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="text-[11px] font-black text-amber-200">⑤ 絵と、段階ごとに使う技</div>
+          <div className="flex items-end justify-around gap-2 rounded-xl bg-slate-900/70 p-2">
+            <figure className="text-center text-[9px] text-slate-300"><img src={JACK_IMG} alt="ジャック(通常)" className="mx-auto h-24 object-contain" />通常</figure>
+            <figure className="text-center text-[9px] text-slate-300"><img src={JACK_POSE_IMG} alt="ジャック(ポーズ)" className="mx-auto h-24 object-contain" />両腕ポーズ</figure>
+            <figure className="text-center text-[9px] text-slate-300"><img src={JACK_ICON_IMG} alt="ジャック(顔アイコン)" className="mx-auto h-16 object-contain" />顔アイコン</figure>
+          </div>
+          <div className="text-[10px] text-slate-200">
+            {[...RAID_JACK_A_TIERS, ...RAID_JACK_B_TIERS].map((t) => (
+              <div key={t.id} className="mt-1"><b>{t.name}</b>({t.actionCount}本): {tacticsEnemyActionIds('Jack', 'Normal', t.actionCount).map((id) => (TACTICS_ENEMY_DATA.Jack.actions[id] || id)).join(' / ')}</div>
+            ))}
+            <div className="mt-1 text-slate-400">通常攻撃「{TACTICS_ENEMY_DATA.Jack.normal}」・必殺技「{TACTICS_ENEMY_DATA.Jack.special}」は全段階で使う(再生なし)</div>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">

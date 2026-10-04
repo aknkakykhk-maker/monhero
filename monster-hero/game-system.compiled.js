@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 32aa386be8da863f
+// source-sha256: b1c3aac77942f908
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:15";
+const BUILD_DATE = "2026-10-04 12:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15405,7 +15405,8 @@ const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Lamia: Object.freeze(['sweep', 'pierce']),
   Nyarlathotep: Object.freeze(['regen', 'pierce', 'allout']),
   Splatter: Object.freeze(['rush', 'roar', 'pierce', 'allout']),
-  AwakenedMoo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'])
+  AwakenedMoo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout']),
+  Jack: Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout'])
 });
 const TACTICS_EXTRA_ACTION_ORDER = Object.freeze(['rush', 'sweep', 'roar', 'regen', 'pierce', 'allout']);
 const TACTICS_DIFFICULTY_ACTION_DELTA = Object.freeze({
@@ -15426,10 +15427,11 @@ const TACTICS_DIFFICULTY_ACTION_DELTA = Object.freeze({
   GOD: 6
 });
 const TACTICS_SUPPORT_ACTION_IDS = Object.freeze(['roar', 'regen']);
-const tacticsEnemyActionIds = (enemyId, difficulty) => {
+const tacticsEnemyActionIds = (enemyId, difficulty, actionCount) => {
   const base = TACTICS_ENEMY_ACTION_IDS[enemyId] || [];
   const delta = Number.isFinite(TACTICS_DIFFICULTY_ACTION_DELTA[difficulty]) ? TACTICS_DIFFICULTY_ACTION_DELTA[difficulty] : 0;
-  const want = Math.max(1, base.length + delta);
+  const fixed = Number.isFinite(actionCount) ? Math.floor(actionCount) : null;
+  const want = fixed !== null ? Math.min(Math.max(1, fixed), base.length) : Math.max(1, base.length + delta);
   if (want === base.length) return base;
   if (want < base.length) {
     const drop = base.length - want,
@@ -15444,8 +15446,8 @@ const tacticsEnemyActionIds = (enemyId, difficulty) => {
   return [...base, ...extra.slice(0, want - base.length)];
 };
 const TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS = Object.freeze(['AwakenedMoo']);
-const tacticsActionDefinitions = (enemyId, difficulty) => {
-  const own = tacticsEnemyActionIds(enemyId, difficulty);
+const tacticsActionDefinitions = (enemyId, difficulty, actionCount) => {
+  const own = tacticsEnemyActionIds(enemyId, difficulty, actionCount);
   const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
   const allTargetSpecial = TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS.includes(enemyId);
   return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id)).map(def => allTargetSpecial && def.id === 'special' ? {
@@ -15456,7 +15458,7 @@ const tacticsActionDefinitions = (enemyId, difficulty) => {
     condition: 'ためた次のターンに必ず発動。立っている全員へ同時に当たる'
   } : def);
 };
-const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? tacticsActionDefinitions(enemyId, difficulty) : ENEMY_ACTION_DEFINITIONS;
+const enemyActionDefinitionsFor = (mode, enemyId, difficulty, actionCount) => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? tacticsActionDefinitions(enemyId, difficulty, actionCount) : ENEMY_ACTION_DEFINITIONS;
 const enemyActionStateFrom = lastIntent => ({
   charging: lastIntent?.type === 'CHARGE',
   piercing: lastIntent?.type === 'PIERCE_CHARGE',
@@ -15654,7 +15656,10 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverrid
     emoji: base?.emoji || '❓',
     hp: Math.floor(baseHp * mod * enemyTurnMultiplier),
     maxHp: Math.floor(baseHp * mod * enemyTurnMultiplier),
-    atk: Math.floor(baseAtk * mod * enemyTurnMultiplier)
+    atk: Math.floor(baseAtk * mod * enemyTurnMultiplier),
+    ...(options && Number.isFinite(options.actionCount) ? {
+      actionCount: Math.floor(options.actionCount)
+    } : {})
   };
 };
 const collectBondRankingEntries = rankingPool => {
@@ -58424,6 +58429,37 @@ const RaidJackDebugScreen = ({
   }, "準備中(docs/sql/raid/ のSQLが未適用か、通信できません)"), Array.isArray(ranking) && React.createElement("div", {
     className: "mt-2"
   }, "Bの上位(デバッグ分): ", ranking.length === 0 ? 'まだありません' : ranking.slice(0, 10).map((r, i) => `${i + 1}位 ${r.breederId.slice(0, 6)}… ${r.total.toLocaleString()}`).join(' / '))), React.createElement("section", {
+    className: "space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-amber-200"
+  }, "⑤ 絵と、段階ごとに使う技"), React.createElement("div", {
+    className: "flex items-end justify-around gap-2 rounded-xl bg-slate-900/70 p-2"
+  }, React.createElement("figure", {
+    className: "text-center text-[9px] text-slate-300"
+  }, React.createElement("img", {
+    src: JACK_IMG,
+    alt: "ジャック(通常)",
+    className: "mx-auto h-24 object-contain"
+  }), "通常"), React.createElement("figure", {
+    className: "text-center text-[9px] text-slate-300"
+  }, React.createElement("img", {
+    src: JACK_POSE_IMG,
+    alt: "ジャック(ポーズ)",
+    className: "mx-auto h-24 object-contain"
+  }), "両腕ポーズ"), React.createElement("figure", {
+    className: "text-center text-[9px] text-slate-300"
+  }, React.createElement("img", {
+    src: JACK_ICON_IMG,
+    alt: "ジャック(顔アイコン)",
+    className: "mx-auto h-16 object-contain"
+  }), "顔アイコン")), React.createElement("div", {
+    className: "text-[10px] text-slate-200"
+  }, [...RAID_JACK_A_TIERS, ...RAID_JACK_B_TIERS].map(t => React.createElement("div", {
+    key: t.id,
+    className: "mt-1"
+  }, React.createElement("b", null, t.name), "(", t.actionCount, "本): ", tacticsEnemyActionIds('Jack', 'Normal', t.actionCount).map(id => TACTICS_ENEMY_DATA.Jack.actions[id] || id).join(' / '))), React.createElement("div", {
+    className: "mt-1 text-slate-400"
+  }, "通常攻撃「", TACTICS_ENEMY_DATA.Jack.normal, "」・必殺技「", TACTICS_ENEMY_DATA.Jack.special, "」は全段階で使う(再生なし)"))), React.createElement("section", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-slate-200"
@@ -69128,7 +69164,7 @@ function MonsterHeroGame() {
     if (reserved && reserved.variant === 'pierce' && !(performed && executedIntent?.type === 'PIERCE_CHARGE')) reserved = null;
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     const actionState = () => ({
-      definitions: enemyActionDefinitionsFor(runMode, enemy?.id, enemy?.difficulty),
+      definitions: enemyActionDefinitionsFor(runMode, enemy?.id, enemy?.difficulty, enemy?.actionCount),
       roarStacks: tacticsRoarStacksRef.current
     });
     const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
@@ -72443,7 +72479,7 @@ function MonsterHeroGame() {
     setEnemyDist(dist);
     setEnemyLastIntent(null);
     const actionState = () => ({
-      definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id, newEnemy?.difficulty),
+      definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id, newEnemy?.difficulty, newEnemy?.actionCount),
       roarStacks: tacticsRoarStacksRef.current
     });
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy, dist, null, {
@@ -86161,7 +86197,7 @@ function MonsterHeroGame() {
         ...(scanBeforeBattle ? {
           unannounced: true
         } : enemyActionStateFrom(enemyLastIntent)),
-        definitions: enemyActionDefinitionsFor(runMode, scanEnemy?.id, scanEnemy?.difficulty),
+        definitions: enemyActionDefinitionsFor(runMode, scanEnemy?.id, scanEnemy?.difficulty, scanEnemy?.actionCount),
         roarStacks: tacticsRoarStacksRef.current
       };
       const actions = enemyActionProbabilities(scanEnemy, scanDist, scanState);

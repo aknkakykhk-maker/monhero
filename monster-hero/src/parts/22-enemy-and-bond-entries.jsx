@@ -136,6 +136,8 @@ const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Nyarlathotep:Object.freeze(['regen','pierce','allout']),
   Splatter:Object.freeze(['rush','roar','pierce','allout']),
   AwakenedMoo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
+  // イベント・レイドボス。再生なし。本数は段階で変わる(actionCount。落とす順は roar → うしろから)
+  Jack:Object.freeze(['rush','sweep','roar','pierce','allout']),
 });
 // 難易度が上がると、基本構成に無い技も順に使えるようになる(2026-09-21 ユーザー指示
 // 「難易度が上がるにつれて使える技も増やそうか」)。足す順はこれ。
@@ -154,10 +156,13 @@ const TACTICS_DIFFICULTY_ACTION_DELTA = Object.freeze({
 //   易しい難易度ほど「敵が何もしてこない」ように見えてしまう
 const TACTICS_SUPPORT_ACTION_IDS = Object.freeze(['roar','regen']);
 // その敵がその難易度で使う技のid。難易度を渡さなければ基本構成のまま(既存の呼び出しはそのまま動く)
-const tacticsEnemyActionIds = (enemyId, difficulty) => {
+// actionCount を渡すと、難易度の増減を使わず「この本数」にする(ジャックは段階ごとに本数を決めている。
+// 難易度は createBattleEnemy が既存の難易度へ丸めるので、段階を難易度のキーにはできない)
+const tacticsEnemyActionIds = (enemyId, difficulty, actionCount) => {
   const base = TACTICS_ENEMY_ACTION_IDS[enemyId] || [];
   const delta = Number.isFinite(TACTICS_DIFFICULTY_ACTION_DELTA[difficulty]) ? TACTICS_DIFFICULTY_ACTION_DELTA[difficulty] : 0;
-  const want = Math.max(1, base.length + delta);
+  const fixed = Number.isFinite(actionCount) ? Math.floor(actionCount) : null;
+  const want = fixed !== null ? Math.min(Math.max(1, fixed), base.length) : Math.max(1, base.length + delta);
   if (want === base.length) return base;
   if (want < base.length) {
     // 落とすのは「補助をうしろから → それでも足りなければうしろから」。残ったものは base の並びを保つ
@@ -175,8 +180,8 @@ const tacticsEnemyActionIds = (enemyId, difficulty) => {
 // 威力は1体あたりいままでの必殺技と同じ(×2.5)のまま、立っている全員へ同時に当たる。
 // 当たる相手は全体攻撃と同じく targetsAll を見て tacticsIntentTargets が数える
 const TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS = Object.freeze(['AwakenedMoo']);
-const tacticsActionDefinitions = (enemyId, difficulty) => {
-  const own = tacticsEnemyActionIds(enemyId, difficulty);
+const tacticsActionDefinitions = (enemyId, difficulty, actionCount) => {
+  const own = tacticsEnemyActionIds(enemyId, difficulty, actionCount);
   // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
   const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
   const allTargetSpecial = TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS.includes(enemyId);
@@ -185,8 +190,8 @@ const tacticsActionDefinitions = (enemyId, difficulty) => {
     : def);
 };
 // そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
-const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
-  ? tacticsActionDefinitions(enemyId, difficulty) : ENEMY_ACTION_DEFINITIONS;
+const enemyActionDefinitionsFor = (mode, enemyId, difficulty, actionCount) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
+  ? tacticsActionDefinitions(enemyId, difficulty, actionCount) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = (lastIntent) => ({
   charging: lastIntent?.type === 'CHARGE',
@@ -358,6 +363,8 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=
     hp:Math.floor(baseHp*mod*enemyTurnMultiplier),
     maxHp:Math.floor(baseHp*mod*enemyTurnMultiplier),
     atk:Math.floor(baseAtk*mod*enemyTurnMultiplier),
+    // ジャックのように「使う技の本数」を段階ごとに決める敵だけが持つ(tacticsEnemyActionIds が見る)
+    ...(options && Number.isFinite(options.actionCount) ? { actionCount:Math.floor(options.actionCount) } : {}),
   };
 };
 
