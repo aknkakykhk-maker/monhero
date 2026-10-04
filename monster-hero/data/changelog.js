@@ -190,7 +190,7 @@ const CHANGELOG = [
   {
     // 2026-10-03 ユーザー指示「ハロウィンイベント(ハロウィン・ナイト)の開始」。時刻で出し入れする項目なので、date は
     // 出はじめる時刻(visibleFrom)にそろえる(RHYTHM_EVENT_PLAYBOOK.md §3)。ランキングは無く、期間・倍率は
-    // RHYTHM_EVENT_POINT_CAMPAIGNS の halloween_night_2026、5部のお話は HALLOWEEN_NIGHT_STORIES が受け持つ
+    // RHYTHM_EVENT_POINT_CAMPAIGNS の halloween_night_2026、第1部のお話は HALLOWEEN_NIGHT_STORIES が受け持つ(第2部以降はジャックのストーリー=レイドの進み具合で流れる)
     date: "2026-10-04 08:00", type:'event', group:'rhythm', title:'【期間限定】ハロウィン・ナイトを開催します', status:'new',
     visibleFrom:'2026-10-04T08:00:00+09:00',
     image: 'images/events/halloween-night-2026.jpg?v=f409e52df4e2',

@@ -117,7 +117,8 @@ check('モードのタブはランキングでは出さない',
 // 1行で収まる品だけが枠の真ん中へ降りて、2行の品の1行目と高さがそろわなくなる。
 check('商品名は行数が変わっても同じ高さの枠に入れる',
   has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>")
-    && has('w-full flex items-start justify-center text-center text-[11px] font-black leading-tight'));
+    // 名前に全角のかっこ（ ）を含む長い商品は文字を10pxに小さくする条件が足され、class が文字列から式(テンプレート)になった(2026-10)
+    && /w-full flex items-start justify-center text-center \$\{[^}]*\}[\s\S]{0,40}font-black leading-tight/.test(source));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
 // 2026-09-10(STEP 6-6)にマーケットを切り出したので、画面は onOpenItemDetail を呼び、
 // 本体がそれに setMarketItemDetail を渡す形になった
@@ -233,7 +234,8 @@ const noScroll = screens.filter(name => {
   // どの画面がどのコンポーネントになったかは、呼び出し側 <XxxScreen から読み取る
   // 画面によっては gameState のあとに条件が足してある({gameState==='SKIP_PICK'&&skipFlow&&( など)。
   // その条件を挟んでもコンポーネント名を取り出せるようにする(2026-09-11)
-  const called = (source.match(new RegExp(`gameState==='${name}'&&(?:[A-Za-z0-9_$.?]+&&)*\\(\\s*<([A-Z][A-Za-z0-9]*)`)) || [])[1];
+  // 条件は `RELEASE_FLAGS.friends===true&&` のように `===true` を含む形もある(フレンド画面。2026-10)
+  const called = (source.match(new RegExp(`gameState==='${name}'&&(?:[A-Za-z0-9_$.?]+(?:===(?:true|false))?&&)*\\(\\s*<([A-Z][A-Za-z0-9]*)`)) || [])[1];
   if (called) {
     // screenSource は部品が見つからないとき gameState の窓へ落ちる。落ちた結果は
     // 呼び出しの数行でしかないので、「部品そのものが返ってきたとき」だけ信用する

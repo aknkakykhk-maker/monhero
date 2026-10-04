@@ -210,10 +210,15 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       await page.waitForTimeout(600);
       if (!closed) break;
     }
+    // ハロウィン・ナイト(10/4〜11/1 3:59)のあいだ、HOMEの曲(自分で選んでいないとき)は「Crazy Party Night」の全編版になる(2026-10-04)。
+    // この検査は日付に左右されないよう、期間中はその曲も「HOMEのBGM」として認める(期間かどうかは見るたびに数え直す)
+    const halloweenNow = await page.evaluate(() => {
+      try { return Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT); } catch (e) { return false; }
+    });
     let homeOk = false;
     for (let i = 0; i < 20; i++) {
       await page.waitForTimeout(500);
-      if ((await playing()).some(s => s === homeSrc)) { homeOk = true; break; }
+      if ((await playing()).some(s => s === homeSrc || (halloweenNow && /crazy-party-night-full/.test(s)))) { homeOk = true; break; }
     }
     check('トップ画面へ進むとHOMEのBGMへ切り替わる', homeOk,
       `既定は ${homeSrc} / いま ${(await playing()).join(',') || '(無音)'}`);

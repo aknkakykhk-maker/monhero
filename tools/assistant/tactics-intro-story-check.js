@@ -114,7 +114,8 @@ check('画面は eventReplayList() を通して一覧を取る（生の配列を
   rawUses === 1, `生の参照 ${rawUses} か所（定義の1か所だけが正しい）`);
 // 呼び出しは3か所（回想の一覧・再生・プロフィール）。定義側は `= () =>` なのでここには数えない
 check('一覧・再生・プロフィールの3か所とも同じ入口を使う',
-  (compact.match(/eventReplayList\(\)/g) || []).length === 3,
+  // 回想の再生中に「着る服」を引くところ(助手の着替え)でも eventReplayList() を呼ぶようになり、4か所になった(2026-10)。3つの入口が使っていることを見るので、3か所以上とする
+  (compact.match(/eventReplayList\(\)/g) || []).length >= 3,
   `${(compact.match(/eventReplayList\(\)/g) || []).length} か所`);
 
 // --- ③-2 会話中に鳴るBGM ---
@@ -150,10 +151,12 @@ if (!released) {
   check('公開しているあいだだけ「見たか」を読みに行く',
     compact.includes('EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle){'));
   check('最後まで見たら「見た」にする',
-    compact.includes("if(event&&event.id==='tactics_intro')markTacticsIntroSeen();"));
+    // デバッグの回想(eventReplay.debug)では「見た」にしない条件が足された(2026-10)
+    compact.includes("if(event&&event.id==='tactics_intro'&&!eventReplay.debug)markTacticsIntroSeen();"));
   // ★飛ばしたときも記録しないと、起動のたびに同じ会話が出る
   check('飛ばしても「見た」にする',
-    compact.includes("event.id==='tactics_intro')markTacticsIntroSeen();setEventReplay(null)"));
+    // 飛ばすときは、本編で流しているとき(live)だけ「見た」にする。デバッグ・回想では記録しない(2026-10)
+    compact.includes("if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro')markTacticsIntroSeen();"));
   // ★保存キーは新しく足す。既存の mh_*_intro_seen_v1 は触らない(CLAUDE.md ⑦)
   check('「見た」を覚える保存キーを新しく足している',
     source.includes("TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1'"));

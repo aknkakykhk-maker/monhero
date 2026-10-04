@@ -235,8 +235,9 @@ const round = (v) => Math.round(v * 1e6) / 1e6;
   // 待機回数・段階・倍率は既存の permaBuffs(バトル中だけの数値)へ足すだけで、保存キーは増やさない
   check('新しい保存キーを増やしていない',
     !gameSource.includes("'mh_poltz") && !gameSource.includes('mh_poltz'));
+  // バトルの始まりで自動回復をふだんの値へ戻す場所は、ジャックの専用戦の開始(startRaidJackBattle)が加わって3か所になった。2か所以上あればよい(2026-10)
   check('バトル開始時に待機がリセットされる',
-    (gameSource.match(/writePermaBuffs\(\{autoHpRecovery:0\.1\}\)/g) || []).length === 2);
+    (gameSource.match(/writePermaBuffs\(\{autoHpRecovery:0\.1\}\)/g) || []).length >= 2);
 
   // ---------- ヘルプ ----------
   check('ヘルプに発動する場面・しない場面が書いてある',

@@ -45,6 +45,7 @@ const run = async (monId, isUnique, opts) => {
     setAttackAnim: (a) => { if (a && !a.charge) anims.push({ ...a }); },
     setSlotSkill: ()=>{}, setEnemy: ()=>{}, setEnemyDist: ()=>{}, syncAtkTierForDist: ()=>{},
     addPopup: ()=>{}, triggerShake: ()=>{}, battleWait: async()=>{},
+    setTacticsPandoraForms: ()=>{},   // パンドラの箱(タクティクスEX)の姿の切り替え。この検査では見ない(2026-10)
     pushBattleLog: ()=>{}, battleActorName: ()=>'テスト',
     Audio_: { se: new Proxy({}, { get: () => () => {} }) },
     RANGE_LABELS: ['零','近','中','遠'],
