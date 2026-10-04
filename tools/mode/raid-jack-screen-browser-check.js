@@ -139,6 +139,16 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await next.click({ timeout: 3000, force: true }).catch(() => {});
       await page.waitForTimeout(250);
     }
+    // ひとこと(吹き出し): 爵位の話し方(段階2=子爵)・残り77%なので full の場面。押すと次のセリフへ。吹き出しを押してもレイド画面は開かない
+    await page.locator('[data-home-raid-say]').waitFor({ timeout: 20000 });
+    const sayA = (await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim();
+    const FULL2 = ['ほっほっほ。わたくしを止められるとお思いですかな？', '優雅に参りましょう。ランタンは、ぜんぶ割ってさしあげますぞ', '男爵などと一緒にされては困りますな。わたくしは子爵ですぞ', 'おや、また挑戦者ですかな。ご苦労なことですぞ'];
+    check('HOMEのジャックが、子爵の話し方で、残りライフが多い(full)ときのひとことを話す', FULL2.includes(sayA), sayA);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/home-say.png` });
+    const seen = new Set([sayA]);
+    for (let k = 0; k < 4; k++) { await page.locator('[data-home-raid-say]').click(); await page.waitForTimeout(120); seen.add((await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim()); }
+    check('吹き出しを押すと、次のセリフに切り替わる(4回押して4種類すべてを回る)', seen.size === 4 && [...seen].every((t) => FULL2.includes(t)), [...seen].join(' | '));
+    check('吹き出しを押してもレイド画面は開かない(ジャック本体を押したときだけ開く)', (await page.locator('[data-raid-jack-screen]').count()) === 0 && (await page.locator('[data-home-raid-jack]').count()) === 1);
     check('強制表示でHOMEの真ん中にジャックが出る', true);
     const jackBox = await page.locator('[data-home-raid-jack]').boundingBox();
     const vp = page.viewportSize();

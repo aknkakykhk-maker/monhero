@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cc31eb7d6edf3c7b
+// source-sha256: 62509aa79e43a783
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 07:23";
+const BUILD_DATE = "2026-10-05 07:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36663,6 +36663,44 @@ const RaidJackResultStinger = ({
     className: "mh-rjstinger-text"
   }, def.text));
 };
+const RAID_JACK_HOME_LINES = Object.freeze({
+  a1: Object.freeze({
+    full: Object.freeze(['吾輩は男爵ジャックであるぞ！ ひれ伏すがよい！', 'このハロウィンの夜は、吾輩のものであるぞ！', 'ふははは！ 貴様ら程度、吾輩の敵ではないのである！', 'ランタンなど、ぜんぶ吾輩が割ってやるのであるぞ！']),
+    half: Object.freeze(['ぬ、ぬぬ……なかなかやるではないか、であるぞ', 'ま、まだ本気を出していないだけであるぞ！', 'ちょっと痛いのである……い、いや痛くないのである！', 'そ、それ以上近づくでないぞ！']),
+    low: Object.freeze(['ひぃっ！ ま、待つのである、話し合おうではないか！', '吾輩、ちょっとだけ……ほんのちょっとだけ弱気になったのであるぞ……', 'き、今日のところは引いてやってもよいのであるぞ！', 'もうやめるのである～！ 瓶が……瓶が重いのであるぞ……'])
+  }),
+  a2: Object.freeze({
+    full: Object.freeze(['ほっほっほ。わたくしを止められるとお思いですかな？', '優雅に参りましょう。ランタンは、ぜんぶ割ってさしあげますぞ', '男爵などと一緒にされては困りますな。わたくしは子爵ですぞ', 'おや、また挑戦者ですかな。ご苦労なことですぞ']),
+    half: Object.freeze(['ふむ……少々、骨のある方々のようですな', 'おほん。まだ余裕ですぞ。余裕ですとも', 'なぜか胸のあたりが、すうすういたしますな……', '楽しそう？ ……いえ、わたくしには関係のないことですぞ']),
+    low: Object.freeze(['こ、これはいけませんな……紅茶が冷めてしまいますぞ', 'お待ちなさい！ もう少し、お手柔らかにお願いしたいですぞ', 'わたくしの優雅さが……崩れていきますぞ……', '……みなさん、ほんとうに楽しそうですな。うらやましい、ですぞ'])
+  }),
+  a3: Object.freeze({
+    full: Object.freeze(['フフフ……余の夜へ、ようこそ。美しい悪夢をお見せしよう', 'ほう、また来たのかね。余興としては上々だ、フフフ', 'この夜は余の舞台。観客は多いほうがよいのだよ', '美しいものほど危ないのだ。覚えておきたまえ']),
+    half: Object.freeze(['ふむ……少しだけ、舞台が揺れてきたようだね', 'フフ……やるではないか。拍手を送ろう', '余の衣装に傷がついた。これは高くつくよ、フフフ', 'どうして、そんなに楽しそうなのかね……余にも教えたまえ']),
+    low: Object.freeze(['く……幕は、まだ降りんよ。降りんとも……', 'フ、フフフ……声が震えているのは、気のせいだよ', '待ちたまえ。もう少しだけ、余の話を聞いていかないかね', '……この舞台に、ひとりきりは、少し寒いのだよ'])
+  }),
+  a4: Object.freeze({
+    full: Object.freeze(['……我が前に、ひざまずけ', '夜は、すべて我のものである', '退け。さもなくば、ひれ伏せ', '我は公爵。誰にも、我は止められぬ']),
+    half: Object.freeze(['……なかなか、やる。認めよう', 'どうせ……また、置いていくのであろう', 'み、みな、そう言う。……そう言って、去るのだ', '我は、揺るがぬ。……揺るがぬ、はずだ']),
+    low: Object.freeze(['……来い。我を、本当に止められるのなら', '……声が、震えている。気のせいである', '止めて、くれ……いや、何でもない', '畑は……暗かった。ここは、明るいな……'])
+  }),
+  a5: Object.freeze({
+    full: Object.freeze(['ガハハ！ ワシが大王じゃ！ かかってこい！', '夜の街は、ワシの庭じゃぞ！ ガハハハ！', 'ワシを楽しませてみせい！ ガハハ……ガハ……', 'どうじゃ、ワシは強かろう！ 強いのじゃぞ！']),
+    half: Object.freeze(['ガハハ……ま、まだまだ、これからじゃ！', 'む？ ワシの笑い声が、ちょっと空っぽじゃと？ ……気のせいじゃ', '楽しくなってきたわい！ ほんとうじゃぞ！', 'みんなの声が、聞こえるのう……にぎやかじゃのう……']),
+    low: Object.freeze(['ガ、ガハ……まだ、倒れんぞ……倒れんぞ……', 'ワシは、大王じゃ……強くなければ、仲間に入れんのじゃ……', '……ほんとうは、ただ……いや、何でもないわい', 'もう、強がらなくても……よいのかのう……'])
+  })
+});
+const RAID_JACK_HOME_LINES_PUMPKIN = Object.freeze(['やっほー！ ぼく、ぱんぷきん！ あそびにきたよ！', 'きょうも、みんなといっしょにあそべて、うれしいな', 'ぼく、ぜんぜんたおれないよ！ げんきいっぱいだもん！', 'ほら、もっと！ もっとあそぼうよ！', 'ぴかぴかのおなか、みてみて！ きれいでしょ？', 'ハロウィン・ナイト、たのしいね！ ぼく、だいすき！', 'みんなのこえ、はたけまでぜんぶきこえてたんだ。いまは、すぐそばにいるね', 'たくさんダメージをあたえたひとが、いちばんすごいんだって。ぼく、みてるよ！', 'ちょっとつかれた？ ぼくはまだまだいけるよー！', 'あ、おかしのにおいがする！ ……え、ちがう？ えへへ']);
+const raidJackLifeBand = rate => {
+  const r = Number(rate);
+  if (!Number.isFinite(r)) return 'full';
+  return r >= 0.7 ? 'full' : r >= 0.3 ? 'half' : 'low';
+};
+const raidJackHomeLines = (tierId, rate, pumpkin = false) => {
+  if (pumpkin === true) return RAID_JACK_HOME_LINES_PUMPKIN;
+  const set = RAID_JACK_HOME_LINES[tierId] || RAID_JACK_HOME_LINES.a1;
+  return set[raidJackLifeBand(rate)];
+};
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
   PROGRESS: 'progress'
@@ -48720,18 +48758,21 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
-const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position: 'absolute',
   left: '50%',
   top: '44%',
   transform: 'translate(-50%,-50%)',
   zIndex: 6,
+  width: '44%',
+  maxWidth: '190px',
+  minWidth: '120px'
+});
+const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  width: '44%',
-  maxWidth: '190px',
-  minWidth: '120px',
+  width: '100%',
   background: 'transparent',
   border: '0',
   padding: '0',
@@ -48742,6 +48783,7 @@ const HomeRaidJack = ({
   onOpen
 }) => {
   const [totals, setTotals] = React.useState(undefined);
+  const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-home-raid-jack-css')) return;
@@ -48790,7 +48832,66 @@ const HomeRaidJack = ({
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
-  return React.createElement("button", {
+  const speechLines = raidJackHomeLines(tier.id, rate, allDone);
+  const speech = speechLines[lineNo % speechLines.length];
+  const speechAccent = allDone ? '#fdba74' : '#fb923c';
+  return React.createElement("div", {
+    "data-home-raid-jack-wrap": true,
+    style: HOME_RAID_JACK_WRAP_STYLE
+  }, React.createElement("button", {
+    type: "button",
+    key: `say${lineNo}`,
+    "data-home-raid-say": true,
+    "data-story-pop": "1",
+    onClick: () => setLineNo(n => n + 1),
+    "aria-label": "ジャックのひとこと(押すと次のセリフ)",
+    style: {
+      position: 'absolute',
+      left: '50%',
+      bottom: '100%',
+      marginLeft: -92,
+      marginBottom: '4px',
+      width: 184,
+      padding: '6px 10px',
+      borderRadius: '14px',
+      border: `2px solid ${speechAccent}`,
+      background: '#1c0a02ee',
+      color: '#ffedd5',
+      fontSize: '11px',
+      fontWeight: 900,
+      lineHeight: 1.45,
+      textAlign: 'left',
+      cursor: 'pointer',
+      boxShadow: `0 0 12px ${speechAccent}66`,
+      animation: 'storyPop .25s ease-out both',
+      zIndex: 2
+    }
+  }, React.createElement("span", {
+    style: {
+      display: 'block'
+    }
+  }, speech), React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      display: 'block',
+      textAlign: 'right',
+      fontSize: '8px',
+      opacity: .7
+    }
+  }, "▶ つぎ"), React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: '50%',
+      bottom: -9,
+      marginLeft: -8,
+      width: 0,
+      height: 0,
+      borderLeft: '8px solid transparent',
+      borderRight: '8px solid transparent',
+      borderTop: `9px solid ${speechAccent}`
+    }
+  })), React.createElement("button", {
     type: "button",
     "data-home-raid-jack": true,
     onClick: onOpen,
@@ -48937,7 +49038,7 @@ const HomeRaidJack = ({
       fontSize: '8px',
       opacity: .85
     }
-  }, "共有HP ", left.toLocaleString()))));
+  }, "共有HP ", left.toLocaleString())))));
 };
 function HomeScreen({
   assistantBondUp,

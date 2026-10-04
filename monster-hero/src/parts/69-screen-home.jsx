@@ -63,13 +63,18 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
-const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:6,
-  display:'flex', flexDirection:'column', alignItems:'center', width:'44%', maxWidth:'190px', minWidth:'120px',
+  width:'44%', maxWidth:'190px', minWidth:'120px',
+});
+const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+  display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
   background:'transparent', border:'0', padding:'0', cursor:'pointer',
 });
 const HomeRaidJack = ({ eventId, onOpen }) => {
   const [totals, setTotals] = React.useState(undefined);
+  // ひとこと(吹き出し)。押すと次のセリフへ。最初の1つは開くたびに変わる
+  const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-home-raid-jack-css')) return;
@@ -98,7 +103,21 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
+  // いま話せるセリフ: 段階(爵位)の話し方 × 残りライフの場面。大王を倒したあとはぱんぷきん(場面なし)
+  const speechLines = raidJackHomeLines(tier.id, rate, allDone);
+  const speech = speechLines[lineNo % speechLines.length];
+  const speechAccent = allDone ? '#fdba74' : '#fb923c';
   return (
+    <div data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
+    {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
+    <button type="button" key={`say${lineNo}`} data-home-raid-say data-story-pop="1" onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+      style={{ position:'absolute', left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184, padding:'6px 10px', borderRadius:'14px',
+        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
+        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2 }}>
+      <span style={{ display:'block' }}>{speech}</span>
+      <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
+      <span aria-hidden="true" style={{ position:'absolute', left:'50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />
+    </button>
     <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
           ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
@@ -131,6 +150,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
         </>}
       </span>
     </button>
+    </div>
   );
 };
 function HomeScreen({

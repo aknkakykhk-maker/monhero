@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 216ab256430ed935
+// generated-sha256: 162dc8e6b7510e8e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 07:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 07:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23655,6 +23655,143 @@ const RaidJackResultStinger = ({ reason }) => {
   );
 };
 
+// ---- part: 38-raid-jack-home-lines.jsx ----
+// HOMEにいるレイドボスのひとこと(2026-10-05・ユーザー指示「ホームにいるレイドボスに吹き出しで喋らせて。何種類か作って、押すと切り替わる。10種類ぐらい。残りライフでセリフも変わる」)。
+// 純粋なデータと選び方だけ(画面は 69-screen-home.jsx の HomeRaidJack)。
+//   ・段階ごと(男爵〜大王)に、爵位の話し方で。残りライフ(共有)で 3つの場面 full / half / low に分け、場面ごとに4種類 = 段階ごとに12種類
+//   ・大王を倒したあとは、小さなぱんぷきんが遊びに来る(共有ライフは無限なので、場面は分けず10種類)
+//   ・話し方は台本(docs/spec/RAID_JACK_STORY.md「ジャックの話し方」)と同じ
+//     男爵=威張る小物「吾輩」「〜であるぞ」/ 子爵=気取った丁寧語「わたくし」「〜ですぞ」/ 伯爵=芝居がかった「余」「フフフ」/
+//     公爵=短く威厳「我」「〜である」ときどき声が揺れる / 大王=豪快だが空元気「ワシ」「〜じゃ」「ガハハ」/ ぱんぷきん=子どもの「ぼく」
+//   ・ストーリーで先に明かされるひみつ(第3部の絵本)に触れる言い方は、その部を見たあとの段階にだけ入れる(公爵は第3部のあと)
+const RAID_JACK_HOME_LINES = Object.freeze({
+  a1: Object.freeze({
+    full: Object.freeze([
+      '吾輩は男爵ジャックであるぞ！ ひれ伏すがよい！',
+      'このハロウィンの夜は、吾輩のものであるぞ！',
+      'ふははは！ 貴様ら程度、吾輩の敵ではないのである！',
+      'ランタンなど、ぜんぶ吾輩が割ってやるのであるぞ！',
+    ]),
+    half: Object.freeze([
+      'ぬ、ぬぬ……なかなかやるではないか、であるぞ',
+      'ま、まだ本気を出していないだけであるぞ！',
+      'ちょっと痛いのである……い、いや痛くないのである！',
+      'そ、それ以上近づくでないぞ！',
+    ]),
+    low: Object.freeze([
+      'ひぃっ！ ま、待つのである、話し合おうではないか！',
+      '吾輩、ちょっとだけ……ほんのちょっとだけ弱気になったのであるぞ……',
+      'き、今日のところは引いてやってもよいのであるぞ！',
+      'もうやめるのである～！ 瓶が……瓶が重いのであるぞ……',
+    ]),
+  }),
+  a2: Object.freeze({
+    full: Object.freeze([
+      'ほっほっほ。わたくしを止められるとお思いですかな？',
+      '優雅に参りましょう。ランタンは、ぜんぶ割ってさしあげますぞ',
+      '男爵などと一緒にされては困りますな。わたくしは子爵ですぞ',
+      'おや、また挑戦者ですかな。ご苦労なことですぞ',
+    ]),
+    half: Object.freeze([
+      'ふむ……少々、骨のある方々のようですな',
+      'おほん。まだ余裕ですぞ。余裕ですとも',
+      'なぜか胸のあたりが、すうすういたしますな……',
+      '楽しそう？ ……いえ、わたくしには関係のないことですぞ',
+    ]),
+    low: Object.freeze([
+      'こ、これはいけませんな……紅茶が冷めてしまいますぞ',
+      'お待ちなさい！ もう少し、お手柔らかにお願いしたいですぞ',
+      'わたくしの優雅さが……崩れていきますぞ……',
+      '……みなさん、ほんとうに楽しそうですな。うらやましい、ですぞ',
+    ]),
+  }),
+  a3: Object.freeze({
+    full: Object.freeze([
+      'フフフ……余の夜へ、ようこそ。美しい悪夢をお見せしよう',
+      'ほう、また来たのかね。余興としては上々だ、フフフ',
+      'この夜は余の舞台。観客は多いほうがよいのだよ',
+      '美しいものほど危ないのだ。覚えておきたまえ',
+    ]),
+    half: Object.freeze([
+      'ふむ……少しだけ、舞台が揺れてきたようだね',
+      'フフ……やるではないか。拍手を送ろう',
+      '余の衣装に傷がついた。これは高くつくよ、フフフ',
+      'どうして、そんなに楽しそうなのかね……余にも教えたまえ',
+    ]),
+    low: Object.freeze([
+      'く……幕は、まだ降りんよ。降りんとも……',
+      'フ、フフフ……声が震えているのは、気のせいだよ',
+      '待ちたまえ。もう少しだけ、余の話を聞いていかないかね',
+      '……この舞台に、ひとりきりは、少し寒いのだよ',
+    ]),
+  }),
+  a4: Object.freeze({
+    full: Object.freeze([
+      '……我が前に、ひざまずけ',
+      '夜は、すべて我のものである',
+      '退け。さもなくば、ひれ伏せ',
+      '我は公爵。誰にも、我は止められぬ',
+    ]),
+    half: Object.freeze([
+      '……なかなか、やる。認めよう',
+      'どうせ……また、置いていくのであろう',
+      'み、みな、そう言う。……そう言って、去るのだ',
+      '我は、揺るがぬ。……揺るがぬ、はずだ',
+    ]),
+    low: Object.freeze([
+      '……来い。我を、本当に止められるのなら',
+      '……声が、震えている。気のせいである',
+      '止めて、くれ……いや、何でもない',
+      '畑は……暗かった。ここは、明るいな……',
+    ]),
+  }),
+  a5: Object.freeze({
+    full: Object.freeze([
+      'ガハハ！ ワシが大王じゃ！ かかってこい！',
+      '夜の街は、ワシの庭じゃぞ！ ガハハハ！',
+      'ワシを楽しませてみせい！ ガハハ……ガハ……',
+      'どうじゃ、ワシは強かろう！ 強いのじゃぞ！',
+    ]),
+    half: Object.freeze([
+      'ガハハ……ま、まだまだ、これからじゃ！',
+      'む？ ワシの笑い声が、ちょっと空っぽじゃと？ ……気のせいじゃ',
+      '楽しくなってきたわい！ ほんとうじゃぞ！',
+      'みんなの声が、聞こえるのう……にぎやかじゃのう……',
+    ]),
+    low: Object.freeze([
+      'ガ、ガハ……まだ、倒れんぞ……倒れんぞ……',
+      'ワシは、大王じゃ……強くなければ、仲間に入れんのじゃ……',
+      '……ほんとうは、ただ……いや、何でもないわい',
+      'もう、強がらなくても……よいのかのう……',
+    ]),
+  }),
+});
+// 大王を倒したあと(共有ライフは無限なので、場面は分けない)。小さなぱんぷきん。子どもの話し方
+const RAID_JACK_HOME_LINES_PUMPKIN = Object.freeze([
+  'やっほー！ ぼく、ぱんぷきん！ あそびにきたよ！',
+  'きょうも、みんなといっしょにあそべて、うれしいな',
+  'ぼく、ぜんぜんたおれないよ！ げんきいっぱいだもん！',
+  'ほら、もっと！ もっとあそぼうよ！',
+  'ぴかぴかのおなか、みてみて！ きれいでしょ？',
+  'ハロウィン・ナイト、たのしいね！ ぼく、だいすき！',
+  'みんなのこえ、はたけまでぜんぶきこえてたんだ。いまは、すぐそばにいるね',
+  'たくさんダメージをあたえたひとが、いちばんすごいんだって。ぼく、みてるよ！',
+  'ちょっとつかれた？ ぼくはまだまだいけるよー！',
+  'あ、おかしのにおいがする！ ……え、ちがう？ えへへ',
+]);
+// 残りライフの割合(0〜1)から場面を決める。7割以上=full / 3割以上=half / それより下=low。壊れた値は full
+const raidJackLifeBand = (rate) => {
+  const r = Number(rate);
+  if (!Number.isFinite(r)) return 'full';
+  return r >= 0.7 ? 'full' : r >= 0.3 ? 'half' : 'low';
+};
+// いま話せるセリフの一覧。tierId は 'a1'〜'a5'(それ以外・壊れた値は a1)/ pumpkin が真なら、ぱんぷきん(場面は見ない)
+const raidJackHomeLines = (tierId, rate, pumpkin = false) => {
+  if (pumpkin === true) return RAID_JACK_HOME_LINES_PUMPKIN;
+  const set = RAID_JACK_HOME_LINES[tierId] || RAID_JACK_HOME_LINES.a1;
+  return set[raidJackLifeBand(rate)];
+};
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -30068,13 +30205,18 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
-const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:6,
-  display:'flex', flexDirection:'column', alignItems:'center', width:'44%', maxWidth:'190px', minWidth:'120px',
+  width:'44%', maxWidth:'190px', minWidth:'120px',
+});
+const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+  display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
   background:'transparent', border:'0', padding:'0', cursor:'pointer',
 });
 const HomeRaidJack = ({ eventId, onOpen }) => {
   const [totals, setTotals] = React.useState(undefined);
+  // ひとこと(吹き出し)。押すと次のセリフへ。最初の1つは開くたびに変わる
+  const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-home-raid-jack-css')) return;
@@ -30103,7 +30245,21 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
+  // いま話せるセリフ: 段階(爵位)の話し方 × 残りライフの場面。大王を倒したあとはぱんぷきん(場面なし)
+  const speechLines = raidJackHomeLines(tier.id, rate, allDone);
+  const speech = speechLines[lineNo % speechLines.length];
+  const speechAccent = allDone ? '#fdba74' : '#fb923c';
   return (
+    <div data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
+    {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
+    <button type="button" key={`say${lineNo}`} data-home-raid-say data-story-pop="1" onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+      style={{ position:'absolute', left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184, padding:'6px 10px', borderRadius:'14px',
+        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
+        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2 }}>
+      <span style={{ display:'block' }}>{speech}</span>
+      <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
+      <span aria-hidden="true" style={{ position:'absolute', left:'50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />
+    </button>
     <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
           ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
@@ -30136,6 +30292,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
         </>}
       </span>
     </button>
+    </div>
   );
 };
 function HomeScreen({
