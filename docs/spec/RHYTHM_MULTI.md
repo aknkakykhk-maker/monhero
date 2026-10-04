@@ -4,7 +4,8 @@
 実装: `monster-hero/src/parts/77-screen-rhythm-multi.jsx`(部屋の状態 `RHYTHM_MULTI` と画面 `RhythmMultiScreen`)。
 モンヒロビートの入口「モードえらび」(`RHYTHM_MODE_SELECT`)も同じ部品で描く(`modeSelect` を渡したとき)。部屋に入れたら `onRoomEntered` で `RHYTHM_MULTI` へ移り、`RHYTHM_MULTI` で部屋が無くなったらモードえらびへ戻る。
 検査: `node tools/mode/rhythm-multi-check.js`(通信と時間を偽物にして、複数人ぶん動かす)。
-配置の検査: `node tools/mode/rhythm-multi-layout-check.js`(モードえらびと結果画面を実際に開いて、実機に近い大きさを含む縦横の数サイズで、はみ出し・カードの中身の切れ・MVPの札の重なり・定型文の段数を測る。通信は同じブラウザの2ページを BroadcastChannel でつなぐ偽物)。
+画面を自前で回している間(`data-mh-view-rotation`・iPhoneの「横」ボタン)は、端末の向きが縦のままなので、`portrait:` と `max-height` の指定は縦画面のほうが効いてしまう(`landscape:` はビルドが回転中へ写してくれる)。この画面は、そうした指定の横に回転中の写し(`[[data-mh-view-rotation=true]_&]:`)を並べて書く。
+配置の検査: `node tools/mode/rhythm-multi-layout-check.js`(モードえらびと結果画面を実際に開いて、実機に近い大きさと「回転中」を含む縦横の数サイズで、はみ出し・カードの中身の切れ・MVPの札の重なり・定型文の段数を測る。通信は同じブラウザの2ページを BroadcastChannel でつなぐ偽物)。
 
 ## 1. 流れ
 
