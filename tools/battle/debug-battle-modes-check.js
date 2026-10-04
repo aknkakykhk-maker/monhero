@@ -119,6 +119,37 @@ const SCENARIOS = [
       await page.close();
     }
 
+    // ── パーティーを選んで戦い始める(選んだ順・4体まで・選びなおし) ──
+    {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(String(e)));
+      await openDebugBattle(page);
+      const ids = await page.evaluate(() => [...document.querySelectorAll('[data-debug-party-option]')].map(b => b.getAttribute('data-debug-party-option')));
+      check('パーティーの候補が並ぶ(5体以上)', ids.length >= 5, String(ids.length));
+      for (const id of ids.slice(0, 5)) { await click(page, `[data-debug-party-option="${id}"]`); await page.waitForTimeout(100); }
+      const picked = await page.evaluate(() => ({
+        count: document.querySelector('[data-debug-party-count]')?.innerText || '',
+        on: [...document.querySelectorAll('[data-debug-party-option][aria-pressed=true]')].length,
+        first: document.querySelector('[data-debug-party-option][aria-pressed=true] span:last-child')?.innerText,
+      }));
+      check('パーティーは4体まで(5体目は入らない)', picked.on === 4 && /4体/.test(picked.count), JSON.stringify(picked));
+      await click(page, `[data-debug-party-option="${ids[1]}"]`);
+      await page.waitForTimeout(100);
+      const afterOff = await page.evaluate(() => [...document.querySelectorAll('[data-debug-party-option][aria-pressed=true]')].length);
+      check('もう一度押すと外れる', afterOff === 3, String(afterOff));
+      await click(page, '[data-debug-party-clear]');
+      await page.waitForTimeout(100);
+      check('「選びなおす」で全部外れる', await page.evaluate(() => document.querySelectorAll('[data-debug-party-option][aria-pressed=true]').length === 0));
+      await click(page, `[data-debug-party-option="${ids[0]}"]`);
+      await click(page, `[data-debug-party-option="${ids[2]}"]`);
+      await page.waitForTimeout(100);
+      await click(page, '[data-debug-battle-start]');
+      await page.waitForTimeout(3500);
+      const started = await page.evaluate(() => !document.querySelector('[data-debug-battle-setup-screen]'));
+      check('選んだパーティーで戦い始められる', started && errors.length === 0, errors[0] ? errors[0].slice(0, 160) : '');
+      await page.close();
+    }
     // ── 実際に戦い始める ──
     for (const [mode, diff, enemyKey, enemyName] of SCENARIOS) {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 09778ed3afe97f0e
+// source-sha256: 4fd282d5201def76
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 18:53";
+const BUILD_DATE = "2026-10-04 19:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61498,6 +61498,7 @@ function MonsterHeroGame() {
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
+  const [debugPartyIds, setDebugPartyIds] = useState([]);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
   const raidJackRunRef = useRef(null);
@@ -73781,7 +73782,8 @@ function MonsterHeroGame() {
   const startDebugBattle = (extreme = false) => {
     stopAllAuto();
     const option = getDebugEnemyOptions(debugBattleModeId).find(item => item.key === debugEnemyKey);
-    const savedParty = getActiveMonsterList();
+    const pickedParty = debugPartyIds.map(resolveRosterEntryToMon).filter(Boolean);
+    const savedParty = pickedParty.length > 0 ? pickedParty : getActiveMonsterList();
     const party = (debugStrongestHero ? [makeDebugStrongestMonster(), ...savedParty.filter(mon => mon?.id !== 'Mocchi')] : savedParty).slice(0, 4);
     if (!option || party.length === 0) return;
     const hero = party[0];
@@ -81849,12 +81851,64 @@ function MonsterHeroGame() {
       className: "block"
     }, "🛠 デバッグ最強モン"), React.createElement("small", {
       className: "block text-[8px] opacity-80"
-    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), React.createElement("button", {
+    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), React.createElement("section", {
+      "data-debug-party": true
+    }, React.createElement("div", {
+      className: "text-[10px] text-slate-500 font-black mb-2"
+    }, "5. パーティー", React.createElement("small", {
+      className: "ml-1 font-bold text-slate-600"
+    }, "（選んだ順。1番目が勇者モン・4体まで）")), (() => {
+      const pool = [...masuMons.map(m => ({
+        entry: `masu:${m.id}`,
+        mon: resolveRosterEntryToMon(`masu:${m.id}`),
+        sub: `絆Lv.${masuBondLevelInfo(m).level}`
+      })), ...Object.keys(ALL_PLAYER_MONSTERS).map(id => ({
+        entry: id,
+        mon: ALL_PLAYER_MONSTERS[id],
+        sub: '図鑑'
+      }))].filter(x => x.mon);
+      const toggle = entry => setDebugPartyIds(cur => cur.includes(entry) ? cur.filter(x => x !== entry) : cur.length >= 4 ? cur : [...cur, entry]);
+      return React.createElement(React.Fragment, null, React.createElement("div", {
+        className: "mb-2 flex items-center gap-2"
+      }, React.createElement("small", {
+        "data-debug-party-count": true,
+        className: "flex-1 text-[10px] font-black text-slate-300"
+      }, debugPartyIds.length > 0 ? `${debugPartyIds.length}体を選択中` : '選んでいません（いつもの編成で戦います）'), React.createElement("button", {
+        type: "button",
+        "data-debug-party-clear": true,
+        disabled: debugPartyIds.length === 0,
+        onClick: () => setDebugPartyIds([]),
+        className: "min-h-[36px] rounded-xl border border-white/15 bg-slate-900 px-3 text-[10px] font-black text-slate-300 disabled:opacity-30"
+      }, "選びなおす")), React.createElement("div", {
+        className: "grid max-h-[22rem] grid-cols-2 gap-2 overflow-y-auto mh-scroll"
+      }, pool.map(({
+        entry,
+        mon,
+        sub
+      }) => {
+        const order = debugPartyIds.indexOf(entry);
+        const on = order >= 0;
+        return React.createElement("button", {
+          key: entry,
+          type: "button",
+          "data-debug-party-option": entry,
+          "aria-pressed": on,
+          onClick: () => toggle(entry),
+          className: `relative min-h-[52px] rounded-2xl border-2 px-3 py-1.5 text-left font-black ${on ? 'border-fuchsia-300 bg-fuchsia-900 text-white' : 'border-white/15 bg-slate-900 text-slate-300'}`
+        }, React.createElement("span", {
+          className: "block truncate text-[11px]"
+        }, mon.name), React.createElement("small", {
+          className: "block text-[8px] opacity-70"
+        }, sub), on && React.createElement("span", {
+          className: "absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-300 text-[10px] font-black text-fuchsia-950"
+        }, order + 1));
+      })));
+    })()), React.createElement("button", {
       "data-debug-battle-start": true,
       disabled: !getDebugEnemyOptions(debugBattleModeId).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: () => startDebugBattle(debugBattleIsExtreme(debugBattleModeId, debugBattleDifficultyId)),
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "5. デバッグ戦開始", React.createElement("small", {
+    }, "6. デバッグ戦開始", React.createElement("small", {
       className: "block text-[9px] font-bold opacity-70"
     }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId)))), gameState === 'DEBUG_SETTINGS' && React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
