@@ -2958,6 +2958,45 @@ const createAnimationStyle = () => {
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
+    /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
+    [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+    [data-jack-aura="1"] { --ja-c: 251,146,60; --ja-d: 253,186,116; }
+    [data-jack-aura="2"] { --ja-c: 251,191,36; --ja-d: 249,115,22; }
+    [data-jack-aura="3"] { --ja-c: 192,132,252; --ja-d: 251,146,60; }
+    [data-jack-aura="4"] { --ja-c: 248,113,113; --ja-d: 251,191,36; }
+    [data-jack-aura="5"] { --ja-c: 250,204,21; --ja-d: 244,114,182; }
+    [data-jack-aura-el] > i[data-ja="base"] { opacity: .55; background: radial-gradient(closest-side, rgba(var(--ja-c),.0) 42%, rgba(var(--ja-c),.55) 78%, rgba(var(--ja-c),0) 100%); animation: jackAuraPulse 3.2s ease-in-out infinite; }
+    [data-jack-aura="2"] [data-ja="base"] { opacity: .8; animation-duration: 2.6s; }
+    [data-jack-aura="3"] [data-ja="base"] { opacity: .9; animation-duration: 2.2s; }
+    [data-jack-aura="4"] [data-ja="base"] { opacity: 1; animation-duration: 1.7s; inset: 0 -2% -2%; }
+    [data-jack-aura="5"] [data-ja="base"] { opacity: 1; animation-duration: 1.2s; inset: -8% -8% -8%; }
+    [data-jack-aura="5"] [data-ja="ring"] { inset: -6%; }
+    [data-jack-aura="1"] [data-ja="ring"], [data-jack-aura="2"] [data-ja="ring"] { display: none; }
+    [data-jack-aura-el] > i[data-ja="ring"] { inset: 0; opacity: .75; background: conic-gradient(from 0deg, rgba(var(--ja-c),0), rgba(var(--ja-c),.8), rgba(var(--ja-d),0) 35%, rgba(var(--ja-d),.7) 55%, rgba(var(--ja-c),0) 80%, rgba(var(--ja-c),.8)); -webkit-mask: radial-gradient(closest-side, transparent 78%, #000 80%, #000 90%, transparent 92%); mask: radial-gradient(closest-side, transparent 78%, #000 80%, #000 90%, transparent 92%); animation: jackAuraSpin 7s linear infinite; }
+    [data-jack-aura="4"] [data-ja="ring"] { animation-duration: 4.5s; opacity: .9; }
+    [data-jack-aura="5"] [data-ja="ring"] { animation-duration: 2.6s; opacity: 1; background: conic-gradient(from 0deg, #fde047, #f472b6, #a78bfa, #38bdf8, #4ade80, #fde047); }
+    /* 炎の舌(モンヒロビートのフリックの炎を参考): 根元から立ちのぼり、細く伸びて消える。本数は段階で増える(5/8/11/15/20本) */
+    [data-jack-aura-el] > ins[data-ja="tongue"] { position: absolute; display: block; text-decoration: none; left: var(--x); bottom: var(--b); width: var(--w); height: var(--h); margin-left: calc(var(--w) / -2); opacity: 0; pointer-events: none; transform-origin: 50% 100%; border-radius: 50% 50% 46% 46% / 85% 85% 15% 15%; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255,247,200,1) 0%, rgba(var(--ja-d),.95) 30%, rgba(var(--ja-c),.8) 62%, rgba(var(--ja-c),0) 92%); animation: jackAuraTongue var(--t) cubic-bezier(.25,.7,.35,1) var(--d) infinite both; will-change: transform, opacity; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="0"] { --ja-c: 244,114,182; --ja-d: 253,224,71; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="1"] { --ja-c: 163,230,53; --ja-d: 253,224,71; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="2"] { --ja-c: 56,189,248; --ja-d: 255,255,255; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="3"] { --ja-c: 167,139,250; --ja-d: 244,114,182; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="4"] { --ja-c: 251,146,60; --ja-d: 253,224,71; }
+    [data-jack-aura="3"] ins[data-ja="tongue"]:nth-of-type(odd) { --ja-c: 251,146,60; --ja-d: 253,224,71; }
+    [data-jack-aura="2"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(251,191,36,.9)); }
+    [data-jack-aura="3"] > [data-moo-body] > img { filter: drop-shadow(0 0 46px rgba(192,132,252,.95)); }
+    [data-jack-aura="4"] > [data-moo-body] > img { filter: drop-shadow(0 0 52px rgba(248,113,113,1)); }
+    [data-jack-aura="5"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(250,204,21,1)) drop-shadow(0 0 70px rgba(244,114,182,.9)); }
+    @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
+    @keyframes jackAuraSpin { to { transform: rotate(360deg); } }
+    @keyframes jackAuraTongue {
+      0% { opacity: 0; transform: translateY(0) rotate(var(--s)) scale(.7,.4); }
+      15% { opacity: 1; }
+      55% { opacity: .85; }
+      100% { opacity: 0; transform: translateY(-48%) rotate(calc(var(--s) * -1.4)) scale(.55,1.3); }
+    }
+    @media (prefers-reduced-motion: reduce) { [data-jack-aura-el] > i { animation: none !important; } }
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */

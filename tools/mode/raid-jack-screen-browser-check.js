@@ -133,6 +133,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('跳ねる動き(アニメーション)が付いている', await page.locator('[data-home-raid-jack] img').first().evaluate((el) => getComputedStyle(el).animationName.includes('mhRaidJackHop')));
     await page.waitForTimeout(1500);
     check('共有HPバーに「あらわれた」と残りHPが出る(段階2が挑戦中)', /ジャック子爵があらわれた/.test(await page.locator('[data-home-raid-jack]').innerText()) && /1,775,000/.test(await page.locator('[data-home-raid-jack]').innerText()), (await page.locator('[data-home-raid-jack]').innerText()).replace(/\s+/g, ' '));
+    check('HOMEのジャックにオーラ(炎の舌)が出ている', await page.evaluate(() => {
+      const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]');
+      return !!el && el.querySelectorAll('[data-jack-aura-el] > ins').length >= 5;
+    }));
     if (SHOT) await page.screenshot({ path: `${SHOT}/home-jack.png` });
 
     // ② レイド画面(A)
