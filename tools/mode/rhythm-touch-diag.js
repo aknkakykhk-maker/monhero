@@ -157,6 +157,25 @@ const compareReported=(rows,{days=null}={})=>{
   return {reports,summary,lines};
 };
 
+// ── 直し方を入れる前と後を比べる(2026-10-05) ──
+// 直し方を入れたあとの診断の行には stats.fixes に名前が入る。同じ iPhone の記録を「入れたあと」と「入れる前」に分けて、
+// 直し方が狙った数字を下げたか、ほかの数字を悪くしていないかを見る
+const compareFix=(rows,fixName,{days=null}={})=>{
+  const has=row=>Array.isArray(row.stats&&row.stats.fixes)&&row.stats.fixes.includes(fixName);
+  const summary=aggregate(rows,{days,keysOf:row=>row.platform==='ios'?[`ios:${has(row)?'入れたあと':'入れる前'}`]:[]});
+  const after=summary.find(g=>g.key==='ios:入れたあと'),before=summary.find(g=>g.key==='ios:入れる前');
+  const lines=[];
+  if(!after||after.plays<MIN_REPORTED){lines.push({level:'wait',text:`「${fixName}」を入れたあとの iPhone の記録がまだ足りません(${after?after.plays:0}曲。${MIN_REPORTED}曲そろったら比べます)`});return {fixName,summary,lines};}
+  if(!before||before.plays<MIN_REPORTED){lines.push({level:'wait',text:'入れる前の iPhone の記録が足りないので比べられません'});return {fixName,summary,lines};}
+  for(const [name,label,floor,unit] of COMPARE_METRICS){
+    const a=after[name],b=before[name];
+    if(b>=floor&&a<=b*.5)lines.push({level:'good',metric:name,text:`入れたあと「${label}」が ${unit}に ${b.toFixed(2)} 回 → ${a.toFixed(2)} 回(半分以下)`});
+    else if(a>=floor&&a>=b*1.5)lines.push({level:'bad',metric:name,text:`入れたあと「${label}」が ${unit}に ${b.toFixed(2)} 回 → ${a.toFixed(2)} 回(1.5倍以上。直し方が悪さをしていないか見る)`});
+  }
+  if(!lines.length)lines.push({level:'none',text:'入れる前と後のあいだに、はっきりした差はありません'});
+  return {fixName,summary,lines};
+};
+
 // ── 判定ごとの、用意してある直し方(data/rhythm-mode.js の RHYTHM_TOUCH_FIXES。既定はすべて切ってある) ──
 // 入れるのはユーザーが了承してから。週の定期実行は報告するだけで、勝手に true にしない
 const FIX_FOR={
@@ -175,7 +194,8 @@ const report=(rows,{json=false,days=null}={})=>{
   const verdict=diagnose(summary);
   const compared=compareReported(rows,{days});
   const fixes=fixesFor(verdict,compared);
-  if(json){console.log(JSON.stringify({summary,verdict,compared,fixes},null,1));return {summary,verdict,compared,fixes};}
+  const fixCompare=Object.values(FIX_FOR).map(item=>item.fix).filter((name,i,list)=>list.indexOf(name)===i).map(name=>compareFix(rows,name,{days}));
+  if(json){console.log(JSON.stringify({summary,verdict,compared,fixes,fixCompare},null,1));return {summary,verdict,compared,fixes,fixCompare};}
   console.log(`タッチの診断: ${rows.length}行${days?`(直近${days}日)`:''}`);
   for(const g of summary){
     console.log(`\n[${g.key}] ${g.plays}曲・${g.devices}端末・${g.taps}タッチ・${g.notes}ノーツ`);
@@ -192,10 +212,15 @@ const report=(rows,{json=false,days=null}={})=>{
   console.log('\n用意してある直し方(入れるのはユーザーが了承してから。data/rhythm-mode.js の RHYTHM_TOUCH_FIXES を true にする):');
   if(fixes.length)fixes.forEach(item=>console.log(`  → ${item.fix}: ${item.text}`));
   else console.log('  いまの判定に合う直し方はありません');
-  return {summary,verdict,compared,fixes};
+  console.log('\n直し方を入れる前と後(iPhoneの同じ記録を、stats.fixes で分ける):');
+  for(const item of fixCompare){
+    for(const g of item.summary)console.log(`  [${item.fixName}・${g.key}] ${g.plays}曲  50ms以上遅れた ${g.lateDeliveryPer1k.toFixed(2)} / 遅れて見えた ${g.lateStartPer1k.toFixed(2)} / 入力の無いMISS ${g.noInputMissPer1k.toFixed(2)} / MISS ${g.missPer1k.toFixed(1)}`);
+    item.lines.forEach(line=>console.log(`  ${line.level==='good'?'◎':line.level==='bad'?'▲':line.level==='wait'?'…':'・'} ${line.text}`));
+  }
+  return {summary,verdict,compared,fixes,fixCompare};
 };
 
-module.exports={aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,fixesFor,FIX_FOR,MIN_REPORTED};
+module.exports={aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,compareFix,fixesFor,FIX_FOR,MIN_REPORTED};
 
 if(require.main===module){
   let rows=readRows();
