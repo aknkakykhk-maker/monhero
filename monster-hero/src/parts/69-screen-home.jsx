@@ -104,11 +104,14 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
           どちらも足もと(本体の下端)をそろえて置く */}
       <span data-jack-aura={Number(String(tier.id).slice(1)) || undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
         {/* 段階が進むほど派手になるオーラ(バトルと同じ部品)。絵の後ろに置く */}
-        <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
+        {/* HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
+        <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-30 - (Number(String(tier.id).slice(1)) || 0) * 14}% ${-14 - (Number(String(tier.id).slice(1)) || 0) * 9}% -6%` }}>
+          <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
+        </span>
         <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
-          style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)', pointerEvents:'none' }} />
+          style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
         <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
-          style={{ position:'absolute', left:0, bottom:'-6%', width:'100%', height:'auto', opacity:pose ? 1 : 0, filter:'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)', pointerEvents:'none' }} />
+          style={{ position:'absolute', left:0, bottom:'-6%', width:'100%', height:'auto', opacity:pose ? 1 : 0, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
       </span>
       <span className="mh-home-raid-jack-shadow" aria-hidden="true" style={{ display:'block', width:'70%', height:'8px', marginTop:'-6px', borderRadius:'50%', background:'#0008', filter:'blur(3px)' }} />
       <span style={{ display:'block', width:'100%', marginTop:'6px', padding:'3px 6px', borderRadius:'10px', border:'1px solid #fdba74aa', background:'#1c0a02d9', color:'#ffedd5', fontSize:'10px', fontWeight:900, textAlign:'center', lineHeight:1.3 }}>

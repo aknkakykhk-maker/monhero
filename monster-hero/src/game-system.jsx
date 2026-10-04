@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 86e5ce64511cf178
+// generated-sha256: 0cce1ef1c4b9d44e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 17:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 17:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23129,27 +23129,44 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
 };
 
 // ---- part: 37-raid-jack-aura.jsx ----
-// ===== ジャックのオーラ(段階1〜5でどんどん派手に・バトルとHOMEで共通) =====
+// ===== ジャックのオーラ(段階1〜5でどんどん派手に・バトル/HOME/段階えらびで共通) =====
 // モンヒロビートのフリックで吹き上がる「炎の舌」を参考に、根元から立ちのぼって細くなりながら消える炎を
 // 本体のまわりに何本も出す。動かすのは transform と opacity だけ(CSS は 70-bootstrap.jsx の data-jack-aura)。
 // 使い方: 親に data-jack-aura={段階の数字} を付け、中に <JackAuraLayer tier={段階の数字} /> を置く。
-const RAID_JACK_AURA_TONGUES = Object.freeze([5, 8, 11, 15, 20]);
-// 1本ずつの位置・太さ・高さ・遅れ・周期・傾きは添字から決める(描き直しても同じ形。乱数は使わない)
+//   段階えらびの小さな絵では limit で炎の本数を減らす(画面に5つ並ぶので軽くする)。
+const RAID_JACK_AURA_TONGUES = Object.freeze([7, 10, 14, 18, 24]);
+// 1本ずつの位置・太さ・高さ・遅れ・周期・傾きは添字から決める(描き直しても同じ形。乱数は使わない)。
+// 本体の左・右・まんなかへ順に散らす(まんなかは絵の後ろに隠れつつ、輪郭のすきまからゆらめく)
 const raidJackAuraTongues = (count) => Array.from({ length: count }, (_, i) => {
   const r = (n) => { const v = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453; return v - Math.floor(v); };
+  const side = i % 3;
   return {
-    x: i % 2 ? 3 + r(1) * 28 : 69 + r(1) * 28, w: 6 + r(2) * 6, h: 30 + r(3) * 26,
-    d: -r(4) * 1.6, t: 0.9 + r(5) * 0.7, s: (r(6) - 0.5) * 36, b: 16 + r(7) * 28, c: i % 5,
+    x: side === 0 ? 4 + r(1) * 26 : side === 1 ? 70 + r(1) * 26 : 34 + r(1) * 32,
+    w: 10 + r(2) * 9, h: 50 + r(3) * 40,
+    d: -r(4) * 1.6, t: 0.9 + r(5) * 0.7, s: (r(6) - 0.5) * 36, b: r(7) * 22, c: i % 5,
   };
 });
 const RAID_JACK_AURA_TONGUE_SETS = Object.freeze(RAID_JACK_AURA_TONGUES.map(raidJackAuraTongues));
-const JackAuraLayer = ({ tier }) => {
+// 絵そのものの光(drop-shadow)の色。段階が上がるほど濃く・大きく・色が増える。scale は絵の大きさに合わせた倍率
+const RAID_JACK_AURA_GLOWS = Object.freeze([
+  [[0, 'rgba(251,146,60,.9)', 10]],
+  [[0, 'rgba(251,191,36,.95)', 14], [0, 'rgba(249,115,22,.7)', 26]],
+  [[0, 'rgba(192,132,252,.95)', 16], [0, 'rgba(251,146,60,.8)', 30]],
+  [[0, 'rgba(248,113,113,1)', 18], [0, 'rgba(251,191,36,.9)', 34], [0, 'rgba(239,68,68,.7)', 50]],
+  [[0, 'rgba(250,204,21,1)', 18], [0, 'rgba(244,114,182,.95)', 36], [0, 'rgba(56,189,248,.85)', 54]],
+]);
+const raidJackAuraGlowFilter = (tier, scale = 1) => {
+  const n = Math.min(Math.max(Math.floor(Number(tier) || 0), 0), 5);
+  if (n < 1) return '';
+  return RAID_JACK_AURA_GLOWS[n - 1].map(([, color, blur]) => `drop-shadow(0 0 ${Math.round(blur * scale)}px ${color})`).join(' ');
+};
+const JackAuraLayer = ({ tier, limit = 99 }) => {
   const n = Math.min(Math.max(Math.floor(Number(tier) || 0), 0), 5);
   if (n < 1) return null;
   return (
     <span aria-hidden="true" data-jack-aura-el>
-      <i data-ja="base" /><i data-ja="ring" />
-      {RAID_JACK_AURA_TONGUE_SETS[n - 1].map((t, k) => (
+      <i data-ja="base" /><i data-ja="ring" /><i data-ja="ring2" />
+      {RAID_JACK_AURA_TONGUE_SETS[n - 1].slice(0, Math.max(0, limit)).map((t, k) => (
         <ins key={k} data-ja="tongue" data-ja-c={t.c}
           style={{ '--x': `${t.x.toFixed(1)}%`, '--w': `${t.w.toFixed(1)}%`, '--h': `${t.h.toFixed(1)}%`, '--b': `${t.b.toFixed(1)}%`,
             '--d': `${t.d.toFixed(2)}s`, '--t': `${t.t.toFixed(2)}s`, '--s': `${t.s.toFixed(1)}deg` }} />
@@ -29588,11 +29605,14 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
           どちらも足もと(本体の下端)をそろえて置く */}
       <span data-jack-aura={Number(String(tier.id).slice(1)) || undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
         {/* 段階が進むほど派手になるオーラ(バトルと同じ部品)。絵の後ろに置く */}
-        <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
+        {/* HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
+        <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-30 - (Number(String(tier.id).slice(1)) || 0) * 14}% ${-14 - (Number(String(tier.id).slice(1)) || 0) * 9}% -6%` }}>
+          <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
+        </span>
         <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
-          style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)', pointerEvents:'none' }} />
+          style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
         <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
-          style={{ position:'absolute', left:0, bottom:'-6%', width:'100%', height:'auto', opacity:pose ? 1 : 0, filter:'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)', pointerEvents:'none' }} />
+          style={{ position:'absolute', left:0, bottom:'-6%', width:'100%', height:'auto', opacity:pose ? 1 : 0, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
       </span>
       <span className="mh-home-raid-jack-shadow" aria-hidden="true" style={{ display:'block', width:'70%', height:'8px', marginTop:'-6px', borderRadius:'50%', background:'#0008', filter:'blur(3px)' }} />
       <span style={{ display:'block', width:'100%', marginTop:'6px', padding:'3px 6px', borderRadius:'10px', border:'1px solid #fdba74aa', background:'#1c0a02d9', color:'#ffedd5', fontSize:'10px', fontWeight:900, textAlign:'center', lineHeight:1.3 }}>
@@ -36448,8 +36468,12 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
           return (
             <button type="button" key={t.id} data-raid-jack-tier={t.id} onClick={() => setSel((prev) => ({ ...prev, [tab]: i }))}
               className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`}>
-              <img src={JACK_IMG} alt="" className="h-14 w-16 shrink-0 object-contain"
-                style={isOpen ? undefined : { filter: 'brightness(0)', opacity: 0.5 }} />
+              {/* 段階ごとに見た目が変わる(オーラの炎・絵の光の色)。未解放は黒いシルエットのまま */}
+              <span data-jack-aura={isOpen ? i + 1 : undefined} className="relative block h-14 w-16 shrink-0">
+                {isOpen && <JackAuraLayer tier={i + 1} limit={8} />}
+                <img src={JACK_IMG} alt="" className="relative h-14 w-16 object-contain"
+                  style={isOpen ? { filter: raidJackAuraGlowFilter(i + 1, 0.4) } : { filter: 'brightness(0)', opacity: 0.5 }} />
+              </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-[13px] font-black text-white">{i + 1}. {t.name}</span>
@@ -59640,34 +59664,40 @@ const createAnimationStyle = () => {
     [data-jack-aura="3"] { --ja-c: 192,132,252; --ja-d: 251,146,60; }
     [data-jack-aura="4"] { --ja-c: 248,113,113; --ja-d: 251,191,36; }
     [data-jack-aura="5"] { --ja-c: 250,204,21; --ja-d: 244,114,182; }
-    [data-jack-aura-el] > i[data-ja="base"] { opacity: .55; background: radial-gradient(closest-side, rgba(var(--ja-c),.0) 42%, rgba(var(--ja-c),.55) 78%, rgba(var(--ja-c),0) 100%); animation: jackAuraPulse 3.2s ease-in-out infinite; }
-    [data-jack-aura="2"] [data-ja="base"] { opacity: .8; animation-duration: 2.6s; }
-    [data-jack-aura="3"] [data-ja="base"] { opacity: .9; animation-duration: 2.2s; }
-    [data-jack-aura="4"] [data-ja="base"] { opacity: 1; animation-duration: 1.7s; inset: 0 -2% -2%; }
-    [data-jack-aura="5"] [data-ja="base"] { opacity: 1; animation-duration: 1.2s; inset: -8% -8% -8%; }
-    [data-jack-aura="5"] [data-ja="ring"] { inset: -6%; }
+    [data-jack-aura-el] > i[data-ja="base"] { inset: -6% -10% -4%; opacity: .8; background: radial-gradient(closest-side, rgba(var(--ja-c),.28) 30%, rgba(var(--ja-c),.75) 70%, rgba(var(--ja-c),0) 100%); animation: jackAuraPulse 3.2s ease-in-out infinite; }
+    [data-jack-aura="2"] [data-ja="base"] { opacity: .9; animation-duration: 2.6s; inset: -10% -14% -6%; }
+    [data-jack-aura="3"] [data-ja="base"] { opacity: 1; animation-duration: 2.2s; inset: -14% -18% -8%; }
+    [data-jack-aura="4"] [data-ja="base"] { opacity: 1; animation-duration: 1.7s; inset: -18% -24% -10%; }
+    [data-jack-aura="5"] [data-ja="base"] { opacity: 1; animation-duration: 1.2s; inset: -24% -30% -14%; }
+    [data-jack-aura="5"] [data-ja="ring"] { inset: -10%; }
+    [data-jack-aura="3"] [data-ja="ring"] { inset: -4%; }
+    [data-jack-aura="4"] [data-ja="ring"] { inset: -7%; }
     [data-jack-aura="1"] [data-ja="ring"], [data-jack-aura="2"] [data-ja="ring"] { display: none; }
-    [data-jack-aura-el] > i[data-ja="ring"] { inset: 0; opacity: .75; background: conic-gradient(from 0deg, rgba(var(--ja-c),0), rgba(var(--ja-c),.8), rgba(var(--ja-d),0) 35%, rgba(var(--ja-d),.7) 55%, rgba(var(--ja-c),0) 80%, rgba(var(--ja-c),.8)); -webkit-mask: radial-gradient(closest-side, transparent 78%, #000 80%, #000 90%, transparent 92%); mask: radial-gradient(closest-side, transparent 78%, #000 80%, #000 90%, transparent 92%); animation: jackAuraSpin 7s linear infinite; }
+    [data-jack-aura-el] > i[data-ja="ring2"] { display: none; inset: -14%; opacity: .8; background: conic-gradient(from 90deg, rgba(var(--ja-d),0), rgba(var(--ja-d),.9), rgba(var(--ja-c),0) 30%, rgba(var(--ja-c),.8) 60%, rgba(var(--ja-d),0) 85%); -webkit-mask: radial-gradient(closest-side, transparent 80%, #000 84%, #000 92%, transparent 95%); mask: radial-gradient(closest-side, transparent 80%, #000 84%, #000 92%, transparent 95%); animation: jackAuraSpin 5s linear infinite reverse; }
+    [data-jack-aura="4"] [data-ja="ring2"], [data-jack-aura="5"] [data-ja="ring2"] { display: block; }
+    [data-jack-aura="5"] [data-ja="ring2"] { inset: -20%; animation-duration: 3s; background: conic-gradient(from 90deg, #38bdf8, #4ade80, #fde047, #f472b6, #a78bfa, #38bdf8); }
+    [data-jack-aura-el] > i[data-ja="ring"] { inset: 0; opacity: .95; background: conic-gradient(from 0deg, rgba(var(--ja-c),0), rgba(var(--ja-c),.8), rgba(var(--ja-d),0) 35%, rgba(var(--ja-d),.7) 55%, rgba(var(--ja-c),0) 80%, rgba(var(--ja-c),.8)); -webkit-mask: radial-gradient(closest-side, transparent 70%, #000 74%, #000 92%, transparent 95%); mask: radial-gradient(closest-side, transparent 70%, #000 74%, #000 92%, transparent 95%); animation: jackAuraSpin 7s linear infinite; }
     [data-jack-aura="4"] [data-ja="ring"] { animation-duration: 4.5s; opacity: .9; }
     [data-jack-aura="5"] [data-ja="ring"] { animation-duration: 2.6s; opacity: 1; background: conic-gradient(from 0deg, #fde047, #f472b6, #a78bfa, #38bdf8, #4ade80, #fde047); }
     /* 炎の舌(モンヒロビートのフリックの炎を参考): 根元から立ちのぼり、細く伸びて消える。本数は段階で増える(5/8/11/15/20本) */
-    [data-jack-aura-el] > ins[data-ja="tongue"] { position: absolute; display: block; text-decoration: none; left: var(--x); bottom: var(--b); width: var(--w); height: var(--h); margin-left: calc(var(--w) / -2); opacity: 0; pointer-events: none; transform-origin: 50% 100%; border-radius: 50% 50% 46% 46% / 85% 85% 15% 15%; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255,247,200,1) 0%, rgba(var(--ja-d),.95) 30%, rgba(var(--ja-c),.8) 62%, rgba(var(--ja-c),0) 92%); animation: jackAuraTongue var(--t) cubic-bezier(.25,.7,.35,1) var(--d) infinite both; will-change: transform, opacity; }
+    [data-jack-aura-el] > ins[data-ja="tongue"] { position: absolute; display: block; text-decoration: none; left: var(--x); bottom: var(--b); width: var(--w); height: var(--h); margin-left: calc(var(--w) / -2); opacity: 0; pointer-events: none; transform-origin: 50% 100%; border-radius: 50% 50% 46% 46% / 85% 85% 15% 15%; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255,247,200,1) 0%, rgba(var(--ja-d),1) 38%, rgba(var(--ja-c),.92) 70%, rgba(var(--ja-c),0) 96%); animation: jackAuraTongue var(--t) cubic-bezier(.25,.7,.35,1) var(--d) infinite both; will-change: transform, opacity; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="0"] { --ja-c: 244,114,182; --ja-d: 253,224,71; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="1"] { --ja-c: 163,230,53; --ja-d: 253,224,71; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="2"] { --ja-c: 56,189,248; --ja-d: 255,255,255; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="3"] { --ja-c: 167,139,250; --ja-d: 244,114,182; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="4"] { --ja-c: 251,146,60; --ja-d: 253,224,71; }
     [data-jack-aura="3"] ins[data-ja="tongue"]:nth-of-type(odd) { --ja-c: 251,146,60; --ja-d: 253,224,71; }
-    [data-jack-aura="2"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(251,191,36,.9)); }
-    [data-jack-aura="3"] > [data-moo-body] > img { filter: drop-shadow(0 0 46px rgba(192,132,252,.95)); }
-    [data-jack-aura="4"] > [data-moo-body] > img { filter: drop-shadow(0 0 52px rgba(248,113,113,1)); }
-    [data-jack-aura="5"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(250,204,21,1)) drop-shadow(0 0 70px rgba(244,114,182,.9)); }
+    [data-jack-aura="1"] > [data-moo-body] > img { filter: drop-shadow(0 0 30px rgba(251,146,60,.95)); }
+    [data-jack-aura="2"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(251,191,36,.95)) drop-shadow(0 0 70px rgba(249,115,22,.7)); }
+    [data-jack-aura="3"] > [data-moo-body] > img { filter: drop-shadow(0 0 46px rgba(192,132,252,.95)) drop-shadow(0 0 80px rgba(251,146,60,.8)); }
+    [data-jack-aura="4"] > [data-moo-body] > img { filter: drop-shadow(0 0 50px rgba(248,113,113,1)) drop-shadow(0 0 90px rgba(251,191,36,.9)); }
+    [data-jack-aura="5"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(250,204,21,1)) drop-shadow(0 0 70px rgba(244,114,182,.95)) drop-shadow(0 0 100px rgba(56,189,248,.8)); }
     @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
     @keyframes jackAuraSpin { to { transform: rotate(360deg); } }
     @keyframes jackAuraTongue {
       0% { opacity: 0; transform: translateY(0) rotate(var(--s)) scale(.7,.4); }
-      15% { opacity: 1; }
-      55% { opacity: .85; }
+      12% { opacity: 1; }
+      65% { opacity: .9; }
       100% { opacity: 0; transform: translateY(-48%) rotate(calc(var(--s) * -1.4)) scale(.55,1.3); }
     }
     @media (prefers-reduced-motion: reduce) { [data-jack-aura-el] > i { animation: none !important; } }

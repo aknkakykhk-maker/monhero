@@ -169,7 +169,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         const el = document.querySelector('[data-jack-aura]');
         return el ? { tier: el.getAttribute('data-jack-aura'), glow: el.querySelectorAll('[data-jack-aura-el] > i').length, tongues: el.querySelectorAll('[data-jack-aura-el] > ins').length } : null;
       });
-      check(`オーラ: 段階${t}で data-jack-aura=${t}・光2枚・炎の舌${[5, 8, 11, 15, 20][t - 1]}本`, !!aura && aura.tier === String(t) && aura.glow === 2 && aura.tongues === [5, 8, 11, 15, 20][t - 1], JSON.stringify(aura));
+      check(`オーラ: 段階${t}で data-jack-aura=${t}・光3枚・炎の舌${[7, 10, 14, 18, 24][t - 1]}本`, !!aura && aura.tier === String(t) && aura.glow === 3 && aura.tongues === [7, 10, 14, 18, 24][t - 1], JSON.stringify(aura));
       if (process.env.RAID_AURA_DEBUG) console.log('INFO tongue', JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('[data-jack-aura-el] > ins')].slice(0, 6).map((e) => { const c = getComputedStyle(e), r = e.getBoundingClientRect(); return { op: c.opacity, w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top), left: Math.round(r.left), bg: c.backgroundImage.slice(0, 30) }; }))));
       if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/aura-${t}.png` }).catch(() => {});
       await page.locator('[data-battle-menu-button]').click();
