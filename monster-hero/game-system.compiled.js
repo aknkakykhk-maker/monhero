@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef7c689ce0f0c3a7
+// source-sha256: f7dd758f87875a89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 22:58";
+const BUILD_DATE = "2026-10-04 23:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35620,6 +35620,9 @@ const RAID_JACK_BASE = Object.freeze({
 const RAID_JACK_LIFE_MULTIPLIER = 10;
 const RAID_JACK_TURNS = 20;
 const RAID_JACK_FREE_PER_DAY = 3;
+const RAID_JACK_A_EX_MAX_USES = 2;
+const RAID_JACK_TEACHING_MAX = 3;
+const RAID_JACK_ALLY_MAX = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
 const RAID_JACK_STORY_START_ID = 'raid_jack_story_1b';
@@ -59598,7 +59601,7 @@ const RaidJackDebugScreen = ({
     className: "mt-1 text-[10px] text-slate-300"
   }, (() => {
     const t = raidJackTierAt(fightKind, fightTier - 1);
-    return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / 10ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
+    return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
   })()), React.createElement("button", {
     "data-raid-fight-start": true,
     className: `${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`,
@@ -60103,7 +60106,7 @@ const RaidJackPrepScreen = ({
   onStart
 }) => {
   const isB = kind === 'b';
-  const maxTeach = 3;
+  const maxTeach = RAID_JACK_TEACHING_MAX;
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = mon => String(mon.masuId || mon.id);
@@ -60115,7 +60118,7 @@ const RaidJackPrepScreen = ({
   const toggleAlly = mon => setAllyKeys(prev => {
     const k = keyOf(mon);
     if (prev.includes(k)) return prev.filter(x => x !== k);
-    return prev.length >= 3 ? prev : [...prev, k];
+    return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
   const toggleTeach = id => setTeachIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length >= maxTeach ? maxTeach === 1 ? [id] : prev : [...prev, id]);
   const tile = (mon, on, onClick, attrs) => React.createElement("button", _extends({
@@ -60166,9 +60169,9 @@ const RaidJackPrepScreen = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-orange-200"
-  }, "供モン(最大3体)", React.createElement("span", {
+  }, "供モン(最大", RAID_JACK_ALLY_MAX, "体)", React.createElement("span", {
     className: "ml-1 text-[9px] text-slate-300"
-  }, allies.length, " / 3")), React.createElement("div", {
+  }, allies.length, " / ", RAID_JACK_ALLY_MAX)), React.createElement("div", {
     className: "grid grid-cols-5 gap-1.5"
   }, list.filter(m => keyOf(m) !== heroKey).map(mon => tile(mon, allyKeys.includes(keyOf(mon)), () => toggleAlly(mon), {
     'data-raid-ally': keyOf(mon)
@@ -62364,7 +62367,7 @@ function MonsterHeroGame() {
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? {
       ...def,
       unlimited: false,
-      maxUses: 2
+      maxUses: RAID_JACK_A_EX_MAX_USES
     } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
@@ -74752,7 +74755,7 @@ function MonsterHeroGame() {
   };
   const startRaidJackBattle = req => {
     stopAllAuto();
-    const party = (Array.isArray(req.party) ? req.party : []).filter(Boolean).slice(0, 4);
+    const party = (Array.isArray(req.party) ? req.party : []).filter(Boolean).slice(0, 1 + RAID_JACK_ALLY_MAX);
     if (party.length === 0) return false;
     const isB = req.kind === 'b';
     const hero = party[0];
@@ -74764,7 +74767,7 @@ function MonsterHeroGame() {
       ...mon.unique,
       evoLevel: isB ? Math.max(0, mon.unique?.evoLevel || 0) : 0
     }));
-    const cards = TEACHING_CARDS.filter(t => (Array.isArray(req.teachingIds) ? req.teachingIds : []).includes(t.id)).slice(0, 3);
+    const cards = TEACHING_CARDS.filter(t => (Array.isArray(req.teachingIds) ? req.teachingIds : []).includes(t.id)).slice(0, RAID_JACK_TEACHING_MAX);
     const teachings = cards.map(card => isB ? {
       ...card,
       evoLevel: 2,
@@ -83248,7 +83251,7 @@ function MonsterHeroGame() {
         const mode = isB ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
         const list = isB ? getActiveMonsterList() : getUnlockedBaseMonsterList();
         if (!list.length) return false;
-        const teachingIds = getActiveTeachingCards().map(c => c.id).slice(0, 3);
+        const teachingIds = getActiveTeachingCards().map(c => c.id).slice(0, RAID_JACK_TEACHING_MAX);
         setRunMode(mode);
         setDifficulty('Normal');
         setExtremeRun(false);
@@ -83256,7 +83259,7 @@ function MonsterHeroGame() {
           mode,
           kind,
           tierIndex,
-          party: list.slice(0, 4),
+          party: list.slice(0, 1 + RAID_JACK_ALLY_MAX),
           teachingIds,
           eventId: RAID_JACK_DEBUG_EVENT_ID
         });

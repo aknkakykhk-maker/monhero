@@ -303,7 +303,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
 const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart }) => {
   const isB = kind === 'b';
-  const maxTeach = 3;   // レイドバトルもグランドスラムも、アシカは3枚まで
+  const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = (mon) => String(mon.masuId || mon.id);
@@ -315,7 +315,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const toggleAlly = (mon) => setAllyKeys((prev) => {
     const k = keyOf(mon);
     if (prev.includes(k)) return prev.filter((x) => x !== k);
-    return prev.length >= 3 ? prev : [...prev, k];
+    return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
   const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
   const tile = (mon, on, onClick, attrs) => (
@@ -344,7 +344,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           {list.length === 0 && <div className="py-2 text-center text-[10px] text-slate-400">編成できるモンスターがいません</div>}
         </section>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
-          <div className="mb-1 text-[11px] font-black text-orange-200">供モン(最大3体)<span className="ml-1 text-[9px] text-slate-300">{allies.length} / 3</span></div>
+          <div className="mb-1 text-[11px] font-black text-orange-200">供モン(最大{RAID_JACK_ALLY_MAX}体)<span className="ml-1 text-[9px] text-slate-300">{allies.length} / {RAID_JACK_ALLY_MAX}</span></div>
           <div className="grid grid-cols-5 gap-1.5">
             {list.filter((m) => keyOf(m) !== heroKey).map((mon) => tile(mon, allyKeys.includes(keyOf(mon)), () => toggleAlly(mon), { 'data-raid-ally': keyOf(mon) }))}
           </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c9d585375d939d34
+// generated-sha256: 14fb22ff1d9fe7ce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 22:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 23:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22900,6 +22900,13 @@ const RAID_JACK_BASE = Object.freeze({ hp: 35000, atk: 700 });
 const RAID_JACK_LIFE_MULTIPLIER = 10;
 const RAID_JACK_TURNS = 20;   // 1回の戦闘のターン数(2026-10-04・ユーザー指示でレイドバトルもグランドスラムも20ターン)
 const RAID_JACK_FREE_PER_DAY = 3;
+// レイドバトル(A)の専用ルール。数字はここだけに置き、戦闘(60-app.jsx)・画面・ヘルプ・検査はここを読む
+//   EXスキルは、EXを持つ味方ごとに2回まで(2026-10-04・ユーザー指示で1回から変更)。グランドスラム(B)と通常戦は今までどおり
+const RAID_JACK_A_EX_MAX_USES = 2;
+//   アシカは、レイドバトルもグランドスラムも3枚まで(2026-10-04・ユーザー指示)
+const RAID_JACK_TEACHING_MAX = 3;
+//   編成: 勇者モン1体 + 供モン最大3体
+const RAID_JACK_ALLY_MAX = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
 // ぱんぷきん×ジャックのストーリー(台本は docs/spec/RAID_JACK_STORY.md、データは data/assistants.js の EVENT_REPLAYS)。
@@ -36679,7 +36686,7 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
               {raidJackTiers(fightKind).map((t, i) => <option key={t.id} value={i + 1}>{i + 1}: {t.name}</option>)}
             </select>
           </div>
-          <div className="mt-1 text-[10px] text-slate-300">{(() => { const t = raidJackTierAt(fightKind, fightTier - 1); return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / 10ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
+          <div className="mt-1 text-[10px] text-slate-300">{(() => { const t = raidJackTierAt(fightKind, fightTier - 1); return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
           <button data-raid-fight-start className={`${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`} onClick={() => { if (onStartBattle && onStartBattle(fightKind, fightTier - 1) === false) say('編成できるモンスターがいません'); }}>この条件でジャックと戦う</button>
         </section>
 
@@ -37013,7 +37020,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
 const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart }) => {
   const isB = kind === 'b';
-  const maxTeach = 3;   // レイドバトルもグランドスラムも、アシカは3枚まで
+  const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = (mon) => String(mon.masuId || mon.id);
@@ -37025,7 +37032,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const toggleAlly = (mon) => setAllyKeys((prev) => {
     const k = keyOf(mon);
     if (prev.includes(k)) return prev.filter((x) => x !== k);
-    return prev.length >= 3 ? prev : [...prev, k];
+    return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
   const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
   const tile = (mon, on, onClick, attrs) => (
@@ -37054,7 +37061,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           {list.length === 0 && <div className="py-2 text-center text-[10px] text-slate-400">編成できるモンスターがいません</div>}
         </section>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
-          <div className="mb-1 text-[11px] font-black text-orange-200">供モン(最大3体)<span className="ml-1 text-[9px] text-slate-300">{allies.length} / 3</span></div>
+          <div className="mb-1 text-[11px] font-black text-orange-200">供モン(最大{RAID_JACK_ALLY_MAX}体)<span className="ml-1 text-[9px] text-slate-300">{allies.length} / {RAID_JACK_ALLY_MAX}</span></div>
           <div className="grid grid-cols-5 gap-1.5">
             {list.filter((m) => keyOf(m) !== heroKey).map((mon) => tile(mon, allyKeys.includes(keyOf(mon)), () => toggleAlly(mon), { 'data-raid-ally': keyOf(mon) }))}
           </div>
@@ -39427,7 +39434,7 @@ function MonsterHeroGame() {
   // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
   const raidExDefOf = (monId) => {
     const def = tacticsExDefOf(monId);
-    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:2 } : def;
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
@@ -48324,7 +48331,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
-    // ★ジャック戦は10ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスは今までどおり20ターン
+    // ★ジャック戦は RAID_JACK_TURNS(20)ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスも20ターン
     if(raidJackRunRef.current){
       raidJackRunRef.current.turns=Math.min(nextTurn,RAID_JACK_TURNS);
       if(nextTurn>RAID_JACK_TURNS){ finishRaidJack('turns'); return; }
@@ -50276,7 +50283,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 編成: 勇者1体+供モン(最大4体)。A=ベースモン / B=マスモン。アシカ: Aは1枚(Lv0から)、Bは3枚まで(最大Lvから)。
   const startRaidJackBattle = (req) => {
     stopAllAuto();
-    const party=(Array.isArray(req.party)?req.party:[]).filter(Boolean).slice(0,4);
+    const party=(Array.isArray(req.party)?req.party:[]).filter(Boolean).slice(0,1+RAID_JACK_ALLY_MAX);
     if(party.length===0) return false;
     const isB=req.kind==='b';
     const hero=party[0];
@@ -50286,7 +50293,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const raidDef=total('def',hero.baseDef);
     // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
     const uniques=raidSlots.filter(Boolean).map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));
-    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,3);
+    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,RAID_JACK_TEACHING_MAX);
     const teachings=cards.map(card=>isB
       ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
       :{...card,evoLevel:0,uid:Math.random()});
@@ -50364,7 +50371,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     addPopup('LEVEL UP!','ally','text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
     Audio_.se.card();
   };
-  // 終わり方(撃破 'defeated' / 10ターン使い切り 'turns' / 全滅 'wipe' / リタイア 'giveup')は、どれもここ1か所に集める。
+  // 終わり方(撃破 'defeated' / ターン使い切り 'turns' / 全滅 'wipe' / リタイア 'giveup')は、どれもここ1か所に集める。
   // 結果は raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。一度しか動かない(finished)。
   // 送れなかった与ダメージは再送待ちに残る(同じ hit_id なので二重に数えられない)
   const finishRaidJack = async (reason) => {
@@ -54151,9 +54158,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
           if(!list.length) return false;
-          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,3);
+          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,RAID_JACK_TEACHING_MAX);
           setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
-          setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,4),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID});
+          setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,1+RAID_JACK_ALLY_MAX),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID});
           return true;
         }}/>)}
         {gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{

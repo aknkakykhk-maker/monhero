@@ -155,7 +155,7 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
               {raidJackTiers(fightKind).map((t, i) => <option key={t.id} value={i + 1}>{i + 1}: {t.name}</option>)}
             </select>
           </div>
-          <div className="mt-1 text-[10px] text-slate-300">{(() => { const t = raidJackTierAt(fightKind, fightTier - 1); return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / 10ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
+          <div className="mt-1 text-[10px] text-slate-300">{(() => { const t = raidJackTierAt(fightKind, fightTier - 1); return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
           <button data-raid-fight-start className={`${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`} onClick={() => { if (onStartBattle && onStartBattle(fightKind, fightTier - 1) === false) say('編成できるモンスターがいません'); }}>この条件でジャックと戦う</button>
         </section>
 
