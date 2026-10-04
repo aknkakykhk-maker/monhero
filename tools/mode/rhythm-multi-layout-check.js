@@ -207,11 +207,14 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     await A.locator('[data-rhythm-multi-confirm]').click();
     const step = (p) => p.evaluate(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') || '');
     await A.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'select', null, { timeout: 15000 });
+    // 部屋の中のヘッダーに全国ランキングのボタンがある(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)
+    check('選曲の画面に、全国ランキングのボタンがある', await A.evaluate(() => !!document.querySelector('[data-rhythm-multi-ranking]')));
     await A.locator('[data-rhythm-demo-start]').click();
     await B.waitForSelector('[data-rhythm-multi-omakase]', { timeout: 15000 });
     await B.locator('[data-rhythm-multi-omakase]').click();
     await A.waitForSelector('[data-rhythm-multi-ready]', { timeout: 20000 });
     await B.waitForSelector('[data-rhythm-multi-ready]', { timeout: 20000 });
+    check('難易度えらびの画面に、全国ランキングのボタンがある', await A.evaluate(() => !!document.querySelector('[data-rhythm-multi-ranking]')));
     await A.locator('[data-rhythm-multi-ready]').click();
     await B.locator('[data-rhythm-multi-ready]').click();
     await A.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });
@@ -264,6 +267,26 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
       check(`結果画面 ${label}: MVPの札がアイコンより前に見えている`, mvp === '', mvp);
       const out = await overflowing(A, '[data-rhythm-multi]');
       check(`結果画面 ${label}: ボタンが画面の外へはみ出さない`, out.length === 0, out.join(' / '));
+      // 結果画面から全国ランキングを開く: 対戦の画面の上へ重なり(画面は移らない)、戻ると閉じて結果画面へ戻る
+      if (w === 750 || rotated) {
+        const hasBtn = await A.evaluate(() => !!document.querySelector('[data-rhythm-multi-result-chat] [data-rhythm-multi-ranking]'));
+        check(`結果画面 ${label}: 全国ランキングのボタンがある`, hasBtn);
+        await A.locator('[data-rhythm-multi-result-chat] [data-rhythm-multi-ranking]').click().catch(() => {});
+        await A.waitForTimeout(700);
+        const layer = await A.evaluate(() => {
+          const l = document.querySelector('[data-rhythm-multi-ranking-layer]');
+          const main = document.querySelector('[data-rhythm-multi]');
+          if (!l || !l.querySelector('[data-rhythm-ranking]')) return 'ランキングが出ない';
+          const a = l.getBoundingClientRect(); const b = main.getBoundingClientRect();
+          return a.width >= b.width - 2 && a.height >= b.height - 2 ? '' : `ランキングの重なりが部屋の画面より小さい(${Math.round(a.width)}×${Math.round(a.height)} / ${Math.round(b.width)}×${Math.round(b.height)})`;
+        });
+        check(`結果画面 ${label}: 全国ランキングが対戦の画面の上へ重なって出る`, layer === '', layer);
+        const stillRoom = await A.evaluate(() => typeof RHYTHM_MULTI !== 'undefined' && !!RHYTHM_MULTI.view() && RHYTHM_MULTI.view().members.length === 2);
+        check(`結果画面 ${label}: ランキングを開いても部屋にいる`, stillRoom);
+        await A.evaluate(() => document.querySelector('[data-rhythm-multi-ranking-layer] button[aria-label="戻る"]')?.click());
+        await A.waitForTimeout(500);
+        check(`結果画面 ${label}: ランキングの戻るで閉じて、結果画面へ戻る`, await A.evaluate(() => !document.querySelector('[data-rhythm-multi-ranking-layer]') && !!document.querySelector('[data-rhythm-multi-result-row]')));
+      }
       if (w > h || rotated) {
         // 回転中は、見た目の上下が画面の左右になる。段の数えかたは「見た目の横方向に直す前の、上下の位置」の種類数
         const stampRows = await A.evaluate((rot) => {
