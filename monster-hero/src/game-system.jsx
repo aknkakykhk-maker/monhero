@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 501d34570567b817
+// generated-sha256: 4944c2d073bbec42
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 06:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 07:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23580,6 +23580,62 @@ const JackAuraLayer = ({ tier, limit = 99 }) => {
           style={{ '--x': `${e.x.toFixed(1)}%`, '--w': `${e.w.toFixed(1)}%`, '--d': `${e.d.toFixed(2)}s`, '--t': `${e.t.toFixed(2)}s`, '--dx': `${e.dx.toFixed(1)}%` }} />
       ))}
     </span>
+  );
+};
+
+// ===== レイドボス戦の「入り」と「終わり」のアクセント(2026-10-04・ユーザー指示「ぬるっと流れるだけだからアクセントいれて」) =====
+// 入り: 通常の WaveIntro(1.5秒の文字だけ)の代わりに、閃光・黒い帯・斜めの光・大きな文字の叩きつけ・段階の星を約2.6秒で出す。色は段階のオーラと同じ。
+//   WaveIntro と同じく data-wave-intro を持ち、「レイドバトル」「VS ジャック◯◯」の文字も同じ。操作は止めない(pointer-events: none)。
+// 終わり: 結果の幕が開いた瞬間に、大きな文字(VICTORY! / TIME UP / DEFEAT / RETIRE)を叩きつけて、そのあと結果を順に出す。
+//   動かすのは transform と opacity だけ。CSS は 70-bootstrap.jsx の mh-rjintro / mh-rjstinger。
+const RaidJackIntro = ({ enabled, enemyName, title = 'レイドバトル', tier = 1 }) => {
+  const [shown, setShown] = React.useState(null);
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!enabled) { lastRef.current = null; setShown(null); return undefined; }
+    const key = `${enemyName || ''}:${title}:${tier}`;
+    if (lastRef.current === key) return undefined;
+    lastRef.current = key;
+    setShown({ key: Date.now() });
+    try { if (typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.special) Audio_.se.special(); } catch (e) { /* 音が出なくても演出は出す */ }
+    const timer = setTimeout(() => setShown(null), 2600);
+    return () => clearTimeout(timer);
+  }, [enabled, enemyName, title, tier]);
+  if (!shown) return null;
+  const n = Math.min(Math.max(Math.floor(Number(tier) || 1), 1), 5);
+  return (
+    <div key={shown.key} data-wave-intro="1" data-raid-jack-intro data-jack-aura={n} aria-hidden="true" className="mh-rjintro">
+      <i className="mh-rjintro-flash" />
+      <i className="mh-rjintro-bar mh-rjintro-bar-top" /><i className="mh-rjintro-bar mh-rjintro-bar-bottom" />
+      <i className="mh-rjintro-slash mh-rjintro-slash-a" /><i className="mh-rjintro-slash mh-rjintro-slash-b" />
+      <div className="mh-rjintro-body">
+        <span className="mh-rjintro-sub">⚠ BOSS APPEARS ⚠</span>
+        <b className="mh-rjintro-title">{title}</b>
+        {enemyName && <span className="mh-rjintro-name">VS {enemyName}</span>}
+        <span className="mh-rjintro-stars">{'★'.repeat(n)}<span className="mh-rjintro-stars-dim">{'★'.repeat(5 - n)}</span></span>
+      </div>
+    </div>
+  );
+};
+const RAID_JACK_STINGERS = Object.freeze({
+  defeated: { text: 'VICTORY!', tone: 'win' },
+  turns: { text: 'TIME UP', tone: 'end' },
+  wipe: { text: 'DEFEAT', tone: 'lose' },
+  giveup: { text: 'RETIRE', tone: 'end' },
+});
+const RaidJackResultStinger = ({ reason }) => {
+  const def = RAID_JACK_STINGERS[reason] || RAID_JACK_STINGERS.turns;
+  React.useEffect(() => {
+    if (reason !== 'defeated') return;
+    try { if (typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.victory) Audio_.se.victory(); } catch (e) { /* 音が出なくても演出は出す */ }
+  }, [reason]);
+  return (
+    <div data-raid-jack-stinger={def.tone} aria-hidden="true" className={`mh-rjstinger mh-rjstinger-${def.tone}`}>
+      <i className="mh-rjstinger-flash" />
+      <i className="mh-rjstinger-ring" />
+      {def.tone === 'win' && <EndConfetti count={30} />}
+      <b className="mh-rjstinger-text">{def.text}</b>
+    </div>
   );
 };
 
@@ -57476,17 +57532,18 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         const reasonLabel={defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
         const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(あとで自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした(あとで自動で送り直します)'}[r.outcome]||'';
         return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
-          <div className="text-[10px] font-black text-orange-300 tracking-[.35em] mb-2">{r.kind==='b'?'マスモン':'ベースモン'}</div>
-          <h2 className="text-2xl font-black text-orange-100 mb-1">{r.tierName}</h2>
-          <div className="text-sm font-black text-amber-200 mb-4">{reasonLabel}</div>
-          <div className="w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3">
+          <RaidJackResultStinger reason={r.reason}/>
+          <div className="mh-rjresult-in text-[10px] font-black text-orange-300 tracking-[.35em] mb-2" style={{'--d':'900ms'}}>{r.kind==='b'?'マスモン':'ベースモン'}</div>
+          <h2 className="mh-rjresult-in text-2xl font-black text-orange-100 mb-1" style={{'--d':'1000ms'}}>{r.tierName}</h2>
+          <div className="mh-rjresult-in text-sm font-black text-amber-200 mb-4" style={{'--d':'1100ms'}}>{reasonLabel}</div>
+          <div className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3" style={{'--d':'1250ms'}}>
             <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
-            <div data-raid-jack-damage className="text-3xl font-black text-white text-right">{r.damage.toLocaleString()}</div>
+            <div data-raid-jack-damage className="text-3xl font-black text-white text-right"><TrainingCountUp from={0} to={r.damage} delay={1400} duration={1300} format={v=>v.toLocaleString()}/></div>
             <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
           </div>
-          {r.opened&&<div className="mb-2 text-sm font-black text-emerald-300">次の段階が開きました！</div>}
-          <div className="mb-4 text-[10px] text-slate-300">{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
-          <div className="w-full max-w-xs space-y-3">
+          {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
+          <div className="mh-rjresult-in mb-4 text-[10px] text-slate-300" style={{'--d':'1500ms'}}>{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
+          <div className="mh-rjresult-in w-full max-w-xs space-y-3" style={{'--d':'1600ms'}}>
             <button onClick={()=>exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>
           </div>
         </div>);
@@ -57566,7 +57623,9 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         const inPlan=!!enemy&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId==='ally'?'ally':phaseId);
         const atRunStart=!enemy&&(phaseId==='hero'||phaseId==='slot'||phaseId==='teaching');
         return <PhaseBanner phase={phaseId} enabled={battleFxEffective.phaseBanner!=='OFF'&&(inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy))}/>;})()}
-      <WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={isRaidJackMode(runMode)?battleModeInfo(runMode).short:''}/>
+      {isRaidJackMode(runMode)
+        ?<RaidJackIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} enemyName={enemy?.name} title={battleModeInfo(runMode).short} tier={Number(String(enemy?.raidJackTier||'').slice(1))||1}/>
+        :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
@@ -61641,6 +61700,47 @@ const createAnimationStyle = () => {
       72% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: translateY(-24px) scale(.96); }
     }
+    /* ==== レイドボス戦の入り(RaidJackIntro)。閃光 → 黒い帯 → 斜めの光 → 文字の叩きつけ → 段階の星。約2.6秒・操作は止めない ==== */
+    .mh-rjintro { position: fixed; inset: 0; z-index: 69000; pointer-events: none; overflow: hidden; --ja-c: 251,146,60; --ja-d: 253,186,116; }
+    .mh-rjintro-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 38%, rgba(255,255,255,.95), rgba(var(--ja-c),.75) 38%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .9s ease-out both; }
+    .mh-rjintro-bar { position: absolute; left: 0; right: 0; height: 15%; background: rgba(2,6,23,.9); }
+    .mh-rjintro-bar-top { top: 0; transform: translateY(-100%); animation: mhRjBarTop 2.6s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-rjintro-bar-bottom { bottom: 0; transform: translateY(100%); animation: mhRjBarBottom 2.6s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-rjintro-slash { position: absolute; left: -20%; width: 140%; height: 6px; top: 36%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 18px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-14deg) translateX(-60%); animation: mhRjSlash .7s ease-out .15s both; }
+    .mh-rjintro-slash-b { top: 52%; transform: rotate(10deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: .3s; }
+    .mh-rjintro-body { position: absolute; left: 0; right: 0; top: 32%; display: flex; flex-direction: column; align-items: center; gap: 5px; animation: mhRjBody 2.6s ease-out both; }
+    .mh-rjintro-sub { font-size: 11px; font-weight: 900; letter-spacing: .35em; color: #fca5a5; text-shadow: 0 0 10px rgba(239,68,68,.9); animation: mhRjBlink .5s steps(2) 4 both; }
+    .mh-rjintro-title { font-size: 44px; font-weight: 900; font-style: italic; letter-spacing: .05em; line-height: 1; background: linear-gradient(180deg, #fff, rgba(var(--ja-d),1) 50%, rgba(var(--ja-c),1)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 18px rgba(var(--ja-c),.9)); animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) .3s both; }
+    .mh-rjintro-name { font-size: 15px; font-weight: 900; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.95), 0 0 12px rgba(var(--ja-c),.9); animation: mhRjRise .45s ease-out .75s both; }
+    .mh-rjintro-stars { font-size: 18px; letter-spacing: .15em; color: rgb(var(--ja-d)); text-shadow: 0 0 10px rgba(var(--ja-c),1); animation: mhRjRise .45s ease-out 1s both; }
+    .mh-rjintro-stars-dim { opacity: .25; }
+    @keyframes mhRjFlash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhRjBarTop { 0% { transform: translateY(-100%); } 14%, 82% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+    @keyframes mhRjBarBottom { 0% { transform: translateY(100%); } 14%, 82% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+    @keyframes mhRjSlash { 0% { opacity: 0; transform: rotate(-14deg) translateX(-60%); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(-14deg) translateX(60%); } }
+    @keyframes mhRjSlashB { 0% { opacity: 0; transform: rotate(10deg) translateX(60%); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(10deg) translateX(-60%); } }
+    @keyframes mhRjBody { 0%, 82% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhRjSlam { 0% { opacity: 0; transform: scale(2.6); } 60% { opacity: 1; transform: scale(.94); } 80% { transform: translate(-3px, 2px) scale(1.02); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhRjRise { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhRjBlink { 0% { opacity: 1; } 50% { opacity: .2; } 100% { opacity: 1; } }
+    /* ==== レイドボス戦の終わり(RaidJackResultStinger)。結果の幕が開いた瞬間に、大きな文字を叩きつける。約1.8秒で消えて、結果が順に出る ==== */
+    .mh-rjstinger { position: absolute; inset: 0; pointer-events: none; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 2; animation: mhRjStingerOut 1.9s ease-in both; }
+    .mh-rjstinger-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(251,191,36,.55) 40%, rgba(251,191,36,0) 75%); opacity: 0; animation: mhRjFlash .8s ease-out both; }
+    .mh-rjstinger-lose .mh-rjstinger-flash { background: radial-gradient(circle at 50% 45%, rgba(254,202,202,.8), rgba(220,38,38,.55) 40%, rgba(220,38,38,0) 75%); }
+    .mh-rjstinger-end .mh-rjstinger-flash { background: radial-gradient(circle at 50% 45%, rgba(224,242,254,.85), rgba(56,189,248,.45) 40%, rgba(56,189,248,0) 75%); }
+    .mh-rjstinger-ring { position: absolute; left: 50%; top: 45%; width: 60vmin; height: 60vmin; margin: -30vmin 0 0 -30vmin; border-radius: 50%; border: 6px solid rgba(253,224,71,.95); box-shadow: 0 0 30px rgba(251,191,36,.9); opacity: 0; animation: mhRjRing .9s ease-out .15s both; }
+    .mh-rjstinger-lose .mh-rjstinger-ring { border-color: rgba(248,113,113,.95); box-shadow: 0 0 30px rgba(220,38,38,.9); }
+    .mh-rjstinger-end .mh-rjstinger-ring { border-color: rgba(125,211,252,.95); box-shadow: 0 0 30px rgba(56,189,248,.9); }
+    .mh-rjstinger-text { position: relative; font-size: 58px; font-weight: 900; font-style: italic; letter-spacing: .04em; line-height: 1; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px rgba(251,191,36,.9)); animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) .1s both; }
+    .mh-rjstinger-lose .mh-rjstinger-text { background: linear-gradient(180deg, #fff1f1, #fca5a5 50%, #dc2626); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px rgba(239,68,68,.9)); }
+    .mh-rjstinger-end .mh-rjstinger-text { font-size: 50px; background: linear-gradient(180deg, #fff, #bae6fd 45%, #38bdf8); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px rgba(56,189,248,.9)); }
+    .mh-rjstinger-win .mh-confetti { z-index: 0; }
+    @media (prefers-reduced-motion: reduce) { .mh-rjresult-in { animation: none !important; opacity: 1; } }
+    @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
+    @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+    /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
+    .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }
+    .mh-rjresult-pop { animation-name: mhRjSlam; animation-duration: .6s; }
     /* ==== 敵を倒した瞬間(EnemyDefeatFx)。白い閃光と大きな文字。1回きり・操作は止めない ==== */
     /* 敵が消えてから「VICTORY!」を出す(2026-10-02・ユーザー指示「倒した演出と敵が消えてからビクトリーがあっていい」)。
        敵は閃光のあいだに白く光って縮みながら消え(.6秒)、文字はそのあとに出る(delay .6秒)。 */
@@ -61676,7 +61776,7 @@ const createAnimationStyle = () => {
     [data-mh-end-fx="OFF"] .mh-confetti, [data-mh-end-fx="OFF"] .mh-end-vignette { display: none; }
     [data-mh-end-fx="OFF"] :is(.mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-flag) { animation: none !important; }
     @media (prefers-reduced-motion: reduce) {
-      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
+      .mh-waveintro, .mh-rjintro *, .mh-rjstinger, .mh-rjstinger *, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
       .mh-defeat-flash { display: none; }
       [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: none !important; opacity: 0; }
       .mh-confetti { display: none; }

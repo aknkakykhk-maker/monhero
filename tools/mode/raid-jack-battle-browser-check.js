@@ -221,6 +221,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.waitForTimeout(800);
     check('与ダメージが1回だけ送られる', posts.length === 1, String(posts.length));
     const autoRow = JSON.parse((posts[0] || {}).body || '{}');
+    await page.waitForTimeout(3200);   // 結果の数字は駆け上がる(約2.7秒)ので、止まってから読む
     const shown = Number((await page.locator('[data-raid-jack-damage]').innerText()).replace(/,/g, ''));
     check('送った与ダメージは画面の数字と同じで、0より大きい', autoRow.damage === shown && shown > 0, `${autoRow.damage} / ${shown}`);
     check('倒した/倒していないが結果と合っている', autoRow.defeated === /ジャックを倒した/.test(autoText), JSON.stringify(autoRow));
