@@ -53,9 +53,11 @@ check('既存の敵とidがひとつも重ならない', overlap.length === 0, o
 check('並びに書いた敵がすべてデータにある',
   (TACTICS_ENEMY_SEQUENCE || []).every(id => TACTICS_ENEMY_DATA[id]),
   (TACTICS_ENEMY_SEQUENCE || []).filter(id => !TACTICS_ENEMY_DATA[id]).join(','));
+// ★Jack はイベント・レイドボス専用の敵で、通常ランの10体には入れない(raid-jack-battle-check.js が見る)
+const RAID_ONLY_ENEMY_IDS = ['Jack'];
 check('データに並びへ入れ忘れた敵が残っていない',
-  Object.keys(TACTICS_ENEMY_DATA || {}).every(id => (TACTICS_ENEMY_SEQUENCE || []).includes(id)),
-  Object.keys(TACTICS_ENEMY_DATA || {}).filter(id => !(TACTICS_ENEMY_SEQUENCE || []).includes(id)).join(','));
+  Object.keys(TACTICS_ENEMY_DATA || {}).every(id => (TACTICS_ENEMY_SEQUENCE || []).includes(id) || RAID_ONLY_ENEMY_IDS.includes(id)),
+  Object.keys(TACTICS_ENEMY_DATA || {}).filter(id => !(TACTICS_ENEMY_SEQUENCE || []).includes(id) && !RAID_ONLY_ENEMY_IDS.includes(id)).join(','));
 
 // ---- ③ 強さの総量 ----
 // 難易度の倍率(Beginner 0.25 〜 Legend 3.0、極限はさらに上)はこの数字の上に乗る。

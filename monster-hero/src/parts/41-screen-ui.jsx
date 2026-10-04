@@ -112,9 +112,12 @@ const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
 //   静的CSS(tailwind.css)に入らないので効かない(UIルール「動的クラスだけに依存しない」)。
 // ★選ばれている側の背景も style で直に持たせる。同じ理由。
 const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
+// 6つ以上は2段に並べる(2026-10-04・ユーザー指摘「文字列が悪い」。7つを1段に並べると「アシス／ト」「アイコ／ン」と
+// タブの文字が途中で割れていた)。4つまでは今までどおり1段、5つも1段のまま。
+const tabColumnCount = (count) => (count > 5 ? Math.ceil(count / 2) : Math.max(1, count));
 const ScreenTabs = ({ items = [], value, onChange, className = '' }) => (
   <div role="tablist" className={`mb-2 grid shrink-0 gap-2 ${className}`}
-    style={{gridTemplateColumns:`repeat(${Math.max(1, items.length)},minmax(0,1fr))`}}>
+    style={{gridTemplateColumns:`repeat(${tabColumnCount(items.length)},minmax(0,1fr))`}}>
     {items.map(tab => {
       const on = tab.id === value;
       return (

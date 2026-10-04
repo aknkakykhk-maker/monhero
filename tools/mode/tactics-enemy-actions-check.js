@@ -84,9 +84,10 @@ const firstWith = (actionId) => ENEMY_ORDER.find(id => (api.TACTICS_ENEMY_ACTION
 // ★この一致が崩れると、敵は追加6技を1つも持たなくなる。例外も画面の乱れも出ないので、ここでしか気付けない
 check('行動表のキーが、タクティクスの敵の並びと過不足なく一致する',
   ENEMY_ORDER.every(id => api.TACTICS_ENEMY_ACTION_IDS[id])
-    && Object.keys(api.TACTICS_ENEMY_ACTION_IDS).every(id => ENEMY_ORDER.includes(id)),
+    // ★Jack はイベント・レイドボス専用の敵で、通常ランの並び(10体)には入れない(raid-jack-battle-check.js が見る)
+    && Object.keys(api.TACTICS_ENEMY_ACTION_IDS).every(id => ENEMY_ORDER.includes(id) || id === 'Jack'),
   `行動表に無い敵:${ENEMY_ORDER.filter(id => !api.TACTICS_ENEMY_ACTION_IDS[id]).join(',') || 'なし'}`
-  + ` / 並びに無いキー:${Object.keys(api.TACTICS_ENEMY_ACTION_IDS).filter(id => !ENEMY_ORDER.includes(id)).join(',') || 'なし'}`);
+  + ` / 並びに無いキー:${Object.keys(api.TACTICS_ENEMY_ACTION_IDS).filter(id => !ENEMY_ORDER.includes(id) && id !== 'Jack').join(',') || 'なし'}`);
 check('10体ぶんの敵に行動が割り当てられている',
   ENEMY_ORDER.every(id => Array.isArray(api.TACTICS_ENEMY_ACTION_IDS[id]) && api.TACTICS_ENEMY_ACTION_IDS[id].length >= 1),
   ENEMY_ORDER.map(id => `${id}:${(api.TACTICS_ENEMY_ACTION_IDS[id] || []).length}`).join(' '));
@@ -231,7 +232,7 @@ check('再生は敵のライフを最大値まででとどめる',
   has('hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)'));
 check('攻撃力アップの重ねがけはWAVEごとに数え直す', has('tacticsRoarStacksRef.current=0'));
 check('SCANも新モードの行動表を見る（難易度つき）',
-  has('definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty)'));
+  has('definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount)'));
 check('SCANは新モードの技を敵ごとの技名で並べる', has('const actionName=enemyActionDisplayName(scanEnemy,action);'));
 
 // --- 咆哮の効き目を画面へ出す(2026-09-20 ユーザー指摘「咆哮の効果が分からない」) ---
@@ -570,8 +571,8 @@ check('いちばん難しい難易度では、どの敵も6技すべてを使う
 check('難易度は敵そのものが持ち歩く(実戦とSCANでずれないため)',
   has('    difficulty:safeDifficulty,'));
 check('実戦の行動表も難易度つきで引く',
-  has('definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty)')
-    && has('definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty)'));
+  has('definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount)')
+    && has('definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount)'));
 
 // --- 何をする技かを、敵の右上へ出す(2026-09-22 ユーザー指示) ---
 // 「他の技も効果が名前だけだと覚えられないから全部吹き出しで効果出しても良さそう」

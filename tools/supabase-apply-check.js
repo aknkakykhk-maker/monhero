@@ -6,9 +6,10 @@ let failed=0;
 const ok=(label,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${label}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 ok('タッチの診断の3本組が見つかる',!!findTrio('RHYTHM_TOUCH_DIAG'));
 ok('遊んだ記録の3本組が見つかる',!!findTrio('RHYTHM_PLAY_LOG'));
+ok('ジャックの3本組が見つかる',!!findTrio('RAID_JACK'));
 ok('3本組がそろっていない名前は見つからない(流さない)',!findTrio('RANKINGS_DELETE_KIKI_ULTIMATE'));
 const fs=require('fs');
-for(const name of ['RHYTHM_TOUCH_DIAG','RHYTHM_PLAY_LOG']){
+for(const name of ['RHYTHM_TOUCH_DIAG','RHYTHM_PLAY_LOG','RAID_JACK']){
   const trio=findTrio(name);
   ok(`${name} に消す操作が無い(流せる)`,trio.files.every(file=>!forbiddenIn(fs.readFileSync(file,'utf8'))));
 }

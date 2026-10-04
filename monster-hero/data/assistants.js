@@ -810,6 +810,12 @@ const ASSISTANT_SCENES = {
     help: 'basics/tactics-ex-skills',
     lines: [],
   },
+  // イベント・レイドボス「ジャック」のレイド画面(2026-10-04)。HOMEのジャックをタップして開いた最初の1度だけ伝える。
+  // 本文は下の addAssistantLinePack から合流する。公開フラグ(raidJack)が立つまで出ない
+  raidJackIntro: {
+    help: 'basics/raid-jack',
+    lines: [],
+  },
   quickRhythmBackground: {
     help: 'home/roster',
     lines: [],
@@ -1525,6 +1531,64 @@ addAssistantLinePack({
       { e:'normal',  t:'EXはカードとは別枠だ。カードの枚数は減らないよ' },
       { e:'wink',    t:'使ったターンはその子だけカードを使えないこともあるから、気をつけな' },
       { e:'happy',   t:'{name}、β版のお試しらしいぞ。遠慮なく試してみな' },
+    ],
+  },
+});
+
+// イベント・レイドボス「ジャック」のレイド画面の案内(2026-10-04)。「みんなで倒す」「マスモンで競う」「1日3回」の3つだけを伝える。
+// 細かい話はヘルプに任せる(help: basics/raid-jack)。セリフは45字まで・各助手5本以上(assistant-check)
+addAssistantLinePack({
+  id: 'raidJackGuide',
+  label: 'ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'excited', t:'カボチャの大王ジャックが暴れてるよ！みんなで倒そう♪' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑むよ。' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減るんだ！' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑むの。' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料！1回は10ターンだよ〜' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'raidJackGuideKiki',
+  assistantId: 'kiki',
+  label: 'きき・ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'excited', t:'カボチャの大王ジャックが暴れていまつ。' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑みまつ。' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減るの。' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑みまつ。' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料。1回は10ターン。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'raidJackGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'excited', t:'カボチャの大王ジャック、暴れてるね！' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑むんだ。' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減るよ。' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑むやつ。' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料だってさ。1回は10ターンw' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'raidJackGuideDra',
+  assistantId: 'dra',
+  label: 'ドラ・ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'happy', t:'カボチャの大王ジャックが暴れてるぞ' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑むんだ' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減る' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑むぞ' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料だ。1回は10ターンだよ' },
     ],
   },
 });

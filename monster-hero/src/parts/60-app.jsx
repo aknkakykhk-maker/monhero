@@ -1172,8 +1172,10 @@ function MonsterHeroGame() {
     const next = list.map((mon, index) => {
       if (!mon) return null;
       if (isSame(mon, index)) return before[index];
-      const fresh = createTacticsUnit(mon);
-      return isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      const fresh = createTacticsUnit(mon, { fullGuts: isRaidJackMode(mode) });
+      const joined = isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      // ジャック戦は、ライフもガッツも全快からはじめる(追いつき補正がガッツを半分へ戻すので、そのあとで満タンにする)
+      return isRaidJackMode(mode) && joined ? normalizeTacticsUnit({ ...joined, hp: joined.maxHp, guts: joined.maxGuts }) : joined;
     });
     // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
@@ -2320,6 +2322,27 @@ function MonsterHeroGame() {
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
+  // ---------- イベント・レイドボス「ジャック」の専用の1戦(docs/spec/RAID_BOSS_JACK.md) ----------
+  // 戦闘の最中だけ {kind,tierIndex,hitId,eventId,turns,finished} が入る。debugBattleRef も立てて始めるので、
+  // 自己ベスト・クリア回数・絆・ゴールド・クリア報酬・全国ランキングのどれにもつながらない。
+  // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
+  const raidJackRunRef = useRef(null);
+  const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
+  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに1回だけ(専用ルール)。ほかの戦いは今までどおり
+  const raidExDefOf = (monId) => {
+    const def = tacticsExDefOf(monId);
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:1 } : def;
+  };
+  const [raidJackResult, setRaidJackResult] = useState(null);
+  const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
+  // 画面のなかの案内(助手の吹き出し)は、レイド画面を開いた最初の1度だけ。保存キーは新しく足す(CLAUDE.md ⑦)
+  const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
+  const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
+  const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);    // デバッグ: 公開フラグ・期間を待たずに HOME へ出す(記録は別のイベントID)
+  const [raidJackDebugRealRules, setRaidJackDebugRealRules] = useState(false);   // デバッグ: 本番どおりの回数・解放で確認する(既定はオフ = 何度でも・全段階)
+  // 本番は RAID_JACK_EVENT.id。デバッグで強制表示しているあいだは、本番の集計を汚さない別のIDを使う
+  const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
 
   // ---------- ダンジョンRPG戦闘テスト(デバッグ専用) ----------
   // すべてメモリ上だけの状態。画面を抜けたり再読込すると消える(保存も送信もしない)。
@@ -3598,6 +3621,7 @@ function MonsterHeroGame() {
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
+    RAID_JACK: 'home', RAID_JACK_PREP: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
@@ -3647,7 +3671,7 @@ function MonsterHeroGame() {
     // デバッグ画面。プレイヤーの通常プレイには出ない
     'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG',
     'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG',
-    'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG',
+    'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG',
     'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT',
   ]);
   const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
@@ -4663,7 +4687,7 @@ function MonsterHeroGame() {
           : isQuickMode(runMode)
             ? { normal:'quickBattle', dullahan:'quickDullahan', moo:'quickMoo' }
             : { normal:'battle', dullahan:'dullahan', moo:'boss' };
-      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];
+      if (enemyId === 'Moo' || enemyId === 'Jack' || currentWave === 10) return bgmArrangement[modeBgm.moo];
       if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];
       return bgmArrangement[modeBgm.normal];
     }
@@ -5939,6 +5963,8 @@ function MonsterHeroGame() {
     // ★タクティクスバトルも専用の送信処理だけを通す。ここから下のどの分岐へも落とさない。
     //   落とすと、極限ぶんは極限チャレンジの mh_extreme_hs_* を、それ以外は
     //   チャレンジの mh_hs_<難易度> を上書きしてしまう(実際にそうなっていた)
+    // ジャック戦は通常のスコア送信・自己ベスト・ランキングのどれにも触らない(結果は finishRaidJack が raid_jack_hits へ別に送る)
+    if (isRaidJackMode(runMode)) return;
     if (isTacticsMode(runMode)) return submitTacticsScoreOnce();
     scoreSubmittedRef.current = true;
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
@@ -8649,6 +8675,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (hp <= 0) {
       if (debugBattleRef.current) {
+        if (raidJackRunRef.current) { finishRaidJack('wipe'); return; }
         if (!debugResultRef.current) {
           debugResultRef.current = true;
           setResultProcessing(false);
@@ -9408,6 +9435,7 @@ function MonsterHeroGame() {
     debugMonsterPreviewRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
+    raidJackRunRef.current = null;
     speciesChallengeBattleRunRef.current = null;
     setSpeciesChallengeBattleRun(null);
     // 種族チャレンジのデバッグ状態は、HOMEへ戻る時点で必ず落とす。
@@ -9620,6 +9648,7 @@ function MonsterHeroGame() {
     // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
     stopAllAuto('retire');
     if (debugBattleRef.current) {
+      if (raidJackRunRef.current) { setShowQuitConfirm(false); setGaveUp(true); finishRaidJack('giveup'); return; }
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setShowQuitConfirm(false);
@@ -9736,7 +9765,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty),roarStacks:tacticsRoarStacksRef.current});
+    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
     //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
     const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
@@ -10058,7 +10087,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current,tacticsUnitsRef.current,live.now) : null; };
   // 使い方案内を出すか。EXを持つ子が盤面にいるバトルで、まだ見ていないときだけ
   const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen
-    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && tacticsExDefOf(mon.id));
+    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && raidExDefOf(mon.id));
   const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent,tacticsUnitsRef.current,dist), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
@@ -10471,6 +10500,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       return false;
     }
     enemyDefeatResolvedRef.current = true;
+    // ★ジャック戦はここで終わり。この先(WAVE報酬・ゴールド・絆・WAVE_RESULT)へは一切進まない
+    if (raidJackRunRef.current) { await finishRaidJack('defeated'); return true; }
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
     const defeatFxOn=battleFxEffectiveRef.current.defeatFx!=='OFF';
@@ -10812,7 +10843,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           } else {
             addPopup(`反射 ${reflectDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
             const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectDmg);
-            setCurrentWaveDamage(p=>p+reflectDmg);
+            setCurrentWaveDamage(p=>p+reflectDmg); raidJackDamageRef.current+=Number(reflectDmg)||0;
             setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
             // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
             if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectDmg})) return;
@@ -11003,7 +11034,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(reflectBack>0){
               addPopup(`反射 ${reflectBack}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
               const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectBack);
-              setCurrentWaveDamage(p=>p+reflectBack);
+              setCurrentWaveDamage(p=>p+reflectBack); raidJackDamageRef.current+=Number(reflectBack)||0;
               setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
               if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;
             }
@@ -11137,7 +11168,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
-    const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
+    const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
+    // ★ジャック戦は10ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスは今までどおり20ターン
+    if(raidJackRunRef.current){
+      raidJackRunRef.current.turns=Math.min(nextTurn,RAID_JACK_TURNS);
+      if(nextTurn>RAID_JACK_TURNS){ finishRaidJack('turns'); return; }
+      // Aは 3 / 5 / 8 ターン目に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
+      // レイドバトル専用: ターンが進むたびに味方全員が強くなり、自動回復の割合も上がる
+      if(raidJackRunRef.current.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount) raidJackTurnGrowth(nextTurn);
+      if(raidJackRunRef.current.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn)&&nextTurn!==turnCount) raidJackLevelUp(nextTurn);
+    } else if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }
+    setIsBusy(false);
   };
 
   const useEmergency = async () => {
@@ -11193,7 +11234,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExInfo = (slotIdx) => {
     if(!tacticsExEnabled||!Number.isInteger(slotIdx)) return null;
     const mon=slots[slotIdx]; if(!mon) return null;
-    const def=tacticsExDefOf(mon.id); if(!def) return null;
+    const def=raidExDefOf(mon.id); if(!def) return null;
     const state=tacticsExState;
     const remaining=tacticsExRemaining(def,tacticsExUsesOf(state,slotIdx,mon.id));
     const lifeUnit=normalizeTacticsUnit(tacticsUnits[slotIdx]);
@@ -11315,7 +11356,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
     const mon=slots[slotIdx]; if(!mon) return false;
-    const def=tacticsExDefOf(mon.id); if(!def) return false;
+    const def=raidExDefOf(mon.id); if(!def) return false;
     const state=tacticsExStateRef.current;
     // ★判定は ref の最新値でもう一度通す。連打で同じターンに2回使えないように
     const lifeNow=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
@@ -11924,7 +11965,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           hitIdx++;
         }
-        setCurrentWaveDamage(p=>p+totalDmg);
+        setCurrentWaveDamage(p=>p+totalDmg); raidJackDamageRef.current+=Number(totalDmg)||0;
         const turnDistDmg=[0,0,0,0];
         for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
         setWaveDistDamage(prev=>{const n=[...prev]; for(let k=0;k<4;k++) n[k]=(n[k]||0)+turnDistDmg[k]; return n;});
@@ -12630,14 +12671,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);
     // 新モードは「連れてきた供モンの総合力」に応じて敵も強くなる(設計 §6)。
     // ★人数ごとの固定倍率にしないこと。弱い編成ほど苦しくなる
-    const tacticsEnemyBoost=isTacticsMode(runMode)
+    // ★ジャック戦は編成の総合力で敵を強くしない(段階の倍率だけで決める。公平さのため)
+    const raidRun=isRaidJackMode(runMode)?raidJackRunRef.current:null;
+    const tacticsEnemyBoost=isTacticsMode(runMode)&&!raidRun
       ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start,tacticsPowerRef.current.now) : 1;
     // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。モードを渡して選ばせる
-    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
+    // ジャック戦は、段階のライフ・攻撃力(35-raid-jack.jsx)をそのまま使う
+    const newEnemy=raidRun
+      ? raidJackMakeEnemy(raidRun.kind,raidRun.tierIndex,runMode)
+      : createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
+    // レイドバトルは、いまの共有ライフの残りからはじめる(みんなが削った分を引き継ぐ。maxHp はそのままなのでバーの割合に出る)
+    if (raidRun&&newEnemy&&Number.isFinite(raidRun.startLife)&&raidRun.startLife>0&&raidRun.startLife<newEnemy.maxHp) newEnemy.hp=Math.floor(raidRun.startLife);
     if (!newEnemy) return null;
     // 敵の基礎ライフ・攻撃力への上乗せ(HELHEIMのライフ10倍・デュラハンの専用倍率)。
     // 難易度名ではなく「上乗せを持っているか」で見るので、持たない難易度では何も変わらない
-    const enemyAdjust=extremeEnemyStatAdjust(specialRuleDifficulty,newEnemy.id);
+    const enemyAdjust=raidRun?{lifeRate:1,atkRate:1}:extremeEnemyStatAdjust(specialRuleDifficulty,newEnemy.id);
     if (enemyAdjust.lifeRate!==1||enemyAdjust.atkRate!==1) {
       newEnemy.maxHp=Math.floor(newEnemy.maxHp*enemyAdjust.lifeRate);
       newEnemy.hp=newEnemy.maxHp;
@@ -12692,7 +12740,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     tacticsRoarStacksRef.current=0;
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty),roarStacks:tacticsRoarStacksRef.current});
+    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
@@ -13065,6 +13113,209 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero, debugAptPct);
   };
 
+  // ---- イベント・レイドボス「ジャック」の専用の1戦 ----
+  // 呼び出し側は setRunMode(mode) と setRaidJackStartRequest({mode,kind,tierIndex,party,teachingIds,eventId}) を同時に行う。
+  // runMode は state で、開始の処理(applySlots・spawnEnemy)がそれを読むので、反映された次の描画で開始する(下の useEffect)。
+  // 編成: 勇者1体+供モン(最大4体)。A=ベースモン / B=マスモン。アシカ: Aは1枚(Lv0から)、Bは3枚まで(最大Lvから)。
+  const startRaidJackBattle = (req) => {
+    stopAllAuto();
+    const party=(Array.isArray(req.party)?req.party:[]).filter(Boolean).slice(0,4);
+    if(party.length===0) return false;
+    const isB=req.kind==='b';
+    const hero=party[0];
+    const raidSlots=[party[0]||null,party[1]||null,party[2]||null,party[3]||null];
+    const allies=raidSlots.slice(1).filter(Boolean);
+    const total=(key,base)=>allies.reduce((value,mon)=>value+(mon.plusStats?.[key]||0),base);
+    const raidDef=total('def',hero.baseDef);
+    // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
+    const uniques=raidSlots.filter(Boolean).map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));
+    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,isB?3:1);
+    const teachings=cards.map(card=>isB
+      ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
+      :{...card,evoLevel:0,uid:Math.random()});
+    raidJackRunRef.current={kind:isB?'b':'a',tierIndex:Math.min(Math.max(Math.floor(Number(req.tierIndex)||0),0),4),hitId:raidJackMakeHitId(),eventId:raidJackSafeEventId(req.eventId),turns:1,finished:false,startLife:(!isB&&Number.isFinite(req.startLife)&&req.startLife>0)?Math.floor(req.startLife):null};
+    raidJackDamageRef.current=0;
+    setRaidJackResult(null);
+    speciesChallengeBattleRunRef.current=null; battleScenarioRef.current=null;
+    debugBattleRef.current=true; extremeRunRef.current=false; debugResultRef.current=false;
+    setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
+    resetTacticsJoinCatchUp();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
+    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
+    setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
+    clearSlotUniqueSelection();
+    setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
+    setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
+    const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
+    const raidApt=raidSlots.filter(Boolean).reduce((sum,mon)=>sum.map((v,i)=>v+getMonsterAptPct(mon,raidRuleDifficulty,1)[i]),[0,0,0,0]);
+    setDistAptPct(raidApt);
+    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,raidApt);
+    return true;
+  };
+  // 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める
+  useEffect(()=>{
+    const req=raidJackStartRequest;
+    if(!req||runMode!==req.mode) return;
+    setRaidJackStartRequest(null);
+    startRaidJackBattle(req);
+  },[raidJackStartRequest,runMode]);
+  // 3 / 5 / 8 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)と、選んだアシカ(上限Lv2)を1段階ずつ上げる。
+  // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
+  // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
+  // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
+  const RAID_JACK_TURN_GROWTH = 1.10;
+  const RAID_JACK_TURN_REGEN_STEP = 0.03;
+  const raidJackTurnGrowth = (turn) => {
+    const before = tacticsUnitsRef.current || [];
+    const grown = before.map((unit) => {
+      const t = unit ? normalizeTacticsUnit(unit) : null;
+      if (!t) return unit;
+      const grow = (value) => Math.max(0, Math.floor(Math.max(0, Number(value) || 0) * RAID_JACK_TURN_GROWTH));
+      return { ...t, baseMaxHp: Math.max(1, grow(t.baseMaxHp)), baseMaxGuts: grow(t.baseMaxGuts), atk: grow(t.atk), def: grow(t.def) };
+    });
+    const scaled = scaleTacticsUnits(grown, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+    const next = scaled.map((unit, index) => {
+      const old = before[index] ? normalizeTacticsUnit(before[index]) : null;
+      if (!unit || !old) return unit;
+      const addHp = Math.max(0, unit.maxHp - old.maxHp), addGuts = Math.max(0, unit.maxGuts - old.maxGuts);
+      return normalizeTacticsUnit({ ...unit, hp: old.downed ? old.hp : Math.min(unit.maxHp, old.hp + addHp), guts: Math.min(unit.maxGuts, old.guts + addGuts) });
+    });
+    if (raidJackRunRef.current) raidJackRunRef.current.growths = (raidJackRunRef.current.growths || 0) + 1;
+    commitTacticsUnits(next);
+    writePermaBuffs(p => ({ ...p, autoHpRecovery: (p.autoHpRecovery ?? 0.1) + RAID_JACK_TURN_REGEN_STEP }));
+    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 100);
+    pushBattleLog(`${turn}ターン目: 味方の全ステータスが10%上がった！自動回復はライフ${lifeRate}%・ガッツ${lifeRate - 5}%`, 'up');
+    addPopup('全ステータス UP!', 'ally', 'text-emerald-300 font-black text-2xl drop-shadow-[0_0_14px_rgba(52,211,153,0.9)]');
+  };
+  const raidJackLevelUp = (turn) => {
+    if(raidJackRunRef.current) raidJackRunRef.current.levelUps=(raidJackRunRef.current.levelUps||0)+1;
+    const bumpCard=(c)=>{
+      if(c.type==='unique'){
+        const lvl=Math.min(MAX_UNIQUE_SKILL_LEVEL,(c.evoLevel||0)+1);
+        return {...c,evoLevel:lvl,crit:0.10+0.05*Math.min(lvl,8),...(Array.isArray(c.names)?{name:c.names[Math.min(lvl,c.names.length-1)]}:{})};
+      }
+      if(TEACHING_CARDS.some(t=>t.id===c.id)&&Number.isFinite(c.baseValue)&&Number.isFinite(c.step)){
+        const cur=Math.min(2,c.evoLevel||0);
+        if(cur>=2) return c;
+        return {...c,evoLevel:cur+1,baseValue:c.baseValue+c.step,name:BREEDER_EVO_NAMES[c.id]?.[cur+1]||c.name};
+      }
+      return c;
+    };
+    setOwnedUniques(prev=>prev.map(u=>({...u,evoLevel:Math.min(MAX_UNIQUE_SKILL_LEVEL,(u.evoLevel||0)+1)})));
+    setOwnedTeachings(prev=>prev.map(t=>(t.evoLevel||0)>=2?t:{...t,evoLevel:(t.evoLevel||0)+1,baseValue:t.baseValue+t.step}));
+    setHand(prev=>prev.map(bumpCard)); setDeck(prev=>prev.map(bumpCard)); setGraveyard(prev=>prev.map(bumpCard));
+    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`,'up');
+    addPopup('LEVEL UP!','ally','text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
+    Audio_.se.card();
+  };
+  // 終わり方(撃破 'defeated' / 10ターン使い切り 'turns' / 全滅 'wipe' / リタイア 'giveup')は、どれもここ1か所に集める。
+  // 結果は raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。一度しか動かない(finished)。
+  // 送れなかった与ダメージは再送待ちに残る(同じ hit_id なので二重に数えられない)
+  const finishRaidJack = async (reason) => {
+    const run=raidJackRunRef.current;
+    if(!run||run.finished) return;
+    run.finished=true;
+    stopAllAuto(reason==='giveup'?'retire':'');
+    debugResultRef.current=true;
+    setIsBusy(true);
+    setResultProcessing(false);
+    const damage=Math.max(0,Math.min(100000000,Math.floor(raidJackDamageRef.current)));
+    const defeated=reason==='defeated';
+    const tier=raidJackTierAt(run.kind,run.tierIndex);
+    const hit={hitId:run.hitId,kind:run.kind,tier:run.tierIndex+1,damage,defeated};
+    let outcome='error';
+    let next=raidJackDefaultState();
+    let opened=false;
+    try {
+      next=await raidJackLoadState();
+      const side=next[run.kind];
+      const before=raidJackUnlockedCount(run.kind,side.defeated);
+      if(defeated&&!side.defeated.includes(tier.id)) side.defeated=[...side.defeated,tier.id];
+      if(run.kind==='b') side.total=(side.total||0)+damage;
+      opened=raidJackUnlockedCount(run.kind,side.defeated)>before;
+      const breederId=await ensureBreederId();
+      const sent=await raidJackSubmitHit(next,hit,breederId,run.eventId);
+      next=sent.state; outcome=sent.outcome;
+      await raidJackSaveState(next);
+    } catch (error) { outcome='error'; }
+    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
+      lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
+  };
+  // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
+  const exitRaidJack = (toDebug=false) => {
+    raidJackRunRef.current=null; raidJackDamageRef.current=0;
+    setRaidJackResult(null);
+    returnToHome();
+    setRunMode(BATTLE_MODE_CHALLENGE);
+    if(toDebug) setGameState('RAID_JACK_DEBUG');
+  };
+  // ---- レイド画面・編成・追加購入(docs/spec/RAID_BOSS_JACK.md) ----
+  const openRaidJack = async () => {
+    setRhythmEventPoints(await loadRhythmEventPoints());
+    try { setRaidJackGuideSeen((await storeGet(RAID_JACK_GUIDE_KEY, false, false)) === true); } catch (e) { setRaidJackGuideSeen(true); }
+    setGameState('RAID_JACK');
+  };
+  // 追加の挑戦を1回ぶん買う。ビートP(1回100P)を払って mh_raid_jack_v1 の extra を増やす。
+  // 払ったあとに記録が保存できなければ、ビートPを戻す(払っただけで回数が増えない事故を作らない)。
+  // デバッグの強制表示中は、実際のビートPを減らさない
+  // 案内を閉じる。デバッグの強制表示のあいだは「見た」にしない(本番で出る案内を消さない)
+  const dismissRaidJackGuide = () => { setRaidJackGuideSeen(true); if (!raidJackDebugForce) storeSet(RAID_JACK_GUIDE_KEY, true, false); };
+  const purchaseRaidJackExtra = async (kind) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    try {
+      const key = kind === 'b' ? 'b' : 'a';
+      const before = await loadRhythmEventPoints();
+      const free = raidJackDebugForce;
+      if (!free && before < RAID_JACK_EXTRA_COST_BEAT_P) return { ok:false, reason:'short' };
+      const state = await raidJackLoadState();
+      const today = raidJackDayKey(Date.now());
+      const side = state[key];
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      side.extra += 1;
+      const nextPoints = free ? before : before - RAID_JACK_EXTRA_COST_BEAT_P;
+      if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, nextPoints, false);
+      const saved = await raidJackSaveState(state);
+      if (!saved) { if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, before, false); return { ok:false, reason:'error' }; }
+      setRhythmEventPoints(nextPoints);
+      return { ok:true, points:nextPoints };
+    } catch (error) {
+      return { ok:false, reason:'error' };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
+  const startRaidJackFromPrep = async ({ party, teachingIds }) => {
+    const prep = raidJackPrep;
+    if (!prep || !Array.isArray(party) || party.length === 0) return;
+    const key = prep.kind === 'b' ? 'b' : 'a';
+    const nowMs = Date.now();
+    // デバッグの強制表示中は回数を数えない(何度でも挑める・端末の記録 mh_raid_jack_v1 も変えない)
+    if (!raidJackDebugForce || raidJackDebugRealRules) {
+      const state = await raidJackLoadState();
+      const side = state[key];
+      const today = raidJackDayKey(nowMs);
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      if (raidJackRemaining(side, nowMs) <= 0) { setGameState('RAID_JACK'); return; }
+      side.used += 1;
+      if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    }
+    const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+    // レイドバトル: いまの共有ライフの残りを取って、そこからはじめる(取れない・すでに0なら満タンから)
+    let startLife = null;
+    if (key === 'a') {
+      try {
+        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+        const tierDef = raidJackTierAt('a', prep.tierIndex);
+        const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
+        if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+      } catch (e) { startLife = null; }
+    }
+    setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId, startLife });
+  };
+
   const setupMon = (m, slotIdx) => {
     if (!m) return;
     const isHero=!mainHero;
@@ -13085,7 +13336,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ★タクティクスは、勇者モンを置いた瞬間に初期スタイル(ソード・コンバージョンなど)を盤面の記録へ書く。
       //   選び直して置き直したときに前の枠の記録が残らないよう、記録ごと作り直す(バトルの前なので消えるものは無い)
       if (isTacticsMode(runMode)) {
-        const heroExDef=tacticsExDefOf(m.id);
+        const heroExDef=raidExDefOf(m.id);
         commitTacticsExState(heroExDef&&heroExDef.heroInitialStyle&&tacticsHeroStyle
           ? setTacticsExInitialStyle(createTacticsExState(),{ def:heroExDef, slot:slotIdx, monId:m.id, style:tacticsHeroStyle })
           : createTacticsExState());
@@ -13809,7 +14060,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}<div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
       {renderSkillSection(mon)}
       {(()=>{
-        const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
+        const exDef=typeof tacticsExDefOf==='function'?raidExDefOf(mon.id):null;
         if(!exDef)return null;
         const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
@@ -14225,14 +14476,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             let shownDay = null;
             // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
-            // 開催中かは描くたびに数え直す(changelogEventLive)。押すと中身(告知画像・本文)が開く
+            // 開催中かは描くたびに数え直す(changelogEventLive)。ふだんは他の行と同じく閉じておき、押すと中身(告知画像・本文)が開く
             const pinnedEvents = changelogTab==='update' ? CHANGELOG_ENTRIES.filter(entry=>changelogEventLive(entry)) : [];
             return [...pinnedEvents.map(c=>(
-              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned" open
+              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
                 style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
                 <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
                   <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>🎃 開催中</span>
-                  <span style={{flex:1,minWidth:0}}>{c.title}</span>
+                  {/* 固定表示の見出しは1行にする。先頭の【期間限定】と末尾の「〜を開催します」は、「開催中」の札と重なるので落とす(本文の見出しはそのまま) */}
+                  <span style={{flex:1,minWidth:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{String(c.title||'').replace(/^【[^】]*】/,'').replace(/を開催(します)?$/,'')}</span>
+                  <small style={{flexShrink:0,fontSize:10,color:'#fdba74'}}>詳細 ▼</small>
                 </summary>
                 {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
                 {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
@@ -14657,6 +14910,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
             profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
+            raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
+            raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
           />
         )}
 
@@ -16272,6 +16527,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          rankingSupport={{
+            // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
+            // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
+            open:(song)=>{loadRhythmRanking(song);},
+            render:(onClose)=>(
+              <RhythmRankingScreen
+                loadRhythmEventRanking={loadRhythmEventRanking}
+                loadRhythmRanking={loadRhythmRanking}
+                loadRhythmTotalRanking={loadRhythmTotalRanking}
+                onBackToSongSelect={onClose}
+                onGoToSongSelect={onClose}
+                rankingBreederIcon={rankingBreederIcon}
+                rhythmEventDivision={rhythmEventDivision}
+                rhythmEventRanking={rhythmEventRanking}
+                rhythmRanking={rhythmRanking}
+                rhythmRankingPending={rhythmRankingPending}
+                onResendRhythmRankingPending={resendRhythmRankingPendingNow}
+                rhythmRankingDetail={rhythmRankingDetail}
+                rhythmRankingTab={rhythmRankingTab}
+                rhythmTotalRanking={rhythmTotalRanking}
+                setRhythmEventDivision={setRhythmEventDivision}
+                setRhythmRankingDetail={setRhythmRankingDetail}
+                setRhythmRankingTab={setRhythmRankingTab}
+              />
+            ),
+          }}
           modeSelect={gameState==='RHYTHM_MODE_SELECT'?{
             multi:RELEASE_FLAGS.rhythmMulti===true,
             onExit:exitRhythmSongSelect, backgroundRun:rhythmBackgroundRun, exiting:rhythmExitingRun,
@@ -16539,6 +16820,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
                       **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
+                  {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
+                  <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -16630,6 +16913,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
+        {gameState==='RAID_JACK'&&(<RaidJackScreen
+          onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
+          onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
+          onPurchase={purchaseRaidJackExtra} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
+          guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}/>)}
+        {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
+          kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
+          candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
+          teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
+          onBack={()=>setGameState('RAID_JACK')} onStart={startRaidJackFromPrep}/>)}
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
+          // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
+          const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
+          const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
+          if(!list.length) return false;
+          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,isB?3:1);
+          setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
+          setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,4),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID});
+          return true;
+        }}/>)}
         {gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{
           // 種族は主血統。ここも本番と同じ一覧を使う
           const speciesEntries=speciesChallengeLineages();
@@ -18470,7 +18773,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           heroStyleDef={(()=>{
             // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
             if(mainHero||!currentPickingMon||!tacticsExEnabled) return null;
-            const d=tacticsExDefOf(currentPickingMon.id);
+            const d=raidExDefOf(currentPickingMon.id);
             return d&&d.heroInitialStyle?d:null;
           })()}
           heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
@@ -19525,7 +19828,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </div>
         </div>
       )}
-      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
+      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
   下のブロックはパーティ合計(ガードの段階などを決める値)なので、そのまま残す */}
 {isTacticsMode(runMode)&&(<div data-tactics-status className="space-y-1.5 text-left">
@@ -19600,8 +19903,28 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {/* ★設定パネルと同じ理由で body の直下へ出す(2026-09-22)。
              画面の揺れ(transform)の中に置くと、揺れているあいだ position:fixed の基準が
              viewport ではなく揺れる箱になり、safe-area ぶん位置がずれる */}
-      {showQuitConfirm&&ReactDOM.createPortal((<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">{debugBattle?'このデバッグ戦を終了します':<>現在のスコア {score.toLocaleString()} pt がランキングに記録されます</>}</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>), document.body)}
+      {showQuitConfirm&&ReactDOM.createPortal((<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">{raidJackRunRef.current?'リタイアします。ここまでに与えたダメージは記録されます(回数は戻りません)':debugBattle?'このデバッグ戦を終了します':<>現在のスコア {score.toLocaleString()} pt がランキングに記録されます</>}</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>), document.body)}
 
+      {raidJackResult&&(()=>{
+        const r=raidJackResult;
+        const reasonLabel={defeated:'ジャックを倒した！',turns:'10ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
+        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(あとで自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした(あとで自動で送り直します)'}[r.outcome]||'';
+        return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
+          <div className="text-[10px] font-black text-orange-300 tracking-[.35em] mb-2">{r.kind==='b'?'マスモン':'ベースモン'}</div>
+          <h2 className="text-2xl font-black text-orange-100 mb-1">{r.tierName}</h2>
+          <div className="text-sm font-black text-amber-200 mb-4">{reasonLabel}</div>
+          <div className="w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3">
+            <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
+            <div data-raid-jack-damage className="text-3xl font-black text-white text-right">{r.damage.toLocaleString()}</div>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
+          </div>
+          {r.opened&&<div className="mb-2 text-sm font-black text-emerald-300">次の段階が開きました！</div>}
+          <div className="mb-4 text-[10px] text-slate-300">{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
+          <div className="w-full max-w-xs space-y-3">
+            <button onClick={()=>exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>
+          </div>
+        </div>);
+      })()}
       {debugBattle&&debugOutcome&&(
         <div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(2,6,23,.98)'}}>
           <div className="text-[10px] font-black text-fuchsia-300 tracking-[.35em] mb-3">DEBUG</div>

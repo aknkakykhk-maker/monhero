@@ -216,8 +216,12 @@ const MarketDetailChip = ({ label, onClick }) => (
 //   検索・保存はこれまでどおり(U+200B は幅0で、コピーしても見た目に出ない)。
 // ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
+// 全角のかっこ「（…）」は、かっこの中を途中で割らない(2026-10-04・ユーザー指摘「文字列が悪い」。
+// 「みゅあ（ハロウィン／）のアイコン」と、閉じかっこだけが次の行へ落ちていた)。
+// 「（」の前と「）」の後ろにも印を入れ、「みゅあ／（ハロウィン）」のようにかっこのかたまりで折る。
 const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
-  (text, word) => text.split(word).join(`​${word}`), String(name || ''));
+  (text, word) => text.split(word).join(`​${word}`), String(name || ''))
+  .split('（').join('​（').split('）').join('）​');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
@@ -246,7 +250,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -568,6 +572,12 @@ const helpDataRows = (id) => {
         return [`${monName}「${def.name}」`,
           `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
+    // イベント・レイドボス「ジャック」の段階(2026-10-04)。名前・ライフ・技の本数は 35-raid-jack.jsx の定義から作る。
+    // ★ライフや倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
+    case 'raidJackTiersA':
+      return (typeof RAID_JACK_A_TIERS !== 'undefined' ? RAID_JACK_A_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
+    case 'raidJackTiersB':
+      return (typeof RAID_JACK_B_TIERS !== 'undefined' ? RAID_JACK_B_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
@@ -803,6 +813,8 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
+  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',

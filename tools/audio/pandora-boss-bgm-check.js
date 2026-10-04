@@ -52,9 +52,9 @@ for (const file of files) {
     !String(helperExpression || '').includes('slots'));
   check(`${file}: 専用曲をモード別ムー戦BGMより先に優先`,
     source.indexOf('if (pandoraBossBgm) return pandoraBossBgm;') >= 0 &&
-    source.indexOf('if (pandoraBossBgm) return pandoraBossBgm;') < source.indexOf("if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];"));
+    source.indexOf('if (pandoraBossBgm) return pandoraBossBgm;') < source.indexOf("if (enemyId === 'Moo' || enemyId === 'Jack' || currentWave === 10) return bgmArrangement[modeBgm.moo];"));
   check(`${file}: 他の勇者は既存のモード別ムー戦BGMへ戻る`,
-    compact.includes("if(enemyId==='Moo'||currentWave===10)returnbgmArrangement[modeBgm.moo];") &&
+    compact.includes("if(enemyId==='Moo'||enemyId==='Jack'||currentWave===10)returnbgmArrangement[modeBgm.moo];") &&
     ['boss', 'quickMoo', 'proMoo', 'extremeMoo', 'speciesMoo'].every(key => compact.includes(`moo:'${key}'`)));
   // 依存配列の末尾へ autoBgmOverride / rhythmScreenOpen が足された。
   // 並び(mainHero?.id の直後に autoBattle)はそのまま要求し、配列の終わりだけ問わない。
