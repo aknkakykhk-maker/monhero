@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 226ded8a7c647f5d
+// source-sha256: 1be5ebbe4c6db553
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 02:21";
+const BUILD_DATE = "2026-10-04 10:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33593,9 +33593,9 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
     desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n' + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n' + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n' + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
-    maxUses: 0,
-    unlimited: true,
-    withCards: false,
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
     duration: 'style',
     styles: Object.freeze([Object.freeze({
       id: 'sword',
