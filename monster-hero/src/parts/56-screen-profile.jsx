@@ -13,6 +13,31 @@
 //
 // props が多いのは、この画面が「ブリーダーの全記録の置き場」だから。
 // 減らすなら記録のまとまりごとに部品を分ける必要があり、それは切り出しとは別の作業にする。
+// モンヒロビートの難易度別の実績表(自分のプロフィールとフレンドのプロフィールで共用)。
+// rows は friendsRhythmAchievements と同じ形 [{ d, total, clear, fc, ae, am }]
+function RhythmAchievementPanel({ rows, who = 'self' }) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length === 0) return null;
+  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  return (
+    <section data-rhythm-achievements={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
+      <b className="block text-[12px] font-black text-amber-100">モンヒロビートの実績</b>
+      <small className="mb-2 block text-[9px] font-bold text-slate-400">難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）</small>
+      <div className="grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center">
+        <span></span>
+        {heads.map(([t, c]) => <span key={t} className={`text-[8px] font-black leading-tight ${c}`}>{t}</span>)}
+        {list.map((r) => (
+          <React.Fragment key={r.d}>
+            <b data-rhythm-achievement-row={r.d} className="pr-1 text-left text-[10px] font-black text-white">{r.d}</b>
+            {[r.clear, r.fc, r.ae, r.am].map((n, i) => (
+              <span key={i} className={`rounded-lg bg-black/30 py-1 text-[11px] font-black tabular-nums ${n >= r.total ? 'text-amber-200' : n > 0 ? 'text-white' : 'text-slate-500'}`}>{n}<span className="text-[8px] font-bold text-slate-400">/{r.total}</span></span>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+    </section>
+  );
+}
 function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
@@ -35,6 +60,18 @@ function ProfileScreen({
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
 }) {
+  // モンヒロビートの実績。曲の記録はモンヒロビートを開くまで読み込まれないので、ここで保存から直接読む
+  const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
+      } catch (error) { /* 読めなければ実績の表を出さないだけ */ }
+    })();
+    return () => { alive = false; };
+  }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length
     ? unlockedAssistants : ASSISTANT_LIST;
   // 根で safe-area を足さない(index.html の body が env(safe-area-inset-*) を持っており、
@@ -301,6 +338,9 @@ function ProfileScreen({
             )}
           </section>;
         })()}
+        {/* モンヒロビートの実績: 難易度ごとのクリア・フルコンボ・オールエクセレント・オールマーベラスの数。
+            フレンドのプロフィールにも同じ表が出る。1曲も遊んでいなければ出さない */}
+        {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。

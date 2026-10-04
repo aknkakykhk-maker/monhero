@@ -43,11 +43,15 @@ const sandbox = {
   rankingMasuDetail: (masu) => ({ v: 6, n: masu.baseId }),
   RHYTHM_SONGS: [{ songId: 'songA' }, { songId: 'songB' }, { songId: 'songC' }],
   RHYTHM_DIFFICULTIES: [{ id: 'EASY' }, { id: 'NORMAL' }, { id: 'HARD' }],
+  // 実績の集計用: songC は EASY だけ、ほかは EASY と NORMAL(HARD はどの曲にも無い)
+  rhythmDemoSongs: (songs) => songs,
+  rhythmDemoDifficultyList: (list) => list,
+  rhythmDemoDifficulties: (song, list) => list.filter((d) => d.id === 'EASY' || (d.id === 'NORMAL' && song.songId !== 'songC')),
 };
 // 通信層を、指定した fetch(偽サーバー)で新しく読み込む。第2の読み込みは「列がまだ無い環境」の検査に使う
 const EXPORTS_SOURCE = `${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsRhythmAchievements, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
 const loadApi = (fetchImpl) => {
   const box = { ...sandbox, fetch: fetchImpl };
   vm.createContext(box);
@@ -307,6 +311,28 @@ const statusOf = (a, b) => {
   notReady = result === 'notready';
   check('表が無い環境では「準備中(notready)」になり、例外を投げない', notReady && api.friendsUnavailable() === true);
   check('一度準備中と分かったら、以後は通信しない', await api.sbSendFriendRequest('userA', 'userB') === 'notready');
+
+  // ---- モンヒロビートの難易度別の実績 ----
+  const rec = (o) => ({ clear: false, fullCombo: false, allExcellent: false, allMarvelous: false, ...o });
+  const ach = api.friendsRhythmAchievements({
+    songA: { EASY: rec({ clear: true, allMarvelous: true }), NORMAL: rec({ clear: true, fullCombo: true }) },
+    songB: { EASY: rec({ clear: true }), NORMAL: rec({ allExcellent: true }) },
+    songC: { EASY: rec({}), HARD: rec({ clear: true }) },
+  });
+  const rowOf = (d) => ach.find((r) => r.d === d);
+  check('実績: 譜面のある難易度だけが並ぶ(HARD は無い)', ach.map((r) => r.d).join(',') === 'EASY,NORMAL');
+  check('実績: 分母は、その難易度がある曲の数', rowOf('EASY').total === 3 && rowOf('NORMAL').total === 2);
+  check('実績: EASY は クリア2・FC1・AE1・AM1(上位の称号も下位に数える)',
+    rowOf('EASY').clear === 2 && rowOf('EASY').fc === 1 && rowOf('EASY').ae === 1 && rowOf('EASY').am === 1);
+  check('実績: NORMAL は クリア2(FCだけでも数える)・FC2・AE1・AM0',
+    rowOf('NORMAL').clear === 2 && rowOf('NORMAL').fc === 2 && rowOf('NORMAL').ae === 1 && rowOf('NORMAL').am === 0);
+  check('実績: 記録が空でも落ちず、数は0', api.friendsRhythmAchievements(null).every((r) => r.clear === 0 && r.am === 0));
+  const achBuilt = { rhythm: { ach: api.friendsRhythmAchievements({ songA: { EASY: rec({ played: true, clear: true }) } }).map((r) => [r.d, r.total, r.clear, r.fc, r.ae, r.am]) } };
+  const achBack = api.friendsNormalizeRecords(JSON.parse(JSON.stringify(achBuilt)));
+  check('実績: 送る形を受け取り側で戻せる', achBack.rhythm.ach.length === 2 && achBack.rhythm.ach[0].d === 'EASY' && achBack.rhythm.ach[0].clear === 1 && achBack.rhythm.ach[0].total === 3);
+  const achOdd = api.friendsNormalizeRecords({ rhythm: { ach: [['EASY', 3, 99, -1, 'x', 2], ['', 0, 1], 'bad', null, [5, 1]] } });
+  check('実績: 分母を超える数は分母へ、壊れた行は捨てる', achOdd.rhythm.ach.length === 1 && achOdd.rhythm.ach[0].clear === 3 && achOdd.rhythm.ach[0].fc === 0 && achOdd.rhythm.ach[0].ae === 0 && achOdd.rhythm.ach[0].am === 2);
+  check('実績: 古い版の records(ach なし)でも空の一覧になる', Array.isArray(api.friendsNormalizeRecords({ rhythm: { played: 1, songs: [] } }).rhythm.ach));
 
   // ---- 見た目の文言 ----
   const now = 1700000000000 + 10 * 24 * 3600 * 1000;

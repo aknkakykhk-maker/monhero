@@ -103,6 +103,16 @@ false のあいだは入口・ヘルプ・更新履歴・助手の告知・ラ�
   自分の `mh_rhythm_best_*` の同じ曲・同じ難易度の `bestScore` を `friendsCompareScores` で比べる（勝ち/負け/同点/未プレイ・差の点数）。自分の記録は読むだけ
 - すべて**既存の保存キーは変えず、新しいキーを足すだけ**
 
+## 5-6. モンヒロビートの難易度別の実績（2026-10-04・追加のSQLなし）
+
+- 集計は `friendsRhythmAchievements`（34）。公開中の曲（`rhythmDemoSongs`）のうち、その難易度の譜面がある曲を分母にし、
+  クリア・FC・AE・AM の曲数を数える。上位の称号は下位にも数える（AM ⊂ AE ⊂ FC。クリアはライフを残した曲か、FC 以上の曲）
+- 自分のプロフィール: `RhythmAchievementPanel`（56）。記録はモンヒロビートを開くまで読み込まれないので、`ProfileScreen` が保存から直接読む。
+  1曲もクリアしていないあいだは出さない
+- フレンド: `records.rhythm.ach` に `[難易度id, 分母, クリア, FC, AE, AM]` の並びで載せる（`records` は既存の JSONB 列に収まる小ささ）。
+  受信側は `friendsNormalizeAchievements` で型を確かめ、分母を超える数は分母へ丸める。`ach` が無い古い版の相手は表を出さない
+- 「曲のベスト」タブの先頭に、同じ部品を出す
+
 ## 6. 検査
 
 - `node tools/friends/friends-api-check.js` … 偽サーバーで申請・承認・解除・ブロック・上限・招待の状態遷移（DELETE 不使用・1組1行）

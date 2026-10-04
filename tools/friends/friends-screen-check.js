@@ -122,7 +122,7 @@ const serve = (flagOn) => new Promise(resolve => {
       const row = fake.db.friend_profiles.find(r => r.breeder_id === 'other-friend');
       row.message = '音ゲーすきです';
       row.records = { v: 1, battle: [{ id: scoreMode.id, k: 's', v: 1234567 }, { id: quickMode.id, k: 'w', v: 25 }],
-        rhythm: { played: 2, songs: [{ s: ids.song, d: 'HARD', sc: 987654, f: 1 }] },
+        rhythm: { played: 2, songs: [{ s: ids.song, d: 'HARD', sc: 987654, f: 1 }], ach: [['EASY', 10, 9, 7, 4, 1], ['MASTER', 8, 2, 0, 0, 0]] },
         collection: { masu: 30, dex: 18, dexTotal: 22, transcended: 3, reincarnated: 2, icons: 10, frames: 4 } };
       // 最近いっしょに遊んだ人(端末に覚えている)と、自分のモンヒロビートの記録(スコア勝負で比べる)を仕込む
       fake.db.breeder_profiles.push({ breeder_id: 'other-recent', user_name: '最近の子', icon: null, profile_frame: null, updated_at: new Date().toISOString() });
@@ -225,6 +225,7 @@ const serve = (flagOn) => new Promise(resolve => {
       };
       result.battleTab = await tabText('バトル', '[data-friend-battle]');
       result.songsTab = await tabText('曲のベスト', '[data-friend-songs]');
+      result.achFriend = await page.evaluate(() => (document.querySelector('[data-rhythm-achievements=friend]') || {}).innerText || '');
       result.versus = await page.evaluate(() => (document.querySelector('[data-friend-versus]') || {}).innerText || '');
       result.versusRow = await page.evaluate(() => (document.querySelector('[data-friend-versus-row]') || {}).innerText || '');
       result.collectionTab = await tabText('集めたもの', '[data-friend-collection]');
@@ -288,6 +289,7 @@ const serve = (flagOn) => new Promise(resolve => {
     && Array.isArray(r.selfRow.records.battle) && r.selfRow.records.rhythm && Array.isArray(r.selfRow.records.rhythm.songs) && r.selfRow.records.collection && typeof r.selfRow.records.collection.masu === 'number', JSON.stringify(r.selfRow && r.selfRow.records).slice(0, 200));
   ok('フレンドのプロフィールに、相手のひとことが出る', /音ゲーすきです/.test(r.friendMessage || ''), `${r.friendMessage}`);
   ok('「バトル」タブにモードごとの記録が出る', (r.battleLabels || []).every(l => (r.battleTab || '').includes(l)) && /1,234,567 pt/.test(r.battleTab || '') && /WAVE 25/.test(r.battleTab || ''), `${r.battleTab}`);
+  ok('「曲のベスト」タブにモンヒロビートの実績(難易度別のクリア・FC・AE・AM)が出る', /EASY\s*9\/10\s*7\/10\s*4\/10\s*1\/10/.test((r.achFriend || '').replace(/\s+/g, ' ')) && /MASTER/.test(r.achFriend || ''), `${r.achFriend}`);
   ok('「曲のベスト」タブに曲・難易度・スコア・フルコンボが出る', (r.songsTab || '').includes(r.songName || '#') && /HARD/.test(r.songsTab || '') && /987,654/.test(r.songsTab || '') && /フルコンボ/.test(r.songsTab || ''), `${r.songsTab}`);
   ok('「集めたもの」タブにマスモン数・図鑑・超越・転生などが出る', /30体/.test(r.collectionTab || '') && /18 \/ 22/.test(r.collectionTab || '') && /3体/.test(r.collectionTab || '') && /2体/.test(r.collectionTab || '') && /10個/.test(r.collectionTab || '') && /4個/.test(r.collectionTab || ''), `${r.collectionTab}`);
   ok('追加タブに「招待リンクを送る」のボタンがある', r.shareButton === true);
