@@ -34,6 +34,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-05 06:34", type:'update', group:'rhythm', title:'iPhoneで、タップがゲームに届くのが遅れるときも、演出を自動で控えめにするようになりました', status:'new',
+    items:[
+      'iPhoneで、押してから0.05秒以上たってからタップがゲームに届くことが続いたとき（3秒のあいだに3回以上）、「重いときは演出を自動で控えめに」と同じ順番で、演出を一段下げるようになりました。',
+      '連打のときにタップが抜けたように感じる原因のひとつが、画面の描き直しの重さで、指の操作が遅れて届くことだったためです。',
+      '「重いときは演出を自動で控えめに」を切っている人には、何も起きません。判定とスコアは変わりません。',
+    ],
+  },
+  {
     date: "2026-10-05 04:00", type:'content', title:'カボチャの大王ジャックがあらわれました', status:'new', releaseFlag:'raidJack', visibleFrom:'2026-10-05T04:00:00+09:00',
     image:'images/enemies/jack.png?v=9814dccba5a2',
     assistantNotice:{ id:'update_notice_raid_jack_v1', type:'content', notifyFrom:'2026-10-05T04:00:00+09:00', notifyUntil:'2026-11-01T04:00:00+09:00' },
