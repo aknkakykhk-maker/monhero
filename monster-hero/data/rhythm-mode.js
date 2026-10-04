@@ -2292,6 +2292,12 @@ const RHYTHM_COUNTDOWN_STEP_MS=800;
 const RHYTHM_COUNTDOWN_STEPS=Object.freeze(['READY','3','2','1']);
 const RHYTHM_COUNTDOWN_TOTAL_MS=RHYTHM_COUNTDOWN_STEP_MS*RHYTHM_COUNTDOWN_STEPS.length;
 const RHYTHM_HOLD_HANDOVER_GRACE_MS=200;
+// 押さえている帯の中へ置いた指が、重なっている普通のノーツ(TAP)ではなく「持ち替えの2本目」として扱われる遅れの目安(2026-10-04)。
+// プレイヤーの声「スライドと普通のノーツが交互に来る形で指置き換えをすると、変な判定が出て必ず失敗する」。
+// 持ち替えのつもりの指が重なったTAPに取られると、1本目を離した瞬間にスライドが丸ごとMISSになる。反対に、遅れて叩くつもりの指が
+// 持ち替えとして扱われても、失うのはそのTAP1つだけでスライドは生き続ける。損の大きさが違うので、時刻をこれより遅れて
+// まだ叩かれていないTAPは、被りノーツとして数えない(MARVELOUS・EXCELLENT の窓=100msを過ぎたもの)。時刻の手前(早い側)は変えない
+const RHYTHM_HANDOVER_PREFER_LATE_MS=100;
 // 終わり際に離すぶんの猶予。持ち替えとは別物なので混ぜない
 // (混ぜると「終わりに離す」と「途中で持ち替える」が同じ扱いになる)。
 const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
@@ -3204,6 +3210,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
         const note=source[index];
         if(!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type))continue;
         if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_INPUT_MATCH_WINDOW_MS)continue;
+        // 時刻を大きく過ぎてもまだ叩かれていないTAPは被りノーツと見ない(持ち替えを優先。RHYTHM_HANDOVER_PREFER_LATE_MS の説明)
+        if(note.type==='TAP'&&now-(Number(note.timeMs)+offset)>RHYTHM_HANDOVER_PREFER_LATE_MS)continue;
         const span=inputSpan(note);
         if(!span)continue;
         const start=Math.max(span.start,held.start),end=Math.min(span.end,held.end);
