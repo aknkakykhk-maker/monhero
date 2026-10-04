@@ -9,6 +9,7 @@
 // ・この画面にタイマーは無い
 
 function MasuSoulTraitsScreen({
+  commitSoulCrystalUse, setSoulCrystalOpen, soulCrystalOpen,
   commitSoulTraitRespec, commitSoulTraitUpgrade, getMasuMon, masuMonDetail, monsterRosterIds,
   onClose, ownedItems, setSoulTraitDraftLevels, setSoulTraitError, setSoulTraitRespecOpen,
   setSoulTraitSelectedId, setSoulTraitTab, soulTraitDraftLevels, soulTraitError, soulTraitProcessingRef,
@@ -27,6 +28,8 @@ function MasuSoulTraitsScreen({
       const spent=soulTraitSpentPoints(masu);
       const available=soulTraitAvailablePoints(masu);
       const scrollHave=ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID);
+      const crystalHave=ownedItemCount(ownedItems,SOUL_CRYSTAL_ITEM_ID);
+      const bonusPoints=normalizeSoulBonusPoints(masu.soulBonusPoints);
       const traits=SOUL_TRAIT_DEFINITIONS.filter(trait=>trait.category===soulTraitTab);
       const selected=soulTraitSelectedId?SOUL_TRAIT_BY_ID[soulTraitSelectedId]:null;
       const maxUpgrade=selected?maxSoulTraitUpgradeLevels(masu,selected.id):0;
@@ -100,6 +103,10 @@ function MasuSoulTraitsScreen({
           <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-400">魂格特性による総合力加算：使用済み魂格P {spent} × 10 = <b className="text-amber-300">+{spent*10}</b><br/>実戦での合成後効果・攻撃予測への反映は、戦闘接続時に同じ特性データから計算します。</div>
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
+          <div className="mb-2 flex items-center gap-2">
+            <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"><div className="text-[10px] font-black text-slate-400">{SOUL_CRYSTAL_ITEM.emoji} {SOUL_CRYSTAL_ITEM.name}</div><div className={`text-[11px] font-black ${crystalHave>0?'text-fuchsia-300':'text-slate-400'}`}>所持 {crystalHave}個{bonusPoints>0?`(使った分 +${bonusPoints}P)`:''}</div></div>
+            <button type="button" data-soul-crystal-open disabled={crystalHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulCrystalOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-fuchsia-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">結晶を使う</button>
+          </div>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"><div className="text-[10px] font-black text-slate-400">魂格再編の書</div><div className={`text-[11px] font-black ${scrollHave>0?'text-cyan-300':'text-slate-400'}`}>所持 {scrollHave}冊</div></div>
             <button type="button" data-soul-trait-respec-open disabled={spent<=0||scrollHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulTraitRespecOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-cyan-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">全リセット</button>
@@ -131,6 +138,21 @@ function MasuSoulTraitsScreen({
               <div className="my-2 text-center text-[11px] font-black text-sky-200">今回 +{draft}段階</div>
               <button type="button" data-soul-trait-confirm disabled={draft<=0||soulTraitProcessingRef.current} onClick={()=>commitSoulTraitUpgrade(masu.id,selected.id,draft)} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30">強化を決定</button>
             </>}
+          </div>
+        </div>}
+
+        {soulCrystalOpen&&<div className="fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="魂格の結晶を使う確認">
+          <div data-soul-crystal-sheet className="w-full max-w-sm rounded-2xl border-2 border-fuchsia-500/60 bg-slate-950 p-5">
+            <div className="text-center text-xl mb-1">{SOUL_CRYSTAL_ITEM.emoji}</div><h3 className="text-center text-base font-black text-fuchsia-200">魂格の結晶を使う</h3>
+            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">「{masu.name}」の魂格Pが、使った結晶1個につき +1 されます。使った結晶はもとに戻せません。</p>
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">総獲得 魂格P</span><span className="text-amber-300">いま {earned}P</span></div>
+            <div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">結晶の所持</span><span className="text-fuchsia-300">{crystalHave}個</span></div>
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <button type="button" data-soul-crystal-use-1 disabled={soulTraitProcessingRef.current||crystalHave<1} onClick={()=>commitSoulCrystalUse(masu.id,1)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1個使う(+1P)</button>
+              {crystalHave>=10&&<button type="button" data-soul-crystal-use-10 disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,10)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">10個使う(+10P)</button>}
+              {crystalHave>1&&<button type="button" data-soul-crystal-use-all disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,crystalHave)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">ぜんぶ使う({crystalHave}個・+{crystalHave}P)</button>}
+              <button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulCrystalOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button>
+            </div>
           </div>
         </div>}
 

@@ -29,6 +29,10 @@ const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 //   適用するまでは中身が出せない。適用して画面を確かめてから true にする。
 //   false のあいだは入口もヘルプ・更新履歴・助手の告知もまとめて隠す(画面そのものも開けない)。
 const FRIENDS_PUBLIC_RELEASE = true;
+// イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。
+// ★共有HPと累計ダメージはSupabaseの新しい表を使うので、docs/sql/raid/RAID_JACK_APPLY.sql を適用して
+//   画面を確かめるまでは false。false のあいだは入口・ヘルプ・更新履歴・助手の告知もまとめて隠す。
+const RAID_JACK_PUBLIC_RELEASE = false;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
@@ -61,7 +65,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJack:RAID_JACK_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -644,6 +648,7 @@ const giftItemRewardInfo = (itemId) => {
   if (typeof HERO_PROOF_ITEM !== 'undefined' && id === HERO_PROOF_ITEM.id) return HERO_PROOF_ITEM;
   if (typeof HERO_PROOF_SHARD_ITEM !== 'undefined' && id === HERO_PROOF_SHARD_ITEM.id) return HERO_PROOF_SHARD_ITEM;
   if (typeof RAINBOW_TRANSCEND_FRUIT_ITEM !== 'undefined' && id === RAINBOW_TRANSCEND_FRUIT_ITEM.id) return RAINBOW_TRANSCEND_FRUIT_ITEM;
+  if (typeof SOUL_CRYSTAL_ITEM !== 'undefined' && id === SOUL_CRYSTAL_ITEM.id) return SOUL_CRYSTAL_ITEM;
   if (typeof speciesTranscendFruitItems === 'function') {
     const found = Object.values(speciesTranscendFruitItems()).find(item => item && item.id === id);
     if (found) return found;
@@ -710,6 +715,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'campaign') return { label:'キャンペーン', title };
   // モンヒロビートのイベント・週間ランキングの報酬(2026-09-14)
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
+  // イベント・レイドボス「ジャック」の報酬(2026-10-04)
+  if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };

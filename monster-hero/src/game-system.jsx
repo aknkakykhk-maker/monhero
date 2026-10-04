@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cae7a7c0c7408f36
+// generated-sha256: 4b0438320e1a0b57
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 22:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 23:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -243,6 +243,17 @@ const TACTICS_BATTLE_MODES = Object.freeze([
 // 難易度ごとの自己ベスト・クリア回数・最高到達WAVEを持つモード。
 // 種族チャレンジは「種族×難易度」で持つので、ここには入れない
 const TACTICS_SCORE_MODES = Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_PRO]);
+// イベント・レイドボス「ジャック」の専用の1戦(docs/spec/RAID_BOSS_JACK.md)。A=ベースモン協力戦 / B=マスモンの累計ダメージ。
+// 盤面・行動表はタクティクスと同じ(isTacticsMode が真になる)が、**既存の記録には一切書かない**:
+//   ・自己ベスト・クリア回数・最高到達WAVE(TACTICS_SCORE_MODES に入れない・modeKeyPrefix は使われない接頭辞を返す)
+//   ・全国ランキング(modeHasRanking は false・submitRunScoreOnce は手前で return・rankingDifficultyForMode は例外)
+//   ・絆経験値・ゴールド・クリア報酬(ラン進行を持たない専用の1戦なので、結果は raidJackSubmitHit だけが送る)
+// 与ダメージは新しい表 raid_jack_hits へ、端末の記録は新しいキー mh_raid_jack_v1 へだけ書く。
+// TACTICS_BATTLE_MODES は3つのまま触らない(tactics-modes-check.js が3つを固定で見ている)。
+const BATTLE_MODE_RAID_JACK_A = 'raidJackA';
+const BATTLE_MODE_RAID_JACK_B = 'raidJackB';
+const RAID_JACK_BATTLE_MODES = Object.freeze([BATTLE_MODE_RAID_JACK_A, BATTLE_MODE_RAID_JACK_B]);
+const isRaidJackMode = (mode) => RAID_JACK_BATTLE_MODES.includes(mode);
 const EMPTY_TACTICS_RECORD = Object.freeze({ hs: Object.freeze({}), clears: Object.freeze({}), waves: Object.freeze({}) });
 // 種族チャレンジを一般公開するかどうかの1つのスイッチ。
 // false のあいだは
@@ -280,6 +291,9 @@ const TACTICS_BETA_PRO_RELEASE = true;
 // その名前→公開しているか の対応をここで持つ。イベントを増やすときはここへ1行足す
 const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+  // ジャックのストーリーと遊び方の話(releaseFlag: 'raidJack')。RELEASE_FLAGS は後ろの部品で作られるので、読み込み時ではなく見るたびに引く。
+  // ★値で書くと、あとの部品の const を読み込み時に触って「初期化の前に使っている」で画面が真っ白になる(2026-10-04に実際に起きた)
+  get raidJack() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidJack === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -466,7 +480,7 @@ const isSpeciesChallengeMode = (mode) => mode === BATTLE_MODE_SPECIES_CHALLENGE
   || mode === BATTLE_MODE_TACTICS_SPECIES;
 // 新モードも normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、idそのものを見る。
 // ここを normalizeBattleMode 経由にすると、記録の置き場がチャレンジと同じ mh_ になってしまう
-const isTacticsMode = (mode) => TACTICS_BATTLE_MODES.includes(mode);
+const isTacticsMode = (mode) => TACTICS_BATTLE_MODES.includes(mode) || isRaidJackMode(mode);
 // クイックの報酬方針は画面内だけで選び、保存データには増やさない。
 // 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
@@ -509,7 +523,10 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
 // プロは mh_pro_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)のキーには一切触らない
 // 新モードは mh_tactics_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)・プロ(mh_pro_*)の
 // キーには一切触らない。id と同じく、公開後はこの接頭辞も変えない
-const modeKeyPrefix = (mode) => mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_'
+// ★ジャックは isTacticsMode より前に見る。あとに置くと mh_tactics_ になり、通常タクティクスの自己ベストと同じキーを指す。
+//   ジャック戦は記録を書かないので、この接頭辞は使われない(万一書いても通常の記録とは別のキーへ行く保険)
+const modeKeyPrefix = (mode) => isRaidJackMode(mode) ? 'mh_raid_jack_unused_'
+  : mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_'
   : isTacticsMode(mode) ? 'mh_tactics_'
   : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
@@ -831,6 +848,8 @@ const battleModePlayable = (id, { debugBattle = false } = {}) => {
   if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
   // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
   if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
+  // ジャックは専用の公開フラグだけで決める(タクティクスの公開とは別。typeof は検査の切り出しで未定義になるため)
+  if (isRaidJackMode(id)) return typeof RAID_JACK_PUBLIC_RELEASE !== 'undefined' && RAID_JACK_PUBLIC_RELEASE === true;
   if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
   return true;
 };
@@ -838,7 +857,7 @@ const battleModePlayable = (id, { debugBattle = false } = {}) => {
 // (ユーザー指示「3つ並べてプロ以外は準備中」)。デバッグからは今までどおり全部遊べる
 const battleModeComingSoon = (id, { debugBattle = false } = {}) => !debugBattle
   && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE
-  && isTacticsMode(id) && !battleModePlayable(id, { debugBattle });
+  && isTacticsMode(id) && !isRaidJackMode(id) && !battleModePlayable(id, { debugBattle });
 // 仕組みの中で実際に画面へ並べるモード。遊べないものは落とすが、
 // 「準備中」として見せるものだけは残す
 const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
@@ -883,6 +902,9 @@ const battleModeInfo = (mode) => {
   if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
   if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
   if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
+  // イベント・レイドボス「ジャック」: 画面の上部に「チャレンジ」と出ないよう、専用の名前と色を返す
+  if (mode === BATTLE_MODE_RAID_JACK_A) return { id: mode, short: 'レイドバトル', label: 'レイドバトル', color: '#fb923c' };
+  if (mode === BATTLE_MODE_RAID_JACK_B) return { id: mode, short: 'グランドスラム', label: 'グランドスラム', color: '#fbbf24' };
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 // 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
@@ -897,6 +919,7 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 //   β版ではタクティクスプロだけが true になり、送り先もβ版専用の行になる
 const modeHasRanking = (mode) => !isQuickMode(mode)
   && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE)
+  && !isRaidJackMode(mode)
   && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
@@ -1052,8 +1075,20 @@ const normalizeSoulTraitLevels = (value) => {
   });
   return out;
 };
+// ボーナス魂格P(2026-10-04・「魂格の結晶」を使った数)。個体ごとに足す項目で、旧セーブには無いので0として読む。
+// 上限は設けない(壊れた値だけ弾く)。0のときは保存しない(soulBonusPointsPatch)。
+const normalizeSoulBonusPoints = (value) => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 1000000000) : 0;
+};
+const soulBonusPointsPatch = (masu) => {
+  const n = normalizeSoulBonusPoints(masu?.soulBonusPoints);
+  return n > 0 ? { soulBonusPoints:n } : {};
+};
+// 獲得済み魂格P = 初到達Lvから導出した分(最大500)+ 結晶のボーナス分
 const soulPointEarned = (masu) =>
-  Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL));
+  Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL))
+  + normalizeSoulBonusPoints(masu?.soulBonusPoints);
 const soulTraitLevel = (masu, traitId) =>
   Math.max(0, Math.floor(Number(normalizeSoulTraitLevels(masu?.soulTraitLevels)[traitId]) || 0));
 const soulTraitEffectValue = (masu, traitId) => {
@@ -1991,6 +2026,36 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
   usage:'heroProofShard',
   desc:`モンヒロビートの週間ランキングと、クイックモードGODのクリアでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
 });
+// 魂格の結晶(2026-10-04・ユーザーが決めた)。ハロウィンのレイドボス「ジャック」の報酬で配る。
+// 使うと選んだマスモン1体のボーナス魂格Pが1個につき+1される(上限なし・マスモンならどれにでも使える)。
+// ★所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない(CLAUDE.md ⑦)。
+// ★マーケットでは売らない。ボーナス分は個体の soulBonusPoints(0のときは保存しない)。
+const SOUL_CRYSTAL_ITEM_ID = 'soul_crystal';
+const SOUL_CRYSTAL_ITEM = Object.freeze({
+  id:SOUL_CRYSTAL_ITEM_ID,
+  name:'魂格の結晶',
+  emoji:'🔮',
+  usage:'soulCrystal',
+  desc:'マスモンの魂格特性で使うと、そのマスモンの魂格Pが1個につき+1される。ハロウィンのレイドボス「ジャック」の報酬。',
+});
+// 結晶を使う。個数は所持数まで(0以下は1個)。足りなければ ok:false を返し、何にも触れない。
+// 増えるのは個体の soulBonusPoints、減るのは所持品の結晶で、書き戻しは呼び出し側が2つまとめて行う
+const buildSoulCrystalUse = (masu, ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  if (!masu || typeof masu !== 'object') return { ok:false, reason:'noMasu', quantity:0, ownedItems:before };
+  const have = ownedItemCount(before, SOUL_CRYSTAL_ITEM_ID);
+  const count = Math.min(have, Math.max(1, Math.floor(Number(quantity) || 1)));
+  if (count <= 0) return { ok:false, reason:'noItem', quantity:0, ownedItems:before };
+  const bonusBefore = normalizeSoulBonusPoints(masu.soulBonusPoints);
+  return {
+    ok:true,
+    quantity:count,
+    bonusBefore,
+    bonusAfter:bonusBefore + count,
+    nextMasu:{ ...masu, soulBonusPoints:bonusBefore + count },
+    ownedItems:{ ...before, [SOUL_CRYSTAL_ITEM_ID]:have - count },
+  };
+};
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
   speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
@@ -2252,7 +2317,12 @@ const transferableReincarnateBonus = (masu) => ({
   points: ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu),
   count: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)) + inheritedReincarnateCountOf(masu),
 });
-const normalizeMasuProgression = (masu) => ({
+// 個体オブジェクトのボーナス魂格Pを正規化する。...masu で元の値がそのまま入るので、壊れた値・0はここで外す
+const withNormalizedSoulBonus = (obj, source) => {
+  const { soulBonusPoints: _drop, ...rest } = obj;
+  return { ...rest, ...soulBonusPointsPatch(source) };
+};
+const normalizeMasuProgression = (masu) => withNormalizedSoulBonus({
   ...masu,
   // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
   autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
@@ -2279,7 +2349,7 @@ const normalizeMasuProgression = (masu) => ({
   // 未使用の固有技ポイント。限界突破・転生でその場に上げなかったぶんをここへ貯めておき、
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
-});
+}, masu);
 const buildAutoRepeatBreakthroughSettingUpdate = (masu, mode, level = 0) => {
   const normalizedMode = mode === 'follow' ? 'follow' : mode === 'fixed' ? 'fixed' : 'off';
   const normalizedLevel = normalizedMode === 'fixed' ? normalizeAutoRepeatBreakthroughLevel(level) : 0;
@@ -2365,6 +2435,7 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
     soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
+    ...soulBonusPointsPatch(masu),
     // 超越は転生で失われない。状態・未使用の超越P・超越で上げた基礎値をそのまま持ち越す
     transcended: isTranscended(masu),
     transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
@@ -4604,7 +4675,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', halloween_night_2026_part1:'halloweenNightEvent', halloween_night_2026_part2:'halloweenNightEvent', halloween_night_2026_part3:'halloweenNightEvent', halloween_night_2026_part4:'halloweenNightEvent', halloween_night_2026_part5:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -7508,6 +7579,10 @@ const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 //   適用するまでは中身が出せない。適用して画面を確かめてから true にする。
 //   false のあいだは入口もヘルプ・更新履歴・助手の告知もまとめて隠す(画面そのものも開けない)。
 const FRIENDS_PUBLIC_RELEASE = true;
+// イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。
+// ★共有HPと累計ダメージはSupabaseの新しい表を使うので、docs/sql/raid/RAID_JACK_APPLY.sql を適用して
+//   画面を確かめるまでは false。false のあいだは入口・ヘルプ・更新履歴・助手の告知もまとめて隠す。
+const RAID_JACK_PUBLIC_RELEASE = false;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
@@ -7540,7 +7615,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJack:RAID_JACK_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -8123,6 +8198,7 @@ const giftItemRewardInfo = (itemId) => {
   if (typeof HERO_PROOF_ITEM !== 'undefined' && id === HERO_PROOF_ITEM.id) return HERO_PROOF_ITEM;
   if (typeof HERO_PROOF_SHARD_ITEM !== 'undefined' && id === HERO_PROOF_SHARD_ITEM.id) return HERO_PROOF_SHARD_ITEM;
   if (typeof RAINBOW_TRANSCEND_FRUIT_ITEM !== 'undefined' && id === RAINBOW_TRANSCEND_FRUIT_ITEM.id) return RAINBOW_TRANSCEND_FRUIT_ITEM;
+  if (typeof SOUL_CRYSTAL_ITEM !== 'undefined' && id === SOUL_CRYSTAL_ITEM.id) return SOUL_CRYSTAL_ITEM;
   if (typeof speciesTranscendFruitItems === 'function') {
     const found = Object.values(speciesTranscendFruitItems()).find(item => item && item.id === id);
     if (found) return found;
@@ -8189,6 +8265,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'campaign') return { label:'キャンペーン', title };
   // モンヒロビートのイベント・週間ランキングの報酬(2026-09-14)
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
+  // イベント・レイドボス「ジャック」の報酬(2026-10-04)
+  if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
@@ -9956,8 +10034,12 @@ const MarketDetailChip = ({ label, onClick }) => (
 //   検索・保存はこれまでどおり(U+200B は幅0で、コピーしても見た目に出ない)。
 // ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
+// 全角のかっこ「（…）」は、かっこの中を途中で割らない(2026-10-04・ユーザー指摘「文字列が悪い」。
+// 「みゅあ（ハロウィン／）のアイコン」と、閉じかっこだけが次の行へ落ちていた)。
+// 「（」の前と「）」の後ろにも印を入れ、「みゅあ／（ハロウィン）」のようにかっこのかたまりで折る。
 const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
-  (text, word) => text.split(word).join(`​${word}`), String(name || ''));
+  (text, word) => text.split(word).join(`​${word}`), String(name || ''))
+  .split('（').join('​（').split('）').join('）​');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
@@ -9986,7 +10068,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -10308,6 +10390,12 @@ const helpDataRows = (id) => {
         return [`${monName}「${def.name}」`,
           `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
+    // イベント・レイドボス「ジャック」の段階(2026-10-04)。名前・ライフ・技の本数は 35-raid-jack.jsx の定義から作る。
+    // ★ライフや倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
+    case 'raidJackTiersA':
+      return (typeof RAID_JACK_A_TIERS !== 'undefined' ? RAID_JACK_A_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
+    case 'raidJackTiersB':
+      return (typeof RAID_JACK_B_TIERS !== 'undefined' ? RAID_JACK_B_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
@@ -10543,6 +10631,8 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
+  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
@@ -10583,9 +10673,15 @@ const HELP_DATA_TITLES = {
 const ASSISTANT_LIST = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
 const ASSISTANT_SCENE_MAP = (typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES) || {};
 const ASSISTANT_FALLBACK = { id:'', name:'助手', image:null, emoji:'💬', accent:'#f472b6', greeting:'' };
+// 再生のときだけ話し手として出る登場人物(ジャックなど)。助手ではないので ASSISTANT_LIST には入れない
+const STORY_GUEST_LIST = (typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS)) ? STORY_GUEST_SPEAKERS : [];
+// 助手を先に探し、いなければ登場人物、それもなければ今までどおり既定の助手へ
 const assistantById = (id) => ASSISTANT_LIST.find(a => a.id === id)
+  || STORY_GUEST_LIST.find(a => a.id === id)
   || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : ''))
   || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
+// 台本に出てくる話し手(顔を並べる人)。助手に加えて、台本に出てくる登場人物も並べる
+const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
 const assistantSceneById = (key) => (key && ASSISTANT_SCENE_MAP[key]) || null;
 // ---- 親密度(みゅあとの仲良し度)を各画面へ配る ----
 // 吹き出しはどの画面にも置くので、画面ごとに props を渡さずに済むよう Context で配る。
@@ -10790,7 +10886,8 @@ const difficultyStyle = (setting, selected) => (selected
 //   ENEMY_ART_LAYOUT だけムーとそろえてあったのに、演出の分岐(8か所)から漏れていて、
 //   丸枠の中に小さく出るだけだった(2026-09-21 ユーザー指摘「覚醒ムーがしょぼすぎる
 //   クラシックのムーの描写を参照してって言ったじゃん」)
-const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo'];
+// ジャック(イベント・レイドボス)もラスボスの置き方(丸枠の外へ大きく出す)にする(2026-10-04・ユーザー指示「ムーと同じラスボスの置き方」)
+const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo', 'Jack'];
 const isMooBoss = (id) => MOO_BOSS_IDS.includes(String(id || ''));
 
 const ENEMY_ART_LAYOUT = {
@@ -10808,6 +10905,8 @@ const ENEMY_ART_LAYOUT = {
   // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
   //   表示のときに大きく拡大する。拡大率もムーとそろえてある
   AwakenedMoo: { scanScale:2.75, waveDetailScale:2,    objectPosition:'center 48%' },
+  // ジャック(絵は 1024x880 の横長で、ほぼ全面が本体。覚醒ムーより拡大を控えめにする)
+  Jack: { scanScale:2.2, waveDetailScale:1.7,    objectPosition:'center 52%' },
 };
 const enemyArtStyle = (enemyId, context='scan') => {
   const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;
@@ -10915,6 +11014,8 @@ const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Nyarlathotep:Object.freeze(['regen','pierce','allout']),
   Splatter:Object.freeze(['rush','roar','pierce','allout']),
   AwakenedMoo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
+  // イベント・レイドボス。再生なし。本数は段階で変わる(actionCount。落とす順は roar → うしろから)
+  Jack:Object.freeze(['rush','sweep','roar','pierce','allout']),
 });
 // 難易度が上がると、基本構成に無い技も順に使えるようになる(2026-09-21 ユーザー指示
 // 「難易度が上がるにつれて使える技も増やそうか」)。足す順はこれ。
@@ -10933,10 +11034,13 @@ const TACTICS_DIFFICULTY_ACTION_DELTA = Object.freeze({
 //   易しい難易度ほど「敵が何もしてこない」ように見えてしまう
 const TACTICS_SUPPORT_ACTION_IDS = Object.freeze(['roar','regen']);
 // その敵がその難易度で使う技のid。難易度を渡さなければ基本構成のまま(既存の呼び出しはそのまま動く)
-const tacticsEnemyActionIds = (enemyId, difficulty) => {
+// actionCount を渡すと、難易度の増減を使わず「この本数」にする(ジャックは段階ごとに本数を決めている。
+// 難易度は createBattleEnemy が既存の難易度へ丸めるので、段階を難易度のキーにはできない)
+const tacticsEnemyActionIds = (enemyId, difficulty, actionCount) => {
   const base = TACTICS_ENEMY_ACTION_IDS[enemyId] || [];
   const delta = Number.isFinite(TACTICS_DIFFICULTY_ACTION_DELTA[difficulty]) ? TACTICS_DIFFICULTY_ACTION_DELTA[difficulty] : 0;
-  const want = Math.max(1, base.length + delta);
+  const fixed = Number.isFinite(actionCount) ? Math.floor(actionCount) : null;
+  const want = fixed !== null ? Math.min(Math.max(1, fixed), base.length) : Math.max(1, base.length + delta);
   if (want === base.length) return base;
   if (want < base.length) {
     // 落とすのは「補助をうしろから → それでも足りなければうしろから」。残ったものは base の並びを保つ
@@ -10954,8 +11058,8 @@ const tacticsEnemyActionIds = (enemyId, difficulty) => {
 // 威力は1体あたりいままでの必殺技と同じ(×2.5)のまま、立っている全員へ同時に当たる。
 // 当たる相手は全体攻撃と同じく targetsAll を見て tacticsIntentTargets が数える
 const TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS = Object.freeze(['AwakenedMoo']);
-const tacticsActionDefinitions = (enemyId, difficulty) => {
-  const own = tacticsEnemyActionIds(enemyId, difficulty);
+const tacticsActionDefinitions = (enemyId, difficulty, actionCount) => {
+  const own = tacticsEnemyActionIds(enemyId, difficulty, actionCount);
   // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
   const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
   const allTargetSpecial = TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS.includes(enemyId);
@@ -10964,8 +11068,8 @@ const tacticsActionDefinitions = (enemyId, difficulty) => {
     : def);
 };
 // そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
-const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
-  ? tacticsActionDefinitions(enemyId, difficulty) : ENEMY_ACTION_DEFINITIONS;
+const enemyActionDefinitionsFor = (mode, enemyId, difficulty, actionCount) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
+  ? tacticsActionDefinitions(enemyId, difficulty, actionCount) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = (lastIntent) => ({
   charging: lastIntent?.type === 'CHARGE',
@@ -11137,6 +11241,8 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=
     hp:Math.floor(baseHp*mod*enemyTurnMultiplier),
     maxHp:Math.floor(baseHp*mod*enemyTurnMultiplier),
     atk:Math.floor(baseAtk*mod*enemyTurnMultiplier),
+    // ジャックのように「使う技の本数」を段階ごとに決める敵だけが持つ(tacticsEnemyActionIds が見る)
+    ...(options && Number.isFinite(options.actionCount) ? { actionCount:Math.floor(options.actionCount) } : {}),
   };
 };
 
@@ -13831,6 +13937,9 @@ const normalizeExtremeDifficulty = (value) => (ALL_EXTREME_DIFFICULTIES
 // 極限チャレンジは diff に極限の段階ID(EXTREMEなど)を渡す
 // 種族チャレンジだけは種族(主血統)も要るので、第3引数で受け取る
 const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
+  // ★ジャック戦は全国ランキングへ送らない(与ダメージは raid_jack_hits へ別に送る)。
+  //   ここまで来たら送信の分岐が漏れている。静かに Tactics<難易度> を返すと通常タクティクスの行を汚すので、例外で止める
+  if (isRaidJackMode(mode)) throw new Error(`raid jack has no ranking difficulty: ${String(mode)}`);
   if (isSpeciesChallengeMode(mode)) {
     const key = speciesChallengeRankingDifficulty(speciesId, diff, mode);
     if (!key) throw new Error(`unknown species challenge ranking: ${String(speciesId)}/${String(diff)}`);
@@ -18050,7 +18159,7 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
                 <li className="rounded-lg border border-amber-300/30 bg-slate-950/50 px-1.5 py-2"><span className="block text-base leading-none">🌟</span>曲の途中で<br/>金色のノーツに</li>
                 <li className="rounded-lg border border-emerald-300/30 bg-slate-950/50 px-1.5 py-2"><span className="block text-base leading-none">✨</span>{RHYTHM_MONSTER_ABILITY_JUDGMENTS[RHYTHM_MONSTER_ABILITY_JUDGMENTS.length-1]}以上で<br/>取ると能力</li>
               </ol>
-              <p className="mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80">上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80">上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。同じ能力は{RHYTHM_MONSTER_SAME_ABILITY_MAX}体までです。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
               <ol className="mt-3 space-y-2">{Array.from({length:RHYTHM_MONSTER_SLOT_MAX},(_,index)=>{
                 const masu=rhythmMonsterSlots[index]||null,base=masu?ALL_PLAYER_MONSTERS[masu.baseId]:null;
                 const lineage=masu?monsterLineageOf(masu.baseId).main:null;
@@ -22786,6 +22895,613 @@ const sbCountIncomingFriendRequests = async (breederIdRaw) => {
   }
 };
 
+// ---- part: 35-raid-jack.jsx ----
+// ===== イベント・レイドボス「ジャック」の定義(純粋な計算とデータ) =====
+// 設計の正本: docs/spec/RAID_BOSS_JACK.md
+//
+// 決めごと:
+//  ・A(ベースモン協力戦)は難易度ごとに別の共有HP(全員で削る)。前の段階を倒すと次が開く。
+//  ・B(マスモン)は共有HPを削らず、期間中の累計ダメージで競う。5段階で、ランキングは共有。
+//  ・ライフ = ムーの基礎35,000 × 段階の倍率(power) × 10。
+//  ・技は「再生」なし。段階3(A)/段階3(B)で全5本。低い段階ほど減らす(3/4/5/5/5)。
+//  ・既存の保存キー(mh_*)・ランキングには触らない。保存は新しいキー mh_raid_jack_v1 だけ。
+//  ・開催中かどうかは、モジュール定数にせず、見るたびに raidJackWindowAt(Date.now()) で数え直す。
+//  ・公開フラグ RELEASE_FLAGS.raidJack が偽のあいだは、入口もヘルプ・更新履歴も出さない。
+
+// 期間(★仮)。公開日時は「準備ができてから決める」。終わりは週の区切り(月曜5:00)ではなく、
+// ハロウィン・ナイトの終了(11/1 4:00)に合わせる。
+const RAID_JACK_EVENT = Object.freeze({
+  id: 'raid_jack_2026',
+  name: 'カボチャの大王ジャック',
+  startAt: '2026-10-11T08:00:00+09:00',
+  endAt: '2026-11-01T04:00:00+09:00',
+});
+
+const RAID_JACK_BASE = Object.freeze({ hp: 35000, atk: 700 });
+const RAID_JACK_LIFE_MULTIPLIER = 10;
+const RAID_JACK_TURNS = 20;   // 1回の戦闘のターン数(2026-10-04・ユーザー指示でレイドバトルもグランドスラムも20ターン)
+const RAID_JACK_FREE_PER_DAY = 3;
+// レイドバトル(A)の専用ルール。数字はここだけに置き、戦闘(60-app.jsx)・画面・ヘルプ・検査はここを読む
+//   EXスキルは、EXを持つ味方ごとに2回まで(2026-10-04・ユーザー指示で1回から変更)。グランドスラム(B)と通常戦は今までどおり
+const RAID_JACK_A_EX_MAX_USES = 2;
+//   アシカは、レイドバトルもグランドスラムも3枚まで(2026-10-04・ユーザー指示)
+const RAID_JACK_TEACHING_MAX = 3;
+//   編成: 勇者モン1体 + 供モン最大3体
+const RAID_JACK_ALLY_MAX = 3;
+const RAID_JACK_EXTRA_COST_BEAT_P = 100;
+const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+// ぱんぷきん×ジャックのストーリー(台本は docs/spec/RAID_JACK_STORY.md、データは data/assistants.js の EVENT_REPLAYS)。
+// 第1.5部=レイド開始 / 第2〜6部=段階(男爵〜大王)を倒したあと / 終章=期間終了後(大王まで倒せたかで2本)。
+// 見たかどうかは、既存のイベント会話と同じ配列(rhythmEventStorySeen)へこの id を入れて持つ。新しい保存キーは作らない。
+const RAID_JACK_STORY_START_ID = 'raid_jack_story_1b';
+// 段階を倒したあとのストーリー。段階 a1(男爵)を倒すと第2部、a5(大王)を倒すと第6部
+const RAID_JACK_STORY_AFTER_TIER = Object.freeze({
+  a1: 'raid_jack_story_2', a2: 'raid_jack_story_3', a3: 'raid_jack_story_4', a4: 'raid_jack_story_5', a5: 'raid_jack_story_6',
+});
+const RAID_JACK_ENDING_CLEARED_ID = 'raid_jack_ending_cleared';
+const RAID_JACK_ENDING_NOTCLEARED_ID = 'raid_jack_ending_notcleared';
+const RAID_JACK_STORY_IDS = Object.freeze([
+  RAID_JACK_STORY_START_ID, ...Object.values(RAID_JACK_STORY_AFTER_TIER), RAID_JACK_ENDING_CLEARED_ID, RAID_JACK_ENDING_NOTCLEARED_ID,
+]);
+// EVENT_REPLAYS の unlockedKey(例: raid_jack_story_2 → raidJackStory2Seen / raid_jack_ending_cleared → raidJackEndingClearedSeen)
+const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'raidJack_').replace(/_([a-z0-9])/g, (m, c) => c.toUpperCase()).replace(/^raidJack(\w)/, (m, c) => 'raidJack' + c.toUpperCase())}Seen`;
+// イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
+// HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
+const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';   // Crazy Party Night ～ぱんぷきんの逆襲～ の全編版(2026-10-04・ユーザー指示「ハロウィンイベント関連はこの曲をデフォルトに」。1分34秒の版から替えた)
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
+// 絵の大きさ合わせ(2026-10-04・ユーザー指示「本体を2枚目(両腕ポーズ)ぐらいのサイズ感に」)。
+// 両腕ポーズの絵は腕が左右へ広がるので、同じ枠に収めると本体は幅の約49%。通常絵は本体が幅の約99%。
+// ポーズ絵は枠いっぱい(1倍)、通常絵は半分(0.5倍)で描くと、切り替わっても本体の大きさがそろう。
+const RAID_JACK_NORMAL_ART_SCALE = 0.5;
+// Aは、このターンになった時に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+// レイドバトル(A)のターンごとの強化。2ターン目から、1ターン進むごとに味方全員の全ステータスが5%ずつ(掛け算で)上がり、
+// ライフ・ガッツの自動回復の割合が1.5%ずつ上がる(ライフの初期値10%・ガッツはそれより5%低い)。
+// 戦闘の中身(60-app.jsx の raidJackTurnGrowth)と、画面の「強化」の表示(71-screen-battle.jsx)が同じ数字を見る
+const RAID_JACK_TURN_GROWTH = 1.05;
+const RAID_JACK_TURN_REGEN_STEP = 0.015;
+// turn ターン目にいるときの強化の状況。turn は 1 始まり。次の固有技・アシカの強化が無ければ nextLevelUpTurn は null
+const raidJackGrowthAt = (turn) => {
+  const t = Math.max(1, Math.floor(Number(turn) || 1));
+  const steps = t - 1;
+  const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * steps) * 1000) / 10;
+  const levelUps = RAID_JACK_LEVEL_UP_TURNS.filter((n) => n <= t).length;
+  const next = RAID_JACK_LEVEL_UP_TURNS.find((n) => n > t);
+  return {
+    turn: t, steps,
+    statPct: Math.round((Math.pow(RAID_JACK_TURN_GROWTH, steps) - 1) * 1000) / 10,   // ここまでの全ステータスの上がり(合計%)
+    stepPct: Math.round((RAID_JACK_TURN_GROWTH - 1) * 1000) / 10,                      // 1ターンぶん(%)
+    lifeRate, gutsRate: Math.round((lifeRate - 5) * 10) / 10,
+    levelUps, levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
+    nextLevelUpTurn: next === undefined ? null : next,
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+  };
+};
+
+// 技の種類(再生なし)。増やす順は既存の TACTICS_EXTRA_ACTION_ORDER に合わせ、
+// 減らすときは攻撃力アップ(roar)から先に落とす。
+const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
+const RAID_JACK_SKILL_NAMES = Object.freeze({
+  normal: 'カボチャ張り手',
+  special: 'めいどのトリート',
+  sweep: 'おばけキッス',
+  rush: 'ジャックラッシュ',
+  pierce: 'かぼちゃ延髄斬り',
+  roar: 'ハロウィンナイト',
+  allout: 'おばけパレード',
+});
+
+// atkPower を渡したときは、攻撃力だけこの倍率で決める(ライフは power のまま)。渡さなければ power と同じ(グランドスラム)。
+const raidJackTier = (id, name, power, actionCount, atkPower = power) => Object.freeze({
+  id, name, power, actionCount, atkPower,
+  hp: Math.round(RAID_JACK_BASE.hp * power * RAID_JACK_LIFE_MULTIPLIER),
+  atk: Math.round(RAID_JACK_BASE.atk * atkPower),
+});
+// レイドバトル(A)の攻撃力の倍率(2026-10-04・ユーザー指示)。通常バトルの難易度 Easy / Normal / Hard / Expert / Master の
+// 攻撃倍率(DIFFICULTY_SETTINGS の power: 0.5 / 1.0 / 1.5 / 3.0 / 5.0)と同じにする。ライフは変えない。
+// 数字がずれていないかは tools/mode/raid-jack-check.js が DIFFICULTY_SETTINGS と突き合わせる
+const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
+
+// A: ベースモン協力戦。段階ごとの共有HP。
+const RAID_JACK_A_TIERS = Object.freeze([
+  raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0]),    // 攻撃力は Easy
+  raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1]),    // Normal
+  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2]),    // Hard
+  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3]),   // Expert
+  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4]),   // Master
+]);
+// B: マスモンの累計ダメージ。5段階(ランキングは共有)。
+const RAID_JACK_B_TIERS = Object.freeze([
+  raidJackTier('b1', '初級ジャック', 0.2, 3),
+  raidJackTier('b2', '中級ジャック', 2, 4),
+  raidJackTier('b3', '上級ジャック', 10, 5),
+  raidJackTier('b4', '超級ジャック', 40, 5),
+  raidJackTier('b5', '極級ジャック', 100, 5),
+]);
+
+const raidJackTiers = (kind) => (kind === 'b' ? RAID_JACK_B_TIERS : RAID_JACK_A_TIERS);
+const raidJackTierAt = (kind, index) => {
+  const list = raidJackTiers(kind);
+  const i = Number.isFinite(index) ? Math.floor(index) : 0;
+  return list[Math.min(Math.max(i, 0), list.length - 1)];
+};
+
+// 期間。見るたびに数え直す(読み込み時に1回だけ決まる値にしない)。
+const raidJackWindowAt = (nowMs) => {
+  const now = Number.isFinite(nowMs) ? nowMs : 0;
+  const start = Date.parse(RAID_JACK_EVENT.startAt);
+  const end = Date.parse(RAID_JACK_EVENT.endAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 'before';
+  if (now < start) return 'before';
+  if (now >= end) return 'after';
+  return 'open';
+};
+
+// 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。
+const raidJackDayKey = (nowMs) => {
+  const now = Number.isFinite(nowMs) ? nowMs : 0;
+  const jst = new Date(now + 9 * 3600 * 1000 - 5 * 3600 * 1000);
+  return jst.toISOString().slice(0, 10);
+};
+
+// 保存データの正規化(新キーだけ。無い・壊れているときは既定値)
+const raidJackDefaultState = () => ({
+  a: { day: '', used: 0, extra: 0, defeated: [] },
+  b: { day: '', used: 0, extra: 0, defeated: [], total: 0 },
+  claimed: [],
+  pending: [],
+});
+const raidJackNormalizeSide = (raw, withTotal) => {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const out = {
+    day: typeof src.day === 'string' ? src.day : '',
+    used: Number.isFinite(src.used) && src.used >= 0 ? Math.floor(src.used) : 0,
+    extra: Number.isFinite(src.extra) && src.extra >= 0 ? Math.floor(src.extra) : 0,
+    defeated: Array.isArray(src.defeated) ? src.defeated.filter((v) => typeof v === 'string').slice(0, 16) : [],
+  };
+  if (withTotal) out.total = Number.isFinite(src.total) && src.total >= 0 ? Math.floor(src.total) : 0;
+  return out;
+};
+// 送れなかった与ダメージ(再送待ち)。同じ hit_id で何度送っても二重に数えられない(サーバー側が1行にする)
+const raidJackNormalizePending = (raw) => (Array.isArray(raw) ? raw : []).map((h) => {
+  const x = h && typeof h === 'object' ? h : {};
+  const tier = Number.isFinite(x.tier) ? Math.floor(x.tier) : 0;
+  const damage = Number.isFinite(x.damage) ? Math.floor(x.damage) : -1;
+  if (typeof x.hitId !== 'string' || !/^[0-9A-Za-z_-]{8,64}$/.test(x.hitId)) return null;
+  if (x.kind !== 'a' && x.kind !== 'b') return null;
+  if (tier < 1 || tier > 5 || damage < 0 || damage > 100000000) return null;
+  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true };
+}).filter(Boolean).slice(0, 30);
+const raidJackNormalizeState = (raw) => {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  return {
+    a: raidJackNormalizeSide(src.a, false),
+    b: raidJackNormalizeSide(src.b, true),
+    claimed: Array.isArray(src.claimed) ? src.claimed.filter((v) => typeof v === 'string').slice(0, 64) : [],
+    pending: raidJackNormalizePending(src.pending),
+  };
+};
+
+// 今日の残りの無料回数(日が変わっていたら used は 0 扱い)。extra はビートPで買った分(その日のうち)。
+const raidJackRemaining = (side, nowMs) => {
+  const s = raidJackNormalizeSide(side, false);
+  const today = raidJackDayKey(nowMs);
+  const used = s.day === today ? s.used : 0;
+  const extra = s.day === today ? s.extra : 0;
+  return Math.max(0, RAID_JACK_FREE_PER_DAY + extra - used);
+};
+
+// B: 前の段階を倒すと次が開く(初級は最初から)。A は共有HPが0になった段階までが開く。
+const raidJackUnlockedCount = (kind, defeatedIds) => {
+  const list = raidJackTiers(kind);
+  const defeated = Array.isArray(defeatedIds) ? defeatedIds : [];
+  let n = 1;
+  for (let i = 0; i < list.length - 1; i += 1) {
+    if (defeated.includes(list[i].id)) n = i + 2;
+    else break;
+  }
+  return n;
+};
+
+// 戦闘に出すジャック本体。ライフ・攻撃は段階の値をそのまま使う(35,000×倍率×10 の端数ずれを避けるため上書きする)。
+// 技の本数は actionCount で直接指定する(再生なし。3/4/5/5/5)。createBattleEnemy は 22-enemy-and-bond-entries.jsx
+const raidJackMakeEnemy = (kind, tierIndex, mode) => {
+  const tier = raidJackTierAt(kind, tierIndex);
+  const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, { mode, actionCount: tier.actionCount });
+  if (!enemy) return null;
+  // 名前は段階の名前(ジャック男爵・初級ジャックなど)。バトル画面のボスバーやログにそのまま出る
+  return { ...enemy, name: tier.name, maxHp: tier.hp, hp: tier.hp, atk: tier.atk, raidJackTier: tier.id };
+};
+
+// ===== 報酬の表(2026-10-04・ユーザーが1つずつ決めた。設計書「報酬の表」と同じ数字) =====
+// 中身は 5 つ: diamond=ダイヤ / psyche=虹のプシュケー / crystal=魂格の結晶 / fruit=虹の超越の実 / proof=勇者の証。
+// 勇者の証片・限定アイコン・称号は使わない。届け方はギフト(raidJackRewardGiftItems)。
+// 配りすぎていないかは公開後に見て、表をここで直せる形にしてある(受け取り済みIDは数字に依らない)。
+const raidJackReward = ({ diamond = 0, psyche = 0, crystal = 0, fruit = 0, proof = 0 } = {}) =>
+  Object.freeze({ diamond, psyche, crystal, fruit, proof });
+const RAID_JACK_REWARDS = Object.freeze({
+  // A・Bそれぞれ、1回でも挑戦した全員へ1回
+  participation: raidJackReward({ diamond: 30000, psyche: 50 }),
+  // A 討伐: その段階が倒れたとき、その段階に1回でも与えた全員へ(男爵→大王)
+  aClear: Object.freeze([
+    raidJackReward({ diamond: 100000, psyche: 50 }),
+    raidJackReward({ diamond: 200000, psyche: 60 }),
+    raidJackReward({ diamond: 300000, psyche: 70 }),
+    raidJackReward({ diamond: 400000, psyche: 80 }),
+    raidJackReward({ diamond: 1000000, psyche: 100, proof: 5 }),
+  ]),
+  // A 順位: 段階ごとの貢献1〜5位(男爵〜公爵は倒れたとき・大王は期間終了のとき)
+  aRank: Object.freeze([
+    Object.freeze([
+      raidJackReward({ diamond: 1000000, psyche: 3000, crystal: 3, fruit: 50 }),
+      raidJackReward({ diamond: 800000, psyche: 2500, crystal: 2, fruit: 40 }),
+      raidJackReward({ diamond: 600000, psyche: 2000, crystal: 2, fruit: 30 }),
+      raidJackReward({ diamond: 400000, psyche: 1500, crystal: 1, fruit: 20 }),
+      raidJackReward({ diamond: 200000, psyche: 1000, crystal: 1, fruit: 10 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 2000000, psyche: 6000, crystal: 6, fruit: 100 }),
+      raidJackReward({ diamond: 1600000, psyche: 5000, crystal: 4, fruit: 80 }),
+      raidJackReward({ diamond: 1200000, psyche: 4000, crystal: 4, fruit: 60 }),
+      raidJackReward({ diamond: 800000, psyche: 3000, crystal: 2, fruit: 40 }),
+      raidJackReward({ diamond: 400000, psyche: 2000, crystal: 2, fruit: 20 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 3000000, psyche: 8000, crystal: 8, fruit: 150, proof: 5 }),
+      raidJackReward({ diamond: 2400000, psyche: 6500, crystal: 6, fruit: 120, proof: 4 }),
+      raidJackReward({ diamond: 1800000, psyche: 5000, crystal: 5, fruit: 100, proof: 3 }),
+      raidJackReward({ diamond: 1200000, psyche: 4000, crystal: 3, fruit: 80, proof: 2 }),
+      raidJackReward({ diamond: 600000, psyche: 3000, crystal: 2, fruit: 60, proof: 1 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 5000000, psyche: 12000, crystal: 12, fruit: 250, proof: 10 }),
+      raidJackReward({ diamond: 4000000, psyche: 10000, crystal: 10, fruit: 200, proof: 8 }),
+      raidJackReward({ diamond: 3000000, psyche: 8000, crystal: 8, fruit: 150, proof: 6 }),
+      raidJackReward({ diamond: 2000000, psyche: 6000, crystal: 6, fruit: 100, proof: 4 }),
+      raidJackReward({ diamond: 1000000, psyche: 4000, crystal: 4, fruit: 50, proof: 2 }),
+    ]),
+    Object.freeze([
+      raidJackReward({ diamond: 6000000, psyche: 14000, crystal: 15, fruit: 300, proof: 15 }),
+      raidJackReward({ diamond: 5000000, psyche: 12000, crystal: 12, fruit: 250, proof: 12 }),
+      raidJackReward({ diamond: 4000000, psyche: 10000, crystal: 10, fruit: 200, proof: 9 }),
+      raidJackReward({ diamond: 3000000, psyche: 8000, crystal: 8, fruit: 150, proof: 6 }),
+      raidJackReward({ diamond: 2000000, psyche: 6000, crystal: 6, fruit: 100, proof: 3 }),
+    ]),
+  ]),
+  // B 討伐: 各難易度を初めて倒したとき1回(初級→極級)
+  bClear: Object.freeze([
+    raidJackReward({ diamond: 1000000, psyche: 5000, crystal: 1, fruit: 20 }),
+    raidJackReward({ diamond: 2000000, psyche: 7000, crystal: 2, fruit: 40, proof: 5 }),
+    raidJackReward({ diamond: 3000000, psyche: 9000, crystal: 3, fruit: 60, proof: 10 }),
+    raidJackReward({ diamond: 4000000, psyche: 11000, crystal: 4, fruit: 80, proof: 15 }),
+    raidJackReward({ diamond: 5000000, psyche: 13000, crystal: 5, fruit: 100, proof: 20 }),
+  ]),
+  // B 順位: 期間中の累計ダメージ(5難易度の合算)の最終1〜5位。期間終了のときに確定
+  bFinal: Object.freeze([
+    raidJackReward({ crystal: 25, fruit: 100, proof: 10 }),
+    raidJackReward({ crystal: 20, fruit: 90, proof: 8 }),
+    raidJackReward({ crystal: 15, fruit: 80, proof: 6 }),
+    raidJackReward({ crystal: 10, fruit: 70, proof: 4 }),
+    raidJackReward({ crystal: 5, fruit: 60, proof: 2 }),
+  ]),
+});
+const RAID_JACK_REWARD_RANKS = 5;
+
+// 報酬1つぶんの中身を、表示用の行にする(ダイヤ・プシュケー・結晶・虹の超越の実・勇者の証。0は出さない)
+const raidJackRewardParts = (reward) => {
+  const r = reward && typeof reward === 'object' ? reward : {};
+  const defs = [
+    ['diamond', '💎', 'ダイヤ'],
+    ['psyche', '💗', '虹のプシュケー'],
+    ['crystal', '🔮', '魂格の結晶'],
+    ['fruit', '🌈', '虹の超越の実'],
+    ['proof', '🏅', '勇者の証'],
+  ];
+  return defs.map(([key, emoji, label]) => ({ key, emoji, label, amount: Math.max(0, Math.floor(Number(r[key]) || 0)) })).filter((p) => p.amount > 0);
+};
+const raidJackRewardText = (reward) => raidJackRewardParts(reward).map((p) => `${p.emoji} ${p.label}×${p.amount.toLocaleString()}`).join(' ／ ');
+// ギフト1件ぶんの中身(既存の diamond / rainbowPsyche と、アイテムidそのままの gameItem)
+const raidJackRewardGiftItems = (reward) => {
+  const r = reward && typeof reward === 'object' ? reward : {};
+  const out = [];
+  const add = (item) => { if (item.amount > 0) out.push(item); };
+  add({ type: 'diamond', amount: Math.max(0, Math.floor(Number(r.diamond) || 0)) });
+  add({ type: 'rainbowPsyche', amount: Math.max(0, Math.floor(Number(r.psyche) || 0)) });
+  add({ type: 'gameItem', itemId: SOUL_CRYSTAL_ITEM_ID, amount: Math.max(0, Math.floor(Number(r.crystal) || 0)) });
+  add({ type: 'gameItem', itemId: RAINBOW_TRANSCEND_FRUIT_ITEM_ID, amount: Math.max(0, Math.floor(Number(r.fruit) || 0)) });
+  add({ type: 'gameItem', itemId: HERO_PROOF_ITEM_ID, amount: Math.max(0, Math.floor(Number(r.proof) || 0)) });
+  return out;
+};
+// 受け取り済みの印(mh_raid_jack_v1 の claimed)に入れるid。1つの報酬に1つ。数字を変えても変わらない
+const raidJackClaimId = (kind, tierIndex, rank) => {
+  const n = Math.floor(Number(tierIndex)) + 1;
+  if (kind === 'part_a' || kind === 'part_b') return kind;
+  if (kind === 'final_b') return 'final_b';
+  return `${kind}${n}`;   // clear_a1 / rank_a1 / clear_b1
+};
+// 受け取り済みの印のうち、「順位に入っていなかった」ことを覚えておく印(毎回サーバーへ問い合わせ直さないため)
+const raidJackNoneId = (id) => `${id}_none`;
+// 1つの報酬の題名(ギフトの見出し)
+const raidJackRewardTitle = (kind, tierIndex, rank) => {
+  const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
+  const bName = RAID_JACK_B_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
+  if (kind === 'part_a') return 'ジャック レイドバトル 参加賞';
+  if (kind === 'part_b') return 'ジャック グランドスラム 参加賞';
+  if (kind === 'clear_a') return `${aName} 討伐報酬`;
+  if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
+  if (kind === 'clear_b') return `${bName} 初討伐報酬`;
+  return `グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+
+// ---- part: 36-raid-jack-api.jsx ----
+// ===== イベント・レイドボス「ジャック」の通信層(Supabase の raid_jack_hits とビュー3つ) =====
+// 設計の正本: docs/spec/RAID_BOSS_JACK.md / SQL: docs/sql/raid/
+//
+// 決めごと:
+//  ・既存の保存データ(mh_*)・ランキング(rankings 等)・breeder_profiles には一度も書き込まない。
+//    書くのは新設の raid_jack_hits(1戦の与ダメージを1行)だけ。端末の保存も新しいキー mh_raid_jack_v1 だけ。
+//  ・同じ hit_id を2回送っても1行しか入らない(on_conflict=hit_id・ignore-duplicates)。だから再送してよい。
+//  ・送れなかった与ダメージは mh_raid_jack_v1 の pending に残し、あとで送り直す(最大30件)。
+//  ・表がまだ無い環境(SQL未適用)は「準備中」として扱う。エラー扱いにして画面を壊さない。
+//  ・このファイルは公開フラグ(RELEASE_FLAGS.raidJack)を見ない。呼ぶ側が見る。
+const RAID_JACK_TIMEOUT_MS = 8000;
+let _raidJackUnavailable = false;                  // 表が無いと分かったら、ページを閉じるまで使わない
+const raidJackUnavailable = () => _raidJackUnavailable;
+
+const raidJackSafeId = (value) => (typeof value === 'string' && /^[0-9A-Za-z_-]{8,100}$/.test(value)) ? value : '';
+// 端末が作る一意のID(8〜64文字の英数字と - _)。同じ1戦の再送には同じIDを使い回す
+const raidJackMakeHitId = (nowMs = Date.now()) => {
+  const rand = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+  return `rj${Math.floor(nowMs).toString(36)}${rand}`.slice(0, 64);
+};
+// デバッグ画面は別のイベントID(RAID_JACK_DEBUG_EVENT_ID)で送り、本番の集計(raid_jack_2026)を汚さない
+const RAID_JACK_DEBUG_EVENT_ID = 'raid_jack_debug';
+const raidJackSafeEventId = (id) => (typeof id === 'string' && /^[0-9A-Za-z_-]{1,40}$/.test(id)) ? id : RAID_JACK_EVENT.id;
+const raidJackEventParam = (eventId) => `event_id=eq.${encodeURIComponent(raidJackSafeEventId(eventId))}`;
+
+// 通信の共通部分。返り値 { ok, status, body, notReady, error }
+const raidJackRequest = async (pathAndQuery, init = {}) => {
+  if (_raidJackUnavailable) return { ok: false, status: 0, body: '', notReady: true, error: null };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), RAID_JACK_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathAndQuery}`, {
+      cache: 'no-store', ...init, headers: { ...SB_HEADERS, ...(init.headers || {}) }, signal: controller.signal,
+    });
+    const body = await res.text();
+    if (!res.ok && (_isMissingTableError(res.status, body) || res.status === 404)) {
+      _raidJackUnavailable = true;
+      return { ok: false, status: res.status, body, notReady: true, error: null };
+    }
+    return { ok: res.ok, status: res.status, body, notReady: false, error: null, headers: res.headers };
+  } catch (error) {
+    return { ok: false, status: 0, body: '', notReady: false, error };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const raidJackParseRows = (result) => {
+  if (!result || !result.ok) return null;
+  try { const rows = JSON.parse(result.body); return Array.isArray(rows) ? rows : null; } catch (e) { return null; }
+};
+
+// 1戦の与ダメージを送る。hit = { hitId, kind, tier, damage, defeated }
+// 返り値: 'sent' / 'notready'(表が無い) / 'invalid'(形が違う・送らない) / 'error'(あとで送り直す)
+const sbSendRaidJackHit = async (hit, breederId, eventId) => {
+  const id = raidJackSafeId(breederId);
+  const [clean] = raidJackNormalizePending([hit]);
+  if (!id || !clean) return 'invalid';
+  const row = {
+    hit_id: clean.hitId, event_id: raidJackSafeEventId(eventId), kind: clean.kind, tier: clean.tier,
+    breeder_id: id, damage: clean.damage, defeated: clean.defeated,
+    app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
+  };
+  const result = await raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
+    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row),
+  });
+  if (result.ok) return 'sent';
+  if (result.notReady) return 'notready';
+  // 形がサーバーの決まりに合わない(400・409・422)は、何度送っても通らないので捨てる
+  if ([400, 409, 422].includes(result.status)) return 'invalid';
+  return 'error';
+};
+
+const raidJackLoadState = async () => {
+  try { return raidJackNormalizeState(await storeGet(RAID_JACK_STORAGE_KEY, null, false)); } catch (e) { return raidJackDefaultState(); }
+};
+const raidJackSaveState = async (state) => {
+  try { await storeSet(RAID_JACK_STORAGE_KEY, raidJackNormalizeState(state), false); return true; } catch (e) { return false; }
+};
+
+// 送る。送れなければ pending に残す(戻り値は送れたかどうか)。state は呼び出し側が持つ最新を渡し、更新後を返す
+const raidJackSubmitHit = async (state, hit, breederId, eventId) => {
+  const next = raidJackNormalizeState(state);
+  const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  if (outcome === 'error' || outcome === 'notready') {
+    const [clean] = raidJackNormalizePending([hit]);
+    if (clean && !next.pending.some((p) => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
+  }
+  return { state: next, outcome };
+};
+// 再送待ちを送り直す。送れた・捨てるべきものを取り除いた状態を返す
+const raidJackFlushPending = async (state, breederId, eventId) => {
+  const next = raidJackNormalizeState(state);
+  if (!next.pending.length || !raidJackSafeId(breederId)) return next;
+  const keep = [];
+  for (const hit of next.pending) {
+    const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+    if (outcome === 'error' || outcome === 'notready') keep.push(hit);
+  }
+  next.pending = keep;
+  return next;
+};
+
+// ---- 読み出し(失敗は null を返し、画面は「準備中」にする) ----
+// 段階ごとの合計。返り値 { a: { 1: {total, players, defeated}, ... }, b: {...} } か null
+const sbFetchRaidJackTierTotals = async (eventId) => {
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_tier_totals?${raidJackEventParam(eventId)}&select=kind,tier,total_damage,player_count,any_defeated`));
+  if (!rows) return null;
+  const out = { a: {}, b: {} };
+  rows.forEach((r) => {
+    if ((r.kind !== 'a' && r.kind !== 'b') || !Number.isFinite(Number(r.tier))) return;
+    out[r.kind][Number(r.tier)] = { total: Number(r.total_damage) || 0, players: Number(r.player_count) || 0, defeated: r.any_defeated === true };
+  });
+  return out;
+};
+// A: 段階ごとの貢献ランキング(上位 limit)
+const sbFetchRaidJackContributions = async (tier, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const t = Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5);
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam(eventId)}&kind=eq.a&tier=eq.${t}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
+};
+// B: 累計ダメージのランキング(上位 limit。既定100)
+const sbFetchRaidJackBRanking = async (limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
+};
+// 自分の貢献(A: 段階ごと / B: 累計)。圏外でも自分の数字と順位(=自分より多い人数+1)が出せる
+const sbFetchRaidJackSelf = async (breederId, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&select=kind,tier,total_damage`));
+  if (!rows) return null;
+  const out = { a: {}, bTotal: 0 };
+  rows.forEach((r) => {
+    const total = Number(r.total_damage) || 0;
+    if (r.kind === 'a') out.a[Number(r.tier)] = total; else if (r.kind === 'b') out.bTotal += total;
+  });
+  return out;
+};
+// 自分より多い人数(順位 = これ + 1)。Content-Range の総数を使う
+const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
+  const mine = Math.max(0, Math.floor(Number(myTotal)) || 0);
+  const view = kind === 'b' ? 'raid_jack_b_ranking' : 'raid_jack_contributions';
+  const extra = kind === 'b' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
+  const result = await raidJackRequest(`${view}?${raidJackEventParam(eventId)}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
+
+// ---- 報酬の受け取り判定(2026-10-04) ----
+// いま受け取れる報酬を集める。サーバーの合計・自分の貢献・上位5人を読み、受け取り済みの印(state.claimed)にないものだけを返す。
+//   ・参加賞: A・Bそれぞれ、自分の与ダメージが1回でも記録されていれば。
+//   ・A 討伐: その段階が倒れていて(合計 >= ライフ)、自分がその段階へ与えていれば。
+//   ・A 順位: 男爵〜公爵は倒れたとき、大王は期間が終わったとき、貢献の上位5人に自分が入っていれば。
+//   ・B 討伐: 端末の記録で、その難易度を倒していれば(初めて倒したときの1回だけ)。
+//   ・B 順位: 期間が終わったとき、累計ダメージの上位5人に自分が入っていれば。
+// 上位5人に入っていなかった人は「入っていなかった」印(_none)を残し、毎回問い合わせ直さない。
+// 返り値 { ok, due:[{id,title,reward}], noneIds:[...] }。通信できないとき ok:false(何も配らない)
+const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
+  const none = { ok: false, due: [], noneIds: [] };
+  const id = raidJackSafeId(breederId);
+  if (!id) return none;
+  const windowState = raidJackWindowAt(nowMs);
+  if (windowState === 'before') return { ok: true, due: [], noneIds: [] };
+  const norm = raidJackNormalizeState(state);
+  const claimed = new Set(norm.claimed);
+  const [totals, self] = await Promise.all([sbFetchRaidJackTierTotals(eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!totals || !self) return none;
+  const due = [];
+  const noneIds = [];
+  const add = (claimId, title, reward) => { if (!claimed.has(claimId)) due.push({ id: claimId, title, reward }); };
+  const mineA = (i) => self.a[i + 1] || 0;
+  if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
+  if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
+  for (let i = 0; i < RAID_JACK_A_TIERS.length; i += 1) {
+    const total = totals.a[i + 1] ? totals.a[i + 1].total : 0;
+    const defeated = total >= RAID_JACK_A_TIERS[i].hp;
+    if (!defeated || mineA(i) <= 0) continue;
+    add(raidJackClaimId('clear_a', i), raidJackRewardTitle('clear_a', i), RAID_JACK_REWARDS.aClear[i]);
+    // 順位は、男爵〜公爵=倒れたとき / 大王=期間が終わったとき(大王は倒れたあとも貢献が続く)
+    const rankId = raidJackClaimId('rank_a', i);
+    if ((i < RAID_JACK_A_TIERS.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
+      const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
+      if (!top) continue;
+      const place = top.findIndex((r) => r.breederId === id);
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);
+      else noneIds.push(raidJackNoneId(rankId));
+    }
+  }
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), raidJackRewardTitle('clear_b', i), RAID_JACK_REWARDS.bClear[i]);
+  });
+  const finalId = raidJackClaimId('final_b');
+  if (windowState === 'after' && self.bTotal > 0 && !claimed.has(finalId) && !claimed.has(raidJackNoneId(finalId))) {
+    const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
+    if (top) {
+      const place = top.findIndex((r) => r.breederId === id);
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);
+      else noneIds.push(raidJackNoneId(finalId));
+    }
+  }
+  return { ok: true, due, noneIds };
+};
+
+// ---- part: 37-raid-jack-aura.jsx ----
+// ===== ジャックのオーラ(段階1〜5でどんどん派手に・バトル/HOME/段階えらびで共通) =====
+// モンヒロビートのフリックで吹き上がる「炎の舌」を参考に、根元から立ちのぼって細くなりながら消える炎を
+// 本体のまわりに何本も出す。動かすのは transform と opacity だけ(CSS は 70-bootstrap.jsx の data-jack-aura)。
+// 使い方: 親に data-jack-aura={段階の数字} を付け、中に <JackAuraLayer tier={段階の数字} /> を置く。
+//   段階えらびの小さな絵では limit で炎の本数を減らす(画面に5つ並ぶので軽くする)。
+// 炎の本数は段階で大きく開く(6→34本)。1本ずつの高さも段階で伸びる(CSS の --hs)。
+// 段階3からは火の粉(ember)と広がる輪(wave)が加わり、段階が上がるほど数と速さが増える(2026-10-04 ユーザー指摘「難易度別のエフェクトの違いが弱い」)
+const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
+const RAID_JACK_AURA_EMBERS = Object.freeze([0, 0, 6, 12, 20]);
+const RAID_JACK_AURA_WAVES = Object.freeze([0, 0, 1, 2, 3]);
+const raidJackAuraEmbers = (count) => Array.from({ length: count }, (_, i) => {
+  const r = (n) => { const v = Math.sin((i + 1) * 39.3467 + n * 11.135) * 24634.6345; return v - Math.floor(v); };
+  return { x: 6 + r(1) * 88, w: 3 + r(2) * 4, d: -r(3) * 2.4, t: 1.4 + r(4) * 1.4, dx: (r(5) - 0.5) * 30, c: i % 5 };
+});
+const RAID_JACK_AURA_EMBER_SETS = Object.freeze(RAID_JACK_AURA_EMBERS.map(raidJackAuraEmbers));
+// 1本ずつの位置・太さ・高さ・遅れ・周期・傾きは添字から決める(描き直しても同じ形。乱数は使わない)。
+// 本体の左・右・まんなかへ順に散らす(まんなかは絵の後ろに隠れつつ、輪郭のすきまからゆらめく)
+const raidJackAuraTongues = (count) => Array.from({ length: count }, (_, i) => {
+  const r = (n) => { const v = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453; return v - Math.floor(v); };
+  const side = i % 3;
+  return {
+    x: side === 0 ? 4 + r(1) * 26 : side === 1 ? 70 + r(1) * 26 : 34 + r(1) * 32,
+    w: 10 + r(2) * 9, h: 50 + r(3) * 40,
+    d: -r(4) * 1.6, t: 0.9 + r(5) * 0.7, s: (r(6) - 0.5) * 36, b: r(7) * 22, c: i % 5,
+  };
+});
+const RAID_JACK_AURA_TONGUE_SETS = Object.freeze(RAID_JACK_AURA_TONGUES.map(raidJackAuraTongues));
+// 絵そのものの光(drop-shadow)の色。段階が上がるほど濃く・大きく・色が増える。scale は絵の大きさに合わせた倍率
+const RAID_JACK_AURA_GLOWS = Object.freeze([
+  [[0, 'rgba(251,146,60,.7)', 8]],
+  [[0, 'rgba(251,191,36,.95)', 14], [0, 'rgba(249,115,22,.7)', 28]],
+  [[0, 'rgba(192,132,252,1)', 18], [0, 'rgba(251,146,60,.85)', 36], [0, 'rgba(126,34,206,.6)', 56]],
+  [[0, 'rgba(248,113,113,1)', 22], [0, 'rgba(251,191,36,.95)', 44], [0, 'rgba(239,68,68,.8)', 68]],
+  [[0, 'rgba(250,204,21,1)', 24], [0, 'rgba(244,114,182,1)', 48], [0, 'rgba(56,189,248,.9)', 76], [0, 'rgba(167,139,250,.7)', 100]],
+]);
+const raidJackAuraGlowFilter = (tier, scale = 1) => {
+  const n = Math.min(Math.max(Math.floor(Number(tier) || 0), 0), 5);
+  if (n < 1) return '';
+  return RAID_JACK_AURA_GLOWS[n - 1].map(([, color, blur]) => `drop-shadow(0 0 ${Math.round(blur * scale)}px ${color})`).join(' ');
+};
+const JackAuraLayer = ({ tier, limit = 99 }) => {
+  const n = Math.min(Math.max(Math.floor(Number(tier) || 0), 0), 5);
+  if (n < 1) return null;
+  return (
+    <span aria-hidden="true" data-jack-aura-el>
+      <i data-ja="base" /><i data-ja="ring" /><i data-ja="ring2" />
+      {limit > 12 && Array.from({ length: RAID_JACK_AURA_WAVES[n - 1] }, (_, k) => <i key={`w${k}`} data-ja="wave" style={{ '--d': `${(-k * (2.4 / RAID_JACK_AURA_WAVES[n - 1])).toFixed(2)}s` }} />)}
+      {RAID_JACK_AURA_TONGUE_SETS[n - 1].slice(0, Math.max(0, limit)).map((t, k) => (
+        <ins key={k} data-ja="tongue" data-ja-c={t.c}
+          style={{ '--x': `${t.x.toFixed(1)}%`, '--w': `${t.w.toFixed(1)}%`, '--h': `${t.h.toFixed(1)}%`, '--b': `${t.b.toFixed(1)}%`,
+            '--d': `${t.d.toFixed(2)}s`, '--t': `${t.t.toFixed(2)}s`, '--s': `${t.s.toFixed(1)}deg` }} />
+      ))}
+      {limit > 12 && RAID_JACK_AURA_EMBER_SETS[n - 1].map((e, k) => (
+        <b key={`e${k}`} data-ja="ember" data-ja-c={e.c}
+          style={{ '--x': `${e.x.toFixed(1)}%`, '--w': `${e.w.toFixed(1)}%`, '--d': `${e.d.toFixed(2)}s`, '--t': `${e.t.toFixed(2)}s`, '--dx': `${e.dx.toFixed(1)}%` }} />
+      ))}
+    </span>
+  );
+};
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -23078,9 +23794,12 @@ const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
 //   静的CSS(tailwind.css)に入らないので効かない(UIルール「動的クラスだけに依存しない」)。
 // ★選ばれている側の背景も style で直に持たせる。同じ理由。
 const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
+// 6つ以上は2段に並べる(2026-10-04・ユーザー指摘「文字列が悪い」。7つを1段に並べると「アシス／ト」「アイコ／ン」と
+// タブの文字が途中で割れていた)。4つまでは今までどおり1段、5つも1段のまま。
+const tabColumnCount = (count) => (count > 5 ? Math.ceil(count / 2) : Math.max(1, count));
 const ScreenTabs = ({ items = [], value, onChange, className = '' }) => (
   <div role="tablist" className={`mb-2 grid shrink-0 gap-2 ${className}`}
-    style={{gridTemplateColumns:`repeat(${Math.max(1, items.length)},minmax(0,1fr))`}}>
+    style={{gridTemplateColumns:`repeat(${tabColumnCount(items.length)},minmax(0,1fr))`}}>
     {items.map(tab => {
       const on = tab.id === value;
       return (
@@ -23426,27 +24145,27 @@ const PhaseBanner = ({ phase, enabled }) => {
 // ==== WAVEのはじまりの演出 ====
 // 敵が出てバトルが始まるたびに、画面の真ん中へ「WAVE ○」を一瞬だけ出す。最後のWAVE(10)はボス戦として赤く出す。
 // 操作は止めない(pointer-events: none)。約1.5秒で、動き続けるものは無い。
-const WaveIntro = ({ enabled, wave, enemyName }) => {
+const WaveIntro = ({ enabled, wave, enemyName, title = '' }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
     // 出している途中で設定が切れたとき(超省エネに入ったときなど)は、表示を消すタイマーも一緒に止まるので、ここで消す
     if (!enabled || !(wave > 0)) { lastRef.current = null; setShown(null); return undefined; }
-    const key = `${wave}:${enemyName || ''}`;
+    const key = `${wave}:${enemyName || ''}:${title}`;
     if (lastRef.current === key) return undefined;
     lastRef.current = key;
-    setShown({ wave, name: enemyName || '', key: Date.now() });
+    setShown({ wave, name: enemyName || '', title, key: Date.now() });
     const timer = setTimeout(() => setShown(null), 1500);
     return () => clearTimeout(timer);
-  }, [enabled, wave, enemyName]);
+  }, [enabled, wave, enemyName, title]);
   if (!shown) return null;
-  const boss = shown.wave >= 10;
+  const boss = !shown.title && shown.wave >= 10;
   return (
     <div key={shown.key} data-wave-intro={shown.wave} aria-hidden="true" className={`mh-waveintro${boss ? ' mh-waveintro-boss' : ''}`}>
       <div className="mh-waveintro-line"/>
       <div className="mh-waveintro-body">
         <span className="mh-waveintro-sub">{boss ? 'FINAL BOSS' : 'BATTLE START'}</span>
-        <b className="mh-waveintro-title">WAVE {shown.wave}</b>
+        <b className="mh-waveintro-title">{shown.title || `WAVE ${shown.wave}`}</b>
         {shown.name && <span className="mh-waveintro-name">VS {shown.name}</span>}
       </div>
       <div className="mh-waveintro-line"/>
@@ -23953,6 +24672,8 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
     // 勇者の証片も売り物ではないので BREEDER_MARKET_ITEMS に無い。ここで並べる
     // (2026-09-13・ユーザー指示「勇者の証片はアイテム欄に並ぶようにしてね」)
     ...((ownedItems[HERO_PROOF_SHARD_ITEM_ID]||0)>0?[HERO_PROOF_SHARD_ITEM]:[]),
+    // 魂格の結晶もマーケットでは売らない(ジャックの報酬)。使うのはマスモン詳細の魂格特性
+    ...((ownedItems[SOUL_CRYSTAL_ITEM_ID]||0)>0?[SOUL_CRYSTAL_ITEM]:[]),
     ...Object.values(speciesTranscendFruitItems()).filter(item=>(ownedItems[item.id]||0)>0),
   ];
   // 「使う場所」の案内は8分岐あり、右列の幅が文字数ぶんバラバラだった。
@@ -23994,7 +24715,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                     ? <div className={usageNoteClass}>神殿の<br/>魂格進化で<br/>使用</div>
                     : item.usage==='heroProofShard'
                     ? <div className={usageNoteClass}>マーケットで<br/>{HERO_PROOF_SHARD_PER_PROOF}個→<br/>勇者の証1個</div>
-                    : item.usage==='soulRankRespec'
+                    : item.usage==='soulRankRespec'||item.usage==='soulCrystal'
                     ? <div className={usageNoteClass}>マスモン詳細の<br/>魂格特性で<br/>使用</div>
                     : <button onClick={()=>onUseItem(item.id)} className="shrink-0 w-[84px] min-h-[44px] rounded-xl bg-teal-600 text-[12px] font-black text-white active:scale-95">使う</button>}
                 </div>
@@ -26770,6 +27491,7 @@ function MasuDonationAnimation({
 // ・この画面にタイマーは無い
 
 function MasuSoulTraitsScreen({
+  commitSoulCrystalUse, setSoulCrystalOpen, soulCrystalOpen,
   commitSoulTraitRespec, commitSoulTraitUpgrade, getMasuMon, masuMonDetail, monsterRosterIds,
   onClose, ownedItems, setSoulTraitDraftLevels, setSoulTraitError, setSoulTraitRespecOpen,
   setSoulTraitSelectedId, setSoulTraitTab, soulTraitDraftLevels, soulTraitError, soulTraitProcessingRef,
@@ -26788,6 +27510,8 @@ function MasuSoulTraitsScreen({
       const spent=soulTraitSpentPoints(masu);
       const available=soulTraitAvailablePoints(masu);
       const scrollHave=ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID);
+      const crystalHave=ownedItemCount(ownedItems,SOUL_CRYSTAL_ITEM_ID);
+      const bonusPoints=normalizeSoulBonusPoints(masu.soulBonusPoints);
       const traits=SOUL_TRAIT_DEFINITIONS.filter(trait=>trait.category===soulTraitTab);
       const selected=soulTraitSelectedId?SOUL_TRAIT_BY_ID[soulTraitSelectedId]:null;
       const maxUpgrade=selected?maxSoulTraitUpgradeLevels(masu,selected.id):0;
@@ -26861,6 +27585,10 @@ function MasuSoulTraitsScreen({
           <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-400">魂格特性による総合力加算：使用済み魂格P {spent} × 10 = <b className="text-amber-300">+{spent*10}</b><br/>実戦での合成後効果・攻撃予測への反映は、戦闘接続時に同じ特性データから計算します。</div>
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
+          <div className="mb-2 flex items-center gap-2">
+            <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"><div className="text-[10px] font-black text-slate-400">{SOUL_CRYSTAL_ITEM.emoji} {SOUL_CRYSTAL_ITEM.name}</div><div className={`text-[11px] font-black ${crystalHave>0?'text-fuchsia-300':'text-slate-400'}`}>所持 {crystalHave}個{bonusPoints>0?`(使った分 +${bonusPoints}P)`:''}</div></div>
+            <button type="button" data-soul-crystal-open disabled={crystalHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulCrystalOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-fuchsia-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">結晶を使う</button>
+          </div>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"><div className="text-[10px] font-black text-slate-400">魂格再編の書</div><div className={`text-[11px] font-black ${scrollHave>0?'text-cyan-300':'text-slate-400'}`}>所持 {scrollHave}冊</div></div>
             <button type="button" data-soul-trait-respec-open disabled={spent<=0||scrollHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulTraitRespecOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-cyan-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">全リセット</button>
@@ -26892,6 +27620,21 @@ function MasuSoulTraitsScreen({
               <div className="my-2 text-center text-[11px] font-black text-sky-200">今回 +{draft}段階</div>
               <button type="button" data-soul-trait-confirm disabled={draft<=0||soulTraitProcessingRef.current} onClick={()=>commitSoulTraitUpgrade(masu.id,selected.id,draft)} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30">強化を決定</button>
             </>}
+          </div>
+        </div>}
+
+        {soulCrystalOpen&&<div className="fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="魂格の結晶を使う確認">
+          <div data-soul-crystal-sheet className="w-full max-w-sm rounded-2xl border-2 border-fuchsia-500/60 bg-slate-950 p-5">
+            <div className="text-center text-xl mb-1">{SOUL_CRYSTAL_ITEM.emoji}</div><h3 className="text-center text-base font-black text-fuchsia-200">魂格の結晶を使う</h3>
+            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">「{masu.name}」の魂格Pが、使った結晶1個につき +1 されます。使った結晶はもとに戻せません。</p>
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">総獲得 魂格P</span><span className="text-amber-300">いま {earned}P</span></div>
+            <div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">結晶の所持</span><span className="text-fuchsia-300">{crystalHave}個</span></div>
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <button type="button" data-soul-crystal-use-1 disabled={soulTraitProcessingRef.current||crystalHave<1} onClick={()=>commitSoulCrystalUse(masu.id,1)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1個使う(+1P)</button>
+              {crystalHave>=10&&<button type="button" data-soul-crystal-use-10 disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,10)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">10個使う(+10P)</button>}
+              {crystalHave>1&&<button type="button" data-soul-crystal-use-all disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,crystalHave)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">ぜんぶ使う({crystalHave}個・+{crystalHave}P)</button>}
+              <button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulCrystalOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button>
+            </div>
           </div>
         </div>}
 
@@ -29156,11 +29899,91 @@ const HOME_EVENT_BADGE_CSS = `
   .mh-home-event-badge{animation:none;transform:none}
   .mh-home-event-badge::after{display:none}}
 `;
+// ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
+//   タップでレイド画面を開く。近くに、いま挑める段階の共有HPバーを出す。ときどき両腕を上げたポーズに変わる(HPとは連動しない)。
+// ★位置・大きさ・見た目は style で直に持たせ、クラスは「動き」だけを足す係にする(配置の検査はこのCSSを読まないため)。
+// ★CSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、配置の検査が数える要素の数がずれる。
+// ★動きを減らす設定の人には跳ねさせない(prefers-reduced-motion)。
+const HOME_RAID_JACK_CSS = `
+.mh-home-raid-jack-img{animation:mhRaidJackHop 1.15s cubic-bezier(.3,.1,.4,1) infinite;transform-origin:50% 100%}
+.mh-home-raid-jack-shadow{animation:mhRaidJackShadow 1.15s cubic-bezier(.3,.1,.4,1) infinite}
+@keyframes mhRaidJackHop{
+  0%,100%{transform:translateY(0) scale(1.06,.92)}
+  18%{transform:translateY(0) scale(.96,1.06)}
+  50%{transform:translateY(-16px) scale(1,1) rotate(-2deg)}
+  82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
+@keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
+@media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+`;
+const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:6,
+  display:'flex', flexDirection:'column', alignItems:'center', width:'44%', maxWidth:'190px', minWidth:'120px',
+  background:'transparent', border:'0', padding:'0', cursor:'pointer',
+});
+const HomeRaidJack = ({ eventId, onOpen }) => {
+  const [totals, setTotals] = React.useState(undefined);
+  const [pose, setPose] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-home-raid-jack-css')) return;
+    const tag = document.createElement('style'); tag.id = 'mh-home-raid-jack-css'; tag.textContent = HOME_RAID_JACK_CSS; document.head.appendChild(tag);
+  }, []);
+  React.useEffect(() => {
+    let alive = true;
+    const load = async () => { const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
+    load();
+    const id = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(id); };
+  }, [eventId]);
+  // ときどき両腕ポーズ(約7秒に1回、1.4秒だけ)
+  React.useEffect(() => {
+    let alive = true; let timer = null;
+    const loop = () => { timer = setTimeout(() => { if (!alive) return; setPose(true); timer = setTimeout(() => { if (!alive) return; setPose(false); loop(); }, 1400); }, 5600); };
+    loop();
+    return () => { alive = false; clearTimeout(timer); };
+  }, []);
+  // いま挑める段階 = まだ共有HPが残っている最初の段階。全部倒していたら「討伐おめでとう」
+  const tiers = RAID_JACK_A_TIERS;
+  const totalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
+  const currentIndex = totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
+  const allDone = !!totals && currentIndex < 0;
+  const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
+  const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
+  const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
+  return (
+    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={`${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
+      {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
+          ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
+          どちらも足もと(本体の下端)をそろえて置く */}
+      <span data-jack-aura={Number(String(tier.id).slice(1)) || undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
+        {/* 段階が進むほど派手になるオーラ(バトルと同じ部品)。絵の後ろに置く */}
+        {/* HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
+        <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-30 - (Number(String(tier.id).slice(1)) || 0) * 14}% ${-14 - (Number(String(tier.id).slice(1)) || 0) * 9}% -6%` }}>
+          <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
+        </span>
+        <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
+          style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
+        <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
+          style={{ position:'absolute', left:0, bottom:'-6%', width:'100%', height:'auto', opacity:pose ? 1 : 0, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
+      </span>
+      <span className="mh-home-raid-jack-shadow" aria-hidden="true" style={{ display:'block', width:'70%', height:'8px', marginTop:'-6px', borderRadius:'50%', background:'#0008', filter:'blur(3px)' }} />
+      <span style={{ display:'block', width:'100%', marginTop:'6px', padding:'3px 6px', borderRadius:'10px', border:'1px solid #fdba74aa', background:'#1c0a02d9', color:'#ffedd5', fontSize:'10px', fontWeight:900, textAlign:'center', lineHeight:1.3 }}>
+        <span style={{ display:'block' }}>{allDone ? 'ジャックを倒した！みんなありがとう' : `${tier.name}があらわれた！`}</span>
+        <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
+          <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:allDone ? '#10b981' : '#f97316' }} />
+        </span>
+        {totals === null ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>準備中</span>
+          : totals === undefined ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>…</span>
+          : <span style={{ display:'block', fontSize:'8px', opacity:.85 }}>共有HP {left.toLocaleString()}</span>}
+      </span>
+    </button>
+  );
+};
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
+  raidJackVisible = false, raidJackEventId, onOpenRaidJack,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -29207,6 +30030,7 @@ function HomeScreen({
         <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
+        {raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
         <header className={`mh-home-status${spotClass('settings')}`}>
           <button type="button" className="mh-home-player relative" onClick={onOpenProfile} aria-label="プロフィールを開く">
             <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
@@ -29585,6 +30409,8 @@ const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Nyarlathotep: 'nyarlathotep',
   Splatter: 'splatter',
   AwakenedMoo: 'awakenedMoo',
+  // イベント・レイドボス「ジャック」(ドクドクと同じネンドロ種。ぴょこぴょこ跳ねる)
+  Jack: 'jack',
 });
 // 技ごとの動きの長さ(ミリ秒)。ここに無い技は今までどおり(通常攻撃 450 / 必殺技 1100)。
 // 戦闘の待ち時間(60-app)もこの値を使うので、CSS の --em-dur / animation の長さと必ずそろえる。
@@ -29659,6 +30485,14 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     normal:['jab','burst'], sweep:['dash','arc'], rush:['spin','slash'], pierce:['windup','beam'],
     special:['swing','slash'], allout:['rise','aura','💀','rain'], roar:['roar','aura'],
     regen:['heal','sparkle','🩸','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // ジャック(カボチャの大王・イベントのレイドボス): ぴょこぴょこ跳ねる。技ごとの動きと飾り(docs/spec/RAID_BOSS_JACK.md)
+  //   カボチャ張り手 … 腕を振り下ろす(両腕ポーズの絵に切り替わる) / めいどのトリート … 跳んで落ち、お菓子とカボチャが降る
+  //   おばけキッス … 顔が前へ寄り、おばけが飛ぶ / ジャックラッシュ … 連打 / かぼちゃ延髄斬り … 回って斬り落とす
+  //   ハロウィンナイト … 両腕を上げて夜の光を立ちのぼらせる(両腕ポーズ) / おばけパレード … 横へ駆け抜けるおばけの行列
+  jack: { idle:'hop', skills:{
+    normal:['swing','arc','🎃','shoot'], sweep:['lunge',null,'👻','shoot'], rush:['flurry','burst','🎃','shoot'], pierce:['spin','slash'],
+    special:['leap','ring','🍬','rain'], allout:['dash','widebeam','👻','shoot'], roar:['rise','aura','🌙','rise'],
+    regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
   awakenedMoo: { idle:null, skills:{
     normal:['swing','slash'], sweep:['dash','arc'], rush:['flurry','burst'], pierce:['windup','beam'],
@@ -29680,6 +30514,7 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
   nyarlathotep: { impact:'void' },
   splatter: { impact:'claw' },
   awakenedMoo: { impact:'nova' },
+  jack: { impact:'stamp', mark:'🎃' },
 });
 const TACTICS_ENEMY_NO_STRIKE_SKILLS = Object.freeze(['roar','charge','pierceCharge','regen']);
 // 覚醒ムーの全画面の演出で、技の名前を大きく出す技(2026-09-24 ユーザー指示「技名のカットイン」)
@@ -29871,6 +30706,9 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
   // ニャルラトホテプ(邪神): 無貌の讃歌=回る魔法陣と光 / 真空魔空弾=魔法陣と十字
   nyarlathotep: { special:[{t:'ring',d:240,r:3.4,flat:.45,rune:true},{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'col',w:120,h:440,d:300,sky:true,soft:true}],
                   allout:[{t:'ring',d:240,r:3.2,flat:.45,rune:true},{t:'blade',a:90,len:340,w:9,d:300},{t:'bits',n:12,shape:'spark',dist:120,d:300},{t:'bits',n:8,shape:'spark',dist:80,d:360}] },
+  // ジャック(カボチャの大王・イベントのレイドボス): めいどのトリート=カボチャの火とお菓子の星が降る / おばけパレード=横切る光とおばけの行列
+  jack:         { special:[{t:'bits',n:14,shape:'star',dist:140,d:280},{t:'bits',n:12,shape:'flame',dist:110,d:330,fall:true},{t:'ring',d:300,r:3.4}],
+                  allout:[{t:'blade',a:0,len:420,w:16,d:240},{t:'bits',n:16,shape:'spark',dist:130,d:260},{t:'wave',d:300},{t:'ring',d:340,r:3.6,flat:.45}] },
   // スプラッター(斧の処刑人): エクスキューション=巨大な斧の一閃と血しぶき / デスエナジー=赤い炎
   splatter:     { special:[{t:'blade',a:-58,len:440,w:16,d:240},{t:'col',w:44,h:440,d:320,sky:true},{t:'bits',n:12,shape:'drop',dist:130,d:340},{t:'ring',d:340,r:3.6}],
                   allout:[{t:'col',w:60,h:400,d:260,flame:true},{t:'bits',n:14,shape:'spark',dist:120,d:300},{t:'ring',d:300,r:3.8,flat:.45}] },
@@ -30042,6 +30880,19 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
+  // 敵のライフの下に「いまの強化」を1行で出し、タップで内訳を開く。強化が入ったターンは、真ん中の上に数秒だけ帯を出す。
+  // 数字は 35-raid-jack.jsx の raidJackGrowthAt(戦闘本体と同じ定数)から出す。グランドスラム(B)は強化が無いので出さない
+  const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
+  const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
+  const [raidGrowthOpen, setRaidGrowthOpen] = useState(false);
+  const [raidGrowthBanner, setRaidGrowthBanner] = useState(null);
+  useEffect(() => {
+    if (!raidGrowthOn || turnCount < 2) { setRaidGrowthBanner(null); return undefined; }
+    setRaidGrowthBanner({ turn: turnCount, key: `${turnCount}-${Date.now()}` });
+    const timer = setTimeout(() => setRaidGrowthBanner(null), 3200);
+    return () => clearTimeout(timer);
+  }, [raidGrowthOn, turnCount]);
   // 攻撃する子から敵までのずれ(24-battle-fx.jsx の measureAttackAim)。
   // ★描画の前(レイアウト直後)に測るので、最初のコマから敵の向きへ飛ぶ。見た目だけに使う
   const [attackAim, setAttackAim] = useState(null);
@@ -30167,6 +31018,15 @@ function BattleScreen({
   // 共通の部品で動かす敵(カワズモー以外)の組み合わせ
   const emSet = enemyMotion ? (TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null) : null;
   const emSpec = emSet && enemySkillNow ? (emSet.skills[enemySkillNow] || null) : null;
+  // ジャックの両腕ポーズ絵は、腕が左右へ広がるぶん、同じ枠に収めると本体が幅の約49%(通常絵は約99%)。
+  // 切り替わっても本体の大きさがそろうよう、ポーズは枠いっぱい、通常絵は半分(RAID_JACK_NORMAL_ART_SCALE)で描く(2026-10-04・ユーザー指示)。
+  // 通常絵は枠の真ん中へ、ポーズ絵は本体が下寄りなので少し上へ寄せて、本体の位置もそろえる
+  const JACK_NORMAL_BATTLE_STYLE = { width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, marginLeft:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, marginTop:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%` };
+  const JACK_POSE_BATTLE_STYLE = { width:'100%', height:'100%', marginTop:'-6%' };
+  // ジャックは「腕を振る・両腕を上げる・必殺技」のとき、両腕を上げたポーズの絵に切り替わる
+  // ジャックのオーラ: 段階(a1〜a5 / b1〜b5)の数字が大きいほど派手になる。見た目は CSS(data-jack-aura)
+  const jackAuraTier = enemy?.id === 'Jack' ? (Number(String(enemy.raidJackTier || '').slice(1)) || 0) : 0;
+  const enemyBossImgSrc = (enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow)) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? { '--em-e': JSON.stringify(emSpec[2]) } : undefined;
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
   // 絵を明るく光らせる板(data-enemy-flash)。同じ絵を明るくした複製を重ね、濃さだけを変える。
@@ -30174,7 +31034,11 @@ function BattleScreen({
   //   (2026-09-24 ユーザー報告「他にも絶対バグる要因あるからちゃんと見つけてなおして」)。
   //   ふだんは置かない(光るあいだだけ置く)ので、層も増えない
   const enemyFlashOn = !!(enemyMotion && enemy?.imgUrl && (enemySkillNow || enemyHurtNow));
-  const enemyFlashNode = enemyFlashOn ? <img data-enemy-flash src={enemy.imgUrl} alt="" aria-hidden="true" draggable={false}/> : null;
+  // ★ジャックは、本体の絵(通常絵/ポーズ絵)と同じ絵・同じ大きさの指定で重ねる。通常絵を枠いっぱいで重ねると、
+  //   本体(通常絵は半分の大きさ・ポーズ絵は枠いっぱい)と大きさのちがう絵が攻撃のたびに混ざって見える(2026-10-04 ユーザー指摘)
+  const enemyFlashIsJack = enemy?.id === 'Jack';
+  const enemyFlashNode = enemyFlashOn ? <img data-enemy-flash src={enemyFlashIsJack ? enemyBossImgSrc : enemy.imgUrl} alt="" aria-hidden="true" draggable={false}
+    style={enemyFlashIsJack ? (enemyBossImgSrc !== enemy.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE) : undefined}/> : null;
   // 技の実際の長さ(戦闘の速さを掛けたもの)。CSS の動きは --em-dur を見るので、2倍速・4倍速でも途中で切れない
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? { '--em-dur': `${enemyAttackFx.ms}ms` } : {};
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
@@ -30395,7 +31259,7 @@ function BattleScreen({
           ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
+          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
@@ -30485,6 +31349,39 @@ function BattleScreen({
                   (2026-09-24 ユーザー指摘「敵のライフの減り方とかかくつき」) */}
               <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
+            </div>
+            {raidGrowth&&(
+              <button type="button" data-raid-growth-chip onClick={()=>setRaidGrowthOpen(true)} aria-label="レイドバトルのターンごとの強化の内訳を開く"
+                className="mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]">
+                <span className="shrink-0 text-emerald-300">⬆ 強化</span>
+                <span className="shrink-0">全ステ <b className="text-emerald-200">+{raidGrowth.statPct}%</b></span>
+                <span className="shrink-0 text-amber-200">技・アシカ {raidGrowth.levelUps}/{raidGrowth.levelUpMax}</span>
+                <span className="min-w-0 flex-1 truncate text-right text-slate-300">{raidGrowth.nextLevelUpTurn?`次の技強化 ${raidGrowth.nextLevelUpTurn}ターン目`:'技強化は出そろった'}</span>
+                <span className="shrink-0 text-slate-400">詳細›</span>
+              </button>
+            )}
+          </div>
+        )}
+        {/* レイドバトルの強化が入ったターンの帯(数秒で消える。操作の邪魔をしない) */}
+        {raidGrowth&&raidGrowthBanner&&(
+          <div key={raidGrowthBanner.key} data-raid-growth-banner aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
+            <div className="text-[13px] font-black text-emerald-300">⬆ {raidGrowth.turn}ターン目 強化！</div>
+            <div className="mt-0.5 text-[11px] font-black text-white">味方の全ステータス +{raidGrowth.stepPct}%<span className="text-slate-300">(ここまで合計 +{raidGrowth.statPct}%)</span></div>
+            <div className="text-[10px] font-black text-sky-200">自動回復 ライフ{raidGrowth.lifeRate}%・ガッツ{raidGrowth.gutsRate}%</div>
+            {raidGrowth.levelUpNow&&<div className="mt-0.5 text-[11px] font-black text-amber-300">固有技とアシカが1段階アップ！({raidGrowth.levelUps}/{raidGrowth.levelUpMax}回目)</div>}
+          </div>
+        )}
+        {raidGrowth&&raidGrowthOpen&&(
+          <div data-raid-growth-detail className="fixed inset-0 flex items-center justify-center bg-black/70 px-4" style={{zIndex:80000}} role="dialog" aria-modal="true" aria-label="レイドバトルの強化" onClick={()=>setRaidGrowthOpen(false)}>
+            <div className="w-full max-w-[340px] rounded-2xl border-2 border-emerald-300/60 bg-slate-950 p-3 text-slate-100" onClick={(e)=>e.stopPropagation()}>
+              <div className="text-center text-[13px] font-black text-emerald-300">レイドバトルの強化(いま {raidGrowth.turn}/{RAID_JACK_TURNS}ターン目)</div>
+              <dl className="mt-2 space-y-1.5 text-[11px]">
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-emerald-200">全ステータス</dt><dd>2ターン目から、1ターンごとに味方全員が +{raidGrowth.stepPct}%(掛け算)。いまは<b className="text-white"> 合計 +{raidGrowth.statPct}%</b>。ライフ・ガッツの上限が増えたぶんは、いまの値にも足されます</dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-sky-200">自動回復</dt><dd>1ターンごとに +1.5%。いまは<b className="text-white"> ライフ {raidGrowth.lifeRate}%・ガッツ {raidGrowth.gutsRate}%</b></dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-amber-200">固有技・アシカ</dt><dd>{RAID_JACK_LEVEL_UP_TURNS.join('・')}ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。<b className="text-white"> {raidGrowth.levelUps}/{raidGrowth.levelUpMax}回</b>済み{raidGrowth.nextLevelUpTurn?`(次は${raidGrowth.nextLevelUpTurn}ターン目)`:'(これで最後)'}</dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-rose-200">EXスキル</dt><dd>持っている味方ごとに2回まで</dd></div>
+              </dl>
+              <button type="button" data-raid-growth-close onClick={()=>setRaidGrowthOpen(false)} className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-white active:scale-95">閉じる</button>
             </div>
           </div>
         )}
@@ -30667,15 +31564,16 @@ function BattleScreen({
             {/* ★ガードの「🛡 キーン!」とアシストカードの全画面演出は、2026-09-29 のユーザー選択で置き換えた。
                 ガードは枠のバリア(GuardBarrier・guardImpact)、アシストカードはカットイン(TacticsExCutin の assist)で出す */}
             {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
-              <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
+              <div data-enemy-motion={enemyMotion||undefined} data-jack-aura={jackAuraTier||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                 {/* ★技の動き・やられの動き・待機の威圧(data-em-body / data-enemy-hurt / data-moo-stage)は CSS が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
                 {emSet&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
                 {/* data-moo-body: 絵と光(後ろの光の輪・絵の形の光の板)をひとまとめにして、動きはこの箱に掛ける(光が絵について動く) */}
                 <div data-moo-body={emSet?'true':undefined} className="relative w-full h-full">
                 {emSet&&<i aria-hidden="true" data-enemy-glow/>}
+                {jackAuraTier>0&&<JackAuraLayer tier={jackAuraTier}/>}
                 {/* ★ふちをぼかすマスクは外した(2026-09-28 battle-fx-lint-check)。絵はもともと切り抜きで、マスクで薄くなっていたのは
                     翼の先など2%ほど。大きな絵のマスクはメモリが足りないと外れ、そのたびに描き直しで固まる原因になる */}
-                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+                <img src={enemyBossImgSrc} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',...(enemy?.id==='Jack'?(enemyBossImgSrc!==enemy?.imgUrl?JACK_POSE_BATTLE_STYLE:JACK_NORMAL_BATTLE_STYLE):null),animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
                 {emSet&&enemyFlashNode}
                 </div>
               </div>
@@ -34847,7 +35745,7 @@ function RhythmModeSelectStage() {
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
@@ -34895,6 +35793,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
+  const [rankingOpen, setRankingOpen] = React.useState(false);
   const [recordOpen, setRecordOpen] = React.useState(false);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
@@ -34976,6 +35875,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   React.useEffect(() => RHYTHM_MULTI.onStart((info) => {
     setCountdown({ info, left: RHYTHM_MULTI_START_COUNTDOWN_SEC });
     setChatOpen(false);
+    setRankingOpen(false);
   }), []);
   React.useEffect(() => {
     if (!countdown) return undefined;
@@ -35048,7 +35948,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     });
     return () => { alive = false; };
   }, [searching]);
-  const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); setChatOpen(false); setSearching(null); };
+  const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); setChatOpen(false); setRankingOpen(false); setSearching(null); };
   // モードえらび(modeSelect あり)で部屋に入れたら、対戦の画面(RHYTHM_MULTI)へ移る。
   // 対戦の画面で部屋が無くなったら(出た・満員で抜けた)、モードえらびへ戻る
   const inRoom = !!view;
@@ -35088,6 +35988,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
       {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
       <RhythmOrientationButton/>
+      {view && rankingButton()}
       {view && chatButton()}
     </header>
   );
@@ -35098,6 +35999,26 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       💬
       {chatUnread > 0 && <b data-rhythm-multi-chat-unread className="absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white">{chatUnread > 9 ? '9+' : chatUnread}</b>}
     </button>
+  );
+  // 🏆 全国ランキング(部屋の中。2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
+  // 見る曲は、選曲中なら見ている曲、決まったあと(難易度えらび・結果)ならその曲、まだ無ければ一覧の先頭
+  const rankingSongId = (room && room.phase !== 'select' && room.songId) ? room.songId : (selSongId || (songs[0] ? songs[0].songId : ''));
+  const openRanking = () => {
+    const song = songById(rankingSongId);
+    if (!song || !rankingSupport) return;
+    rankingSupport.open(song);
+    setChatOpen(false);
+    setRankingOpen(true);
+  };
+  const rankingButton = (extra = '') => rankingSupport && (
+    <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
+      className={`min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`}>🏆</button>
+  );
+  // ランキングは対戦の画面の上へ重ねる(画面を移すと、ライブ開始の合図を受ける側が外れて取り逃すため)
+  const rankingLayer = rankingOpen && rankingSupport && view && (
+    <div data-rhythm-multi-ranking-layer className="absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950">
+      {rankingSupport.render(() => setRankingOpen(false))}
+    </div>
   );
   // 最新の発言を添えた💬(結果画面用)。押すとチャット欄が開く
   const chatLatestButton = () => {
@@ -35349,7 +36270,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </div>
             </div>
           </>}
-        {chatSheet}
+        {chatSheet}{rankingLayer}
       </main>
     );
   }
@@ -35362,7 +36283,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     return (
       <main data-rhythm-multi data-rhythm-multi-step="result" className={`${shell} bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950`}>
         <b aria-hidden="true" className="pointer-events-none absolute left-2 top-0 text-6xl font-black italic tracking-widest text-white/[0.06]" style={{ top: 'var(--mh-sa-top)' }}>RESULT</b>
-        <section data-rhythm-multi-results className="relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2 [@media(max-height:440px)]:py-1" style={{ marginTop: 'calc(.4rem + var(--mh-sa-top))' }}>
+        <section data-rhythm-multi-results className="relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2 [@media(max-height:440px)]:py-1 [[data-mh-view-rotation=true]_&]:py-1" style={{ marginTop: 'calc(.4rem + var(--mh-sa-top))' }}>
           {drawnSong && <span className="h-12 w-12 shrink-0 landscape:h-14 landscape:w-14"><RhythmSongArt song={drawnSong} marked={false} /></span>}
           <div className="min-w-0 flex-1 landscape:max-w-[34%]">
             <b className="block truncate text-sm font-black">{drawnSong ? rhythmSongFullName(drawnSong) : ''}</b>
@@ -35396,25 +36317,25 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             ))}
           </div>
         </div>
-        <ul className="grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2">
+        <ul className="grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
           {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
             const r = team.rows[i];
             if (!r) return <li key={`empty${i}`} aria-hidden="true" className="rounded-xl border border-dashed border-white/5" />;
             const isMvp = r.m.id === team.mvpId && !team.waiting;
             const lv = r.res ? drawnLevel(r.res.diffId) : 0;
             return (
-              <li key={r.m.id} data-rhythm-multi-result-row role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => setMemberSheetId(r.m.id) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5'}`}>
+              <li key={r.m.id} data-rhythm-multi-result-row role={r.m.id !== view.selfId ? 'button' : undefined} onClick={r.m.id !== view.selfId ? () => setMemberSheetId(r.m.id) : undefined} className={`relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`}>
                 <RhythmMultiChatBubble text={chatBubbleOf(r.m.id)} />
                 {/* MVP は札をアイコンより前に出し、王冠・金色の光で目立たせる(2026-10-03・ユーザー指摘「MVPが裏に回ってる / もっと強調して」) */}
                 {isMvp && <b data-rhythm-multi-mvp className="mhmv-badge absolute left-1/2 top-1 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 px-2.5 py-0.5 text-[11px] font-black tracking-wider text-slate-950 shadow-[0_0_12px_rgba(252,211,77,.9)] landscape:text-[13px]">👑 MVP</b>}
                 <span className={`relative z-10 shrink-0 rounded-full ${isMvp ? 'mhmv-ring' : ''}`}>
-                  <RhythmMultiAvatar m={r.m} resolveIconUrl={resolveIconUrl} sizeClass="h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11" />
+                  <RhythmMultiAvatar m={r.m} resolveIconUrl={resolveIconUrl} sizeClass="h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [[data-mh-view-rotation=true]_&]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:w-11" />
                 </span>
                 <span className={`relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`}>{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}</span>
                 <small className="block h-3 shrink-0 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]">{r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''}</small>
-                <b className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0')) : r.m.gone ? '—' : 'ライブ中…'}</b>
+                <b className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0')) : r.m.gone ? '—' : 'ライブ中…'}</b>
                 {r.res && !r.res.quit && <>
-                  <small className="mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5">{r.res.diffId || '-'}{lv ? ` Lv.${lv}` : ''}</small>
+                  <small className="mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5">{r.res.diffId || '-'}{lv ? ` Lv.${lv}` : ''}</small>
                   {!r.res.cleared && <small className="text-[8px] font-black text-rose-300">失敗</small>}
                 </>}
               </li>
@@ -35423,17 +36344,20 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         </ul>
         {/* 結果を見ながら、ワンタップで「もう一回!」「ありがとう!」(2026-10-03・ユーザー指示) */}
         {/* 定型文は折り返して6つだけ(すべらせて探さない)。右の💬に最新の発言を出す(2026-10-03・ユーザー指摘「チャットが使いにくい」) */}
-        <div data-rhythm-multi-result-chat className="flex shrink-0 items-center gap-2 px-2 pt-1.5 landscape:px-3 [@media(max-height:440px)]:pt-1">
-          {/* ★折り返さない。実機の横画面は左右と下に余白(切り欠き・ホームバー)があって狭く、2段になるとカードが押しつぶされて
+        <div data-rhythm-multi-result-chat className="flex shrink-0 items-center gap-2 px-2 pt-1.5 landscape:px-3 [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1">
+          {/* ★画面を自前で回している間(data-mh-view-rotation)は、端末の向きが縦のままなので `portrait:` も `max-height` の指定も
+              縦画面のほうが効いてしまう。回転中の写し(`[[data-mh-view-rotation=true]_&]:`)を並べて書く(2026-10-04・ユーザー報告「画面切れしてる」)。
+              ★折り返さない。実機の横画面は左右と下に余白(切り欠き・ホームバー)があって狭く、2段になるとカードが押しつぶされて
               アイコンと難易度が切れた(2026-10-03・ユーザー報告)。入りきらないぶんは横にすべらせる */}
-          <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} big limit={6} className="min-w-0 flex-1 portrait:flex-wrap" />
+          <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} big limit={6} className="min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap" />
+          {rankingButton()}
           {chatLatestButton()}
         </div>
-        <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
+        <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
           <button data-rhythm-multi-member-stats type="button" onClick={() => setStatsOpen(true)}
-            className="min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px]">メンバーの成績</button>
+            className="min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">メンバーの成績</button>
           <button data-rhythm-multi-result-next type="button" onClick={() => RHYTHM_MULTI.nextFromResult(room.round)}
-            className="min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px]">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
+            className="min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
         </div>
         {/* 結果が出たら対戦の記録へ足す(自分が参加して、全員の結果がそろってから) */}
         {(() => {
@@ -35481,7 +36405,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             </div>
           </div>
         )}
-        {chatSheet}
+        {chatSheet}{rankingLayer}
       </main>
     );
   }
@@ -35498,7 +36422,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <p className="min-w-0 flex-1 text-sm font-black text-amber-200">{phase === 'playing' ? 'いまライブ中です。次の曲から参加できます' : 'ホストが次へ進むのを待っています'}{drawnSong ? <small className="block truncate text-[11px] font-bold text-slate-300">{rhythmSongFullName(drawnSong)}</small> : null}</p>
           <button data-rhythm-multi-leave type="button" className={`${btn} bg-slate-700 landscape:w-48`} onClick={leaveRoom}>ルームを出る</button>
         </div>
-        {chatSheet}
+        {chatSheet}{rankingLayer}
         {countdownLayer}
       </main>
     );
@@ -35580,7 +36504,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           <button data-rhythm-multi-ready type="button" disabled={iAmReady} onClick={() => { if (onUserGesture) onUserGesture(); if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
             className="min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]">{iAmReady ? '準備完了!' : '準備完了'}{iAmReady && <small className="block text-[9px] font-bold">ほかのメンバーを待っています</small>}</button>
         </div>
-        {chatSheet}
+        {chatSheet}{rankingLayer}
         {countdownLayer}
       </main>
     );
@@ -35619,11 +36543,578 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300">ルームを出る</button>
           </div>
         )} />
-      {chatSheet}
+      {chatSheet}{rankingLayer}
       {countdownLayer}
     </main>
   );
 }
+
+// ---- part: 78-screen-raid-jack-debug.jsx ----
+// ==================== ジャック確認(デバッグ専用) ====================
+// イベント・レイドボス「ジャック」を、公開フラグ・期間・時刻を待たずに確かめる画面。
+// 入口はデバッグ設定(DEBUG_SETTINGS)だけで、通常プレイには一切出さない。
+// デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き)。設計: docs/spec/RAID_BOSS_JACK.md
+//
+// 何をするか(実装した段階ごとに、ここへ確認の入口を足していく)
+//   ① 定義: 5段階×2種類の名前・倍率・ライフ・技の本数・技名(35-raid-jack.jsx をそのまま表にする)
+//   ② 期間と回数: 「いま」を前・中・後に動かしたときの判定、今日の残り回数
+//   ③ 端末の記録(mh_raid_jack_v1): 回数・倒した段階・再送待ちの確認と初期化(★保存します)
+//   ⑤ 絵と技: バトルの立ち絵2枚・顔アイコン、段階ごとに使う技(実際の行動表 tacticsActionDefinitions)
+//   ⑦ 画面: HOMEのジャック(強制表示)・レイド画面を、公開フラグと期間を待たずに開く(記録は別のイベントID)
+//   ⑥ 戦う: ジャック戦(専用の1戦)を、段階を選んで始める。回数は使わず、送る記録も別のイベントID(raid_jack_debug)
+//   ④ サーバー: 本番の集計(raid_jack_2026)を汚さない別のイベントID(raid_jack_debug)で、
+//      テスト送信・段階ごとの合計・Bの上位・再送待ちの送り直しを試す
+const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
+  { id: 'real', label: 'いま(本物)' },
+  { id: 'before', label: '開始の1分前', at: () => Date.parse(RAID_JACK_EVENT.startAt) - 60000 },
+  { id: 'open', label: '開始の1分後', at: () => Date.parse(RAID_JACK_EVENT.startAt) + 60000 },
+  { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
+]);
+
+const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome }) => {
+  const [nowChoice, setNowChoice] = useState('real');
+  const [state, setState] = useState(() => raidJackDefaultState());
+  const [log, setLog] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [totals, setTotals] = useState(undefined);   // undefined=未取得 / null=準備中 / object
+  const [ranking, setRanking] = useState(undefined);
+  const [testDamage, setTestDamage] = useState(1000);
+  const [testKind, setTestKind] = useState('a');
+  const [testTier, setTestTier] = useState(1);
+  const [fightKind, setFightKind] = useState('a');
+  const [fightTier, setFightTier] = useState(1);
+  const say = (text) => setLog((prev) => [`${new Date().toLocaleTimeString('ja-JP')} ${text}`, ...prev].slice(0, 12));
+
+  useEffect(() => {
+    let alive = true;
+    raidJackLoadState().then((loaded) => { if (alive) setState(loaded); });
+    return () => { alive = false; };
+  }, []);
+
+  const choice = RAID_JACK_DEBUG_NOW_CHOICES.find((c) => c.id === nowChoice) || RAID_JACK_DEBUG_NOW_CHOICES[0];
+  const nowMs = choice.at ? choice.at() : Date.now();
+  const windowLabel = { before: '開始前', open: '開催中', after: '終了後' }[raidJackWindowAt(nowMs)];
+  const save = async (next) => { const ok = await raidJackSaveState(next); setState(raidJackNormalizeState(next)); say(ok ? '端末の記録を保存しました' : '保存できませんでした'); };
+  const withBusy = async (fn) => { setBusy(true); try { await fn(); } finally { setBusy(false); } };
+
+  const sendTest = () => withBusy(async () => {
+    const breederId = await ensureBreederId();
+    if (!breederId) { say('ブリーダーIDが作れず、送れません'); return; }
+    const hit = { hitId: raidJackMakeHitId(), kind: testKind, tier: testTier, damage: Math.max(0, Math.floor(Number(testDamage) || 0)), defeated: false };
+    const { state: next, outcome } = await raidJackSubmitHit(state, hit, breederId, RAID_JACK_DEBUG_EVENT_ID);
+    await raidJackSaveState(next); setState(next);
+    say(`テスト送信(${testKind.toUpperCase()}${testTier}・${hit.damage}): ${({ sent: '送れました', notready: '準備中(SQL未適用)', invalid: '形が違うので送りません', error: '通信できず再送待ちへ' })[outcome] || outcome}`);
+  });
+  const flush = () => withBusy(async () => {
+    const breederId = await ensureBreederId();
+    const next = await raidJackFlushPending(state, breederId, RAID_JACK_DEBUG_EVENT_ID);
+    await raidJackSaveState(next); setState(next);
+    say(`再送待ちを送り直しました(残り ${next.pending.length} 件)`);
+  });
+  const fetchAll = () => withBusy(async () => {
+    const t = await sbFetchRaidJackTierTotals(RAID_JACK_DEBUG_EVENT_ID);
+    setTotals(t);
+    const r = await sbFetchRaidJackBRanking(100, RAID_JACK_DEBUG_EVENT_ID);
+    setRanking(r);
+    say(t === null ? '取得できません(準備中か通信エラー)' : '段階ごとの合計とBの上位を取得しました');
+  });
+
+  const cell = 'border border-white/10 px-1.5 py-1 text-[10px]';
+  const tierTable = (label, tiers) => (
+    <div className="overflow-x-auto">
+      <div className="mb-1 text-[11px] font-black text-cyan-200">{label}</div>
+      <table className="w-full border-collapse text-slate-100">
+        <thead><tr className="bg-white/10"><th className={cell}>段階</th><th className={cell}>名前</th><th className={cell}>倍率</th><th className={cell}>ライフ</th><th className={cell}>技</th>{totals ? <th className={cell}>削った量</th> : null}</tr></thead>
+        <tbody>{tiers.map((t, i) => (
+          <tr key={t.id}><td className={cell}>{i + 1}</td><td className={cell}>{t.name}</td><td className={cell}>{t.power}</td><td className={`${cell} text-right`}>{t.hp.toLocaleString()}</td><td className={cell}>{t.actionCount}本</td>
+            {totals ? <td className={`${cell} text-right`}>{((totals[t.id[0]] || {})[i + 1]?.total || 0).toLocaleString()}</td> : null}</tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+  const btn = 'min-h-[44px] rounded-xl border px-2 text-center text-[11px] font-black leading-tight active:scale-95 disabled:opacity-40';
+
+  return (
+    <div className={`${SCREEN_SHELL_CLASS} overflow-y-auto`} data-raid-jack-debug>
+      <DebugScreenHead title="ジャック確認" note="イベント・レイドボス「ジャック」の確認。サーバーへのテスト送信は別のイベントID(raid_jack_debug)で、本番の集計に入りません" saves onBack={onBack} />
+      <div className="space-y-3 pb-8">
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-amber-200">① 公開フラグと期間</div>
+          <div>公開フラグ(RAID_JACK_PUBLIC_RELEASE): <b>{RELEASE_FLAGS.raidJack === true ? 'true(公開中)' : 'false(公開前)'}</b></div>
+          <div className="mt-1">期間: {RAID_JACK_EVENT.startAt.replace('T', ' ').slice(0, 16)} 〜 {RAID_JACK_EVENT.endAt.replace('T', ' ').slice(0, 16)}(仮)</div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {RAID_JACK_DEBUG_NOW_CHOICES.map((c) => (
+              <button key={c.id} onClick={() => setNowChoice(c.id)} className={`${btn} ${nowChoice === c.id ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-white/20 bg-white/5 text-slate-200'}`}>{c.label}</button>
+            ))}
+          </div>
+          <div className="mt-2">この時刻の判定: <b className="text-amber-200">{windowLabel}</b>(日付キー {raidJackDayKey(nowMs)})</div>
+        </section>
+
+        <section className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="text-[11px] font-black text-amber-200">② 段階の定義(ライフ = 35,000×倍率×10)</div>
+          {tierTable('A: ベースモン協力戦(共有HP)', RAID_JACK_A_TIERS)}
+          {tierTable('B: マスモンの累計ダメージ(ランキングは共有)', RAID_JACK_B_TIERS)}
+          <div className="text-[10px] text-slate-300">技名: {Object.entries(RAID_JACK_SKILL_NAMES).map(([k, v]) => `${k}=${v}`).join(' / ')}</div>
+        </section>
+
+        <section className="rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-rose-200">③ 端末の記録(mh_raid_jack_v1)★保存します</div>
+          <div>今日の残り回数: A {raidJackRemaining(state.a, nowMs)} / B {raidJackRemaining(state.b, nowMs)}(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</div>
+          <div>倒した段階: A [{state.a.defeated.join(',')}] / B [{state.b.defeated.join(',')}]・開いている段階: A {raidJackUnlockedCount('a', state.a.defeated)} / B {raidJackUnlockedCount('b', state.b.defeated)}</div>
+          <div>Bの自分用の累計: {state.b.total.toLocaleString()}・再送待ち: {state.pending.length}件・受け取り済み報酬: {state.claimed.length}件</div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save(raidJackDefaultState())}>記録を初期化</button>
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save({ ...state, a: { ...state.a, day: raidJackDayKey(nowMs), used: RAID_JACK_FREE_PER_DAY }, b: { ...state.b, day: raidJackDayKey(nowMs), used: RAID_JACK_FREE_PER_DAY } })}>今日の無料回数を使い切る</button>
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save({ ...state, a: { ...state.a, defeated: [] }, b: { ...state.b, defeated: [] } })}>倒した段階をリセット</button>
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save({ ...state, b: { ...state.b, defeated: RAID_JACK_B_TIERS.slice(0, 4).map((t) => t.id) }, a: { ...state.a, defeated: RAID_JACK_A_TIERS.slice(0, 4).map((t) => t.id) } })}>手前4段階を倒した状態にする</button>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-cyan-200">④ サーバー(別のイベントID raid_jack_debug)</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select value={testKind} onChange={(e) => setTestKind(e.target.value)} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]"><option value="a">A(協力)</option><option value="b">B(累計)</option></select>
+            <select value={testTier} onChange={(e) => setTestTier(Number(e.target.value))} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]">{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>段階{n}</option>)}</select>
+            <input type="number" min="0" max="100000000" value={testDamage} onChange={(e) => setTestDamage(e.target.value)} className="w-28 rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]" />
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            <button disabled={busy} className={`${btn} border-cyan-400/60 bg-cyan-950/40`} onClick={sendTest}>テスト送信</button>
+            <button disabled={busy} className={`${btn} border-cyan-400/60 bg-cyan-950/40`} onClick={flush}>再送待ちを送る</button>
+            <button disabled={busy} className={`${btn} border-cyan-400/60 bg-cyan-950/40`} onClick={fetchAll}>合計と上位を取得</button>
+          </div>
+          {totals === null && <div className="mt-2 text-amber-200">準備中(docs/sql/raid/ のSQLが未適用か、通信できません)</div>}
+          {Array.isArray(ranking) && (
+            <div className="mt-2">Bの上位(デバッグ分): {ranking.length === 0 ? 'まだありません' : ranking.slice(0, 10).map((r, i) => `${i + 1}位 ${r.breederId.slice(0, 6)}… ${r.total.toLocaleString()}`).join(' / ')}</div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-orange-200">⑦ HOMEのジャックとレイド画面(公開フラグ・期間を待たずに)</div>
+          <div className="text-[10px] text-slate-300">強制表示を入れると、HOMEの真ん中にジャックが出ます。レイド画面・編成・追加購入・戦闘が、別のイベントID(raid_jack_debug)の記録で動きます。追加購入でビートPは減りません。初めは何度でも挑め、全段階を選べます(本番どおりの回数・解放で見たいときは下のボタン)。</div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <button data-raid-force-toggle className={`${btn} ${raidForce ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`} onClick={() => onToggleRaidForce && onToggleRaidForce()}>HOMEに出す: {raidForce ? 'ON' : 'OFF'}</button>
+            <button data-raid-real-rules-toggle className={`${btn} col-span-2 ${realRules ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`} onClick={() => onToggleRealRules && onToggleRealRules()}>本番どおりの回数・解放で確認: {realRules ? 'ON' : 'OFF'}(OFFは何度でも・全段階)</button>
+            <button data-raid-open className={`${btn} border-orange-400/60 bg-orange-950/40`} onClick={() => onOpenRaid && onOpenRaid()}>レイド画面を開く</button>
+            <button data-raid-go-home className={`${btn} col-span-2 border-orange-400/60 bg-orange-950/40`} onClick={() => onGoHome && onGoHome()}>HOMEを見る(ジャックが出ているか確認)</button>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-orange-200">⑥ ジャックと戦う(回数は使わない・別のイベントIDで送る)</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select data-raid-fight-kind value={fightKind} onChange={(e) => setFightKind(e.target.value)} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]"><option value="a">A(ベースモン・協力戦)</option><option value="b">B(マスモン・累計ダメージ)</option></select>
+            <select data-raid-fight-tier value={fightTier} onChange={(e) => setFightTier(Number(e.target.value))} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]">
+              {raidJackTiers(fightKind).map((t, i) => <option key={t.id} value={i + 1}>{i + 1}: {t.name}</option>)}
+            </select>
+          </div>
+          <div className="mt-1 text-[10px] text-slate-300">{(() => { const t = raidJackTierAt(fightKind, fightTier - 1); return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
+          <button data-raid-fight-start className={`${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`} onClick={() => { if (onStartBattle && onStartBattle(fightKind, fightTier - 1) === false) say('編成できるモンスターがいません'); }}>この条件でジャックと戦う</button>
+        </section>
+
+        <section className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="text-[11px] font-black text-amber-200">⑤ 絵と、段階ごとに使う技</div>
+          <div className="flex items-end justify-around gap-2 rounded-xl bg-slate-900/70 p-2">
+            <figure className="text-center text-[9px] text-slate-300"><img src={JACK_IMG} alt="ジャック(通常)" className="mx-auto h-24 object-contain" />通常</figure>
+            <figure className="text-center text-[9px] text-slate-300"><img src={JACK_POSE_IMG} alt="ジャック(ポーズ)" className="mx-auto h-24 object-contain" />両腕ポーズ</figure>
+            <figure className="text-center text-[9px] text-slate-300"><img src={JACK_ICON_IMG} alt="ジャック(顔アイコン)" className="mx-auto h-16 object-contain" />顔アイコン</figure>
+          </div>
+          <div className="text-[10px] text-slate-200">
+            {[...RAID_JACK_A_TIERS, ...RAID_JACK_B_TIERS].map((t) => (
+              <div key={t.id} className="mt-1"><b>{t.name}</b>({t.actionCount}本): {tacticsEnemyActionIds('Jack', 'Normal', t.actionCount).map((id) => (TACTICS_ENEMY_DATA.Jack.actions[id] || id)).join(' / ')}</div>
+            ))}
+            <div className="mt-1 text-slate-400">通常攻撃「{TACTICS_ENEMY_DATA.Jack.normal}」・必殺技「{TACTICS_ENEMY_DATA.Jack.special}」は全段階で使う(再生なし)</div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-slate-200">ログ</div>
+          {log.length === 0 ? <div className="text-[10px] text-slate-400">まだ何もしていません</div> : log.map((l, i) => <div key={i} className="text-[10px] text-slate-300">{l}</div>)}
+        </section>
+      </div>
+    </div>
+  );
+};
+
+// ---- part: 79-screen-raid-jack.jsx ----
+// ==================== イベント・レイドボス「ジャック」(レイド画面と編成画面) ====================
+// 設計の正本: docs/spec/RAID_BOSS_JACK.md
+//   RAID_JACK      … A(ベースモン協力戦・段階ごとの共有HP)とB(マスモンの累計ダメージ)。残り回数・追加購入・ランキング
+//   RAID_JACK_PREP … 編成(勇者1体+供モン最大3体)とアシカえらび。始めると専用の1戦(60-app.jsx の startRaidJackBattle)へ
+//
+// 決めごと:
+//  ・この画面は表示と選択だけ。回数を使う・ビートPを払う・戦闘を始めるのは本体側(onChallenge / onPurchase / onStart)。
+//  ・サーバー(36-raid-jack-api.jsx)が準備中(SQL未適用)・通信できないときも、画面は壊さず「準備中」と出す。
+//  ・A の段階は「前の段階の共有HPが0になったら開く」。未解放はシルエットで見せる(報酬も見えるようにする)。
+//  ・B の段階は「自分が前の段階を倒したら開く」。解放した段階にはいつでも戻れる。
+//  ・報酬の表は 35-raid-jack.jsx の RAID_JACK_REWARDS(設計書「報酬の表」)。画面は読むだけで、数字を書き写さない。
+//    難易度ごとの報酬は各段階のカードの下、モード別・難易度別の一覧は「報酬一覧」から開く。受け取りは本体側(onClaimRewards)がギフトで届ける。
+
+// ランキングの1行ぶんの名前(ブリーダー名)。プロフィールが引けない人は「名無しのブリーダー」
+const raidJackNameOf = (breederId) => {
+  const profile = typeof latestBreederProfileFor === 'function' ? latestBreederProfileFor({ breederId }) : null;
+  return (profile && profile.userName) || '名無しのブリーダー';
+};
+
+const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
+  const rate = max > 0 ? Math.max(0, Math.min(1, left / max)) : 0;
+  const color = tone === 'emerald' ? 'bg-emerald-500' : 'bg-orange-500';
+  return (
+    <div className="h-3 w-full overflow-hidden rounded-full border border-white/20 bg-black/50" role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.max(0, left)}>
+      <div className={`h-full ${color} transition-all`} style={{ width: `${rate * 100}%` }} />
+    </div>
+  );
+};
+
+// 報酬1つぶんの中身(ダイヤ・虹のプシュケー・魂格の結晶・虹の超越の実・勇者の証。0のものは出さない)
+const RaidJackRewardChips = ({ reward }) => (
+  <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+    {raidJackRewardParts(reward).map((p) => (
+      <span key={p.key} className="whitespace-nowrap text-[10px] font-black text-slate-100">{p.emoji}{p.label}<b className="ml-0.5 text-amber-200">×{p.amount.toLocaleString()}</b></span>
+    ))}
+  </span>
+);
+const RaidJackRewardRow = ({ label, note, reward, got, dataKey }) => (
+  <div data-raid-jack-reward-row={dataKey} className="flex items-start gap-2 border-b border-white/5 py-1.5 last:border-b-0">
+    <div className="w-[68px] shrink-0">
+      <div className="text-[10px] font-black leading-tight text-orange-200">{label}</div>
+      {note && <div className="text-[8px] leading-tight text-slate-400">{note}</div>}
+    </div>
+    <div className="min-w-0 flex-1"><RaidJackRewardChips reward={reward} /></div>
+    {got && <span className="shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white">受け取り済み</span>}
+  </div>
+);
+// 1つの段階の報酬(難易度別)。A=討伐報酬+貢献1〜5位 / B=初めて倒したとき。未解放の段階も見える
+const RaidJackTierRewards = ({ kind, index, claimed }) => {
+  const have = Array.isArray(claimed) ? claimed : [];
+  if (kind === 'a') {
+    return (
+      <div data-raid-jack-tier-rewards="a">
+        <RaidJackRewardRow dataKey="clear" label="討伐報酬" note="参加した全員" reward={RAID_JACK_REWARDS.aClear[index]} got={have.includes(raidJackClaimId('clear_a', index))} />
+        {RAID_JACK_REWARDS.aRank[index].map((r, k) => (
+          <RaidJackRewardRow key={k} dataKey={`rank-${k + 1}`} label={`貢献${k + 1}位`} reward={r} got={k === 0 && have.includes(raidJackClaimId('rank_a', index))} />
+        ))}
+        <div className="mt-1 text-[9px] text-slate-400">{index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。倒したあとも貢献は続きます。' : '倒したときに順位が確定して、ギフトで届きます。'}</div>
+      </div>
+    );
+  }
+  return (
+    <div data-raid-jack-tier-rewards="b">
+      <RaidJackRewardRow dataKey="clear" label="初めて倒したとき" note="1回だけ" reward={RAID_JACK_REWARDS.bClear[index]} got={have.includes(raidJackClaimId('clear_b', index))} />
+      <div className="mt-1 text-[9px] text-slate-400">倒した直後にギフトで届きます。順位の報酬は、全難易度の累計ダメージで決まります(報酬一覧)。</div>
+    </div>
+  );
+};
+// 報酬一覧(モード別・難易度別)。レイド画面の「報酬一覧」から開く
+const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a' }) => {
+  const [tab, setTab] = useState(initialTab);
+  const have = Array.isArray(claimed) ? claimed : [];
+  return (
+    <div data-raid-jack-reward-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3" role="dialog" aria-modal="true" aria-label="ジャックの報酬一覧"
+      style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+      <div className="mb-2 flex shrink-0 items-center justify-between">
+        <div className="text-[14px] font-black text-orange-200">🎃 ジャックの報酬一覧</div>
+        <button type="button" data-raid-jack-reward-close onClick={onClose} aria-label="報酬一覧を閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
+      </div>
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">参加賞(1回でも挑戦した全員・{tab === 'a' ? 'レイドバトル' : 'グランドスラム'}で1回)</div>
+          <RaidJackRewardRow dataKey="participation" label="参加賞" reward={RAID_JACK_REWARDS.participation} got={have.includes(raidJackClaimId(tab === 'a' ? 'part_a' : 'part_b'))} />
+        </div>
+        {raidJackTiers(tab).map((t, i) => (
+          <div key={t.id} data-raid-jack-reward-tier={t.id} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+            <div className="mb-1 text-[12px] font-black text-white">{i + 1}. {t.name}</div>
+            <RaidJackTierRewards kind={tab} index={i} claimed={have} />
+          </div>
+        ))}
+        {tab === 'b' && (
+          <div data-raid-jack-reward-final className="rounded-2xl border border-orange-300/30 bg-orange-950/20 p-3">
+            <div className="mb-1 text-[12px] font-black text-orange-200">累計ダメージの最終順位(全難易度の合計)</div>
+            {RAID_JACK_REWARDS.bFinal.map((r, k) => (
+              <RaidJackRewardRow key={k} dataKey={`final-${k + 1}`} label={`${k + 1}位`} reward={r} got={k === 0 && have.includes(raidJackClaimId('final_b'))} />
+            ))}
+            <div className="mt-1 text-[9px] text-slate-400">期間の終わり(11/1 4:00)に確定して、ギフトで届きます。</div>
+          </div>
+        )}
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-300">
+          🔮 魂格の結晶は、マスモンの魂格特性の画面で使うと、そのマスモンの魂格Pが1個につき+1されます。<br />
+          🌈 虹の超越の実は、超越強化で超越ポイント+1に変えられます。
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// renderPlace / renderIcon / cardClass … 通常バトルの全国ランキングと同じ部品(60-app.jsx の rankingPlace / rankingBreederIcon / rankingCardClass)。
+//   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
+const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
+  const [tab, setTab] = useState('a');
+  const [sel, setSel] = useState({ a: 0, b: 0 });
+  const [state, setState] = useState(() => raidJackDefaultState());
+  const [totals, setTotals] = useState(undefined);       // undefined=読み込み中 / null=準備中 / object
+  const [rows, setRows] = useState(undefined);           // 選択中のランキング(A=その段階の貢献 / B=累計)
+  const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
+  const [ahead, setAhead] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [tick, setTick] = useState(0);
+  const [showRewards, setShowRewards] = useState(false);
+  const nowMs = Date.now();
+  const windowState = raidJackWindowAt(nowMs);
+  const open = forced || windowState === 'open';
+
+  // 読み込み(サーバーの合計・自分の状態・ランキング)。タブや段階を変えるたびに、そのぶんだけ読み直す
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      let loaded = await raidJackLoadState();
+      if (!alive) return;
+      // 受け取れる報酬があればギフトで届け(本体側)、届いたら受け取り済みの印を読み直す
+      const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
+      if (!alive) return;
+      if (granted > 0) { loaded = await raidJackLoadState(); setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`); }
+      setState(loaded);
+      const meId = await ensureBreederId();
+      if (alive) setMyId(meId || null);
+      const t = await sbFetchRaidJackTierTotals(eventId);
+      if (!alive) return;
+      setTotals(t);
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
+      if (!alive) return;
+      setSelf(mine);
+      setRows(undefined); setAhead(null);
+      const list = tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      if (!alive) return;
+      if (list) { try { await ensureBreederProfiles('raid-jack'); } catch (e) { /* 名前が引けなくても順位は出る */ } }
+      if (!alive) return;
+      setRows(list);
+      if (list && mine) {
+        const myTotal = tab === 'a' ? (mine.a[sel.a + 1] || 0) : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(tab, sel.a + 1, myTotal, eventId) : null;
+        if (alive) setAhead(count);
+      }
+    })();
+    return () => { alive = false; };
+  }, [tab, tab === 'a' ? sel.a : 0, tick, eventId]);
+
+  const side = tab === 'a' ? state.a : state.b;
+  // デバッグの強制表示中は、回数は無制限・全段階を最初から選べる
+  const remaining = unlimited ? Infinity : raidJackRemaining(side, nowMs);
+  const tiers = raidJackTiers(tab);
+  const aTotalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
+  const aDefeated = (i) => totals ? aTotalOf(i) >= tiers[i].hp : false;
+  const unlocked = unlimited ? () => true : tab === 'a'
+    ? (i) => i === 0 || aDefeated(i - 1)
+    : (i) => i < raidJackUnlockedCount('b', state.b.defeated);
+  const current = Math.min(sel[tab], tiers.length - 1);
+  const tier = tiers[current];
+  const isOpenTier = unlocked(current);
+  const myTotalHere = self ? (tab === 'a' ? (self.a[current + 1] || 0) : self.bTotal) : 0;
+
+  const buy = async () => {
+    setBusy(true); setMessage('');
+    try {
+      const result = await onPurchase(tab);
+      if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${RAID_JACK_EXTRA_COST_BEAT_P})`); setTick((n) => n + 1); }
+      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度ためしてください');
+    } finally { setBusy(false); }
+  };
+
+  // 倒した段階(男爵〜公爵)には挑めない。貢献順位が倒れたときに固まり、報酬がその場で決まるため。大王だけは倒したあとも続く
+  const closedTier = tab === 'a' && !unlimited && current < tiers.length - 1 && aDefeated(current);
+  const challengeLabel = !open ? (windowState === 'before' ? 'まだ始まっていません' : '終了しました')
+    : !isOpenTier ? '前の段階を倒すと開きます' : closedTier ? 'この段階は倒されました(次の段階へ)' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
+
+  return (
+    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-screen>
+      <ScreenHead title="カボチャの大王ジャック" icon="🎃" accent="text-orange-200" onBack={onBack}
+        note={forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'} />
+      {guideVisible && (
+        <div data-raid-jack-guide className="mb-2 shrink-0">
+          <AssistantBubble scene="raidJackIntro" compact />
+          <button type="button" data-raid-jack-guide-close onClick={onDismissGuide}
+            className="mt-1 w-full min-h-[36px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[11px] font-black text-orange-100 active:scale-95">わかった</button>
+        </div>
+      )}
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
+      <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
+        <div>
+          <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
+          <div data-raid-jack-remaining>{unlimited ? <>今日の残り <b className="text-white">無制限</b>(デバッグ・全段階を選べます)</> : <>今日の残り <b className="text-white">{remaining}</b> 回(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</>}</div>
+        </div>
+        <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
+          className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
+          1回追加<br /><small className="text-[9px] opacity-80">ビートP {RAID_JACK_EXTRA_COST_BEAT_P}(所持 {beatPoints})</small>
+        </button>
+      </div>
+      {message && <div className="mb-2 shrink-0 text-center text-[11px] font-black text-amber-200" role="status">{message}</div>}
+      {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
+
+      <div className={`${SCREEN_LIST_CLASS} space-y-2`}>
+        {tiers.map((t, i) => {
+          const isOpen = unlocked(i);
+          const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
+          const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);
+          const on = i === current;
+          return (
+            <button type="button" key={t.id} data-raid-jack-tier={t.id} onClick={() => setSel((prev) => ({ ...prev, [tab]: i }))}
+              className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`}>
+              {/* 段階ごとに見た目が変わる(オーラの炎・絵の光の色)。未解放は黒いシルエットのまま */}
+              <span data-jack-aura={isOpen ? i + 1 : undefined} className="relative block h-14 w-16 shrink-0">
+                {isOpen && <JackAuraLayer tier={i + 1} limit={8} />}
+                <img src={JACK_IMG} alt="" className="relative h-14 w-16 object-contain"
+                  style={isOpen ? { filter: raidJackAuraGlowFilter(i + 1, 0.4) } : { filter: 'brightness(0)', opacity: 0.5 }} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-[13px] font-black text-white">{i + 1}. {t.name}</span>
+                  <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                    {done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放'}
+                  </span>
+                </div>
+                {tab === 'a' ? (
+                  isOpen ? (
+                    <>
+                      <RaidJackHpBar left={left} max={t.hp} tone={done ? 'emerald' : 'orange'} />
+                      <div className="mt-0.5 text-[9px] text-slate-300">共有HP {left.toLocaleString()} / {t.hp.toLocaleString()}{totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : ''}</div>
+                    </>
+                  ) : <div className="text-[10px] text-slate-400">前の段階のジャックを倒すと姿をあらわします</div>
+                ) : (
+                  <div className="text-[10px] text-slate-300">ライフ {t.hp.toLocaleString()} / 技 {t.actionCount}本{isOpen ? '' : '(前の段階を倒すと開く)'}</div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+
+        <div data-raid-jack-rewards className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="font-black text-orange-200">{tier.name}の報酬</span>
+            <button type="button" data-raid-jack-reward-list-open onClick={() => setShowRewards(true)}
+              className="min-h-[32px] shrink-0 rounded-xl border border-orange-300/50 bg-orange-950/40 px-3 text-[10px] font-black text-orange-100 active:scale-95">報酬一覧</button>
+          </div>
+          <RaidJackTierRewards kind={tab} index={current} claimed={state.claimed} />
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 flex items-baseline justify-between text-[11px]">
+            <span className="font-black text-orange-200">{tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
+            {myTotalHere > 0 && <span data-raid-jack-mine className="text-[10px] text-slate-200">あなた {myTotalHere.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
+          </div>
+          {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
+          {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
+          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
+          {Array.isArray(rows) && rows.length > 0 && (
+            <ol data-raid-jack-ranking className="space-y-1.5">
+              {rows.slice(0, 100).map((r, i) => {
+                // 名前・アイコン・プロフィール枠は、通常バトルのランキングと同じ「いまの設定」をかぶせる
+                const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({ breederId: r.breederId, userName: raidJackNameOf(r.breederId) }) : { breederId: r.breederId, userName: raidJackNameOf(r.breederId) };
+                const mineRow = !!myId && r.breederId === myId;
+                return (
+                  <li key={`${r.breederId}-${i}`} data-raid-jack-ranking-row data-ranking-kind="raid-jack" aria-current={mineRow ? 'true' : undefined}
+                    className={`${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`}>
+                    {typeof renderPlace === 'function' ? renderPlace(i) : <span className="w-7 shrink-0 text-center text-[10px] font-black text-amber-200">{i + 1}</span>}
+                    {typeof renderIcon === 'function' && renderIcon(entry)}
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{entry.userName || '名無しのブリーダー'}{mineRow && <span className="ml-1 text-[8px] text-orange-200">(あなた)</span>}</span>
+                    <b className="shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200">{r.total.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">ダメージ</small></b>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+      </div>
+
+      <div className={SCREEN_FOOTER_CLASS}>
+        <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
+          onClick={() => onChallenge(tab, current)}
+          className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+          {challengeLabel}
+        </button>
+      </div>
+      {showRewards && <RaidJackRewardList claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
+    </div>
+  );
+};
+
+// 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
+const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart }) => {
+  const isB = kind === 'b';
+  const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
+  const tier = raidJackTierAt(kind, tierIndex);
+  const list = Array.isArray(candidates) ? candidates : [];
+  const keyOf = (mon) => String(mon.masuId || mon.id);
+  const [heroKey, setHeroKey] = useState(null);
+  const [allyKeys, setAllyKeys] = useState([]);
+  const [teachIds, setTeachIds] = useState(() => (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
+  const hero = list.find((m) => keyOf(m) === heroKey) || null;
+  const allies = allyKeys.map((k) => list.find((m) => keyOf(m) === k)).filter(Boolean);
+  const toggleAlly = (mon) => setAllyKeys((prev) => {
+    const k = keyOf(mon);
+    if (prev.includes(k)) return prev.filter((x) => x !== k);
+    return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
+  });
+  const toggleTeach = (id) => setTeachIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : (prev.length >= maxTeach ? (maxTeach === 1 ? [id] : prev) : [...prev, id])));
+  const tile = (mon, on, onClick, attrs) => (
+    <button type="button" key={keyOf(mon)} onClick={onClick} {...attrs}
+      className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
+      {(() => {
+        // 本番のプロフィールのアイコンと同じ見え方(拡大・位置の調整つき)にそろえる
+        const face = friendsFaceIconOf(mon.baseId || mon.id);
+        return face
+          ? <BreederIcon src={face.src} id={face.id} className="h-12 w-12 bg-slate-800" />
+          : <img src={mon.faceIconUrl || mon.iconUrl || mon.imgUrl} alt="" className="h-12 w-12 rounded-full bg-slate-800 object-contain" />;
+      })()}
+      <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
+    </button>
+  );
+  return (
+    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep>
+      <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={onBack}
+        note={`${isB ? 'マスモン' : 'ベースモン'}で編成・20ターン勝負`} />
+      <div className={`${SCREEN_LIST_CLASS} space-y-3`}>
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">勇者モン(1体)</div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {list.map((mon) => tile(mon, heroKey === keyOf(mon), () => { setHeroKey(keyOf(mon)); setAllyKeys((prev) => prev.filter((x) => x !== keyOf(mon))); }, { 'data-raid-hero': keyOf(mon) }))}
+          </div>
+          {list.length === 0 && <div className="py-2 text-center text-[10px] text-slate-400">編成できるモンスターがいません</div>}
+        </section>
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">供モン(最大{RAID_JACK_ALLY_MAX}体)<span className="ml-1 text-[9px] text-slate-300">{allies.length} / {RAID_JACK_ALLY_MAX}</span></div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {list.filter((m) => keyOf(m) !== heroKey).map((mon) => tile(mon, allyKeys.includes(keyOf(mon)), () => toggleAlly(mon), { 'data-raid-ally': keyOf(mon) }))}
+          </div>
+        </section>
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span></div>
+          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
+          <div className="mt-1 grid grid-cols-4 gap-1.5">
+            {(Array.isArray(teachings) ? teachings : []).map((t) => (
+              <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
+                className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
+                {/* 手札のカードと同じ見え方(きき のように全身の絵は、カード用の拡大・位置の補正で顔に寄せる) */}
+                {cardIconNode(t.icon, 40, t.id)}
+                <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{t.baseName}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+        <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300">
+          ライフ {tier.hp.toLocaleString()} / 技 {tier.actionCount}本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。
+        </div>
+      </div>
+      <div className={SCREEN_FOOTER_CLASS}>
+        <button type="button" data-raid-prep-start disabled={!hero}
+          onClick={() => onStart({ party: [hero, ...allies], teachingIds: teachIds })}
+          className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+          {hero ? 'この編成で挑戦する' : '勇者モンを選んでください'}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
@@ -36800,8 +38291,10 @@ function MonsterHeroGame() {
     const next = list.map((mon, index) => {
       if (!mon) return null;
       if (isSame(mon, index)) return before[index];
-      const fresh = createTacticsUnit(mon);
-      return isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      const fresh = createTacticsUnit(mon, { fullGuts: isRaidJackMode(mode) });
+      const joined = isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      // ジャック戦は、ライフもガッツも全快からはじめる(追いつき補正がガッツを半分へ戻すので、そのあとで満タンにする)
+      return isRaidJackMode(mode) && joined ? normalizeTacticsUnit({ ...joined, hp: joined.maxHp, guts: joined.maxGuts }) : joined;
     });
     // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
@@ -37194,6 +38687,7 @@ function MonsterHeroGame() {
   const [soulTraitReturnState, setSoulTraitReturnState] = useState('MASU_MONS');
   const [soulTraitError, setSoulTraitError] = useState('');
   const [soulTraitRespecOpen, setSoulTraitRespecOpen] = useState(false);
+  const [soulCrystalOpen, setSoulCrystalOpen] = useState(false);   // 魂格の結晶を使う確認(魂格特性の画面)
   const soulTraitProcessingRef = useRef(false);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
@@ -37946,8 +39440,33 @@ function MonsterHeroGame() {
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
+  // デバッグ戦で自分で選んだパーティー(編成の入れ物と同じ書き方: 'masu:<id>' か モンスターid)。空なら、いつもの編成のまま
+  const [debugPartyIds, setDebugPartyIds] = useState([]);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
+  // ---------- イベント・レイドボス「ジャック」の専用の1戦(docs/spec/RAID_BOSS_JACK.md) ----------
+  // 戦闘の最中だけ {kind,tierIndex,hitId,eventId,turns,finished} が入る。debugBattleRef も立てて始めるので、
+  // 自己ベスト・クリア回数・絆・ゴールド・クリア報酬・全国ランキングのどれにもつながらない。
+  // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
+  const raidJackRunRef = useRef(null);
+  const raidJackClaimingRef = useRef(false);    // 報酬の受け取りを同時に2つ走らせない
+  const raidJackLastClaimRef = useRef(0);       // HOMEへ戻るたびに問い合わせ直さない(5分あける。戦闘のあとは0に戻して今すぐ確かめる)
+  const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
+  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
+  const raidExDefOf = (monId) => {
+    const def = tacticsExDefOf(monId);
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES } : def;
+  };
+  const [raidJackResult, setRaidJackResult] = useState(null);
+  const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
+  // 画面のなかの案内(助手の吹き出し)は、レイド画面を開いた最初の1度だけ。保存キーは新しく足す(CLAUDE.md ⑦)
+  const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
+  const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
+  const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);    // デバッグ: 公開フラグ・期間を待たずに HOME へ出す(記録は別のイベントID)
+  const [raidJackDebugRealRules, setRaidJackDebugRealRules] = useState(false);   // デバッグ: 本番どおりの回数・解放で確認する(既定はオフ = 何度でも・全段階)
+  // 本番は RAID_JACK_EVENT.id。デバッグで強制表示しているあいだは、本番の集計を汚さない別のIDを使う
+  const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
 
   // ---------- ダンジョンRPG戦闘テスト(デバッグ専用) ----------
   // すべてメモリ上だけの状態。画面を抜けたり再読込すると消える(保存も送信もしない)。
@@ -39226,6 +40745,7 @@ function MonsterHeroGame() {
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
+    RAID_JACK: 'home', RAID_JACK_PREP: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
@@ -39275,7 +40795,7 @@ function MonsterHeroGame() {
     // デバッグ画面。プレイヤーの通常プレイには出ない
     'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG',
     'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG',
-    'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG',
+    'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG',
     'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT',
   ]);
   const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
@@ -39800,11 +41320,15 @@ function MonsterHeroGame() {
   // 6レーンの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   // (新しいキーは作らない)。みんなで対戦の公開フラグが立っているときだけ並べる
   const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
+  // レイドの遊び方(2026-10-04・ユーザー指示「最初のストーリーを終了後にレイドの遊び方説明をいれて」)。
+  // ハロウィン・ナイト第1部を見終えたら続けて1度だけ流す。公開フラグ(raidJack)が立つまでは流さない
+  const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
+  const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   // ハロウィン・ナイト(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり、週ごとに更新の5部構成」)。
   // 5部のidと出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。**時刻が来た部を、古いほうから1つずつ**HOMEで流す
   // (期間の内か外かは見ない。第5部は閉幕の時刻に出る)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -39922,11 +41446,19 @@ function MonsterHeroGame() {
       // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
+      // レイドの遊び方。第1部を見終えていて、まだ見ていなければ、ほかの部より先に続けて流す
+      // 順番は 第1部 → 第1.5部(ふくれあがる影) → 遊び方。遊び方は、第1.5部を見終えてから流す(2026-10-04・ユーザー指示)
+      const raidStartStoryReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_STORY_START_ID);
+      const raidHowtoReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_STORY_START_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
-        if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
+        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
+        else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
         else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
@@ -39938,6 +41470,8 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
+      else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
@@ -40246,6 +41780,15 @@ function MonsterHeroGame() {
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
+    // イベント・レイドボス「ジャック」: ジャック戦・レイド画面・段階えらび・編成は、ぱんぷきんの曲に固定する
+    if (RAID_JACK_BGM_STATES.includes(state) || (state === 'BATTLE' && raidJackRunRef.current)) return RAID_JACK_BGM_TRACK;
+    // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
+    // 開催中かは見るたびに数え直す(読み込み時に1回だけ決めない)
+    // ハロウィン・ナイト(10/4〜11/1)のあいだも同じ曲にする(2026-10-04・ユーザー指摘「ホーム音楽がぱんぷきんのはずなのにデフォルトでもならない」。
+    // 更新履歴には「イベント中はHOMEのBGMもこの曲」と書いていたのに、ジャックの開催中しか切り替えていなかった)
+    const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
+    const homeBgm = (((RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open') || raidJackDebugForce || halloweenNightOpen)
+      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
@@ -40255,7 +41798,8 @@ function MonsterHeroGame() {
     // ★鳴らさないと決めた画面はここで終わり。下まで落ちて null になるのと結果は同じだが、
     //   「決め忘れて無音」と「決めたうえで無音」をコードの上で見分けられるようにしておく
     if (BGM_SILENT_STATES.includes(state)) return null;
-    if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
+    if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
+    if (BGM_STATE_MAP[state] === 'home') return homeBgm;
     if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangementWithEventDefault(bgmArrangement, 'management');
     // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
@@ -40291,7 +41835,7 @@ function MonsterHeroGame() {
           : isQuickMode(runMode)
             ? { normal:'quickBattle', dullahan:'quickDullahan', moo:'quickMoo' }
             : { normal:'battle', dullahan:'dullahan', moo:'boss' };
-      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];
+      if (enemyId === 'Moo' || enemyId === 'Jack' || currentWave === 10) return bgmArrangement[modeBgm.moo];
       if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];
       return bgmArrangement[modeBgm.normal];
     }
@@ -41567,6 +43111,8 @@ function MonsterHeroGame() {
     // ★タクティクスバトルも専用の送信処理だけを通す。ここから下のどの分岐へも落とさない。
     //   落とすと、極限ぶんは極限チャレンジの mh_extreme_hs_* を、それ以外は
     //   チャレンジの mh_hs_<難易度> を上書きしてしまう(実際にそうなっていた)
+    // ジャック戦は通常のスコア送信・自己ベスト・ランキングのどれにも触らない(結果は finishRaidJack が raid_jack_hits へ別に送る)
+    if (isRaidJackMode(runMode)) return;
     if (isTacticsMode(runMode)) return submitTacticsScoreOnce();
     scoreSubmittedRef.current = true;
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
@@ -42403,8 +43949,12 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
+    // 時刻で流すハロウィン・ナイトは第1部だけ(第2部以降はジャックのストーリー・下の raidJackStory...)
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
+    ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
+    raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -42956,6 +44506,38 @@ function MonsterHeroGame() {
       return reset;
     } catch {
       setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      return null;
+    } finally { soulTraitProcessingRef.current = false; }
+  };
+
+  // 魂格の結晶を使い、その個体のボーナス魂格Pを増やす(2026-10-04)。
+  // 個体(mh_masu_mons)と所持品(mh_owned_items)を取引保存するので、結晶だけ減る・Pだけ増える状態を作らない。
+  const commitSoulCrystalUse = async (masuId, quantity) => {
+    if (soulTraitProcessingRef.current) return null;
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeItems = ownedItemsRef.current;
+    const masu = beforeMasuMons.find(m=>String(m.id)===String(masuId));
+    const used = buildSoulCrystalUse(masu, beforeItems, quantity);
+    if (!used.ok) { setSoulTraitError('魂格の結晶を所持していません。'); return null; }
+    const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(masuId)?used.nextMasu:m);
+    soulTraitProcessingRef.current = true;
+    setSoulTraitError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons },
+        { key:'mh_owned_items', before:beforeItems, next:used.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('soul crystal save failed');
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = used.ownedItems;
+      setMasuMons(nextMasuMons);
+      setOwnedItems(used.ownedItems);
+      setMasuMonDetail(prev=>prev&&String(prev.id)===String(masuId)?used.nextMasu:prev);
+      setSoulCrystalOpen(false);
+      Audio_.se.levelUp();
+      return used;
+    } catch {
+      setSoulTraitError('魂格の結晶を使えませんでした。結晶と魂格Pは変更していません。');
       return null;
     } finally { soulTraitProcessingRef.current = false; }
   };
@@ -44277,6 +45859,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (hp <= 0) {
       if (debugBattleRef.current) {
+        if (raidJackRunRef.current) { finishRaidJack('wipe'); return; }
         if (!debugResultRef.current) {
           debugResultRef.current = true;
           setResultProcessing(false);
@@ -45036,6 +46619,7 @@ function MonsterHeroGame() {
     debugMonsterPreviewRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
+    raidJackRunRef.current = null;
     speciesChallengeBattleRunRef.current = null;
     setSpeciesChallengeBattleRun(null);
     // 種族チャレンジのデバッグ状態は、HOMEへ戻る時点で必ず落とす。
@@ -45248,6 +46832,7 @@ function MonsterHeroGame() {
     // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
     stopAllAuto('retire');
     if (debugBattleRef.current) {
+      if (raidJackRunRef.current) { setShowQuitConfirm(false); setGaveUp(true); finishRaidJack('giveup'); return; }
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setShowQuitConfirm(false);
@@ -45364,7 +46949,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty),roarStacks:tacticsRoarStacksRef.current});
+    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
     //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
     const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
@@ -45686,7 +47271,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current,tacticsUnitsRef.current,live.now) : null; };
   // 使い方案内を出すか。EXを持つ子が盤面にいるバトルで、まだ見ていないときだけ
   const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen
-    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && tacticsExDefOf(mon.id));
+    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && raidExDefOf(mon.id));
   const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent,tacticsUnitsRef.current,dist), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
@@ -46099,6 +47684,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       return false;
     }
     enemyDefeatResolvedRef.current = true;
+    // ★ジャック戦はここで終わり。この先(WAVE報酬・ゴールド・絆・WAVE_RESULT)へは一切進まない
+    if (raidJackRunRef.current) { await finishRaidJack('defeated'); return true; }
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
     const defeatFxOn=battleFxEffectiveRef.current.defeatFx!=='OFF';
@@ -46440,7 +48027,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           } else {
             addPopup(`反射 ${reflectDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
             const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectDmg);
-            setCurrentWaveDamage(p=>p+reflectDmg);
+            setCurrentWaveDamage(p=>p+reflectDmg); raidJackDamageRef.current+=Number(reflectDmg)||0;
             setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
             // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
             if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectDmg})) return;
@@ -46631,7 +48218,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(reflectBack>0){
               addPopup(`反射 ${reflectBack}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
               const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectBack);
-              setCurrentWaveDamage(p=>p+reflectBack);
+              setCurrentWaveDamage(p=>p+reflectBack); raidJackDamageRef.current+=Number(reflectBack)||0;
               setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
               if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;
             }
@@ -46765,7 +48352,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
-    const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
+    const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
+    // ★ジャック戦は RAID_JACK_TURNS(20)ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスも20ターン
+    if(raidJackRunRef.current){
+      raidJackRunRef.current.turns=Math.min(nextTurn,RAID_JACK_TURNS);
+      if(nextTurn>RAID_JACK_TURNS){ finishRaidJack('turns'); return; }
+      // Aは 3 / 5 / 8 ターン目に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
+      // レイドバトル専用: ターンが進むたびに味方全員が強くなり、自動回復の割合も上がる
+      if(raidJackRunRef.current.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount) raidJackTurnGrowth(nextTurn);
+      if(raidJackRunRef.current.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn)&&nextTurn!==turnCount) raidJackLevelUp(nextTurn);
+    } else if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }
+    setIsBusy(false);
   };
 
   const useEmergency = async () => {
@@ -46821,7 +48418,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExInfo = (slotIdx) => {
     if(!tacticsExEnabled||!Number.isInteger(slotIdx)) return null;
     const mon=slots[slotIdx]; if(!mon) return null;
-    const def=tacticsExDefOf(mon.id); if(!def) return null;
+    const def=raidExDefOf(mon.id); if(!def) return null;
     const state=tacticsExState;
     const remaining=tacticsExRemaining(def,tacticsExUsesOf(state,slotIdx,mon.id));
     const lifeUnit=normalizeTacticsUnit(tacticsUnits[slotIdx]);
@@ -46943,7 +48540,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
     const mon=slots[slotIdx]; if(!mon) return false;
-    const def=tacticsExDefOf(mon.id); if(!def) return false;
+    const def=raidExDefOf(mon.id); if(!def) return false;
     const state=tacticsExStateRef.current;
     // ★判定は ref の最新値でもう一度通す。連打で同じターンに2回使えないように
     const lifeNow=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
@@ -47552,7 +49149,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           hitIdx++;
         }
-        setCurrentWaveDamage(p=>p+totalDmg);
+        setCurrentWaveDamage(p=>p+totalDmg); raidJackDamageRef.current+=Number(totalDmg)||0;
         const turnDistDmg=[0,0,0,0];
         for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
         setWaveDistDamage(prev=>{const n=[...prev]; for(let k=0;k<4;k++) n[k]=(n[k]||0)+turnDistDmg[k]; return n;});
@@ -48258,14 +49855,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);
     // 新モードは「連れてきた供モンの総合力」に応じて敵も強くなる(設計 §6)。
     // ★人数ごとの固定倍率にしないこと。弱い編成ほど苦しくなる
-    const tacticsEnemyBoost=isTacticsMode(runMode)
+    // ★ジャック戦は編成の総合力で敵を強くしない(段階の倍率だけで決める。公平さのため)
+    const raidRun=isRaidJackMode(runMode)?raidJackRunRef.current:null;
+    const tacticsEnemyBoost=isTacticsMode(runMode)&&!raidRun
       ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start,tacticsPowerRef.current.now) : 1;
     // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。モードを渡して選ばせる
-    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
+    // ジャック戦は、段階のライフ・攻撃力(35-raid-jack.jsx)をそのまま使う
+    const newEnemy=raidRun
+      ? raidJackMakeEnemy(raidRun.kind,raidRun.tierIndex,runMode)
+      : createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
+    // レイドバトルは、いまの共有ライフの残りからはじめる(みんなが削った分を引き継ぐ。maxHp はそのままなのでバーの割合に出る)
+    if (raidRun&&newEnemy&&Number.isFinite(raidRun.startLife)&&raidRun.startLife>0&&raidRun.startLife<newEnemy.maxHp) newEnemy.hp=Math.floor(raidRun.startLife);
     if (!newEnemy) return null;
     // 敵の基礎ライフ・攻撃力への上乗せ(HELHEIMのライフ10倍・デュラハンの専用倍率)。
     // 難易度名ではなく「上乗せを持っているか」で見るので、持たない難易度では何も変わらない
-    const enemyAdjust=extremeEnemyStatAdjust(specialRuleDifficulty,newEnemy.id);
+    const enemyAdjust=raidRun?{lifeRate:1,atkRate:1}:extremeEnemyStatAdjust(specialRuleDifficulty,newEnemy.id);
     if (enemyAdjust.lifeRate!==1||enemyAdjust.atkRate!==1) {
       newEnemy.maxHp=Math.floor(newEnemy.maxHp*enemyAdjust.lifeRate);
       newEnemy.hp=newEnemy.maxHp;
@@ -48320,13 +49924,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     tacticsRoarStacksRef.current=0;
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty),roarStacks:tacticsRoarStacksRef.current});
+    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
-    pushBattleLog(`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
+    pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
@@ -48656,7 +50260,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const startDebugBattle = (extreme=false) => {
     stopAllAuto();
     const option = getDebugEnemyOptions(debugBattleModeId).find(item => item.key === debugEnemyKey);
-    const savedParty = getActiveMonsterList();
+    // 自分で選んでいればそのパーティー(選んだ順。先頭が勇者モン)、選んでいなければいつもの編成
+    const pickedParty = debugPartyIds.map(resolveRosterEntryToMon).filter(Boolean);
+    const savedParty = pickedParty.length > 0 ? pickedParty : getActiveMonsterList();
     const party = (debugStrongestHero
       ? [makeDebugStrongestMonster(),...savedParty.filter(mon=>mon?.id!=='Mocchi')]
       : savedParty).slice(0, 4);
@@ -48693,6 +50299,253 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero, debugAptPct);
   };
 
+  // ---- イベント・レイドボス「ジャック」の専用の1戦 ----
+  // 呼び出し側は setRunMode(mode) と setRaidJackStartRequest({mode,kind,tierIndex,party,teachingIds,eventId}) を同時に行う。
+  // runMode は state で、開始の処理(applySlots・spawnEnemy)がそれを読むので、反映された次の描画で開始する(下の useEffect)。
+  // 編成: 勇者1体+供モン(最大4体)。A=ベースモン / B=マスモン。アシカ: Aは1枚(Lv0から)、Bは3枚まで(最大Lvから)。
+  const startRaidJackBattle = (req) => {
+    stopAllAuto();
+    const party=(Array.isArray(req.party)?req.party:[]).filter(Boolean).slice(0,1+RAID_JACK_ALLY_MAX);
+    if(party.length===0) return false;
+    const isB=req.kind==='b';
+    const hero=party[0];
+    const raidSlots=[party[0]||null,party[1]||null,party[2]||null,party[3]||null];
+    const allies=raidSlots.slice(1).filter(Boolean);
+    const total=(key,base)=>allies.reduce((value,mon)=>value+(mon.plusStats?.[key]||0),base);
+    const raidDef=total('def',hero.baseDef);
+    // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
+    const uniques=raidSlots.filter(Boolean).map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));
+    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,RAID_JACK_TEACHING_MAX);
+    const teachings=cards.map(card=>isB
+      ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
+      :{...card,evoLevel:0,uid:Math.random()});
+    raidJackRunRef.current={kind:isB?'b':'a',tierIndex:Math.min(Math.max(Math.floor(Number(req.tierIndex)||0),0),4),hitId:raidJackMakeHitId(),eventId:raidJackSafeEventId(req.eventId),turns:1,finished:false,startLife:(!isB&&Number.isFinite(req.startLife)&&req.startLife>0)?Math.floor(req.startLife):null};
+    raidJackDamageRef.current=0;
+    setRaidJackResult(null);
+    speciesChallengeBattleRunRef.current=null; battleScenarioRef.current=null;
+    debugBattleRef.current=true; extremeRunRef.current=false; debugResultRef.current=false;
+    setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
+    resetTacticsJoinCatchUp();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
+    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
+    setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
+    clearSlotUniqueSelection();
+    setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
+    setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
+    const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
+    const raidApt=raidSlots.filter(Boolean).reduce((sum,mon)=>sum.map((v,i)=>v+getMonsterAptPct(mon,raidRuleDifficulty,1)[i]),[0,0,0,0]);
+    setDistAptPct(raidApt);
+    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,raidApt);
+    return true;
+  };
+  // 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める
+  useEffect(()=>{
+    const req=raidJackStartRequest;
+    if(!req||runMode!==req.mode) return;
+    setRaidJackStartRequest(null);
+    startRaidJackBattle(req);
+  },[raidJackStartRequest,runMode]);
+  // 3 / 5 / 8 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)と、選んだアシカ(上限Lv2)を1段階ずつ上げる。
+  // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
+  // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
+  // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
+  const raidJackTurnGrowth = (turn) => {
+    const before = tacticsUnitsRef.current || [];
+    const grown = before.map((unit) => {
+      const t = unit ? normalizeTacticsUnit(unit) : null;
+      if (!t) return unit;
+      const grow = (value) => Math.max(0, Math.floor(Math.max(0, Number(value) || 0) * RAID_JACK_TURN_GROWTH));
+      return { ...t, baseMaxHp: Math.max(1, grow(t.baseMaxHp)), baseMaxGuts: grow(t.baseMaxGuts), atk: grow(t.atk), def: grow(t.def) };
+    });
+    const scaled = scaleTacticsUnits(grown, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+    const next = scaled.map((unit, index) => {
+      const old = before[index] ? normalizeTacticsUnit(before[index]) : null;
+      if (!unit || !old) return unit;
+      const addHp = Math.max(0, unit.maxHp - old.maxHp), addGuts = Math.max(0, unit.maxGuts - old.maxGuts);
+      return normalizeTacticsUnit({ ...unit, hp: old.downed ? old.hp : Math.min(unit.maxHp, old.hp + addHp), guts: Math.min(unit.maxGuts, old.guts + addGuts) });
+    });
+    if (raidJackRunRef.current) raidJackRunRef.current.growths = (raidJackRunRef.current.growths || 0) + 1;
+    commitTacticsUnits(next);
+    writePermaBuffs(p => ({ ...p, autoHpRecovery: (p.autoHpRecovery ?? 0.1) + RAID_JACK_TURN_REGEN_STEP }));
+    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 1000) / 10;
+    const gutsRate = Math.round((lifeRate - 5) * 10) / 10;
+    pushBattleLog(`${turn}ターン目: 味方の全ステータスが5%上がった！自動回復はライフ${lifeRate}%・ガッツ${gutsRate}%`, 'up');
+    addPopup('全ステータス UP!', 'ally', 'text-emerald-300 font-black text-2xl drop-shadow-[0_0_14px_rgba(52,211,153,0.9)]');
+  };
+  const raidJackLevelUp = (turn) => {
+    if(raidJackRunRef.current) raidJackRunRef.current.levelUps=(raidJackRunRef.current.levelUps||0)+1;
+    const bumpCard=(c)=>{
+      if(c.type==='unique'){
+        const lvl=Math.min(MAX_UNIQUE_SKILL_LEVEL,(c.evoLevel||0)+1);
+        return {...c,evoLevel:lvl,crit:0.10+0.05*Math.min(lvl,8),...(Array.isArray(c.names)?{name:c.names[Math.min(lvl,c.names.length-1)]}:{})};
+      }
+      if(TEACHING_CARDS.some(t=>t.id===c.id)&&Number.isFinite(c.baseValue)&&Number.isFinite(c.step)){
+        const cur=Math.min(2,c.evoLevel||0);
+        if(cur>=2) return c;
+        return {...c,evoLevel:cur+1,baseValue:c.baseValue+c.step,name:BREEDER_EVO_NAMES[c.id]?.[cur+1]||c.name};
+      }
+      return c;
+    };
+    setOwnedUniques(prev=>prev.map(u=>({...u,evoLevel:Math.min(MAX_UNIQUE_SKILL_LEVEL,(u.evoLevel||0)+1)})));
+    setOwnedTeachings(prev=>prev.map(t=>(t.evoLevel||0)>=2?t:{...t,evoLevel:(t.evoLevel||0)+1,baseValue:t.baseValue+t.step}));
+    setHand(prev=>prev.map(bumpCard)); setDeck(prev=>prev.map(bumpCard)); setGraveyard(prev=>prev.map(bumpCard));
+    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`,'up');
+    addPopup('LEVEL UP!','ally','text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
+    Audio_.se.card();
+  };
+  // 終わり方(撃破 'defeated' / ターン使い切り 'turns' / 全滅 'wipe' / リタイア 'giveup')は、どれもここ1か所に集める。
+  // 結果は raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。一度しか動かない(finished)。
+  // 送れなかった与ダメージは再送待ちに残る(同じ hit_id なので二重に数えられない)
+  const finishRaidJack = async (reason) => {
+    const run=raidJackRunRef.current;
+    if(!run||run.finished) return;
+    run.finished=true;
+    stopAllAuto(reason==='giveup'?'retire':'');
+    debugResultRef.current=true;
+    setIsBusy(true);
+    setResultProcessing(false);
+    const damage=Math.max(0,Math.min(100000000,Math.floor(raidJackDamageRef.current)));
+    const defeated=reason==='defeated';
+    const tier=raidJackTierAt(run.kind,run.tierIndex);
+    const hit={hitId:run.hitId,kind:run.kind,tier:run.tierIndex+1,damage,defeated};
+    let outcome='error';
+    let next=raidJackDefaultState();
+    let opened=false;
+    try {
+      next=await raidJackLoadState();
+      const side=next[run.kind];
+      const before=raidJackUnlockedCount(run.kind,side.defeated);
+      if(defeated&&!side.defeated.includes(tier.id)) side.defeated=[...side.defeated,tier.id];
+      if(run.kind==='b') side.total=(side.total||0)+damage;
+      opened=raidJackUnlockedCount(run.kind,side.defeated)>before;
+      const breederId=await ensureBreederId();
+      const sent=await raidJackSubmitHit(next,hit,breederId,run.eventId);
+      next=sent.state; outcome=sent.outcome;
+      await raidJackSaveState(next);
+    } catch (error) { outcome='error'; }
+    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
+      lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
+  };
+  // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
+  const exitRaidJack = (toDebug=false) => {
+    raidJackRunRef.current=null; raidJackDamageRef.current=0;
+    raidJackLastClaimRef.current=0;   // 倒した直後の報酬を、HOMEへ戻ったらすぐ確かめる
+    setRaidJackResult(null);
+    returnToHome();
+    setRunMode(BATTLE_MODE_CHALLENGE);
+    if(toDebug) setGameState('RAID_JACK_DEBUG');
+  };
+  // ジャックの報酬を受け取れるぶんだけギフトで届ける(設計書「報酬の表」)。
+  // ★先に「ギフト」と「受け取り済みの印(mh_raid_jack_v1 の claimed)」を取引保存する。同じIDのギフトは
+  //   grantGiftOnce が二重に作らないので、途中で止まっても二重には届かない(CLAUDE.md ⑦)。
+  // ★公開フラグが偽・デバッグの強制表示(別のイベントID)のあいだは何もしない。戻り値は届けた件数
+  const claimRaidJackRewards = async () => {
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return 0;
+    if (raidJackClaimingRef.current) return 0;
+    raidJackClaimingRef.current = true;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return 0;
+      const state = await raidJackLoadState();
+      const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
+      if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      let nextGifts = beforeGifts;
+      let granted = 0;
+      found.due.forEach((entry) => {
+        const gift = { id:`${RAID_JACK_EVENT.id}_${entry.id}`, title:entry.title, source:'raidJack', rewards:raidJackRewardGiftItems(entry.reward) };
+        const result = grantGiftOnce(nextGifts, gift);
+        if (result.granted) { nextGifts = result.gifts; granted += 1; }
+      });
+      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.noneIds] });
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_gifts', before:beforeGifts, next:nextGifts },
+        { key:RAID_JACK_STORAGE_KEY, before:state, next:nextState },
+      ], storeGet, storeSet);
+      if (!saved) { console.error('[raid-jack-reward] save failed'); return 0; }
+      if (granted > 0) setGifts(nextGifts);
+      return granted;
+    } catch (error) { return 0; }
+    finally { raidJackClaimingRef.current = false; }
+  };
+  // HOMEにいるとき、報酬を受け取れるか確かめる(期間が終わると入口が消えるので、終了後の順位報酬もここで届く)
+  useEffect(() => {
+    if (gameState !== 'HOME') return;
+    if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return;
+    const now = Date.now();
+    if (raidJackWindowAt(now) === 'before') return;
+    if (now - raidJackLastClaimRef.current < 300000) return;
+    raidJackLastClaimRef.current = now;
+    void claimRaidJackRewards();
+  }, [gameState]);
+  // ---- レイド画面・編成・追加購入(docs/spec/RAID_BOSS_JACK.md) ----
+  const openRaidJack = async () => {
+    setRhythmEventPoints(await loadRhythmEventPoints());
+    try { setRaidJackGuideSeen((await storeGet(RAID_JACK_GUIDE_KEY, false, false)) === true); } catch (e) { setRaidJackGuideSeen(true); }
+    setGameState('RAID_JACK');
+  };
+  // 追加の挑戦を1回ぶん買う。ビートP(1回100P)を払って mh_raid_jack_v1 の extra を増やす。
+  // 払ったあとに記録が保存できなければ、ビートPを戻す(払っただけで回数が増えない事故を作らない)。
+  // デバッグの強制表示中は、実際のビートPを減らさない
+  // 案内を閉じる。デバッグの強制表示のあいだは「見た」にしない(本番で出る案内を消さない)
+  const dismissRaidJackGuide = () => { setRaidJackGuideSeen(true); if (!raidJackDebugForce) storeSet(RAID_JACK_GUIDE_KEY, true, false); };
+  const purchaseRaidJackExtra = async (kind) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    try {
+      const key = kind === 'b' ? 'b' : 'a';
+      const before = await loadRhythmEventPoints();
+      const free = raidJackDebugForce;
+      if (!free && before < RAID_JACK_EXTRA_COST_BEAT_P) return { ok:false, reason:'short' };
+      const state = await raidJackLoadState();
+      const today = raidJackDayKey(Date.now());
+      const side = state[key];
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      side.extra += 1;
+      const nextPoints = free ? before : before - RAID_JACK_EXTRA_COST_BEAT_P;
+      if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, nextPoints, false);
+      const saved = await raidJackSaveState(state);
+      if (!saved) { if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, before, false); return { ok:false, reason:'error' }; }
+      setRhythmEventPoints(nextPoints);
+      return { ok:true, points:nextPoints };
+    } catch (error) {
+      return { ok:false, reason:'error' };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
+  const startRaidJackFromPrep = async ({ party, teachingIds }) => {
+    const prep = raidJackPrep;
+    if (!prep || !Array.isArray(party) || party.length === 0) return;
+    const key = prep.kind === 'b' ? 'b' : 'a';
+    const nowMs = Date.now();
+    // デバッグの強制表示中は回数を数えない(何度でも挑める・端末の記録 mh_raid_jack_v1 も変えない)
+    if (!raidJackDebugForce || raidJackDebugRealRules) {
+      const state = await raidJackLoadState();
+      const side = state[key];
+      const today = raidJackDayKey(nowMs);
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      if (raidJackRemaining(side, nowMs) <= 0) { setGameState('RAID_JACK'); return; }
+      side.used += 1;
+      if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    }
+    const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+    // レイドバトル: いまの共有ライフの残りを取って、そこからはじめる(取れない・すでに0なら満タンから)
+    let startLife = null;
+    if (key === 'a') {
+      try {
+        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+        const tierDef = raidJackTierAt('a', prep.tierIndex);
+        const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
+        if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+      } catch (e) { startLife = null; }
+    }
+    setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId, startLife });
+  };
+
   const setupMon = (m, slotIdx) => {
     if (!m) return;
     const isHero=!mainHero;
@@ -48713,7 +50566,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ★タクティクスは、勇者モンを置いた瞬間に初期スタイル(ソード・コンバージョンなど)を盤面の記録へ書く。
       //   選び直して置き直したときに前の枠の記録が残らないよう、記録ごと作り直す(バトルの前なので消えるものは無い)
       if (isTacticsMode(runMode)) {
-        const heroExDef=tacticsExDefOf(m.id);
+        const heroExDef=raidExDefOf(m.id);
         commitTacticsExState(heroExDef&&heroExDef.heroInitialStyle&&tacticsHeroStyle
           ? setTacticsExInitialStyle(createTacticsExState(),{ def:heroExDef, slot:slotIdx, monId:m.id, style:tacticsHeroStyle })
           : createTacticsExState());
@@ -49437,7 +51290,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}<div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
       {renderSkillSection(mon)}
       {(()=>{
-        const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
+        const exDef=typeof tacticsExDefOf==='function'?raidExDefOf(mon.id):null;
         if(!exDef)return null;
         const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
@@ -49952,7 +51805,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
-    ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
+    ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="shrink-0 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:opacity-40">デフォルト</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 下の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div><button data-mhsave-action="export" className="mh-dialog-choice" onClick={saveBackupFile}>バックアップファイルを保存（.mhsave）</button>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 下の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><button data-mhsave-action="import" className="mh-dialog-choice" onClick={restoreFromBackupFile}>バックアップファイルから復元（.mhsave）</button><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
   ) : null;
@@ -50287,6 +52140,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
             profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
+            raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
+            raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
           />
         )}
 
@@ -51902,6 +53757,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
+          rankingSupport={{
+            // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
+            // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
+            open:(song)=>{loadRhythmRanking(song);},
+            render:(onClose)=>(
+              <RhythmRankingScreen
+                loadRhythmEventRanking={loadRhythmEventRanking}
+                loadRhythmRanking={loadRhythmRanking}
+                loadRhythmTotalRanking={loadRhythmTotalRanking}
+                onBackToSongSelect={onClose}
+                onGoToSongSelect={onClose}
+                rankingBreederIcon={rankingBreederIcon}
+                rhythmEventDivision={rhythmEventDivision}
+                rhythmEventRanking={rhythmEventRanking}
+                rhythmRanking={rhythmRanking}
+                rhythmRankingPending={rhythmRankingPending}
+                onResendRhythmRankingPending={resendRhythmRankingPendingNow}
+                rhythmRankingDetail={rhythmRankingDetail}
+                rhythmRankingTab={rhythmRankingTab}
+                rhythmTotalRanking={rhythmTotalRanking}
+                setRhythmEventDivision={setRhythmEventDivision}
+                setRhythmRankingDetail={setRhythmRankingDetail}
+                setRhythmRankingTab={setRhythmRankingTab}
+              />
+            ),
+          }}
           modeSelect={gameState==='RHYTHM_MODE_SELECT'?{
             multi:RELEASE_FLAGS.rhythmMulti===true,
             onExit:exitRhythmSongSelect, backgroundRun:rhythmBackgroundRun, exiting:rhythmExitingRun,
@@ -52128,8 +54009,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section data-debug-battle-difficulties><div className="text-[10px] text-slate-500 font-black mb-2">2. 難易度</div><div className="grid grid-cols-3 gap-2">{debugBattleDifficultyIds(debugBattleModeId).map(key=>{const setting=debugBattleDifficultySetting(key);const selected=debugBattleDifficultyId===key;return <button key={key} type="button" data-debug-battle-difficulty={key} aria-pressed={selected} onClick={()=>selectDebugBattle(debugBattleModeId,key)} className={`min-h-[48px] rounded-xl text-[9px] font-black ${selected?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle({bg:'#475569',text:'#cbd5e1',...setting},selected)}>{setting.label||key}</button>;})}</div></section>
               <section data-debug-battle-enemies><div className="text-[10px] text-slate-500 font-black mb-2">3. 敵<small className="ml-1 font-bold text-slate-600">（その敵が出てくるWAVEとして戦う）</small></div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(debugBattleModeId).map(({key,wave:debugWave,enemy:debugEnemy})=><button key={key} type="button" data-debug-battle-enemy={key} aria-pressed={debugEnemyKey===key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black text-left ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><small className="block text-[8px] opacity-70">WAVE {debugWave}</small>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">4. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
+              <section data-debug-party>
+                <div className="text-[10px] text-slate-500 font-black mb-2">5. パーティー<small className="ml-1 font-bold text-slate-600">（選んだ順。1番目が勇者モン・4体まで）</small></div>
+                {(()=>{
+                  const pool=[...masuMons.map(m=>({entry:`masu:${m.id}`,mon:resolveRosterEntryToMon(`masu:${m.id}`),sub:`絆Lv.${masuBondLevelInfo(m).level}`})),
+                    ...Object.keys(ALL_PLAYER_MONSTERS).map(id=>({entry:id,mon:ALL_PLAYER_MONSTERS[id],sub:'図鑑'}))].filter(x=>x.mon);
+                  const toggle=entry=>setDebugPartyIds(cur=>cur.includes(entry)?cur.filter(x=>x!==entry):cur.length>=4?cur:[...cur,entry]);
+                  return <>
+                    <div className="mb-2 flex items-center gap-2">
+                      <small data-debug-party-count className="flex-1 text-[10px] font-black text-slate-300">{debugPartyIds.length>0?`${debugPartyIds.length}体を選択中`:'選んでいません（いつもの編成で戦います）'}</small>
+                      <button type="button" data-debug-party-clear disabled={debugPartyIds.length===0} onClick={()=>setDebugPartyIds([])} className="min-h-[36px] rounded-xl border border-white/15 bg-slate-900 px-3 text-[10px] font-black text-slate-300 disabled:opacity-30">選びなおす</button>
+                    </div>
+                    <div className="grid max-h-[22rem] grid-cols-2 gap-2 overflow-y-auto mh-scroll">
+                      {pool.map(({entry,mon,sub})=>{const order=debugPartyIds.indexOf(entry);const on=order>=0;return (
+                        <button key={entry} type="button" data-debug-party-option={entry} aria-pressed={on} onClick={()=>toggle(entry)} className={`relative min-h-[52px] rounded-2xl border-2 px-3 py-1.5 text-left font-black ${on?'border-fuchsia-300 bg-fuchsia-900 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}>
+                          <span className="block truncate text-[11px]">{mon.name}</span><small className="block text-[8px] opacity-70">{sub}</small>
+                          {on&&<span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-300 text-[10px] font-black text-fuchsia-950">{order+1}</span>}
+                        </button>);})}
+                    </div>
+                  </>;
+                })()}
+              </section>
               {/* ★開始の関数をそのまま onClick へ渡すと、押したときのイベントが「極限か」の引数へ入ってしまう */}
-              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">5. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
+              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">6. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
             </div>
           </main>
         )}
@@ -52169,6 +54071,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
                       **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
+                  {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
+                  <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -52260,6 +54164,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
+        {gameState==='RAID_JACK'&&(<RaidJackScreen
+          onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
+          onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
+          onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidJackRewards} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
+          guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}
+          renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
+        {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
+          kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
+          candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
+          teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
+          onBack={()=>setGameState('RAID_JACK')} onStart={startRaidJackFromPrep}/>)}
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex)=>{
+          // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
+          const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
+          const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
+          if(!list.length) return false;
+          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,RAID_JACK_TEACHING_MAX);
+          setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
+          setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,1+RAID_JACK_ALLY_MAX),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID});
+          return true;
+        }}/>)}
         {gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{
           // 種族は主血統。ここも本番と同じ一覧を使う
           const speciesEntries=speciesChallengeLineages();
@@ -53168,12 +55093,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 魂格特性STEP3: 小さなモーダルへ詰めず独立全画面。戦闘への反映はSTEP4で接続する。 */}
         {gameState==='MASU_SOUL_TRAITS'&&(
           <MasuSoulTraitsScreen
+            commitSoulCrystalUse={commitSoulCrystalUse}
             commitSoulTraitRespec={commitSoulTraitRespec}
             commitSoulTraitUpgrade={commitSoulTraitUpgrade}
+            soulCrystalOpen={soulCrystalOpen}
+            setSoulCrystalOpen={setSoulCrystalOpen}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}
             monsterRosterIds={monsterRosterIds}
-            onClose={()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState(soulTraitReturnState||'MASU_MONS');}}
+            onClose={()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setSoulCrystalOpen(false);setGameState(soulTraitReturnState||'MASU_MONS');}}
             ownedItems={ownedItems}
             setSoulTraitDraftLevels={setSoulTraitDraftLevels}
             setSoulTraitError={setSoulTraitError}
@@ -54100,7 +56028,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           heroStyleDef={(()=>{
             // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
             if(mainHero||!currentPickingMon||!tacticsExEnabled) return null;
-            const d=tacticsExDefOf(currentPickingMon.id);
+            const d=raidExDefOf(currentPickingMon.id);
             return d&&d.heroInitialStyle?d:null;
           })()}
           heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
@@ -54238,7 +56166,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const speaker=assistantById(line.who);
         const last=step===script.length-1;
         const calls=(event&&event.calls)||{};
-        const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
+        const cast=storyCastOf(script);
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
@@ -54248,6 +56176,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id==='tactics_intro') markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
           if(event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)&&!eventReplay.debug) void markRhythmEventStorySeen(event.id);
+          // 順番は 第1部 → 第1.5部(ふくれあがる影) → レイドの遊び方。本編で見終えたら、次を続けて流す
+          // (公開前・見たあと・回想からのときは流さない)
+          if(event&&event.id===RAID_JACK_HOWTO_AFTER_STORY_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
+            &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_STORY_START_ID);
+          if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
+            &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
@@ -54281,13 +56215,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 return(
                   <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
                     <AssistantFace who={who} size={talking?84:64} accent={who.accent} expression={talking?line.e:'normal'}/>
-                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{who.name}</span>
+                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
                   </div>
                 );
               })}
             </div>
             <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
-              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
+              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{line.name||speaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
@@ -55155,7 +57089,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </div>
         </div>
       )}
-      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
+      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
   下のブロックはパーティ合計(ガードの段階などを決める値)なので、そのまま残す */}
 {isTacticsMode(runMode)&&(<div data-tactics-status className="space-y-1.5 text-left">
@@ -55230,8 +57164,28 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {/* ★設定パネルと同じ理由で body の直下へ出す(2026-09-22)。
              画面の揺れ(transform)の中に置くと、揺れているあいだ position:fixed の基準が
              viewport ではなく揺れる箱になり、safe-area ぶん位置がずれる */}
-      {showQuitConfirm&&ReactDOM.createPortal((<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">{debugBattle?'このデバッグ戦を終了します':<>現在のスコア {score.toLocaleString()} pt がランキングに記録されます</>}</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>), document.body)}
+      {showQuitConfirm&&ReactDOM.createPortal((<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">{raidJackRunRef.current?'リタイアします。ここまでに与えたダメージは記録されます(回数は戻りません)':debugBattle?'このデバッグ戦を終了します':<>現在のスコア {score.toLocaleString()} pt がランキングに記録されます</>}</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>), document.body)}
 
+      {raidJackResult&&(()=>{
+        const r=raidJackResult;
+        const reasonLabel={defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
+        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(あとで自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした(あとで自動で送り直します)'}[r.outcome]||'';
+        return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
+          <div className="text-[10px] font-black text-orange-300 tracking-[.35em] mb-2">{r.kind==='b'?'マスモン':'ベースモン'}</div>
+          <h2 className="text-2xl font-black text-orange-100 mb-1">{r.tierName}</h2>
+          <div className="text-sm font-black text-amber-200 mb-4">{reasonLabel}</div>
+          <div className="w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3">
+            <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
+            <div data-raid-jack-damage className="text-3xl font-black text-white text-right">{r.damage.toLocaleString()}</div>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
+          </div>
+          {r.opened&&<div className="mb-2 text-sm font-black text-emerald-300">次の段階が開きました！</div>}
+          <div className="mb-4 text-[10px] text-slate-300">{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
+          <div className="w-full max-w-xs space-y-3">
+            <button onClick={()=>exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>
+          </div>
+        </div>);
+      })()}
       {debugBattle&&debugOutcome&&(
         <div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(2,6,23,.98)'}}>
           <div className="text-[10px] font-black text-fuchsia-300 tracking-[.35em] mb-3">DEBUG</div>
@@ -55307,7 +57261,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         const inPlan=!!enemy&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId==='ally'?'ally':phaseId);
         const atRunStart=!enemy&&(phaseId==='hero'||phaseId==='slot'||phaseId==='teaching');
         return <PhaseBanner phase={phaseId} enabled={battleFxEffective.phaseBanner!=='OFF'&&(inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy))}/>;})()}
-      <WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name}/>
+      <WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={isRaidJackMode(runMode)?battleModeInfo(runMode).short:''}/>
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
@@ -58347,6 +60301,69 @@ const createAnimationStyle = () => {
     [data-enemy-motion="nyarlathotep"] { --em-c: 250,204,21; }
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
+    [data-enemy-motion="jack"] { --em-c: 251,146,60; }
+    /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
+    [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+    [data-jack-aura="1"] { --ja-c: 251,146,60; --ja-d: 253,186,116; --hs: .6; }
+    [data-jack-aura="2"] { --ja-c: 251,191,36; --ja-d: 249,115,22; --hs: .8; }
+    [data-jack-aura="3"] { --ja-c: 192,132,252; --ja-d: 251,146,60; --hs: 1; }
+    [data-jack-aura="4"] { --ja-c: 248,113,113; --ja-d: 251,191,36; --hs: 1.25; }
+    [data-jack-aura="5"] { --ja-c: 250,204,21; --ja-d: 244,114,182; --hs: 1.55; }
+    [data-jack-aura-el] > i[data-ja="base"] { inset: -6% -10% -4%; opacity: .8; background: radial-gradient(closest-side, rgba(var(--ja-c),.28) 30%, rgba(var(--ja-c),.75) 70%, rgba(var(--ja-c),0) 100%); animation: jackAuraPulse 3.2s ease-in-out infinite; }
+    [data-jack-aura="2"] [data-ja="base"] { opacity: .9; animation-duration: 2.6s; inset: -10% -14% -6%; }
+    [data-jack-aura="3"] [data-ja="base"] { opacity: 1; animation-duration: 2.2s; inset: -14% -18% -8%; }
+    [data-jack-aura="4"] [data-ja="base"] { opacity: 1; animation-duration: 1.7s; inset: -18% -24% -10%; }
+    [data-jack-aura="5"] [data-ja="base"] { opacity: 1; animation-duration: 1.2s; inset: -24% -30% -14%; }
+    [data-jack-aura="5"] [data-ja="ring"] { inset: -10%; }
+    [data-jack-aura="3"] [data-ja="ring"] { inset: -4%; }
+    [data-jack-aura="4"] [data-ja="ring"] { inset: -7%; }
+    [data-jack-aura="1"] [data-ja="ring"], [data-jack-aura="2"] [data-ja="ring"] { display: none; }
+    [data-jack-aura-el] > i[data-ja="ring2"] { display: none; inset: -14%; opacity: .8; background: conic-gradient(from 90deg, rgba(var(--ja-d),0), rgba(var(--ja-d),.9), rgba(var(--ja-c),0) 30%, rgba(var(--ja-c),.8) 60%, rgba(var(--ja-d),0) 85%); -webkit-mask: radial-gradient(closest-side, transparent 80%, #000 84%, #000 92%, transparent 95%); mask: radial-gradient(closest-side, transparent 80%, #000 84%, #000 92%, transparent 95%); animation: jackAuraSpin 5s linear infinite reverse; }
+    [data-jack-aura="4"] [data-ja="ring2"], [data-jack-aura="5"] [data-ja="ring2"] { display: block; }
+    [data-jack-aura="5"] [data-ja="ring2"] { inset: -20%; animation-duration: 3s; background: conic-gradient(from 90deg, #38bdf8, #4ade80, #fde047, #f472b6, #a78bfa, #38bdf8); }
+    [data-jack-aura-el] > i[data-ja="ring"] { inset: 0; opacity: .95; background: conic-gradient(from 0deg, rgba(var(--ja-c),0), rgba(var(--ja-c),.8), rgba(var(--ja-d),0) 35%, rgba(var(--ja-d),.7) 55%, rgba(var(--ja-c),0) 80%, rgba(var(--ja-c),.8)); -webkit-mask: radial-gradient(closest-side, transparent 70%, #000 74%, #000 92%, transparent 95%); mask: radial-gradient(closest-side, transparent 70%, #000 74%, #000 92%, transparent 95%); animation: jackAuraSpin 7s linear infinite; }
+    [data-jack-aura="4"] [data-ja="ring"] { animation-duration: 4.5s; opacity: .9; }
+    [data-jack-aura="5"] [data-ja="ring"] { animation-duration: 2.6s; opacity: 1; background: conic-gradient(from 0deg, #fde047, #f472b6, #a78bfa, #38bdf8, #4ade80, #fde047); }
+    /* 炎の舌(モンヒロビートのフリックの炎を参考): 根元から立ちのぼり、細く伸びて消える。本数は段階で増える(5/8/11/15/20本) */
+    [data-jack-aura-el] > ins[data-ja="tongue"] { position: absolute; display: block; text-decoration: none; left: var(--x); bottom: var(--b); width: var(--w); height: calc(var(--h) * var(--hs, 1)); margin-left: calc(var(--w) / -2); opacity: 0; pointer-events: none; transform-origin: 50% 100%; border-radius: 50% 50% 46% 46% / 85% 85% 15% 15%; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255,247,200,1) 0%, rgba(var(--ja-d),1) 38%, rgba(var(--ja-c),.92) 70%, rgba(var(--ja-c),0) 96%); animation: jackAuraTongue var(--t) cubic-bezier(.25,.7,.35,1) var(--d) infinite both; will-change: transform, opacity; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="0"] { --ja-c: 244,114,182; --ja-d: 253,224,71; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="1"] { --ja-c: 163,230,53; --ja-d: 253,224,71; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="2"] { --ja-c: 56,189,248; --ja-d: 255,255,255; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="3"] { --ja-c: 167,139,250; --ja-d: 244,114,182; }
+    [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="4"] { --ja-c: 251,146,60; --ja-d: 253,224,71; }
+    [data-jack-aura="3"] ins[data-ja="tongue"]:nth-of-type(odd) { --ja-c: 251,146,60; --ja-d: 253,224,71; }
+    [data-jack-aura="1"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 20px rgba(251,146,60,.7)); }
+    [data-jack-aura="2"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 36px rgba(251,191,36,.95)) drop-shadow(0 0 64px rgba(249,115,22,.7)); }
+    [data-jack-aura="3"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 46px rgba(192,132,252,1)) drop-shadow(0 0 84px rgba(251,146,60,.85)) saturate(1.1); }
+    [data-jack-aura="4"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 54px rgba(248,113,113,1)) drop-shadow(0 0 96px rgba(251,191,36,.95)) saturate(1.2) contrast(1.05); }
+    [data-jack-aura="5"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 44px rgba(250,204,21,1)) drop-shadow(0 0 78px rgba(244,114,182,1)) drop-shadow(0 0 112px rgba(56,189,248,.9)) saturate(1.3) contrast(1.08); }
+    /* 火の粉(段階3から)と広がる輪(段階3から): 段階が上がるほど数・速さ・大きさが増える */
+    [data-jack-aura-el] > b[data-ja="ember"] { position: absolute; display: block; left: var(--x); bottom: 8%; width: var(--w); aspect-ratio: 1; border-radius: 50%; opacity: 0; pointer-events: none; background: radial-gradient(circle, #fff 0%, rgba(var(--ja-d),1) 45%, rgba(var(--ja-c),0) 100%); animation: jackAuraEmber var(--t) ease-out var(--d) infinite both; will-change: transform, opacity; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="0"] { --ja-d: 244,114,182; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="1"] { --ja-d: 163,230,53; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="2"] { --ja-d: 56,189,248; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="3"] { --ja-d: 167,139,250; }
+    [data-jack-aura-el] > i[data-ja="wave"] { inset: 6% 6% 2%; opacity: 0; border: 3px solid rgba(var(--ja-d),.9); box-shadow: 0 0 18px rgba(var(--ja-c),.8); background: none; animation: jackAuraWave 2.4s ease-out var(--d) infinite both; }
+    [data-jack-aura="4"] [data-ja="wave"] { animation-duration: 1.9s; border-width: 4px; }
+    [data-jack-aura="5"] [data-ja="wave"] { animation-duration: 1.5s; border-width: 5px; border-color: rgba(253,224,71,.95); }
+    @keyframes jackAuraEmber { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -420%) scale(.3); } }
+    @keyframes jackAuraWave { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.45); } }
+    /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
+    @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
+    @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
+    @keyframes jackAuraSpin { to { transform: rotate(360deg); } }
+    @keyframes jackAuraTongue {
+      0% { opacity: 0; transform: translateY(0) rotate(var(--s)) scale(.7,.4); }
+      12% { opacity: 1; }
+      65% { opacity: .9; }
+      100% { opacity: 0; transform: translateY(-48%) rotate(calc(var(--s) * -1.4)) scale(.55,1.3); }
+    }
+    @media (prefers-reduced-motion: reduce) { [data-jack-aura-el] > i { animation: none !important; } }
+    /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
+       枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
+       大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
+    [data-moo-stage="true"][data-enemy-motion="jack"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

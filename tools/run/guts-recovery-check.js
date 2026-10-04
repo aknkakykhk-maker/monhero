@@ -50,8 +50,11 @@ const modeConst = ['const BATTLE_MODE_TACTICS =', 'const BATTLE_MODE_TACTICS_SPE
   .map(mark => slice(mark, '\n')).join('\n');
 const modeList = slice('const TACTICS_BATTLE_MODES = Object.freeze([', ']);') + ']);';
 const modeFn = slice('const isTacticsMode = (mode)', '\n');
+// ジャック戦のモード(isTacticsMode が真になる)も同じ切り出しへ入れる(2026-10-04)
+const raidMode = ['const BATTLE_MODE_RAID_JACK_A =', 'const BATTLE_MODE_RAID_JACK_B =', 'const RAID_JACK_BATTLE_MODES =', 'const isRaidJackMode =']
+  .map(mark => slice(mark, '\n')).join('\n');
 check('モードの判定を本体から取り出せる', modeConst.length > 0 && modeList.length > 6 && modeFn.length > 0, modeFn.trim());
-const isTacticsMode = new Function(`${modeConst}\n${modeList}\n${modeFn}\nreturn isTacticsMode;`)();
+const isTacticsMode = new Function(`${modeConst}\n${raidMode}\n${modeList}\n${modeFn}\nreturn isTacticsMode;`)();
 // 新モードは「立っている子にガッツを入れる余地があるか」で押せるかを決める。
 // ★中身(tacticsHasGutsRoom)は tools/mode/tactics-units-check.js が見るので、ここでは
 //   答えを差し込めるだけの替え玉にして、「条件式がその答えをそのまま使うか」を見る。

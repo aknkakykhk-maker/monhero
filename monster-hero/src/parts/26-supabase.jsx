@@ -118,6 +118,9 @@ const normalizeExtremeDifficulty = (value) => (ALL_EXTREME_DIFFICULTIES
 // 極限チャレンジは diff に極限の段階ID(EXTREMEなど)を渡す
 // 種族チャレンジだけは種族(主血統)も要るので、第3引数で受け取る
 const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
+  // ★ジャック戦は全国ランキングへ送らない(与ダメージは raid_jack_hits へ別に送る)。
+  //   ここまで来たら送信の分岐が漏れている。静かに Tactics<難易度> を返すと通常タクティクスの行を汚すので、例外で止める
+  if (isRaidJackMode(mode)) throw new Error(`raid jack has no ranking difficulty: ${String(mode)}`);
   if (isSpeciesChallengeMode(mode)) {
     const key = speciesChallengeRankingDifficulty(speciesId, diff, mode);
     if (!key) throw new Error(`unknown species challenge ranking: ${String(speciesId)}/${String(diff)}`);

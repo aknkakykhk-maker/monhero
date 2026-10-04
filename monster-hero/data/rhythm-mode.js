@@ -188,18 +188,33 @@ const sanitizeRhythmMonsterSlotIds=value=>{
   }
   return ids;
 };
-// 実際に使う並び。手元にいないマスモンと、同じベースモンスターの重複をここで落とす。
-// 落とすのは「使うとき」だけで、保存値そのものは書き換えない。
+// 同じ能力(元気・無敵・我慢・根性・必死)のマスモンを編成できる数(2026-10-04・ユーザー指示「モンビーのマスモンで状態変化の被りを2つまでに」)。
+// 能力は主血統で決まる(§4.5)ので、血統が違っても能力が同じなら被りに数える。能力の無いマスモンは数えない
+const RHYTHM_MONSTER_SAME_ABILITY_MAX=2;
+// そのマスモンの能力の名前(無ければ '')。能力の表(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)と血統の引き方は、
+// 呼ぶときに初めて使う(この下で定義される・血統の表は別ファイル)。引けない場面では '' を返して、被りを数えない
+const rhythmMonsterSlotAbilityId=masu=>{
+  try{
+    if(!masu||!masu.baseId||typeof monsterLineageOf!=='function'||typeof rhythmMonsterAbilityForLineage!=='function')return '';
+    const ability=rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id);
+    return ability&&ability.id?String(ability.id):'';
+  }catch{return '';}
+};
+// 実際に使う並び。手元にいないマスモンと、同じベースモンスターの重複、同じ能力の3体目以降をここで落とす。
+// 落とすのは「使うとき」だけで、保存値そのものは書き換えない(前からの保存で3体以上そろえていても、並びの先の2体が残る)。
 const resolveRhythmMonsterSlots=(value,masuMons)=>{
   const owned=Array.isArray(masuMons)?masuMons:[];
   const byId=new Map(owned.filter(masu=>masu&&masu.id!=null).map(masu=>[String(masu.id),masu]));
-  const slots=[],usedBaseIds=new Set();
+  const slots=[],usedBaseIds=new Set(),abilityCounts=new Map();
   for(const id of sanitizeRhythmMonsterSlotIds(value)){
     const masu=byId.get(id);
     if(!masu)continue;
     const baseId=String(masu.baseId||'');
     if(!baseId||usedBaseIds.has(baseId))continue;
+    const abilityId=rhythmMonsterSlotAbilityId(masu);
+    if(abilityId&&(abilityCounts.get(abilityId)||0)>=RHYTHM_MONSTER_SAME_ABILITY_MAX)continue;
     usedBaseIds.add(baseId);slots.push(masu);
+    if(abilityId)abilityCounts.set(abilityId,(abilityCounts.get(abilityId)||0)+1);
     if(slots.length>=RHYTHM_MONSTER_SLOT_MAX)break;
   }
   return slots;
@@ -212,8 +227,10 @@ const rhythmMonsterSlotAddIssue=(value,masuId,masuMons)=>{
   const ids=sanitizeRhythmMonsterSlotIds(value);
   if(ids.length>=RHYTHM_MONSTER_SLOT_MAX)return 'full';
   if(ids.includes(String(masuId)))return 'duplicate-id';
-  const usedBaseIds=resolveRhythmMonsterSlots(ids,owned).map(masu=>String(masu.baseId||''));
-  if(usedBaseIds.includes(String(target.baseId)))return 'duplicate-base';
+  const inUse=resolveRhythmMonsterSlots(ids,owned);
+  if(inUse.map(masu=>String(masu.baseId||'')).includes(String(target.baseId)))return 'duplicate-base';
+  const abilityId=rhythmMonsterSlotAbilityId(target);
+  if(abilityId&&inUse.filter(masu=>rhythmMonsterSlotAbilityId(masu)===abilityId).length>=RHYTHM_MONSTER_SAME_ABILITY_MAX)return 'duplicate-ability';
   return null;
 };
 const RHYTHM_MONSTER_SLOT_ISSUE_TEXT=Object.freeze({
@@ -221,6 +238,7 @@ const RHYTHM_MONSTER_SLOT_ISSUE_TEXT=Object.freeze({
   full:`設定できるのは${RHYTHM_MONSTER_SLOT_MAX}体までです`,
   'duplicate-id':'すでに設定しています',
   'duplicate-base':'同じモンスターは重ねて設定できません',
+  'duplicate-ability':`同じ能力は${RHYTHM_MONSTER_SAME_ABILITY_MAX}体までです`,
 });
 const addRhythmMonsterSlot=(value,masuId,masuMons)=>{
   const ids=sanitizeRhythmMonsterSlotIds(value);
@@ -2274,6 +2292,12 @@ const RHYTHM_COUNTDOWN_STEP_MS=800;
 const RHYTHM_COUNTDOWN_STEPS=Object.freeze(['READY','3','2','1']);
 const RHYTHM_COUNTDOWN_TOTAL_MS=RHYTHM_COUNTDOWN_STEP_MS*RHYTHM_COUNTDOWN_STEPS.length;
 const RHYTHM_HOLD_HANDOVER_GRACE_MS=200;
+// 押さえている帯の中へ置いた指が、重なっている普通のノーツ(TAP)ではなく「持ち替えの2本目」として扱われる遅れの目安(2026-10-04)。
+// プレイヤーの声「スライドと普通のノーツが交互に来る形で指置き換えをすると、変な判定が出て必ず失敗する」。
+// 持ち替えのつもりの指が重なったTAPに取られると、1本目を離した瞬間にスライドが丸ごとMISSになる。反対に、遅れて叩くつもりの指が
+// 持ち替えとして扱われても、失うのはそのTAP1つだけでスライドは生き続ける。損の大きさが違うので、時刻をこれより遅れて
+// まだ叩かれていないTAPは、被りノーツとして数えない(MARVELOUS・EXCELLENT の窓=100msを過ぎたもの)。時刻の手前(早い側)は変えない
+const RHYTHM_HANDOVER_PREFER_LATE_MS=100;
 // 終わり際に離すぶんの猶予。持ち替えとは別物なので混ぜない
 // (混ぜると「終わりに離す」と「途中で持ち替える」が同じ扱いになる)。
 const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
@@ -3186,6 +3210,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
         const note=source[index];
         if(!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type))continue;
         if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_INPUT_MATCH_WINDOW_MS)continue;
+        // 時刻を大きく過ぎてもまだ叩かれていないTAPは被りノーツと見ない(持ち替えを優先。RHYTHM_HANDOVER_PREFER_LATE_MS の説明)
+        if(note.type==='TAP'&&now-(Number(note.timeMs)+offset)>RHYTHM_HANDOVER_PREFER_LATE_MS)continue;
         const span=inputSpan(note);
         if(!span)continue;
         const start=Math.max(span.start,held.start),end=Math.min(span.end,held.end);

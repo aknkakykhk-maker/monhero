@@ -237,7 +237,8 @@ const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 //   ・イベント中(10/4 8:00〜11/1 3:59)はビートP交換所で1000P、終わったあとはブリーダーP交換所で1pt(下の halloweenIconSale が決める)
 //   ・どちらで買っても8表情ぜんぶ手に入る(まとめの中身が mh_market_icons に全部入る。新しい保存キーは作らない)
 //   ・絵は衣装の顔アイコンをそのまま使う(images/assistant/halloween/face/)。別のファイルを作らない
-// 助手(みゅあ・きき・ももすけ)は表情8種、スネグーラチカは通常と覚醒の2種(それぞれ1つのまとまり)
+// 助手(みゅあ・きき・ももすけ)は表情8種、スネグーラチカは通常と覚醒の2種(それぞれ1つのまとまり)。
+// ★1つずつの名前は16文字まで(monster/market-icon-check.js)。売り場のカードの名前は、まとまりの名前(BREEDER_ICON_GROUP_NAMES)から作る
 // ★名前を _ICON で終わらせない(ヘルプの描画検査が「_ICON の定数」を空にして読むため)
 const SNEGUROCHKA_HALLOWEEN_ART = "images/breeder-icons/snegurochka_halloween.png?v=390c7fe41639";
 const SNEGUROCHKA_HALLOWEEN_AWAKENED_ART = "images/breeder-icons/snegurochka_halloween_awakened.png?v=7dca63b3fe4c";
@@ -251,7 +252,7 @@ const HALLOWEEN_ICON_SETS = Object.freeze([
     assistantId,
     name: `${who}（ハロウィン）`,
     items: Object.freeze(MYUA_ICON_EXPRESSIONS.map(([key, label]) => Object.freeze({
-      id: `${prefix}_halloween_${key}`, name: `${who}（ハロウィン・${label}）のアイコン`, icon: `images/assistant/halloween/face/${prefix}_${key}.PNG`,
+      id: `${prefix}_halloween_${key}`, name: `ハロウィン${who}（${label}）`, icon: `images/assistant/halloween/face/${prefix}_${key}.PNG`,
     }))),
   })),
   // スネグーラチカ(2026-10-04・ユーザー指示「スネグーラチカのアイコン、ハロウィン版の販売。みゅあ、ききとかと同じ仕様で」)。
@@ -261,8 +262,8 @@ const HALLOWEEN_ICON_SETS = Object.freeze([
     assistantId: null,
     name: 'スネグーラチカ（ハロウィン）',
     items: Object.freeze([
-      Object.freeze({ id: 'snegurochka_halloween_icon', name: 'スネグーラチカ（ハロウィン）のアイコン', icon: SNEGUROCHKA_HALLOWEEN_ART }),
-      Object.freeze({ id: 'snegurochka_halloween_awakened_icon', name: 'スネグーラチカ（ハロウィン・覚醒）のアイコン', icon: SNEGUROCHKA_HALLOWEEN_AWAKENED_ART }),
+      Object.freeze({ id: 'snegurochka_halloween_icon', name: 'ハロウィンスネグーラチカ（通常）', icon: SNEGUROCHKA_HALLOWEEN_ART }),
+      Object.freeze({ id: 'snegurochka_halloween_awakened_icon', name: 'ハロウィンスネグーラチカ（覚醒）', icon: SNEGUROCHKA_HALLOWEEN_AWAKENED_ART }),
     ]),
   }),
 ].map(set => Object.freeze({ ...set, memberIds: Object.freeze(set.items.map(item => item.id)) })));

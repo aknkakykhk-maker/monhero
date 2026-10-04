@@ -136,7 +136,7 @@ if (from >= 0 && to > from) {
   // 「本編で流したぶんを見たことにする」処理を使うようになった(2026-09-11)。
   // 名前を渡していないと ReferenceError で描画そのものが落ち、下の確認が1件も走らない
   const transformed = babel.transformSync(
-    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, AssistantFace,\n'
+    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, storyCastOf, AssistantFace,\n'
     + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
     + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID }) => (<>\n'
     + replayBlock + '\n</>);\nmodule.exports = { Screen };',
@@ -152,6 +152,8 @@ if (from >= 0 && to > from) {
     eventReplayList: () => list,
     ASSISTANT_LIST: ASSISTANTS,
     assistantById: (id) => ASSISTANTS.find(x => x.id === id) || ASSISTANTS[0],
+    // 台本に出てくる話し手(助手+登場人物)。この検査では助手だけで足りる(ジャックの再生は tools/mode/raid-jack-story-check.js が見る)
+    storyCastOf: (script) => ASSISTANTS.filter(who => script.some(l => l.who === who.id)),
     AssistantFace,
     // 言い回しの部品。ここでは「本文がそのまま出る」いちばん素直な形にしておく
     // (呼び方や仲良し度そのものは tools/assistant-check.js の担当)
