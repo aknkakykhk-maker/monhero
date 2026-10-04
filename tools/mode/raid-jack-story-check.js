@@ -140,9 +140,12 @@ check('全部の台詞を最後まで再生しても、画面が落ちない', o
   const sp = render('raid_jack_story_1b', firstPumpkin);
   check('ぱんぷきんが初めて話す行から、画面の上部のステージに出て、台詞は上の吹き出しに出る', sp.includes('data-story-stage') && sp.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble[^>]*>[^]*?だ、だれ/.test(sp));
   check('ぱんぷきんが話している行でも、下の助手の列にぱんぷきんは並ばない(助手の顔だけ)', !/data-face="pumpkin"[^]*data-face="pumpkin"/.test(sp) && ['mua', 'kiki', 'momosuke', 'dra'].every((id) => sp.includes(`data-face="${id}"`)));
-  check('ぱんぷきんが話している行の下の箱は、直前の助手の台詞を薄く残す', /opacity:0\.5/.test(sp) || /opacity:\.5/.test(sp));
+  check('ぱんぷきんが話している行の下の箱は、直前の助手の台詞を薄く残す', /opacity:0\.4[,;"]/.test(sp) && !/data-story-pop="1" class="rounded-2xl border-2 bg-slate-900 px-3 py-3"/.test(sp));
   const sAfter = render('raid_jack_story_1b', firstPumpkin + 1);
-  check('助手が話す行では、ステージのぱんぷきんは残り(吹き出しは薄くなる)', sAfter.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble[^>]*opacity:0\.45/.test(sAfter));
+  check('助手が話す行では、ステージのぱんぷきんは残り(吹き出しは薄くなる)', sAfter.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble[^>]*opacity:0\.4[,;"]/.test(sAfter) && !/data-story-guest-bubble="[^"]*"\s+data-story-pop="1"/.test(sAfter));
+  const talkingOf = (html) => (html.match(/drop-shadow\(0 0 10px [^)]*\)/g) || []).length;
+  check('ぱんぷきんが話しているときは、下の助手は誰も「話している(光る)」にならない', talkingOf(sp) === 1 && /data-story-guest-bubble="[^"]*"\s+data-story-pop="1"/.test(sp));
+  check('助手が話しているときは、下の箱がぽんと出て、ステージの顔は暗くなる(話している人が一目で分かる)', /data-story-pop="1" class="rounded-2xl border-2 bg-slate-900/.test(sAfter) && /brightness\(\.7\)/.test(sAfter) && talkingOf(sAfter) === 1);
   check('ぱんぷきんがジャックになる行に、変身の演出(光・帯)があり、ステージの顔がジャックへ替わる', transformIdx > firstPumpkin
     && render('raid_jack_story_1b', transformIdx).includes('data-story-fx-flash="transform"') && render('raid_jack_story_1b', transformIdx).includes('ぱんぷきんが、ふくれあがった')
     && render('raid_jack_story_1b', transformIdx).includes('data-story-guest="jack"') && !render('raid_jack_story_1b', transformIdx - 1).includes('data-story-fx-flash'));

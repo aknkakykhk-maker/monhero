@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 79068c44a8bb809d
+// generated-sha256: 0dbec4bab79976e2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 00:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 01:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -56321,18 +56321,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ボタンは stopPropagation で二重に動かないようにする。
               ついでに紙が指でスクロールできるようになる(pointerEvents:'none' では出来なかった) */}
           {stageGuest&&(
-            <div data-story-stage className="pointer-events-none" data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 10px)',left:0,right:0,zIndex:3}}>
+            <div data-story-stage className="pointer-events-none" data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 13vh)',left:0,right:0,zIndex:3}}>
               <div className="mx-auto flex w-full max-w-md items-start gap-2 px-3">
                 <div key={`${stageGuest.id}:${stageName}`} data-story-guest={stageGuest.id} data-story-fx={fx||undefined} className="shrink-0 text-center" style={{animation:fx==='shrink'?'storyShrink .9s ease-out both':fx==='transform'||fx==='rankup'?'storyGrow .9s ease-out both':'storyStageIn .45s ease-out both'}}>
                   <span data-jack-aura={stageTier||undefined} style={{position:'relative',display:'block',width:96,height:96,filter:(stageTier>0&&typeof raidJackAuraGlowFilter==='function')?raidJackAuraGlowFilter(stageTier,.4):undefined}}>
                     {stageTier>0&&typeof JackAuraLayer==='function'&&<JackAuraLayer tier={stageTier} limit={8}/>}
-                    <span style={{position:'relative',zIndex:1,display:'block'}}><AssistantFace who={stageGuest} size={92} accent={stageGuest.accent} expression={speakingGuest?line.e:'normal'}/></span>
+                    <span style={{position:'relative',zIndex:1,display:'block',opacity:speakingGuest?1:.55,filter:speakingGuest?`drop-shadow(0 0 10px ${stageGuest.accent})`:'brightness(.7)',transition:'opacity .2s, filter .2s'}}><AssistantFace who={stageGuest} size={92} accent={stageGuest.accent} expression={speakingGuest?line.e:'normal'}/></span>
                   </span>
-                  <span className="block text-[9px] font-black" style={{color:stageGuest.accent}}>{stageName}</span>
+                  <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?'#0f172a':stageGuest.accent,background:speakingGuest?stageGuest.accent:'rgba(15,23,42,.8)',transition:'background .2s, color .2s'}}>{stageName}</span>
                 </div>
                 {bubbleLine&&(
-                  <div data-story-guest-bubble className="min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.45,transition:'opacity .18s',marginTop:6}}>
-                    <span className="block text-[9px] font-black tracking-widest" style={{color:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
+                  <div key={`b${bubbleIdx}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
+                    {/* 話している人の顔を指すしっぽ */}
+                    <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
+                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
                     <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white">{speakText(bubbleLine,stageGuest)}</span>
                   </div>
                 )}
@@ -56349,17 +56351,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             <div className="mb-3 flex items-end justify-center gap-3">
               {cast.map(who=>{
-                const talking=who.id===(bottomLine&&bottomLine.who);
+                const talking=!speakingGuest&&who.id===line.who;
                 return(
                   <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
-                    <AssistantFace who={who} size={talking?84:64} accent={who.accent} expression={talking?line.e:'normal'}/>
-                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{talking&&bottomLine&&bottomLine.name?bottomLine.name:who.name}</span>
+                    <span style={{display:'block',filter:talking?`drop-shadow(0 0 10px ${who.accent})`:'none',transition:'filter .2s'}}><AssistantFace who={who} size={talking?84:64} accent={who.accent} expression={talking?line.e:'normal'}/></span>
+                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
                   </div>
                 );
               })}
             </div>
-            {bottomLine?<div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.5:1,transition:'opacity .18s'}}>
-              <span className="block text-[9px] font-black tracking-widest" style={{color:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
+            {bottomLine?<div key={speakingGuest?'keep':`x${step}`} data-story-pop={speakingGuest?undefined:'1'} className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
+              <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
@@ -60483,6 +60485,7 @@ const createAnimationStyle = () => {
     /* ジャックのストーリーの演出(2026-10-04・ユーザー指示「ぱんぷきん→ジャックや次の爵位で画面演出」)。動かすのは transform / opacity / filter だけ。
        ステージ(画面の上部)へ出る → 変身・爵位アップでは光る・揺れる・ふくらむ・帯が出る / ジャックがぱんぷきんへ戻るときはしぼむ */
     @keyframes storyStageIn { 0% { opacity: 0; transform: translateY(-26px) scale(.88); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyPop { 0% { opacity: .4; transform: translateY(6px) scale(.97); } 100% { opacity: 1; transform: none; } }
     @keyframes storyFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes storyGrow { 0% { opacity: 0; transform: scale(.5); filter: brightness(2.4); } 40% { opacity: 1; transform: scale(1.3); filter: brightness(1.7); } 70% { transform: scale(.96); filter: brightness(1.15); } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
@@ -60492,7 +60495,7 @@ const createAnimationStyle = () => {
     [data-story-shake="0"] { animation: storyShakeA .7s ease-in-out both; }
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
-      [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner] { animation: none !important; }
+      [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
