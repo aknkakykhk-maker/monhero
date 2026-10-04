@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 711348f66958973b
+// generated-sha256: 3f5c2f74013987ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 12:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 12:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22930,7 +22930,10 @@ const raidJackMakeHitId = (nowMs = Date.now()) => {
   const rand = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
   return `rj${Math.floor(nowMs).toString(36)}${rand}`.slice(0, 64);
 };
-const raidJackEventParam = () => `event_id=eq.${encodeURIComponent(RAID_JACK_EVENT.id)}`;
+// デバッグ画面は別のイベントID(RAID_JACK_DEBUG_EVENT_ID)で送り、本番の集計(raid_jack_2026)を汚さない
+const RAID_JACK_DEBUG_EVENT_ID = 'raid_jack_debug';
+const raidJackSafeEventId = (id) => (typeof id === 'string' && /^[0-9A-Za-z_-]{1,40}$/.test(id)) ? id : RAID_JACK_EVENT.id;
+const raidJackEventParam = (eventId) => `event_id=eq.${encodeURIComponent(raidJackSafeEventId(eventId))}`;
 
 // 通信の共通部分。返り値 { ok, status, body, notReady, error }
 const raidJackRequest = async (pathAndQuery, init = {}) => {
@@ -22960,12 +22963,12 @@ const raidJackParseRows = (result) => {
 
 // 1戦の与ダメージを送る。hit = { hitId, kind, tier, damage, defeated }
 // 返り値: 'sent' / 'notready'(表が無い) / 'invalid'(形が違う・送らない) / 'error'(あとで送り直す)
-const sbSendRaidJackHit = async (hit, breederId) => {
+const sbSendRaidJackHit = async (hit, breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   const [clean] = raidJackNormalizePending([hit]);
   if (!id || !clean) return 'invalid';
   const row = {
-    hit_id: clean.hitId, event_id: RAID_JACK_EVENT.id, kind: clean.kind, tier: clean.tier,
+    hit_id: clean.hitId, event_id: raidJackSafeEventId(eventId), kind: clean.kind, tier: clean.tier,
     breeder_id: id, damage: clean.damage, defeated: clean.defeated,
     app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
   };
@@ -22987,9 +22990,9 @@ const raidJackSaveState = async (state) => {
 };
 
 // 送る。送れなければ pending に残す(戻り値は送れたかどうか)。state は呼び出し側が持つ最新を渡し、更新後を返す
-const raidJackSubmitHit = async (state, hit, breederId) => {
+const raidJackSubmitHit = async (state, hit, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
-  const outcome = await sbSendRaidJackHit(hit, breederId);
+  const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
   if (outcome === 'error' || outcome === 'notready') {
     const [clean] = raidJackNormalizePending([hit]);
     if (clean && !next.pending.some((p) => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
@@ -22997,12 +23000,12 @@ const raidJackSubmitHit = async (state, hit, breederId) => {
   return { state: next, outcome };
 };
 // 再送待ちを送り直す。送れた・捨てるべきものを取り除いた状態を返す
-const raidJackFlushPending = async (state, breederId) => {
+const raidJackFlushPending = async (state, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
   if (!next.pending.length || !raidJackSafeId(breederId)) return next;
   const keep = [];
   for (const hit of next.pending) {
-    const outcome = await sbSendRaidJackHit(hit, breederId);
+    const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
     if (outcome === 'error' || outcome === 'notready') keep.push(hit);
   }
   next.pending = keep;
@@ -23011,8 +23014,8 @@ const raidJackFlushPending = async (state, breederId) => {
 
 // ---- 読み出し(失敗は null を返し、画面は「準備中」にする) ----
 // 段階ごとの合計。返り値 { a: { 1: {total, players, defeated}, ... }, b: {...} } か null
-const sbFetchRaidJackTierTotals = async () => {
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_tier_totals?${raidJackEventParam()}&select=kind,tier,total_damage,player_count,any_defeated`));
+const sbFetchRaidJackTierTotals = async (eventId) => {
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_tier_totals?${raidJackEventParam(eventId)}&select=kind,tier,total_damage,player_count,any_defeated`));
   if (!rows) return null;
   const out = { a: {}, b: {} };
   rows.forEach((r) => {
@@ -23022,23 +23025,23 @@ const sbFetchRaidJackTierTotals = async () => {
   return out;
 };
 // A: 段階ごとの貢献ランキング(上位 limit)
-const sbFetchRaidJackContributions = async (tier, limit = 100) => {
+const sbFetchRaidJackContributions = async (tier, limit = 100, eventId) => {
   const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
   const t = Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5);
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam()}&kind=eq.a&tier=eq.${t}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam(eventId)}&kind=eq.a&tier=eq.${t}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
 // B: 累計ダメージのランキング(上位 limit。既定100)
-const sbFetchRaidJackBRanking = async (limit = 100) => {
+const sbFetchRaidJackBRanking = async (limit = 100, eventId) => {
   const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam()}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
 // 自分の貢献(A: 段階ごと / B: 累計)。圏外でも自分の数字と順位(=自分より多い人数+1)が出せる
-const sbFetchRaidJackSelf = async (breederId) => {
+const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   if (!id) return null;
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam()}&breeder_id=eq.${id}&select=kind,tier,total_damage`));
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&select=kind,tier,total_damage`));
   if (!rows) return null;
   const out = { a: {}, bTotal: 0 };
   rows.forEach((r) => {
@@ -23048,11 +23051,11 @@ const sbFetchRaidJackSelf = async (breederId) => {
   return out;
 };
 // 自分より多い人数(順位 = これ + 1)。Content-Range の総数を使う
-const sbCountRaidJackAhead = async (kind, tier, myTotal) => {
+const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const mine = Math.max(0, Math.floor(Number(myTotal)) || 0);
   const view = kind === 'b' ? 'raid_jack_b_ranking' : 'raid_jack_contributions';
   const extra = kind === 'b' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
-  const result = await raidJackRequest(`${view}?${raidJackEventParam()}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  const result = await raidJackRequest(`${view}?${raidJackEventParam(eventId)}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
   if (!result.ok) return null;
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
   const m = /\/(\d+)$/.exec(String(range || ''));
@@ -35887,6 +35890,149 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   );
 }
 
+// ---- part: 78-screen-raid-jack-debug.jsx ----
+// ==================== ジャック確認(デバッグ専用) ====================
+// イベント・レイドボス「ジャック」を、公開フラグ・期間・時刻を待たずに確かめる画面。
+// 入口はデバッグ設定(DEBUG_SETTINGS)だけで、通常プレイには一切出さない。
+// デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き)。設計: docs/spec/RAID_BOSS_JACK.md
+//
+// 何をするか(実装した段階ごとに、ここへ確認の入口を足していく)
+//   ① 定義: 5段階×2種類の名前・倍率・ライフ・技の本数・技名(35-raid-jack.jsx をそのまま表にする)
+//   ② 期間と回数: 「いま」を前・中・後に動かしたときの判定、今日の残り回数
+//   ③ 端末の記録(mh_raid_jack_v1): 回数・倒した段階・再送待ちの確認と初期化(★保存します)
+//   ④ サーバー: 本番の集計(raid_jack_2026)を汚さない別のイベントID(raid_jack_debug)で、
+//      テスト送信・段階ごとの合計・Bの上位・再送待ちの送り直しを試す
+const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
+  { id: 'real', label: 'いま(本物)' },
+  { id: 'before', label: '開始の1分前', at: () => Date.parse(RAID_JACK_EVENT.startAt) - 60000 },
+  { id: 'open', label: '開始の1分後', at: () => Date.parse(RAID_JACK_EVENT.startAt) + 60000 },
+  { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
+]);
+
+const RaidJackDebugScreen = ({ onBack }) => {
+  const [nowChoice, setNowChoice] = useState('real');
+  const [state, setState] = useState(() => raidJackDefaultState());
+  const [log, setLog] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [totals, setTotals] = useState(undefined);   // undefined=未取得 / null=準備中 / object
+  const [ranking, setRanking] = useState(undefined);
+  const [testDamage, setTestDamage] = useState(1000);
+  const [testKind, setTestKind] = useState('a');
+  const [testTier, setTestTier] = useState(1);
+  const say = (text) => setLog((prev) => [`${new Date().toLocaleTimeString('ja-JP')} ${text}`, ...prev].slice(0, 12));
+
+  useEffect(() => {
+    let alive = true;
+    raidJackLoadState().then((loaded) => { if (alive) setState(loaded); });
+    return () => { alive = false; };
+  }, []);
+
+  const choice = RAID_JACK_DEBUG_NOW_CHOICES.find((c) => c.id === nowChoice) || RAID_JACK_DEBUG_NOW_CHOICES[0];
+  const nowMs = choice.at ? choice.at() : Date.now();
+  const windowLabel = { before: '開始前', open: '開催中', after: '終了後' }[raidJackWindowAt(nowMs)];
+  const save = async (next) => { const ok = await raidJackSaveState(next); setState(raidJackNormalizeState(next)); say(ok ? '端末の記録を保存しました' : '保存できませんでした'); };
+  const withBusy = async (fn) => { setBusy(true); try { await fn(); } finally { setBusy(false); } };
+
+  const sendTest = () => withBusy(async () => {
+    const breederId = await ensureBreederId();
+    if (!breederId) { say('ブリーダーIDが作れず、送れません'); return; }
+    const hit = { hitId: raidJackMakeHitId(), kind: testKind, tier: testTier, damage: Math.max(0, Math.floor(Number(testDamage) || 0)), defeated: false };
+    const { state: next, outcome } = await raidJackSubmitHit(state, hit, breederId, RAID_JACK_DEBUG_EVENT_ID);
+    await raidJackSaveState(next); setState(next);
+    say(`テスト送信(${testKind.toUpperCase()}${testTier}・${hit.damage}): ${({ sent: '送れました', notready: '準備中(SQL未適用)', invalid: '形が違うので送りません', error: '通信できず再送待ちへ' })[outcome] || outcome}`);
+  });
+  const flush = () => withBusy(async () => {
+    const breederId = await ensureBreederId();
+    const next = await raidJackFlushPending(state, breederId, RAID_JACK_DEBUG_EVENT_ID);
+    await raidJackSaveState(next); setState(next);
+    say(`再送待ちを送り直しました(残り ${next.pending.length} 件)`);
+  });
+  const fetchAll = () => withBusy(async () => {
+    const t = await sbFetchRaidJackTierTotals(RAID_JACK_DEBUG_EVENT_ID);
+    setTotals(t);
+    const r = await sbFetchRaidJackBRanking(100, RAID_JACK_DEBUG_EVENT_ID);
+    setRanking(r);
+    say(t === null ? '取得できません(準備中か通信エラー)' : '段階ごとの合計とBの上位を取得しました');
+  });
+
+  const cell = 'border border-white/10 px-1.5 py-1 text-[10px]';
+  const tierTable = (label, tiers) => (
+    <div className="overflow-x-auto">
+      <div className="mb-1 text-[11px] font-black text-cyan-200">{label}</div>
+      <table className="w-full border-collapse text-slate-100">
+        <thead><tr className="bg-white/10"><th className={cell}>段階</th><th className={cell}>名前</th><th className={cell}>倍率</th><th className={cell}>ライフ</th><th className={cell}>技</th>{totals ? <th className={cell}>削った量</th> : null}</tr></thead>
+        <tbody>{tiers.map((t, i) => (
+          <tr key={t.id}><td className={cell}>{i + 1}</td><td className={cell}>{t.name}</td><td className={cell}>{t.power}</td><td className={`${cell} text-right`}>{t.hp.toLocaleString()}</td><td className={cell}>{t.actionCount}本</td>
+            {totals ? <td className={`${cell} text-right`}>{((totals[t.id[0]] || {})[i + 1]?.total || 0).toLocaleString()}</td> : null}</tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+  const btn = 'min-h-[44px] rounded-xl border px-2 text-center text-[11px] font-black leading-tight active:scale-95 disabled:opacity-40';
+
+  return (
+    <div className={`${SCREEN_SHELL_CLASS} overflow-y-auto`} data-raid-jack-debug>
+      <DebugScreenHead title="ジャック確認" note="イベント・レイドボス「ジャック」の確認。サーバーへのテスト送信は別のイベントID(raid_jack_debug)で、本番の集計に入りません" saves onBack={onBack} />
+      <div className="space-y-3 pb-8">
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-amber-200">① 公開フラグと期間</div>
+          <div>公開フラグ(RAID_JACK_PUBLIC_RELEASE): <b>{RELEASE_FLAGS.raidJack === true ? 'true(公開中)' : 'false(公開前)'}</b></div>
+          <div className="mt-1">期間: {RAID_JACK_EVENT.startAt.replace('T', ' ').slice(0, 16)} 〜 {RAID_JACK_EVENT.endAt.replace('T', ' ').slice(0, 16)}(仮)</div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {RAID_JACK_DEBUG_NOW_CHOICES.map((c) => (
+              <button key={c.id} onClick={() => setNowChoice(c.id)} className={`${btn} ${nowChoice === c.id ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-white/20 bg-white/5 text-slate-200'}`}>{c.label}</button>
+            ))}
+          </div>
+          <div className="mt-2">この時刻の判定: <b className="text-amber-200">{windowLabel}</b>(日付キー {raidJackDayKey(nowMs)})</div>
+        </section>
+
+        <section className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="text-[11px] font-black text-amber-200">② 段階の定義(ライフ = 35,000×倍率×10)</div>
+          {tierTable('A: ベースモン協力戦(共有HP)', RAID_JACK_A_TIERS)}
+          {tierTable('B: マスモンの累計ダメージ(ランキングは共有)', RAID_JACK_B_TIERS)}
+          <div className="text-[10px] text-slate-300">技名: {Object.entries(RAID_JACK_SKILL_NAMES).map(([k, v]) => `${k}=${v}`).join(' / ')}</div>
+        </section>
+
+        <section className="rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-rose-200">③ 端末の記録(mh_raid_jack_v1)★保存します</div>
+          <div>今日の残り回数: A {raidJackRemaining(state.a, nowMs)} / B {raidJackRemaining(state.b, nowMs)}(無料{RAID_JACK_FREE_PER_DAY}回+買い足し)</div>
+          <div>倒した段階: A [{state.a.defeated.join(',')}] / B [{state.b.defeated.join(',')}]・開いている段階: A {raidJackUnlockedCount('a', state.a.defeated)} / B {raidJackUnlockedCount('b', state.b.defeated)}</div>
+          <div>Bの自分用の累計: {state.b.total.toLocaleString()}・再送待ち: {state.pending.length}件・受け取り済み報酬: {state.claimed.length}件</div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save(raidJackDefaultState())}>記録を初期化</button>
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save({ ...state, a: { ...state.a, day: raidJackDayKey(nowMs), used: RAID_JACK_FREE_PER_DAY }, b: { ...state.b, day: raidJackDayKey(nowMs), used: RAID_JACK_FREE_PER_DAY } })}>今日の無料回数を使い切る</button>
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save({ ...state, a: { ...state.a, defeated: [] }, b: { ...state.b, defeated: [] } })}>倒した段階をリセット</button>
+            <button className={`${btn} border-rose-400/60 bg-rose-950/40`} onClick={() => save({ ...state, b: { ...state.b, defeated: RAID_JACK_B_TIERS.slice(0, 4).map((t) => t.id) }, a: { ...state.a, defeated: RAID_JACK_A_TIERS.slice(0, 4).map((t) => t.id) } })}>手前4段階を倒した状態にする</button>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-[11px] text-slate-100">
+          <div className="mb-1 font-black text-cyan-200">④ サーバー(別のイベントID raid_jack_debug)</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select value={testKind} onChange={(e) => setTestKind(e.target.value)} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]"><option value="a">A(協力)</option><option value="b">B(累計)</option></select>
+            <select value={testTier} onChange={(e) => setTestTier(Number(e.target.value))} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]">{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>段階{n}</option>)}</select>
+            <input type="number" min="0" max="100000000" value={testDamage} onChange={(e) => setTestDamage(e.target.value)} className="w-28 rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]" />
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            <button disabled={busy} className={`${btn} border-cyan-400/60 bg-cyan-950/40`} onClick={sendTest}>テスト送信</button>
+            <button disabled={busy} className={`${btn} border-cyan-400/60 bg-cyan-950/40`} onClick={flush}>再送待ちを送る</button>
+            <button disabled={busy} className={`${btn} border-cyan-400/60 bg-cyan-950/40`} onClick={fetchAll}>合計と上位を取得</button>
+          </div>
+          {totals === null && <div className="mt-2 text-amber-200">準備中(docs/sql/raid/ のSQLが未適用か、通信できません)</div>}
+          {Array.isArray(ranking) && (
+            <div className="mt-2">Bの上位(デバッグ分): {ranking.length === 0 ? 'まだありません' : ranking.slice(0, 10).map((r, i) => `${i + 1}位 ${r.breederId.slice(0, 6)}… ${r.total.toLocaleString()}`).join(' / ')}</div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
+          <div className="mb-1 text-[11px] font-black text-slate-200">ログ</div>
+          {log.length === 0 ? <div className="text-[10px] text-slate-400">まだ何もしていません</div> : log.map((l, i) => <div key={i} className="text-[10px] text-slate-300">{l}</div>)}
+        </section>
+      </div>
+    </div>
+  );
+};
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -39537,7 +39683,7 @@ function MonsterHeroGame() {
     // デバッグ画面。プレイヤーの通常プレイには出ない
     'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG',
     'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG',
-    'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG',
+    'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RAID_JACK_DEBUG',
     'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT',
   ]);
   const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
@@ -52415,6 +52561,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
                       **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
+                  {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
+                  <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -52506,6 +52654,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')}/>)}
         {gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{
           // 種族は主血統。ここも本番と同じ一覧を使う
           const speciesEntries=speciesChallengeLineages();

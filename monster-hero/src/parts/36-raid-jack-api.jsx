@@ -18,7 +18,10 @@ const raidJackMakeHitId = (nowMs = Date.now()) => {
   const rand = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
   return `rj${Math.floor(nowMs).toString(36)}${rand}`.slice(0, 64);
 };
-const raidJackEventParam = () => `event_id=eq.${encodeURIComponent(RAID_JACK_EVENT.id)}`;
+// デバッグ画面は別のイベントID(RAID_JACK_DEBUG_EVENT_ID)で送り、本番の集計(raid_jack_2026)を汚さない
+const RAID_JACK_DEBUG_EVENT_ID = 'raid_jack_debug';
+const raidJackSafeEventId = (id) => (typeof id === 'string' && /^[0-9A-Za-z_-]{1,40}$/.test(id)) ? id : RAID_JACK_EVENT.id;
+const raidJackEventParam = (eventId) => `event_id=eq.${encodeURIComponent(raidJackSafeEventId(eventId))}`;
 
 // 通信の共通部分。返り値 { ok, status, body, notReady, error }
 const raidJackRequest = async (pathAndQuery, init = {}) => {
@@ -48,12 +51,12 @@ const raidJackParseRows = (result) => {
 
 // 1戦の与ダメージを送る。hit = { hitId, kind, tier, damage, defeated }
 // 返り値: 'sent' / 'notready'(表が無い) / 'invalid'(形が違う・送らない) / 'error'(あとで送り直す)
-const sbSendRaidJackHit = async (hit, breederId) => {
+const sbSendRaidJackHit = async (hit, breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   const [clean] = raidJackNormalizePending([hit]);
   if (!id || !clean) return 'invalid';
   const row = {
-    hit_id: clean.hitId, event_id: RAID_JACK_EVENT.id, kind: clean.kind, tier: clean.tier,
+    hit_id: clean.hitId, event_id: raidJackSafeEventId(eventId), kind: clean.kind, tier: clean.tier,
     breeder_id: id, damage: clean.damage, defeated: clean.defeated,
     app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
   };
@@ -75,9 +78,9 @@ const raidJackSaveState = async (state) => {
 };
 
 // 送る。送れなければ pending に残す(戻り値は送れたかどうか)。state は呼び出し側が持つ最新を渡し、更新後を返す
-const raidJackSubmitHit = async (state, hit, breederId) => {
+const raidJackSubmitHit = async (state, hit, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
-  const outcome = await sbSendRaidJackHit(hit, breederId);
+  const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
   if (outcome === 'error' || outcome === 'notready') {
     const [clean] = raidJackNormalizePending([hit]);
     if (clean && !next.pending.some((p) => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
@@ -85,12 +88,12 @@ const raidJackSubmitHit = async (state, hit, breederId) => {
   return { state: next, outcome };
 };
 // 再送待ちを送り直す。送れた・捨てるべきものを取り除いた状態を返す
-const raidJackFlushPending = async (state, breederId) => {
+const raidJackFlushPending = async (state, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
   if (!next.pending.length || !raidJackSafeId(breederId)) return next;
   const keep = [];
   for (const hit of next.pending) {
-    const outcome = await sbSendRaidJackHit(hit, breederId);
+    const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
     if (outcome === 'error' || outcome === 'notready') keep.push(hit);
   }
   next.pending = keep;
@@ -99,8 +102,8 @@ const raidJackFlushPending = async (state, breederId) => {
 
 // ---- 読み出し(失敗は null を返し、画面は「準備中」にする) ----
 // 段階ごとの合計。返り値 { a: { 1: {total, players, defeated}, ... }, b: {...} } か null
-const sbFetchRaidJackTierTotals = async () => {
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_tier_totals?${raidJackEventParam()}&select=kind,tier,total_damage,player_count,any_defeated`));
+const sbFetchRaidJackTierTotals = async (eventId) => {
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_tier_totals?${raidJackEventParam(eventId)}&select=kind,tier,total_damage,player_count,any_defeated`));
   if (!rows) return null;
   const out = { a: {}, b: {} };
   rows.forEach((r) => {
@@ -110,23 +113,23 @@ const sbFetchRaidJackTierTotals = async () => {
   return out;
 };
 // A: 段階ごとの貢献ランキング(上位 limit)
-const sbFetchRaidJackContributions = async (tier, limit = 100) => {
+const sbFetchRaidJackContributions = async (tier, limit = 100, eventId) => {
   const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
   const t = Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5);
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam()}&kind=eq.a&tier=eq.${t}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam(eventId)}&kind=eq.a&tier=eq.${t}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
 // B: 累計ダメージのランキング(上位 limit。既定100)
-const sbFetchRaidJackBRanking = async (limit = 100) => {
+const sbFetchRaidJackBRanking = async (limit = 100, eventId) => {
   const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam()}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_b_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
 // 自分の貢献(A: 段階ごと / B: 累計)。圏外でも自分の数字と順位(=自分より多い人数+1)が出せる
-const sbFetchRaidJackSelf = async (breederId) => {
+const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   if (!id) return null;
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam()}&breeder_id=eq.${id}&select=kind,tier,total_damage`));
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_contributions?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&select=kind,tier,total_damage`));
   if (!rows) return null;
   const out = { a: {}, bTotal: 0 };
   rows.forEach((r) => {
@@ -136,11 +139,11 @@ const sbFetchRaidJackSelf = async (breederId) => {
   return out;
 };
 // 自分より多い人数(順位 = これ + 1)。Content-Range の総数を使う
-const sbCountRaidJackAhead = async (kind, tier, myTotal) => {
+const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const mine = Math.max(0, Math.floor(Number(myTotal)) || 0);
   const view = kind === 'b' ? 'raid_jack_b_ranking' : 'raid_jack_contributions';
   const extra = kind === 'b' ? '' : `&kind=eq.a&tier=eq.${Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5)}`;
-  const result = await raidJackRequest(`${view}?${raidJackEventParam()}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  const result = await raidJackRequest(`${view}?${raidJackEventParam(eventId)}${extra}&total_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
   if (!result.ok) return null;
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
   const m = /\/(\d+)$/.exec(String(range || ''));

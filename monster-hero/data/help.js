@@ -2074,6 +2074,7 @@ const HELP_SCREEN_COVERAGE = {
   DEBUG_DATA_SETUP: 'items/items',
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
+  RAID_JACK_DEBUG: null,
   BREEDER_ICON_DEBUG:'home/profile',
   TRAINING_INFO:    null,
   RHYTHM_INFO:      'rhythm/rhythm-coming-soon',

@@ -232,6 +232,10 @@
       "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
     },
     {
+      "file": "78-screen-raid-jack-debug.jsx",
+      "role": "画面: ジャック確認(RAID_JACK_DEBUG。デバッグ専用)。定義・期間と回数・端末の記録・サーバー(別イベントID)を、公開フラグや時刻を待たずに確かめる"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
