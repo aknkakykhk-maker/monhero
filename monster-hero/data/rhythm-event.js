@@ -388,6 +388,16 @@ const RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS = Object.freeze(
         .map(costume => Object.freeze({ id:`costume_${costume.id}`, name:costume.name, kind:'costume', costumeId:costume.id, assistantId:costume.assistantId, grantAmount:1, unit:'着', cost:assistantCostumeSaleEverCost(costume, 'beatPoint'),
           get available() { return costume.released === true && !!assistantCostumeSaleIn(costume, 'beatPoint'); } }))
     : []);
+// ハロウィン・ナイトの衣装のアイコン(2026-10-04・ユーザー指示「ビートポイント1000」)。同じキャラの8表情を1つにまとめて1回で交換する。
+//   売る期間は data/breeder.js の halloweenIconSale が決める(イベント中だけビートP交換所。終わったあとはブリーダーP交換所の1pt)。
+//   持っていれば交換できない(まとめのどれか1つでも持っていれば全部持っている扱い)。交換すると mh_market_icons に中身が全部入る。
+// ★breeder.js が読み込まれていない環境(この定義だけを取り出す検査)では空になる。
+const RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS = Object.freeze(
+  (typeof HALLOWEEN_ICON_SETS !== 'undefined' && typeof halloweenIconSale === 'function')
+    ? HALLOWEEN_ICON_SETS.map(set => Object.freeze({ id:`icon_${set.groupId}`, name:`${set.name}のアイコン`, kind:'icon', groupId:set.groupId, assistantId:set.assistantId,
+        memberIds:set.memberIds, grantAmount:1, unit:'セット', cost:1000,
+        get available() { return halloweenIconSale() === 'beatPoint'; } }))
+    : []);
 // 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
 // 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す
 const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
@@ -395,7 +405,8 @@ const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
 // unlockedTeachingIds … 解放済みのアシストカードid(アシストカードの交換のときだけ使う)
 // ownedProfileFrames … 持っているフレームid(フレームの交換のときだけ使う)
 // ownedAssistantCostumes … 持っている着替えのid(着替えの交換のときだけ使う)
-const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[], ownedAssistantCostumes=[] } = {}) => {
+// ownedMarketIcons … 持っているアイコンのid(アイコンの交換のときだけ使う。まとめを広げた形で渡してよい)
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[], ownedAssistantCostumes=[], ownedMarketIcons=[] } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {
     const n = Number(value);
@@ -407,7 +418,7 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
   const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const unitCost = safeInt(offer?.cost);
   const grantAmount = safeInt(offer?.grantAmount);
-  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame','costume'].includes(offer.kind)) {
+  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame','costume','icon'].includes(offer.kind)) {
     return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
   }
   // 円盤石: 1回に1つ。持っているモンスターは交換できない。ダイヤ・所持品は変えない
@@ -439,6 +450,16 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
     if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
     return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
       frameId, ownedProfileFrames:[...owned, frameId] };
+  }
+  // アイコン(まとめ): 1回に1セット。まとめの中身のどれか1つでも持っていれば交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'icon') {
+    const memberIds = Array.isArray(offer.memberIds) ? offer.memberIds.filter(id => typeof id === 'string' && id) : [];
+    const owned = Array.isArray(ownedMarketIcons) ? ownedMarketIcons.filter(id => typeof id === 'string') : [];
+    if (!memberIds.length || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (memberIds.some(id => owned.includes(id))) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      ownedMarketIcons:[...new Set([...owned, ...memberIds])] };
   }
   // 着替え: 1回に1着。持っている服は交換できない。ダイヤ・所持品は変えない
   if (offer.kind === 'costume') {

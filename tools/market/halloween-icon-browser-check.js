@@ -1,4 +1,10 @@
-// ハロウィンの衣装(助手の着替え)を、実際の画面で確かめる(2026-10-04)。時計を動かして3つの時間を見る。
+// ハロウィンの衣装のアイコン販売を、実際の画面で確かめる(2026-10-04)。時計を動かして3つの時間を見る。
+//   ① 開始の前 … ビートP交換所に「アイコン」タブが無い
+//   ② 期間中 … ビートP交換所に「アイコン」タブが出て、みゅあ・きき・ももすけ(ハロウィン)が1000Pで並ぶ。
+//        買うと8表情ぜんぶ mh_market_icons に入り、ポイントは1000だけ減り、所持済みになる。ブリーダーP交換所のアイコンには並ばない
+//   ③ 終わったあと … ビートP交換所に「アイコン」タブが無く、ブリーダーP交換所のアイコンに3キャラが1ptで並ぶ
+// (元の組み立ては assistant-costume-browser-check.js と同じ。下の1行目以降の説明は、そちらの古い説明のまま)
+// 以下、組み立ての説明:
 //   ① 開始の前(10/4 7:59) … プロフィールに「着替え」が無く、ビートP交換所にも「着替え」タブが無い
 //   ② 期間中(10/10) … ビートP交換所に3着が並び、1000Pで買える(ダイヤショップには並ばない)。
 //        買うと mh_assistant_costume_owned_v1 に入り、プロフィールから着替えると吹き出しの顔が衣装の絵になる
@@ -116,71 +122,53 @@ const seed = ({ conditions }) => {
     await clickText(page, entry, { exact: false });
   };
 
+  const iconCards = (page) => page.evaluate(() => {
+    return ['みゅあ（ハロウィン）のアイコン', 'きき（ハロウィン）のアイコン', 'ももすけ（ハロウィン）のアイコン', 'スネグーラチカ（ハロウィン）のアイコン'].map(n => {
+      const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').includes(n));
+      const text = card ? card.innerText.replace(/\s+/g, ' ') : '';
+      const buy = card ? [...card.querySelectorAll('button')].find(b => /購入|交換/.test(b.getAttribute('aria-label') || b.innerText || '')) : null;
+      return { name: n, found: !!card, text, buyEnabled: !!buy && !buy.disabled };
+    });
+  });
+  const EXPR = ['normal', 'happy', 'wink', 'excited', 'surprise', 'troubled', 'angry', 'crying'];
+
   // ===== ① 開始の前 =====
   {
     const { page, ctx } = await open('2026-10-04T07:59:00+09:00');
     await goShop(page, 'ビートP');
-    check('① 開始の前は、ビートP交換所に「着替え」タブが無い', !(await tabs(page)).includes('着替え'));
-    await goShop(page, 'ダイヤ');
-    check('① 開始の前は、ダイヤショップにも「着替え」タブが無い', !(await tabs(page)).includes('着替え'));
+    check('① 開始の前は、ビートP交換所に「アイコン」タブが無い', !(await tabs(page)).includes('アイコン'));
     await ctx.close();
   }
 
   // ===== ② 期間中 =====
   {
     const { page, ctx } = await open('2026-10-10T12:00:00+09:00');
-    await goShop(page, 'ダイヤ');
-    // 2026-10-04 ユーザー指示「ダイヤの方にも着替えタブ作って、販売予定のものを入れといて」: 期間中は「近日追加」で並べ、買えない
-    check('② 期間中も、ダイヤショップに「着替え」タブが出る(売り出す前の予告)', (await tabs(page)).includes('着替え'));
-    await clickText(page, '着替え');
-    {
-      const soon = await costumeCards(page);
-      check('② ダイヤショップの3着は「近日追加」で並び、買えない', soon.every(c => c.found && !c.buyEnabled && /近日/.test(c.text)), soon.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 30)}`).join(' | '));
-    }
     await goShop(page, 'ビートP');
-    check('② ビートP交換所に「着替え」タブが出る', (await tabs(page)).includes('着替え'));
-    await clickText(page, '着替え');
-    let cards = await costumeCards(page);
-    check('② 3着が並ぶ', cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
-    check('② 3着とも1000Pで買える', cards.every(c => c.buyEnabled && /1,?000/.test(c.text)), cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
+    check('② ビートP交換所に「アイコン」タブが出る', (await tabs(page)).includes('アイコン'));
+    await clickText(page, 'アイコン');
+    let cards = await iconCards(page);
+    check('② 4キャラが並ぶ', cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
+    check('② 4キャラとも1000Pで買える', cards.every(c => c.buyEnabled && /1,?000/.test(c.text)), cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
     const buy = await page.evaluate(() => {
-      const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').includes('ハロウィンの魔女'));
+      const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').includes('みゅあ（ハロウィン）のアイコン'));
       const b = card && [...card.querySelectorAll('button')].find(x => /購入|交換/.test(x.getAttribute('aria-label') || x.innerText || ''));
       if (!b || b.disabled) return false; b.scrollIntoView({ block: 'center' }); b.click(); return true;
     });
     await page.waitForTimeout(800);
-    if (process.env.COSTUME_DEBUG) console.log(await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button, button')].slice(-12).map(b => (b.innerText||'').replace(/\s+/g,' ').trim() + '|' + (b.getAttribute('aria-label')||'')).join(' ;; ')));
-    check('② 魔女の交換ボタンを押せる', buy);
+    check('② みゅあ(ハロウィン)の交換ボタンを押せる', buy);
     await page.evaluate(() => {
       const b = [...document.querySelectorAll('button')].find(x => /^(購入する|交換する)$/.test((x.textContent || '').trim()));
       if (b && !b.disabled) b.click();
     });
     await page.waitForTimeout(1500);
     check('② ビートPが1000だけ引かれる(2500 → 1500)', (await store(page, 'mh_rhythm_event_points_v1')) === 1500, String(await store(page, 'mh_rhythm_event_points_v1')));
-    check('② 魔女が mh_assistant_costume_owned_v1 に入る', ((await store(page, 'mh_assistant_costume_owned_v1')) || []).join() === 'mua_halloween_2026', JSON.stringify(await store(page, 'mh_assistant_costume_owned_v1')));
-    cards = await costumeCards(page);
-    check('② 買った魔女は「所持済み」で買えない。ほかの2着は買える', !cards[0].buyEnabled && cards[1].buyEnabled && cards[2].buyEnabled, cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
-
-    // プロフィールから着替える
-    await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (b) b.click(); });
-    await page.waitForTimeout(800);
-    await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (b) b.click(); });
-    await page.waitForTimeout(800);
-    const opened = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /プロフィール/.test(x.getAttribute('aria-label') || '')); if (b) { b.click(); return true; } return false; });
-    await page.waitForTimeout(1500);
-    const tile = await page.evaluate(() => !!document.querySelector('[data-profile-tile="costume"]'));
-    check('② プロフィールに「着替え」のタイルが出る', opened && tile, `opened=${opened}`);
-    await page.evaluate(() => document.querySelector('[data-profile-tile="costume"]')?.click());
-    await page.waitForTimeout(1000);
-    const opts = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-costume-option]')].map(b => `${b.getAttribute('data-assistant-costume-option')}:${b.getAttribute('data-assistant-costume-locked')}`));
-    check('② 着替えの窓に「元の服」と魔女が並ぶ(魔女は持っているので鍵なし)', opts.join() === 'original:no,mua_halloween_2026:no', opts.join());
-    await page.evaluate(() => document.querySelector('[data-assistant-costume-option="mua_halloween_2026"]')?.click());
-    await page.waitForTimeout(1200);
-    check('② 魔女を着ると mh_assistant_costume_worn_v1 に残る', (await store(page, 'mh_assistant_costume_worn_v1'))?.mua === 'mua_halloween_2026', JSON.stringify(await store(page, 'mh_assistant_costume_worn_v1')));
-    const face = await page.evaluate(() => [...document.querySelectorAll('img')].map(i => i.getAttribute('src') || '').filter(s => s.includes('assistant/halloween/face/myua_')));
-    check('② 着替えの窓の「いま着ている服」の顔が衣装の絵になる', face.length > 0, face[0] || '(なし)');
-    const shot = process.env.COSTUME_SHOT;
-    if (shot) await page.screenshot({ path: shot });
+    const icons = (await store(page, 'mh_market_icons')) || [];
+    check('② 8表情ぜんぶ mh_market_icons に入る(通常のみゅあのアイコンは入らない)', EXPR.every(k => icons.includes(`myua_halloween_${k}`)) && !icons.includes('myua_normal') && !icons.includes('mua'), JSON.stringify(icons));
+    cards = await iconCards(page);
+    check('② 買ったみゅあは「所持済み」で買えない。ほかの3キャラは買える', !cards[0].buyEnabled && cards[1].buyEnabled && cards[2].buyEnabled && cards[3].buyEnabled, cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
+    await goShop(page, 'ブリーダー');
+    const breederText = await page.evaluate(() => document.body.innerText);
+    check('② ブリーダーP交換所には、ハロウィンのアイコンがまだ並ばない', !breederText.includes('（ハロウィン）'));
     await ctx.close();
   }
 
@@ -188,12 +176,10 @@ const seed = ({ conditions }) => {
   {
     const { page, ctx } = await open('2026-11-01T04:00:00+09:00');
     await goShop(page, 'ビートP');
-    check('③ 終わったあとは、ビートP交換所に「着替え」タブが無い', !(await tabs(page)).includes('着替え'));
-    await goShop(page, 'ダイヤ');
-    check('③ ダイヤショップに「着替え」タブが出る', (await tabs(page)).includes('着替え'));
-    await clickText(page, '着替え');
-    const cards = await costumeCards(page);
-    check('③ 3着が100000ダイヤで並ぶ', cards.every(c => c.found && /100,?000/.test(c.text)), cards.map(c => `${c.name}:${c.found}:${c.text.slice(0, 30)}`).join(' | '));
+    check('③ 終わったあとは、ビートP交換所に「アイコン」タブが無い', !(await tabs(page)).includes('アイコン'));
+    await goShop(page, 'ブリーダー');
+    const cards = await iconCards(page);
+    check('③ ブリーダーP交換所に4キャラ(ハロウィン)が1ptで並び、買える', cards.every(c => c.found && c.buyEnabled && /\b1\b/.test(c.text)), cards.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 40)}`).join(' | '));
     await ctx.close();
   }
 

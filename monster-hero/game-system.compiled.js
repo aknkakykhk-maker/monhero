@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed9269d2af2e22f4
+// source-sha256: 51f6e4d34cfc7fea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 12:06";
+const BUILD_DATE = "2026-10-04 12:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5268,6 +5268,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   lightweightMode: false,
   multiLightLook: true,
   multiLook: 'LIGHT',
+  modeSelectArt: true,
+  modeSelectComment: true,
   noteSeType: 'STANDARD',
   noteSeJudgeVary: true,
   noteSeFlickVolume: 100,
@@ -5347,6 +5349,8 @@ const normalizeRhythmSettings = value => {
     lightweightMode: bool('lightweightMode'),
     livePartnerVisible: bool('livePartnerVisible'),
     multiLightLook: bool('multiLightLook'),
+    modeSelectArt: bool('modeSelectArt'),
+    modeSelectComment: bool('modeSelectComment'),
     multiLook: RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook) ? source.multiLook : source.multiLightLook === false ? 'OWN' : 'LIGHT',
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
@@ -33639,9 +33643,9 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
     desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n' + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n' + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n' + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
-    maxUses: 0,
-    unlimited: true,
-    withCards: false,
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
     duration: 'style',
     styles: Object.freeze([Object.freeze({
       id: 'sword',
@@ -35227,6 +35231,36 @@ const friendsRhythmSummary = bestRecords => {
     }) => rest)
   };
 };
+const friendsRhythmAchievements = bestRecords => {
+  const songs = rhythmDemoSongs(RHYTHM_SONGS);
+  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  return list.map(({
+    id
+  }) => {
+    const row = {
+      d: id,
+      total: 0,
+      clear: 0,
+      fc: 0,
+      ae: 0,
+      am: 0
+    };
+    songs.forEach(song => {
+      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some(x => x.id === id)) return;
+      row.total += 1;
+      const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
+      if (!rec) return;
+      const am = rec.allMarvelous === true,
+        ae = am || rec.allExcellent === true,
+        fc = ae || rec.fullCombo === true;
+      if (rec.clear === true || fc) row.clear += 1;
+      if (fc) row.fc += 1;
+      if (ae) row.ae += 1;
+      if (am) row.am += 1;
+    });
+    return row;
+  }).filter(row => row.total > 0);
+};
 const friendsCollectionSummary = ({
   masuMons,
   unlockedMonsterIds,
@@ -35247,9 +35281,25 @@ const friendsCollectionSummary = ({
 const friendsBuildRecords = src => ({
   v: 1,
   battle: friendsBattleSummary(src),
-  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  rhythm: {
+    ...friendsRhythmSummary(src && src.rhythmBest),
+    ach: friendsRhythmAchievements(src && src.rhythmBest).map(r => [r.d, r.total, r.clear, r.fc, r.ae, r.am])
+  },
   collection: friendsCollectionSummary(src || {})
 });
+const friendsNormalizeAchievements = raw => (Array.isArray(raw) ? raw : []).map(e => {
+  if (!Array.isArray(e) || typeof e[0] !== 'string') return null;
+  const total = Math.min(friendsInt(e[1]), 999);
+  const n = v => Math.min(friendsInt(v), total);
+  return {
+    d: e[0].slice(0, 20),
+    total,
+    clear: n(e[2]),
+    fc: n(e[3]),
+    ae: n(e[4]),
+    am: n(e[5])
+  };
+}).filter(r => r && r.total > 0).slice(0, 8);
 const friendsNormalizeRecords = raw => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const battle = (Array.isArray(raw.battle) ? raw.battle : []).map(e => e && typeof e.id === 'string' && (e.k === 's' || e.k === 'w') && friendsInt(e.v) > 0 ? {
@@ -35269,7 +35319,8 @@ const friendsNormalizeRecords = raw => {
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
-      songs
+      songs,
+      ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach)
     },
     collection: {
       masu: friendsInt(c.masu),
@@ -37448,6 +37499,9 @@ function BreederMarketScreen({
       }] : []), ...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer => offer.available !== false) ? [{
         key: 'costume',
         label: '着替え'
+      }] : []), ...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer => offer.available !== false) ? [{
+        key: 'icon',
+        label: 'アイコン'
       }] : []), {
         key: 'item',
         label: 'アイテム'
@@ -37931,6 +37985,42 @@ function BreederMarketScreen({
         onClick: () => onOpenItemDetail(item)
       }) : null
     });
+  }), eventTab === 'icon' && RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.filter(offer => offer.available !== false).map(offer => {
+    const members = offer.memberIds.map(id => BREEDER_MARKET_ITEMS.find(m => m.id === id)).filter(Boolean);
+    const item = {
+      ...members[0],
+      name: offer.name,
+      groupMembers: members,
+      groupId: offer.groupId,
+      type: 'icon',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    const owned = isItemOwned({
+      id: members[0]?.id,
+      type: 'icon'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-icon': offer.id
+      },
+      previewIcon: previewIcon,
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      middle: React.createElement(MarketDetailChip, {
+        label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      })
+    });
   }), eventTab === 'frame' && RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer => {
     const frame = profileFrameById(offer.frameId);
     const item = {
@@ -38016,6 +38106,37 @@ function BreederMarketScreen({
     onClose: () => setRebirth(null)
   }));
 }
+function RhythmAchievementPanel({
+  rows,
+  who = 'self'
+}) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length === 0) return null;
+  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  return React.createElement("section", {
+    "data-rhythm-achievements": who,
+    className: `${SCREEN_PANEL_FLAT_CLASS} mb-3`
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-amber-100"
+  }, "モンヒロビートの実績"), React.createElement("small", {
+    className: "mb-2 block text-[9px] font-bold text-slate-400"
+  }, "難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）"), React.createElement("div", {
+    className: "grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center"
+  }, React.createElement("span", null), heads.map(([t, c]) => React.createElement("span", {
+    key: t,
+    className: `text-[8px] font-black leading-tight ${c}`
+  }, t)), list.map(r => React.createElement(React.Fragment, {
+    key: r.d
+  }, React.createElement("b", {
+    "data-rhythm-achievement-row": r.d,
+    className: "pr-1 text-left text-[10px] font-black text-white"
+  }, r.d), [r.clear, r.fc, r.ae, r.am].map((n, i) => React.createElement("span", {
+    key: i,
+    className: `rounded-lg bg-black/30 py-1 text-[11px] font-black tabular-nums ${n >= r.total ? 'text-amber-200' : n > 0 ? 'text-white' : 'text-slate-500'}`
+  }, n, React.createElement("span", {
+    className: "text-[8px] font-bold text-slate-400"
+  }, "/", r.total)))))));
+}
 function ProfileScreen({
   activeAssistant,
   assistantBond,
@@ -38074,6 +38195,19 @@ function ProfileScreen({
   onOpenMessageEditor,
   unlockedAssistants
 }) {
+  const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
+      } catch (error) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST;
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -38598,7 +38732,10 @@ function ProfileScreen({
         className: "mt-2 text-center text-[11px] font-black text-slate-400"
       }, "未記録"));
     }))));
-  })(), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  })(), onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
+    rows: rhythmAchRows,
+    who: "self"
+  }), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -54344,7 +54481,10 @@ function FriendsScreen({
           className: "mt-2 flex flex-col gap-2"
         }, React.createElement("p", {
           className: "px-1 text-[10px] font-black text-slate-400"
-        }, "遊んだ曲 ", sum.records.rhythm.played, "曲（スコアの高い順に", FRIEND_RECORD_SONG_MAX, "曲まで）"), songs.length > 0 && React.createElement("div", {
+        }, "遊んだ曲 ", sum.records.rhythm.played, "曲（スコアの高い順に", FRIEND_RECORD_SONG_MAX, "曲まで）"), React.createElement(RhythmAchievementPanel, {
+          rows: sum.records.rhythm.ach,
+          who: "friend"
+        }), songs.length > 0 && React.createElement("div", {
           "data-friend-versus": true,
           className: `${SCREEN_PANEL_FLAT_CLASS} text-center`
         }, React.createElement("small", {
@@ -56304,6 +56444,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
 .mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
+.mhms-bubble-alone::before{display:none}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -56810,6 +56951,21 @@ function RhythmMultiScreen({
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    const assistToggles = (cls, withLabel) => ms.onToggleAssistant && React.createElement("div", {
+      "data-rhythm-mode-assistant-toggles": true,
+      role: "group",
+      "aria-label": "助手の表示",
+      className: `flex items-center gap-1.5 ${cls}`
+    }, withLabel && React.createElement("small", {
+      className: "mr-auto text-[10px] font-black text-slate-400"
+    }, "助手 ", ms.assistant ? ms.assistant.name : ''), [['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
+      key: key,
+      type: "button",
+      [attr]: '',
+      "aria-pressed": on,
+      onClick: () => ms.onToggleAssistant(key),
+      className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, label, " ", on ? 'ON' : 'OFF')));
     return React.createElement("main", {
       "data-rhythm-mode-select": true,
       "data-rhythm-multi-step": "rooms",
@@ -56848,14 +57004,17 @@ function RhythmMultiScreen({
     }, React.createElement("b", {
       className: "text-sm font-black text-amber-200"
     }, "周回を終えています…")), React.createElement("div", {
-      className: "relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden"
-    }, ms.assistant && React.createElement("div", {
+      className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`
+    }, ms.assistant && (ms.showArt || ms.showComment) && React.createElement("div", {
       "data-rhythm-mode-assistant": true,
-      className: "mhms-glass mhms-in-left relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none"
+      className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${ms.showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
+    }, ms.showArt && React.createElement("div", {
+      "data-rhythm-mode-assistant-art-box": true,
+      className: "relative min-h-0 flex-1 overflow-hidden"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-glow"
-    }), React.createElement("div", {
+    }), assistToggles('absolute bottom-1.5 right-1.5 z-20', false), React.createElement("div", {
       className: "mhms-float pointer-events-none absolute inset-0"
     }, RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id] ? (() => {
       const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id];
@@ -56881,9 +57040,9 @@ function RhythmMultiScreen({
       alt: "",
       draggable: false,
       className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
-    })), React.createElement("p", {
+    }))), !ms.showArt && assistToggles('mx-2 mt-2 justify-end', true), ms.showComment && React.createElement("p", {
       "data-rhythm-mode-assistant-line": true,
-      className: "mhms-bubble absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]",
+      className: `mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`,
       style: {
         borderColor: ms.assistant.accent
       }
@@ -56893,8 +57052,8 @@ function RhythmMultiScreen({
         color: ms.assistant.accent
       }
     }, ms.assistant.name), ms.assistant.text)), React.createElement("div", {
-      className: "shrink-0 space-y-2.5 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
-    }, friendsOn && friendInvites.length > 0 && React.createElement("section", {
+      className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
+    }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
     }, React.createElement("h3", {
@@ -56915,7 +57074,7 @@ function RhythmMultiScreen({
       "data-rhythm-mode-solo": true,
       type: "button",
       onClick: ms.onSolo,
-      className: "mhms-card mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.05s'
       }
@@ -56935,7 +57094,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-free": true,
       type: "button",
       onClick: () => searchRoom('free'),
-      className: "mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.12s'
       }
@@ -64603,6 +64762,9 @@ function MonsterHeroGame() {
       const isCostume = offer?.kind === 'costume';
       const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
       const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
+      const isIcon = offer?.kind === 'icon';
+      const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
+      const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
         if (frameStatus && !frameStatus.met) {
@@ -64622,10 +64784,11 @@ function MonsterHeroGame() {
         unlockedMonsterIds: beforeUnlocked,
         unlockedTeachingIds: beforeTeachings,
         ownedProfileFrames: beforeFrames,
-        ownedAssistantCostumes: beforeCostumes
+        ownedAssistantCostumes: beforeCostumes,
+        ownedMarketIcons: expandOwnedMarketIcons(beforeIcons)
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isIcon ? 'このアイコンはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -64656,6 +64819,10 @@ function MonsterHeroGame() {
         key: ASSISTANT_COSTUME_OWNED_KEY,
         before: storedCostumes,
         next: exchange.ownedAssistantCostumes
+      }] : []), ...(isIcon ? [{
+        key: 'mh_market_icons',
+        before: storedIcons,
+        next: exchange.ownedMarketIcons
       }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -64683,6 +64850,7 @@ function MonsterHeroGame() {
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
       }
+      if (isIcon) setOwnedMarketIcons(prev => [...new Set([...prev, ...exchange.ownedMarketIcons])]);
       if (isCostume) {
         ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
         setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
@@ -79234,7 +79402,16 @@ function MonsterHeroGame() {
             src: base ? base.faceIconUrl || base.iconUrl : ''
           };
         }),
-        assistant: rhythmModeAssistant
+        assistant: rhythmModeAssistant,
+        showArt: rhythmSettings.modeSelectArt !== false,
+        showComment: rhythmSettings.modeSelectComment !== false,
+        onToggleAssistant: async key => {
+          const saved = await saveRhythmSettings({
+            ...rhythmSettings,
+            [key]: rhythmSettings[key] === false
+          });
+          setRhythmSettings(saved);
+        }
       } : null,
       onStartPlay: (song, difficulty, startId, count, streak) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();

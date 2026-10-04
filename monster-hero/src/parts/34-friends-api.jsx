@@ -611,6 +611,27 @@ const friendsRhythmSummary = (bestRecords) => {
   songs.sort((a, b) => b.sc - a.sc);
   return { played, songs: songs.slice(0, FRIEND_RECORD_SONG_MAX).map(({ order, ...rest }) => rest) };
 };
+// モンヒロビートの難易度別の実績。公開中の曲のうち、その難易度の譜面がある曲を分母に数える。
+// 返す形: [{ d:難易度id, total:分母, clear, fc, ae, am }]。フルコンボ以上は上位の称号も数に含める(AM ⊂ AE ⊂ FC)
+const friendsRhythmAchievements = (bestRecords) => {
+  const songs = rhythmDemoSongs(RHYTHM_SONGS);
+  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  return list.map(({ id }) => {
+    const row = { d: id, total: 0, clear: 0, fc: 0, ae: 0, am: 0 };
+    songs.forEach((song) => {
+      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some((x) => x.id === id)) return;
+      row.total += 1;
+      const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
+      if (!rec) return;
+      const am = rec.allMarvelous === true, ae = am || rec.allExcellent === true, fc = ae || rec.fullCombo === true;
+      if (rec.clear === true || fc) row.clear += 1;
+      if (fc) row.fc += 1;
+      if (ae) row.ae += 1;
+      if (am) row.am += 1;
+    });
+    return row;
+  }).filter((row) => row.total > 0);
+};
 // 持っているもの・図鑑の進み(数だけ)
 const friendsCollectionSummary = ({ masuMons, unlockedMonsterIds, ownedIconIds, ownedFrameIds }) => {
   const list = (Array.isArray(masuMons) ? masuMons : []).filter((m) => m && ALL_PLAYER_MONSTERS[m.baseId]);
@@ -628,9 +649,16 @@ const friendsCollectionSummary = ({ masuMons, unlockedMonsterIds, ownedIconIds, 
 const friendsBuildRecords = (src) => ({
   v: 1,
   battle: friendsBattleSummary(src),
-  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  rhythm: { ...friendsRhythmSummary(src && src.rhythmBest), ach: friendsRhythmAchievements(src && src.rhythmBest).map((r) => [r.d, r.total, r.clear, r.fc, r.ae, r.am]) },
   collection: friendsCollectionSummary(src || {}),
 });
+// 受け取った実績を整える。[難易度id, 分母, クリア, FC, AE, AM] の並び。分母を超える数は分母へ丸める
+const friendsNormalizeAchievements = (raw) => (Array.isArray(raw) ? raw : []).map((e) => {
+  if (!Array.isArray(e) || typeof e[0] !== 'string') return null;
+  const total = Math.min(friendsInt(e[1]), 999);
+  const n = (v) => Math.min(friendsInt(v), total);
+  return { d: e[0].slice(0, 20), total, clear: n(e[2]), fc: n(e[3]), ae: n(e[4]), am: n(e[5]) };
+}).filter((r) => r && r.total > 0).slice(0, 8);
 // 受け取った records を、安全な形へ整える(型を確かめ、ありえない値は捨てる。未知のモード・曲は読まない)
 const friendsNormalizeRecords = (raw) => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
@@ -642,7 +670,7 @@ const friendsNormalizeRecords = (raw) => {
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
     battle,
-    rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs },
+    rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs, ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach) },
     collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
       reincarnated: friendsInt(c.reincarnated), icons: friendsInt(c.icons), frames: friendsInt(c.frames) },
   };

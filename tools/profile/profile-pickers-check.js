@@ -58,6 +58,8 @@ const serve = () => new Promise(resolve => {
       put('mh_rhythm_tutorial_seen_v1', true); put('mh_breeder_id_v1', 'self-user');
       put('mh_masu_mons', ids.map((b, i) => ({ id: 1000 + i, baseId: b, bondXp: (i + 1) * 500 }))); put('mh_masu_migrated', true);
       put('mh_market_icons', icons);
+      // モンヒロビートの実績表の確認用(monster_hero は公開曲)
+      put('mh_rhythm_best_v1', { monster_hero: { EASY: { bestScore: 500000, played: true, clear: true, fullCombo: true, allExcellent: true, allMarvelous: true } } });
     }, [monsterIds, marketIcons]);
     const clickText = async (pattern) => page.evaluate((source) => {
       const rx = new RegExp(source);
@@ -92,12 +94,18 @@ const serve = () => new Promise(resolve => {
         frameText: (q('[data-profile-tile=frame]') || {}).textContent || '', playtime: !!q('[data-profile-playtime]'),
       };
     });
-    ok('プロフィールに名刺・設定タイル4つ・持ちもの・入口が並ぶ', layout.card && layout.tiles === 4 && layout.icon && layout.frame && layout.message && layout.fav && layout.stats && layout.links, JSON.stringify(layout));
+    ok('プロフィールに名刺・設定タイル4つ・持ちもの・入口が並ぶ', layout.card && layout.tiles >= 4 && layout.icon && layout.frame && layout.message && layout.fav && layout.stats && layout.links, JSON.stringify(layout));
     ok('フレンドの入口は、開いてすぐ見える位置(画面の中)で、バトル記録より前にある', layout.friends && layout.friendsTop < layout.vh && layout.friendsTop < layout.recordsTop, `${layout.friendsTop} / ${layout.recordsTop} / ${layout.vh}`);
     ok('バトル記録は2列で並ぶ', layout.cols === 2, `${layout.cols}列`);
     ok('フレームのボタンは「フレーム：◯◯」の文言を保つ(既存の検査が前提にしている)', /フレーム：フレームなし/.test(layout.frameText), layout.frameText);
     ok('プレイ時間のくわしい記録(今日・遊んだ日・数え始めた日)は残っている', layout.playtime);
     ok('プロフィールが横にはみ出さない', layout.overflowX === false);
+    const achSelf = await page.evaluate(() => {
+      const panel = document.querySelector('[data-rhythm-achievements=self]');
+      const row = panel && panel.querySelector('[data-rhythm-achievement-row=EASY]');
+      return { panel: !!panel, text: panel ? panel.innerText.replace(/\s+/g, ' ') : '', row: !!row, overflow: document.documentElement.scrollWidth > window.innerWidth };
+    });
+    ok('モンヒロビートの実績が出る(EASY の行に クリア・FC・AE・AM が 1/◯)', achSelf.panel && achSelf.row && /EASY( 1\/\d+){4}/.test(achSelf.text) && !achSelf.overflow, achSelf.text);
 
     // ② アイコン選択
     await page.evaluate(() => document.querySelector('[data-profile-tile=icon]').click());

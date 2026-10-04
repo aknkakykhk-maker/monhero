@@ -63,13 +63,14 @@ check('開始の前は、ダイヤショップの枠があっても売り物に�
 const during = load('', jst(START));
 check('開始の時刻から3着が見え、入口が出る', during.releasedAssistantCostumes().length === 3 && during.assistantCostumeFeatureOn() === true);
 check('期間中は3着ともビートP交換所の1000Pだけで売る(ダイヤでは売らない)', during.releasedAssistantCostumes().every(c => during.assistantCostumeSaleIn(c, 'beatPoint')?.cost === 1000 && !during.assistantCostumeSaleIn(c, 'diamond')));
-check('期間中はダイヤショップに並ばない', during.items.every(item => item.shop === false));
+// 2026-10-04 ユーザー指示「ダイヤの方にも着替えタブ作って、販売予定のものを入れといて」: 期間中も「近日追加」で並べ、買えない(available:false)
+check('期間中のダイヤショップには、3着とも並ぶが買えない(shop は false でなく、available が false)', during.items.length === 3 && during.items.every(item => item.shop !== false && item.available === false && item.cost === 100000));
 const lastMinute = load('', jst(END) - 1);
 check('終了の直前(3:59:59)はまだビートP交換所', lastMinute.assistantCostumeSaleIn(lastMinute.assistantCostumeById('mua_halloween_2026'), 'beatPoint')?.cost === 1000);
 const after = load('', jst(END));
 check('終了の時刻からは、ビートP交換所では売らずダイヤショップで100000ダイヤ',
   after.releasedAssistantCostumes().every(c => !after.assistantCostumeSaleIn(c, 'beatPoint') && after.assistantCostumeSaleIn(c, 'diamond')?.cost === 100000)
-  && after.items.length === 3 && after.items.every(item => item.shop !== false && item.cost === 100000 && item.currency === 'diamond' && item.type === 'costume'));
+  && after.items.length === 3 && after.items.every(item => item.shop !== false && item.available !== false && item.cost === 100000 && item.currency === 'diamond' && item.type === 'costume'));
 check('売り方の窓が壊れていない(値段が読めない公開済みの服が無い)', [during, after].every(x => x.assistantCostumesWithBrokenSale().length === 0));
 check('3着は みゅあ・きき・ももすけ の1着ずつ', during.assistantCostumesFor('mua').length === 1 && during.assistantCostumesFor('kiki').length === 1 && during.assistantCostumesFor('momosuke').length === 1);
 // 絵と、期間が rhythm-event.js と食い違っていないこと
