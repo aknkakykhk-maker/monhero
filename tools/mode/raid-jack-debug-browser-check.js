@@ -84,6 +84,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       if (req.method() === 'POST') { posts.push({ url: req.url(), body: req.postData() }); await route.fulfill({ status: 201, body: '' }); return; }
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
+    // 公開前の画面を確かめる検査なので、時計を開始日時(2026-10-05 4:00)より前に固定する(公開後の本物の時刻だと、旗が立って前提が変わる)
+    await page.clock.setFixedTime(new Date('2026-10-05T03:00:00+09:00'));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
