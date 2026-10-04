@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0dbec4bab79976e2
+// generated-sha256: d5c3c0b8b6080d1b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 01:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 01:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7586,7 +7586,9 @@ const FRIENDS_PUBLIC_RELEASE = true;
 // イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。
 // ★共有HPと累計ダメージはSupabaseの新しい表を使うので、docs/sql/raid/RAID_JACK_APPLY.sql を適用して
 //   画面を確かめるまでは false。false のあいだは入口・ヘルプ・更新履歴・助手の告知もまとめて隠す。
-const RAID_JACK_PUBLIC_RELEASE = false;
+// ★2026-10-05・ユーザー指示「10/5 4:00公開」で true にした。ただし RELEASE_FLAGS.raidJack は、下で開始日時(RAID_JACK_EVENT.startAt)になるまで偽を返す。
+//   先に配信しても、入口・ヘルプ・更新履歴・お話・回想は4:00ちょうどまで出ない(見るたびに数え直す getter)
+const RAID_JACK_PUBLIC_RELEASE = true;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
@@ -7619,7 +7621,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJack:RAID_JACK_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_EVENT.startAt); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -22912,12 +22914,12 @@ const sbCountIncomingFriendRequests = async (breederIdRaw) => {
 //  ・開催中かどうかは、モジュール定数にせず、見るたびに raidJackWindowAt(Date.now()) で数え直す。
 //  ・公開フラグ RELEASE_FLAGS.raidJack が偽のあいだは、入口もヘルプ・更新履歴も出さない。
 
-// 期間(★仮)。公開日時は「準備ができてから決める」。終わりは週の区切り(月曜5:00)ではなく、
+// 期間。開始は公開日時(2026-10-05 4:00・ユーザー指示)。RELEASE_FLAGS.raidJack もこの時刻まで偽を返す。終わりは週の区切り(月曜5:00)ではなく、
 // ハロウィン・ナイトの終了(11/1 4:00)に合わせる。
 const RAID_JACK_EVENT = Object.freeze({
   id: 'raid_jack_2026',
   name: 'カボチャの大王ジャック',
-  startAt: '2026-10-11T08:00:00+09:00',
+  startAt: '2026-10-05T04:00:00+09:00',
   endAt: '2026-11-01T04:00:00+09:00',
 });
 

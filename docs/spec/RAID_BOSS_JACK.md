@@ -62,13 +62,13 @@
 - 第2〜4部(`ASSISTANT_HALLOWEEN_NIGHT_2〜4`)と、レイドの段階のお話の流れ・出る順番が噛み合っているか
 - 回想の並び(日付)・見たかの記録(`mh_rhythm_event_story_v1`)・公開フラグでの出し入れに抜けが無いか
 
-### 公開までの手順(ユーザーの作業を含む)
+### 公開(2026-10-05 4:00・ユーザー指示)
 
-1. Supabase の SQL Editor で `docs/sql/raid/RAID_JACK_APPLY_TEST.sql` → `RAID_JACK_APPLY.sql` → `RAID_JACK_VERIFY.sql`(手順書: `RAID_JACK_STEPS.md`)。
-2. 公開日時を決め、`35-raid-jack.jsx` の `RAID_JACK_EVENT.startAt / endAt` を直す(いまは仮)。
-3. 報酬・お話ができたら足す。更新履歴の日時は、公開の直前に実時刻へ書き直す。
-4. `17-release-changelog-login-missions.jsx` の `RAID_JACK_PUBLIC_RELEASE` を `true` にする。
-5. デバッグの「ジャック確認」の強制表示で、本番と同じ画面を事前に確かめられる(記録は別イベントID `raid_jack_debug`)。
+- `RAID_JACK_PUBLIC_RELEASE = true`、`RAID_JACK_EVENT.startAt = 2026-10-05T04:00:00+09:00`(終了は 11/1 4:00)。
+- **`RELEASE_FLAGS.raidJack` は getter**で、開始日時になるまで偽を返す(`17-release-changelog-login-missions.jsx`)。先に配信しておいても、入口・ヘルプ・お話・回想は **4:00ちょうど**まで出ない。見るたびに数え直す(1分おきの見回りで、開いたままの端末にも出る)。
+- 更新履歴の項目は `visibleFrom` / 助手の告知は `notifyFrom` を 4:00 にそろえた(日時も 2026-10-05 04:00)。
+- SQL は本番に適用済み(`RAID_JACK_APPLY.sql` と `RAID_JACK_A_RANKING.sql`)。
+- 公開後に見るもの: HOME の真ん中のジャック・レイド画面・第1.5部→遊び方のお話・段階の合計とランキング。数字が合わなければ公開フラグを `false` に戻せば画面から消える。
 
 ### 既知の限界・注意
 
