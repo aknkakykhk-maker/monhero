@@ -36,11 +36,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   {
     const fixCtx = (ua) => { const c = { navigator: { userAgent: ua, maxTouchPoints: 5 }, console }; vm.runInNewContext(`${src.slice(start, end)}\nthis.F=RHYTHM_TOUCH_FIXES;this.on=rhythmTouchFixOn;this.active=rhythmTouchFixesActive;`, c); return c; };
     const pc = fixCtx('Mozilla/5.0 (X11; Linux x86_64)'), ip = fixCtx('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
-    check('部品: 直し方は既定ですべて切ってある', !ip.on('lateInputEffectDown') && !ip.on('wideEdge') && ip.active().length === 0);
+    check('部品: 入れてあるのは lateInputEffectDown だけ(iPhoneのみ・wideEdge は切ってある)', ip.on('lateInputEffectDown') && !ip.on('wideEdge') && !pc.on('lateInputEffectDown') && ip.active().join() === 'lateInputEffectDown');
     pc.F.wideEdge = true; ip.F.wideEdge = true;
-    check('部品: 入れた直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'wideEdge');
+    check('部品: 入れた直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'lateInputEffectDown,wideEdge');
     pc.F.allPlatforms = true;
-    check('部品: 検査用の allPlatforms で、パソコンでも試せる(名前としては返さない)', pc.on('wideEdge') && !pc.on('allPlatforms') && pc.active().join() === 'wideEdge');
+    check('部品: 検査用の allPlatforms で、パソコンでも試せる(名前としては返さない)', pc.on('wideEdge') && !pc.on('allPlatforms') && pc.active().join() === 'lateInputEffectDown,wideEdge');
   }
   B.reset();
   B.pointerDown(1, 100, 300, 1000, 1000); B.touchStart(11, 100, 300, 1000, 1001, 1);

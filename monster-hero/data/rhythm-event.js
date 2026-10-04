@@ -216,20 +216,26 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     // 画面に出す終わりの時刻(案内は「3:59まで」。内部の endAt は 4:00 の前までと同じ意味)
     displayEndAt: '2026-11-01T03:59:00+09:00',
     boost: 5,
-    loopScale: 5,
+    // ふだんの2倍の5倍=10。「いつもの5倍」の指示(2026-10-04・ユーザー指示「クイック無限周回は普段の5倍にして」)。
+    // loopBoost は画面に出す「いつもの◯倍」(loopScale ÷ ふだんの倍率)
+    loopScale: 10,
+    loopBoost: 5,
+    // HOMEの札・バナー(2026-10-04・ユーザー指示「イベント開催中みたいなのを更新情報とかどこかしらに出しといて」)。
+    // banner を書いたキャンペーンだけ出す。書かない(ビートPアップキャンペーン)は今までどおり何も出ない
+    banner: Object.freeze({ emoji: '🎃', title: 'ハロウィン・ナイト', sub: '開催中 〜11/1 3:59' }),
   }),
 ]);
 // ハロウィン・ナイトのストーリー(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め)、
-// 週ごとに更新の5部構成」)。第1部が開幕、第5部が閉幕。第2〜4部は毎週日曜の8:00。
+// 週ごとに更新の5部構成」)。時刻で出すのは第1部(開幕)だけ。第2部以降は、ジャックのストーリーとしてレイドの進み具合で開く(assistants.js)。
 //   id は assistants.js の EVENT_REPLAYS の id と同じ。あとから変えない(見たかどうかの記録に使う)。
 //   at より前には流さず、見ていない部は古いほうから1つずつ流す。期間が終わっても回想から見られる。
+//   ★2026-10-04から、時刻で流すのは第1部だけ。第2部以降はジャックのストーリー(レイドの進捗で流れる)になった。
 // ★出る時刻は見るたびに数え直す(CLAUDE.md ⑥-4)
 const HALLOWEEN_NIGHT_STORIES = Object.freeze([
   Object.freeze({ id: 'halloween_night_2026_part1', part: 1, at: HALLOWEEN_NIGHT_START_AT }),
-  Object.freeze({ id: 'halloween_night_2026_part2', part: 2, at: '2026-10-11T08:00:00+09:00' }),
-  Object.freeze({ id: 'halloween_night_2026_part3', part: 3, at: '2026-10-18T08:00:00+09:00' }),
-  Object.freeze({ id: 'halloween_night_2026_part4', part: 4, at: '2026-10-25T08:00:00+09:00' }),
-  Object.freeze({ id: 'halloween_night_2026_part5', part: 5, at: HALLOWEEN_NIGHT_END_AT }),
+  // 第2部以降は、時刻ではなく**レイド(ジャック)の進捗**で流す(2026-10-04・ユーザー指示「ぱんぷきんのストーリーをレイドのストーリーと同じに扱う」)。
+  // 第1.5部(ふくれあがる影)=レイド開始 / 第2〜6部=男爵〜大王を倒したあと / 終章=期間終了後。id・出し方は 35-raid-jack.jsx の RAID_JACK_STORY_IDS。
+  // 旧い第2〜5部(時刻で流れる版)は、まだ誰も見ていない(10/11以降だった)ので、台本ごとやめた。第1部のidは変えない(見たかの記録があるため)
 ]);
 // いま読める(時刻が来ている)ハロウィン・ナイトの部のid。古いほうから
 const halloweenNightStoryIdsAt = (nowMs) => {

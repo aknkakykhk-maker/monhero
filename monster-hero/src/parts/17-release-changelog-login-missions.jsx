@@ -29,6 +29,17 @@ const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 //   適用するまでは中身が出せない。適用して画面を確かめてから true にする。
 //   false のあいだは入口もヘルプ・更新履歴・助手の告知もまとめて隠す(画面そのものも開けない)。
 const FRIENDS_PUBLIC_RELEASE = true;
+// イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。
+// ★共有HPと累計ダメージはSupabaseの新しい表を使うので、docs/sql/raid/RAID_JACK_APPLY.sql を適用して
+//   画面を確かめるまでは false。false のあいだは入口・ヘルプ・更新履歴・助手の告知もまとめて隠す。
+// ★2026-10-05・ユーザー指示「10/5 4:00公開」で true にした。ただし RELEASE_FLAGS.raidJack は、下で開始日時(RAID_JACK_EVENT.startAt)になるまで偽を返す。
+//   先に配信しても、入口・ヘルプ・更新履歴・お話・回想は4:00ちょうどまで出ない(見るたびに数え直す getter)
+// ジャックの開始日時。RELEASE_FLAGS.raidJack の判定は、更新履歴や助手の告知を作るとき(このファイルが読み込まれるとき)にも
+// 呼ばれる。そのとき RAID_JACK_EVENT(35-raid-jack.jsx・あとに読み込まれる)はまだ無く、触ると例外になって「いつも偽」になり、
+// 開始を過ぎても更新履歴に出なかった(2026-10-05・ユーザー指摘「もう公開してるのに更新情報に出てない」)。
+// 開始日時はここにも置く(35-raid-jack.jsx の RAID_JACK_EVENT.startAt と同じ値。食い違いは tools/mode/raid-jack-check.js が見る)。
+const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
+const RAID_JACK_PUBLIC_RELEASE = true;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
@@ -61,7 +72,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -244,6 +255,15 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   event:   { label:'イベント',   tone:'event' },
 });
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
+// 期間限定イベントのお知らせが、いま開催中か(一覧の項目に「開催中」の札を出す)。
+// 助手の告知の期間(notifyFrom〜notifyUntil)を見る。描くたびに数え直す(CLAUDE.md ⑥-4)
+const changelogEventLive = (entry, nowMs = Date.now()) => {
+  const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
+  if (!notice || !notice.notifyUntil) return false;
+  const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
+  const until = Date.parse(notice.notifyUntil);
+  return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
+};
 
 // 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
 // 【なぜ絞るか】(2026-09-14・よそのゲームの曲を入れたときの案内用に足した)
@@ -635,6 +655,7 @@ const giftItemRewardInfo = (itemId) => {
   if (typeof HERO_PROOF_ITEM !== 'undefined' && id === HERO_PROOF_ITEM.id) return HERO_PROOF_ITEM;
   if (typeof HERO_PROOF_SHARD_ITEM !== 'undefined' && id === HERO_PROOF_SHARD_ITEM.id) return HERO_PROOF_SHARD_ITEM;
   if (typeof RAINBOW_TRANSCEND_FRUIT_ITEM !== 'undefined' && id === RAINBOW_TRANSCEND_FRUIT_ITEM.id) return RAINBOW_TRANSCEND_FRUIT_ITEM;
+  if (typeof SOUL_CRYSTAL_ITEM !== 'undefined' && id === SOUL_CRYSTAL_ITEM.id) return SOUL_CRYSTAL_ITEM;
   if (typeof speciesTranscendFruitItems === 'function') {
     const found = Object.values(speciesTranscendFruitItems()).find(item => item && item.id === id);
     if (found) return found;
@@ -701,6 +722,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'campaign') return { label:'キャンペーン', title };
   // モンヒロビートのイベント・週間ランキングの報酬(2026-09-14)
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
+  // イベント・レイドボス「ジャック」の報酬(2026-10-04)
+  if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };

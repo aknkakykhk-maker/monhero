@@ -59,6 +59,9 @@
 | `mh_friend_favorites_v1` | string[] / `[]` | フレンド一覧で「お気に入り」にしたフレンドのID(`friendsNormalizeFavorites` を通す) |
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
+| `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
+| `mh_raid_jack_guide_seen_v1` | boolean / `false` | レイド画面を開いた最初の1度だけ出す、画面のなかの案内(助手の吹き出し)を見たか。新しく足したキー。既存のキーには触らない |
+| `mh_raid_jack_unused_hs_<難易度>` など | number / `0` | **実際には書かれない**保険のキー(`modeKeyPrefix`)。ジャック戦は記録を書かないが、万一書いても通常のタクティクスの自己ベスト(`mh_tactics_*`)と同じキーを指さないように、別の接頭辞へ逃がしてある |
 | `mh_masu_lock_rebirth_v1` | string[] / `[]` | マスモンの転生ロックのIDの並び(2026-10-01)。転生ロックの子は転生できない。お気に入り(`mh_masu_locked_v1`)とは別々に付け外しできる。壊れた値は「ロックなし」。`mh_masu_mons` には書かない |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
@@ -328,6 +331,8 @@
 未使用魂格Pは保存せず、`soulPointMaxReachedLevel` と `soulTraitLevels` から導出する。転生では上記3項目を明示的に維持し、合体の通常経路では副の魂格段階・最高到達Lv・特性振り分けを主へコピーしない。魂格継承合体を選んだ場合だけ、主の不足段階分の通常進化コストを支払って `soulRankStage` / `levelCap` を先に解放する。
 
 勇者の証 `hero_proof` と魂格再編の書 `soul_rank_respec_scroll` は、既存 `mh_owned_items` の個数として保存する。専用保存キーは作らない。
+
+(2026-10-04・決定・未実装)イベント報酬の「魂格の結晶(仮)」も同じく `mh_owned_items` の個数で持つ。使うと `mh_masu_mons` の個体へ足す `soulBonusPoints`(0以上の整数・欠損は0・0のときは保存しない)が+1される。仕様は SOUL_RANK_SYSTEM.md §5.3.1。
 
 ランキング個体詳細は `RANKING_DETAIL_VERSION = 6` で、記録時の `soulRankStage` / `soulTraitLevels` / `soulSpentPoints` を既存detail内へ追加する。未使用魂格Pはランキングへ保存しない。旧ランキングは魂格なし・特性なし・使用済み0Pとして読む。
 

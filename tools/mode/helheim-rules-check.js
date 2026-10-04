@@ -16,7 +16,7 @@ vm.createContext(sandbox);
 vm.runInContext([
   "const BATTLE_MODE_CHALLENGE='challenge',BATTLE_MODE_QUICK='quick',BATTLE_MODE_PRO='pro',BATTLE_MODE_SPECIES_CHALLENGE='speciesChallenge',"
   + "BATTLE_MODE_TACTICS='tactics',BATTLE_MODE_TACTICS_SPECIES='tacticsSpecies',BATTLE_MODE_TACTICS_PRO='tacticsPro';"
-  + "const isTacticsMode=()=>false,isSpeciesChallengeMode=(m)=>m===BATTLE_MODE_SPECIES_CHALLENGE;",
+  + "const isTacticsMode=()=>false,isSpeciesChallengeMode=(m)=>m===BATTLE_MODE_SPECIES_CHALLENGE,isRaidJackMode=()=>false;",
   slice('const EXTREME_DIFFICULTIES = Object.freeze([','// ===== トレーニング'),
   slice('const TRAINING_PICK_COUNT','// 極限チャレンジの説明には'),
   slice('const EXTREME_RANKING_PREFIX','// ランキングの難易度キーから'),
@@ -96,7 +96,8 @@ check('不死の対象WAVEと回数を実データから書く',JSON.stringify(g
 check('複合特殊ルールありと出す',G('extremeRuleSummaryText')('HELHEIM')==='複合特殊ルールあり');
 
 // 本体側の接続
-check('敵生成のあとで上乗せを1か所で掛ける',source.includes('const enemyAdjust=extremeEnemyStatAdjust(specialRuleDifficulty,newEnemy.id);')
+// ジャックの専用戦(raidRun)は、極限の特殊ルールの上乗せを受けない(率1のまま)ので、その分岐の中に extremeEnemyStatAdjust が入った(2026-10)
+check('敵生成のあとで上乗せを1か所で掛ける',source.includes('const enemyAdjust=raidRun?{lifeRate:1,atkRate:1}:extremeEnemyStatAdjust(specialRuleDifficulty,newEnemy.id);')
   &&source.includes('newEnemy.maxHp=Math.floor(newEnemy.maxHp*enemyAdjust.lifeRate);')
   &&(source.match(/createBattleEnemy\(w,difficulty,forcedEnemyKey/g)||[]).length===1);
 check('実効最大ライフへ冥府の率を掛ける(表示用・ターン中の両方)',source.includes('const allyMaxHpRate = extremeAllyMaxHpRate(specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty), wave);')

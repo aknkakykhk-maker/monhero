@@ -24,7 +24,7 @@ const path = require('path');
 const { PARTS_DIR, readPartsManifest } = require(path.join(TOOLS_DIR, 'harness'));
 
 // 12 → 16: ビートPの交換(exchangeRhythmEventPoints)は、保存の取引関数の呼び出しから state 更新まで13行あく。保存してから更新する正しい順なので、窓を広げて通す
-const SPAN = 16;
+const SPAN = 20;   // 16 → 20: 交換の保存の項目に衣装・アイコンの行が増え、保存の取引関数の呼び出しから state 更新までがさらに離れた。保存してから更新する順は変わらない
 // storeSet を引数で受け取って保存まで済ませる取引関数。増やしたらここへ足す。
 // これらは「保存に失敗したら書かない/巻き戻す」ところまで面倒を見るので、
 // 呼び出し側は結果を見て state を更新すればよい

@@ -123,7 +123,7 @@ const seed = ({ conditions }) => {
   };
 
   const iconCards = (page) => page.evaluate(() => {
-    return ['みゅあ（ハロウィン）のアイコン', 'きき（ハロウィン）のアイコン', 'ももすけ（ハロウィン）のアイコン'].map(n => {
+    return ['みゅあ（ハロウィン）のアイコン', 'きき（ハロウィン）のアイコン', 'ももすけ（ハロウィン）のアイコン', 'スネグーラチカ（ハロウィン）のアイコン'].map(n => {
       const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').includes(n));
       const text = card ? card.innerText.replace(/\s+/g, ' ') : '';
       const buy = card ? [...card.querySelectorAll('button')].find(b => /購入|交換/.test(b.getAttribute('aria-label') || b.innerText || '')) : null;
@@ -146,9 +146,27 @@ const seed = ({ conditions }) => {
     await goShop(page, 'ビートP');
     check('② ビートP交換所に「アイコン」タブが出る', (await tabs(page)).includes('アイコン'));
     await clickText(page, 'アイコン');
+    // 2026-10-04 ユーザー指摘「文字列が悪い」: タブの文字が途中で割れない / 商品名の「（…）」が行をまたがない
+    const wraps = await page.evaluate(() => {
+      const linesOf = (el) => { const tops = new Set(); const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+        while ((n = w.nextNode())) { for (let i = 0; i < n.data.length; i++) { if (/\u200b/.test(n.data[i])) continue; const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); const b = r.getBoundingClientRect(); if (b.width) tops.add(Math.round(b.top)); } } return tops.size; };
+      const tabs = [...document.querySelectorAll('[role="tab"]')].map(b => ({ label: (b.innerText || '').trim(), lines: linesOf(b) }));
+      const cut = [];
+      document.querySelectorAll('[data-event-point-icon]').forEach(card => {
+        const name = [...card.querySelectorAll('div')].find(d => /ハロウィン/.test(d.innerText || '') && d.className.toString().includes('font-black') && d.className.toString().includes('text-center'));
+        if (!name) return;
+        const chars = []; const w = document.createTreeWalker(name, NodeFilter.SHOW_TEXT); let n;
+        while ((n = w.nextNode())) for (let i = 0; i < n.data.length; i++) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); const b = r.getBoundingClientRect(); if (b.width) chars.push({ c: n.data[i], top: Math.round(b.top) }); }
+        const open = chars.find(x => x.c === '（'), close = chars.find(x => x.c === '）');
+        if (!open || !close || open.top !== close.top) cut.push((name.innerText || '').replace(/\s+/g, ' '));
+      });
+      return { tabs, cut };
+    });
+    check('② タブの文字が途中で割れない(どのタブも1行)', wraps.tabs.length >= 7 && wraps.tabs.every(t => t.lines === 1), JSON.stringify(wraps.tabs));
+    check('② 商品名の「（…）」が行をまたがない', wraps.cut.length === 0, wraps.cut.join(' | '));
     let cards = await iconCards(page);
-    check('② 3キャラが並ぶ', cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
-    check('② 3キャラとも1000Pで買える', cards.every(c => c.buyEnabled && /1,?000/.test(c.text)), cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
+    check('② 4キャラが並ぶ', cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
+    check('② 4キャラとも1000Pで買える', cards.every(c => c.buyEnabled && /1,?000/.test(c.text)), cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
     const buy = await page.evaluate(() => {
       const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').includes('みゅあ（ハロウィン）のアイコン'));
       const b = card && [...card.querySelectorAll('button')].find(x => /購入|交換/.test(x.getAttribute('aria-label') || x.innerText || ''));
@@ -165,7 +183,7 @@ const seed = ({ conditions }) => {
     const icons = (await store(page, 'mh_market_icons')) || [];
     check('② 8表情ぜんぶ mh_market_icons に入る(通常のみゅあのアイコンは入らない)', EXPR.every(k => icons.includes(`myua_halloween_${k}`)) && !icons.includes('myua_normal') && !icons.includes('mua'), JSON.stringify(icons));
     cards = await iconCards(page);
-    check('② 買ったみゅあは「所持済み」で買えない。ほかの2キャラは買える', !cards[0].buyEnabled && cards[1].buyEnabled && cards[2].buyEnabled, cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
+    check('② 買ったみゅあは「所持済み」で買えない。ほかの3キャラは買える', !cards[0].buyEnabled && cards[1].buyEnabled && cards[2].buyEnabled && cards[3].buyEnabled, cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
     await goShop(page, 'ブリーダー');
     const breederText = await page.evaluate(() => document.body.innerText);
     check('② ブリーダーP交換所には、ハロウィンのアイコンがまだ並ばない', !breederText.includes('（ハロウィン）'));
@@ -178,8 +196,10 @@ const seed = ({ conditions }) => {
     await goShop(page, 'ビートP');
     check('③ 終わったあとは、ビートP交換所に「アイコン」タブが無い', !(await tabs(page)).includes('アイコン'));
     await goShop(page, 'ブリーダー');
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText||'').trim() === '確認'); if (b) b.click(); });
+    await page.waitForTimeout(600);
     const cards = await iconCards(page);
-    check('③ ブリーダーP交換所に3キャラ(ハロウィン)が1ptで並び、買える', cards.every(c => c.found && c.buyEnabled && /\b1\b/.test(c.text)), cards.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 40)}`).join(' | '));
+    check('③ ブリーダーP交換所に4キャラ(ハロウィン)が1ptで並び、買える', cards.every(c => c.found && c.buyEnabled && /\b1\b/.test(c.text)), cards.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 40)}`).join(' | '));
     await ctx.close();
   }
 

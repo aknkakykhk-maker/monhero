@@ -74,6 +74,35 @@ for(const [label,make] of [['長押し',hold],['スライド',slide]]){
     r.target!==r.held&&r.held.activePointerId==='touch:1',
     `押さえている指=${r.held.activePointerId}`);
 }
+// ── 時刻を大きく過ぎてまだ叩かれていないTAPは、被りノーツと見ない(2026-10-04・持ち替えを優先) ──
+// プレイヤーの声「スライドと普通のノーツが交互に来る形で指置き換えをすると、変な判定が出て必ず失敗する」。
+// 持ち替えのつもりの指がTAPに取られるとスライドが丸ごとMISSになる。反対に遅れて叩くつもりの指が持ち替え扱いになっても、
+// 失うのはそのTAP1つだけ。境界は100ms(MARVELOUS・EXCELLENT の窓の外)。TAP以外・早い側・帯が無いときは変えない
+{
+  const LATE=100;
+  for(const [label,make] of [['長押し',hold],['スライド',slide]]){
+    const rAt=(delta,type='TAP')=>play(make(),over(type,3),4,1500+delta);
+    const ok=rAt(LATE);
+    check(`${label}: 時刻から${LATE}msちょうど遅れたTAPは、これまでどおり叩ける`,ok.target===ok.other,
+      ok.target?'叩いた':(ok.standby?'控え':'空打ち'));
+    const late=rAt(LATE+1);
+    check(`${label}: ${LATE+1}ms遅れて、まだ叩かれていないTAPの上へ置いた指は、持ち替えの2本目(控え)になる`,
+      !late.target&&late.standby===late.held,late.target?'TAPを取ってしまった':(late.standby?'控え':'空打ち'));
+    const far=rAt(170);
+    check(`${label}: 170ms遅れた(GOODの窓ぎりぎり)TAPの上でも、持ち替えを優先する`,!far.target&&far.standby===far.held);
+    const early=rAt(-120);
+    check(`${label}: 早い側(120ms手前)のTAPは、これまでどおり叩ける`,early.target===early.other,early.target?'叩いた':'控え');
+    for(const type of ['FLICK','HOLD']){
+      const r=rAt(150,type);
+      check(`${label}: 遅れて降りてきた${type}は、これまでどおり叩ける(TAPだけを持ち替え寄りにしている)`,r.target===r.other,r.target?'叩いた':(r.standby?'控え':'空打ち'));
+    }
+  }
+  // 帯を押さえていないときは、遅れたTAPもこれまでどおり叩ける(持ち替えの場面だけが対象)
+  X.RHYTHM_GESTURE_RUNTIME.clear();
+  const lone={index:0,type:'TAP',timeMs:1500,lane:1,subLane:2,subLaneWidth:4,done:false,activePointerId:null};
+  const r=match([lone],[at('touch:2',4)],1500+150,0)[0];
+  check('帯を押さえていないときは、150ms遅れたTAPもこれまでどおり叩ける',r.target===lone,r.target?'叩いた':'取れなかった');
+}
 // ── 接しているだけの隣のノーツは、これまでどおり控え(#1493を戻さない) ──
 {
   // SLIDEの帯は 1〜5。隣のノーツは 5〜7 で、境界の1点(5.0)だけが接している

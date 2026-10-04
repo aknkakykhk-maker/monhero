@@ -53,19 +53,27 @@ check('ハロウィンを1つ持っていると、同じ表情違いは全部持
   (() => { const out = now.expandOwnedMarketIcons(['myua_halloween_wink']); return EXPR.every(k => out.includes(`myua_halloween_${k}`)) && !out.includes('myua_normal') && !out.includes('mua'); })());
 check('通常のアイコンを持っていても、ハロウィンは持っていることにならない', !now.expandOwnedMarketIcons(['myua_normal', 'mua']).some(id => /_halloween_/.test(id)));
 
+// スネグーラチカ(通常と覚醒の2種が1つのまとまり。通常のスネグーラチカのアイコンとは混ぜない)
+check('スネグーラチカ（ハロウィン）が、通常・覚醒の2種で1つのまとまりになる', idsOf(now, 'snegurochka_halloween').join() === 'snegurochka_halloween_icon,snegurochka_halloween_awakened_icon');
+check('通常のスネグーラチカのまとまりは変わらず、ハロウィンが混ざらない', idsOf(now, 'snegurochka').join() === 'snegurochka_icon,snegurochka_awakened_icon');
+check('ハロウィンのスネグーラチカを1つ持つと2種とも持っていることになり、通常は持っていることにならない',
+  (() => { const out = now.expandOwnedMarketIcons(['snegurochka_halloween_awakened_icon']); return out.includes('snegurochka_halloween_icon') && !out.includes('snegurochka_icon'); })());
+
 // ② 売り場の切り替え
 const before = load(jst(START) - 1);
 const during = load(jst(START));
 const last = load(jst(END) - 1);
 const after = load(jst(END));
 const halloweenItems = (g) => g.BREEDER_MARKET_ITEMS.filter(i => i.type === 'icon' && /_halloween_/.test(i.id));
-check('商品は3キャラ×8表情=24個で、1つ1pt', halloweenItems(now).length === 24 && halloweenItems(now).every(i => i.type === 'icon' && i.cost === 1));
+check('商品は、3キャラ×8表情とスネグーラチカ2種の=26個で、1つ1pt', halloweenItems(now).length === 26 && halloweenItems(now).every(i => i.type === 'icon' && i.cost === 1));
 check('開始の前は、どこでも売らない', before.halloweenIconSale() === null && halloweenItems(before).every(i => i.shop === false) && before.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.every(o => o.available === false));
 check('イベント中は、ビートP交換所の1000Pだけで売る(ブリーダーP交換所には並ばない)', during.halloweenIconSale() === 'beatPoint' && halloweenItems(during).every(i => i.shop === false)
-  && during.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.length === 3 && during.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.every(o => o.available === true && o.cost === 1000 && o.kind === 'icon'));
+  && during.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.length === 4 && during.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.every(o => o.available === true && o.cost === 1000 && o.kind === 'icon'));
 check('終了の直前(3:59:59)はまだビートP交換所', last.halloweenIconSale() === 'beatPoint');
 check('終了の時刻からは、ビートP交換所では売らず、ブリーダーP交換所の1ptで売る', after.halloweenIconSale() === 'breederPoint'
   && halloweenItems(after).every(i => i.shop !== false && i.cost === 1) && after.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.every(o => o.available === false));
+
+check('ビートP交換所の商品に、スネグーラチカ（ハロウィン）が1000Pで並ぶ(イベント中)', (() => { const o = during.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.find(x => x.groupId === 'snegurochka_halloween'); return !!o && o.cost === 1000 && o.available === true && o.memberIds.length === 2; })());
 
 // ③ ビートP交換
 const offer = during.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.find(o => o.groupId === 'mua_halloween');
@@ -81,8 +89,8 @@ check('壊れた持ち物(文字列・null・数値の混ざった配列)でも�
 
 // ④ 絵と保存
 const missing = halloweenItems(now).filter(i => !fs.existsSync(path.join(ROOT, 'monster-hero', i.icon.split('?')[0])));
-check('24個とも、衣装の顔アイコンの実ファイルがある', missing.length === 0, missing.map(i => i.icon).slice(0, 3).join(' '));
-check('絵は衣装と同じ images/assistant/halloween/face/ (別のファイルを作らない)', halloweenItems(now).every(i => i.icon.startsWith('images/assistant/halloween/face/')));
+check('26個とも、絵の実ファイルがある', missing.length === 0, missing.map(i => i.icon).slice(0, 3).join(' '));
+check('助手の絵は衣装と同じ images/assistant/halloween/face/ (別のファイルを作らない)', halloweenItems(now).filter(i => !/^snegurochka_/.test(i.id)).every(i => i.icon.startsWith('images/assistant/halloween/face/')));
 const app = read('monster-hero/src/parts/60-app.jsx');
 const saveSpec = read('docs/spec/SAVE_DATA.md');
 check('保存は既存の mh_market_icons だけ(新しいキーを作らない)', /isIcon \? \[\{ key:'mh_market_icons'/.test(app));

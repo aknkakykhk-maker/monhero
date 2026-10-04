@@ -20,6 +20,8 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
     // 勇者の証片も売り物ではないので BREEDER_MARKET_ITEMS に無い。ここで並べる
     // (2026-09-13・ユーザー指示「勇者の証片はアイテム欄に並ぶようにしてね」)
     ...((ownedItems[HERO_PROOF_SHARD_ITEM_ID]||0)>0?[HERO_PROOF_SHARD_ITEM]:[]),
+    // 魂格の結晶もマーケットでは売らない(ジャックの報酬)。使うのはマスモン詳細の魂格特性
+    ...((ownedItems[SOUL_CRYSTAL_ITEM_ID]||0)>0?[SOUL_CRYSTAL_ITEM]:[]),
     ...Object.values(speciesTranscendFruitItems()).filter(item=>(ownedItems[item.id]||0)>0),
   ];
   // 「使う場所」の案内は8分岐あり、右列の幅が文字数ぶんバラバラだった。
@@ -61,7 +63,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                     ? <div className={usageNoteClass}>神殿の<br/>魂格進化で<br/>使用</div>
                     : item.usage==='heroProofShard'
                     ? <div className={usageNoteClass}>マーケットで<br/>{HERO_PROOF_SHARD_PER_PROOF}個→<br/>勇者の証1個</div>
-                    : item.usage==='soulRankRespec'
+                    : item.usage==='soulRankRespec'||item.usage==='soulCrystal'
                     ? <div className={usageNoteClass}>マスモン詳細の<br/>魂格特性で<br/>使用</div>
                     : <button onClick={()=>onUseItem(item.id)} className="shrink-0 w-[84px] min-h-[44px] rounded-xl bg-teal-600 text-[12px] font-black text-white active:scale-95">使う</button>}
                 </div>

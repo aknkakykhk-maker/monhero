@@ -45,16 +45,25 @@ check('各イベントが日付(YYYY-MM-DD HH:MM)を持つ(足すときの書き
   (list || []).filter(ev => !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(ev.date || '')).map(ev => ev.id).join(', '));
 {
   const core = fs.readFileSync(path.join(root, 'monster-hero/src/parts/10-core.jsx'), 'utf8');
-  const from = core.indexOf('const eventReplayDateMs'), to = core.indexOf('.map(row => row.event);', from);
+  // eventReplayList は eventReplaySorted(絞り込み)の1行になった(2026-10-04・デバッグの全ストーリー確認のため)。
+  // 切り出しの終わりは、全件を返す eventReplayAllList の行までにする
+  const from = core.indexOf('const eventReplayDateMs'), endMark = 'const eventReplayAllList = () => eventReplaySorted(() => true);', to = core.indexOf(endMark, from);
   const c2 = { EVENT_REPLAYS: list };
   vm.createContext(c2);
-  vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + '.map(row => row.event);'.length)}\nglobalThis.__o={order:eventReplayList().map(e=>e.id),text:eventReplayDateText(EVENT_REPLAYS[0]),bad:eventReplayDateText({date:'x'})};`, c2);
+  vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + endMark.length)}\nglobalThis.__o={order:eventReplayList().map(e=>e.id),text:eventReplayDateText(EVENT_REPLAYS[0]),bad:eventReplayDateText({date:'x'})};`, c2);
   const order = c2.__o.order;
   const ms = order.map(id => Date.parse(list.find(ev => ev.id === id).date.replace(' ', 'T') + ':00+09:00'));
   check('一覧は日付の新しい順に並ぶ', order.length === list.length && ms.every((v, i) => i === 0 || ms[i - 1] >= v), order.join(' > '));
   check('一覧に出す日付は YYYY/MM/DD・壊れた日付は出さない', /^\d{4}\/\d{2}\/\d{2}$/.test(c2.__o.text) && c2.__o.bad === '', c2.__o.text);
 }
 check('一覧の各行に日付を出す', (source.match(/data-event-replay-date/g) || []).length >= 2);
+// ハロウィン・ナイトとジャックの会話は、全部に曲が付く(2026-10-04・「レイドの遊び方のときにBGMがない」。設定表への1行の書き忘れだった)
+{
+  const bgm = fs.readFileSync(path.join(root, 'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'), 'utf8');
+  const line = (bgm.match(/const EVENT_BGM_SCENES = Object\.freeze\(\{[^\n]*\}\);/) || [''])[0];
+  const missing = (list || []).filter(ev => /^(raid_jack|halloween_night)/.test(ev.id) && !new RegExp(`\\b${ev.id}:'`).test(line)).map(ev => ev.id);
+  check('ハロウィン・ナイトとジャックの会話は、すべて EVENT_BGM_SCENES に曲が登録されている', line !== '' && missing.length === 0, missing.join(', '));
+}
 
 const kikiEvent = Array.isArray(list) ? list.find(ev => ev.id === 'kiki_intro') : null;
 check('最初の登録イベントがきき加入イベント', !!kikiEvent);
@@ -136,7 +145,7 @@ if (from >= 0 && to > from) {
   // 「本編で流したぶんを見たことにする」処理を使うようになった(2026-09-11)。
   // 名前を渡していないと ReferenceError で描画そのものが落ち、下の確認が1件も走らない
   const transformed = babel.transformSync(
-    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, AssistantFace,\n'
+    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, storyCastOf, AssistantFace,\n'
     + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
     + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID }) => (<>\n'
     + replayBlock + '\n</>);\nmodule.exports = { Screen };',
@@ -152,6 +161,8 @@ if (from >= 0 && to > from) {
     eventReplayList: () => list,
     ASSISTANT_LIST: ASSISTANTS,
     assistantById: (id) => ASSISTANTS.find(x => x.id === id) || ASSISTANTS[0],
+    // 台本に出てくる話し手(助手+登場人物)。この検査では助手だけで足りる(ジャックの再生は tools/mode/raid-jack-story-check.js が見る)
+    storyCastOf: (script) => ASSISTANTS.filter(who => script.some(l => l.who === who.id)),
     AssistantFace,
     // 言い回しの部品。ここでは「本文がそのまま出る」いちばん素直な形にしておく
     // (呼び方や仲良し度そのものは tools/assistant-check.js の担当)

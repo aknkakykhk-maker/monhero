@@ -237,27 +237,46 @@ const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 //   ・イベント中(10/4 8:00〜11/1 3:59)はビートP交換所で1000P、終わったあとはブリーダーP交換所で1pt(下の halloweenIconSale が決める)
 //   ・どちらで買っても8表情ぜんぶ手に入る(まとめの中身が mh_market_icons に全部入る。新しい保存キーは作らない)
 //   ・絵は衣装の顔アイコンをそのまま使う(images/assistant/halloween/face/)。別のファイルを作らない
+// 助手(みゅあ・きき・ももすけ)は表情8種、スネグーラチカは通常と覚醒の2種(それぞれ1つのまとまり)。
+// ★1つずつの名前は16文字まで(monster/market-icon-check.js)。売り場のカードの名前は、まとまりの名前(BREEDER_ICON_GROUP_NAMES)から作る
+// ★名前を _ICON で終わらせない(ヘルプの描画検査が「_ICON の定数」を空にして読むため)
+const SNEGUROCHKA_HALLOWEEN_ART = "images/breeder-icons/snegurochka_halloween.png?v=390c7fe41639";
+const SNEGUROCHKA_HALLOWEEN_AWAKENED_ART = "images/breeder-icons/snegurochka_halloween_awakened.png?v=7dca63b3fe4c";
 const HALLOWEEN_ICON_SETS = Object.freeze([
-  ['mua', 'myua', 'みゅあ'],
-  ['kiki', 'kiki', 'きき'],
-  ['momosuke', 'momosuke', 'ももすけ'],
-].map(([assistantId, prefix, who]) => Object.freeze({
-  groupId: `${assistantId}_halloween`,
-  assistantId,
-  name: `${who}（ハロウィン）`,
-  memberIds: Object.freeze(MYUA_ICON_EXPRESSIONS.map(([key]) => `${prefix}_halloween_${key}`)),
-  prefix,
-})));
+  ...[
+    ['mua', 'myua', 'みゅあ'],
+    ['kiki', 'kiki', 'きき'],
+    ['momosuke', 'momosuke', 'ももすけ'],
+  ].map(([assistantId, prefix, who]) => Object.freeze({
+    groupId: `${assistantId}_halloween`,
+    assistantId,
+    name: `${who}（ハロウィン）`,
+    items: Object.freeze(MYUA_ICON_EXPRESSIONS.map(([key, label]) => Object.freeze({
+      id: `${prefix}_halloween_${key}`, name: `ハロウィン${who}（${label}）`, icon: `images/assistant/halloween/face/${prefix}_${key}.PNG`,
+    }))),
+  })),
+  // スネグーラチカ(2026-10-04・ユーザー指示「スネグーラチカのアイコン、ハロウィン版の販売。みゅあ、ききとかと同じ仕様で」)。
+  // 通常(青緑の髪)と覚醒(黒髪)の2種が1つのまとまり。通常のスネグーラチカのアイコンとは混ぜない
+  Object.freeze({
+    groupId: 'snegurochka_halloween',
+    assistantId: null,
+    name: 'スネグーラチカ（ハロウィン）',
+    items: Object.freeze([
+      Object.freeze({ id: 'snegurochka_halloween_icon', name: 'ハロウィンスネグーラチカ（通常）', icon: SNEGUROCHKA_HALLOWEEN_ART }),
+      Object.freeze({ id: 'snegurochka_halloween_awakened_icon', name: 'ハロウィンスネグーラチカ（覚醒）', icon: SNEGUROCHKA_HALLOWEEN_AWAKENED_ART }),
+    ]),
+  }),
+].map(set => Object.freeze({ ...set, memberIds: Object.freeze(set.items.map(item => item.id)) })));
 // いまの売り場。'beatPoint'(ビートP交換所)・'breederPoint'(ブリーダーP交換所)・null(まだ売らない)。見るたびに数え直す
 const halloweenIconSale = (nowMs = Date.now()) => {
   if (nowMs < Date.parse(ASSISTANT_COSTUME_HALLOWEEN_START_AT)) return null;
   return nowMs < Date.parse(ASSISTANT_COSTUME_HALLOWEEN_END_AT) ? 'beatPoint' : 'breederPoint';
 };
-const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
-  id: `${set.prefix}_halloween_${key}`,
-  name: `${set.name}（${label}）のアイコン`,
+const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => set.items.map(item => ({
+  id: item.id,
+  name: item.name,
   type: 'icon',
-  icon: `images/assistant/halloween/face/${set.prefix}_${key}.PNG`,
+  icon: item.icon,
   cost: 1,
   // ブリーダーP交換所に並ぶのはイベントが終わってから(それまでは false で出ない)
   get shop() { return halloweenIconSale() === 'breederPoint' ? undefined : false; },
@@ -394,6 +413,7 @@ const breederIconGroupKeyOf = (id) => {
   // ハロウィンのアイコンは通常のアイコンと混ぜない(下の通常の判定より先に見る)
   const halloween = /^(myua|kiki|momosuke)_halloween_/.exec(key);
   if (halloween) return `${halloween[1] === 'myua' ? 'mua' : halloween[1]}_halloween`;
+  if (/^snegurochka_halloween_/.test(key)) return 'snegurochka_halloween';
   if (key === 'mua' || /^myua_/.test(key)) return 'mua';
   if (key === 'dra' || /^dra_/.test(key)) return 'dra';
   if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
@@ -402,7 +422,7 @@ const breederIconGroupKeyOf = (id) => {
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
 const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ',
-  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）' });
+  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）' });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
   const order = [];

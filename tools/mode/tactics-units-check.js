@@ -43,7 +43,8 @@ const slice = (from, to) => {
 const sandbox = { Math, Number, console };
 vm.createContext(sandbox);
 vm.runInContext(
-  slice('const TACTICS_START_GUTS_RATE', '// ==== 画面ライフサイクル')
+  // 終わりは「ジャックの定義(35)」の手前まで。そのあとの 37-raid-jack-aura.jsx は JSX なので、素の vm では読めない(2026-10)
+  slice('const TACTICS_START_GUTS_RATE', '// ===== イベント・レイドボス「ジャック」の定義')
     + ';globalThis.api={TACTICS_START_GUTS_RATE,'
     + 'createTacticsUnit,normalizeTacticsUnit,applyTacticsDamage,healTacticsUnit,reviveTacticsUnit,'
     + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
@@ -516,7 +517,8 @@ check('合流しても、すでに居る子の現在値を作り直さない',
 //   勇者モンはそこまでトレーニングを受けているので遅く入るほど見劣りする。
 //   クリアしたWAVE1つにつき全ステ+10%を基準に、そのWAVEの残りターンで厚みを決めて積む
 check('加入した子へ積み上げた補正を掛ける',
-  has('return isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;'));
+  // ジャック戦の「全快からはじめる」処理が後ろに足され、`return` から `const joined =` の形になった(2026-10)
+  has('const joined = isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;'));
 check('補正はWAVEを倒しきった瞬間に1回だけ積む',
   has('tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);')
     && has('const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);'));

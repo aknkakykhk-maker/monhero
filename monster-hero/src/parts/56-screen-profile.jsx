@@ -18,14 +18,15 @@
 function RhythmAchievementPanel({ rows, who = 'self' }) {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length === 0) return null;
-  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  // 見出しは言葉の切れ目で2行に分ける(列が狭く、自動の折り返しだと「オールエクセレン/ト」のように切れる)
+  const heads = [[['クリア'], 'text-emerald-300'], [['フル', 'コンボ'], 'text-sky-300'], [['オール', 'エクセレント'], 'text-amber-300'], [['オール', 'マーベラス'], 'text-pink-300']];
   return (
     <section data-rhythm-achievements={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
       <b className="block text-[12px] font-black text-amber-100">モンヒロビートの実績</b>
       <small className="mb-2 block text-[9px] font-bold text-slate-400">難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）</small>
       <div className="grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center">
         <span></span>
-        {heads.map(([t, c]) => <span key={t} className={`text-[8px] font-black leading-tight ${c}`}>{t}</span>)}
+        {heads.map(([t, c]) => <span key={t.join('')} data-rhythm-achievement-head className={`text-[9px] font-black leading-tight ${c}`}>{t.map((line) => <span key={line} className="block whitespace-nowrap">{line}</span>)}</span>)}
         {list.map((r) => (
           <React.Fragment key={r.d}>
             <b data-rhythm-achievement-row={r.d} className="pr-1 text-left text-[10px] font-black text-white">{r.d}</b>
