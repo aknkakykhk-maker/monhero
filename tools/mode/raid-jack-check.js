@@ -115,7 +115,7 @@ check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJa
 // ⑥ 公開の準備(更新履歴・告知・ヘルプ・案内が公開フラグで隠れる)
 const changelog = read('monster-hero/data/changelog.js');
 const entry = changelog.slice(changelog.indexOf('const CHANGELOG = ['), changelog.indexOf('const CHANGELOG = [') + 4000);
-check('更新履歴の項目は公開フラグ raidJack が立つまで出ない', /releaseFlag:'raidJack'/.test(entry) && /カボチャの大王ジャック/.test(entry));
+check('更新履歴の項目は公開フラグ raidJack が立つまで出ない', /releaseFlag:'raidJack'/.test(entry) && /カボチャのおばけジャック/.test(entry));
 check('大きい追加なので助手の告知(content)が付く', /assistantNotice:\{ id:'update_notice_raid_jack_v1', type:'content', notifyFrom:'2026-10-05T04:00:00\+09:00'/.test(entry) && /visibleFrom:'2026-10-05T04:00:00\+09:00'/.test(entry));
 const help = read('monster-hero/data/help.js');
 check('ヘルプの項目は公開フラグが立つまで出ず、助手のひとことがある', /id: 'raid-jack'[^\n]*releaseFlag:'raidJack'/.test(help) && /id: 'raid-jack'[\s\S]{0,400}assistant:/.test(help));

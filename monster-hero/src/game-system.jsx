@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 162dc8e6b7510e8e
+// generated-sha256: 171c55010a7e9f19
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 07:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 07:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23128,6 +23128,8 @@ const raidJackDefaultState = () => ({
   b: { day: '', used: 0, extra: 0, defeated: [], total: 0 },
   claimed: [],
   pending: [],
+  repaired: false,   // デバッグで付いた「倒した」印をサーバーの記録と突き合わせて直したか(1回だけ・raidJackRepairState)
+  giftsChecked: false,   // 倒していない段階の初討伐報酬(ギフト・受け取り済みの印)を取り下げたか(1回だけ・raidJackRevokeUnearned)
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -23157,6 +23159,8 @@ const raidJackNormalizeState = (raw) => {
     b: raidJackNormalizeSide(src.b, true),
     claimed: Array.isArray(src.claimed) ? src.claimed.filter((v) => typeof v === 'string').slice(0, 64) : [],
     pending: raidJackNormalizePending(src.pending),
+    repaired: src.repaired === true,
+    giftsChecked: src.giftsChecked === true,
   };
 };
 
@@ -23536,6 +23540,70 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     }
   }
   return { ok: true, due, noneIds };
+};
+
+// ---- 端末の「倒した」印の修復(2026-10-05) ----
+// デバッグの強制表示(別のイベントID)で戦った結果が、本番の端末記録(mh_raid_jack_v1)の「倒した段階」「累計」にも書かれていた。
+// グランドスラムが倒していないのに「討伐済み」になり、初討伐の報酬の判定にも使われてしまう(ユーザー指摘)。
+// 端末の印を、サーバーの本番のイベントの記録(自分の defeated=true の行)と突き合わせ、裏付けのない印を外す。
+//   ・送れていない再送待ち(pending)の中の「倒した」は、まだ送れていないだけなので残す
+//   ・通信できない・読めないときは何も変えない(直しは次の機会へ)。直せたら repaired を立てて、以後は走らない
+//   ・受け取り済みの印(claimed)・ギフトには触らない
+const sbFetchRaidJackMyDefeats = async (breederId, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_hits?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&defeated=eq.true&select=kind,tier&limit=200`));
+  return rows ? rows.filter((r) => (r.kind === 'a' || r.kind === 'b') && Number.isFinite(Number(r.tier))).map((r) => `${r.kind}${Number(r.tier)}`) : null;
+};
+const raidJackRepairState = async (state, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  if (norm.repaired) return { state: norm, changed: false };
+  const id = raidJackSafeId(breederId);
+  if (!id) return { state: norm, changed: false };
+  const [mine, self] = await Promise.all([sbFetchRaidJackMyDefeats(id, eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!mine || !self) return { state: norm, changed: false };
+  const valid = new Set(mine);
+  norm.pending.filter((p) => p.defeated).forEach((p) => valid.add(`${p.kind}${p.tier}`));
+  const next = raidJackNormalizeState(norm);
+  const before = JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]);
+  next.a.defeated = next.a.defeated.filter((v) => valid.has(v));
+  next.b.defeated = next.b.defeated.filter((v) => valid.has(v));
+  next.b.total = (Number(self.bTotal) || 0) + norm.pending.filter((p) => p.kind === 'b').reduce((sum, p) => sum + p.damage, 0);
+  next.repaired = true;
+  return { state: next, changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before };
+};
+
+// ---- 倒していない段階の初討伐報酬の取り下げ(2026-10-05) ----
+// 上の修復で「倒した」印は直せるが、それまでに印が使われて作られたグランドスラムの初討伐報酬(ギフト・受け取り済みの印 clear_bN)が残る。
+// サーバーに本番で倒した記録(defeated=true)が無い難易度のぶんだけ、次のように直す(1回だけ・giftsChecked)。
+//   ・ギフトが「まだ受け取られていない」→ ギフトを取り下げ、受け取り済みの印も外す(本当に倒したときに、改めて届く)
+//   ・ギフトを「もう受け取った」→ 中身は戻せないので、ギフトも印もそのまま残す(あとで本当に倒しても二重には届かない)
+//   ・ギフトが見つからない → 印だけ外す
+//   ・本番で本当に倒した難易度・ほかの報酬(A・順位・参加賞)・ほかのギフトには触れない。通信できないときは何も変えない
+// gifts は mh_gifts の配列。返り値 { ok, state, gifts, changed, removed }(removed=取り下げたギフトの数)
+const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (norm.giftsChecked) return { ok: true, state: norm, gifts: list, changed: false, removed: 0 };
+  const id = raidJackSafeId(breederId);
+  const mine = id ? await sbFetchRaidJackMyDefeats(id, eventId) : null;
+  if (!mine) return { ok: false, state: norm, gifts: list, changed: false, removed: 0 };
+  const earned = new Set(mine);
+  norm.pending.filter((p) => p.defeated).forEach((p) => earned.add(`${p.kind}${p.tier}`));
+  let nextGifts = list;
+  let nextClaimed = norm.claimed;
+  let removed = 0;
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    const claimId = raidJackClaimId('clear_b', i);
+    if (earned.has(tier.id) || !nextClaimed.includes(claimId)) return;
+    const giftId = `${eventId}_${claimId}`;
+    const gift = nextGifts.find((g) => g && g.id === giftId);
+    if (gift && gift.claimedAt) return;   // もう受け取った: 戻せないので残す
+    if (gift) { nextGifts = nextGifts.filter((g) => g !== gift); removed += 1; }
+    nextClaimed = nextClaimed.filter((v) => v !== claimId);
+  });
+  const next = raidJackNormalizeState({ ...norm, claimed: nextClaimed, giftsChecked: true });
+  return { ok: true, state: next, gifts: nextGifts, changed: removed > 0 || nextClaimed.length !== norm.claimed.length, removed };
 };
 
 // ---- part: 37-raid-jack-aura.jsx ----
@@ -37302,7 +37370,9 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       // 受け取れる報酬があればギフトで届け(本体側)、届いたら受け取り済みの印を読み直す
       const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
       if (!alive) return;
-      if (granted > 0) { loaded = await raidJackLoadState(); setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`); }
+      // 受け取り(と、端末の印の修復)で記録が変わっていることがあるので、読み直す
+      loaded = await raidJackLoadState();
+      if (granted > 0) setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
@@ -50894,17 +50964,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let outcome='error';
     let next=raidJackDefaultState();
     let opened=false;
+    // ★デバッグの強制表示(別のイベントID)の戦いは、本番の端末記録(倒した段階・累計・再送待ち)に一切書かない。
+    //   書くと、グランドスラムが倒していないのに「討伐済み」になり、初討伐の報酬の判定にも使われる(2026-10-05・ユーザー指摘)。
+    //   デバッグの与ダメージはデバッグ用のイベントIDでサーバーへ送るだけにする(送れなくても再送待ちには残さない)
+    const isDebugRun=run.eventId!==RAID_JACK_EVENT.id;
     try {
-      next=await raidJackLoadState();
-      const side=next[run.kind];
-      const before=raidJackUnlockedCount(run.kind,side.defeated);
-      if(defeated&&!side.defeated.includes(tier.id)) side.defeated=[...side.defeated,tier.id];
-      if(run.kind==='b') side.total=(side.total||0)+damage;
-      opened=raidJackUnlockedCount(run.kind,side.defeated)>before;
-      const breederId=await ensureBreederId();
-      const sent=await raidJackSubmitHit(next,hit,breederId,run.eventId);
-      next=sent.state; outcome=sent.outcome;
-      await raidJackSaveState(next);
+      if(isDebugRun){
+        const breederId=await ensureBreederId();
+        outcome=await sbSendRaidJackHit(hit,breederId,run.eventId);
+      } else {
+        next=await raidJackLoadState();
+        const side=next[run.kind];
+        const before=raidJackUnlockedCount(run.kind,side.defeated);
+        if(defeated&&!side.defeated.includes(tier.id)) side.defeated=[...side.defeated,tier.id];
+        if(run.kind==='b') side.total=(side.total||0)+damage;
+        opened=raidJackUnlockedCount(run.kind,side.defeated)>before;
+        const breederId=await ensureBreederId();
+        const sent=await raidJackSubmitHit(next,hit,breederId,run.eventId);
+        next=sent.state; outcome=sent.outcome;
+        await raidJackSaveState(next);
+      }
     } catch (error) { outcome='error'; }
     setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
       lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
@@ -50929,7 +51008,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     try {
       const breederId = await ensureBreederId();
       if (!breederId) return 0;
-      const state = await raidJackLoadState();
+      let state = await raidJackLoadState();
+      // 先に、デバッグで付いてしまった「倒した」印をサーバーの記録と突き合わせて直す(初討伐の報酬を、倒していない段階へ出さないため)
+      const repaired = await raidJackRepairState(state, breederId, RAID_JACK_EVENT.id);
+      if (repaired.state.repaired && !state.repaired) {
+        if (!(await raidJackSaveState(repaired.state))) return 0;
+        state = repaired.state;
+      }
+      // 続けて、その印のせいで作られた「倒していない段階の初討伐報酬」を取り下げる(もう受け取ったものは残す)。1回だけ
+      if (!state.giftsChecked) {
+        const savedGiftsNow = await storeGet('mh_gifts', [], false);
+        const giftsNow = Array.isArray(savedGiftsNow) ? savedGiftsNow : [];
+        const revoked = await raidJackRevokeUnearned(state, giftsNow, breederId, RAID_JACK_EVENT.id);
+        if (revoked.ok) {
+          const savedRevoke = await saveStoredValuesOrRollback([
+            { key:'mh_gifts', before:giftsNow, next:revoked.gifts },
+            { key:RAID_JACK_STORAGE_KEY, before:state, next:revoked.state },
+          ], storeGet, storeSet);
+          if (!savedRevoke) return 0;
+          state = revoked.state;
+          if (revoked.removed > 0) setGifts(revoked.gifts);
+        }
+      }
       const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
       if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
       const savedGifts = await storeGet('mh_gifts', [], false);

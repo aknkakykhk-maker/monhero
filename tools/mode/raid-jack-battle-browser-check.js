@@ -271,7 +271,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('B: kind は b・段階1', bRow.kind === 'b' && bRow.tier === 1);
     check('B: 成長の表示は出ない(Bは成長しない)', (await page.locator('[data-raid-jack-levelups]').count()) === 0);
     const bState = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_raid_jack_v1') || 'null'));
-    check('B: 端末の記録(mh_raid_jack_v1)に累計が残る', !!bState && Number(bState.value && bState.value.b ? bState.value.b.total : (bState.b ? bState.b.total : 0)) >= 0);
+    // デバッグの強制表示(別のイベントID)の戦いは、本番の端末記録に「倒した段階」「累計」を書かない(書くと本番のグランドスラムが討伐済みになる・2026-10-05)
+    const bStateBody = bState && bState.value ? bState.value : bState;
+    check('B: デバッグの戦いは、本番の端末記録(mh_raid_jack_v1)に倒した印・累計を書かない', !bStateBody || ((!bStateBody.b || ((bStateBody.b.defeated || []).length === 0 && !(Number(bStateBody.b.total) > 0))) && (!bStateBody.a || (bStateBody.a.defeated || []).length === 0)), JSON.stringify(bStateBody));
     await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));
