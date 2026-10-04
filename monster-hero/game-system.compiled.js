@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aeede25fa536c4e4
+// source-sha256: 7c20265e63b24e03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 19:45";
+const BUILD_DATE = "2026-10-04 20:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35879,7 +35879,26 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const m = /\/(\d+)$/.exec(String(range || ''));
   return m ? Number(m[1]) : null;
 };
-const RAID_JACK_AURA_TONGUES = Object.freeze([7, 10, 14, 18, 24]);
+const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
+const RAID_JACK_AURA_EMBERS = Object.freeze([0, 0, 6, 12, 20]);
+const RAID_JACK_AURA_WAVES = Object.freeze([0, 0, 1, 2, 3]);
+const raidJackAuraEmbers = count => Array.from({
+  length: count
+}, (_, i) => {
+  const r = n => {
+    const v = Math.sin((i + 1) * 39.3467 + n * 11.135) * 24634.6345;
+    return v - Math.floor(v);
+  };
+  return {
+    x: 6 + r(1) * 88,
+    w: 3 + r(2) * 4,
+    d: -r(3) * 2.4,
+    t: 1.4 + r(4) * 1.4,
+    dx: (r(5) - 0.5) * 30,
+    c: i % 5
+  };
+});
+const RAID_JACK_AURA_EMBER_SETS = Object.freeze(RAID_JACK_AURA_EMBERS.map(raidJackAuraEmbers));
 const raidJackAuraTongues = count => Array.from({
   length: count
 }, (_, i) => {
@@ -35900,7 +35919,7 @@ const raidJackAuraTongues = count => Array.from({
   };
 });
 const RAID_JACK_AURA_TONGUE_SETS = Object.freeze(RAID_JACK_AURA_TONGUES.map(raidJackAuraTongues));
-const RAID_JACK_AURA_GLOWS = Object.freeze([[[0, 'rgba(251,146,60,.9)', 10]], [[0, 'rgba(251,191,36,.95)', 14], [0, 'rgba(249,115,22,.7)', 26]], [[0, 'rgba(192,132,252,.95)', 16], [0, 'rgba(251,146,60,.8)', 30]], [[0, 'rgba(248,113,113,1)', 18], [0, 'rgba(251,191,36,.9)', 34], [0, 'rgba(239,68,68,.7)', 50]], [[0, 'rgba(250,204,21,1)', 18], [0, 'rgba(244,114,182,.95)', 36], [0, 'rgba(56,189,248,.85)', 54]]]);
+const RAID_JACK_AURA_GLOWS = Object.freeze([[[0, 'rgba(251,146,60,.7)', 8]], [[0, 'rgba(251,191,36,.95)', 14], [0, 'rgba(249,115,22,.7)', 28]], [[0, 'rgba(192,132,252,1)', 18], [0, 'rgba(251,146,60,.85)', 36], [0, 'rgba(126,34,206,.6)', 56]], [[0, 'rgba(248,113,113,1)', 22], [0, 'rgba(251,191,36,.95)', 44], [0, 'rgba(239,68,68,.8)', 68]], [[0, 'rgba(250,204,21,1)', 24], [0, 'rgba(244,114,182,1)', 48], [0, 'rgba(56,189,248,.9)', 76], [0, 'rgba(167,139,250,.7)', 100]]]);
 const raidJackAuraGlowFilter = (tier, scale = 1) => {
   const n = Math.min(Math.max(Math.floor(Number(tier) || 0), 0), 5);
   if (n < 1) return '';
@@ -35921,7 +35940,15 @@ const JackAuraLayer = ({
     "data-ja": "ring"
   }), React.createElement("i", {
     "data-ja": "ring2"
-  }), RAID_JACK_AURA_TONGUE_SETS[n - 1].slice(0, Math.max(0, limit)).map((t, k) => React.createElement("ins", {
+  }), limit > 12 && Array.from({
+    length: RAID_JACK_AURA_WAVES[n - 1]
+  }, (_, k) => React.createElement("i", {
+    key: `w${k}`,
+    "data-ja": "wave",
+    style: {
+      '--d': `${(-k * (2.4 / RAID_JACK_AURA_WAVES[n - 1])).toFixed(2)}s`
+    }
+  })), RAID_JACK_AURA_TONGUE_SETS[n - 1].slice(0, Math.max(0, limit)).map((t, k) => React.createElement("ins", {
     key: k,
     "data-ja": "tongue",
     "data-ja-c": t.c,
@@ -35933,6 +35960,17 @@ const JackAuraLayer = ({
       '--d': `${t.d.toFixed(2)}s`,
       '--t': `${t.t.toFixed(2)}s`,
       '--s': `${t.s.toFixed(1)}deg`
+    }
+  })), limit > 12 && RAID_JACK_AURA_EMBER_SETS[n - 1].map((e, k) => React.createElement("b", {
+    key: `e${k}`,
+    "data-ja": "ember",
+    "data-ja-c": e.c,
+    style: {
+      '--x': `${e.x.toFixed(1)}%`,
+      '--w': `${e.w.toFixed(1)}%`,
+      '--d': `${e.d.toFixed(2)}s`,
+      '--t': `${e.t.toFixed(2)}s`,
+      '--dx': `${e.dx.toFixed(1)}%`
     }
   })));
 };
@@ -50247,12 +50285,14 @@ function BattleScreen({
   } : undefined;
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
   const enemyFlashOn = !!(enemyMotion && enemy?.imgUrl && (enemySkillNow || enemyHurtNow));
+  const enemyFlashIsJack = enemy?.id === 'Jack';
   const enemyFlashNode = enemyFlashOn ? React.createElement("img", {
     "data-enemy-flash": true,
-    src: enemy.imgUrl,
+    src: enemyFlashIsJack ? enemyBossImgSrc : enemy.imgUrl,
     alt: "",
     "aria-hidden": "true",
-    draggable: false
+    draggable: false,
+    style: enemyFlashIsJack ? enemyBossImgSrc !== enemy.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE : undefined
   }) : null;
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? {
     '--em-dur': `${enemyAttackFx.ms}ms`
@@ -59020,7 +59060,10 @@ const RaidJackScreen = ({
   forced = false,
   unlimited = false,
   guideVisible = false,
-  onDismissGuide
+  onDismissGuide,
+  renderPlace,
+  renderIcon,
+  cardClass
 }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({
@@ -59031,6 +59074,7 @@ const RaidJackScreen = ({
   const [totals, setTotals] = useState(undefined);
   const [rows, setRows] = useState(undefined);
   const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
   const [ahead, setAhead] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -59044,11 +59088,12 @@ const RaidJackScreen = ({
       const loaded = await raidJackLoadState();
       if (!alive) return;
       setState(loaded);
-      const myId = await ensureBreederId();
+      const meId = await ensureBreederId();
+      if (alive) setMyId(meId || null);
       const t = await sbFetchRaidJackTierTotals(eventId);
       if (!alive) return;
       setTotals(t);
-      const mine = myId ? await sbFetchRaidJackSelf(myId, eventId) : null;
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
       if (!alive) return;
       setSelf(mine);
       setRows(undefined);
@@ -59225,17 +59270,34 @@ const RaidJackScreen = ({
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "まだ記録がありません。いちばんのりを目指そう！"), Array.isArray(rows) && rows.length > 0 && React.createElement("ol", {
     "data-raid-jack-ranking": true,
-    className: "space-y-1"
-  }, rows.slice(0, 100).map((r, i) => React.createElement("li", {
-    key: `${r.breederId}-${i}`,
-    className: "flex items-center gap-2 rounded-lg bg-slate-900/60 px-2 py-1 text-[11px] text-slate-100"
-  }, React.createElement("span", {
-    className: "w-7 shrink-0 text-right font-black text-amber-200"
-  }, i + 1), React.createElement("span", {
-    className: "min-w-0 flex-1 truncate"
-  }, raidJackNameOf(r.breederId)), React.createElement("b", {
-    className: "shrink-0 text-white"
-  }, r.total.toLocaleString())))))), React.createElement("div", {
+    className: "space-y-1.5"
+  }, rows.slice(0, 100).map((r, i) => {
+    const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    }) : {
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    };
+    const mineRow = !!myId && r.breederId === myId;
+    return React.createElement("li", {
+      key: `${r.breederId}-${i}`,
+      "data-raid-jack-ranking-row": true,
+      "data-ranking-kind": "raid-jack",
+      "aria-current": mineRow ? 'true' : undefined,
+      className: `${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`
+    }, typeof renderPlace === 'function' ? renderPlace(i) : React.createElement("span", {
+      className: "w-7 shrink-0 text-center text-[10px] font-black text-amber-200"
+    }, i + 1), typeof renderIcon === 'function' && renderIcon(entry), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+    }, entry.userName || '名無しのブリーダー', mineRow && React.createElement("span", {
+      className: "ml-1 text-[8px] text-orange-200"
+    }, "(あなた)")), React.createElement("b", {
+      className: "shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200"
+    }, r.total.toLocaleString(), React.createElement("small", {
+      className: "ml-0.5 text-[8px] text-slate-400"
+    }, "ダメージ")));
+  })))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
@@ -82260,7 +82322,10 @@ function MonsterHeroGame() {
       forced: raidJackDebugForce,
       unlimited: raidJackDebugForce && !raidJackDebugRealRules,
       guideVisible: (RELEASE_FLAGS.raidJack === true || raidJackDebugForce) && !raidJackGuideSeen,
-      onDismissGuide: dismissRaidJackGuide
+      onDismissGuide: dismissRaidJackGuide,
+      renderPlace: rankingPlace,
+      renderIcon: rankingBreederIcon,
+      cardClass: rankingCardClass
     }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(RaidJackPrepScreen, {
       kind: raidJackPrep.kind,
       tierIndex: raidJackPrep.tierIndex,
@@ -91390,11 +91455,11 @@ const createAnimationStyle = () => {
     /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
     [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
-    [data-jack-aura="1"] { --ja-c: 251,146,60; --ja-d: 253,186,116; }
-    [data-jack-aura="2"] { --ja-c: 251,191,36; --ja-d: 249,115,22; }
-    [data-jack-aura="3"] { --ja-c: 192,132,252; --ja-d: 251,146,60; }
-    [data-jack-aura="4"] { --ja-c: 248,113,113; --ja-d: 251,191,36; }
-    [data-jack-aura="5"] { --ja-c: 250,204,21; --ja-d: 244,114,182; }
+    [data-jack-aura="1"] { --ja-c: 251,146,60; --ja-d: 253,186,116; --hs: .6; }
+    [data-jack-aura="2"] { --ja-c: 251,191,36; --ja-d: 249,115,22; --hs: .8; }
+    [data-jack-aura="3"] { --ja-c: 192,132,252; --ja-d: 251,146,60; --hs: 1; }
+    [data-jack-aura="4"] { --ja-c: 248,113,113; --ja-d: 251,191,36; --hs: 1.25; }
+    [data-jack-aura="5"] { --ja-c: 250,204,21; --ja-d: 244,114,182; --hs: 1.55; }
     [data-jack-aura-el] > i[data-ja="base"] { inset: -6% -10% -4%; opacity: .8; background: radial-gradient(closest-side, rgba(var(--ja-c),.28) 30%, rgba(var(--ja-c),.75) 70%, rgba(var(--ja-c),0) 100%); animation: jackAuraPulse 3.2s ease-in-out infinite; }
     [data-jack-aura="2"] [data-ja="base"] { opacity: .9; animation-duration: 2.6s; inset: -10% -14% -6%; }
     [data-jack-aura="3"] [data-ja="base"] { opacity: 1; animation-duration: 2.2s; inset: -14% -18% -8%; }
@@ -91411,18 +91476,29 @@ const createAnimationStyle = () => {
     [data-jack-aura="4"] [data-ja="ring"] { animation-duration: 4.5s; opacity: .9; }
     [data-jack-aura="5"] [data-ja="ring"] { animation-duration: 2.6s; opacity: 1; background: conic-gradient(from 0deg, #fde047, #f472b6, #a78bfa, #38bdf8, #4ade80, #fde047); }
     /* 炎の舌(モンヒロビートのフリックの炎を参考): 根元から立ちのぼり、細く伸びて消える。本数は段階で増える(5/8/11/15/20本) */
-    [data-jack-aura-el] > ins[data-ja="tongue"] { position: absolute; display: block; text-decoration: none; left: var(--x); bottom: var(--b); width: var(--w); height: var(--h); margin-left: calc(var(--w) / -2); opacity: 0; pointer-events: none; transform-origin: 50% 100%; border-radius: 50% 50% 46% 46% / 85% 85% 15% 15%; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255,247,200,1) 0%, rgba(var(--ja-d),1) 38%, rgba(var(--ja-c),.92) 70%, rgba(var(--ja-c),0) 96%); animation: jackAuraTongue var(--t) cubic-bezier(.25,.7,.35,1) var(--d) infinite both; will-change: transform, opacity; }
+    [data-jack-aura-el] > ins[data-ja="tongue"] { position: absolute; display: block; text-decoration: none; left: var(--x); bottom: var(--b); width: var(--w); height: calc(var(--h) * var(--hs, 1)); margin-left: calc(var(--w) / -2); opacity: 0; pointer-events: none; transform-origin: 50% 100%; border-radius: 50% 50% 46% 46% / 85% 85% 15% 15%; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255,247,200,1) 0%, rgba(var(--ja-d),1) 38%, rgba(var(--ja-c),.92) 70%, rgba(var(--ja-c),0) 96%); animation: jackAuraTongue var(--t) cubic-bezier(.25,.7,.35,1) var(--d) infinite both; will-change: transform, opacity; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="0"] { --ja-c: 244,114,182; --ja-d: 253,224,71; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="1"] { --ja-c: 163,230,53; --ja-d: 253,224,71; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="2"] { --ja-c: 56,189,248; --ja-d: 255,255,255; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="3"] { --ja-c: 167,139,250; --ja-d: 244,114,182; }
     [data-jack-aura="5"] ins[data-ja="tongue"][data-ja-c="4"] { --ja-c: 251,146,60; --ja-d: 253,224,71; }
     [data-jack-aura="3"] ins[data-ja="tongue"]:nth-of-type(odd) { --ja-c: 251,146,60; --ja-d: 253,224,71; }
-    [data-jack-aura="1"] > [data-moo-body] > img { filter: drop-shadow(0 0 30px rgba(251,146,60,.95)); }
-    [data-jack-aura="2"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(251,191,36,.95)) drop-shadow(0 0 70px rgba(249,115,22,.7)); }
-    [data-jack-aura="3"] > [data-moo-body] > img { filter: drop-shadow(0 0 46px rgba(192,132,252,.95)) drop-shadow(0 0 80px rgba(251,146,60,.8)); }
-    [data-jack-aura="4"] > [data-moo-body] > img { filter: drop-shadow(0 0 50px rgba(248,113,113,1)) drop-shadow(0 0 90px rgba(251,191,36,.9)); }
-    [data-jack-aura="5"] > [data-moo-body] > img { filter: drop-shadow(0 0 40px rgba(250,204,21,1)) drop-shadow(0 0 70px rgba(244,114,182,.95)) drop-shadow(0 0 100px rgba(56,189,248,.8)); }
+    [data-jack-aura="1"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 20px rgba(251,146,60,.7)); }
+    [data-jack-aura="2"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 36px rgba(251,191,36,.95)) drop-shadow(0 0 64px rgba(249,115,22,.7)); }
+    [data-jack-aura="3"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 46px rgba(192,132,252,1)) drop-shadow(0 0 84px rgba(251,146,60,.85)) saturate(1.1); }
+    [data-jack-aura="4"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 54px rgba(248,113,113,1)) drop-shadow(0 0 96px rgba(251,191,36,.95)) saturate(1.2) contrast(1.05); }
+    [data-jack-aura="5"] > [data-moo-body] > img:not([data-enemy-flash]) { filter: drop-shadow(0 0 44px rgba(250,204,21,1)) drop-shadow(0 0 78px rgba(244,114,182,1)) drop-shadow(0 0 112px rgba(56,189,248,.9)) saturate(1.3) contrast(1.08); }
+    /* 火の粉(段階3から)と広がる輪(段階3から): 段階が上がるほど数・速さ・大きさが増える */
+    [data-jack-aura-el] > b[data-ja="ember"] { position: absolute; display: block; left: var(--x); bottom: 8%; width: var(--w); aspect-ratio: 1; border-radius: 50%; opacity: 0; pointer-events: none; background: radial-gradient(circle, #fff 0%, rgba(var(--ja-d),1) 45%, rgba(var(--ja-c),0) 100%); animation: jackAuraEmber var(--t) ease-out var(--d) infinite both; will-change: transform, opacity; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="0"] { --ja-d: 244,114,182; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="1"] { --ja-d: 163,230,53; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="2"] { --ja-d: 56,189,248; }
+    [data-jack-aura="5"] b[data-ja="ember"][data-ja-c="3"] { --ja-d: 167,139,250; }
+    [data-jack-aura-el] > i[data-ja="wave"] { inset: 6% 6% 2%; opacity: 0; border: 3px solid rgba(var(--ja-d),.9); box-shadow: 0 0 18px rgba(var(--ja-c),.8); background: none; animation: jackAuraWave 2.4s ease-out var(--d) infinite both; }
+    [data-jack-aura="4"] [data-ja="wave"] { animation-duration: 1.9s; border-width: 4px; }
+    [data-jack-aura="5"] [data-ja="wave"] { animation-duration: 1.5s; border-width: 5px; border-color: rgba(253,224,71,.95); }
+    @keyframes jackAuraEmber { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -420%) scale(.3); } }
+    @keyframes jackAuraWave { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.45); } }
     @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
     @keyframes jackAuraSpin { to { transform: rotate(360deg); } }
     @keyframes jackAuraTongue {

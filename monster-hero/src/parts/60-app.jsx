@@ -16953,7 +16953,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
           onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
           onPurchase={purchaseRaidJackExtra} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
-          guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}/>)}
+          guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}
+          renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
         {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<RaidJackPrepScreen
           kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
           candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
