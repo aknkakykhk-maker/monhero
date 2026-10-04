@@ -44,8 +44,8 @@
 | 更新履歴・ヘルプ・助手の告知・案内のセリフ | `data/changelog.js` `data/help.js` `data/assistants.js` | 済(公開フラグが立つまで出ない) |
 | デバッグ確認(定義・期間・回数・サーバー・戦闘・HOME強制表示。既定は何度でも・全段階) | `src/parts/78-screen-raid-jack-debug.jsx` | 済 |
 | ストーリーの台本(第1.5部〜第6部・終章2本)・話し手としてのジャック・回想への登録・遊び方の話との順番 | `data/assistants.js` `src/parts/60-app.jsx` `docs/spec/RAID_JACK_STORY.md` | 済(確認済み) |
-| **第2〜6部・終章を流す仕組み** | `raidJackStoryCandidates`(35)・HOMEの見回り(60の `raidProgressStoryId`) | 済(HOMEに着いたとき、倒した段階の話を古い順に1本ずつ。期間が終わると大王を倒せたかで終章を選ぶ。公開フラグで隠す)。無限ライフ・レイドの累計ランキングは未 |
-| **大王のあとの「共有ライフ無限・レイドバトルの累計ダメージ競争」**(サーバーの新しい集計つき) | — | **未** |
+| **第2〜6部・終章を流す仕組み** | `raidJackStoryCandidates`(35)・HOMEの見回り(60の `raidProgressStoryId`) | 済(HOMEに着いたとき、倒した段階の話を古い順に1本ずつ。期間が終わると大王を倒せたかで終章を選ぶ。公開フラグで隠す)。無限ライフ・累計ランキングは下の行 |
+| **大王のあとの「共有ライフ無限・レイドバトルの累計ダメージ競争」**(サーバーの新しい集計つき) | 大王の共有ライフが尽きたら毎回満タンから(`startRaidJackFromPrep`)・ビュー `raid_jack_a_ranking`(`docs/sql/raid/RAID_JACK_A_RANKING.sql`)・`sbFetchRaidJackARanking`・レイド画面の切り替え | 済(**SQLは本番へ未適用**。報酬は付けない。大王の報酬は今までどおり「大王への貢献」) |
 | **期間終了後の終章の出し分け**(大王まで倒せたかで2本) | — | **未** |
 | 攻撃モーションの見た目の調整 | — | 実機で見てから |
 

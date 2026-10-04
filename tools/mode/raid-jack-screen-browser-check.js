@@ -77,6 +77,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     });
     await page.addInitScript(eventStorySeed());
     const posts = [];
+    let bossDown = false;   // true にすると、大王(段階5)まで倒された状態の合計を返す
     await page.route('**/rest/v1/**', async (route) => {
       const req = route.request(); const url = req.url();
       if (/raid_jack_/.test(url)) {
@@ -85,7 +86,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         if (/raid_jack_tier_totals/.test(url)) rows = [
           { kind: 'a', tier: 1, total_damage: 1750000, player_count: 12, any_defeated: true },
           { kind: 'a', tier: 2, total_damage: 500000, player_count: 7, any_defeated: false },
+          ...(bossDown ? [{ kind: 'a', tier: 5, total_damage: 99999999, player_count: 30, any_defeated: true }] : []),
         ];
+        else if (/raid_jack_a_ranking/.test(url)) rows = [{ breeder_id: 'rank-user-0002', total_damage: 8800000 }, { breeder_id: 'rank-user-0001', total_damage: 4400000 }];
         else if (/raid_jack_contributions/.test(url) && /breeder_id=eq\./.test(url)) rows = [{ kind: 'a', tier: 2, total_damage: 4200 }, { kind: 'b', tier: 1, total_damage: 70000 }];
         else if (/raid_jack_contributions/.test(url)) rows = [{ breeder_id: 'rank-user-0001', total_damage: 90000 }, { breeder_id: 'rank-user-0002', total_damage: 61000 }];
         else if (/raid_jack_b_ranking/.test(url)) rows = [{ breeder_id: 'rank-user-0003', total_damage: 3000000 }, { breeder_id: 'rank-user-0001', total_damage: 1200000 }];
@@ -238,6 +241,23 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.waitForFunction(() => /無制限/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
     check('A: 全段階が「挑戦できる」(未解放が1つも無い)', !/未解放/.test(t) && /5\. ジャック大王\s*挑戦できる/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
+    // ⑦ 大王を倒したあと: 「累計ダメージ(全段階の合計)」のランキングへ切り替えられる
+    check('大王が倒れる前は、ランキングの切り替えが出ない', (await page.locator('[data-raid-jack-all-toggle]').count()) === 0);
+    bossDown = true;
+    await page.locator('button[aria-label="戻る"]').first().click();
+    await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    await page.locator('[data-raid-open]').click();
+    await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
+    await page.locator('[data-raid-jack-all-toggle]').waitFor({ timeout: 30000 });
+    check('大王が倒れると、「大王への貢献/累計ダメージ」の切り替えが出る', /大王への貢献/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()) && /累計ダメージ/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()));
+    await page.locator('[data-raid-jack-all-mode="all"]').click();
+    await page.waitForFunction(() => /8,800,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
+    t = await raidText();
+    check('累計ダメージに切り替えると、全段階の合計のランキングが出る', /レイドバトルの累計ダメージ\(全段階の合計\)/.test(t) && /8,800,000/.test(t) && /4,400,000/.test(t));
+    check('累計ダメージのあなたの数字は、自分の全段階の合計(4,200)', /あなた 4,200/.test(await page.locator('[data-raid-jack-mine]').innerText()));
+    await page.locator('[data-raid-jack-all-mode="tier"]').click();
+    await page.waitForFunction(() => /への貢献ランキング/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
+    check('「大王への貢献」へ戻せる', /への貢献ランキング/.test(await raidText()));
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     check('画面が横にはみ出さない', size.s <= size.c + 1, `${size.s} / ${size.c}`);
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));
