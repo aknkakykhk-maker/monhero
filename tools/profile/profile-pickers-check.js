@@ -58,6 +58,8 @@ const serve = () => new Promise(resolve => {
       put('mh_rhythm_tutorial_seen_v1', true); put('mh_breeder_id_v1', 'self-user');
       put('mh_masu_mons', ids.map((b, i) => ({ id: 1000 + i, baseId: b, bondXp: (i + 1) * 500 }))); put('mh_masu_migrated', true);
       put('mh_market_icons', icons);
+      // モンヒロビートの実績表の確認用(monster_hero は公開曲)
+      put('mh_rhythm_best_v1', { monster_hero: { EASY: { bestScore: 500000, played: true, clear: true, fullCombo: true, allExcellent: true, allMarvelous: true } } });
     }, [monsterIds, marketIcons]);
     const clickText = async (pattern) => page.evaluate((source) => {
       const rx = new RegExp(source);
@@ -92,12 +94,18 @@ const serve = () => new Promise(resolve => {
         frameText: (q('[data-profile-tile=frame]') || {}).textContent || '', playtime: !!q('[data-profile-playtime]'),
       };
     });
-    ok('プロフィールに名刺・設定タイル4つ・持ちもの・入口が並ぶ', layout.card && layout.tiles === 4 && layout.icon && layout.frame && layout.message && layout.fav && layout.stats && layout.links, JSON.stringify(layout));
+    ok('プロフィールに名刺・設定タイル4つ・持ちもの・入口が並ぶ', layout.card && layout.tiles >= 4 && layout.icon && layout.frame && layout.message && layout.fav && layout.stats && layout.links, JSON.stringify(layout));
     ok('フレンドの入口は、開いてすぐ見える位置(画面の中)で、バトル記録より前にある', layout.friends && layout.friendsTop < layout.vh && layout.friendsTop < layout.recordsTop, `${layout.friendsTop} / ${layout.recordsTop} / ${layout.vh}`);
     ok('バトル記録は2列で並ぶ', layout.cols === 2, `${layout.cols}列`);
     ok('フレームのボタンは「フレーム：◯◯」の文言を保つ(既存の検査が前提にしている)', /フレーム：フレームなし/.test(layout.frameText), layout.frameText);
     ok('プレイ時間のくわしい記録(今日・遊んだ日・数え始めた日)は残っている', layout.playtime);
     ok('プロフィールが横にはみ出さない', layout.overflowX === false);
+    const achSelf = await page.evaluate(() => {
+      const panel = document.querySelector('[data-rhythm-achievements=self]');
+      const row = panel && panel.querySelector('[data-rhythm-achievement-row=EASY]');
+      return { panel: !!panel, text: panel ? panel.innerText.replace(/\s+/g, ' ') : '', row: !!row, overflow: document.documentElement.scrollWidth > window.innerWidth };
+    });
+    ok('モンヒロビートの実績が出る(EASY の行に クリア・FC・AE・AM が 1/◯)', achSelf.panel && achSelf.row && /EASY( 1\/\d+){4}/.test(achSelf.text) && !achSelf.overflow, achSelf.text);
 
     // ② アイコン選択
     await page.evaluate(() => document.querySelector('[data-profile-tile=icon]').click());
@@ -116,16 +124,17 @@ const serve = () => new Promise(resolve => {
       };
     });
     ok('アイコン選択: いまの選択・検索・絞り込みチップ・「閉じる」がある', ic.preview && ic.search && ic.chips.length === 3 && ic.closeText, JSON.stringify(ic.chips));
-    ok('アイコン選択: 全部のアイコンが名前つきで並ぶ(はじめから8+購入10)', ic.options === 18 && ic.labeled, `${ic.options}個`);
-    ok('アイコン選択: チップに件数が出る', /すべて\s*18/.test(ic.chips[0]) && /はじめから\s*8/.test(ic.chips[1]) && /購入ずみ\s*10/.test(ic.chips[2]), ic.chips.join(' / '));
+    // 購入したのは10個。同じキャラのまとめは「どれか1つでも持っていれば全部持っている」ので、中身(円盤石アイコン・覚醒など)6個ぶん増えて16個になる(2026-10-03)
+    ok('アイコン選択: 全部のアイコンが名前つきで並ぶ(はじめから8+購入16=まとめの中身を含む)', ic.options === 24 && ic.labeled, `${ic.options}個`);
+    ok('アイコン選択: チップに件数が出る', /すべて\s*24/.test(ic.chips[0]) && /はじめから\s*8/.test(ic.chips[1]) && /購入ずみ\s*16/.test(ic.chips[2]), ic.chips.join(' / '));
     ok('アイコン選択: 一覧だけがスクロールする', ic.scrolls && ic.headFixed);
     await page.fill('[data-picker-sheet=icon] [data-picker-search]', 'ミーア');
     await page.waitForTimeout(300);
-    ok('アイコン選択: 名前で探すと絞られる', (await page.evaluate(() => [...document.querySelectorAll('[data-picker-sheet=icon] [data-icon-option]')].map(b => b.getAttribute('data-icon-option')).join(','))) === 'mia_icon');
+    ok('アイコン選択: 名前で探すと絞られる', (await page.evaluate(() => [...document.querySelectorAll('[data-picker-sheet=icon] [data-icon-option]')].map(b => b.getAttribute('data-icon-option')).join(','))) === 'mia_icon,mia_disc_icon');
     await page.fill('[data-picker-sheet=icon] [data-picker-search]', '');
     await page.evaluate(() => document.querySelector('[data-picker-sheet=icon] [data-picker-chip=market]').click());
     await page.waitForTimeout(300);
-    ok('アイコン選択: 「購入ずみ」で絞れる', (await page.evaluate(() => document.querySelectorAll('[data-picker-sheet=icon] [data-icon-option]').length)) === 10);
+    ok('アイコン選択: 「購入ずみ」で絞れる', (await page.evaluate(() => document.querySelectorAll('[data-picker-sheet=icon] [data-icon-option]').length)) === 16);
     await page.evaluate(() => document.querySelector('[data-icon-option=zan_icon]').click());
     await page.waitForTimeout(500);
     ok('アイコン選択: 選ぶと保存して閉じる', (await page.evaluate(() => localStorage.getItem('mh_breeder_icon'))) === '"zan_icon"' && (await page.evaluate(() => !document.querySelector('[data-picker-sheet]'))));

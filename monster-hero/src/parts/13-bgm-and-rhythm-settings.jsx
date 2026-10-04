@@ -61,6 +61,7 @@ const BGM_TRACKS = [
   { id:'melo_haruka', name:'ハルカ', creator:'オリジナル', src:'audio/bgm-haruka.mp3', gain:1, loop:true },
   { id:'melo_stay_with_me_short', name:'Stay With Me ～Locked Fate～ short ver.', creator:'オリジナル', src:'audio/bgm-stay-with-me-short.mp3', gain:1, loop:true },
   { id:'melo_kiki_issen_short', name:'綺季一閃 ～花雪に舞う詠姫～ short ver.', creator:'オリジナル', src:'audio/bgm-kiki-issen-short.mp3', gain:1, loop:true },
+  { id:'melo_crazy_party_night', name:'Crazy Party Night ～ぱんぷきんの逆襲～', creator:'オリジナル', src:'audio/bgm-crazy-party-night.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -520,6 +521,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
   // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
   multiLook:'LIGHT',
+  // モードえらびの助手の見せ方(2026-10-04・ユーザー指示「助手コメントが助手に被ってる 位置を変えて、あとはオンオフもつけてほしい」)。
+  // 立ち絵とコメントを別々に出し入れできる。新しい項目なので、保存値に無い人は ON(これまでの見え方)で補われる
+  modeSelectArt:true, modeSelectComment:true,
   // タップ音の種類(2026-09-26)。新しい項目なので、保存値に無い人は「標準」(これまでの音)で補う
   noteSeType:'STANDARD',
   // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
@@ -621,7 +625,7 @@ const normalizeRhythmSettings = value => {
     noteSeHoldVolume:rhythmFiniteStep(source.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
     multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
@@ -709,7 +713,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka',halloweenNightEvent:'melo_crazy_party_night', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -741,7 +745,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', halloween_night_2026_part1:'halloweenNightEvent', halloween_night_2026_part2:'halloweenNightEvent', halloween_night_2026_part3:'halloweenNightEvent', halloween_night_2026_part4:'halloweenNightEvent', halloween_night_2026_part5:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、

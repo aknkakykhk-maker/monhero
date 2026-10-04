@@ -202,6 +202,7 @@ const RELEASED_MARKERS=Object.freeze({
   haruka:'haruka-v3',
   stay_with_me_short:'stay-with-me-short-v3',
   kiki_issen_short:'kiki-issen-short-v3',
+  crazy_party_night:'crazy-party-night-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -237,6 +238,7 @@ const RELEASED_TRACKS=Object.freeze({
   haruka:'haruka',
   stay_with_me_short:'stay_with_me_short',
   kiki_issen_short:'kiki_issen_short',
+  crazy_party_night:'crazy_party_night',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

@@ -203,6 +203,66 @@ const assistantUpdateNoticeFromChangelog = entry => {
 // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
 //   (2026-09-11・ユーザー指示)。
 const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
+  // ハロウィン・ナイト(2026-10-04〜11-01)。期間・5倍・新曲・5部のお話・衣装の4つを伝える。
+  // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、きき・ドラは「モンヒロビート」。ドラは「〜だよ」「〜だ」で話す
+  update_notice_halloween_night_v1: {
+    mua: [
+      { e:'excited',  t:'{name}、ハロウィン・ナイト始まったよ〜！🎃 11月1日(日)の朝3時59分までだよ！' },
+      { e:'surprise', t:'期間中は、モンビーで貯まるビートPがいつもの5倍！ しかも、クイックの∞周回を回しながら演奏したときの周回数も5倍なの！ まじやばくない！？' },
+      { e:'happy',    t:'新曲「Crazy Party Night ～ぱんぷきんの逆襲～」も、イベントと同時に遊べるようになったよ！' },
+      { e:'wink',     t:'お話は5部構成で、毎週日曜の朝に1部ずつ更新されるんだ〜。最後の第5部は11月1日の朝4時！ ドラケンも出てくるよ♪' },
+      { e:'excited',  t:'私ときき、ももは、ハロウィンのコスプレ衣装で登場！ 衣装はマーケットで買えて、プロフィールから着替えられるんだよ〜👗' },
+    ],
+    kiki: [
+      { e:'happy',    t:'{name}、ハロウィン・ナイトが始まりまつ。11月1日(日)の3時59分までの期間限定でつ。' },
+      { e:'normal',   t:'期間中は、モンヒロビートで貯まるビートPがいつもの5倍になりまつ。' },
+      { e:'normal',   t:'クイックの∞周回を回しながら演奏したときに入る周回数も、いつもの5倍でつ。' },
+      { e:'happy',    t:'新曲「Crazy Party Night ～ぱんぷきんの逆襲～」が、イベントと同時に遊べるようになったでつ。' },
+      { e:'normal',   t:'お話は5部構成で、毎週日曜の朝に1部ずつ増えまつ。最後の第5部は、11月1日の4時に出まつ。' },
+      { e:'wink',     t:'わたしたち3人も、ハロウィンのコスプレ衣装で登場しまつ。衣装はマーケットで買えて、プロフィールで着替えられまつ。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}、見て見て〜！ ハロウィン・ナイトが始まったよ♡ 11月1日(日)の3時59分までなの♪' },
+      { e:'happy',    t:'期間中は、モンビーで貯まるビートPがいつもの5倍！ クイックの∞周回を回しながら演奏したときの周回数も5倍だよ♡' },
+      { e:'wink',     t:'新曲の「Crazy Party Night ～ぱんぷきんの逆襲～」も、今日から遊べるよ。ぱんぷきんって、どんな子かな〜？' },
+      { e:'normal',   t:'お話は5部構成で、毎週日曜に1部ずつ増えるの。ドラちゃんも出てくるから、お楽しみに♡' },
+      { e:'excited',  t:'ももはね、小悪魔のコスプレなの！ みゅあねぇとききちゃんも、かわいい衣装で登場するよ♡ 衣装はマーケットで買えるんだから、着替えて遊んでね♪' },
+    ],
+    dra: [
+      { e:'excited',  t:'{name}、ハロウィン・ナイトが始まったぞ。11月1日(日)の3時59分までだ' },
+      { e:'happy',    t:'期間中は、モンヒロビートで貯まるビートPがいつもの5倍だよ。クイックの∞周回を回しながら演奏したときの周回数も5倍だ' },
+      { e:'normal',   t:'新曲「Crazy Party Night ～ぱんぷきんの逆襲～」も、イベントと同時に遊べるようになった' },
+      { e:'happy',    t:'お話は5部構成で、毎週日曜の朝に1部ずつ増えていく。おでも出てるから、見てくれよ' },
+      { e:'normal',   t:'みゅあ、靴下さん、ももは、ハロウィンのコスプレ衣装だ。マーケットで買えて、プロフィールから着替えられる' },
+    ],
+  },
+  // 助手の着替え(2026-10-04)。最初の服はハロウィン・ナイトの衣装。値段は書かない(ダイヤの値段は終了後のものなので)
+  update_notice_assistant_costume_v1: {
+    mua: [
+      { e:'excited',  t:'{name}、助手の着替えができるようになったよ〜！👗' },
+      { e:'happy',    t:'プロフィールの「着替え」から、持ってる服に着替えられるの。吹き出しの顔も立ち絵も、その服に変わるんだ〜' },
+      { e:'wink',     t:'服はマーケットで買えるよ。最初の服は、ハロウィン・ナイトの衣装！ 私は魔女のコスプレだよ🎃' },
+      { e:'normal',   t:'ハロウィンのあいだはビートP交換所、イベントが終わったらダイヤショップに並ぶんだって。' },
+    ],
+    kiki: [
+      { e:'happy',    t:'{name}、助手の着替えができるようになったでつ。' },
+      { e:'normal',   t:'プロフィールの「着替え」から、持っている服に着替えられまつ。吹き出しの顔と立ち絵が、その服に変わりまつ。' },
+      { e:'normal',   t:'服はマーケットで買えまつ。最初の服は、ハロウィン・ナイトの衣装でつ。' },
+      { e:'wink',     t:'ハロウィンのあいだはビートP交換所、イベントが終わったあとはダイヤショップで買えまつ。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}、ももたちの着替えができるようになったよ♡' },
+      { e:'happy',    t:'プロフィールの「着替え」から、持ってる服に着替えさせてね。顔も立ち絵も、その服になるの♪' },
+      { e:'wink',     t:'最初の服は、ハロウィン・ナイトの衣装だよ。ももは小悪魔なの♡' },
+      { e:'normal',   t:'ハロウィンのあいだはビートP交換所、終わったらダイヤショップで買えるよ。' },
+    ],
+    dra: [
+      { e:'excited',  t:'{name}、助手の着替えができるようになったぞ' },
+      { e:'normal',   t:'プロフィールの「着替え」から、持ってる服に着替えられる。顔も立ち絵も、その服に変わるんだ' },
+      { e:'happy',    t:'服はマーケットで買える。最初の服はハロウィン・ナイトの衣装だよ' },
+      { e:'normal',   t:'ハロウィンのあいだはビートP交換所、終わったあとはダイヤショップだ。ちなみにおでの服は、まだ無いんだよな' },
+    ],
+  },
   // 新血統「ユグドラシル」実装予告(2026-09-28)。絵は更新履歴の image(告知画像)がそのまま出る。
   // 値段はまだ仮なので読み上げない。ドラは「〜だよ」「〜だ」で話す(2026-09-28 の決めごと)
   update_notice_yggdrasil_lineage_preview_v1: {
@@ -337,12 +397,15 @@ const assistantExpressionName = (who, expression) => {
   return list.includes(expression) ? expression : fallback;
 };
 // 吹き出しの丸い顔に使う軽い画像
+// ★着替え(data/breeder.js の assistantCostumeImage)を着ているときは、その服の絵を返す。服の絵が決まらないときは元の服
 const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
-  ? `${who.imageDir}/face/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`
+  ? ((typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'face'))
+    || `${who.imageDir}/face/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 // 元の大きい立ち絵(今後、全身で出したい場面ができたときに使う)
 const assistantFullImage = (who, expression) => (who && who.imagePrefix)
-  ? `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`
+  ? ((typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'full'))
+    || `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 
 // ---------- 親密度(みゅあとの仲良し度) ----------
@@ -6190,6 +6253,268 @@ const ASSISTANT_TACTICS_INTRO = [
 //   alwaysUnlocked … true にすると、本編でまだ見ていなくても回想一覧に出す。
 //                 「本編で流れるのを待たずに、ここから見てもいい」イベント用。
 //                 最後まで見たら、本編で見たときと同じ扱い(解放・以後は自動で流さない)になる
+// ---------- ハロウィン・ナイト(2026-10-04 〜 11-01) ----------
+// 2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め、ハロウィンらしいストーリー性あり、
+// 週ごとに更新の5部構成)」「ドラもいれて」。台本はClaudeが書いた。
+// 第1部が開幕(10/4 8:00)、第2〜4部は毎週日曜の8:00、第5部が閉幕(11/1 4:00)。
+// 出る時刻と id は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。HOMEで1度だけ流れ、そのあとは回想から見返せる。
+// あらすじ: 夜だけ開く「ハロウィン・ナイト」の街で、毎年ランタンにされるかぼちゃのぱんぷきんが
+//   「ぼくだってパーティーの主役になりたい」と音(ビート)を奪って逆襲する。じつは仲間に入りたかっただけ。
+//   最後は一緒に踊って夜明け(3:59)を迎える。
+// ★期間・倍率・値段など、この回かぎりの話は書いてよいが、報酬の個数のような数字は書かない(回想で見返したとき古くなるため)。
+// ★新曲「Crazy Party Night ～ぱんぷきんの逆襲～」はぱんぷきんのテーマ曲。曲名は正式名称で書く。
+// ★呼び方: みゅあ→ドラケン / きき→ドラさん・みゅあちん / もも→ドラちゃん・みゅあねぇ・ききちゃん / ドラ→靴下さん・みゅあ・もも
+// ★ドラの口調は「〜だよ」「〜だ」「〜だな」(「なんよ」「ほんま」は使わない)。ききは語尾が「〜でつ」。
+
+// ---- 第1部 開幕 ～ハロウィン・ナイトへようこそ～ ----
+const ASSISTANT_HALLOWEEN_NIGHT_1 = [
+  // SCENE 1 夜祭の入口
+  { who:'mua',      e:'excited',  t:'見て見て、街中ランタンだらけ！ これが「ハロウィン・ナイト」かぁ！' },
+  { who:'kiki',     e:'happy',    t:'夜になると、かぼちゃのランタンにいっせいに灯りがともる街でつ。きれいでつね……' },
+  { who:'momosuke', e:'wink',     t:'ふふ、今年はね、みんなでコスプレして遊ぶのが決まりなんだよ♡' },
+  { who:'mua',      e:'surprise', t:'コスプレ！？ ちょっと待って、聞いてないんだけど！' },
+  { who:'momosuke', e:'happy',    t:'だからももが用意しといたの。はい、みゅあねぇはこれ♪' },
+  { who:'mua',      e:'excited',  t:'うわっ、大きい魔女帽子だ！ かぼちゃのステッキまである！' },
+  { who:'kiki',     e:'normal',   t:'みゅあちん、似合ってまつよ。ほんとの魔女みたいでつ。' },
+  { who:'mua',      e:'happy',    t:'でしょ〜？ ききは……わ、オレンジと黒のうさ耳じゃん！ かわいい！' },
+  { who:'kiki',     e:'troubled', t:'パーカーもうさ耳も、ちょっと目立ちすぎじゃないでつか……？' },
+  { who:'momosuke', e:'wink',     t:'目立っていいの。ききちゃん、とってもかわいいよ♡' },
+  { who:'kiki',     e:'happy',    t:'そ、そうでつか？ ……それなら、がんばって着まつ。' },
+  { who:'mua',      e:'surprise', t:'もものは？ 羽がついてる！ ちっちゃいツノまで！' },
+  { who:'momosuke', e:'wink',     t:'ももは小悪魔だよ♡ ……どう？ ドキッとした？' },
+  { who:'mua',      e:'troubled', t:'した。くやしいけど、した' },
+  // SCENE 2 着替えの案内
+  { who:'momosuke', e:'normal',   t:'この服はね、プロフィールの「着替え」から、いつでも着替えられるの♪' },
+  { who:'kiki',     e:'normal',   t:'着替えると、吹き出しの顔も立ち絵もその服になるんでつ。' },
+  { who:'mua',      e:'happy',    t:'で、その服はマーケットで買えるんだって！ ハロウィンのあいだはビートP交換所に並ぶよ！' },
+  { who:'kiki',     e:'surprise', t:'ビートP交換所に服が並ぶなんて、初めてでつね。' },
+  { who:'momosuke', e:'wink',     t:'モンビーでビートPをいっぱい貯めてくれたら、みんなも同じ服を着せてあげられるよ♡' },
+  // SCENE 3 5倍
+  { who:'momosuke', e:'excited',  t:'それにね、ハロウィンのあいだは特別なの！ モンビーで貯まるビートPが、いつもの5倍！' },
+  { who:'mua',      e:'surprise', t:'5倍！？ まじで！？' },
+  { who:'kiki',     e:'excited',  t:'さらに、クイックの∞周回を回しながらモンヒロビートを演奏すると、入る周回数も5倍になるでつ！' },
+  { who:'mua',      e:'excited',  t:'いつもの2倍が5倍かぁ。これは遊ばないと損じゃん！' },
+  // SCENE 4 ドラの登場
+  { who:'dra',      e:'excited',  t:'おーい！ 遅くなった、遅くなった！' },
+  { who:'mua',      e:'surprise', t:'あっ、ドラケン！ ……って、頭になんかかぶってない？' },
+  { who:'dra',      e:'happy',    t:'おでのコスプレだ。かぼちゃのかぶりものだよ。どうだ、似合うだろ？' },
+  { who:'kiki',     e:'normal',   t:'前が見えてないでつよ、ドラさん。そっちは壁でつ。' },
+  { who:'dra',      e:'surprise', t:'うおっ！？ ほんとだ、壁だった' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃん、かぼちゃ頭のほうが中身よりかっこいいよ♡' },
+  { who:'dra',      e:'troubled', t:'もも、それ褒めてるのか？ けなしてるのか？' },
+  { who:'momosuke', e:'happy',    t:'どっちかな〜♡' },
+  // SCENE 5 新曲と異変
+  { who:'dra',      e:'normal',   t:'それでな、今日は新しい曲を持ってきたんだ。ハロウィン・ナイトのためだけの曲だよ' },
+  { who:'mua',      e:'excited',  t:'新曲！？ タイトルは！？' },
+  { who:'dra',      e:'happy',    t:'「Crazy Party Night ～ぱんぷきんの逆襲～」だ。今日からモンヒロビートで遊べる' },
+  { who:'kiki',     e:'normal',   t:'ぱんぷきんの逆襲……？ 逆襲、というところが気になりまつね。' },
+  { who:'dra',      e:'normal',   t:'おでも詳しくは知らないんだ。ただ、この街のかぼちゃたちが、ここ数日そわそわしててさ' },
+  { who:'mua',      e:'troubled', t:'そわそわ？ かぼちゃが？' },
+  // SCENE 6 最初の異変
+  { who:'kiki',     e:'surprise', t:'……あれ。ランタンの灯りが、ひとつ、消えたでつ。' },
+  { who:'momosuke', e:'surprise', t:'えっ、風もないのに？' },
+  { who:'dra',      e:'surprise', t:'おい、見ろ。あの路地の奥……なんか、ちっちゃいかぼちゃの影が走っていったぞ' },
+  { who:'mua',      e:'troubled', t:'……ねえ、これ、まじでなにか起きてない？' },
+  { who:'kiki',     e:'normal',   t:'お祭りを楽しみながら、様子を見まつか。' },
+  { who:'momosuke', e:'wink',     t:'うん！ まずは楽しまなきゃね♡ ハロウィン・ナイト、開幕〜！' },
+  { who:'mua',      e:'excited',  t:'いくよ、みんな！ トリック・オア・ビート！' },
+];
+const ASSISTANT_HALLOWEEN_NIGHT_1_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
+// ---- 第2部 ～消えたランタン～ ----
+const ASSISTANT_HALLOWEEN_NIGHT_2 = [
+  // SCENE 1 被害の報告
+  { who:'kiki',     e:'normal',   t:'あれから、消えるランタンが毎晩ふえていまつ。' },
+  { who:'mua',      e:'troubled', t:'今日なんて、広場のランタンが全部真っ暗だったんだよ。さすがにおかしいよ' },
+  { who:'momosuke', e:'normal',   t:'それだけじゃないの。街のあちこちで、お祭りの音楽が途中で止まっちゃうんだって' },
+  { who:'dra',      e:'normal',   t:'音だけ盗られてるんだ。楽器は無事なのに、鳴らそうとすると音が出ない' },
+  { who:'kiki',     e:'surprise', t:'ビートを、盗んでいる……ということでつか？' },
+  { who:'dra',      e:'normal',   t:'そうとしか思えないな。おでも昨日、笛を吹いたら空気しか出なかったからな' },
+  { who:'mua',      e:'happy',    t:'ぷっ、ドラケンの笛ｗ スカー、って音がしたの？' },
+  { who:'dra',      e:'angry',    t:'笑うなよ、みゅあ。おで真剣に吹いたんだぞ' },
+  // SCENE 2 犯人の足あと
+  { who:'momosuke', e:'wink',     t:'ねえねえ、地面を見て♡ ちっちゃい足あとがついてるよ' },
+  { who:'kiki',     e:'normal',   t:'丸くて、ちょこちょこと小さい足あとでつね。' },
+  { who:'mua',      e:'surprise', t:'しかも、足あとの横にオレンジ色のねばねばが落ちてる！' },
+  { who:'dra',      e:'surprise', t:'これ、かぼちゃの中身だな。種もまざってるぞ' },
+  { who:'kiki',     e:'normal',   t:'やはり、犯人は「ぱんぷきん」でつか。あの曲名は、予告だったんでつね。' },
+  { who:'mua',      e:'troubled', t:'でも、なんで音なんか盗むんだろ' },
+  { who:'dra',      e:'normal',   t:'それを知るには、本人に会うしかないな' },
+  // SCENE 3 追跡
+  { who:'momosuke', e:'excited',  t:'足あとの続きを追いかけよう！ こっち、こっち♪' },
+  { who:'mua',      e:'excited',  t:'待ってもも、魔女のスカートで走りにくいんだってば！' },
+  { who:'kiki',     e:'troubled', t:'うさ耳が、枝にひっかかりまつ……っ' },
+  { who:'dra',      e:'troubled', t:'おでも、かぼちゃ頭が前に見えなさすぎる。さっきから木にぶつかってるんだ' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃん、それ脱げばいいのに♡' },
+  { who:'dra',      e:'surprise', t:'あっ。それもそうだな' },
+  { who:'mua',      e:'happy',    t:'ドラケン、気づくの遅っｗ' },
+  // SCENE 4 ぱんぷきんとの出会い
+  { who:'kiki',     e:'surprise', t:'しっ。広場のまんなかに、何かいまつ。' },
+  { who:'dra',      e:'surprise', t:'……いた。ちっちゃいかぼちゃのモンスターだ。オレンジのおなかで、ぴかぴか光ってる' },
+  { who:'mua',      e:'normal',   t:'あれが、ぱんぷきん……？ 思ってたよりずっとちっちゃい' },
+  { who:'momosuke', e:'happy',    t:'かわいい〜♡ ほっぺがまんまる' },
+  { who:'dra',      e:'normal',   t:'でも、手に抱えてるのを見ろ。街の音をぜんぶ、小さな瓶に詰めてるんだ' },
+  { who:'kiki',     e:'normal',   t:'あれが、盗まれたビートでつか。きらきら光っていまつ。' },
+  { who:'mua',      e:'excited',  t:'よーし、返してもらおう！ ねえ、ぱんぷきん！ そのビート、返して！' },
+  // SCENE 5 逃げられる
+  { who:'dra',      e:'surprise', t:'あ、こっちを向いた。……逃げた！？' },
+  { who:'kiki',     e:'surprise', t:'すごい速さでつ！ 瓶を抱えたまま、屋根の上まで！' },
+  { who:'momosuke', e:'troubled', t:'待って〜！ ……行っちゃった' },
+  { who:'mua',      e:'troubled', t:'逃げるとき、ちょっと泣きそうな顔してなかった？' },
+  { who:'kiki',     e:'normal',   t:'わたしにも、そう見えまつ。悪いことをしている顔では、なかったでつ。' },
+  { who:'dra',      e:'normal',   t:'ただのいたずらじゃなさそうだな。もう少し調べてみよう' },
+  { who:'momosuke', e:'wink',     t:'うん♡ その前にね、みんなでモンビーを遊んでビートPを貯めておこ？ 夜は長いんだから' },
+  { who:'mua',      e:'happy',    t:'そうだね。盗まれた音を取り返すには、まず自分たちのビートを鳴らさなきゃ！' },
+];
+const ASSISTANT_HALLOWEEN_NIGHT_2_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
+// ---- 第3部 ～ぱんぷきんのひみつ～ ----
+const ASSISTANT_HALLOWEEN_NIGHT_3 = [
+  // SCENE 1 古い絵本
+  { who:'kiki',     e:'happy',    t:'手がかりを見つけたでつ。街の図書室で、この街のハロウィンの絵本を見つけたんでつ。' },
+  { who:'mua',      e:'surprise', t:'さすがきき！ なにが書いてあったの？' },
+  { who:'kiki',     e:'normal',   t:'昔からこの街では、収穫したかぼちゃをくり抜いて、ランタンにするのがならわしでつ。' },
+  { who:'dra',      e:'normal',   t:'それは知ってる。おでも毎年、かぼちゃパイを食わせてもらってるからな' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃんは、パイが目当てなんだね♡' },
+  { who:'dra',      e:'troubled', t:'ち、違うよ。おではちゃんとランタンも見てるからな' },
+  { who:'kiki',     e:'normal',   t:'そして絵本の最後に、小さく書き足してあるでつ。「ランタンになれなかったかぼちゃは、夜の街にひとりで残る」と。' },
+  { who:'mua',      e:'troubled', t:'ひとりで……残る……' },
+  // SCENE 2 ぱんぷきんの正体
+  { who:'momosuke', e:'surprise', t:'それってもしかして、ぱんぷきんのこと？' },
+  { who:'kiki',     e:'normal',   t:'はい。ぱんぷきんは、ランタンに選ばれなかったかぼちゃの子でつ。' },
+  { who:'dra',      e:'normal',   t:'ランタンになった仲間は、街で灯りをともしてもらえて、みんなに見てもらえる' },
+  { who:'dra',      e:'troubled', t:'でも、選ばれなかった子は、暗い畑に置いていかれるんだな' },
+  { who:'mua',      e:'crying',   t:'そんなの、さびしすぎるじゃん……' },
+  { who:'momosuke', e:'troubled', t:'だからぱんぷきんは、パーティーを台なしにして「ぼくもここにいるぞ」って言いたかったのかな' },
+  { who:'kiki',     e:'troubled', t:'それで「逆襲」……。怒っているというより、さびしくて叫んでいるんでつね。' },
+  // SCENE 3 ドラの気持ち
+  { who:'dra',      e:'normal',   t:'おで、ちょっとだけ分かるんだ' },
+  { who:'mua',      e:'surprise', t:'ドラケンが？' },
+  { who:'dra',      e:'normal',   t:'みんなが楽しそうに集まってるところに、入っていけない時ってあるだろ' },
+  { who:'dra',      e:'happy',    t:'そういう時にな、誰かが「こっちに来なよ」って言ってくれると、すごく嬉しいんだ' },
+  { who:'momosuke', e:'happy',    t:'ドラちゃん……' },
+  { who:'dra',      e:'surprise', t:'あっ、なんだよもも、そんな目で見るなよ。照れるだろ' },
+  { who:'momosuke', e:'wink',     t:'ふふ。じゃあ今度は、ドラちゃんがぱんぷきんに言ってあげる番だね♡' },
+  // SCENE 4 作戦会議
+  { who:'mua',      e:'excited',  t:'よし、決めた！ ぱんぷきんをパーティーに招待しよう！' },
+  { who:'kiki',     e:'normal',   t:'でも、逃げられてしまいまつよ。どうやって近づきまつか。' },
+  { who:'momosuke', e:'wink',     t:'あのね、ももに考えがあるの♡ ぱんぷきんが持ってた瓶、音をたくさん集めてたでしょ？' },
+  { who:'mua',      e:'normal',   t:'うん。街中のビートを集めてた' },
+  { who:'momosuke', e:'happy',    t:'ということは、ぱんぷきんは音楽が大好きなんだよ。だったら、音楽でお話しすればいいの♪' },
+  { who:'kiki',     e:'surprise', t:'なるほど。モンヒロビートで、ぱんぷきんの曲を鳴らしてあげるんでつね！' },
+  { who:'dra',      e:'happy',    t:'「Crazy Party Night ～ぱんぷきんの逆襲～」か。あの曲は、ぱんぷきんのテーマ曲みたいなものだもんな' },
+  { who:'mua',      e:'excited',  t:'それ、まじいい作戦じゃん！ 私たちの演奏で、ぱんぷきんに気持ちを伝えよう！' },
+  // SCENE 5 その夜
+  { who:'kiki',     e:'normal',   t:'そうと決まれば、練習でつね。ビートを重ねるほど、きっと街の音も戻ってきまつ。' },
+  { who:'momosuke', e:'wink',     t:'みんなが遊んでくれたぶんだけ、ぱんぷきんにも届くよ。ももたちは、それを信じて待ってよ♡' },
+  { who:'dra',      e:'normal',   t:'来週は、ぱんぷきんを見つけ出そう。おで、今度はちゃんと前を見て走るからな' },
+  { who:'mua',      e:'happy',    t:'かぶりもの、もう脱いだもんね、ドラケンｗ' },
+  { who:'dra',      e:'troubled', t:'……それ、まだ言うのか' },
+];
+const ASSISTANT_HALLOWEEN_NIGHT_3_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
+// ---- 第4部 ～届け、ビート～ ----
+const ASSISTANT_HALLOWEEN_NIGHT_4 = [
+  // SCENE 1 ぱんぷきんのすみか
+  { who:'kiki',     e:'normal',   t:'ようやく、ぱんぷきんのすみかを見つけたでつ。街のはずれの、古い畑の奥でつ。' },
+  { who:'dra',      e:'normal',   t:'おでも行ってきた。あそこにはランタンになれなかったかぼちゃが、たくさん転がってたよ' },
+  { who:'mua',      e:'troubled', t:'みんな、ぱんぷきんの仲間なんだよね' },
+  { who:'momosuke', e:'normal',   t:'ぱんぷきんはね、その子たちのためにも、パーティーを開きたかったんだと思うの' },
+  { who:'dra',      e:'normal',   t:'小さな瓶に、盗んだ音をいっぱい詰めてさ。自分たちだけのパーティーを、やろうとしてたんだな' },
+  { who:'mua',      e:'crying',   t:'うう、聞いてるだけで泣けてくる……' },
+  { who:'kiki',     e:'happy',    t:'みゅあちん、泣くのは早いでつ。これからが本番でつよ。' },
+  // SCENE 2 会いに行く
+  { who:'mua',      e:'excited',  t:'行こう！ みんなで、ぱんぷきんに会いに！' },
+  { who:'momosuke', e:'wink',     t:'ももたちの衣装、せっかくだから気合い入れよ？ 魔女帽子もうさ耳も、ばっちり決めて♡' },
+  { who:'kiki',     e:'happy',    t:'パーティーの正装でつね。はい、着ました。' },
+  { who:'dra',      e:'happy',    t:'おでも、かぼちゃのかぶりものをかぶり直したぞ。今度は前が見えるように、穴を広げたんだ' },
+  { who:'mua',      e:'happy',    t:'ドラケン、ちゃんと学習してるじゃん！' },
+  // SCENE 3 対面
+  { who:'dra',      e:'surprise', t:'……いたぞ。畑のまんなかで、ひとりで座ってる' },
+  { who:'momosuke', e:'normal',   t:'ぱんぷきん……' },
+  { who:'mua',      e:'normal',   t:'ねえ、ぱんぷきん。逃げないで。私たち、あなたに会いに来たの' },
+  { who:'kiki',     e:'normal',   t:'盗んだ音を取り返しに来たのではありません。あなたの話を、聞きに来たんでつ。' },
+  { who:'dra',      e:'normal',   t:'おで、ドラっていう。こいつらの仲間だ。おまえ、さびしかったんだろ' },
+  { who:'momosuke', e:'wink',     t:'ねえ、ぱんぷきん。ももたちと一緒に、パーティー、やらない？' },
+  { who:'mua',      e:'surprise', t:'……あ、今ちょっとだけ、こっち向いた' },
+  // SCENE 4 すれ違い
+  { who:'kiki',     e:'troubled', t:'でも、ぱんぷきんは首を横にふっていまつ。' },
+  { who:'dra',      e:'troubled', t:'「どうせ、また置いていかれる」って顔してるな' },
+  { who:'mua',      e:'troubled', t:'そんなことしないよ、って言っても、信じてくれないよね' },
+  { who:'momosuke', e:'normal',   t:'言葉だけじゃ、足りないんだよ。だったら……ももたちのビートで、見せてあげよう？' },
+  { who:'kiki',     e:'excited',  t:'そうでつね。ビートは、嘘をつきません。' },
+  { who:'dra',      e:'happy',    t:'いいこと言うな、靴下さん' },
+  { who:'kiki',     e:'angry',    t:'靴下さんではありません！' },
+  // SCENE 5 ビートを重ねる
+  { who:'mua',      e:'excited',  t:'いくよ！ 「Crazy Party Night ～ぱんぷきんの逆襲～」！' },
+  { who:'momosuke', e:'excited',  t:'みんなが遊んでくれたビート、ぜんぶ乗せて届けるよ！' },
+  { who:'dra',      e:'excited',  t:'届け、ぱんぷきん！ これがおでたちのビートだ！' },
+  { who:'kiki',     e:'surprise', t:'……あっ。ぱんぷきんの瓶が、光り出したでつ！' },
+  { who:'mua',      e:'surprise', t:'音が、街のほうへ飛んでいく！ ランタンの灯りが、ひとつずつ戻ってる！' },
+  { who:'momosuke', e:'happy',    t:'見て、ぱんぷきんが……笑った♡' },
+  { who:'dra',      e:'surprise', t:'あ、泣いてるぞ。……あれはうれし泣きだな' },
+  { who:'mua',      e:'happy',    t:'やった！ 通じたんだ！' },
+  // SCENE 6 次の一晩
+  { who:'kiki',     e:'normal',   t:'あとは、ぱんぷきんが、パーティーに来てくれるかどうかでつ。' },
+  { who:'dra',      e:'normal',   t:'来週は、この街のハロウィンの最後の夜だ。ぱんぷきんも、きっと来る' },
+  { who:'momosuke', e:'wink',     t:'うん。最後は、みんなで朝まで踊ろうね♡' },
+];
+const ASSISTANT_HALLOWEEN_NIGHT_4_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
+// ---- 第5部 閉幕 ～夜明けのパーティー～ ----
+const ASSISTANT_HALLOWEEN_NIGHT_5 = [
+  // SCENE 1 最後の夜
+  { who:'mua',      e:'excited',  t:'いよいよ、ハロウィン・ナイト最後の夜だね！' },
+  { who:'kiki',     e:'happy',    t:'街中のランタンがぜんぶ灯って、音も全部戻ってきたでつ。きれいでつね……' },
+  { who:'momosuke', e:'wink',     t:'あとは主役が来るのを待つだけだよ♡' },
+  { who:'dra',      e:'normal',   t:'来るかな、ぱんぷきん' },
+  { who:'mua',      e:'normal',   t:'来るよ。だって、ビートはちゃんと届いたもん' },
+  // SCENE 2 ぱんぷきんが来る
+  { who:'kiki',     e:'surprise', t:'あっ、広場の入口に、ちっちゃいかぼちゃの影が！' },
+  { who:'momosuke', e:'excited',  t:'ぱんぷきんだ！ ひとりじゃない、後ろにもたくさんいる！' },
+  { who:'dra',      e:'surprise', t:'畑にいた、ランタンになれなかったかぼちゃたちが、みんな来たんだ' },
+  { who:'mua',      e:'happy',    t:'来てくれた……！ ようこそ、ぱんぷきん！ ハロウィン・ナイトへ！' },
+  { who:'kiki',     e:'happy',    t:'お待ちしてたでつ。さあ、いちばん前の席へどうぞ。' },
+  { who:'momosuke', e:'wink',     t:'今夜の主役は、ぱんぷきんたちだよ♡' },
+  // SCENE 3 パーティー
+  { who:'dra',      e:'excited',  t:'よし、始めるぞ！ 最後の「Crazy Party Night ～ぱんぷきんの逆襲～」だ！' },
+  { who:'mua',      e:'excited',  t:'みんなで踊ろう！ 魔女も、うさ耳も、小悪魔も、かぼちゃ頭も、ぜーんぶ一緒に！' },
+  { who:'kiki',     e:'excited',  t:'ぱんぷきんが、一緒にステップを踏んでいまつ！' },
+  { who:'momosuke', e:'happy',    t:'かわいい〜♡ 光るおなかが、リズムに合わせてぴかぴかしてる' },
+  { who:'dra',      e:'happy',    t:'おでも、負けてられないな。……あ、足がもつれた' },
+  { who:'mua',      e:'happy',    t:'ドラケン、またぁｗ' },
+  { who:'dra',      e:'troubled', t:'今のは、わざとだよ' },
+  { who:'kiki',     e:'normal',   t:'ドラさん、立ち上がるのに三回かかっていまつ。' },
+  { who:'momosuke', e:'wink',     t:'ふふ。ドラちゃんのそういうところ、嫌いじゃないよ♡' },
+  { who:'dra',      e:'surprise', t:'……もも、今なんて言った？' },
+  { who:'momosuke', e:'happy',    t:'さあ、なんでしょう〜♡' },
+  { who:'dra',      e:'troubled', t:'ももぉ……聞き返しても教えてくれないんだよな……' },
+  // SCENE 4 ぱんぷきんの贈りもの
+  { who:'kiki',     e:'surprise', t:'あっ、ぱんぷきんが、何かを差し出していまつ。' },
+  { who:'mua',      e:'normal',   t:'あの小さな瓶……盗んだ音を詰めてた瓶だよね' },
+  { who:'dra',      e:'normal',   t:'「ごめんなさい」って、言ってるな。中身は、もう空っぽだ' },
+  { who:'momosuke', e:'happy',    t:'ううん、もう怒ってないよ。ももたちこそ、ぱんぷきんの気持ち、気づくのが遅れてごめんね' },
+  { who:'mua',      e:'happy',    t:'来年も、再来年も、ぱんぷきんが一番前で踊れる夜にしようね' },
+  { who:'kiki',     e:'happy',    t:'約束でつ。ぱんぷきんも、うれしそうに跳ねていまつ。' },
+  // SCENE 5 夜明け
+  { who:'momosuke', e:'normal',   t:'空が少し明るくなってきたね……もう、夜明けだ' },
+  { who:'kiki',     e:'normal',   t:'ハロウィン・ナイトも、もうすぐおしまいでつね。' },
+  { who:'mua',      e:'troubled', t:'ちょっと寂しいな。ずっと続けばいいのに' },
+  { who:'dra',      e:'normal',   t:'またやればいいさ。ハロウィンは、来年も来る' },
+  { who:'dra',      e:'happy',    t:'それにな、ビートはいつでも鳴らせる。ぱんぷきんも、モンヒロビートの中でいつでも待ってるよ' },
+  // SCENE 6 衣装とお礼
+  { who:'momosuke', e:'wink',     t:'あ、そうそう。ハロウィンの衣装はね、イベントが終わっても、ダイヤショップで買えるようになるよ♡' },
+  { who:'kiki',     e:'normal',   t:'ビートP交換所に並んでいたぶんは、ここまでになりまつ。着たかった人は、ダイヤショップをのぞいてほしいでつ。' },
+  { who:'mua',      e:'happy',    t:'もう持ってる子は、ずっと着てていいよ！ 魔女のみゅあを、これからもよろしくね！' },
+  { who:'dra',      e:'happy',    t:'最後に、遊んでくれた全員にお礼だ。おまえたちのビートのおかげで、ぱんぷきんは笑えた' },
+  { who:'kiki',     e:'happy',    t:'ありがとうでつ。' },
+  { who:'momosuke', e:'excited',  t:'ありがとう〜♡ また次のイベントで会おうね！' },
+  { who:'mua',      e:'excited',  t:'ハッピー・ハロウィン！' },
+];
+const ASSISTANT_HALLOWEEN_NIGHT_5_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
+// 5部の会話のあいだ、持っているかに関わらず着る衣装(breeder.js の halloweenCostume の id)
+const ASSISTANT_HALLOWEEN_NIGHT_COSTUMES = Object.freeze({ mua:'mua_halloween_2026', kiki:'kiki_halloween_2026', momosuke:'momosuke_halloween_2026' });
 const EVENT_REPLAYS = [
   // タクティクスバトルの導入(2026-09-21)。**公開するまでは回想にも出さない**
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
@@ -6221,6 +6546,13 @@ const EVENT_REPLAYS = [
   { id: 'beat_point_up_2026_09_28', date: '2026-09-28 18:00', title: 'ビートPアップキャンペーン ～森と甘い香りの新しい仲間～', script: ASSISTANT_BEAT_POINT_UP, calls: ASSISTANT_BEAT_POINT_UP_CALLS, unlockedKey: 'beatPointUpSeen' },
   // みんなで対戦・フレンド・ももすけのアシストカード・EXスキルの知らせ(2026-10-03)。HOMEで1度だけ流れ、そのあとは回想から見返せる
   { id: 'rhythm_multi_friends_2026_10_03', date: '2026-10-03 03:31', title: 'みんなで対戦 ～フレンドといっしょに～', script: ASSISTANT_RHYTHM_MULTI_FRIENDS, calls: ASSISTANT_RHYTHM_MULTI_FRIENDS_CALLS, unlockedKey: 'rhythmMultiFriendsSeen' },
+  // ハロウィン・ナイト(2026-10-04〜11-01)の5部構成。第1部が開幕、第5部が閉幕。**時刻が来た部から**HOMEで1度ずつ流れ、そのあとは回想から見返せる
+  // (出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。id はそこと同じ)
+  { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part2', date: '2026-10-11 08:00', title: 'ハロウィン・ナイト 第2部 ～消えたランタン～', script: ASSISTANT_HALLOWEEN_NIGHT_2, calls: ASSISTANT_HALLOWEEN_NIGHT_2_CALLS, unlockedKey: 'halloweenNightPart2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part3', date: '2026-10-18 08:00', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: ASSISTANT_HALLOWEEN_NIGHT_3, calls: ASSISTANT_HALLOWEEN_NIGHT_3_CALLS, unlockedKey: 'halloweenNightPart3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part4', date: '2026-10-25 08:00', title: 'ハロウィン・ナイト 第4部 ～届け、ビート～', script: ASSISTANT_HALLOWEEN_NIGHT_4, calls: ASSISTANT_HALLOWEEN_NIGHT_4_CALLS, unlockedKey: 'halloweenNightPart4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part5', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 第5部 ～夜明けのパーティー～', script: ASSISTANT_HALLOWEEN_NIGHT_5, calls: ASSISTANT_HALLOWEEN_NIGHT_5_CALLS, unlockedKey: 'halloweenNightPart5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

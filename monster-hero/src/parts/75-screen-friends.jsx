@@ -391,6 +391,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                 return (
                   <div data-friend-songs className="mt-2 flex flex-col gap-2">
                     <p className="px-1 text-[10px] font-black text-slate-400">遊んだ曲 {sum.records.rhythm.played}曲（スコアの高い順に{FRIEND_RECORD_SONG_MAX}曲まで）</p>
+                    <RhythmAchievementPanel rows={sum.records.rhythm.ach} who="friend" />
                     {songs.length > 0 && (
                       <div data-friend-versus className={`${SCREEN_PANEL_FLAT_CLASS} text-center`}>
                         <small className="block text-[9px] font-bold text-slate-400">スコア勝負（同じ曲・同じ難易度で、自分と比べます）</small>

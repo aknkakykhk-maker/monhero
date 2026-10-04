@@ -13,7 +13,7 @@ const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 // ももすけのカード用の顔アイコン。助手の表情画像(小さい)をそのまま使う
-const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=567b7baa59e9";
+const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=26508bc26c81";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // マーケットのアイコン商品だけで使う立ち絵。
@@ -208,6 +208,61 @@ const DRA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
+// あつは助手ではないので、顔アイコン(256px)を images/breeder-icons/atsu_<表情>.png に直接置いている。
+// 既存の「あつのアイコン」(id:'atsu', images/breeder-icons/atsu.png)は別の絵で、購入済みの人がいるのでそのまま残す。
+// こちらは id を atsu_* に分けているので、既存の保存データには影響しない。
+// (使われていない画像の検査が見つけられるよう、パスは1枚ずつ文字で書いておく)
+const ATSU_EXPRESSION_ICONS = {
+  normal:   "images/breeder-icons/atsu_normal.png?v=f4d1376ca306",
+  happy:    "images/breeder-icons/atsu_happy.png?v=311560d5a472",
+  wink:     "images/breeder-icons/atsu_wink.png?v=702e6985867a",
+  excited:  "images/breeder-icons/atsu_excited.png?v=98eb2efc88fa",
+  surprise: "images/breeder-icons/atsu_surprise.png?v=5ea1fdd3873c",
+  troubled: "images/breeder-icons/atsu_troubled.png?v=e9ffa3a87f89",
+  angry:    "images/breeder-icons/atsu_angry.png?v=24449b0075a1",
+  crying:   "images/breeder-icons/atsu_crying.png?v=c8e7bc88c9c3",
+};
+const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `atsu_${key}`,
+  name: `あつ（${label}）のアイコン`,
+  type: 'icon',
+  icon: ATSU_EXPRESSION_ICONS[key],
+  cost: 1,
+}));
+
+// ハロウィン・ナイトの衣装のアイコン(2026-10-04・ユーザー指示「みゅあ、きき、もものアイコンの販売。ハロウィンみたいな名称。
+// 同じキャラだけど通常のみゅあとかとは混ぜずに販売。ただし表情とかはまとめる。ブリーダーポイント1(イベント後販売)、ビートポイント1000」)。
+//   ・通常のアイコン(myua_* / kiki_* / momosuke_*)とは別のまとめ(mua_halloween など)。id が違うので、持っているかも別々に数える
+//   ・イベント中(10/4 8:00〜11/1 3:59)はビートP交換所で1000P、終わったあとはブリーダーP交換所で1pt(下の halloweenIconSale が決める)
+//   ・どちらで買っても8表情ぜんぶ手に入る(まとめの中身が mh_market_icons に全部入る。新しい保存キーは作らない)
+//   ・絵は衣装の顔アイコンをそのまま使う(images/assistant/halloween/face/)。別のファイルを作らない
+const HALLOWEEN_ICON_SETS = Object.freeze([
+  ['mua', 'myua', 'みゅあ'],
+  ['kiki', 'kiki', 'きき'],
+  ['momosuke', 'momosuke', 'ももすけ'],
+].map(([assistantId, prefix, who]) => Object.freeze({
+  groupId: `${assistantId}_halloween`,
+  assistantId,
+  name: `${who}（ハロウィン）`,
+  memberIds: Object.freeze(MYUA_ICON_EXPRESSIONS.map(([key]) => `${prefix}_halloween_${key}`)),
+  prefix,
+})));
+// いまの売り場。'beatPoint'(ビートP交換所)・'breederPoint'(ブリーダーP交換所)・null(まだ売らない)。見るたびに数え直す
+const halloweenIconSale = (nowMs = Date.now()) => {
+  if (nowMs < Date.parse(ASSISTANT_COSTUME_HALLOWEEN_START_AT)) return null;
+  return nowMs < Date.parse(ASSISTANT_COSTUME_HALLOWEEN_END_AT) ? 'beatPoint' : 'breederPoint';
+};
+const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `${set.prefix}_halloween_${key}`,
+  name: `${set.name}（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/halloween/face/${set.prefix}_${key}.PNG`,
+  cost: 1,
+  // ブリーダーP交換所に並ぶのはイベントが終わってから(それまでは false で出ない)
+  get shop() { return halloweenIconSale() === 'breederPoint' ? undefined : false; },
+})));
+
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -320,8 +375,61 @@ const BREEDER_MARKET_ITEMS = [
   ...KIKI_MARKET_ICONS,
   ...MOMOSUKE_MARKET_ICONS,
   // 助手ドラの表情アイコン(8種)
-  ...DRA_MARKET_ICONS
+  ...DRA_MARKET_ICONS,
+  ...ATSU_MARKET_ICONS,
+  ...HALLOWEEN_MARKET_ICONS
 ];
+// ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
+// 同じキャラのアイコンが何種類もある(助手の8表情・モンスターの顔と円盤石など)。
+// ショップではキャラごとに1つにまとめて売り、「詳細」で中身を見られる。プロフィールで設定するときは、中身を1つずつ選べる。
+//
+// ★「どれか1つでも持っている人は、全部持っていることになる」(ユーザー指示)。
+//   これは**読むときに広げる**だけで、保存してある mh_market_icons は書き換えない(CLAUDE.md ⑦)。
+//   買ったときは、まとめの中身を全部 mh_market_icons へ足す(1つ買うと全部入る)。
+// ★値段はまとめ全体で、代表(いちばん先のもの)の値段。いまは全部1pt。
+// ★商品そのもの(BREEDER_MARKET_ITEMS)は変えない。id・名前・絵・値段は今までどおりで、
+//   「どれとどれが同じキャラか」だけをここで決める。
+const breederIconGroupKeyOf = (id) => {
+  const key = String(id || '');
+  // ハロウィンのアイコンは通常のアイコンと混ぜない(下の通常の判定より先に見る)
+  const halloween = /^(myua|kiki|momosuke)_halloween_/.exec(key);
+  if (halloween) return `${halloween[1] === 'myua' ? 'mua' : halloween[1]}_halloween`;
+  if (key === 'mua' || /^myua_/.test(key)) return 'mua';
+  if (key === 'dra' || /^dra_/.test(key)) return 'dra';
+  if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
+  if (/^momosuke_/.test(key)) return 'momosuke';
+  if (key === 'atsu' || /^atsu_/.test(key)) return 'atsu';
+  return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
+};
+const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ',
+  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）' });
+// 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
+const BREEDER_ICON_GROUPS = (() => {
+  const order = [];
+  const byKey = {};
+  BREEDER_MARKET_ITEMS.filter(item => item.type === 'icon').forEach(item => {
+    const key = breederIconGroupKeyOf(item.id);
+    if (!byKey[key]) { byKey[key] = []; order.push(key); }
+    byKey[key].push(item);
+  });
+  return order.filter(key => byKey[key].length >= 2).map(key => {
+    const members = byKey[key];
+    const name = BREEDER_ICON_GROUP_NAMES[key] || String(members[0].name || '').replace(/（覚醒）のアイコン$|の円盤石アイコン$|のアイコン$/, '');
+    return Object.freeze({ id:key, name, memberIds:Object.freeze(members.map(m => m.id)) });
+  });
+})();
+const BREEDER_ICON_GROUP_BY_MEMBER = Object.freeze(Object.fromEntries(
+  BREEDER_ICON_GROUPS.flatMap(group => group.memberIds.map(id => [id, group]))));
+// そのアイコンが入っているまとめ。まとまらないアイコンは null
+const breederIconGroupOf = (id) => BREEDER_ICON_GROUP_BY_MEMBER[id] || null;
+// 持っているアイコンのid一覧を「まとめの中身を全部持っている」形へ広げる。保存値は変えない。
+// 壊れた値(配列でない・文字列でない)は捨てる
+const expandOwnedMarketIcons = (owned) => {
+  const list = Array.isArray(owned) ? owned.filter(id => typeof id === 'string') : [];
+  const out = new Set(list);
+  list.forEach(id => { const group = BREEDER_ICON_GROUP_BY_MEMBER[id]; if (group) group.memberIds.forEach(m => out.add(m)); });
+  return [...out];
+};
 // 難易度キー → その難易度で使えるスキップチケットのid
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
   BREEDER_MARKET_ITEMS.filter(item => item.usage === 'battleSkip').map(item => [item.skipDifficulty, item.id])
@@ -666,3 +774,153 @@ const nextProfileFrameForAssistant = (assistantId, bondLevel, owned) => {
   return profileFramesForAssistant(assistantId)
     .find(frame => !have.has(frame.id) && !(Number.isFinite(level) && profileFrameUnlock(frame).bondLevel <= level)) || null;
 };
+
+// ==================== 助手の着替え(2026-10-03 ユーザー指示「助手の着替え機能を作りたい。着替え自体はマーケットに販売する予定」) ====================
+//
+// 助手ごとに「着替え」を持てる。プロフィールの「着替え」から、持っている服へ着替える。
+// 着替えると、その助手の吹き出しの顔・立ち絵が服の絵に変わる(絵の出し口は data/assistants.js の
+// assistantFaceImage / assistantFullImage の1か所だけ)。
+//
+// ★まだ売り物は無い(絵が用意できていない)。ここは「ASSISTANT_COSTUMES に1件足せば、マーケットに並んで
+//   買えて、プロフィールで着替えられる」ための土台だけ。画面側のコードは1行も触らなくてよい。
+// ★足し方(1件):
+//     { id:'mua_summer_v1', assistantId:'mua', name:'夏のワンピース', desc:'…', released:true,
+//       icon:'<服のフォルダ>/face/<imagePrefix>_happy.PNG',   // 商品カードの小さな絵(顔アイコン)
+//       imageDir:'<服の絵を置くフォルダ>',   // 立ち絵 <imagePrefix>_<表情>.PNG と face/<imagePrefix>_<表情>.PNG を置く(置き場は images/assistant/ の下に作る)
+//       price:{ diamond:3000, beatPoint:1500 } }             // 売る交換所と値段。書いた交換所にだけ並ぶ(どちらか片方でもよい)
+//   絵は assistants.js の表情8種(normal/happy/wink/surprise/troubled/angry/crying/excited)をそろえる。
+//   足りない表情は、その服の normal ではなく**元の服の絵**へ落ちる(絵切れを起こさない)。
+// ★released:true にして price を書かないと、全員が無料で着られてしまう。price は必ず書く(検査が見張る)。
+// ★保存は新しいキー2つだけ。既存の mh_* は読みも書きも変えない(CLAUDE.md ⑦)。
+//     mh_assistant_costume_owned_v1 … 買った服のid(配列)。一度買ったら外さない
+//     mh_assistant_costume_worn_v1  … 助手ごとに今着ている服 { 助手id: 服id }。無い助手は元の服
+const ASSISTANT_COSTUME_OWNED_KEY = 'mh_assistant_costume_owned_v1';
+const ASSISTANT_COSTUME_WORN_KEY = 'mh_assistant_costume_worn_v1';
+// 公開フラグ。false のあいだは、売る服が1着も無ければ プロフィールの「着替え」もマーケットの「着替え」タブも出さない
+// (空の画面を見せない)。服を1着でも released:true にすると、フラグに関係なく出る。
+const ASSISTANT_COSTUME_PUBLIC_RELEASE = false;
+// ★期間で売り方が変わる服は price の代わりに saleWindows を書く:
+//     saleWindows:[{ shop:'beatPoint', cost:1000, from:開始, until:終了 }, { shop:'diamond', cost:100000, from:開始 }]
+//   from(その時刻から)・until(その時刻の前まで)はどちらも省いてよい。いま有効な窓だけが売り物になる
+//   (見るたびに数え直す。CLAUDE.md ⑥-4)。このとき released は getter にして、公開前は false を返す
+// ハロウィン・ナイトの衣装(2026-10-03・ユーザー指示「みゅあ、きき、ももはハロウィンコスプレ衣装で登場」「助手の着替え機能実装。
+// マーケットに販売。1000ビートポイント。ハロウィンイベント後解放、100000ダイヤ」)。
+//   イベント中(10/4 8:00〜11/1 3:59)はビートP交換所で1000P、終わったあとはダイヤショップで100000ダイヤ。
+//   絵は images/assistant/halloween/(立ち絵 <接頭辞>_<表情>.PNG と face/ の顔アイコン)
+// ★期間は data/rhythm-event.js の HALLOWEEN_NIGHT_START_AT / END_AT と同じ(あちらは breeder.js より後に読み込まれるので、ここに写して持つ。
+//   食い違わないことは tools/mode/halloween-night-check.js が見張る)
+const ASSISTANT_COSTUME_HALLOWEEN_START_AT = '2026-10-04T08:00:00+09:00';
+const ASSISTANT_COSTUME_HALLOWEEN_END_AT = '2026-11-01T04:00:00+09:00';
+const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
+  id: `${assistantId}_halloween_2026`, assistantId, name, desc,
+  get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_HALLOWEEN_START_AT); },
+  icon: `images/assistant/halloween/face/${imagePrefix}_happy.PNG`,
+  imageDir: 'images/assistant/halloween',
+  saleWindows: Object.freeze([
+    Object.freeze({ shop:'beatPoint', cost:1000, from:ASSISTANT_COSTUME_HALLOWEEN_START_AT, until:ASSISTANT_COSTUME_HALLOWEEN_END_AT }),
+    Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_HALLOWEEN_END_AT }),
+  ]),
+});
+const ASSISTANT_COSTUMES = Object.freeze([
+  halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
+  halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
+  halloweenCostume('momosuke', 'momosuke', 'ハロウィンの小悪魔', 'ハロウィン・ナイトの衣装。ふわふわの耳と小さな翼の小悪魔コスプレです。'),
+]);
+const ASSISTANT_COSTUME_SHOPS = Object.freeze({
+  diamond:   Object.freeze({ label:'ダイヤショップ', currency:'diamond' }),
+  beatPoint: Object.freeze({ label:'ビートP交換所', currency:'beatPoint' }),
+});
+// 壊れた値・古い形が入っていても必ず文字列の配列へ落とす
+const normalizeOwnedAssistantCostumes = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+};
+const releasedAssistantCostumes = () => ASSISTANT_COSTUMES.filter(costume => costume && costume.released === true);
+const assistantCostumeById = (id) => releasedAssistantCostumes().find(costume => costume.id === id) || null;
+// その助手の服(並びは ASSISTANT_COSTUMES のとおり)
+const assistantCostumesFor = (assistantId) => releasedAssistantCostumes().filter(costume => costume.assistantId === assistantId);
+// 着替えの入口を出すか(上のコメントのとおり)
+const assistantCostumeFeatureOn = () => ASSISTANT_COSTUME_PUBLIC_RELEASE === true || releasedAssistantCostumes().length > 0;
+// その服の売り値の一覧 [{ shop, cost, currency }]。値段が正しくないものは入れない
+const assistantCostumeSales = (costume, nowMs = Date.now()) => {
+  // 期間で売り方が変わる服(saleWindows)は、いま有効な窓だけを売り物にする
+  if (costume && Array.isArray(costume.saleWindows)) {
+    return costume.saleWindows.map(window => {
+      const shop = window && window.shop;
+      const cost = Math.floor(Number(window && window.cost));
+      const fromMs = window && window.from ? Date.parse(window.from) : -Infinity;
+      const untilMs = window && window.until ? Date.parse(window.until) : Infinity;
+      const live = nowMs >= fromMs && nowMs < untilMs;
+      return (ASSISTANT_COSTUME_SHOPS[shop] && Number.isFinite(cost) && cost >= 1 && live) ? { shop, cost, currency: ASSISTANT_COSTUME_SHOPS[shop].currency } : null;
+    }).filter(Boolean);
+  }
+  const price = costume && costume.price;
+  if (!price || typeof price !== 'object') return [];
+  return Object.keys(ASSISTANT_COSTUME_SHOPS).map(shop => {
+    const cost = Math.floor(Number(price[shop]));
+    return (Number.isFinite(cost) && cost >= 1) ? { shop, cost, currency: ASSISTANT_COSTUME_SHOPS[shop].currency } : null;
+  }).filter(Boolean);
+};
+const assistantCostumeSaleIn = (costume, shop) => assistantCostumeSales(costume).find(sale => sale.shop === shop) || null;
+// 期間に関係なく、その交換所で売ることがある服か。読み込み時に商品の枠を作るために使う
+// (枠を残しておき、売れるかどうかは見るたびに assistantCostumeSaleIn で数え直す)
+const assistantCostumeEverSellsIn = (costume, shop) => {
+  if (costume && Array.isArray(costume.saleWindows)) return costume.saleWindows.some(window => window && window.shop === shop);
+  return !!costume && !!assistantCostumeSaleIn(costume, shop);
+};
+const assistantCostumeSaleEverCost = (costume, shop) => {
+  const list = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
+  const window = list.find(w => w && w.shop === shop);
+  return window ? Math.floor(Number(window.cost)) : (assistantCostumeSaleIn(costume, shop) || {}).cost;
+};
+// 売る服として書かれているのに値段が1つも読めない服のid。検査用
+const assistantCostumesWithBrokenSale = () => releasedAssistantCostumes()
+  .filter(costume => (Array.isArray(costume.saleWindows) ? costume.saleWindows.length === 0 : assistantCostumeSales(costume).length === 0)
+    || Object.keys(costume.price || {}).some(shop => !ASSISTANT_COSTUME_SHOPS[shop])
+    || (Array.isArray(costume.saleWindows) && costume.saleWindows.some(window => !window || !ASSISTANT_COSTUME_SHOPS[window.shop] || !(Math.floor(Number(window.cost)) >= 1))))
+  .map(costume => costume.id);
+// 持っているか(持っている服のidの配列に入っているか)
+const assistantCostumeOwned = (id, owned) => normalizeOwnedAssistantCostumes(owned).includes(id) && !!assistantCostumeById(id);
+// 保存してある「今着ている服」を { 助手id: 服id } に直す。
+// 持っていない服・その助手の服ではないもの・消えた服は捨てて、元の服へ戻す(壊れた値でも落ちない)
+const normalizeWornAssistantCostumes = (value, owned) => {
+  const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+  const have = new Set(normalizeOwnedAssistantCostumes(owned));
+  const result = {};
+  Object.keys(source).forEach(assistantId => {
+    const costume = assistantCostumeById(source[assistantId]);
+    if (costume && costume.assistantId === assistantId && have.has(costume.id)) result[assistantId] = costume.id;
+  });
+  return result;
+};
+// 画面が描く瞬間に見る「いま着ている服」。アプリが読み込み・着替え・購入のたびに入れ直す
+// (assistants.js の画像の出し口が参照する。読み込み前は空 = どの助手も元の服)
+let ASSISTANT_COSTUME_WORN_NOW = {};
+const setAssistantCostumeWornNow = (worn) => { ASSISTANT_COSTUME_WORN_NOW = (worn && typeof worn === 'object') ? worn : {}; };
+// イベントの会話(EVENT_REPLAYS の costumes)が、会話のあいだだけ着せる服 { 助手id: 服id }。持っていなくても着る(会話の絵はその回の演出なので)。
+// 会話を閉じたら空へ戻る。アプリが描くたびに入れ直す(2026-10-04・ユーザー指摘「コスプレ版になってない」)
+let ASSISTANT_COSTUME_STORY_NOW = {};
+const setAssistantCostumeStoryNow = (map) => { ASSISTANT_COSTUME_STORY_NOW = (map && typeof map === 'object') ? map : {}; };
+const assistantCostumeWornFor = (assistantId) => assistantCostumeById(ASSISTANT_COSTUME_STORY_NOW[assistantId] || ASSISTANT_COSTUME_WORN_NOW[assistantId]);
+// 服の絵のパス。kind は 'face'(吹き出しの丸い顔)か 'full'(立ち絵)。服の絵が決まらないときは null(呼ぶ側が元の服へ落とす)
+const assistantCostumeImage = (who, expression, kind) => {
+  const costume = who && assistantCostumeWornFor(who.id);
+  if (!costume || !costume.imageDir || !who.imagePrefix) return null;
+  const list = Array.isArray(who.expressions) ? who.expressions : [];
+  if (!list.includes(expression)) return null;
+  return `${costume.imageDir}/${kind === 'face' ? 'face/' : ''}${who.imagePrefix}_${expression}.PNG`;
+};
+// ダイヤショップに並べる服は、ASSISTANT_COSTUMES の売り値(price.diamond)から**自動で**作る(手で書き写さない)。
+// type:'costume' が着替えの商品。買う処理(buyMarketItem)・所持の判定(isMarketItemOwned)・見た目はこの type を扱う。
+// ★ビートP交換所の分は data/rhythm-event.js が RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS を作る。
+ASSISTANT_COSTUMES
+  .filter(costume => assistantCostumeEverSellsIn(costume, 'diamond'))
+  .forEach(costume => {
+    // 2026-10-04 ユーザー指示「ダイヤの方にも着替えタブ作って、販売予定のものを入れといてほしい」。
+    // shop・available は見るたびに数え直す。服が公開されていれば、ダイヤで売る前でも「着替え」タブに並べる。
+    // ダイヤで売るのはまだ先(いまの窓に無い)あいだは available:false で「近日追加」の札になり、買えない
+    // (買う処理は available:false を断る)。窓が開いた(ハロウィン・ナイト終了)瞬間から、そのまま買える
+    BREEDER_MARKET_ITEMS.push({ id:costume.id, name:costume.name, type:'costume', currency:'diamond', cost:assistantCostumeSaleEverCost(costume, 'diamond'), desc:costume.desc || '', assistantId:costume.assistantId, emoji:'👗', icon:costume.icon,
+      get shop() { return costume.released === true ? undefined : false; },
+      get available() { return assistantCostumeSaleIn(costume, 'diamond') ? undefined : false; } });
+  });

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1be5ebbe4c6db553
+// source-sha256: 9ab5deab0326ff0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 10:27";
+const BUILD_DATE = "2026-10-04 10:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -537,7 +537,9 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
   const base = Math.max(RHYTHM_PLAY_RUN_LOOP_MIN, Math.floor(ms / 60000));
   return Math.floor(base * safeMult);
 };
-const rhythmPlayRunLoopScale = (songId, event) => {
+const rhythmPlayRunLoopScale = (songId, event, campaign) => {
+  const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
+  if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
   const ids = event && Array.isArray(event.songIds) ? event.songIds : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return id && ids && ids.includes(id) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
@@ -2192,7 +2194,7 @@ const buildMarketItemPurchase = ({
   const purchaseQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
   const cost = unitCost * purchaseQuantity;
-  const currency = item?.currency === 'psyche' ? 'psyche' : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' ? 'diamond' : 'breederPoint';
+  const currency = item?.currency === 'psyche' ? 'psyche' : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
   const balances = {
     diamond: Math.max(0, Math.floor(Number(gold) || 0)),
     breederPoint: Math.max(0, Math.floor(Number(breederPoints) || 0)),
@@ -4739,6 +4741,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_crazy_party_night',
+  name: 'Crazy Party Night ～ぱんぷきんの逆襲～',
+  creator: 'オリジナル',
+  src: 'audio/bgm-crazy-party-night.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -5259,6 +5268,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   lightweightMode: false,
   multiLightLook: true,
   multiLook: 'LIGHT',
+  modeSelectArt: true,
+  modeSelectComment: true,
   noteSeType: 'STANDARD',
   noteSeJudgeVary: true,
   noteSeFlickVolume: 100,
@@ -5338,6 +5349,8 @@ const normalizeRhythmSettings = value => {
     lightweightMode: bool('lightweightMode'),
     livePartnerVisible: bool('livePartnerVisible'),
     multiLightLook: bool('multiLightLook'),
+    modeSelectArt: bool('modeSelectArt'),
+    modeSelectComment: bool('modeSelectComment'),
     multiLook: RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook) ? source.multiLook : source.multiLightLook === false ? 'OWN' : 'LIGHT',
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
@@ -5478,6 +5491,7 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   monbeatCupEvent: 'kaze_ga_soyogu',
   symphonyEvent: 'melo_mou_hitotsu_no_sekai_e',
   rhythmMultiEvent: 'melo_haruka',
+  halloweenNightEvent: 'melo_crazy_party_night',
   rhythmModeSelect: 'pandora_boss_remix'
 });
 const BGM_BATTLE_MODE_TABS = Object.freeze([{
@@ -5526,7 +5540,12 @@ const EVENT_BGM_SCENES = Object.freeze({
   beat_point_always_2026_09_24: 'monbeatCupEvent',
   rhythm_six_lane_2026_09_26: 'monbeatCupEvent',
   beat_point_up_2026_09_28: 'monbeatCupEvent',
-  rhythm_multi_friends_2026_10_03: 'rhythmMultiEvent'
+  rhythm_multi_friends_2026_10_03: 'rhythmMultiEvent',
+  halloween_night_2026_part1: 'halloweenNightEvent',
+  halloween_night_2026_part2: 'halloweenNightEvent',
+  halloween_night_2026_part3: 'halloweenNightEvent',
+  halloween_night_2026_part4: 'halloweenNightEvent',
+  halloween_night_2026_part5: 'halloweenNightEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -5788,6 +5807,7 @@ const Audio_ = (() => {
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
     "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",
+    "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
     "audio/bgm-dullahan-clockwork.mp3": "e87bd8466b2c",
@@ -14169,7 +14189,7 @@ const MARKET_CURRENCY_META = Object.freeze({
     max: 'bg-violet-800'
   })
 });
-const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' ? 'diamond' : 'breederPoint';
+const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
 const marketPriceText = item => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost) || 0)).toLocaleString());
 const MarketBalanceBar = ({
   balances
@@ -14231,7 +14251,30 @@ const MarketItemDetail = ({
     accent: meta.text
   }), item.desc && React.createElement("p", {
     className: "mt-3 text-[12px] text-slate-200 leading-relaxed"
-  }, item.desc), item.frameCondition && React.createElement("div", {
+  }, item.desc), item.groupMembers && React.createElement("div", {
+    "data-market-icon-group": item.groupId,
+    className: "mt-3 rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-slate-200 leading-snug"
+  }, item.groupMembers.length, "種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。"), React.createElement("p", {
+    className: "mt-1 text-[10px] text-slate-400 leading-snug"
+  }, "プロフィールで、1つずつ選んで設定できます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-4 gap-2"
+  }, item.groupMembers.map(m => React.createElement("div", {
+    key: m.id,
+    "data-market-icon-group-member": m.id,
+    className: "flex flex-col items-center gap-1"
+  }, React.createElement(BreederIcon, {
+    src: m.icon,
+    id: m.id,
+    alt: m.name,
+    className: "w-full aspect-square"
+  }), React.createElement("span", {
+    className: "w-full text-center text-[8px] font-black leading-tight text-slate-300",
+    style: {
+      overflowWrap: 'anywhere'
+    }
+  }, String(m.name || '').replace(/のアイコン$/, '')))))), item.frameCondition && React.createElement("div", {
     "data-market-frame-condition": true,
     className: "mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black"
   }, React.createElement("div", {
@@ -14240,7 +14283,7 @@ const MarketItemDetail = ({
     className: "mt-1 text-[11px] text-slate-300"
   }, item.frameCondition.met ? '条件を達成しています！' : item.frameCondition.progress)), React.createElement("div", {
     className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
-  }, React.createElement("div", {
+  }, !item.groupMembers && React.createElement("div", {
     className: "flex justify-between"
   }, React.createElement("span", {
     className: "text-slate-400"
@@ -31536,7 +31579,7 @@ const RhythmTapTest = ({
         className: "text-[15px] font-black leading-none text-white"
       }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-amber-200"
-      }, "🏆 イベント対象曲 ×", quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
+      }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-cyan-200"
       }, "👥 対戦ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-slate-300"
@@ -31847,7 +31890,7 @@ const RhythmTapTest = ({
     }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
       "data-rhythm-result-quick-run-event": true,
       className: "mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200"
-    }, "🏆 イベント対象曲 ×", quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
+    }, quickRunAward.scale > RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ? '🎃 キャンペーン中 ×' : '🏆 イベント対象曲 ×', quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
       "data-rhythm-result-quick-run-multi": true,
       className: "mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200"
     }, "👥 みんなで対戦のボーナス(人数・連続) ×", quickRunAward.multiScale), React.createElement("div", {
@@ -35181,6 +35224,36 @@ const friendsRhythmSummary = bestRecords => {
     }) => rest)
   };
 };
+const friendsRhythmAchievements = bestRecords => {
+  const songs = rhythmDemoSongs(RHYTHM_SONGS);
+  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  return list.map(({
+    id
+  }) => {
+    const row = {
+      d: id,
+      total: 0,
+      clear: 0,
+      fc: 0,
+      ae: 0,
+      am: 0
+    };
+    songs.forEach(song => {
+      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some(x => x.id === id)) return;
+      row.total += 1;
+      const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
+      if (!rec) return;
+      const am = rec.allMarvelous === true,
+        ae = am || rec.allExcellent === true,
+        fc = ae || rec.fullCombo === true;
+      if (rec.clear === true || fc) row.clear += 1;
+      if (fc) row.fc += 1;
+      if (ae) row.ae += 1;
+      if (am) row.am += 1;
+    });
+    return row;
+  }).filter(row => row.total > 0);
+};
 const friendsCollectionSummary = ({
   masuMons,
   unlockedMonsterIds,
@@ -35201,9 +35274,25 @@ const friendsCollectionSummary = ({
 const friendsBuildRecords = src => ({
   v: 1,
   battle: friendsBattleSummary(src),
-  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  rhythm: {
+    ...friendsRhythmSummary(src && src.rhythmBest),
+    ach: friendsRhythmAchievements(src && src.rhythmBest).map(r => [r.d, r.total, r.clear, r.fc, r.ae, r.am])
+  },
   collection: friendsCollectionSummary(src || {})
 });
+const friendsNormalizeAchievements = raw => (Array.isArray(raw) ? raw : []).map(e => {
+  if (!Array.isArray(e) || typeof e[0] !== 'string') return null;
+  const total = Math.min(friendsInt(e[1]), 999);
+  const n = v => Math.min(friendsInt(v), total);
+  return {
+    d: e[0].slice(0, 20),
+    total,
+    clear: n(e[2]),
+    fc: n(e[3]),
+    ae: n(e[4]),
+    am: n(e[5])
+  };
+}).filter(r => r && r.total > 0).slice(0, 8);
 const friendsNormalizeRecords = raw => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const battle = (Array.isArray(raw.battle) ? raw.battle : []).map(e => e && typeof e.id === 'string' && (e.k === 's' || e.k === 'w') && friendsInt(e.v) > 0 ? {
@@ -35223,7 +35312,8 @@ const friendsNormalizeRecords = raw => {
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
-      songs
+      songs,
+      ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach)
     },
     collection: {
       masu: friendsInt(c.masu),
@@ -37323,6 +37413,7 @@ function BreederMarketScreen({
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false);
+  const costumeItems = marketItems.filter(item => item.type === 'costume');
   const diamondTabs = [{
     key: 'disc',
     label: '円盤石'
@@ -37332,10 +37423,35 @@ function BreederMarketScreen({
   }, {
     key: 'item',
     label: 'アイテム'
-  }];
+  }, ...(costumeItems.length ? [{
+    key: 'costume',
+    label: '着替え'
+  }] : [])];
   const activeDiamondTab = diamondTabs.some(tab => tab.key === marketTab) ? marketTab : 'disc';
   const diamondItems = marketItems.filter(item => item.type === activeDiamondTab && item.type !== 'icon' && item.currency !== 'psyche');
-  const breederPointItems = marketItems.filter(item => item.type === 'icon');
+  const breederPointItems = (() => {
+    const icons = marketItems.filter(item => item.type === 'icon');
+    const seen = new Set();
+    const out = [];
+    icons.forEach(item => {
+      const group = breederIconGroupOf(item.id);
+      if (!group) {
+        out.push(item);
+        return;
+      }
+      if (seen.has(group.id)) return;
+      seen.add(group.id);
+      const members = group.memberIds.map(id => icons.find(m => m.id === id)).filter(Boolean);
+      out.push({
+        ...members[0],
+        name: `${group.name}のアイコン`,
+        groupMembers: members,
+        groupId: group.id
+      });
+    });
+    return out;
+  })();
+  const hasDiscIconCards = breederPointItems.some(item => /_disc_icon$/.test(item.id));
   const breederFrameItems = marketItems.filter(item => item.type === 'frame');
   const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
   const SECTION_TABS = {
@@ -37344,10 +37460,10 @@ function BreederMarketScreen({
       tabs: [{
         key: 'face',
         label: 'アイコン'
-      }, {
+      }, ...(hasDiscIconCards ? [{
         key: 'disc',
         label: '円盤石アイコン'
-      }, ...(breederFrameItems.length ? [{
+      }] : []), ...(breederFrameItems.length ? [{
         key: 'frame',
         label: 'フレーム'
       }] : [])]
@@ -37373,6 +37489,12 @@ function BreederMarketScreen({
       }, ...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length ? [{
         key: 'frame',
         label: 'フレーム'
+      }] : []), ...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer => offer.available !== false) ? [{
+        key: 'costume',
+        label: '着替え'
+      }] : []), ...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer => offer.available !== false) ? [{
+        key: 'icon',
+        label: 'アイコン'
       }] : []), {
         key: 'item',
         label: 'アイテム'
@@ -37494,7 +37616,10 @@ function BreederMarketScreen({
       }),
       detail: detailMon || detailTeaching,
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
-      middle: item.type === 'frame' && frameCondition ? React.createElement(MarketDetailChip, {
+      middle: item.groupMembers ? React.createElement(MarketDetailChip, {
+        label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : item.type === 'frame' && frameCondition ? React.createElement(MarketDetailChip, {
         label: `${item.name}の買える条件を見る`,
         onClick: () => onOpenItemDetail({
           ...item,
@@ -37653,7 +37778,7 @@ function BreederMarketScreen({
     return campaign ? React.createElement(MarketNotice, {
       tone: "info",
       "data-event-point-campaign": true
-    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopScale) > 0 ? `。演奏でのクイック周回も${campaign.loopScale}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt)), "まで）") : null;
   })(), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     value: activeDiamondTab,
     onChange: onSelectTab,
@@ -37815,6 +37940,80 @@ function BreederMarketScreen({
       detail: teaching,
       onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
     });
+  }), eventTab === 'costume' && RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer => offer.available !== false).map(offer => {
+    const costume = assistantCostumeById(offer.costumeId);
+    const who = assistantById(offer.assistantId);
+    const item = {
+      id: offer.costumeId,
+      name: offer.name,
+      emoji: '👗',
+      icon: costume?.icon,
+      type: 'costume',
+      currency: 'beatPoint',
+      cost: offer.cost,
+      desc: `${who?.name || ''}の着替え。${costume?.desc || ''}`
+    };
+    const owned = isItemOwned({
+      id: offer.costumeId,
+      type: 'costume'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-costume': offer.id
+      },
+      previewIcon: previewIcon,
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      middle: item.desc ? React.createElement(MarketDetailChip, {
+        label: `${offer.name}の説明を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : null
+    });
+  }), eventTab === 'icon' && RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.filter(offer => offer.available !== false).map(offer => {
+    const members = offer.memberIds.map(id => BREEDER_MARKET_ITEMS.find(m => m.id === id)).filter(Boolean);
+    const item = {
+      ...members[0],
+      name: offer.name,
+      groupMembers: members,
+      groupId: offer.groupId,
+      type: 'icon',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    const owned = isItemOwned({
+      id: members[0]?.id,
+      type: 'icon'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-icon': offer.id
+      },
+      previewIcon: previewIcon,
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      middle: React.createElement(MarketDetailChip, {
+        label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      })
+    });
   }), eventTab === 'frame' && RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer => {
     const frame = profileFrameById(offer.frameId);
     const item = {
@@ -37900,6 +38099,37 @@ function BreederMarketScreen({
     onClose: () => setRebirth(null)
   }));
 }
+function RhythmAchievementPanel({
+  rows,
+  who = 'self'
+}) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length === 0) return null;
+  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  return React.createElement("section", {
+    "data-rhythm-achievements": who,
+    className: `${SCREEN_PANEL_FLAT_CLASS} mb-3`
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-amber-100"
+  }, "モンヒロビートの実績"), React.createElement("small", {
+    className: "mb-2 block text-[9px] font-bold text-slate-400"
+  }, "難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）"), React.createElement("div", {
+    className: "grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center"
+  }, React.createElement("span", null), heads.map(([t, c]) => React.createElement("span", {
+    key: t,
+    className: `text-[8px] font-black leading-tight ${c}`
+  }, t)), list.map(r => React.createElement(React.Fragment, {
+    key: r.d
+  }, React.createElement("b", {
+    "data-rhythm-achievement-row": r.d,
+    className: "pr-1 text-left text-[10px] font-black text-white"
+  }, r.d), [r.clear, r.fc, r.ae, r.am].map((n, i) => React.createElement("span", {
+    key: i,
+    className: `rounded-lg bg-black/30 py-1 text-[11px] font-black tabular-nums ${n >= r.total ? 'text-amber-200' : n > 0 ? 'text-white' : 'text-slate-500'}`
+  }, n, React.createElement("span", {
+    className: "text-[8px] font-bold text-slate-400"
+  }, "/", r.total)))))));
+}
 function ProfileScreen({
   activeAssistant,
   assistantBond,
@@ -37934,6 +38164,9 @@ function ProfileScreen({
   speciesChallengeProgress,
   tacticsRecordsOf,
   speciesChallengeProgressOf,
+  costumeEnabled = false,
+  wornCostume = null,
+  onOpenCostumePicker = null,
   onBack,
   onOpenNameEdit,
   onOpenIconPicker,
@@ -37955,6 +38188,19 @@ function ProfileScreen({
   onOpenMessageEditor,
   unlockedAssistants
 }) {
+  const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
+      } catch (error) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST;
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -38094,7 +38340,21 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-amber-300"
     }, "フレーム"), React.createElement("b", {
       className: "block break-words text-[11px] font-black leading-tight text-white"
-    }, "フレーム：", frameName))), showFriendTiles && React.createElement("button", {
+    }, "フレーム：", frameName))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
+      type: "button",
+      "data-profile-tile": "costume",
+      onClick: onOpenCostumePicker,
+      className: tile
+    }, React.createElement("span", {
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      "aria-hidden": "true"
+    }, "👗"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black text-pink-300"
+    }, "着替え"), React.createElement("b", {
+      className: "block break-words text-[11px] font-black leading-tight text-white"
+    }, "着替え：", wornCostume ? wornCostume.name : '元の服'))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-message": true,
       onClick: onOpenMessageEditor,
@@ -38465,7 +38725,10 @@ function ProfileScreen({
         className: "mt-2 text-center text-[11px] font-black text-slate-400"
       }, "未記録"));
     }))));
-  })(), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  })(), onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
+    rows: rhythmAchRows,
+    who: "self"
+  }), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -39386,9 +39649,11 @@ function RhythmSongSelectScreen({
     className: "block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "mt-0.5 block"
-  }, "キャンペーン中"), React.createElement("span", {
+  }, "キャンペーン中"), Number(beatPointCampaign.loopScale) > 0 && React.createElement("span", {
+    className: "block"
+  }, "周回 ×", beatPointCampaign.loopScale), React.createElement("span", {
     className: "block text-amber-200/80"
-  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
+  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
     "data-rhythm-beat-band-landscape": true,
     "data-rhythm-beat-point-active-side": true,
     className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
@@ -39635,9 +39900,9 @@ function RhythmSongSelectScreen({
     className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "min-w-0 truncate"
-  }, "キャンペーン中"), React.createElement("span", {
+  }, beatPointCampaign.name, Number(beatPointCampaign.loopScale) > 0 ? `・周回 ×${beatPointCampaign.loopScale}` : '中'), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
-  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
+  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
@@ -54198,7 +54463,10 @@ function FriendsScreen({
           className: "mt-2 flex flex-col gap-2"
         }, React.createElement("p", {
           className: "px-1 text-[10px] font-black text-slate-400"
-        }, "遊んだ曲 ", sum.records.rhythm.played, "曲（スコアの高い順に", FRIEND_RECORD_SONG_MAX, "曲まで）"), songs.length > 0 && React.createElement("div", {
+        }, "遊んだ曲 ", sum.records.rhythm.played, "曲（スコアの高い順に", FRIEND_RECORD_SONG_MAX, "曲まで）"), React.createElement(RhythmAchievementPanel, {
+          rows: sum.records.rhythm.ach,
+          who: "friend"
+        }), songs.length > 0 && React.createElement("div", {
           "data-friend-versus": true,
           className: `${SCREEN_PANEL_FLAT_CLASS} text-center`
         }, React.createElement("small", {
@@ -56158,6 +56426,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
 .mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
+.mhms-bubble-alone::before{display:none}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -56664,6 +56933,21 @@ function RhythmMultiScreen({
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    const assistToggles = (cls, withLabel) => ms.onToggleAssistant && React.createElement("div", {
+      "data-rhythm-mode-assistant-toggles": true,
+      role: "group",
+      "aria-label": "助手の表示",
+      className: `flex items-center gap-1.5 ${cls}`
+    }, withLabel && React.createElement("small", {
+      className: "mr-auto text-[10px] font-black text-slate-400"
+    }, "助手 ", ms.assistant ? ms.assistant.name : ''), [['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
+      key: key,
+      type: "button",
+      [attr]: '',
+      "aria-pressed": on,
+      onClick: () => ms.onToggleAssistant(key),
+      className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, label, " ", on ? 'ON' : 'OFF')));
     return React.createElement("main", {
       "data-rhythm-mode-select": true,
       "data-rhythm-multi-step": "rooms",
@@ -56702,14 +56986,17 @@ function RhythmMultiScreen({
     }, React.createElement("b", {
       className: "text-sm font-black text-amber-200"
     }, "周回を終えています…")), React.createElement("div", {
-      className: "relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden"
-    }, ms.assistant && React.createElement("div", {
+      className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`
+    }, ms.assistant && (ms.showArt || ms.showComment) && React.createElement("div", {
       "data-rhythm-mode-assistant": true,
-      className: "mhms-glass mhms-in-left relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none"
+      className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${ms.showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
+    }, ms.showArt && React.createElement("div", {
+      "data-rhythm-mode-assistant-art-box": true,
+      className: "relative min-h-0 flex-1 overflow-hidden"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-glow"
-    }), React.createElement("div", {
+    }), assistToggles('absolute bottom-1.5 right-1.5 z-20', false), React.createElement("div", {
       className: "mhms-float pointer-events-none absolute inset-0"
     }, RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id] ? (() => {
       const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id];
@@ -56735,9 +57022,9 @@ function RhythmMultiScreen({
       alt: "",
       draggable: false,
       className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
-    })), React.createElement("p", {
+    }))), !ms.showArt && assistToggles('mx-2 mt-2 justify-end', true), ms.showComment && React.createElement("p", {
       "data-rhythm-mode-assistant-line": true,
-      className: "mhms-bubble absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]",
+      className: `mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`,
       style: {
         borderColor: ms.assistant.accent
       }
@@ -56747,8 +57034,8 @@ function RhythmMultiScreen({
         color: ms.assistant.accent
       }
     }, ms.assistant.name), ms.assistant.text)), React.createElement("div", {
-      className: "shrink-0 space-y-2.5 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
-    }, friendsOn && friendInvites.length > 0 && React.createElement("section", {
+      className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
+    }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
     }, React.createElement("h3", {
@@ -56769,7 +57056,7 @@ function RhythmMultiScreen({
       "data-rhythm-mode-solo": true,
       type: "button",
       onClick: ms.onSolo,
-      className: "mhms-card mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.05s'
       }
@@ -56789,7 +57076,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-free": true,
       type: "button",
       onClick: () => searchRoom('free'),
-      className: "mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.12s'
       }
@@ -58966,6 +59253,13 @@ function MonsterHeroGame() {
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
   const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
   const ownedProfileFramesRef = useRef([]);
+  const [ownedAssistantCostumes, setOwnedAssistantCostumes] = useState([]);
+  const ownedAssistantCostumesRef = useRef([]);
+  const [wornAssistantCostumes, setWornAssistantCostumes] = useState({});
+  const [showCostumePicker, setShowCostumePicker] = useState(false);
+  const [costumeAssistantId, setCostumeAssistantId] = useState(null);
+  const [costumeLockedInfo, setCostumeLockedInfo] = useState(null);
+  setAssistantCostumeWornNow(wornAssistantCostumes);
   const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
   const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
   const markProfileFrameNoticed = useCallback(frameId => {
@@ -59007,6 +59301,24 @@ function MonsterHeroGame() {
     setProfileFrameId(next);
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
+    });
+  }, []);
+  const wearAssistantCostume = useCallback((assistantId, costumeId) => {
+    const costume = costumeId ? assistantCostumeById(costumeId) : null;
+    if (costumeId && (!costume || costume.assistantId !== assistantId || !ownedAssistantCostumesRef.current.includes(costume.id))) return;
+    setWornAssistantCostumes(prev => {
+      const next = {
+        ...prev
+      };
+      if (costume) next[assistantId] = costume.id;else delete next[assistantId];
+      return next;
+    });
+    Promise.resolve(storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false)).then(stored => {
+      const base = normalizeWornAssistantCostumes(stored, ownedAssistantCostumesRef.current);
+      if (costume) base[assistantId] = costume.id;else delete base[assistantId];
+      return storeSet(ASSISTANT_COSTUME_WORN_KEY, base, false);
+    }).catch(error => {
+      console.error('[assistant-costume] save failed:', error && error.message ? error.message : error);
     });
   }, []);
   const lastPublishedProfileRef = useRef('');
@@ -59134,6 +59446,7 @@ function MonsterHeroGame() {
   const [newPlayerCampaignEligible, setNewPlayerCampaignEligible] = useState(false);
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplay, setEventReplay] = useState(null);
+  setAssistantCostumeStoryNow(eventReplay ? (eventReplayList().find(ev => ev.id === eventReplay.id) || {}).costumes || null : null);
   const [breederPoints, setBreederPoints] = useState(0);
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]);
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS);
@@ -59149,7 +59462,7 @@ function MonsterHeroGame() {
     speciesProgressOf: speciesChallengeProgressOf,
     tacticsRecordsOf,
     unlockedMonsterIds,
-    ownedMarketIcons,
+    ownedMarketIcons: expandOwnedMarketIcons(ownedMarketIcons),
     ownedProfileFrames
   };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS);
@@ -61359,7 +61672,8 @@ function MonsterHeroGame() {
     return Number.isFinite(ms) && ms > 0 ? ms : 0;
   };
   const rhythmPlayRunLoopEventNow = () => RELEASE_FLAGS.rhythmWeeklyRanking === true && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
-  const rhythmPlayRunLoopScaleFor = song => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow());
+  const rhythmPlayRunLoopCampaignNow = () => RELEASE_FLAGS.rhythmEventPoints === true && typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const rhythmPlayRunLoopScaleFor = song => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow(), rhythmPlayRunLoopCampaignNow());
   const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
     if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
@@ -61563,7 +61877,8 @@ function MonsterHeroGame() {
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
   const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
   const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
+  const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -61650,14 +61965,15 @@ function MonsterHeroGame() {
       const multiFriendsStoryReady = RELEASE_FLAGS.rhythmMulti === true && notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID);
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
+      const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true ? halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
       if (!liveEvent) {
-        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -62740,6 +63056,10 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = catchUp;
       setOwnedProfileFrames(catchUp);
       setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      const loadedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+      ownedAssistantCostumesRef.current = loadedCostumes;
+      setOwnedAssistantCostumes(loadedCostumes);
+      setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
       setRhythmClearTotal(await loadRhythmClearTotal());
       if (catchUp.length !== loadedFrames.length) {
         try {
@@ -64083,6 +64403,7 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
+    ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
@@ -64193,8 +64514,9 @@ function MonsterHeroGame() {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
+    if (item.type === 'costume') return normalizeOwnedAssistantCostumes(ownedAssistantCostumes).includes(item.id);
     if (item.type === 'item') return false;
-    return ownedMarketIcons.includes(item.id);
+    return expandOwnedMarketIcons(ownedMarketIcons).includes(item.id);
   };
   const saveMonsterPartySets = nextSets => {
     const normalized = normalizeMonsterPartySets(nextSets);
@@ -64322,9 +64644,16 @@ function MonsterHeroGame() {
         setOwnedProfileFrames(nextFrames);
         storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
         markProfileFrameNoticed(item.id);
+      } else if (item.type === 'costume') {
+        const storedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+        const nextCostumes = normalizeOwnedAssistantCostumes([...storedCostumes, ...ownedAssistantCostumesRef.current, item.id]);
+        ownedAssistantCostumesRef.current = nextCostumes;
+        setOwnedAssistantCostumes(nextCostumes);
+        storeSet(ASSISTANT_COSTUME_OWNED_KEY, nextCostumes, false);
       } else if (item.type !== 'item') {
         setOwnedMarketIcons(prev => {
-          const next = [...prev, item.id];
+          const group = breederIconGroupOf(item.id);
+          const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])];
           storeSet('mh_market_icons', next, false);
           return next;
         });
@@ -64412,6 +64741,12 @@ function MonsterHeroGame() {
       const isFrame = offer?.kind === 'frame';
       const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      const isCostume = offer?.kind === 'costume';
+      const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
+      const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
+      const isIcon = offer?.kind === 'icon';
+      const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
+      const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
         if (frameStatus && !frameStatus.met) {
@@ -64430,10 +64765,12 @@ function MonsterHeroGame() {
         quantity,
         unlockedMonsterIds: beforeUnlocked,
         unlockedTeachingIds: beforeTeachings,
-        ownedProfileFrames: beforeFrames
+        ownedProfileFrames: beforeFrames,
+        ownedAssistantCostumes: beforeCostumes,
+        ownedMarketIcons: expandOwnedMarketIcons(beforeIcons)
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isIcon ? 'このアイコンはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -64460,6 +64797,14 @@ function MonsterHeroGame() {
         key: PROFILE_FRAME_OWNED_KEY,
         before: storedFrames,
         next: exchange.ownedProfileFrames
+      }] : []), ...(isCostume ? [{
+        key: ASSISTANT_COSTUME_OWNED_KEY,
+        before: storedCostumes,
+        next: exchange.ownedAssistantCostumes
+      }] : []), ...(isIcon ? [{
+        key: 'mh_market_icons',
+        before: storedIcons,
+        next: exchange.ownedMarketIcons
       }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -64486,6 +64831,11 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
+      }
+      if (isIcon) setOwnedMarketIcons(prev => [...new Set([...prev, ...exchange.ownedMarketIcons])]);
+      if (isCostume) {
+        ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
+        setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -74023,7 +74373,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',
@@ -78967,7 +79317,16 @@ function MonsterHeroGame() {
             src: base ? base.faceIconUrl || base.iconUrl : ''
           };
         }),
-        assistant: rhythmModeAssistant
+        assistant: rhythmModeAssistant,
+        showArt: rhythmSettings.modeSelectArt !== false,
+        showComment: rhythmSettings.modeSelectComment !== false,
+        onToggleAssistant: async key => {
+          const saved = await saveRhythmSettings({
+            ...rhythmSettings,
+            [key]: rhythmSettings[key] === false
+          });
+          setRhythmSettings(saved);
+        }
       } : null,
       onStartPlay: (song, difficulty, startId, count, streak) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
@@ -80565,6 +80924,12 @@ function MonsterHeroGame() {
       },
       onOpenIconPicker: () => setShowIconPicker(true),
       onOpenFramePicker: () => setShowFramePicker(true),
+      costumeEnabled: assistantCostumeFeatureOn(),
+      wornCostume: assistantCostumeWornFor(selectedAssistantId),
+      onOpenCostumePicker: () => {
+        setCostumeAssistantId(selectedAssistantId);
+        setShowCostumePicker(true);
+      },
       onOpenItems: () => setGameState('ITEM_INVENTORY'),
       onOpenCallStylePicker: () => {
         setTempCallStyle(assistantCallStyle || '');
@@ -82388,7 +82753,7 @@ function MonsterHeroGame() {
         setIconChip('all');
       };
       const all = breederIconOptions({
-        ownedMarketIconIds: ownedMarketIcons
+        ownedMarketIconIds: expandOwnedMarketIcons(ownedMarketIcons)
       });
       const label = m => String(m.name || '').replace(/のアイコン$/, '');
       const q = iconQuery.trim().toLowerCase();
@@ -82759,6 +83124,102 @@ function MonsterHeroGame() {
       }, "助手の枠（仲良し度でもらえます）"), assistantFrames.map(cell), saleFrames.length > 0 && React.createElement(PickerGroupLabel, {
         count: saleFrames.length
       }, "モンスターの枠（条件を達成するとマーケットで買えます）"), saleFrames.map(cell)));
+    })(), showCostumePicker && (() => {
+      const closeCostume = () => {
+        setShowCostumePicker(false);
+        setCostumeLockedInfo(null);
+      };
+      const who = assistantById(costumeAssistantId) || assistantById(selectedAssistantId);
+      const chipList = ASSISTANT_LIST.map(a => ({
+        id: a.id,
+        label: a.name,
+        count: assistantCostumesFor(a.id).filter(c => ownedAssistantCostumes.includes(c.id)).length
+      }));
+      const costumes = assistantCostumesFor(who.id);
+      const worn = assistantCostumeById(wornAssistantCostumes[who.id]);
+      const faceOf = costume => costume && costume.icon ? costume.icon : null;
+      const cell = costume => {
+        const owned = !costume || ownedAssistantCostumes.includes(costume.id);
+        const selected = costume ? worn && worn.id === costume.id : !worn;
+        const src = costume ? faceOf(costume) : `${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+        return React.createElement("button", {
+          key: costume ? costume.id : 'original',
+          "data-assistant-costume-option": costume ? costume.id : 'original',
+          "data-assistant-costume-locked": owned ? 'no' : 'yes',
+          onClick: () => {
+            if (owned) {
+              wearAssistantCostume(who.id, costume ? costume.id : null);
+              setCostumeLockedInfo(null);
+            } else setCostumeLockedInfo(costume.id);
+          },
+          "aria-pressed": !!selected,
+          "aria-disabled": !owned,
+          className: `relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected ? 'border-amber-400 bg-amber-950/30' : 'border-slate-700 bg-slate-950/40'}`
+        }, React.createElement("span", {
+          className: `relative block ${owned ? '' : 'opacity-45'}`
+        }, src ? React.createElement("img", {
+          src: src,
+          alt: costume ? costume.name : '元の服',
+          className: "h-14 w-14 rounded-full object-cover bg-black/30",
+          draggable: "false"
+        }) : React.createElement("span", {
+          className: "flex h-14 w-14 items-center justify-center text-3xl",
+          "aria-hidden": "true"
+        }, "👗"), !owned && React.createElement(Lock, {
+          size: 14,
+          className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
+        })), selected && React.createElement(PickerCheckMark, null), React.createElement("span", {
+          className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
+        }, costume ? costume.name : '元の服'), !owned && React.createElement("span", {
+          className: "text-[8px] font-black leading-tight text-center text-amber-400"
+        }, "マーケットで購入"));
+      };
+      const lockedCostume = costumeLockedInfo ? assistantCostumeById(costumeLockedInfo) : null;
+      const lockedInfo = lockedCostume && React.createElement("div", {
+        "data-assistant-costume-locked-info": true,
+        className: "rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
+      }, React.createElement("p", {
+        className: "text-[10px] font-black text-amber-300 leading-tight text-center"
+      }, lockedCostume.name, "はマーケットで買えます"), React.createElement("p", {
+        className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
+      }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ ')), React.createElement("p", {
+        className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
+      }, lockedCostume.desc || ''));
+      return React.createElement(PickerSheet, {
+        title: "助手の着替え",
+        note: "助手の顔と立ち絵が、えらんだ服に変わります。服はマーケットで買えます。",
+        onClose: closeCostume,
+        preview: React.createElement(React.Fragment, null, (() => {
+          const nowSrc = assistantFaceImage(who, 'happy');
+          return nowSrc ? React.createElement("img", {
+            src: nowSrc,
+            alt: who.name,
+            className: "h-14 w-14 shrink-0 rounded-full object-cover bg-black/30",
+            draggable: "false"
+          }) : React.createElement("span", {
+            className: "text-3xl",
+            "aria-hidden": "true"
+          }, who.emoji);
+        })(), React.createElement("span", {
+          className: "min-w-0"
+        }, React.createElement("b", {
+          className: "block truncate text-[12px] font-black text-white"
+        }, who.name, "：", worn ? worn.name : '元の服'), React.createElement("small", {
+          className: "block text-[10px] font-bold leading-tight text-slate-400"
+        }, "いま着ている服"))),
+        chips: chipList,
+        chip: who.id,
+        onChip: id => {
+          setCostumeAssistantId(id);
+          setCostumeLockedInfo(null);
+        },
+        footerExtra: lockedInfo,
+        dataPicker: "assistant-costume"
+      }, React.createElement("div", {
+        className: "grid grid-cols-3 gap-2.5"
+      }, cell(null), costumes.map(cell)), costumes.length === 0 && React.createElement("p", {
+        className: "py-6 text-center text-[11px] font-bold text-slate-500"
+      }, who.name, "の着替えは、まだありません"));
     })(), showBackup && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {

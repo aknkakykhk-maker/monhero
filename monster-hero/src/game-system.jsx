@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 30332753329a3dc6
+// generated-sha256: e7f2d04377705d0e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 10:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -571,7 +571,12 @@ const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
 // 対象曲なら3倍、それ以外は2倍。
 // ★イベントは引数で受け取る。ここで時刻を1回だけ見て決め打ちにすると、開きっぱなしの
 //   端末で「開催したのに倍率が上がらない／終わったのに上がったまま」になる(CLAUDE.md ⑥-4)。
-const rhythmPlayRunLoopScale = (songId, event) => {
+// campaign … 開催中のビートPキャンペーン(rhythmEventPointCampaignAt で引いたもの)。loopScale を持つものは、
+//   曲を問わず**その倍率に置き換える**(ハロウィン・ナイトは全曲5倍。ランキングイベントの対象曲の3倍とも重ねない)。
+//   loopScale を書いていないキャンペーンは、今までどおり何も変えない
+const rhythmPlayRunLoopScale = (songId, event, campaign) => {
+  const campaignScale = campaign ? Number(campaign.loopScale) : NaN;
+  if (Number.isFinite(campaignScale) && campaignScale > 0) return campaignScale;
   const ids = (event && Array.isArray(event.songIds)) ? event.songIds : null;
   const id = songId === null || songId === undefined ? '' : String(songId);
   return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
@@ -2220,7 +2225,7 @@ const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={},
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
   const cost = unitCost * purchaseQuantity;
   const currency = item?.currency === 'psyche' ? 'psyche'
-    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item') ? 'diamond' : 'breederPoint';
+    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume') ? 'diamond' : 'breederPoint';
   const balances = { diamond:Math.max(0, Math.floor(Number(gold) || 0)), breederPoint:Math.max(0, Math.floor(Number(breederPoints) || 0)), psyche:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) };
   if (!item || item.available === false || balances[currency] < cost) return { ok:false, currency, cost, gold:balances.diamond, breederPoints:balances.breederPoint, ownedItems };
   const nextItems = item.type === 'item' ? { ...ownedItems, [item.id]:ownedItemCount(ownedItems, item.id) + purchaseQuantity } : ownedItems;
@@ -3914,6 +3919,7 @@ const BGM_TRACKS = [
   { id:'melo_haruka', name:'ハルカ', creator:'オリジナル', src:'audio/bgm-haruka.mp3', gain:1, loop:true },
   { id:'melo_stay_with_me_short', name:'Stay With Me ～Locked Fate～ short ver.', creator:'オリジナル', src:'audio/bgm-stay-with-me-short.mp3', gain:1, loop:true },
   { id:'melo_kiki_issen_short', name:'綺季一閃 ～花雪に舞う詠姫～ short ver.', creator:'オリジナル', src:'audio/bgm-kiki-issen-short.mp3', gain:1, loop:true },
+  { id:'melo_crazy_party_night', name:'Crazy Party Night ～ぱんぷきんの逆襲～', creator:'オリジナル', src:'audio/bgm-crazy-party-night.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -4373,6 +4379,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
   // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
   multiLook:'LIGHT',
+  // モードえらびの助手の見せ方(2026-10-04・ユーザー指示「助手コメントが助手に被ってる 位置を変えて、あとはオンオフもつけてほしい」)。
+  // 立ち絵とコメントを別々に出し入れできる。新しい項目なので、保存値に無い人は ON(これまでの見え方)で補われる
+  modeSelectArt:true, modeSelectComment:true,
   // タップ音の種類(2026-09-26)。新しい項目なので、保存値に無い人は「標準」(これまでの音)で補う
   noteSeType:'STANDARD',
   // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
@@ -4474,7 +4483,7 @@ const normalizeRhythmSettings = value => {
     noteSeHoldVolume:rhythmFiniteStep(source.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
     multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
@@ -4562,7 +4571,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka',halloweenNightEvent:'melo_crazy_party_night', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -4594,7 +4603,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', halloween_night_2026_part1:'halloweenNightEvent', halloween_night_2026_part2:'halloweenNightEvent', halloween_night_2026_part3:'halloweenNightEvent', halloween_night_2026_part4:'halloweenNightEvent', halloween_night_2026_part5:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -4807,6 +4816,7 @@ const Audio_ = (() => {
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
     "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",
+    "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
     "audio/bgm-dullahan-clockwork.mp3": "e87bd8466b2c",
@@ -9975,7 +9985,7 @@ const MARKET_CURRENCY_META = Object.freeze({
 });
 // 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
-  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item') ? 'diamond' : 'breederPoint';
+  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item'||item?.type==='costume') ? 'diamond' : 'breederPoint';
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
@@ -10017,12 +10027,22 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
   return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
     <MarketModalHead item={item} accent={meta.text}/>
     {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+    {item.groupMembers&&<div data-market-icon-group={item.groupId} className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+      <p className="text-[12px] font-black text-slate-200 leading-snug">{item.groupMembers.length}種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。</p>
+      <p className="mt-1 text-[10px] text-slate-400 leading-snug">プロフィールで、1つずつ選んで設定できます。</p>
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {item.groupMembers.map(m=><div key={m.id} data-market-icon-group-member={m.id} className="flex flex-col items-center gap-1">
+          <BreederIcon src={m.icon} id={m.id} alt={m.name} className="w-full aspect-square"/>
+          <span className="w-full text-center text-[8px] font-black leading-tight text-slate-300" style={{overflowWrap:'anywhere'}}>{String(m.name||'').replace(/のアイコン$/,'')}</span>
+        </div>)}
+      </div>
+    </div>}
       {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
         <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
         <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
       </div>}
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
-      <div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>
+      {!item.groupMembers&&<div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>}
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
       <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
     </div>
@@ -19750,7 +19770,7 @@ scheduleTick();};
   {gains&&<div data-rhythm-result-hero-gains className="relative w-full shrink-0 space-y-1.5 text-left">
     {runOk&&<div data-rhythm-result-hero-gains-run className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/60 px-2 py-1.5">
       <div className="flex items-baseline justify-between gap-1"><span className="text-[9px] font-black text-fuchsia-200">クイック∞周回</span><b className="text-[15px] font-black leading-none text-white">+{quickRunAward.loops}周</b></div>
-      {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}</div>}
+      {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?'🎃 キャンペーン中 ×':'🏆 イベント対象曲 ×'}{quickRunAward.scale}</div>}
       {quickRunAward.multiScale>1&&<div className="mt-0.5 text-[9px] font-black text-cyan-200">👥 対戦ボーナス ×{quickRunAward.multiScale}</div>}
       <div className="mt-0.5 text-[9px] font-black text-slate-300">{quickRunAward.fromLoop}周目 → {quickRunAward.toLoop}周目</div>
       <div className="mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300">
@@ -19877,7 +19897,7 @@ scheduleTick();};
   </div>
   {/* イベントの対象曲だけ、ふだんの2倍ではなく3倍で入る(2026-09-11・ユーザー指示)。
       入った周回数だけでは「この曲だから多かった」と気づけないので、その場で言う */}
-  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
+  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">{quickRunAward.scale>RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE?'🎃 キャンペーン中 ×':'🏆 イベント対象曲 ×'}{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
   {quickRunAward.multiScale>1&&<div data-rhythm-result-quick-run-multi className="mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{quickRunAward.multiScale}</div>}
   <div className="mt-1 text-[11px] font-black text-slate-200">{quickRunAward.fromLoop}周目 <span className="text-slate-500">→</span> {quickRunAward.toLoop}周目</div>
   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-300">
@@ -22556,6 +22576,27 @@ const friendsRhythmSummary = (bestRecords) => {
   songs.sort((a, b) => b.sc - a.sc);
   return { played, songs: songs.slice(0, FRIEND_RECORD_SONG_MAX).map(({ order, ...rest }) => rest) };
 };
+// モンヒロビートの難易度別の実績。公開中の曲のうち、その難易度の譜面がある曲を分母に数える。
+// 返す形: [{ d:難易度id, total:分母, clear, fc, ae, am }]。フルコンボ以上は上位の称号も数に含める(AM ⊂ AE ⊂ FC)
+const friendsRhythmAchievements = (bestRecords) => {
+  const songs = rhythmDemoSongs(RHYTHM_SONGS);
+  const list = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  return list.map(({ id }) => {
+    const row = { d: id, total: 0, clear: 0, fc: 0, ae: 0, am: 0 };
+    songs.forEach((song) => {
+      if (!rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some((x) => x.id === id)) return;
+      row.total += 1;
+      const rec = bestRecords && bestRecords[song.songId] && bestRecords[song.songId][id];
+      if (!rec) return;
+      const am = rec.allMarvelous === true, ae = am || rec.allExcellent === true, fc = ae || rec.fullCombo === true;
+      if (rec.clear === true || fc) row.clear += 1;
+      if (fc) row.fc += 1;
+      if (ae) row.ae += 1;
+      if (am) row.am += 1;
+    });
+    return row;
+  }).filter((row) => row.total > 0);
+};
 // 持っているもの・図鑑の進み(数だけ)
 const friendsCollectionSummary = ({ masuMons, unlockedMonsterIds, ownedIconIds, ownedFrameIds }) => {
   const list = (Array.isArray(masuMons) ? masuMons : []).filter((m) => m && ALL_PLAYER_MONSTERS[m.baseId]);
@@ -22573,9 +22614,16 @@ const friendsCollectionSummary = ({ masuMons, unlockedMonsterIds, ownedIconIds, 
 const friendsBuildRecords = (src) => ({
   v: 1,
   battle: friendsBattleSummary(src),
-  rhythm: friendsRhythmSummary(src && src.rhythmBest),
+  rhythm: { ...friendsRhythmSummary(src && src.rhythmBest), ach: friendsRhythmAchievements(src && src.rhythmBest).map((r) => [r.d, r.total, r.clear, r.fc, r.ae, r.am]) },
   collection: friendsCollectionSummary(src || {}),
 });
+// 受け取った実績を整える。[難易度id, 分母, クリア, FC, AE, AM] の並び。分母を超える数は分母へ丸める
+const friendsNormalizeAchievements = (raw) => (Array.isArray(raw) ? raw : []).map((e) => {
+  if (!Array.isArray(e) || typeof e[0] !== 'string') return null;
+  const total = Math.min(friendsInt(e[1]), 999);
+  const n = (v) => Math.min(friendsInt(v), total);
+  return { d: e[0].slice(0, 20), total, clear: n(e[2]), fc: n(e[3]), ae: n(e[4]), am: n(e[5]) };
+}).filter((r) => r && r.total > 0).slice(0, 8);
 // 受け取った records を、安全な形へ整える(型を確かめ、ありえない値は捨てる。未知のモード・曲は読まない)
 const friendsNormalizeRecords = (raw) => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
@@ -22587,7 +22635,7 @@ const friendsNormalizeRecords = (raw) => {
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
     battle,
-    rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs },
+    rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs, ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach) },
     collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
       reincarnated: friendsInt(c.reincarnated), icons: friendsInt(c.icons), frames: friendsInt(c.frames) },
   };
@@ -23974,22 +24022,40 @@ function BreederMarketScreen({
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  // 着替え(2026-10-03)。売る服が1着も無いうちは「着替え」タブごと出さない(空のタブを見せない)
+  const costumeItems = marketItems.filter(item=>item.type==='costume');
   const diamondTabs = [
     {key:'disc',label:'円盤石'},
     {key:'assist',label:'アシスト'},
     {key:'item',label:'アイテム'},
+    ...(costumeItems.length?[{key:'costume',label:'着替え'}]:[]),
   ];
   const activeDiamondTab = diamondTabs.some(tab=>tab.key===marketTab)?marketTab:'disc';
   const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
-  const breederPointItems = marketItems.filter(item=>item.type==='icon');
+  // アイコンは同じキャラを1つにまとめて売る(2026-10-03・ユーザー指示)。中身は「詳細」で見られ、1つ買うと全部手に入る。
+  // まとめの定義は data/breeder.js の BREEDER_ICON_GROUPS。代表(いちばん先の中身)の商品を、名前だけ「◯◯のアイコン」にして1枚で出す
+  const breederPointItems = (()=>{
+    const icons=marketItems.filter(item=>item.type==='icon');
+    const seen=new Set(); const out=[];
+    icons.forEach(item=>{
+      const group=breederIconGroupOf(item.id);
+      if(!group){ out.push(item); return; }
+      if(seen.has(group.id)) return;
+      seen.add(group.id);
+      const members=group.memberIds.map(id=>icons.find(m=>m.id===id)).filter(Boolean);
+      out.push({ ...members[0], name:`${group.name}のアイコン`, groupMembers:members, groupId:group.id });
+    });
+    return out;
+  })();
+  const hasDiscIconCards = breederPointItems.some(item=>/_disc_icon$/.test(item.id));
   // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
   const breederFrameItems = marketItems.filter(item=>item.type==='frame');
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
   const SECTION_TABS = {
-    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'},...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
+    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -24058,7 +24124,7 @@ function BreederMarketScreen({
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
@@ -24127,7 +24193,7 @@ function BreederMarketScreen({
           :[{currency:'beatPoint',value:safeEventPoints}]}/>
         {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
         {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
-          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍（{rhythmEventJstText(Date.parse(campaign.endAt))}まで）</MarketNotice>:null;})()}
+          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍{Number(campaign.loopScale)>0?`。演奏でのクイック周回も${campaign.loopScale}倍`:''}（{rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）</MarketNotice>:null;})()}
         {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
       </>}
 
@@ -24223,6 +24289,37 @@ function BreederMarketScreen({
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
             />;
           })}
+          {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
+              服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
+          {eventTab==='costume'&&RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer=>offer.available!==false).map(offer=>{
+            const costume=assistantCostumeById(offer.costumeId);
+            const who=assistantById(offer.assistantId);
+            const item={ id:offer.costumeId, name:offer.name, emoji:'👗', icon:costume?.icon, type:'costume', currency:'beatPoint', cost:offer.cost, desc:`${who?.name||''}の着替え。${costume?.desc||''}` };
+            const owned=isItemOwned({ id:offer.costumeId, type:'costume' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-costume':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={item.desc?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
+            />;
+          })}
+          {/* 交換できるアイコン(2026-10-04)。ハロウィン・ナイトの衣装の8表情を1つにまとめて1000P。イベント中だけ並ぶ。
+              どれか1つでも持っていれば「所持済み」。中身は「中身を見る」で確かめられる */}
+          {eventTab==='icon'&&RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.filter(offer=>offer.available!==false).map(offer=>{
+            const members=offer.memberIds.map(id=>BREEDER_MARKET_ITEMS.find(m=>m.id===id)).filter(Boolean);
+            const item={ ...members[0], name:offer.name, groupMembers:members, groupId:offer.groupId, type:'icon', currency:'beatPoint', cost:offer.cost };
+            const owned=isItemOwned({ id:members[0]?.id, type:'icon' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-icon':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>}
+            />;
+          })}
           {/* 交換できるプロフィールフレーム(2026-10-03)。いまは売る枠が無いので何も並ばない(タブも出ない)。
               枠に unlock:{shop:'beatPoint',cost} を書くと、ここへ自動で並ぶ。1枚につき1回、持っていれば「所持済み」 */}
           {eventTab==='frame'&&RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer=>{
@@ -24295,6 +24392,31 @@ function BreederMarketScreen({
 //
 // props が多いのは、この画面が「ブリーダーの全記録の置き場」だから。
 // 減らすなら記録のまとまりごとに部品を分ける必要があり、それは切り出しとは別の作業にする。
+// モンヒロビートの難易度別の実績表(自分のプロフィールとフレンドのプロフィールで共用)。
+// rows は friendsRhythmAchievements と同じ形 [{ d, total, clear, fc, ae, am }]
+function RhythmAchievementPanel({ rows, who = 'self' }) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length === 0) return null;
+  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  return (
+    <section data-rhythm-achievements={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
+      <b className="block text-[12px] font-black text-amber-100">モンヒロビートの実績</b>
+      <small className="mb-2 block text-[9px] font-bold text-slate-400">難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）</small>
+      <div className="grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center">
+        <span></span>
+        {heads.map(([t, c]) => <span key={t} className={`text-[8px] font-black leading-tight ${c}`}>{t}</span>)}
+        {list.map((r) => (
+          <React.Fragment key={r.d}>
+            <b data-rhythm-achievement-row={r.d} className="pr-1 text-left text-[10px] font-black text-white">{r.d}</b>
+            {[r.clear, r.fc, r.ae, r.am].map((n, i) => (
+              <span key={i} className={`rounded-lg bg-black/30 py-1 text-[11px] font-black tabular-nums ${n >= r.total ? 'text-amber-200' : n > 0 ? 'text-white' : 'text-slate-500'}`}>{n}<span className="text-[8px] font-bold text-slate-400">/{r.total}</span></span>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+    </section>
+  );
+}
 function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
@@ -24303,6 +24425,7 @@ function ProfileScreen({
   profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
+  costumeEnabled=false, wornCostume=null, onOpenCostumePicker=null,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
@@ -24316,6 +24439,18 @@ function ProfileScreen({
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
 }) {
+  // モンヒロビートの実績。曲の記録はモンヒロビートを開くまで読み込まれないので、ここで保存から直接読む
+  const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
+      } catch (error) { /* 読めなければ実績の表を出さないだけ */ }
+    })();
+    return () => { alive = false; };
+  }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length
     ? unlockedAssistants : ASSISTANT_LIST;
   // 根で safe-area を足さない(index.html の body が env(safe-area-inset-*) を持っており、
@@ -24386,6 +24521,12 @@ function ProfileScreen({
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
                 <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">フレーム：{frameName}</b></span>
               </button>
+              {costumeEnabled&&onOpenCostumePicker&&(
+                <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">👗</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">着替え：{wornCostume?wornCostume.name:'元の服'}</b></span>
+                </button>
+              )}
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
@@ -24576,6 +24717,9 @@ function ProfileScreen({
             )}
           </section>;
         })()}
+        {/* モンヒロビートの実績: 難易度ごとのクリア・フルコンボ・オールエクセレント・オールマーベラスの数。
+            フレンドのプロフィールにも同じ表が出る。1曲も遊んでいなければ出さない */}
+        {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
@@ -25120,7 +25264,8 @@ function RhythmSongSelectScreen({
         ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
           <span className="block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
           <span className="mt-0.5 block">キャンペーン中</span>
-          <span className="block text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+          {Number(beatPointCampaign.loopScale)>0&&<span className="block">周回 ×{beatPointCampaign.loopScale}</span>}
+          <span className="block text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
         </div>
         :beatPointEvent
           ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
@@ -25339,8 +25484,8 @@ function RhythmSongSelectScreen({
         {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
           {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
             <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
-            <span className="min-w-0 truncate">キャンペーン中</span>
-            <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+            <span className="min-w-0 truncate">{beatPointCampaign.name}{Number(beatPointCampaign.loopScale)>0?`・周回 ×${beatPointCampaign.loopScale}`:'中'}</span>
+            <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
           {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         </div>}
@@ -33221,6 +33366,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                 return (
                   <div data-friend-songs className="mt-2 flex flex-col gap-2">
                     <p className="px-1 text-[10px] font-black text-slate-400">遊んだ曲 {sum.records.rhythm.played}曲（スコアの高い順に{FRIEND_RECORD_SONG_MAX}曲まで）</p>
+                    <RhythmAchievementPanel rows={sum.records.rhythm.ach} who="friend" />
                     {songs.length > 0 && (
                       <div data-friend-versus className={`${SCREEN_PANEL_FLAT_CLASS} text-center`}>
                         <small className="block text-[9px] font-bold text-slate-400">スコア勝負（同じ曲・同じ難易度で、自分と比べます）</small>
@@ -34606,6 +34752,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
 .mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
+.mhms-bubble-alone::before{display:none}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -34951,6 +35098,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    // 助手の「立ち絵 ON/OFF」「コメント ON/OFF」の札。立ち絵があるときはその右下の角に重ねて(帽子や顔にかぶせず・行を増やさず、絵の枠を広く使う。
+    // 2026-10-04・ユーザー指摘「立絵エリアがせまくなってる」)、立ち絵が無いときは枠の中(両方オフなら右の列の上)に並べる
+    const assistToggles = (cls, withLabel) => ms.onToggleAssistant && (
+      <div data-rhythm-mode-assistant-toggles role="group" aria-label="助手の表示" className={`flex items-center gap-1.5 ${cls}`}>
+        {withLabel && <small className="mr-auto text-[10px] font-black text-slate-400">助手 {ms.assistant ? ms.assistant.name : ''}</small>}
+        {[['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => (
+          <button key={key} type="button" {...{ [attr]: '' }} aria-pressed={on} onClick={() => ms.onToggleAssistant(key)}
+            className={`min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{label} {on ? 'ON' : 'OFF'}</button>
+        ))}
+      </div>
+    );
     return (
       <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`}>
         <RhythmModeSelectStage />
@@ -34974,21 +35132,32 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
-        <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden">
-          {ms.assistant && (
-            <div data-rhythm-mode-assistant className="mhms-glass mhms-in-left relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none">
-              <span aria-hidden="true" className="mhms-glow" />
-              <div className="mhms-float pointer-events-none absolute inset-0">
-                {RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]
-                  ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(ms.assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; return <img data-rhythm-mode-assistant-art src={ms.assistant.image} alt="" draggable={false} className="absolute max-w-none" style={{ width: `${fr.zoom * 100}%`, height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)` }} />; })()
-                  : <img data-rhythm-mode-assistant-art src={ms.assistant.image} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />}
-              </div>
-              <p data-rhythm-mode-assistant-line className="mhms-bubble absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]" style={{ borderColor: ms.assistant.accent }}>
-                <b className="mb-0.5 block text-[10px]" style={{ color: ms.assistant.accent }}>{ms.assistant.name}</b>{ms.assistant.text}
-              </p>
+        <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`}>
+          {/* 助手。上に立ち絵、その下にコメント(絵に重ねない。2026-10-04・ユーザー指摘「助手コメントが助手に被ってる」)。
+              立ち絵とコメントは別々にオン・オフできる。両方オフなら枠ごと出さない */}
+          {ms.assistant && (ms.showArt || ms.showComment) && (
+            <div data-rhythm-mode-assistant className={`mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${ms.showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`}>
+              {ms.showArt && (
+                <div data-rhythm-mode-assistant-art-box className="relative min-h-0 flex-1 overflow-hidden">
+                  <span aria-hidden="true" className="mhms-glow" />
+                  {assistToggles('absolute bottom-1.5 right-1.5 z-20', false)}
+                  <div className="mhms-float pointer-events-none absolute inset-0">
+                    {RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]
+                      ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(ms.assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; return <img data-rhythm-mode-assistant-art src={ms.assistant.image} alt="" draggable={false} className="absolute max-w-none" style={{ width: `${fr.zoom * 100}%`, height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)` }} />; })()
+                      : <img data-rhythm-mode-assistant-art src={ms.assistant.image} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />}
+                  </div>
+                </div>
+              )}
+              {!ms.showArt && assistToggles('mx-2 mt-2 justify-end', true)}
+              {ms.showComment && (
+                <p data-rhythm-mode-assistant-line className={`mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`} style={{ borderColor: ms.assistant.accent }}>
+                  <b className="mb-0.5 block text-[10px]" style={{ color: ms.assistant.accent }}>{ms.assistant.name}</b>{ms.assistant.text}
+                </p>
+              )}
             </div>
           )}
-          <div className="shrink-0 space-y-2.5 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
+          <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
+            {!(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true)}
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
                 <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
@@ -35003,14 +35172,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div className={`grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {/* ソロ: いつもの曲えらびへ */}
               <button data-rhythm-mode-solo type="button" onClick={ms.onSolo}
-                className="mhms-card mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.05s' }}>
+                className="mhms-card mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.05s' }}>
                 <span aria-hidden="true" className="mhms-mark">SOLO LIVE</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎵</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">ソロライブ</b><small className="block text-[10px] font-black leading-tight text-slate-800/80">ひとりで好きな曲を演奏</small></span>
               </button>
               {/* マルチ: フリーマッチ(だれとでも)。ベテランは無くした(2026-10-03・ユーザー指示) */}
               {ms.multi && <button data-rhythm-multi-free type="button" onClick={() => searchRoom('free')}
-                className="mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
+                className="mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
                 <span aria-hidden="true" className="mhms-mark">FREE MATCH</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎮</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small><RhythmMultiLobbyCount /></span>
@@ -37064,6 +37233,16 @@ function MonsterHeroGame() {
   // ★一度もらったら外さない。助手を切り替えても、条件を変えても残す
   const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
   const ownedProfileFramesRef = useRef([]);
+  // 助手の着替え(2026-10-03)。買った服(mh_assistant_costume_owned_v1)と、助手ごとに今着ている服(mh_assistant_costume_worn_v1)。
+  // ★どちらも新設のキー。既存の mh_* には触らない(CLAUDE.md ⑦)。読み込みでは書き戻さない
+  const [ownedAssistantCostumes, setOwnedAssistantCostumes] = useState([]);
+  const ownedAssistantCostumesRef = useRef([]);
+  const [wornAssistantCostumes, setWornAssistantCostumes] = useState({});
+  const [showCostumePicker, setShowCostumePicker] = useState(false);
+  const [costumeAssistantId, setCostumeAssistantId] = useState(null);
+  const [costumeLockedInfo, setCostumeLockedInfo] = useState(null);
+  // 画面が描く瞬間に、助手の顔・立ち絵の出し口(assistants.js)へ「いま着ている服」を渡す
+  setAssistantCostumeWornNow(wornAssistantCostumes);
   // 「新しくもらったよ」と助手が知らせ終えた枠のid。
   // ★もらうたびに知らせたいので、既読は1回きりの id ではなく**枠ごと**に覚える
   //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
@@ -37127,6 +37306,26 @@ function MonsterHeroGame() {
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
     });
+  }, []);
+
+  // 助手を着替えさせる(2026-10-03)。costumeId が null なら元の服へ戻す。
+  // 持っていない服・その助手の服ではないものは受けない。押したその場で画面へ反映し、保存は読み直して足す
+  // (他の助手が着ている服を消さない)。保存できなくても表示だけは変わる
+  const wearAssistantCostume = useCallback((assistantId, costumeId) => {
+    const costume = costumeId ? assistantCostumeById(costumeId) : null;
+    if (costumeId && (!costume || costume.assistantId !== assistantId || !ownedAssistantCostumesRef.current.includes(costume.id))) return;
+    setWornAssistantCostumes(prev => {
+      const next = { ...prev };
+      if (costume) next[assistantId] = costume.id; else delete next[assistantId];
+      return next;
+    });
+    Promise.resolve(storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false))
+      .then(stored => {
+        const base = normalizeWornAssistantCostumes(stored, ownedAssistantCostumesRef.current);
+        if (costume) base[assistantId] = costume.id; else delete base[assistantId];
+        return storeSet(ASSISTANT_COSTUME_WORN_KEY, base, false);
+      })
+      .catch(error => { console.error('[assistant-costume] save failed:', error && error.message ? error.message : error); });
   }, []);
 
   // ===== ランキングに出す「いまの見た目」を登録する(2026-09-16) =====
@@ -37257,12 +37456,14 @@ function MonsterHeroGame() {
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplay, setEventReplay] = useState(null);
+  // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
+  setAssistantCostumeStoryNow(eventReplay ? ((eventReplayList().find(ev => ev.id === eventReplay.id) || {}).costumes || null) : null);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
   // フレンドへ送る内容の「最新の値」。送信は少し遅れて走るので、その時点の値をここから読む(宣言のあとに置く)
   friendLatestRef.current = { gameState, masuMons, favoriteMasuId, profileMessage, highScores, proHighScores, quickHighestWaves, extremeBestScores,
-    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons, ownedProfileFrames };
+    speciesProgressOf: speciesChallengeProgressOf, tacticsRecordsOf, unlockedMonsterIds, ownedMarketIcons: expandOwnedMarketIcons(ownedMarketIcons), ownedProfileFrames };
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
@@ -39284,7 +39485,11 @@ function MonsterHeroGame() {
   const rhythmPlayRunLoopEventNow = () =>
     (RELEASE_FLAGS.rhythmWeeklyRanking === true && typeof rhythmLimitedEventAt === 'function')
       ? rhythmLimitedEventAt(Date.now()) : null;
-  const rhythmPlayRunLoopScaleFor = (song) => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow());
+  // キャンペーン(ハロウィン・ナイトの5倍など)も呼ばれるたびに引き直す
+  const rhythmPlayRunLoopCampaignNow = () =>
+    (RELEASE_FLAGS.rhythmEventPoints === true && typeof rhythmEventPointCampaignAt === 'function')
+      ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const rhythmPlayRunLoopScaleFor = (song) => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow(), rhythmPlayRunLoopCampaignNow());
   const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
     if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
@@ -39554,7 +39759,11 @@ function MonsterHeroGame() {
   // 6レーンの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   // (新しいキーは作らない)。みんなで対戦の公開フラグが立っているときだけ並べる
   const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
+  // ハロウィン・ナイト(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり、週ごとに更新の5部構成」)。
+  // 5部のidと出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。**時刻が来た部を、古いほうから1つずつ**HOMEで流す
+  // (期間の内か外かは見ない。第5部は閉幕の時刻に出る)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
+  const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -39672,8 +39881,12 @@ function MonsterHeroGame() {
       // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
+      // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
+      const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
+        ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
-        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
+        if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
+        else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
         else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
         else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
@@ -39684,6 +39897,7 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
@@ -40845,6 +41059,11 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = catchUp;
       setOwnedProfileFrames(catchUp);
       setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      // 着替え。保存値が無い・壊れているときは「何も持っていない・全員元の服」で始める
+      const loadedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+      ownedAssistantCostumesRef.current = loadedCostumes;
+      setOwnedAssistantCostumes(loadedCostumes);
+      setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
       setRhythmClearTotal(await loadRhythmClearTotal());
       if (catchUp.length !== loadedFrames.length) {
         try { await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false); } catch {}
@@ -42143,6 +42362,7 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
+    ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -42228,8 +42448,10 @@ function MonsterHeroGame() {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
+    if (item.type === 'costume') return normalizeOwnedAssistantCostumes(ownedAssistantCostumes).includes(item.id);
     if (item.type === 'item') return false;
-    return ownedMarketIcons.includes(item.id);
+    // アイコンは、同じキャラのまとめのどれか1つでも持っていれば全部持っている扱い(保存値は広げるだけで書き換えない)
+    return expandOwnedMarketIcons(ownedMarketIcons).includes(item.id);
   };
 
   const saveMonsterPartySets = (nextSets) => {
@@ -42322,8 +42544,16 @@ function MonsterHeroGame() {
       setOwnedProfileFrames(nextFrames);
       storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
       markProfileFrameNoticed(item.id);
+    } else if (item.type === 'costume') {
+      // 売っている助手の着替え。保存を読み直して足す(画面の値だけを見て書くと、ほかで増えたぶんを消しうる)
+      const storedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+      const nextCostumes = normalizeOwnedAssistantCostumes([...storedCostumes, ...ownedAssistantCostumesRef.current, item.id]);
+      ownedAssistantCostumesRef.current = nextCostumes;
+      setOwnedAssistantCostumes(nextCostumes);
+      storeSet(ASSISTANT_COSTUME_OWNED_KEY, nextCostumes, false);
     } else if (item.type !== 'item') {
-      setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
+      // 同じキャラのまとめは、1つ買うと中身が全部入る(商品の並びでは1つにまとまっている)
+      setOwnedMarketIcons(prev => { const group = breederIconGroupOf(item.id); const next = [...new Set([...prev, item.id, ...(group ? group.memberIds : [])])]; storeSet('mh_market_icons', next, false); return next; });
     }
     saveMissionProgress('market');
     return true;
@@ -42399,6 +42629,15 @@ function MonsterHeroGame() {
       const isFrame = offer?.kind==='frame';
       const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      // 着替えの交換も同じ。持っている服の保存(mh_assistant_costume_owned_v1)を同じ取引に入れる
+      const isCostume = offer?.kind==='costume';
+      const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
+      const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
+      // アイコン(まとめ)の交換も同じ。持っているアイコンの保存(mh_market_icons)を同じ取引に入れる。
+      // 持っているかは、まとめのどれか1つでも持っていれば全部持っている扱い(広げて渡す。保存値は書き換えない)
+      const isIcon = offer?.kind==='icon';
+      const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
+      const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
@@ -42407,9 +42646,9 @@ function MonsterHeroGame() {
           return { ok:false, reason:'condition' };
         }
       }
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames });
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames, ownedAssistantCostumes:beforeCostumes, ownedMarketIcons:expandOwnedMarketIcons(beforeIcons) });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':isIcon?'このアイコンはもう持っています。':isCostume?'この着替えはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -42419,6 +42658,8 @@ function MonsterHeroGame() {
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
         ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
+        ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange.ownedAssistantCostumes }] : []),
+        ...(isIcon ? [{ key:'mh_market_icons', before:storedIcons, next:exchange.ownedMarketIcons }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -42440,6 +42681,11 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
+      }
+      if (isIcon) setOwnedMarketIcons(prev => [...new Set([...prev, ...exchange.ownedMarketIcons])]);
+      if (isCostume) {
+        ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
+        setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -49643,7 +49889,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -51609,6 +51855,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             monsterCount:rhythmMonsterSlots.length, monsterMax:RHYTHM_MONSTER_SLOT_MAX,
             monsterFaces:rhythmMonsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return {id:masu.id,src:base?(base.faceIconUrl||base.iconUrl):''};}),
             assistant:rhythmModeAssistant,
+            showArt:rhythmSettings.modeSelectArt!==false, showComment:rhythmSettings.modeSelectComment!==false,
+            onToggleAssistant:async(key)=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:rhythmSettings[key]===false});setRhythmSettings(saved);},
           }:null}
           onStartPlay={(song,difficulty,startId,count,streak)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak});setGameState('RHYTHM_PLAY');}}/>}
 
@@ -52199,6 +52447,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenNameEdit={(name)=>{setTempName(name);setShowNameEdit(true);}}
             onOpenIconPicker={()=>setShowIconPicker(true)}
             onOpenFramePicker={()=>setShowFramePicker(true)}
+            costumeEnabled={assistantCostumeFeatureOn()}
+            wornCostume={assistantCostumeWornFor(selectedAssistantId)}
+            onOpenCostumePicker={()=>{setCostumeAssistantId(selectedAssistantId);setShowCostumePicker(true);}}
             onOpenItems={()=>setGameState('ITEM_INVENTORY')}
             onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
@@ -53236,7 +53487,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
           // フレームはここでは変えられない(プロフィールの「フレーム」から変える)
           const closeIcon=()=>{ setShowIconPicker(false); setIconQuery(''); setIconChip('all'); };
-          const all=breederIconOptions({ownedMarketIconIds:ownedMarketIcons});
+          const all=breederIconOptions({ownedMarketIconIds:expandOwnedMarketIcons(ownedMarketIcons)});
           const label=(m)=>String(m.name||'').replace(/のアイコン$/,'');
           const q=iconQuery.trim().toLowerCase();
           const matches=all.filter(m=>(iconChip==='all'||m.source===iconChip)&&(!q||label(m).toLowerCase().includes(q)));
@@ -53430,6 +53681,60 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {saleFrames.length>0&&<PickerGroupLabel count={saleFrames.length}>モンスターの枠（条件を達成するとマーケットで買えます）</PickerGroupLabel>}
                 {saleFrames.map(cell)}
               </div>
+            </PickerSheet>
+          );
+        })()}
+
+        {showCostumePicker&&(()=>{
+          // 助手の着替えを選ぶ窓(PickerSheet)。上のチップで助手を切り替え、その助手の服を並べる。
+          // 「元の服」は誰でも選べる。持っていない服は絵を薄くして鍵を重ね、押すとマーケットで買えることを案内する。
+          // 押したその場で反映して保存する(閉じるまで見比べられる)。並ぶのは公開済み(released:true)の服だけ
+          const closeCostume=()=>{ setShowCostumePicker(false); setCostumeLockedInfo(null); };
+          const who=assistantById(costumeAssistantId)||assistantById(selectedAssistantId);
+          const chipList=ASSISTANT_LIST.map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
+          const costumes=assistantCostumesFor(who.id);
+          const worn=assistantCostumeById(wornAssistantCostumes[who.id]);
+          const faceOf=(costume)=>costume&&costume.icon?costume.icon:null;
+          const cell=(costume)=>{
+            const owned=!costume||ownedAssistantCostumes.includes(costume.id);
+            const selected=costume?(worn&&worn.id===costume.id):!worn;
+            const src=costume?faceOf(costume):`${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+            return (
+              <button key={costume?costume.id:'original'} data-assistant-costume-option={costume?costume.id:'original'} data-assistant-costume-locked={owned?'no':'yes'}
+                onClick={()=>{ if(owned){ wearAssistantCostume(who.id, costume?costume.id:null); setCostumeLockedInfo(null); } else setCostumeLockedInfo(costume.id); }}
+                aria-pressed={!!selected} aria-disabled={!owned}
+                className={`relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
+                <span className={`relative block ${owned?'':'opacity-45'}`}>
+                  {src?<img src={src} alt={costume?costume.name:'元の服'} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
+                  {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                </span>
+                {selected&&<PickerCheckMark/>}
+                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:'元の服'}</span>
+                {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">マーケットで購入</span>}
+              </button>
+            );
+          };
+          const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
+          const lockedInfo=lockedCostume&&(
+            <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
+              <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
+              <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{lockedCostume.desc||''}</p>
+            </div>
+          );
+          return (
+            <PickerSheet title="助手の着替え" note="助手の顔と立ち絵が、えらんだ服に変わります。服はマーケットで買えます。" onClose={closeCostume}
+              preview={<>
+                {(()=>{const nowSrc=assistantFaceImage(who,'happy');return nowSrc?<img src={nowSrc} alt={who.name} className="h-14 w-14 shrink-0 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="text-3xl" aria-hidden="true">{who.emoji}</span>;})()}
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:'元の服'}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
+              </>}
+              chips={chipList} chip={who.id} onChip={(id)=>{ setCostumeAssistantId(id); setCostumeLockedInfo(null); }}
+              footerExtra={lockedInfo} dataPicker="assistant-costume">
+              <div className="grid grid-cols-3 gap-2.5">
+                {cell(null)}
+                {costumes.map(cell)}
+              </div>
+              {costumes.length===0&&<p className="py-6 text-center text-[11px] font-bold text-slate-500">{who.name}の着替えは、まだありません</p>}
             </PickerSheet>
           );
         })()}

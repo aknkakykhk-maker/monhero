@@ -34,7 +34,9 @@ const demoIds=(data.match(/^const RHYTHM_DEMO_SONG_IDS=Object\.freeze\(\[[\s\S]*
 // 定義の終わり(.filter(Boolean);)まで取る
 const demoSongsStart=data.indexOf('const rhythmDemoSongs=');
 const demoSongsEnd=demoSongsStart>=0?data.indexOf('.filter(Boolean);',demoSongsStart)+'.filter(Boolean);'.length:-1;
-const demoSongs=demoSongsEnd>demoSongsStart?data.slice(demoSongsStart,demoSongsEnd):'';
+// 時刻まで出さない曲の判定(RHYTHM_SONG_RELEASE_AT / rhythmSongReleased)は rhythmDemoSongs の手前にあるので、そこから取る(2026-10-04)
+const releaseStart=data.indexOf('const RHYTHM_SONG_RELEASE_AT');
+const demoSongs=demoSongsEnd>demoSongsStart?data.slice(releaseStart>=0&&releaseStart<demoSongsStart?releaseStart:demoSongsStart,demoSongsEnd):'';
 const totalBlock=grab('const rhythmTotalRankingSongCount=','const installRhythmGestureVisuals');
 check('合算の道具(曲数・理論満点・達成率)を抽出できる',!!difficulties&&!!demoIds&&!!demoSongs&&!!totalBlock);
 if(!difficulties||!demoIds||!demoSongs||!totalBlock){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
@@ -42,10 +44,11 @@ if(!difficulties||!demoIds||!demoSongs||!totalBlock){console.log(`\n${failed}件
 const context={console};
 vm.createContext(context);
 vm.runInContext(`${difficulties}\n${demoIds}\n${demoSongs}\n${totalBlock}\n`
-  +'this.out={RHYTHM_DEMO_SONG_IDS,rhythmTotalRankingSongCount,rhythmTotalRankingMaxScore,rhythmTotalRankingProgress};',context);
-const {RHYTHM_DEMO_SONG_IDS,rhythmTotalRankingSongCount,rhythmTotalRankingMaxScore,rhythmTotalRankingProgress}=context.out;
+  +'this.out={RHYTHM_DEMO_SONG_IDS,rhythmSongReleased,rhythmTotalRankingSongCount,rhythmTotalRankingMaxScore,rhythmTotalRankingProgress};',context);
+const {RHYTHM_DEMO_SONG_IDS,rhythmSongReleased,rhythmTotalRankingSongCount,rhythmTotalRankingMaxScore,rhythmTotalRankingProgress}=context.out;
 const songs=RHYTHM_DEMO_SONG_IDS.map(songId=>({songId}));
-const published=RHYTHM_DEMO_SONG_IDS.length;
+// 時刻まで出さない曲(RHYTHM_SONG_RELEASE_AT)は、出る前は数えない(2026-10-04)
+const published=RHYTHM_DEMO_SONG_IDS.filter(id=>rhythmSongReleased(id)).length;
 
 check('曲数は公開曲の一覧から数える',rhythmTotalRankingSongCount(songs)===published,`${published}曲`);
 check('理論満点は 曲数 × MASTERの満点',rhythmTotalRankingMaxScore(songs)===published*1000000,

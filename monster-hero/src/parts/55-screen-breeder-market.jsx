@@ -44,22 +44,40 @@ function BreederMarketScreen({
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  // 着替え(2026-10-03)。売る服が1着も無いうちは「着替え」タブごと出さない(空のタブを見せない)
+  const costumeItems = marketItems.filter(item=>item.type==='costume');
   const diamondTabs = [
     {key:'disc',label:'円盤石'},
     {key:'assist',label:'アシスト'},
     {key:'item',label:'アイテム'},
+    ...(costumeItems.length?[{key:'costume',label:'着替え'}]:[]),
   ];
   const activeDiamondTab = diamondTabs.some(tab=>tab.key===marketTab)?marketTab:'disc';
   const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
-  const breederPointItems = marketItems.filter(item=>item.type==='icon');
+  // アイコンは同じキャラを1つにまとめて売る(2026-10-03・ユーザー指示)。中身は「詳細」で見られ、1つ買うと全部手に入る。
+  // まとめの定義は data/breeder.js の BREEDER_ICON_GROUPS。代表(いちばん先の中身)の商品を、名前だけ「◯◯のアイコン」にして1枚で出す
+  const breederPointItems = (()=>{
+    const icons=marketItems.filter(item=>item.type==='icon');
+    const seen=new Set(); const out=[];
+    icons.forEach(item=>{
+      const group=breederIconGroupOf(item.id);
+      if(!group){ out.push(item); return; }
+      if(seen.has(group.id)) return;
+      seen.add(group.id);
+      const members=group.memberIds.map(id=>icons.find(m=>m.id===id)).filter(Boolean);
+      out.push({ ...members[0], name:`${group.name}のアイコン`, groupMembers:members, groupId:group.id });
+    });
+    return out;
+  })();
+  const hasDiscIconCards = breederPointItems.some(item=>/_disc_icon$/.test(item.id));
   // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
   const breederFrameItems = marketItems.filter(item=>item.type==='frame');
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
   const SECTION_TABS = {
-    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'},...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
+    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -128,7 +146,7 @@ function BreederMarketScreen({
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
@@ -197,7 +215,7 @@ function BreederMarketScreen({
           :[{currency:'beatPoint',value:safeEventPoints}]}/>
         {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
         {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
-          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍（{rhythmEventJstText(Date.parse(campaign.endAt))}まで）</MarketNotice>:null;})()}
+          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍{Number(campaign.loopScale)>0?`。演奏でのクイック周回も${campaign.loopScale}倍`:''}（{rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）</MarketNotice>:null;})()}
         {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
       </>}
 
@@ -291,6 +309,37 @@ function BreederMarketScreen({
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
               detail={teaching}
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
+            />;
+          })}
+          {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
+              服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
+          {eventTab==='costume'&&RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer=>offer.available!==false).map(offer=>{
+            const costume=assistantCostumeById(offer.costumeId);
+            const who=assistantById(offer.assistantId);
+            const item={ id:offer.costumeId, name:offer.name, emoji:'👗', icon:costume?.icon, type:'costume', currency:'beatPoint', cost:offer.cost, desc:`${who?.name||''}の着替え。${costume?.desc||''}` };
+            const owned=isItemOwned({ id:offer.costumeId, type:'costume' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-costume':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={item.desc?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
+            />;
+          })}
+          {/* 交換できるアイコン(2026-10-04)。ハロウィン・ナイトの衣装の8表情を1つにまとめて1000P。イベント中だけ並ぶ。
+              どれか1つでも持っていれば「所持済み」。中身は「中身を見る」で確かめられる */}
+          {eventTab==='icon'&&RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.filter(offer=>offer.available!==false).map(offer=>{
+            const members=offer.memberIds.map(id=>BREEDER_MARKET_ITEMS.find(m=>m.id===id)).filter(Boolean);
+            const item={ ...members[0], name:offer.name, groupMembers:members, groupId:offer.groupId, type:'icon', currency:'beatPoint', cost:offer.cost };
+            const owned=isItemOwned({ id:members[0]?.id, type:'icon' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-icon':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>}
             />;
           })}
           {/* 交換できるプロフィールフレーム(2026-10-03)。いまは売る枠が無いので何も並ばない(タブも出ない)。
