@@ -23,6 +23,13 @@ const RAID_JACK_BASE = Object.freeze({ hp: 35000, atk: 700 });
 const RAID_JACK_LIFE_MULTIPLIER = 10;
 const RAID_JACK_TURNS = 20;   // 1回の戦闘のターン数(2026-10-04・ユーザー指示でレイドバトルもグランドスラムも20ターン)
 const RAID_JACK_FREE_PER_DAY = 3;
+// レイドバトル(A)の専用ルール。数字はここだけに置き、戦闘(60-app.jsx)・画面・ヘルプ・検査はここを読む
+//   EXスキルは、EXを持つ味方ごとに2回まで(2026-10-04・ユーザー指示で1回から変更)。グランドスラム(B)と通常戦は今までどおり
+const RAID_JACK_A_EX_MAX_USES = 2;
+//   アシカは、レイドバトルもグランドスラムも3枚まで(2026-10-04・ユーザー指示)
+const RAID_JACK_TEACHING_MAX = 3;
+//   編成: 勇者モン1体 + 供モン最大3体
+const RAID_JACK_ALLY_MAX = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
 // ぱんぷきん×ジャックのストーリー(台本は docs/spec/RAID_JACK_STORY.md、データは data/assistants.js の EVENT_REPLAYS)。

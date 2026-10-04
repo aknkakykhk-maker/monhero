@@ -1,13 +1,13 @@
 // ハロウィン・ナイト(2026-10-04 8:00 〜 11-01 3:59)を確かめる。
 //
 //   ユーザー指示「イベント期間はモンビーポイント5倍、モンビー中のクイック周回5倍」「開始と終了にストーリーイベント
-//   (週ごとに更新の5部構成)」「開始と同時に Crazy Party Night ～ぱんぷきんの逆襲～ を新規実装」
+//   (第1部だけ時刻で出し、第2部以降はレイドの進み具合で開く)」「開始と同時に Crazy Party Night ～ぱんぷきんの逆襲～ を新規実装」
 //
 // 見るもの(時刻を動かして、本物のデータと式をNodeで動かす)
 //   ① ビートP: 期間の中だけ5倍(ビートPアップキャンペーンと重なる10/4 8:00〜10/5 5:00も5倍で、重ねがけしない)
 //   ② クイック周回: 期間の中は全曲5倍(ふだん2倍・ランキングイベントの対象曲3倍を置き換える)。期間の外は今までどおり
-//   ③ ストーリー5部: 出る時刻(開幕・毎週日曜8:00×3・閉幕)と、古いほうから順に読める形
-//   ④ 台本・回想・BGM・見たかどうかの結線(5部ぶんそろっているか)
+//   ③ ストーリー: 時刻で出す第1部と、第2部以降(ジャックの話)に置き換わっていること
+//   ④ 台本・回想・BGM・見たかどうかの結線
 //   ⑤ 新曲: 開始の時刻まで曲えらびに出さず、時刻から出る
 //   ⑥ お知らせの時刻が期間と食い違っていない
 const fs = require('fs');
@@ -73,17 +73,12 @@ check('期間の外は今までどおり(2倍・イベント対象曲は3倍)', 
 check('loopScale を書いていないキャンペーンは周回を変えない', rhythmPlayRunLoopScale('monster_hero', null, { boost: 5 }) === 2 && rhythmPlayRunLoopScale('monster_hero', null, { loopScale: 'x' }) === 2 && rhythmPlayRunLoopScale('monster_hero', null, { loopScale: 0 }) === 2);
 check('3分の曲は、ふだん6周・期間中30周(5倍)', rhythmPlayRunLoops(180000, 2) === 6 && rhythmPlayRunLoops(180000, 10) === 30);
 
-// ③ ストーリー
+// ③ ストーリー(時刻で出すのは第1部だけ。第2部以降はレイドの進み具合で開く=ジャックの話 raid_jack_story_*)
 const stories = o.HALLOWEEN_NIGHT_STORIES;
-check('5部ある(第1部=開始・第2〜4部=毎週日曜8:00・第5部=終了)', stories.length === 5
-  && stories[0].at === START && stories[4].at === END
-  && stories[1].at === '2026-10-11T08:00:00+09:00' && stories[2].at === '2026-10-18T08:00:00+09:00' && stories[3].at === '2026-10-25T08:00:00+09:00');
-check('第2〜4部は日曜(JST)の朝8:00', stories.slice(1, 4).every((s) => { const d = new Date(Date.parse(s.at) + 9 * 3600 * 1000); return d.getUTCDay() === 0 && d.getUTCHours() === 8; }));
-check('idは重ならず、順番に part が付く', new Set(stories.map((s) => s.id)).size === 5 && stories.every((s, i) => s.part === i + 1));
+check('時刻で出るのは第1部だけ(開始の時刻)', stories.length === 1 && stories[0].at === START && stories[0].part === 1 && stories[0].id === 'halloween_night_2026_part1');
 check('開始の前は読める部が無い', o.halloweenNightStoryIdsAt(jst(START) - 1).length === 0);
 check('開始の時刻に第1部だけ', o.halloweenNightStoryIdsAt(jst(START)).join() === stories[0].id);
-check('日曜ごとに1部ずつ増える', o.halloweenNightStoryIdsAt(jst('2026-10-11T08:00:00+09:00')).length === 2 && o.halloweenNightStoryIdsAt(jst('2026-10-18T08:00:00+09:00')).length === 3 && o.halloweenNightStoryIdsAt(jst('2026-10-25T08:00:00+09:00')).length === 4);
-check('終了の時刻に第5部が増えて全部そろう', o.halloweenNightStoryIdsAt(jst(END) - 1).length === 4 && o.halloweenNightStoryIdsAt(jst(END)).length === 5);
+check('終了の時刻を過ぎても第1部のまま増えない(続きはレイドの話が受け持つ)', o.halloweenNightStoryIdsAt(jst(END)).join() === stories[0].id);
 check('壊れた時刻でも落ちない', o.halloweenNightStoryIdsAt(null).length === 0 && o.halloweenNightStoryIdsAt('x').length === 0);
 
 // ④ 台本・回想・BGM・見たか
@@ -96,6 +91,7 @@ try {
 } catch (e) { check('assistants.js を動かせる', false, e.message); }
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 const WHO = ['mua', 'kiki', 'momosuke', 'dra'];
+const JACK_STORY_IDS = ['raid_jack_story_1b', 'raid_jack_story_2', 'raid_jack_story_3', 'raid_jack_story_4', 'raid_jack_story_5', 'raid_jack_story_6', 'raid_jack_ending_cleared', 'raid_jack_ending_notcleared'];
 if (replays) {
   for (const story of stories) {
     const rp = replays.find((r) => r.id === story.id);
@@ -107,6 +103,12 @@ if (replays) {
     check(`第${story.part}部: 回想の日時が出る時刻と同じ`, !!rp && Date.parse(rp.date.replace(' ', 'T') + ':00+09:00') === Date.parse(story.at));
     check(`第${story.part}部: BGMの場面が決まっている`, new RegExp(`${story.id}:'halloweenNightEvent'`).test(bgm));
   }
+  // 第2部以降(ジャックの話)は、時刻ではなくレイドの進み具合で開く。衣装・ドラ・BGMだけはここでも確かめる
+  for (const id of JACK_STORY_IDS) {
+    const rp = replays.find((r) => r.id === id);
+    check(`${id}: 回想に登録され、3人が衣装で出て、BGMの場面が決まっている`, !!rp && !!rp.costumes && rp.costumes.mua === 'mua_halloween_2026' && rp.costumes.kiki === 'kiki_halloween_2026' && rp.costumes.momosuke === 'momosuke_halloween_2026' && new RegExp(`${id}:'halloweenNightEvent'`).test(bgm));
+  }
+  check('旧い時刻制の第2〜5部(halloween_night_2026_part2〜5)が、回想にも台本にも残っていない', !replays.some((r) => /halloween_night_2026_part[2-5]/.test(r.id)) && !/ASSISTANT_HALLOWEEN_NIGHT_[2-5]\b/.test(assistants));
   const all = stories.map((s) => (replays.find((r) => r.id === s.id)?.script || []).map((l) => l.t).join('\n')).join('\n');
   check('「Crazy Party Night ～ぱんぷきんの逆襲～」を正式名称で書いている(略称のモンビーはキャラの会話だけ)', all.includes('Crazy Party Night ～ぱんぷきんの逆襲～'));
   check('ドラの口調に「なんよ」「ほんま」を使っていない', !stories.some((s) => (replays.find((r) => r.id === s.id)?.script || []).some((l) => l.who === 'dra' && /なんよ|んよ|ほんま|せやけど/.test(l.t))));
@@ -117,7 +119,7 @@ if (replays) {
 }
 check('見たかどうかは既存の保存キーの配列に入れる(新しいキーを作らない)', /HALLOWEEN_NIGHT_STORY_IDS\s*=\s*HALLOWEEN_NIGHT_STORIES\.map/.test(app) && /const RHYTHM_EVENT_STORY_IDS = \[\.\.\.HALLOWEEN_NIGHT_STORY_IDS/.test(app));
 check('時刻が来た部を古いほうから1つずつ流す(見回りのたびに数え直す)', /halloweenNightStoryIdsAt\(Date\.now\(\)\)\.find\(id => notPlayedYet\(id\)\)/.test(app));
-check('回想の「見た」判定が5部ぶん結線されている', /halloweenNightPart\$\{story\.part\}Seen/.test(app));
+check('回想の「見た」判定が結線されている', /halloweenNightPart\$\{story\.part\}Seen/.test(app));
 check('会話のあいだだけ衣装を着せる(setAssistantCostumeStoryNow)', /setAssistantCostumeStoryNow\(eventReplay/.test(app));
 check('BGMの既定が新曲', /halloweenNightEvent:'melo_crazy_party_night'/.test(bgm));
 

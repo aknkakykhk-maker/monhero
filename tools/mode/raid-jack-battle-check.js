@@ -136,8 +136,8 @@ check('ジャック戦の敵は段階の値で作る(編成の総合力の補正
 check('A: 1ターンごとに味方全員の全ステータスが5%ずつ(掛け算)・自動回復の割合が1.5%ずつ上がる(20ターンぶんで半分)',
   /RAID_JACK_TURN_GROWTH = 1\.05;/.test(defs35) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(defs35)
   && /raidJackRunRef\.current\.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount\) raidJackTurnGrowth\(nextTurn\)/.test(app));
-check('A: EXスキルは、持つ味方ごとに2回まで(raidExDefOf が maxUses:2 にする。Bと通常戦は今までどおり)',
-  /const raidExDefOf = \(monId\) => \{[\s\S]{0,260}kind === 'a' \? \{ \.\.\.def, unlimited:false, maxUses:2 \} : def;/.test(app)
+check('A: EXスキルは、持つ味方ごとに RAID_JACK_A_EX_MAX_USES(=2)回まで(raidExDefOf が回数を決める。Bと通常戦は今までどおり)',
+  /RAID_JACK_A_EX_MAX_USES = 2;/.test(defs35) && /const raidExDefOf = \(monId\) => \{[\s\S]{0,260}kind === 'a' \? \{ \.\.\.def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES \} : def;/.test(app)
   && !/[^a-zA-Z]tacticsExDefOf\(/.test(app.replace(/const def = tacticsExDefOf\(monId\);/, '')));
 check('AもBも、味方のライフ・ガッツは全快からはじまる(追いつき補正のあとで満タンにする)',
   /fullGuts: isRaidJackMode\(mode\)[\s\S]{0,500}isRaidJackMode\(mode\) && joined \? normalizeTacticsUnit\(\{ \.\.\.joined, hp: joined\.maxHp, guts: joined\.maxGuts \}\)/.test(app));
