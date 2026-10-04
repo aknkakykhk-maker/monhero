@@ -1,0 +1,64 @@
+// イベント・レイドボス「ジャック」の定義(35-raid-jack.jsx)を確かめる。正本: docs/spec/RAID_BOSS_JACK.md
+//
+// 見るもの(本物の定義をNodeで動かす)
+//   ① A/Bの5段階の名前・倍率・ライフ(35,000×倍率×10)・技の本数(3/4/5/5/5)が設計書どおり
+//   ② 期間は見るたびに数え直す(前・中・後)。回数は毎日5:00(JST)で戻る
+//   ③ 保存データの正規化(無い・壊れている → 既定値)と、新しい保存キーだけを使う
+//   ④ 段階式の解放(前の段階を倒すと次が開く)
+//   ⑤ 公開フラグが偽のまま(公開前に出ない)
+const fs = require('fs');
+const vm = require('vm');
+const path = require('path');
+const ROOT = path.join(__dirname, '..', '..');
+const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+let failed = 0;
+const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
+
+const src = read('monster-hero/src/parts/35-raid-jack.jsx');
+const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
+vm.createContext(ctx);
+vm.runInContext(`${src}\nthis.o={RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+const o = ctx.o;
+
+// ① 段階
+const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 2275000, 4], ['ジャック伯爵', 2800000, 5], ['ジャック公爵', 3500000, 5], ['ジャック大王', 4550000, 5]];
+const bWant = [['初級ジャック', 70000, 3], ['中級ジャック', 700000, 4], ['上級ジャック', 3500000, 5], ['超級ジャック', 14000000, 5], ['極級ジャック', 35000000, 5]];
+aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
+bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
+check('A の攻撃倍率は 5/6.5/8/10/13', o.RAID_JACK_A_TIERS.map((t) => t.power).join() === '5,6.5,8,10,13');
+check('B の倍率は 0.2/2/10/40/100', o.RAID_JACK_B_TIERS.map((t) => t.power).join() === '0.2,2,10,40,100');
+check('技に「再生」が無い', !o.RAID_JACK_ACTION_IDS.includes('regen') && o.RAID_JACK_ACTION_IDS.length === 5);
+check('技名がそろっている', ['normal', 'special', 'sweep', 'rush', 'pierce', 'roar', 'allout'].every((k) => typeof o.RAID_JACK_SKILL_NAMES[k] === 'string' && o.RAID_JACK_SKILL_NAMES[k].length >= 5));
+
+// ② 期間と回数
+const t = (s) => Date.parse(s);
+check('開始前は before', o.raidJackWindowAt(t('2026-10-11T07:59:59+09:00')) === 'before');
+check('期間中は open', o.raidJackWindowAt(t('2026-10-20T12:00:00+09:00')) === 'open');
+check('終了後は after', o.raidJackWindowAt(t('2026-11-01T04:00:00+09:00')) === 'after');
+check('5:00前は前日扱い', o.raidJackDayKey(t('2026-10-20T04:59:00+09:00')) === '2026-10-19');
+check('5:00から翌日', o.raidJackDayKey(t('2026-10-20T05:00:00+09:00')) === '2026-10-20');
+const day = '2026-10-20';
+check('無料は1日3回', o.raidJackRemaining({ day, used: 0, extra: 0 }, t('2026-10-20T12:00:00+09:00')) === 3);
+check('使った分だけ減る', o.raidJackRemaining({ day, used: 2, extra: 0 }, t('2026-10-20T12:00:00+09:00')) === 1);
+check('買い足した分が増える', o.raidJackRemaining({ day, used: 3, extra: 2 }, t('2026-10-20T12:00:00+09:00')) === 2);
+check('日が変わると戻る', o.raidJackRemaining({ day, used: 3, extra: 2 }, t('2026-10-21T06:00:00+09:00')) === 3);
+
+// ③ 保存の正規化
+const bad = o.raidJackNormalizeState('こわれた');
+check('壊れた保存は既定値', JSON.stringify(bad) === JSON.stringify(o.raidJackDefaultState()));
+const odd = o.raidJackNormalizeState({ a: { used: -1, extra: 'x', defeated: ['a1', 3] }, b: { total: 'x' }, claimed: 'z' });
+check('型が違う値は直る', odd.a.used === 0 && odd.a.extra === 0 && odd.a.defeated.length === 1 && odd.b.total === 0 && odd.claimed.length === 0);
+check('保存キーは新しい mh_raid_jack_v1', o.RAID_JACK_STORAGE_KEY === 'mh_raid_jack_v1');
+
+// ④ 段階式の解放
+check('最初は1段階だけ', o.raidJackUnlockedCount('b', []) === 1);
+check('初級を倒すと中級が開く', o.raidJackUnlockedCount('b', ['b1']) === 2);
+check('飛ばしては開かない', o.raidJackUnlockedCount('b', ['b2', 'b3']) === 1);
+check('全部倒しても5段階まで', o.raidJackUnlockedCount('b', ['b1', 'b2', 'b3', 'b4', 'b5']) === 5);
+
+// ⑤ 公開フラグ
+const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
+check('公開フラグは false(準備ができるまで)', /const RAID_JACK_PUBLIC_RELEASE = false;/.test(rel) && /raidJack:RAID_JACK_PUBLIC_RELEASE/.test(rel));
+
+if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
+console.log('\nすべて OK');

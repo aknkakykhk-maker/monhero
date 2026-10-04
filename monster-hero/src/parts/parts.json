@@ -107,6 +107,11 @@
       "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
     },
     {
+      "file": "35-raid-jack.jsx",
+      "role": "イベント・レイドボス「ジャック」の定義(段階・倍率・ライフ・技名・期間・回数の数え方・保存の正規化)。純粋な計算とデータ。公開フラグは RELEASE_FLAGS.raidJack",
+      "pure": true
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
