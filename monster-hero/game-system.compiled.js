@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c6ce67a4f364fe4
+// source-sha256: b310d984ce22437f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 00:24";
+const BUILD_DATE = "2026-10-05 00:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87155,7 +87155,55 @@ function MonsterHeroGame() {
       const speaker = assistantById(line.who);
       const last = step === script.length - 1;
       const calls = event && event.calls || {};
-      const cast = storyCastOf(script);
+      const isGuestWho = id => {
+        const w = assistantById(id);
+        return !!w && w.role === 'ゲスト';
+      };
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト');
+      let stageIdx = -1;
+      for (let i = step; i >= 0; i--) {
+        const l = script[i];
+        if (l.stage === 'none') {
+          stageIdx = -1;
+          break;
+        }
+        if (l.stage || isGuestWho(l.who)) {
+          stageIdx = i;
+          break;
+        }
+      }
+      const stageLine = stageIdx >= 0 ? script[stageIdx] : null;
+      const stageGuest = stageLine ? assistantById(stageLine.stage || stageLine.who) : null;
+      const stageName = stageLine ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
+      const stageTier = ['男爵', '子爵', '伯爵', '公爵', '大王'].findIndex(t => stageName.includes(t)) + 1;
+      const speakingGuest = isGuestWho(line.who);
+      let bubbleIdx = -1;
+      for (let i = step; i >= 0; i--) {
+        if (isGuestWho(script[i].who)) {
+          bubbleIdx = i;
+          break;
+        }
+      }
+      const bubbleLine = bubbleIdx >= 0 && bubbleIdx >= stageIdx && stageGuest ? script[bubbleIdx] : null;
+      let assistIdx = -1;
+      for (let i = step; i >= 0; i--) {
+        if (!isGuestWho(script[i].who)) {
+          assistIdx = i;
+          break;
+        }
+      }
+      const bottomLine = speakingGuest ? assistIdx >= 0 ? script[assistIdx] : null : line;
+      const bottomSpeaker = bottomLine ? assistantById(bottomLine.who) : speaker;
+      const fx = line.fx || null;
+      const fxColors = {
+        transform: '255,237,180',
+        rankup: ['251,146,60', '251,191,36', '192,132,252', '248,113,113', '250,204,21'][Math.max(0, stageTier - 1)],
+        shrink: '186,230,253'
+      };
+      const speakText = (l, w) => {
+        const bond = normalizeAssistantBond(assistantBonds[w.id]);
+        return assistantSpeakText(l.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[w.id] || null, w.id);
+      };
       const next = () => {
         if (!last) {
           setEventReplay(r => r && {
@@ -87197,8 +87245,104 @@ function MonsterHeroGame() {
         style: {
           background: 'transparent'
         }
-      }), React.createElement("div", {
+      }), stageGuest && React.createElement("div", {
+        "data-story-stage": true,
+        className: "pointer-events-none",
+        "data-story-shake": fx === 'transform' || fx === 'rankup' ? step % 2 : undefined,
+        style: {
+          position: 'absolute',
+          top: 'calc(env(safe-area-inset-top) + 10px)',
+          left: 0,
+          right: 0,
+          zIndex: 3
+        }
+      }, React.createElement("div", {
+        className: "mx-auto flex w-full max-w-md items-start gap-2 px-3"
+      }, React.createElement("div", {
+        key: `${stageGuest.id}:${stageName}`,
+        "data-story-guest": stageGuest.id,
+        "data-story-fx": fx || undefined,
+        className: "shrink-0 text-center",
+        style: {
+          animation: fx === 'shrink' ? 'storyShrink .9s ease-out both' : fx === 'transform' || fx === 'rankup' ? 'storyGrow .9s ease-out both' : 'storyStageIn .45s ease-out both'
+        }
+      }, React.createElement("span", {
+        "data-jack-aura": stageTier || undefined,
+        style: {
+          position: 'relative',
+          display: 'block',
+          width: 96,
+          height: 96,
+          filter: stageTier > 0 && typeof raidJackAuraGlowFilter === 'function' ? raidJackAuraGlowFilter(stageTier, .4) : undefined
+        }
+      }, stageTier > 0 && typeof JackAuraLayer === 'function' && React.createElement(JackAuraLayer, {
+        tier: stageTier,
+        limit: 8
+      }), React.createElement("span", {
+        style: {
+          position: 'relative',
+          zIndex: 1,
+          display: 'block'
+        }
+      }, React.createElement(AssistantFace, {
+        who: stageGuest,
+        size: 92,
+        accent: stageGuest.accent,
+        expression: speakingGuest ? line.e : 'normal'
+      }))), React.createElement("span", {
+        className: "block text-[9px] font-black",
+        style: {
+          color: stageGuest.accent
+        }
+      }, stageName)), bubbleLine && React.createElement("div", {
+        "data-story-guest-bubble": true,
+        className: "min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
+        style: {
+          borderColor: stageGuest.accent,
+          opacity: speakingGuest ? 1 : .45,
+          transition: 'opacity .18s',
+          marginTop: 6
+        }
+      }, React.createElement("span", {
+        className: "block text-[9px] font-black tracking-widest",
+        style: {
+          color: stageGuest.accent
+        }
+      }, bubbleLine.name || stageGuest.name), React.createElement("span", {
+        className: "mt-1 block text-[14px] font-bold leading-relaxed text-white"
+      }, speakText(bubbleLine, stageGuest))))), fx && React.createElement("div", {
+        key: `fx${step}`,
+        "aria-hidden": "true",
+        className: "pointer-events-none",
+        style: {
+          position: 'absolute',
+          inset: 0,
+          zIndex: 4
+        }
+      }, React.createElement("div", {
+        "data-story-fx-flash": fx,
+        style: {
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(circle at 50% 22%, rgba(${fxColors[fx] || '255,255,255'},.95), rgba(${fxColors[fx] || '255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,
+          animation: 'storyFlash 1s ease-out both'
+        }
+      }), line.fxText && React.createElement("div", {
+        "data-story-banner": true,
+        className: "px-4 text-center text-[17px] font-black",
+        style: {
+          position: 'absolute',
+          top: '42%',
+          left: '50%',
+          width: '100%',
+          maxWidth: '28rem',
+          color: '#fff',
+          textShadow: `0 0 14px rgba(${fxColors[fx] || '255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,
+          animation: 'storyBanner 2.2s ease-out both'
+        }
+      }, line.fxText)), React.createElement("div", {
         onClick: next,
+        "data-story-shake": fx === 'transform' || fx === 'rankup' ? step % 2 : undefined,
         className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
@@ -87210,7 +87354,7 @@ function MonsterHeroGame() {
       }, eventReplay.live ? '' : '回想・', event?.title || ''), React.createElement("div", {
         className: "mb-3 flex items-end justify-center gap-3"
       }, cast.map(who => {
-        const talking = who.id === line.who;
+        const talking = who.id === (bottomLine && bottomLine.who);
         return React.createElement("div", {
           key: who.id,
           className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
@@ -87228,23 +87372,24 @@ function MonsterHeroGame() {
           style: {
             color: talking ? who.accent : '#64748b'
           }
-        }, talking && line.name ? line.name : who.name));
-      })), React.createElement("div", {
+        }, talking && bottomLine && bottomLine.name ? bottomLine.name : who.name));
+      })), bottomLine ? React.createElement("div", {
         className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
         style: {
-          borderColor: speaker.accent
+          borderColor: bottomSpeaker.accent,
+          opacity: speakingGuest ? .5 : 1,
+          transition: 'opacity .18s'
         }
       }, React.createElement("span", {
         className: "block text-[9px] font-black tracking-widest",
         style: {
-          color: speaker.accent
+          color: bottomSpeaker.accent
         }
-      }, line.name || speaker.name), React.createElement("span", {
+      }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
-      }, (() => {
-        const bond = normalizeAssistantBond(assistantBonds[speaker.id]);
-        return assistantSpeakText(line.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[speaker.id] || null, speaker.id);
-      })())), React.createElement("p", {
+      }, speakText(bottomLine, bottomSpeaker))) : React.createElement("div", {
+        className: "rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
+      }, "▲ 上のことばを読んでね"), React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
       }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), React.createElement("div", {
         className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
@@ -92540,6 +92685,20 @@ const createAnimationStyle = () => {
     [data-jack-aura="5"] [data-ja="wave"] { animation-duration: 1.5s; border-width: 5px; border-color: rgba(253,224,71,.95); }
     @keyframes jackAuraEmber { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -420%) scale(.3); } }
     @keyframes jackAuraWave { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.45); } }
+    /* ジャックのストーリーの演出(2026-10-04・ユーザー指示「ぱんぷきん→ジャックや次の爵位で画面演出」)。動かすのは transform / opacity / filter だけ。
+       ステージ(画面の上部)へ出る → 変身・爵位アップでは光る・揺れる・ふくらむ・帯が出る / ジャックがぱんぷきんへ戻るときはしぼむ */
+    @keyframes storyStageIn { 0% { opacity: 0; transform: translateY(-26px) scale(.88); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes storyGrow { 0% { opacity: 0; transform: scale(.5); filter: brightness(2.4); } 40% { opacity: 1; transform: scale(1.3); filter: brightness(1.7); } 70% { transform: scale(.96); filter: brightness(1.15); } 100% { transform: scale(1); filter: brightness(1); } }
+    @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
+    @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
+    @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
+    @keyframes storyShakeB { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
+    [data-story-shake="0"] { animation: storyShakeA .7s ease-in-out both; }
+    [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
+    @media (prefers-reduced-motion: reduce) {
+      [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner] { animation: none !important; }
+    }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
     @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }

@@ -168,7 +168,7 @@ if (jsx.length > 0) {
 // 会話中はイベントBGMを鳴らし、終われば元の画面のBGMへ戻す。
 // 「画面には出ていないのに曲だけ変わる」「イベントが終わっても曲が残る」を防ぐため、
 // 表示条件と同じ判定を使っていること、依存へ入っていることまで見る。
-check('会話中はイベントBGMを鳴らす', has('if (eventBgmScene) return bgmArrangement[eventBgmScene];'));
+check('会話中はイベントBGMを鳴らす', has('if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);'));
 // 行の文字列そのものを見ていたため、戻り値が BGM アレンジ設定から引く形へ変わったときに
 // 探し物(`if (isGameOver) return 'gameOver';`)が見つからず、indexOf が -1 を返して
 // 「イベントのほうが後ろ」と誤判定していた(2026-09-11)。

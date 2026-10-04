@@ -19088,7 +19088,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const speaker=assistantById(line.who);
         const last=step===script.length-1;
         const calls=(event&&event.calls)||{};
-        const cast=storyCastOf(script);
+        // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
+        //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
+        const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト');
+        let stageIdx=-1;
+        for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
+        const stageLine=stageIdx>=0?script[stageIdx]:null;
+        const stageGuest=stageLine?assistantById(stageLine.stage||stageLine.who):null;
+        const stageName=stageLine?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
+        const stageTier=['男爵','子爵','伯爵','公爵','大王'].findIndex(t=>stageName.includes(t))+1;
+        const speakingGuest=isGuestWho(line.who);
+        let bubbleIdx=-1;
+        for(let i=step;i>=0;i--){if(isGuestWho(script[i].who)){bubbleIdx=i;break;}}
+        const bubbleLine=(bubbleIdx>=0&&bubbleIdx>=stageIdx&&stageGuest)?script[bubbleIdx]:null;
+        let assistIdx=-1;
+        for(let i=step;i>=0;i--){if(!isGuestWho(script[i].who)){assistIdx=i;break;}}
+        // ジャックが話しているあいだ、下の箱には直前の助手の台詞を薄く残す(流れが分かる)。まだ助手が話していなければ案内を出す
+        const bottomLine=speakingGuest?(assistIdx>=0?script[assistIdx]:null):line;
+        const bottomSpeaker=bottomLine?assistantById(bottomLine.who):speaker;
+        const fx=line.fx||null;
+        const fxColors={transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
+        const speakText=(l,w)=>{
+          // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
+          const bond=normalizeAssistantBond(assistantBonds[w.id]);
+          return assistantSpeakText(l.t,breederName,assistantBondLevelOf(bond.points),assistantCallStyles[w.id]||null,w.id);
+        };
         // 回想でも最後まで見たら「見たことがある」として扱う。
         // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
         // あとから本編で同じ会話が重ねて流れることもなくなる
@@ -19131,34 +19156,52 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               「どこをタップしても次へ」は紙自身の onClick が受け持ち、
               ボタンは stopPropagation で二重に動かないようにする。
               ついでに紙が指でスクロールできるようになる(pointerEvents:'none' では出来なかった) */}
-          <div onClick={next} className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+          {stageGuest&&(
+            <div data-story-stage className="pointer-events-none" data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 10px)',left:0,right:0,zIndex:3}}>
+              <div className="mx-auto flex w-full max-w-md items-start gap-2 px-3">
+                <div key={`${stageGuest.id}:${stageName}`} data-story-guest={stageGuest.id} data-story-fx={fx||undefined} className="shrink-0 text-center" style={{animation:fx==='shrink'?'storyShrink .9s ease-out both':fx==='transform'||fx==='rankup'?'storyGrow .9s ease-out both':'storyStageIn .45s ease-out both'}}>
+                  <span data-jack-aura={stageTier||undefined} style={{position:'relative',display:'block',width:96,height:96,filter:(stageTier>0&&typeof raidJackAuraGlowFilter==='function')?raidJackAuraGlowFilter(stageTier,.4):undefined}}>
+                    {stageTier>0&&typeof JackAuraLayer==='function'&&<JackAuraLayer tier={stageTier} limit={8}/>}
+                    <span style={{position:'relative',zIndex:1,display:'block'}}><AssistantFace who={stageGuest} size={92} accent={stageGuest.accent} expression={speakingGuest?line.e:'normal'}/></span>
+                  </span>
+                  <span className="block text-[9px] font-black" style={{color:stageGuest.accent}}>{stageName}</span>
+                </div>
+                {bubbleLine&&(
+                  <div data-story-guest-bubble className="min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.45,transition:'opacity .18s',marginTop:6}}>
+                    <span className="block text-[9px] font-black tracking-widest" style={{color:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white">{speakText(bubbleLine,stageGuest)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {fx&&(
+            <div key={`fx${step}`} aria-hidden="true" className="pointer-events-none" style={{position:'absolute',inset:0,zIndex:4}}>
+              <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% 22%, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
+              {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{line.fxText}</div>}
+            </div>
+          )}
+          <div onClick={next} data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             <div className="mb-3 flex items-end justify-center gap-3">
               {cast.map(who=>{
-                const talking=who.id===line.who;
+                const talking=who.id===(bottomLine&&bottomLine.who);
                 return(
                   <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
                     <AssistantFace who={who} size={talking?84:64} accent={who.accent} expression={talking?line.e:'normal'}/>
-                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{talking&&line.name?line.name:who.name}</span>
+                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{talking&&bottomLine&&bottomLine.name?bottomLine.name:who.name}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
-              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{line.name||speaker.name}</span>
+            {bottomLine?<div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.5:1,transition:'opacity .18s'}}>
+              <span className="block text-[9px] font-black tracking-widest" style={{color:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{(()=>{
-                // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。
-                //   bond.callStyle を見ていたので、いつも絆Lvの既定の呼び方になっていた
-                //   (2026-09-11・ユーザー指摘「ここは現在設定されてる呼び方にならない？」)。
-                //   絆Lvも呼び方も助手ごとに違うので、両方とも話している助手のぶんを引く
-                const bond=normalizeAssistantBond(assistantBonds[speaker.id]);
-                return assistantSpeakText(line.t,breederName,assistantBondLevelOf(bond.points),assistantCallStyles[speaker.id]||null,speaker.id);
-              })()}</span>
-            </div>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{speakText(bottomLine,bottomSpeaker)}</span>
+            </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}
               {Object.keys(calls).length>0&&`　／　${cast.filter(who=>calls[who.id]).map(who=>`${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`}
