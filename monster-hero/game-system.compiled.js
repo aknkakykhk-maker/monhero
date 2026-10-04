@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b310d984ce22437f
+// source-sha256: 479fe0a0f8503c55
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 00:55";
+const BUILD_DATE = "2026-10-05 01:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87251,7 +87251,7 @@ function MonsterHeroGame() {
         "data-story-shake": fx === 'transform' || fx === 'rankup' ? step % 2 : undefined,
         style: {
           position: 'absolute',
-          top: 'calc(env(safe-area-inset-top) + 10px)',
+          top: 'calc(env(safe-area-inset-top) + 13vh)',
           left: 0,
           right: 0,
           zIndex: 3
@@ -87282,7 +87282,10 @@ function MonsterHeroGame() {
         style: {
           position: 'relative',
           zIndex: 1,
-          display: 'block'
+          display: 'block',
+          opacity: speakingGuest ? 1 : .55,
+          filter: speakingGuest ? `drop-shadow(0 0 10px ${stageGuest.accent})` : 'brightness(.7)',
+          transition: 'opacity .2s, filter .2s'
         }
       }, React.createElement(AssistantFace, {
         who: stageGuest,
@@ -87290,23 +87293,41 @@ function MonsterHeroGame() {
         accent: stageGuest.accent,
         expression: speakingGuest ? line.e : 'normal'
       }))), React.createElement("span", {
-        className: "block text-[9px] font-black",
+        className: "mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
-          color: stageGuest.accent
+          color: speakingGuest ? '#0f172a' : stageGuest.accent,
+          background: speakingGuest ? stageGuest.accent : 'rgba(15,23,42,.8)',
+          transition: 'background .2s, color .2s'
         }
       }, stageName)), bubbleLine && React.createElement("div", {
+        key: `b${bubbleIdx}`,
         "data-story-guest-bubble": true,
-        className: "min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
+        "data-story-pop": speakingGuest ? '1' : undefined,
+        className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
         style: {
           borderColor: stageGuest.accent,
-          opacity: speakingGuest ? 1 : .45,
-          transition: 'opacity .18s',
-          marginTop: 6
+          opacity: speakingGuest ? 1 : .4,
+          boxShadow: speakingGuest ? `0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88` : 'none',
+          marginTop: 8,
+          animation: speakingGuest ? 'storyPop .3s ease-out both' : undefined
         }
       }, React.createElement("span", {
-        className: "block text-[9px] font-black tracking-widest",
+        "aria-hidden": "true",
         style: {
-          color: stageGuest.accent
+          position: 'absolute',
+          left: -9,
+          top: 22,
+          width: 0,
+          height: 0,
+          borderTop: '8px solid transparent',
+          borderBottom: '8px solid transparent',
+          borderRight: `9px solid ${stageGuest.accent}`
+        }
+      }), React.createElement("span", {
+        className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
+        style: {
+          color: '#0f172a',
+          background: stageGuest.accent
         }
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white"
@@ -87354,7 +87375,7 @@ function MonsterHeroGame() {
       }, eventReplay.live ? '' : '回想・', event?.title || ''), React.createElement("div", {
         className: "mb-3 flex items-end justify-center gap-3"
       }, cast.map(who => {
-        const talking = who.id === (bottomLine && bottomLine.who);
+        const talking = !speakingGuest && who.id === line.who;
         return React.createElement("div", {
           key: who.id,
           className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
@@ -87362,28 +87383,39 @@ function MonsterHeroGame() {
             transform: talking ? 'scale(1)' : 'scale(.86)',
             transition: 'opacity .18s, transform .18s'
           }
+        }, React.createElement("span", {
+          style: {
+            display: 'block',
+            filter: talking ? `drop-shadow(0 0 10px ${who.accent})` : 'none',
+            transition: 'filter .2s'
+          }
         }, React.createElement(AssistantFace, {
           who: who,
           size: talking ? 84 : 64,
           accent: who.accent,
           expression: talking ? line.e : 'normal'
-        }), React.createElement("span", {
+        })), React.createElement("span", {
           className: "text-[9px] font-black",
           style: {
             color: talking ? who.accent : '#64748b'
           }
-        }, talking && bottomLine && bottomLine.name ? bottomLine.name : who.name));
+        }, talking && line.name ? line.name : who.name));
       })), bottomLine ? React.createElement("div", {
+        key: speakingGuest ? 'keep' : `x${step}`,
+        "data-story-pop": speakingGuest ? undefined : '1',
         className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
         style: {
           borderColor: bottomSpeaker.accent,
-          opacity: speakingGuest ? .5 : 1,
-          transition: 'opacity .18s'
+          opacity: speakingGuest ? .4 : 1,
+          boxShadow: speakingGuest ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
+          transition: 'opacity .18s',
+          animation: speakingGuest ? undefined : 'storyPop .28s ease-out both'
         }
       }, React.createElement("span", {
-        className: "block text-[9px] font-black tracking-widest",
+        className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
-          color: bottomSpeaker.accent
+          color: '#0f172a',
+          background: bottomSpeaker.accent
         }
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
@@ -92688,6 +92720,7 @@ const createAnimationStyle = () => {
     /* ジャックのストーリーの演出(2026-10-04・ユーザー指示「ぱんぷきん→ジャックや次の爵位で画面演出」)。動かすのは transform / opacity / filter だけ。
        ステージ(画面の上部)へ出る → 変身・爵位アップでは光る・揺れる・ふくらむ・帯が出る / ジャックがぱんぷきんへ戻るときはしぼむ */
     @keyframes storyStageIn { 0% { opacity: 0; transform: translateY(-26px) scale(.88); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyPop { 0% { opacity: .4; transform: translateY(6px) scale(.97); } 100% { opacity: 1; transform: none; } }
     @keyframes storyFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes storyGrow { 0% { opacity: 0; transform: scale(.5); filter: brightness(2.4); } 40% { opacity: 1; transform: scale(1.3); filter: brightness(1.7); } 70% { transform: scale(.96); filter: brightness(1.15); } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
@@ -92697,7 +92730,7 @@ const createAnimationStyle = () => {
     [data-story-shake="0"] { animation: storyShakeA .7s ease-in-out both; }
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
-      [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner] { animation: none !important; }
+      [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
