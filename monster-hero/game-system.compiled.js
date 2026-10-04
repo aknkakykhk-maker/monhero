@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87cc8fb68a34130d
+// source-sha256: 87e6f8777df6db98
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 14:33";
+const BUILD_DATE = "2026-10-04 15:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35539,6 +35539,7 @@ const RAID_JACK_TURNS = 10;
 const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_EXTRA_COST_BEAT_P = 100;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
+const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
 const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
 const RAID_JACK_SKILL_NAMES = Object.freeze({
@@ -47923,17 +47924,37 @@ const HomeRaidJack = ({
     style: {
       position: 'relative',
       display: 'block',
-      width: '100%'
+      width: '100%',
+      aspectRatio: '1024 / 640'
     }
   }, React.createElement("img", {
     className: "mh-home-raid-jack-img",
-    src: pose ? JACK_POSE_IMG : JACK_IMG,
+    src: JACK_IMG,
     alt: "",
     draggable: false,
     style: {
-      display: 'block',
+      position: 'absolute',
+      left: `${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`,
+      bottom: 0,
+      width: `${RAID_JACK_NORMAL_ART_SCALE * 100}%`,
+      height: 'auto',
+      opacity: pose ? 0 : 1,
+      filter: 'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)',
+      pointerEvents: 'none'
+    }
+  }), React.createElement("img", {
+    className: "mh-home-raid-jack-img",
+    src: JACK_POSE_IMG,
+    alt: "",
+    draggable: false,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      bottom: '-6%',
       width: '100%',
       height: 'auto',
+      opacity: pose ? 1 : 0,
       filter: 'drop-shadow(0 6px 10px #000a) drop-shadow(0 0 12px #f9731699)',
       pointerEvents: 'none'
     }
@@ -50122,6 +50143,17 @@ function BattleScreen({
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen' || enemyIsMoo && !!enemyAttackAnim) ? enemyAttackFx.skill : null;
   const emSet = enemyMotion ? TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null : null;
   const emSpec = emSet && enemySkillNow ? emSet.skills[enemySkillNow] || null : null;
+  const JACK_NORMAL_BATTLE_STYLE = {
+    width: `${RAID_JACK_NORMAL_ART_SCALE * 100}%`,
+    height: `${RAID_JACK_NORMAL_ART_SCALE * 100}%`,
+    marginLeft: `${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`,
+    marginTop: `${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`
+  };
+  const JACK_POSE_BATTLE_STYLE = {
+    width: '100%',
+    height: '100%',
+    marginTop: '-6%'
+  };
   const enemyBossImgSrc = enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? {
     '--em-e': JSON.stringify(emSpec[2])
@@ -50800,6 +50832,7 @@ function BattleScreen({
     style: {
       width: '100%',
       height: '100%',
+      ...(enemy?.id === 'Jack' ? enemyBossImgSrc !== enemy?.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE : null),
       animation: liteBattleView || emSpec || enemyHurtNow || emSet && !enemyAttackAnim ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
       imageRendering: 'auto'
     },
@@ -59135,11 +59168,18 @@ const RaidJackPrepScreen = ({
     onClick: onClick
   }, attrs, {
     className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
-  }), React.createElement("img", {
-    src: mon.faceIconUrl || mon.iconUrl || mon.imgUrl,
-    alt: "",
-    className: "h-12 w-12 rounded-full object-cover"
-  }), React.createElement("span", {
+  }), (() => {
+    const face = friendsFaceIconOf(mon.baseId || mon.id);
+    return face ? React.createElement(BreederIcon, {
+      src: face.src,
+      id: face.id,
+      className: "h-12 w-12 bg-slate-800"
+    }) : React.createElement("img", {
+      src: mon.faceIconUrl || mon.iconUrl || mon.imgUrl,
+      alt: "",
+      className: "h-12 w-12 rounded-full bg-slate-800 object-contain"
+    });
+  })(), React.createElement("span", {
     className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
   }, mon.name));
   return React.createElement("div", {
@@ -91099,9 +91139,10 @@ const createAnimationStyle = () => {
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
-    /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠だと画面を覆うので、ボスの枠だけ小さくする。
+    /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
+       枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
-    [data-moo-stage="true"][data-enemy-motion="jack"] { width: min(70vw, 360px) !important; height: min(70vw, 360px) !important; }
+    [data-moo-stage="true"][data-enemy-motion="jack"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

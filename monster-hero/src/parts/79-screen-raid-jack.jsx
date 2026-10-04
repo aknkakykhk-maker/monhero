@@ -214,7 +214,13 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const tile = (mon, on, onClick, attrs) => (
     <button type="button" key={keyOf(mon)} onClick={onClick} {...attrs}
       className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
-      <img src={mon.faceIconUrl || mon.iconUrl || mon.imgUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+      {(() => {
+        // 本番のプロフィールのアイコンと同じ見え方(拡大・位置の調整つき)にそろえる
+        const face = friendsFaceIconOf(mon.baseId || mon.id);
+        return face
+          ? <BreederIcon src={face.src} id={face.id} className="h-12 w-12 bg-slate-800" />
+          : <img src={mon.faceIconUrl || mon.iconUrl || mon.imgUrl} alt="" className="h-12 w-12 rounded-full bg-slate-800 object-contain" />;
+      })()}
       <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
     </button>
   );
