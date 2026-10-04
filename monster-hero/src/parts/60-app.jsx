@@ -13379,6 +13379,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (!(await raidJackSaveState(repaired.state))) return 0;
         state = repaired.state;
       }
+      // 続けて、その印のせいで作られた「倒していない段階の初討伐報酬」を取り下げる(もう受け取ったものは残す)。1回だけ
+      if (!state.giftsChecked) {
+        const savedGiftsNow = await storeGet('mh_gifts', [], false);
+        const giftsNow = Array.isArray(savedGiftsNow) ? savedGiftsNow : [];
+        const revoked = await raidJackRevokeUnearned(state, giftsNow, breederId, RAID_JACK_EVENT.id);
+        if (revoked.ok) {
+          const savedRevoke = await saveStoredValuesOrRollback([
+            { key:'mh_gifts', before:giftsNow, next:revoked.gifts },
+            { key:RAID_JACK_STORAGE_KEY, before:state, next:revoked.state },
+          ], storeGet, storeSet);
+          if (!savedRevoke) return 0;
+          state = revoked.state;
+          if (revoked.removed > 0) setGifts(revoked.gifts);
+        }
+      }
       const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
       if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
       const savedGifts = await storeGet('mh_gifts', [], false);

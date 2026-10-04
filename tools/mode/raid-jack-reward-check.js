@@ -49,7 +49,7 @@ const make = () => {
   };
   vm.createContext(ctx);
   vm.runInContext(`${defs}\n${api}
-    this.o={RAID_JACK_EVENT,RAID_JACK_REWARDS,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,raidJackRewardParts,raidJackRewardText,raidJackRewardGiftItems,raidJackClaimId,raidJackNoneId,raidJackRewardTitle,raidJackCollectDueRewards,raidJackRepairState,raidJackDefaultState,raidJackNormalizeState};`, ctx);
+    this.o={RAID_JACK_EVENT,RAID_JACK_REWARDS,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,raidJackRewardParts,raidJackRewardText,raidJackRewardGiftItems,raidJackClaimId,raidJackNoneId,raidJackRewardTitle,raidJackCollectDueRewards,raidJackRepairState,raidJackRevokeUnearned,raidJackDefaultState,raidJackNormalizeState};`, ctx);
   return { ctx, o: ctx.o, live };
 };
 
@@ -157,6 +157,35 @@ const make = () => {
     check('直し済み(repaired)なら、もう走らない(本番で倒した印を消さない)', r.changed === false && r.state.b.defeated.length === 1);
     const claimedKept = await (async () => { const mm = make(); mm.live.self = { a: {}, bTotal: 0 }; const rr = await mm.o.raidJackRepairState(mm.o.raidJackNormalizeState({ a: {}, b: { defeated: ['b1'] }, claimed: ['clear_b1', 'part_b'] }), BID, 'raid_jack_2026'); return rr.state.claimed.join(); })();
     check('修復しても claimed はそのまま', claimedKept === 'clear_b1,part_b', claimedKept);
+  }
+
+  // ⑥ 倒していない段階の初討伐報酬の取り下げ
+  {
+    const G = (id, claimedAt = null) => ({ id: `raid_jack_2026_${id}`, title: 't', rewards: [{ type: 'diamond', amount: 1 }], claimedAt });
+    const st = (m, claimed) => m.o.raidJackNormalizeState({ a: {}, b: { defeated: [] }, claimed });
+    let m = make(); m.live.defeats = [];
+    let r = await m.o.raidJackRevokeUnearned(st(m, ['clear_b1', 'clear_b2', 'part_b', 'clear_a1']), [G('clear_b1'), G('clear_b2'), G('part_b'), G('other')], BID, 'raid_jack_2026');
+    check('倒していない段階の、まだ受け取っていない初討伐ギフトを取り下げ、印も外す(参加賞・Aの印・ほかのギフトは残す)',
+      r.ok && r.removed === 2 && r.gifts.map((g) => g.id).join() === 'raid_jack_2026_part_b,raid_jack_2026_other' && r.state.claimed.join() === 'part_b,clear_a1' && r.state.giftsChecked === true, r.gifts.map((g) => g.id).join() + ' / ' + r.state.claimed.join());
+    m = make(); m.live.defeats = ['b2'];
+    r = await m.o.raidJackRevokeUnearned(st(m, ['clear_b1', 'clear_b2']), [G('clear_b1'), G('clear_b2')], BID, 'raid_jack_2026');
+    check('本番で本当に倒した難易度(サーバーに記録あり)の報酬は取り下げない', r.removed === 1 && r.state.claimed.join() === 'clear_b2' && r.gifts.map((g) => g.id).join() === 'raid_jack_2026_clear_b2');
+    m = make(); m.live.defeats = [];
+    r = await m.o.raidJackRevokeUnearned(st(m, ['clear_b1']), [G('clear_b1', '2026-10-05T00:00:00Z')], BID, 'raid_jack_2026');
+    check('もう受け取ったギフトは戻せないので、ギフトも印も残す', r.removed === 0 && r.state.claimed.join() === 'clear_b1' && r.gifts.length === 1);
+    m = make(); m.live.defeats = [];
+    r = await m.o.raidJackRevokeUnearned(st(m, ['clear_b3']), [], BID, 'raid_jack_2026');
+    check('ギフトが見つからなければ、印だけ外す', r.removed === 0 && r.state.claimed.length === 0 && r.changed === true);
+    m = make(); m.live.offline = true;
+    r = await m.o.raidJackRevokeUnearned(st(m, ['clear_b1']), [G('clear_b1')], BID, 'raid_jack_2026');
+    check('通信できないときは何も変えない(giftsChecked も立てない)', r.ok === false && r.gifts.length === 1 && r.state.giftsChecked === false && r.state.claimed.join() === 'clear_b1');
+    m = make(); m.live.defeats = [];
+    r = await m.o.raidJackRevokeUnearned(m.o.raidJackNormalizeState({ a: {}, b: { defeated: [] }, claimed: ['clear_b1'], giftsChecked: true }), [G('clear_b1')], BID, 'raid_jack_2026');
+    check('取り下げ済み(giftsChecked)なら、もう走らない', r.changed === false && r.gifts.length === 1 && r.state.claimed.join() === 'clear_b1');
+    m = make(); m.live.defeats = [];
+    const pend = m.o.raidJackNormalizeState({ a: {}, b: { defeated: ['b1'] }, claimed: ['clear_b1'], pending: [{ hitId: 'pending-aaaa02', kind: 'b', tier: 1, damage: 5, defeated: true }] });
+    r = await m.o.raidJackRevokeUnearned(pend, [G('clear_b1')], BID, 'raid_jack_2026');
+    check('まだ送れていない再送待ちの「倒した」は、本当に倒した扱いで取り下げない', r.removed === 0 && r.state.claimed.join() === 'clear_b1');
   }
 
   // ④ 魂格の結晶(本物の関数を動かす)

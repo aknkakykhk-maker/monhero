@@ -248,3 +248,36 @@ const raidJackRepairState = async (state, breederId, eventId) => {
   next.repaired = true;
   return { state: next, changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before };
 };
+
+// ---- 倒していない段階の初討伐報酬の取り下げ(2026-10-05) ----
+// 上の修復で「倒した」印は直せるが、それまでに印が使われて作られたグランドスラムの初討伐報酬(ギフト・受け取り済みの印 clear_bN)が残る。
+// サーバーに本番で倒した記録(defeated=true)が無い難易度のぶんだけ、次のように直す(1回だけ・giftsChecked)。
+//   ・ギフトが「まだ受け取られていない」→ ギフトを取り下げ、受け取り済みの印も外す(本当に倒したときに、改めて届く)
+//   ・ギフトを「もう受け取った」→ 中身は戻せないので、ギフトも印もそのまま残す(あとで本当に倒しても二重には届かない)
+//   ・ギフトが見つからない → 印だけ外す
+//   ・本番で本当に倒した難易度・ほかの報酬(A・順位・参加賞)・ほかのギフトには触れない。通信できないときは何も変えない
+// gifts は mh_gifts の配列。返り値 { ok, state, gifts, changed, removed }(removed=取り下げたギフトの数)
+const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (norm.giftsChecked) return { ok: true, state: norm, gifts: list, changed: false, removed: 0 };
+  const id = raidJackSafeId(breederId);
+  const mine = id ? await sbFetchRaidJackMyDefeats(id, eventId) : null;
+  if (!mine) return { ok: false, state: norm, gifts: list, changed: false, removed: 0 };
+  const earned = new Set(mine);
+  norm.pending.filter((p) => p.defeated).forEach((p) => earned.add(`${p.kind}${p.tier}`));
+  let nextGifts = list;
+  let nextClaimed = norm.claimed;
+  let removed = 0;
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    const claimId = raidJackClaimId('clear_b', i);
+    if (earned.has(tier.id) || !nextClaimed.includes(claimId)) return;
+    const giftId = `${eventId}_${claimId}`;
+    const gift = nextGifts.find((g) => g && g.id === giftId);
+    if (gift && gift.claimedAt) return;   // もう受け取った: 戻せないので残す
+    if (gift) { nextGifts = nextGifts.filter((g) => g !== gift); removed += 1; }
+    nextClaimed = nextClaimed.filter((v) => v !== claimId);
+  });
+  const next = raidJackNormalizeState({ ...norm, claimed: nextClaimed, giftsChecked: true });
+  return { ok: true, state: next, gifts: nextGifts, changed: removed > 0 || nextClaimed.length !== norm.claimed.length, removed };
+};

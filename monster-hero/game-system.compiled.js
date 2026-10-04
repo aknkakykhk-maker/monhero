@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 08aa538735445d80
+// source-sha256: e8f81f476b3932cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 07:23";
+const BUILD_DATE = "2026-10-05 07:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35824,7 +35824,8 @@ const raidJackDefaultState = () => ({
   },
   claimed: [],
   pending: [],
-  repaired: false
+  repaired: false,
+  giftsChecked: false
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -35859,7 +35860,8 @@ const raidJackNormalizeState = raw => {
     b: raidJackNormalizeSide(src.b, true),
     claimed: Array.isArray(src.claimed) ? src.claimed.filter(v => typeof v === 'string').slice(0, 64) : [],
     pending: raidJackNormalizePending(src.pending),
-    repaired: src.repaired === true
+    repaired: src.repaired === true,
+    giftsChecked: src.giftsChecked === true
   };
 };
 const raidJackRemaining = (side, nowMs) => {
@@ -36485,6 +36487,55 @@ const raidJackRepairState = async (state, breederId, eventId) => {
   return {
     state: next,
     changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before
+  };
+};
+const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (norm.giftsChecked) return {
+    ok: true,
+    state: norm,
+    gifts: list,
+    changed: false,
+    removed: 0
+  };
+  const id = raidJackSafeId(breederId);
+  const mine = id ? await sbFetchRaidJackMyDefeats(id, eventId) : null;
+  if (!mine) return {
+    ok: false,
+    state: norm,
+    gifts: list,
+    changed: false,
+    removed: 0
+  };
+  const earned = new Set(mine);
+  norm.pending.filter(p => p.defeated).forEach(p => earned.add(`${p.kind}${p.tier}`));
+  let nextGifts = list;
+  let nextClaimed = norm.claimed;
+  let removed = 0;
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    const claimId = raidJackClaimId('clear_b', i);
+    if (earned.has(tier.id) || !nextClaimed.includes(claimId)) return;
+    const giftId = `${eventId}_${claimId}`;
+    const gift = nextGifts.find(g => g && g.id === giftId);
+    if (gift && gift.claimedAt) return;
+    if (gift) {
+      nextGifts = nextGifts.filter(g => g !== gift);
+      removed += 1;
+    }
+    nextClaimed = nextClaimed.filter(v => v !== claimId);
+  });
+  const next = raidJackNormalizeState({
+    ...norm,
+    claimed: nextClaimed,
+    giftsChecked: true
+  });
+  return {
+    ok: true,
+    state: next,
+    gifts: nextGifts,
+    changed: removed > 0 || nextClaimed.length !== norm.claimed.length,
+    removed
   };
 };
 const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
@@ -75467,6 +75518,25 @@ function MonsterHeroGame() {
       if (repaired.state.repaired && !state.repaired) {
         if (!(await raidJackSaveState(repaired.state))) return 0;
         state = repaired.state;
+      }
+      if (!state.giftsChecked) {
+        const savedGiftsNow = await storeGet('mh_gifts', [], false);
+        const giftsNow = Array.isArray(savedGiftsNow) ? savedGiftsNow : [];
+        const revoked = await raidJackRevokeUnearned(state, giftsNow, breederId, RAID_JACK_EVENT.id);
+        if (revoked.ok) {
+          const savedRevoke = await saveStoredValuesOrRollback([{
+            key: 'mh_gifts',
+            before: giftsNow,
+            next: revoked.gifts
+          }, {
+            key: RAID_JACK_STORAGE_KEY,
+            before: state,
+            next: revoked.state
+          }], storeGet, storeSet);
+          if (!savedRevoke) return 0;
+          state = revoked.state;
+          if (revoked.removed > 0) setGifts(revoked.gifts);
+        }
       }
       const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
       if (!found.ok || found.due.length === 0 && found.noneIds.length === 0) return 0;
