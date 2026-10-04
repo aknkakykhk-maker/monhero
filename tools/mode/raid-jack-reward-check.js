@@ -19,7 +19,7 @@ const BID = 'breeder-aaaa1111';
 
 const make = () => {
   const store = {};
-  const live = { totals: { a: {}, b: {} }, self: { a: {}, bTotal: 0 }, tops: {} };
+  const live = { totals: { a: {}, b: {} }, self: { a: {}, bTotal: 0 }, tops: {}, defeats: [], offline: false };
   const url2rows = (url) => {
     const u = decodeURIComponent(url);
     if (/raid_jack_tier_totals/.test(u)) {
@@ -32,6 +32,7 @@ const make = () => {
       if (live.self.bTotal > 0) rows.push({ kind: 'b', tier: 1, total_damage: live.self.bTotal });
       return rows;
     }
+    if (/raid_jack_hits\?.*defeated=eq\.true/.test(u)) return (live.defeats || []).map((x) => ({ kind: x[0], tier: Number(x.slice(1)) }));
     const mt = /raid_jack_contributions\?.*kind=eq\.a&tier=eq\.(\d)/.exec(u);
     if (mt) return (live.tops['a' + mt[1]] || []).map((b) => ({ breeder_id: b, total_damage: 1 }));
     if (/raid_jack_b_ranking/.test(u)) return (live.tops.b || []).map((b) => ({ breeder_id: b, total_damage: 1 }));
@@ -44,11 +45,11 @@ const make = () => {
     _isMissingTableError: () => false,
     SOUL_CRYSTAL_ITEM_ID: 'soul_crystal', RAINBOW_TRANSCEND_FRUIT_ITEM_ID: 'transcend_fruit_rainbow', HERO_PROOF_ITEM_ID: 'hero_proof',
     storeGet: async (k, d) => (k in store ? store[k] : d), storeSet: async (k, v) => { store[k] = v; return true; },
-    fetch: async (url) => ({ ok: true, status: 200, text: async () => JSON.stringify(url2rows(url)), headers: { get: () => null } }),
+    fetch: async (url) => live.offline ? ({ ok: false, status: 500, text: async () => '', headers: { get: () => null } }) : ({ ok: true, status: 200, text: async () => JSON.stringify(url2rows(url)), headers: { get: () => null } }),
   };
   vm.createContext(ctx);
   vm.runInContext(`${defs}\n${api}
-    this.o={RAID_JACK_EVENT,RAID_JACK_REWARDS,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,raidJackRewardParts,raidJackRewardText,raidJackRewardGiftItems,raidJackClaimId,raidJackNoneId,raidJackRewardTitle,raidJackCollectDueRewards,raidJackDefaultState,raidJackNormalizeState};`, ctx);
+    this.o={RAID_JACK_EVENT,RAID_JACK_REWARDS,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,raidJackRewardParts,raidJackRewardText,raidJackRewardGiftItems,raidJackClaimId,raidJackNoneId,raidJackRewardTitle,raidJackCollectDueRewards,raidJackRepairState,raidJackDefaultState,raidJackNormalizeState};`, ctx);
   return { ctx, o: ctx.o, live };
 };
 
@@ -132,6 +133,31 @@ const make = () => {
   check('B最終順位に入っていなければ印だけ', ids(r) === 'part_b' && r.noneIds.join() === 'final_b_none');
   r = await run({ now: after, selfB: 0, tops: { b: [BID] } });
   check('Bに与えていなければ最終順位の報酬は出ない', ids(r) === '');
+
+  // ⑤ 端末の「倒した」印の修復(デバッグで付いた印を、サーバーの本番の記録と突き合わせる)
+  {
+    const polluted = (m) => m.o.raidJackNormalizeState({ a: { defeated: ['a1'] }, b: { defeated: ['b1', 'b2', 'b3'], total: 5000 }, claimed: [] });
+    let m = make();
+    m.live.self = { a: {}, bTotal: 0 };
+    let r = await m.o.raidJackRepairState(polluted(m), BID, 'raid_jack_2026');
+    check('サーバーに本番の「倒した」が無ければ、デバッグで付いた印(a1・b1〜b3)を全部外し、累計も0へ戻す', JSON.stringify(r.state.a.defeated) === '[]' && JSON.stringify(r.state.b.defeated) === '[]' && r.state.b.total === 0 && r.state.repaired === true && r.changed === true, JSON.stringify(r.state));
+    m = make(); m.live.defeats = ['b1', 'a1']; m.live.self = { a: { 1: 10 }, bTotal: 777 };
+    r = await m.o.raidJackRepairState(polluted(m), BID, 'raid_jack_2026');
+    check('本番で本当に倒した段階(サーバーに記録あり)は残し、累計はサーバーの値にそろえる', JSON.stringify(r.state.b.defeated) === '["b1"]' && JSON.stringify(r.state.a.defeated) === '["a1"]' && r.state.b.total === 777, JSON.stringify(r.state.b));
+    m = make(); m.live.self = { a: {}, bTotal: 0 };
+    const withPending = m.o.raidJackNormalizeState({ a: {}, b: { defeated: ['b2'], total: 0 }, claimed: [], pending: [{ hitId: 'pending-aaaa01', kind: 'b', tier: 2, damage: 500, defeated: true }] });
+    r = await m.o.raidJackRepairState(withPending, BID, 'raid_jack_2026');
+    check('まだ送れていない再送待ちの「倒した」は、残す(累計にも足す)', JSON.stringify(r.state.b.defeated) === '["b2"]' && r.state.b.total === 500, JSON.stringify(r.state.b));
+    m = make(); m.live.offline = true;
+    r = await m.o.raidJackRepairState(polluted(m), BID, 'raid_jack_2026');
+    check('通信できないときは何も変えない(直しは次の機会へ・repaired も立てない)', r.changed === false && r.state.repaired === false && r.state.b.defeated.length === 3);
+    m = make(); m.live.self = { a: {}, bTotal: 0 };
+    const done = m.o.raidJackNormalizeState({ a: {}, b: { defeated: ['b1'], total: 9 }, claimed: [], repaired: true });
+    r = await m.o.raidJackRepairState(done, BID, 'raid_jack_2026');
+    check('直し済み(repaired)なら、もう走らない(本番で倒した印を消さない)', r.changed === false && r.state.b.defeated.length === 1);
+    const claimedKept = await (async () => { const mm = make(); mm.live.self = { a: {}, bTotal: 0 }; const rr = await mm.o.raidJackRepairState(mm.o.raidJackNormalizeState({ a: {}, b: { defeated: ['b1'] }, claimed: ['clear_b1', 'part_b'] }), BID, 'raid_jack_2026'); return rr.state.claimed.join(); })();
+    check('修復しても claimed はそのまま', claimedKept === 'clear_b1,part_b', claimedKept);
+  }
 
   // ④ 魂格の結晶(本物の関数を動かす)
   const { loadDyeModule } = require('../harness');

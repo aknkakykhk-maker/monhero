@@ -217,3 +217,34 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   }
   return { ok: true, due, noneIds };
 };
+
+// ---- 端末の「倒した」印の修復(2026-10-05) ----
+// デバッグの強制表示(別のイベントID)で戦った結果が、本番の端末記録(mh_raid_jack_v1)の「倒した段階」「累計」にも書かれていた。
+// グランドスラムが倒していないのに「討伐済み」になり、初討伐の報酬の判定にも使われてしまう(ユーザー指摘)。
+// 端末の印を、サーバーの本番のイベントの記録(自分の defeated=true の行)と突き合わせ、裏付けのない印を外す。
+//   ・送れていない再送待ち(pending)の中の「倒した」は、まだ送れていないだけなので残す
+//   ・通信できない・読めないときは何も変えない(直しは次の機会へ)。直せたら repaired を立てて、以後は走らない
+//   ・受け取り済みの印(claimed)・ギフトには触らない
+const sbFetchRaidJackMyDefeats = async (breederId, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_hits?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&defeated=eq.true&select=kind,tier&limit=200`));
+  return rows ? rows.filter((r) => (r.kind === 'a' || r.kind === 'b') && Number.isFinite(Number(r.tier))).map((r) => `${r.kind}${Number(r.tier)}`) : null;
+};
+const raidJackRepairState = async (state, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  if (norm.repaired) return { state: norm, changed: false };
+  const id = raidJackSafeId(breederId);
+  if (!id) return { state: norm, changed: false };
+  const [mine, self] = await Promise.all([sbFetchRaidJackMyDefeats(id, eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!mine || !self) return { state: norm, changed: false };
+  const valid = new Set(mine);
+  norm.pending.filter((p) => p.defeated).forEach((p) => valid.add(`${p.kind}${p.tier}`));
+  const next = raidJackNormalizeState(norm);
+  const before = JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]);
+  next.a.defeated = next.a.defeated.filter((v) => valid.has(v));
+  next.b.defeated = next.b.defeated.filter((v) => valid.has(v));
+  next.b.total = (Number(self.bTotal) || 0) + norm.pending.filter((p) => p.kind === 'b').reduce((sum, p) => sum + p.damage, 0);
+  next.repaired = true;
+  return { state: next, changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before };
+};

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4c925c7b668d286c
+// source-sha256: 08aa538735445d80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 07:17";
+const BUILD_DATE = "2026-10-05 07:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35823,7 +35823,8 @@ const raidJackDefaultState = () => ({
     total: 0
   },
   claimed: [],
-  pending: []
+  pending: [],
+  repaired: false
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -35857,7 +35858,8 @@ const raidJackNormalizeState = raw => {
     a: raidJackNormalizeSide(src.a, false),
     b: raidJackNormalizeSide(src.b, true),
     claimed: Array.isArray(src.claimed) ? src.claimed.filter(v => typeof v === 'string').slice(0, 64) : [],
-    pending: raidJackNormalizePending(src.pending)
+    pending: raidJackNormalizePending(src.pending),
+    repaired: src.repaired === true
   };
 };
 const raidJackRemaining = (side, nowMs) => {
@@ -36448,6 +36450,41 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     ok: true,
     due,
     noneIds
+  };
+};
+const sbFetchRaidJackMyDefeats = async (breederId, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_hits?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&defeated=eq.true&select=kind,tier&limit=200`));
+  return rows ? rows.filter(r => (r.kind === 'a' || r.kind === 'b') && Number.isFinite(Number(r.tier))).map(r => `${r.kind}${Number(r.tier)}`) : null;
+};
+const raidJackRepairState = async (state, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  if (norm.repaired) return {
+    state: norm,
+    changed: false
+  };
+  const id = raidJackSafeId(breederId);
+  if (!id) return {
+    state: norm,
+    changed: false
+  };
+  const [mine, self] = await Promise.all([sbFetchRaidJackMyDefeats(id, eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!mine || !self) return {
+    state: norm,
+    changed: false
+  };
+  const valid = new Set(mine);
+  norm.pending.filter(p => p.defeated).forEach(p => valid.add(`${p.kind}${p.tier}`));
+  const next = raidJackNormalizeState(norm);
+  const before = JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]);
+  next.a.defeated = next.a.defeated.filter(v => valid.has(v));
+  next.b.defeated = next.b.defeated.filter(v => valid.has(v));
+  next.b.total = (Number(self.bTotal) || 0) + norm.pending.filter(p => p.kind === 'b').reduce((sum, p) => sum + p.damage, 0);
+  next.repaired = true;
+  return {
+    state: next,
+    changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before
   };
 };
 const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
@@ -60241,10 +60278,8 @@ const RaidJackScreen = ({
       if (!alive) return;
       const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
       if (!alive) return;
-      if (granted > 0) {
-        loaded = await raidJackLoadState();
-        setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
-      }
+      loaded = await raidJackLoadState();
+      if (granted > 0) setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
@@ -75374,18 +75409,24 @@ function MonsterHeroGame() {
     let outcome = 'error';
     let next = raidJackDefaultState();
     let opened = false;
+    const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
     try {
-      next = await raidJackLoadState();
-      const side = next[run.kind];
-      const before = raidJackUnlockedCount(run.kind, side.defeated);
-      if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
-      if (run.kind === 'b') side.total = (side.total || 0) + damage;
-      opened = raidJackUnlockedCount(run.kind, side.defeated) > before;
-      const breederId = await ensureBreederId();
-      const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
-      next = sent.state;
-      outcome = sent.outcome;
-      await raidJackSaveState(next);
+      if (isDebugRun) {
+        const breederId = await ensureBreederId();
+        outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
+      } else {
+        next = await raidJackLoadState();
+        const side = next[run.kind];
+        const before = raidJackUnlockedCount(run.kind, side.defeated);
+        if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+        if (run.kind === 'b') side.total = (side.total || 0) + damage;
+        opened = raidJackUnlockedCount(run.kind, side.defeated) > before;
+        const breederId = await ensureBreederId();
+        const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
+        next = sent.state;
+        outcome = sent.outcome;
+        await raidJackSaveState(next);
+      }
     } catch (error) {
       outcome = 'error';
     }
@@ -75421,7 +75462,12 @@ function MonsterHeroGame() {
     try {
       const breederId = await ensureBreederId();
       if (!breederId) return 0;
-      const state = await raidJackLoadState();
+      let state = await raidJackLoadState();
+      const repaired = await raidJackRepairState(state, breederId, RAID_JACK_EVENT.id);
+      if (repaired.state.repaired && !state.repaired) {
+        if (!(await raidJackSaveState(repaired.state))) return 0;
+        state = repaired.state;
+      }
       const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
       if (!found.ok || found.due.length === 0 && found.noneIds.length === 0) return 0;
       const savedGifts = await storeGet('mh_gifts', [], false);
