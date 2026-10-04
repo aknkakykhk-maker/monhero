@@ -4674,7 +4674,7 @@ function MonsterHeroGame() {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
-    if (eventBgmScene) return bgmArrangement[eventBgmScene];
+    if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
     // イベント・レイドボス「ジャック」: ジャック戦・レイド画面・段階えらび・編成は、ぱんぷきんの曲に固定する
     if (RAID_JACK_BGM_STATES.includes(state) || (state === 'BATTLE' && raidJackRunRef.current)) return RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
@@ -4695,8 +4695,8 @@ function MonsterHeroGame() {
     if (BGM_SILENT_STATES.includes(state)) return null;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return homeBgm;
     if (BGM_STATE_MAP[state] === 'home') return homeBgm;
-    if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
-    if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
+    if (BGM_STATE_MAP[state]) return bgmArrangementWithEventDefault(bgmArrangement, BGM_STATE_MAP[state]) || BGM_STATE_MAP[state];
+    if (PROFILE_BGM_STATES.includes(state)) return bgmArrangementWithEventDefault(bgmArrangement, 'management');
     // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
     // デバッグで敵を直接呼び出した場合も、選択中のモードに対応する曲を使う。
     if (state === 'BATTLE') {
