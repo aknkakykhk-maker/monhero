@@ -63,6 +63,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
+    // この検査は「公開前(フラグが偽)」から始めて、デバッグの強制表示でHOMEへ出す流れを確かめる。
+    // ジャックは 2026-10-05 4:00 に公開されたので、時計を公開前(ハロウィン・ナイトの期間内)へ固定して流す。
+    // そうしないと、公開のあとに実行したときに「公開前のHOMEにジャックは出ない」から落ちる(2026-10-05に確認)
+    await page.clock.install({ time: new Date('2026-10-04T12:00:00+09:00') });
+    await page.clock.resume();
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
       localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));
