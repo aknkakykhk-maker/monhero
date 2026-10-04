@@ -7046,6 +7046,11 @@ function MonsterHeroGame() {
       const isCostume = offer?.kind==='costume';
       const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
       const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
+      // アイコン(まとめ)の交換も同じ。持っているアイコンの保存(mh_market_icons)を同じ取引に入れる。
+      // 持っているかは、まとめのどれか1つでも持っていれば全部持っている扱い(広げて渡す。保存値は書き換えない)
+      const isIcon = offer?.kind==='icon';
+      const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
+      const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
@@ -7054,9 +7059,9 @@ function MonsterHeroGame() {
           return { ok:false, reason:'condition' };
         }
       }
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames, ownedAssistantCostumes:beforeCostumes });
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames, ownedAssistantCostumes:beforeCostumes, ownedMarketIcons:expandOwnedMarketIcons(beforeIcons) });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':isCostume?'この着替えはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':isIcon?'このアイコンはもう持っています。':isCostume?'この着替えはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -7067,6 +7072,7 @@ function MonsterHeroGame() {
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
         ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
         ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange.ownedAssistantCostumes }] : []),
+        ...(isIcon ? [{ key:'mh_market_icons', before:storedIcons, next:exchange.ownedMarketIcons }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -7089,6 +7095,7 @@ function MonsterHeroGame() {
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
       }
+      if (isIcon) setOwnedMarketIcons(prev => [...new Set([...prev, ...exchange.ownedMarketIcons])]);
       if (isCostume) {
         ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
         setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
@@ -14216,7 +14223,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const rows = changelogRowsOfTab(changelogTab);
             const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
-            return rows.map(row=>{
+            // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
+            // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
+            // 開催中かは描くたびに数え直す(changelogEventLive)。押すと中身(告知画像・本文)が開く
+            const pinnedEvents = changelogTab==='update' ? CHANGELOG_ENTRIES.filter(entry=>changelogEventLive(entry)) : [];
+            return [...pinnedEvents.map(c=>(
+              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned" open
+                style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
+                <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
+                  <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>🎃 開催中</span>
+                  <span style={{flex:1,minWidth:0}}>{c.title}</span>
+                </summary>
+                {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
+                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
+              </details>)),
+            ...rows.map(row=>{
               const open=changelogOpenId===row.key;
               const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
@@ -14245,7 +14266,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
-                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
@@ -14273,7 +14294,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>}
                 </article>
               </React.Fragment>);
-            });
+            })];
           })()}</div>
       </div>
     </div>

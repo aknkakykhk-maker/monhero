@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a50745ea61cf6375
+// generated-sha256: 1fa4929357480d0b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 12:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7702,6 +7702,15 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   event:   { label:'イベント',   tone:'event' },
 });
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
+// 期間限定イベントのお知らせが、いま開催中か(一覧の項目に「開催中」の札を出す)。
+// 助手の告知の期間(notifyFrom〜notifyUntil)を見る。描くたびに数え直す(CLAUDE.md ⑥-4)
+const changelogEventLive = (entry, nowMs = Date.now()) => {
+  const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
+  if (!notice || !notice.notifyUntil) return false;
+  const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
+  const until = Date.parse(notice.notifyUntil);
+  return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
+};
 
 // 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
 // 【なぜ絞るか】(2026-09-14・よそのゲームの曲を入れたときの案内用に足した)
@@ -21327,7 +21336,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
       + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n'
       + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n'
       + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
-    maxUses: 0, unlimited: true, withCards: false, duration: 'style',
+    // ★2026-10-04 ユーザー指示「ラン5回・併用可」(それまでは無制限・カードと併用できない。いったん10回と言われ、すぐ5回に直った)
+    maxUses: 5, unlimited: false, withCards: true, duration: 'style',
     styles: Object.freeze([
       Object.freeze({ id: 'sword', label: '片手剣', desc: 'いつもの戦い方。ソードスキルも出る' }),
       Object.freeze({ id: 'shield', label: '片手盾', desc: '力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない' }),
@@ -24054,7 +24064,7 @@ function BreederMarketScreen({
   const SECTION_TABS = {
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -24302,6 +24312,21 @@ function BreederMarketScreen({
               onZoom={()=>onZoomIcon(item)}
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
               middle={item.desc?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
+            />;
+          })}
+          {/* 交換できるアイコン(2026-10-04)。ハロウィン・ナイトの衣装の8表情を1つにまとめて1000P。イベント中だけ並ぶ。
+              どれか1つでも持っていれば「所持済み」。中身は「中身を見る」で確かめられる */}
+          {eventTab==='icon'&&RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.filter(offer=>offer.available!==false).map(offer=>{
+            const members=offer.memberIds.map(id=>BREEDER_MARKET_ITEMS.find(m=>m.id===id)).filter(Boolean);
+            const item={ ...members[0], name:offer.name, groupMembers:members, groupId:offer.groupId, type:'icon', currency:'beatPoint', cost:offer.cost };
+            const owned=isItemOwned({ id:members[0]?.id, type:'icon' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-icon':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>}
             />;
           })}
           {/* 交換できるプロフィールフレーム(2026-10-03)。いまは売る枠が無いので何も並ばない(タブも出ない)。
@@ -29142,6 +29167,12 @@ function HomeScreen({
     tag.textContent=HOME_EVENT_BADGE_CSS;
     document.head.appendChild(tag);
   },[]);
+  // 開催中のキャンペーンのうち、HOMEの札・バナー(banner)を持つもの(ハロウィン・ナイト)。描くたびに数え直す
+  const homeEventCampaign=(()=>{
+    if(typeof RELEASE_FLAGS==='undefined'||!RELEASE_FLAGS||RELEASE_FLAGS.rhythmEventPoints!==true||typeof rhythmEventPointCampaignAt!=='function')return null;
+    const campaign=rhythmEventPointCampaignAt(Date.now());
+    return campaign&&campaign.banner?campaign:null;
+  })();
   // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
   const homeRhythmEventOpen=(()=>{
     const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
@@ -29194,6 +29225,10 @@ function HomeScreen({
           {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
         </button>
         <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
+        {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの右側、更新履歴のすぐ下。横持ちでは出さない */}
+        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
+          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
+        </button>}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
         <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact/></div>
       </main>
@@ -42618,6 +42653,11 @@ function MonsterHeroGame() {
       const isCostume = offer?.kind==='costume';
       const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
       const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
+      // アイコン(まとめ)の交換も同じ。持っているアイコンの保存(mh_market_icons)を同じ取引に入れる。
+      // 持っているかは、まとめのどれか1つでも持っていれば全部持っている扱い(広げて渡す。保存値は書き換えない)
+      const isIcon = offer?.kind==='icon';
+      const storedIcons = isIcon ? await storeGet('mh_market_icons', [], false) : null;
+      const beforeIcons = Array.isArray(storedIcons) ? storedIcons.filter(id => typeof id === 'string') : [];
       // 条件つきのフレームは、保存されている回数を読み直して条件を確かめる(画面の値が古くても通さない)
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
@@ -42626,9 +42666,9 @@ function MonsterHeroGame() {
           return { ok:false, reason:'condition' };
         }
       }
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames, ownedAssistantCostumes:beforeCostumes });
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames, ownedAssistantCostumes:beforeCostumes, ownedMarketIcons:expandOwnedMarketIcons(beforeIcons) });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':isCostume?'この着替えはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':isIcon?'このアイコンはもう持っています。':isCostume?'この着替えはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -42639,6 +42679,7 @@ function MonsterHeroGame() {
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
         ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
         ...(isCostume ? [{ key:ASSISTANT_COSTUME_OWNED_KEY, before:storedCostumes, next:exchange.ownedAssistantCostumes }] : []),
+        ...(isIcon ? [{ key:'mh_market_icons', before:storedIcons, next:exchange.ownedMarketIcons }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -42661,6 +42702,7 @@ function MonsterHeroGame() {
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
       }
+      if (isIcon) setOwnedMarketIcons(prev => [...new Set([...prev, ...exchange.ownedMarketIcons])]);
       if (isCostume) {
         ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
         setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
@@ -49788,7 +49830,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const rows = changelogRowsOfTab(changelogTab);
             const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
-            return rows.map(row=>{
+            // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
+            // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
+            // 開催中かは描くたびに数え直す(changelogEventLive)。押すと中身(告知画像・本文)が開く
+            const pinnedEvents = changelogTab==='update' ? CHANGELOG_ENTRIES.filter(entry=>changelogEventLive(entry)) : [];
+            return [...pinnedEvents.map(c=>(
+              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned" open
+                style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
+                <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
+                  <span style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11}}>🎃 開催中</span>
+                  <span style={{flex:1,minWidth:0}}>{c.title}</span>
+                </summary>
+                {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
+                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
+              </details>)),
+            ...rows.map(row=>{
               const open=changelogOpenId===row.key;
               const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
@@ -49817,7 +49873,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
-                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
@@ -49845,7 +49901,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>}
                 </article>
               </React.Fragment>);
-            });
+            })];
           })()}</div>
       </div>
     </div>
@@ -59601,7 +59657,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;right:9px;top:calc(160px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:flex-end;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
