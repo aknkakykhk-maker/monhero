@@ -137,7 +137,7 @@ function HomeScreen({
           {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
         </button>
         <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
-        {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの右側、更新履歴のすぐ下。横持ちでは出さない */}
+        {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの左下(モンヒロバトルのすぐ上)。右側のボタン列・上の吹き出しとかぶらない場所。横持ちでは出さない */}
         {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
           <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
