@@ -140,6 +140,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]');
       return !!el && el.querySelectorAll('[data-jack-aura-el] > ins').length >= 5;
     }));
+    // 撮影用: RAID_HOME_TIER を渡すと、HOMEのオーラの段階の数字だけを差し替えて撮る(色・輪の見え方の確認用。炎の本数は変わらない)
+    if (SHOT && process.env.RAID_HOME_TIER) {
+      await page.evaluate((t) => { const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]'); if (el) el.setAttribute('data-jack-aura', t); }, process.env.RAID_HOME_TIER);
+      await page.waitForTimeout(900);
+    }
     if (SHOT) await page.screenshot({ path: `${SHOT}/home-jack.png` });
 
     // ② レイド画面(A)
