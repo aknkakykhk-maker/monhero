@@ -123,7 +123,7 @@ const seed = ({ conditions }) => {
   };
 
   const iconCards = (page) => page.evaluate(() => {
-    return ['みゅあ（ハロウィン）のアイコン', 'きき（ハロウィン）のアイコン', 'ももすけ（ハロウィン）のアイコン'].map(n => {
+    return ['みゅあ（ハロウィン）のアイコン', 'きき（ハロウィン）のアイコン', 'ももすけ（ハロウィン）のアイコン', 'スネグーラチカ（ハロウィン）のアイコン'].map(n => {
       const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').includes(n));
       const text = card ? card.innerText.replace(/\s+/g, ' ') : '';
       const buy = card ? [...card.querySelectorAll('button')].find(b => /購入|交換/.test(b.getAttribute('aria-label') || b.innerText || '')) : null;
@@ -147,8 +147,8 @@ const seed = ({ conditions }) => {
     check('② ビートP交換所に「アイコン」タブが出る', (await tabs(page)).includes('アイコン'));
     await clickText(page, 'アイコン');
     let cards = await iconCards(page);
-    check('② 3キャラが並ぶ', cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
-    check('② 3キャラとも1000Pで買える', cards.every(c => c.buyEnabled && /1,?000/.test(c.text)), cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
+    check('② 4キャラが並ぶ', cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
+    check('② 4キャラとも1000Pで買える', cards.every(c => c.buyEnabled && /1,?000/.test(c.text)), cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
     const buy = await page.evaluate(() => {
       const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').includes('みゅあ（ハロウィン）のアイコン'));
       const b = card && [...card.querySelectorAll('button')].find(x => /購入|交換/.test(x.getAttribute('aria-label') || x.innerText || ''));
@@ -165,7 +165,7 @@ const seed = ({ conditions }) => {
     const icons = (await store(page, 'mh_market_icons')) || [];
     check('② 8表情ぜんぶ mh_market_icons に入る(通常のみゅあのアイコンは入らない)', EXPR.every(k => icons.includes(`myua_halloween_${k}`)) && !icons.includes('myua_normal') && !icons.includes('mua'), JSON.stringify(icons));
     cards = await iconCards(page);
-    check('② 買ったみゅあは「所持済み」で買えない。ほかの2キャラは買える', !cards[0].buyEnabled && cards[1].buyEnabled && cards[2].buyEnabled, cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
+    check('② 買ったみゅあは「所持済み」で買えない。ほかの3キャラは買える', !cards[0].buyEnabled && cards[1].buyEnabled && cards[2].buyEnabled && cards[3].buyEnabled, cards.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
     await goShop(page, 'ブリーダー');
     const breederText = await page.evaluate(() => document.body.innerText);
     check('② ブリーダーP交換所には、ハロウィンのアイコンがまだ並ばない', !breederText.includes('（ハロウィン）'));
@@ -179,7 +179,7 @@ const seed = ({ conditions }) => {
     check('③ 終わったあとは、ビートP交換所に「アイコン」タブが無い', !(await tabs(page)).includes('アイコン'));
     await goShop(page, 'ブリーダー');
     const cards = await iconCards(page);
-    check('③ ブリーダーP交換所に3キャラ(ハロウィン)が1ptで並び、買える', cards.every(c => c.found && c.buyEnabled && /\b1\b/.test(c.text)), cards.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 40)}`).join(' | '));
+    check('③ ブリーダーP交換所に4キャラ(ハロウィン)が1ptで並び、買える', cards.every(c => c.found && c.buyEnabled && /\b1\b/.test(c.text)), cards.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 40)}`).join(' | '));
     await ctx.close();
   }
 
