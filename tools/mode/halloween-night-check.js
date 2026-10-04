@@ -119,7 +119,19 @@ check('見たかどうかは既存の保存キーの配列に入れる(新しい
 check('時刻が来た部を古いほうから1つずつ流す(見回りのたびに数え直す)', /halloweenNightStoryIdsAt\(Date\.now\(\)\)\.find\(id => notPlayedYet\(id\)\)/.test(app));
 check('回想の「見た」判定が5部ぶん結線されている', /halloweenNightPart\$\{story\.part\}Seen/.test(app));
 check('会話のあいだだけ衣装を着せる(setAssistantCostumeStoryNow)', /setAssistantCostumeStoryNow\(eventReplay/.test(app));
-check('BGMの既定が新曲', /halloweenNightEvent:'melo_crazy_party_night'/.test(bgm));
+// BGMの初期値の差し替え(保存値は書き換えず、鳴らす瞬間だけ)
+{
+  const st=bgm.indexOf('const BGM_EVENT_DEFAULT_OVERRIDES'), en=bgm.indexOf('const normalizeBgmArrangement');
+  const bc={Date,Object,Array,rhythmEventPointCampaignAt:o.rhythmEventPointCampaignAt,BGM_TRACK_BY_ID:{melo_crazy_party_night_full:{},melo_crazy_party_night:{},original_profile:{},custom_x:{}}};
+  vm.createContext(bc);
+  vm.runInContext(`${bgm.slice(st,en)}\nthis.f=bgmArrangementWithEventDefault;`,bc);
+  const f=bc.f, inEv=jst('2026-10-10T12:00:00+09:00'), out=jst('2026-11-01T04:00:00+09:00');
+  check('M/B管理: 設定を変えていない人は、期間中だけ全編版', f({management:'original_profile'},'management',inEv)==='melo_crazy_party_night_full' && f({management:'original_profile'},'management',out)==='original_profile' && f({management:'original_profile'},'management',jst(START)-1)==='original_profile');
+  check('M/B管理: 自分で曲を選んでいる人は期間中も変えない', f({management:'custom_x'},'management',inEv)==='custom_x');
+  check('お話の場面: 全編版が初期値(閉幕の時刻の後でも)', f({halloweenNightEvent:'melo_crazy_party_night'},'halloweenNightEvent',out)==='melo_crazy_party_night_full' && f({halloweenNightEvent:'custom_x'},'halloweenNightEvent',out)==='custom_x');
+  check('ほかの場面は変えない', f({home:'original_home'},'home',inEv)==='original_home');
+}
+check('BGMの既定が新曲', /halloweenNightEvent:'melo_crazy_party_night_full'/.test(bgm));
 
 // ⑤ 新曲
 const m = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, Map, Set };
