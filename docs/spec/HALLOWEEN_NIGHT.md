@@ -7,7 +7,7 @@
 
 | もの | 置き場 | 要点 |
 | --- | --- | --- |
-| 期間・ビートP5倍・クイック周回5倍 | `data/rhythm-event.js` の `RHYTHM_EVENT_POINT_CAMPAIGNS`(`halloween_night_2026`) | `boost:5`(ビートP)と `loopScale:5`(演奏で入る周回数)。終わりの `endAt` は 4:00(案内は「3:59まで」) |
+| 期間・ビートP5倍・クイック周回5倍 | `data/rhythm-event.js` の `RHYTHM_EVENT_POINT_CAMPAIGNS`(`halloween_night_2026`) | `boost:5`(ビートP)と `loopScale:10`(演奏で入る周回数。ふだんの2倍の5倍。画面には `loopBoost:5` を「いつもの5倍」と出す)。終わりの `endAt` は 4:00(案内は「3:59まで」) |
 | 周回の倍率 | `10-core.jsx` の `rhythmPlayRunLoopScale(songId, event, campaign)` | `loopScale` を持つキャンペーン中は**全曲**その倍率に置き換える(ふだん2倍・ランキングイベントの対象曲3倍とは重ねない) |
 | ビートPアップキャンペーンとの重なり | `rhythmEventPointCampaignAt` | 10/4 8:00〜10/5 5:00 は重なる。**あとから始まったほうを使う**(2つ重ねがけはしない) |
 | 5部のお話 | `HALLOWEEN_NIGHT_STORIES`(出る時刻)+ `data/assistants.js` の `ASSISTANT_HALLOWEEN_NIGHT_1〜5`(台本)+ `EVENT_REPLAYS` | 第1部=開始・第2〜4部=毎週日曜8:00・第5部=終了(11/1 4:00)。時刻が来た部を古いほうから1つずつHOMEで流す |

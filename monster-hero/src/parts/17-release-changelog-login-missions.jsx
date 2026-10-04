@@ -248,6 +248,15 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   event:   { label:'イベント',   tone:'event' },
 });
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
+// 期間限定イベントのお知らせが、いま開催中か(一覧の項目に「開催中」の札を出す)。
+// 助手の告知の期間(notifyFrom〜notifyUntil)を見る。描くたびに数え直す(CLAUDE.md ⑥-4)
+const changelogEventLive = (entry, nowMs = Date.now()) => {
+  const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
+  if (!notice || !notice.notifyUntil) return false;
+  const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
+  const until = Date.parse(notice.notifyUntil);
+  return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
+};
 
 // 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
 // 【なぜ絞るか】(2026-09-14・よそのゲームの曲を入れたときの案内用に足した)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cefdb14fba34fe12
+// source-sha256: 87cc8fb68a34130d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 14:25";
+const BUILD_DATE = "2026-10-04 14:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10685,6 +10685,13 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   }
 });
 const changelogTypeOf = entry => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
+const changelogEventLive = (entry, nowMs = Date.now()) => {
+  const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
+  if (!notice || !notice.notifyUntil) return false;
+  const from = Date.parse(notice.notifyFrom || entry.visibleFrom || '');
+  const until = Date.parse(notice.notifyUntil);
+  return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
+};
 const changelogSafeLink = link => {
   const url = link && typeof link.url === 'string' ? link.url.trim() : '';
   if (!url) return '';
@@ -14039,7 +14046,7 @@ const MarketDetailChip = ({
   size: 10
 }), "詳細");
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
-const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || ''));
+const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || '')).split('（').join('​（').split('）').join('）​');
 const marketNameNodes = name => marketNameForWrap(name).split('​').map((seg, index) => React.createElement(React.Fragment, {
   key: index
 }, index > 0 && React.createElement("wbr", null), seg));
@@ -14072,7 +14079,7 @@ const MarketProductCard = ({
     disabled: disabled,
     previewIcon: previewIcon
   }), React.createElement("div", {
-    className: `w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
+    className: `w-full flex items-start justify-center text-center ${/（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
       minHeight: '36px',
       wordBreak: 'keep-all',
@@ -36123,6 +36130,7 @@ const ScreenEmpty = ({
   className: "mt-2 w-full"
 }, action));
 const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
+const tabColumnCount = count => count > 5 ? Math.ceil(count / 2) : Math.max(1, count);
 const ScreenTabs = ({
   items = [],
   value,
@@ -36132,7 +36140,7 @@ const ScreenTabs = ({
   role: "tablist",
   className: `mb-2 grid shrink-0 gap-2 ${className}`,
   style: {
-    gridTemplateColumns: `repeat(${Math.max(1, items.length)},minmax(0,1fr))`
+    gridTemplateColumns: `repeat(${tabColumnCount(items.length)},minmax(0,1fr))`
   }
 }, items.map(tab => {
   const on = tab.id === value;
@@ -38139,7 +38147,7 @@ function BreederMarketScreen({
     return campaign ? React.createElement(MarketNotice, {
       tone: "info",
       "data-event-point-campaign": true
-    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopScale) > 0 ? `。演奏でのクイック周回も${campaign.loopScale}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt)), "まで）") : null;
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopBoost) > 0 ? `。演奏でのクイック周回も${campaign.loopBoost}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt)), "まで）") : null;
   })(), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     value: activeDiamondTab,
     onChange: onSelectTab,
@@ -38466,7 +38474,7 @@ function RhythmAchievementPanel({
 }) {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length === 0) return null;
-  const heads = [['クリア', 'text-emerald-300'], ['フルコンボ', 'text-sky-300'], ['オールエクセレント', 'text-amber-300'], ['オールマーベラス', 'text-pink-300']];
+  const heads = [[['クリア'], 'text-emerald-300'], [['フル', 'コンボ'], 'text-sky-300'], [['オール', 'エクセレント'], 'text-amber-300'], [['オール', 'マーベラス'], 'text-pink-300']];
   return React.createElement("section", {
     "data-rhythm-achievements": who,
     className: `${SCREEN_PANEL_FLAT_CLASS} mb-3`
@@ -38477,9 +38485,13 @@ function RhythmAchievementPanel({
   }, "難易度ごとに、曲をいくつ達成したか（分母は、その難易度がある曲の数）"), React.createElement("div", {
     className: "grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-x-1 gap-y-1 text-center"
   }, React.createElement("span", null), heads.map(([t, c]) => React.createElement("span", {
-    key: t,
-    className: `text-[8px] font-black leading-tight ${c}`
-  }, t)), list.map(r => React.createElement(React.Fragment, {
+    key: t.join(''),
+    "data-rhythm-achievement-head": true,
+    className: `text-[9px] font-black leading-tight ${c}`
+  }, t.map(line => React.createElement("span", {
+    key: line,
+    className: "block whitespace-nowrap"
+  }, line)))), list.map(r => React.createElement(React.Fragment, {
     key: r.d
   }, React.createElement("b", {
     "data-rhythm-achievement-row": r.d,
@@ -40010,9 +40022,9 @@ function RhythmSongSelectScreen({
     className: "block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "mt-0.5 block"
-  }, "キャンペーン中"), Number(beatPointCampaign.loopScale) > 0 && React.createElement("span", {
+  }, "キャンペーン中"), Number(beatPointCampaign.loopBoost) > 0 && React.createElement("span", {
     className: "block"
-  }, "周回 ×", beatPointCampaign.loopScale), React.createElement("span", {
+  }, "周回 ", beatPointCampaign.loopBoost, "倍"), React.createElement("span", {
     className: "block text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
     "data-rhythm-beat-band-landscape": true,
@@ -40261,7 +40273,7 @@ function RhythmSongSelectScreen({
     className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
     className: "min-w-0 truncate"
-  }, beatPointCampaign.name, Number(beatPointCampaign.loopScale) > 0 ? `・周回 ×${beatPointCampaign.loopScale}` : '中'), React.createElement("span", {
+  }, beatPointCampaign.name, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中'), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
@@ -48058,6 +48070,11 @@ function HomeScreen({
     tag.textContent = HOME_EVENT_BADGE_CSS;
     document.head.appendChild(tag);
   }, []);
+  const homeEventCampaign = (() => {
+    if (typeof RELEASE_FLAGS === 'undefined' || !RELEASE_FLAGS || RELEASE_FLAGS.rhythmEventPoints !== true || typeof rhythmEventPointCampaignAt !== 'function') return null;
+    const campaign = rhythmEventPointCampaignAt(Date.now());
+    return campaign && campaign.banner ? campaign : null;
+  })();
   const homeRhythmEventOpen = (() => {
     const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
     if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
@@ -48182,7 +48199,13 @@ function HomeScreen({
   }), "更新履歴", hasUnreadChangelog && React.createElement("em", {
     className: "mh-unread-badge",
     "aria-label": "未読あり"
-  }, "!")), React.createElement("div", {
+  }, "!")), homeEventCampaign && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": true,
+    className: "mh-home-event-banner",
+    onClick: openChangelog,
+    "aria-label": `${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`
+  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), React.createElement("div", {
     className: `mh-home-assistant${spotClass('assistant')}`
   }, React.createElement(AssistantBubble, {
     scene: "home",
@@ -57176,7 +57199,8 @@ function RhythmMultiScreen({
   onBack,
   onStartPlay,
   modeSelect = null,
-  onRoomEntered = null
+  onRoomEntered = null,
+  rankingSupport = null
 }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
@@ -57228,6 +57252,7 @@ function RhythmMultiScreen({
   };
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
+  const [rankingOpen, setRankingOpen] = React.useState(false);
   const [recordOpen, setRecordOpen] = React.useState(false);
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
@@ -57323,6 +57348,7 @@ function RhythmMultiScreen({
       left: RHYTHM_MULTI_START_COUNTDOWN_SEC
     });
     setChatOpen(false);
+    setRankingOpen(false);
   }), []);
   React.useEffect(() => {
     if (!countdown) return undefined;
@@ -57417,6 +57443,7 @@ function RhythmMultiScreen({
     RHYTHM_MULTI.leave();
     setCountdown(null);
     setChatOpen(false);
+    setRankingOpen(false);
     setSearching(null);
   };
   const inRoom = !!view;
@@ -57472,7 +57499,7 @@ function RhythmMultiScreen({
   }, opts.advance), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && chatButton());
+  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && rankingButton(), view && chatButton());
   const chatButton = (extra = '') => React.createElement("button", {
     "data-rhythm-multi-chat-open": true,
     type: "button",
@@ -57483,6 +57510,25 @@ function RhythmMultiScreen({
     "data-rhythm-multi-chat-unread": true,
     className: "absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white"
   }, chatUnread > 9 ? '9+' : chatUnread));
+  const rankingSongId = room && room.phase !== 'select' && room.songId ? room.songId : selSongId || (songs[0] ? songs[0].songId : '');
+  const openRanking = () => {
+    const song = songById(rankingSongId);
+    if (!song || !rankingSupport) return;
+    rankingSupport.open(song);
+    setChatOpen(false);
+    setRankingOpen(true);
+  };
+  const rankingButton = (extra = '') => rankingSupport && React.createElement("button", {
+    "data-rhythm-multi-ranking": true,
+    type: "button",
+    "aria-label": "全国ランキング",
+    onClick: openRanking,
+    className: `min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`
+  }, "🏆");
+  const rankingLayer = rankingOpen && rankingSupport && view && React.createElement("div", {
+    "data-rhythm-multi-ranking-layer": true,
+    className: "absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950"
+  }, rankingSupport.render(() => setRankingOpen(false)));
   const chatLatestButton = () => {
     const last = chatList.length ? chatList[chatList.length - 1] : null;
     return React.createElement("button", {
@@ -57948,7 +57994,7 @@ function RhythmMultiScreen({
       onClick: leaveRoom
     }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
-    }, message)))), chatSheet);
+    }, message)))), chatSheet, rankingLayer);
   }
   if (showResult) {
     const fill = Math.min(1, Math.max(0, team.average / 1000000));
@@ -57971,7 +58017,7 @@ function RhythmMultiScreen({
       }
     }, "RESULT"), React.createElement("section", {
       "data-rhythm-multi-results": true,
-      className: "relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2 [@media(max-height:440px)]:py-1",
+      className: "relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2 [@media(max-height:440px)]:py-1 [[data-mh-view-rotation=true]_&]:py-1",
       style: {
         marginTop: 'calc(.4rem + var(--mh-sa-top))'
       }
@@ -58032,7 +58078,7 @@ function RhythmMultiScreen({
     }, React.createElement("small", {
       className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
     }, mk.id))))), React.createElement("ul", {
-      className: "grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2"
+      className: "grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
     }, Array.from({
       length: RHYTHM_MULTI_ROOM_MAX
     }).map((_, i) => {
@@ -58049,7 +58095,7 @@ function RhythmMultiScreen({
         "data-rhythm-multi-result-row": true,
         role: r.m.id !== view.selfId ? 'button' : undefined,
         onClick: r.m.id !== view.selfId ? () => setMemberSheetId(r.m.id) : undefined,
-        className: `relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5'}`
+        className: `relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`
       }, React.createElement(RhythmMultiChatBubble, {
         text: chatBubbleOf(r.m.id)
       }), isMvp && React.createElement("b", {
@@ -58060,29 +58106,29 @@ function RhythmMultiScreen({
       }, React.createElement(RhythmMultiAvatar, {
         m: r.m,
         resolveIconUrl: resolveIconUrl,
-        sizeClass: "h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11"
+        sizeClass: "h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [[data-mh-view-rotation=true]_&]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:w-11"
       })), React.createElement("span", {
         className: `relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`
       }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement("small", {
         className: "block h-3 shrink-0 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]"
       }, r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''), React.createElement("b", {
-        className: `block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm ${isMvp ? 'text-amber-200' : ''}`
+        className: `block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`
       }, r.res ? r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0') : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
-        className: "mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5"
+        className: "mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5"
       }, r.res.diffId || '-', lv ? ` Lv.${lv}` : ''), !r.res.cleared && React.createElement("small", {
         className: "text-[8px] font-black text-rose-300"
       }, "失敗")));
     })), React.createElement("div", {
       "data-rhythm-multi-result-chat": true,
-      className: "flex shrink-0 items-center gap-2 px-2 pt-1.5 landscape:px-3 [@media(max-height:440px)]:pt-1"
+      className: "flex shrink-0 items-center gap-2 px-2 pt-1.5 landscape:px-3 [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1"
     }, React.createElement(RhythmMultiStampBar, {
       phase: "result",
       onSend: text => RHYTHM_MULTI.sendChat(text),
       big: true,
       limit: 6,
-      className: "min-w-0 flex-1 portrait:flex-wrap"
-    }), chatLatestButton()), React.createElement("div", {
-      className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1",
+      className: "min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
+    }), rankingButton(), chatLatestButton()), React.createElement("div", {
+      className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1",
       style: {
         paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))'
       }
@@ -58090,12 +58136,12 @@ function RhythmMultiScreen({
       "data-rhythm-multi-member-stats": true,
       type: "button",
       onClick: () => setStatsOpen(true),
-      className: "min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px]"
+      className: "min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]"
     }, "メンバーの成績"), React.createElement("button", {
       "data-rhythm-multi-result-next": true,
       type: "button",
       onClick: () => RHYTHM_MULTI.nextFromResult(room.round),
-      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px]"
+      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]"
     }, team.waiting ? isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)' : '次へ')), (() => {
       const mine = team.rows.find(row => row.m.id === view.selfId);
       if (team.waiting || !mine || !mine.res) return null;
@@ -58190,7 +58236,7 @@ function RhythmMultiScreen({
       className: "px-1 tabular-nums"
     }, r.res && !r.res.quit && r.res.j ? r.res.j[k] : '—')), React.createElement("td", {
       className: "rounded-r-lg px-1 tabular-nums"
-    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))), chatSheet);
+    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))), chatSheet, rankingLayer);
   }
   if (phase === 'playing' || phase === 'result') {
     return React.createElement("main", {
@@ -58232,7 +58278,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} bg-slate-700 landscape:w-48`,
       onClick: leaveRoom
-    }, "ルームを出る")), chatSheet, countdownLayer);
+    }, "ルームを出る")), chatSheet, rankingLayer, countdownLayer);
   }
   if (shuffleRound) {
     const picked = members.map(m => ({
@@ -58376,7 +58422,7 @@ function RhythmMultiScreen({
       className: "min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]"
     }, iAmReady ? '準備完了!' : '準備完了', iAmReady && React.createElement("small", {
       className: "block text-[9px] font-bold"
-    }, "ほかのメンバーを待っています"))), chatSheet, countdownLayer);
+    }, "ほかのメンバーを待っています"))), chatSheet, rankingLayer, countdownLayer);
   }
   const myPick = me && me.pickRound === room.round ? me.pick : '';
   const pickLabel = m => {
@@ -58441,7 +58487,7 @@ function RhythmMultiScreen({
       onClick: leaveRoom,
       className: "flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300"
     }, "ルームを出る"))
-  }), chatSheet, countdownLayer);
+  }), chatSheet, rankingLayer, countdownLayer);
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -75769,7 +75815,73 @@ function MonsterHeroGame() {
     const rows = changelogRowsOfTab(changelogTab);
     const unreadHere = new Set(changelogUnreadIds[changelogTab]);
     let shownDay = null;
-    return rows.map(row => {
+    const pinnedEvents = changelogTab === 'update' ? CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry)) : [];
+    return [...pinnedEvents.map(c => React.createElement("details", {
+      key: `pinned-${c.id}`,
+      "data-changelog-pinned": true,
+      className: "mh-changelog-pinned",
+      style: {
+        margin: '0 0 10px',
+        border: '2px solid #fb923c',
+        borderRadius: 16,
+        background: 'linear-gradient(135deg,#431407,#3b0764)',
+        padding: '8px 10px'
+      }
+    }, React.createElement("summary", {
+      style: {
+        cursor: 'pointer',
+        listStyle: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        fontWeight: 900,
+        fontSize: 13,
+        color: '#ffedd5'
+      }
+    }, React.createElement("span", {
+      style: {
+        background: '#f97316',
+        color: '#1c1917',
+        borderRadius: 999,
+        padding: '1px 8px',
+        fontSize: 11
+      }
+    }, "🎃 開催中"), React.createElement("span", {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
+      }
+    }, String(c.title || '').replace(/^【[^】]*】/, '').replace(/を開催(します)?$/, '')), React.createElement("small", {
+      style: {
+        flexShrink: 0,
+        fontSize: 10,
+        color: '#fdba74'
+      }
+    }, "詳細 ▼")), c.image && React.createElement("img", {
+      "data-changelog-pinned-image": true,
+      src: c.image,
+      alt: `${c.title}のお知らせ`,
+      onError: e => {
+        e.currentTarget.style.display = 'none';
+      },
+      loading: "lazy",
+      decoding: "async",
+      style: {
+        width: '100%',
+        borderRadius: 12,
+        margin: '8px 0 4px'
+      }
+    }), (c.items || []).map((x, j) => React.createElement("p", {
+      key: j,
+      style: {
+        fontSize: 12,
+        color: '#fed7aa',
+        margin: '3px 0'
+      }
+    }, "・", x)))), ...rows.map(row => {
       const open = changelogOpenId === row.key;
       const unreadCount = row.entries.filter(entry => unreadHere.has(entry.id)).length;
       const kinds = [];
@@ -75823,7 +75935,16 @@ function MonsterHeroGame() {
       }, React.createElement("time", null, (c.date || '').slice(11) || c.date, unreadHere.has(c.id) && React.createElement("em", null, "NEW")), React.createElement("span", {
         className: "mh-changelog-kind",
         "data-kind": changelogTypeOf(c).tone
-      }, changelogTypeOf(c).label), React.createElement("b", null, c.title), c.image && React.createElement("img", {
+      }, changelogTypeOf(c).label), changelogEventLive(c) && React.createElement("span", {
+        "data-changelog-event-live": true,
+        className: "mh-changelog-kind",
+        style: {
+          background: '#f97316',
+          color: '#1c1917',
+          borderColor: '#fdba74',
+          marginLeft: 4
+        }
+      }, "🎃 開催中"), React.createElement("b", null, c.title), c.image && React.createElement("img", {
         "data-changelog-image": true,
         src: c.image,
         alt: `${c.title}のお知らせ`,
@@ -75868,7 +75989,7 @@ function MonsterHeroGame() {
         target: "_blank",
         rel: "noopener noreferrer"
       }, c.link && c.link.label || '詳しく見る', " ↗"))))));
-    });
+    })];
   })()))) : showTitleSettings ? React.createElement("div", {
     className: "mh-title-modal",
     onPointerDown: e => e.stopPropagation()
@@ -80940,6 +81061,30 @@ function MonsterHeroGame() {
       } : null,
       onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
       onRoomEntered: () => setGameState('RHYTHM_MULTI'),
+      rankingSupport: {
+        open: song => {
+          loadRhythmRanking(song);
+        },
+        render: onClose => React.createElement(RhythmRankingScreen, {
+          loadRhythmEventRanking: loadRhythmEventRanking,
+          loadRhythmRanking: loadRhythmRanking,
+          loadRhythmTotalRanking: loadRhythmTotalRanking,
+          onBackToSongSelect: onClose,
+          onGoToSongSelect: onClose,
+          rankingBreederIcon: rankingBreederIcon,
+          rhythmEventDivision: rhythmEventDivision,
+          rhythmEventRanking: rhythmEventRanking,
+          rhythmRanking: rhythmRanking,
+          rhythmRankingPending: rhythmRankingPending,
+          onResendRhythmRankingPending: resendRhythmRankingPendingNow,
+          rhythmRankingDetail: rhythmRankingDetail,
+          rhythmRankingTab: rhythmRankingTab,
+          rhythmTotalRanking: rhythmTotalRanking,
+          setRhythmEventDivision: setRhythmEventDivision,
+          setRhythmRankingDetail: setRhythmRankingDetail,
+          setRhythmRankingTab: setRhythmRankingTab
+        })
+      },
       modeSelect: gameState === 'RHYTHM_MODE_SELECT' ? {
         multi: RELEASE_FLAGS.rhythmMulti === true,
         onExit: exitRhythmSongSelect,
@@ -92290,7 +92435,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも

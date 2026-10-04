@@ -4,7 +4,8 @@
 実装: `monster-hero/src/parts/77-screen-rhythm-multi.jsx`(部屋の状態 `RHYTHM_MULTI` と画面 `RhythmMultiScreen`)。
 モンヒロビートの入口「モードえらび」(`RHYTHM_MODE_SELECT`)も同じ部品で描く(`modeSelect` を渡したとき)。部屋に入れたら `onRoomEntered` で `RHYTHM_MULTI` へ移り、`RHYTHM_MULTI` で部屋が無くなったらモードえらびへ戻る。
 検査: `node tools/mode/rhythm-multi-check.js`(通信と時間を偽物にして、複数人ぶん動かす)。
-配置の検査: `node tools/mode/rhythm-multi-layout-check.js`(モードえらびと結果画面を実際に開いて、実機に近い大きさを含む縦横の数サイズで、はみ出し・カードの中身の切れ・MVPの札の重なり・定型文の段数を測る。通信は同じブラウザの2ページを BroadcastChannel でつなぐ偽物)。
+画面を自前で回している間(`data-mh-view-rotation`・iPhoneの「横」ボタン)は、端末の向きが縦のままなので、`portrait:` と `max-height` の指定は縦画面のほうが効いてしまう(`landscape:` はビルドが回転中へ写してくれる)。この画面は、そうした指定の横に回転中の写し(`[[data-mh-view-rotation=true]_&]:`)を並べて書く。
+配置の検査: `node tools/mode/rhythm-multi-layout-check.js`(モードえらびと結果画面を実際に開いて、実機に近い大きさと「回転中」を含む縦横の数サイズで、はみ出し・カードの中身の切れ・MVPの札の重なり・定型文の段数を測る。通信は同じブラウザの2ページを BroadcastChannel でつなぐ偽物)。
 
 ## 1. 流れ
 
@@ -72,6 +73,7 @@
 - **周回報酬とビートP**は、ひとりで遊ぶときと同じ計算に**人数ボーナス**を掛ける: 参加者1人ごとに+50%(`rhythmMultiRewardScale`: 2人1.5倍〜5人3倍)。
 - **連続ボーナス**(2026-10-03): 前のライブの参加者が全員また参加していれば連続が1つ増える(`liveStreak`・`liveIds`)。メンバーが増えただけなら続き(同日・ユーザー指示)、だれかが抜けたら1に戻る。2曲目+10%…11曲目より後は+100%(`rhythmMultiStreakBonus`)。人数ボーナスと掛け合わせる(`rhythmMultiTotalScale`)。
 - **MVP**はごほうびを付けず、結果画面と記録に出すだけ(2026-10-03・ユーザー指示)。
+- **全国ランキング**(2026-10-04): 部屋の中の各画面のヘッダー(結果画面は下の行)に🏆。`rankingSupport`(60-app が渡す)で、既存の `RhythmRankingScreen` を**対戦の画面の上へ重ねて**出す(`gameState` は移さない。移すと、ライブ開始の合図を受ける側が外れて取り逃す)。ライブ開始の合図が来たら閉じる。
 - **記録** `mh_rhythm_multi_record_v1`: 結果がそろったら1回ぶん足す(`RhythmMultiRecordSaver`)。モードえらびの「記録」で見る。
 - **フレンド申請**: `hb` にブリーダーid(`bid`・英数字と記号だけ)を載せ、結果画面のカードから `sbSendFriendRequest`。
 - **待ち人数**: モードえらびで受付を聞き(`watchLobby`)、最近8秒に「ここにいるよ」を送ってきた部屋の人数を足して出す。フリーで45秒ひとりのままなら、プライベートルームを勧める。
