@@ -3005,6 +3005,8 @@ const createAnimationStyle = () => {
     [data-jack-aura="5"] [data-ja="wave"] { animation-duration: 1.5s; border-width: 5px; border-color: rgba(253,224,71,.95); }
     @keyframes jackAuraEmber { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -420%) scale(.3); } }
     @keyframes jackAuraWave { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.45); } }
+    /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
+    @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
     @keyframes jackAuraPulse { 0%,100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
     @keyframes jackAuraSpin { to { transform: rotate(360deg); } }
     @keyframes jackAuraTongue {

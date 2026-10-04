@@ -35,6 +35,28 @@ const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 // Aは、このターンになった時に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+// レイドバトル(A)のターンごとの強化。2ターン目から、1ターン進むごとに味方全員の全ステータスが5%ずつ(掛け算で)上がり、
+// ライフ・ガッツの自動回復の割合が1.5%ずつ上がる(ライフの初期値10%・ガッツはそれより5%低い)。
+// 戦闘の中身(60-app.jsx の raidJackTurnGrowth)と、画面の「強化」の表示(71-screen-battle.jsx)が同じ数字を見る
+const RAID_JACK_TURN_GROWTH = 1.05;
+const RAID_JACK_TURN_REGEN_STEP = 0.015;
+// turn ターン目にいるときの強化の状況。turn は 1 始まり。次の固有技・アシカの強化が無ければ nextLevelUpTurn は null
+const raidJackGrowthAt = (turn) => {
+  const t = Math.max(1, Math.floor(Number(turn) || 1));
+  const steps = t - 1;
+  const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * steps) * 1000) / 10;
+  const levelUps = RAID_JACK_LEVEL_UP_TURNS.filter((n) => n <= t).length;
+  const next = RAID_JACK_LEVEL_UP_TURNS.find((n) => n > t);
+  return {
+    turn: t, steps,
+    statPct: Math.round((Math.pow(RAID_JACK_TURN_GROWTH, steps) - 1) * 1000) / 10,   // ここまでの全ステータスの上がり(合計%)
+    stepPct: Math.round((RAID_JACK_TURN_GROWTH - 1) * 1000) / 10,                      // 1ターンぶん(%)
+    lifeRate, gutsRate: Math.round((lifeRate - 5) * 10) / 10,
+    levelUps, levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
+    nextLevelUpTurn: next === undefined ? null : next,
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+  };
+};
 
 // 技の種類(再生なし)。増やす順は既存の TACTICS_EXTRA_ACTION_ORDER に合わせ、
 // 減らすときは攻撃力アップ(roar)から先に落とす。

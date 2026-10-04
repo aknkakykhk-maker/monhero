@@ -123,6 +123,15 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (process.env.RAID_SHOT_DIR) { await page.waitForTimeout(1500); await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/battle-start.png` }); }
     const bodyText = await page.locator('body').innerText();
     check('バトル画面にジャックの名前が出る', bodyText.includes('ジャック'));
+    // ターンごとの強化の表示(2026-10-04・ユーザー指示)。1ターン目は +0%、タップで内訳が開く
+    await page.locator('[data-raid-growth-chip]').waitFor({ timeout: 30000 }).catch(() => {});
+    const chipText = (await page.locator('[data-raid-growth-chip]').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+    check('A: 敵のライフの下に「強化」の行が出る(全ステ +0%・技・アシカ 0/3・次の技強化 3ターン目)', /全ステ\s*\+0%/.test(chipText) && /0\/3/.test(chipText) && /3ターン目/.test(chipText), chipText);
+    await page.locator('[data-raid-growth-chip]').first().click().catch(() => {});
+    const detailText = await page.locator('[data-raid-growth-detail]').innerText().catch(() => '');
+    check('A: 強化の行をタップすると内訳(全ステータス・自動回復・固有技とアシカ・EXスキル)が開く', /全ステータス/.test(detailText) && /自動回復/.test(detailText) && /固有技・アシカ/.test(detailText) && /EXスキル/.test(detailText) && /2回まで/.test(detailText), detailText.slice(0, 80));
+    if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/growth-detail.png` }).catch(() => {});
+    await page.locator('[data-raid-growth-close]').click().catch(() => {});
     // 敵の名前は段階の名前、上部のバッジは「レイドバトル / 段階名」(チャレンジ・WAVE・Normal は出さない)
     // 開始演出(約1.5秒)は「WAVE 1」ではなく「レイドバトル」と出る
     check('開始演出に WAVE が出ず、「レイドバトル」と「VS ジャック男爵」が出る', await page.evaluate(() => {

@@ -647,6 +647,19 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
+  // 敵のライフの下に「いまの強化」を1行で出し、タップで内訳を開く。強化が入ったターンは、真ん中の上に数秒だけ帯を出す。
+  // 数字は 35-raid-jack.jsx の raidJackGrowthAt(戦闘本体と同じ定数)から出す。グランドスラム(B)は強化が無いので出さない
+  const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
+  const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
+  const [raidGrowthOpen, setRaidGrowthOpen] = useState(false);
+  const [raidGrowthBanner, setRaidGrowthBanner] = useState(null);
+  useEffect(() => {
+    if (!raidGrowthOn || turnCount < 2) { setRaidGrowthBanner(null); return undefined; }
+    setRaidGrowthBanner({ turn: turnCount, key: `${turnCount}-${Date.now()}` });
+    const timer = setTimeout(() => setRaidGrowthBanner(null), 3200);
+    return () => clearTimeout(timer);
+  }, [raidGrowthOn, turnCount]);
   // 攻撃する子から敵までのずれ(24-battle-fx.jsx の measureAttackAim)。
   // ★描画の前(レイアウト直後)に測るので、最初のコマから敵の向きへ飛ぶ。見た目だけに使う
   const [attackAim, setAttackAim] = useState(null);
@@ -1103,6 +1116,39 @@ function BattleScreen({
                   (2026-09-24 ユーザー指摘「敵のライフの減り方とかかくつき」) */}
               <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
+            </div>
+            {raidGrowth&&(
+              <button type="button" data-raid-growth-chip onClick={()=>setRaidGrowthOpen(true)} aria-label="レイドバトルのターンごとの強化の内訳を開く"
+                className="mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]">
+                <span className="shrink-0 text-emerald-300">⬆ 強化</span>
+                <span className="shrink-0">全ステ <b className="text-emerald-200">+{raidGrowth.statPct}%</b></span>
+                <span className="shrink-0 text-amber-200">技・アシカ {raidGrowth.levelUps}/{raidGrowth.levelUpMax}</span>
+                <span className="min-w-0 flex-1 truncate text-right text-slate-300">{raidGrowth.nextLevelUpTurn?`次の技強化 ${raidGrowth.nextLevelUpTurn}ターン目`:'技強化は出そろった'}</span>
+                <span className="shrink-0 text-slate-400">詳細›</span>
+              </button>
+            )}
+          </div>
+        )}
+        {/* レイドバトルの強化が入ったターンの帯(数秒で消える。操作の邪魔をしない) */}
+        {raidGrowth&&raidGrowthBanner&&(
+          <div key={raidGrowthBanner.key} data-raid-growth-banner aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
+            <div className="text-[13px] font-black text-emerald-300">⬆ {raidGrowth.turn}ターン目 強化！</div>
+            <div className="mt-0.5 text-[11px] font-black text-white">味方の全ステータス +{raidGrowth.stepPct}%<span className="text-slate-300">(ここまで合計 +{raidGrowth.statPct}%)</span></div>
+            <div className="text-[10px] font-black text-sky-200">自動回復 ライフ{raidGrowth.lifeRate}%・ガッツ{raidGrowth.gutsRate}%</div>
+            {raidGrowth.levelUpNow&&<div className="mt-0.5 text-[11px] font-black text-amber-300">固有技とアシカが1段階アップ！({raidGrowth.levelUps}/{raidGrowth.levelUpMax}回目)</div>}
+          </div>
+        )}
+        {raidGrowth&&raidGrowthOpen&&(
+          <div data-raid-growth-detail className="fixed inset-0 flex items-center justify-center bg-black/70 px-4" style={{zIndex:80000}} role="dialog" aria-modal="true" aria-label="レイドバトルの強化" onClick={()=>setRaidGrowthOpen(false)}>
+            <div className="w-full max-w-[340px] rounded-2xl border-2 border-emerald-300/60 bg-slate-950 p-3 text-slate-100" onClick={(e)=>e.stopPropagation()}>
+              <div className="text-center text-[13px] font-black text-emerald-300">レイドバトルの強化(いま {raidGrowth.turn}/{RAID_JACK_TURNS}ターン目)</div>
+              <dl className="mt-2 space-y-1.5 text-[11px]">
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-emerald-200">全ステータス</dt><dd>2ターン目から、1ターンごとに味方全員が +{raidGrowth.stepPct}%(掛け算)。いまは<b className="text-white"> 合計 +{raidGrowth.statPct}%</b>。ライフ・ガッツの上限が増えたぶんは、いまの値にも足されます</dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-sky-200">自動回復</dt><dd>1ターンごとに +1.5%。いまは<b className="text-white"> ライフ {raidGrowth.lifeRate}%・ガッツ {raidGrowth.gutsRate}%</b></dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-amber-200">固有技・アシカ</dt><dd>{RAID_JACK_LEVEL_UP_TURNS.join('・')}ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。<b className="text-white"> {raidGrowth.levelUps}/{raidGrowth.levelUpMax}回</b>済み{raidGrowth.nextLevelUpTurn?`(次は${raidGrowth.nextLevelUpTurn}ターン目)`:'(これで最後)'}</dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-rose-200">EXスキル</dt><dd>持っている味方ごとに2回まで</dd></div>
+              </dl>
+              <button type="button" data-raid-growth-close onClick={()=>setRaidGrowthOpen(false)} className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-white active:scale-95">閉じる</button>
             </div>
           </div>
         )}

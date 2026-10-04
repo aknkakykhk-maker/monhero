@@ -134,7 +134,7 @@ check('ジャック戦の敵は段階の値で作る(編成の総合力の補正
 
 // ⑧ レイドバトル(A)専用ルール(2026-10-04)。EXの回数はコードの形で固定する(実機で通しにくいため)
 check('A: 1ターンごとに味方全員の全ステータスが5%ずつ(掛け算)・自動回復の割合が1.5%ずつ上がる(20ターンぶんで半分)',
-  /RAID_JACK_TURN_GROWTH = 1\.05;/.test(app) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(app)
+  /RAID_JACK_TURN_GROWTH = 1\.05;/.test(defs35) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(defs35)
   && /raidJackRunRef\.current\.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount\) raidJackTurnGrowth\(nextTurn\)/.test(app));
 check('A: EXスキルは、持つ味方ごとに2回まで(raidExDefOf が maxUses:2 にする。Bと通常戦は今までどおり)',
   /const raidExDefOf = \(monId\) => \{[\s\S]{0,260}kind === 'a' \? \{ \.\.\.def, unlimited:false, maxUses:2 \} : def;/.test(app)
@@ -144,7 +144,7 @@ check('AもBも、味方のライフ・ガッツは全快からはじまる(追�
 
 // ⑨ ターン数とBGM(2026-10-04)
 check('1回の戦闘は20ターン(レイドバトルもグランドスラムも)・ターンごとのバフは半分(5% / 1.5%)',
-  /const RAID_JACK_TURNS = 20;/.test(defs35) && /RAID_JACK_TURN_GROWTH = 1\.05;/.test(app) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(app));
+  /const RAID_JACK_TURNS = 20;/.test(defs35) && /RAID_JACK_TURN_GROWTH = 1\.05;/.test(defs35) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(defs35));
 check('ジャックの戦い・レイド画面・段階えらび・編成はぱんぷきんの曲に固定(isGameOver より前で決める)',
   /RAID_JACK_BGM_STATES\.includes\(state\) \|\| \(state === 'BATTLE' && raidJackRunRef\.current\)\) return RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
   && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night'/.test(defs35) && /id:'melo_crazy_party_night'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
