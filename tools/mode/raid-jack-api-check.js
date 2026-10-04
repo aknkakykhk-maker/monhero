@@ -123,6 +123,23 @@ const make = () => {
     check('A累計の自分より多い人数も、専用のビューで数える(段階では絞らない)', (await t.o.sbCountRaidJackAhead('a_all', 3, 500)) === 4 && /raid_jack_a_ranking\?/.test(t.calls[callsBefore2].url) && !/tier=eq/.test(t.calls[callsBefore2].url));
     t.setResponder(() => ({ ok: true, status: 404, body: '' }));
     check('ビューがまだ無い(404)ときは null(画面は準備中)', (await t.o.sbFetchRaidJackARanking()) === null);
+    // 後から足したビュー(raid_jack_a_ranking)だけが無いとき、与ダメージの送信・段階の合計・報酬は止めない(2026-10-05)
+    {
+      const u = make();
+      u.setResponder((url) => (/raid_jack_a_ranking/.test(url)
+        ? { ok: false, status: 404, body: '{"code":"PGRST205","message":"Could not find the table public.raid_jack_a_ranking"}' }
+        : /raid_jack_tier_totals/.test(url)
+          ? { ok: true, status: 200, body: '[{"kind":"a","tier":1,"total_damage":5,"player_count":1,"any_defeated":false}]' }
+          : { ok: true, status: 201, body: '' }));
+      const none = await u.o.sbFetchRaidJackARanking();
+      const totals = await u.o.sbFetchRaidJackTierTotals();
+      const sent = await u.o.sbSendRaidJackHit({ hitId: 'abcdefgh12', kind: 'a', tier: 1, damage: 10, defeated: false }, 'breeder-aaaa1111');
+      check('累計ランキングのビューだけ無くても、通信全体は止まらない', none === null && !!totals && sent === 'sent' && !u.o.raidJackUnavailable(),
+        `累計=${none} 合計=${totals ? 'ok' : 'null'} 送信=${sent} 全体停止=${u.o.raidJackUnavailable()}`);
+      const callsBefore3 = u.calls.length;
+      await u.o.sbFetchRaidJackARanking();
+      check('無いと分かったビューには、以後は問い合わせない', u.calls.length === callsBefore3);
+    }
     t.setResponder(() => ({ ok: true, status: 200, body: 'こわれた' }));
     check('壊れた返事は null(画面は準備中)', (await t.o.sbFetchRaidJackTierTotals()) === null && (await t.o.sbFetchRaidJackBRanking()) === null);
     t.setResponder(() => 'throw');
