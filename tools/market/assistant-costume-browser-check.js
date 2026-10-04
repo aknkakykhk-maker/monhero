@@ -130,7 +130,13 @@ const seed = ({ conditions }) => {
   {
     const { page, ctx } = await open('2026-10-10T12:00:00+09:00');
     await goShop(page, 'ダイヤ');
-    check('② 期間中は、ダイヤショップに「着替え」タブが出ない(ビートP交換所だけで売る)', !(await tabs(page)).includes('着替え'));
+    // 2026-10-04 ユーザー指示「ダイヤの方にも着替えタブ作って、販売予定のものを入れといて」: 期間中は「近日追加」で並べ、買えない
+    check('② 期間中も、ダイヤショップに「着替え」タブが出る(売り出す前の予告)', (await tabs(page)).includes('着替え'));
+    await clickText(page, '着替え');
+    {
+      const soon = await costumeCards(page);
+      check('② ダイヤショップの3着は「近日追加」で並び、買えない', soon.every(c => c.found && !c.buyEnabled && /近日/.test(c.text)), soon.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 30)}`).join(' | '));
+    }
     await goShop(page, 'ビートP');
     check('② ビートP交換所に「着替え」タブが出る', (await tabs(page)).includes('着替え'));
     await clickText(page, '着替え');
