@@ -60,6 +60,8 @@
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
+| `mh_raid_jack_guide_seen_v1` | boolean / `false` | レイド画面を開いた最初の1度だけ出す、画面のなかの案内(助手の吹き出し)を見たか。新しく足したキー。既存のキーには触らない |
+| `mh_raid_jack_unused_hs_<難易度>` など | number / `0` | **実際には書かれない**保険のキー(`modeKeyPrefix`)。ジャック戦は記録を書かないが、万一書いても通常のタクティクスの自己ベスト(`mh_tactics_*`)と同じキーを指さないように、別の接頭辞へ逃がしてある |
 | `mh_masu_lock_rebirth_v1` | string[] / `[]` | マスモンの転生ロックのIDの並び(2026-10-01)。転生ロックの子は転生できない。お気に入り(`mh_masu_locked_v1`)とは別々に付け外しできる。壊れた値は「ロックなし」。`mh_masu_mons` には書かない |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
