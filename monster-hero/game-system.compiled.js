@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 150e1ca92bb5fa7e
+// source-sha256: 136b27ef993dc83f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 17:23";
+const BUILD_DATE = "2026-10-04 17:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -59320,11 +59320,7 @@ const RaidJackPrepScreen = ({
     "data-raid-teach": t.id,
     onClick: () => toggleTeach(t.id),
     className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
-  }, React.createElement("img", {
-    src: t.icon,
-    alt: "",
-    className: "h-10 w-10 rounded-full object-cover"
-  }), React.createElement("span", {
+  }, cardIconNode(t.icon, 40, t.id), React.createElement("span", {
     className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
   }, t.baseName))))), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300"

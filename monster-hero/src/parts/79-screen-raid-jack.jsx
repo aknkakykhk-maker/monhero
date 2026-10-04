@@ -254,7 +254,8 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
             {(Array.isArray(teachings) ? teachings : []).map((t) => (
               <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
                 className={`flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
-                <img src={t.icon} alt="" className="h-10 w-10 rounded-full object-cover" />
+                {/* 手札のカードと同じ見え方(きき のように全身の絵は、カード用の拡大・位置の補正で顔に寄せる) */}
+                {cardIconNode(t.icon, 40, t.id)}
                 <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{t.baseName}</span>
               </button>
             ))}
