@@ -63,7 +63,7 @@ vm.runInContext([
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
-    + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExDefOf,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -123,6 +123,16 @@ check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX
 {
   const bad = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id)).filter(d => /上限の[0-9]+%戻|ライフを最大の/.test(d.desc || '')).map(d => d.name);
   check('どの説明文も「上限の◯%戻る」「ライフを最大の」を使わない(回復と書く)', bad.length === 0, bad.join(','));
+}
+// 使った直後に出す「何が起きたか」(useNote)。どのEXにも1行ある。プレゼントは中身ごとの数字つきの言い方になる
+check('どのEXも使った直後の一言(useNote)を持つ', Object.keys(ex.TACTICS_EX_SKILLS).every(id => ex.tacticsExDefOf(id).useNote.length > 0),
+  Object.keys(ex.TACTICS_EX_SKILLS).filter(id => !ex.tacticsExDefOf(id).useNote).join(','));
+{
+  const sn = ex.tacticsExDefOf('Snegurochka');
+  const one = ex.tacticsExPresentNote({ jackpot: false, kinds: ['dmg'] }, sn.present, sn.turns);
+  const all = ex.tacticsExPresentNote({ jackpot: true, kinds: ['dmg', 'taken', 'combo', 'heal', 'guts', 'crit'] }, sn.present, sn.turns);
+  check('プレゼントの中身は数字つきで言う(1つ・大当たり)', one === '全員のガッツが上限の20%回復＋与ダメージ+20%（2ターン）'
+    && all.startsWith('全員のガッツが上限の20%回復＋大当たり！ ') && ['与ダメージ+20%', '被ダメージ−20%', '連撃 与ダメ10%×2回', 'ライフが上限の20%回復', 'ガッツがさらに上限の20%回復', '会心率×1.3'].every(w => all.includes(w)), one + ' / ' + all);
 }
 const ids = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id).id);
 check('EXのidが重ならない', new Set(ids).size === ids.length, ids.join(','));
