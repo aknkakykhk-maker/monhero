@@ -879,7 +879,11 @@ const assistantCostumeImage = (who, expression, kind) => {
 ASSISTANT_COSTUMES
   .filter(costume => assistantCostumeEverSellsIn(costume, 'diamond'))
   .forEach(costume => {
-    // shop は見るたびに数え直す(いま売っていないあいだは false を返し、ダイヤショップに並ばない・「着替え」タブも出ない)
+    // 2026-10-04 ユーザー指示「ダイヤの方にも着替えタブ作って、販売予定のものを入れといてほしい」。
+    // shop・available は見るたびに数え直す。服が公開されていれば、ダイヤで売る前でも「着替え」タブに並べる。
+    // ダイヤで売るのはまだ先(いまの窓に無い)あいだは available:false で「近日追加」の札になり、買えない
+    // (買う処理は available:false を断る)。窓が開いた(ハロウィン・ナイト終了)瞬間から、そのまま買える
     BREEDER_MARKET_ITEMS.push({ id:costume.id, name:costume.name, type:'costume', currency:'diamond', cost:assistantCostumeSaleEverCost(costume, 'diamond'), desc:costume.desc || '', assistantId:costume.assistantId, emoji:'👗', icon:costume.icon,
-      get shop() { return (costume.released === true && assistantCostumeSaleIn(costume, 'diamond')) ? undefined : false; } });
+      get shop() { return costume.released === true ? undefined : false; },
+      get available() { return assistantCostumeSaleIn(costume, 'diamond') ? undefined : false; } });
   });
