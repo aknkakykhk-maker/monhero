@@ -118,7 +118,7 @@ check('submitRunScoreOnce はジャックを手前で return する(submitTactic
 check('TACTICS_SCORE_MODES(自己ベストを持つモード)にジャックを入れていない', !/const TACTICS_SCORE_MODES = [^\n]*RAID/.test(core));
 
 // ⑦ 戦闘の終わり方(実機で通しにくい経路は、コードの形で固定する)
-check('10ターンを超えたら finishRaidJack("turns")(全滅にはしない)・通常は今までどおり20ターン',
+check('20ターンを超えたら finishRaidJack("turns")(全滅にはしない)・通常は今までどおり20ターン',
   /if\(raidJackRunRef\.current\)\{\s*raidJackRunRef\.current\.turns=Math\.min\(nextTurn,RAID_JACK_TURNS\);\s*if\(nextTurn>RAID_JACK_TURNS\)\{ finishRaidJack\('turns'\); return; \}/.test(app)
   && /\} else if\(nextTurn>20\)\{ if\(tacticsWipe\(\)===null\) setHp\(0\); \}/.test(app));
 check('Aだけ 3/5/8 ターン目に成長する(RAID_JACK_LEVEL_UP_TURNS)', /raidJackRunRef\.current\.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS\.includes\(nextTurn\)/.test(app));
@@ -131,14 +131,24 @@ check('ジャック戦は debugBattleRef を立てて始まる(報酬・絆・�
 check('ジャック戦の敵は段階の値で作る(編成の総合力の補正を掛けない)', /const raidRun=isRaidJackMode\(runMode\)\?raidJackRunRef\.current:null;[\s\S]{0,200}isTacticsMode\(runMode\)&&!raidRun/.test(app));
 
 // ⑧ レイドバトル(A)専用ルール(2026-10-04)。EXの回数はコードの形で固定する(実機で通しにくいため)
-check('A: 1ターンごとに味方全員の全ステータスが10%ずつ(掛け算)・自動回復の割合が3%ずつ上がる',
-  /RAID_JACK_TURN_GROWTH = 1\.10;/.test(app) && /RAID_JACK_TURN_REGEN_STEP = 0\.03;/.test(app)
+check('A: 1ターンごとに味方全員の全ステータスが5%ずつ(掛け算)・自動回復の割合が1.5%ずつ上がる(20ターンぶんで半分)',
+  /RAID_JACK_TURN_GROWTH = 1\.05;/.test(app) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(app)
   && /raidJackRunRef\.current\.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount\) raidJackTurnGrowth\(nextTurn\)/.test(app));
 check('A: EXスキルは、持つ味方ごとに1回だけ(raidExDefOf が maxUses:1 にする。Bと通常戦は今までどおり)',
   /const raidExDefOf = \(monId\) => \{[\s\S]{0,260}kind === 'a' \? \{ \.\.\.def, unlimited:false, maxUses:1 \} : def;/.test(app)
   && !/[^a-zA-Z]tacticsExDefOf\(/.test(app.replace(/const def = tacticsExDefOf\(monId\);/, '')));
 check('AもBも、味方のライフ・ガッツは全快からはじまる(追いつき補正のあとで満タンにする)',
   /fullGuts: isRaidJackMode\(mode\)[\s\S]{0,500}isRaidJackMode\(mode\) && joined \? normalizeTacticsUnit\(\{ \.\.\.joined, hp: joined\.maxHp, guts: joined\.maxGuts \}\)/.test(app));
+
+// ⑨ ターン数とBGM(2026-10-04)
+check('1回の戦闘は20ターン(レイドバトルもグランドスラムも)・ターンごとのバフは半分(5% / 1.5%)',
+  /const RAID_JACK_TURNS = 20;/.test(defs35) && /RAID_JACK_TURN_GROWTH = 1\.05;/.test(app) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(app));
+check('ジャックの戦い・レイド画面・段階えらび・編成はぱんぷきんの曲に固定(isGameOver より前で決める)',
+  /RAID_JACK_BGM_STATES\.includes\(state\) \|\| \(state === 'BATTLE' && raidJackRunRef\.current\)\) return RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
+  && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night'/.test(defs35) && /id:'melo_crazy_party_night'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
+check('HOMEの曲は、イベント中かつ曲を選んでいないときだけぱんぷきん(開催中は見るたびに数え直す)',
+  /raidJackWindowAt\(Date\.now\(\)\) === 'open'\) \|\| raidJackDebugForce\)\s*&& bgmArrangement\.home === DEFAULT_BGM_ARRANGEMENT\.home\) \? RAID_JACK_BGM_TRACK : bgmArrangement\.home;/.test(app)
+  && /state === 'HOME' \|\| state === 'PROFILE' \|\| state === 'ITEM_INVENTORY'\) return homeBgm;/.test(app));
 
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべて OK');
