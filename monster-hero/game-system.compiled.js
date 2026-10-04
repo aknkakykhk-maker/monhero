@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d9b7040ecf61fad9
+// source-sha256: 80d4d1807e3839a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 16:40";
+const BUILD_DATE = "2026-10-04 17:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14763,8 +14763,8 @@ const helpDataRows = id => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
-  raidJackTiersA: 'みんなで討伐のジャック(段階ごとの共有ライフ)',
-  raidJackTiersB: 'ダメージ競争のジャック(段階ごとのライフ)',
+  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
@@ -59083,10 +59083,10 @@ const RaidJackScreen = ({
   }, "わかった")), React.createElement(ScreenTabs, {
     items: [{
       id: 'a',
-      label: 'みんなで討伐'
+      label: 'レイドバトル'
     }, {
       id: 'b',
-      label: 'ダメージ競争'
+      label: 'グランドスラム'
     }],
     value: tab,
     onChange: setTab
@@ -60306,8 +60306,15 @@ function MonsterHeroGame() {
     const next = list.map((mon, index) => {
       if (!mon) return null;
       if (isSame(mon, index)) return before[index];
-      const fresh = createTacticsUnit(mon);
-      return isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      const fresh = createTacticsUnit(mon, {
+        fullGuts: isRaidJackMode(mode)
+      });
+      const joined = isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      return isRaidJackMode(mode) && joined ? normalizeTacticsUnit({
+        ...joined,
+        hp: joined.maxHp,
+        guts: joined.maxGuts
+      }) : joined;
     });
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
   };
@@ -61459,6 +61466,14 @@ function MonsterHeroGame() {
   const debugResultRef = useRef(false);
   const raidJackRunRef = useRef(null);
   const raidJackDamageRef = useRef(0);
+  const raidExDefOf = monId => {
+    const def = tacticsExDefOf(monId);
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? {
+      ...def,
+      unlimited: false,
+      maxUses: 1
+    } : def;
+  };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);
@@ -70312,7 +70327,7 @@ function MonsterHeroGame() {
     const live = tacticsExLiveRef.current;
     return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current, tacticsUnitsRef.current, live.now) : null;
   };
-  const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && tacticsExDefOf(mon.id));
+  const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && raidExDefOf(mon.id));
   const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent, tacticsUnitsRef.current, dist), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if (!isTacticsMode(runMode) || !card) return [];
@@ -71450,6 +71465,7 @@ function MonsterHeroGame() {
         finishRaidJack('turns');
         return;
       }
+      if (raidJackRunRef.current.kind === 'a' && nextTurn >= 2 && nextTurn !== turnCount) raidJackTurnGrowth(nextTurn);
       if (raidJackRunRef.current.kind === 'a' && RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn) && nextTurn !== turnCount) raidJackLevelUp(nextTurn);
     } else if (nextTurn > 20) {
       if (tacticsWipe() === null) setHp(0);
@@ -71507,7 +71523,7 @@ function MonsterHeroGame() {
     if (!tacticsExEnabled || !Number.isInteger(slotIdx)) return null;
     const mon = slots[slotIdx];
     if (!mon) return null;
-    const def = tacticsExDefOf(mon.id);
+    const def = raidExDefOf(mon.id);
     if (!def) return null;
     const state = tacticsExState;
     const remaining = tacticsExRemaining(def, tacticsExUsesOf(state, slotIdx, mon.id));
@@ -71698,7 +71714,7 @@ function MonsterHeroGame() {
     if (!tacticsExEnabled || isBusy || autoBattleRef.current) return false;
     const mon = slots[slotIdx];
     if (!mon) return false;
-    const def = tacticsExDefOf(mon.id);
+    const def = raidExDefOf(mon.id);
     if (!def) return false;
     const state = tacticsExStateRef.current;
     const lifeNow = normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
@@ -73873,6 +73889,44 @@ function MonsterHeroGame() {
     setRaidJackStartRequest(null);
     startRaidJackBattle(req);
   }, [raidJackStartRequest, runMode]);
+  const RAID_JACK_TURN_GROWTH = 1.10;
+  const RAID_JACK_TURN_REGEN_STEP = 0.03;
+  const raidJackTurnGrowth = turn => {
+    const before = tacticsUnitsRef.current || [];
+    const grown = before.map(unit => {
+      const t = unit ? normalizeTacticsUnit(unit) : null;
+      if (!t) return unit;
+      const grow = value => Math.max(0, Math.floor(Math.max(0, Number(value) || 0) * RAID_JACK_TURN_GROWTH));
+      return {
+        ...t,
+        baseMaxHp: Math.max(1, grow(t.baseMaxHp)),
+        baseMaxGuts: grow(t.baseMaxGuts),
+        atk: grow(t.atk),
+        def: grow(t.def)
+      };
+    });
+    const scaled = scaleTacticsUnits(grown, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+    const next = scaled.map((unit, index) => {
+      const old = before[index] ? normalizeTacticsUnit(before[index]) : null;
+      if (!unit || !old) return unit;
+      const addHp = Math.max(0, unit.maxHp - old.maxHp),
+        addGuts = Math.max(0, unit.maxGuts - old.maxGuts);
+      return normalizeTacticsUnit({
+        ...unit,
+        hp: old.downed ? old.hp : Math.min(unit.maxHp, old.hp + addHp),
+        guts: Math.min(unit.maxGuts, old.guts + addGuts)
+      });
+    });
+    if (raidJackRunRef.current) raidJackRunRef.current.growths = (raidJackRunRef.current.growths || 0) + 1;
+    commitTacticsUnits(next);
+    writePermaBuffs(p => ({
+      ...p,
+      autoHpRecovery: (p.autoHpRecovery ?? 0.1) + RAID_JACK_TURN_REGEN_STEP
+    }));
+    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 100);
+    pushBattleLog(`${turn}ターン目: 味方の全ステータスが10%上がった！自動回復はライフ${lifeRate}%・ガッツ${lifeRate - 5}%`, 'up');
+    addPopup('全ステータス UP!', 'ally', 'text-emerald-300 font-black text-2xl drop-shadow-[0_0_14px_rgba(52,211,153,0.9)]');
+  };
   const raidJackLevelUp = turn => {
     if (raidJackRunRef.current) raidJackRunRef.current.levelUps = (raidJackRunRef.current.levelUps || 0) + 1;
     const bumpCard = c => {
@@ -73960,6 +74014,7 @@ function MonsterHeroGame() {
       defeated,
       turns: run.turns || 1,
       levelUps: run.levelUps || 0,
+      growths: run.growths || 0,
       outcome,
       opened,
       eventId: run.eventId,
@@ -74099,7 +74154,7 @@ function MonsterHeroGame() {
     if (isHero) {
       initialBattleDistanceRef.current = slotIdx;
       if (isTacticsMode(runMode)) {
-        const heroExDef = tacticsExDefOf(m.id);
+        const heroExDef = raidExDefOf(m.id);
         commitTacticsExState(heroExDef && heroExDef.heroInitialStyle && tacticsHeroStyle ? setTacticsExInitialStyle(createTacticsExState(), {
           def: heroExDef,
           slot: slotIdx,
@@ -75172,7 +75227,7 @@ function MonsterHeroGame() {
     })), openAptEntry && renderGrowthAptDetail(openAptEntry), React.createElement("div", {
       className: "text-[10px] text-slate-500 font-bold mt-1 leading-tight"
     }, "置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます")), renderSkillSection(mon), (() => {
-      const exDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
+      const exDef = typeof tacticsExDefOf === 'function' ? raidExDefOf(mon.id) : null;
       if (!exDef) return null;
       const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
         turn: 'そのターン',
@@ -85754,7 +85809,7 @@ function MonsterHeroGame() {
       wave: wave,
       heroStyleDef: (() => {
         if (mainHero || !currentPickingMon || !tacticsExEnabled) return null;
-        const d = tacticsExDefOf(currentPickingMon.id);
+        const d = raidExDefOf(currentPickingMon.id);
         return d && d.heroInitialStyle ? d : null;
       })(),
       heroStyle: tacticsHeroStyle,
@@ -87877,7 +87932,10 @@ function MonsterHeroGame() {
       }, r.lifeLeft.toLocaleString()), React.createElement("span", null, "固有技とアシカの成長"), React.createElement("b", {
         "data-raid-jack-levelups": true,
         className: "text-right"
-      }, r.levelUps, "回")))), r.opened && React.createElement("div", {
+      }, r.levelUps, "回"), React.createElement("span", {
+        hidden: true,
+        "data-raid-jack-growths": true
+      }, r.growths || 0)))), r.opened && React.createElement("div", {
         className: "mb-2 text-sm font-black text-emerald-300"
       }, "次の段階が開きました！"), React.createElement("div", {
         className: "mb-4 text-[10px] text-slate-300"

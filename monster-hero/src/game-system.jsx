@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f1f1dac7cb90785c
+// generated-sha256: 86e5ce64511cf178
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 16:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 17:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10553,8 +10553,8 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
-  raidJackTiersA: 'みんなで討伐のジャック(段階ごとの共有ライフ)',
-  raidJackTiersB: 'ダメージ競争のジャック(段階ごとのライフ)',
+  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
@@ -36425,7 +36425,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
             className="mt-1 w-full min-h-[36px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[11px] font-black text-orange-100 active:scale-95">わかった</button>
         </div>
       )}
-      <ScreenTabs items={[{ id: 'a', label: 'みんなで討伐' }, { id: 'b', label: 'ダメージ競争' }]} value={tab} onChange={setTab} />
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
       <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
         <div>
           <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
@@ -37763,8 +37763,10 @@ function MonsterHeroGame() {
     const next = list.map((mon, index) => {
       if (!mon) return null;
       if (isSame(mon, index)) return before[index];
-      const fresh = createTacticsUnit(mon);
-      return isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      const fresh = createTacticsUnit(mon, { fullGuts: isRaidJackMode(mode) });
+      const joined = isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+      // ジャック戦は、ライフもガッツも全快からはじめる(追いつき補正がガッツを半分へ戻すので、そのあとで満タンにする)
+      return isRaidJackMode(mode) && joined ? normalizeTacticsUnit({ ...joined, hp: joined.maxHp, guts: joined.maxGuts }) : joined;
     });
     // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
@@ -38917,6 +38919,11 @@ function MonsterHeroGame() {
   // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
   const raidJackRunRef = useRef(null);
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
+  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに1回だけ(専用ルール)。ほかの戦いは今までどおり
+  const raidExDefOf = (monId) => {
+    const def = tacticsExDefOf(monId);
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:1 } : def;
+  };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
@@ -46671,7 +46678,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current,tacticsUnitsRef.current,live.now) : null; };
   // 使い方案内を出すか。EXを持つ子が盤面にいるバトルで、まだ見ていないときだけ
   const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen
-    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && tacticsExDefOf(mon.id));
+    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && raidExDefOf(mon.id));
   const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent,tacticsUnitsRef.current,dist), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
@@ -47758,6 +47765,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       raidJackRunRef.current.turns=Math.min(nextTurn,RAID_JACK_TURNS);
       if(nextTurn>RAID_JACK_TURNS){ finishRaidJack('turns'); return; }
       // Aは 3 / 5 / 8 ターン目に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
+      // レイドバトル専用: ターンが進むたびに味方全員が強くなり、自動回復の割合も上がる
+      if(raidJackRunRef.current.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount) raidJackTurnGrowth(nextTurn);
       if(raidJackRunRef.current.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn)&&nextTurn!==turnCount) raidJackLevelUp(nextTurn);
     } else if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }
     setIsBusy(false);
@@ -47816,7 +47825,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExInfo = (slotIdx) => {
     if(!tacticsExEnabled||!Number.isInteger(slotIdx)) return null;
     const mon=slots[slotIdx]; if(!mon) return null;
-    const def=tacticsExDefOf(mon.id); if(!def) return null;
+    const def=raidExDefOf(mon.id); if(!def) return null;
     const state=tacticsExState;
     const remaining=tacticsExRemaining(def,tacticsExUsesOf(state,slotIdx,mon.id));
     const lifeUnit=normalizeTacticsUnit(tacticsUnits[slotIdx]);
@@ -47938,7 +47947,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
     const mon=slots[slotIdx]; if(!mon) return false;
-    const def=tacticsExDefOf(mon.id); if(!def) return false;
+    const def=raidExDefOf(mon.id); if(!def) return false;
     const state=tacticsExStateRef.current;
     // ★判定は ref の最新値でもう一度通す。連打で同じターンに2回使えないように
     const lifeNow=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
@@ -49262,7 +49271,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const newEnemy=raidRun
       ? raidJackMakeEnemy(raidRun.kind,raidRun.tierIndex,runMode)
       : createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
-    // みんなで討伐は、いまの共有ライフの残りからはじめる(みんなが削った分を引き継ぐ。maxHp はそのままなのでバーの割合に出る)
+    // レイドバトルは、いまの共有ライフの残りからはじめる(みんなが削った分を引き継ぐ。maxHp はそのままなのでバーの割合に出る)
     if (raidRun&&newEnemy&&Number.isFinite(raidRun.startLife)&&raidRun.startLife>0&&raidRun.startLife<newEnemy.maxHp) newEnemy.hp=Math.floor(raidRun.startLife);
     if (!newEnemy) return null;
     // 敵の基礎ライフ・攻撃力への上乗せ(HELHEIMのライフ10倍・デュラハンの専用倍率)。
@@ -49743,6 +49752,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   },[raidJackStartRequest,runMode]);
   // 3 / 5 / 8 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)と、選んだアシカ(上限Lv2)を1段階ずつ上げる。
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
+  // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが10%ずつ(掛け算で)上がり、
+  // ライフ・ガッツの自動回復の割合が3%ずつ上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
+  const RAID_JACK_TURN_GROWTH = 1.10;
+  const RAID_JACK_TURN_REGEN_STEP = 0.03;
+  const raidJackTurnGrowth = (turn) => {
+    const before = tacticsUnitsRef.current || [];
+    const grown = before.map((unit) => {
+      const t = unit ? normalizeTacticsUnit(unit) : null;
+      if (!t) return unit;
+      const grow = (value) => Math.max(0, Math.floor(Math.max(0, Number(value) || 0) * RAID_JACK_TURN_GROWTH));
+      return { ...t, baseMaxHp: Math.max(1, grow(t.baseMaxHp)), baseMaxGuts: grow(t.baseMaxGuts), atk: grow(t.atk), def: grow(t.def) };
+    });
+    const scaled = scaleTacticsUnits(grown, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+    const next = scaled.map((unit, index) => {
+      const old = before[index] ? normalizeTacticsUnit(before[index]) : null;
+      if (!unit || !old) return unit;
+      const addHp = Math.max(0, unit.maxHp - old.maxHp), addGuts = Math.max(0, unit.maxGuts - old.maxGuts);
+      return normalizeTacticsUnit({ ...unit, hp: old.downed ? old.hp : Math.min(unit.maxHp, old.hp + addHp), guts: Math.min(unit.maxGuts, old.guts + addGuts) });
+    });
+    if (raidJackRunRef.current) raidJackRunRef.current.growths = (raidJackRunRef.current.growths || 0) + 1;
+    commitTacticsUnits(next);
+    writePermaBuffs(p => ({ ...p, autoHpRecovery: (p.autoHpRecovery ?? 0.1) + RAID_JACK_TURN_REGEN_STEP }));
+    const lifeRate = Math.round((0.1 + RAID_JACK_TURN_REGEN_STEP * (turn - 1)) * 100);
+    pushBattleLog(`${turn}ターン目: 味方の全ステータスが10%上がった！自動回復はライフ${lifeRate}%・ガッツ${lifeRate - 5}%`, 'up');
+    addPopup('全ステータス UP!', 'ally', 'text-emerald-300 font-black text-2xl drop-shadow-[0_0_14px_rgba(52,211,153,0.9)]');
+  };
   const raidJackLevelUp = (turn) => {
     if(raidJackRunRef.current) raidJackRunRef.current.levelUps=(raidJackRunRef.current.levelUps||0)+1;
     const bumpCard=(c)=>{
@@ -49794,7 +49829,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       next=sent.state; outcome=sent.outcome;
       await raidJackSaveState(next);
     } catch (error) { outcome='error'; }
-    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,outcome,opened,eventId:run.eventId,
+    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
       lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
   };
   // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
@@ -49858,7 +49893,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
     }
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
-    // みんなで討伐: いまの共有ライフの残りを取って、そこからはじめる(取れない・すでに0なら満タンから)
+    // レイドバトル: いまの共有ライフの残りを取って、そこからはじめる(取れない・すでに0なら満タンから)
     let startLife = null;
     if (key === 'a') {
       try {
@@ -49892,7 +49927,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ★タクティクスは、勇者モンを置いた瞬間に初期スタイル(ソード・コンバージョンなど)を盤面の記録へ書く。
       //   選び直して置き直したときに前の枠の記録が残らないよう、記録ごと作り直す(バトルの前なので消えるものは無い)
       if (isTacticsMode(runMode)) {
-        const heroExDef=tacticsExDefOf(m.id);
+        const heroExDef=raidExDefOf(m.id);
         commitTacticsExState(heroExDef&&heroExDef.heroInitialStyle&&tacticsHeroStyle
           ? setTacticsExInitialStyle(createTacticsExState(),{ def:heroExDef, slot:slotIdx, monId:m.id, style:tacticsHeroStyle })
           : createTacticsExState());
@@ -50616,7 +50651,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}<div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
       {renderSkillSection(mon)}
       {(()=>{
-        const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
+        const exDef=typeof tacticsExDefOf==='function'?raidExDefOf(mon.id):null;
         if(!exDef)return null;
         const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
@@ -55329,7 +55364,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           heroStyleDef={(()=>{
             // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
             if(mainHero||!currentPickingMon||!tacticsExEnabled) return null;
-            const d=tacticsExDefOf(currentPickingMon.id);
+            const d=raidExDefOf(currentPickingMon.id);
             return d&&d.heroInitialStyle?d:null;
           })()}
           heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
@@ -56472,7 +56507,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <div className="w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3">
             <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
             <div data-raid-jack-damage className="text-3xl font-black text-white text-right">{r.damage.toLocaleString()}</div>
-            <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b></>}</div>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
           </div>
           {r.opened&&<div className="mb-2 text-sm font-black text-emerald-300">次の段階が開きました！</div>}
           <div className="mb-4 text-[10px] text-slate-300">{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>

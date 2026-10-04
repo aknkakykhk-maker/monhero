@@ -108,7 +108,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
             className="mt-1 w-full min-h-[36px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[11px] font-black text-orange-100 active:scale-95">わかった</button>
         </div>
       )}
-      <ScreenTabs items={[{ id: 'a', label: 'みんなで討伐' }, { id: 'b', label: 'ダメージ競争' }]} value={tab} onChange={setTab} />
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
       <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
         <div>
           <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
