@@ -120,6 +120,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-fight-start]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
     check('ジャック戦が始まり、バトル画面が出る', true);
+    if (process.env.RAID_SHOT_DIR) { await page.waitForTimeout(1500); await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/battle-start.png` }); }
     const bodyText = await page.locator('body').innerText();
     check('バトル画面にジャックの名前が出る', bodyText.includes('ジャック'));
 
@@ -163,6 +164,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // バトル速度を最大にして、AUTOを入れる
     for (let i = 0; i < 3; i++) { await page.locator('[data-battle-controls] button').first().click().catch(() => {}); }
     await page.locator('button[aria-label^="AUTO"]').first().click();
+    if (process.env.RAID_SHOT_DIR) { for (let k = 0; k < 6; k++) { await page.waitForTimeout(1200); await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/battle-auto-${k}.png` }).catch(() => {}); } }
     await page.locator('[data-raid-jack-result]').waitFor({ timeout: 240000 });
     const autoText = await page.locator('[data-raid-jack-result]').innerText();
     const turnsMatch = /使ったターン\s*(\d+)\s*\/\s*10/.exec(autoText);

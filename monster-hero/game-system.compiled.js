@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5dc007cbd2bcce63
+// source-sha256: 02d68b688450f556
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 13:23";
+const BUILD_DATE = "2026-10-04 14:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14586,6 +14586,10 @@ const helpDataRows = id => {
         }[def.duration] || '';
         return [`${monName}「${def.name}」`, `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
+    case 'raidJackTiersA':
+      return (typeof RAID_JACK_A_TIERS !== 'undefined' ? RAID_JACK_A_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
+    case 'raidJackTiersB':
+      return (typeof RAID_JACK_B_TIERS !== 'undefined' ? RAID_JACK_B_TIERS : []).map(t => [t.name, `ライフ ${t.hp.toLocaleString()} ／ 技${t.actionCount}本`]);
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
     case 'monsterLineages':
@@ -14752,6 +14756,8 @@ const helpDataRows = id => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
+  raidJackTiersA: 'みんなで討伐のジャック(段階ごとの共有ライフ)',
+  raidJackTiersB: 'ダメージ競争のジャック(段階ごとのライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
@@ -15149,7 +15155,7 @@ const difficultyStyle = (setting, selected) => selected ? {
   backgroundColor: 'rgba(15,23,42,0.9)',
   color: setting.text
 };
-const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo'];
+const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo', 'Jack'];
 const isMooBoss = id => MOO_BOSS_IDS.includes(String(id || ''));
 const ENEMY_ART_LAYOUT = {
   default: {
@@ -15166,6 +15172,11 @@ const ENEMY_ART_LAYOUT = {
     scanScale: 2.75,
     waveDetailScale: 2,
     objectPosition: 'center 48%'
+  },
+  Jack: {
+    scanScale: 2.2,
+    waveDetailScale: 1.7,
+    objectPosition: 'center 52%'
   }
 };
 const enemyArtStyle = (enemyId, context = 'scan') => {
@@ -48690,7 +48701,8 @@ const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Lamia: 'lamia',
   Nyarlathotep: 'nyarlathotep',
   Splatter: 'splatter',
-  AwakenedMoo: 'awakenedMoo'
+  AwakenedMoo: 'awakenedMoo',
+  Jack: 'jack'
 });
 const TACTICS_ENEMY_SKILL_MS_DEFAULT = Object.freeze({
   rush: 750,
@@ -48858,6 +48870,21 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
       pierceCharge: ['stance', 'lock']
     }
   },
+  jack: {
+    idle: 'hop',
+    skills: {
+      normal: ['swing', 'arc', '🎃', 'shoot'],
+      sweep: ['lunge', null, '👻', 'shoot'],
+      rush: ['flurry', 'burst', '🎃', 'shoot'],
+      pierce: ['spin', 'slash'],
+      special: ['leap', 'ring', '🍬', 'rain'],
+      allout: ['dash', 'widebeam', '👻', 'shoot'],
+      roar: ['rise', 'aura', '🌙', 'rise'],
+      regen: ['heal', 'sparkle'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
   awakenedMoo: {
     idle: null,
     skills: {
@@ -48910,6 +48937,10 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
   },
   awakenedMoo: {
     impact: 'nova'
+  },
+  jack: {
+    impact: 'stamp',
+    mark: '🎃'
   }
 });
 const TACTICS_ENEMY_NO_STRIKE_SKILLS = Object.freeze(['roar', 'charge', 'pierceCharge', 'regen']);
@@ -49459,6 +49490,47 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
       shape: 'spark',
       dist: 80,
       d: 360
+    }]
+  },
+  jack: {
+    special: [{
+      t: 'bits',
+      n: 14,
+      shape: 'star',
+      dist: 140,
+      d: 280
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'flame',
+      dist: 110,
+      d: 330,
+      fall: true
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.4
+    }],
+    allout: [{
+      t: 'blade',
+      a: 0,
+      len: 420,
+      w: 16,
+      d: 240
+    }, {
+      t: 'bits',
+      n: 16,
+      shape: 'spark',
+      dist: 130,
+      d: 260
+    }, {
+      t: 'wave',
+      d: 300
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.6,
+      flat: .45
     }]
   },
   splatter: {
@@ -50027,6 +50099,8 @@ function BattleScreen({
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen' || enemyIsMoo && !!enemyAttackAnim) ? enemyAttackFx.skill : null;
   const emSet = enemyMotion ? TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null : null;
   const emSpec = emSet && enemySkillNow ? emSet.skills[enemySkillNow] || null : null;
+  const enemyBossBox = enemy?.id === 'Jack' ? 'min(70vw,360px)' : 'min(108vw,560px)';
+  const enemyBossImgSrc = enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? {
     '--em-e': JSON.stringify(emSpec[2])
   } : undefined;
@@ -50685,8 +50759,8 @@ function BattleScreen({
       top: '30%',
       transform: 'translate(-50%,-50%)',
       zIndex: focusedCard ? 5 : 30,
-      width: 'min(108vw,560px)',
-      height: 'min(108vw,560px)'
+      width: enemyBossBox,
+      height: enemyBossBox
     }
   }, emSet && React.createElement("i", {
     "aria-hidden": "true",
@@ -50699,7 +50773,7 @@ function BattleScreen({
     "aria-hidden": "true",
     "data-enemy-glow": true
   }), React.createElement("img", {
-    src: enemy.imgUrl,
+    src: enemyBossImgSrc,
     alt: enemy?.name || "ムー",
     style: {
       width: '100%',
@@ -58769,7 +58843,9 @@ const RaidJackScreen = ({
   onPurchase,
   beatPoints = 0,
   eventId,
-  forced = false
+  forced = false,
+  guideVisible = false,
+  onDismissGuide
 }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({
@@ -58854,7 +58930,18 @@ const RaidJackScreen = ({
     accent: "text-orange-200",
     onBack: onBack,
     note: forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'
-  }), React.createElement(ScreenTabs, {
+  }), guideVisible && React.createElement("div", {
+    "data-raid-jack-guide": true,
+    className: "mb-2 shrink-0"
+  }, React.createElement(AssistantBubble, {
+    scene: "raidJackIntro",
+    compact: true
+  }), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-guide-close": true,
+    onClick: onDismissGuide,
+    className: "mt-1 w-full min-h-[36px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[11px] font-black text-orange-100 active:scale-95"
+  }, "わかった")), React.createElement(ScreenTabs, {
     items: [{
       id: 'a',
       label: 'みんなで討伐'
@@ -61227,6 +61314,8 @@ function MonsterHeroGame() {
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);
+  const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
+  const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
   const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);
   const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
   const rpgDefaultAlly = index => {
@@ -63549,7 +63638,7 @@ function MonsterHeroGame() {
         dullahan: 'dullahan',
         moo: 'boss'
       };
-      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];
+      if (enemyId === 'Moo' || enemyId === 'Jack' || currentWave === 10) return bgmArrangement[modeBgm.moo];
       if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];
       return bgmArrangement[modeBgm.normal];
     }
@@ -73736,7 +73825,16 @@ function MonsterHeroGame() {
   };
   const openRaidJack = async () => {
     setRhythmEventPoints(await loadRhythmEventPoints());
+    try {
+      setRaidJackGuideSeen((await storeGet(RAID_JACK_GUIDE_KEY, false, false)) === true);
+    } catch (e) {
+      setRaidJackGuideSeen(true);
+    }
     setGameState('RAID_JACK');
+  };
+  const dismissRaidJackGuide = () => {
+    setRaidJackGuideSeen(true);
+    if (!raidJackDebugForce) storeSet(RAID_JACK_GUIDE_KEY, true, false);
   };
   const purchaseRaidJackExtra = async kind => {
     if (marketPurchaseProcessingRef.current) return {
@@ -81734,7 +81832,9 @@ function MonsterHeroGame() {
       onPurchase: purchaseRaidJackExtra,
       beatPoints: rhythmEventPoints,
       eventId: raidJackEventId,
-      forced: raidJackDebugForce
+      forced: raidJackDebugForce,
+      guideVisible: (RELEASE_FLAGS.raidJack === true || raidJackDebugForce) && !raidJackGuideSeen,
+      onDismissGuide: dismissRaidJackGuide
     }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(RaidJackPrepScreen, {
       kind: raidJackPrep.kind,
       tierIndex: raidJackPrep.tierIndex,
@@ -90854,6 +90954,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="nyarlathotep"] { --em-c: 250,204,21; }
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
+    [data-enemy-motion="jack"] { --em-c: 251,146,60; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

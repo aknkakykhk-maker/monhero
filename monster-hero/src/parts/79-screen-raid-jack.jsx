@@ -27,7 +27,7 @@ const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
   );
 };
 
-const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false }) => {
+const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, eventId, forced = false, guideVisible = false, onDismissGuide }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({ a: 0, b: 0 });
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -100,6 +100,13 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-screen>
       <ScreenHead title="カボチャの大王ジャック" icon="🎃" accent="text-orange-200" onBack={onBack}
         note={forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'} />
+      {guideVisible && (
+        <div data-raid-jack-guide className="mb-2 shrink-0">
+          <AssistantBubble scene="raidJackIntro" compact />
+          <button type="button" data-raid-jack-guide-close onClick={onDismissGuide}
+            className="mt-1 w-full min-h-[36px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[11px] font-black text-orange-100 active:scale-95">わかった</button>
+        </div>
+      )}
       <ScreenTabs items={[{ id: 'a', label: 'みんなで討伐' }, { id: 'b', label: 'ダメージ競争' }]} value={tab} onChange={setTab} />
       <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
         <div>

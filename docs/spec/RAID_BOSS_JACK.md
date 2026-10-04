@@ -1,8 +1,41 @@
-# イベント・レイドボス「ジャック」設計書(下書き)
+# イベント・レイドボス「ジャック」設計書
 
-2026-10-04・ユーザー指示。**ステータス: 設計中(未実装)**。ハロウィン・ナイト
+2026-10-04・ユーザー指示。**ステータス: 実装済み・公開前(公開フラグ `RAID_JACK_PUBLIC_RELEASE` は false)**。残りは下の「実装の状況」。ハロウィン・ナイト
 ([`HALLOWEEN_NIGHT.md`](HALLOWEEN_NIGHT.md))のお話に乗せて、カボチャのモンスターが暴れ、みんなで倒す
 イベントを入れる。
+
+## 実装の状況(2026-10-04)
+
+| もの | 置き場 | 状態 |
+| --- | --- | --- |
+| 定義(段階・倍率・ライフ・技名・期間・回数・保存の正規化) | `src/parts/35-raid-jack.jsx` | 済 |
+| 通信層(送信・再送・取得。別イベントIDでの確認つき) | `src/parts/36-raid-jack-api.jsx` | 済 |
+| SQL(新規の表1つ+ビュー3つ・予行演習/本番/確認/手順書) | `docs/sql/raid/` | 済(**本番のSupabaseへは未適用**) |
+| 敵データ・絵・技の本数(3/4/5/5/5) | `data/enemy-monsters.js`(`Jack`)・`data/images/images-enemy.js` | 済 |
+| 専用の1戦(開始・10ターン・撃破/全滅/リタイア/使い切り・Aの成長) | `src/parts/60-app.jsx`(`startRaidJackBattle` `finishRaidJack` ほか) | 済 |
+| モードの隔離(自己ベスト・全国ランキング・絆・報酬へ書かない) | `src/parts/10-core.jsx` ほか | 済 |
+| レイド画面・編成・追加購入・HOMEのジャック・画面のなかの案内 | `src/parts/79-screen-raid-jack.jsx` `69-screen-home.jsx` | 済 |
+| 攻撃モーション(7技)・ボス表示・ボスBGM | `src/parts/71-screen-battle.jsx` `70-bootstrap.jsx` | 済(見た目は実機で調整) |
+| 更新履歴・ヘルプ・助手の告知・案内のセリフ | `data/changelog.js` `data/help.js` `data/assistants.js` | 済(公開フラグが立つまで出ない) |
+| デバッグ確認(定義・期間・回数・サーバー・戦闘・HOME強制表示) | `src/parts/78-screen-raid-jack-debug.jsx`(デバッグ設定の「ジャック確認」) | 済 |
+| **報酬の中身・個数・受け取り** | — | **未(ユーザーが決める)。画面は「準備中」と出す** |
+| **第2〜5部のお話(ジャックが暴れる・倒せた段階数で台本が変わる)** | — | **未(台本の内容をユーザーと決めて作る)** |
+| 攻撃モーションの見た目の調整 | — | 実機で見てから |
+
+### 公開までの手順(ユーザーの作業を含む)
+
+1. Supabase の SQL Editor で `docs/sql/raid/RAID_JACK_APPLY_TEST.sql` → `RAID_JACK_APPLY.sql` → `RAID_JACK_VERIFY.sql`(手順書: `RAID_JACK_STEPS.md`)。
+2. 公開日時を決め、`35-raid-jack.jsx` の `RAID_JACK_EVENT.startAt / endAt` を直す(いまは仮)。
+3. 報酬・お話ができたら足す。更新履歴の日時は、公開の直前に実時刻へ書き直す。
+4. `17-release-changelog-login-missions.jsx` の `RAID_JACK_PUBLIC_RELEASE` を `true` にする。
+5. デバッグの「ジャック確認」の強制表示で、本番と同じ画面を事前に確かめられる(記録は別イベントID `raid_jack_debug`)。
+
+### 既知の限界・注意
+
+- 不正対策のダメージ上限は置いていない(信頼する)。1回の送信は1億まで(桁あふれを弾くだけ)。
+- ランキングの行は名前だけ(アイコンは付けていない)。
+- 超級を倒せる人がいないと極級は開かない。公開後に数字を見て調整する。
+- 実装で足した細かい決めごと: アシカの枚数は A=1枚 / B=3枚まで。デバッグの強制表示中の追加購入はビートPを減らさない。
 
 ## 決まったこと(ユーザーの回答)
 

@@ -2957,6 +2957,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="nyarlathotep"] { --em-c: 250,204,21; }
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
+    [data-enemy-motion="jack"] { --em-c: 251,146,60; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

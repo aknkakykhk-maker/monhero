@@ -11,7 +11,8 @@ const difficultyStyle = (setting, selected) => (selected
 //   ENEMY_ART_LAYOUT だけムーとそろえてあったのに、演出の分岐(8か所)から漏れていて、
 //   丸枠の中に小さく出るだけだった(2026-09-21 ユーザー指摘「覚醒ムーがしょぼすぎる
 //   クラシックのムーの描写を参照してって言ったじゃん」)
-const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo'];
+// ジャック(イベント・レイドボス)もラスボスの置き方(丸枠の外へ大きく出す)にする(2026-10-04・ユーザー指示「ムーと同じラスボスの置き方」)
+const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo', 'Jack'];
 const isMooBoss = (id) => MOO_BOSS_IDS.includes(String(id || ''));
 
 const ENEMY_ART_LAYOUT = {
@@ -29,6 +30,8 @@ const ENEMY_ART_LAYOUT = {
   // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
   //   表示のときに大きく拡大する。拡大率もムーとそろえてある
   AwakenedMoo: { scanScale:2.75, waveDetailScale:2,    objectPosition:'center 48%' },
+  // ジャック(絵は 1024x880 の横長で、ほぼ全面が本体。覚醒ムーより拡大を控えめにする)
+  Jack: { scanScale:2.2, waveDetailScale:1.7,    objectPosition:'center 52%' },
 };
 const enemyArtStyle = (enemyId, context='scan') => {
   const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;

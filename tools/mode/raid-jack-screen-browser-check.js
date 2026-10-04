@@ -140,6 +140,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
     await page.waitForFunction(() => /共有HP/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
     const raidText = async () => page.locator('[data-raid-jack-screen]').innerText();
+    check('画面のなかの案内(助手の吹き出し)が最初に出る', (await page.locator('[data-raid-jack-guide]').count()) === 1 && (await page.locator('[data-raid-jack-guide]').innerText()).trim().length > 10);
+    await page.locator('[data-raid-jack-guide-close]').click();
+    check('「わかった」で案内が閉じる', (await page.locator('[data-raid-jack-guide]').count()) === 0);
+    check('デバッグの強制表示では「見た」を保存しない(本番の案内を消さない)', await page.evaluate(() => localStorage.getItem('mh_raid_jack_guide_seen_v1') === null));
     let t = await raidText();
     check('A: 5段階が並ぶ', ['ジャック男爵', 'ジャック子爵', 'ジャック伯爵', 'ジャック公爵', 'ジャック大王'].every((n) => t.includes(n)));
     check('A: 男爵は討伐済み・子爵は挑戦できる・伯爵以降は未解放', /1\. ジャック男爵\s*討伐済み/.test(t) && /2\. ジャック子爵\s*挑戦できる/.test(t) && /3\. ジャック伯爵\s*未解放/.test(t) && /5\. ジャック大王\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
@@ -149,7 +153,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('報酬は「準備中」と出る', /報酬の中身は準備中です/.test(t));
     check('残り回数 3 / ビートP 250 が出る', /今日の残り\s*3\s*回/.test(t) && /所持 250/.test(t));
     await page.locator('[data-raid-jack-tier="a2"]').click();
-    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking] li').length >= 2, null, { timeout: 15000 });
+    await page.waitForFunction(() => /90,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 15000 });
     t = await raidText();
     check('A: 貢献ランキングに順位と数字が出る', /1\s*名無しのブリーダー\s*90,000/.test(t.replace(/\n/g, ' ')) || /90,000/.test(t));
     await page.waitForFunction(() => /あなた 4,200\(\d+位\)/.test(document.querySelector('[data-raid-jack-mine]')?.innerText || ''), null, { timeout: 15000 }).catch(() => {});

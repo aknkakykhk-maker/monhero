@@ -60,5 +60,15 @@ check('全部倒しても5段階まで', o.raidJackUnlockedCount('b', ['b1', 'b2
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 check('公開フラグは false(準備ができるまで)', /const RAID_JACK_PUBLIC_RELEASE = false;/.test(rel) && /raidJack:RAID_JACK_PUBLIC_RELEASE/.test(rel));
 
+// ⑥ 公開の準備(更新履歴・告知・ヘルプ・案内が公開フラグで隠れる)
+const changelog = read('monster-hero/data/changelog.js');
+const entry = changelog.slice(changelog.indexOf('const CHANGELOG = ['), changelog.indexOf('const CHANGELOG = [') + 4000);
+check('更新履歴の項目は公開フラグ raidJack が立つまで出ない', /releaseFlag:'raidJack'/.test(entry) && /カボチャの大王ジャック/.test(entry));
+check('大きい追加なので助手の告知(content)が付く', /assistantNotice:\{ id:'update_notice_raid_jack_v1', type:'content' \}/.test(entry));
+const help = read('monster-hero/data/help.js');
+check('ヘルプの項目は公開フラグが立つまで出ず、助手のひとことがある', /id: 'raid-jack'[^\n]*releaseFlag:'raidJack'/.test(help) && /id: 'raid-jack'[\s\S]{0,400}assistant:/.test(help));
+check('画面(RAID_JACK / PREP)はヘルプの項目につながる', /RAID_JACK: 'basics\/raid-jack'/.test(help) && /RAID_JACK_PREP: 'basics\/raid-jack'/.test(help));
+check('画面のなかの案内は新しい保存キー mh_raid_jack_guide_seen_v1 で、公開フラグ(または強制表示)でだけ出る', /mh_raid_jack_guide_seen_v1/.test(read('monster-hero/src/parts/60-app.jsx')) && /guideVisible=\{\(RELEASE_FLAGS\.raidJack===true\|\|raidJackDebugForce\)&&!raidJackGuideSeen\}/.test(read('monster-hero/src/parts/60-app.jsx')));
+
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべて OK');
