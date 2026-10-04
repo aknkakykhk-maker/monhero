@@ -141,9 +141,14 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
       });
       check(`モードえらび ${w}×${h}: 助手のコメントが立ち絵に重ならない`, apart === '', apart);
     }
-    // 助手のオン・オフ(立ち絵とコメントを別々に。両方オフで枠ごと消える。2026-10-04・ユーザー指示)
+    // 立ち絵の枠は縦画面で狭くしない(2026-10-04・ユーザー指摘「立絵エリアがせまくなってる / デフォでもっとでかくしたい」)。
+    // コメントを絵の下へ出したあと、画面の高さの半分より低くなった
     await A.setViewportSize({ width: 390, height: 844 });
-    await A.waitForTimeout(400);
+    await A.waitForTimeout(500);
+    const artH = await A.evaluate(() => { const e = document.querySelector('[data-rhythm-mode-assistant-art-box]'); return e ? Math.round(e.getBoundingClientRect().height) : 0; });
+    check('縦画面(390×844)で、立ち絵の枠が画面の高さの半分以上ある', artH >= 422, `${artH}px / 画面844px`);
+    // 助手のオン・オフ(立ち絵とコメントを別々に。両方オフで枠ごと消える。2026-10-04・ユーザー指示)
+    await A.waitForTimeout(100);
     const has = (sel) => A.evaluate((q) => !!document.querySelector(q), sel);
     await A.locator('[data-rhythm-mode-toggle-comment]').click();
     check('コメントをオフにすると、絵だけが残る', (await has('[data-rhythm-mode-assistant-art-box]')) && !(await has('[data-rhythm-mode-assistant-line]')));
@@ -154,6 +159,17 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     check('両方オフにすると、助手の枠ごと消える(切り替えの札は残る)', !(await has('[data-rhythm-mode-assistant]')) && (await has('[data-rhythm-mode-assistant-toggles]')));
     const offOut = await overflowing(A, '[data-rhythm-mode-select]');
     check('両方オフでも、ボタンが画面の外へはみ出さない', offOut.length === 0, offOut.join(' / '));
+    // 立ち絵オフは上に詰めない(縦の真ん中にそろえる。2026-10-04・ユーザー指摘「立絵オフは上詰めでよくない」)
+    const gaps = await A.evaluate(() => {
+      const first = document.querySelector('[data-rhythm-mode-assistant-toggles]');
+      const last = document.querySelector('[data-rhythm-mode-options]');
+      const head = document.querySelector('[data-rhythm-mode-select] header');
+      if (!first || !last || !head) return null;
+      const top = first.getBoundingClientRect().top - head.getBoundingClientRect().bottom;
+      const bottom = window.innerHeight - last.getBoundingClientRect().bottom;
+      return { top: Math.round(top), bottom: Math.round(bottom) };
+    });
+    check('立ち絵もコメントもオフのとき、ボタンが縦の真ん中にそろう(上に詰めない)', !!gaps && Math.abs(gaps.top - gaps.bottom) <= 60 && gaps.top >= 100, gaps ? `上${gaps.top}px / 下${gaps.bottom}px` : '測れない');
     await A.locator('[data-rhythm-mode-toggle-art]').click();
     await A.locator('[data-rhythm-mode-toggle-comment]').click();
     check('もう一度オンにすると、絵もコメントも戻る', (await has('[data-rhythm-mode-assistant-art-box]')) && (await has('[data-rhythm-mode-assistant-line]')));

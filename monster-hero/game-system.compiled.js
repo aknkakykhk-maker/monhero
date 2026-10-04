@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e6899146814e93d
+// source-sha256: 6ce775dfa1511e32
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 10:04";
+const BUILD_DATE = "2026-10-04 10:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -56797,6 +56797,21 @@ function RhythmMultiScreen({
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    const assistToggles = (cls, withLabel) => ms.onToggleAssistant && React.createElement("div", {
+      "data-rhythm-mode-assistant-toggles": true,
+      role: "group",
+      "aria-label": "助手の表示",
+      className: `flex items-center gap-1.5 ${cls}`
+    }, withLabel && React.createElement("small", {
+      className: "mr-auto text-[10px] font-black text-slate-400"
+    }, "助手 ", ms.assistant ? ms.assistant.name : ''), [['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
+      key: key,
+      type: "button",
+      [attr]: '',
+      "aria-pressed": on,
+      onClick: () => ms.onToggleAssistant(key),
+      className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, label, " ", on ? 'ON' : 'OFF')));
     return React.createElement("main", {
       "data-rhythm-mode-select": true,
       "data-rhythm-multi-step": "rooms",
@@ -56835,7 +56850,7 @@ function RhythmMultiScreen({
     }, React.createElement("b", {
       className: "text-sm font-black text-amber-200"
     }, "周回を終えています…")), React.createElement("div", {
-      className: "relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden"
+      className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`
     }, ms.assistant && (ms.showArt || ms.showComment) && React.createElement("div", {
       "data-rhythm-mode-assistant": true,
       className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${ms.showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
@@ -56845,7 +56860,7 @@ function RhythmMultiScreen({
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mhms-glow"
-    }), React.createElement("div", {
+    }), assistToggles('absolute bottom-1.5 right-1.5 z-20', false), React.createElement("div", {
       className: "mhms-float pointer-events-none absolute inset-0"
     }, RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id] ? (() => {
       const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id];
@@ -56871,9 +56886,9 @@ function RhythmMultiScreen({
       alt: "",
       draggable: false,
       className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
-    }))), ms.showComment && React.createElement("p", {
+    }))), !ms.showArt && assistToggles('mx-2 mt-2 justify-end', true), ms.showComment && React.createElement("p", {
       "data-rhythm-mode-assistant-line": true,
-      className: `mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-2 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:text-[12px]`,
+      className: `mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`,
       style: {
         borderColor: ms.assistant.accent
       }
@@ -56883,8 +56898,8 @@ function RhythmMultiScreen({
         color: ms.assistant.accent
       }
     }, ms.assistant.name), ms.assistant.text)), React.createElement("div", {
-      className: "shrink-0 space-y-2.5 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
-    }, friendsOn && friendInvites.length > 0 && React.createElement("section", {
+      className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
+    }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
     }, React.createElement("h3", {
@@ -56905,7 +56920,7 @@ function RhythmMultiScreen({
       "data-rhythm-mode-solo": true,
       type: "button",
       onClick: ms.onSolo,
-      className: "mhms-card mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.05s'
       }
@@ -56925,7 +56940,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-free": true,
       type: "button",
       onClick: () => searchRoom('free'),
-      className: "mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.12s'
       }
@@ -57040,21 +57055,7 @@ function RhythmMultiScreen({
       className: "text-lg leading-none"
     }, "⚙️"), React.createElement("span", {
       className: "text-[11px] font-black"
-    }, "オプション"))), ms.onToggleAssistant && React.createElement("div", {
-      "data-rhythm-mode-assistant-toggles": true,
-      role: "group",
-      "aria-label": "助手の表示",
-      className: "flex items-center justify-end gap-1.5"
-    }, React.createElement("small", {
-      className: "mr-auto text-[10px] font-black text-slate-400"
-    }, "助手 ", ms.assistant ? ms.assistant.name : ''), [['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
-      key: key,
-      type: "button",
-      [attr]: '',
-      "aria-pressed": on,
-      onClick: () => ms.onToggleAssistant(key),
-      className: `min-h-[34px] rounded-full border px-3 text-[11px] font-black ${on ? 'border-emerald-300 bg-emerald-600/90 text-white' : 'border-white/20 bg-slate-800/80 text-slate-300'}`
-    }, label, " ", on ? 'ON' : 'OFF'))))), React.createElement("div", {
+    }, "オプション"))))), React.createElement("div", {
       "aria-hidden": "true",
       className: "shrink-0",
       style: {
