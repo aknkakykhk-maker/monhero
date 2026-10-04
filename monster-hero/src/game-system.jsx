@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ac7ee8f3baffc9bb
+// generated-sha256: 8457deaaacd6ac56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 07:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 07:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23119,6 +23119,7 @@ const raidJackDefaultState = () => ({
   claimed: [],
   pending: [],
   repaired: false,   // デバッグで付いた「倒した」印をサーバーの記録と突き合わせて直したか(1回だけ・raidJackRepairState)
+  giftsChecked: false,   // 倒していない段階の初討伐報酬(ギフト・受け取り済みの印)を取り下げたか(1回だけ・raidJackRevokeUnearned)
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -23149,6 +23150,7 @@ const raidJackNormalizeState = (raw) => {
     claimed: Array.isArray(src.claimed) ? src.claimed.filter((v) => typeof v === 'string').slice(0, 64) : [],
     pending: raidJackNormalizePending(src.pending),
     repaired: src.repaired === true,
+    giftsChecked: src.giftsChecked === true,
   };
 };
 
@@ -23553,6 +23555,39 @@ const raidJackRepairState = async (state, breederId, eventId) => {
   next.b.total = (Number(self.bTotal) || 0) + norm.pending.filter((p) => p.kind === 'b').reduce((sum, p) => sum + p.damage, 0);
   next.repaired = true;
   return { state: next, changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before };
+};
+
+// ---- 倒していない段階の初討伐報酬の取り下げ(2026-10-05) ----
+// 上の修復で「倒した」印は直せるが、それまでに印が使われて作られたグランドスラムの初討伐報酬(ギフト・受け取り済みの印 clear_bN)が残る。
+// サーバーに本番で倒した記録(defeated=true)が無い難易度のぶんだけ、次のように直す(1回だけ・giftsChecked)。
+//   ・ギフトが「まだ受け取られていない」→ ギフトを取り下げ、受け取り済みの印も外す(本当に倒したときに、改めて届く)
+//   ・ギフトを「もう受け取った」→ 中身は戻せないので、ギフトも印もそのまま残す(あとで本当に倒しても二重には届かない)
+//   ・ギフトが見つからない → 印だけ外す
+//   ・本番で本当に倒した難易度・ほかの報酬(A・順位・参加賞)・ほかのギフトには触れない。通信できないときは何も変えない
+// gifts は mh_gifts の配列。返り値 { ok, state, gifts, changed, removed }(removed=取り下げたギフトの数)
+const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (norm.giftsChecked) return { ok: true, state: norm, gifts: list, changed: false, removed: 0 };
+  const id = raidJackSafeId(breederId);
+  const mine = id ? await sbFetchRaidJackMyDefeats(id, eventId) : null;
+  if (!mine) return { ok: false, state: norm, gifts: list, changed: false, removed: 0 };
+  const earned = new Set(mine);
+  norm.pending.filter((p) => p.defeated).forEach((p) => earned.add(`${p.kind}${p.tier}`));
+  let nextGifts = list;
+  let nextClaimed = norm.claimed;
+  let removed = 0;
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    const claimId = raidJackClaimId('clear_b', i);
+    if (earned.has(tier.id) || !nextClaimed.includes(claimId)) return;
+    const giftId = `${eventId}_${claimId}`;
+    const gift = nextGifts.find((g) => g && g.id === giftId);
+    if (gift && gift.claimedAt) return;   // もう受け取った: 戻せないので残す
+    if (gift) { nextGifts = nextGifts.filter((g) => g !== gift); removed += 1; }
+    nextClaimed = nextClaimed.filter((v) => v !== claimId);
+  });
+  const next = raidJackNormalizeState({ ...norm, claimed: nextClaimed, giftsChecked: true });
+  return { ok: true, state: next, gifts: nextGifts, changed: removed > 0 || nextClaimed.length !== norm.claimed.length, removed };
 };
 
 // ---- part: 37-raid-jack-aura.jsx ----
@@ -50777,6 +50812,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (repaired.state.repaired && !state.repaired) {
         if (!(await raidJackSaveState(repaired.state))) return 0;
         state = repaired.state;
+      }
+      // 続けて、その印のせいで作られた「倒していない段階の初討伐報酬」を取り下げる(もう受け取ったものは残す)。1回だけ
+      if (!state.giftsChecked) {
+        const savedGiftsNow = await storeGet('mh_gifts', [], false);
+        const giftsNow = Array.isArray(savedGiftsNow) ? savedGiftsNow : [];
+        const revoked = await raidJackRevokeUnearned(state, giftsNow, breederId, RAID_JACK_EVENT.id);
+        if (revoked.ok) {
+          const savedRevoke = await saveStoredValuesOrRollback([
+            { key:'mh_gifts', before:giftsNow, next:revoked.gifts },
+            { key:RAID_JACK_STORAGE_KEY, before:state, next:revoked.state },
+          ], storeGet, storeSet);
+          if (!savedRevoke) return 0;
+          state = revoked.state;
+          if (revoked.removed > 0) setGifts(revoked.gifts);
+        }
       }
       const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
       if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
