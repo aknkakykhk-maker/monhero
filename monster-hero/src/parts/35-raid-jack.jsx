@@ -49,19 +49,24 @@ const RAID_JACK_SKILL_NAMES = Object.freeze({
   allout: 'おばけパレード',
 });
 
-const raidJackTier = (id, name, power, actionCount) => Object.freeze({
-  id, name, power, actionCount,
+// atkPower を渡したときは、攻撃力だけこの倍率で決める(ライフは power のまま)。渡さなければ power と同じ(グランドスラム)。
+const raidJackTier = (id, name, power, actionCount, atkPower = power) => Object.freeze({
+  id, name, power, actionCount, atkPower,
   hp: Math.round(RAID_JACK_BASE.hp * power * RAID_JACK_LIFE_MULTIPLIER),
-  atk: Math.round(RAID_JACK_BASE.atk * power),
+  atk: Math.round(RAID_JACK_BASE.atk * atkPower),
 });
+// レイドバトル(A)の攻撃力の倍率(2026-10-04・ユーザー指示)。通常バトルの難易度 Easy / Normal / Hard / Expert / Master の
+// 攻撃倍率(DIFFICULTY_SETTINGS の power: 0.5 / 1.0 / 1.5 / 3.0 / 5.0)と同じにする。ライフは変えない。
+// 数字がずれていないかは tools/mode/raid-jack-check.js が DIFFICULTY_SETTINGS と突き合わせる
+const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
 
 // A: ベースモン協力戦。段階ごとの共有HP。
 const RAID_JACK_A_TIERS = Object.freeze([
-  raidJackTier('a1', 'ジャック男爵', 5.0, 3),
-  raidJackTier('a2', 'ジャック子爵', 6.5, 4),
-  raidJackTier('a3', 'ジャック伯爵', 8.0, 5),
-  raidJackTier('a4', 'ジャック公爵', 10.0, 5),
-  raidJackTier('a5', 'ジャック大王', 13.0, 5),
+  raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0]),    // 攻撃力は Easy
+  raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1]),    // Normal
+  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2]),    // Hard
+  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3]),   // Expert
+  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4]),   // Master
 ]);
 // B: マスモンの累計ダメージ。5段階(ランキングは共有)。
 const RAID_JACK_B_TIERS = Object.freeze([
