@@ -39,7 +39,7 @@ check('技名がそろっている', ['normal', 'special', 'sweep', 'rush', 'pie
 
 // ② 期間と回数
 const t = (s) => Date.parse(s);
-check('開始前は before', o.raidJackWindowAt(t('2026-10-11T07:59:59+09:00')) === 'before');
+check('開始前は before(開始は公開日時の 2026-10-05 4:00)', o.raidJackWindowAt(t('2026-10-05T03:59:59+09:00')) === 'before' && o.raidJackWindowAt(t('2026-10-05T04:00:00+09:00')) === 'open');
 check('期間中は open', o.raidJackWindowAt(t('2026-10-20T12:00:00+09:00')) === 'open');
 check('終了後は after', o.raidJackWindowAt(t('2026-11-01T04:00:00+09:00')) === 'after');
 check('5:00前は前日扱い', o.raidJackDayKey(t('2026-10-20T04:59:00+09:00')) === '2026-10-19');
@@ -65,13 +65,29 @@ check('全部倒しても5段階まで', o.raidJackUnlockedCount('b', ['b1', 'b2
 
 // ⑤ 公開フラグ
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
-check('公開フラグは false(準備ができるまで)', /const RAID_JACK_PUBLIC_RELEASE = false;/.test(rel) && /raidJack:RAID_JACK_PUBLIC_RELEASE/.test(rel));
+check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJack は開始日時までは偽を返す(見るたびに数え直す getter・読み込み時に touch しても落ちない)',
+  /const RAID_JACK_PUBLIC_RELEASE = true;/.test(rel) && /get raidJack\(\) \{ try \{ return RAID_JACK_PUBLIC_RELEASE === true && Date\.now\(\) >= Date\.parse\(RAID_JACK_EVENT\.startAt\); \} catch \(e\) \{ return false; \} \}/.test(rel));
+// 公開の瞬間(開始日時)の前後で、実際に旗が切り替わることを、本物の定義で確かめる
+{
+  const vm2 = require('vm');
+  const fl = rel.slice(rel.indexOf('const RELEASE_FLAGS = {'), rel.indexOf('};', rel.indexOf('const RELEASE_FLAGS = {')) + 2);
+  const base = { SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: true, TACTICS_BETA_PRO_RELEASE: true, TACTICS_EX_SKILLS_RELEASE: true, RHYTHM_MODE_PUBLIC_RELEASE: true, RHYTHM_MULTI_PUBLIC_RELEASE: true, FRIENDS_PUBLIC_RELEASE: true,
+    QUICK_RHYTHM_LINK_PUBLIC_RELEASE: true, RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE: true, RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE: true, RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE: true, RHYTHM_EVENT_POINTS_PUBLIC_RELEASE: true, RAID_JACK_PUBLIC_RELEASE: true };
+  const at = (ms, withEvent = true) => {
+    const c = { ...base, Date: class extends Date { static now() { return ms; } }, Object, Number, Math, Array };
+    vm2.createContext(c);
+    const pre = withEvent ? "const RAID_JACK_EVENT = { startAt: '2026-10-05T04:00:00+09:00' };\n" : '';
+    return vm2.runInContext(`${pre}${fl}\nRELEASE_FLAGS.raidJack`, c);
+  };
+  check('開始の1ミリ秒前は旗が偽、開始の時刻から真(4:00ちょうどに公開される)', at(Date.parse('2026-10-05T03:59:59.999+09:00')) === false && at(Date.parse('2026-10-05T04:00:00+09:00')) === true);
+  check('開始日時の定義より前に旗を読んでも落ちない(初期化前の参照は偽になる)', (() => { try { const c = { ...base, Object, Number, Math, Array }; vm2.createContext(c); return vm2.runInContext(`${fl}\nRELEASE_FLAGS.raidJack`, c) === false; } catch (e) { return false; } })());
+}
 
 // ⑥ 公開の準備(更新履歴・告知・ヘルプ・案内が公開フラグで隠れる)
 const changelog = read('monster-hero/data/changelog.js');
 const entry = changelog.slice(changelog.indexOf('const CHANGELOG = ['), changelog.indexOf('const CHANGELOG = [') + 4000);
 check('更新履歴の項目は公開フラグ raidJack が立つまで出ない', /releaseFlag:'raidJack'/.test(entry) && /カボチャの大王ジャック/.test(entry));
-check('大きい追加なので助手の告知(content)が付く', /assistantNotice:\{ id:'update_notice_raid_jack_v1', type:'content' \}/.test(entry));
+check('大きい追加なので助手の告知(content)が付く', /assistantNotice:\{ id:'update_notice_raid_jack_v1', type:'content', notifyFrom:'2026-10-05T04:00:00\+09:00'/.test(entry) && /visibleFrom:'2026-10-05T04:00:00\+09:00'/.test(entry));
 const help = read('monster-hero/data/help.js');
 check('ヘルプの項目は公開フラグが立つまで出ず、助手のひとことがある', /id: 'raid-jack'[^\n]*releaseFlag:'raidJack'/.test(help) && /id: 'raid-jack'[\s\S]{0,400}assistant:/.test(help));
 check('画面(RAID_JACK / PREP)はヘルプの項目につながる', /RAID_JACK: 'basics\/raid-jack'/.test(help) && /RAID_JACK_PREP: 'basics\/raid-jack'/.test(help));

@@ -89,7 +89,7 @@ check('ストーリー台本の文書に、爵位の順(男爵→子爵→伯爵
 // ④ 設計書(現在の仕様)
 const design = read('docs/spec/RAID_BOSS_JACK.md');
 const statusStart = design.indexOf('## 実装の状況');
-const statusEnd = design.indexOf('### 公開までの手順');
+const statusEnd = design.indexOf('### 公開(2026-10-05');
 const statusText = design.slice(statusStart, statusEnd);
 check('設計書の「実装の状況」に、旧い記述(10ターン・第2〜5部は未)が残っていない', !/10ターン|第2〜5部のお話[^|]*\|[^|]*\|[^|]*未/.test(statusText), (statusText.match(/10ターン|第2〜5部のお話/) || [''])[0]);
 check('設計書に「現在の仕様(まとめ)」の節があり、数字が定義と同じ',
