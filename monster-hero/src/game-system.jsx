@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8e606e796ee2a638
+// generated-sha256: ae7ade9726e9dba1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 20:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 20:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38988,10 +38988,10 @@ function MonsterHeroGame() {
   // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
   const raidJackRunRef = useRef(null);
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
-  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに1回だけ(専用ルール)。ほかの戦いは今までどおり
+  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
   const raidExDefOf = (monId) => {
     const def = tacticsExDefOf(monId);
-    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:1 } : def;
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:2 } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);

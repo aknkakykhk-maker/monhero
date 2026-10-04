@@ -2330,10 +2330,10 @@ function MonsterHeroGame() {
   // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
   const raidJackRunRef = useRef(null);
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
-  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに1回だけ(専用ルール)。ほかの戦いは今までどおり
+  // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
   const raidExDefOf = (monId) => {
     const def = tacticsExDefOf(monId);
-    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:1 } : def;
+    return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:2 } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
