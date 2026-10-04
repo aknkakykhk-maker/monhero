@@ -1413,6 +1413,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    // 助手の「立ち絵 ON/OFF」「コメント ON/OFF」の札。立ち絵があるときはその右下の角に重ねて(帽子や顔にかぶせず・行を増やさず、絵の枠を広く使う。
+    // 2026-10-04・ユーザー指摘「立絵エリアがせまくなってる」)、立ち絵が無いときは枠の中(両方オフなら右の列の上)に並べる
+    const assistToggles = (cls, withLabel) => ms.onToggleAssistant && (
+      <div data-rhythm-mode-assistant-toggles role="group" aria-label="助手の表示" className={`flex items-center gap-1.5 ${cls}`}>
+        {withLabel && <small className="mr-auto text-[10px] font-black text-slate-400">助手 {ms.assistant ? ms.assistant.name : ''}</small>}
+        {[['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => (
+          <button key={key} type="button" {...{ [attr]: '' }} aria-pressed={on} onClick={() => ms.onToggleAssistant(key)}
+            className={`min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{label} {on ? 'ON' : 'OFF'}</button>
+        ))}
+      </div>
+    );
     return (
       <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`}>
         <RhythmModeSelectStage />
@@ -1436,7 +1447,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
-        <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden">
+        <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`}>
           {/* 助手。上に立ち絵、その下にコメント(絵に重ねない。2026-10-04・ユーザー指摘「助手コメントが助手に被ってる」)。
               立ち絵とコメントは別々にオン・オフできる。両方オフなら枠ごと出さない */}
           {ms.assistant && (ms.showArt || ms.showComment) && (
@@ -1444,6 +1455,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               {ms.showArt && (
                 <div data-rhythm-mode-assistant-art-box className="relative min-h-0 flex-1 overflow-hidden">
                   <span aria-hidden="true" className="mhms-glow" />
+                  {assistToggles('absolute bottom-1.5 right-1.5 z-20', false)}
                   <div className="mhms-float pointer-events-none absolute inset-0">
                     {RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]
                       ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(ms.assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; return <img data-rhythm-mode-assistant-art src={ms.assistant.image} alt="" draggable={false} className="absolute max-w-none" style={{ width: `${fr.zoom * 100}%`, height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)` }} />; })()
@@ -1451,14 +1463,16 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                   </div>
                 </div>
               )}
+              {!ms.showArt && assistToggles('mx-2 mt-2 justify-end', true)}
               {ms.showComment && (
-                <p data-rhythm-mode-assistant-line className={`mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-2 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:text-[12px]`} style={{ borderColor: ms.assistant.accent }}>
+                <p data-rhythm-mode-assistant-line className={`mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`} style={{ borderColor: ms.assistant.accent }}>
                   <b className="mb-0.5 block text-[10px]" style={{ color: ms.assistant.accent }}>{ms.assistant.name}</b>{ms.assistant.text}
                 </p>
               )}
             </div>
           )}
-          <div className="shrink-0 space-y-2.5 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
+          <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
+            {!(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true)}
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
                 <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
@@ -1473,14 +1487,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div className={`grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {/* ソロ: いつもの曲えらびへ */}
               <button data-rhythm-mode-solo type="button" onClick={ms.onSolo}
-                className="mhms-card mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.05s' }}>
+                className="mhms-card mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.05s' }}>
                 <span aria-hidden="true" className="mhms-mark">SOLO LIVE</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎵</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">ソロライブ</b><small className="block text-[10px] font-black leading-tight text-slate-800/80">ひとりで好きな曲を演奏</small></span>
               </button>
               {/* マルチ: フリーマッチ(だれとでも)。ベテランは無くした(2026-10-03・ユーザー指示) */}
               {ms.multi && <button data-rhythm-multi-free type="button" onClick={() => searchRoom('free')}
-                className="mhms-card free mhms-in flex min-h-[92px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
+                className="mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
                 <span aria-hidden="true" className="mhms-mark">FREE MATCH</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎮</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small><RhythmMultiLobbyCount /></span>
@@ -1517,16 +1531,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="text-[11px] font-black">オプション</span>
               </button>
             </div>
-            {/* 助手の見せ方(立ち絵・コメントを別々にオン・オフ。両方オフで助手の枠ごと消える) */}
-            {ms.onToggleAssistant && (
-              <div data-rhythm-mode-assistant-toggles role="group" aria-label="助手の表示" className="flex items-center justify-end gap-1.5">
-                <small className="mr-auto text-[10px] font-black text-slate-400">助手 {ms.assistant ? ms.assistant.name : ''}</small>
-                {[['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => (
-                  <button key={key} type="button" {...{ [attr]: '' }} aria-pressed={on} onClick={() => ms.onToggleAssistant(key)}
-                    className={`min-h-[34px] rounded-full border px-3 text-[11px] font-black ${on ? 'border-emerald-300 bg-emerald-600/90 text-white' : 'border-white/20 bg-slate-800/80 text-slate-300'}`}>{label} {on ? 'ON' : 'OFF'}</button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
         <div aria-hidden="true" className="shrink-0" style={{ height: 'var(--mh-sa-bottom)' }} />
