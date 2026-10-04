@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42511be32f1b144d
+// source-sha256: dd16c900e878a0f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 06:56";
+const BUILD_DATE = "2026-10-05 07:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -20035,7 +20035,10 @@ const TacticsExCutin = ({
     }
   }, cutin.exName), React.createElement("div", {
     className: "ex-cutin__sub"
-  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''))), React.createElement("div", {
+  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''), cutin.note ? React.createElement("div", {
+    "data-ex-cutin-note": true,
+    className: "ex-cutin__note"
+  }, cutin.note) : null)), React.createElement("div", {
     className: "ex-cutin__flash"
   })), document.body);
 };
@@ -33564,6 +33567,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
+    useNote: '敵の攻撃を全部モノリスが受ける',
     desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
     maxUses: 10,
     unlimited: false,
@@ -33574,6 +33578,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mocchi: Object.freeze({
     id: 'mocchi_guts_full',
     name: 'ガッツ全開っちー',
+    useNote: '5ターン 全ステータス+30%・満タン・自動回復+30%',
     desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3,
     unlimited: false,
@@ -33588,6 +33593,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mitarashi: Object.freeze({
     id: 'mitarashi_dragon',
     name: 'ドラゴンだっちー',
+    useNote: '5ターン 力・ガッツ+40% 丈夫さ・ライフ+20%・満タン',
     desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3,
     unlimited: false,
@@ -33612,6 +33618,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
+    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
     desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
     maxUses: 3,
     unlimited: false,
@@ -33623,6 +33630,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
+    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
     desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
     maxUses: 5,
     unlimited: false,
@@ -33635,6 +33643,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ark: Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
+    useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
     desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
     maxUses: 5,
     unlimited: false,
@@ -33652,6 +33661,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Iblis: Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
+    useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
     desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
     maxUses: 5,
     unlimited: false,
@@ -33674,6 +33684,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pixie: Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
+    useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
     desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
     maxUses: 3,
     unlimited: false,
@@ -33687,6 +33698,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mia: Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
+    useNote: '4ターン カード+1・使うほどボルテージ上昇',
     desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
     maxUses: 3,
     unlimited: false,
@@ -33706,6 +33718,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Snegurochka: Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
+    useNote: '全員のガッツ回復＋ランダムで1つ',
     desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
     maxUses: 1,
     unlimited: false,
@@ -33731,6 +33744,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Undine: Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
+    useNote: '選んだ味方が満タンに・ガッツ30%回復',
     desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
     maxUses: 5,
     unlimited: false,
@@ -33747,6 +33761,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yaobikuni: Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
+    useNote: '時間停止 このターン敵は動かない',
     desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
     maxUses: 2,
     unlimited: false,
@@ -33757,6 +33772,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pandora: Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
+    useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
     desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
     maxUses: 3,
     unlimited: false,
@@ -33780,6 +33796,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
+    useNote: '丈夫さが0になり、その50%が力へ',
     desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
     maxUses: 3,
     unlimited: false,
@@ -33791,6 +33808,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
+    useNote: '戦い方を切り替えた',
     desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n' + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n' + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n' + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
     maxUses: 5,
     unlimited: false,
@@ -33816,6 +33834,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yggdrasil: Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
+    useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
     desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
     maxUses: 5,
     unlimited: false,
@@ -33829,6 +33848,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   MelWhip: Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
+    useNote: 'このターン 連撃30%×4・先にカードで攻撃',
     desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
     maxUses: 3,
     unlimited: false,
@@ -33863,6 +33883,7 @@ const normalizeTacticsExDef = raw => {
     id: raw.id,
     name: String(raw.name || raw.id),
     desc: String(raw.desc || ''),
+    useNote: String(raw.useNote || ''),
     maxUses: unlimited ? 0 : Math.max(0, tacticsSafeInt(raw.maxUses, 0)),
     unlimited,
     withCards: raw.withCards === true,
@@ -34397,6 +34418,33 @@ const TACTICS_EX_PRESENT_LABELS = Object.freeze({
   guts: 'ガッツ追加回復',
   crit: '会心率アップ'
 });
+const tacticsExPresentKindText = (kind, cfg, turns = 2) => {
+  const c = cfg || {},
+    pct = v => Math.round((Number(v) || 0) * 100);
+  switch (kind) {
+    case 'dmg':
+      return `与ダメージ+${pct(c.dmg)}%（${turns}ターン）`;
+    case 'taken':
+      return `被ダメージ−${pct(c.taken)}%（${turns}ターン）`;
+    case 'combo':
+      return c.combo ? `連撃 与ダメ${pct(c.combo.rate)}%×${c.combo.count}回（${turns}ターン）` : '連撃付与';
+    case 'heal':
+      return `全員のライフが上限の${pct(c.heal)}%回復`;
+    case 'guts':
+      return `全員のガッツがさらに上限の${pct(c.guts)}%回復`;
+    case 'crit':
+      return `会心率×${(Number(c.crit) || 0) + 1}（${turns}ターン）`;
+    default:
+      return '';
+  }
+};
+const tacticsExPresentNote = (roll, cfg, turns = 2) => {
+  if (!roll || !Array.isArray(roll.kinds)) return '';
+  const c = cfg || {};
+  const head = `全員のガッツが上限の${Math.round((Number(c.fixedGuts) || 0) * 100)}%回復`;
+  const body = roll.kinds.map(k => tacticsExPresentKindText(k, c, turns)).filter(Boolean).join('・');
+  return `${head}＋${roll.jackpot ? '大当たり！ ' : ''}${body}`;
+};
 const rollTacticsExPresent = (r1, r2, jackpot = 0.1) => Number(r1) < jackpot ? {
   jackpot: true,
   kinds: TACTICS_EX_PRESENT_KINDS.slice()
@@ -59989,6 +60037,168 @@ const RaidJackRewardList = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-300"
   }, "🔮 魂格の結晶は、マスモンの魂格特性の画面で使うと、そのマスモンの魂格Pが1個につき+1されます。", React.createElement("br", null), "🌈 虹の超越の実は、超越強化で超越ポイント+1に変えられます。")));
 };
+const RaidJackRankingRows = ({
+  rows,
+  myId,
+  renderPlace,
+  renderIcon,
+  cardClass,
+  limit = 100
+}) => {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return React.createElement("ol", {
+    "data-raid-jack-ranking": true,
+    className: "space-y-1.5"
+  }, rows.slice(0, limit).map((r, i) => {
+    const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    }) : {
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    };
+    const mineRow = !!myId && r.breederId === myId;
+    return React.createElement("li", {
+      key: `${r.breederId}-${i}`,
+      "data-raid-jack-ranking-row": true,
+      "data-ranking-kind": "raid-jack",
+      "aria-current": mineRow ? 'true' : undefined,
+      className: `${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`
+    }, typeof renderPlace === 'function' ? renderPlace(i) : React.createElement("span", {
+      className: "w-7 shrink-0 text-center text-[10px] font-black text-amber-200"
+    }, i + 1), typeof renderIcon === 'function' && renderIcon(entry), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+    }, entry.userName || '名無しのブリーダー', mineRow && React.createElement("span", {
+      className: "ml-1 text-[8px] text-orange-200"
+    }, "(あなた)")), React.createElement("b", {
+      className: "shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200"
+    }, r.total.toLocaleString(), React.createElement("small", {
+      className: "ml-0.5 text-[8px] text-slate-400"
+    }, "ダメージ")));
+  }));
+};
+const RaidJackRankingList = ({
+  onClose,
+  eventId,
+  initialTab = 'a',
+  initialTier = 0,
+  bossDown = false,
+  renderPlace,
+  renderIcon,
+  cardClass
+}) => {
+  const [tab, setTab] = useState(initialTab);
+  const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
+  const [allMode, setAllMode] = useState(false);
+  const [rows, setRows] = useState(undefined);
+  const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
+  const [ahead, setAhead] = useState(null);
+  const useAll = tab === 'a' && allMode && bossDown;
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setRows(undefined);
+      setAhead(null);
+      const meId = await ensureBreederId();
+      if (!alive) return;
+      setMyId(meId || null);
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
+      if (!alive) return;
+      setSelf(mine);
+      const list = useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      if (!alive) return;
+      if (list) {
+        try {
+          await ensureBreederProfiles('raid-jack');
+        } catch (e) {}
+      }
+      if (!alive) return;
+      setRows(list);
+      if (list && mine) {
+        const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? mine.a[tierIdx + 1] || 0 : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, tierIdx + 1, myTotal, eventId) : null;
+        if (alive) setAhead(count);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [tab, tierIdx, useAll, eventId]);
+  const myTotal = self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
+  const title = useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  return React.createElement("div", {
+    "data-raid-jack-ranking-list": true,
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "ジャックのランキング",
+    style: {
+      paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+    }
+  }, React.createElement("div", {
+    className: "mb-2 flex shrink-0 items-center justify-between"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-orange-200"
+  }, "🏆 ジャックのランキング"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-close": true,
+    onClick: onClose,
+    "aria-label": "ランキングを閉じる",
+    className: "min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95"
+  }, "閉じる")), React.createElement(ScreenTabs, {
+    items: [{
+      id: 'a',
+      label: 'レイドバトル'
+    }, {
+      id: 'b',
+      label: 'グランドスラム'
+    }],
+    value: tab,
+    onChange: setTab
+  }), tab === 'a' && React.createElement("div", {
+    "data-raid-jack-ranking-tiers": true,
+    className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
+  }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
+    type: "button",
+    key: t.id,
+    "data-raid-jack-ranking-tier": t.id,
+    onClick: () => {
+      setTierIdx(i);
+      setAllMode(false);
+    },
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, t.name.replace('ジャック', ''))), bossDown && React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-all": true,
+    onClick: () => setAllMode(true),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, "累計ダメージ")), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 flex items-baseline justify-between gap-2 text-[11px]"
+  }, React.createElement("span", {
+    className: "font-black text-orange-200"
+  }, title), myTotal > 0 && React.createElement("span", {
+    "data-raid-jack-ranking-mine": true,
+    className: "shrink-0 text-[10px] text-slate-200"
+  }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
+    className: "mb-2 text-[9px] text-slate-400"
+  }, useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "読み込み中…"), rows === null && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+    rows: rows,
+    myId: myId,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass
+  })));
+};
 const RaidJackScreen = ({
   onBack,
   onChallenge,
@@ -60019,6 +60229,7 @@ const RaidJackScreen = ({
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
   const [showRewards, setShowRewards] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
   const [aAll, setAAll] = useState(false);
   const nowMs = Date.now();
   const windowState = raidJackWindowAt(nowMs);
@@ -60141,7 +60352,19 @@ const RaidJackScreen = ({
     className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
   }, "1回追加", React.createElement("br", null), React.createElement("small", {
     className: "text-[9px] opacity-80"
-  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), message && React.createElement("div", {
+  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), React.createElement("div", {
+    className: "mb-2 grid shrink-0 grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-open": true,
+    onClick: () => setShowRanking(true),
+    className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
+  }, "🏆 ランキング"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-reward-list-open-top": true,
+    onClick: () => setShowRewards(true),
+    className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
+  }, "🎁 報酬一覧")), message && React.createElement("div", {
     className: "mb-2 shrink-0 text-center text-[11px] font-black text-amber-200",
     role: "status"
   }, message), totals === null && React.createElement("div", {
@@ -60237,36 +60460,13 @@ const RaidJackScreen = ({
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
-  }, "まだ記録がありません。いちばんのりを目指そう！"), Array.isArray(rows) && rows.length > 0 && React.createElement("ol", {
-    "data-raid-jack-ranking": true,
-    className: "space-y-1.5"
-  }, rows.slice(0, 100).map((r, i) => {
-    const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({
-      breederId: r.breederId,
-      userName: raidJackNameOf(r.breederId)
-    }) : {
-      breederId: r.breederId,
-      userName: raidJackNameOf(r.breederId)
-    };
-    const mineRow = !!myId && r.breederId === myId;
-    return React.createElement("li", {
-      key: `${r.breederId}-${i}`,
-      "data-raid-jack-ranking-row": true,
-      "data-ranking-kind": "raid-jack",
-      "aria-current": mineRow ? 'true' : undefined,
-      className: `${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`
-    }, typeof renderPlace === 'function' ? renderPlace(i) : React.createElement("span", {
-      className: "w-7 shrink-0 text-center text-[10px] font-black text-amber-200"
-    }, i + 1), typeof renderIcon === 'function' && renderIcon(entry), React.createElement("span", {
-      className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
-    }, entry.userName || '名無しのブリーダー', mineRow && React.createElement("span", {
-      className: "ml-1 text-[8px] text-orange-200"
-    }, "(あなた)")), React.createElement("b", {
-      className: "shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200"
-    }, r.total.toLocaleString(), React.createElement("small", {
-      className: "ml-0.5 text-[8px] text-slate-400"
-    }, "ダメージ")));
-  })))), React.createElement("div", {
+  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+    rows: rows,
+    myId: myId,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass
+  }))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
@@ -60274,7 +60474,16 @@ const RaidJackScreen = ({
     disabled: !open || !isOpenTier || closedTier || remaining <= 0,
     onClick: () => onChallenge(tab, current),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-  }, challengeLabel)), showRewards && React.createElement(RaidJackRewardList, {
+  }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
+    eventId: eventId,
+    initialTab: tab,
+    initialTier: current,
+    bossDown: bossDownNow,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass,
+    onClose: () => setShowRanking(false)
+  }), showRewards && React.createElement(RaidJackRewardList, {
     claimed: state.claimed,
     initialTab: tab,
     onClose: () => setShowRewards(false)
@@ -60286,7 +60495,8 @@ const RaidJackPrepScreen = ({
   candidates,
   teachings,
   onBack,
-  onStart
+  onStart,
+  onOpenDetail
 }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;
@@ -60304,12 +60514,14 @@ const RaidJackPrepScreen = ({
     return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
   const toggleTeach = id => setTeachIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length >= maxTeach ? maxTeach === 1 ? [id] : prev : [...prev, id]);
-  const tile = (mon, on, onClick, attrs) => React.createElement("button", _extends({
-    type: "button",
+  const tile = (mon, on, onClick, attrs) => React.createElement("div", {
     key: keyOf(mon),
+    className: "relative"
+  }, React.createElement("button", _extends({
+    type: "button",
     onClick: onClick
   }, attrs, {
-    className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
+    className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
   }), (() => {
     const face = friendsFaceIconOf(mon.baseId || mon.id);
     return face ? React.createElement(BreederIcon, {
@@ -60323,7 +60535,16 @@ const RaidJackPrepScreen = ({
     });
   })(), React.createElement("span", {
     className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-  }, mon.name));
+  }, mon.name)), typeof onOpenDetail === 'function' && React.createElement("button", {
+    type: "button",
+    "data-raid-detail": keyOf(mon),
+    "aria-label": `${mon.name}の詳細を見る`,
+    onClick: e => {
+      e.stopPropagation();
+      onOpenDetail(mon);
+    },
+    className: "absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
+  }, "i"));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
     "data-raid-jack-prep": true
@@ -60339,7 +60560,11 @@ const RaidJackPrepScreen = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-orange-200"
-  }, "勇者モン(1体)"), React.createElement("div", {
+  }, "勇者モン(1体)", React.createElement("span", {
+    className: "ml-1 text-[9px] font-normal text-slate-300"
+  }, "右上の ", React.createElement("b", {
+    className: "text-sky-200"
+  }, "i"), " でモンスターの詳細が見られます")), React.createElement("div", {
     className: "grid grid-cols-5 gap-1.5"
   }, list.map(mon => tile(mon, heroKey === keyOf(mon), () => {
     setHeroKey(keyOf(mon));
@@ -62556,6 +62781,7 @@ function MonsterHeroGame() {
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
@@ -72709,6 +72935,13 @@ function MonsterHeroGame() {
           text: `あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン`,
           active: true
         };
+        if (def.effect === 'present' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const pr = tacticsExPresentOf(state, tacticsUnits, tacticsExNow);
+          if (pr && pr.kinds.length) return {
+            text: pr.jackpot ? '大当たり！' : TACTICS_EX_PRESENT_LABELS[pr.kinds[0]],
+            active: true
+          };
+        }
         if (isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
           text: `${def.name}中`,
           active: true
@@ -72725,7 +72958,16 @@ function MonsterHeroGame() {
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
         const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
         if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);
-        if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり（全部）' : pres.kinds.map(k => TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
+        if (def.effect === 'dodgeCombo' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const zc = tacticsExExtraCombosAt(state, tacticsUnits, slotIdx, tacticsExNow);
+          out.push(zc ? `回避 ${zc.count}回 → 与ダメ${Math.round(zc.rate * 100)}%の連撃が${zc.count}回付いている` : '回避 0回（回避するたびに連撃が1回ずつ増える）');
+        }
+        if (def.effect === 'pandoraBox' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const pb = def.pandoraBox;
+          out.push(`1枚目＝悪魔（与ダメ×${pb.devilDmg}・連撃${Math.round(pb.devilCombo.rate * 100)}%×${pb.devilCombo.count}）／2枚目＝天使（味方全員のライフ・ガッツが上限の${Math.round(pb.angelRate * 100)}%回復）`);
+          out.push(`あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン（ターン終わりに最大ライフの${Math.round(pb.costRate * 100)}%を払う）`);
+        }
+        if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり！ ' : ''}${pres.kinds.map(k => tacticsExPresentKindText(k, def.present, def.turns)).join('・')}`);
         return out;
       })(),
       stats: (() => {
@@ -72947,15 +73189,16 @@ function MonsterHeroGame() {
         setGraveyard(ens.graveyard);
       }
     }
+    let presentNote = null;
     if (def.effect === 'present' && def.present) {
       const roll = rollTacticsExPresent(Math.random(), Math.random(), def.present.jackpot);
       commitTacticsExState(setTacticsExPresent(tacticsExStateRef.current, slotIdx, roll));
       tacticsRateHeal(0, def.present.fixedGuts, false);
       if (roll.kinds.includes('heal')) tacticsRateHeal(def.present.heal, 0, false);
       if (roll.kinds.includes('guts')) tacticsRateHeal(0, def.present.guts, false);
-      const names = roll.kinds.map(k => TACTICS_EX_PRESENT_LABELS[k]);
-      pushBattleLog(`🎁 プレゼントの中身: ${roll.jackpot ? '大当たり！ 全部' : names.join('・')}`, 'ally');
-      addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${names[0]}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
+      presentNote = tacticsExPresentNote(roll, def.present, def.turns);
+      pushBattleLog(`🎁 プレゼントの中身: ${presentNote}`, 'ally');
+      addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${tacticsExPresentKindText(roll.kinds[0], def.present, def.turns)}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
     }
     if (def.effect === 'pandoraBox') [PANDORA_DEVIL_IMG, PANDORA_ANGEL_IMG].forEach(u => {
       try {
@@ -72965,6 +73208,8 @@ function MonsterHeroGame() {
     });
     const onUse = TACTICS_EX_ON_USE[def.effect];
     if (isTacticsExEffectImplemented(def)) {
+      const useNote = presentNote || (def.duration === 'style' ? `戦い方を${tacticsExStyleLabel(def, next, slotIdx, mon.id)}に切り替えた` : def.useNote) || '';
+      if (useNote && !presentNote) pushBattleLog(`　→ ${useNote}`, 'ally');
       addPopup(`EX ${def.name}！${toggled}`, 'hero', 'text-fuchsia-300 font-black text-xl drop-shadow-md', undefined, slotIdx);
       Audio_.se.special();
       showTacticsExCutin({
@@ -72975,7 +73220,8 @@ function MonsterHeroGame() {
         colors: mon.colors,
         monName: mon.masuName || mon.name,
         exName: def.name,
-        styleLabel: def.duration === 'style' ? tacticsExStyleLabel(def, next, slotIdx, mon.id) : ''
+        styleLabel: def.duration === 'style' ? tacticsExStyleLabel(def, next, slotIdx, mon.id) : '',
+        note: useNote
       });
       if (typeof onUse === 'function') onUse({
         def,
@@ -83424,7 +83670,7 @@ function MonsterHeroGame() {
       renderPlace: rankingPlace,
       renderIcon: rankingBreederIcon,
       cardClass: rankingCardClass
-    }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(RaidJackPrepScreen, {
+    }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(React.Fragment, null, React.createElement(RaidJackPrepScreen, {
       kind: raidJackPrep.kind,
       tierIndex: raidJackPrep.tierIndex,
       candidates: raidJackPrep.kind === 'b' ? getActiveMonsterList() : getUnlockedBaseMonsterList(),
@@ -83432,9 +83678,23 @@ function MonsterHeroGame() {
         const unlocked = TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
         return unlocked.length > 0 ? unlocked : getActiveTeachingCards();
       })(),
-      onBack: () => setGameState('RAID_JACK'),
-      onStart: startRaidJackFromPrep
-    }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
+      onOpenDetail: mon => setRaidJackDetailMon(mon),
+      onBack: () => {
+        setRaidJackDetailMon(null);
+        setGameState('RAID_JACK');
+      },
+      onStart: args => {
+        setRaidJackDetailMon(null);
+        return startRaidJackFromPrep(args);
+      }
+    }), raidJackDetailMon && renderMonsterDetailModal({
+      mon: raidJackDetailMon,
+      masu: raidJackDetailMon.masuId ? getMasuMon(raidJackDetailMon.masuId) : null,
+      onClose: () => setRaidJackDetailMon(null),
+      accent: 'indigo',
+      readOnly: true,
+      label: `${raidJackDetailMon.name}の詳細`
+    })), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
       raidForce: raidJackDebugForce,
       onToggleRaidForce: () => setRaidJackDebugForce(v => !v),
@@ -92088,6 +92348,8 @@ const createAnimationStyle = () => {
     @keyframes exName { 0%,12% { opacity:0; translate:46px 0; scale:1.35; } 24% { opacity:1; translate:0 0; scale:.96; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; translate:-20px 0; } }
     .ex-cutin__sub { margin-top:6px; font:800 11px/1.2 system-ui, sans-serif; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       opacity:0; animation:exTag 1600ms ease-out 60ms forwards; }
+    .ex-cutin__note { margin-top:4px; font:800 10px/1.35 system-ui, sans-serif; color:#fde68a; max-width:100%; white-space:normal; text-shadow:0 1px 3px rgba(0,0,0,.8);
+      opacity:0; animation:exName 1600ms cubic-bezier(.2,.8,.2,1) 80ms forwards; }
     .ex-cutin__flash { inset:0; background:#fff; opacity:0; animation:exFlash 1600ms linear forwards; }
     @keyframes exFlash { 0% { opacity:0; } 5% { opacity:.7; } 15% { opacity:0; } 84% { opacity:0; } 90% { opacity:.3; } 100% { opacity:0; } }
     .ex-cutin__motif { inset:0; }

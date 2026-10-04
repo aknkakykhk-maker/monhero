@@ -81,6 +81,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const url = req.url();
       if (/raid_jack_/.test(url)) {
         if (req.method() === 'POST') { posts.push({ url, body: req.postData() }); await route.fulfill({ status: 201, body: '' }); return; }
+        // ランキングの確認用: 子爵(段階2)の貢献には3人、グランドスラムの累計には2人を返す
+        if (/raid_jack_contributions\?.*kind=eq\.a&tier=eq\.2/.test(decodeURIComponent(url))) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ breeder_id: 'rank-aaaa0001', total_damage: 900, last_hit_at: 't' }, { breeder_id: 'rank-aaaa0002', total_damage: 500, last_hit_at: 't' }, { breeder_id: 'rank-aaaa0003', total_damage: 100, last_hit_at: 't' }]) }); return; }
+        if (/raid_jack_b_ranking/.test(url)) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ breeder_id: 'rank-bbbb0001', total_damage: 7000, last_hit_at: 't' }, { breeder_id: 'rank-bbbb0002', total_damage: 3000, last_hit_at: 't' }]) }); return; }
         await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }); return;
       }
       // ジャック戦から、ほかの表(rankings など)へ書き込みが出たら記録する
@@ -132,6 +135,22 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/reward-list-b.png` });
     await page.locator('[data-raid-jack-reward-close]').click();
     check('閉じられる', await page.locator('[data-raid-jack-reward-list]').count() === 0);
+    // ② ランキング画面(モード別・段階別)
+    await page.locator('[data-raid-jack-ranking-open]').click();
+    await page.locator('[data-raid-jack-ranking-list]').waitFor({ timeout: 10000 });
+    check('ランキングボタンから、ランキング画面が開く', true);
+    check('レイドバトルは段階のボタンが5つ(男爵〜大王)並ぶ', await page.locator('[data-raid-jack-ranking-tier]').count() === 5);
+    await page.locator('[data-raid-jack-ranking-tier="a2"]').click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 3, null, { timeout: 10000 });
+    check('子爵を選ぶと、その段階の貢献ランキング(3人)が出る', true);
+    check('段階名が見出しに出る', /ジャック子爵への貢献ランキング/.test(await page.locator('[data-raid-jack-ranking-list]').innerText()));
+    await page.locator('[data-raid-jack-ranking-list]').getByText('グランドスラム', { exact: true }).first().click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 2, null, { timeout: 10000 });
+    check('グランドスラムは累計ダメージのランキング(2人)が出る', /グランドスラムの累計ダメージ/.test(await page.locator('[data-raid-jack-ranking-list]').innerText()));
+    check('ランキング画面は横にはみ出さない', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+    if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/ranking-b.png` });
+    await page.locator('[data-raid-jack-ranking-close]').click();
+    check('ランキング画面を閉じられる', await page.locator('[data-raid-jack-ranking-list]').count() === 0);
     check('実行時エラーが出ない', errors.length === 0, errors.join(' / '));
   } finally {
     if (browser) await browser.close();

@@ -542,7 +542,11 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     p = await panel();
     check('「クリスマスプレゼント」: 1/1(このWAVE)・カードと併用できる', !!p && p.name === 'クリスマスプレゼント' && /1 \/ 1/.test(p.uses) && /このWAVE/.test(p.uses) && p.withCards === 'yes', p && p.text.slice(0, 260));
     await page.locator('[data-tactics-ex-use]').click();
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(350);
+    // 使った直後のカットインの下の行に、何が起きたか(全員のガッツ回復＋中身)が数字つきで出る
+    const snNote = await page.evaluate(() => { const el = document.querySelector('[data-ex-cutin-note]'); return el ? el.textContent : ''; });
+    check('使った直後に、中身が数字つきで出る(ガッツ20%回復＋ランダムの1つ)', /ガッツが上限の20%回復＋/.test(snNote) && /[0-9]+%|×/.test(snNote.split('＋')[1] || ''), snNote);
+    await page.waitForTimeout(550);
     const snAfter = await partyOf(snSlot);
     check('使うとガッツが増える(必ず上限の20%・満タンなら変わらない)', !!snBefore && !!snAfter && gutsNow(snAfter.guts) >= gutsNow(snBefore.guts), `${JSON.stringify(snBefore)} → ${JSON.stringify(snAfter)}`);
     await tapSlot(snSlot);
