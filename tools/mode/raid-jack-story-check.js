@@ -129,5 +129,25 @@ let ok = true; let bad = '';
 for (const [n, s] of want) { const id = ids[want.findIndex((w) => w[0] === n)]; for (let i = 0; i < s.length; i++) { try { render(id, i); } catch (err) { ok = false; bad = `${n} ${i}: ${err.message}`; break; } } if (!ok) break; }
 check('全部の台詞を最後まで再生しても、画面が落ちない', ok, bad);
 
+// 段階を倒したあと・期間が終わったあとに流す話の選び方(raidJackStoryCandidates)
+{
+  const vm2 = require('vm');
+  const c3 = { Object, Number, Math, Array, Date, Number };
+  vm2.createContext(c3);
+  vm2.runInContext(`${defs}\nglobalThis.__f={raidJackStoryCandidates,RAID_JACK_A_TIERS,RAID_JACK_EVENT};`, c3);
+  const f = c3.__f;
+  const tot = (n) => { const a = {}; f.RAID_JACK_A_TIERS.forEach((t, i) => { if (i < n) a[i + 1] = { total: t.hp }; }); return { a }; };
+  const during = Date.parse(f.RAID_JACK_EVENT.startAt) + 3600000;
+  const after = Date.parse(f.RAID_JACK_EVENT.endAt) + 1000;
+  check('取れていない(null)ときは何も出さない', f.raidJackStoryCandidates(null, during).length === 0 && f.raidJackStoryCandidates(null, after).length === 0);
+  check('1つも倒していなければ話は無い', f.raidJackStoryCandidates(tot(0), during).length === 0);
+  check('男爵を倒すと第2部、子爵まで倒すと第2・3部の順', f.raidJackStoryCandidates(tot(1), during).join() === 'raid_jack_story_2' && f.raidJackStoryCandidates(tot(2), during).join() === 'raid_jack_story_2,raid_jack_story_3');
+  check('大王まで倒すと第2〜6部。期間中は終章が出ない', f.raidJackStoryCandidates(tot(5), during).join() === 'raid_jack_story_2,raid_jack_story_3,raid_jack_story_4,raid_jack_story_5,raid_jack_story_6');
+  check('期間が終わると、大王を倒していれば「倒せた」終章', f.raidJackStoryCandidates(tot(5), after).pop() === 'raid_jack_ending_cleared');
+  check('期間が終わると、大王を倒せていなければ「倒せなかった」終章', f.raidJackStoryCandidates(tot(3), after).pop() === 'raid_jack_ending_notcleared');
+  check('期間が終わっても、取れていなければ終章を出さない', f.raidJackStoryCandidates(null, after).length === 0);
+  check('見回りが見るたびに数え直す(HOMEの見回りから呼ぶ・読み込み時に決めない)', /raidJackStoryCandidates\(raidTotals, Date\.now\(\)\)/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8')));
+}
+
 if (failed) { console.log(`\n${failed}件 NG`); process.exit(1); }
 console.log('\nすべて OK');
