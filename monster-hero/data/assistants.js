@@ -6513,6 +6513,8 @@ const ASSISTANT_HALLOWEEN_NIGHT_5 = [
 ];
 const ASSISTANT_HALLOWEEN_NIGHT_5_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
 
+// 5部の会話のあいだ、持っているかに関わらず着る衣装(breeder.js の halloweenCostume の id)
+const ASSISTANT_HALLOWEEN_NIGHT_COSTUMES = Object.freeze({ mua:'mua_halloween_2026', kiki:'kiki_halloween_2026', momosuke:'momosuke_halloween_2026' });
 const EVENT_REPLAYS = [
   // タクティクスバトルの導入(2026-09-21)。**公開するまでは回想にも出さない**
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
@@ -6546,11 +6548,11 @@ const EVENT_REPLAYS = [
   { id: 'rhythm_multi_friends_2026_10_03', date: '2026-10-03 03:31', title: 'みんなで対戦 ～フレンドといっしょに～', script: ASSISTANT_RHYTHM_MULTI_FRIENDS, calls: ASSISTANT_RHYTHM_MULTI_FRIENDS_CALLS, unlockedKey: 'rhythmMultiFriendsSeen' },
   // ハロウィン・ナイト(2026-10-04〜11-01)の5部構成。第1部が開幕、第5部が閉幕。**時刻が来た部から**HOMEで1度ずつ流れ、そのあとは回想から見返せる
   // (出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。id はそこと同じ)
-  { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen' },
-  { id: 'halloween_night_2026_part2', date: '2026-10-11 08:00', title: 'ハロウィン・ナイト 第2部 ～消えたランタン～', script: ASSISTANT_HALLOWEEN_NIGHT_2, calls: ASSISTANT_HALLOWEEN_NIGHT_2_CALLS, unlockedKey: 'halloweenNightPart2Seen' },
-  { id: 'halloween_night_2026_part3', date: '2026-10-18 08:00', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: ASSISTANT_HALLOWEEN_NIGHT_3, calls: ASSISTANT_HALLOWEEN_NIGHT_3_CALLS, unlockedKey: 'halloweenNightPart3Seen' },
-  { id: 'halloween_night_2026_part4', date: '2026-10-25 08:00', title: 'ハロウィン・ナイト 第4部 ～届け、ビート～', script: ASSISTANT_HALLOWEEN_NIGHT_4, calls: ASSISTANT_HALLOWEEN_NIGHT_4_CALLS, unlockedKey: 'halloweenNightPart4Seen' },
-  { id: 'halloween_night_2026_part5', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 第5部 ～夜明けのパーティー～', script: ASSISTANT_HALLOWEEN_NIGHT_5, calls: ASSISTANT_HALLOWEEN_NIGHT_5_CALLS, unlockedKey: 'halloweenNightPart5Seen' },
+  { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part2', date: '2026-10-11 08:00', title: 'ハロウィン・ナイト 第2部 ～消えたランタン～', script: ASSISTANT_HALLOWEEN_NIGHT_2, calls: ASSISTANT_HALLOWEEN_NIGHT_2_CALLS, unlockedKey: 'halloweenNightPart2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part3', date: '2026-10-18 08:00', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: ASSISTANT_HALLOWEEN_NIGHT_3, calls: ASSISTANT_HALLOWEEN_NIGHT_3_CALLS, unlockedKey: 'halloweenNightPart3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part4', date: '2026-10-25 08:00', title: 'ハロウィン・ナイト 第4部 ～届け、ビート～', script: ASSISTANT_HALLOWEEN_NIGHT_4, calls: ASSISTANT_HALLOWEEN_NIGHT_4_CALLS, unlockedKey: 'halloweenNightPart4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part5', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 第5部 ～夜明けのパーティー～', script: ASSISTANT_HALLOWEEN_NIGHT_5, calls: ASSISTANT_HALLOWEEN_NIGHT_5_CALLS, unlockedKey: 'halloweenNightPart5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------
