@@ -201,7 +201,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
 const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart }) => {
   const isB = kind === 'b';
-  const maxTeach = isB ? 3 : 1;
+  const maxTeach = 3;   // レイドバトルもグランドスラムも、アシカは3枚まで
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = (mon) => String(mon.masuId || mon.id);
@@ -249,7 +249,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         </section>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span></div>
-          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります'}</div>
+          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
           <div className="mt-1 grid grid-cols-4 gap-1.5">
             {(Array.isArray(teachings) ? teachings : []).map((t) => (
               <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}

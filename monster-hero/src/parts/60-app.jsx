@@ -13129,7 +13129,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const raidDef=total('def',hero.baseDef);
     // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
     const uniques=raidSlots.filter(Boolean).map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));
-    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,isB?3:1);
+    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,3);
     const teachings=cards.map(card=>isB
       ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
       :{...card,evoLevel:0,uid:Math.random()});
@@ -16928,7 +16928,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
           if(!list.length) return false;
-          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,isB?3:1);
+          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,3);
           setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
           setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,4),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID});
           return true;

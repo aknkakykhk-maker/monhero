@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 136b27ef993dc83f
+// source-sha256: 3cd64966379ba971
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 17:30";
+const BUILD_DATE = "2026-10-04 17:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -59235,7 +59235,7 @@ const RaidJackPrepScreen = ({
   onStart
 }) => {
   const isB = kind === 'b';
-  const maxTeach = isB ? 3 : 1;
+  const maxTeach = 3;
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = mon => String(mon.masuId || mon.id);
@@ -59312,7 +59312,7 @@ const RaidJackPrepScreen = ({
     className: "ml-1 text-[9px] text-slate-300"
   }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
     className: "text-[9px] text-slate-300"
-  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります'), React.createElement("div", {
+  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
   }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
     type: "button",
@@ -73842,7 +73842,7 @@ function MonsterHeroGame() {
       ...mon.unique,
       evoLevel: isB ? Math.max(0, mon.unique?.evoLevel || 0) : 0
     }));
-    const cards = TEACHING_CARDS.filter(t => (Array.isArray(req.teachingIds) ? req.teachingIds : []).includes(t.id)).slice(0, isB ? 3 : 1);
+    const cards = TEACHING_CARDS.filter(t => (Array.isArray(req.teachingIds) ? req.teachingIds : []).includes(t.id)).slice(0, 3);
     const teachings = cards.map(card => isB ? {
       ...card,
       evoLevel: 2,
@@ -82202,7 +82202,7 @@ function MonsterHeroGame() {
         const mode = isB ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
         const list = isB ? getActiveMonsterList() : getUnlockedBaseMonsterList();
         if (!list.length) return false;
-        const teachingIds = getActiveTeachingCards().map(c => c.id).slice(0, isB ? 3 : 1);
+        const teachingIds = getActiveTeachingCards().map(c => c.id).slice(0, 3);
         setRunMode(mode);
         setDifficulty('Normal');
         setExtremeRun(false);

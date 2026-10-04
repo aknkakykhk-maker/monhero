@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 63b6ec70bba990d0
+// generated-sha256: 6b94e644188fbeb8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-04 17:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-04 17:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36538,7 +36538,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, beatPoints = 0, event
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
 const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart }) => {
   const isB = kind === 'b';
-  const maxTeach = isB ? 3 : 1;
+  const maxTeach = 3;   // レイドバトルもグランドスラムも、アシカは3枚まで
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = (mon) => String(mon.masuId || mon.id);
@@ -36586,7 +36586,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         </section>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span></div>
-          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります'}</div>
+          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
           <div className="mt-1 grid grid-cols-4 gap-1.5">
             {(Array.isArray(teachings) ? teachings : []).map((t) => (
               <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
@@ -49745,7 +49745,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const raidDef=total('def',hero.baseDef);
     // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
     const uniques=raidSlots.filter(Boolean).map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));
-    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,isB?3:1);
+    const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,3);
     const teachings=cards.map(card=>isB
       ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
       :{...card,evoLevel:0,uid:Math.random()});
@@ -53544,7 +53544,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
           if(!list.length) return false;
-          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,isB?3:1);
+          const teachingIds=getActiveTeachingCards().map(c=>c.id).slice(0,3);
           setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
           setRaidJackStartRequest({mode,kind,tierIndex,party:list.slice(0,4),teachingIds,eventId:RAID_JACK_DEBUG_EVENT_ID});
           return true;
