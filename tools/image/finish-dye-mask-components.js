@@ -5,7 +5,7 @@
 //   node image/finish-dye-mask-components.js ghost --out /tmp/x.png   … 配信フォルダへ書かずに試す
 //
 // 入力  tools/art-sources/dye-masks/<名前>-dye-mask-aligned.png
-//         いただいた見本を立ち絵の座標へ合わせ、色だけリポジトリの約束(赤=① / 緑=② / 青=③ / 黄=④ / 透明=対象外)
+//         いただいた見本を立ち絵の座標へ合わせ、色だけリポジトリの約束(赤=① / 緑=② / 青=③ / 黄=④ / マゼンタ=⑤ / 透明=対象外)
 //         へそろえたもの。形には手を入れていない
 //       monster-hero/images/monsters/<名前>.png(配信中の立ち絵)
 // 出力  monster-hero/images/monsters/<名前>-dye-mask.PNG
@@ -75,6 +75,7 @@ const CONFIGS = {
       { near: [351, 424], cls: 2, label: 0, why: '口の歯。見本では口は黒(染めない)だが、ずれて顔の範囲に入る' },
       { near: [351, 488], cls: 4, label: 4, why: '首元の結び目。見本では顔の範囲だが、色は服の黄色い飾りと同じ' },
       { near: [544, 663], cls: 4, label: 2, why: '右手のつや。見本の手の円の外へはみ出している(左手のつやは②になっている)' },
+      { near: [618, 784], cls: 3, label: 5, why: 'しっぽの先の枝。見本ではしっぽ(②)と同じ色だが、2026-10-05 ユーザー指示「染色5にする」で5つ目の部位に分けた' },
     ],
   },
 };
@@ -101,7 +102,7 @@ const hsv = (r, g, b) => {
   const pixels = (im) => { const c = createCanvas(W, H), x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H); return x.getImageData(0, 0, W, H).data; };
   const A = pixels(art), G = pixels(guide);
   const opaque = (i) => A[i * 4 + 3] >= 20;
-  const guideLabel = (i) => { const o = i * 4; if (G[o + 3] < 20) return 0; const r = G[o], g = G[o + 1], b = G[o + 2]; if (r > 200 && g > 200 && b < 100) return 4; return r > 200 ? 1 : g > 200 ? 2 : b > 200 ? 3 : 0; };
+  const guideLabel = (i) => { const o = i * 4; if (G[o + 3] < 20) return 0; const r = G[o], g = G[o + 1], b = G[o + 2]; if (r > 200 && g > 200 && b < 100) return 4; if (r > 200 && b > 200 && g < 100) return 5; return r > 200 ? 1 : g > 200 ? 2 : b > 200 ? 3 : 0; };
   const nb4 = (i) => { const x = i % W, out = []; if (x > 0) out.push(i - 1); if (x < W - 1) out.push(i + 1); if (i >= W) out.push(i - W); if (i < N - W) out.push(i + W); return out; };
 
   // ① 色で分ける
@@ -116,7 +117,7 @@ const hsv = (r, g, b) => {
   const comps = [];
   for (let i = 0; i < N; i++) {
     if (cls[i] <= 0 || comp[i] >= 0) continue;
-    const id = comps.length, members = [i], votes = [0, 0, 0, 0, 0];
+    const id = comps.length, members = [i], votes = [0, 0, 0, 0, 0, 0];
     comp[i] = id;
     for (let k = 0; k < members.length; k++) {
       const j = members[k];
@@ -130,7 +131,7 @@ const hsv = (r, g, b) => {
   for (const c of big) {
     if (c.cls === cfg.whiteClass) continue;
     let best = 0;
-    for (let L = 1; L <= 4; L++) if (c.votes[L] > c.votes[best]) best = L;
+    for (let L = 1; L <= 5; L++) if (c.votes[L] > c.votes[best]) best = L;
     c.label = best;
   }
   const touches = (c) => { const s = new Set(); for (const j of c.members) for (const n of nb4(j)) { const o = comp[n]; if (o >= 0 && o !== c.id) s.add(o); } return [...s].map(o => comps[o]); };
@@ -163,7 +164,7 @@ const hsv = (r, g, b) => {
   for (const c of big.filter(c => c.cls === cfg.whiteClass)) {
     const around = touches(c).filter(o => o.label >= 0);
     if (around.some(o => o.label === 0)) { c.label = 0; continue; }
-    const cnt = [0, 0, 0, 0, 0];
+    const cnt = [0, 0, 0, 0, 0, 0];
     for (const o of around) cnt[o.label] += o.members.length;
     c.label = cnt.indexOf(Math.max(...cnt));
   }
@@ -214,9 +215,9 @@ const hsv = (r, g, b) => {
     }
   }
 
-  const count = [0, 0, 0, 0, 0];
+  const count = [0, 0, 0, 0, 0, 0];
   const c = createCanvas(W, H), x = c.getContext('2d'), img = x.createImageData(W, H);
-  const COL = [null, [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]];
+  const COL = [null, [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255]];
   for (let i = 0; i < N; i++) {
     if (!opaque(i)) continue;
     const L = lab[i] > 0 ? lab[i] : 0;
@@ -226,6 +227,6 @@ const hsv = (r, g, b) => {
   x.putImageData(img, 0, 0);
   const out = outArg || path.join(ROOT, 'monster-hero/images/monsters', `${name}-dye-mask.PNG`);
   fs.writeFileSync(out, c.toBuffer('image/png'));
-  console.log(`しあがり  対象外/①/②/③/④ = ${count.join(' / ')}`);
+  console.log(`しあがり  対象外/①/②/③/④/⑤ = ${count.join(' / ')}`);
   console.log(`書き出しました: ${path.relative(process.cwd(), out)}`);
 })();

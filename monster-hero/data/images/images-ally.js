@@ -139,10 +139,10 @@ const MEL_WHIP_DYE_MASK = "images/monsters/mel-whip-dye-mask.PNG?v=b7353a79a018"
 // 塗る範囲は絵の色のかたまりで決めたもの(tools/image/finish-dye-mask-components.js ghost)
 const GHOST_IMG = "images/monsters/ghost.png?v=a8ded23fd634";
 const GHOST_DYE_MASK = "images/monsters/ghost-dye-mask.PNG?v=253996bd5187";
-// スプーキー(2026-10-05・ゴースト×？？？のレア)。染色マスクは4部位(①帽子・服 / ②手・しっぽ / ③かぼちゃの顔 /
-// ④帽子のリボン・胸元の飾り)。ゴーストと同じ道具で作った(tools/image/finish-dye-mask-components.js spooky)
+// スプーキー(2026-10-05・ゴースト×？？？のレア)。染色マスクは5部位(①帽子・服 / ②手・しっぽ / ③かぼちゃの顔 /
+// ④帽子のリボン・胸元の飾り / ⑤しっぽの先の枝)。ゴーストと同じ道具で作った(tools/image/finish-dye-mask-components.js spooky)
 const SPOOKY_IMG = "images/monsters/spooky.png?v=cc8ebc4b6425";
-const SPOOKY_DYE_MASK = "images/monsters/spooky-dye-mask.PNG?v=f16a017abf82";
+const SPOOKY_DYE_MASK = "images/monsters/spooky-dye-mask.PNG?v=e981a71afc3c";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
