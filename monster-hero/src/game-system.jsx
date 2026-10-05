@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6080d72679ecfe72
+// generated-sha256: 451938bc4ffa79c5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 10:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 11:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22998,7 +22998,7 @@ const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'rai
 // イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';   // Crazy Party Night ～ぱんぷきんの逆襲～ の全編版(2026-10-04・ユーザー指示「ハロウィンイベント関連はこの曲をデフォルトに」。1分34秒の版から替えた)
-const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
 // 絵の大きさ合わせ(2026-10-04・ユーザー指示「本体を2枚目(両腕ポーズ)ぐらいのサイズ感に」)。
 // 両腕ポーズの絵は腕が左右へ広がるので、同じ枠に収めると本体は幅の約49%。通常絵は本体が幅の約99%。
 // ポーズ絵は枠いっぱい(1倍)、通常絵は半分(0.5倍)で描くと、切り替わっても本体の大きさがそろう。
@@ -37548,15 +37548,16 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
 };
 
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
-const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, onOpenDetail }) => {
+const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, restore = null, onOpenDetail }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = (mon) => String(mon.masuId || mon.id);
-  const [heroKey, setHeroKey] = useState(null);
-  const [allyKeys, setAllyKeys] = useState([]);
-  const [teachIds, setTeachIds] = useState(() => (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
+  // 配置画面から戻ってきたときは、選んでいた編成のまま(restore)
+  const [heroKey, setHeroKey] = useState(restore && restore.heroKey ? restore.heroKey : null);
+  const [allyKeys, setAllyKeys] = useState(restore && Array.isArray(restore.allyKeys) ? restore.allyKeys : []);
+  const [teachIds, setTeachIds] = useState(() => (restore && Array.isArray(restore.teachIds)) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
   const hero = list.find((m) => keyOf(m) === heroKey) || null;
   const allies = allyKeys.map((k) => list.find((m) => keyOf(m) === k)).filter(Boolean);
   const toggleAlly = (mon) => setAllyKeys((prev) => {
@@ -37624,7 +37625,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
         <button type="button" data-raid-prep-start disabled={!hero}
-          onClick={() => onStart({ party: [hero, ...allies], teachingIds: teachIds })}
+          onClick={() => onStart({ party: [hero, ...allies], teachingIds: teachIds, heroKey, allyKeys })}
           className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
           {hero ? 'この編成で挑戦する' : '勇者モンを選んでください'}
         </button>
@@ -39979,6 +39980,7 @@ function MonsterHeroGame() {
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);       // 編成画面で詳細を見ているモンスター(確認専用)
   const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
+  const [raidJackPlace, setRaidJackPlace] = useState(null);               // 配置(距離)えらび {party,teachingIds,slots,heroSlot}。通常バトルと同じ PickSlotScreen で1体ずつ置く
   // 画面のなかの案内(助手の吹き出し)は、レイド画面を開いた最初の1度だけ。保存キーは新しく足す(CLAUDE.md ⑦)
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
@@ -41264,7 +41266,7 @@ function MonsterHeroGame() {
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
-    RAID_JACK: 'home', RAID_JACK_PREP: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
+    RAID_JACK: 'home', RAID_JACK_PREP: 'home', RAID_JACK_PLACE: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
@@ -50862,12 +50864,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(party.length===0) return false;
     const isB=req.kind==='b';
     const hero=party[0];
-    const raidSlots=[party[0]||null,party[1]||null,party[2]||null,party[3]||null];
-    const allies=raidSlots.slice(1).filter(Boolean);
+    // 立ち位置(距離)は、通常バトルと同じ配置画面で自分が選んだもの(req.slots)。無いとき(デバッグの開始など)だけ編成順に並べる
+    const placed=Array.isArray(req.slots)&&req.slots.length===4&&req.slots.filter(Boolean).length===party.length?req.slots.map(mon=>mon||null):null;
+    const raidSlots=placed||[party[0]||null,party[1]||null,party[2]||null,party[3]||null];
+    const heroSlot=placed&&Number.isInteger(req.heroSlot)&&req.heroSlot>=0&&req.heroSlot<4?req.heroSlot:0;
+    initialBattleDistanceRef.current=heroSlot;
+    const allies=party.slice(1);
     const total=(key,base)=>allies.reduce((value,mon)=>value+(mon.plusStats?.[key]||0),base);
     const raidDef=total('def',hero.baseDef);
     // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
-    const uniques=raidSlots.filter(Boolean).map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));
+    const uniques=party.map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));   // 並びは編成順(勇者が先)。立ち位置とは関係しない
     const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,RAID_JACK_TEACHING_MAX);
     const teachings=cards.map(card=>isB
       ?{...card,evoLevel:2,baseValue:card.baseValue+card.step*2,uid:Math.random()}
@@ -51098,8 +51104,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       marketPurchaseProcessingRef.current = false;
     }
   };
+  // 編成が決まったら、通常バトルと同じ配置画面(PICK_SLOT)で、勇者モン→供モンの順に1体ずつ距離(立ち位置)を選んでもらう。
+  // 回数を使うのは、全員を置き終えて戦闘を始めるときだけ(ここで戻っても回数は減らない)。
+  // 勇者モンを置いた距離が、最初の間合い(initialBattleDistanceRef)になる(2026-10-05・ユーザー指摘「勇者モンの距離が固定になってる」)
+  const beginRaidJackPlacement = ({ party, teachingIds, heroKey = null, allyKeys = [] }) => {
+    const list = (Array.isArray(party) ? party : []).filter(Boolean);
+    if (list.length === 0) return;
+    setRaidJackPlace({ party:list, teachingIds, slots:[null,null,null,null], heroSlot:0, restore:{ heroKey, allyKeys, teachIds:teachingIds } });
+    setGameState('RAID_JACK_PLACE');
+  };
+  const placeRaidJackMon = (mon, slotIdx) => {
+    const place = raidJackPlace;
+    if (!place || !mon || !Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || place.slots[slotIdx]) return;
+    const slots = [...place.slots];
+    const isHero = slots.every(slot => !slot);
+    slots[slotIdx] = { ...mon };
+    Audio_.se.join();
+    const heroSlot = isHero ? slotIdx : place.heroSlot;
+    if (slots.filter(Boolean).length >= place.party.length) {
+      setRaidJackPlace(null);
+      void startRaidJackFromPrep({ party:place.party, teachingIds:place.teachingIds, slots, heroSlot });
+      return;
+    }
+    setRaidJackPlace({ ...place, slots, heroSlot });
+  };
+  const cancelRaidJackPlacement = () => { const restore = raidJackPlace && raidJackPlace.restore; setRaidJackPrep(prev => prev ? { ...prev, restore } : prev); setRaidJackPlace(null); setGameState('RAID_JACK_PREP'); };
   // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
-  const startRaidJackFromPrep = async ({ party, teachingIds }) => {
+  const startRaidJackFromPrep = async ({ party, teachingIds, slots = null, heroSlot = 0 }) => {
     const prep = raidJackPrep;
     if (!prep || !Array.isArray(party) || party.length === 0) return;
     const key = prep.kind === 'b' ? 'b' : 'a';
@@ -51128,7 +51159,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } catch (e) { startLife = null; }
     }
     setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
-    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, eventId:raidJackEventId, startLife, pumpkin });
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, slots, heroSlot, eventId:raidJackEventId, startLife, pumpkin });
   };
 
   const setupMon = (m, slotIdx) => {
@@ -54757,12 +54788,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidJackRewards} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
           guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}
           renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
+        {gameState==='RAID_JACK_PLACE'&&raidJackPlace&&(()=>{
+          const placed=raidJackPlace.slots.filter(Boolean).length;
+          const mon=raidJackPlace.party[placed]||null;
+          // 通常バトルと同じ配置画面。間合い適性は「置いた子たちの合計」(どこに置いても4距離すべてに加算される)
+          const placedBonus=(dist)=>raidJackPlace.slots.reduce((sum,m)=>sum+(m?aptGradeToPct(getDistAptitude(m,dist)):0),0);
+          return <PickSlotScreen
+            battleTutorial={null} battleTutorialSpotClass={()=>''}
+            currentPickingMon={mon} distTotalBonus={placedBonus}
+            getDistAptitude={getDistAptitude} scenarioPicksSlot={()=>true}
+            setupMon={placeRaidJackMon} slots={raidJackPlace.slots}
+            phasePlan={null} wave={0}
+            heroStyleDef={null} heroStyle={null} onHeroStyle={null}
+            onRepick={cancelRaidJackPlacement}/>;
+        })()}
         {gameState==='RAID_JACK_PREP'&&raidJackPrep&&(<><RaidJackPrepScreen
           kind={raidJackPrep.kind} tierIndex={raidJackPrep.tierIndex}
           candidates={raidJackPrep.kind==='b'?getActiveMonsterList():getUnlockedBaseMonsterList()}
+          restore={raidJackPrep.restore||null}
           teachings={(()=>{const unlocked=TEACHING_CARDS.filter(t=>unlockedTeachingIds.includes(t.id));return unlocked.length>0?unlocked:getActiveTeachingCards();})()}
           onOpenDetail={(mon)=>setRaidJackDetailMon(mon)}
-          onBack={()=>{setRaidJackDetailMon(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);return startRaidJackFromPrep(args);}}/>
+          onBack={()=>{setRaidJackDetailMon(null);setGameState('RAID_JACK');}} onStart={(args)=>{setRaidJackDetailMon(null);return beginRaidJackPlacement(args);}}/>
           {raidJackDetailMon&&renderMonsterDetailModal({
             mon:raidJackDetailMon,
             masu:raidJackDetailMon.masuId?getMasuMon(raidJackDetailMon.masuId):null,
