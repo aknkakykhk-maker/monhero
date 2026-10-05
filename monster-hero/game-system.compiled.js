@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7368a138770e74ed
+// source-sha256: c7a28dcc5111559e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 12:45";
+const BUILD_DATE = "2026-10-05 13:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35731,7 +35731,9 @@ const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';
 const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
-const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8, 11]);
+const RAID_JACK_UNIQUE_LEVEL_STEP = 2;
+const RAID_JACK_TEACHING_MAX_LEVEL = 2;
 const RAID_JACK_TURN_GROWTH = 1.05;
 const RAID_JACK_TURN_REGEN_STEP = 0.015;
 const raidJackGrowthAt = turn => {
@@ -35750,7 +35752,8 @@ const raidJackGrowthAt = turn => {
     levelUps,
     levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
     nextLevelUpTurn: next === undefined ? null : next,
-    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t)
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+    teachingUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t) && levelUps <= RAID_JACK_TEACHING_MAX_LEVEL
   };
 };
 const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
@@ -51858,7 +51861,7 @@ function BattleScreen({
     className: "text-[10px] font-black text-sky-200"
   }, "自動回復 ライフ", raidGrowth.lifeRate, "%・ガッツ", raidGrowth.gutsRate, "%"), raidGrowth.levelUpNow && React.createElement("div", {
     className: "mt-0.5 text-[11px] font-black text-amber-300"
-  }, "固有技とアシカが1段階アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
+  }, "固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階", raidGrowth.teachingUpNow ? '・アシカが1段階' : '', "アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
     "data-raid-growth-detail": true,
     className: "fixed inset-0 flex items-center justify-center bg-black/70 px-4",
     style: {
@@ -51891,7 +51894,7 @@ function BattleScreen({
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
   }, React.createElement("dt", {
     className: "font-black text-amber-200"
-  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。", React.createElement("b", {
+  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階ずつアップ(アシカは", RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL).join('・'), "ターン目に1段階ずつ・最大", RAID_JACK_TEACHING_MAX_LEVEL, "段階)。", React.createElement("b", {
     className: "text-white"
   }, " ", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回"), "済み", raidGrowth.nextLevelUpTurn ? `(次は${raidGrowth.nextLevelUpTurn}ターン目)` : '(これで最後)')), React.createElement("div", {
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
@@ -60129,7 +60132,7 @@ const RaidJackDebugScreen = ({
   }, (() => {
     const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1;
     const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1);
-    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
+    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8・11ターン目に固有技が2段階、3・5ターン目にアシカが1段階成長)' : '(成長なし・アシカは最大Lv)'}`;
   })()), React.createElement("button", {
     "data-raid-fight-start": true,
     className: `${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`,
@@ -60913,7 +60916,7 @@ const RaidJackPrepScreen = ({
     className: "ml-1 text-[9px] text-slate-300"
   }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
     className: "text-[9px] text-slate-300"
-  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
+  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
   }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
     type: "button",
@@ -75657,7 +75660,7 @@ function MonsterHeroGame() {
     if (raidJackRunRef.current) raidJackRunRef.current.levelUps = (raidJackRunRef.current.levelUps || 0) + 1;
     const bumpCard = c => {
       if (c.type === 'unique') {
-        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + 1);
+        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP);
         return {
           ...c,
           evoLevel: lvl,
@@ -75668,8 +75671,8 @@ function MonsterHeroGame() {
         };
       }
       if (TEACHING_CARDS.some(t => t.id === c.id) && Number.isFinite(c.baseValue) && Number.isFinite(c.step)) {
-        const cur = Math.min(2, c.evoLevel || 0);
-        if (cur >= 2) return c;
+        const cur = Math.min(RAID_JACK_TEACHING_MAX_LEVEL, c.evoLevel || 0);
+        if (cur >= RAID_JACK_TEACHING_MAX_LEVEL) return c;
         return {
           ...c,
           evoLevel: cur + 1,
@@ -75681,9 +75684,9 @@ function MonsterHeroGame() {
     };
     setOwnedUniques(prev => prev.map(u => ({
       ...u,
-      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + 1)
+      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP)
     })));
-    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= 2 ? t : {
+    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= RAID_JACK_TEACHING_MAX_LEVEL ? t : {
       ...t,
       evoLevel: (t.evoLevel || 0) + 1,
       baseValue: t.baseValue + t.step
@@ -75691,7 +75694,8 @@ function MonsterHeroGame() {
     setHand(prev => prev.map(bumpCard));
     setDeck(prev => prev.map(bumpCard));
     setGraveyard(prev => prev.map(bumpCard));
-    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`, 'up');
+    const teachingGrew = ownedTeachings.some(t => (t.evoLevel || 0) < RAID_JACK_TEACHING_MAX_LEVEL);
+    pushBattleLog(`${turn}ターン目: 固有技が${RAID_JACK_UNIQUE_LEVEL_STEP}段階${teachingGrew ? '、アシカが1段階' : ''}強くなった！`, 'up');
     addPopup('LEVEL UP!', 'ally', 'text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
     Audio_.se.card();
   };
