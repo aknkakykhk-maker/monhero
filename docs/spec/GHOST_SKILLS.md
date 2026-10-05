@@ -201,4 +201,13 @@ Spooky: baseHp:400, baseGuts:160, baseAtk:165, baseDef:40, plusStats:{hp:160,atk
 | `monster-hero/images/monsters/idle/ghost-*.png` | 待機アニメ。体ごとふわふわ浮き、しっぽの先をゆらゆら振る |
 | `data/ally-monsters.js` の `UPCOMING_MONSTER_DRAFTS.Ghost` | 案の段階の本体。デバッグの「新モンスター確認」にだけ並ぶ |
 
-スプーキーの絵はまだ届いていない。
+### スプーキー(2026-10-05 立ち絵と4色の見本が届いた)
+
+| 置き場所 | 中身 |
+|---|---|
+| `monster-hero/images/monsters/spooky.png` | 立ち絵(770x916)。原本は `tools/art-sources/monsters/SPOOKY-original.png` |
+| `monster-hero/images/monsters/spooky-dye-mask.PNG` | 染色マスク(4部位。①帽子・服 / ②手・しっぽ(先の枝も) / ③かぼちゃの顔 / ④帽子のリボン・胸元の飾り・首元の結び目。目・鼻・口は染めない)。`node tools/image/finish-dye-mask-components.js spooky` で作り直せる |
+| `monster-hero/images/monster-icons/face/spooky.png` | 顔アイコン(とんがり帽子のつば〜あご下) |
+| `monster-hero/images/disc-icons/spooky-disc.PNG` | 円盤石アイコン(マーケットにはまだ並べていない) |
+| `monster-hero/images/monsters/idle/spooky-*.png` | 待機アニメ。体ごとふわふわ浮き、枝を持ったしっぽを振り、とんがり帽子の折れた先をゆっくり揺らす |
+| `data/ally-monsters.js` の `UPCOMING_MONSTER_DRAFTS.Spooky` | 案の段階の本体。デバッグの「新モンスター確認」にだけ並ぶ |

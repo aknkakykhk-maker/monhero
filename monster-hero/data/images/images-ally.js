@@ -86,6 +86,9 @@ const IDLE_MEL_WHIP_UMBRELLA_MASK = "images/monsters/idle/mel-whip-umbrella.png?
 const IDLE_MEL_WHIP_BODY_MASK = "images/monsters/idle/mel-whip-body.png?v=819b121a5e2d";
 const IDLE_GHOST_TAIL_MASK = "images/monsters/idle/ghost-tail.png?v=f9686155b6d3";
 const IDLE_GHOST_BODY_MASK = "images/monsters/idle/ghost-body.png?v=a9a4123c0caf";
+const IDLE_SPOOKY_TAIL_MASK = "images/monsters/idle/spooky-tail.png?v=9589d97affb5";
+const IDLE_SPOOKY_HAT_TIP_MASK = "images/monsters/idle/spooky-hat-tip.png?v=f02d9a623af0";
+const IDLE_SPOOKY_BODY_MASK = "images/monsters/idle/spooky-body.png?v=c3cb8ed1d676";
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
@@ -136,6 +139,10 @@ const MEL_WHIP_DYE_MASK = "images/monsters/mel-whip-dye-mask.PNG?v=b7353a79a018"
 // 塗る範囲は絵の色のかたまりで決めたもの(tools/image/finish-dye-mask-components.js ghost)
 const GHOST_IMG = "images/monsters/ghost.png?v=a8ded23fd634";
 const GHOST_DYE_MASK = "images/monsters/ghost-dye-mask.PNG?v=253996bd5187";
+// スプーキー(2026-10-05・ゴースト×？？？のレア)。染色マスクは4部位(①帽子・服 / ②手・しっぽ / ③かぼちゃの顔 /
+// ④帽子のリボン・胸元の飾り)。ゴーストと同じ道具で作った(tools/image/finish-dye-mask-components.js spooky)
+const SPOOKY_IMG = "images/monsters/spooky.png?v=cc8ebc4b6425";
+const SPOOKY_DYE_MASK = "images/monsters/spooky-dye-mask.PNG?v=f16a017abf82";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -181,6 +188,7 @@ const PLANT_FACE_ICON = PLANT_IMG;
 const YGGDRASIL_ICON = YGGDRASIL_IMG;
 const MEL_WHIP_ICON = MEL_WHIP_IMG;
 const GHOST_ICON = GHOST_IMG;
+const SPOOKY_ICON = SPOOKY_IMG;
 const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=f341b74babb9";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=1ddd19baef6b";
@@ -195,6 +203,7 @@ const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=f
 const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
 const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
 const GHOST_FACE_ICON = "images/monster-icons/face/ghost.png?v=fdbc8d32d2cd";
+const SPOOKY_FACE_ICON = "images/monster-icons/face/spooky.png?v=2c047a771ffe";
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
 // 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
