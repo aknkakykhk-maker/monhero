@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3202b79c43cac64b
+// generated-sha256: 2031f02835443ed1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 22:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 22:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23592,6 +23592,11 @@ const sbFetchRaidJackTierTotals = async (eventId) => {
   });
   return out;
 };
+// 前回取れた段階の合計(HOMEとレイド画面で共有。画面を出入りしても残る)。
+// 取れていないあいだを「男爵・ライフ満タン」として描くと、通信が遅いとき、あとから本当の段階・ライフへ切り替わって見える(2026-10-05)
+let raidJackTotalsCache = { eventId: null, totals: undefined };
+const raidJackCachedTotals = (eventId) => (raidJackTotalsCache.eventId === eventId ? raidJackTotalsCache.totals : undefined);
+const raidJackRememberTotals = (eventId, totals) => { if (totals) raidJackTotalsCache = { eventId, totals }; };
 // A: 段階ごとの貢献ランキング(上位 limit)
 const sbFetchRaidJackContributions = async (tier, limit = 100, eventId) => {
   const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
@@ -30498,12 +30503,10 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
   background:'transparent', border:'0', padding:'0', cursor:'pointer',
 });
-// 前回HOMEで取れた段階の合計(画面を出入りしても残る)。読み込みが終わるまでの間も、前回の段階・ライフで描ける
-//   (取れていないあいだを「男爵・ライフ満タン」として描くと、通信が遅いとき男爵が一瞬出て、あとから本当の段階へ切り替わって見える。2026-10-05)
-let homeRaidJackTotalsCache = { eventId: null, totals: undefined };
 const HomeRaidJack = ({ eventId, onOpen }) => {
-  const [totals, setTotalsState] = React.useState(() => (homeRaidJackTotalsCache.eventId === eventId ? homeRaidJackTotalsCache.totals : undefined));
-  const setTotals = (t) => { if (t) homeRaidJackTotalsCache = { eventId, totals: t }; setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
+  // 前回取れた段階の合計から描き始める(36-raid-jack-api.jsx の raidJackTotalsCache)。読み込みが終わるまでの間を「男爵・ライフ満タン」にしない
+  const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
+  const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
   // ひとこと(吹き出し)。押すと次のセリフへ。最初の1つは開くたびに変わる
   const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
@@ -37631,7 +37634,8 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({ a: 0, b: 0 });
   const [state, setState] = useState(() => raidJackDefaultState());
-  const [totals, setTotals] = useState(undefined);       // undefined=読み込み中 / null=準備中 / object
+  const [totals, setTotalsState] = useState(() => raidJackCachedTotals(eventId));   // undefined=読み込み中 / null=準備中 / object(前回取れた値から描き始める)
+  const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
   const [rows, setRows] = useState(undefined);           // 選択中のランキング(A=その段階の貢献 / B=累計)
   const [self, setSelf] = useState(null);
   const [myId, setMyId] = useState(null);
@@ -37650,6 +37654,8 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
   // 読み込み(サーバーの合計・自分の状態・ランキング)。タブや段階を変えるたびに、そのぶんだけ読み直す
   useEffect(() => {
     let alive = true;
+    // 段階の合計は、報酬の受け取りなどを待たずに先に取り始める(待たせるほど、男爵・満タンのまま見える時間が延びる)
+    const totalsPromise = sbFetchRaidJackTierTotals(eventId);
     (async () => {
       let loaded = await raidJackLoadState();
       if (!alive) return;
@@ -37662,7 +37668,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
-      const t = await sbFetchRaidJackTierTotals(eventId);
+      const t = await totalsPromise;
       if (!alive) return;
       setTotals(t);
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
@@ -37749,7 +37755,9 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
 
       <div className={`${SCREEN_LIST_CLASS} space-y-2`}>
-        {tiers.map((t, i) => {
+        {/* 初めて読み込むあいだは、段階もライフも分からないので一覧を出さない(出すと男爵・満タンから本当の姿へ切り替わって見える) */}
+        {tab === 'a' && totals === undefined && <div data-raid-jack-loading className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>}
+        {!(tab === 'a' && totals === undefined) && tiers.map((t, i) => {
           const isOpen = unlocked(i);
           const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
           const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);

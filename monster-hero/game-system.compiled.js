@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7cd1285206e8f757
+// source-sha256: 42d4e23dd242d9de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 22:48";
+const BUILD_DATE = "2026-10-05 22:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36654,6 +36654,17 @@ const sbFetchRaidJackTierTotals = async eventId => {
   });
   return out;
 };
+let raidJackTotalsCache = {
+  eventId: null,
+  totals: undefined
+};
+const raidJackCachedTotals = eventId => raidJackTotalsCache.eventId === eventId ? raidJackTotalsCache.totals : undefined;
+const raidJackRememberTotals = (eventId, totals) => {
+  if (totals) raidJackTotalsCache = {
+    eventId,
+    totals
+  };
+};
 const sbFetchRaidJackContributions = async (tier, limit = 100, eventId) => {
   const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
   const t = Math.min(Math.max(Math.floor(Number(tier)) || 1, 1), 5);
@@ -49297,20 +49308,13 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   padding: '0',
   cursor: 'pointer'
 });
-let homeRaidJackTotalsCache = {
-  eventId: null,
-  totals: undefined
-};
 const HomeRaidJack = ({
   eventId,
   onOpen
 }) => {
-  const [totals, setTotalsState] = React.useState(() => homeRaidJackTotalsCache.eventId === eventId ? homeRaidJackTotalsCache.totals : undefined);
+  const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
   const setTotals = t => {
-    if (t) homeRaidJackTotalsCache = {
-      eventId,
-      totals: t
-    };
+    raidJackRememberTotals(eventId, t);
     setTotalsState(prev => t || prev === undefined ? t : prev);
   };
   const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
@@ -61091,7 +61095,11 @@ const RaidJackScreen = ({
     b: 0
   });
   const [state, setState] = useState(() => raidJackDefaultState());
-  const [totals, setTotals] = useState(undefined);
+  const [totals, setTotalsState] = useState(() => raidJackCachedTotals(eventId));
+  const setTotals = t => {
+    raidJackRememberTotals(eventId, t);
+    setTotalsState(prev => t || prev === undefined ? t : prev);
+  };
   const [rows, setRows] = useState(undefined);
   const [self, setSelf] = useState(null);
   const [myId, setMyId] = useState(null);
@@ -61107,6 +61115,7 @@ const RaidJackScreen = ({
   const open = forced || windowState === 'open';
   useEffect(() => {
     let alive = true;
+    const totalsPromise = sbFetchRaidJackTierTotals(eventId);
     (async () => {
       let loaded = await raidJackLoadState();
       if (!alive) return;
@@ -61117,7 +61126,7 @@ const RaidJackScreen = ({
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
-      const t = await sbFetchRaidJackTierTotals(eventId);
+      const t = await totalsPromise;
       if (!alive) return;
       setTotals(t);
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
@@ -61240,7 +61249,10 @@ const RaidJackScreen = ({
     className: "mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100"
   }, "サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)"), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2`
-  }, tiers.map((t, i) => {
+  }, tab === 'a' && totals === undefined && React.createElement("div", {
+    "data-raid-jack-loading": true,
+    className: "py-6 text-center text-[11px] text-slate-300"
+  }, "読み込み中…"), !(tab === 'a' && totals === undefined) && tiers.map((t, i) => {
     const isOpen = unlocked(i);
     const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
     const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);
