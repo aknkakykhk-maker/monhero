@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4222751f0c57e82c
+// source-sha256: 56e2ab8d82c9f80a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 03:06";
+const BUILD_DATE = "2026-10-06 07:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -43926,33 +43926,23 @@ function MasuRegenerationDetailScreen({
   }), React.createElement("section", {
     className: "space-y-2",
     "aria-label": `${selectedBase.name}の基礎性能`
-  }, renderDetailSectionLabel('ベースモンの性能', '再生前の正式な基礎値です'), renderMonsterDetailInfo(selectedBase)), React.createElement("section", {
-    className: "rounded-2xl border border-amber-400/60 bg-amber-950/30 p-3",
+  }, renderDetailSectionLabel('ベースモンの性能', '再生前の正式な基礎値です'), renderMonsterDetailInfo(selectedBase))), React.createElement("div", {
+    className: `${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto space-y-2`
+  }, React.createElement("section", {
+    className: "rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2",
     "aria-label": "再生に必要な情報"
   }, React.createElement("div", {
-    className: "text-[10px] text-amber-200 font-black mb-1"
-  }, "再生に必要な情報"), React.createElement("div", {
-    className: "flex items-center justify-between text-sm"
+    className: "flex items-baseline justify-between gap-2 whitespace-nowrap"
   }, React.createElement("span", {
-    className: "text-slate-300"
-  }, "対象"), React.createElement("b", {
-    className: "text-white"
-  }, selectedBase.name)), React.createElement("div", {
-    className: "flex items-center justify-between text-sm mt-1"
-  }, React.createElement("span", {
-    className: "text-slate-300"
-  }, "必要ダイヤ"), React.createElement("b", {
-    className: "text-amber-300"
-  }, cost === 0 ? '初回無料' : cost.toLocaleString())), React.createElement("div", {
-    className: "flex items-center justify-between text-[10px] mt-1"
-  }, React.createElement("span", {
-    className: "text-slate-400"
-  }, "所持ダイヤ"), React.createElement("span", {
-    className: "text-slate-300"
-  }, gold.toLocaleString()))), React.createElement("button", {
+    className: "text-[12px] text-slate-300"
+  }, "必要ダイヤ ", React.createElement("b", {
+    className: gold >= cost ? "text-amber-300" : "text-red-400"
+  }, cost === 0 ? '初回無料' : cost.toLocaleString())), React.createElement("span", {
+    className: "min-w-0 truncate text-[10px] text-slate-400"
+  }, "所持ダイヤ ", gold.toLocaleString()))), React.createElement("button", {
     disabled: gold < cost || regenerationProcessing,
     onClick: executeMasuRegeneration,
-    className: "w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30"
+    className: "mh-button mh-button-primary w-full min-h-[52px] rounded-2xl text-sm font-black active:scale-[.98] disabled:opacity-30"
   }, regenerationProcessing ? '再生中…' : gold < cost ? 'ダイヤが不足しています' : `${selectedBase.name}を再生する`)));
 }
 function MasuDonationScreen({
