@@ -65,7 +65,7 @@ vm.runInContext([
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
-    + 'tacticsExDefOf,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExDefOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -742,6 +742,23 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const scr = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '71-screen-battle.jsx'), 'utf8');
   check('画面へ結線してある(札の残り・詳細の「残り」と状態のひとこと・ターン終わりのログ)', /remainText:\(\(\)=>\{/.test(app) && /stateText:\(\(\)=>\{/.test(app)
     && /data-tactics-ex-remain/.test(scr) && /data-tactics-ex-state-pill/.test(scr) && /の効果が切れた/.test(app) && /雷纏が始まる！/.test(app));
+}
+
+// ---------- ⑳ オボロゲソウ「おぼろ返し」(2026-10-05 ユーザー選択) ----------
+{
+  const ob = ex.tacticsExDefOf('Oboro');
+  check('オボロゲソウ「おぼろ返し」: ラン5回・併用できる・3ターン・受けたダメージの50%をライフへ・5%をガッツへ',
+    !!ob && ob.name === 'おぼろ返し' && ob.maxUses === 5 && !ob.unlimited && ob.withCards && ob.duration === 'turns' && ob.turns === 3
+    && ob.effect === 'damageBack' && ex.isTacticsExEffectImplemented(ob) && !!ob.damageBack && ob.damageBack.hpRate === 0.5 && ob.damageBack.gutsRate === 0.05, JSON.stringify(ob));
+  const A = (wave, turn) => ({ wave, turn });
+  const st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ob, slot: 2, monId: 'Oboro', now: A(1, 4) });
+  const on = ex.tacticsExDamageBackRates(st, A(1, 4)), on3 = ex.tacticsExDamageBackRates(st, A(1, 6));
+  check('使ったターンから3ターンだけ効く(4〜6ターン目)・7ターン目と次のWAVEでは0',
+    Math.abs(on.hp - 0.5) < 1e-9 && Math.abs(on.guts - 0.05) < 1e-9 && Math.abs(on3.hp - 0.5) < 1e-9
+    && ex.tacticsExDamageBackRates(st, A(1, 7)).hp === 0 && ex.tacticsExDamageBackRates(st, A(2, 4)).hp === 0 && ex.tacticsExDamageBackRates(ex.createTacticsExState(), A(1, 4)).guts === 0);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体へ結線してある(受けたダメージの一部をその子へ戻す・倒れた子には戻さない)', /const back=tacticsExDamageBackRates\(tacticsExStateRef\.current,tacticsExLiveRef\.current\.now\);/.test(app)
+    && /fd>0&&\(back\.hp>0\|\|back\.guts>0\)&&afterHit&&!afterHit\.downed/.test(app) && /healTacticsAt\(units,slotIdx,backHp\),slotIdx,backGuts/.test(app));
 }
 
 // ---------- ⑲ プラント「緑のめぐみ」(2026-10-05 ユーザー指示) ----------

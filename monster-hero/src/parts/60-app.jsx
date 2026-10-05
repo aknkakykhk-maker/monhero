@@ -11093,6 +11093,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const fd=applyImmediateTakenReduction(hit.taken,slotIdx);
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
                 fx.dmg=(fx.dmg||0)+fd;
+                // ★オボロゲソウの「おぼろ返し」: 受けたダメージの一部を、その子のライフ・ガッツへすぐ戻す(倒れた子には戻さない)
+                const back=tacticsExDamageBackRates(tacticsExStateRef.current,tacticsExLiveRef.current.now);
+                const afterHit=normalizeTacticsUnit(units[slotIdx]);
+                if(fd>0&&(back.hp>0||back.guts>0)&&afterHit&&!afterHit.downed){
+                  const backHp=Math.floor(fd*back.hp), backGuts=Math.floor(fd*back.guts);
+                  units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,backHp),slotIdx,backGuts);
+                  fx.heal=(fx.heal||0)+backHp; fx.guts=(fx.guts||0)+backGuts;
+                }
                 // ★連撃は**発ごとの通る量**をそのまま出す(2026-09-22 ユーザー指摘
                 //   「ガード1枚でしたけど連撃分全部のダメージが同じだった」)。
                 //   合計を均等に割ると、ガードが効いた発も効いていない発も同じ数字になり、

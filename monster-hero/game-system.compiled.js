@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f456010a6081fb60
+// source-sha256: 46ccfe0c1775b58c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 23:22";
+const BUILD_DATE = "2026-10-05 23:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33981,6 +33981,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     effect: 'partyBoost'
   }),
+  Oboro: Object.freeze({
+    id: 'oboro_misty_return',
+    name: 'おぼろ返し',
+    useNote: '3ターン 受けたダメージの50%がライフに戻る',
+    desc: '3ターンのあいだ、受けたダメージを回復に変える。\n・味方が敵の攻撃で受けたダメージの50%を、受けた子のライフへすぐ回復する\n・ガッツも、受けたダメージの5%ぶん回復する\n・倒れた子には回復しない\n・使った子が倒れても効果は続く',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    damageBack: Object.freeze({
+      hpRate: 0.5,
+      gutsRate: 0.05
+    }),
+    effect: 'damageBack'
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -34052,7 +34068,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -34110,6 +34126,10 @@ const normalizeTacticsExDef = raw => {
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    damageBack: raw.damageBack && typeof raw.damageBack === 'object' ? {
+      hpRate: Math.max(0, Number(raw.damageBack.hpRate) || 0),
+      gutsRate: Math.max(0, Number(raw.damageBack.gutsRate) || 0)
+    } : null,
     partyBoost: raw.partyBoost && typeof raw.partyBoost === 'object' ? {
       statRate: Math.max(0, Number(raw.partyBoost.statRate) || 0),
       hpRegen: Math.max(0, Number(raw.partyBoost.hpRegen) || 0),
@@ -34386,6 +34406,9 @@ const applyTacticsExUse = (state, {
         thunder: 0,
         partyBoostCfg: def.partyBoost ? {
           ...def.partyBoost
+        } : null,
+        damageBackCfg: def.damageBack ? {
+          ...def.damageBack
         } : null,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
@@ -34918,6 +34941,22 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+const tacticsExDamageBackRates = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'damageBack' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
+    const hp = Number(e.damageBackCfg && e.damageBackCfg.hpRate),
+      guts = Number(e.damageBackCfg && e.damageBackCfg.gutsRate);
+    return {
+      hp: acc.hp + (Number.isFinite(hp) && hp > 0 ? hp : 0),
+      guts: acc.guts + (Number.isFinite(guts) && guts > 0 ? guts : 0)
+    };
+  }, {
+    hp: 0,
+    guts: 0
+  });
 };
 const tacticsExPartyBoostRegenRate = (state, now, kind = 'hp') => {
   const effects = normalizeTacticsExState(state).effects;
@@ -73690,6 +73729,15 @@ function MonsterHeroGame() {
                 units = damageTacticsTargets(units, [slotIdx], fd);
                 dealt += fd;
                 fx.dmg = (fx.dmg || 0) + fd;
+                const back = tacticsExDamageBackRates(tacticsExStateRef.current, tacticsExLiveRef.current.now);
+                const afterHit = normalizeTacticsUnit(units[slotIdx]);
+                if (fd > 0 && (back.hp > 0 || back.guts > 0) && afterHit && !afterHit.downed) {
+                  const backHp = Math.floor(fd * back.hp),
+                    backGuts = Math.floor(fd * back.guts);
+                  units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, backHp), slotIdx, backGuts);
+                  fx.heal = (fx.heal || 0) + backHp;
+                  fx.guts = (fx.guts || 0) + backGuts;
+                }
                 if (rushHits > 1) fx.hits = scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), fd);
               }
               if (hit.saved > 0) {
