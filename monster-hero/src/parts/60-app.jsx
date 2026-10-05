@@ -166,6 +166,7 @@ function MonsterHeroGame() {
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
+    void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
     setRhythmMonsterPickerOpen(false); setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY,DEFAULT_RHYTHM_SELECT_VIEW,false)));
     // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
@@ -177,6 +178,7 @@ function MonsterHeroGame() {
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
+    void recordRhythmAchievements(records);   // 実績の台帳へそろえる(初回は、すでに取れていたぶんを取り込む。失敗しても入れる)
     setRhythmMonsterPickerOpen(false); setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY,DEFAULT_RHYTHM_SELECT_VIEW,false)));
     setRhythmDebugTab('play'); setGameState('RHYTHM_DEBUG');
@@ -16867,7 +16869,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);

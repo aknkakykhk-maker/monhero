@@ -712,6 +712,137 @@ const mergeRhythmBestRecord = (current,result) => {
     allMarvelous:previous.allMarvelous||result?.allMarvelous===true,
   });
 };
+// <rhythm-achievement-ledger>
+// ===== モンヒロビートの実績の仕組み(2026-10-05・ユーザー指示「フルコンボ、オールエクセレント、オールマーベラスの実績の仕組みを作って。
+//       今後そこに報酬をいれたい。報酬内容はまだ決まってないから仕組みだけ作っといて」) =====
+// 仕様の正本: docs/spec/RHYTHM_ACHIEVEMENTS.md
+//
+// ・実績は「曲 × 難易度 × 称号」ごと。称号は FC(フルコンボ)・AE(オールエクセレント)・AM(オールマーベラス)で、
+//   上の称号を取ったら下の称号も取ったことにする(AM ⊃ AE ⊃ FC。プロフィールの実績表と同じ数え方)
+// ・「取れたか」の正本は、いまのBEST記録(mh_rhythm_best_v1)。BESTは一度取れば残る(下がらない)ので、実績も下がらない。
+//   アシストモード・練習・タイミング合わせはBESTに残らない(受け取る側が除いている)ので、実績にもならない
+// ・新しい保存キー mh_rhythm_achievements_v1 に、実績ごとの「いつ取ったか」と、報酬ごとの「受け取り済みか」を持つ。
+//   BESTには何も足さない。形が壊れていても、読むときは空の台帳として扱う(CLAUDE.md ⑦)
+// ・報酬は RHYTHM_ACHIEVEMENT_REWARDS に足す。**いまは空**(報酬が決まっていない)。空のあいだは何も配らず、何も書かない。
+//   足したときは、すでに取っていた実績にも遡って配る(since を書いたときだけ、それより後に取ったものに絞る)
+const RHYTHM_ACHIEVEMENT_LEDGER_KEY = 'mh_rhythm_achievements_v1';
+const RHYTHM_ACHIEVEMENT_LEDGER_MAX = 4000;
+// rank … 大きいほど上の称号。上の称号を取ると、下の称号も取ったことになる
+const RHYTHM_ACHIEVEMENT_KINDS = Object.freeze([
+  Object.freeze({ id:'fullCombo', short:'FC', name:'フルコンボ', rank:1 }),
+  Object.freeze({ id:'allExcellent', short:'AE', name:'オールエクセレント', rank:2 }),
+  Object.freeze({ id:'allMarvelous', short:'AM', name:'オールマーベラス', rank:3 }),
+]);
+const RHYTHM_ACHIEVEMENT_KIND_IDS = Object.freeze(RHYTHM_ACHIEVEMENT_KINDS.map(kind => kind.id));
+// 実績のid。曲のidに「:」は入らない(綴りは英数字と _ - だけ)ので、後ろの2つを切り出せば元に戻る
+const rhythmAchievementId = (songId,difficultyId,kind) => `${songId}:${difficultyId}:${kind}`;
+const parseRhythmAchievementId = id => {
+  const text=String(id??'');
+  const second=text.lastIndexOf(':'),first=second>0?text.lastIndexOf(':',second-1):-1;
+  if(first<=0||second<=first+1)return null;
+  const songId=text.slice(0,first),difficultyId=text.slice(first+1,second),kind=text.slice(second+1);
+  if(songId.length>80||difficultyId.length>20||!RHYTHM_ACHIEVEMENT_KIND_IDS.includes(kind))return null;
+  return {songId,difficultyId,kind};
+};
+// そのBEST記録で取れている称号(上の称号を取っていれば下の称号も含む)。並びは下の称号から
+const rhythmAchievedKinds = record => {
+  const am=record?.allMarvelous===true,ae=am||record?.allExcellent===true,fc=ae||record?.fullCombo===true;
+  return RHYTHM_ACHIEVEMENT_KINDS.filter(kind=>kind.id==='allMarvelous'?am:kind.id==='allExcellent'?ae:fc).map(kind=>kind.id);
+};
+const emptyRhythmAchievementLedger = () => ({v:1,items:{},claimed:{}});
+// 受け取り済みの印は「実績のid#報酬ルールのid」。同じ実績へ別の報酬ルールを後から足しても、別々に受け取れる
+const rhythmAchievementClaimKey = (achievementId,ruleId) => `${achievementId}#${ruleId}`;
+const rhythmAchievementTime = value => { const n=Number(value); return Number.isFinite(n)&&n>0?Math.floor(n):0; };
+const isRhythmAchievementClaimKey = key => {
+  const text=String(key??''),at=text.lastIndexOf('#');
+  return at>0&&at<text.length-1&&text.length-at-1<=40&&!!parseRhythmAchievementId(text.slice(0,at));
+};
+// 保存値を整える。壊れた項目は捨てるだけで、ほかの項目は残す。曲が増えたり減ったりしても落とさない(一覧を見ずに整える)
+const normalizeRhythmAchievementLedger = value => {
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  const isMap=v=>v&&typeof v==='object'&&!Array.isArray(v);
+  const items={},claimed={};
+  let count=0;
+  for(const [id,entry] of Object.entries(isMap(source.items)?source.items:{})){
+    if(count>=RHYTHM_ACHIEVEMENT_LEDGER_MAX)break;
+    if(!parseRhythmAchievementId(id))continue;
+    items[id]={at:rhythmAchievementTime(isMap(entry)?entry.at:entry)};
+    count++;
+  }
+  for(const [key,at] of Object.entries(isMap(source.claimed)?source.claimed:{})){
+    if(Object.keys(claimed).length>=RHYTHM_ACHIEVEMENT_LEDGER_MAX*4)break;
+    if(!isRhythmAchievementClaimKey(key))continue;
+    claimed[key]=rhythmAchievementTime(at)||1;   // 受け取り済みの印は、時刻が読めなくても消さない(二重に渡さない)
+  }
+  return {v:1,items,claimed};
+};
+// BEST記録と台帳をそろえる(足すだけで、消さない)。now は新しく足す実績の時刻。0 は「すでに取っていた(時刻は不明)」
+// 返すもの … { ledger: 新しい台帳, added: 今回足した実績のid(新しく取れたものの一覧) }
+const syncRhythmAchievementLedger = (ledger,bestRecords,{now=0}={}) => {
+  const current=normalizeRhythmAchievementLedger(ledger),items={...current.items},added=[];
+  const records=bestRecords&&typeof bestRecords==='object'&&!Array.isArray(bestRecords)?bestRecords:{};
+  const at=rhythmAchievementTime(now);
+  for(const songId of Object.keys(records)){
+    const byDifficulty=records[songId];
+    if(!byDifficulty||typeof byDifficulty!=='object')continue;
+    for(const difficultyId of Object.keys(byDifficulty)){
+      for(const kind of rhythmAchievedKinds(byDifficulty[difficultyId])){
+        const id=rhythmAchievementId(songId,difficultyId,kind);
+        if(items[id]||!parseRhythmAchievementId(id))continue;
+        if(Object.keys(items).length>=RHYTHM_ACHIEVEMENT_LEDGER_MAX)break;
+        items[id]={at};added.push(id);
+      }
+    }
+  }
+  return {ledger:{...current,items},added};
+};
+// ── 報酬 ──
+// 報酬ルールの形: { id:'ルールの名前(英数字と _ -、40字まで。後から変えない)',
+//   kinds:['fullCombo',…]|null, difficulties:['EXPERT',…]|null, songs:['曲のid',…]|null   … null は「すべて」
+//   since:取った時刻(ms)の下限(省略=遡って配る。0=時刻不明のものは since を書くと対象外),
+//   reward:{ type:'報酬の種類', amount:個数, … } }
+// 例: { id:'fc-expert-beat-p', kinds:['fullCombo'], difficulties:['EXPERT','MASTER'], songs:null, reward:{ type:'beatP', amount:100 } }
+// ★いまは報酬が決まっていないので空。ルールを足したら、渡す処理を RHYTHM_ACHIEVEMENT_GRANTERS[報酬の種類] へ足す(25-storage.jsx)
+const RHYTHM_ACHIEVEMENT_REWARDS = Object.freeze([]);
+const normalizeRhythmAchievementRules = list => {
+  const seen=new Set(),out=[];
+  const pick=(value,allowed)=>Array.isArray(value)?value.map(String).filter(item=>!allowed||allowed.includes(item)):null;
+  for(const rule of Array.isArray(list)?list:[]){
+    if(!rule||typeof rule!=='object')continue;
+    const id=String(rule.id??'');
+    if(!/^[A-Za-z0-9_-]{1,40}$/.test(id)||seen.has(id))continue;
+    const reward=rule.reward;
+    if(!reward||typeof reward!=='object'||typeof reward.type!=='string'||!reward.type||reward.type.length>30)continue;
+    const kinds=rule.kinds==null?null:pick(rule.kinds,RHYTHM_ACHIEVEMENT_KIND_IDS);
+    if(kinds&&!kinds.length)continue;   // 称号を絞ったのに1つも残らないルールは、すべてに効かせず捨てる
+    seen.add(id);
+    out.push({id,kinds,difficulties:rule.difficulties==null?null:pick(rule.difficulties),songs:rule.songs==null?null:pick(rule.songs),
+      since:rhythmAchievementTime(rule.since),reward:{...reward}});
+  }
+  return out;
+};
+// 受け取り待ちの一覧(取れていて、報酬ルールに合い、まだ受け取っていないもの)。eligible(songId,difficultyId) が false の実績は数えない
+// (公開していない曲・難易度。デバッグで取れた実績に報酬を出さないため)。並びは実績のid順 → ルールの並び順で、いつも同じ
+const rhythmAchievementPending = (ledger,rules,eligible) => {
+  const current=normalizeRhythmAchievementLedger(ledger),list=normalizeRhythmAchievementRules(rules),out=[];
+  if(!list.length)return out;
+  for(const achievementId of Object.keys(current.items).sort()){
+    const parsed=parseRhythmAchievementId(achievementId);
+    if(!parsed||(typeof eligible==='function'&&!eligible(parsed.songId,parsed.difficultyId)))continue;
+    const at=current.items[achievementId].at;
+    for(const rule of list){
+      if(rule.kinds&&!rule.kinds.includes(parsed.kind))continue;
+      if(rule.difficulties&&!rule.difficulties.includes(parsed.difficultyId))continue;
+      if(rule.songs&&!rule.songs.includes(parsed.songId))continue;
+      if(rule.since>0&&!(at>=rule.since))continue;
+      const key=rhythmAchievementClaimKey(achievementId,rule.id);
+      if(current.claimed[key])continue;
+      out.push({key,achievementId,songId:parsed.songId,difficultyId:parsed.difficultyId,kind:parsed.kind,ruleId:rule.id,reward:{...rule.reward}});
+    }
+  }
+  return out;
+};
+// </rhythm-achievement-ledger>
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
