@@ -74,6 +74,24 @@ function MasuAutoEnhanceScreen({
         const captured = buildAutoEnhanceLimitsFromCurrent(masu, base);
         if (captured) { setLimitDraft(null); updateAutoEnhance(masu.id, captured); }
       };
+      // かんたん設定。1タップで目標と ON をまとめて決める(優先順位はいまのまま)。
+      // ステータスの上限なし=null、間合い適性は M を目標にすると上限なしと同じ
+      const applyPreset = (kind) => {
+        setLimitDraft(null);
+        const allStat = { hp:null, atk:null, def:null, guts:null };
+        const noStat = { hp:0, atk:0, def:0, guts:0 };
+        const allApt = ['M','M','M','M'];
+        const noApt = [null,null,null,null];
+        const patch = kind === 'all' ? { statTargets:allStat, aptLimits:allApt }
+          : kind === 'stat' ? { statTargets:allStat, aptLimits:noApt }
+          : { statTargets:noStat, aptLimits:allApt };
+        updateAutoEnhance(masu.id, { enabled:true, ...patch });
+      };
+      // OFF→ON のとき、振る先がまだ1つも無ければ「おまかせ」にして、押しただけで働くようにする
+      const toggleEnabled = () => {
+        if (!settings.enabled && !hasTarget) { applyPreset('all'); return; }
+        updateAutoEnhance(masu.id, { enabled: !settings.enabled });
+      };
       const clearAll = () => {
         setLimitDraft(null);
         updateAutoEnhance(masu.id, { statTargets:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
@@ -110,7 +128,7 @@ function MasuAutoEnhanceScreen({
 
             {/* オン / オフ */}
             <div className={`rounded-2xl border p-3 shadow-xl ${settings.enabled?'border-lime-400/60 bg-lime-950/25':'border-white/10 bg-slate-900'}`}>
-              <button type="button" aria-pressed={settings.enabled} onClick={()=>updateAutoEnhance(masu.id, { enabled: !settings.enabled })}
+              <button type="button" aria-pressed={settings.enabled} onClick={toggleEnabled}
                 className={`w-full min-h-[52px] rounded-xl font-black text-[13px] active:scale-95 flex items-center justify-center gap-2 ${settings.enabled?'bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}`}>
                 <Sparkles size={16}/>{settings.enabled?'オート強化 ON':'オート強化 OFF'}
               </button>
@@ -130,6 +148,17 @@ function MasuAutoEnhanceScreen({
                 </div>
               )}
               <div className="mt-2 text-[10px] font-bold text-slate-400 leading-relaxed">設定は転生しても残ります。目標まで届くと止まり、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。</div>
+            </div>
+
+            {/* かんたん設定: 細かい上限や順番を決めなくても、押すだけで ON になって働く */}
+            <div data-auto-enhance-presets className="rounded-2xl border border-lime-500/40 bg-slate-900 p-3">
+              <div className="text-[13px] font-black text-lime-300">かんたん設定（押すだけで ON）</div>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <button type="button" data-auto-enhance-preset="all" onClick={()=>applyPreset('all')} className="min-h-[56px] rounded-xl bg-lime-600 text-slate-950 text-[11px] font-black active:scale-95 px-1 leading-tight">おまかせ<br/><span className="text-[9px] font-bold">全部上げる</span></button>
+                <button type="button" data-auto-enhance-preset="stat" onClick={()=>applyPreset('stat')} className="min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight">ステータスだけ<br/><span className="text-[9px] font-bold text-slate-400">適性は振らない</span></button>
+                <button type="button" data-auto-enhance-preset="apt" onClick={()=>applyPreset('apt')} className="min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight">適性だけ<br/><span className="text-[9px] font-bold text-slate-400">ステは振らない</span></button>
+              </div>
+              <div className="mt-1.5 text-[10px] font-bold text-slate-400 leading-relaxed">上限なしで、下の優先順位どおりに強化ポイントを使い切ります。あとから下で細かく直せます。</div>
             </div>
 
             {/* 上限の一括操作 */}
