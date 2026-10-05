@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9550df99987b3e0e
+// generated-sha256: 6f86d95785f6b1f0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 00:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 00:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21569,6 +21569,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
     psychoLock: Object.freeze({ enemyDmgDown: 0.3, enemyTakenUp: 0.3 }),
     effect: 'psychoLock',
   }),
+  // ★2026-10-05 ユーザー指定(ハムのEX)。名前は「ハムボクシング」・3ターン・ラン5回。
+  //   「使用時『カウンター』を1付与。自分が狙われたときに攻撃をすると、クロスカウンター発動。相手の攻撃を回避して、
+  //   与ダメ100%×カウンターの攻撃になる。クロスカウンターが発動するとカウンターを1付与。効果が切れるとカウンターもなくなる」。
+  //   「与ダメ100%」は、そのターンにハムが敵へ与えたダメージ(連撃も含めた合計)の100%と読んで実装した。威力は 100% × カウンターの数。
+  //   カードとの併用は指定が無かったが、攻撃しないと発動しないので「併用できる」
+  Ham: Object.freeze({
+    id: 'ham_boxing',
+    name: 'ハムボクシング',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・ハムが敵に狙われたターンに、ハムが攻撃していると「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えたダメージの100%×カウンターの数を、敵へ返す\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    counter: Object.freeze({ start: 1, dmgRate: 1 }),
+    effect: 'counter',
+    // 効いている途中でもう一度使うと、カウンターが1に戻ってしまうので使えない
+    conditions: Object.freeze(['notActive']),
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -21634,7 +21650,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -21694,6 +21710,8 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    counter: raw.counter && typeof raw.counter === 'object'
+      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), dmgRate: Math.max(0, Number(raw.counter.dmgRate) || 0) } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
       ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
@@ -21860,6 +21878,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyBoostCfg: def.partyBoost ? { ...def.partyBoost } : null,
       damageBackCfg: def.damageBack ? { ...def.damageBack } : null,
       psychoLockCfg: def.psychoLock ? { ...def.psychoLock } : null,
+      counterCfg: def.counter ? { ...def.counter } : null, counter: def.counter ? def.counter.start : 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -22225,6 +22244,30 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+// ---- ハム(counter): ハムボクシング ----
+// いまのカウンターの数(効いていなければ null)。dmgRate は1つあたりの威力(与ダメの割合)
+const tacticsExCounterOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'counter') return null;
+  const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.counterCfg;
+  if (!cfg) return null;
+  const rate = Number(cfg.dmgRate);
+  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), dmgRate: Number.isFinite(rate) && rate > 0 ? rate : 0 };
+};
+// クロスカウンターが発動した子のカウンターを n 増やす(効いていなければ状態をそのまま返す)
+const addTacticsExCounter = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const c = tacticsExCounterOf(safe, units, slot, now);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  if (!c || add <= 0) return safe;
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(99, c.counter + add) } } };
+};
+// クロスカウンターで敵へ返すダメージ(ハムがそのターンに与えたダメージ × 威力 × カウンターの数。切り捨て)
+const tacticsExCounterDamage = (state, units, slot, now, dealtThisTurn) => {
+  const c = tacticsExCounterOf(state, units, slot, now);
+  const dealt = Math.max(0, Number(dealtThisTurn) || 0);
+  return c && dealt > 0 ? Math.floor(dealt * c.dmgRate * c.counter) : 0;
 };
 // サイコロックオン(psychoLock)が効いているか。効いているあいだ、敵は距離を動かせず(移動を選んでも何もしない)、
 // 敵の与ダメージが enemyDmgDown 下がり、敵の被ダメージが enemyTakenUp 上がる。効いていなければ active:false・倍率は変えない
@@ -48164,6 +48207,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★ダメージの式は useCallback で古い描画の関数が残ることがある(依存に wave・turnCount が無いものもある)。
   //   EXの効き目は「いま」を ref から読むので、どの描画の関数から呼ばれても同じ答えになる
   const tacticsExLiveRef = useRef({ enabled:false, now:{ wave:1, turn:1 } });
+  // ハムのクロスカウンター用: そのターンに、どの枠が敵へ何ダメージ与えたか(ターンの印つき。別のターンの値は見ない)
+  const tacticsExTurnAtkRef = useRef({ wave:-1, turn:-1, bySlot:{} });
   tacticsExLiveRef.current = { enabled:tacticsExEnabled, now:tacticsExNow };
   // 併用できないEXを使ったので、このターンはカードを使えない枠。★止まるのは使った子だけで、
   //   ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示「EXで他行動禁止はそのモンスターだけ」)
@@ -49117,13 +49162,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   その子は受けずに、受けるはずだった量を敵へ返す。ほかの子は普通に受ける。
             //   固有技の確定反射は上の枝(味方全体)で処理しているのでここへは来ない
             const reflectedSlot=isReflect?pickDefenseSlot():null;
-            let evadedName='', reflectedName='', reflectBack=0;
+            let evadedName='', reflectedName='', reflectBack=0, counterBack=0, counterLabel='';
             let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0, throughTotal=0;
             // ★枠ごとに「何が起きたか」を控える。合計の数字だけでは、全体攻撃のときに
             //   誰がどれだけ減って、誰が受け止めたのかが分からない
             const slotFx={};
             targets.forEach(slotIdx=>{
               // ★エイキの「緋桜瞬歩」が効いていて、敵と同じ距離の枠にいるなら、抽選に関係なく完全に回避する
+              // ★ハムの「クロスカウンター」: 狙われたハムがそのターンに攻撃していれば、攻撃を回避して、与えたダメージ×カウンターを敵へ返す
+              {
+                const atk=tacticsExTurnAtkRef.current, liveNow=tacticsExLiveRef.current.now;
+                const hamDealt=atk&&atk.wave===liveNow.wave&&atk.turn===liveNow.turn?(atk.bySlot[slotIdx]||0):0;
+                const crossDmg=hamDealt>0?tacticsExCounterDamage(tacticsExStateRef.current,units,slotIdx,liveNow,hamDealt):0;
+                if(crossDmg>0&&counterBack===0){
+                  counterBack=crossDmg; counterLabel=tacticsTargetName(units,slotIdx);
+                  commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current,tacticsUnitsRef.current,liveNow,slotIdx,1));
+                  evadedName=counterLabel; slotFx[slotIdx]={evade:true};
+                  pushBattleLog(`🥊 ${counterLabel}のクロスカウンター！ 攻撃を回避して ${crossDmg.toLocaleString()} ダメージを返した（カウンター+1）`,'ally');
+                  return;
+                }
+              }
               const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);
               // ★ライガーの雷纏: 雷の数ぶん(1つ5%)、狙われた攻撃を確率で回避する
               const thunderDodge=Math.random()<tacticsExThunderDodgeNow(slotIdx);
@@ -49242,9 +49300,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(dealt<=0&&saved<=0&&evadedSlot==null&&!evadedName&&reflectedSlot==null) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             // 味方の増減を確定させてから敵へ返す。撃破したらここで止める(回復・次ターンへ進ませない)
+            // ★クロスカウンター: 回避したぶんを敵へ返す。撃破したらここで止める
+            if(counterBack>0){
+              addPopup(`クロスカウンター ${counterBack}!!`,'enemy','text-orange-300 font-black text-4xl drop-shadow-lg');
+              const counteredHp=Math.max(0,enemyHpAtAttackStart-counterBack);
+              setCurrentWaveDamage(p=>p+counterBack); raidJackDamageRef.current+=Number(counterBack)||0;
+              setEnemy(prev=>prev?{...prev,hp:counteredHp}:prev); await battleWait(1000);
+              if (await resolveEnemyDefeat({remainingHp:counteredHp,damage:counterBack})) return;
+            }
             if(reflectBack>0){
               addPopup(`反射 ${reflectBack}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
-              const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectBack);
+              const reflectedHp=Math.max(0,enemyHpAtAttackStart-counterBack-reflectBack);
               setCurrentWaveDamage(p=>p+reflectBack); raidJackDamageRef.current+=Number(reflectBack)||0;
               setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
               if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;
@@ -49450,6 +49516,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const scenario=battleScenarioRef.current;
     const acting=enemyIntent;
     const hpAfterRecovery=emergencyHp!==null?emergencyHp:Math.min(liveEffectiveMaxHp(),hp+recoverHp);
+    tacticsExTurnAtkRef.current={ wave:-1, turn:-1, bySlot:{} }; // カードを切らない番では、クロスカウンターの元になるダメージは無い
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
@@ -49505,6 +49572,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       badge:(()=>{
         const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
         if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        // ハムボクシングは、カウンターの数と残りを札に出す
+        if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+          const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
+          if(ct) return { text:`反撃${ct.counter}・あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}`, active:true };
+        }
         // 雷狼影は、雷の数と段階を札に出す(ためている間は「雷◯」、雷纏のあいだは「雷纏◯」)
         if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
           const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
@@ -49529,6 +49601,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
           const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
           if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
+          // ハムのハムボクシング: いまのカウンターの数と、クロスカウンターの威力
+          if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+            const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
+            if(ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメの${Math.round(ct.dmgRate*100*ct.counter)}%。発動するたび+1）`);
+          }
           // ライガーの雷狼影: いまの雷の数と、ためている/雷纏の段階
           if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
@@ -49735,6 +49812,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setFocusedCard(null); setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const acting=enemyIntent;
+    tacticsExTurnAtkRef.current={ wave:-1, turn:-1, bySlot:{} };
     await handleEnemyTurn('none',{},acting,hp);
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
@@ -50322,6 +50400,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // (0のままだと、反射で殴り返したときに「HP0の敵をもう一度倒した」ことになってしまう)
     if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
+    // ★ハムボクシング: このターンに各枠が与えたダメージ(連撃も含む)を控える。敵の番のクロスカウンターが読む
+    { const bySlot={}; attackHits.forEach(h=>{ if(h&&Number.isInteger(h.slotIdx)) bySlot[h.slotIdx]=(bySlot[h.slotIdx]||0)+(Number(h.dmg)||0); });
+      tacticsExTurnAtkRef.current={ wave:tacticsExLiveRef.current.now.wave, turn:tacticsExLiveRef.current.now.turn, bySlot }; }
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする

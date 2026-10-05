@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35a917d6b5aa4a3f
+// source-sha256: 73bec16b974ac28a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 00:23";
+const BUILD_DATE = "2026-10-06 00:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34013,6 +34013,23 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     effect: 'psychoLock'
   }),
+  Ham: Object.freeze({
+    id: 'ham_boxing',
+    name: 'ハムボクシング',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・ハムが敵に狙われたターンに、ハムが攻撃していると「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えたダメージの100%×カウンターの数を、敵へ返す\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    counter: Object.freeze({
+      start: 1,
+      dmgRate: 1
+    }),
+    effect: 'counter',
+    conditions: Object.freeze(['notActive'])
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -34084,7 +34101,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -34142,6 +34159,10 @@ const normalizeTacticsExDef = raw => {
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    counter: raw.counter && typeof raw.counter === 'object' ? {
+      start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)),
+      dmgRate: Math.max(0, Number(raw.counter.dmgRate) || 0)
+    } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object' ? {
       enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)),
       enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0)
@@ -34433,6 +34454,10 @@ const applyTacticsExUse = (state, {
         psychoLockCfg: def.psychoLock ? {
           ...def.psychoLock
         } : null,
+        counterCfg: def.counter ? {
+          ...def.counter
+        } : null,
+        counter: def.counter ? def.counter.start : 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -34964,6 +34989,40 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+const tacticsExCounterOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'counter') return null;
+  const mine = normalizeTacticsExState(state).effects[slot],
+    cfg = mine.counterCfg;
+  if (!cfg) return null;
+  const rate = Number(cfg.dmgRate);
+  return {
+    slot,
+    counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))),
+    dmgRate: Number.isFinite(rate) && rate > 0 ? rate : 0
+  };
+};
+const addTacticsExCounter = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const c = tacticsExCounterOf(safe, units, slot, now);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  if (!c || add <= 0) return safe;
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [slot]: {
+        ...safe.effects[slot],
+        counter: Math.min(99, c.counter + add)
+      }
+    }
+  };
+};
+const tacticsExCounterDamage = (state, units, slot, now, dealtThisTurn) => {
+  const c = tacticsExCounterOf(state, units, slot, now);
+  const dealt = Math.max(0, Number(dealtThisTurn) || 0);
+  return c && dealt > 0 ? Math.floor(dealt * c.dmgRate * c.counter) : 0;
 };
 const tacticsExPsychoLockOf = (state, now) => {
   const effects = normalizeTacticsExState(state).effects;
@@ -72707,6 +72766,11 @@ function MonsterHeroGame() {
       turn: 1
     }
   });
+  const tacticsExTurnAtkRef = useRef({
+    wave: -1,
+    turn: -1,
+    bySlot: {}
+  });
   tacticsExLiveRef.current = {
     enabled: tacticsExEnabled,
     now: tacticsExNow
@@ -73731,7 +73795,9 @@ function MonsterHeroGame() {
             const reflectedSlot = isReflect ? pickDefenseSlot() : null;
             let evadedName = '',
               reflectedName = '',
-              reflectBack = 0;
+              reflectBack = 0,
+              counterBack = 0,
+              counterLabel = '';
             let units = tacticsUnitsRef.current,
               dealt = 0,
               saved = 0,
@@ -73740,6 +73806,23 @@ function MonsterHeroGame() {
               throughTotal = 0;
             const slotFx = {};
             targets.forEach(slotIdx => {
+              {
+                const atk = tacticsExTurnAtkRef.current,
+                  liveNow = tacticsExLiveRef.current.now;
+                const hamDealt = atk && atk.wave === liveNow.wave && atk.turn === liveNow.turn ? atk.bySlot[slotIdx] || 0 : 0;
+                const crossDmg = hamDealt > 0 ? tacticsExCounterDamage(tacticsExStateRef.current, units, slotIdx, liveNow, hamDealt) : 0;
+                if (crossDmg > 0 && counterBack === 0) {
+                  counterBack = crossDmg;
+                  counterLabel = tacticsTargetName(units, slotIdx);
+                  commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current, tacticsUnitsRef.current, liveNow, slotIdx, 1));
+                  evadedName = counterLabel;
+                  slotFx[slotIdx] = {
+                    evade: true
+                  };
+                  pushBattleLog(`🥊 ${counterLabel}のクロスカウンター！ 攻撃を回避して ${crossDmg.toLocaleString()} ダメージを返した（カウンター+1）`, 'ally');
+                  return;
+                }
+              }
               const exDodge = tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist);
               const thunderDodge = Math.random() < tacticsExThunderDodgeNow(slotIdx);
               if (exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now));
@@ -73854,9 +73937,24 @@ function MonsterHeroGame() {
             }
             if (dealt <= 0 && saved <= 0 && evadedSlot == null && !evadedName && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
+            if (counterBack > 0) {
+              addPopup(`クロスカウンター ${counterBack}!!`, 'enemy', 'text-orange-300 font-black text-4xl drop-shadow-lg');
+              const counteredHp = Math.max(0, enemyHpAtAttackStart - counterBack);
+              setCurrentWaveDamage(p => p + counterBack);
+              raidJackDamageRef.current += Number(counterBack) || 0;
+              setEnemy(prev => prev ? {
+                ...prev,
+                hp: counteredHp
+              } : prev);
+              await battleWait(1000);
+              if (await resolveEnemyDefeat({
+                remainingHp: counteredHp,
+                damage: counterBack
+              })) return;
+            }
             if (reflectBack > 0) {
               addPopup(`反射 ${reflectBack}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
-              const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectBack);
+              const reflectedHp = Math.max(0, enemyHpAtAttackStart - counterBack - reflectBack);
               setCurrentWaveDamage(p => p + reflectBack);
               raidJackDamageRef.current += Number(reflectBack) || 0;
               setEnemy(prev => prev ? {
@@ -74090,6 +74188,11 @@ function MonsterHeroGame() {
     const scenario = battleScenarioRef.current;
     const acting = enemyIntent;
     const hpAfterRecovery = emergencyHp !== null ? emergencyHp : Math.min(liveEffectiveMaxHp(), hp + recoverHp);
+    tacticsExTurnAtkRef.current = {
+      wave: -1,
+      turn: -1,
+      bySlot: {}
+    };
     await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
@@ -74169,6 +74272,13 @@ function MonsterHeroGame() {
           text: styleLabel,
           active: isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)
         };
+        if (def.effect === 'counter' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const ct = tacticsExCounterOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (ct) return {
+            text: `反撃${ct.counter}・あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}`,
+            active: true
+          };
+        }
         if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
           if (th) return {
@@ -74210,6 +74320,10 @@ function MonsterHeroGame() {
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
         const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
         if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);
+        if (def.effect === 'counter' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const ct = tacticsExCounterOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメの${Math.round(ct.dmgRate * 100 * ct.counter)}%。発動するたび+1）`);
+        }
         if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
           if (th) {
@@ -74501,6 +74615,11 @@ function MonsterHeroGame() {
     setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const acting = enemyIntent;
+    tacticsExTurnAtkRef.current = {
+      wave: -1,
+      turn: -1,
+      bySlot: {}
+    };
     await handleEnemyTurn('none', {}, acting, hp);
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
@@ -75331,6 +75450,17 @@ function MonsterHeroGame() {
       distDamage: attackDistDamage
     }))) return;
     if (enemyRevivedHpRef.current != null) enemyHpAfterOurAttacks = enemyRevivedHpRef.current;
+    {
+      const bySlot = {};
+      attackHits.forEach(h => {
+        if (h && Number.isInteger(h.slotIdx)) bySlot[h.slotIdx] = (bySlot[h.slotIdx] || 0) + (Number(h.dmg) || 0);
+      });
+      tacticsExTurnAtkRef.current = {
+        wave: tacticsExLiveRef.current.now.wave,
+        turn: tacticsExLiveRef.current.now.turn,
+        bySlot
+      };
+    }
     const finalActionType = guardTypeInTurn !== 'none' ? guardTypeInTurn : lastType;
     const executedIntent = enemyIntent;
     await handleEnemyTurn(finalActionType, {
