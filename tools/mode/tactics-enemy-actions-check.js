@@ -302,9 +302,10 @@ check('新モードは回避を「回避！」の枝へ落とさない',
 // ★避けた子・反射した子は、受ける計算へ進まずそこで抜ける(枠へ出す印だけ控える)
 //   エイキの緋桜瞬歩・ザンの血踊(敵と同じ距離なら完全回避)で避けた子も同じ枝を通る(exDodge)。そのとき evadedSlot は空なので、
 //   「無傷！」は evadedName でも止める
+//   ゴーストのオフリィアボイド(完全回避が残っている子)も同じ枝を通る(avoidDodge。2026-10-05)
 check('避けた子・反射した子はダメージ処理を飛ばす',
   has('const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);')
-    && has('if(slotIdx===evadedSlot||exDodge||thunderDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
+    && has('if(slotIdx===evadedSlot||exDodge||thunderDodge||avoidDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
     && has('if(slotIdx===reflectedSlot){') && has('slotFx[slotIdx]={reflect:true};'));
 check('確率で出た反射は、その子が受けるはずだった量を返す',
   has('reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);'));

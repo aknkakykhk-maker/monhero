@@ -83,7 +83,7 @@ function ProfileScreen({
         {/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}
         <ScreenHead title="プロフィール" accent="text-indigo-400"
           onBack={(onboarded&&!onboardingPreview)?onBack:null} backLabel="ホームへ戻る"/>
-        <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="profile"/></div>
+        <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="profile" compact/></div>
         <div className={`${SCREEN_LIST_CLASS} pb-4`}>
         {/* はじめての設定。ここで名前とアイコンを決めてもらい、そのまま村の案内へ続ける。
             進み具合(どちらが決まっているか)に応じて、みゅあが次にやることを教える */}
@@ -141,12 +141,12 @@ function ProfileScreen({
               </button>
               <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">フレーム：{frameName}</b></span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">{frameName}</b></span>
               </button>
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">👗</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">着替え：{wornCostume?wornCostume.name:'元の服'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
                 </button>
               )}
               {showFriendTiles&&(

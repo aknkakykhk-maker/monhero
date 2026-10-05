@@ -111,10 +111,12 @@ function MasuEnhanceScreen({
                   <div className="mt-1.5">{renderPowerBadge(currentPower, {dense:true, size:'sm'})}</div>
                 </div>
               </div>
-            </div>
-            <div className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center justify-between`}>
-              <div className="text-[11px] text-amber-300 font-black flex items-center gap-1.5"><Sparkles size={12}/>強化ポイント</div>
-              <div className="text-xl text-white font-black font-mono">{points}</div>
+              {/* 強化ポイントは見出しのカードの右に置く(2026-10-05)。別の帯にしていたぶん、
+                  振り分けの行まで余計にスクロールが要った */}
+              <div data-enhance-points className="shrink-0 self-stretch flex flex-col items-center justify-center rounded-xl border border-amber-400/40 bg-black/30 px-2.5">
+                <div className="text-[10px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={11}/>強化P</div>
+                <div className="text-2xl text-white font-black font-mono leading-none mt-0.5">{points}</div>
+              </div>
             </div>
             {/* 画面のなかでの使い方案内(CLAUDE.md ⑤)。オート強化は裏で働く仕組みで、
                 ここを開いた人が上のタブに気づかないと一生出会えないため、最初の1回だけ知らせる */}
@@ -146,6 +148,16 @@ function MasuEnhanceScreen({
                 <div className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/30 mb-3" role="group" aria-label="振り分け単位">
                   {[1,5,10,100,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[44px] rounded-xl text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                 </div>
+                {/* オート強化の設定で下書きを作る(2026-10-05)。いつもの振り方を毎回手で入れなくて済む。
+                    保存は「強化する」を押したときだけ(下書きなので、そのあと手で直せる) */}
+                {(()=>{const draft=buildMasuAutoEnhancePlan({...masu, autoEnhance:{...autoEnhance, enabled:true}}, base);
+                  return <button type="button" data-enhance-auto-draft={draft?'fill':'setup'} onClick={()=>draft?setBulkPlan({apt:[...draft.plan.apt],stat:{...draft.plan.stat}}):onOpenAutoEnhance()}
+                    className="mb-3 w-full min-h-[44px] rounded-xl border border-lime-400/50 bg-lime-950/25 px-3 text-left active:scale-[.98] flex items-center gap-2">
+                    <Sparkles size={14} className="shrink-0 text-lime-300"/>
+                    <span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-lime-200">{draft?'オート強化の設定で下書きする':'いつもの振り方をオート強化で決めておく'}</span>
+                    <span className="block text-[10px] font-bold text-slate-400">{draft?`決めた上限と優先順位どおりに ${draft.used}P を入れます(まだ保存しません)`:'決めておくと、ここから1回で下書きできます'}</span></span>
+                    <ChevronRight size={16} className="shrink-0 text-lime-300"/>
+                  </button>;})()}
                 {restoreDraft&&restoreDraft.requested>0&&<div className="mb-3 rounded-xl border border-cyan-400/40 bg-cyan-950/20 p-2">
                   <button type="button" onClick={restoreResetAllocation} disabled={restoreDraft.restored<=0} className="mh-button mh-button-secondary w-full min-h-[44px] rounded-xl bg-slate-800 text-cyan-200 text-[12px] font-black active:scale-95 disabled:opacity-30">↩ リセット前の配分を復元</button>
                   <div className={`mt-1 text-[10px] font-bold text-center ${restoreDraft.omitted>0?'text-amber-300':'text-slate-400'}`}>{restoreDraft.omitted>0?`現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）`:'保存は「強化する」を押した時だけです'}</div>

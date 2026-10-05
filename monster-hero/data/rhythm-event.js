@@ -344,7 +344,10 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
 //   アシストカードは下の RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS。
 const RHYTHM_EVENT_POINT_DISC_COST = 1500;
 const rhythmEventDiscOffer = (monsterId, name) => Object.freeze({ id:`disc_${monsterId.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()}`, name:`${name}の円盤石`, kind:'disc', monsterId, grantAmount:1, unit:'個', cost:RHYTHM_EVENT_POINT_DISC_COST });
+// ★2026-10-05 ゴースト・スプーキーを正式実装し、ユグドラシル種と同じくここで先行公開した(1,500P。いちばん新しいので先頭)
 const RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS = Object.freeze([
+  rhythmEventDiscOffer('Ghost', 'ゴースト'),
+  rhythmEventDiscOffer('Spooky', 'スプーキー'),
   rhythmEventDiscOffer('Yggdrasil', 'ユグドラシル'),
   rhythmEventDiscOffer('MelWhip', 'メルホイップ'),
   rhythmEventDiscOffer('Zan', 'ザン'),

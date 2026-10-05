@@ -41,6 +41,8 @@ const incomingBody = slice(
   '  }, [effectiveDef,');
 // 勇者特性「生命の源」(1〜5ターン目の被ダメ軽減)の決めごとも本体から持ち込む。ターン数は既定で0(効かない)
 const lifeSourceSrc = `const LIFE_SOURCE_MONSTER_IDS${slice('const LIFE_SOURCE_MONSTER_IDS', '// 固有技「大樹の加護」')}`;
+// 勇者特性「トリックスタート」(丈夫さ+20%を積む)の決めごとも本体から持ち込む。積んだ数は既定で無し(1倍)
+const trickStartSrc = `// ==== 勇者特性「トリックスタート」${slice('// ==== 勇者特性「トリックスタート」', '// ★タクティクスバトルは敵の並びが別').slice('// ==== 勇者特性「トリックスタート」'.length)}`;
 const makeIncoming = (deps) => new Function('d', `
   const {getWaveBuff,mainHero,isTacticsMode,runMode,heroDist,tacticsUnitsRef,
     resolveEffectiveMaxStat,normalizeTacticsUnit,effectiveDef,getPermaBuff,
@@ -49,6 +51,10 @@ const makeIncoming = (deps) => new Function('d', `
   // スエゾーのサイコロックオン(敵の与ダメ−30%)。既存モードの検査では効いていないものとして、倍率を変えない代役を置く
   const tacticsExPsychoLockNow = d.tacticsExPsychoLockNow || (() => ({ active: false, enemyDmgMult: 1, enemyTakenBonus: 0 }));
   ${lifeSourceSrc}
+  ${trickStartSrc}
+  const trickStartStacksAt = d.trickStartStacksAt || (() => null);
+  // 運命の輪(スプーキー)の弱体は既定で無し(敵の与ダメそのまま)
+  const fateWheelRef = d.fateWheelRef || { current: null };
   // 新モードの1体ぶんは tacticsBattleUnit で読む(EXスキルの上乗せはここでは無いものとして盤面の値を返す)
   const tacticsBattleUnit = d.tacticsBattleUnit || ((slot) => (tacticsUnitsRef.current || [])[slot]);
   return (intent, targetSlot=null) => {${incomingBody}};

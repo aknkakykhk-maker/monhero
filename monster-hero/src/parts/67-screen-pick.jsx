@@ -27,7 +27,7 @@ function SkipPickScreen({
     const slotMons=[skipFlow.hero,...(skipFlow.allies||[])];
     return(
     <div style={{position:'absolute',inset:0,backgroundColor:'#020617',zIndex:30000}} className="absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden">
-      <div className="mb-2 flex items-center justify-between px-2 shrink-0"><button onClick={closeBattleSkip} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest">スキップ・{label}</h2><div className="w-10"/></div>
+      <div className="mb-2 flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" onClick={closeBattleSkip} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest">スキップ・{label}</h2><div className="w-10"/></div>
       <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="skipPick" compact/></div>
       <div className="w-full max-w-md mx-auto shrink-0">
         <div className="grid grid-cols-4 gap-1.5">
@@ -299,7 +299,8 @@ function PickHeroAllyScreen({
     <div style={pickMode==='ally'?{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}:{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode==='ally'?' mh-phase mh-ph-bg':''}`}>
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={onBack} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+      {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -588,7 +589,7 @@ function PickProAlliesScreen({
     return (
     <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
       <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'.35rem'}}>
-        <button aria-label="戻る" onClick={returnToHero} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+        <button type="button" aria-label="戻る" onClick={returnToHero} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
         <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
         <div className="w-10"></div>
       </div>

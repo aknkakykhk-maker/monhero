@@ -468,12 +468,14 @@ check('ガッツの回復は1か所(gainGuts)へまとめる',
 // ★「その子だけ」へ入るのは4つ。固有技(スエゾー＝そのモンスターの技)と、
 //   氷海の支配者(持っている子だけ・仕様 4.9)、固有技「大樹の加護」(ユグドラシル・メルホイップ＝使った子)、
 //   特性「生命の源」(持っている子だけ。2026-09-29)
+// ★固定量でその子へ入れるのは3つ。スエゾーの固有技の数字・オボロ/プラントのドレイン、
+//   特性「トリックスタート」の「当たったら払った消費ガッツの半分」(攻撃した子だけ。2026-10-05)
 check('ガッツを増やすものは、行き先を名指しで渡す', has('const gainGutsAt = (slotIdx, amount) => {')
   && has('const gainGutsByRate = (slotIdx, rate) => {')
   && has('const gainGutsByRateAll = (rate) => {')
   && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 4
   && (source.match(/gainGutsByRateAll\(/g) || []).length === 4
-  && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 2,
+  && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 3,
   `その子だけ ${(source.match(/gainGutsByRate\(slotIdx,/g) || []).length}か所 / 全体 ${(source.match(/gainGutsByRateAll\(/g) || []).length}か所 / 固定量 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);
 // 氷海ぶんは全員へ配る率に混ぜず、持っている子へだけ足す(混ぜると誰か1人の特性で全員が得をする)
 check('氷海ぶんは持っている子へだけ足す',
@@ -1182,9 +1184,11 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
     has('const guardValueOf = (flat, mult, slotIdx = null) =>')
       && has('(flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;'));
   check('枠を渡さなければ今までどおりパーティの値(既存5モード)',
-    has('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;'));
+    has('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef * trickMult;')
+      // ★トリックスタート(ゴースト・スプーキー)の丈夫さ+20%は、ガードの軽減量にも同じ倍率で効く(積んでいなければ1倍)
+      && has('const trickMult = trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? slotIdx : null));'));
   check('枠を渡せばその子の丈夫さで出す',
-    has('return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff(\'defPct\')) : effectiveDef;'));
+    has('return (unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff(\'defPct\')) : effectiveDef) * trickMult;'));
   check('実際に受け止める計算も画面と同じ1か所を通る',
     has('const base=tacticsSlotGuardValue(slotGuards,slotIdx);')
       && has('const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {'));

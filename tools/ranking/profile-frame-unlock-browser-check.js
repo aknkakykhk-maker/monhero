@@ -82,7 +82,7 @@ async function run() {
   // 案内が出ていたら閉じる(低いLvでは出ないはずだが、出ても先へ進める)
   await low.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.trim() === '閉じる')?.click());
   await low.waitForTimeout(600);
-  await low.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.includes('フレーム：'))?.click());
+  await low.evaluate(() => document.querySelector('button[data-profile-tile="frame"]')?.click());
   await low.waitForTimeout(1000);
   const lowFrames = await readFrames(low);
   check('選択画面に枠が並ぶ', lowFrames.length >= 20, `${lowFrames.length}件`);
@@ -171,7 +171,7 @@ async function run() {
   }
   const nextFrame = await high.evaluate(() => document.querySelector('[data-assistant-next-frame]')?.getAttribute('data-assistant-next-frame') || '');
   check('全部もらった助手には「次にもらえる」を出さない', nextFrame === '', nextFrame || 'なし');
-  await high.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.includes('フレーム：'))?.click());
+  await high.evaluate(() => document.querySelector('button[data-profile-tile="frame"]')?.click());
   await high.waitForTimeout(1000);
   const highFrames = await readFrames(high);
   const mua = highFrames.filter(f => f.id.startsWith('frame_mua_'));
