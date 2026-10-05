@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9550df99987b3e0e
+// generated-sha256: a49c856a78024a93
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 00:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 00:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23280,23 +23280,25 @@ const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride
 };
 // レイドバトル(A)の攻撃力の倍率(2026-10-04・ユーザー指示)。通常バトルの難易度 Easy / Normal / Hard / Expert / Master の
 // 攻撃倍率(DIFFICULTY_SETTINGS の power: 0.5 / 1.0 / 1.5 / 3.0 / 5.0)と同じにする。ライフは変えない。
-// 数字がずれていないかは tools/mode/raid-jack-check.js が DIFFICULTY_SETTINGS と突き合わせる
-const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
+// 2026-10-05・ユーザーが段階ごとに決め直した(Easy〜Master と同じではなくなった): 男爵 350 / 子爵 500 / 伯爵 600 / 公爵 800 / 大王 1,000。
+// 攻撃力の数字そのものを正本にし、倍率は基礎攻撃力 700 で割って出す(RAID_JACK_BASE.atk を掛けると元の数字へ戻る)
+const RAID_JACK_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
+const RAID_JACK_A_ATK_POWERS = Object.freeze(RAID_JACK_A_ATKS.map((atk) => atk / RAID_JACK_BASE.atk));
 
 // A: ベースモン協力戦。段階ごとの共有HP。
 // ライフ(2026-10-05・ユーザーが段階ごとに決めた): 男爵 1,750,000 / 子爵 3,200,000 / 伯爵 8,000,000 / 公爵 14,000,000 / 大王 21,000,000(2026-10-05 に伯爵・公爵・大王を2度引き上げ。男爵・子爵は開始済みなので変えない)
 const RAID_JACK_A_TIERS = Object.freeze([
-  raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000),    // 攻撃力は Easy
-  raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000),    // Normal
-  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000),    // Hard
-  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000),   // Expert
-  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000),   // Master
+  raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000),    // 攻撃力 350
+  raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000),    // 攻撃力 500
+  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000),    // 攻撃力 600
+  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000),   // 攻撃力 800
+  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000),   // 攻撃力 1,000
 ]);
 // 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示)。大王を倒したら共有ライフは無限になり、敵は小さなぱんぷきんに替わる。
 //   ・共有ライフは減らない。毎回ぜんかいのライフからはじめ、与えたダメージだけがスコア(累計)に足される
 //   ・ライフは 4,550,000 の設定値(大王のライフとは連動しない。1戦で倒せるのはそこまで)/ 攻撃力は子爵と同じ / 技の名前は今までのまま(動きは絵に合わせる)
 //   ・サーバーへ送る段階は大王(tier 5)のまま(表の制約が 1〜5 のため)。ID は a5 を引き継ぎ、raidJackPumpkin で見分ける
-const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, RAID_JACK_A_ATK_POWERS[1], 4550000);   // ライフは 4,550,000(大王のライフを変えても連動しない・2026-10-05)
+const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);   // 攻撃力は 700(1.0倍・子爵を変えても連動しない・2026-10-05)/ ライフは 4,550,000(大王のライフを変えても連動しない・2026-10-05)
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
 const raidJackBossDown = (totals) => !!totals && !!totals.a && !!totals.a[5]
   && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
