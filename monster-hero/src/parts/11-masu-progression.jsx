@@ -2900,6 +2900,22 @@ const buildMasuOffering = ({ masu, gold, ownedItems, lockedIds = [], mode = 'dia
   };
 };
 
+// 転生をまとめて行う。1回ぶんの計算は buildMasuReincarnation をそのまま count 回くり返すだけ
+// (費用・ポイント・ロックの判定を別に書かない)。途中で止まったら、そこまでの回数で確定する。
+// 固有技は選んだものを毎回上げる。最大に届いたあとは自動で「ポイントとして残す」になる。
+const REINCARNATE_BATCH_MAX = 50;
+const buildMasuReincarnationBatch = ({ masu, skillKey, gold, lockedIds = [], count = 1 }) => {
+  const wanted = Math.min(REINCARNATE_BATCH_MAX, Math.max(1, Math.floor(Number(count) || 1)));
+  let cur = masu, goldLeft = donationDiamondValue(gold), spent = 0, done = 0, first = null, last = null, reason = '';
+  for (let i = 0; i < wanted; i++) {
+    const r = buildMasuReincarnation({ masu:cur, skillKey, gold:goldLeft, lockedIds });
+    if (!r.ok) { reason = r.reason; break; }
+    if (!first) first = r;
+    last = r; cur = r.nextMasu; goldLeft = r.nextGold; spent += r.cost; done++;
+  }
+  if (!last) return { ok:false, reason:reason || '転生できません。', count:0, cost:0 };
+  return { ...last, ok:true, count:done, cost:spent, fromLevel:first.fromLevel, stopReason:done < wanted ? reason : '' };
+};
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
 const donationDiamondValue = (bondXp) => {
   const value = Number(bondXp);

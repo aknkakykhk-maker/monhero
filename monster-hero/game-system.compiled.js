@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e13b496507bcad5
+// source-sha256: 4687b52f0a131f53
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 01:51";
+const BUILD_DATE = "2026-10-06 07:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4260,6 +4260,55 @@ const buildMasuOffering = ({
       [BREAKTHROUGH_ITEM_ID]: st.psyche
     },
     nextMasu: st.masu
+  };
+};
+const REINCARNATE_BATCH_MAX = 50;
+const buildMasuReincarnationBatch = ({
+  masu,
+  skillKey,
+  gold,
+  lockedIds = [],
+  count = 1
+}) => {
+  const wanted = Math.min(REINCARNATE_BATCH_MAX, Math.max(1, Math.floor(Number(count) || 1)));
+  let cur = masu,
+    goldLeft = donationDiamondValue(gold),
+    spent = 0,
+    done = 0,
+    first = null,
+    last = null,
+    reason = '';
+  for (let i = 0; i < wanted; i++) {
+    const r = buildMasuReincarnation({
+      masu: cur,
+      skillKey,
+      gold: goldLeft,
+      lockedIds
+    });
+    if (!r.ok) {
+      reason = r.reason;
+      break;
+    }
+    if (!first) first = r;
+    last = r;
+    cur = r.nextMasu;
+    goldLeft = r.nextGold;
+    spent += r.cost;
+    done++;
+  }
+  if (!last) return {
+    ok: false,
+    reason: reason || '転生できません。',
+    count: 0,
+    cost: 0
+  };
+  return {
+    ...last,
+    ok: true,
+    count: done,
+    cost: spent,
+    fromLevel: first.fromLevel,
+    stopReason: done < wanted ? reason : ''
   };
 };
 const donationDiamondValue = bondXp => {
@@ -43977,7 +44026,9 @@ function MasuReincarnateScreen({
   setReincarnateSelectedId,
   setReincarnateSkillKey,
   sortMonsterEntries,
-  rebirthLockedMasuIds = []
+  rebirthLockedMasuIds = [],
+  reincarnateTimes = 1,
+  setReincarnateTimes = () => {}
 }) {
   const selected = masuMons.find(m => String(m.id) === String(reincarnateSelectedId));
   if (!selected) {
@@ -44019,6 +44070,7 @@ function MasuReincarnateScreen({
         onClick: () => {
           setReincarnateSelectedId(masu.id);
           setReincarnateSkillKey(null);
+          setReincarnateTimes(1);
           setReincarnateError('');
         },
         style: MONSTER_CARD_STYLE,
@@ -44038,10 +44090,25 @@ function MasuReincarnateScreen({
   const normalized = normalizeMasuProgression(selected),
     base = ALL_PLAYER_MONSTERS[selected.baseId],
     lvl = masuBondLevelInfo(selected),
-    cost = masuRebirthCost(lvl.level),
     skills = getRebirthSkillChoices(selected);
-  const nextLevel = Math.max(1, lvl.level - REINCARNATE_LEVEL_DROP);
-  const nextPoints = nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + normalized.reincarnateBonusPoints + REINCARNATE_POINTS + normalized.inheritedReincarnateBonusPoints;
+  const batchArgs = {
+    masu: selected,
+    skillKey: reincarnateSkillKey || '',
+    gold,
+    lockedIds: rebirthLockedMasuIds
+  };
+  const maxTimes = buildMasuReincarnationBatch({
+    ...batchArgs,
+    count: REINCARNATE_BATCH_MAX
+  }).count || 1;
+  const times = Math.min(Math.max(1, reincarnateTimes), maxTimes);
+  const batch = buildMasuReincarnationBatch({
+    ...batchArgs,
+    count: times
+  });
+  const cost = batch.ok ? batch.cost : masuRebirthCost(lvl.level);
+  const nextLevel = batch.ok ? batch.nextLevel : Math.max(1, lvl.level - REINCARNATE_LEVEL_DROP);
+  const nextPoints = batch.ok ? batch.nextPoints : nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + normalized.reincarnateBonusPoints + REINCARNATE_POINTS + normalized.inheritedReincarnateBonusPoints;
   return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -44073,18 +44140,52 @@ function MasuReincarnateScreen({
   }, "上限Lv.", normalized.levelCap, "はそのまま。振った強化は白紙に戻ります"), React.createElement("div", {
     className: "text-amber-300 text-[10px] font-black"
   }, "振り直せる強化ポイント ", nextPoints, "（うち転生ぶん +", REINCARNATE_POINTS, "）"))), React.createElement("div", {
+    "data-reincarnate-times": true,
+    className: "shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "flex justify-between text-[11px] font-black"
+  }, React.createElement("span", {
+    className: "text-slate-300"
+  }, "転生する回数"), React.createElement("span", {
+    className: "font-mono text-violet-200"
+  }, "最大 ", maxTimes, "回")), React.createElement("div", {
+    className: "mt-2 grid grid-cols-5 items-center gap-1.5"
+  }, [['-10', -10], ['-1', -1]].map(([l, d]) => React.createElement("button", {
+    key: l,
+    type: "button",
+    disabled: times <= 1,
+    onClick: () => setReincarnateTimes(Math.max(1, times + d)),
+    className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30"
+  }, l)), React.createElement("strong", {
+    className: "text-center text-xl font-black font-mono"
+  }, times), [['+1', 1], ['+10', 10]].map(([l, d]) => React.createElement("button", {
+    key: l,
+    type: "button",
+    disabled: times >= maxTimes,
+    onClick: () => setReincarnateTimes(Math.min(maxTimes, times + d)),
+    className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30"
+  }, l))), React.createElement("button", {
+    type: "button",
+    disabled: times >= maxTimes,
+    onClick: () => setReincarnateTimes(maxTimes),
+    className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30"
+  }, "MAX（", maxTimes, "回）"), times > 1 && React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold text-slate-400"
+  }, "Lv.", lvl.level, " → Lv.", nextLevel, "（", times, "回ぶんまとめて転生）。固有技は選んだものを毎回上げ、最大になったあとはポイントとして残します"), batch.ok && batch.stopReason && React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold text-amber-300"
+  }, batch.stopReason)), React.createElement("div", {
     className: "shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"
   }, React.createElement("div", {
     className: "flex justify-between text-[10px] font-bold"
   }, React.createElement("span", {
     className: "text-slate-400"
-  }, "必要ダイヤ"), React.createElement("span", {
+  }, "必要ダイヤ", times > 1 ? `（${times}回ぶん）` : ``), React.createElement("span", {
     className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
   }, React.createElement(Gem, {
     size: 12
   }), cost.toLocaleString())), React.createElement("div", {
     className: "text-[10px] text-slate-400"
-  }, "（絆Lv.", lvl.level, "）× ", REBIRTH_COST_PER_LEVEL), React.createElement("div", {
+  }, times > 1 ? `その時点の絆Lv × ${REBIRTH_COST_PER_LEVEL} を回数ぶん` : `（絆Lv.${lvl.level}）× ${REBIRTH_COST_PER_LEVEL}`), React.createElement("div", {
     className: "flex justify-between text-[10px] font-bold"
   }, React.createElement("span", {
     className: "text-slate-400"
@@ -44117,10 +44218,10 @@ function MasuReincarnateScreen({
   }, reincarnateError), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
-    disabled: reincarnateSkillKey == null || gold < cost || reincarnateProcessingRef.current,
+    disabled: reincarnateSkillKey == null || !batch.ok || gold < cost || reincarnateProcessingRef.current,
     onClick: executeMasuReincarnation,
     className: "mh-button mh-button-primary w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30"
-  }, "転生する")));
+  }, times > 1 ? `${times}回まとめて転生する` : '転生する')));
 }
 function MasuTranscendenceScreen({
   MONSTER_CARD_CLASS,
@@ -44820,7 +44921,7 @@ function MasuReincarnateAnimation({
     count: normalizeMasuProgression(reincarnateAnimation.masu).reincarnateCount
   })), React.createElement("div", {
     className: "mh-reincarnation-copy"
-  }, React.createElement("b", null, "転生完了！"), React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " → Lv.", reincarnateAnimation.nextLevel), React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), React.createElement("span", null, "強化ポイント ", reincarnateAnimation.nextPoints, " を振り直せます")));
+  }, React.createElement("b", null, reincarnateAnimation.times > 1 ? `転生 ×${reincarnateAnimation.times} 完了！` : '転生完了！'), React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " → Lv.", reincarnateAnimation.nextLevel), React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), React.createElement("span", null, "強化ポイント ", reincarnateAnimation.nextPoints, " を振り直せます")));
 }
 function MasuDonationAnimation({
   donationAnimation
@@ -64155,6 +64256,7 @@ function MonsterHeroGame() {
   const [rebirthAnimation, setRebirthAnimation] = useState(null);
   const [reincarnateSelectedId, setReincarnateSelectedId] = useState(null);
   const [reincarnateSkillKey, setReincarnateSkillKey] = useState(null);
+  const [reincarnateTimes, setReincarnateTimes] = useState(1);
   const [reincarnateError, setReincarnateError] = useState('');
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
@@ -71567,11 +71669,12 @@ function MonsterHeroGame() {
   const executeMasuReincarnation = async () => {
     if (reincarnateProcessingRef.current || !reincarnateSelectedId) return;
     const masu = masuMonsRef.current.find(m => String(m.id) === String(reincarnateSelectedId));
-    const result = buildMasuReincarnation({
+    const result = buildMasuReincarnationBatch({
       masu,
       skillKey: reincarnateSkillKey,
       gold,
-      lockedIds: rebirthLockedMasuIds
+      lockedIds: rebirthLockedMasuIds,
+      count: reincarnateTimes
     });
     if (!result.ok) {
       setReincarnateError(result.reason);
@@ -71598,6 +71701,7 @@ function MonsterHeroGame() {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice => choice.key === result.skillKey) : null;
       setReincarnateAnimation({
+        times: result.count,
         masu: result.nextMasu,
         base,
         raisesSkill: result.raisesSkill,
@@ -82102,6 +82206,7 @@ function MonsterHeroGame() {
       }), '転生', 'Lvを99下げて強化Pを獲得し、育成を振り直す', () => {
         setReincarnateSelectedId(null);
         setReincarnateSkillKey(null);
+        setReincarnateTimes(1);
         setReincarnateError('');
         setGameState('MASU_REINCARNATE');
       }), templeLink(React.createElement(Sparkles, {
@@ -82205,6 +82310,8 @@ function MonsterHeroGame() {
       reincarnateProcessingRef: reincarnateProcessingRef,
       reincarnateSelectedId: reincarnateSelectedId,
       reincarnateSkillKey: reincarnateSkillKey,
+      reincarnateTimes: reincarnateTimes,
+      setReincarnateTimes: setReincarnateTimes,
       renderMonsterCardBody: renderMonsterCardBody,
       renderMonsterSortFilterBar: renderMonsterSortFilterBar,
       renderScreenNote: renderScreenNote,

@@ -1556,6 +1556,7 @@ function MonsterHeroGame() {
   const [reincarnateSelectedId, setReincarnateSelectedId] = useState(null);
   // 転生で上げる固有技。null=まだ選んでいない / ''=あとで決める(ポイントとして残す)
   const [reincarnateSkillKey, setReincarnateSkillKey] = useState(null);
+  const [reincarnateTimes, setReincarnateTimes] = useState(1);
   const [reincarnateError, setReincarnateError] = useState('');
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
@@ -8181,7 +8182,7 @@ function MonsterHeroGame() {
   const executeMasuReincarnation = async () => {
     if (reincarnateProcessingRef.current || !reincarnateSelectedId) return;
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(reincarnateSelectedId));
-    const result = buildMasuReincarnation({ masu, skillKey:reincarnateSkillKey, gold, lockedIds:rebirthLockedMasuIds });
+    const result = buildMasuReincarnationBatch({ masu, skillKey:reincarnateSkillKey, gold, lockedIds:rebirthLockedMasuIds, count:reincarnateTimes });
     if (!result.ok) { setReincarnateError(result.reason); return; }
     reincarnateProcessingRef.current = true;
     setReincarnateError('');
@@ -8197,7 +8198,7 @@ function MonsterHeroGame() {
       addAssistantBond('reincarnate');
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice=>choice.key===result.skillKey) : null;
-      setReincarnateAnimation({ masu:result.nextMasu, base, raisesSkill:result.raisesSkill, keptSkillPoints:result.keptSkillPoints, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, fromLevel:result.fromLevel, nextLevel:result.nextLevel, nextPoints:result.nextPoints });
+      setReincarnateAnimation({ times:result.count, masu:result.nextMasu, base, raisesSkill:result.raisesSkill, keptSkillPoints:result.keptSkillPoints, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, fromLevel:result.fromLevel, nextLevel:result.nextLevel, nextPoints:result.nextPoints });
       setTimeout(()=>{ setReincarnateAnimation(null); setReincarnateSelectedId(null); setReincarnateSkillKey(null); reincarnateProcessingRef.current=false; }, 4100);
     } catch {
       reincarnateProcessingRef.current=false;
@@ -15568,7 +15569,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {templeLink(<Gem size={18}/>,'寄付','マスモンを寄付して報酬を受け取る',()=>{resetDonationFlow();setGameState('MASU_DONATION');})}
               {templeLink(<Coins size={18}/>,'お布施','ダイヤを払ってマスモンへ直接経験値を与える',()=>{setGameState('MASU_OFFERING');})}
               {templeLink(<ArrowUpCircle size={18}/>,'限界突破','マスモンのレベル上限を引き上げる',()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');})}
-              {templeLink(<RotateCcw size={18}/>,'転生','Lvを99下げて強化Pを獲得し、育成を振り直す',()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
+              {templeLink(<RotateCcw size={18}/>,'転生','Lvを99下げて強化Pを獲得し、育成を振り直す',()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
               {templeLink(<Sparkles size={18}/>,'超越','さらなる成長へ進むための限界を超える',()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');},{className:'mh-transcend-link'})}
               {templeLink(<Crown size={18}/>,'魂格進化','魂格を進めてLv上限をさらに解放する',()=>{setSoulRankSelectedId(null);setSoulRankError('');setGameState('MASU_SOUL_RANK');},{'data-soul-rank-link':true})}
             </div>
@@ -15670,6 +15671,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             reincarnateProcessingRef={reincarnateProcessingRef}
             reincarnateSelectedId={reincarnateSelectedId}
             reincarnateSkillKey={reincarnateSkillKey}
+            reincarnateTimes={reincarnateTimes}
+            setReincarnateTimes={setReincarnateTimes}
             renderMonsterCardBody={renderMonsterCardBody}
             renderMonsterSortFilterBar={renderMonsterSortFilterBar}
             renderScreenNote={renderScreenNote}
