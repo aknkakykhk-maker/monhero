@@ -79,7 +79,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       // すぐ消える表示(ポップアップ)は、出た瞬間に文を拾ってためる
       document.addEventListener('DOMContentLoaded', () => {
         window.__pops = [];
-        new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { const t = (n.textContent || '').trim(); if (t && t.length < 120 && /🎩|トリックスタート|コイン|運命の輪|乱心|オフリィアボイド|トリックコンフューズ|完全回避/.test(t)) window.__pops.push(t); } })
+        new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { const t = (n.textContent || '').trim(); if (t && t.length < 120 && /🎩|トリックスタート|コイン|運命の輪|乱心|オフリィアボイド|トリックコンフューズ|完全回避|意味不明/.test(t)) window.__pops.push(t); } })
           .observe(document.documentElement, { childList: true, subtree: true });
       });
     });
@@ -238,6 +238,12 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     };
 
     // 攻撃カードを1枚選んで勇者モンの枠へ置き、行動を押してターンを進める
+    const closeExPanel = async () => {
+      if (await page.evaluate(() => !!document.querySelector('[data-tactics-ex-panel]'))) {
+        await page.evaluate(() => document.querySelector('[data-tactics-ex-close]')?.click());
+        await page.waitForTimeout(400);
+      }
+    };
     const turnNo = async () => { const m = (await text()).match(/TURN (\d+)\/20/); return m ? Number(m[1]) : null; };
     const playAttackTurn = async (attack = true) => {
       const before = await turnNo();
@@ -257,8 +263,11 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         await page.waitForTimeout(600);
         await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent && /\(使用中\)/.test(x.textContent)); if (b) b.click(); });
         await page.waitForTimeout(400);
+        await closeExPanel();
         if (s != null) await tapSlot(s);
       }
+      // ★置き先の決まっているカードで枠を押すと、その子のEXの詳細が開くことがある。開いていたら閉じてから進める
+      await closeExPanel();
       await page.evaluate(() => document.querySelector('[data-battle-action]')?.click());
       for (let k = 0; k < 60; k += 1) {
         await page.waitForTimeout(500);
@@ -270,6 +279,15 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       return idx >= 0 && (await turnNo()) !== before;
     };
     const pops = () => page.evaluate(() => (window.__pops || []).slice());
+    // その枠の子のEXを使う(枠をタップ → 詳細の「使う」)。使えたら true
+    const useEx = async (slot) => {
+      await tapSlot(slot);
+      const can = await page.evaluate(() => { const b = document.querySelector('[data-tactics-ex-use]'); return !!b && !b.disabled; });
+      if (!can) { await page.evaluate(() => document.querySelector('[data-tactics-ex-close]')?.click()); return false; }
+      await page.locator('[data-tactics-ex-use]').click();
+      await page.waitForTimeout(900);
+      return true;
+    };
 
     await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.waitForTimeout(600);
@@ -281,6 +299,12 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await closePopups();
       let p = await pops();
       check('1ターン目にトリックスタートの抽選が出る', p.some(t => /トリックスタート/.test(t)), p.slice(0, 6).join(' / '));
+      // EX「オフリィアボイド」: 完全回避を2つもらう。WAVE1はゴースト1体なので、敵の攻撃はゴーストへ来る
+      const gSlot = await heroSlot();
+      check('ゴーストのEX「オフリィアボイド」を使える', await useEx(gSlot), `枠${gSlot}`);
+      check('使うとカットインとポップアップが出る', (await pops()).some(t => /EX オフリィアボイド！/.test(t)), (await pops()).slice(-4).join(' / '));
+      const panelText = async () => { await tapSlot(gSlot); const t = await page.evaluate(() => document.querySelector('[data-tactics-ex-panel]')?.innerText.replace(/\s+/g, ' ') || ''); await page.evaluate(() => document.querySelector('[data-tactics-ex-close]')?.click()); await page.waitForTimeout(300); return t; };
+      check('使うと残り回数が 4 / 5 になる', /4 \/ 5/.test(await panelText()));
       // 1ターン目で敵を倒すとWAVEが変わって4ターン目まで行けないので、先にカードを置かずに3ターン進める
       for (let k = 0; k < 6 && (await turnNo()) < 4; k += 1) await playAttackTurn(false);
       check('攻撃以外のカードで4ターン目まで進められた', (await turnNo()) === 4, `TURN ${await turnNo()}`);
@@ -288,6 +312,11 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       const rolls = p.filter(t => /トリックスタート[！…]/.test(t)).length;
       check('4ターン目にもう一度抽選が出る(1・4ターン目で2回)', rolls >= 2 && (await turnNo()) === 4, `${rolls}回 / TURN ${await turnNo()}`);
       check('2・3ターン目には抽選しない(1・4ターン目の2回だけ)', rolls === 2, `${rolls}回`);
+      // 3ターンのあいだに敵が殴ってきていれば、完全回避でかわしている(殴られた回数ぶん、2回まで)
+      const log = await page.evaluate(() => document.body.innerText);
+      const avoided = p.filter(t => /👻 完全回避！/.test(t)).length;
+      check('狙われた攻撃を完全回避でかわす(1回ごとに1つ減る)', avoided >= 1 && avoided <= 2 && p.some(t => /完全回避！ (のこり1回|これで最後)/.test(t)),
+        `${avoided}回 / ${p.filter(t => /完全回避/.test(t)).join(' / ')}`);
       // 固有技「運命のコイン」: 使うたびに表か裏のどちらかが出る(手札に無いうちはふつうの攻撃)。
       // ★敵を倒すとWAVEの結果画面で止まるので、固有技を先に使う
       let attacked = 0;
@@ -302,6 +331,13 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       check('ゴーストの固有技で運命のコイン(表・裏)が出る', p.some(t => /🪙 運命のコイン (表！ ダメージ4倍・連撃\+10%|裏… ダメージ0\.5倍・消費ガッツ\+20%)/.test(t)), p.filter(t => /🪙|コイン/.test(t)).slice(0, 4).join(' / ') || `${(await text()).slice(0, 160)} || ` + await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].map(c => `${c.getAttribute('data-card-type')}:${c.getAttribute('data-card-usable')}:${c.getAttribute('data-card-cost')}`).join(' ')));
     }
     // スプーキー: 運命の輪(当てるたびに6つから1つ)
+    // ★乱心の表示(意味不明の予告・敵が動かないターン)を見るため、この回だけ敵のライフを40倍にする。
+    //   WAVE1の敵はライフ120で、乱心にする攻撃そのもので倒れてしまう。検査の中で読み込むファイルを書き換えるだけ
+    await page.route(/data\/enemy-monsters\.js/, async (route) => {
+      const res = await route.fetch();
+      const body = (await res.text()).replace(/baseHp:(\d+)/g, (m, n) => `baseHp:${Number(n) * 40}`);
+      await route.fulfill({ response: res, body });
+    });
     await boot();
     await closePopups();
     await page.evaluate(() => { window.__pops = []; });
@@ -314,12 +350,37 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.waitForTimeout(1500);
       await closePopups();
       check('スプーキーもトリックスタートの抽選が出る', (await pops()).some(t => /スプーキーのトリックスタート/.test(t)));
+      const sSlot = await heroSlot();
+      let exUsed = false;
       for (let k = 0; k < 10 && !(await pops()).some(t => /運命の輪/.test(t)); k += 1) {
-        if (/GAME OVER/.test(await text())) break;
+        if (/GAME OVER|CLEAR/.test(await text())) break;
         await closePopups();
+        // 固有技が手札に来たターンに、先にEX「トリックコンフューズ」を使う(当てると乱心になる)
+        const hasUnique = await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].some(c => c.getAttribute('data-card-type') === 'unique' && c.getAttribute('data-card-usable') === 'true'));
+        if (hasUnique && !exUsed) exUsed = await useEx(sSlot);
         await playAttackTurn('unique');
       }
       const p2 = await pops();
+      check('スプーキーのEX「トリックコンフューズ」を使える', exUsed && p2.some(t => /EX トリックコンフューズ！/.test(t)), p2.slice(-6).join(' / '));
+      check('効いているあいだにスプーキーの攻撃を当てると、敵が乱心になる', p2.some(t => /🌀 乱心！ 敵は3ターン惑わされる/.test(t)), p2.slice(-6).join(' / '));
+      // 乱心の振り方を確かめるため、次の予告を決めるあいだだけ乱数を小さくする(50%未満 → 意味不明)
+      if (p2.some(t => /🌀 乱心/.test(t)) && !/CLEAR|GAME OVER/.test(await text())) {
+        const confusedShown = await page.evaluate(() => !!document.querySelector('[data-enemy-confused]'));
+        // 札はアイコン表示だと文字が短いので、名前は title(aria-label)で見る
+        const chip = await page.evaluate(() => { const box = document.querySelector('[data-battle-buffs]'); return !!box && (/乱心/.test(box.innerText) || [...box.querySelectorAll('[title]')].some(el => /敵 乱心/.test(el.getAttribute('title')))); });
+        check('乱心の残りがバフの札に出る', chip || confusedShown);
+        if (!confusedShown) {
+          await page.evaluate(() => { window.__realRandom = Math.random; Math.random = () => 0.1; });
+          await playAttackTurn(false);
+          await page.evaluate(() => { if (window.__realRandom) Math.random = window.__realRandom; });
+        }
+        const intentText = await page.evaluate(() => document.querySelector('[data-enemy-intent]')?.innerText.replace(/\s+/g, ' ') || '');
+        check('乱心で「意味不明」になった行動が、次の行動の札に出る', /意味不明/.test(intentText) && /動けない・会心確定/.test(intentText), intentText);
+        if (/意味不明/.test(intentText) && !/CLEAR|GAME OVER/.test(await text())) {
+          await playAttackTurn(false);
+          check('意味不明のターン、敵は動かない', (await pops()).some(t => /❓ 意味不明！ 敵は動けない/.test(t)), (await pops()).slice(-4).join(' / '));
+        }
+      }
       check('スプーキーの固有技で運命の輪が出る(6つのどれか)', p2.some(t => /🎡 運命の輪！ (敵の与ダメ−30%\(2ターン\)|敵の被ダメ\+30%\(2ターン\)|ダメージ3倍|ダメージ2倍|連撃\+10%|ちから\+15%)/.test(t)), p2.slice(-6).join(' / '));
     }
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));

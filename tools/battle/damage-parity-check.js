@@ -32,7 +32,7 @@ const slice = (from, to, fromIndex = 0) => {
 };
 
 // --- 予測: useCallback の中の関数だけを取り出す ---
-const pred = slice('const getAttackPredictedDmg = useCallback(', ', [mainHero, turnBuffs, permaBuffs]);');
+const pred = slice('const getAttackPredictedDmg = useCallback(', ', [mainHero, turnBuffs, permaBuffs, enemyIntent]);');
 const predictedArrow = pred.text.slice('const getAttackPredictedDmg = useCallback('.length);
 // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだ「この子の連撃+10%」も、予測と実処理へ同じ本数が渡る。
 // 決めごと(withFateCombo ほか)は本体から取り出して、両方へ同じものを入れる
@@ -52,7 +52,7 @@ const tacticsSlotFlag = Function(`${slotFlagSrc.text}\nreturn tacticsSlotFlag;`)
 // この検査が見るのは**既存5モードのぶん**なので、持ち主は勇者モンで固定する。
 // タクティクスで「札を出した子」になることは tools/mode/tactics-enemy-actions-check.js が見る
 const traitOwnerOfFor = (mainHero) => () => (mainHero && mainHero.id) || null;
-const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `${fateSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
+const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `${fateSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult)");
@@ -63,7 +63,7 @@ const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getP
   const halved = false; // 「同じ子の2枚目」ではない(パンドラの箱の悪魔側が見る値)
   ${fateSrc}
   const livePermaBuff = getPermaBuff; // ターン途中の永続バフ(ref)。ここでは同じ値
-  const tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない
+  const tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない
   ${act.text}
   return { totalDmg, attackHits, hasCrit };
 `)
@@ -125,7 +125,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
     const getDmg = () => d0; const setImmediateTurnBuff = () => {};
     ${fateSrc}
     const livePermaBuff = getPermaBuff;
-    const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); // スイーツパラダイス(タクティクスのEX)は既存5モードでは効かない
+    const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); // スイーツパラダイス(タクティクスのEX)は既存5モードでは効かない
     ${stun.text.replace(/\}\s*$/, '')}
     return { totalDmg, attackHits, hasCrit, attackCount };
   `);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1442198740a6c3d6
+// generated-sha256: 28489c841290b836
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 00:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 00:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10411,6 +10411,7 @@ const rhythmAbilityEffectText=ability=>{
   if(ability.id==='MUTEKI')return `${Math.round(ability.durationMs/1000)}秒のあいだライフが減らない`;
   if(ability.id==='GAMAN')return `${Math.round(ability.durationMs/1000)}秒のあいだライフの減りが${Math.round((1-ability.reduceRate)*100)}%小さくなる`;
   if(ability.id==='HISSHI')return `${Math.round(ability.durationMs/1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
+  if(ability.id==='ITAZURA')return `${Math.round(ability.durationMs/1000)}秒のあいだ、BAD・MISSでもライフが減らず、コンボも切れない`;
   if(ability.id==='KONJO')return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
 };
@@ -12822,8 +12823,46 @@ const SKILL_MOTION_SETS_MAIN = Object.freeze({
       : i === 8 ? skm('float', { c:'blue', fx:skmFx('fall', 'water', 16), over:'boom' }) : sp)),
   },
 });
+// ゴースト(2026-10-05): シルクハットの手品師のおばけ。カード・コイン・ハト・ドクロで見せる(専用の動きは無いので見せ場 sig は置かない)
+//   並びは HERO_ATK_NAMES.Ghost / unique.names と同じ段階の順
+const SKM_GHOST = Object.freeze({
+  normal:[
+    skm('jump', { c:'pink', over:'fist', burst:'star' }),                                   // ピコピコハンマー
+    skm('cast', { c:'cosmic', line:'ray', burst:'spark' }),                                 // ソウルビーム
+    skm('float', { c:'white', fx:skmFx('fall', 'feather', 12), burst:'dust' }),             // ハトのおとしもの
+    skm('warp', { c:'psy', over:'eye', burst:'star' }),                                     // びっくり
+    skm('dash', { c:'dark', burst:'dust' }),                                                // 体当たり
+    skm('toss', { c:'red', fx:skmFx('shot', 'blade', 5), burst:'spark' }),                  // カード
+    skm('cast', { c:'gold', fx:skmFx('orbit', 'star', 8, { h:45 }), burst:'star' }),        // すてきステッキ
+    skm('jab', { c:'dark', over:'fist', burst:'dust' }),                                    // 大パンチ
+    skm('spin', { c:'psy', over:'xslash', burst:'star' })],                                 // コンビネーション
+  unique:[
+    skm('toss', { c:'red', fx:skmFx('shot', 'blade', 8, { step:35 }), over:'slash', burst:'spark' }),        // 連続カード
+    skm('cast', { c:'dark', line:'ray', over:'boom', fx:skmFx('orbit', 'ghost', 6) }),                      // ドクロビーム
+    skm('float', { c:'white', fx:skmFx('fall', 'meteor', 3, { s:1.6 }), over:'boom', burst:'dust' }),       // 大きなおとしもの
+    skm('warp', { c:'dark', fx:skmFx('shot', 'ghost', 5), over:'eye', burst:'star' }),                      // びっくりドクロ
+    skm('shake', { c:'gold', fx:skmFx('shot', 'star', 7, { h:[45, 0, 45] }), over:'pillar', burst:'star' }), // スリーセブン
+    skm('cast', { c:'psy', fx:skmFx('orbit', 'orb', 8, { h:[280, 45, 190, 330] }), over:'aurora', burst:'spark' }), // Woフォーチュン
+    skm('toss', { c:'gold', fx:skmFx('shot', 'blade', 5, { h:45 }), over:'cross', burst:'star' }),          // RSF(ロイヤルストレートフラッシュ)
+    skm('hop', { c:'gold', fx:skmFx('lob', 'ring', 3, { s:1.4, h:45 }), over:'boom', burst:'star' }),       // 運命のコイン
+    skm('gather', { c:'cosmic', fx:skmFx('orbit', 'ghost', 10), over:'eclipse', burst:'star' })],           // グランドイリュージョン
+});
+// スプーキー: かぼちゃ頭の魔女。ゴーストと同じ技の並びを、炎と葉の色で。名前が違う2つ(カード・クラブ / グリンネーション)と、
+// 運命の輪(Woフォーチュン)はスプーキーらしい動きにする
+const SKM_SPOOKY = Object.freeze({
+  normal:SKM_GHOST.normal.map((sp, i) => (i === 2 ? sp
+    : i === 5 ? skm('toss', { c:'dark', fx:skmFx('shot', 'blade', 5, { h:270 }), over:'cross', burst:'spark' })   // カード・クラブ
+    : i === 6 ? skm('cast', { c:'plant', fx:skmFx('orbit', 'leaf', 8), burst:'leaf' })                             // すてきステッキ(枝)
+    : i === 8 ? skm('spin', { c:'plant', fx:skmFx('rise', 'leaf', 10), over:'tornado', burst:'leaf' })            // グリンネーション
+    : { ...sp, c:'fire' })),
+  unique:SKM_GHOST.unique.map((sp, i) => (i === 5 ? skm('spin', { c:'psy', fx:skmFx('orbit', 'orb', 8, { h:[30, 280, 120, 330] }), over:'aurora', burst:'spark' }) // Woフォーチュン(運命の輪)
+    : i === 1 ? skm('cast', { c:'fire', line:'ray', over:'boom', fx:skmFx('orbit', 'flame', 6) })
+    : i === 8 ? skm('gather', { c:'fire', fx:skmFx('orbit', 'flame', 10), over:'eclipse', burst:'star' })
+    : i === 7 ? sp
+    : { ...sp, c:sp.c === 'gold' ? 'gold' : 'fire' })),
+});
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
-const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red') });
+const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
@@ -13061,6 +13100,8 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   heal:         { c1:'#bbf7d0', c2:'#10b981', motif:'rise' },   // 緊急回復(2026-09-29): 緑の光が立ちのぼる
   partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
   comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
+  avoidCharge:  { c1:'#e9d5ff', c2:'#6d28d9', motif:'blade' },  // オフリィアボイド: 紫の残像(すり抜ける)
+  trickConfuse: { c1:'#fed7aa', c2:'#9333ea', motif:'rise' },   // トリックコンフューズ: かぼちゃ色と紫の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
@@ -18232,12 +18273,13 @@ const rhythmClockLabel=ms=>{const total=Math.max(0,Math.floor((Number(ms)||0)/10
 // 判定ライン付近では1サブレーン約32〜38pxなので、.20は約6〜8px。
 // 接触幅側の中心揺れdeadzone(6〜10px)と同程度だけを無視し、明確な横移動は残す。
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES=.20;
-const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':abilityId==='HISSHI'?'🎯':'✨';
+const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':abilityId==='HISSHI'?'🎯':abilityId==='ITAZURA'?'👻':'✨';
 const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg-emerald-950/40 text-emerald-100'
   :abilityId==='MUTEKI'?'border-cyan-300/50 bg-cyan-950/40 text-cyan-100'
   :abilityId==='GAMAN'?'border-amber-300/50 bg-amber-950/40 text-amber-100'
   :abilityId==='KONJO'?'border-rose-300/50 bg-rose-950/40 text-rose-100'
   :abilityId==='HISSHI'?'border-lime-300/50 bg-lime-950/40 text-lime-100'
+  :abilityId==='ITAZURA'?'border-violet-300/50 bg-violet-950/40 text-violet-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
 const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
@@ -18294,6 +18336,7 @@ const RhythmMonsterNoteGuide=()=>{
         無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
         両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
         必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
+        いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
     </details>
@@ -19347,11 +19390,14 @@ if(judgment!=='MISS'){
 //   それまでは演出量のブロックの中で tap(26) を呼んだうえ、ここでも tap() を呼んでいて、
 //   モンスターノーツでは**2回**走っていた。しかも演出量を下げると強さが変わっていた。
 if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap(monsterHit?26:12);const nextCombo=rhythmComboAfter(run.combo,judgment);let keptCombo=nextCombo;
+/* いたずら(ゴースト血統の能力)のあいだは、BAD・MISSでもコンボが切れない(判定の数・スコアはふつうどおり。ライフは能力の計算で減らない)。
+   アシストのコンボガードより先に見るので、いたずらで守れたときはガードを使わない */
+if(nextCombo===0&&run.combo>0&&rhythmItazuraKeepsCombo(run.abilities,judgment,run.audio?.songTimeMs?.()??0))keptCombo=run.combo;
 /* アシストモードのコンボガード(アワーノーツの「コンボ継続のアシスト」)。BAD・MISSで切れそうなコンボを、
    ガードが残っていれば代わりに受け止める。判定の数・ライフの減り方はふだんどおりで、コンボ数だけが続く。
    ガードは最大3つ。コンボをつないだ判定20回で1つたまり、最近ガードを使った(崩れている)ときは8回でたまる */
 if(assistOn){const guard=run.assistGuard??RHYTHM_ASSIST_GUARD_MAX;run._assistJudged=(run._assistJudged||0)+1;
-  if(nextCombo===0&&run.combo>0&&(judgment==='BAD'||judgment==='MISS')&&guard>0){run.assistGuard=guard-1;run.assistGuarded=(run.assistGuarded||0)+1;run._assistLastGuardAt=run._assistJudged;run._assistStreak=0;keptCombo=run.combo;}
+  if(keptCombo===0&&nextCombo===0&&run.combo>0&&(judgment==='BAD'||judgment==='MISS')&&guard>0){run.assistGuard=guard-1;run.assistGuarded=(run.assistGuarded||0)+1;run._assistLastGuardAt=run._assistJudged;run._assistStreak=0;keptCombo=run.combo;}
   else if(nextCombo>0){run.assistGuard=guard;run._assistStreak=(run._assistStreak||0)+1;const struggling=run._assistLastGuardAt!=null&&run._assistJudged-run._assistLastGuardAt<40;if(guard<RHYTHM_ASSIST_GUARD_MAX&&run._assistStreak>=(struggling?RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING:RHYTHM_ASSIST_GUARD_RECHARGE)){run.assistGuard=guard+1;run._assistStreak=0;}}
   else{run.assistGuard=guard;run._assistStreak=0;}}
 /* ライブログ(アワーノーツの演奏後の振り返り)。ノーツの時刻と判定だけを控え、リザルトで区間ごとに数える。記録には残さない */
@@ -19391,7 +19437,7 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 判定・スコア・ライフには一切関係しない、見た目だけの控え。
     const slot=rhythmNoteMonsterSlot(note);
     run.abilityOwners=run.abilityOwners||{};
-    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI')run.abilityOwners[monster.ability.id]=slot;
+    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI'||monster.ability.id==='ITAZURA')run.abilityOwners[monster.ability.id]=slot;
     if(monster.ability.id==='KONJO'&&Number(activated.state?.konjoStock)>0)run.abilityOwners.KONJO=slot;
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
@@ -19714,14 +19760,15 @@ const badge=abilityBadgeRef.current;
 const hasAbilityBadge=badge&&(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0
   ||rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0
   ||rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0
+  ||rhythmMonsterAbilityRemainingMs(run.abilities,'ITAZURA',songTimeMs)>0
   ||Number(run.abilities?.konjoStock)>0);
 if(badge&&!hasAbilityBadge){
   if(badge._rhythmBadgeText!==''){badge.textContent='';badge._rhythmBadgeText='';}
   if(!badge.hidden)badge.hidden=true;
 }
 if(hasAbilityBadge){
-  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs);
-  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
+  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs),itazuraMs=rhythmMonsterAbilityRemainingMs(run.abilities,'ITAZURA',songTimeMs);
+  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',itazuraMs>0?`いたずら ${(itazuraMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
   if(badge._rhythmBadgeText!==text){badge.textContent=text;badge._rhythmBadgeText=text;}
   if(badge.hidden!==(text===''))badge.hidden=text==='';
 }
@@ -19733,6 +19780,7 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0&&owners.MUTEKI)active.add(owners.MUTEKI);
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0&&owners.GAMAN)active.add(owners.GAMAN);
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0&&owners.HISSHI)active.add(owners.HISSHI);
+  if(rhythmMonsterAbilityRemainingMs(run.abilities,'ITAZURA',songTimeMs)>0&&owners.ITAZURA)active.add(owners.ITAZURA);
   if(Number(run.abilities?.konjoStock)>0&&owners.KONJO)active.add(owners.KONJO);
   if(run.abilityFlashSlot&&songTimeMs<Number(run.abilityFlashUntilMs))active.add(run.abilityFlashSlot);
   const signature=[...active].sort().join(',');
@@ -21448,6 +21496,9 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   present   … (present) スネグーラチカのプレゼントの数字。fixedGuts=必ず入る全員のガッツ(上限の割合) / jackpot=大当たりの確率 / dmg・taken・crit・heal・guts=ランダム1種の効き目 / combo={count,rate}
 //   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
 //   dodgeComboRate … 回避するたびに増える連撃の rate(0.1 なら、回避1回ごとに与ダメージ10%の連撃が1回増える)
+//   avoidCharges … (avoidCharge) 使うともらう「完全回避」の回数。狙われた攻撃1回(技1回)につき1つ減る
+//   partyHealRate … 使った瞬間に、味方全員のライフとガッツを上限のこの割合ぶん回復する
+//   partyStatRate … (trickConfuse) 効いているあいだ、味方全員のちから・丈夫さをこの割合上げる
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
@@ -21697,6 +21748,31 @@ const TACTICS_EX_SKILLS = Object.freeze({
     extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
     effect: 'comboBurst',
   }),
+  // ★2026-10-05 ユーザー指示「オフリィアボイド、完全回避（2回）を付与。完全回避がなくなるまでクリティカル確定、連撃10%×3」
+  //   「ゴーストが狙われた攻撃。連撃も技を1回とみなして消化は1」「5回」。
+  //   残りは使ったWAVEのあいだ(ほかのEXと同じく、WAVEをまたがない)
+  Ghost: Object.freeze({
+    id: 'ghost_offlia_avoid',
+    name: 'オフリィアボイド',
+    useNote: '完全回避×2・残っているあいだ会心確定と連撃10%×3',
+    desc: 'ゴーストが「完全回避」を2回ぶんもらう。\n・ゴーストが狙われた攻撃を、完全にかわす（連撃も全体攻撃も、技1回ぶんで1回減る）\n・完全回避が残っているあいだ、ゴーストの攻撃は会心が確定し、与ダメージ10%の連撃が3回付く\n・2回使い切るか、WAVEが変わると終わる',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'wave',
+    avoidCharges: 2,
+    extraCombos: Object.freeze({ count: 3, rate: 0.1 }),
+    effect: 'avoidCharge',
+  }),
+  // ★2026-10-05 ユーザー指示「効果3ターン、ラン5回、効果中攻撃を当てたら相手が3ターン乱心になる。乱心は相手の行動が
+  //   50%の確率で意味不明になる。（行動予測で出る）意味不明のときは行動不能、被クリ率100%アップ。更に使用した時に
+  //   味方全員のライフガッツが30%回復。効果ターン中味方全員の力、丈夫さが10%アップ」「スプーキーの攻撃だけ」
+  Spooky: Object.freeze({
+    id: 'spooky_trick_confuse',
+    name: 'トリックコンフューズ',
+    useNote: '全員ライフ・ガッツ30%回復・3ターン 全員ちから丈夫さ+10%・当てると乱心',
+    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「意味不明」になる（次の行動に出る）。意味不明のターン、敵は動けず、味方の攻撃は会心が確定する',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    partyHealRate: 0.3, partyStatRate: 0.1,
+    effect: 'trickConfuse',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
@@ -21707,7 +21783,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'avoidCharge', 'trickConfuse']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -21759,6 +21835,9 @@ const normalizeTacticsExDef = (raw) => {
     partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
     partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
     dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
+    avoidCharges: Math.min(9, Math.max(0, tacticsSafeInt(raw.avoidCharges, 0))),
+    partyHealRate: Math.min(1, Math.max(0, Number.isFinite(Number(raw.partyHealRate)) ? Number(raw.partyHealRate) : 0)),
+    partyStatRate: Math.min(1, Math.max(0, Number.isFinite(Number(raw.partyStatRate)) ? Number(raw.partyStatRate) : 0)),
     distMult: Math.max(0, Number.isFinite(Number(raw.distMult)) ? Number(raw.distMult) : 0),
     guaranteeUnique: raw.guaranteeUnique === true,
     cardBonus: Math.min(3, Math.max(0, tacticsSafeInt(raw.cardBonus, 0))),
@@ -21847,6 +21926,8 @@ const isTacticsExEffectActive = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.monId !== monId) return false;
   if (effect.duration === 'style') return effect.on === true;
+  // ★オフリィアボイド(avoidCharge)は、完全回避を使い切ったら終わる(会心確定・連撃も一緒に終わる)
+  if (effect.effect === 'avoidCharge' && tacticsSafeInt(effect.avoidLeft, 0) <= 0) return false;
   // ★ターン数で切れるもの。**WAVEをまたがない**(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)。
   //   同じWAVEのあいだだけ、使ったターンから数えて turns ターン目まで効く
   if (effect.duration === 'turns') {
@@ -21917,6 +21998,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
+      avoidLeft: def.avoidCharges || 0, partyStatRate: def.partyStatRate || 0,
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
@@ -22031,12 +22113,12 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const t = tacticsExThunderOf(state, units, slot, now);
     return t && t.combo ? t.combo : null;
   }
-  if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
+  if (kind !== 'comboBurst' && kind !== 'multiBuff' && kind !== 'avoidCharge') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
   if (!(count > 0 && Number.isFinite(rate) && rate > 0)) return null;
   // 連撃の名前は、アーク・イブリース(multiBuff)ではそのEXの名前(スイーツパラダイスは、これまでどおり名前を渡さない)
-  return kind === 'multiBuff' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
+  return kind === 'multiBuff' || kind === 'avoidCharge' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
 };
 // ---- ライガー(thunder): 雷狼影 ----
 // いまの雷と段階。phase は 'charge'(ためている前半)か 'wrap'(雷纏の後半)。効いていなければ null
@@ -22280,7 +22362,62 @@ const recordTacticsExDodge = (state, units, slot, now) => {
   const mine = safe.effects[slot];
   return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, dodges: tacticsSafeInt(mine.dodges, 0) + 1 } } };
 };
+// ---- ゴースト(avoidCharge): オフリィアボイド ----
+// その子に残っている完全回避の数(効いていなければ0)
+const tacticsExAvoidLeftOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'avoidCharge') return 0;
+  return Math.max(0, tacticsSafeInt(normalizeTacticsExState(state).effects[slot].avoidLeft, 0));
+};
+// 完全回避を1つ使う(狙われた攻撃1回ぶん。連撃でも1つ)。残っていなければ状態をそのまま返す
+const spendTacticsExAvoid = (state, units, slot, now) => {
+  const safe = normalizeTacticsExState(state);
+  if (tacticsExAvoidLeftOf(safe, units, slot, now) <= 0) return safe;
+  const mine = safe.effects[slot];
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, avoidLeft: Math.max(0, tacticsSafeInt(mine.avoidLeft, 0) - 1) } } };
+};
+// その子の攻撃の会心が確定するか(完全回避が残っているあいだ)
+const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(state, units, slot, now) > 0;
+// ---- スプーキー(trickConfuse): トリックコンフューズ ----
+// 味方全員のちから・丈夫さへ足す割合。効いている子が複数いれば足し算。
+// ★使った子が倒れても効果は残る(世界樹の守りと同じ)。どの子のEXかは効果の記録(monId)で見る
+const tacticsExPartyStatRate = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'trickConfuse' || !isTacticsExEffectActive(state, Number(key), e.monId, now)) return sum;
+    const rate = Number(e.partyStatRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// その子の攻撃が当たったら敵を乱心にするか(トリックコンフューズが効いている本人だけ。2026-10-05 ユーザー指示「スプーキーの攻撃だけ」)
+const tacticsExConfusesOnHit = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  return !!unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'trickConfuse';
+};
+// 乱心: 敵の行動が50%で「意味不明」になる。ターン数は乱心のまま決めた予告の数(3つ)。
+// 意味不明のターン、敵は動けず、味方の攻撃は会心が確定する(被会心率+100%)
+const ENEMY_CONFUSE_TURNS = 3;
+const ENEMY_CONFUSE_CHANCE = 0.5;
+// 予告を「意味不明」へ差し替えたもの。狙い(targetSlot)は持たせない(だれも狙われない)
+const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '意味不明', icon: '❓', value: 0, notice: '乱心',
+  confusedFrom: intent && typeof intent.label === 'string' ? intent.label : null });
+// 次の予告を決めるときの乱心。turns が残っていれば1つ使い、rnd() が確率未満なら意味不明にする
+const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
+  const left = Math.max(0, tacticsSafeInt(turns, 0));
+  if (!intent || left <= 0) return { intent, turns: left };
+  return { intent: rnd() < ENEMY_CONFUSE_CHANCE ? confusedEnemyIntent(intent) : intent, turns: left - 1 };
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
+  if (!unit || typeof unit !== 'object') return unit;
+  // トリックコンフューズ(味方全員のちから・丈夫さ)は、その子自身のEXで変わったあとの値へ掛ける
+  const own = applyTacticsExOwnStats(unit, state, slot, now);
+  const party = tacticsExPartyStatRate(state, now);
+  if (!(party > 0) || !own || typeof own !== 'object') return own;
+  return { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)),
+    def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) };
+};
+const applyTacticsExOwnStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
   if (kind === 'allIn') {
@@ -31604,7 +31741,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -31944,6 +32081,8 @@ function BattleScreen({
       :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]'
       :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]'
       :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]'
+      // 乱心で「意味不明」(スプーキーのトリックコンフューズ)。敵は動けない
+      :enemyIntent.type==='CONFUSED'?'bg-violet-600 border-violet-100 text-white shadow-[0_0_14px_rgba(139,92,246,0.85)]'
       :'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
     // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
     // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
@@ -32196,6 +32335,7 @@ function BattleScreen({
               // ★再生だけは赤にしない。こちらが減るのではなく敵が戻る数字なので、
               //   右上の吹き出し(noticeHeal)と同じ緑にそろえて取り違えを防ぐ
               :enemyIntent.type==='REGEN'?'bg-emerald-950 border-emerald-500/60 text-emerald-300'
+              :enemyIntent.type==='CONFUSED'?'bg-violet-950 border-violet-400/70 text-violet-200'
               :'bg-red-950 border-red-600/50 text-red-400';
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
@@ -32214,6 +32354,7 @@ function BattleScreen({
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"><Target size={9}/>次の行動</div>
                 <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
+                {enemyIntent.type==='CONFUSED'?<div data-enemy-confused className="mt-0.5 text-[9px] font-bold leading-tight opacity-90">動けない・会心確定</div>:null}
                 {rawDmg>0&&showPlannedInBubble&&plannedText?(
                   <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
                     <div className="text-[12px] font-black tabular-nums">{plannedTotalText}</div>
@@ -32640,6 +32781,7 @@ function BattleScreen({
               });
               if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
             }
+            if(enemyConfuseTurns>0) chip('enemyConfuse',<Sparkles size={9}/>,'敵 乱心',`残り${enemyConfuseTurns}回`,'text-violet-300 border-violet-400/50',{pulse:true,short:`${enemyConfuseTurns}`});
             if(fateWheelView?.atkDown>0) chip('fateAtkDown',<ArrowDownCircle size={9}/>,'運命の輪 敵与ダメ',`-30%（残り${fateWheelView.atkDown}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'-30%'});
             if(fateWheelView?.takenUp>0) chip('fateTakenUp',<PlusCircle size={9}/>,'運命の輪 敵被ダメ',`+30%（残り${fateWheelView.takenUp}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'+30%'});
             // === ターン限定バフ（都度表示） ===
@@ -39064,6 +39206,12 @@ function MonsterHeroGame() {
   const [fateWheelView, setFateWheelView] = useState({ atkDown: 0, takenUp: 0 });
   const writeFateWheel = (next) => { const value = fateWheelDebuffOf(next); fateWheelRef.current = value; setFateWheelView(value); return value; };
   const resetFateWheel = () => writeFateWheel(null);
+  // 敵の「乱心」(スプーキーのトリックコンフューズ)の残り。次の予告を決めるたびに1つ使い、50%で「意味不明」にする。
+  //   敵1体ぶんなのでWAVEが変わると消す。ref が正本、画面のために state にも置く
+  const enemyConfuseRef = useRef(0);
+  const [enemyConfuseTurns, setEnemyConfuseTurns] = useState(0);
+  const writeEnemyConfuse = (n) => { const v = Math.max(0, Math.floor(Number(n) || 0)); enemyConfuseRef.current = v; setEnemyConfuseTurns(v); return v; };
+  const resetEnemyConfuse = () => writeEnemyConfuse(0);
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
@@ -47938,9 +48086,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
     //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
-    const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
+    const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
+    // ★乱心(スプーキーのトリックコンフューズ): 残っていれば1つ使い、50%で「意味不明」へ差し替える。
+    //   予告として出す前に決めるので、意味不明かどうかは「次の行動」の札に出る。
+    //   意味不明の行動はしない前提なので、2手先は今の間合いのまま・直前の行動なしで選ぶ
+    const confusion = rollEnemyConfusion(aimed, enemyConfuseRef.current);
+    if (confusion.turns !== enemyConfuseRef.current) writeEnemyConfuse(confusion.turns);
+    const upcoming = confusion.intent;
     setEnemyIntent(upcoming);
-    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming, actionState()));
+    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming?.type==='CONFUSED' ? null : upcoming, actionState()));
   };
 
   // 絶氷の楔の実効果と表示が別判定にならないよう、準備を除いた発動状態をここへ集約する。
@@ -48201,6 +48355,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(!live.enabled||!Number.isInteger(slotIdx)) return null;
     const unit=tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveStyle(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
+  };
+  // オフリィアボイド(ゴースト)の完全回避の残り(効いていなければ0。ほかのモードも0)
+  const tacticsExAvoidLeftNow = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    return live.enabled&&Number.isInteger(slotIdx) ? tacticsExAvoidLeftOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now) : 0;
+  };
+  // 会心が確定する攻撃(タクティクスだけ)。オフリィアボイドの完全回避が残っている子の攻撃と、
+  // 敵が乱心で「意味不明」のターンの味方全員の攻撃(被会心率+100%)。ほかのモードは常に false
+  const tacticsCritFixedNow = (slotIdx) => {
+    if(!isTacticsMode(runMode)) return false;
+    if(enemyIntent?.type==='CONFUSED') return true;
+    return tacticsExAvoidLeftNow(slotIdx)>0;
   };
   // スイーツパラダイスで足す連撃({count, rate})。効いていなければ null(ほかのモードも null)
   const tacticsExCombosAt = (slotIdx, halved=false) => {
@@ -48654,13 +48820,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,null);
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-      guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
+      guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
       hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,halved),getPermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
   // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
@@ -48810,6 +48976,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     enemyActionPerformedRef.current = false;
     if (timeStopSlot!=null) {
       addPopup('⏳ 時間停止！ 敵は動けない','enemy','text-sky-300 font-black text-xl drop-shadow-md'); pushBattleLog('⏳ 時間が止まっている。敵は行動しない','info'); await battleWait(1000);
+    } else if (intent && intent.type==='CONFUSED') {
+      // 乱心で「意味不明」になったターン。敵は何もしない(行動しなかった扱い)
+      addPopup('❓ 意味不明！ 敵は動けない','enemy','text-violet-300 font-black text-xl drop-shadow-md'); pushBattleLog('❓ 敵は乱心して、意味不明な動きをした','info'); await battleWait(1000);
     } else if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible',false); await battleWait(1000);
@@ -49115,7 +49284,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const thunderDodge=Math.random()<tacticsExThunderDodgeNow(slotIdx);
               // ★ザンの「血踊」は、回避した数を数える(連撃が1回ずつ増える)
               if(exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now));
-              if(slotIdx===evadedSlot||exDodge||thunderDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
+              // ★ゴーストの「オフリィアボイド」: 完全回避が残っていれば、狙われた攻撃をかわして1つ使う。
+              //   連撃も技1回ぶんなので1つだけ(2026-10-05 ユーザー指示)。ほかの回避でかわせたときは使わない
+              const avoidLeft=(slotIdx===evadedSlot||exDodge||thunderDodge)?0:tacticsExAvoidLeftNow(slotIdx);
+              const avoidDodge=avoidLeft>0;
+              if(avoidDodge){
+                commitTacticsExState(spendTacticsExAvoid(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now));
+                addPopup(avoidLeft>1?`👻 完全回避！ のこり${avoidLeft-1}回`:'👻 完全回避！ これで最後','hero','text-violet-200 font-black text-lg drop-shadow-md',undefined,slotIdx);
+                pushBattleLog(`👻 ${battleActorName(slotIdx)}が完全回避した${avoidLeft>1?`（のこり${avoidLeft-1}回）`:'（使い切った）'}`,'ally');
+              }
+              if(slotIdx===evadedSlot||exDodge||thunderDodge||avoidDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
               if(slotIdx===reflectedSlot){
                 reflectedName=tacticsTargetName(units,slotIdx);
                 reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);
@@ -49709,6 +49887,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       pushBattleLog(`🎁 プレゼントの中身: ${presentNote}`,'ally');
       addPopup(roll.jackpot?'🎁 大当たり！ 全部入り':`🎁 ${tacticsExPresentKindText(roll.kinds[0],def.present,def.turns)}`,'hero','text-amber-300 font-black text-2xl drop-shadow-md',undefined,slotIdx);
     }
+    // トリックコンフューズ(スプーキー): 使った瞬間に、味方全員(立っている子)のライフとガッツを上限の partyHealRate ぶん回復する
+    if(def.partyHealRate>0) tacticsRateHeal(def.partyHealRate,def.partyHealRate,false);
     // パンドラの箱: 悪魔・天使の絵は起動時に読まないので、使った瞬間に先読みして、カードを切るときに出遅れないようにする
     if(def.effect==='pandoraBox') [PANDORA_DEVIL_IMG,PANDORA_ANGEL_IMG].forEach(u=>{ try{ const im=new Image(); im.src=u; }catch(e){} });
     const onUse=TACTICS_EX_ON_USE[def.effect];
@@ -49882,7 +50062,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-            guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
+            guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
             globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
@@ -50022,7 +50202,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0))*tacticsExMultiBuffNow(slotIdx).critRate),
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0))*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
           hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,halved),livePermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
@@ -50043,6 +50223,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const refund=trickStartGutsRefund(cardCost);
             if (refund>0) { gainGutsAt(slotIdx,refund); addPopup(`🎩 ガッツ +${refund}`,'guts','text-violet-200 text-base font-bold drop-shadow-md'); }
           }
+        }
+        // ★トリックコンフューズ(スプーキー): 効いているあいだに本人の攻撃が当たったら、敵を3ターン乱心にする(当て直すと3へ数え直す)
+        if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
+          && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
+          writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
+          addPopup(`🌀 乱心！ 敵は${ENEMY_CONFUSE_TURNS}ターン惑わされる`,'enemy','text-violet-300 text-lg font-black drop-shadow-md');
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -51076,7 +51262,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); resetFateWheel(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   // 勇者特性「トリックスタート」(ゴースト・スプーキー)の抽選。WAVEの1ターン目と、そこから3ターンごと。
@@ -51256,7 +51442,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
     resetTacticsJoinCatchUp(); // あとから入る子の追いつき補正は1周ごとに数え直す
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
@@ -51452,7 +51638,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     resetTacticsJoinCatchUp();
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
@@ -51500,7 +51686,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugBattleRef.current=true; extremeRunRef.current=false; debugResultRef.current=false;
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     resetTacticsJoinCatchUp();
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel();
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel(); resetEnemyConfuse();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection();
@@ -57104,7 +57290,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} fateWheelView={fateWheelView}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}

@@ -651,7 +651,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -991,6 +991,8 @@ function BattleScreen({
       :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]'
       :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]'
       :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]'
+      // 乱心で「意味不明」(スプーキーのトリックコンフューズ)。敵は動けない
+      :enemyIntent.type==='CONFUSED'?'bg-violet-600 border-violet-100 text-white shadow-[0_0_14px_rgba(139,92,246,0.85)]'
       :'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
     // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
     // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
@@ -1243,6 +1245,7 @@ function BattleScreen({
               // ★再生だけは赤にしない。こちらが減るのではなく敵が戻る数字なので、
               //   右上の吹き出し(noticeHeal)と同じ緑にそろえて取り違えを防ぐ
               :enemyIntent.type==='REGEN'?'bg-emerald-950 border-emerald-500/60 text-emerald-300'
+              :enemyIntent.type==='CONFUSED'?'bg-violet-950 border-violet-400/70 text-violet-200'
               :'bg-red-950 border-red-600/50 text-red-400';
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
@@ -1261,6 +1264,7 @@ function BattleScreen({
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"><Target size={9}/>次の行動</div>
                 <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
+                {enemyIntent.type==='CONFUSED'?<div data-enemy-confused className="mt-0.5 text-[9px] font-bold leading-tight opacity-90">動けない・会心確定</div>:null}
                 {rawDmg>0&&showPlannedInBubble&&plannedText?(
                   <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
                     <div className="text-[12px] font-black tabular-nums">{plannedTotalText}</div>
@@ -1687,6 +1691,7 @@ function BattleScreen({
               });
               if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
             }
+            if(enemyConfuseTurns>0) chip('enemyConfuse',<Sparkles size={9}/>,'敵 乱心',`残り${enemyConfuseTurns}回`,'text-violet-300 border-violet-400/50',{pulse:true,short:`${enemyConfuseTurns}`});
             if(fateWheelView?.atkDown>0) chip('fateAtkDown',<ArrowDownCircle size={9}/>,'運命の輪 敵与ダメ',`-30%（残り${fateWheelView.atkDown}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'-30%'});
             if(fateWheelView?.takenUp>0) chip('fateTakenUp',<PlusCircle size={9}/>,'運命の輪 敵被ダメ',`+30%（残り${fateWheelView.takenUp}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'+30%'});
             // === ターン限定バフ（都度表示） ===

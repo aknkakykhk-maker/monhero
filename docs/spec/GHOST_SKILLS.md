@@ -258,9 +258,9 @@ Spooky: baseHp:510, baseGuts:160, baseAtk:150, baseDef:55, plusStats:{hp:160,atk
 | ① | 本体登録(案の段階→ALL_PLAYER_MONSTERS・血統の割り当て・固有技の名前と倍率)・数を決め打ちした検査を24種へ | 済 |
 | ② | 勇者特性「トリックスタート」の効き目(既存モード・タクティクス)。積んだ数はバフの札に出す | 済 |
 | ③ | 固有技「運命のコイン」「運命の輪」の効き目。積んだ強化と弱体の残りターンはバフの札に出す | 済 |
-| ④ | タクティクスEX「オフリィアボイド」「トリックコンフューズ」(乱心) | |
-| ⑤ | モンヒロビートの能力「いたずら」 | |
-| ⑥ | 技ごとの攻撃モーション36技と演出(コイン・ルーレット・乱心) | |
+| ④ | タクティクスEX「オフリィアボイド」「トリックコンフューズ」(乱心)。完全回避はWAVEをまたがない(ほかのEXと同じ)。意味不明は予告の札に出す | 済 |
+| ⑤ | モンヒロビートの能力「いたずら」(`RHYTHM_MONSTER_ABILITIES.ITAZURA`・`rhythmItazuraKeepsCombo`)。コンボはアシストのコンボガードより先に守る | 済 |
+| ⑥ | 技ごとの攻撃モーション36技(`24-battle-fx.jsx` の `SKM_GHOST` / `SKM_SPOOKY`)。コイン・ルーレット・乱心はポップアップ(🪙・🎡・🌀・❓)と札で出す | 済 |
 | ⑦ | 公開(ビートP交換所・ダイヤショップ・ユグドラシル種のダイヤ販売開始・ヘルプ・お知らせ・紹介カード) | |
 
 ### どこに何を書いたか
@@ -272,6 +272,7 @@ Spooky: baseHp:510, baseGuts:160, baseAtk:150, baseDef:55, plusStats:{hp:160,atk
 | 運命のコイン/輪で積んだ強化 | `permaBuffs.fateStacks`(ランが終わるまで。連撃・ちからは枠ごと、コインの消費ガッツは技の側) |
 | 運命の輪の弱体 | `60-app.jsx` の `fateWheelRef`(使ったターンと次のターン。WAVEが変わると消える) |
 | この技のダメージ倍率(4倍・0.5倍・3倍・2倍) | `getDmg` の8つ目の引数 `skillDmgMult` |
-| 検査 | `tools/monster/ghost-effects-check.js`(決めごとと本体の分岐) / `tools/monster/ghost-browser-check.js`(実際に遊んで出るか) |
+| タクティクスEX | `32-tactics-units.jsx` の `TACTICS_EX_SKILLS.Ghost/Spooky`(効果 `avoidCharge` / `trickConfuse`)。乱心は `60-app.jsx` の `enemyConfuseRef` と `advanceEnemyIntents`。詳しくは `docs/spec/TACTICS_EX_SKILLS.md` |
+| 検査 | `tools/mode/tactics-ex-skills-check.js` の⑪-4 / `tools/monster/ghost-effects-check.js`(決めごとと本体の分岐) / `tools/monster/ghost-browser-check.js`(実際に遊んで出るか) |
 
 `tools/monster/monster-check-debug-check.js` は main でも「デバッグ設定へ入れる」から落ちている(今回の変更とは関係ない)。

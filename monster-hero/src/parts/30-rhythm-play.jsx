@@ -436,12 +436,13 @@ const rhythmClockLabel=ms=>{const total=Math.max(0,Math.floor((Number(ms)||0)/10
 // 判定ライン付近では1サブレーン約32〜38pxなので、.20は約6〜8px。
 // 接触幅側の中心揺れdeadzone(6〜10px)と同程度だけを無視し、明確な横移動は残す。
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES=.20;
-const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':abilityId==='HISSHI'?'🎯':'✨';
+const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':abilityId==='HISSHI'?'🎯':abilityId==='ITAZURA'?'👻':'✨';
 const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg-emerald-950/40 text-emerald-100'
   :abilityId==='MUTEKI'?'border-cyan-300/50 bg-cyan-950/40 text-cyan-100'
   :abilityId==='GAMAN'?'border-amber-300/50 bg-amber-950/40 text-amber-100'
   :abilityId==='KONJO'?'border-rose-300/50 bg-rose-950/40 text-rose-100'
   :abilityId==='HISSHI'?'border-lime-300/50 bg-lime-950/40 text-lime-100'
+  :abilityId==='ITAZURA'?'border-violet-300/50 bg-violet-950/40 text-violet-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
 const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
@@ -498,6 +499,7 @@ const RhythmMonsterNoteGuide=()=>{
         無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
         両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
         必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
+        いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
     </details>
@@ -1551,11 +1553,14 @@ if(judgment!=='MISS'){
 //   それまでは演出量のブロックの中で tap(26) を呼んだうえ、ここでも tap() を呼んでいて、
 //   モンスターノーツでは**2回**走っていた。しかも演出量を下げると強さが変わっていた。
 if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap(monsterHit?26:12);const nextCombo=rhythmComboAfter(run.combo,judgment);let keptCombo=nextCombo;
+/* いたずら(ゴースト血統の能力)のあいだは、BAD・MISSでもコンボが切れない(判定の数・スコアはふつうどおり。ライフは能力の計算で減らない)。
+   アシストのコンボガードより先に見るので、いたずらで守れたときはガードを使わない */
+if(nextCombo===0&&run.combo>0&&rhythmItazuraKeepsCombo(run.abilities,judgment,run.audio?.songTimeMs?.()??0))keptCombo=run.combo;
 /* アシストモードのコンボガード(アワーノーツの「コンボ継続のアシスト」)。BAD・MISSで切れそうなコンボを、
    ガードが残っていれば代わりに受け止める。判定の数・ライフの減り方はふだんどおりで、コンボ数だけが続く。
    ガードは最大3つ。コンボをつないだ判定20回で1つたまり、最近ガードを使った(崩れている)ときは8回でたまる */
 if(assistOn){const guard=run.assistGuard??RHYTHM_ASSIST_GUARD_MAX;run._assistJudged=(run._assistJudged||0)+1;
-  if(nextCombo===0&&run.combo>0&&(judgment==='BAD'||judgment==='MISS')&&guard>0){run.assistGuard=guard-1;run.assistGuarded=(run.assistGuarded||0)+1;run._assistLastGuardAt=run._assistJudged;run._assistStreak=0;keptCombo=run.combo;}
+  if(keptCombo===0&&nextCombo===0&&run.combo>0&&(judgment==='BAD'||judgment==='MISS')&&guard>0){run.assistGuard=guard-1;run.assistGuarded=(run.assistGuarded||0)+1;run._assistLastGuardAt=run._assistJudged;run._assistStreak=0;keptCombo=run.combo;}
   else if(nextCombo>0){run.assistGuard=guard;run._assistStreak=(run._assistStreak||0)+1;const struggling=run._assistLastGuardAt!=null&&run._assistJudged-run._assistLastGuardAt<40;if(guard<RHYTHM_ASSIST_GUARD_MAX&&run._assistStreak>=(struggling?RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING:RHYTHM_ASSIST_GUARD_RECHARGE)){run.assistGuard=guard+1;run._assistStreak=0;}}
   else{run.assistGuard=guard;run._assistStreak=0;}}
 /* ライブログ(アワーノーツの演奏後の振り返り)。ノーツの時刻と判定だけを控え、リザルトで区間ごとに数える。記録には残さない */
@@ -1595,7 +1600,7 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 判定・スコア・ライフには一切関係しない、見た目だけの控え。
     const slot=rhythmNoteMonsterSlot(note);
     run.abilityOwners=run.abilityOwners||{};
-    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI')run.abilityOwners[monster.ability.id]=slot;
+    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI'||monster.ability.id==='ITAZURA')run.abilityOwners[monster.ability.id]=slot;
     if(monster.ability.id==='KONJO'&&Number(activated.state?.konjoStock)>0)run.abilityOwners.KONJO=slot;
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
@@ -1918,14 +1923,15 @@ const badge=abilityBadgeRef.current;
 const hasAbilityBadge=badge&&(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0
   ||rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0
   ||rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0
+  ||rhythmMonsterAbilityRemainingMs(run.abilities,'ITAZURA',songTimeMs)>0
   ||Number(run.abilities?.konjoStock)>0);
 if(badge&&!hasAbilityBadge){
   if(badge._rhythmBadgeText!==''){badge.textContent='';badge._rhythmBadgeText='';}
   if(!badge.hidden)badge.hidden=true;
 }
 if(hasAbilityBadge){
-  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs);
-  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
+  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs),itazuraMs=rhythmMonsterAbilityRemainingMs(run.abilities,'ITAZURA',songTimeMs);
+  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',itazuraMs>0?`いたずら ${(itazuraMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
   if(badge._rhythmBadgeText!==text){badge.textContent=text;badge._rhythmBadgeText=text;}
   if(badge.hidden!==(text===''))badge.hidden=text==='';
 }
@@ -1937,6 +1943,7 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0&&owners.MUTEKI)active.add(owners.MUTEKI);
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0&&owners.GAMAN)active.add(owners.GAMAN);
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0&&owners.HISSHI)active.add(owners.HISSHI);
+  if(rhythmMonsterAbilityRemainingMs(run.abilities,'ITAZURA',songTimeMs)>0&&owners.ITAZURA)active.add(owners.ITAZURA);
   if(Number(run.abilities?.konjoStock)>0&&owners.KONJO)active.add(owners.KONJO);
   if(run.abilityFlashSlot&&songTimeMs<Number(run.abilityFlashUntilMs))active.add(run.abilityFlashSlot);
   const signature=[...active].sort().join(',');

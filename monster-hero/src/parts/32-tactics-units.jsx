@@ -1016,6 +1016,9 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   present   … (present) スネグーラチカのプレゼントの数字。fixedGuts=必ず入る全員のガッツ(上限の割合) / jackpot=大当たりの確率 / dmg・taken・crit・heal・guts=ランダム1種の効き目 / combo={count,rate}
 //   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
 //   dodgeComboRate … 回避するたびに増える連撃の rate(0.1 なら、回避1回ごとに与ダメージ10%の連撃が1回増える)
+//   avoidCharges … (avoidCharge) 使うともらう「完全回避」の回数。狙われた攻撃1回(技1回)につき1つ減る
+//   partyHealRate … 使った瞬間に、味方全員のライフとガッツを上限のこの割合ぶん回復する
+//   partyStatRate … (trickConfuse) 効いているあいだ、味方全員のちから・丈夫さをこの割合上げる
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
@@ -1265,6 +1268,31 @@ const TACTICS_EX_SKILLS = Object.freeze({
     extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
     effect: 'comboBurst',
   }),
+  // ★2026-10-05 ユーザー指示「オフリィアボイド、完全回避（2回）を付与。完全回避がなくなるまでクリティカル確定、連撃10%×3」
+  //   「ゴーストが狙われた攻撃。連撃も技を1回とみなして消化は1」「5回」。
+  //   残りは使ったWAVEのあいだ(ほかのEXと同じく、WAVEをまたがない)
+  Ghost: Object.freeze({
+    id: 'ghost_offlia_avoid',
+    name: 'オフリィアボイド',
+    useNote: '完全回避×2・残っているあいだ会心確定と連撃10%×3',
+    desc: 'ゴーストが「完全回避」を2回ぶんもらう。\n・ゴーストが狙われた攻撃を、完全にかわす（連撃も全体攻撃も、技1回ぶんで1回減る）\n・完全回避が残っているあいだ、ゴーストの攻撃は会心が確定し、与ダメージ10%の連撃が3回付く\n・2回使い切るか、WAVEが変わると終わる',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'wave',
+    avoidCharges: 2,
+    extraCombos: Object.freeze({ count: 3, rate: 0.1 }),
+    effect: 'avoidCharge',
+  }),
+  // ★2026-10-05 ユーザー指示「効果3ターン、ラン5回、効果中攻撃を当てたら相手が3ターン乱心になる。乱心は相手の行動が
+  //   50%の確率で意味不明になる。（行動予測で出る）意味不明のときは行動不能、被クリ率100%アップ。更に使用した時に
+  //   味方全員のライフガッツが30%回復。効果ターン中味方全員の力、丈夫さが10%アップ」「スプーキーの攻撃だけ」
+  Spooky: Object.freeze({
+    id: 'spooky_trick_confuse',
+    name: 'トリックコンフューズ',
+    useNote: '全員ライフ・ガッツ30%回復・3ターン 全員ちから丈夫さ+10%・当てると乱心',
+    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「意味不明」になる（次の行動に出る）。意味不明のターン、敵は動けず、味方の攻撃は会心が確定する',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    partyHealRate: 0.3, partyStatRate: 0.1,
+    effect: 'trickConfuse',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
@@ -1275,7 +1303,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'avoidCharge', 'trickConfuse']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1327,6 +1355,9 @@ const normalizeTacticsExDef = (raw) => {
     partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
     partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
     dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
+    avoidCharges: Math.min(9, Math.max(0, tacticsSafeInt(raw.avoidCharges, 0))),
+    partyHealRate: Math.min(1, Math.max(0, Number.isFinite(Number(raw.partyHealRate)) ? Number(raw.partyHealRate) : 0)),
+    partyStatRate: Math.min(1, Math.max(0, Number.isFinite(Number(raw.partyStatRate)) ? Number(raw.partyStatRate) : 0)),
     distMult: Math.max(0, Number.isFinite(Number(raw.distMult)) ? Number(raw.distMult) : 0),
     guaranteeUnique: raw.guaranteeUnique === true,
     cardBonus: Math.min(3, Math.max(0, tacticsSafeInt(raw.cardBonus, 0))),
@@ -1415,6 +1446,8 @@ const isTacticsExEffectActive = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.monId !== monId) return false;
   if (effect.duration === 'style') return effect.on === true;
+  // ★オフリィアボイド(avoidCharge)は、完全回避を使い切ったら終わる(会心確定・連撃も一緒に終わる)
+  if (effect.effect === 'avoidCharge' && tacticsSafeInt(effect.avoidLeft, 0) <= 0) return false;
   // ★ターン数で切れるもの。**WAVEをまたがない**(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)。
   //   同じWAVEのあいだだけ、使ったターンから数えて turns ターン目まで効く
   if (effect.duration === 'turns') {
@@ -1485,6 +1518,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
+      avoidLeft: def.avoidCharges || 0, partyStatRate: def.partyStatRate || 0,
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
@@ -1599,12 +1633,12 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const t = tacticsExThunderOf(state, units, slot, now);
     return t && t.combo ? t.combo : null;
   }
-  if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
+  if (kind !== 'comboBurst' && kind !== 'multiBuff' && kind !== 'avoidCharge') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
   if (!(count > 0 && Number.isFinite(rate) && rate > 0)) return null;
   // 連撃の名前は、アーク・イブリース(multiBuff)ではそのEXの名前(スイーツパラダイスは、これまでどおり名前を渡さない)
-  return kind === 'multiBuff' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
+  return kind === 'multiBuff' || kind === 'avoidCharge' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
 };
 // ---- ライガー(thunder): 雷狼影 ----
 // いまの雷と段階。phase は 'charge'(ためている前半)か 'wrap'(雷纏の後半)。効いていなければ null
@@ -1848,7 +1882,62 @@ const recordTacticsExDodge = (state, units, slot, now) => {
   const mine = safe.effects[slot];
   return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, dodges: tacticsSafeInt(mine.dodges, 0) + 1 } } };
 };
+// ---- ゴースト(avoidCharge): オフリィアボイド ----
+// その子に残っている完全回避の数(効いていなければ0)
+const tacticsExAvoidLeftOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'avoidCharge') return 0;
+  return Math.max(0, tacticsSafeInt(normalizeTacticsExState(state).effects[slot].avoidLeft, 0));
+};
+// 完全回避を1つ使う(狙われた攻撃1回ぶん。連撃でも1つ)。残っていなければ状態をそのまま返す
+const spendTacticsExAvoid = (state, units, slot, now) => {
+  const safe = normalizeTacticsExState(state);
+  if (tacticsExAvoidLeftOf(safe, units, slot, now) <= 0) return safe;
+  const mine = safe.effects[slot];
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, avoidLeft: Math.max(0, tacticsSafeInt(mine.avoidLeft, 0) - 1) } } };
+};
+// その子の攻撃の会心が確定するか(完全回避が残っているあいだ)
+const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(state, units, slot, now) > 0;
+// ---- スプーキー(trickConfuse): トリックコンフューズ ----
+// 味方全員のちから・丈夫さへ足す割合。効いている子が複数いれば足し算。
+// ★使った子が倒れても効果は残る(世界樹の守りと同じ)。どの子のEXかは効果の記録(monId)で見る
+const tacticsExPartyStatRate = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'trickConfuse' || !isTacticsExEffectActive(state, Number(key), e.monId, now)) return sum;
+    const rate = Number(e.partyStatRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// その子の攻撃が当たったら敵を乱心にするか(トリックコンフューズが効いている本人だけ。2026-10-05 ユーザー指示「スプーキーの攻撃だけ」)
+const tacticsExConfusesOnHit = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  return !!unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'trickConfuse';
+};
+// 乱心: 敵の行動が50%で「意味不明」になる。ターン数は乱心のまま決めた予告の数(3つ)。
+// 意味不明のターン、敵は動けず、味方の攻撃は会心が確定する(被会心率+100%)
+const ENEMY_CONFUSE_TURNS = 3;
+const ENEMY_CONFUSE_CHANCE = 0.5;
+// 予告を「意味不明」へ差し替えたもの。狙い(targetSlot)は持たせない(だれも狙われない)
+const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '意味不明', icon: '❓', value: 0, notice: '乱心',
+  confusedFrom: intent && typeof intent.label === 'string' ? intent.label : null });
+// 次の予告を決めるときの乱心。turns が残っていれば1つ使い、rnd() が確率未満なら意味不明にする
+const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
+  const left = Math.max(0, tacticsSafeInt(turns, 0));
+  if (!intent || left <= 0) return { intent, turns: left };
+  return { intent: rnd() < ENEMY_CONFUSE_CHANCE ? confusedEnemyIntent(intent) : intent, turns: left - 1 };
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
+  if (!unit || typeof unit !== 'object') return unit;
+  // トリックコンフューズ(味方全員のちから・丈夫さ)は、その子自身のEXで変わったあとの値へ掛ける
+  const own = applyTacticsExOwnStats(unit, state, slot, now);
+  const party = tacticsExPartyStatRate(state, now);
+  if (!(party > 0) || !own || typeof own !== 'object') return own;
+  return { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)),
+    def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) };
+};
+const applyTacticsExOwnStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
   if (kind === 'allIn') {

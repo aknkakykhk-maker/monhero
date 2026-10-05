@@ -9,6 +9,8 @@
 //      (重複あり・WAVEのあいだ)。攻撃が当たると消費ガッツの半分を回復
 //   ② 固有技「運命のコイン」(ゴースト): 表50%=この技4倍＋この子の連撃+10% / 裏=0.5倍＋ゴーストの固有技の消費ガッツ+20%
 //      固有技「運命の輪」(スプーキー): 当てるたびに6つから1つ(敵与ダメ−30%・敵被ダメ+30%は2ターン / 3倍 / 2倍 / 連撃+10% / ちから+15%)
+//   ③ モンヒロビートの能力「いたずら」(ゴースト血統): 6秒のあいだライフが減らず、BAD・MISSでもコンボが切れない
+//   ④ 技ごとの攻撃モーション(2体×通常9・固有9)。中身の決まりは tools/battle/skill-motion-check.js が見る
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -23,6 +25,9 @@ const allies = read('monster-hero/data/ally-monsters.js');
 const lineages = read('monster-hero/data/lineages.js');
 const bond = read('monster-hero/src/parts/22-enemy-and-bond-entries.jsx');
 const app = read('monster-hero/src/parts/60-app.jsx');
+const rhythm = read('monster-hero/data/rhythm-mode.js');
+const play = read('monster-hero/src/parts/30-rhythm-play.jsx');
+const fxSrc = read('monster-hero/src/parts/24-battle-fx.jsx');
 
 // --- 本体の登録 ---
 const sandboxData = {};
@@ -149,6 +154,40 @@ check('コインは0.5未満で表(4倍)・それ以外は裏(0.5倍)', f.rollFa
     && (app.match(/resetTrickStart\(\); resetFateWheel\(\);/g) || []).length === 3);
   check('積んだ強化はランを始めると消える(permaBuffs に入れている)', /writePermaBuffs\(\{autoHpRecovery:0\.1\}\)/.test(app) && !/fateStacks:\s*\{/.test(app.slice(0, app.indexOf('const resetAllState'))));
 }
+
+// --- ③ いたずら ---
+{
+  const abilitySrc = slice(rhythm, 'const RHYTHM_MONSTER_ABILITIES=', '// 能力を通したライフ計算。');
+  const activateSrc = slice(rhythm, 'const rhythmActivateMonsterAbility=', '// 蘇生したときのスコアの続き方');
+  check('能力の決めごとを切り出せる', abilitySrc.length > 0 && activateSrc.length > 0);
+  const rs = { RHYTHM_LIFE_MAX: 1000, rhythmLifeValue: (v) => Number(v) || 0 };
+  vm.createContext(rs);
+  vm.runInContext(`${abilitySrc}\n${activateSrc}\nglobalThis.r={RHYTHM_MONSTER_ABILITIES,rhythmMonsterAbilityForLineage,createRhythmMonsterAbilityState,rhythmMonsterAbilityRemainingMs,rhythmApplyMonsterAbilityToLifeDelta,rhythmItazuraKeepsCombo,rhythmActivateMonsterAbility};`, rs);
+  const r = rs.r;
+  const ita = r.rhythmMonsterAbilityForLineage('ghost');
+  check('主血統ゴーストの能力は「いたずら」(6秒)', !!ita && ita.id === 'ITAZURA' && ita.name === 'いたずら' && ita.durationMs === 6000);
+  const on = r.rhythmActivateMonsterAbility({ ability: ita, state: r.createRhythmMonsterAbilityState(), life: 500, songTimeMs: 10000 });
+  check('取ると6秒の終わりを持つ(ライフは変えない)', on.applied && on.life === 500 && on.state.itazuraUntilMs === 16000
+    && r.rhythmMonsterAbilityRemainingMs(on.state, 'ITAZURA', 12000) === 4000);
+  check('効いているあいだライフが減らない(増えるぶんはそのまま)', r.rhythmApplyMonsterAbilityToLifeDelta(on.state, -80, 15999) === 0
+    && r.rhythmApplyMonsterAbilityToLifeDelta(on.state, 30, 12000) === 30 && r.rhythmApplyMonsterAbilityToLifeDelta(on.state, -80, 16000) === -80);
+  check('効いているあいだ BAD・MISS でもコンボを守る(ほかの判定・切れたあと・取る前は守らない)',
+    r.rhythmItazuraKeepsCombo(on.state, 'MISS', 12000) && r.rhythmItazuraKeepsCombo(on.state, 'BAD', 15999)
+    && !r.rhythmItazuraKeepsCombo(on.state, 'GOOD', 12000) && !r.rhythmItazuraKeepsCombo(on.state, 'MISS', 16000)
+    && !r.rhythmItazuraKeepsCombo(r.createRhythmMonsterAbilityState(), 'MISS', 12000));
+  check('必死・無敵の残り時間とは別々に持つ',
+    r.rhythmActivateMonsterAbility({ ability: r.RHYTHM_MONSTER_ABILITIES.MUTEKI, state: on.state, life: 500, songTimeMs: 11000 }).state.itazuraUntilMs === 16000);
+  check('演奏: コンボはアシストのコンボガードより先に守る(守れたときはガードを使わない)',
+    /if\(nextCombo===0&&run\.combo>0&&rhythmItazuraKeepsCombo\(run\.abilities,judgment,run\.audio\?\.songTimeMs\?\.\(\)\?\?0\)\)keptCombo=run\.combo;/.test(play)
+    && play.indexOf('rhythmItazuraKeepsCombo(run.abilities') < play.indexOf('if(keptCombo===0&&nextCombo===0&&run.combo>0&&(judgment===\'BAD\'||judgment===\'MISS\')&&guard>0)'));
+  check('演奏中の右上に残り時間を出し、持ち主の枠を光らせる',
+    /itazuraMs>0\?`いたずら \$\{\(itazuraMs\/1000\)\.toFixed\(1\)\}s`/.test(play)
+    && /'ITAZURA',songTimeMs\)>0&&owners\.ITAZURA\)active\.add\(owners\.ITAZURA\)/.test(play));
+}
+
+// --- ④ 技ごとの攻撃モーション ---
+check('ゴースト・スプーキーの技ごとの動きを SKILL_MOTION_SETS へ入れた',
+  /Ghost:SKM_GHOST, Spooky:SKM_SPOOKY \}\);/.test(fxSrc) && /const SKM_GHOST = Object\.freeze\(\{/.test(fxSrc) && /const SKM_SPOOKY = Object\.freeze\(\{/.test(fxSrc));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

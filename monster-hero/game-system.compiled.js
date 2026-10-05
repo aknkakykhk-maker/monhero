@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 22b5680b77a44a3b
+// source-sha256: beeff536e9fea512
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 00:13";
+const BUILD_DATE = "2026-10-06 00:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14808,6 +14808,7 @@ const rhythmAbilityEffectText = ability => {
   if (ability.id === 'MUTEKI') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフが減らない`;
   if (ability.id === 'GAMAN') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフの減りが${Math.round((1 - ability.reduceRate) * 100)}%小さくなる`;
   if (ability.id === 'HISSHI') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
+  if (ability.id === 'ITAZURA') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、BAD・MISSでもライフが減らず、コンボも切れない`;
   if (ability.id === 'KONJO') return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
 };
@@ -19403,9 +19404,153 @@ const SKILL_MOTION_SETS_MAIN = Object.freeze({
     }) : sp)
   }
 });
+const SKM_GHOST = Object.freeze({
+  normal: [skm('jump', {
+    c: 'pink',
+    over: 'fist',
+    burst: 'star'
+  }), skm('cast', {
+    c: 'cosmic',
+    line: 'ray',
+    burst: 'spark'
+  }), skm('float', {
+    c: 'white',
+    fx: skmFx('fall', 'feather', 12),
+    burst: 'dust'
+  }), skm('warp', {
+    c: 'psy',
+    over: 'eye',
+    burst: 'star'
+  }), skm('dash', {
+    c: 'dark',
+    burst: 'dust'
+  }), skm('toss', {
+    c: 'red',
+    fx: skmFx('shot', 'blade', 5),
+    burst: 'spark'
+  }), skm('cast', {
+    c: 'gold',
+    fx: skmFx('orbit', 'star', 8, {
+      h: 45
+    }),
+    burst: 'star'
+  }), skm('jab', {
+    c: 'dark',
+    over: 'fist',
+    burst: 'dust'
+  }), skm('spin', {
+    c: 'psy',
+    over: 'xslash',
+    burst: 'star'
+  })],
+  unique: [skm('toss', {
+    c: 'red',
+    fx: skmFx('shot', 'blade', 8, {
+      step: 35
+    }),
+    over: 'slash',
+    burst: 'spark'
+  }), skm('cast', {
+    c: 'dark',
+    line: 'ray',
+    over: 'boom',
+    fx: skmFx('orbit', 'ghost', 6)
+  }), skm('float', {
+    c: 'white',
+    fx: skmFx('fall', 'meteor', 3, {
+      s: 1.6
+    }),
+    over: 'boom',
+    burst: 'dust'
+  }), skm('warp', {
+    c: 'dark',
+    fx: skmFx('shot', 'ghost', 5),
+    over: 'eye',
+    burst: 'star'
+  }), skm('shake', {
+    c: 'gold',
+    fx: skmFx('shot', 'star', 7, {
+      h: [45, 0, 45]
+    }),
+    over: 'pillar',
+    burst: 'star'
+  }), skm('cast', {
+    c: 'psy',
+    fx: skmFx('orbit', 'orb', 8, {
+      h: [280, 45, 190, 330]
+    }),
+    over: 'aurora',
+    burst: 'spark'
+  }), skm('toss', {
+    c: 'gold',
+    fx: skmFx('shot', 'blade', 5, {
+      h: 45
+    }),
+    over: 'cross',
+    burst: 'star'
+  }), skm('hop', {
+    c: 'gold',
+    fx: skmFx('lob', 'ring', 3, {
+      s: 1.4,
+      h: 45
+    }),
+    over: 'boom',
+    burst: 'star'
+  }), skm('gather', {
+    c: 'cosmic',
+    fx: skmFx('orbit', 'ghost', 10),
+    over: 'eclipse',
+    burst: 'star'
+  })]
+});
+const SKM_SPOOKY = Object.freeze({
+  normal: SKM_GHOST.normal.map((sp, i) => i === 2 ? sp : i === 5 ? skm('toss', {
+    c: 'dark',
+    fx: skmFx('shot', 'blade', 5, {
+      h: 270
+    }),
+    over: 'cross',
+    burst: 'spark'
+  }) : i === 6 ? skm('cast', {
+    c: 'plant',
+    fx: skmFx('orbit', 'leaf', 8),
+    burst: 'leaf'
+  }) : i === 8 ? skm('spin', {
+    c: 'plant',
+    fx: skmFx('rise', 'leaf', 10),
+    over: 'tornado',
+    burst: 'leaf'
+  }) : {
+    ...sp,
+    c: 'fire'
+  }),
+  unique: SKM_GHOST.unique.map((sp, i) => i === 5 ? skm('spin', {
+    c: 'psy',
+    fx: skmFx('orbit', 'orb', 8, {
+      h: [30, 280, 120, 330]
+    }),
+    over: 'aurora',
+    burst: 'spark'
+  }) : i === 1 ? skm('cast', {
+    c: 'fire',
+    line: 'ray',
+    over: 'boom',
+    fx: skmFx('orbit', 'flame', 6)
+  }) : i === 8 ? skm('gather', {
+    c: 'fire',
+    fx: skmFx('orbit', 'flame', 10),
+    over: 'eclipse',
+    burst: 'star'
+  }) : i === 7 ? sp : {
+    ...sp,
+    c: sp.c === 'gold' ? 'gold' : 'fire'
+  })
+});
 const SKILL_MOTION_SETS = Object.freeze({
   ...SKILL_MOTION_SETS_MAIN,
-  Yaobikuni: skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red')
+  Yaobikuni: skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'),
+  Ghost: SKM_GHOST,
+  Spooky: SKM_SPOOKY
 });
 const SKM_BODY_TIMING = Object.freeze({
   bash: [.48, 560],
@@ -20217,6 +20362,16 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   comboBurst: {
     c1: '#fbcfe8',
     c2: '#db2777',
+    motif: 'rise'
+  },
+  avoidCharge: {
+    c1: '#e9d5ff',
+    c2: '#6d28d9',
+    motif: 'blade'
+  },
+  trickConfuse: {
+    c1: '#fed7aa',
+    c2: '#9333ea',
     motif: 'rise'
   },
   default: {
@@ -28376,8 +28531,8 @@ const rhythmClockLabel = ms => {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 };
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES = .20;
-const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : abilityId === 'HISSHI' ? '🎯' : '✨';
-const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : abilityId === 'HISSHI' ? 'border-lime-300/50 bg-lime-950/40 text-lime-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
+const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : abilityId === 'HISSHI' ? '🎯' : abilityId === 'ITAZURA' ? '👻' : '✨';
+const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : abilityId === 'HISSHI' ? 'border-lime-300/50 bg-lime-950/40 text-lime-100' : abilityId === 'ITAZURA' ? 'border-violet-300/50 bg-violet-950/40 text-violet-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
 const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => ({
   ability,
   lineages: Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name)
@@ -28433,7 +28588,7 @@ const RhythmMonsterNoteGuide = () => {
     className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
   }, "主血統: ", lineages.join(' / '))))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
+  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
 };
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
@@ -30318,10 +30473,11 @@ const RhythmTapTest = ({
     if (settings.vibrationEnabled && judgment !== 'MISS') RHYTHM_HAPTICS.tap(monsterHit ? 26 : 12);
     const nextCombo = rhythmComboAfter(run.combo, judgment);
     let keptCombo = nextCombo;
+    if (nextCombo === 0 && run.combo > 0 && rhythmItazuraKeepsCombo(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) keptCombo = run.combo;
     if (assistOn) {
       const guard = run.assistGuard ?? RHYTHM_ASSIST_GUARD_MAX;
       run._assistJudged = (run._assistJudged || 0) + 1;
-      if (nextCombo === 0 && run.combo > 0 && (judgment === 'BAD' || judgment === 'MISS') && guard > 0) {
+      if (keptCombo === 0 && nextCombo === 0 && run.combo > 0 && (judgment === 'BAD' || judgment === 'MISS') && guard > 0) {
         run.assistGuard = guard - 1;
         run.assistGuarded = (run.assistGuarded || 0) + 1;
         run._assistLastGuardAt = run._assistJudged;
@@ -30415,7 +30571,7 @@ const RhythmTapTest = ({
         };
         const slot = rhythmNoteMonsterSlot(note);
         run.abilityOwners = run.abilityOwners || {};
-        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI') run.abilityOwners[monster.ability.id] = slot;
+        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI' || monster.ability.id === 'ITAZURA') run.abilityOwners[monster.ability.id] = slot;
         if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
         run.abilityFlashSlot = slot;
         run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
@@ -31114,7 +31270,7 @@ const RhythmTapTest = ({
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
       const badge = abilityBadgeRef.current;
-      const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
+      const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'ITAZURA', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
       if (badge && !hasAbilityBadge) {
         if (badge._rhythmBadgeText !== '') {
           badge.textContent = '';
@@ -31125,8 +31281,9 @@ const RhythmTapTest = ({
       if (hasAbilityBadge) {
         const mutekiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs),
           gamanMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs),
-          hisshiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs);
-        const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', hisshiMs > 0 ? `必死 ${(hisshiMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
+          hisshiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs),
+          itazuraMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'ITAZURA', songTimeMs);
+        const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', hisshiMs > 0 ? `必死 ${(hisshiMs / 1000).toFixed(1)}s` : '', itazuraMs > 0 ? `いたずら ${(itazuraMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
         if (badge._rhythmBadgeText !== text) {
           badge.textContent = text;
           badge._rhythmBadgeText = text;
@@ -31139,6 +31296,7 @@ const RhythmTapTest = ({
         if (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 && owners.MUTEKI) active.add(owners.MUTEKI);
         if (rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 && owners.GAMAN) active.add(owners.GAMAN);
         if (rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 && owners.HISSHI) active.add(owners.HISSHI);
+        if (rhythmMonsterAbilityRemainingMs(run.abilities, 'ITAZURA', songTimeMs) > 0 && owners.ITAZURA) active.add(owners.ITAZURA);
         if (Number(run.abilities?.konjoStock) > 0 && owners.KONJO) active.add(owners.KONJO);
         if (run.abilityFlashSlot && songTimeMs < Number(run.abilityFlashUntilMs)) active.add(run.abilityFlashSlot);
         const signature = [...active].sort().join(',');
@@ -34165,12 +34323,42 @@ const TACTICS_EX_SKILLS = Object.freeze({
       rate: 0.3
     }),
     effect: 'comboBurst'
+  }),
+  Ghost: Object.freeze({
+    id: 'ghost_offlia_avoid',
+    name: 'オフリィアボイド',
+    useNote: '完全回避×2・残っているあいだ会心確定と連撃10%×3',
+    desc: 'ゴーストが「完全回避」を2回ぶんもらう。\n・ゴーストが狙われた攻撃を、完全にかわす（連撃も全体攻撃も、技1回ぶんで1回減る）\n・完全回避が残っているあいだ、ゴーストの攻撃は会心が確定し、与ダメージ10%の連撃が3回付く\n・2回使い切るか、WAVEが変わると終わる',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'wave',
+    avoidCharges: 2,
+    extraCombos: Object.freeze({
+      count: 3,
+      rate: 0.1
+    }),
+    effect: 'avoidCharge'
+  }),
+  Spooky: Object.freeze({
+    id: 'spooky_trick_confuse',
+    name: 'トリックコンフューズ',
+    useNote: '全員ライフ・ガッツ30%回復・3ターン 全員ちから丈夫さ+10%・当てると乱心',
+    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「意味不明」になる（次の行動に出る）。意味不明のターン、敵は動けず、味方の攻撃は会心が確定する',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    partyHealRate: 0.3,
+    partyStatRate: 0.1,
+    effect: 'trickConfuse'
   })
 });
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'avoidCharge', 'trickConfuse']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -34216,6 +34404,9 @@ const normalizeTacticsExDef = raw => {
     partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
     partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
     dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
+    avoidCharges: Math.min(9, Math.max(0, tacticsSafeInt(raw.avoidCharges, 0))),
+    partyHealRate: Math.min(1, Math.max(0, Number.isFinite(Number(raw.partyHealRate)) ? Number(raw.partyHealRate) : 0)),
+    partyStatRate: Math.min(1, Math.max(0, Number.isFinite(Number(raw.partyStatRate)) ? Number(raw.partyStatRate) : 0)),
     distMult: Math.max(0, Number.isFinite(Number(raw.distMult)) ? Number(raw.distMult) : 0),
     guaranteeUnique: raw.guaranteeUnique === true,
     cardBonus: Math.min(3, Math.max(0, tacticsSafeInt(raw.cardBonus, 0))),
@@ -34343,6 +34534,7 @@ const isTacticsExEffectActive = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.monId !== monId) return false;
   if (effect.duration === 'style') return effect.on === true;
+  if (effect.effect === 'avoidCharge' && tacticsSafeInt(effect.avoidLeft, 0) <= 0) return false;
   if (effect.duration === 'turns') {
     if (!now || tacticsSafeInt(effect.wave, -1) !== tacticsSafeInt(now.wave, -2)) return false;
     const at = tacticsSafeInt(now.turn, -1),
@@ -34471,6 +34663,8 @@ const applyTacticsExUse = (state, {
         } : null,
         dodgeComboRate: def.dodgeComboRate || 0,
         dodges: 0,
+        avoidLeft: def.avoidCharges || 0,
+        partyStatRate: def.partyStatRate || 0,
         dmgRate: def.dmgRate || 0,
         selfTakenRate: def.selfTakenRate || 0,
         critRateRate: def.critRateRate || 0,
@@ -34615,12 +34809,12 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const t = tacticsExThunderOf(state, units, slot, now);
     return t && t.combo ? t.combo : null;
   }
-  if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
+  if (kind !== 'comboBurst' && kind !== 'multiBuff' && kind !== 'avoidCharge') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0),
     rate = Number(own && own.rate);
   if (!(count > 0 && Number.isFinite(rate) && rate > 0)) return null;
-  return kind === 'multiBuff' ? {
+  return kind === 'multiBuff' || kind === 'avoidCharge' ? {
     count,
     rate,
     label: (tacticsExDefOf(unit.id) || {}).name || ''
@@ -35020,7 +35214,73 @@ const recordTacticsExDodge = (state, units, slot, now) => {
     }
   };
 };
+const tacticsExAvoidLeftOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'avoidCharge') return 0;
+  return Math.max(0, tacticsSafeInt(normalizeTacticsExState(state).effects[slot].avoidLeft, 0));
+};
+const spendTacticsExAvoid = (state, units, slot, now) => {
+  const safe = normalizeTacticsExState(state);
+  if (tacticsExAvoidLeftOf(safe, units, slot, now) <= 0) return safe;
+  const mine = safe.effects[slot];
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [slot]: {
+        ...mine,
+        avoidLeft: Math.max(0, tacticsSafeInt(mine.avoidLeft, 0) - 1)
+      }
+    }
+  };
+};
+const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(state, units, slot, now) > 0;
+const tacticsExPartyStatRate = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'trickConfuse' || !isTacticsExEffectActive(state, Number(key), e.monId, now)) return sum;
+    const rate = Number(e.partyStatRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const tacticsExConfusesOnHit = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  return !!unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'trickConfuse';
+};
+const ENEMY_CONFUSE_TURNS = 3;
+const ENEMY_CONFUSE_CHANCE = 0.5;
+const confusedEnemyIntent = intent => ({
+  type: 'CONFUSED',
+  label: '意味不明',
+  icon: '❓',
+  value: 0,
+  notice: '乱心',
+  confusedFrom: intent && typeof intent.label === 'string' ? intent.label : null
+});
+const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
+  const left = Math.max(0, tacticsSafeInt(turns, 0));
+  if (!intent || left <= 0) return {
+    intent,
+    turns: left
+  };
+  return {
+    intent: rnd() < ENEMY_CONFUSE_CHANCE ? confusedEnemyIntent(intent) : intent,
+    turns: left - 1
+  };
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
+  if (!unit || typeof unit !== 'object') return unit;
+  const own = applyTacticsExOwnStats(unit, state, slot, now);
+  const party = tacticsExPartyStatRate(state, now);
+  if (!(party > 0) || !own || typeof own !== 'object') return own;
+  return {
+    ...own,
+    atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)),
+    def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party))
+  };
+};
+const applyTacticsExOwnStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
   if (kind === 'allIn') {
@@ -51749,6 +52009,7 @@ function BattleScreen({
   tacticsPandoraForms,
   trickStartView,
   fateWheelView,
+  enemyConfuseTurns,
   teachingFx,
   totalTurnCount,
   turnCount,
@@ -52068,7 +52329,7 @@ function BattleScreen({
   const plannedDamageFor = slotIdx => plannedHitWithCover(slotIdx).taken;
   const enemyNoticeShown = !ecoBattleView && !!enemy && !!enemyIntent && !isBusy && !enemyAttackFx && Array.isArray(tacticsUnits) && !!enemyIntent.notice;
   const enemyNoticeCard = () => {
-    const noticeTone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]' : enemyIntent.type === 'CHARGE' ? 'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]' : enemyIntent.type === 'MOVE' ? 'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]' : enemyIntent.type === 'ROAR' ? 'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]' : enemyIntent.type === 'REGEN' ? 'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]' : enemyIntent.type === 'WAIT' ? 'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]' : 'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
+    const noticeTone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]' : enemyIntent.type === 'CHARGE' ? 'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]' : enemyIntent.type === 'MOVE' ? 'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]' : enemyIntent.type === 'ROAR' ? 'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]' : enemyIntent.type === 'REGEN' ? 'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]' : enemyIntent.type === 'WAIT' ? 'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]' : enemyIntent.type === 'CONFUSED' ? 'bg-violet-600 border-violet-100 text-white shadow-[0_0_14px_rgba(139,92,246,0.85)]' : 'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
     const noticeAnim = enemyIntent.type === 'REGEN' ? 'noticeHeal 1400ms ease-in-out infinite' : enemyIntent.type === 'ROAR' ? 'noticeShout 900ms ease-in-out infinite' : enemyIntent.type === 'CHARGE' ? 'noticeCharge 1100ms ease-in-out infinite' : enemyIntent.type === 'MOVE' || enemyIntent.type === 'WAIT' ? 'noticeCalm 1600ms ease-in-out infinite' : 'noticeHit 800ms ease-in-out infinite';
     return React.createElement("div", {
       "data-enemy-notice": enemyIntent.notice,
@@ -52543,7 +52804,7 @@ function BattleScreen({
     const plannedTotalText = plannedHit.raw > plannedDmg ? `${plannedHit.raw}→${plannedDmg}` : `${plannedDmg}`;
     const showPlannedInBubble = coverActive || !enemyIntent.targetsAll;
     const regenHeal = enemyIntent.type === 'REGEN' ? tacticsRegenHealAmount(enemy?.maxHp) : 0;
-    const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-950 border-rose-500 text-rose-300' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : enemyIntent.type === 'REGEN' ? 'bg-emerald-950 border-emerald-500/60 text-emerald-300' : 'bg-red-950 border-red-600/50 text-red-400';
+    const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-950 border-rose-500 text-rose-300' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : enemyIntent.type === 'REGEN' ? 'bg-emerald-950 border-emerald-500/60 text-emerald-300' : enemyIntent.type === 'CONFUSED' ? 'bg-violet-950 border-violet-400/70 text-violet-200' : 'bg-red-950 border-red-600/50 text-red-400';
     const intentTitle = enemyIntent.type === 'CHARGE' && enemyIntent.category ? enemyIntent.category : enemyIntent.label;
     return React.createElement("div", {
       "data-enemy-intent": true,
@@ -52556,7 +52817,10 @@ function BattleScreen({
       className: "mt-0.5 text-[11px] font-black leading-tight"
     }, intentTitle), aimedName ? React.createElement("div", {
       className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90"
-    }, "🎯", aimedName) : null, rawDmg > 0 && showPlannedInBubble && plannedText ? React.createElement("div", {
+    }, "🎯", aimedName) : null, enemyIntent.type === 'CONFUSED' ? React.createElement("div", {
+      "data-enemy-confused": true,
+      className: "mt-0.5 text-[9px] font-bold leading-tight opacity-90"
+    }, "動けない・会心確定") : null, rawDmg > 0 && showPlannedInBubble && plannedText ? React.createElement("div", {
       className: "mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none"
     }, React.createElement("div", {
       className: "text-[12px] font-black tabular-nums"
@@ -53230,6 +53494,12 @@ function BattleScreen({
         size: 9
       }), '運命のコイン消費', `+${fateCount(fate.coinGuts) * 20}%`, 'text-slate-300 border-slate-400/50');
     }
+    if (enemyConfuseTurns > 0) chip('enemyConfuse', React.createElement(Sparkles, {
+      size: 9
+    }), '敵 乱心', `残り${enemyConfuseTurns}回`, 'text-violet-300 border-violet-400/50', {
+      pulse: true,
+      short: `${enemyConfuseTurns}`
+    });
     if (fateWheelView?.atkDown > 0) chip('fateAtkDown', React.createElement(ArrowDownCircle, {
       size: 9
     }), '運命の輪 敵与ダメ', `-30%（残り${fateWheelView.atkDown}T）`, 'text-fuchsia-300 border-fuchsia-400/50', {
@@ -62568,6 +62838,15 @@ function MonsterHeroGame() {
     return value;
   };
   const resetFateWheel = () => writeFateWheel(null);
+  const enemyConfuseRef = useRef(0);
+  const [enemyConfuseTurns, setEnemyConfuseTurns] = useState(0);
+  const writeEnemyConfuse = n => {
+    const v = Math.max(0, Math.floor(Number(n) || 0));
+    enemyConfuseRef.current = v;
+    setEnemyConfuseTurns(v);
+    return v;
+  };
+  const resetEnemyConfuse = () => writeEnemyConfuse(0);
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   const nextTurnBuffsRef = useRef({});
@@ -72523,12 +72802,15 @@ function MonsterHeroGame() {
       definitions: enemyActionDefinitionsFor(runMode, enemy?.id, enemy?.difficulty, enemy?.actionCount),
       roarStacks: tacticsRoarStacksRef.current
     });
-    const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
+    const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
       unannounced: true,
       ...actionState()
     }), runMode);
+    const confusion = rollEnemyConfusion(aimed, enemyConfuseRef.current);
+    if (confusion.turns !== enemyConfuseRef.current) writeEnemyConfuse(confusion.turns);
+    const upcoming = confusion.intent;
     setEnemyIntent(upcoming);
-    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming, actionState()));
+    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming?.type === 'CONFUSED' ? null : upcoming, actionState()));
   };
   const iceLockTurns = getWaveBuff('iceLockTurns');
   const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
@@ -72710,6 +72992,15 @@ function MonsterHeroGame() {
     if (!live.enabled || !Number.isInteger(slotIdx)) return null;
     const unit = tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveStyle(tacticsExStateRef.current, slotIdx, unit.id, live.now) : null;
+  };
+  const tacticsExAvoidLeftNow = slotIdx => {
+    const live = tacticsExLiveRef.current;
+    return live.enabled && Number.isInteger(slotIdx) ? tacticsExAvoidLeftOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : 0;
+  };
+  const tacticsCritFixedNow = slotIdx => {
+    if (!isTacticsMode(runMode)) return false;
+    if (enemyIntent?.type === 'CONFUSED') return true;
+    return tacticsExAvoidLeftNow(slotIdx) > 0;
   };
   const tacticsExCombosAt = (slotIdx, halved = false) => {
     const live = tacticsExLiveRef.current;
@@ -73228,7 +73519,7 @@ function MonsterHeroGame() {
       comboDmgBonus: getPermaBuff('comboDmgPct'),
       critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
       kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-      guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit'),
+      guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx),
       rollCrit: () => false,
       globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo,
       mainCanCrit: card.subType !== 'stun_atsu',
@@ -73239,7 +73530,7 @@ function MonsterHeroGame() {
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
   const resolveEnemyDefeat = async ({
     remainingHp,
     damage,
@@ -73407,6 +73698,10 @@ function MonsterHeroGame() {
     if (timeStopSlot != null) {
       addPopup('⏳ 時間停止！ 敵は動けない', 'enemy', 'text-sky-300 font-black text-xl drop-shadow-md');
       pushBattleLog('⏳ 時間が止まっている。敵は行動しない', 'info');
+      await battleWait(1000);
+    } else if (intent && intent.type === 'CONFUSED') {
+      addPopup('❓ 意味不明！ 敵は動けない', 'enemy', 'text-violet-300 font-black text-xl drop-shadow-md');
+      pushBattleLog('❓ 敵は乱心して、意味不明な動きをした', 'info');
       await battleWait(1000);
     } else if (getTurnBuff('invincible', false) || immediateEffects.invincible) {
       addPopup("無効化！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-md');
@@ -73672,7 +73967,14 @@ function MonsterHeroGame() {
               const exDodge = tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist);
               const thunderDodge = Math.random() < tacticsExThunderDodgeNow(slotIdx);
               if (exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now));
-              if (slotIdx === evadedSlot || exDodge || thunderDodge) {
+              const avoidLeft = slotIdx === evadedSlot || exDodge || thunderDodge ? 0 : tacticsExAvoidLeftNow(slotIdx);
+              const avoidDodge = avoidLeft > 0;
+              if (avoidDodge) {
+                commitTacticsExState(spendTacticsExAvoid(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now));
+                addPopup(avoidLeft > 1 ? `👻 完全回避！ のこり${avoidLeft - 1}回` : '👻 完全回避！ これで最後', 'hero', 'text-violet-200 font-black text-lg drop-shadow-md', undefined, slotIdx);
+                pushBattleLog(`👻 ${battleActorName(slotIdx)}が完全回避した${avoidLeft > 1 ? `（のこり${avoidLeft - 1}回）` : '（使い切った）'}`, 'ally');
+              }
+              if (slotIdx === evadedSlot || exDodge || thunderDodge || avoidDodge) {
                 evadedName = tacticsTargetName(units, slotIdx);
                 slotFx[slotIdx] = {
                   evade: true
@@ -74403,6 +74705,7 @@ function MonsterHeroGame() {
       pushBattleLog(`🎁 プレゼントの中身: ${presentNote}`, 'ally');
       addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${tacticsExPresentKindText(roll.kinds[0], def.present, def.turns)}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
     }
+    if (def.partyHealRate > 0) tacticsRateHeal(def.partyHealRate, def.partyHealRate, false);
     if (def.effect === 'pandoraBox') [PANDORA_DEVIL_IMG, PANDORA_ANGEL_IMG].forEach(u => {
       try {
         const im = new Image();
@@ -74631,7 +74934,7 @@ function MonsterHeroGame() {
             comboDmgBonus: getPermaBuff('comboDmgPct'),
             critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
             kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-            guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit'),
+            guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx),
             rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus),
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
@@ -74831,7 +75134,7 @@ function MonsterHeroGame() {
           comboDmgBonus: getPermaBuff('comboDmgPct'),
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit'),
+          guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx),
           rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0)) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
@@ -74889,6 +75192,10 @@ function MonsterHeroGame() {
               addPopup(`🎩 ガッツ +${refund}`, 'guts', 'text-violet-200 text-base font-bold drop-shadow-md');
             }
           }
+        }
+        if (finalD > 0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled && tacticsExConfusesOnHit(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now)) {
+          writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
+          addPopup(`🌀 乱心！ 敵は${ENEMY_CONFUSE_TURNS}ターン惑わされる`, 'enemy', 'text-violet-300 text-lg font-black drop-shadow-md');
         }
         if (card.type === 'unique') {
           if (card.monId === 'Ham') {
@@ -76059,6 +76366,7 @@ function MonsterHeroGame() {
     setWaveDistDamage([0, 0, 0, 0]);
     setWaveBuffs({});
     resetFateWheel();
+    resetEnemyConfuse();
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   useEffect(() => {
@@ -76262,6 +76570,7 @@ function MonsterHeroGame() {
     writeNextTurnBuffs({});
     resetTrickStart();
     resetFateWheel();
+    resetEnemyConfuse();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -76472,6 +76781,7 @@ function MonsterHeroGame() {
     writeNextTurnBuffs({});
     resetTrickStart();
     resetFateWheel();
+    resetEnemyConfuse();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -76561,6 +76871,7 @@ function MonsterHeroGame() {
     writeNextTurnBuffs({});
     resetTrickStart();
     resetFateWheel();
+    resetEnemyConfuse();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -88472,6 +88783,7 @@ function MonsterHeroGame() {
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
       fateWheelView: fateWheelView,
+      enemyConfuseTurns: enemyConfuseTurns,
       tacticsExTurnUsed: tacticsExTurnUsed,
       passTacticsTurn: passTacticsTurn,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
