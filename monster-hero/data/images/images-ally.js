@@ -189,7 +189,7 @@ const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f67
 const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
-// 血統のid(MONSTER_LINEAGES)との対応は data/lineages.js の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
+// 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
 const LINEAGE_ICON_ARC = "images/lineage-icons/arc.png?v=4f256c2605d5";
 const LINEAGE_ICON_ARROWHEAD = "images/lineage-icons/arrowhead.png?v=b7f1fb78b532";
 const LINEAGE_ICON_CENTAUR = "images/lineage-icons/centaur.png?v=2955c68a245b";
@@ -227,3 +227,27 @@ const LINEAGE_ICON_UNDINE = "images/lineage-icons/undine.png?v=9728d3a8bbe7";
 const LINEAGE_ICON_WORM = "images/lineage-icons/worm.png?v=3b39e38ca672";
 const LINEAGE_ICON_YGGDRASIL = "images/lineage-icons/yggdrasil.png?v=612ee0b767e7";
 const LINEAGE_ICON_ZAN = "images/lineage-icons/zan.png?v=be0f440b9156";
+
+// ---------- 血統のアイコン(エンブレム) ----------
+// 血統のid(data/lineages.js の MONSTER_LINEAGES)→ 血統別のアイコンの画像(上の LINEAGE_ICON_*)。
+// 2026-10-05・ユーザー提供。まだ画面では使っていない(ここは対応表だけ。どこへ出すかはこれから決める)。
+// ★ファイル名の綴りが血統のidと違うもの: tiger=liger / ham=hamu / monol=monolith / ark=arc / unknown=raremon(「？」のアイコン)
+// ★ゲームにまだ無い血統用の画像(naga・nendoro・lord・dino ほか)は、血統を足すときにここへ1行足して使う。
+const MONSTER_LINEAGE_ICONS = Object.freeze({
+  mocchi: LINEAGE_ICON_MOCCHI,
+  suezo: LINEAGE_ICON_SUEZO,
+  golem: LINEAGE_ICON_GOLEM,
+  tiger: LINEAGE_ICON_LIGER,
+  ham: LINEAGE_ICON_HAMU,
+  pixie: LINEAGE_ICON_PIXIE,
+  monol: LINEAGE_ICON_MONOLITH,
+  zan: LINEAGE_ICON_ZAN,
+  ark: LINEAGE_ICON_ARC,
+  undine: LINEAGE_ICON_UNDINE,
+  yggdrasil: LINEAGE_ICON_YGGDRASIL,
+  dragon: LINEAGE_ICON_DRAGON,
+  joker: LINEAGE_ICON_JOKER,
+  plant: LINEAGE_ICON_PLANT,
+  gel: LINEAGE_ICON_GEL,
+  unknown: LINEAGE_ICON_RAREMON,
+});
