@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0c66a5fc56123041
+// generated-sha256: d3ce9a10ed471aa7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 20:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 23:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21502,6 +21502,18 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'thunder',
     conditions: Object.freeze(['notActive']),
   }),
+  // ★2026-10-05 ユーザー指示(プラントのEX)。名前は「緑のめぐみ」。「5ターンの間、味方全員、力10%、丈夫さ10%、
+  //   ライフ自動回復+10%、ガッツ自動回復+10%」。回数はラン5回(ユーザー選択)。カードとの併用は指定が無かったので「併用できる」。
+  //   力・丈夫さは+10%(切り捨て)、自動回復は「いまの率 + 10%」(ガッツ全開っちーと同じく固定値で足す)。味方全員が対象
+  Plant: Object.freeze({
+    id: 'plant_green_blessing',
+    name: '緑のめぐみ',
+    useNote: '5ターン 味方全員 力・丈夫さ+10%・自動回復+10%',
+    desc: '5ターンのあいだ、味方全員が緑の力に包まれる。\n・味方全員のちから・丈夫さが+10%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の10%ぶん多くなる\n・使った子が倒れても効果は続く',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    partyBoost: Object.freeze({ statRate: 0.1, hpRegen: 0.1, gutsRegen: 0.1 }),
+    effect: 'partyBoost',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -21567,7 +21579,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -21627,6 +21639,8 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    partyBoost: raw.partyBoost && typeof raw.partyBoost === 'object'
+      ? { statRate: Math.max(0, Number(raw.partyBoost.statRate) || 0), hpRegen: Math.max(0, Number(raw.partyBoost.hpRegen) || 0), gutsRegen: Math.max(0, Number(raw.partyBoost.gutsRegen) || 0) } : null,
     thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0
       ? { chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)), dmg: Math.max(0, Number(raw.thunder.dmg) || 0), crit: Math.max(0, Number(raw.thunder.crit) || 0), comboRate: Math.max(0, Number(raw.thunder.comboRate) || 0), dodge: Math.max(0, Number(raw.thunder.dodge) || 0), regenHp: Math.max(0, Number(raw.thunder.regenHp) || 0), regenGuts: Math.max(0, Number(raw.thunder.regenGuts) || 0) } : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
@@ -21784,6 +21798,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
       pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
       thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,
+      partyBoostCfg: def.partyBoost ? { ...def.partyBoost } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -22140,7 +22155,32 @@ const recordTacticsExDodge = (state, units, slot, now) => {
   const mine = safe.effects[slot];
   return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, dodges: tacticsSafeInt(mine.dodges, 0) + 1 } } };
 };
+// 緑のめぐみ(partyBoost)が効いているとき、味方全員のちから・丈夫さへ上乗せする倍率(+statRate)。効いていなければ 0
+const tacticsExPartyStatRate = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// 緑のめぐみのターン終わりの自動回復(味方全員へ足す率)。kind … 'hp' か 'guts'
+const tacticsExPartyBoostRegenRate = (state, now, kind = 'hp') => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && (kind === 'guts' ? e.partyBoostCfg.gutsRegen : e.partyBoostCfg.hpRegen));
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
+  const own = applyTacticsExOwnStats(unit, state, slot, now);
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  return party > 0 ? { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)), def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) } : own;
+};
+const applyTacticsExOwnStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
   if (kind === 'allIn') {
@@ -39146,10 +39186,12 @@ function MonsterHeroGame() {
     let units = alive.units, hp = alive.hp, guts = alive.guts;
     const live = tacticsExLiveRef.current;
     // ★世界樹の守りは味方全員のライフを上限の20%ぶん多く回復する(効いている子の分を足し合わせる)
-    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) : 0;
+    // ★プラントの緑のめぐみは、味方全員のライフ・ガッツの自動回復へ10%ずつ足す
+    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) + tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'hp') : 0;
+    const partyGutsBoost = live.enabled ? tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'guts') : 0;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
       const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
-      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts') + partyGutsBoost;
       if (hpBoost + partyHpBoost <= 0 && gutsBoost <= 0) return;
       const extra = rateHealTacticsAt(units, slotIdx, hpBoost + partyHpBoost, gutsBoost);
       units = extra.units; hp += extra.hp; guts += extra.guts;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 731f0b65aa723e1b
+// source-sha256: 4c607660741d7ae7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 20:08";
+const BUILD_DATE = "2026-10-05 23:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33863,6 +33863,23 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'thunder',
     conditions: Object.freeze(['notActive'])
   }),
+  Plant: Object.freeze({
+    id: 'plant_green_blessing',
+    name: '緑のめぐみ',
+    useNote: '5ターン 味方全員 力・丈夫さ+10%・自動回復+10%',
+    desc: '5ターンのあいだ、味方全員が緑の力に包まれる。\n・味方全員のちから・丈夫さが+10%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の10%ぶん多くなる\n・使った子が倒れても効果は続く',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 5,
+    partyBoost: Object.freeze({
+      statRate: 0.1,
+      hpRegen: 0.1,
+      gutsRegen: 0.1
+    }),
+    effect: 'partyBoost'
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -33934,7 +33951,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -33992,6 +34009,11 @@ const normalizeTacticsExDef = raw => {
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    partyBoost: raw.partyBoost && typeof raw.partyBoost === 'object' ? {
+      statRate: Math.max(0, Number(raw.partyBoost.statRate) || 0),
+      hpRegen: Math.max(0, Number(raw.partyBoost.hpRegen) || 0),
+      gutsRegen: Math.max(0, Number(raw.partyBoost.gutsRegen) || 0)
+    } : null,
     thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0 ? {
       chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)),
       dmg: Math.max(0, Number(raw.thunder.dmg) || 0),
@@ -34261,6 +34283,9 @@ const applyTacticsExUse = (state, {
           ...def.thunder
         } : null,
         thunder: 0,
+        partyBoostCfg: def.partyBoost ? {
+          ...def.partyBoost
+        } : null,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -34784,7 +34809,34 @@ const recordTacticsExDodge = (state, units, slot, now) => {
     }
   };
 };
+const tacticsExPartyStatRate = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const tacticsExPartyBoostRegenRate = (state, now, kind = 'hp') => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && (kind === 'guts' ? e.partyBoostCfg.gutsRegen : e.partyBoostCfg.hpRegen));
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
+  const own = applyTacticsExOwnStats(unit, state, slot, now);
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  return party > 0 ? {
+    ...own,
+    atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)),
+    def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party))
+  } : own;
+};
+const applyTacticsExOwnStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
   if (kind === 'allIn') {
@@ -62419,10 +62471,11 @@ function MonsterHeroGame() {
       hp = alive.hp,
       guts = alive.guts;
     const live = tacticsExLiveRef.current;
-    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) : 0;
+    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) + tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'hp') : 0;
+    const partyGutsBoost = live.enabled ? tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'guts') : 0;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
       const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
-      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts') + partyGutsBoost;
       if (hpBoost + partyHpBoost <= 0 && gutsBoost <= 0) return;
       const extra = rateHealTacticsAt(units, slotIdx, hpBoost + partyHpBoost, gutsBoost);
       units = extra.units;

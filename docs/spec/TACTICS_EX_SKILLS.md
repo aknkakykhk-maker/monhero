@@ -61,6 +61,7 @@
 | ミーア（`Mia`） | オン・ステージ！ | ラン3回 | 併用できる | 使ったターンから4ターン | `stage`（`cardBonus`・`voltage`） |
 | スネグーラチカ（`Snegurochka`） | クリスマスプレゼント | **各WAVE1回** | 併用できる | 使ったターンから2ターン（持続のある中身だけ） | `present`（`usesPerWave`・`present`） |
 | パンドラ（`Pandora`） | パンドラの箱 | ラン3回 | 併用できる | 使ったターンから3ターン | `pandoraBox` |
+| プラント（`Plant`） | 緑のめぐみ | ラン5回 | 併用できる | 使ったターンから5ターン（WAVEが変わると切れる） | `partyBoost`（`partyBoost:{statRate,hpRegen,gutsRegen}`。力・丈夫さ＝`applyTacticsExStats` の味方全員ぶん、自動回復＝`tacticsExPartyBoostRegenRate`） |
 | ライガー（`Tiger`） | 雷狼影 | ラン5回 | 併用できる | 使ったターンから合計6ターン（ため3＋雷纏3。WAVEが変わると切れる） | `thunder`（`thunder:{chargeTurns,dmg,crit,comboRate,dodge,regenHp,regenGuts}`） |
 | ウンディーネ（`Undine`） | 生命の泉 | ラン5回 | 併用できる | 使ったターンから3ターン（ライフ上限アップのあいだ） | `lifeSpring`（`target:'ally'`） |
 | ヤオビクニ（`Yaobikuni`） | 悠久の刻 | ラン2回 | 併用できる | 発動ターン | `timeStop` |
