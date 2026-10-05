@@ -227,8 +227,29 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('詳細を閉じると編成画面に戻り、選んだ状態は変わらない', (await page.locator('[data-raid-jack-prep]').count()) === 1 && (await page.locator('[data-raid-hero]').first().getAttribute('class')) === heroBefore && !(await page.locator('[data-raid-prep-start]').isDisabled()));
     posts.length = 0;
     await page.locator('[data-raid-prep-start]').click();
+    // 通常バトルと同じ配置画面で、勇者モン→供モンの順に、距離(立ち位置)を自分で選ぶ(2026-10-05・「勇者モンの距離が固定になってる」)
+    await page.locator('[data-ph-range]').first().waitFor({ timeout: 20000 });
+    check('始める前に配置画面(通常バトルと同じ)が出る', /配置場所を決定せよ/.test(await page.locator('body').innerText()));
+    check('回数は、配置のあいだは減らない(まだ戦闘を始めていない)', await page.evaluate(() => { const st = JSON.parse(localStorage.getItem('mh_raid_jack_v1') || '{}'); return !st.a || !st.a.used; }));
+    check('4つの距離が選べる(零・近・中・遠)', await page.locator('[data-ph-range]').count() === 4 && await page.locator('[data-ph-range][data-ph-on]').count() === 4);
+    // 配置画面から編成へ戻れる(選び直し)。戻っても回数は減らず、もう一度始めると配置からやり直せる
+    await page.getByRole('button', { name: /モンスターを選び直す/ }).click();
+    await page.locator('[data-raid-jack-prep]').waitFor({ timeout: 10000 });
+    check('配置画面から編成へ戻れる(選んだ編成はそのまま)', !(await page.locator('[data-raid-prep-start]').isDisabled()));
+    await page.locator('[data-raid-prep-start]').click();
+    await page.locator('[data-ph-range]').first().waitFor({ timeout: 20000 });
+    // 勇者モンは「中距離(2番目の枠=添字2)」へ置く。固定の最前列ではなく、選んだ場所になる
+    await page.locator('[data-ph-range="2"]').click();
+    const afterHero = await page.locator('body').innerText();
+    check('勇者モンを置いたあと、供モンの配置になる(置いた枠は選べない)', await page.locator('[data-ph-range="2"]').isDisabled() && await page.locator('[data-ph-range][data-ph-on]').count() === 3, afterHero.replace(/\s+/g, ' ').slice(0, 80));
+    await page.locator('[data-ph-range="0"]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
-    check('編成からジャック戦が始まる', true);
+    check('編成と配置からジャック戦が始まる', true);
+    // 戦闘の盤面で、勇者モンが選んだ距離(中=添字2)にいて、供モンが零距離(添字0)にいる
+    await page.waitForSelector('[data-slot-index]', { timeout: 30000 });
+    const board = await page.evaluate(() => [...document.querySelectorAll('[data-slot-index]')].map((el) => ({ i: el.getAttribute('data-slot-index'), t: (el.innerText || '').replace(/\s+/g, ' ').slice(0, 40), img: !!el.querySelector('img') })));
+    console.log('INFO board', JSON.stringify(board));
+    check('戦闘の盤面で、置いた距離(零・中)に子がいて、置いていない距離(近・遠)は空いている', ['0', '2'].every((i) => board.some((b) => b.i === i && b.img)) && ['1', '3'].every((i) => !board.some((b) => b.i === i && b.img)), JSON.stringify(board));
     // レイドバトルは、みんなが削った分を引き継ぐ(子爵 3,200,000 のうち 500,000 が削れている → 2,700,000 から)
     await page.waitForFunction(() => /2,700,000\s*\/\s*3,200,000/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
     check('A: 敵ライフが共有の残り(2,700,000 / 3,200,000)から始まる', /2,700,000\s*\/\s*3,200,000/.test(await page.locator('body').innerText()));
