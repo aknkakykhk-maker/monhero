@@ -238,7 +238,8 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState({ a: 0, b: 0 });
   const [state, setState] = useState(() => raidJackDefaultState());
-  const [totals, setTotals] = useState(undefined);       // undefined=読み込み中 / null=準備中 / object
+  const [totals, setTotalsState] = useState(() => raidJackCachedTotals(eventId));   // undefined=読み込み中 / null=準備中 / object(前回取れた値から描き始める)
+  const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
   const [rows, setRows] = useState(undefined);           // 選択中のランキング(A=その段階の貢献 / B=累計)
   const [self, setSelf] = useState(null);
   const [myId, setMyId] = useState(null);
@@ -257,6 +258,8 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
   // 読み込み(サーバーの合計・自分の状態・ランキング)。タブや段階を変えるたびに、そのぶんだけ読み直す
   useEffect(() => {
     let alive = true;
+    // 段階の合計は、報酬の受け取りなどを待たずに先に取り始める(待たせるほど、男爵・満タンのまま見える時間が延びる)
+    const totalsPromise = sbFetchRaidJackTierTotals(eventId);
     (async () => {
       let loaded = await raidJackLoadState();
       if (!alive) return;
@@ -269,7 +272,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
-      const t = await sbFetchRaidJackTierTotals(eventId);
+      const t = await totalsPromise;
       if (!alive) return;
       setTotals(t);
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
@@ -356,7 +359,9 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
 
       <div className={`${SCREEN_LIST_CLASS} space-y-2`}>
-        {tiers.map((t, i) => {
+        {/* 初めて読み込むあいだは、段階もライフも分からないので一覧を出さない(出すと男爵・満タンから本当の姿へ切り替わって見える) */}
+        {tab === 'a' && totals === undefined && <div data-raid-jack-loading className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>}
+        {!(tab === 'a' && totals === undefined) && tiers.map((t, i) => {
           const isOpen = unlocked(i);
           const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
           const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);
