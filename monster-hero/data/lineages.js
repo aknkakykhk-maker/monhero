@@ -41,6 +41,8 @@ const MONSTER_LINEAGES = {
   unknown: { id:'unknown', name:'？？？', rare:true },
 };
 
+// 血統別のアイコンの対応表(MONSTER_LINEAGE_ICONS)は、画像の定数と同じ data/images/images-ally.js にある(ここだけ読み込んだ検査でも落ちないように)。
+
 // ---------- モンスターごとの血統 ----------
 // キーは ALL_PLAYER_MONSTERS のid。main が主血統、sub が副血統。
 const MONSTER_LINEAGE_MAP = {
