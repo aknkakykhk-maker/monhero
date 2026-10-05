@@ -118,6 +118,11 @@ const sbFetchRaidJackTierTotals = async (eventId) => {
   });
   return out;
 };
+// 前回取れた段階の合計(HOMEとレイド画面で共有。画面を出入りしても残る)。
+// 取れていないあいだを「男爵・ライフ満タン」として描くと、通信が遅いとき、あとから本当の段階・ライフへ切り替わって見える(2026-10-05)
+let raidJackTotalsCache = { eventId: null, totals: undefined };
+const raidJackCachedTotals = (eventId) => (raidJackTotalsCache.eventId === eventId ? raidJackTotalsCache.totals : undefined);
+const raidJackRememberTotals = (eventId, totals) => { if (totals) raidJackTotalsCache = { eventId, totals }; };
 // A: 段階ごとの貢献ランキング(上位 limit)
 const sbFetchRaidJackContributions = async (tier, limit = 100, eventId) => {
   const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);

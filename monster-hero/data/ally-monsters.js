@@ -51,7 +51,7 @@ const ALL_PLAYER_MONSTERS = {
   // 自動回復3/ターンで消費68)。他の11種は1ターン目に撃てるので、これはゴーレムだけの
   // 「重い」性格として意図した値。tools/golem-balance-check.js が実測して表示する。
   Golem:  { id:'Golem',  name:"ゴーレム", emoji:"🗿", imgUrl:GOLEM_IMG, iconUrl:GOLEM_ICON, faceIconUrl:GOLEM_FACE_ICON, atkMotion:'default', trait:"怪力", traitDesc:"勇者モン選択時：与ダメージ20%増加", baseHp:600, baseGuts:70, baseAtk:220, baseDef:150, plusStats:{hp:400,atk:80,def:0,guts:0}, distAptitude:['A','E','G','G'], unique:{name:"合掌",icon:GOLEM_ICON,monId:"Golem",baseMult:3.2,baseGuts:68,evoLevel:0,names:["合掌","フライングプレス","竜巻アタック","ぐるぐるアタック","大岩落とし","隕石落とし","超竜巻アタック","超ぐるぐるアタック","銀河破壊"],effectDesc:"闘志：味方の与ダメージ7.5%アップ(永続)"}},
-  Tiger:  { id:'Tiger',  name:"ライガー", emoji:"🐺", imgUrl:TIGER_IMG, iconUrl:TIGER_ICON, faceIconUrl:TIGER_FACE_ICON, atkMotion:'default', trait:"俊足", traitDesc:"勇者モン選択時：50%の確率で攻撃を回避", baseHp:400, baseGuts:110, baseAtk:150, baseDef:80, plusStats:{hp:200,atk:50,def:50,guts:0}, distAptitude:['C','B','D','D'], unique:{name:"雷撃",icon:TIGER_ICON,monId:"Tiger",baseMult:2.3,baseGuts:46,evoLevel:0,names:["雷撃","冷気弾","超雷撃","ブリザード","突き刺し","落雷共鳴","かがやきいき","ライジングブースト","氷雷突殺"],effectDesc:"ロックオン：次ターン会心確定＆会心率+2%・会心ダメージ+2%(永続/重複可/次のターンから)"}},
+  Tiger:  { id:'Tiger',  name:"ライガー", emoji:"🐺", imgUrl:TIGER_IMG, iconUrl:TIGER_ICON, faceIconUrl:TIGER_FACE_ICON, atkMotion:'default', trait:"俊足", traitDesc:"勇者モン選択時：50%の確率で攻撃を回避", baseHp:400, baseGuts:110, baseAtk:150, baseDef:80, plusStats:{hp:200,atk:50,def:50,guts:0}, distAptitude:['C','B','D','D'], unique:{name:"雷撃",icon:TIGER_ICON,monId:"Tiger",baseMult:2.3,baseGuts:46,evoLevel:0,names:["雷撃","冷気弾","超雷撃","ブリザード","突き刺し","落雷共鳴","かがやきいき","ライジングブースト","氷雷突殺"],effectDesc:"狩撃：次ターン会心確定＆会心率+2%・会心ダメージ+2%(永続/重複可/次のターンから)"}},
   Ham:    { id:'Ham',    name:"ハム", emoji:"🐹", imgUrl:HAM_IMG, iconUrl:HAM_ICON, faceIconUrl:HAM_FACE_ICON, atkMotion:'default', trait:"連続攻撃", traitDesc:"勇者モン選択時：同時使用可能枚数+1", baseHp:350, baseGuts:120, baseAtk:110, baseDef:70, plusStats:{hp:150,atk:60,def:0,guts:20}, distAptitude:['B','B','D','D'], unique:{name:"おなら",icon:HAM_ICON,monId:"Ham",baseMult:2.0,baseGuts:40,evoLevel:0,names:["おなら","瞬撃","大放屁","暗けい","フラフラダンス","超放屁","超暗けい","デンプシーロール","マジワンツー"],effectDesc:"スタン：このターン、敵を行動不能にする"}},
   Pixie:  { id:'Pixie',  name:"ピクシー", emoji:"🧚", imgUrl:PIXIE_IMG, iconUrl:PIXIE_ICON, faceIconUrl:PIXIE_FACE_ICON, atkMotion:'default', trait:"魔力開放", traitDesc:"勇者モン選択時：固有技のダメージが2倍", baseHp:250, baseGuts:170, baseAtk:160, baseDef:50, plusStats:{hp:100,atk:20,def:0,guts:60}, distAptitude:['G','F','B','A'], unique:{name:"バン",icon:PIXIE_ICON,monId:"Pixie",baseMult:2.1,baseGuts:42,evoLevel:0,names:["バン","ギガレイ","ギガサンダー","ビッグバン","ギガライトニング","コズミッグバン","テラレイ","テラバン","ドラゴ・ノヴァ"],effectDesc:"魔法空間：次ターン、カード消費ガッツ0"}},
   Mia:    { id:'Mia',    name:"ミーア", emoji:"🧚", imgUrl:MIA_IMG, iconUrl:MIA_ICON, faceIconUrl:MIA_FACE_ICON, atkMotion:'miaSongNotes', trait:"魔力開放", traitDesc:"勇者モン選択時：固有技のダメージが2倍", baseHp:300, baseGuts:180, baseAtk:175, baseDef:60, plusStats:{hp:120,atk:30,def:10,guts:65}, distAptitude:['G','C','A','B'], unique:{name:"ボイスバン",icon:MIA_ICON,monId:"Mia",baseMult:2.1,baseGuts:42,evoLevel:0,names:["ボイスバン","ギガメロディ","ギガサンダー","ビッグバンライブ","ギガライトニング","コズミックライブ","テラメロディ","テラボイスバン","ノヴァ・フィナーレ"],effectDesc:"魔法空間：次ターン、カード消費ガッツ0"}},
@@ -118,7 +118,8 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:GHOST_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'ghost', sub:'ghost' }),
     trait:"トリックスタート",
     traitDesc:"勇者モン選択時：WAVEの1ターン目から3ターン毎に、ちから+20%・丈夫さ+20%・毎ターンライフ5%回復をそれぞれ50%で付与(重複あり・そのWAVEのあいだ)。攻撃が当たると、その技の消費ガッツの半分を回復",
-    baseHp:380, baseGuts:150, baseAtk:150, baseDef:50,
+    // 能力値は 2026-10-05 にユーザーが1つずつ決め直した(最初の案は 380/150/150/50)
+    baseHp:450, baseGuts:150, baseAtk:130, baseDef:50,
     plusStats:Object.freeze({hp:150,atk:35,def:10,guts:45}),
     distAptitude:Object.freeze(['C','C','A','C']),
     draftUniqueNames:Object.freeze(["連続カード","ドクロビーム","大きなおとしもの","びっくりドクロ","スリーセブン","Woフォーチュン","RSF","運命のコイン","グランドイリュージョン"]) }),
@@ -127,7 +128,8 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:SPOOKY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'ghost', sub:'unknown' }),
     trait:"トリックスタート",
     traitDesc:"勇者モン選択時：WAVEの1ターン目から3ターン毎に、ちから+20%・丈夫さ+20%・毎ターンライフ5%回復をそれぞれ50%で付与(重複あり・そのWAVEのあいだ)。攻撃が当たると、その技の消費ガッツの半分を回復",
-    baseHp:400, baseGuts:160, baseAtk:165, baseDef:40,
+    // 能力値は 2026-10-05 にユーザーが1つずつ決め直した(最初の案は 400/160/165/40)
+    baseHp:510, baseGuts:160, baseAtk:150, baseDef:55,
     plusStats:Object.freeze({hp:160,atk:40,def:5,guts:50}),
     distAptitude:Object.freeze(['B','D','B','A']),
     draftUniqueNames:Object.freeze(["連続カード","ドクロビーム","大きなおとしもの","びっくりドクロ","スリーセブン","Woフォーチュン","RSF","運命のコイン","グランドイリュージョン"]) }),

@@ -1210,6 +1210,43 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'thunder',
     conditions: Object.freeze(['notActive']),
   }),
+  // ★2026-10-05 ユーザー指示(プラントのEX)。名前は「緑のめぐみ」。「5ターンの間、味方全員、力10%、丈夫さ10%、
+  //   ライフ自動回復+10%、ガッツ自動回復+10%」。回数はラン5回(ユーザー選択)。カードとの併用は指定が無かったので「併用できる」。
+  //   力・丈夫さは+10%(切り捨て)、自動回復は「いまの率 + 10%」(ガッツ全開っちーと同じく固定値で足す)。味方全員が対象
+  Plant: Object.freeze({
+    id: 'plant_green_blessing',
+    name: '緑のめぐみ',
+    useNote: '5ターン 味方全員 力・丈夫さ+10%・自動回復+10%',
+    desc: '5ターンのあいだ、味方全員が緑の力に包まれる。\n・味方全員のちから・丈夫さが+10%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の10%ぶん多くなる\n・使った子が倒れても効果は続く',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    partyBoost: Object.freeze({ statRate: 0.1, hpRegen: 0.1, gutsRegen: 0.1 }),
+    effect: 'partyBoost',
+  }),
+  // ★2026-10-05 ユーザー選択(オボロゲソウのEX)。案「おぼろ返し」・ラン5回(ターン数は案のとおり3ターン)。
+  //   特性「吸収」(被ダメージをライフとガッツへ変える)の味方全員版: 3ターンのあいだ、味方が敵の攻撃で受けたダメージの
+  //   50%を、受けた子のライフへすぐ回復し、ガッツも受けたダメージの5%ぶん回復する。カードとの併用は指定が無かったので「併用できる」。
+  //   倒れた子には回復しない(ダメージで倒れたら、そのまま)
+  Oboro: Object.freeze({
+    id: 'oboro_misty_return',
+    name: 'おぼろ返し',
+    useNote: '3ターン 受けたダメージの50%がライフに戻る',
+    desc: '3ターンのあいだ、受けたダメージを回復に変える。\n・味方が敵の攻撃で受けたダメージの50%を、受けた子のライフへすぐ回復する\n・ガッツも、受けたダメージの5%ぶん回復する\n・倒れた子には回復しない\n・使った子が倒れても効果は続く',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    damageBack: Object.freeze({ hpRate: 0.5, gutsRate: 0.05 }),
+    effect: 'damageBack',
+  }),
+  // ★2026-10-05 ユーザー指定(スエゾーのEX)。名前は「サイコロックオン」・ラン3回(ユーザー選択)・併用できる。
+  //   「効果時間5ターン。敵の距離を固定(行動で移動が出た場合は行動なし)。効果ターン、相手の与ダメ30%ダウン・相手の被ダメ30%アップ」。
+  //   敵の距離移動の封じ方は、絶氷の楔(iceLockTurns)と同じ「移動できない！」(その移動は何もしない)に合わせる
+  Suezo: Object.freeze({
+    id: 'suezo_psycho_lock_on',
+    name: 'サイコロックオン',
+    useNote: '5ターン 敵の距離を固定・敵の与ダメ−30%・被ダメ+30%',
+    desc: '5ターンのあいだ、念力で敵を縛りつける。\n・敵の距離を固定する（敵が「移動」を選んだときは、何もしない）\n・敵の与ダメージが30%下がる\n・敵の被ダメージが30%上がる（味方の攻撃が通りやすくなる）\n・使った子が倒れても効果は続く',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    psychoLock: Object.freeze({ enemyDmgDown: 0.3, enemyTakenUp: 0.3 }),
+    effect: 'psychoLock',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1275,7 +1312,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1335,6 +1372,12 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
+      ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
+    damageBack: raw.damageBack && typeof raw.damageBack === 'object'
+      ? { hpRate: Math.max(0, Number(raw.damageBack.hpRate) || 0), gutsRate: Math.max(0, Number(raw.damageBack.gutsRate) || 0) } : null,
+    partyBoost: raw.partyBoost && typeof raw.partyBoost === 'object'
+      ? { statRate: Math.max(0, Number(raw.partyBoost.statRate) || 0), hpRegen: Math.max(0, Number(raw.partyBoost.hpRegen) || 0), gutsRegen: Math.max(0, Number(raw.partyBoost.gutsRegen) || 0) } : null,
     thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0
       ? { chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)), dmg: Math.max(0, Number(raw.thunder.dmg) || 0), crit: Math.max(0, Number(raw.thunder.crit) || 0), comboRate: Math.max(0, Number(raw.thunder.comboRate) || 0), dodge: Math.max(0, Number(raw.thunder.dodge) || 0), regenHp: Math.max(0, Number(raw.thunder.regenHp) || 0), regenGuts: Math.max(0, Number(raw.thunder.regenGuts) || 0) } : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
@@ -1492,6 +1535,9 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
       pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
       thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,
+      partyBoostCfg: def.partyBoost ? { ...def.partyBoost } : null,
+      damageBackCfg: def.damageBack ? { ...def.damageBack } : null,
+      psychoLockCfg: def.psychoLock ? { ...def.psychoLock } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1848,7 +1894,54 @@ const recordTacticsExDodge = (state, units, slot, now) => {
   const mine = safe.effects[slot];
   return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, dodges: tacticsSafeInt(mine.dodges, 0) + 1 } } };
 };
+// 緑のめぐみ(partyBoost)が効いているとき、味方全員のちから・丈夫さへ上乗せする倍率(+statRate)。効いていなければ 0
+const tacticsExPartyStatRate = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// サイコロックオン(psychoLock)が効いているか。効いているあいだ、敵は距離を動かせず(移動を選んでも何もしない)、
+// 敵の与ダメージが enemyDmgDown 下がり、敵の被ダメージが enemyTakenUp 上がる。効いていなければ active:false・倍率は変えない
+const tacticsExPsychoLockOf = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'psychoLock' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
+    const down = Number(e.psychoLockCfg && e.psychoLockCfg.enemyDmgDown), up = Number(e.psychoLockCfg && e.psychoLockCfg.enemyTakenUp);
+    return { active: true, enemyDmgMult: Math.min(acc.enemyDmgMult, 1 - (Number.isFinite(down) && down > 0 ? Math.min(0.9, down) : 0)),
+      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0) };
+  }, { active: false, enemyDmgMult: 1, enemyTakenBonus: 0 });
+};
+// おぼろ返し(damageBack)が効いているとき、味方が敵の攻撃で受けたダメージのうち、ライフ・ガッツへ回復する割合。効いていなければ 0
+const tacticsExDamageBackRates = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'damageBack' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
+    const hp = Number(e.damageBackCfg && e.damageBackCfg.hpRate), guts = Number(e.damageBackCfg && e.damageBackCfg.gutsRate);
+    return { hp: acc.hp + (Number.isFinite(hp) && hp > 0 ? hp : 0), guts: acc.guts + (Number.isFinite(guts) && guts > 0 ? guts : 0) };
+  }, { hp: 0, guts: 0 });
+};
+// 緑のめぐみのターン終わりの自動回復(味方全員へ足す率)。kind … 'hp' か 'guts'
+const tacticsExPartyBoostRegenRate = (state, now, kind = 'hp') => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && (kind === 'guts' ? e.partyBoostCfg.gutsRegen : e.partyBoostCfg.hpRegen));
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
+  const own = applyTacticsExOwnStats(unit, state, slot, now);
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  return party > 0 ? { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)), def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) } : own;
+};
+const applyTacticsExOwnStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
   if (kind === 'allIn') {

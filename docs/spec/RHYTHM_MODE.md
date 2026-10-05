@@ -8305,7 +8305,7 @@ songId `wrath_of_the_thorn_king` / bgmTrackId `melo_wrath_of_the_thorn_king` / �
 ## 「Monster」の全編版と short ver. をモンヒロビートへ足した（2026-10-05）
 
 ユーザー指示（mp4 2本「Monster」とジャケット1枚。1本目＝全編 4分25秒、2本目＝short 1分51秒）。
-songId `monster`（全編・副題 `full ver.`）/ `monster_short`（副題 `short ver.`）、bgmTrackId `melo_monster` / `melo_monster_short`。
+songId `monster`（全編・副題なし。2026-10-05 ユーザー指摘「曲名がちがう / fullはいらない」で full ver. を外した）/ `monster_short`（副題 `short ver.`）、bgmTrackId `melo_monster` / `melo_monster_short`。
 譜面は MHB CHART ENGINE Rev.28。曲えらびは `RHYTHM_SONG_VERSION_GROUPS` で1行にまとめ、先頭（行を押したとき）は全編版。
 
 - **ジャケット**: 2つの版で同じ絵。細かい絵で quality 80 だと 101KB になったので、quality 74 で **87KB**
