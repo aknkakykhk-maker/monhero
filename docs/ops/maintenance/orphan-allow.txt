@@ -1,3 +1,5 @@
 # 孤立画像の候補から外す、意図して残している画像。1行1つ、「パス(*が使える) # 理由」。
 # パスは monster-hero/images からの相対。理由を書かずに足さない。
 assistant/*.PNG   # 助手の全身の元絵(1536x1024)。顔の切り出し(tools/make-assistant-faces.js)の元で、全身を出す場面が来たときにも使う
+assistant/halloween/*.PNG   # ハロウィン衣装の全身の元絵。顔の切り出し(tools/make-assistant-faces.js)の元で、assistant/*.PNG と同じ扱い
+assistant/halloween/face/*.PNG   # ハロウィン衣装の顔。衣装の定義(imageDir)と表情名から組み立てて読むので、画像の名前そのものはコードに出てこない

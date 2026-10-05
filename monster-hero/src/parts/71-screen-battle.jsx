@@ -167,6 +167,7 @@ const BATTLE_PERF = (() => {
 // (2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」で10体すべてに広げた)
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Kawazumo: 'kawazumo',
+  Pumpkin: 'pumpkin',   // 大王を倒したあとのレイドバトルの敵「ぱんぷきん」(enemy.raidJackPumpkin のときだけ。id は Jack のまま)
   Metalner: 'metalner',
   Inari: 'inari',
   Koinobori: 'koinobori',
@@ -176,6 +177,8 @@ const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Nyarlathotep: 'nyarlathotep',
   Splatter: 'splatter',
   AwakenedMoo: 'awakenedMoo',
+  // イベント・レイドボス「ジャック」(ドクドクと同じネンドロ種。ぴょこぴょこ跳ねる)
+  Jack: 'jack',
 });
 // 技ごとの動きの長さ(ミリ秒)。ここに無い技は今までどおり(通常攻撃 450 / 必殺技 1100)。
 // 戦闘の待ち時間(60-app)もこの値を使うので、CSS の --em-dur / animation の長さと必ずそろえる。
@@ -250,6 +253,21 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     normal:['jab','burst'], sweep:['dash','arc'], rush:['spin','slash'], pierce:['windup','beam'],
     special:['swing','slash'], allout:['rise','aura','💀','rain'], roar:['roar','aura'],
     regen:['heal','sparkle','🩸','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // ジャック(カボチャの大王・イベントのレイドボス): ぴょこぴょこ跳ねる。技ごとの動きと飾り(docs/spec/RAID_BOSS_JACK.md)
+  //   カボチャ張り手 … 腕を振り下ろす(両腕ポーズの絵に切り替わる) / めいどのトリート … 跳んで落ち、お菓子とカボチャが降る
+  //   おばけキッス … 顔が前へ寄り、おばけが飛ぶ / ジャックラッシュ … 連打 / かぼちゃ延髄斬り … 回って斬り落とす
+  //   ハロウィンナイト … 両腕を上げて夜の光を立ちのぼらせる(両腕ポーズ) / おばけパレード … 横へ駆け抜けるおばけの行列
+  jack: { idle:'hop', skills:{
+    normal:['swing','arc','🎃','shoot'], sweep:['lunge',null,'👻','shoot'], rush:['flurry','burst','🎃','shoot'], pierce:['spin','slash'],
+    special:['leap','ring','🍬','rain'], allout:['dash','widebeam','👻','shoot'], roar:['rise','aura','🌙','rise'],
+    regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // ぱんぷきん(大王を倒したあとの小さなジャック・腕のない丸い絵): 技の名前はジャックのまま、動きだけ絵に合わせる。
+  //   カボチャ張り手 … 腕が無いので、体ごと体当たりする(腕を振る動きと、ポーズ絵への切り替えはしない)
+  //   そのほかは、跳ねる・回る・転がる・顔を寄せるなど、腕が無くてもできる動き
+  pumpkin: { idle:'hop', skills:{
+    normal:['lunge','burst','🎃','shoot'], sweep:['lunge',null,'👻','shoot'], rush:['flurry','burst','🎃','shoot'], pierce:['spin','slash'],
+    special:['leap','ring','🍬','rain'], allout:['dash','widebeam','👻','shoot'], roar:['rise','aura','🌙','rise'],
+    regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
   awakenedMoo: { idle:null, skills:{
     normal:['swing','slash'], sweep:['dash','arc'], rush:['flurry','burst'], pierce:['windup','beam'],
@@ -271,6 +289,8 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
   nyarlathotep: { impact:'void' },
   splatter: { impact:'claw' },
   awakenedMoo: { impact:'nova' },
+  jack: { impact:'stamp', mark:'🎃' },
+  pumpkin: { impact:'stamp', mark:'🎃' },
 });
 const TACTICS_ENEMY_NO_STRIKE_SKILLS = Object.freeze(['roar','charge','pierceCharge','regen']);
 // 覚醒ムーの全画面の演出で、技の名前を大きく出す技(2026-09-24 ユーザー指示「技名のカットイン」)
@@ -462,6 +482,12 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
   // ニャルラトホテプ(邪神): 無貌の讃歌=回る魔法陣と光 / 真空魔空弾=魔法陣と十字
   nyarlathotep: { special:[{t:'ring',d:240,r:3.4,flat:.45,rune:true},{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'col',w:120,h:440,d:300,sky:true,soft:true}],
                   allout:[{t:'ring',d:240,r:3.2,flat:.45,rune:true},{t:'blade',a:90,len:340,w:9,d:300},{t:'bits',n:12,shape:'spark',dist:120,d:300},{t:'bits',n:8,shape:'spark',dist:80,d:360}] },
+  // ジャック(カボチャの大王・イベントのレイドボス): めいどのトリート=カボチャの火とお菓子の星が降る / おばけパレード=横切る光とおばけの行列
+  jack:         { special:[{t:'bits',n:14,shape:'star',dist:140,d:280},{t:'bits',n:12,shape:'flame',dist:110,d:330,fall:true},{t:'ring',d:300,r:3.4}],
+                  allout:[{t:'blade',a:0,len:420,w:16,d:240},{t:'bits',n:16,shape:'spark',dist:130,d:260},{t:'wave',d:300},{t:'ring',d:340,r:3.6,flat:.45}] },
+  // ぱんぷきん: ジャックと同じ飾り(めいどのトリート=お菓子の星とカボチャの火 / おばけパレード=おばけの行列)
+  pumpkin:      { special:[{t:'bits',n:14,shape:'star',dist:140,d:280},{t:'bits',n:12,shape:'flame',dist:110,d:330,fall:true},{t:'ring',d:300,r:3.4}],
+                  allout:[{t:'blade',a:0,len:420,w:16,d:240},{t:'bits',n:16,shape:'spark',dist:130,d:260},{t:'wave',d:300},{t:'ring',d:340,r:3.6,flat:.45}] },
   // スプラッター(斧の処刑人): エクスキューション=巨大な斧の一閃と血しぶき / デスエナジー=赤い炎
   splatter:     { special:[{t:'blade',a:-58,len:440,w:16,d:240},{t:'col',w:44,h:440,d:320,sky:true},{t:'bits',n:12,shape:'drop',dist:130,d:340},{t:'ring',d:340,r:3.6}],
                   allout:[{t:'col',w:60,h:400,d:260,flame:true},{t:'bits',n:14,shape:'spark',dist:120,d:300},{t:'ring',d:300,r:3.8,flat:.45}] },
@@ -633,6 +659,19 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
+  // 敵のライフの下に「いまの強化」を1行で出し、タップで内訳を開く。強化が入ったターンは、真ん中の上に数秒だけ帯を出す。
+  // 数字は 35-raid-jack.jsx の raidJackGrowthAt(戦闘本体と同じ定数)から出す。グランドスラム(B)は強化が無いので出さない
+  const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
+  const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
+  const [raidGrowthOpen, setRaidGrowthOpen] = useState(false);
+  const [raidGrowthBanner, setRaidGrowthBanner] = useState(null);
+  useEffect(() => {
+    if (!raidGrowthOn || turnCount < 2) { setRaidGrowthBanner(null); return undefined; }
+    setRaidGrowthBanner({ turn: turnCount, key: `${turnCount}-${Date.now()}` });
+    const timer = setTimeout(() => setRaidGrowthBanner(null), 3200);
+    return () => clearTimeout(timer);
+  }, [raidGrowthOn, turnCount]);
   // 攻撃する子から敵までのずれ(24-battle-fx.jsx の measureAttackAim)。
   // ★描画の前(レイアウト直後)に測るので、最初のコマから敵の向きへ飛ぶ。見た目だけに使う
   const [attackAim, setAttackAim] = useState(null);
@@ -670,7 +709,7 @@ function BattleScreen({
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
-  const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.id] || null) : null;
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id] || null) : null;
   // 必殺技ムービーを持つ敵との戦いに入ったら、読み込みを始めておく(流すのは 60-app が決める)。
   // ★設定で「流さない」にしている人・省エネの軽量表示では読まない(通信量を使わせない)
   const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
@@ -758,6 +797,17 @@ function BattleScreen({
   // 共通の部品で動かす敵(カワズモー以外)の組み合わせ
   const emSet = enemyMotion ? (TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null) : null;
   const emSpec = emSet && enemySkillNow ? (emSet.skills[enemySkillNow] || null) : null;
+  // ジャックの両腕ポーズ絵は、腕が左右へ広がるぶん、同じ枠に収めると本体が幅の約49%(通常絵は約99%)。
+  // 切り替わっても本体の大きさがそろうよう、ポーズは枠いっぱい、通常絵は半分(RAID_JACK_NORMAL_ART_SCALE)で描く(2026-10-04・ユーザー指示)。
+  // 通常絵は枠の真ん中へ、ポーズ絵は本体が下寄りなので少し上へ寄せて、本体の位置もそろえる
+  const JACK_NORMAL_BATTLE_STYLE = { width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, marginLeft:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, marginTop:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%` };
+  const JACK_POSE_BATTLE_STYLE = { width:'100%', height:'100%', marginTop:'-6%' };
+  // 小さなぱんぷきんは、腕の無い丸い絵を、ジャックの通常絵より少し小さく真ん中へ置く(ポーズ絵なし)
+  const PUMPKIN_BATTLE_STYLE = { width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, marginLeft:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, marginTop:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%` };
+  // ジャックは「腕を振る・両腕を上げる・必殺技」のとき、両腕を上げたポーズの絵に切り替わる
+  // ジャックのオーラ: 段階(a1〜a5 / b1〜b5)の数字が大きいほど派手になる。見た目は CSS(data-jack-aura)
+  const jackAuraTier = (enemy?.id === 'Jack' && !enemy.raidJackPumpkin) ? (Number(String(enemy.raidJackTier || '').slice(1)) || 0) : 0;
+  const enemyBossImgSrc = (enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow)) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? { '--em-e': JSON.stringify(emSpec[2]) } : undefined;
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
   // 絵を明るく光らせる板(data-enemy-flash)。同じ絵を明るくした複製を重ね、濃さだけを変える。
@@ -765,7 +815,12 @@ function BattleScreen({
   //   (2026-09-24 ユーザー報告「他にも絶対バグる要因あるからちゃんと見つけてなおして」)。
   //   ふだんは置かない(光るあいだだけ置く)ので、層も増えない
   const enemyFlashOn = !!(enemyMotion && enemy?.imgUrl && (enemySkillNow || enemyHurtNow));
-  const enemyFlashNode = enemyFlashOn ? <img data-enemy-flash src={enemy.imgUrl} alt="" aria-hidden="true" draggable={false}/> : null;
+  // ★ジャックは、本体の絵(通常絵/ポーズ絵)と同じ絵・同じ大きさの指定で重ねる。通常絵を枠いっぱいで重ねると、
+  //   本体(通常絵は半分の大きさ・ポーズ絵は枠いっぱい)と大きさのちがう絵が攻撃のたびに混ざって見える(2026-10-04 ユーザー指摘)
+  const enemyFlashIsJack = enemy?.id === 'Jack';
+  const enemyJackArtStyle = enemy?.raidJackPumpkin ? PUMPKIN_BATTLE_STYLE : (enemyBossImgSrc !== enemy?.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE);
+  const enemyFlashNode = enemyFlashOn ? <img data-enemy-flash src={enemyFlashIsJack ? enemyBossImgSrc : enemy.imgUrl} alt="" aria-hidden="true" draggable={false}
+    style={enemyFlashIsJack ? enemyJackArtStyle : undefined}/> : null;
   // 技の実際の長さ(戦闘の速さを掛けたもの)。CSS の動きは --em-dur を見るので、2倍速・4倍速でも途中で切れない
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? { '--em-dur': `${enemyAttackFx.ms}ms` } : {};
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
@@ -986,7 +1041,7 @@ function BattleScreen({
           ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
+          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
@@ -1076,6 +1131,39 @@ function BattleScreen({
                   (2026-09-24 ユーザー指摘「敵のライフの減り方とかかくつき」) */}
               <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
+            </div>
+            {raidGrowth&&(
+              <button type="button" data-raid-growth-chip onClick={()=>setRaidGrowthOpen(true)} aria-label="レイドバトルのターンごとの強化の内訳を開く"
+                className="mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]">
+                <span className="shrink-0 text-emerald-300">⬆ 強化</span>
+                <span className="shrink-0">全ステ <b className="text-emerald-200">+{raidGrowth.statPct}%</b></span>
+                <span className="shrink-0 text-amber-200">技・アシカ {raidGrowth.levelUps}/{raidGrowth.levelUpMax}</span>
+                <span className="min-w-0 flex-1 truncate text-right text-slate-300">{raidGrowth.nextLevelUpTurn?`次の技強化 ${raidGrowth.nextLevelUpTurn}ターン目`:'技強化は出そろった'}</span>
+                <span className="shrink-0 text-slate-400">詳細›</span>
+              </button>
+            )}
+          </div>
+        )}
+        {/* レイドバトルの強化が入ったターンの帯(数秒で消える。操作の邪魔をしない) */}
+        {raidGrowth&&raidGrowthBanner&&(
+          <div key={raidGrowthBanner.key} data-raid-growth-banner aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
+            <div className="text-[13px] font-black text-emerald-300">⬆ {raidGrowth.turn}ターン目 強化！</div>
+            <div className="mt-0.5 text-[11px] font-black text-white">味方の全ステータス +{raidGrowth.stepPct}%<span className="text-slate-300">(ここまで合計 +{raidGrowth.statPct}%)</span></div>
+            <div className="text-[10px] font-black text-sky-200">自動回復 ライフ{raidGrowth.lifeRate}%・ガッツ{raidGrowth.gutsRate}%</div>
+            {raidGrowth.levelUpNow&&<div className="mt-0.5 text-[11px] font-black text-amber-300">固有技が{RAID_JACK_UNIQUE_LEVEL_STEP}段階{raidGrowth.teachingUpNow?'・アシカが1段階':''}アップ！({raidGrowth.levelUps}/{raidGrowth.levelUpMax}回目)</div>}
+          </div>
+        )}
+        {raidGrowth&&raidGrowthOpen&&(
+          <div data-raid-growth-detail className="fixed inset-0 flex items-center justify-center bg-black/70 px-4" style={{zIndex:80000}} role="dialog" aria-modal="true" aria-label="レイドバトルの強化" onClick={()=>setRaidGrowthOpen(false)}>
+            <div className="w-full max-w-[340px] rounded-2xl border-2 border-emerald-300/60 bg-slate-950 p-3 text-slate-100" onClick={(e)=>e.stopPropagation()}>
+              <div className="text-center text-[13px] font-black text-emerald-300">レイドバトルの強化(いま {raidGrowth.turn}/{RAID_JACK_TURNS}ターン目)</div>
+              <dl className="mt-2 space-y-1.5 text-[11px]">
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-emerald-200">全ステータス</dt><dd>2ターン目から、1ターンごとに味方全員が +{raidGrowth.stepPct}%(掛け算)。いまは<b className="text-white"> 合計 +{raidGrowth.statPct}%</b>。ライフ・ガッツの上限が増えたぶんは、いまの値にも足されます</dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-sky-200">自動回復</dt><dd>1ターンごとに +1.5%。いまは<b className="text-white"> ライフ {raidGrowth.lifeRate}%・ガッツ {raidGrowth.gutsRate}%</b></dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-amber-200">固有技・アシカ</dt><dd>{RAID_JACK_LEVEL_UP_TURNS.join('・')}ターン目に、編成全員の固有技が{RAID_JACK_UNIQUE_LEVEL_STEP}段階ずつアップ(アシカは{RAID_JACK_LEVEL_UP_TURNS.slice(0,RAID_JACK_TEACHING_MAX_LEVEL).join('・')}ターン目に1段階ずつ・最大{RAID_JACK_TEACHING_MAX_LEVEL}段階)。<b className="text-white"> {raidGrowth.levelUps}/{raidGrowth.levelUpMax}回</b>済み{raidGrowth.nextLevelUpTurn?`(次は${raidGrowth.nextLevelUpTurn}ターン目)`:'(これで最後)'}</dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-rose-200">EXスキル</dt><dd>持っている味方ごとに2回まで</dd></div>
+              </dl>
+              <button type="button" data-raid-growth-close onClick={()=>setRaidGrowthOpen(false)} className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-white active:scale-95">閉じる</button>
             </div>
           </div>
         )}
@@ -1197,7 +1285,7 @@ function BattleScreen({
             {/* 敵の技の全画面の演出(攻撃が味方の枠まで届く・必殺技で暗くなる・覚醒ムーのカットインなど) */}
             {/* ボスの必殺技ムービー(画面を切り替えて流す)。流すかどうかは 60-app が playBossMovie で決める */}
             <BossMovieLayer shake={battleFx.shake!=='OFF'}/>
-            {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
+            {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.raidJackPumpkin?'Pumpkin':enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
@@ -1258,15 +1346,16 @@ function BattleScreen({
             {/* ★ガードの「🛡 キーン!」とアシストカードの全画面演出は、2026-09-29 のユーザー選択で置き換えた。
                 ガードは枠のバリア(GuardBarrier・guardImpact)、アシストカードはカットイン(TacticsExCutin の assist)で出す */}
             {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
-              <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
+              <div data-enemy-motion={enemyMotion||undefined} data-jack-aura={jackAuraTier||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                 {/* ★技の動き・やられの動き・待機の威圧(data-em-body / data-enemy-hurt / data-moo-stage)は CSS が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
                 {emSet&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
                 {/* data-moo-body: 絵と光(後ろの光の輪・絵の形の光の板)をひとまとめにして、動きはこの箱に掛ける(光が絵について動く) */}
                 <div data-moo-body={emSet?'true':undefined} className="relative w-full h-full">
                 {emSet&&<i aria-hidden="true" data-enemy-glow/>}
+                {jackAuraTier>0&&<JackAuraLayer tier={jackAuraTier}/>}
                 {/* ★ふちをぼかすマスクは外した(2026-09-28 battle-fx-lint-check)。絵はもともと切り抜きで、マスクで薄くなっていたのは
                     翼の先など2%ほど。大きな絵のマスクはメモリが足りないと外れ、そのたびに描き直しで固まる原因になる */}
-                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+                <img src={enemyBossImgSrc} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',...(enemy?.id==='Jack'?enemyJackArtStyle:null),animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
                 {emSet&&enemyFlashNode}
                 </div>
               </div>

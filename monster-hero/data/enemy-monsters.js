@@ -78,6 +78,16 @@ const TACTICS_ENEMY_DATA = {
     // 必殺技のときに画面いっぱいで流すムービー(2026-09-25 ユーザー指示)。?v= は tools/stamp-version.js が付ける
     specialMovie:"movies/awakened-moo-apocalypse.mp4?v=53c57562a6fe"
   },
+  // イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。ドクドクと同じネンドロ種なので、技はドクドクの名前を土台にした。
+  // ★TACTICS_ENEMY_SEQUENCE には入れない(通常ランは10体固定)。ジャック戦だけが forcedEnemyKey='Jack' で呼ぶ。
+  // baseHp は「ムーの基礎35,000×10」。ライフ・攻撃は 段階の倍率(RAID_JACK_*_TIERS の power)を掛けて決まる。
+  // 技の名前は 35-raid-jack.jsx の RAID_JACK_SKILL_NAMES と同じ(食い違わないことは raid-jack-battle-check.js が見る)。
+  // 再生は持たない。使う技の本数は段階ごとに3/4/5/5/5(tacticsEnemyActionIds の actionCount)
+  Jack: {
+    name:"ジャック", emoji:"🎃", imgUrl:JACK_IMG, poseImgUrl:JACK_POSE_IMG, baseHp:350000, baseAtk:700,
+    normal:"カボチャ張り手", special:"めいどのトリート",
+    actions:{ sweep:"おばけキッス", rush:"ジャックラッシュ", pierce:"かぼちゃ延髄斬り", roar:"ハロウィンナイト", allout:"おばけパレード" }
+  },
 };
 
 const TACTICS_ENEMY_SEQUENCE = ['Kawazumo','Metalner','Inari','Koinobori','Delpiero','Dokudoku','Lamia','Nyarlathotep','Splatter','AwakenedMoo'];

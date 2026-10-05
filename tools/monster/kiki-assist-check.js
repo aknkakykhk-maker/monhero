@@ -41,7 +41,8 @@ assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 
   'heroCardBonus + kikiCardBonus',
   "prev.length >= TEACHING_ROSTER_SIZE",
   // 予測ダメージにはスロットの番号(タクティクスの距離)が足された
-  "getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx)",
+  // さらに「2枚目以降か(パンドラの箱の半減)」の引数が末尾に足されたので、閉じかっこの手前までで見る
+  "getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx",
 ].forEach(text=>assert(gameSource.includes(text),`実装結線が不足: ${text}`));
 assert(gameSource.includes("globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo") && gameSource.includes("if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true);"),'共通予測に全体連撃を含める');
 assert(gameSource.includes('const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 })'),'ききの顔寄り調整値を1か所で定義する');

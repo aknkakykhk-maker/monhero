@@ -36,6 +36,10 @@ for (const rel of DATA_FILES) {
     // プロフィール枠は「1枠に1枚」で、ほかの場所から同じ絵を指さない。書き方(src に images/profile-frames/… を
     // そのまま書く)は tools/ranking/profile-frame-check.js が決めている(2026-09-16 に足したとき、ここと食い違っていた)
     if (/\bsrc:\s*["']images\/profile-frames\//.test(line)) return;
+    // 着替えの服は、絵のフォルダ(imageDir)だけを書き、1枚ずつのパスは持たない。フォルダの文字は画像パスではない(2026-10)
+    if (/^\s*imageDir:\s*["']images\/assistant\//.test(line)) return;
+    // アツの表情アイコンは、使われていない画像の検査(image-asset-check)が見つけられるよう、1枚ずつ文字でパスを書く決まりにしてある(breeder.js のコメント)
+    if (/^\s*[a-z]+:\s*["']images\/breeder-icons\/atsu_[a-z]+\.png/.test(line)) return;
     if (!/["']images\/[^"']+["']/.test(line)) return;
     inlineRefs.push(`${rel}:${i + 1}`);
   });
@@ -89,7 +93,9 @@ const GRANDFATHERED = new Set([
 ]);
 const shapeOf = {
   disc: id => /^[A-Z][A-Za-z0-9]*$/.test(id),
-  icon: id => /_icon$/.test(id),
+  // 助手の表情アイコンは `<だれ>_<表情>`、着替えの服の表情アイコンは `<だれ>_<服>_<表情>`(例: myua_halloween_wink)という1つの家族の形。
+  // アツ(atsu)の8種とハロウィンの衣装(みゅあ・きき・ももすけ 各8種)も同じ形で出した(2026-10-04)。_icon が付かないのは、この家族だけ
+  icon: id => /_icon$/.test(id) || /^(myua|kiki|momosuke|dra|atsu)(?:_[a-z0-9]+)?_(normal|happy|wink|excited|surprise|troubled|angry|crying)$/.test(id),
   assist: id => /^[a-z][a-z0-9_]*$/.test(id),
   item: id => /^[a-z][a-z0-9_]*$/.test(id),
 };

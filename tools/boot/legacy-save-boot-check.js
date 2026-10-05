@@ -80,8 +80,9 @@ const WATCH_KEYS = ['mh_masu_mons', 'mh_gifts', 'mh_gold', 'mh_breeder_xp', 'mh_
     check('絆XP・適性・適性ポイント(不足分の補填で増えるが減らない)が引き継がれる', mocchi.bondXp === 300 && mocchi.distAptPoints >= 2 && Array.isArray(mocchi.distApt) && mocchi.distApt[0] === 'B' && mocchi.distApt[3] === 'D', JSON.stringify({ bondXp: mocchi.bondXp, distAptPoints: mocchi.distAptPoints, distApt: mocchi.distApt }));
     check('移行フラグが立つ(mh_masu_migrated / mh_points_migrated / mh_points_base_granted)', first.mh_masu_migrated === 'true' && first.mh_points_migrated === 'true' && first.mh_points_base_granted === 'true');
     check('旧キー(mh_bond_xp / mh_dist_apt_points / mh_dist_apt_overrides)は消さない', first.mh_bond_xp !== null && first.mh_dist_apt_points !== null && first.mh_dist_apt_overrides !== null);
+    // ハイスコアは、スコアを全モード1/1000にした一度きりの移行(mh_battle_score_shrink_migrated_v1・2026-10-03)で 4321 → 4(切り捨て)になる。意図した変更
     // 所持アイテムは一度きりの配布(限界突破の補償など)で増えることがあるので、持っていた分が減っていないことを見る
-    check('ダイヤ・ブリーダーXP・ハイスコア・持っていたアイテムは変わらない', parse(first.mh_gold) === 1234 && parse(first.mh_breeder_xp) === 5000 && parse(first.mh_hs_Normal) === 4321 && (parse(first.mh_owned_items) || {}).psyche === 3, `gold=${first.mh_gold} xp=${first.mh_breeder_xp} hs=${first.mh_hs_Normal} items=${first.mh_owned_items}`);
+    check('ダイヤ・ブリーダーXP・ハイスコア・持っていたアイテムは変わらない', parse(first.mh_gold) === 1234 && parse(first.mh_breeder_xp) === 5000 && parse(first.mh_hs_Normal) === 4 && (parse(first.mh_owned_items) || {}).psyche === 3, `gold=${first.mh_gold} xp=${first.mh_breeder_xp} hs=${first.mh_hs_Normal} items=${first.mh_owned_items}`);
     check('名前とXPがあるので既存プレイヤーとして扱われる(mh_onboarded=true)', first.mh_onboarded === 'true', String(first.mh_onboarded));
     const gifts = parse(first.mh_gifts) || [];
     check('新規プレイヤーキャンペーンのギフトは付かない', !gifts.some(g => g && g.id === 'monhiro_beat_preopen_new_player_v1'), `gifts=${gifts.map(g => g && g.id).join(', ') || '(なし)'}`);

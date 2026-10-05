@@ -44,7 +44,7 @@
 | `mh_breeder_points` | number / `0` | 未使用マーケットポイント |
 | `mh_breeder_points_granted` | number or null | 累計付与済み相当数 |
 | `mh_breeder_id_v1` | string or null | 端末ごとに1回だけ作るブリーダーID。全国ランキングで同名の別人を見分けるために送る(名前を変えても変わらない。`docs/spec/RHYTHM_RANKING.md` §4) |
-| `mh_market_icons` | string[] / `[]` | 購入アイコンID。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
+| `mh_market_icons` | string[] / `[]` | 購入アイコンID。ブリーダーP交換所だけでなく、**ビートP交換所のハロウィンのアイコン(1000P)の交換でも**、まとまりの中身が全部ここへ足される(2026-10-04)。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
 | `mh_unlocked_monsters` | string[] / 初期8種 | 解放済み種ID |
@@ -59,6 +59,9 @@
 | `mh_friend_favorites_v1` | string[] / `[]` | フレンド一覧で「お気に入り」にしたフレンドのID(`friendsNormalizeFavorites` を通す) |
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
+| `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
+| `mh_raid_jack_guide_seen_v1` | boolean / `false` | レイド画面を開いた最初の1度だけ出す、画面のなかの案内(助手の吹き出し)を見たか。新しく足したキー。既存のキーには触らない |
+| `mh_raid_jack_unused_hs_<難易度>` など | number / `0` | **実際には書かれない**保険のキー(`modeKeyPrefix`)。ジャック戦は記録を書かないが、万一書いても通常のタクティクスの自己ベスト(`mh_tactics_*`)と同じキーを指さないように、別の接頭辞へ逃がしてある |
 | `mh_masu_lock_rebirth_v1` | string[] / `[]` | マスモンの転生ロックのIDの並び(2026-10-01)。転生ロックの子は転生できない。お気に入り(`mh_masu_locked_v1`)とは別々に付け外しできる。壊れた値は「ロックなし」。`mh_masu_mons` には書かない |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
@@ -144,7 +147,7 @@
 | `mh_assistant_call_style` / `mh_assistant_call_style_<id>` | string | 助手の呼び方(さん付けなど)。みゅあは無印(`assistantCallStyleKeyFor`) |
 | `mh_assistant_unlock_seen_v1` | object / `{}` | 助手の解放告知を見たか(`data/assistants.js` の `normalizeAssistantUnlockSeen`) |
 | `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD`)のハイスコアと完走回数 |
-| `mh_rhythm_settings_v1` | object / `DEFAULT_RHYTHM_SETTINGS` | モンビーの演奏設定(`normalizeRhythmSettings`)。2026-09-27 に `roadWidth`(`WIDE`/`STANDARD`/`NARROW`、横画面の道の幅)を足した。無い・知らない値は `WIDE`(それまでと同じ幅)へ補う。2026-09-28 に `noteSeHoldVolume`(押さえている間の溜める音の大きさ・0〜200・既定100)を足した 2026-10-03 に `multiLightLook`(boolean・既定 `true`。みんなで対戦のライブだけ見た目を「軽さ優先」に重ねる)を追加。無い既存の保存値は既定値で補う。2026-10-03 に `multiLook`(`LIGHT`/`STANDARD`/`VIVID`/`OWN`・既定 `LIGHT`。対戦の演出の段階)を追加。無い保存値は `multiLightLook` から決める(ON→LIGHT・OFF→OWN)。選び直すときは `multiLightLook` も合わせて書く |
+| `mh_rhythm_settings_v1` | object / `DEFAULT_RHYTHM_SETTINGS` | モンビーの演奏設定(`normalizeRhythmSettings`)。2026-09-27 に `roadWidth`(`WIDE`/`STANDARD`/`NARROW`、横画面の道の幅)を足した。無い・知らない値は `WIDE`(それまでと同じ幅)へ補う。2026-09-28 に `noteSeHoldVolume`(押さえている間の溜める音の大きさ・0〜200・既定100)を足した 2026-10-03 に `multiLightLook`(boolean・既定 `true`。みんなで対戦のライブだけ見た目を「軽さ優先」に重ねる)を追加。無い既存の保存値は既定値で補う。2026-10-04 に `modeSelectArt` / `modeSelectComment`(boolean・既定 `true`。モードえらびの助手の立ち絵とコメントを出すか。無い保存値は `true` で補う)を追加。2026-10-03 に `multiLook`(`LIGHT`/`STANDARD`/`VIVID`/`OWN`・既定 `LIGHT`。対戦の演出の段階)を追加。無い保存値は `multiLightLook` から決める(ON→LIGHT・OFF→OWN)。選び直すときは `multiLightLook` も合わせて書く |
 | `mh_rhythm_select_v1` | object / `DEFAULT_RHYTHM_SELECT_VIEW` | 曲えらび画面の見え方(並び順など) |
 | `mh_rhythm_best_v1` | object | 曲×難易度ごとの BEST(`normalizeRhythmBestRecords`) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
@@ -174,6 +177,8 @@
 | `mh_ranking_debug` | `'1'` のとき有効 | ランキングの詳細ログ(手で `localStorage` に入れるデバッグ用。ゲームは書かない) |
 | `mh_masu_auto_enhance_intro_seen_v1` | boolean / `true` | マスモンの自動強化の案内を見たか。**既定値は `true`**(保存が無いときに「見た」扱いにすると案内が誰にも出ないため、読み込み側で未保存を判別してから出す) |
 | `mh_profile_frame_owned_v1` | string[] / `[]` | 手に入れたプロフィールフレームのid。**一度もらったら外さない**(条件を変えても取り上げにならないよう、「いまのLv」ではなく「もらった記録」を持つ)。`normalizeOwnedProfileFrames` を通す |
+| `mh_assistant_costume_owned_v1` | string[] / `[]` | 買った助手の着替え(服)のid。**一度買ったら外さない**。`normalizeOwnedAssistantCostumes` を通す。マーケット(ダイヤショップ・ビートP交換所)で買うたびに、保存を読み直して足す |
+| `mh_assistant_costume_worn_v1` | object / `{}` | 助手ごとに今着ている服 `{ 助手id: 服id }`。無い助手は元の服。`normalizeWornAssistantCostumes` を通し、持っていない服・その助手の服ではないもの・消えた服は読み捨てて元の服へ戻す |
 | `mh_profile_frame_notice_v1` | string[] / `[]` | フレームをもらったことを知らせ終えたid。枠ごとに覚える(1つのidで既読にすると2枚目以降が知らされない) |
 | `mh_rhythm_clear_total_v1` | number / `0` | モンヒロビートの通算クリア回数(2026-10-03・スエゾービートのフレームを買える条件「10回クリア」に使う)。**この更新から数えはじめる**(既存の `mh_rhythm_best_v1` は曲×難易度ごとのクリア有無しか持たず、回数が分からないため。過去の分は入れない)。ライフを残して終えた演奏だけ+1(練習・アシストモード・失敗は数えない)。`normalizeRhythmClearTotal` を通す。減らさない・消さない |
 | `mh_update_notice_style_v1` | `'FULL'` / `'MINI'` / `'OFF'` / 既定 `'FULL'` | 更新のお知らせの出し方(`normalizeUpdateNoticeStyle` で既定へ倒す) |
@@ -326,6 +331,8 @@
 未使用魂格Pは保存せず、`soulPointMaxReachedLevel` と `soulTraitLevels` から導出する。転生では上記3項目を明示的に維持し、合体の通常経路では副の魂格段階・最高到達Lv・特性振り分けを主へコピーしない。魂格継承合体を選んだ場合だけ、主の不足段階分の通常進化コストを支払って `soulRankStage` / `levelCap` を先に解放する。
 
 勇者の証 `hero_proof` と魂格再編の書 `soul_rank_respec_scroll` は、既存 `mh_owned_items` の個数として保存する。専用保存キーは作らない。
+
+(2026-10-04・決定・未実装)イベント報酬の「魂格の結晶(仮)」も同じく `mh_owned_items` の個数で持つ。使うと `mh_masu_mons` の個体へ足す `soulBonusPoints`(0以上の整数・欠損は0・0のときは保存しない)が+1される。仕様は SOUL_RANK_SYSTEM.md §5.3.1。
 
 ランキング個体詳細は `RANKING_DETAIL_VERSION = 6` で、記録時の `soulRankStage` / `soulTraitLevels` / `soulSpentPoints` を既存detail内へ追加する。未使用魂格Pはランキングへ保存しない。旧ランキングは魂格なし・特性なし・使用済み0Pとして読む。
 

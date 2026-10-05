@@ -42,3 +42,9 @@ const LAMIA_IMG = "images/enemies/lamia.png?v=a38c03a55af1";
 const NYARLATHOTEP_IMG = "images/enemies/nyarlathotep.png?v=784ba273ad33";
 const SPLATTER_IMG = "images/enemies/splatter.png?v=fc268b0fd810";
 const AWAKENED_MOO_IMG = "images/enemies/awakened-moo.png?v=59ab671d8033";
+// イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。バトルの立ち絵2枚と、イベント中の顔アイコン
+const JACK_IMG = "images/enemies/jack.png?v=9814dccba5a2";
+const JACK_POSE_IMG = "images/enemies/jack-pose.png?v=b566f028caa6";
+const JACK_ICON_IMG = "images/raid/jack-icon.png?v=03c637e855ac";
+// 素のぱんぷきん(爵位を脱いだ小さな姿)の顔アイコン。ジャックの顔アイコンの目をやさしい丸い目に描き替えたもの(ストーリーの話し手 pumpkin)
+const PUMPKIN_ICON_IMG = "images/raid/pumpkin-icon.png?v=f836641ae5ca";

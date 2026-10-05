@@ -107,6 +107,24 @@
       "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
     },
     {
+      "file": "35-raid-jack.jsx",
+      "role": "イベント・レイドボス「ジャック」の定義(段階・倍率・ライフ・技名・期間・回数の数え方・保存の正規化)。純粋な計算とデータ。公開フラグは RELEASE_FLAGS.raidJack",
+      "pure": true
+    },
+    {
+      "file": "36-raid-jack-api.jsx",
+      "role": "イベント・レイドボス「ジャック」の通信層(Supabase の raid_jack_hits とビュー3つ)。1戦の与ダメージを1行送り、同じ hit_id は二重に数えない。送れなければ再送待ちへ。既存の保存データ・ランキングには書き込まない"
+    },
+    {
+      "file": "37-raid-jack-aura.jsx",
+      "role": "ジャックのオーラ(段階1〜5で派手になる炎の舌)。バトルとHOMEで共通の部品 JackAuraLayer。見た目は 70-bootstrap.jsx の data-jack-aura"
+    },
+    {
+      "file": "38-raid-jack-home-lines.jsx",
+      "role": "HOMEにいるレイドボスのひとこと。爵位ごとの話し方×残りライフの3場面(各4種類)と、大王を倒したあとのぱんぷきん(10種類)。純粋なデータと選び方だけ。画面は 69-screen-home.jsx の HomeRaidJack",
+      "pure": true
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
@@ -221,6 +239,14 @@
     {
       "file": "77-screen-rhythm-multi.jsx",
       "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
+    },
+    {
+      "file": "78-screen-raid-jack-debug.jsx",
+      "role": "画面: ジャック確認(RAID_JACK_DEBUG。デバッグ専用)。定義・期間と回数・端末の記録・サーバー(別イベントID)を、公開フラグや時刻を待たずに確かめる"
+    },
+    {
+      "file": "79-screen-raid-jack.jsx",
+      "role": "画面: イベント・レイドボス「ジャック」(RAID_JACK=A協力戦・B累計ダメージ・残り回数・追加購入・ランキング / RAID_JACK_PREP=編成とアシカえらび)。表示と選択だけで、回数・ビートP・戦闘開始は本体側"
     },
     {
       "file": "60-app.jsx",

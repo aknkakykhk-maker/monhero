@@ -203,6 +203,70 @@ const assistantUpdateNoticeFromChangelog = entry => {
 // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
 //   (2026-09-11・ユーザー指示)。
 const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
+  // ハロウィン・ナイト(2026-10-04〜11-01)。期間・5倍・新曲・お話(第1部)・衣装の4つを伝える。
+  // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、きき・ドラは「モンヒロビート」。ドラは「〜だよ」「〜だ」で話す
+  update_notice_halloween_night_v1: {
+    mua: [
+      { e:'excited',  t:'{name}、ハロウィン・ナイト始まったよ〜！🎃 11月1日(日)の朝3時59分までだよ！' },
+      { e:'surprise', t:'期間中は、モンビーで貯まるビートPがいつもの5倍！ しかも、クイックの∞周回を回しながら演奏したときの周回数も5倍なの！ まじやばくない！？' },
+      { e:'happy',    t:'新曲「Crazy Party Night ～ぱんぷきんの逆襲～」も、イベントと同時に遊べるようになったよ！' },
+      { e:'wink',     t:'お話の第1部も、もう見られるよ〜。続きもあるから、お楽しみに！ ドラケンも出てくるよ♪' },
+      { e:'excited',  t:'私ときき、ももは、ハロウィンのコスプレ衣装で登場！ 衣装はマーケットで買えて、プロフィールから着替えられるんだよ〜👗' },
+      { e:'surprise', t:'10月5日(月)の朝4時からは、レイドボス戦「カボチャの大王ジャック」も始まるよ！ HOMEの真ん中にあらわれるから、タップしてみてね〜🎃' },
+    ],
+    kiki: [
+      { e:'happy',    t:'{name}、ハロウィン・ナイトが始まりまつ。11月1日(日)の3時59分までの期間限定でつ。' },
+      { e:'normal',   t:'期間中は、モンヒロビートで貯まるビートPがいつもの5倍になりまつ。' },
+      { e:'normal',   t:'クイックの∞周回を回しながら演奏したときに入る周回数も、いつもの5倍でつ。' },
+      { e:'happy',    t:'新曲「Crazy Party Night ～ぱんぷきんの逆襲～」が、イベントと同時に遊べるようになったでつ。' },
+      { e:'normal',   t:'お話の第1部が、もう見られまつ。お話はこのあとも続きまつ。' },
+      { e:'wink',     t:'わたしたち3人も、ハロウィンのコスプレ衣装で登場しまつ。衣装はマーケットで買えて、プロフィールで着替えられまつ。' },
+      { e:'normal',   t:'10月5日(月)の4時からは、レイドボス戦「カボチャの大王ジャック」も始まりまつ。HOMEの真ん中にあらわれ、タップするとレイド画面が開きまつ。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}、見て見て〜！ ハロウィン・ナイトが始まったよ♡ 11月1日(日)の3時59分までなの♪' },
+      { e:'happy',    t:'期間中は、モンビーで貯まるビートPがいつもの5倍！ クイックの∞周回を回しながら演奏したときの周回数も5倍だよ♡' },
+      { e:'wink',     t:'新曲の「Crazy Party Night ～ぱんぷきんの逆襲～」も、今日から遊べるよ。ぱんぷきんって、どんな子かな〜？' },
+      { e:'normal',   t:'お話の第1部が、もう見られるの。このあとも続くから、ドラちゃんも出てくるから、お楽しみに♡' },
+      { e:'excited',  t:'ももはね、小悪魔のコスプレなの！ みゅあねぇとききちゃんも、かわいい衣装で登場するよ♡ 衣装はマーケットで買えるんだから、着替えて遊んでね♪' },
+      { e:'wink',     t:'10月5日(月)の朝4時からは、レイドボス戦「カボチャの大王ジャック」も始まるの♡ HOMEの真ん中のジャックをタップしてみてね♪' },
+    ],
+    dra: [
+      { e:'excited',  t:'{name}、ハロウィン・ナイトが始まったぞ。11月1日(日)の3時59分までだ' },
+      { e:'happy',    t:'期間中は、モンヒロビートで貯まるビートPがいつもの5倍だよ。クイックの∞周回を回しながら演奏したときの周回数も5倍だ' },
+      { e:'normal',   t:'新曲「Crazy Party Night ～ぱんぷきんの逆襲～」も、イベントと同時に遊べるようになった' },
+      { e:'happy',    t:'お話の第1部が、もう見られる。続きもある。おでも出てるから、見てくれよ' },
+      { e:'normal',   t:'みゅあ、靴下さん、ももは、ハロウィンのコスプレ衣装だ。マーケットで買えて、プロフィールから着替えられる' },
+      { e:'surprise', t:'10月5日(月)の4時からは、レイドボス戦「カボチャの大王ジャック」も始まるぞ。HOMEの真ん中にあらわれる。タップするとレイド画面が開く' },
+    ],
+  },
+  // 助手の着替え(2026-10-04)。最初の服はハロウィン・ナイトの衣装。値段は書かない(ダイヤの値段は終了後のものなので)
+  update_notice_assistant_costume_v1: {
+    mua: [
+      { e:'excited',  t:'{name}、助手の着替えができるようになったよ〜！👗' },
+      { e:'happy',    t:'プロフィールの「着替え」から、持ってる服に着替えられるの。吹き出しの顔も立ち絵も、その服に変わるんだ〜' },
+      { e:'wink',     t:'服はマーケットで買えるよ。最初の服は、ハロウィン・ナイトの衣装！ 私は魔女のコスプレだよ🎃' },
+      { e:'normal',   t:'ハロウィンのあいだはビートP交換所、イベントが終わったらダイヤショップに並ぶんだって。' },
+    ],
+    kiki: [
+      { e:'happy',    t:'{name}、助手の着替えができるようになったでつ。' },
+      { e:'normal',   t:'プロフィールの「着替え」から、持っている服に着替えられまつ。吹き出しの顔と立ち絵が、その服に変わりまつ。' },
+      { e:'normal',   t:'服はマーケットで買えまつ。最初の服は、ハロウィン・ナイトの衣装でつ。' },
+      { e:'wink',     t:'ハロウィンのあいだはビートP交換所、イベントが終わったあとはダイヤショップで買えまつ。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}、ももたちの着替えができるようになったよ♡' },
+      { e:'happy',    t:'プロフィールの「着替え」から、持ってる服に着替えさせてね。顔も立ち絵も、その服になるの♪' },
+      { e:'wink',     t:'最初の服は、ハロウィン・ナイトの衣装だよ。ももは小悪魔なの♡' },
+      { e:'normal',   t:'ハロウィンのあいだはビートP交換所、終わったらダイヤショップで買えるよ。' },
+    ],
+    dra: [
+      { e:'excited',  t:'{name}、助手の着替えができるようになったぞ' },
+      { e:'normal',   t:'プロフィールの「着替え」から、持ってる服に着替えられる。顔も立ち絵も、その服に変わるんだ' },
+      { e:'happy',    t:'服はマーケットで買える。最初の服はハロウィン・ナイトの衣装だよ' },
+      { e:'normal',   t:'ハロウィンのあいだはビートP交換所、終わったあとはダイヤショップだ。ちなみにおでの服は、まだ無いんだよな' },
+    ],
+  },
   // 新血統「ユグドラシル」実装予告(2026-09-28)。絵は更新履歴の image(告知画像)がそのまま出る。
   // 値段はまだ仮なので読み上げない。ドラは「〜だよ」「〜だ」で話す(2026-09-28 の決めごと)
   update_notice_yggdrasil_lineage_preview_v1: {
@@ -337,12 +401,15 @@ const assistantExpressionName = (who, expression) => {
   return list.includes(expression) ? expression : fallback;
 };
 // 吹き出しの丸い顔に使う軽い画像
+// ★着替え(data/breeder.js の assistantCostumeImage)を着ているときは、その服の絵を返す。服の絵が決まらないときは元の服
 const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
-  ? `${who.imageDir}/face/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`
+  ? ((typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'face'))
+    || `${who.imageDir}/face/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 // 元の大きい立ち絵(今後、全身で出したい場面ができたときに使う)
 const assistantFullImage = (who, expression) => (who && who.imagePrefix)
-  ? `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`
+  ? ((typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'full'))
+    || `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 
 // ---------- 親密度(みゅあとの仲良し度) ----------
@@ -745,6 +812,12 @@ const ASSISTANT_SCENES = {
   // 本文は下の addAssistantLinePack から合流する
   tacticsExIntro: {
     help: 'basics/tactics-ex-skills',
+    lines: [],
+  },
+  // イベント・レイドボス「ジャック」のレイド画面(2026-10-04)。HOMEのジャックをタップして開いた最初の1度だけ伝える。
+  // 本文は下の addAssistantLinePack から合流する。公開フラグ(raidJack)が立つまで出ない
+  raidJackIntro: {
+    help: 'basics/raid-jack',
     lines: [],
   },
   quickRhythmBackground: {
@@ -1462,6 +1535,64 @@ addAssistantLinePack({
       { e:'normal',  t:'EXはカードとは別枠だ。カードの枚数は減らないよ' },
       { e:'wink',    t:'使ったターンはその子だけカードを使えないこともあるから、気をつけな' },
       { e:'happy',   t:'{name}、β版のお試しらしいぞ。遠慮なく試してみな' },
+    ],
+  },
+});
+
+// イベント・レイドボス「ジャック」のレイド画面の案内(2026-10-04)。「みんなで倒す」「マスモンで競う」「1日3回」の3つだけを伝える。
+// 細かい話はヘルプに任せる(help: basics/raid-jack)。セリフは45字まで・各助手5本以上(assistant-check)
+addAssistantLinePack({
+  id: 'raidJackGuide',
+  label: 'ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'excited', t:'カボチャの大王ジャックが暴れてるよ！みんなで倒そう♪' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑むよ。' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減るんだ！' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑むの。' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料！1回は20ターンだよ〜' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'raidJackGuideKiki',
+  assistantId: 'kiki',
+  label: 'きき・ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'excited', t:'カボチャの大王ジャックが暴れていまつ。' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑みまつ。' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減るの。' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑みまつ。' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料。1回は20ターン。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'raidJackGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'excited', t:'カボチャの大王ジャック、暴れてるね！' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑むんだ。' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減るよ。' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑むやつ。' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料だってさ。1回は20ターンw' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'raidJackGuideDra',
+  assistantId: 'dra',
+  label: 'ドラ・ジャックのレイド画面案内',
+  lines: {
+    raidJackIntro: [
+      { e:'happy', t:'カボチャの大王ジャックが暴れてるぞ' },
+      { e:'normal', t:'「レイドバトル」は、ベースモンで挑むんだ' },
+      { e:'happy', t:'みんなのダメージで、ジャックのライフが減る' },
+      { e:'normal', t:'「グランドスラム」は、育てたマスモンで挑むぞ' },
+      { e:'wink', t:'{name}、挑戦は1日3回まで無料だ。1回は20ターンだよ' },
     ],
   },
 });
@@ -6190,7 +6321,365 @@ const ASSISTANT_TACTICS_INTRO = [
 //   alwaysUnlocked … true にすると、本編でまだ見ていなくても回想一覧に出す。
 //                 「本編で流れるのを待たずに、ここから見てもいい」イベント用。
 //                 最後まで見たら、本編で見たときと同じ扱い(解放・以後は自動で流さない)になる
+// ---------- ハロウィン・ナイト(2026-10-04 〜 11-01) ----------
+// 2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め、ハロウィンらしいストーリー性あり、
+// 週ごとに更新の5部構成)」「ドラもいれて」。台本はClaudeが書いた。
+// 第1部が開幕(10/4 8:00)。第2部以降は2026-10-04に、ジャックのストーリー(下の RAID_JACK_STORY_*)へ置き換えた。
+// 出る時刻と id は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。HOMEで1度だけ流れ、そのあとは回想から見返せる。
+// あらすじ: 夜だけ開く「ハロウィン・ナイト」の街で、毎年ランタンにされるかぼちゃのぱんぷきんが
+//   「ぼくだってパーティーの主役になりたい」と音(ビート)を奪って逆襲する。じつは仲間に入りたかっただけ。
+//   最後は一緒に踊って夜明け(3:59)を迎える。
+// ★期間・倍率・値段など、この回かぎりの話は書いてよいが、報酬の個数のような数字は書かない(回想で見返したとき古くなるため)。
+// ★新曲「Crazy Party Night ～ぱんぷきんの逆襲～」はぱんぷきんのテーマ曲。曲名は正式名称で書く。
+// ★呼び方: みゅあ→ドラケン / きき→ドラさん・みゅあちん / もも→ドラちゃん・みゅあねぇ・ききちゃん / ドラ→靴下さん・みゅあ・もも
+// ★ドラの口調は「〜だよ」「〜だ」「〜だな」(「なんよ」「ほんま」は使わない)。ききは語尾が「〜でつ」。
+
+// ---- 第1部 開幕 ～ハロウィン・ナイトへようこそ～ ----
+const ASSISTANT_HALLOWEEN_NIGHT_1 = [
+  // SCENE 1 夜祭の入口
+  { who:'mua',      e:'excited',  t:'見て見て、街中ランタンだらけ！ これが「ハロウィン・ナイト」かぁ！' },
+  { who:'kiki',     e:'happy',    t:'夜になると、かぼちゃのランタンにいっせいに灯りがともる街でつ。きれいでつね……' },
+  { who:'momosuke', e:'wink',     t:'ふふ、今年はね、みんなでコスプレして遊ぶのが決まりなんだよ♡' },
+  { who:'mua',      e:'surprise', t:'コスプレ！？ ちょっと待って、聞いてないんだけど！' },
+  { who:'momosuke', e:'happy',    t:'だからももが用意しといたの。はい、みゅあねぇはこれ♪' },
+  { who:'mua',      e:'excited',  t:'うわっ、大きい魔女帽子だ！ かぼちゃのステッキまである！' },
+  { who:'kiki',     e:'normal',   t:'みゅあちん、似合ってまつよ。ほんとの魔女みたいでつ。' },
+  { who:'mua',      e:'happy',    t:'でしょ〜？ ききは……わ、オレンジと黒のうさ耳じゃん！ かわいい！' },
+  { who:'kiki',     e:'troubled', t:'パーカーもうさ耳も、ちょっと目立ちすぎじゃないでつか……？' },
+  { who:'momosuke', e:'wink',     t:'目立っていいの。ききちゃん、とってもかわいいよ♡' },
+  { who:'kiki',     e:'happy',    t:'そ、そうでつか？ ……それなら、がんばって着まつ。' },
+  { who:'mua',      e:'surprise', t:'もものは？ 羽がついてる！ ちっちゃいツノまで！' },
+  { who:'momosuke', e:'wink',     t:'ももは小悪魔だよ♡ ……どう？ ドキッとした？' },
+  { who:'mua',      e:'troubled', t:'した。くやしいけど、した' },
+  // SCENE 2 着替えの案内
+  { who:'momosuke', e:'normal',   t:'この服はね、プロフィールの「着替え」から、いつでも着替えられるの♪' },
+  { who:'kiki',     e:'normal',   t:'着替えると、吹き出しの顔も立ち絵もその服になるんでつ。' },
+  { who:'mua',      e:'happy',    t:'で、その服はマーケットで買えるんだって！ ハロウィンのあいだはビートP交換所に並ぶよ！' },
+  { who:'kiki',     e:'surprise', t:'ビートP交換所に服が並ぶなんて、初めてでつね。' },
+  { who:'momosuke', e:'wink',     t:'モンビーでビートPをいっぱい貯めてくれたら、みんなも同じ服を着せてあげられるよ♡' },
+  // SCENE 3 5倍
+  { who:'momosuke', e:'excited',  t:'それにね、ハロウィンのあいだは特別なの！ モンビーで貯まるビートPが、いつもの5倍！' },
+  { who:'mua',      e:'surprise', t:'5倍！？ まじで！？' },
+  { who:'kiki',     e:'excited',  t:'さらに、クイックの∞周回を回しながらモンヒロビートを演奏すると、入る周回数も5倍になるでつ！' },
+  { who:'mua',      e:'excited',  t:'いつもの2倍が5倍かぁ。これは遊ばないと損じゃん！' },
+  // SCENE 4 ドラの登場
+  { who:'dra',      e:'excited',  t:'おーい！ 遅くなった、遅くなった！' },
+  { who:'mua',      e:'surprise', t:'あっ、ドラケン！ ……って、頭になんかかぶってない？' },
+  { who:'dra',      e:'happy',    t:'おでのコスプレだ。かぼちゃのかぶりものだよ。どうだ、似合うだろ？' },
+  { who:'kiki',     e:'normal',   t:'前が見えてないでつよ、ドラさん。そっちは壁でつ。' },
+  { who:'dra',      e:'surprise', t:'うおっ！？ ほんとだ、壁だった' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃん、かぼちゃ頭のほうが中身よりかっこいいよ♡' },
+  { who:'dra',      e:'troubled', t:'もも、それ褒めてるのか？ けなしてるのか？' },
+  { who:'momosuke', e:'happy',    t:'どっちかな〜♡' },
+  // SCENE 5 新曲と異変
+  { who:'dra',      e:'normal',   t:'それでな、今日は新しい曲を持ってきたんだ。ハロウィン・ナイトのためだけの曲だよ' },
+  { who:'mua',      e:'excited',  t:'新曲！？ タイトルは！？' },
+  { who:'dra',      e:'happy',    t:'「Crazy Party Night ～ぱんぷきんの逆襲～」だ。今日からモンヒロビートで遊べる' },
+  { who:'kiki',     e:'normal',   t:'ぱんぷきんの逆襲……？ 逆襲、というところが気になりまつね。' },
+  { who:'dra',      e:'normal',   t:'おでも詳しくは知らないんだ。ただ、この街のかぼちゃたちが、ここ数日そわそわしててさ' },
+  { who:'mua',      e:'troubled', t:'そわそわ？ かぼちゃが？' },
+  // SCENE 6 最初の異変
+  { who:'kiki',     e:'surprise', t:'……あれ。ランタンの灯りが、ひとつ、消えたでつ。' },
+  { who:'momosuke', e:'surprise', t:'えっ、風もないのに？' },
+  { who:'dra',      e:'surprise', t:'おい、見ろ。あの路地の奥……なんか、ちっちゃいかぼちゃの影が走っていったぞ' },
+  { who:'mua',      e:'troubled', t:'……ねえ、これ、まじでなにか起きてない？' },
+  { who:'kiki',     e:'normal',   t:'お祭りを楽しみながら、様子を見まつか。' },
+  { who:'momosuke', e:'wink',     t:'うん！ まずは楽しまなきゃね♡ ハロウィン・ナイト、開幕〜！' },
+  { who:'mua',      e:'excited',  t:'いくよ、みんな！ トリック・オア・ビート！' },
+];
+const ASSISTANT_HALLOWEEN_NIGHT_1_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
+// ---- 第2部以降 ----
+// 旧い第2〜5部(ぱんぷきんの本編・時刻で流れる版)は、2026-10-04にやめた。ジャックのストーリー(RAID_JACK_STORY_*)に置き換えた。
+// 絵本・ドラの気持ち・ビートを重ねる場面・衣装とお礼の台詞は、そちらへ活かして書き直してある(docs/spec/RAID_JACK_STORY.md)。
+
+// 5部の会話のあいだ、持っているかに関わらず着る衣装(breeder.js の halloweenCostume の id)
+const ASSISTANT_HALLOWEEN_NIGHT_COSTUMES = Object.freeze({ mua:'mua_halloween_2026', kiki:'kiki_halloween_2026', momosuke:'momosuke_halloween_2026' });
+
+// ===== 再生のときだけ話し手として出る登場人物(助手ではない。助手の選択画面などには出さない) =====
+// ジャック(ぱんぷきん)。ASSISTANT_LIST には入れず、assistantById が助手のあとに探す。
+// 行の name を書くと表示名を上書きする(爵位ごとの「ジャック(男爵)」・素の「ぱんぷきん」)。
+// 素のぱんぷきん(第1.5部のふくれる前・第6部以降)は、別の話し手 pumpkin(やさしい目の顔アイコン)
+const STORY_GUEST_SPEAKERS = [
+  { id: 'jack', name: 'ジャック', role: 'ゲスト', emoji: '🎃', accent: '#fb923c', image: (typeof JACK_ICON_IMG !== 'undefined' ? JACK_ICON_IMG : null), expressions: [], defaultExpression: 'normal' },
+  { id: 'pumpkin', name: 'ぱんぷきん', role: 'ゲスト', emoji: '🎃', accent: '#fdba74', image: (typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : null), expressions: [], defaultExpression: 'normal' },
+];
+
+// ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====
+// 台本の正本: docs/spec/RAID_JACK_STORY.md(確認済み。2026-10-04・ユーザー「いいかんじ！」)。
+// ジャックは助手ではなく、再生のときだけ話し手として出る(data/assistants.js の STORY_GUEST_SPEAKERS)。
+// 行に name を書くと、その話し手の名前の表示を上書きする(爵位ごとの「ジャック(男爵)」・素の「ぱんぷきん」)。
+// ★解放: 第1.5部=レイドの公開後に初めてHOMEを開いたとき / 第2〜6部=段階を倒したあと / 終章=期間終了後。
+//   時刻ではなく共有結果で決める(第1部だけは今までどおり時刻)。公開フラグ(RELEASE_FLAGS.raidJack)が偽のあいだは出さない。
+
+// 第1.5部 ～ふくれあがる影～(レイド開始)
+const RAID_JACK_STORY_1B = [
+  // 路地の奥で: ぱんぷきんと出会う(ぱんぷきんは、初めて話す行で画面の上部に出る)
+  { who:'kiki', e:'normal', t:'ランタンの灯りが、ひとつ、またひとつ消えていくでつ。さっきの路地の奥からでつ。' },
+  { who:'dra', e:'normal', t:'やっぱりな。あの、ちっちゃいかぼちゃの影、気になってたんだ' },
+  { who:'mua', e:'normal', t:'行ってみよう。……べ、べつに、怖くないし' },
+  { who:'momosuke', e:'wink', t:'みゅあねぇ、声がふるえてるよ♡' },
+  { who:'mua', e:'angry', t:'ふるえてない！' },
+  { who:'pumpkin', e:'surprise', t:'……っ！ だ、だれ……？' },
+  { who:'momosuke', e:'excited', t:'あっ、かぼちゃの子だ！ ちっちゃくて、おなかがぴかぴか光ってる♡' },
+  { who:'pumpkin', e:'troubled', t:'こ、来ないで……。ぼく、なにも悪いことしてない……' },
+  { who:'kiki', e:'normal', t:'その手に抱えた瓶……街の音が、いっぱい入っていまつね。' },
+  { who:'pumpkin', e:'troubled', t:'……借りただけだよ。パーティーの音、すごくきれいだったから' },
+  { who:'mua', e:'normal', t:'借りた？ ……ねえ、もしかして、あなたが「ぱんぷきん」？' },
+  { who:'pumpkin', e:'normal', t:'……うん。ぼく、ぱんぷきん。この街の畑に住んでるんだ' },
+  { who:'dra', e:'normal', t:'新曲のタイトルの、ぱんぷきんか。逆襲って、こんなちっちゃい子のことだったのか' },
+  { who:'pumpkin', e:'troubled', t:'逆襲なんて、してないよ。……ただ、ぼくの音も、聞いてほしかっただけ' },
+  { who:'kiki', e:'normal', t:'ぼくの音、でつか。' },
+  { who:'pumpkin', e:'normal', t:'畑にいても、お祭りの音だけは聞こえるんだ。みんな楽しそうで、きらきらしてて。ぼくも混ざりたかった' },
+  { who:'pumpkin', e:'troubled', t:'でも、話しかけても、だれも気づいてくれなくて。だから、きれいな音を集めたら、気づいてもらえるかなって' },
+  { who:'momosuke', e:'troubled', t:'それで、ランタンの灯りを消して、音を瓶に詰めたの？ ……さびしかったんだね' },
+  { who:'pumpkin', e:'troubled', t:'……うん。でも、音を集めるほど、瓶がどんどん熱くなってきて……' },
+  { who:'mua', e:'happy', t:'ねえ、ぱんぷきん。その音、ちゃんと返してくれたら、いっしょに遊ぼうよ！' },
+  { who:'pumpkin', e:'surprise', t:'いっしょに……？ ほんとに……？' },
+  // 瓶が光る: ぱんぷきんがジャックになる
+  { who:'kiki', e:'surprise', t:'待ってくださいでつ。瓶が、さっきより強く光っていまつ！' },
+  { who:'pumpkin', e:'surprise', t:'あ、あれ……？ 瓶が、熱い……！ 音があふれて、止まらないよ……！' },
+  { who:'dra', e:'surprise', t:'詰め込みすぎたんだ。瓶が割れるぞ！' },
+  { who:'mua', e:'surprise', t:'ぱんぷきん！？ 瓶を放して！' },
+  { who:'pumpkin', e:'crying', t:'やだ……こわい……！ たすけて……！ ぼく、ただ……ここにいるって、言いたかっただけなのに……！' },
+  { who:'jack', name:'ジャック(男爵)', e:'normal', fx:'transform', fxText:'ぱんぷきんが、ふくれあがった！', t:'ぐおおお……！ 吾輩は……吾輩は男爵ジャックであるぞ！' },
+  { who:'jack', name:'ジャック(男爵)', e:'normal', t:'ひれ伏せ、ひれ伏すがよい！ このハロウィンの夜は、吾輩のものである！' },
+  { who:'dra', e:'normal', t:'でかくなった……。もう、ぱんぷきんの面影がほとんどない' },
+  { who:'momosuke', e:'troubled', t:'でも、目はぱんぷきんのままだよ♡ ……泣きそうな目をしてる' },
+  { who:'kiki', e:'normal', t:'このままでは、街のランタンが全部割られてしまいまつ。止めるしかないでつ。' },
+  { who:'dra', e:'normal', t:'話を聞くのは、そのあとだ。まずは、暴れるのを止めよう' },
+  { who:'mua', e:'excited', t:'みんな、お願い！ 街のみんなの力を合わせて、ジャックを止めて！' },
+  { who:'kiki', e:'normal', t:'ジャックのレイドが始まったでつ。ホームからレイド画面を開けまつ。' },
+];
+
+// 第2部 ～吠えるカボチャ(男爵を倒したあと)
+const RAID_JACK_STORY_2 = [
+  { who:'jack', name:'ジャック(男爵)', e:'surprise', t:'ぐ、ぐぬぬ……吾輩が、負けただと……！？' },
+  { who:'jack', name:'ジャック(男爵)', e:'normal', t:'ひ、ひれ伏すのは貴様らのほうであるぞ！ ……あ、いや、今日のところは引いてやるのである！' },
+  { who:'mua', e:'happy', t:'やった！ 男爵ジャックを倒したよ！ ……でも、急に大きくなってびっくりした' },
+  { who:'momosuke', e:'happy', t:'ちょっと弱気だったね〜♡ なんだか、虚勢を張ってるみたい' },
+  { who:'kiki', e:'normal', t:'ジャックの手に、あの小さな瓶がありまつ。盗まれたビートを、まだ抱えていまつ。' },
+  { who:'dra', e:'normal', t:'瓶が光ってるな。音の力が、かぼちゃの体をどんどん大きくしてるんだ' },
+  { who:'mua', e:'normal', t:'あんなに光ってたら、ぱんぷきん、体がもたないよ……。さっきの泣きそうな目、まだ忘れられない' },
+  { who:'kiki', e:'normal', t:'瓶の音が増えるたびに、ジャックは大きくなっていく気がしまつ。このままだと、もっと大きくなるかもしれないでつ。' },
+  { who:'jack', name:'ジャック(子爵)', fx:'rankup', fxText:'ジャック(子爵)があらわれた！', e:'normal', t:'ほっほっほ。男爵ごときに勝って、いい気になっては困りますな' },
+  { who:'jack', name:'ジャック(子爵)', e:'normal', t:'わたくしは子爵。街のランタンを、ぜんぶ割ってさしあげましょう' },
+  { who:'mua', e:'excited', t:'ちょっと、やめてよ！ みんなが楽しみにしてるお祭りなんだよ！' },
+  { who:'jack', name:'ジャック(子爵)', e:'normal', t:'楽しみ？ ……フン。わたくしには、関係のないことです' },
+  { who:'momosuke', e:'troubled', t:'あれ？ 今、一瞬だけさびしそうな顔したよ♡' },
+  { who:'dra', e:'normal', t:'放っておくと街がめちゃくちゃになる。まずは止めよう。話は、そのあとだ' },
+  { who:'kiki', e:'normal', t:'みんなの力を合わせれば、きっと止められまつ。' },
+  { who:'mua', e:'excited', t:'よーし、次は子爵ジャックだ！ ぜったい止める！' },
+];
+
+// 第3部 ～ぱんぷきんのひみつ(子爵を倒したあと)
+const RAID_JACK_STORY_3 = [
+  { who:'jack', name:'ジャック(子爵)', e:'normal', t:'おのれ……わたくしが、こんな……！' },
+  { who:'jack', name:'ジャック(子爵)', e:'normal', t:'覚えていらっしゃい！ 爵位は、まだ上があるのです！' },
+  { who:'kiki', e:'normal', t:'手がかりを見つけたでつ。街の図書室で、この街のハロウィンの絵本を見つけたんでつ。' },
+  { who:'mua', e:'excited', t:'さすがきき！ なにが書いてあったの？' },
+  { who:'kiki', e:'normal', t:'昔からこの街では、収穫したかぼちゃをくり抜いて、ランタンにするのがならわしでつ。' },
+  { who:'kiki', e:'normal', t:'ぱんぷきんは、ランタンに選ばれなかったかぼちゃの子でつ。' },
+  { who:'dra', e:'normal', t:'ランタンになった仲間は、街で灯りをともしてもらえて、みんなに見てもらえる' },
+  { who:'dra', e:'normal', t:'でも、選ばれなかった子は、暗い畑に置いていかれるんだな' },
+  { who:'mua', e:'troubled', t:'そんなの、さびしすぎるじゃん……' },
+  { who:'momosuke', e:'normal', t:'だからぱんぷきんは、パーティーを台なしにして『ぼくもここにいるぞ』って言いたかったのかな' },
+  { who:'kiki', e:'troubled', t:'それで『逆襲』……。怒っているというより、さびしくて叫んでいるんでつね。' },
+  { who:'mua', e:'normal', t:'じゃあ、暴れてるジャックは、やっぱり……' },
+  { who:'dra', e:'troubled', t:'ああ。ぱんぷきんが、さびしさと盗んだビートの力で、膨らんじまったんだ' },
+  { who:'jack', name:'ジャック(伯爵)', fx:'rankup', fxText:'ジャック(伯爵)があらわれた！', e:'normal', t:'フフフ……何を話しているのかね、お嬢さんたち。余の噂話かな' },
+  { who:'jack', name:'ジャック(伯爵)', e:'normal', t:'余は伯爵。この夜を、美しい悪夢に変えてさしあげよう' },
+  { who:'momosuke', e:'happy', t:'うわ〜、急におしゃれになった。ちょっとかっこいいかも♡' },
+  { who:'jack', name:'ジャック(伯爵)', e:'normal', t:'お褒めにあずかり光栄だ。だが、美しいものほど危ないのだよ' },
+  { who:'dra', e:'normal', t:'感心してる場合じゃない。構えろ' },
+  { who:'mua', e:'excited', t:'止めるよ。そして、ちゃんと話を聞くんだ。みんな、力を貸して！' },
+];
+
+// 第4部 ～ドラの気持ち(伯爵を倒したあと)
+const RAID_JACK_STORY_4 = [
+  { who:'jack', name:'ジャック(伯爵)', e:'normal', t:'ほう……余を退けるとは。見事だ、フフフ……' },
+  { who:'jack', name:'ジャック(伯爵)', e:'normal', t:'だが、余の上には『我』がいる。せいぜい覚悟しておくがいい' },
+  { who:'momosuke', e:'happy', t:'伯爵さん、最後までおしゃれだったね♡ ……でも、声がちょっと震えてたよ' },
+  { who:'mua', e:'normal', t:'うん。強がってるのが、なんとなく分かる' },
+  { who:'dra', e:'normal', t:'おで、ちょっとだけ分かるんだ' },
+  { who:'mua', e:'normal', t:'ドラケンが？' },
+  { who:'dra', e:'normal', t:'みんなが楽しそうに集まってるところに、入っていけない時ってあるだろ' },
+  { who:'dra', e:'normal', t:'そういう時にな、誰かが『こっちに来なよ』って言ってくれると、すごく嬉しいんだ' },
+  { who:'momosuke', e:'normal', t:'ドラちゃん……' },
+  { who:'dra', e:'normal', t:'あっ、なんだよもも、そんな目で見るなよ。照れるだろ' },
+  { who:'momosuke', e:'happy', t:'ふふ。じゃあ今度は、ドラちゃんがぱんぷきんに言ってあげる番だね♡' },
+  { who:'mua', e:'excited', t:'よし、決めた！ ジャック……ううん、ぱんぷきんを、パーティーに招待しよう！' },
+  { who:'kiki', e:'normal', t:'でも、暴れていて近づけないでつよ。どうやって気持ちを届けまつか。' },
+  { who:'momosuke', e:'normal', t:'ぱんぷきんは、街中のビートを集めてたでしょ？ ということは、音楽が大好きなんだよ。音楽でお話しすればいいの♪' },
+  { who:'kiki', e:'normal', t:'なるほど。ぱんぷきんの曲を鳴らしながら、まっすぐぶつかって気持ちを届けるんでつね！' },
+  { who:'dra', e:'normal', t:'『Crazy Party Night ～ぱんぷきんの逆襲～』か。あの曲は、ぱんぷきんのテーマ曲みたいなものだもんな' },
+  { who:'mua', e:'excited', t:'それ、まじいい作戦じゃん！ 全力でぶつかって、気持ちを伝えよう！' },
+  { who:'jack', name:'ジャック(公爵)', fx:'rankup', fxText:'ジャック(公爵)があらわれた！', e:'normal', t:'……我が前に、ひざまずけ' },
+  { who:'jack', name:'ジャック(公爵)', e:'normal', t:'我は公爵。夜は、すべて我のものである' },
+  { who:'mua', e:'excited', t:'ひざまずかないよ！ 夜は、みんなのものだもん！' },
+  { who:'dra', e:'normal', t:'望むところだ。気持ちは、ぶつけてから伝えるさ' },
+];
+
+// 第5部 ～すれ違い(公爵を倒したあと)
+const RAID_JACK_STORY_5 = [
+  { who:'jack', name:'ジャック(公爵)', e:'normal', t:'……見事である。我を退けるとは' },
+  { who:'jack', name:'ジャック(公爵)', e:'troubled', t:'だが、無駄だ。どうせ、また置いていくのであろう' },
+  { who:'mua', e:'excited', t:'置いていかないよ！' },
+  { who:'jack', name:'ジャック(公爵)', e:'normal', t:'みな、そう言う。……ランタンになった者たちも、そう言った' },
+  { who:'kiki', e:'troubled', t:'ずっと畑に残されていて、さびしかったんでつね。' },
+  { who:'dra', e:'normal', t:'畑には、ランタンになれなかったかぼちゃが、たくさん転がってた。みんな、ぱんぷきんの仲間だ' },
+  { who:'momosuke', e:'normal', t:'ぱんぷきんはね、その子たちのためにも、パーティーを開きたかったんだと思うの' },
+  { who:'mua', e:'troubled', t:'うう、聞いてるだけで泣けてくる……' },
+  { who:'kiki', e:'troubled', t:'みゅあちん、泣くのは早いでつ。これからが本番でつよ。' },
+  { who:'jack', name:'ジャック(公爵)', e:'normal', t:'……来い。我を、本当に止められるのなら' },
+  { who:'dra', e:'normal', t:'……今、一瞬だけ、『止めてくれ』って聞こえた気がするな' },
+  { who:'momosuke', e:'normal', t:'うん。言葉じゃ、まだ足りないよね。だったら……ももたちの本気で、見せてあげよう？' },
+  { who:'kiki', e:'normal', t:'そうでつね。本気のぶつかり合いは、嘘をつきません。' },
+  { who:'dra', e:'normal', t:'いいこと言うな、靴下さん' },
+  { who:'kiki', e:'normal', t:'靴下さんではありません！' },
+  { who:'jack', name:'ジャック(大王)', fx:'rankup', fxText:'ジャック(大王)があらわれた！', e:'normal', t:'ガハハハハ！ よくぞワシの眠りを覚ましたな！' },
+  { who:'jack', name:'ジャック(大王)', e:'normal', t:'ワシがカボチャの大王じゃ！ 夜の街は、ワシの庭じゃぞ！ ……ガハ、ガハハ……' },
+  { who:'kiki', e:'normal', t:'笑い声が、ちょっと空っぽでつ。' },
+  { who:'mua', e:'excited', t:'ここまで来たんだもん、絶対に止める。ぜんぶのビートを、届けよう！' },
+  { who:'jack', name:'ジャック(大王)', e:'normal', t:'かかってこい！ ワシを、楽しませてみせい！' },
+];
+
+// 第6部 ～ただ、遊びたかっただけ(大王を倒したあと)
+const RAID_JACK_STORY_6 = [
+  { who:'jack', name:'ジャック(大王)', e:'normal', t:'ぐおお……！ ワシが、負けた……のか……' },
+  { who:'jack', name:'ジャック(大王)', e:'normal', t:'…………' },
+  { who:'mua', e:'normal', t:'……ジャック？ 大丈夫？' },
+  { who:'momosuke', e:'excited', stage:'pumpkin', stageName:'ぱんぷきん', fx:'shrink', fxText:'ジャックが、ぱんぷきんにもどった', t:'あっ、体がしぼんでいく！ ちっちゃく……！' },
+  { who:'kiki', e:'normal', t:'元の、ぱんぷきんでつ。光るおなかも、そのままでつ。' },
+  { who:'pumpkin', e:'troubled', t:'……ごめんなさい' },
+  { who:'pumpkin', e:'normal', t:'ぼく、ほんとうは大王なんかじゃないんだ。爵位も、ぜんぶ飾りなんだ' },
+  { who:'pumpkin', e:'normal', t:'ハロウィン・ナイトが始まると、みんなの楽しそうな声が聞こえてきて……' },
+  { who:'pumpkin', e:'normal', t:'ぼくも仲間に入りたかったのに、どう言えばいいか分からなくて。強そうにして、暴れちゃったんだ' },
+  { who:'kiki', e:'troubled', t:'……ずっと、さみしかったんでつね。' },
+  { who:'dra', e:'troubled', t:'おで、ドラっていう。こいつらの仲間だ。おまえ、さびしかったんだろ' },
+  { who:'pumpkin', e:'troubled', t:'……うん。みんなと、ただ遊びたかっただけなんだ。ごめんなさい' },
+  { who:'mua', e:'excited', t:'なーんだ！ それなら最初から言ってくれればよかったのに！' },
+  { who:'momosuke', e:'happy', t:'だいじょうぶだよ♡ ももたち、もう怒ってないもん。ねえ、ぱんぷきん。ももたちと一緒に、パーティー、やらない？' },
+  { who:'pumpkin', e:'normal', t:'ほんとう……？ また、遊んでくれる……？' },
+  { who:'mua', e:'excited', t:'もちろん！ 今度はみんなで、思いっきり遊ぼう！' },
+  { who:'dra', e:'normal', t:'いくらでも相手になるぞ。ぱんぷきんが疲れるまでな' },
+  { who:'pumpkin', e:'happy', t:'やった……！ ありがとう！ ぼく、いくらでも遊ぶよ！ 元気いっぱいだから、ぜんぜん倒れないよ！' },
+  { who:'kiki', e:'normal', t:'それは頼もしいでつ。ここからは、ぱんぷきんと思いきり遊ぶ時間でつね。' },
+];
+
+// 終章の冒頭 結末A(大王まで倒せた)
+const RAID_JACK_ENDING_A_HEAD = [
+  { who:'mua', e:'excited', t:'いよいよ、ハロウィン・ナイト最後の夜だね！ ……みんなで、ぱんぷきんを大王まで止められたんだもん' },
+  { who:'kiki', e:'normal', t:'街中のランタンがぜんぶ灯って、音も全部戻ってきたでつ。きれいでつね……' },
+  { who:'momosuke', e:'happy', t:'あとは主役が来るのを待つだけだよ♡' },
+  { who:'dra', e:'normal', t:'来るかな、ぱんぷきん' },
+  { who:'mua', e:'normal', t:'来るよ。だって、ビートはちゃんと届いたもん' },
+  { who:'pumpkin', e:'normal', t:'……来たよ。みんな、ぼくの仲間も連れてきたんだ' },
+  { who:'dra', e:'normal', t:'畑にいた、ランタンになれなかったかぼちゃたちが、みんな来たんだな' },
+  { who:'mua', e:'excited', t:'来てくれた……！ ようこそ、ぱんぷきん！ ハロウィン・ナイトへ！' },
+];
+
+// 終章の冒頭 結末B(大王まで倒せなかった)
+const RAID_JACK_ENDING_B_HEAD = [
+  { who:'mua', e:'normal', t:'いよいよ、ハロウィン・ナイト最後の夜だね。……大王ジャックには、あと少し届かなかったけど' },
+  { who:'jack', name:'ジャック(大王)', e:'normal', t:'ガハハ……夜が明けるようじゃな。今回は、ワシの勝ちじゃ' },
+  { who:'kiki', e:'normal', t:'それでも、ビートは届いていたはずでつ。ジャックの笑い声が、前より優しくなっていまつ。' },
+  { who:'dra', e:'normal', t:'ああ。ここまで食い下がったんだ。胸を張っていい' },
+  { who:'jack', name:'ジャック(大王)', e:'normal', t:'……フン。なかなか、楽しかったぞ。だから……もう、暴れなくてよいのじゃ' },
+  { who:'pumpkin', e:'happy', t:'……ありがとう。みんなのビート、ちゃんと聞こえたよ。ぼくも、パーティーに入れてほしいんだ' },
+  { who:'momosuke', e:'happy', t:'もちろんだよ♡ ぱんぷきんも、後ろのみんなも、ようこそ！' },
+  { who:'mua', e:'excited', t:'来年こそ、大王のジャックまで止めて、もっとたくさん遊ぼうね！ ようこそ、ハロウィン・ナイトへ！' },
+];
+
+// 終章の続き(結末AもBも共通)
+const RAID_JACK_ENDING_COMMON = [
+  { who:'dra', e:'normal', t:'よし、始めるぞ！ 最後の『Crazy Party Night ～ぱんぷきんの逆襲～』だ！' },
+  { who:'mua', e:'excited', t:'みんなで踊ろう！ 魔女も、うさ耳も、小悪魔も、かぼちゃ頭も、ぜーんぶ一緒に！' },
+  { who:'kiki', e:'normal', t:'ぱんぷきんが、一緒にステップを踏んでいまつ！' },
+  { who:'momosuke', e:'happy', t:'かわいい〜♡ 光るおなかが、リズムに合わせてぴかぴかしてる' },
+  { who:'dra', e:'normal', t:'おでも、負けてられないな。……あ、足がもつれた' },
+  { who:'mua', e:'normal', t:'ドラケン、またぁｗ' },
+  { who:'pumpkin', e:'troubled', t:'あのね、これ。……ぼくが盗んじゃった音の、瓶。ごめんなさい。中身は、もう空っぽなんだ' },
+  { who:'momosuke', e:'troubled', t:'ううん、もう怒ってないよ。ももたちこそ、ぱんぷきんの気持ち、気づくのが遅れてごめんね' },
+  { who:'mua', e:'normal', t:'来年も、再来年も、ぱんぷきんが一番前で踊れる夜にしようね' },
+  { who:'kiki', e:'normal', t:'約束でつ。ぱんぷきんも、うれしそうに跳ねていまつ。' },
+  { who:'momosuke', e:'normal', t:'空が少し明るくなってきたね……もう、夜明けだ' },
+  { who:'kiki', e:'normal', t:'ハロウィン・ナイトも、もうすぐおしまいでつね。' },
+  { who:'mua', e:'normal', t:'ちょっと寂しいな。ずっと続けばいいのに' },
+  { who:'dra', e:'normal', t:'またやればいいさ。ハロウィンは、来年も来る。ぱんぷきんも、モンヒロビートの中でいつでも待ってるよ' },
+  { who:'momosuke', e:'happy', t:'あ、そうそう。ハロウィンの衣装はね、イベントが終わっても、ダイヤショップで買えるようになるよ♡' },
+  { who:'kiki', e:'normal', t:'ビートP交換所に並んでいたぶんは、ここまでになりまつ。着たかった人は、ダイヤショップをのぞいてほしいでつ。' },
+  { who:'mua', e:'excited', t:'もう持ってる子は、ずっと着てていいよ！ 魔女のみゅあを、これからもよろしくね！' },
+  { who:'dra', e:'normal', t:'最後に、遊んでくれた全員にお礼だ。おまえたちのビートのおかげで、ぱんぷきんは笑えた' },
+  { who:'pumpkin', e:'happy', t:'ありがとう、みんな！ また来年、いっしょに遊ぼうね！' },
+  { who:'momosuke', e:'happy', t:'ありがとう〜♡ また次のイベントで会おうね！' },
+  { who:'mua', e:'happy', t:'ハッピー・ハロウィン！' },
+];
+
+// 終章は、冒頭(結末で分かれる)+共通の続き を1本につなげて再生する
+const RAID_JACK_ENDING_CLEARED = [...RAID_JACK_ENDING_A_HEAD, ...RAID_JACK_ENDING_COMMON];
+const RAID_JACK_ENDING_NOTCLEARED = [...RAID_JACK_ENDING_B_HEAD, ...RAID_JACK_ENDING_COMMON];
+
+// ---- レイドの遊び方(カボチャの大王ジャック) ----
+// ハロウィン・ナイト第1部を見終えたあとに、HOMEで1度だけ続けて流れる(2026-10-04・ユーザー指示「最初のストーリーを終了後にレイドの遊び方説明をいれて」)。
+// 公開フラグ(RELEASE_FLAGS.raidJack)が立つまでは流れず、回想にも出ない。そのあとは回想から見返せる。
+// 遊び方の数字は help.js の raid-jack と同じ(変えたら両方直す)
+const ASSISTANT_RAID_JACK_HOWTO = [
+  // SCENE 1 ジャックを止める(第1.5部「ふくれあがる影」のあとに続く。ジャック=ふくれあがったぱんぷきん)
+  { who:'kiki',     e:'normal',   t:'みゅあちん、HOMEの真ん中を見てほしいでつ。男爵ジャックが、まだそこで暴れていまつ。' },
+  { who:'mua',      e:'troubled', t:'ほんとだ……。ぱんぷきんが、あんなに大きくなっちゃって' },
+  { who:'dra',      e:'normal',   t:'おまえら、気持ちは分かる。でも、止めないと街がめちゃくちゃになる。まずは暴れるのを止めるぞ' },
+  { who:'momosuke', e:'wink',     t:'みんなで力を合わせて止めようね♡ ジャックの中のぱんぷきんにも、きっと届くよ' },
+  { who:'mua',      e:'excited',  t:'よーし、やってやろうじゃん！ で、どうやって戦うの？' },
+  // SCENE 2 入り方と2つの遊び方
+  { who:'kiki',     e:'normal',   t:'HOMEの真ん中のジャックをタップすると、レイド画面が開きまつ。' },
+  { who:'kiki',     e:'normal',   t:'遊び方は2つ。「レイドバトル」と「グランドスラム」でつ。' },
+  { who:'momosuke', e:'happy',    t:'レイドバトルは、ベースモンで挑む協力戦だよ。ジャックのライフはみんなで共有！ みんなのダメージが合わさって減っていくの♪' },
+  { who:'mua',      e:'surprise', t:'みんなで1体を削るんだ！ ライフが0になったら？' },
+  { who:'dra',      e:'normal',   t:'次の段階のジャックが出てくる。男爵、子爵、伯爵、公爵、大王の5段階だ' },
+  { who:'momosuke', e:'wink',     t:'段階ごとに、がんばった人の貢献ランキングが並ぶよ。上位には報酬があるかもね♡' },
+  { who:'kiki',     e:'normal',   t:'グランドスラムは、育てたマスモンで挑む個人戦でつ。ジャックのライフは減りませんが、与えたダメージの合計で、みんなとランキングを競いまつ。' },
+  { who:'mua',      e:'happy',    t:'協力のレイドバトルと、腕試しのグランドスラムかぁ。どっちも燃えるね！' },
+  // SCENE 3 挑戦のしかた
+  { who:'kiki',     e:'normal',   t:'挑むときは、段階を選んで、勇者モン・供モン(3体まで)・アシカを選んで、編成して始めまつ。' },
+  { who:'dra',      e:'normal',   t:'1回の挑戦は20ターン。そのあいだにジャックへダメージを与えるんだ' },
+  { who:'mua',      e:'troubled', t:'20ターンかぁ。短いようで長いね' },
+  { who:'momosuke', e:'normal',   t:'挑戦は1日3回まで無料。毎朝5:00に回復するよ。レイドバトルとグランドスラムは、別々に数えるの' },
+  { who:'kiki',     e:'surprise', t:'足りないときは、ビートPで1回100Pずつ追加できまつ。1日に買える回数に上限はありませんよ。' },
+  { who:'momosuke', e:'wink',     t:'モンビーでビートPをいっぱい貯めておけば、何回でも挑めちゃうね♡' },
+  { who:'dra',      e:'troubled', t:'ただし気をつけろ。始めた時点で1回使う。途中でやめても、アプリを閉じても、回数は戻らないぞ' },
+  { who:'kiki',     e:'normal',   t:'リタイアしても、そこまでのダメージは記録されまつ。' },
+  // SCENE 4 レイドバトルのコツ
+  { who:'momosuke', e:'excited',  t:'ここからはレイドバトルのコツ！ 1ターン進むごとに、味方みんなの全ステータスが5%ずつ上がっていくの♡' },
+  { who:'mua',      e:'excited',  t:'長引くほど強くなるんだ！ ライフとガッツの自動回復も、少しずつ上がるんだよね' },
+  { who:'kiki',     e:'normal',   t:'3ターン目・5ターン目・8ターン目・11ターン目には、編成全員の固有技が2段階ずつ強くなりまつ。アシカは3ターン目と5ターン目に1段階ずつ強くなりまつ。' },
+  { who:'dra',      e:'normal',   t:'EXスキルは、持ってるやつごとに2回までだ。使いどころを考えろよ' },
+  { who:'mua',      e:'happy',    t:'味方のライフとガッツは、全快からスタート。ジャックの攻撃は、段階が上がるほど強くなるよ' },
+  { who:'kiki',     e:'normal',   t:'男爵は通常バトルのEasy、子爵はNormal、伯爵はHard、公爵はExpert、大王はMasterと同じ強さでつ。' },
+  { who:'momosuke', e:'wink',     t:'迷ったらヘルプの「カボチャの大王ジャック」を読んでね。ここで話したことは全部載ってるよ♪' },
+  // SCENE 5 開幕
+  { who:'dra',      e:'happy',    t:'よし、準備はいいか？ 夜祭を荒らすかぼちゃ、懲らしめてやろうぜ' },
+  { who:'mua',      e:'excited',  t:'いくよ、みんな！ ジャックを倒して、ハロウィン・ナイトを取り戻そう！' },
+];
+const ASSISTANT_RAID_JACK_HOWTO_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
 const EVENT_REPLAYS = [
+  // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
+  // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
+  //   第1.5部=レイド開始(公開後に初めてHOMEを開いたとき) / 第2〜6部=段階を倒したあと / 終章=期間終了後
+  //   終章は「大王まで倒せたか」で2本(raid_jack_ending_cleared / raid_jack_ending_notcleared)。
+  // date は回想の並び順にだけ使う(第1部の 10/4 08:00 のあとに並ぶよう、同じ日の少しあとにしてある)。
+  //   物語の順(第1部 08:00 → 第1.5部 08:01 → 遊び方 08:02 → 第2部 08:03 … 第6部 08:07)に、同じ時刻を使い回さず1分ずつ振る。回想の一覧は新しい順で、
+  //   同じ時刻だと書いた順に並ぶので、遊び方が第1.5部と同じ 08:01 だと一覧で「遊び方」が第1.5部より前(古い側)に出てしまっていた(2026-10-05に確認)。
+  // 見たかどうかは unlockedKey(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS)で引く
+  { id: 'raid_jack_story_1b', date: '2026-10-04 08:01', title: 'ハロウィン・ナイト 第1.5部 ～ふくれあがる影～', script: RAID_JACK_STORY_1B, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory1bSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_2', date: '2026-10-04 08:03', title: 'ハロウィン・ナイト 第2部 ～吠えるカボチャ～', script: RAID_JACK_STORY_2, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_3', date: '2026-10-04 08:04', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: RAID_JACK_STORY_3, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_4', date: '2026-10-04 08:05', title: 'ハロウィン・ナイト 第4部 ～ドラの気持ち～', script: RAID_JACK_STORY_4, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_5', date: '2026-10-04 08:06', title: 'ハロウィン・ナイト 第5部 ～すれ違い～', script: RAID_JACK_STORY_5, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_6', date: '2026-10-04 08:07', title: 'ハロウィン・ナイト 第6部 ～ただ、遊びたかっただけ～', script: RAID_JACK_STORY_6, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory6Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_ending_cleared', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王まで倒せた)～', script: RAID_JACK_ENDING_CLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingClearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_ending_notcleared', date: '2026-11-01 04:01', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王には届かなかった)～', script: RAID_JACK_ENDING_NOTCLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingNotclearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
   // タクティクスバトルの導入(2026-09-21)。**公開するまでは回想にも出さない**
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
@@ -6221,6 +6710,11 @@ const EVENT_REPLAYS = [
   { id: 'beat_point_up_2026_09_28', date: '2026-09-28 18:00', title: 'ビートPアップキャンペーン ～森と甘い香りの新しい仲間～', script: ASSISTANT_BEAT_POINT_UP, calls: ASSISTANT_BEAT_POINT_UP_CALLS, unlockedKey: 'beatPointUpSeen' },
   // みんなで対戦・フレンド・ももすけのアシストカード・EXスキルの知らせ(2026-10-03)。HOMEで1度だけ流れ、そのあとは回想から見返せる
   { id: 'rhythm_multi_friends_2026_10_03', date: '2026-10-03 03:31', title: 'みんなで対戦 ～フレンドといっしょに～', script: ASSISTANT_RHYTHM_MULTI_FRIENDS, calls: ASSISTANT_RHYTHM_MULTI_FRIENDS_CALLS, unlockedKey: 'rhythmMultiFriendsSeen' },
+  // ハロウィン・ナイト(2026-10-04〜11-01)の第1部。開幕の時刻にHOMEで1度流れ、そのあとは回想から見返せる(第2部以降はジャックのストーリー=レイドの進み具合で開く)
+  // (出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。id はそこと同じ)
+  { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  // レイドの遊び方(2026-10-04)。第1部を見終えたあとにHOMEで1度だけ続けて流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
+  { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

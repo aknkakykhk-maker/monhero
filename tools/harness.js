@@ -306,6 +306,11 @@ const EXPORTED_NAMES = [
   'SOUL_TRAIT_BY_ID',
   'SOUL_TRAIT_CATEGORIES',
   'soulPointEarned',
+  'normalizeSoulBonusPoints',
+  'buildSoulCrystalUse',
+  'SOUL_CRYSTAL_ITEM',
+  'SOUL_CRYSTAL_ITEM_ID',
+  'buildMasuSoulTraitReset',
   'soulTraitLevel',
   'soulTraitEffectValue',
   'soulTraitSpentPoints',
@@ -571,7 +576,8 @@ function loadEmbeddedImages() {
     // そのままではファイル名にならない。実在確認の対象から外す。
     // (以前はこれも拾っており、たまたま同じ名前の後ろの行で上書きされて隠れていた。
     //  2026-09-05に breeder.js の直書きを定数へまとめたら表に出た)
-    while ((m = re.exec(s))) { if (m[2].includes('${')) continue; map[m[1]] = m[2]; }
+    // imageDir: 'images/assistant/halloween' のような**フォルダ**(拡張子が無い)は画像ではないので除く(着替えの絵の置き場・2026-10-04)
+    while ((m = re.exec(s))) { if (m[2].includes('${')) continue; if (m[2].startsWith('images/') && !/\.[A-Za-z0-9]+$/.test(m[2].split('?')[0])) continue; map[m[1]] = m[2]; }
     const reAlias = /const\s+([A-Za-z0-9_$]+)\s*=\s*([A-Za-z0-9_$]+)\s*;/g;
     while ((m = reAlias.exec(s))) aliases.push([m[1], m[2]]);
   }

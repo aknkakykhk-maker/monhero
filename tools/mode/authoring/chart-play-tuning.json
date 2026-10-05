@@ -1,0 +1,25 @@
+{
+ "schemaVersion": 1,
+ "revisions": {
+  "27": {
+   "createdAt": "2026-10-05 05:49",
+   "basedOn": {
+    "charts": 54,
+    "plays": 186
+   },
+   "reasons": [
+    "低音の遅れ: 3曲・1057件から、プレイヤーが聞いているのは解析の遅れの 0.25倍 → 0 を 0.1 へ",
+    "1本の線: 2576小節で、つまみ食いの多い小節はばらつきが 1.1ms 大きい → 動かさない",
+    "仮想プレイヤー: 13譜面で、実際のばらつきは見込みの 1.76倍・ミスは 2.99倍 → ばらつきの倍率 1→1.4・ミスの倍率 1→2"
+   ],
+   "values": {
+    "lowLagFactor": 0.1,
+    "lineBoost": 0,
+    "lineDemote": 0,
+    "virtualSigmaScale": 1.4,
+    "virtualMissScale": 2
+   }
+  }
+ },
+ "note": "遊んだ記録から学ぶ調整値(rhythm-chart-play-tuning.js)。リビジョンごとに残す。rhythm-play-log.js --learn --write が書き足す。前のリビジョンは消さない"
+}

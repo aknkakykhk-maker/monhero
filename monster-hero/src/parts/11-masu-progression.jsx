@@ -114,8 +114,20 @@ const normalizeSoulTraitLevels = (value) => {
   });
   return out;
 };
+// ボーナス魂格P(2026-10-04・「魂格の結晶」を使った数)。個体ごとに足す項目で、旧セーブには無いので0として読む。
+// 上限は設けない(壊れた値だけ弾く)。0のときは保存しない(soulBonusPointsPatch)。
+const normalizeSoulBonusPoints = (value) => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 1000000000) : 0;
+};
+const soulBonusPointsPatch = (masu) => {
+  const n = normalizeSoulBonusPoints(masu?.soulBonusPoints);
+  return n > 0 ? { soulBonusPoints:n } : {};
+};
+// 獲得済み魂格P = 初到達Lvから導出した分(最大500)+ 結晶のボーナス分
 const soulPointEarned = (masu) =>
-  Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL));
+  Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL))
+  + normalizeSoulBonusPoints(masu?.soulBonusPoints);
 const soulTraitLevel = (masu, traitId) =>
   Math.max(0, Math.floor(Number(normalizeSoulTraitLevels(masu?.soulTraitLevels)[traitId]) || 0));
 const soulTraitEffectValue = (masu, traitId) => {
@@ -1053,6 +1065,36 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
   usage:'heroProofShard',
   desc:`モンヒロビートの週間ランキングと、クイックモードGODのクリアでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
 });
+// 魂格の結晶(2026-10-04・ユーザーが決めた)。ハロウィンのレイドボス「ジャック」の報酬で配る。
+// 使うと選んだマスモン1体のボーナス魂格Pが1個につき+1される(上限なし・マスモンならどれにでも使える)。
+// ★所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない(CLAUDE.md ⑦)。
+// ★マーケットでは売らない。ボーナス分は個体の soulBonusPoints(0のときは保存しない)。
+const SOUL_CRYSTAL_ITEM_ID = 'soul_crystal';
+const SOUL_CRYSTAL_ITEM = Object.freeze({
+  id:SOUL_CRYSTAL_ITEM_ID,
+  name:'魂格の結晶',
+  emoji:'🔮',
+  usage:'soulCrystal',
+  desc:'マスモンの魂格特性で使うと、そのマスモンの魂格Pが1個につき+1される。ハロウィンのレイドボス「ジャック」の報酬。',
+});
+// 結晶を使う。個数は所持数まで(0以下は1個)。足りなければ ok:false を返し、何にも触れない。
+// 増えるのは個体の soulBonusPoints、減るのは所持品の結晶で、書き戻しは呼び出し側が2つまとめて行う
+const buildSoulCrystalUse = (masu, ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  if (!masu || typeof masu !== 'object') return { ok:false, reason:'noMasu', quantity:0, ownedItems:before };
+  const have = ownedItemCount(before, SOUL_CRYSTAL_ITEM_ID);
+  const count = Math.min(have, Math.max(1, Math.floor(Number(quantity) || 1)));
+  if (count <= 0) return { ok:false, reason:'noItem', quantity:0, ownedItems:before };
+  const bonusBefore = normalizeSoulBonusPoints(masu.soulBonusPoints);
+  return {
+    ok:true,
+    quantity:count,
+    bonusBefore,
+    bonusAfter:bonusBefore + count,
+    nextMasu:{ ...masu, soulBonusPoints:bonusBefore + count },
+    ownedItems:{ ...before, [SOUL_CRYSTAL_ITEM_ID]:have - count },
+  };
+};
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
   speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
@@ -1287,7 +1329,7 @@ const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={},
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
   const cost = unitCost * purchaseQuantity;
   const currency = item?.currency === 'psyche' ? 'psyche'
-    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item') ? 'diamond' : 'breederPoint';
+    : (item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume') ? 'diamond' : 'breederPoint';
   const balances = { diamond:Math.max(0, Math.floor(Number(gold) || 0)), breederPoint:Math.max(0, Math.floor(Number(breederPoints) || 0)), psyche:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) };
   if (!item || item.available === false || balances[currency] < cost) return { ok:false, currency, cost, gold:balances.diamond, breederPoints:balances.breederPoint, ownedItems };
   const nextItems = item.type === 'item' ? { ...ownedItems, [item.id]:ownedItemCount(ownedItems, item.id) + purchaseQuantity } : ownedItems;
@@ -1314,7 +1356,12 @@ const transferableReincarnateBonus = (masu) => ({
   points: ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu),
   count: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)) + inheritedReincarnateCountOf(masu),
 });
-const normalizeMasuProgression = (masu) => ({
+// 個体オブジェクトのボーナス魂格Pを正規化する。...masu で元の値がそのまま入るので、壊れた値・0はここで外す
+const withNormalizedSoulBonus = (obj, source) => {
+  const { soulBonusPoints: _drop, ...rest } = obj;
+  return { ...rest, ...soulBonusPointsPatch(source) };
+};
+const normalizeMasuProgression = (masu) => withNormalizedSoulBonus({
   ...masu,
   // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
   autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
@@ -1341,7 +1388,7 @@ const normalizeMasuProgression = (masu) => ({
   // 未使用の固有技ポイント。限界突破・転生でその場に上げなかったぶんをここへ貯めておき、
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
-});
+}, masu);
 const buildAutoRepeatBreakthroughSettingUpdate = (masu, mode, level = 0) => {
   const normalizedMode = mode === 'follow' ? 'follow' : mode === 'fixed' ? 'fixed' : 'off';
   const normalizedLevel = normalizedMode === 'fixed' ? normalizeAutoRepeatBreakthroughLevel(level) : 0;
@@ -1427,6 +1474,7 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
     soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
+    ...soulBonusPointsPatch(masu),
     // 超越は転生で失われない。状態・未使用の超越P・超越で上げた基礎値をそのまま持ち越す
     transcended: isTranscended(masu),
     transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),

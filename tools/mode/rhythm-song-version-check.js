@@ -14,8 +14,8 @@ const ok=(label,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${label}${deta
 const ctx={console,Object,Number,Math,Array,JSON,String,Boolean,isNaN,parseInt,parseFloat,Date,Map,Set};
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8')
-  +'\nthis.out={RHYTHM_SONGS,RHYTHM_DEMO_SONG_IDS,RHYTHM_SONG_VERSION_GROUPS,rhythmSongVersionHead,rhythmSongVersionLabel};',ctx);
-const {RHYTHM_SONGS,RHYTHM_DEMO_SONG_IDS,RHYTHM_SONG_VERSION_GROUPS:GROUPS,rhythmSongVersionHead}=ctx.out;
+  +'\nthis.out={RHYTHM_SONGS,RHYTHM_DEMO_SONG_IDS,RHYTHM_SONG_VERSION_GROUPS,rhythmSongVersionHead,rhythmSongVersionLabel,rhythmSongReleased};',ctx);
+const {RHYTHM_SONGS,RHYTHM_DEMO_SONG_IDS,RHYTHM_SONG_VERSION_GROUPS:GROUPS,rhythmSongVersionHead,rhythmSongReleased}=ctx.out;
 const ids=GROUPS.flatMap(group=>group.map(([id])=>id));
 ok('表にある曲はどれも公開中',ids.every(id=>RHYTHM_DEMO_SONG_IDS.includes(id)),ids.filter(id=>!RHYTHM_DEMO_SONG_IDS.includes(id)).join(', '));
 ok('1曲が2つの組に入っていない',new Set(ids).size===ids.length);
@@ -25,7 +25,8 @@ for(const id of RHYTHM_DEMO_SONG_IDS){const song=RHYTHM_SONGS.find(s=>s.songId==
   if(!byName.has(song.displayName))byName.set(song.displayName,[]);byName.get(song.displayName).push(id);}
 const loose=[...byName].filter(([,list])=>list.length>1&&new Set(list.map(rhythmSongVersionHead)).size>1);
 ok('表示名が同じ公開曲は、どれも同じ組に入っている',!loose.length,loose.map(([name,list])=>`${name}: ${list.join(' / ')}`).join(' ・ '));
-const expectedRows=RHYTHM_DEMO_SONG_IDS.length-GROUPS.reduce((sum,group)=>sum+group.length-1,0);
+// 時刻が来るまで出さない曲(RHYTHM_SONG_RELEASE_AT)は、一覧の行に数えない(2026-10-04)
+const expectedRows=RHYTHM_DEMO_SONG_IDS.filter(id=>rhythmSongReleased(id)).length-GROUPS.reduce((sum,group)=>sum+group.length-1,0);
 
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg'};
 (async()=>{

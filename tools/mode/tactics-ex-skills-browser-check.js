@@ -435,7 +435,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     if (process.env.EX_SHOT_KENSHI) await page.screenshot({ path: process.env.EX_SHOT_KENSHI });
     // 説明だけで3つのスタイルの効き目が読める(2026-09-25 ユーザー指摘「説明があれじゃ効果が分からない」)
     check('剣士モッチーの詳細に、3つのスタイルの効き目が1行ずつ出る', !!p && ['片手剣：', '片手盾：', '二刀流：'].every(w => p.text.includes(w)), p && p.text.slice(0, 260));
-    check('二刀流: 力135/丈夫さ75 → 135／37 で、回数は使っていない', !!p && /135／37/.test(p.text) && /無制限/.test(p.uses), p && p.text.slice(0, 220));
+    check('二刀流: 力135/丈夫さ75 → 135／37 で、回数は使っていない(5 / 5)', !!p && /135／37/.test(p.text) && /5 \/ 5/.test(p.uses), p && p.text.slice(0, 220));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(300);
     const choices = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-ex-choice]')]
@@ -542,7 +542,11 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     p = await panel();
     check('「クリスマスプレゼント」: 1/1(このWAVE)・カードと併用できる', !!p && p.name === 'クリスマスプレゼント' && /1 \/ 1/.test(p.uses) && /このWAVE/.test(p.uses) && p.withCards === 'yes', p && p.text.slice(0, 260));
     await page.locator('[data-tactics-ex-use]').click();
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(350);
+    // 使った直後のカットインの下の行に、何が起きたか(全員のガッツ回復＋中身)が数字つきで出る
+    const snNote = await page.evaluate(() => { const el = document.querySelector('[data-ex-cutin-note]'); return el ? el.textContent : ''; });
+    check('使った直後に、中身が数字つきで出る(ガッツ20%回復＋ランダムの1つ)', /ガッツが上限の20%回復＋/.test(snNote) && /[0-9]+%|×/.test(snNote.split('＋')[1] || ''), snNote);
+    await page.waitForTimeout(550);
     const snAfter = await partyOf(snSlot);
     check('使うとガッツが増える(必ず上限の20%・満タンなら変わらない)', !!snBefore && !!snAfter && gutsNow(snAfter.guts) >= gutsNow(snBefore.guts), `${JSON.stringify(snBefore)} → ${JSON.stringify(snAfter)}`);
     await tapSlot(snSlot);
@@ -569,6 +573,20 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await tapSlot(unSlot);
     p = await panel();
     check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
+    // --- ⑫ ライガー「雷狼影」(2026-10-05 ユーザー指示) ---
+    const tgSlot = await startWith('ライガー');
+    await page.waitForTimeout(1500);
+    await tapSlot(tgSlot);
+    p = await panel();
+    check('「雷狼影」: 5/5・カードと併用できる・6ターン(ため3＋雷纏3)', !!p && p.name === '雷狼影' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /6ターン/.test(p.text), p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    check('使うと距離枠の札に「雷0」が出る', await page.locator(`[data-tactics-ex-mark="${tgSlot}"]`).getAttribute('data-tactics-ex-state') === '雷0');
+    await tapSlot(tgSlot);
+    p = await panel();
+    check('詳細に「雷 0（ためている。あと3ターンで雷纏が始まる）」が出る', !!p && /雷 0（ためている。あと3ターンで雷纏が始まる）/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
     // --- ⑪ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮。ひとりだけの盤面) ---

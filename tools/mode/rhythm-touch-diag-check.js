@@ -6,7 +6,7 @@
 //   ③ 読む道具が、作り物の記録から原因を言い当てる(ブラウザが落とした / 手前で消えた / 5本 / 差が無い / 記録が足りない)
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os'),{spawnSync}=require('child_process');
-const {aggregate,diagnose,MIN_PLAYS,compareReported,fixesFor,MIN_REPORTED}=require('./rhythm-touch-diag.js');
+const {aggregate,diagnose,MIN_PLAYS,compareReported,compareFix,fixesFor,MIN_REPORTED}=require('./rhythm-touch-diag.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 let failed=0;
@@ -143,11 +143,11 @@ const verdictOf=rows=>diagnose(aggregate(rows)).filter(line=>line.level==='found
   const few=compareReported([...ios,...android,...reports.slice(0,MIN_REPORTED-1)]);
   ok('報告: 報告が少ないうちは比べない',few.lines.length===1&&few.lines[0].level==='wait',few.lines[0]&&few.lines[0].text);
 }
-// ── ⑤ 用意してある直し方(既定はすべて切ってある) ──
+// ── ⑤ 用意してある直し方(入れてあるのは lateInputEffectDown だけ。ほかは切ってある) ──
 {
   const mode=read('monster-hero/data/rhythm-mode.js');
   const fixes=(mode.match(/const RHYTHM_TOUCH_FIXES=\{[\s\S]*?\n\};/)||[''])[0];
-  ok('直し方: 公開では、すべて切ってある',/lateInputEffectDown:false/.test(fixes)&&/wideEdge:false/.test(fixes)&&/allPlatforms:false/.test(fixes)&&!/:true/.test(fixes),fixes.replace(/\s+/g,' ').slice(0,200));
+  ok('直し方: 公開で入れてあるのは lateInputEffectDown だけ(wideEdge・allPlatforms は切ってある)',/lateInputEffectDown:true/.test(fixes)&&/wideEdge:false/.test(fixes)&&/allPlatforms:false/.test(fixes)&&(fixes.match(/:true/g)||[]).length===1,fixes.replace(/\s+/g,' ').slice(0,200));
   ok('直し方: 効くのは iPhone だけ',/return rhythmTouchPlatformCache==='ios';/.test(mode));
   ok('直し方: 道の外の受け付けは、切り替えを通して決める',/const margin=laneWidth\/2\*rhythmInputEdgeMarginSubLanes\(\);/.test(mode));
   ok('直し方: タッチの遅れで演出を下げるのは「重いときは演出を自動で控えめに」の中だけ(設定を切った人には効かない)',
@@ -156,6 +156,20 @@ const verdictOf=rows=>diagnose(aggregate(rows)).filter(line=>line.level==='found
   const picks=fixesFor(late,null).map(item=>item.fix);
   ok('直し方: 「遅れて届いた」の判定には lateInputEffectDown を示す',picks.length===1&&picks[0]==='lateInputEffectDown',picks.join(','));
   ok('直し方: 差が無いときは何も示さない',fixesFor(diagnose(aggregate([...make('ios',40),...make('android',40)])),null).length===0);
+}
+
+// ── ⑥ 直し方を入れる前と後の比べ(2026-10-05) ──
+{
+  const before=make('ios',20,{late:40}),after=make('ios',20,{late:5}).map(r=>({...r,id:`a${r.id}`,stats:{...r.stats,fixes:['lateInputEffectDown']}}));
+  const res=compareFix([...before,...after,...make('android',20)],'lateInputEffectDown');
+  const good=res.lines.filter(l=>l.level==='good');
+  ok('比べ: 入れたあとで「遅れて届いた」が半分以下になれば、良くなったと言う',good.length===1&&good[0].metric==='lateDeliveryPer1k',res.lines.map(l=>l.text).join(' / '));
+  ok('比べ: 入れたあと・入れる前に分けて数える(Android は入れない)',res.summary.length===2&&res.summary.every(g=>g.key.startsWith('ios:')));
+  const worse=compareFix([...make('ios',20,{late:5}),...make('ios',20,{late:40}).map(r=>({...r,id:`b${r.id}`,stats:{...r.stats,fixes:['lateInputEffectDown']}}))],'lateInputEffectDown');
+  ok('比べ: 入れたあとで数字が1.5倍以上に増えたら、悪さを疑う',worse.lines.some(l=>l.level==='bad'&&l.metric==='lateDeliveryPer1k'),worse.lines.map(l=>l.text).join(' / '));
+  const wait=compareFix(make('ios',30),'lateInputEffectDown');
+  ok('比べ: 入れたあとの記録が無いうちは、足りないと言う(比べない)',wait.lines.length===1&&wait.lines[0].level==='wait',wait.lines[0]&&wait.lines[0].text);
+  ok('比べ: 報告の行は数に入れない',compareFix([...before,...after,{id:'r1',platform:'ios',stats:{kind:'report',playId:'x',fixes:['lateInputEffectDown']}}],'lateInputEffectDown').summary.find(g=>g.key==='ios:入れたあと').plays===20);
 }
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

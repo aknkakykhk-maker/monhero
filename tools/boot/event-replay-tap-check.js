@@ -54,6 +54,7 @@ catch { console.log('SKIP: playwright が入っていないので、実際に押
 
 const ctx = {};
 vm.createContext(ctx);
+ctx.JACK_ICON_IMG = 'images/raid/jack-icon.png';
 vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS};`, ctx);
 const list = ctx.__e.EVENT_REPLAYS;
 // いちばん長い会話(＝スキップを押したくなる会話)で見る
@@ -67,7 +68,12 @@ const ASSISTANT_LIST=ASSISTANTS;
 // ★画面は「公開フラグでふるいにかけた一覧」(eventReplayList)を通す。
 //   定義していないと ReferenceError で描画ごと落ち、スキップのボタンも出ない
 const eventReplayList=()=>EVENT_REPLAYS;
-const assistantById=(id)=>ASSISTANTS.find(x=>x.id===id)||ASSISTANTS[0];
+// ★台本に出てくる話し手は、助手に加えて登場人物(ジャックなど)もいる(2026-10-04)。
+//   定義していないと ReferenceError で描画ごと落ち、スキップのボタンも出ない
+//   (JACK_ICON_IMG は assistants.js 側で定義するので、ここでは宣言しない。二重にすると SyntaxError で画面が出ない)
+const STORY_GUESTS=(typeof STORY_GUEST_SPEAKERS!=='undefined'?STORY_GUEST_SPEAKERS:[]);
+const assistantById=(id)=>ASSISTANTS.find(x=>x.id===id)||STORY_GUESTS.find(x=>x.id===id)||ASSISTANTS[0];
+const storyCastOf=(script)=>[...ASSISTANTS,...STORY_GUESTS].filter(who=>script.some(l=>l.who===who.id));
 const normalizeAssistantBond=()=>({points:0});
 const assistantBonds={},assistantCallStyles={};
 const assistantSpeakText=(t)=>t; const assistantBondLevelOf=()=>1; const breederName='ブリーダー';
@@ -87,7 +93,7 @@ const code = babel.transformSync(app, { presets: [[PRESET_REACT, { runtime: 'cla
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, 'app.js'), code);
-fs.writeFileSync(path.join(OUT, 'assistants.js'), `${assistantsSrc}\n;window.EVENT_REPLAYS=EVENT_REPLAYS;window.ASSISTANTS=ASSISTANTS;`);
+fs.writeFileSync(path.join(OUT, 'assistants.js'), `var JACK_ICON_IMG='images/raid/jack-icon.png';\n${assistantsSrc}\n;window.EVENT_REPLAYS=EVENT_REPLAYS;window.ASSISTANTS=ASSISTANTS;window.STORY_GUEST_SPEAKERS=STORY_GUEST_SPEAKERS;`);
 fs.writeFileSync(path.join(OUT, 'style.css'), `${fs.readFileSync(path.join(root, 'monster-hero/tailwind.css'), 'utf8')}\nhtml,body{margin:0;background:#020617}`);
 fs.copyFileSync(path.join(root, 'monster-hero/vendor/react.production.min.js'), path.join(OUT, 'react.js'));
 fs.copyFileSync(path.join(root, 'monster-hero/vendor/react-dom.production.min.js'), path.join(OUT, 'react-dom.js'));

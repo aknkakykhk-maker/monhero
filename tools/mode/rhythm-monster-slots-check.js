@@ -26,7 +26,7 @@ const block=data.match(/const RHYTHM_MONSTER_SLOT_KEY=[\s\S]*?const rhythmMonste
 check('マスモン設定の実装を抽出できる',!!block);
 if(!block)process.exit(1);
 const context={};vm.createContext(context);
-vm.runInContext(`${block}\nthis.out={RHYTHM_MONSTER_SLOT_KEY,RHYTHM_MONSTER_SLOT_MAX,RHYTHM_MONSTER_SLOT_ISSUE_TEXT,RHYTHM_MONSTER_NOTE_BASE_RATIOS,sanitizeRhythmMonsterSlotIds,resolveRhythmMonsterSlots,rhythmMonsterSlotAddIssue,addRhythmMonsterSlot,removeRhythmMonsterSlot,moveRhythmMonsterSlot,rhythmMonsterNoteBaseRatios,rhythmMonsterSlotReplaceIssue,replaceRhythmMonsterSlot};`,context);
+vm.runInContext(`${block}\nthis.out={RHYTHM_MONSTER_SLOT_KEY,RHYTHM_MONSTER_SLOT_MAX,RHYTHM_MONSTER_SLOT_ISSUE_TEXT,RHYTHM_MONSTER_SAME_ABILITY_MAX,rhythmMonsterSlotAbilityId,RHYTHM_MONSTER_NOTE_BASE_RATIOS,sanitizeRhythmMonsterSlotIds,resolveRhythmMonsterSlots,rhythmMonsterSlotAddIssue,addRhythmMonsterSlot,removeRhythmMonsterSlot,moveRhythmMonsterSlot,rhythmMonsterNoteBaseRatios,rhythmMonsterSlotReplaceIssue,replaceRhythmMonsterSlot};`,context);
 const M=context.out;
 
 check('保存キーは新しく分けてある',M.RHYTHM_MONSTER_SLOT_KEY==='mh_rhythm_monsters_v1',M.RHYTHM_MONSTER_SLOT_KEY);
@@ -86,7 +86,7 @@ check('5体目は不可',
 check('手元にいないマスモンは設定できない',
   M.rhythmMonsterSlotAddIssue([],'u-gone',OWNED)==='missing');
 check('設定できない理由には日本語の説明がある',
-  ['missing','full','duplicate-id','duplicate-base'].every(key=>typeof M.RHYTHM_MONSTER_SLOT_ISSUE_TEXT[key]==='string'&&M.RHYTHM_MONSTER_SLOT_ISSUE_TEXT[key].length>0));
+  ['missing','full','duplicate-id','duplicate-base','duplicate-ability'].every(key=>typeof M.RHYTHM_MONSTER_SLOT_ISSUE_TEXT[key]==='string'&&M.RHYTHM_MONSTER_SLOT_ISSUE_TEXT[key].length>0));
 
 // ── 追加・削除・並べ替え ────────────────────────────────────────────────────
 check('設定は末尾へ足す(足した順が登場順)',
@@ -116,6 +116,57 @@ check('4枠埋まっていても、差し替えはできる',
 check('1〜3体でも成立する(4体を必須にしない)',
   M.resolveRhythmMonsterSlots(['u-ham'],OWNED).length===1
   &&M.rhythmMonsterSlotAddIssue(['u-ham'],'u-pandora',OWNED)===null);
+
+// ── 同じ能力は2体まで(2026-10-04・ユーザー指示「モンビーのマスモンで状態変化の被りを2つまでに」) ──
+// 本物の能力の表と血統の表をそのまま使う(手で写した値を使うと、値を変えたときにここだけ古いまま残る)
+{
+  const abilities=data.match(/const RHYTHM_MONSTER_ABILITIES=[\s\S]*?const rhythmMonsterAbilityForLineage=[\s\S]*?\|\|null;/)?.[0];
+  const lineageSrc=read('monster-hero/data/lineages.js').match(/const MONSTER_LINEAGE_MAP = \{[\s\S]*?\n\};/)?.[0];
+  check('能力の表と血統の表を抽出できる',!!abilities&&!!lineageSrc);
+  const real={};vm.createContext(real);
+  vm.runInContext(`${abilities}\n${lineageSrc}\nthis.out={rhythmMonsterAbilityForLineage,MONSTER_LINEAGE_MAP};`,real);
+  context.rhythmMonsterAbilityForLineage=real.out.rhythmMonsterAbilityForLineage;
+  context.monsterLineageOf=baseId=>({main:{id:real.out.MONSTER_LINEAGE_MAP[baseId]?.main}});
+  const mk=(id,baseId)=>({id,baseId,name:id});
+  // 元気: ミーア・パンドラ・オボロ(主血統がピクシー) / 無敵: イヴリース / 根性: エイキ / 我慢: みたらし
+  const O=[mk('g1','Mia'),mk('g2','Pandora'),mk('g3','Oboro'),mk('m1','Iblis'),mk('k1','Eiki'),mk('a1','Mitarashi')];
+  check('上限は2体',M.RHYTHM_MONSTER_SAME_ABILITY_MAX===2);
+  check('能力を引ける(ミーア=元気 / イヴリース=無敵 / エイキ=根性 / みたらし=我慢)',
+    ['g1:GENKI','m1:MUTEKI','k1:KONJO','a1:GAMAN'].every(pair=>{const [id,ability]=pair.split(':');return M.rhythmMonsterSlotAbilityId(O.find(x=>x.id===id))===ability;}));
+  check('同じ能力の1体目・2体目は設定できる',
+    M.rhythmMonsterSlotAddIssue([],'g1',O)===null&&M.rhythmMonsterSlotAddIssue(['g1'],'g2',O)===null);
+  check('同じ能力の3体目は設定できない(間に別の能力が入っていても数える)',
+    M.rhythmMonsterSlotAddIssue(['g1','g2'],'g3',O)==='duplicate-ability'
+    &&M.rhythmMonsterSlotAddIssue(['g1','m1','g2'],'g3',O)==='duplicate-ability');
+  check('別の能力なら、2体そろっていても設定できる',
+    M.rhythmMonsterSlotAddIssue(['g1','g2'],'m1',O)===null&&M.rhythmMonsterSlotAddIssue(['g1','g2','m1'],'k1',O)===null);
+  check('2体ずつ組み合わせられる(元気2+無敵1+根性1)',
+    JSON.stringify(M.addRhythmMonsterSlot(M.addRhythmMonsterSlot(M.addRhythmMonsterSlot(['g1'],'g2',O),'m1',O),'k1',O))==='["g1","g2","m1","k1"]');
+  check('設定できないときは並びを変えない',JSON.stringify(M.addRhythmMonsterSlot(['g1','g2'],'g3',O))==='["g1","g2"]');
+  check('理由の文は「同じ能力は2体までです」','同じ能力は2体までです'===M.RHYTHM_MONSTER_SLOT_ISSUE_TEXT['duplicate-ability']);
+  // 差し替え: 差し替える枠の子は数えない
+  check('元気2体のうち1体を、別の元気に差し替えるのはよい',
+    M.rhythmMonsterSlotReplaceIssue(['g1','g2'],1,'g3',O)===null&&JSON.stringify(M.replaceRhythmMonsterSlot(['g1','g2'],1,'g3',O))==='["g1","g3"]');
+  check('別の能力の枠を、3体目になる元気へは差し替えられない',
+    M.rhythmMonsterSlotReplaceIssue(['g1','g2','m1'],2,'g3',O)==='duplicate-ability'
+    &&JSON.stringify(M.replaceRhythmMonsterSlot(['g1','g2','m1'],2,'g3',O))==='["g1","g2","m1"]');
+  // 前からの保存で3体以上そろえている人。保存値は書き換えず、使うときだけ並びの先の2体を残す
+  check('すでに同じ能力を3体そろえていても、保存値は減らない',
+    JSON.stringify(M.sanitizeRhythmMonsterSlotIds(['g1','g2','g3','m1']))==='["g1","g2","g3","m1"]');
+  check('使うときは、並びの先の2体が残り、3体目は外れる(あとの別能力はそのまま残る)',
+    JSON.stringify(ids(M.resolveRhythmMonsterSlots(['g1','g2','g3','m1'],O)))==='["g1","g2","m1"]');
+  check('並びの途中の別能力をはさんでも、先の2体が残る',
+    JSON.stringify(ids(M.resolveRhythmMonsterSlots(['g1','m1','g2','g3'],O)))==='["g1","m1","g2"]');
+  check('外した3体目より前の登場順は変わらない',
+    JSON.stringify(ids(M.resolveRhythmMonsterSlots(['g1','g2','g3'],O)))==='["g1","g2"]');
+  check('能力の無いマスモン(能力が決まっていない血統)は被りに数えない',
+    M.rhythmMonsterSlotAbilityId({id:'x',baseId:'__unknown__'})===''
+    &&M.resolveRhythmMonsterSlots(['x1','x2','x3'],[{id:'x1',baseId:'__a__'},{id:'x2',baseId:'__b__'},{id:'x3',baseId:'__c__'}]).length===3);
+  check('血統の表を引けない場面(読み込み前など)でも落ちず、被りを数えない',
+    (()=>{const keep=[context.monsterLineageOf,context.rhythmMonsterAbilityForLineage];
+      try{context.monsterLineageOf=undefined;return M.resolveRhythmMonsterSlots(['g1','g2','g3'],O).length===3&&M.rhythmMonsterSlotAddIssue(['g1','g2'],'g3',O)===null;}
+      finally{[context.monsterLineageOf,context.rhythmMonsterAbilityForLineage]=keep;}})());
+}
 
 // ── 1曲あたりの出現回数(§3.3の配置目安) ────────────────────────────────────
 check('出現の基本位置は20 / 40 / 60 / 80%',

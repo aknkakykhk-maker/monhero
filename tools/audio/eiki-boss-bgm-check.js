@@ -42,7 +42,7 @@ for (const file of files) {
     compact.includes('eikiBossBgmForBattle(mainHero?.id,currentWave,enemyId)'));
   check(`${file}: モード別ムー戦BGMより先にエイキ専用曲を優先`,
     source.indexOf('if (eikiBossBgm) return eikiBossBgm;') >= 0 &&
-    source.indexOf('if (eikiBossBgm) return eikiBossBgm;') < source.indexOf("if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];"));
+    source.indexOf('if (eikiBossBgm) return eikiBossBgm;') < source.indexOf("if (enemyId === 'Moo' || enemyId === 'Jack' || currentWave === 10) return bgmArrangement[modeBgm.moo];"));
   check(`${file}: パンドラ専用BGMも維持`,
     compact.includes("id:'pandora_boss'") && compact.includes('pandoraBossBgmForBattle(mainHero?.id,currentWave,enemyId)'));
 }

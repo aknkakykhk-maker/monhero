@@ -191,6 +191,8 @@ const RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER = 0.2;
 // ★終わりは週の区切り(月曜5:00)に合わせる。ランキングイベントと同じ決めごと。
 // ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
 // id はイベント会話の既読の記録にも使うので、あとから変えない。
+const HALLOWEEN_NIGHT_START_AT = '2026-10-04T08:00:00+09:00';
+const HALLOWEEN_NIGHT_END_AT = '2026-11-01T04:00:00+09:00';
 const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
   // ユグドラシル・メルホイップをビートP交換所で先行公開するのに合わせた、貯めるための1週間
   Object.freeze({
@@ -200,17 +202,61 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     endAt: '2026-10-05T05:00:00+09:00',
     boost: 5,
   }),
+  // ハロウィンナイト(2026-10-04〜11-01)。2026-10-03・ユーザー指示「イベント期間はモンビーポイント5倍、
+  // モンビー中のクイック周回5倍」。ビートPは上のキャンペーンと同じ5倍。
+  //   loopScale … モンヒロビートを演奏したときに入るクイック周回の倍率(ふだんは2倍・ランキングイベントの対象曲は3倍)。
+  //               曲を問わず全曲にかかる。書かないキャンペーンでは今までどおり
+  // ★終わりは「3:59」までと案内しているので、endAt は 4:00(その分より前まで)。
+  // ★ストーリーは HALLOWEEN_NIGHT_STORIES(下)。期間とは別に、決まった時刻で出る
+  Object.freeze({
+    id: 'halloween_night_2026',
+    name: 'ハロウィン・ナイト',
+    startAt: HALLOWEEN_NIGHT_START_AT,
+    endAt: HALLOWEEN_NIGHT_END_AT,
+    // 画面に出す終わりの時刻(案内は「3:59まで」。内部の endAt は 4:00 の前までと同じ意味)
+    displayEndAt: '2026-11-01T03:59:00+09:00',
+    boost: 5,
+    // ふだんの2倍の5倍=10。「いつもの5倍」の指示(2026-10-04・ユーザー指示「クイック無限周回は普段の5倍にして」)。
+    // loopBoost は画面に出す「いつもの◯倍」(loopScale ÷ ふだんの倍率)
+    loopScale: 10,
+    loopBoost: 5,
+    // HOMEの札・バナー(2026-10-04・ユーザー指示「イベント開催中みたいなのを更新情報とかどこかしらに出しといて」)。
+    // banner を書いたキャンペーンだけ出す。書かない(ビートPアップキャンペーン)は今までどおり何も出ない
+    banner: Object.freeze({ emoji: '🎃', title: 'ハロウィン・ナイト', sub: '開催中 〜11/1 3:59' }),
+  }),
 ]);
+// ハロウィン・ナイトのストーリー(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め)、
+// 週ごとに更新の5部構成」)。時刻で出すのは第1部(開幕)だけ。第2部以降は、ジャックのストーリーとしてレイドの進み具合で開く(assistants.js)。
+//   id は assistants.js の EVENT_REPLAYS の id と同じ。あとから変えない(見たかどうかの記録に使う)。
+//   at より前には流さず、見ていない部は古いほうから1つずつ流す。期間が終わっても回想から見られる。
+//   ★2026-10-04から、時刻で流すのは第1部だけ。第2部以降はジャックのストーリー(レイドの進捗で流れる)になった。
+// ★出る時刻は見るたびに数え直す(CLAUDE.md ⑥-4)
+const HALLOWEEN_NIGHT_STORIES = Object.freeze([
+  Object.freeze({ id: 'halloween_night_2026_part1', part: 1, at: HALLOWEEN_NIGHT_START_AT }),
+  // 第2部以降は、時刻ではなく**レイド(ジャック)の進捗**で流す(2026-10-04・ユーザー指示「ぱんぷきんのストーリーをレイドのストーリーと同じに扱う」)。
+  // 第1.5部(ふくれあがる影)=レイド開始 / 第2〜6部=男爵〜大王を倒したあと / 終章=期間終了後。id・出し方は 35-raid-jack.jsx の RAID_JACK_STORY_IDS。
+  // 旧い第2〜5部(時刻で流れる版)は、まだ誰も見ていない(10/11以降だった)ので、台本ごとやめた。第1部のidは変えない(見たかの記録があるため)
+]);
+// いま読める(時刻が来ている)ハロウィン・ナイトの部のid。古いほうから
+const halloweenNightStoryIdsAt = (nowMs) => {
+  const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
+  if (!Number.isFinite(now)) return [];
+  return HALLOWEEN_NIGHT_STORIES.filter(story => now >= Date.parse(story.at)).map(story => story.id);
+};
 const rhythmEventPointCampaignAt = (nowMs) => {
   const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
   if (!Number.isFinite(now)) return null;
-  return RHYTHM_EVENT_POINT_CAMPAIGNS.find(campaign => {
+  // 重なっているときは、あとから始まったほうを使う(2つ重ねがけはしない)。
+  // ハロウィンナイト(10/4 8:00〜)は、ビートPアップキャンペーン(〜10/5 5:00)と重なる
+  const live = RHYTHM_EVENT_POINT_CAMPAIGNS.filter(campaign => {
     const startMs = Date.parse(campaign.startAt);
     const endMs = Date.parse(campaign.endAt);
     const boost = Number(campaign.boost);
     return Number.isFinite(startMs) && Number.isFinite(endMs) && Number.isFinite(boost) && boost > 0
       && now >= startMs && now < endMs;
-  }) || null;
+  });
+  if (live.length === 0) return null;
+  return live.reduce((latest, campaign) => (Date.parse(campaign.startAt) >= Date.parse(latest.startAt) ? campaign : latest));
 };
 // ビートPが「いつもの1/5」ではなく満額で貯まる時間か(ランキングイベント開催中か、キャンペーン中か)。
 // ラッキーラッシュのおまけビートPも、これを見て1/5にするかどうかを決める
@@ -334,13 +380,36 @@ const RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS = Object.freeze(
     ? PROFILE_FRAMES.filter(frame => frame.released === true && profileFrameSaleIn(frame, 'beatPoint'))
         .map(frame => Object.freeze({ id:`frame_${frame.id}`, name:`${frame.name}のフレーム`, kind:'frame', frameId:frame.id, grantAmount:1, unit:'枚', cost:profileFrameSaleIn(frame, 'beatPoint').cost }))
     : []);
+// 助手の着替え(2026-10-03 ユーザー指示「着替え自体はマーケットに販売する予定」)。
+// ★まだ売る服は無い。服(data/breeder.js の ASSISTANT_COSTUMES)に `price:{ beatPoint:◯◯ }` を書くと、ここへ自動で並ぶ。
+//   1着につき1回、持っていれば交換できない。交換すると mh_assistant_costume_owned_v1 にidが入る。
+// ★breeder.js が読み込まれていない環境(この定義だけを取り出す検査)では空になる。
+const RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS = Object.freeze(
+  (typeof ASSISTANT_COSTUMES !== 'undefined' && typeof assistantCostumeEverSellsIn === 'function')
+    // 期間で売り方が変わる服(ハロウィン・ナイトの衣装)のために、枠は読み込み時に作り、いま売れるかは available を見るたびに数え直す
+    ? ASSISTANT_COSTUMES.filter(costume => assistantCostumeEverSellsIn(costume, 'beatPoint'))
+        .map(costume => Object.freeze({ id:`costume_${costume.id}`, name:costume.name, kind:'costume', costumeId:costume.id, assistantId:costume.assistantId, grantAmount:1, unit:'着', cost:assistantCostumeSaleEverCost(costume, 'beatPoint'),
+          get available() { return costume.released === true && !!assistantCostumeSaleIn(costume, 'beatPoint'); } }))
+    : []);
+// ハロウィン・ナイトの衣装のアイコン(2026-10-04・ユーザー指示「ビートポイント1000」)。同じキャラの8表情を1つにまとめて1回で交換する。
+//   売る期間は data/breeder.js の halloweenIconSale が決める(イベント中だけビートP交換所。終わったあとはブリーダーP交換所の1pt)。
+//   持っていれば交換できない(まとめのどれか1つでも持っていれば全部持っている扱い)。交換すると mh_market_icons に中身が全部入る。
+// ★breeder.js が読み込まれていない環境(この定義だけを取り出す検査)では空になる。
+const RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS = Object.freeze(
+  (typeof HALLOWEEN_ICON_SETS !== 'undefined' && typeof halloweenIconSale === 'function')
+    ? HALLOWEEN_ICON_SETS.map(set => Object.freeze({ id:`icon_${set.groupId}`, name:`${set.name}のアイコン`, kind:'icon', groupId:set.groupId, assistantId:set.assistantId,
+        memberIds:set.memberIds, grantAmount:1, unit:'セット', cost:1000,
+        get available() { return halloweenIconSale() === 'beatPoint'; } }))
+    : []);
 // 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
 // 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す
 const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
 // unlockedMonsterIds … 解放済みのモンスターid(円盤石の交換のときだけ使う)
 // unlockedTeachingIds … 解放済みのアシストカードid(アシストカードの交換のときだけ使う)
 // ownedProfileFrames … 持っているフレームid(フレームの交換のときだけ使う)
-const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[] } = {}) => {
+// ownedAssistantCostumes … 持っている着替えのid(着替えの交換のときだけ使う)
+// ownedMarketIcons … 持っているアイコンのid(アイコンの交換のときだけ使う。まとめを広げた形で渡してよい)
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[], unlockedTeachingIds=[], ownedProfileFrames=[], ownedAssistantCostumes=[], ownedMarketIcons=[] } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {
     const n = Number(value);
@@ -352,7 +421,7 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
   const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const unitCost = safeInt(offer?.cost);
   const grantAmount = safeInt(offer?.grantAmount);
-  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame'].includes(offer.kind)) {
+  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc','assist','frame','costume','icon'].includes(offer.kind)) {
     return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
   }
   // 円盤石: 1回に1つ。持っているモンスターは交換できない。ダイヤ・所持品は変えない
@@ -384,6 +453,26 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
     if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
     return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
       frameId, ownedProfileFrames:[...owned, frameId] };
+  }
+  // アイコン(まとめ): 1回に1セット。まとめの中身のどれか1つでも持っていれば交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'icon') {
+    const memberIds = Array.isArray(offer.memberIds) ? offer.memberIds.filter(id => typeof id === 'string' && id) : [];
+    const owned = Array.isArray(ownedMarketIcons) ? ownedMarketIcons.filter(id => typeof id === 'string') : [];
+    if (!memberIds.length || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (memberIds.some(id => owned.includes(id))) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      ownedMarketIcons:[...new Set([...owned, ...memberIds])] };
+  }
+  // 着替え: 1回に1着。持っている服は交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'costume') {
+    const costumeId = typeof offer.costumeId === 'string' ? offer.costumeId : '';
+    const owned = Array.isArray(ownedAssistantCostumes) ? ownedAssistantCostumes.filter(id => typeof id === 'string') : [];
+    if (!costumeId || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (owned.includes(costumeId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      costumeId, ownedAssistantCostumes:[...owned, costumeId] };
   }
   const totalCost = Math.min(max, unitCost * q);
   if (points < totalCost) {

@@ -50,8 +50,11 @@ const modeConst = ['const BATTLE_MODE_TACTICS =', 'const BATTLE_MODE_TACTICS_SPE
   .map(mark => slice(mark, '\n')).join('\n');
 const modeList = slice('const TACTICS_BATTLE_MODES = Object.freeze([', ']);') + ']);';
 const modeFn = slice('const isTacticsMode = (mode)', '\n');
+// ジャック戦のモード(isTacticsMode が真になる)も同じ切り出しへ入れる(2026-10-04)
+const raidMode = ['const BATTLE_MODE_RAID_JACK_A =', 'const BATTLE_MODE_RAID_JACK_B =', 'const RAID_JACK_BATTLE_MODES =', 'const isRaidJackMode =']
+  .map(mark => slice(mark, '\n')).join('\n');
 check('モードの判定を本体から取り出せる', modeConst.length > 0 && modeList.length > 6 && modeFn.length > 0, modeFn.trim());
-const isTacticsMode = new Function(`${modeConst}\n${modeList}\n${modeFn}\nreturn isTacticsMode;`)();
+const isTacticsMode = new Function(`${modeConst}\n${raidMode}\n${modeList}\n${modeFn}\nreturn isTacticsMode;`)();
 // 新モードは「立っている子にガッツを入れる余地があるか」で押せるかを決める。
 // ★中身(tacticsHasGutsRoom)は tools/mode/tactics-units-check.js が見るので、ここでは
 //   答えを差し込めるだけの替え玉にして、「条件式がその答えをそのまま使うか」を見る。
@@ -161,9 +164,13 @@ check('固有技の＋／－は従来どおり',
 const nextButton = slice('const continueAfterUniqueUpgrade =', '// AUTO中にWAVE後の選択画面へ');
 check('未使用ポイントを残して次へ進んでも捨てられない', !/setUpgradePoints/.test(nextButton), nextButton.slice(0, 80));
 // ポイントを0へ戻すのは、ランを始めるとき(resetAllState経由)だけ
+// ジャックの専用戦の開始(startRaidJackBattle)も「ランを始めるとき」にあたるので、その中の1か所は数えない(2026-10)
+const raidStartAt = source.indexOf('const startRaidJackBattle = (req) => {');
+const raidStartEnd = source.indexOf('// 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める', raidStartAt);
+const sourceWithoutRaidStart = raidStartAt >= 0 && raidStartEnd > raidStartAt ? source.slice(0, raidStartAt) + source.slice(raidStartEnd) : source;
 check('ポイントを0へ戻すのはラン開始時だけ',
-  (source.match(/setUpgradePoints\(0\)/g) || []).length === 2,
-  `${(source.match(/setUpgradePoints\(0\)/g) || []).length}か所`);
+  (sourceWithoutRaidStart.match(/setUpgradePoints\(0\)/g) || []).length === 2,
+  `${(sourceWithoutRaidStart.match(/setUpgradePoints\(0\)/g) || []).length}か所(ジャック戦の開始を除く)`);
 check('WAVEクリア時のポイント付与を変えていない',
   has('setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));'));
 check('固有技のLv上限は8のまま', has('const MAX_UNIQUE_SKILL_LEVEL = 8;') && has('Math.max(0,Math.min(8,u.evoLevel+diff))'));
