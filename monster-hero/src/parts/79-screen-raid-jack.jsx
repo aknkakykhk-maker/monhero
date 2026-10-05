@@ -55,7 +55,7 @@ const RaidJackTierRewards = ({ kind, index, claimed }) => {
         {RAID_JACK_REWARDS.aRank[index].map((r, k) => (
           <RaidJackRewardRow key={k} dataKey={`rank-${k + 1}`} label={`貢献${k + 1}位`} reward={r} got={k === 0 && have.includes(raidJackClaimId('rank_a', index))} />
         ))}
-        <div className="mt-1 text-[9px] text-slate-400">{index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。倒したあとも貢献は続きます。' : '倒したときに順位が確定して、ギフトで届きます。'}</div>
+        <div className="mt-1 text-[9px] text-slate-400">{index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。' : '倒したときに順位が確定して、ギフトで届きます。'}</div>
       </div>
     );
   }
