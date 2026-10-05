@@ -139,13 +139,23 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await next.click({ timeout: 3000, force: true }).catch(() => {});
       await page.waitForTimeout(250);
     }
+    // ひとこと(吹き出し): 爵位の話し方(段階2=子爵)・残り77%なので full の場面。押すと次のセリフへ。吹き出しを押してもレイド画面は開かない
+    await page.locator('[data-home-raid-say]').waitFor({ timeout: 20000 });
+    const sayA = (await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim();
+    const FULL2 = ['ほっほっほ。わたくしを止められるとお思いですかな？', '優雅に参りましょう。ランタンは、ぜんぶ割ってさしあげますぞ', '男爵などと一緒にされては困りますな。わたくしは子爵ですぞ', 'おや、また挑戦者ですかな。ご苦労なことですぞ'];
+    check('HOMEのジャックが、子爵の話し方で、残りライフが多い(full)ときのひとことを話す', FULL2.includes(sayA), sayA);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/home-say.png` });
+    const seen = new Set([sayA]);
+    for (let k = 0; k < 4; k++) { await page.locator('[data-home-raid-say]').click(); await page.waitForTimeout(120); seen.add((await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim()); }
+    check('吹き出しを押すと、次のセリフに切り替わる(4回押して4種類すべてを回る)', seen.size === 4 && [...seen].every((t) => FULL2.includes(t)), [...seen].join(' | '));
+    check('吹き出しを押してもレイド画面は開かない(ジャック本体を押したときだけ開く)', (await page.locator('[data-raid-jack-screen]').count()) === 0 && (await page.locator('[data-home-raid-jack]').count()) === 1);
     check('強制表示でHOMEの真ん中にジャックが出る', true);
     const jackBox = await page.locator('[data-home-raid-jack]').boundingBox();
     const vp = page.viewportSize();
     check('ジャックはHOMEのほぼ中央にいる', jackBox && Math.abs((jackBox.x + jackBox.width / 2) - vp.width / 2) < 30, JSON.stringify(jackBox));
     check('跳ねる動き(アニメーション)が付いている', await page.locator('[data-home-raid-jack] img').first().evaluate((el) => getComputedStyle(el).animationName.includes('mhRaidJackHop')));
     await page.waitForTimeout(1500);
-    check('共有HPバーに「あらわれた」と残りHPが出る(段階2が挑戦中)', /ジャック子爵があらわれた/.test(await page.locator('[data-home-raid-jack]').innerText()) && /1,775,000/.test(await page.locator('[data-home-raid-jack]').innerText()), (await page.locator('[data-home-raid-jack]').innerText()).replace(/\s+/g, ' '));
+    check('共有HPバーに「あらわれた」と残りHPが出る(段階2が挑戦中)', /ジャック子爵があらわれた/.test(await page.locator('[data-home-raid-jack]').innerText()) && /2,700,000/.test(await page.locator('[data-home-raid-jack]').innerText()), (await page.locator('[data-home-raid-jack]').innerText()).replace(/\s+/g, ' '));
     check('HOMEのジャックにオーラ(炎の舌)が出ている', await page.evaluate(() => {
       const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]');
       return !!el && el.querySelectorAll('[data-jack-aura-el] > ins').length >= 5;
@@ -169,7 +179,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     let t = await raidText();
     check('A: 5段階が並ぶ', ['ジャック男爵', 'ジャック子爵', 'ジャック伯爵', 'ジャック公爵', 'ジャック大王'].every((n) => t.includes(n)));
     check('A: 男爵は討伐済み・子爵は挑戦できる・伯爵以降は未解放', /1\. ジャック男爵\s*討伐済み/.test(t) && /2\. ジャック子爵\s*挑戦できる/.test(t) && /3\. ジャック伯爵\s*未解放/.test(t) && /5\. ジャック大王\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
-    check('A: 共有HPと参加人数が出る(子爵 2,275,000 のうち 500,000 を削った)', /共有HP 1,775,000 \/ 2,275,000/.test(t) && /7人が参加/.test(t));
+    check('A: 共有HPと参加人数が出る(子爵 3,200,000 のうち 500,000 を削った)', /共有HP 2,700,000 \/ 3,200,000/.test(t) && /7人が参加/.test(t));
     const silhouettes = await page.locator('[data-raid-jack-tier] img').evaluateAll((els) => els.map((e) => e.style.filter));
     check('A: 未解放の段階はシルエット(黒塗り)で見せる', silhouettes.slice(2).every((f) => /brightness\(0\)/.test(f)) && !/brightness\(0\)/.test(silhouettes[1]), JSON.stringify(silhouettes));
     // 報酬の中身が決まったので、「準備中」ではなく、討伐報酬と貢献ランキングの報酬が出る(2026-10-04・#2129)
@@ -217,11 +227,36 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('詳細を閉じると編成画面に戻り、選んだ状態は変わらない', (await page.locator('[data-raid-jack-prep]').count()) === 1 && (await page.locator('[data-raid-hero]').first().getAttribute('class')) === heroBefore && !(await page.locator('[data-raid-prep-start]').isDisabled()));
     posts.length = 0;
     await page.locator('[data-raid-prep-start]').click();
+    // 通常バトルと同じ配置画面で、勇者モン→供モンの順に、距離(立ち位置)を自分で選ぶ(2026-10-05・「勇者モンの距離が固定になってる」)
+    await page.locator('[data-ph-range]').first().waitFor({ timeout: 20000 });
+    check('始める前に配置画面(通常バトルと同じ)が出る', /配置場所を決定せよ/.test(await page.locator('body').innerText()));
+    check('回数は、配置のあいだは減らない(まだ戦闘を始めていない)', await page.evaluate(() => { const st = JSON.parse(localStorage.getItem('mh_raid_jack_v1') || '{}'); return !st.a || !st.a.used; }));
+    check('配置画面の説明が、タクティクスの仕様(置いた距離にいる子のぶんだけ・足し算にならない)になっている', /置いた距離にいる子のぶんだけ/.test(await page.locator('body').innerText()) && !/4距離すべてに加算されます/.test(await page.locator('body').innerText()));
+    check('4つの距離が選べる(零・近・中・遠)', await page.locator('[data-ph-range]').count() === 4 && await page.locator('[data-ph-range][data-ph-on]').count() === 4);
+    // 配置画面から編成へ戻れる(選び直し)。戻っても回数は減らず、もう一度始めると配置からやり直せる
+    await page.getByRole('button', { name: /モンスターを選び直す/ }).click();
+    await page.locator('[data-raid-jack-prep]').waitFor({ timeout: 10000 });
+    check('配置画面から編成へ戻れる(選んだ編成はそのまま)', !(await page.locator('[data-raid-prep-start]').isDisabled()));
+    await page.locator('[data-raid-prep-start]').click();
+    await page.locator('[data-ph-range]').first().waitFor({ timeout: 20000 });
+    // 勇者モンは「中距離(2番目の枠=添字2)」へ置く。固定の最前列ではなく、選んだ場所になる
+    await page.locator('[data-ph-range="2"]').click();
+    const afterHero = await page.locator('body').innerText();
+    check('勇者モンを置いたあと、供モンの配置になる(置いた枠は選べない)', await page.locator('[data-ph-range="2"]').isDisabled() && await page.locator('[data-ph-range][data-ph-on]').count() === 3, afterHero.replace(/\s+/g, ' ').slice(0, 80));
+    // 供モンの配置では、空いている枠の表示は「その子の適性だけ」(勇者モンのぶんを足さない)。スエゾーは零距離E(-10%)
+    const slot0 = (await page.locator('[data-ph-range="0"]').innerText()).replace(/\s+/g, ' ');
+    check('空いている枠には、置く子の適性だけが出る(すでに置いた勇者モンのぶんを足さない)', /E\s*この距離で\s*-10\.?0?%/.test(slot0) || /この距離で\s*-10/.test(slot0), slot0);
+    await page.locator('[data-ph-range="0"]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
-    check('編成からジャック戦が始まる', true);
-    // レイドバトルは、みんなが削った分を引き継ぐ(子爵 2,275,000 のうち 500,000 が削れている → 1,775,000 から)
-    await page.waitForFunction(() => /1,775,000\s*\/\s*2,275,000/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
-    check('A: 敵ライフが共有の残り(1,775,000 / 2,275,000)から始まる', /1,775,000\s*\/\s*2,275,000/.test(await page.locator('body').innerText()));
+    check('編成と配置からジャック戦が始まる', true);
+    // 戦闘の盤面で、勇者モンが選んだ距離(中=添字2)にいて、供モンが零距離(添字0)にいる
+    await page.waitForSelector('[data-slot-index]', { timeout: 30000 });
+    const board = await page.evaluate(() => [...document.querySelectorAll('[data-slot-index]')].map((el) => ({ i: el.getAttribute('data-slot-index'), t: (el.innerText || '').replace(/\s+/g, ' ').slice(0, 40), img: !!el.querySelector('img') })));
+    console.log('INFO board', JSON.stringify(board));
+    check('戦闘の盤面で、置いた距離(零・中)に子がいて、置いていない距離(近・遠)は空いている', ['0', '2'].every((i) => board.some((b) => b.i === i && b.img)) && ['1', '3'].every((i) => !board.some((b) => b.i === i && b.img)), JSON.stringify(board));
+    // レイドバトルは、みんなが削った分を引き継ぐ(子爵 3,200,000 のうち 500,000 が削れている → 2,700,000 から)
+    await page.waitForFunction(() => /2,700,000\s*\/\s*3,200,000/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
+    check('A: 敵ライフが共有の残り(2,700,000 / 3,200,000)から始まる', /2,700,000\s*\/\s*3,200,000/.test(await page.locator('body').innerText()));
     await page.locator('[data-battle-menu-button]').click();
     await page.locator('[data-battle-quit]').click();
     await page.getByText('降参しますか？').waitFor({ timeout: 10000 });
@@ -271,6 +306,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 20000 });
     await page.locator('[data-raid-jack-all-toggle]').waitFor({ timeout: 30000 });
     check('大王が倒れると、「大王への貢献/累計ダメージ」の切り替えが出る', /大王への貢献/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()) && /累計ダメージ/.test(await page.locator('[data-raid-jack-all-toggle]').innerText()));
+    // 大王を倒したあとの段階5は、小さなぱんぷきん(共有ライフは無限・毎回ぜんかいから)
+    check('大王を倒したあと、段階5の絵がぱんぷきんになり、オーラは付かない', (await page.locator('[data-raid-pumpkin="true"]').count()) === 1 && (await page.locator('[data-raid-jack-tier="a5"] [data-jack-aura]').count()) === 0 && /pumpkin-icon/.test((await page.locator('[data-raid-pumpkin="true"] img').getAttribute('src')) || ''));
+    const tile5 = await page.locator('[data-raid-jack-tier="a5"]').innerText();
+    check('段階5は「ぱんぷきん」「あそびに来た」と、共有ライフは無限の説明が出る(共有HPバーは出ない)', /5\. ぱんぷきん/.test(tile5) && /あそびに来た/.test(tile5) && /共有ライフは無限/.test(tile5) && !/共有HP/.test(tile5), tile5.replace(/\s+/g, ' ').slice(0, 120));
+    check('ほかの段階(男爵〜公爵)は今までどおりジャックの絵・討伐済み', /1\. ジャック男爵\s*討伐済み/.test(await page.locator('[data-raid-jack-screen]').innerText()));
     await page.locator('[data-raid-jack-all-mode="all"]').click();
     await page.waitForFunction(() => /8,800,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
@@ -279,6 +319,15 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-raid-jack-all-mode="tier"]').click();
     await page.waitForFunction(() => /への貢献ランキング/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     check('「大王への貢献」へ戻せる', /への貢献ランキング/.test(await raidText()));
+    // HOME のジャックも、大王を倒したあとは小さなぱんぷきん(オーラ・ポーズ絵なし)
+    await page.locator('button[aria-label="戻る"]').first().click();
+    await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    await page.locator('[data-raid-go-home]').click();
+    await page.locator('[data-home-raid-pumpkin="true"]').waitFor({ timeout: 30000 });
+    const homeBtn = await page.locator('[data-home-raid-jack]').innerText();
+    check('HOME: 大王を倒したあとは「ぱんぷきんが遊びに来た！」と出て、共有HPバーは出ない', /ぱんぷきんが遊びに来た/.test(homeBtn) && !/共有HP/.test(homeBtn), homeBtn.replace(/\s+/g, ' ').slice(0, 100));
+    check('HOME: ぱんぷきんの絵が出て、ジャックの絵・オーラは出ない', (await page.locator('[data-home-raid-jack] img[src*="pumpkin-icon"]').count()) === 1 && (await page.locator('[data-home-raid-jack] img[src*="jack.png"], [data-home-raid-jack] img[src*="jack-pose"]').count()) === 0 && (await page.locator('[data-home-raid-jack] [data-jack-aura-el]').count()) === 0);
+    if (SHOT) await page.screenshot({ path: `${SHOT}/home-pumpkin.png` });
     const size = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     check('画面が横にはみ出さない', size.s <= size.c + 1, `${size.s} / ${size.c}`);
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));

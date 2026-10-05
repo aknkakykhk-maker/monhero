@@ -57,3 +57,59 @@ const JackAuraLayer = ({ tier, limit = 99 }) => {
     </span>
   );
 };
+
+// ===== レイドボス戦の「入り」と「終わり」のアクセント(2026-10-04・ユーザー指示「ぬるっと流れるだけだからアクセントいれて」) =====
+// 入り: 通常の WaveIntro(1.5秒の文字だけ)の代わりに、閃光・黒い帯・斜めの光・大きな文字の叩きつけ・段階の星を約2.6秒で出す。色は段階のオーラと同じ。
+//   WaveIntro と同じく data-wave-intro を持ち、「レイドバトル」「VS ジャック◯◯」の文字も同じ。操作は止めない(pointer-events: none)。
+// 終わり: 結果の幕が開いた瞬間に、大きな文字(VICTORY! / TIME UP / DEFEAT / RETIRE)を叩きつけて、そのあと結果を順に出す。
+//   動かすのは transform と opacity だけ。CSS は 70-bootstrap.jsx の mh-rjintro / mh-rjstinger。
+const RaidJackIntro = ({ enabled, enemyName, title = 'レイドバトル', tier = 1, friendly = false }) => {
+  const [shown, setShown] = React.useState(null);
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!enabled) { lastRef.current = null; setShown(null); return undefined; }
+    const key = `${enemyName || ''}:${title}:${tier}`;
+    if (lastRef.current === key) return undefined;
+    lastRef.current = key;
+    setShown({ key: Date.now() });
+    try { if (typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.special) Audio_.se.special(); } catch (e) { /* 音が出なくても演出は出す */ }
+    const timer = setTimeout(() => setShown(null), 2600);
+    return () => clearTimeout(timer);
+  }, [enabled, enemyName, title, tier]);
+  if (!shown) return null;
+  const n = Math.min(Math.max(Math.floor(Number(tier) || 1), 1), 5);
+  return (
+    <div key={shown.key} data-wave-intro="1" data-raid-jack-intro data-jack-aura={n} aria-hidden="true" className="mh-rjintro">
+      <i className="mh-rjintro-flash" />
+      <i className="mh-rjintro-bar mh-rjintro-bar-top" /><i className="mh-rjintro-bar mh-rjintro-bar-bottom" />
+      <i className="mh-rjintro-slash mh-rjintro-slash-a" /><i className="mh-rjintro-slash mh-rjintro-slash-b" />
+      <div className="mh-rjintro-body">
+        <span className="mh-rjintro-sub">{friendly ? '♪ PLAY TIME ♪' : '⚠ BOSS APPEARS ⚠'}</span>
+        <b className="mh-rjintro-title">{title}</b>
+        {enemyName && <span className="mh-rjintro-name">VS {enemyName}</span>}
+        {!friendly && <span className="mh-rjintro-stars">{'★'.repeat(n)}<span className="mh-rjintro-stars-dim">{'★'.repeat(5 - n)}</span></span>}
+      </div>
+    </div>
+  );
+};
+const RAID_JACK_STINGERS = Object.freeze({
+  defeated: { text: 'VICTORY!', tone: 'win' },
+  turns: { text: 'TIME UP', tone: 'end' },
+  wipe: { text: 'DEFEAT', tone: 'lose' },
+  giveup: { text: 'RETIRE', tone: 'end' },
+});
+const RaidJackResultStinger = ({ reason }) => {
+  const def = RAID_JACK_STINGERS[reason] || RAID_JACK_STINGERS.turns;
+  React.useEffect(() => {
+    if (reason !== 'defeated') return;
+    try { if (typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.victory) Audio_.se.victory(); } catch (e) { /* 音が出なくても演出は出す */ }
+  }, [reason]);
+  return (
+    <div data-raid-jack-stinger={def.tone} aria-hidden="true" className={`mh-rjstinger mh-rjstinger-${def.tone}`}>
+      <i className="mh-rjstinger-flash" />
+      <i className="mh-rjstinger-ring" />
+      {def.tone === 'win' && <EndConfetti count={30} />}
+      <b className="mh-rjstinger-text">{def.text}</b>
+    </div>
+  );
+};

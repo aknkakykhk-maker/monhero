@@ -198,6 +198,30 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
       await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     }
+    // 大王を倒したあとの「ぱんぷきん」(2026-10-05): 名前・絵・オーラ無し・攻撃力は子爵・ライフは大王と同じ・降参したら与えたダメージだけ送る
+    {
+      await page.locator('[data-raid-fight-kind]').selectOption('a');
+      await page.locator('[data-raid-fight-tier]').selectOption('6');
+      await page.locator('[data-raid-fight-start]').click();
+      await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
+      await page.waitForTimeout(1500);
+      const pk = await page.evaluate(() => {
+        const stage = document.querySelector('[data-enemy-motion]');
+        const img = stage ? stage.querySelector('img:not([data-enemy-flash])') : null;
+        return { motion: stage && stage.getAttribute('data-enemy-motion'), aura: !!document.querySelector('[data-enemy-motion][data-jack-aura]') || !!document.querySelector('[data-enemy-motion] [data-jack-aura-el]'), intro: (document.querySelector('[data-raid-jack-intro]') || { innerText: '' }).innerText, src: img ? img.getAttribute('src') : '', alt: img ? img.getAttribute('alt') : '', body: document.body.innerText.slice(0, 4000) };
+      });
+      check('ぱんぷきん: 開始の演出は「PLAY TIME」で、ボスの警告(BOSS APPEARS・星)は出ない', !/BOSS APPEARS|★/.test(pk.intro || ''));
+      check('ぱんぷきん: 動きは pumpkin・オーラは出ない・絵は小さなぱんぷきん(pumpkin-icon)・名前は「ぱんぷきん」', pk.motion === 'pumpkin' && pk.aura === false && /pumpkin-icon/.test(pk.src) && pk.alt === 'ぱんぷきん', JSON.stringify({ m: pk.motion, a: pk.aura, s: pk.src.slice(-30), alt: pk.alt }));
+      if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/pumpkin-battle.png` }).catch(() => {});
+      await page.locator('[data-battle-menu-button]').click();
+      await page.locator('[data-battle-quit]').click();
+      await page.getByText('降参しますか？').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: /降参|あきらめる|リタイア/ }).filter({ hasText: /降参|あきらめる|リタイア/ }).last().click();
+      await page.locator('[data-raid-jack-result]').waitFor({ timeout: 30000 });
+      check('ぱんぷきん: 結果の見出しも「ぱんぷきん」', /ぱんぷきん/.test(await page.locator('[data-raid-jack-result]').innerText()));
+      await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+      await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
+    }
     // ④ AUTOで最後まで進める(A・段階1)。どんな終わり方でも結果が1回だけ出て、与ダメージが1回だけ送られる
     posts.length = 0;
     await page.locator('[data-raid-fight-kind]').selectOption('a');
@@ -221,6 +245,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.waitForTimeout(800);
     check('与ダメージが1回だけ送られる', posts.length === 1, String(posts.length));
     const autoRow = JSON.parse((posts[0] || {}).body || '{}');
+    await page.waitForTimeout(3200);   // 結果の数字は駆け上がる(約2.7秒)ので、止まってから読む
     const shown = Number((await page.locator('[data-raid-jack-damage]').innerText()).replace(/,/g, ''));
     check('送った与ダメージは画面の数字と同じで、0より大きい', autoRow.damage === shown && shown > 0, `${autoRow.damage} / ${shown}`);
     check('倒した/倒していないが結果と合っている', autoRow.defeated === /ジャックを倒した/.test(autoText), JSON.stringify(autoRow));
@@ -247,7 +272,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('B: kind は b・段階1', bRow.kind === 'b' && bRow.tier === 1);
     check('B: 成長の表示は出ない(Bは成長しない)', (await page.locator('[data-raid-jack-levelups]').count()) === 0);
     const bState = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_raid_jack_v1') || 'null'));
-    check('B: 端末の記録(mh_raid_jack_v1)に累計が残る', !!bState && Number(bState.value && bState.value.b ? bState.value.b.total : (bState.b ? bState.b.total : 0)) >= 0);
+    // デバッグの強制表示(別のイベントID)の戦いは、本番の端末記録に「倒した段階」「累計」を書かない(書くと本番のグランドスラムが討伐済みになる・2026-10-05)
+    const bStateBody = bState && bState.value ? bState.value : bState;
+    check('B: デバッグの戦いは、本番の端末記録(mh_raid_jack_v1)に倒した印・累計を書かない', !bStateBody || ((!bStateBody.b || ((bStateBody.b.defeated || []).length === 0 && !(Number(bStateBody.b.total) > 0))) && (!bStateBody.a || (bStateBody.a.defeated || []).length === 0)), JSON.stringify(bStateBody));
     await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));

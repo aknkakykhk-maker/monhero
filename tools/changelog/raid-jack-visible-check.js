@@ -34,7 +34,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
       await page.waitForSelector('[data-changelog-list] article', { timeout: 10000 });
       await page.evaluate(() => { document.querySelectorAll('[data-changelog-list] button').forEach((b) => { if (/詳細/.test(b.innerText)) b.click(); }); });
       await page.waitForTimeout(500);
-      const has = await page.evaluate(() => /カボチャの大王ジャックがあらわれました/.test(document.querySelector('[data-changelog-list]').innerText));
+      const has = await page.evaluate(() => /レイドボス戦「カボチャのおばけジャック」を開催します/.test(document.querySelector('[data-changelog-list]').innerText));
       await page.close();
       return has;
     };

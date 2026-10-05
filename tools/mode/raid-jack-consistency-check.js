@@ -43,7 +43,7 @@ const assistants = read('monster-hero/data/assistants.js');
 const hw = assistants.indexOf('const ASSISTANT_RAID_JACK_HOWTO = [');
 const howto = assistants.slice(hw, assistants.indexOf('];', hw));
 const changelog = read('monster-hero/data/changelog.js');
-const ce = changelog.indexOf("title:'カボチャの大王ジャックがあらわれました'");
+const ce = changelog.indexOf("title:'【期間限定】レイドボス戦「カボチャのおばけジャック」を開催します'");
 const clRaid = changelog.slice(ce, changelog.indexOf("\n  },", ce));
 
 // ① 名前
