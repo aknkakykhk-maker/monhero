@@ -42,7 +42,15 @@ const DEV_WORDS = /addAssistantLinePack|ASSISTANT_SCENES|RELEASE_FLAGS|localStor
 // 作業の都合。読む側には関係がなく、あとから嘘になる
 const WORK_EXCUSE = /さきほど|先ほど|今回は見送|今回はそのまま|次回に回|作業の都合|開発の都合/;
 
+// 敵のライフ・攻撃力の数字(2026-10-06・ユーザー指摘「内部データ的な数字をお知らせに出すのやめてほしい」
+// 「まだ実装されてないやつのライフが上がったとかネタバレやめて」)。
+// 画面に出るお知らせへ、敵のライフや攻撃力の数字を書かない。まだ出ていない敵の変更は、そもそも書かない。
+// それ以前の古い項目は対象外(この日付以降に足したものだけ見る)
+const ENEMY_NUMBERS = /(ライフ|攻撃力|ＨＰ|HP)[^。\n]{0,24}?[0-9][0-9,]{2,}|[0-9][0-9,]{2,}\s*(の)?(ライフ|攻撃力)/;
+const ENEMY_NUMBERS_SINCE = '2026-10-06';
+
 const RULES = [
+  ['敵のライフ・攻撃力の数字', ENEMY_NUMBERS, ENEMY_NUMBERS_SINCE],
   ['ゲームの外の数え方', INTERNAL_COUNT],
   ['開発の言葉', DEV_WORDS],
   ['作業の都合', WORK_EXCUSE],
@@ -53,9 +61,10 @@ const RULES = [
 const shown = entries.filter(e => e && !e.dev);
 check('更新履歴を読み込めた', shown.length > 0, `${shown.length}件`);
 
-for (const [label, re] of RULES) {
+for (const [label, re, since] of RULES) {
   const hits = [];
   for (const e of shown) {
+    if (since && String(e.date || '') < since) continue;
     for (const text of [e.title || '', ...(e.items || [])]) {
       const m = String(text).match(re);
       if (m) hits.push(`${e.date} 「${String(e.title || '').slice(0, 24)}」 → ${m[0]}`);
