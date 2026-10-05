@@ -1204,7 +1204,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'tiger_thunder_shadow',
     name: '雷狼影',
     useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
-    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 6,
     thunder: Object.freeze({ chargeTurns: 3, dmg: 0.3, crit: 0.1, comboRate: 0.1, dodge: 0.05, regenHp: 0.05, regenGuts: 0.05 }),
     effect: 'thunder',
@@ -1913,6 +1913,19 @@ const tacticsExTurnsLeft = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.duration !== 'turns' || !isTacticsExEffectActive(state, slot, monId, now)) return 0;
   return tacticsSafeInt(effect.turn, 0) + tacticsSafeInt(effect.turns, 0) - tacticsSafeInt(now.turn, 0);
+};
+// 効いているEXの「残り」(画面に出す言い方)。効いていなければ null
+//   turns … ターン数で切れるもの。残りは「このターンを含めて」数える(使ったターンは def.turns、次のターンは def.turns-1 …)
+//   wave / turn / style … ターン数ではないので、いつまで続くかを言葉で出す
+const tacticsExRemainOf = (def, state, slot, monId, now) => {
+  if (!def || !isTacticsExEffectActive(state, slot, monId, now)) return null;
+  if (def.duration === 'turns') {
+    const left = tacticsExTurnsLeft(state, slot, monId, now);
+    return { kind: 'turns', turns: left, text: `あと${left}ターン（このターンを含む）`, short: `あと${left}ターン` };
+  }
+  if (def.duration === 'wave') return { kind: 'wave', turns: null, text: 'このWAVEが終わるまで', short: 'WAVE中' };
+  if (def.duration === 'style') return { kind: 'style', turns: null, text: '切り替えるまでずっと', short: '' };
+  return { kind: 'turn', turns: 0, text: 'このターンだけ', short: 'このターン' };
 };
 // いま効いているスタイル(既定のスタイルのときは null)。戦闘の計算側がヒット列やソードスキルの有無に使う
 const tacticsExActiveStyle = (state, slot, monId, now) => {

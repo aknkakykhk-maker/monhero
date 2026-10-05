@@ -76,7 +76,7 @@ function SkipConfirmDialog({
   difficulty, executeBattleSkip, ownedItems, setSkipConfirmOpen, skipFlow, skipFlowCount,
 }) {
 const item=BREEDER_MARKET_ITEMS.find(i=>i.id===skipFlow.itemId); const useCount=skipFlowCount(); return(
-    <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true">
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true">
       <div className="bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl text-center">
         <div className="text-4xl mb-2">{item?.emoji}</div>
         <h3 className="text-base font-black text-white mb-1">{item?.name}を{useCount}枚使いますか？</h3>
@@ -587,7 +587,7 @@ function PickProAlliesScreen({
     };
     return (
     <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))'}}>
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'.35rem'}}>
         <button aria-label="戻る" onClick={returnToHero} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
         <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
         <div className="w-10"></div>
@@ -785,7 +785,7 @@ function PickTeachingScreen({
       </div>
       </div>
       {selectedTeachingCard&&(
-        <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
+        <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
           <div data-ph-kind={(()=>{const o=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); return kindOf(o,!!o&&o.evoLevel>=TEACHING_MAX_LEVEL);})()} data-ph-on=""
             className="mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full"><i aria-hidden="true" className="mh-ph-ring"/>
             <span aria-hidden="true" className="mh-ph-sparkle"/>

@@ -83,6 +83,11 @@ const MARKET_PROFILE_ICON_STYLES = {
   Yggdrasil: { scale: 0.95, x: 0, y: 0 },
   mel_whip_disc_icon: { scale: 0.95, x: 0, y: 0 },
   MelWhip: { scale: 0.95, x: 0, y: 0 },
+  // ゴースト・スプーキー(2026-10-05・近日追加)。円盤石はほかの子と同じ作り方なので同じ収まり
+  ghost_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Ghost: { scale: 0.95, x: 0, y: 0 },
+  spooky_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Spooky: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
@@ -203,7 +208,7 @@ const MarketProductIcon = ({ item, onZoom, disabled=false, previewIcon=null }) =
 // 中身の行は高さ22pxに固定してあるので、そこへ収まる範囲でいっぱいまで大きくする。
 const MarketDetailChip = ({ label, onClick }) => (
   <button type="button" onClick={onClick} aria-label={label}
-    className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full border border-indigo-500/40 bg-indigo-950/50 px-2 py-1 text-[10px] font-black leading-none text-indigo-300 active:scale-95"><BookOpen size={10}/>詳細</button>
+    className="mh-hit-expand relative flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full border border-indigo-500/40 bg-indigo-950/50 px-2 py-1 text-[10px] font-black leading-none text-indigo-300 active:scale-95"><BookOpen size={10}/>詳細</button>
 );
 // 商品名の折り返し(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
 // カードの幅では2行になる名前があるが、ブラウザは日本語の語の切れ目を知らないので

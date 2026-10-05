@@ -1046,7 +1046,7 @@ function BattleScreen({
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
           </div>
-          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
+          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="mh-hit-expand-y relative shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="mh-hit-expand-y relative shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
         </header>
         {/* ★簡易画面には relative z-10 が要る。バトルの背景(data-battle-stage-bg)は
               position:absolute の z-index:0 で、CSSでは「位置指定のある要素」が static より上に描かれる。
@@ -1711,7 +1711,7 @@ function BattleScreen({
                   )}
                   <button type="button" data-battle-buff-toggle={buffDetail?'close':'open'} onClick={()=>setBuffDetail(v=>!v)}
                     aria-label={buffDetail?'強化の詳細を閉じる':`強化の詳細を見る（${chips.length}件）`}
-                    className="shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center">
+                    className="mh-hit-expand relative shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center">
                     {buffDetail?'閉じる':`詳細 ${chips.length}`}
                   </button>
                 </div>
@@ -2531,6 +2531,7 @@ function BattleScreen({
                 {!exPanel.implemented&&<span data-tactics-ex-dev className="ml-auto shrink-0 rounded-full border border-amber-300/60 bg-amber-900/60 px-2 py-0.5 text-[10px] font-black text-amber-100">開発中</span>}
               </div>
               <div data-tactics-ex-name className="mt-1 text-[18px] font-black leading-tight text-fuchsia-100">{exPanel.def.name}</div>
+              {exPanel.stateText&&<span data-tactics-ex-state-pill={exPanel.stateText.kind} className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black leading-none ${exPanel.stateText.kind==='on'?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':exPanel.stateText.kind==='ready'?'bg-emerald-700/70 text-emerald-100 ring-1 ring-emerald-300/60':'bg-slate-700 text-slate-300 ring-1 ring-white/10'}`}>{exPanel.stateText.text}</span>}
               <p data-tactics-ex-desc className="mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
@@ -2540,6 +2541,7 @@ function BattleScreen({
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
+                {exPanel.remainText&&<><dt className="font-bold text-slate-400">残り</dt><dd data-tactics-ex-remain className="font-black text-fuchsia-200">{exPanel.remainText}</dd></>}
                 {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
                 {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
                 {(exPanel.statusLines||[]).map((t,i)=><React.Fragment key={i}><dt className="font-bold text-slate-400">いまの状態</dt><dd data-tactics-ex-status className="font-black text-fuchsia-200">{t}</dd></React.Fragment>)}

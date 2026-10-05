@@ -183,15 +183,17 @@ function BreederMarketScreen({
       {!marketSection&&<div data-market-top className={`relative ${SCREEN_LIST_CLASS}`}>
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>
         <div className="relative grid grid-cols-2 gap-2.5 pt-1 pb-2">
+          {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
-            {key:'exchange',emoji:'🔄',label:'アイテム交換所',value:null,hint:'プシュケー・証など',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
+            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:null,hint:'プシュケー・証など',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
             {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:safeEventPoints.toLocaleString(),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
           ].map(section=>(
             <button
               key={section.key}
               data-market-section={section.key}
+              aria-label={section.label}
               onClick={()=>setMarketSection(section.key)}
               className={`relative min-h-[112px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[.98]`}
             >

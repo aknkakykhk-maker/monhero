@@ -470,6 +470,268 @@
     "source": "command"
    },
    "challengeFactor": 1.3
+  },
+  "emerald_rush": {
+   "audio": "monster-hero/audio/bgm-emerald-rush.mp3",
+   "chartRevision": 28,
+   "audioSha256": "7782e3520275c316557513a15b605d691ca42ef76f9faf2628a21fb3a25efcc3",
+   "durationMs": 146052,
+   "analyzedTiming": {
+    "bpm": 151.507,
+    "beatZeroMs": 487.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "warpPoints": [
+    [
+     4500,
+     61
+    ],
+    [
+     9500,
+     106
+    ],
+    [
+     14500,
+     165
+    ],
+    [
+     19500,
+     223
+    ],
+    [
+     24500,
+     262
+    ],
+    [
+     29500,
+     289
+    ],
+    [
+     34500,
+     318
+    ],
+    [
+     39500,
+     343
+    ],
+    [
+     44500,
+     370
+    ],
+    [
+     49500,
+     381
+    ],
+    [
+     54500,
+     383
+    ],
+    [
+     59500,
+     385
+    ],
+    [
+     64500,
+     384
+    ],
+    [
+     69500,
+     390
+    ],
+    [
+     74500,
+     391
+    ],
+    [
+     79500,
+     389
+    ],
+    [
+     84500,
+     388
+    ],
+    [
+     89500,
+     375
+    ],
+    [
+     94500,
+     360
+    ],
+    [
+     99500,
+     338
+    ],
+    [
+     104500,
+     323
+    ],
+    [
+     109500,
+     303
+    ],
+    [
+     114500,
+     281
+    ],
+    [
+     119500,
+     261
+    ],
+    [
+     124500,
+     234
+    ],
+    [
+     129500,
+     205
+    ],
+    [
+     134500,
+     163
+    ],
+    [
+     139500,
+     139
+    ]
+   ]
+  },
+  "wrath_of_the_thorn_king": {
+   "audio": "monster-hero/audio/bgm-wrath-of-the-thorn-king.mp3",
+   "chartRevision": 28,
+   "audioSha256": "d1ea326a4ee27057c26a19f9e8e94ba29eca75464470641a982062f064728311",
+   "durationMs": 96444,
+   "analyzedTiming": {
+    "bpm": 141.507,
+    "beatZeroMs": 234,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "warpPoints": [
+    [
+     2839,
+     61
+    ],
+    [
+     7615,
+     172
+    ],
+    [
+     12824,
+     294
+    ],
+    [
+     17577,
+     383
+    ],
+    [
+     22722,
+     440
+    ],
+    [
+     27844,
+     473
+    ],
+    [
+     32529,
+     494
+    ],
+    [
+     37630,
+     507
+    ],
+    [
+     42722,
+     511
+    ],
+    [
+     47798,
+     499
+    ],
+    [
+     52855,
+     468
+    ],
+    [
+     57904,
+     429
+    ],
+    [
+     62532,
+     393
+    ],
+    [
+     67576,
+     349
+    ],
+    [
+     72611,
+     296
+    ],
+    [
+     77641,
+     237
+    ],
+    [
+     82667,
+     175
+    ],
+    [
+     87691,
+     111
+    ],
+    [
+     92715,
+     48
+    ]
+   ]
+  },
+  "monster": {
+   "audio": "monster-hero/audio/bgm-monster.mp3",
+   "chartRevision": 28,
+   "audioSha256": "6b190639c3faa0f20837ef7972df4ba72143efedf54e2735c0eab6ca2d0392c7",
+   "durationMs": 265068,
+   "analyzedTiming": {
+    "bpm": 135.01,
+    "beatZeroMs": 494,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "warpPoints": [
+    [
+     54500,
+     0
+    ],
+    [
+     56500,
+     -18
+    ],
+    [
+     157500,
+     -18
+    ],
+    [
+     162500,
+     0
+    ]
+   ]
+  },
+  "monster_short": {
+   "audio": "monster-hero/audio/bgm-monster-short.mp3",
+   "chartRevision": 28,
+   "audioSha256": "415b771e9bbfc4064caec2dff6b2956f27832a9137cc779f4a817d255f239143",
+   "durationMs": 110808,
+   "analyzedTiming": {
+    "bpm": 135.01,
+    "beatZeroMs": 494,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

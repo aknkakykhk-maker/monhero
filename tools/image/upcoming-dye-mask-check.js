@@ -6,7 +6,7 @@
 // ユグドラシルの配信マスクは、いただいた3色マスク(立ち絵へ位置を合わせただけのもの)を
 // tools/image/finish-dye-mask.js で仕上げたもの。メルホイップは、ユーザーが元の絵の上に部位ごとの色を
 // 塗った指示図(5部位)を tools/image/finish-dye-mask-guide.js で仕上げたもの。ここでは次の3つを見る。
-//   ① 出発点から仕上げ直すと、配信中のマスクと1画素も違わない(手で直して、作り直せないマスクにしていない)
+//   ① 出発点から仕上げ直すと、配信中のマスクと1画素も違わない(2026-10-05 からゴーストも)(手で直して、作り直せないマスクにしていない)
 //   ② メルホイップ: ケーキの目と口の暗い線、ブルーベリーの紺、黒い蹄、顔の肌は染めない。
 //      ユーザーが決めた部位の分け方(イチゴ=1 / 服と傘=2 / フリルと白い線=3 / ケーキとホイップ=4 / 髪と目=5)
 //   ③ 部位ごとの染め方(MASU_COLOR_REGION_DYE)が部位の数だけある。白に近い部位に gloss を
@@ -35,9 +35,11 @@ const regionOf = (d, o) => {
 };
 
 (async () => {
-  for (const name of ['yggdrasil', 'mel-whip']) {
+  // ゴースト・スプーキー(2026-10-05)は、見本で部位を決めて絵の色のかたまりで塗る finish-dye-mask-components.js で仕上げた
+  const TOOLS = { yggdrasil: 'finish-dye-mask.js', 'mel-whip': 'finish-dye-mask-guide.js', ghost: 'finish-dye-mask-components.js', spooky: 'finish-dye-mask-components.js' };
+  for (const name of Object.keys(TOOLS)) {
     const tmp = path.join(os.tmpdir(), `finish-${name}-${process.pid}.png`);
-    const tool = name === 'mel-whip' ? 'finish-dye-mask-guide.js' : 'finish-dye-mask.js';
+    const tool = TOOLS[name];
     execFileSync('node', [path.join(__dirname, tool), name, '--out', tmp], { stdio: 'ignore' });
     const shipped = await pixels(path.join(ROOT, 'monster-hero/images/monsters', `${name}-dye-mask.PNG`));
     const again = await pixels(tmp, shipped.W, shipped.H);

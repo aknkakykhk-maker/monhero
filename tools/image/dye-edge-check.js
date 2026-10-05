@@ -62,13 +62,15 @@ const page = `<!doctype html><meta charset="utf-8">
 <script>
 ${dyeSource}
 window.__targets = () => Object.keys(MASK_HIRES_BASE_IDS);
+// 案の段階のモンスター(UPCOMING_MONSTER_DRAFTS)は、本体より先に染色マスクと染め方だけ入る(2026-10-05 ゴースト)
+const baseMonsterOf = (id) => ALL_PLAYER_MONSTERS[id] || ((typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS) || {})[id];
 window.__glossTargets = () => Object.entries(MASU_COLOR_REGION_DYE)
   .filter(([, v]) => (Array.isArray(v) ? v : [v]).some((x) => x && typeof x.gloss === 'number')).map(([k]) => k);
 // 部位ごとに、染めたあとの彩度が狙った彩度のどれくらいまで届いているかを測る。
 // 部位マスクの中だけを見るので、「①は染まるが②は白いまま」のような部位単位の
 // 塗り漏れを拾える(画像全体の平均では①に埋もれて気付けない)
 window.__regionSaturation = async (id, colorId) => {
-  const base = ALL_PLAYER_MONSTERS[id];
+  const base = baseMonsterOf(id);
   const masks = await Promise.resolve(getDyeRegionMasks(id, base.imgUrl));
   if (!masks) return { error: 'マスクを作れませんでした' };
   const art = await load(base.imgUrl);
@@ -101,7 +103,7 @@ window.__regionSaturation = async (id, colorId) => {
 // 染め上がりの彩度がどれだけばらついているかを測る。
 // 彩度を一律に固定する塗り方だと全画素が同じ値になり、ばらつきは0になる
 window.__glossSpread = async (id) => {
-  const base = ALL_PLAYER_MONSTERS[id];
+  const base = baseMonsterOf(id);
   const url = await Promise.resolve(getRecoloredImage(base.imgUrl, 'blue', id));
   if (!url) return { error: '染め直せませんでした' };
   const im = await load(url);
@@ -122,7 +124,7 @@ window.__glossSpread = async (id) => {
 window.__analysisSize = () => MASK_ANALYSIS_MAX_SIZE;
 const load = (url) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
 window.__measure = async (id, colors) => {
-  const base = ALL_PLAYER_MONSTERS[id];
+  const base = baseMonsterOf(id);
   const t0 = performance.now();
   const masks = await Promise.resolve(getDyeRegionMasks(id, base.imgUrl));
   const ms = Math.round(performance.now() - t0);

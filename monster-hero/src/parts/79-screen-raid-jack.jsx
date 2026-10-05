@@ -335,7 +335,7 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
         <div data-raid-jack-guide className="mb-2 shrink-0">
           <AssistantBubble scene="raidJackIntro" compact />
           <button type="button" data-raid-jack-guide-close onClick={onDismissGuide}
-            className="mt-1 w-full min-h-[36px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[11px] font-black text-orange-100 active:scale-95">わかった</button>
+            className="mt-1 w-full min-h-[44px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[12px] font-black text-orange-100 active:scale-95">わかった</button>
         </div>
       )}
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />

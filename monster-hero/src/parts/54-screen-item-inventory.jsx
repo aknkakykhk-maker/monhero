@@ -42,8 +42,9 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                 <div key={item.id} className="rounded-2xl border border-teal-500/30 bg-slate-900 p-3 flex items-center gap-3 min-h-[76px]">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30">{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-2xl">{item.emoji}</span>}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0 text-[13px] font-black text-white truncate">{item.name}</div>
+                    {/* 名前は切らずに折り返す。右に所持数と使う場所が並ぶので、1行に収めると「虹のプシ…」のように名前が読めなかった */}
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0 text-[13px] leading-snug font-black text-white">{item.name}</div>
                       <span className="shrink-0 rounded-full bg-slate-950/60 px-2.5 py-0.5 text-[11px] font-black tabular-nums text-teal-300">所持数: {ownedItems[item.id]}</span>
                     </div>
                     <div className="text-[10px] text-slate-400 leading-relaxed mt-1">{item.desc}</div>

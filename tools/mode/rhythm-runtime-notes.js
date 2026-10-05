@@ -204,6 +204,10 @@ const RELEASED_MARKERS=Object.freeze({
   kiki_issen_short:'kiki-issen-short-v3',
   crazy_party_night:'crazy-party-night-v3',
   crazy_party_night_full:'crazy-party-night-full-v3',
+  emerald_rush:'emerald-rush-v3',
+  wrath_of_the_thorn_king:'wrath-of-the-thorn-king-v3',
+  monster:'monster-v3',
+  monster_short:'monster-short-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -241,6 +245,10 @@ const RELEASED_TRACKS=Object.freeze({
   kiki_issen_short:'kiki_issen_short',
   crazy_party_night:'crazy_party_night',
   crazy_party_night_full:'crazy_party_night_full',
+  emerald_rush:'emerald_rush',
+  wrath_of_the_thorn_king:'wrath_of_the_thorn_king',
+  monster:'monster',
+  monster_short:'monster_short',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

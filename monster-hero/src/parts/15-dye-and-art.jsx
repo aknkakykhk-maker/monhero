@@ -265,6 +265,23 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 60, noAAGuard: true, noEdgeGuard: true },
     { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
+  // ゴースト(2026-10-05・案の段階)。いただいた3色の見本どおり ①=帽子 / ②=体 / ③=帽子のリボン。
+  // 目(白目・瞳)と口は対象外。まだ ALL_PLAYER_MONSTERS にいないので、正式実装するまで画面には出ない
+  Ghost: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+  ],
+  // スプーキー(2026-10-05・案の段階・5部位)。いただいた4色の見本どおり ①=帽子・服 / ②=手・しっぽ /
+  // ③=かぼちゃの顔 / ④=帽子のリボン・胸元の飾り・首元の結び目。⑤=しっぽの先の枝(見本では②だったが、
+  // 2026-10-05 ユーザー指示「染色5にする」で分けた)。目・鼻・口は対象外
+  Spooky: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -701,7 +718,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -1007,6 +1024,13 @@ const MASU_COLOR_REGION_DYE = {
   // 0.7 にして、つやを残す。③フリル・白い線と④ケーキは元がほぼ白で、比例させると色が乗らないので gloss を付けない
   Yggdrasil: [{ gloss: 0.9 }, { gloss: 0.93 }, { gloss: 0.72 }],
   MelWhip: [{ gloss: 0.9 }, { gloss: 0.9 }, {}, {}, { gloss: 0.7 }],
+  // ゴースト: ①帽子は暗い紺(彩度の中央値0.35・上のほう0.42)、③リボンは濃い赤(0.89)。
+  // ②体はほぼ白に近いクリーム(0.20)で、比例させると色が乗らないので gloss を付けない
+  Ghost: [{ gloss: 0.42 }, {}, { gloss: 0.9 }],
+  // スプーキー: ①帽子・服(彩度の中央値0.92)と③かぼちゃの顔(0.78)は濃い。②手・しっぽはほぼ白(0.17)なので付けない。
+  // ④リボンと胸元の飾りは淡いクリーム(0.36・上のほう0.51)なので、上のほうに合わせて淡い所を淡いまま残す。
+  // ⑤しっぽの先の枝は茶色の木(0.60)
+  Spooky: [{ gloss: 0.92 }, {}, { gloss: 0.78 }, { gloss: 0.51 }, { gloss: 0.6 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)

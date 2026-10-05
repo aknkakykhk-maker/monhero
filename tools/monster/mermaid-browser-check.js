@@ -105,8 +105,9 @@ const MARKET_ITEMS = [
   const openSection = async (tab) => {
     await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
     await page.waitForTimeout(600);
-    const entry = tab === 'アイコン' || tab === '円盤石アイコン' ? 'ブリーダーP' : 'ダイヤショップ';
-    await page.evaluate((e) => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText || '').includes(e)); if (b) b.click(); }, entry);
+    // 入口の名前は2行に分けて書いてある(「ダイヤ／ショップ」)ので、文字ではなく data-market-section で押す
+    const entry = tab === 'アイコン' || tab === '円盤石アイコン' ? 'breeder' : 'diamond';
+    await page.evaluate((e) => { const b = document.querySelector(`button[data-market-section="${e}"]`); if (b) b.click(); }, entry);
     await page.waitForTimeout(1000);
     // ブリーダーP交換所は「アイコン」「円盤石アイコン」のタブに分かれた(2026-10-01・マーケット全体をタブでそろえた)
     // 売り場を出入りしてもタブは覚えているので、毎回目的のタブを押す

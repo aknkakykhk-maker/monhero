@@ -1090,6 +1090,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   KenshiMocchi: { body:'jelly', bodyMask:IDLE_KENSHI_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_KENSHI_MOCCHI_SWORD_L_MASK, origin:'29.5% 26%', anim:'swing', amp:-4, dur:2400, delay:0, layer:'back' }, { mask:IDLE_KENSHI_MOCCHI_SWORD_R_MASK, origin:'70.5% 26%', anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' }] },
   Yggdrasil: { body:'breathe', bodyMask:IDLE_YGGDRASIL_BODY_MASK, parts:[{ mask:IDLE_YGGDRASIL_LEAF_TOP_MASK, origin:'35.9% 7.3%', anim:'swingIn', amp:3, dur:3200, delay:0, layer:'front' }, { mask:IDLE_YGGDRASIL_LEAF_SIDE_MASK, origin:'27.8% 15.8%', anim:'swing', amp:-7, dur:2600, delay:700, layer:'front' }] },
   MelWhip: { body:'sway', bodyMask:IDLE_MEL_WHIP_BODY_MASK, parts:[{ mask:IDLE_MEL_WHIP_UMBRELLA_MASK, origin:'41.2% 40.5%', anim:'swing', amp:2, dur:3000, delay:0, layer:'back' }] },
+  Ghost: { body:'hover', bodyMask:IDLE_GHOST_BODY_MASK, parts:[{ mask:IDLE_GHOST_TAIL_MASK, origin:'63.8% 86%', anim:'wag', amp:6, dur:1700, delay:0, layer:'back' }] },
+  Spooky: { body:'hover', bodyMask:IDLE_SPOOKY_BODY_MASK, parts:[{ mask:IDLE_SPOOKY_TAIL_MASK, origin:'58% 86%', anim:'wag', amp:5, dur:1900, delay:0, layer:'back' }, { mask:IDLE_SPOOKY_HAT_TIP_MASK, origin:'66% 12%', anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({

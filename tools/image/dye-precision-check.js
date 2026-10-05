@@ -39,6 +39,9 @@ const APPROVED_MASKS = {
   // 近日公開予定の2体(2026-09-28)。本体(ALL_PLAYER_MONSTERS)より先にマスクだけ入っている
   Yggdrasil: 'images/monsters/yggdrasil-dye-mask.PNG',
   MelWhip: 'images/monsters/mel-whip-dye-mask.PNG',
+  // ゴースト・スプーキー(2026-10-05・案の段階)。本体より先にマスクだけ入っている
+  Ghost: 'images/monsters/ghost-dye-mask.PNG',
+  Spooky: 'images/monsters/spooky-dye-mask.PNG',
 };
 // これ未満しか染まらない画素を「染まっていない」とみなす
 const COVER_MIN = 0.5;

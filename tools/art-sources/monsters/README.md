@@ -23,6 +23,8 @@
 | `PANDORA-original.PNG` | `node tools/image/art-source-fidelity-check.js` が「配信中の絵が原本から画素を削っていないか」を突き合わせる正本。配信中の `pandora.PNG` はこれを減色しただけのもの。 |
 | `KENSHI_MOCCHI-original.png` | 同じく `art-source-fidelity-check.js` の正本。配信中の `kenshi-mocchi.png` はこれを減色しただけ(1284KB→343KB)で、余白は切っていないので原本と同じ座標系で比べられる。 |
 | `YGGDRASIL-original.png` / `MEL_WHIP-original.png` | 近日公開予定の2体(2026-09-28)の、届いたときのままの立ち絵。配信中の `yggdrasil.png` / `mel-whip.png` は `import-monster-art.js` で1024pxへ縮めて余白を切ったもの。能力値が決まって正式に実装するとき、より大きく取り込み直したくなったらここから作る。名前に `-original` を付けているので、顔アイコンの道具はこれを拾わない |
+| `GHOST-original.png` | ゴースト(2026-10-05・案の段階)の、届いたときのままの立ち絵(1206x1305・透過つき)。配信中の `ghost.png` は `import-monster-art.js` で1024pxへ縮めて余白を切ったもの |
+| `SPOOKY-original.png` | スプーキー(2026-10-05・案の段階)の、届いたときのままの立ち絵(1240x1268・透過つき)。配信中の `spooky.png` は `import-monster-art.js` で1024pxへ縮めて余白を切ったもの |
 
 ## 大きさが同じでも原本を置くことがある
 
