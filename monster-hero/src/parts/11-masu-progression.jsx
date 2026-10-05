@@ -2801,6 +2801,105 @@ const buildMasuReincarnation = ({ masu, skillKey, gold, lockedIds = [] }) => {
   };
 };
 
+// 【神殿のお布施】ダイヤを払って、マスモンへ直接絆経験値を与える。
+// ダイヤと経験値の割合はトレーニングチケット(100ダイヤ=15EXP)と同じ。
+// 限界突破の上限に届いたら、費用(ダイヤ・虹のプシュケー)を払って限界突破しながら先へ進める。
+// 転生は「絆Lv.100へ上げる → 転生する」を指定回数ぶん続けて行う。
+// 画面の見積もりと実際の実行は必ずこの関数1本で計算する(別々に数えると表示と実際がずれる)。
+const OFFERING_TICKET_DIAMONDS = 100;
+const OFFERING_TICKET_XP = 15;
+const OFFERING_MAX_REINCARNATIONS = 50;
+const OFFERING_MODES = Object.freeze(['diamonds', 'levels', 'reincarnate']);
+const offeringXpForDiamonds = (diamonds) => Math.floor(donationDiamondValue(diamonds) * OFFERING_TICKET_XP / OFFERING_TICKET_DIAMONDS);
+const offeringDiamondsForXp = (xp) => Math.ceil(donationDiamondValue(xp) * OFFERING_TICKET_DIAMONDS / OFFERING_TICKET_XP);
+const offeringStopMessage = (reason) => ({
+  funds:'ダイヤが足りないため、ここまでで止まります。',
+  psyche:'虹のプシュケーが足りないため、ここで止まります。',
+  cap:'レベル上限に届いたため、ここまでで止まります（限界突破も行うにすると先へ進めます）。',
+  max:'これ以上は上げられません（Lv.400の先は超越・魂格進化が必要です）。',
+  locked:'転生ロック中のマスモンは転生できません。',
+  level:'絆Lv.100に届かないため、転生できません。',
+  none:'',
+}[reason] || '');
+// amount: diamonds=使うダイヤの上限 / levels=上げたいレベル数 / reincarnate=転生の回数
+const buildMasuOffering = ({ masu, gold, ownedItems, lockedIds = [], mode = 'diamonds', amount = 0, autoBreakthrough = false }) => {
+  const empty = { ok:false, changed:false, reason:'', stopReason:'none', stopMessage:'', spent:0, xpDiamonds:0, breakDiamonds:0, reincDiamonds:0,
+    xpGained:0, breakthroughs:0, psycheUsed:0, reincarnations:0, fromLevel:1, toLevel:1, fromCap:0, toCap:0 };
+  if (!masu) return { ...empty, reason:'対象のマスモンが見つかりません。' };
+  if (!OFFERING_MODES.includes(mode)) return { ...empty, reason:'お布施の種類が正しくありません。' };
+  const normalized = normalizeMasuProgression(masu);
+  const goldHave = donationDiamondValue(gold);
+  const psycheHave = Math.max(0, Math.floor(Number(ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID)) || 0));
+  const requested = donationDiamondValue(amount);
+  const fromLevel = masuBondLevelInfo(normalized).level;
+  const base = { ...empty, fromLevel, toLevel:fromLevel, fromCap:normalized.levelCap, toCap:normalized.levelCap };
+  if (requested <= 0) return { ...base, reason:mode === 'diamonds' ? 'お布施のダイヤを入力してください。' : mode === 'levels' ? '上げるレベルを選んでください。' : '転生の回数を選んでください。' };
+  // 「ダイヤ指定」は、経験値・限界突破・転生を全部ふくめて使うダイヤの上限。それ以外は持っているダイヤが上限
+  const limit = mode === 'diamonds' ? Math.min(goldHave, requested) : goldHave;
+  const st = { masu:normalized, xp:0, breakCost:0, reincCost:0, psyche:psycheHave, breakthroughs:0, reincarnations:0, stop:'none', stopDetail:'' };
+  const spent = () => offeringDiamondsForXp(st.xp) + st.breakCost + st.reincCost;
+  const stop = (reason, detail = '') => { if (st.stop === 'none') { st.stop = reason; st.stopDetail = detail; } };
+  // xpWanted ぶんの経験値を与える。上限なら(許可があれば)限界突破して続ける。止まった理由は st.stop へ
+  const offerXp = (xpWanted) => {
+    let left = Math.max(0, Math.floor(Number(xpWanted) || 0));
+    for (let guard = 0; guard < 2000 && left > 0 && st.stop === 'none'; guard++) {
+      const cur = st.masu;
+      const room = Math.max(0, totalBondXpForLevel(cur.levelCap) - donationDiamondValue(cur.bondXp));
+      if (room > 0) {
+        const fundsXp = Math.max(0, offeringXpForDiamonds(limit - st.breakCost - st.reincCost) - st.xp);
+        const take = Math.min(left, room, fundsXp);
+        if (take <= 0) { stop('funds'); break; }
+        const res = applyBondXpGain(cur, take);
+        if (res.xpGain <= 0) { stop('cap'); break; }
+        st.masu = res.masu; st.xp += res.xpGain; left -= res.xpGain;
+        if (fundsXp < Math.min(left + res.xpGain, room)) stop('funds');
+        continue;
+      }
+      if (!autoBreakthrough) { stop('cap'); break; }
+      const r = buildMasuBreakthrough({ masu:cur, skillKey:'', gold:limit - spent(), psycheOwned:st.psyche });
+      if (!r.ok) {
+        const levelMax = cur.levelCap >= MAX_MASU_LEVEL_CAP;
+        stop(levelMax ? 'max' : (r.psycheHave < r.psycheCost ? 'psyche' : 'funds'), r.reason);
+        break;
+      }
+      st.masu = r.nextMasu; st.breakCost += r.cost; st.psyche = r.nextPsyche; st.breakthroughs++;
+    }
+    return left;
+  };
+  if (mode === 'diamonds') {
+    offerXp(autoBreakthrough ? 1e12 : offeringXpForDiamonds(limit));
+  } else if (mode === 'levels') {
+    const target = Math.min(SOUL_RANK_LEVEL_CAP, fromLevel + requested);
+    offerXp(totalBondXpForLevel(target) - donationDiamondValue(st.masu.bondXp));
+  } else {
+    const times = Math.min(OFFERING_MAX_REINCARNATIONS, requested);
+    for (let i = 0; i < times && st.stop === 'none'; i++) {
+      if (masuBondLevelInfo(st.masu).level < REINCARNATE_MIN_LEVEL) {
+        offerXp(totalBondXpForLevel(REINCARNATE_MIN_LEVEL) - donationDiamondValue(st.masu.bondXp));
+        if (masuBondLevelInfo(st.masu).level < REINCARNATE_MIN_LEVEL) { stop(st.stop === 'none' ? 'level' : st.stop); break; }
+      }
+      const r = buildMasuReincarnation({ masu:st.masu, skillKey:'', gold:limit - spent(), lockedIds });
+      if (!r.ok) { stop(isMasuLocked(lockedIds, st.masu.id) ? 'locked' : 'funds', r.reason); break; }
+      st.masu = r.nextMasu; st.reincCost += r.cost; st.reincarnations++;
+    }
+  }
+  const total = spent();
+  const toLevel = masuBondLevelInfo(st.masu).level;
+  const changed = st.xp > 0 || st.breakthroughs > 0 || st.reincarnations > 0;
+  return {
+    ...base,
+    ok:changed && total <= goldHave, changed, reason:changed ? '' : (offeringStopMessage(st.stop) || 'お布施できる内容がありません。'),
+    stopReason:st.stop, stopMessage:offeringStopMessage(st.stop), stopDetail:st.stopDetail,
+    spent:total, xpDiamonds:offeringDiamondsForXp(st.xp), breakDiamonds:st.breakCost, reincDiamonds:st.reincCost,
+    xpGained:st.xp, breakthroughs:st.breakthroughs, psycheUsed:psycheHave - st.psyche, reincarnations:st.reincarnations,
+    toLevel, toCap:st.masu.levelCap,
+    gainedPoints:Math.max(0, (st.masu.distAptPoints || 0) - (normalized.distAptPoints || 0)),
+    nextGold:goldHave - total,
+    nextOwnedItems:{ ...(ownedItems || {}), [BREAKTHROUGH_ITEM_ID]:st.psyche },
+    nextMasu:st.masu,
+  };
+};
+
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
 const donationDiamondValue = (bondXp) => {
   const value = Number(bondXp);

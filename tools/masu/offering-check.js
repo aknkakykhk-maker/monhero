@@ -1,0 +1,25 @@
+// 神殿のお布施(buildMasuOffering)の計算を守る検査。
+// 見積もりと実行が同じ関数なので、割合・上限・費用の合計が崩れていないかをここで見る。
+const vm = require('vm'), fs = require('fs'), path = require('path');
+const src = fs.readFileSync(path.join(__dirname, '../../monster-hero/src/parts/11-masu-progression.jsx'), 'utf8');
+const sb = { console, BREEDER_MARKET_ITEMS: [], ALL_PLAYER_MONSTERS: { Test: { id:'Test', distAptitude:['C','C','C','C'], baseHp:10, baseAtk:10, baseDef:10, baseGuts:10 } } };
+vm.createContext(sb);
+vm.runInContext(src + '\nthis.__x={buildMasuOffering,totalBondXpForLevel,offeringXpForDiamonds,offeringDiamondsForXp};', sb);
+const { buildMasuOffering: build, totalBondXpForLevel: total, offeringXpForDiamonds: xpOf, offeringDiamondsForXp: dOf } = sb.__x;
+let fail = 0;
+const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${ok ? '' : ' — ' + detail}`); if (!ok) fail++; };
+const masu = (o = {}) => ({ id:'m1', baseId:'Test', name:'T', bondXp:0, distAptPoints:0, statPoints:{hp:0,atk:0,def:0,guts:0}, distAptBoosts:[0,0,0,0], rebirthCount:0, levelCap:30, ...o });
+check('100ダイヤ=経験値15(トレーニングチケットと同じ)', xpOf(100) === 15 && xpOf(1000) === 150 && dOf(15) === 100);
+const a = build({ masu:masu(), gold:1e6, ownedItems:{}, mode:'diamonds', amount:1000 });
+check('1000ダイヤで経験値150・支払いも1000', a.ok && a.xpGained === 150 && a.spent === 1000 && a.nextGold === 1e6 - 1000, JSON.stringify(a.spent));
+const b = build({ masu:masu(), gold:1e6, ownedItems:{}, mode:'diamonds', amount:1e6 });
+check('上限Lv.30で止まり、使ったぶんだけ引く', b.toLevel === 30 && b.stopReason === 'cap' && b.spent === dOf(total(30)), JSON.stringify([b.toLevel, b.spent]));
+const c = build({ masu:masu(), gold:1e6, ownedItems:{ rainbow_psyche:50 }, mode:'levels', amount:100, autoBreakthrough:true });
+check('限界突破を続けると上限を越えて上がり、プシュケーを使う', c.breakthroughs > 0 && c.toLevel > 30 && c.psycheUsed > 0 && c.spent === c.xpDiamonds + c.breakDiamonds, JSON.stringify([c.breakthroughs, c.toLevel]));
+check('持っているダイヤを超えて使わない', c.spent <= 1e6 && c.nextOwnedItems.rainbow_psyche === 50 - c.psycheUsed);
+const d = build({ masu:masu({ bondXp:total(250), levelCap:250, rebirthCount:44 }), gold:1e8, ownedItems:{}, mode:'reincarnate', amount:3 });
+check('転生は回数ぶん続き、Lvが99ずつ下がる(250→1)', d.reincarnations === 3 && d.toLevel === 1 && d.spent === d.xpDiamonds + d.reincDiamonds, JSON.stringify([d.reincarnations, d.toLevel]));
+const e = build({ masu:masu({ bondXp:total(250), levelCap:250, rebirthCount:44 }), gold:1e8, ownedItems:{}, mode:'reincarnate', amount:2, lockedIds:['m1'] });
+check('転生ロック中は転生しない', !e.ok && e.reincarnations === 0);
+check('ダイヤ0なら実行できない', !build({ masu:masu(), gold:0, ownedItems:{}, mode:'diamonds', amount:100 }).ok);
+process.exit(fail ? 1 : 0);
