@@ -11266,6 +11266,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     writeNextTurnBuffs({});
     // 時間を止めたターンは数えない(20ターン制限にも入れない)。止めた記録は使い終わったことにして、止め続けない
     // パンドラの箱: ターン終わりの始末。時間が止まったターンは箱も進めない
+    // ターン終わりに、効いているEXの残りをログへ出す(あとNターン／効果が切れた。ライガーは雷纏の始まりも)
+    if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
+      const stLog=tacticsExStateRef.current, unitsLog=tacticsUnitsRef.current, nowLog=tacticsExLiveRef.current.now;
+      slots.forEach((m,i)=>{
+        const dLog=m?tacticsExDefOf(m.id):null;
+        if(!dLog||dLog.duration!=='turns') return;
+        const who=`EX ${battleActorName(i)}「${dLog.name}」`;
+        if(dLog.effect==='thunder'){
+          const th=tacticsExThunderOf(stLog,unitsLog,i,nowLog);
+          if(!th) return;
+          if(th.phase==='charge') pushBattleLog(th.turnsLeft>1?`${who} 雷${th.charge}（雷纏まであと${th.turnsLeft-1}ターン）`:`⚡ ${who} 雷纏が始まる！ 雷${th.charge}`,'ally');
+          else pushBattleLog(th.turnsLeft>1?`${who} 雷纏 あと${th.turnsLeft-1}ターン`:`${who} 雷纏が終わった`,'ally');
+          return;
+        }
+        const left=tacticsExTurnsLeft(stLog,i,m.id,nowLog);
+        if(left>1) pushBattleLog(`${who} あと${left-1}ターン`,'ally');
+        else if(left===1) pushBattleLog(`${who} の効果が切れた`,'ally');
+      });
+    }
     if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
       const boxStep=tacticsExPandoraTurnEnd(tacticsExStateRef.current,tacticsUnitsRef.current,tacticsExLiveRef.current.now);
       if(boxStep) await settleTacticsExPandoraBox(boxStep);
@@ -11352,6 +11371,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
         current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
       durationText:tacticsExDurationText(def),
+      // 残り(効いているときだけ)。ライガーは「ためる/雷纏」の段階ごとの残りを出す
+      remainText:(()=>{
+        const rm=tacticsExRemainOf(def,state,slotIdx,mon.id,tacticsExNow);
+        if(!rm) return null;
+        if(def.effect==='thunder'){
+          const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
+          if(th) return th.phase==='charge'?`雷をためる あと${th.turnsLeft}ターン（そのあと雷纏が${def.turns-def.thunder.chargeTurns}ターン）`:`雷纏 あと${th.turnsLeft}ターン`;
+        }
+        return rm.text;
+      })(),
+      // 状態のひとこと(詳細の上に出す): 効果中／使える／使えない
+      stateText:(()=>{
+        const rm=tacticsExRemainOf(def,state,slotIdx,mon.id,tacticsExNow);
+        if(rm) return { kind:'on', text:rm.kind==='turns'?`効果中・あと${rm.kind==='turns'?rm.turns:0}ターン`:`効果中・${rm.text}` };
+        if(check.ok) return { kind:'ready', text:'使える' };
+        return { kind:'off', text:'いまは使えない' };
+      })(),
         // 味方を選んで使うEX(生命の泉)の、選べる味方の一覧(名前つき)
         targetOptions:(()=>{ const opts=tacticsExTargetOptions(def,tacticsUnits); return opts?opts.map(o=>({ ...o, name:(slots[o.slot]?.masuName||slots[o.slot]?.name||'') })):null; })(),
       implemented:isTacticsExEffectImplemented(def),
@@ -11364,16 +11400,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 雷狼影は、雷の数と段階を札に出す(ためている間は「雷◯」、雷纏のあいだは「雷纏◯」)
         if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
           const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
-          if(th) return { text:`${th.phase==='wrap'?'雷纏':'雷'}${th.charge}`, active:true };
+          if(th) return { text:`${th.phase==='wrap'?'雷纏':'雷'}${th.charge}・あと${th.turnsLeft}`, active:true };
         }
         // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
-        if(def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
+        // (プレゼントは中身も一緒に出すので、先に下の枝で返す)
+        if(def.effect!=='present'&&def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
         // プレゼントは、決まった中身を札に出す(何が効いているかが距離枠から分かる)
         if(def.effect==='present'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
           const pr=tacticsExPresentOf(state,tacticsUnits,tacticsExNow);
-          if(pr&&pr.kinds.length) return { text:pr.jackpot?'大当たり！':TACTICS_EX_PRESENT_LABELS[pr.kinds[0]], active:true };
+          if(pr&&pr.kinds.length) return { text:`${pr.jackpot?'大当たり':({dmg:'与ダメ↑',taken:'被ダメ↓',combo:'連撃',heal:'回復',guts:'ガッツ',crit:'会心↑'}[pr.kinds[0]]||'中身')}・あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}`, active:true };
         }
-        if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
+        if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:tacticsExRemainOf(def,state,slotIdx,mon.id,tacticsExNow).short||`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
       // 詳細パネルへ出す「いまの状態」の行(ミーアのボルテージ・スネグーラチカのプレゼントの中身)

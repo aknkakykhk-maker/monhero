@@ -348,7 +348,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('使うと残りが 3→2 に減る', !!p && /2 \/ 3/.test(p.uses), p && p.uses);
     if (released) check('捨て身: 力220/丈夫さ150 → 力295/丈夫さ0 になる', !!p && /295／0/.test(p.text), p && p.text.slice(0, 220));
     await closePanel();
-    check('効いているあいだは枠の札が「捨て身中」になる', await page.locator(`[data-tactics-ex-mark="${gSlot}"]`).getAttribute('data-tactics-ex-state') === '捨て身中');
+    check('効いているあいだは枠の札が「WAVE中」になる', await page.locator(`[data-tactics-ex-mark="${gSlot}"]`).getAttribute('data-tactics-ex-state') === 'WAVE中');
     // ステータス画面(HERO SCAN)にも、戦闘で使う値で出る(2026-09-23 ユーザー指示)
     await page.locator('button[aria-label="勇者モンのステータス"]').dispatchEvent('click');
     await page.waitForTimeout(600);
@@ -583,10 +583,12 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('「雷狼影」: 5/5・カードと併用できる・6ターン(ため3＋雷纏3)', !!p && p.name === '雷狼影' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /6ターン/.test(p.text), p && p.text.slice(0, 260));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(900);
-    check('使うと距離枠の札に「雷0」が出る', await page.locator(`[data-tactics-ex-mark="${tgSlot}"]`).getAttribute('data-tactics-ex-state') === '雷0');
+    check('使うと距離枠の札に「雷0・あと3」(雷の数と残りターン)が出る', await page.locator(`[data-tactics-ex-mark="${tgSlot}"]`).getAttribute('data-tactics-ex-state') === '雷0・あと3');
     await tapSlot(tgSlot);
     p = await panel();
     check('詳細に「雷 0（ためている。あと3ターンで雷纏が始まる）」が出る', !!p && /雷 0（ためている。あと3ターンで雷纏が始まる）/.test(p.text), p && p.text.slice(0, 300));
+    const tgState = await page.evaluate(() => ({ pill: document.querySelector('[data-tactics-ex-state-pill]')?.textContent || '', remain: document.querySelector('[data-tactics-ex-remain]')?.textContent || '' }));
+    check('詳細の上に状態のひとこと(効果中)と、「残り」の行(雷をためる あと3ターン)が出る', /効果中/.test(tgState.pill) && /雷をためる あと3ターン/.test(tgState.remain), JSON.stringify(tgState));
     await closePanel();
 
     // --- ⑪ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮。ひとりだけの盤面) ---
