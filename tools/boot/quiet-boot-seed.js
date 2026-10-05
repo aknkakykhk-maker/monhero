@@ -67,7 +67,26 @@ const ONE_TIME_NOTICE_SCRIPT = `(() => { try {
 
 const oneTimeNoticeSeed = () => ({ content: ONE_TIME_NOTICE_SCRIPT });
 
+// 更新履歴に付いている「助手の告知」(assistantNotice)を全部見たことにする種(2026-10-05)。
+// 新曲などを公開した日は、起動直後に何十枚も続く告知の会話が画面を覆い、
+// バトルメニューの検査がボタンを押せずに止まった(「Emerald Rush」の告知)。
+// 告知そのものを確かめる検査が困らないよう、quietBootSeed には混ぜず、要る検査だけが使う。
+// ★告知のidは更新履歴から読む(検査へ書き写すと、次の告知でまた止まる)
+const updateNoticeIds = () => {
+  const changelog = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/data/changelog.js'), 'utf8');
+  return [...new Set(changelog.match(/update_notice_[A-Za-z0-9_]+/g) || [])];
+};
+const updateNoticeKey = () => {
+  const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/20-market-notices-help.jsx'), 'utf8');
+  const key = (src.match(/const UPDATE_NOTICE_SEEN_KEY = '([^']+)'/) || [])[1];
+  if (!key) throw new Error('UPDATE_NOTICE_SEEN_KEY を読めませんでした');
+  return key;
+};
+const updateNoticeSeed = () => ({
+  content: `(() => { try { localStorage.setItem(${JSON.stringify(updateNoticeKey())}, ${JSON.stringify(JSON.stringify(updateNoticeIds()))}); } catch (e) {} })();`,
+});
+
 // 会話も案内もまとめて黙らせる(ふつうはこれを使う)
 const quietBootSeed = () => ({ content: `${eventStorySeed().content}\n${ONE_TIME_NOTICE_SCRIPT}` });
 
-module.exports = { eventStoryIds, eventStoryKey, eventStorySeed, oneTimeNoticeSeed, quietBootSeed };
+module.exports = { eventStoryIds, eventStoryKey, eventStorySeed, oneTimeNoticeSeed, quietBootSeed, updateNoticeSeed };

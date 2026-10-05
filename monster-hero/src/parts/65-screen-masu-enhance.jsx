@@ -93,11 +93,7 @@ function MasuEnhanceScreen({
           <ScreenHead title="マスモン強化" accent="text-amber-400" onBack={backToDetail} backLabel="マスモン詳細へ戻る"/>
           {/* どのマスモンでも通常強化・超越強化・オート強化を切り替えられる。
               超越強化が使えるかどうかと、神殿で正式に超越したかどうかは別の話 */}
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
-            <button type="button" aria-current="page" className="min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[11px] font-black">通常強化</button>
-            <button type="button" onClick={onOpenTranscendEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
-            <button type="button" onClick={onOpenAutoEnhance} className={`min-h-[44px] rounded-xl border bg-slate-900 text-[11px] font-black active:scale-95 flex items-center justify-center gap-1 ${autoEnhance.enabled?'border-lime-400/60 text-lime-200':'border-white/10 text-lime-300/80'}`}>オート強化{autoEnhance.enabled&&<span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-lime-400"/>}</button>
-          </div>
+          <EnhanceModeTabs current="normal" onTranscend={onOpenTranscendEnhance} onAuto={onOpenAutoEnhance} autoOn={autoEnhance.enabled}/>
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuEnhance" compact/></div>
           <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3`}>
             {/* どの子を強化しているかは、いちばん上で分かるようにする(下にあると最初の画面に入らない) */}

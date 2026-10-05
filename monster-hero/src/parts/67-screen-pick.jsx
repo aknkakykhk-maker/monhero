@@ -530,11 +530,11 @@ stat.label, `${stat.before} → ${stat.after}${stat.diff>0?`（+${stat.diff}）`
   extraAfterApt: (<>
 {currentPickingMon.masuId&&(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0)>0&&(
   <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
-    <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
+    <div className="text-[9px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
     <div className="grid grid-cols-4 gap-1">
       {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
         <button key={key} onClick={()=>{const updated=spendStatPoint(currentPickingMon.masuId,key); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
-          <span className="text-[7px] text-emerald-300 font-black">{label}</span>
+          <span className="text-[9px] text-emerald-300 font-black">{label}</span>
           <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
         </button>
       ))}
@@ -804,7 +804,7 @@ function PickTeachingScreen({
             );})()}
             <div className="relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
               {getFullEvolutionDetails(selectedTeachingCard).map(info=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const currentLvl=owned?owned.evoLevel:-1; const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
+                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[9px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
               })}
             </div>
             <div className="relative flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="mh-ph-btn-gold flex-1 min-h-[44px] py-3 rounded-xl font-black text-sm">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>

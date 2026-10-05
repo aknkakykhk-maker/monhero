@@ -95,3 +95,20 @@
 残した(7px の字): バトルのモード/難易度カード・報酬選択・勇者選択のカードの中など、
 高さを詰めて収めている場所。上げると収まらなくなるので、カードの作りを見直すときに一緒にやる。
 引き継ぎメモ②(強化画面のタブ・必要/所持ダイヤの行の部品化)と④の残り(窓を ModalFrame へ寄せる)は未着手。
+
+### 4本目のPR(2026-10-05・ユーザーの返事「全部やって」)
+- `battle/battle-menu-browser-check.js` が新曲の告知に覆われて止まる件: `quiet-boot-seed.js` に
+  `updateNoticeSeed()`(更新履歴の assistantNotice を全部既読にする種)を足し、この検査だけで使う。
+- 引き継ぎメモ②: 強化3画面のタブを `EnhanceModeTabs`、転生・超越の必要/所持の3行を `CostRow`(41-screen-ui.jsx)へ。
+  検査が「必要ダイヤ」等の文字をソースで探しているので、言葉は props の文字としてそのまま書く。
+- 引き継ぎメモ④の続き: 名前変更の窓2つを `NameEditModal`(ModalFrame の上)に。z-index は元の値を渡す。
+- 7px の字: バトル中のカード詳細・所持固有技・ランキングの行・勇者選択のステータス強化を 9px に。
+- **1本目で入れた設定メニューの絵文字が、検査5本(`clickText('^ヘルプ$')`)を壊していた**。
+  `--changed` がその検査を選ばなかったので気づけなかった。絵文字は `.mh-emoji-icon::before { content: attr(data-icon) }`
+  で描き、ボタンの文字(textContent)に入れない形にした。検査は前方一致(`^ヘルプ`)へ。
+  → 見た目の部品を変えたら `--area all`(593本・約100分)で確かめる。
+- `--area all` で落ちる5本は main でも落ちる(この作業と無関係): rhythm-chart-v2-step6 / assistant-costume-browser /
+  raid-jack-battle / species-challenge-browser / training-reward。rhythm-run-progress は単独では通る(周回のタイミング次第)。
+
+残したもの: 合体・寄付の並べ替え(C1)、カードの中で高さを詰めている 7px(モード/難易度カードの英字の飾り見出しなど)、
+窓の残り(ModalFrame へ寄せるのは個別の窓ごとに外側タップの挙動を決める必要がある)。
