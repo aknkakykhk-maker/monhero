@@ -504,6 +504,23 @@ const PROFILE_FRAMES = [
     unlock:{ shops:PROFILE_FRAME_RAGNAROK_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'RAGNAROK', shops:['breederPoint'], text:'バトルの難易度ラグナロクをクリアする' } },
     src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece',
     desc:'燃えさかる炎をまとう黒い竜が、ぐるりと取り巻く輪。' },
+  // ==================== ハロウィンとモンヒロビート用の4枚(2026-10-05・未公開) ====================
+  // ユーザーから受け取ったJPEG(透過なし・黒背景)を、枠の外と穴の中の黒を透明にして取り込んだ(384px)。
+  // 売り方が決まっていないので released:false(選択画面にも売り場にも出ず、他人の記録に入っていても描かれない)。
+  // 決まったら released:true にして unlock に売り値(shops)や条件を書く(上のモンスターの枠と同じ)。
+  //   ハロウィンの2種は期間限定にするか未定。「モンビー用」はモンヒロビート用の意味。
+  { id:'frame_halloween_night', name:'ハロウィン・夜', kind:'image', released:false, hole:0.521,
+    src:'images/profile-frames/halloween-night.png?v=647f32308d31',
+    desc:'青い炎と骨、音符の輪に、ハロウィンの夜のモンスターたちが集まる、暗い夜のフレーム。' },
+  { id:'frame_halloween_pumpkin', name:'ハロウィン・パンプキン', kind:'image', released:false, hole:0.583,
+    src:'images/profile-frames/halloween-pumpkin.png?v=f68b833002c2',
+    desc:'大きなパンプキンと、包帯のうさぎ、ゴーストが並ぶ、にぎやかなハロウィンのフレーム。' },
+  { id:'frame_eiki_zan', name:'エイキ&ザン', kind:'image', released:false, hole:0.656,
+    src:'images/profile-frames/eiki-zan.png?v=535efca30954',
+    desc:'桜と夜空のステージで、エイキとザンがギターを奏でる、モンヒロビート用のフレーム。' },
+  { id:'frame_undine_beat', name:'ウンディーネ種', kind:'image', released:false, hole:0.604,
+    src:'images/profile-frames/undine-beat.png?v=71fc5b699b36',
+    desc:'水と泡のステージで、ウンディーネの仲間たちが歌う、モンヒロビート用のフレーム。' },
   // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
   // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
   // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
