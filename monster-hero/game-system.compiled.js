@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4897a6483b42d24b
+// source-sha256: c351e3cfe0cc8f5a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 16:51";
+const BUILD_DATE = "2026-10-05 17:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35836,7 +35836,9 @@ const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';
 const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
-const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8, 11]);
+const RAID_JACK_UNIQUE_LEVEL_STEP = 2;
+const RAID_JACK_TEACHING_MAX_LEVEL = 2;
 const RAID_JACK_TURN_GROWTH = 1.05;
 const RAID_JACK_TURN_REGEN_STEP = 0.015;
 const raidJackGrowthAt = turn => {
@@ -35855,7 +35857,8 @@ const raidJackGrowthAt = turn => {
     levelUps,
     levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
     nextLevelUpTurn: next === undefined ? null : next,
-    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t)
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+    teachingUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t) && levelUps <= RAID_JACK_TEACHING_MAX_LEVEL
   };
 };
 const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
@@ -35882,7 +35885,7 @@ const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride
   });
 };
 const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
-const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 4000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 5000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 7000000)]);
+const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 6000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 7500000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 14000000)]);
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, RAID_JACK_A_ATK_POWERS[1], 4550000);
 const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
@@ -36300,6 +36303,7 @@ const raidJackClaimId = (kind, tierIndex, rank) => {
   return `${kind}${n}`;
 };
 const raidJackNoneId = id => `${id}_none`;
+const raidJackPlaceId = (rankId, place) => `${rankId}_p${Math.max(1, Math.floor(Number(place)) || 1)}`;
 const raidJackRewardTitle = (kind, tierIndex, rank) => {
   const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
   const bName = RAID_JACK_B_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
@@ -36496,6 +36500,36 @@ const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
     total: Number(r.total_damage) || 0
   })) : null;
 };
+const sbFetchRaidJackMaxHitRanking = async (kind, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&select=breeder_id,max_damage,last_hit_at&order=max_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map(r => ({
+    breederId: String(r.breeder_id),
+    total: Number(r.max_damage) || 0
+  })) : null;
+};
+const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&breeder_id=eq.${id}&select=max_damage&limit=1`));
+  if (!rows) return null;
+  return rows.length ? Number(rows[0].max_damage) || 0 : 0;
+};
+const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId) => {
+  const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
+  const k = kind === 'b' ? 'b' : 'a';
+  const result = await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&max_damage=gt.${mine}&select=breeder_id&limit=1`, {
+    headers: {
+      'Prefer': 'count=exact'
+    }
+  });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   if (!id) return null;
@@ -36545,8 +36579,13 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   if (!totals || !self) return none;
   const due = [];
   const noneIds = [];
-  const add = (claimId, title, reward) => {
-    if (!claimed.has(claimId)) due.push({
+  const add = (claimId, title, reward, place) => {
+    if (!claimed.has(claimId)) due.push(place ? {
+      id: claimId,
+      title,
+      reward,
+      place
+    } : {
       id: claimId,
       title,
       reward
@@ -36565,7 +36604,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);else noneIds.push(raidJackNoneId(rankId));
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);else noneIds.push(raidJackNoneId(rankId));
     }
   }
   RAID_JACK_B_TIERS.forEach((tier, i) => {
@@ -36576,7 +36615,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);else noneIds.push(raidJackNoneId(finalId));
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);else noneIds.push(raidJackNoneId(finalId));
     }
   }
   return {
@@ -51963,7 +52002,7 @@ function BattleScreen({
     className: "text-[10px] font-black text-sky-200"
   }, "自動回復 ライフ", raidGrowth.lifeRate, "%・ガッツ", raidGrowth.gutsRate, "%"), raidGrowth.levelUpNow && React.createElement("div", {
     className: "mt-0.5 text-[11px] font-black text-amber-300"
-  }, "固有技とアシカが1段階アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
+  }, "固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階", raidGrowth.teachingUpNow ? '・アシカが1段階' : '', "アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
     "data-raid-growth-detail": true,
     className: "fixed inset-0 flex items-center justify-center bg-black/70 px-4",
     style: {
@@ -51996,7 +52035,7 @@ function BattleScreen({
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
   }, React.createElement("dt", {
     className: "font-black text-amber-200"
-  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。", React.createElement("b", {
+  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階ずつアップ(アシカは", RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL).join('・'), "ターン目に1段階ずつ・最大", RAID_JACK_TEACHING_MAX_LEVEL, "段階)。", React.createElement("b", {
     className: "text-white"
   }, " ", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回"), "済み", raidGrowth.nextLevelUpTurn ? `(次は${raidGrowth.nextLevelUpTurn}ターン目)` : '(これで最後)')), React.createElement("div", {
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
@@ -60234,7 +60273,7 @@ const RaidJackDebugScreen = ({
   }, (() => {
     const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1;
     const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1);
-    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
+    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8・11ターン目に固有技が2段階、3・5ターン目にアシカが1段階成長)' : '(成長なし・アシカは最大Lv)'}`;
   })()), React.createElement("button", {
     "data-raid-fight-start": true,
     className: `${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`,
@@ -60343,7 +60382,7 @@ const RaidJackRewardRow = ({
   reward: reward
 })), got && React.createElement("span", {
   className: "shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white"
-}, "受け取り済み"));
+}, "ギフトに届いた"));
 const RaidJackTierRewards = ({
   kind,
   index,
@@ -60364,8 +60403,14 @@ const RaidJackTierRewards = ({
       dataKey: `rank-${k + 1}`,
       label: `貢献${k + 1}位`,
       reward: r,
-      got: k === 0 && have.includes(raidJackClaimId('rank_a', index))
-    })), React.createElement("div", {
+      got: have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))
+    })), have.includes(raidJackClaimId('rank_a', index)) && !RAID_JACK_REWARDS.aRank[index].some((r, k) => have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))) && React.createElement("div", {
+      "data-raid-jack-rank-note": "delivered",
+      className: "mt-1 rounded-lg bg-emerald-950/40 px-2 py-1 text-[9px] font-black text-emerald-200"
+    }, "順位の報酬は、ギフトに届いています(何位かは、ギフトの名前で分かります)"), have.includes(raidJackNoneId(raidJackClaimId('rank_a', index))) && React.createElement("div", {
+      "data-raid-jack-rank-note": "none",
+      className: "mt-1 rounded-lg bg-slate-800/60 px-2 py-1 text-[9px] font-black text-slate-300"
+    }, "この段階では、順位の報酬の対象(5位まで)になりませんでした"), React.createElement("div", {
       className: "mt-1 text-[9px] text-slate-400"
     }, index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。' : '倒したときに順位が確定して、ギフトで届きます。'));
   }
@@ -60449,7 +60494,7 @@ const RaidJackRewardList = ({
     dataKey: `final-${k + 1}`,
     label: `${k + 1}位`,
     reward: r,
-    got: k === 0 && have.includes(raidJackClaimId('final_b'))
+    got: have.includes(raidJackPlaceId(raidJackClaimId('final_b'), k + 1))
   })), React.createElement("div", {
     className: "mt-1 text-[9px] text-slate-400"
   }, "期間の終わり(11/1 4:00)に確定して、ギフトで届きます。")), React.createElement("div", {
@@ -60509,11 +60554,13 @@ const RaidJackRankingList = ({
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
   const [allMode, setAllMode] = useState(false);
+  const [maxHit, setMaxHit] = useState(false);
   const [rows, setRows] = useState(undefined);
   const [self, setSelf] = useState(null);
   const [myId, setMyId] = useState(null);
   const [ahead, setAhead] = useState(null);
-  const useAll = tab === 'a' && allMode && bossDown;
+  const [myMax, setMyMax] = useState(null);
+  const useAll = !maxHit && tab === 'a' && allMode && bossDown;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -60525,7 +60572,7 @@ const RaidJackRankingList = ({
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
       if (!alive) return;
       setSelf(mine);
-      const list = useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      const list = maxHit ? await sbFetchRaidJackMaxHitRanking(tab, 100, eventId) : useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
       if (!alive) return;
       if (list) {
         try {
@@ -60534,7 +60581,13 @@ const RaidJackRankingList = ({
       }
       if (!alive) return;
       setRows(list);
-      if (list && mine) {
+      if (list && maxHit) {
+        const best = meId ? await sbFetchRaidJackMaxHitSelf(meId, tab, eventId) : null;
+        if (!alive) return;
+        setMyMax(best);
+        const count = best > 0 ? await sbCountRaidJackMaxHitAhead(tab, best, eventId) : null;
+        if (alive) setAhead(count);
+      } else if (list && mine) {
         const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? mine.a[tierIdx + 1] || 0 : mine.bTotal;
         const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, tierIdx + 1, myTotal, eventId) : null;
         if (alive) setAhead(count);
@@ -60543,9 +60596,9 @@ const RaidJackRankingList = ({
     return () => {
       alive = false;
     };
-  }, [tab, tierIdx, useAll, eventId]);
-  const myTotal = self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
-  const title = useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  }, [tab, tierIdx, useAll, maxHit, eventId]);
+  const myTotal = maxHit ? Number(myMax) || 0 : self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
+  const title = maxHit ? tab === 'a' ? 'レイドバトルの最大ダメージ(1戦あたり)' : 'グランドスラムの最大ダメージ(1戦あたり)' : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
     className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
@@ -60576,7 +60629,20 @@ const RaidJackRankingList = ({
     }],
     value: tab,
     onChange: setTab
-  }), tab === 'a' && React.createElement("div", {
+  }), React.createElement("div", {
+    "data-raid-jack-ranking-kinds": true,
+    className: "mb-2 flex shrink-0 gap-1.5 text-[10px] font-black"
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-kind": "total",
+    onClick: () => setMaxHit(false),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, tab === 'a' ? '貢献・累計' : '累計ダメージ'), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-kind": "max",
+    onClick: () => setMaxHit(true),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, "1戦の最大ダメージ")), tab === 'a' && !maxHit && React.createElement("div", {
     "data-raid-jack-ranking-tiers": true,
     className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
   }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
@@ -60604,7 +60670,7 @@ const RaidJackRankingList = ({
     className: "shrink-0 text-[10px] text-slate-200"
   }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
     className: "mb-2 text-[9px] text-slate-400"
-  }, useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+  }, maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "読み込み中…"), rows === null && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
@@ -61018,7 +61084,7 @@ const RaidJackPrepScreen = ({
     className: "ml-1 text-[9px] text-slate-300"
   }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
     className: "text-[9px] text-slate-300"
-  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
+  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
   }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
     type: "button",
@@ -75797,7 +75863,7 @@ function MonsterHeroGame() {
     if (raidJackRunRef.current) raidJackRunRef.current.levelUps = (raidJackRunRef.current.levelUps || 0) + 1;
     const bumpCard = c => {
       if (c.type === 'unique') {
-        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + 1);
+        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP);
         return {
           ...c,
           evoLevel: lvl,
@@ -75808,8 +75874,8 @@ function MonsterHeroGame() {
         };
       }
       if (TEACHING_CARDS.some(t => t.id === c.id) && Number.isFinite(c.baseValue) && Number.isFinite(c.step)) {
-        const cur = Math.min(2, c.evoLevel || 0);
-        if (cur >= 2) return c;
+        const cur = Math.min(RAID_JACK_TEACHING_MAX_LEVEL, c.evoLevel || 0);
+        if (cur >= RAID_JACK_TEACHING_MAX_LEVEL) return c;
         return {
           ...c,
           evoLevel: cur + 1,
@@ -75821,9 +75887,9 @@ function MonsterHeroGame() {
     };
     setOwnedUniques(prev => prev.map(u => ({
       ...u,
-      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + 1)
+      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP)
     })));
-    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= 2 ? t : {
+    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= RAID_JACK_TEACHING_MAX_LEVEL ? t : {
       ...t,
       evoLevel: (t.evoLevel || 0) + 1,
       baseValue: t.baseValue + t.step
@@ -75831,7 +75897,8 @@ function MonsterHeroGame() {
     setHand(prev => prev.map(bumpCard));
     setDeck(prev => prev.map(bumpCard));
     setGraveyard(prev => prev.map(bumpCard));
-    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`, 'up');
+    const teachingGrew = ownedTeachings.some(t => (t.evoLevel || 0) < RAID_JACK_TEACHING_MAX_LEVEL);
+    pushBattleLog(`${turn}ターン目: 固有技が${RAID_JACK_UNIQUE_LEVEL_STEP}段階${teachingGrew ? '、アシカが1段階' : ''}強くなった！`, 'up');
     addPopup('LEVEL UP!', 'ally', 'text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
     Audio_.se.card();
   };
@@ -75964,7 +76031,7 @@ function MonsterHeroGame() {
       });
       const nextState = raidJackNormalizeState({
         ...state,
-        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.noneIds]
+        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.due.filter(entry => entry.place).map(entry => raidJackPlaceId(entry.id, entry.place)), ...found.noneIds]
       });
       const saved = await saveStoredValuesOrRollback([{
         key: 'mh_gifts',

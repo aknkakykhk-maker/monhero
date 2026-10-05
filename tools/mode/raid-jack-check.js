@@ -24,16 +24,16 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
-vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
 const o = ctx.o;
 
 // ① 段階
-const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 3200000, 4], ['ジャック伯爵', 4000000, 5], ['ジャック公爵', 5000000, 5], ['ジャック大王', 7000000, 5]];
+const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 3200000, 4], ['ジャック伯爵', 6000000, 5], ['ジャック公爵', 7500000, 5], ['ジャック大王', 14000000, 5]];
 const bWant = [['初級ジャック', 70000, 3], ['中級ジャック', 700000, 4], ['上級ジャック', 3500000, 5], ['超級ジャック', 14000000, 5], ['極級ジャック', 35000000, 5]];
 aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 // ライフは段階ごとの設定値(2026-10-05・ユーザーが決めた)。倍率 power は hp ÷ 350,000 に合わせてある(Bは今までどおり 35,000×倍率×10)
-check('A のライフは 175万 / 320万 / 400万 / 500万 / 700万(ユーザーが段階ごとに決めた値)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,4000000,5000000,7000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
+check('A のライフは 175万 / 320万 / 600万 / 750万 / 1,400万(ユーザーが段階ごとに決めた値。伯爵・公爵・大王は2026-10-05に引き上げ)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,6000000,7500000,14000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
 check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.power - t.hp / 350000) < 1e-9) && o.RAID_JACK_A_TIERS[0].power === 5);
 // ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は子爵と同じ / 技名はそのまま)
 {
@@ -103,6 +103,16 @@ check('0ターンは0周・壊れた値も0周・20ターンを超えても40周
   check('結果画面に「クイック周回ぶん」を別のまとまりで出す', /data-raid-jack-quick-award/.test(app));
 }
 
+// ④-4 ターンごとの強化(固有技は3・5・8・11ターン目に2段階ずつ=4回で最大の8段階・アシカは1段階ずつ=3・5ターン目で最大の2段階・2026-10-05)
+check('固有技の強化は 3・5・8・11 ターン目の4回・1回2段階 → ちょうど最大の8段階', o.RAID_JACK_LEVEL_UP_TURNS.join(',') === '3,5,8,11' && o.RAID_JACK_UNIQUE_LEVEL_STEP === 2 && o.RAID_JACK_LEVEL_UP_TURNS.length * o.RAID_JACK_UNIQUE_LEVEL_STEP === 8);
+check('アシカは1段階ずつ・最大2段階(3・5ターン目で最大)', o.RAID_JACK_TEACHING_MAX_LEVEL === 2 && [3, 5, 8, 11].map((t) => o.raidJackGrowthAt(t).teachingUpNow).join() === 'true,true,false,false');
+check('強化の表示(回数)は 4回・次の強化のターンが出る', o.raidJackGrowthAt(1).levelUpMax === 4 && o.raidJackGrowthAt(1).nextLevelUpTurn === 3 && o.raidJackGrowthAt(9).nextLevelUpTurn === 11 && o.raidJackGrowthAt(11).nextLevelUpTurn === null && o.raidJackGrowthAt(11).levelUps === 4);
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const up = app.slice(app.indexOf('const raidJackLevelUp = (turn) => {'), app.indexOf('// 終わり方(撃破'));
+  check('戦闘の強化は、固有技を RAID_JACK_UNIQUE_LEVEL_STEP ずつ・手札と山札と捨て札のカードにも反映する', (up.match(/RAID_JACK_UNIQUE_LEVEL_STEP/g) || []).length >= 3 && /setHand\(prev=>prev\.map\(bumpCard\)\); setDeck\(prev=>prev\.map\(bumpCard\)\); setGraveyard/.test(up));
+}
+
 // ④-3 距離適性はタクティクスバトルの仕様(合算しない。その距離に立っている子の適性だけ)・2026-10-05・ユーザー指摘
 {
   const app = read('monster-hero/src/parts/60-app.jsx');
@@ -135,7 +145,8 @@ check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJa
 
 // ⑥ 公開の準備(更新履歴・告知・ヘルプ・案内が公開フラグで隠れる)
 const changelog = read('monster-hero/data/changelog.js');
-const entry = changelog.slice(changelog.indexOf('const CHANGELOG = ['), changelog.indexOf('const CHANGELOG = [') + 4000);
+const jackAt = changelog.indexOf("title:'【期間限定】レイドボス戦「カボチャのおばけジャック」を開催します'");
+const entry = changelog.slice(Math.max(0, jackAt - 200), jackAt + 2500);   // 先頭からの固定の長さではなく、この項目の位置から読む(新しい項目が先頭へ足されても、ずれない)
 check('更新履歴の項目は公開フラグ raidJack が立つまで出ない', /releaseFlag:'raidJack'/.test(entry) && /カボチャのおばけジャック/.test(entry));
 check('大きい追加なので助手の告知(content)が付く', /assistantNotice:\{ id:'update_notice_raid_jack_v1', type:'content', notifyFrom:'2026-10-05T04:00:00\+09:00'/.test(entry) && /visibleFrom:'2026-10-05T04:00:00\+09:00'/.test(entry));
 const help = read('monster-hero/data/help.js');
