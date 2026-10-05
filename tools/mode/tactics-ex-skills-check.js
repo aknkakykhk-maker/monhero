@@ -65,7 +65,7 @@ vm.runInContext([
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
-    + 'tacticsExDefOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExDefOf,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -722,6 +722,26 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /if \(timeStopSlot!=null\) \{\n\s*addPopup\('⏳ 時間停止！/.test(app)
     && /const nextTurn=timeStopSlot!=null\?turnCount:turnCount\+1; setTurnCount\(nextTurn\);/.test(app)
     && /data-tactics-ex-target=\{t\.slot\}/.test(screen));
+}
+
+// ---------- 残りターンの言い方(2026-10-05 ユーザー指示「残り効果ターンも分かるようにして」) ----------
+{
+  const A = (wave, turn) => ({ wave, turn });
+  const mo = ex.tacticsExDefOf('Mocchi'), go = ex.tacticsExDefOf('Golem'), mn = ex.tacticsExDefOf('Monol'), km = ex.tacticsExDefOf('KenshiMocchi');
+  const st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: mo, slot: 0, monId: 'Mocchi', now: A(1, 4) });
+  const r4 = ex.tacticsExRemainOf(mo, st, 0, 'Mocchi', A(1, 4)), r8 = ex.tacticsExRemainOf(mo, st, 0, 'Mocchi', A(1, 8));
+  check('残りターン: 使ったターンは5(このターンを含む)・5ターン目は1・切れたら null', !!r4 && r4.kind === 'turns' && r4.turns === 5 && r4.short === 'あと5ターン' && /このターンを含む/.test(r4.text)
+    && !!r8 && r8.turns === 1 && ex.tacticsExRemainOf(mo, st, 0, 'Mocchi', A(1, 9)) === null && ex.tacticsExRemainOf(mo, st, 0, 'Mocchi', A(2, 4)) === null);
+  const sg = ex.applyTacticsExUse(ex.createTacticsExState(), { def: go, slot: 0, monId: 'Golem', now: A(1, 2), snapshot: { atk: 1, def: 1 } });
+  const sm = ex.applyTacticsExUse(ex.createTacticsExState(), { def: mn, slot: 0, monId: 'Monol', now: A(1, 2) });
+  const sk = ex.applyTacticsExUse(ex.createTacticsExState(), { def: km, slot: 0, monId: 'KenshiMocchi', now: A(1, 2), choice: 'dual' });
+  check('ターン数で切れないものも、いつまでかを言葉で言う(WAVE・このターン・切り替えるまで)',
+    ex.tacticsExRemainOf(go, sg, 0, 'Golem', A(1, 5)).text === 'このWAVEが終わるまで' && ex.tacticsExRemainOf(mn, sm, 0, 'Monol', A(1, 2)).text === 'このターンだけ'
+    && ex.tacticsExRemainOf(km, sk, 0, 'KenshiMocchi', A(1, 9)).text === '切り替えるまでずっと' && ex.tacticsExRemainOf(mn, sm, 0, 'Monol', A(1, 3)) === null);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  const scr = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '71-screen-battle.jsx'), 'utf8');
+  check('画面へ結線してある(札の残り・詳細の「残り」と状態のひとこと・ターン終わりのログ)', /remainText:\(\(\)=>\{/.test(app) && /stateText:\(\(\)=>\{/.test(app)
+    && /data-tactics-ex-remain/.test(scr) && /data-tactics-ex-state-pill/.test(scr) && /の効果が切れた/.test(app) && /雷纏が始まる！/.test(app));
 }
 
 // ---------- ⑱ ライガー「雷狼影」(2026-10-05 ユーザー指示・数字はユーザー指定) ----------

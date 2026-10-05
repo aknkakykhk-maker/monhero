@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7074f46dd54751d1
+// generated-sha256: 6ac35a02eb6f2a4a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 19:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 19:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22193,6 +22193,19 @@ const tacticsExTurnsLeft = (state, slot, monId, now) => {
   if (!effect || effect.duration !== 'turns' || !isTacticsExEffectActive(state, slot, monId, now)) return 0;
   return tacticsSafeInt(effect.turn, 0) + tacticsSafeInt(effect.turns, 0) - tacticsSafeInt(now.turn, 0);
 };
+// 効いているEXの「残り」(画面に出す言い方)。効いていなければ null
+//   turns … ターン数で切れるもの。残りは「このターンを含めて」数える(使ったターンは def.turns、次のターンは def.turns-1 …)
+//   wave / turn / style … ターン数ではないので、いつまで続くかを言葉で出す
+const tacticsExRemainOf = (def, state, slot, monId, now) => {
+  if (!def || !isTacticsExEffectActive(state, slot, monId, now)) return null;
+  if (def.duration === 'turns') {
+    const left = tacticsExTurnsLeft(state, slot, monId, now);
+    return { kind: 'turns', turns: left, text: `あと${left}ターン（このターンを含む）`, short: `あと${left}ターン` };
+  }
+  if (def.duration === 'wave') return { kind: 'wave', turns: null, text: 'このWAVEが終わるまで', short: 'WAVE中' };
+  if (def.duration === 'style') return { kind: 'style', turns: null, text: '切り替えるまでずっと', short: '' };
+  return { kind: 'turn', turns: 0, text: 'このターンだけ', short: 'このターン' };
+};
 // いま効いているスタイル(既定のスタイルのときは null)。戦闘の計算側がヒット列やソードスキルの有無に使う
 const tacticsExActiveStyle = (state, slot, monId, now) => {
   if (!tacticsExActiveEffect(state, slot, monId, now)) return null;
@@ -33282,6 +33295,7 @@ function BattleScreen({
                 {!exPanel.implemented&&<span data-tactics-ex-dev className="ml-auto shrink-0 rounded-full border border-amber-300/60 bg-amber-900/60 px-2 py-0.5 text-[10px] font-black text-amber-100">開発中</span>}
               </div>
               <div data-tactics-ex-name className="mt-1 text-[18px] font-black leading-tight text-fuchsia-100">{exPanel.def.name}</div>
+              {exPanel.stateText&&<span data-tactics-ex-state-pill={exPanel.stateText.kind} className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black leading-none ${exPanel.stateText.kind==='on'?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':exPanel.stateText.kind==='ready'?'bg-emerald-700/70 text-emerald-100 ring-1 ring-emerald-300/60':'bg-slate-700 text-slate-300 ring-1 ring-white/10'}`}>{exPanel.stateText.text}</span>}
               <p data-tactics-ex-desc className="mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
@@ -33291,6 +33305,7 @@ function BattleScreen({
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
+                {exPanel.remainText&&<><dt className="font-bold text-slate-400">残り</dt><dd data-tactics-ex-remain className="font-black text-fuchsia-200">{exPanel.remainText}</dd></>}
                 {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
                 {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
                 {(exPanel.statusLines||[]).map((t,i)=><React.Fragment key={i}><dt className="font-bold text-slate-400">いまの状態</dt><dd data-tactics-ex-status className="font-black text-fuchsia-200">{t}</dd></React.Fragment>)}
@@ -49068,6 +49083,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     writeNextTurnBuffs({});
     // 時間を止めたターンは数えない(20ターン制限にも入れない)。止めた記録は使い終わったことにして、止め続けない
     // パンドラの箱: ターン終わりの始末。時間が止まったターンは箱も進めない
+    // ターン終わりに、効いているEXの残りをログへ出す(あとNターン／効果が切れた。ライガーは雷纏の始まりも)
+    if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
+      const stLog=tacticsExStateRef.current, unitsLog=tacticsUnitsRef.current, nowLog=tacticsExLiveRef.current.now;
+      slots.forEach((m,i)=>{
+        const dLog=m?tacticsExDefOf(m.id):null;
+        if(!dLog||dLog.duration!=='turns') return;
+        const who=`EX ${battleActorName(i)}「${dLog.name}」`;
+        if(dLog.effect==='thunder'){
+          const th=tacticsExThunderOf(stLog,unitsLog,i,nowLog);
+          if(!th) return;
+          if(th.phase==='charge') pushBattleLog(th.turnsLeft>1?`${who} 雷${th.charge}（雷纏まであと${th.turnsLeft-1}ターン）`:`⚡ ${who} 雷纏が始まる！ 雷${th.charge}`,'ally');
+          else pushBattleLog(th.turnsLeft>1?`${who} 雷纏 あと${th.turnsLeft-1}ターン`:`${who} 雷纏が終わった`,'ally');
+          return;
+        }
+        const left=tacticsExTurnsLeft(stLog,i,m.id,nowLog);
+        if(left>1) pushBattleLog(`${who} あと${left-1}ターン`,'ally');
+        else if(left===1) pushBattleLog(`${who} の効果が切れた`,'ally');
+      });
+    }
     if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
       const boxStep=tacticsExPandoraTurnEnd(tacticsExStateRef.current,tacticsUnitsRef.current,tacticsExLiveRef.current.now);
       if(boxStep) await settleTacticsExPandoraBox(boxStep);
@@ -49154,6 +49188,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
         current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
       durationText:tacticsExDurationText(def),
+      // 残り(効いているときだけ)。ライガーは「ためる/雷纏」の段階ごとの残りを出す
+      remainText:(()=>{
+        const rm=tacticsExRemainOf(def,state,slotIdx,mon.id,tacticsExNow);
+        if(!rm) return null;
+        if(def.effect==='thunder'){
+          const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
+          if(th) return th.phase==='charge'?`雷をためる あと${th.turnsLeft}ターン（そのあと雷纏が${def.turns-def.thunder.chargeTurns}ターン）`:`雷纏 あと${th.turnsLeft}ターン`;
+        }
+        return rm.text;
+      })(),
+      // 状態のひとこと(詳細の上に出す): 効果中／使える／使えない
+      stateText:(()=>{
+        const rm=tacticsExRemainOf(def,state,slotIdx,mon.id,tacticsExNow);
+        if(rm) return { kind:'on', text:rm.kind==='turns'?`効果中・あと${rm.kind==='turns'?rm.turns:0}ターン`:`効果中・${rm.text}` };
+        if(check.ok) return { kind:'ready', text:'使える' };
+        return { kind:'off', text:'いまは使えない' };
+      })(),
         // 味方を選んで使うEX(生命の泉)の、選べる味方の一覧(名前つき)
         targetOptions:(()=>{ const opts=tacticsExTargetOptions(def,tacticsUnits); return opts?opts.map(o=>({ ...o, name:(slots[o.slot]?.masuName||slots[o.slot]?.name||'') })):null; })(),
       implemented:isTacticsExEffectImplemented(def),
@@ -49166,16 +49217,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 雷狼影は、雷の数と段階を札に出す(ためている間は「雷◯」、雷纏のあいだは「雷纏◯」)
         if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
           const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
-          if(th) return { text:`${th.phase==='wrap'?'雷纏':'雷'}${th.charge}`, active:true };
+          if(th) return { text:`${th.phase==='wrap'?'雷纏':'雷'}${th.charge}・あと${th.turnsLeft}`, active:true };
         }
         // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
-        if(def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
+        // (プレゼントは中身も一緒に出すので、先に下の枝で返す)
+        if(def.effect!=='present'&&def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
         // プレゼントは、決まった中身を札に出す(何が効いているかが距離枠から分かる)
         if(def.effect==='present'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
           const pr=tacticsExPresentOf(state,tacticsUnits,tacticsExNow);
-          if(pr&&pr.kinds.length) return { text:pr.jackpot?'大当たり！':TACTICS_EX_PRESENT_LABELS[pr.kinds[0]], active:true };
+          if(pr&&pr.kinds.length) return { text:`${pr.jackpot?'大当たり':({dmg:'与ダメ↑',taken:'被ダメ↓',combo:'連撃',heal:'回復',guts:'ガッツ',crit:'会心↑'}[pr.kinds[0]]||'中身')}・あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}`, active:true };
         }
-        if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
+        if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:tacticsExRemainOf(def,state,slotIdx,mon.id,tacticsExNow).short||`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
       // 詳細パネルへ出す「いまの状態」の行(ミーアのボルテージ・スネグーラチカのプレゼントの中身)
