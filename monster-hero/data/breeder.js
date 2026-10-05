@@ -39,6 +39,8 @@ const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
 // 近日公開予定のユグドラシル・メルホイップの円盤石(2026-09-28)。作り方は剣士モッチーと同じ
 const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=16a7bd3b4eed";
+// ゴースト(2026-10-05・案の段階)。マーケットにはまだ並べていない
+const GHOST_DISC_ICON = "images/disc-icons/ghost-disc.PNG?v=2745f9d5900d";
 const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
 
 const BREEDER_EVO_NAMES = {

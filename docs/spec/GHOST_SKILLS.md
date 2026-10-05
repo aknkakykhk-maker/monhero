@@ -189,3 +189,16 @@ Spooky: baseHp:400, baseGuts:160, baseAtk:165, baseDef:40, plusStats:{hp:160,atk
 - 固有技の倍率・消費ガッツ(案は2.4倍・48)
 - タクティクスのEXスキル
 - モンヒロビートのモンスターノーツの能力(ゴースト血統は新しい血統なので `RHYTHM_MONSTER_ABILITY_BY_LINEAGE` へ1つ割り当てが要る)
+
+## 絵(2026-10-05 ゴーストの立ち絵と3色の見本が届いた)
+
+| 置き場所 | 中身 |
+|---|---|
+| `monster-hero/images/monsters/ghost.png` | 立ち絵(615x916)。原本は `tools/art-sources/monsters/GHOST-original.png` |
+| `monster-hero/images/monsters/ghost-dye-mask.PNG` | 染色マスク(①帽子 / ②体 / ③帽子のリボン。目と口は染めない)。`node tools/image/finish-dye-mask-components.js ghost` で作り直せる |
+| `monster-hero/images/monster-icons/face/ghost.png` | 顔アイコン(シルクハットのつば〜あご) |
+| `monster-hero/images/disc-icons/ghost-disc.PNG` | 円盤石アイコン(マーケットにはまだ並べていない) |
+| `monster-hero/images/monsters/idle/ghost-*.png` | 待機アニメ。体ごとふわふわ浮き、しっぽの先をゆらゆら振る |
+| `data/ally-monsters.js` の `UPCOMING_MONSTER_DRAFTS.Ghost` | 案の段階の本体。デバッグの「新モンスター確認」にだけ並ぶ |
+
+スプーキーの絵はまだ届いていない。
