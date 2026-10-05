@@ -153,10 +153,11 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
             <select data-raid-fight-kind value={fightKind} onChange={(e) => setFightKind(e.target.value)} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]"><option value="a">A(ベースモン・協力戦)</option><option value="b">B(マスモン・累計ダメージ)</option></select>
             <select data-raid-fight-tier value={fightTier} onChange={(e) => setFightTier(Number(e.target.value))} className="rounded border border-white/20 bg-slate-900 px-1 py-2 text-[11px]">
               {raidJackTiers(fightKind).map((t, i) => <option key={t.id} value={i + 1}>{i + 1}: {t.name}</option>)}
+              {fightKind === 'a' && <option value={RAID_JACK_A_TIERS.length + 1}>{RAID_JACK_A_TIERS.length + 1}: {RAID_JACK_PUMPKIN.name}(大王を倒したあと)</option>}
             </select>
           </div>
-          <div className="mt-1 text-[10px] text-slate-300">{(() => { const t = raidJackTierAt(fightKind, fightTier - 1); return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
-          <button data-raid-fight-start className={`${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`} onClick={() => { if (onStartBattle && onStartBattle(fightKind, fightTier - 1) === false) say('編成できるモンスターがいません'); }}>この条件でジャックと戦う</button>
+          <div className="mt-1 text-[10px] text-slate-300">{(() => { const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1; const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1); return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8・11ターン目に固有技が2段階、3・5ターン目にアシカが1段階成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
+          <button data-raid-fight-start className={`${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`} onClick={() => { const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1; if (onStartBattle && (pk ? onStartBattle('a', RAID_JACK_A_TIERS.length - 1, { pumpkin: true }) : onStartBattle(fightKind, fightTier - 1)) === false) say('編成できるモンスターがいません'); }}>この条件でジャックと戦う</button>
         </section>
 
         <section className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3">

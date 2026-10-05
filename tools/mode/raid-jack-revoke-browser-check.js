@@ -1,4 +1,4 @@
-// ジャックの報酬一覧(モード別・難易度別)と、魂格の結晶を使う画面を、実際のブラウザで確かめる。
+// デバッグで付いた「倒した」印と初討伐ギフトが、開き直したときに直るかを、実際のブラウザで確かめる。
 //
 //   python3 tools/serve.py  は要らない(このツールが自前でポートを開く)
 //   node tools/mode/species-challenge-browser-check.js
@@ -23,7 +23,7 @@ const fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const root = path.resolve(__dirname, '..', '..');
-const PORT = 8993;
+const PORT = 8998;
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
   '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp',
   '.svg':'image/svg+xml', '.mp3':'audio/mpeg', '.ico':'image/x-icon' };
@@ -70,6 +70,14 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         { id: 'rj-m1', baseId: 'Mocchi', name: '検査モッチー', bondXp: 300, createdAt: 1, statPoints: { hp: 0, atk: 400000, def: 0, guts: 0 } },
         { id: 'rj-m2', baseId: 'Suezo', name: '検査スエゾー', bondXp: 300, createdAt: 2, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 } },
       ]));
+      // デバッグで汚れた本番の端末記録(「倒した」印は前の修復ですでに外れた状態): 初級〜上級の初討伐が受け取り済みの印・ギフト3件(初級は受け取り済み)
+      localStorage.setItem('mh_raid_jack_v1', JSON.stringify({ a: { day: '', used: 0, extra: 0, defeated: [] }, b: { day: '', used: 0, extra: 0, defeated: [], total: 0 }, claimed: ['clear_b1', 'clear_b2', 'clear_b3'], pending: [], repaired: true }));
+      localStorage.setItem('mh_gifts', JSON.stringify([
+        { id: 'raid_jack_2026_clear_b1', title: '初級ジャック 初討伐報酬', source: 'raidJack', rewards: [{ type: 'diamond', amount: 1000000 }], createdAt: '2026-10-05T07:00:00.000Z', claimedAt: '2026-10-05T07:01:00.000Z' },
+        { id: 'raid_jack_2026_clear_b2', title: '中級ジャック 初討伐報酬', source: 'raidJack', rewards: [{ type: 'diamond', amount: 2000000 }], createdAt: '2026-10-05T07:00:00.000Z', claimedAt: null },
+        { id: 'raid_jack_2026_clear_b3', title: '上級ジャック 初討伐報酬', source: 'raidJack', rewards: [{ type: 'diamond', amount: 3000000 }], createdAt: '2026-10-05T07:00:00.000Z', claimedAt: null },
+        { id: 'other_gift_keep', title: 'ほかのギフト', source: 'campaign', rewards: [{ type: 'diamond', amount: 1 }], createdAt: '2026-10-05T07:00:00.000Z', claimedAt: null },
+      ]));
       localStorage.setItem('mh_monster_roster', JSON.stringify(['masu:rj-m1', 'masu:rj-m2']));
     });
     await page.addInitScript(eventStorySeed());
@@ -102,55 +110,14 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
     }
-    await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
-    await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
-    await page.locator('footer button[aria-label=""]').dispatchEvent('click');
-    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
-    await page.locator('[data-debug-raid-jack]').dispatchEvent('click');
-    await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
-
-    // 魂格の結晶を3個持たせる(ほかの所持品は触らない)
-    // ① レイド画面を開く(デバッグの強制表示)→ 報酬一覧
-    await page.locator('[data-raid-open]').click();
-    await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 30000 });
-    check('段階のカードの下に、難易度別の報酬が出る(準備中の文は出ない)', await page.locator('[data-raid-jack-rewards] [data-raid-jack-tier-rewards="a"]').count() === 1 && !/準備中です\(決まりしだい/.test(await page.locator('body').innerText()));
-    const rowTexts = await page.locator('[data-raid-jack-rewards] [data-raid-jack-reward-row]').allInnerTexts();
-    check('男爵の討伐報酬+貢献1〜5位の6行', rowTexts.length === 6, String(rowTexts.length));
-    check('討伐報酬の中身(ダイヤ100,000・プシュケー50)', /ダイヤ×100,000/.test(rowTexts[0]) && /虹のプシュケー×50/.test(rowTexts[0]), rowTexts[0].replace(/\s+/g, ' '));
-    check('貢献1位の中身(結晶3・虹の超越の実50)', /魂格の結晶×3/.test(rowTexts[1]) && /虹の超越の実×50/.test(rowTexts[1]), rowTexts[1].replace(/\s+/g, ' '));
-    await page.locator('[data-raid-jack-reward-list-open]').click();
-    await page.locator('[data-raid-jack-reward-list]').waitFor({ timeout: 10000 });
-    const tiersA = await page.locator('[data-raid-jack-reward-tier]').count();
-    check('報酬一覧(レイドバトル): 5段階が並ぶ', tiersA === 5, String(tiersA));
-    check('参加賞が出る', await page.locator('[data-raid-jack-reward-row="participation"]').count() === 1);
-    await page.locator('[data-raid-jack-reward-list]').getByText('グランドスラム', { exact: true }).first().click();
-    await page.waitForTimeout(300);
-    check('報酬一覧(グランドスラム): 5難易度と最終順位1〜5位', await page.locator('[data-raid-jack-reward-tier]').count() === 5 && await page.locator('[data-raid-jack-reward-final] [data-raid-jack-reward-row]').count() === 5);
-    const finalFirst = await page.locator('[data-raid-jack-reward-row="final-1"]').innerText();
-    check('最終1位の中身(証10・結晶25・虹の実100)', /勇者の証×10/.test(finalFirst) && /魂格の結晶×25/.test(finalFirst) && /虹の超越の実×100/.test(finalFirst), finalFirst.replace(/\s+/g, ' '));
-    check('報酬一覧は横にはみ出さない', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-    if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/reward-list-b.png` });
-    await page.locator('[data-raid-jack-reward-close]').click();
-    check('閉じられる', await page.locator('[data-raid-jack-reward-list]').count() === 0);
-    // ② ランキング画面(モード別・段階別)
-    await page.locator('[data-raid-jack-ranking-open]').click();
-    await page.locator('[data-raid-jack-ranking-list]').waitFor({ timeout: 10000 });
-    check('ランキングボタンから、ランキング画面が開く', true);
-    check('レイドバトルは段階のボタンが5つ(男爵〜大王)並ぶ', await page.locator('[data-raid-jack-ranking-tier]').count() === 5);
-    await page.locator('[data-raid-jack-ranking-tier="a2"]').click();
-    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 3, null, { timeout: 10000 });
-    check('子爵を選ぶと、その段階の貢献ランキング(3人)が出る', true);
-    check('段階名が見出しに出る', /ジャック子爵への貢献ランキング/.test(await page.locator('[data-raid-jack-ranking-list]').innerText()));
-    await page.locator('[data-raid-jack-ranking-list]').getByText('グランドスラム', { exact: true }).first().click();
-    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 2, null, { timeout: 10000 });
-    check('グランドスラムは累計ダメージのランキング(2人)が出る', /グランドスラムの累計ダメージ/.test(await page.locator('[data-raid-jack-ranking-list]').innerText()));
-    check('ランキング画面は横にはみ出さない', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-    if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/ranking-b.png` });
-    await page.locator('[data-raid-jack-ranking-close]').click();
-    check('ランキング画面を閉じられる', await page.locator('[data-raid-jack-ranking-list]').count() === 0);
+    // HOMEの入口で、報酬の確認(端末の印の修復→取り下げ)が自動で走る。少し待ってから保存を見る
+    await page.waitForTimeout(6000);
+    const saved = await page.evaluate(() => ({ st: JSON.parse(localStorage.getItem('mh_raid_jack_v1') || 'null'), gifts: JSON.parse(localStorage.getItem('mh_gifts') || '[]') }));
+    console.log('INFO', JSON.stringify(saved.st), saved.gifts.map((g) => g.id + ':' + (g.claimedAt ? 'got' : 'new')).join(','));
+    check('倒した印は空のまま(取り下げたあとに、報酬が作り直されない)', saved.st && saved.st.b.defeated.length === 0 && saved.st.b.total === 0);
+    check('受け取っていない初討伐ギフト(中級・上級)が取り下げられ、受け取った初級と、ほかのギフトは残る', saved.gifts.map((g) => g.id).join() === 'raid_jack_2026_clear_b1,other_gift_keep', saved.gifts.map((g) => g.id).join());
+    check('受け取り済みの印は、受け取っていない中級・上級だけが外れ、受け取った初級は残る', saved.st && saved.st.claimed.join() === 'clear_b1', saved.st && saved.st.claimed.join());
+    check('取り下げ済みの旗が立つ', saved.st && saved.st.giftsChecked === true && saved.st.repaired === true);
     check('実行時エラーが出ない', errors.length === 0, errors.join(' / '));
   } finally {
     if (browser) await browser.close();

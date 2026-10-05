@@ -120,6 +120,11 @@
       "role": "ジャックのオーラ(段階1〜5で派手になる炎の舌)。バトルとHOMEで共通の部品 JackAuraLayer。見た目は 70-bootstrap.jsx の data-jack-aura"
     },
     {
+      "file": "38-raid-jack-home-lines.jsx",
+      "role": "HOMEにいるレイドボスのひとこと。爵位ごとの話し方×残りライフの3場面(各4種類)と、大王を倒したあとのぱんぷきん(10種類)。純粋なデータと選び方だけ。画面は 69-screen-home.jsx の HomeRaidJack",
+      "pure": true
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },

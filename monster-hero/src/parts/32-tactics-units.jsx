@@ -1032,7 +1032,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
-    desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
+    useNote: '敵の攻撃を全部モノリスが受ける',
+    desc: 'このターン、敵の攻撃をすべてモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
     // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
     maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
@@ -1046,9 +1047,10 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mocchi: Object.freeze({
     id: 'mocchi_guts_full',
     name: 'ガッツ全開っちー',
+    useNote: '5ターン 全ステータス+30%・満タン・自動回復+30%',
     // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
     //   上限も20%上げ、その上がった上限まで満タンにする
-    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、モッチーが大きく強くなる。\n・ちから・丈夫さ・ライフ上限・ガッツ上限が+30%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の30%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.3, regenRate: 0.3, fullRecover: true,
     effect: 'statBoost',
@@ -1060,7 +1062,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mitarashi: Object.freeze({
     id: 'mitarashi_dragon',
     name: 'ドラゴンだっちー',
-    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    useNote: '5ターン 力・ガッツ+40% 丈夫さ・ライフ+20%・満タン',
+    desc: '5ターンのあいだ、ミタラシが強くなる。\n・ちから・ガッツ上限が+40%、丈夫さ・ライフ上限が+20%\n・ターン終わりの自動回復が、ガッツは上限の40%、ライフは上限の20%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.2, regenRate: 0.2, fullRecover: true,
     rates: Object.freeze({ atk: 0.4, def: 0.2, hp: 0.2, guts: 0.4 }),
@@ -1077,7 +1080,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
+    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
     maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
     effect: 'distMatch',
   }),
@@ -1088,7 +1092,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
-    desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
+    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
@@ -1098,7 +1103,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ark: Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
-    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
+    desc: '5ターンのあいだ、アークが攻めも守りも強くなる。\n・与ダメージ+30%\n・攻撃に「与ダメージ10%の連撃」が1回付く\n・受けるダメージ−20%',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
     effect: 'multiBuff',
@@ -1108,7 +1114,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Iblis: Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
-    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
+    desc: '最大ライフの30%を払って、5ターンのあいだ攻撃が鋭くなる。\n・攻撃に「与ダメージ5%の連撃」が5回付く\n・会心率×1.5、会心ダメージ×1.3\n・丈夫さ+30%\n・ライフが払う量より多いときだけ使える（払って倒れることはない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
     lifeCostRate: 0.3, conditionText: 'ライフが最大の30%より多いときだけ使える',
@@ -1121,7 +1128,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pixie: Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
-    desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
+    useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
+    desc: '3ターンのあいだ、固有技を撃ちやすくなり、近くから殴ったことになる。\n・毎ターン、ピクシーの固有技カードが必ず手札に出る\n・距離補正が、どの距離でも×1.5（敵と同じ距離から攻撃したときと同じ）',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     distMult: 1.5, guaranteeUnique: true,
     effect: 'multiBuff',
@@ -1131,7 +1139,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mia: Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
-    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    useNote: '4ターン カード+1・使うほどボルテージ上昇',
+    desc: '4ターンのあいだ、味方全員が動きやすくなる。\n・1ターンに使えるカードが+1枚（ミーア自身も+1）\n・味方がカードを1枚使うたびに、ボルテージが1たまる（最大10）\n・ボルテージ1段階ごとに、味方全員の与ダメージ+3%・回復カードの回復量+5%・ライフ自動回復+3%・ガッツ自動回復+2%\n・効果が終わると、ボルテージは0に戻る',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
     cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02, hp: 0.03 }),
     effect: 'stage',
@@ -1141,7 +1150,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Snegurochka: Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
-    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    useNote: '全員のガッツ回復＋ランダムで1つ',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで1つ：\n　与ダメージ+20%（2ターン）\n　被ダメージ−20%（2ターン）\n　連撃 与ダメ10%×2回（2ターン）\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3（2ターン）\n・10%の確率で「大当たり」：6つ全部',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 2,
     present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
@@ -1151,7 +1161,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Undine: Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
-    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
+    useNote: '選んだ味方が満タンに・ガッツ30%回復',
+    desc: '味方1体（自分でもよい）を選んで、回復させる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%\n・どちらも、選んだ子のガッツが上限の30%回復する',
     // ★2026-10-03 ユーザー指示で 3回 → 5回
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
@@ -1162,7 +1173,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yaobikuni: Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
-    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    useNote: '時間停止 このターン敵は動かない',
+    desc: '時間を止める。\n・使ったターンは、敵が行動しない\n・そのターンは、WAVEの20ターンの数に入らない（ターンの数字が進まない）',
     maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
     effect: 'timeStop',
   }),
@@ -1174,17 +1186,35 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pandora: Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
-    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
+    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・1枚目のカード＝悪魔の力：与ダメージ+50%、与ダメージ30%の連撃が1回付く\n・2枚目のカード＝天使の力：味方全員のライフ・ガッツが上限の10%回復\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：パンドラはダウンするが、ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の50%回復\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
     effect: 'pandoraBox',
     // ラン3回のあいだ、箱が効いている途中でもう一度使うことはできない(重ね掛けで3ターンが延びないように)
     conditions: Object.freeze(['notActive']),
   }),
+  // ★2026-10-05 ユーザー指示(ライガーのEX)。「雷狼影・3ターン・ラン5回。3ターンの間、自身の行動回数ぶん『雷』がたまる
+  //   (ガードやききの効果で増えていればそれも行動分)。3ターンのターン終了後に『雷纏』が始まり、3ターンの間、
+  //   雷の数だけ強化(雷×与ダメ30%・雷×クリ率10%・雷×連撃10%)」。のちに「雷×回避率5%」(敵の攻撃を確率で回避。上限90%)・「雷×ライフ自動回復5%」・「雷×ガッツ自動回復5%」(ターン終わりの自動回復の率へ足す)も追加。
+  //   前半3ターン=ためる(その子が使ったカード1枚につき雷+1)、後半3ターン=雷纏。効果は合計6ターン続く(WAVEをまたがない)。
+  //   連撃は「与ダメージ10%の連撃が雷の数だけ付く」、クリ率は足し算(いまの会心率に+10%×雷)、与ダメは最終ダメージへの乗算。
+  //   カードとの併用は指定が無かったので「併用できる」。雷の数に上限は設けない
+  Tiger: Object.freeze({
+    id: 'tiger_thunder_shadow',
+    name: '雷狼影',
+    useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 6,
+    thunder: Object.freeze({ chargeTurns: 3, dmg: 0.3, crit: 0.1, comboRate: 0.1, dodge: 0.05, regenHp: 0.05, regenGuts: 0.05 }),
+    effect: 'thunder',
+    conditions: Object.freeze(['notActive']),
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
-    desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
+    useNote: '丈夫さが0になり、その50%が力へ',
+    desc: '丈夫さを0にして、その分を力へ足す。\n・足す量は、0にした丈夫さの50%\n・効き目は、そのWAVEが終わるまで',
     maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
     // ★効果中にもう一度使っても何も変わらない(丈夫さはもう0)。回数だけ減るのを防ぐ
     conditions: Object.freeze(['notActive']),
@@ -1193,6 +1223,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
+    useNote: '戦い方を切り替えた',
     // ★2026-09-25 ユーザー指示で3択にした(片手剣・片手盾・二刀流。既定は片手剣)。
     //   スタイルの効き目は、いつも「元のステータス」から数え直す(切り替えても積み重ならない)
     // ★説明だけで3つの効き目が分かるように、スタイルごとに1行ずつ書く(2026-09-25 ユーザー指摘
@@ -1218,7 +1249,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yggdrasil: Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
-    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
+    desc: '3ターンのあいだ、味方全員を守り、癒やす。\n・味方全員の被ダメージ−30%\n・ターン終わりに、味方全員のライフが上限の20%回復',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     partyTakenRate: 0.3, partyRegenRate: 0.2,
     effect: 'partyGuard',
@@ -1227,7 +1259,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   MelWhip: Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
-    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    useNote: 'このターン 連撃30%×4・先にカードで攻撃',
+    desc: 'このターンだけ、メルホイップの攻撃に連撃が付く。\n・与ダメージ30%の連撃が4回追加される\n・先にEXを使ってから、同じターンにメルホイップのカードで攻撃する',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
     extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
     effect: 'comboBurst',
@@ -1242,7 +1275,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1265,6 +1298,7 @@ const normalizeTacticsExDef = (raw) => {
     id: raw.id,
     name: String(raw.name || raw.id),
     desc: String(raw.desc || ''),
+    useNote: String(raw.useNote || ''),
     maxUses: unlimited ? 0 : Math.max(0, tacticsSafeInt(raw.maxUses, 0)),
     unlimited,
     // ★併用できるかが書かれていなければ「併用できない」へ倒す(強すぎる側へ倒さない)
@@ -1301,6 +1335,8 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0
+      ? { chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)), dmg: Math.max(0, Number(raw.thunder.dmg) || 0), crit: Math.max(0, Number(raw.thunder.crit) || 0), comboRate: Math.max(0, Number(raw.thunder.comboRate) || 0), dodge: Math.max(0, Number(raw.thunder.dodge) || 0), regenHp: Math.max(0, Number(raw.thunder.regenHp) || 0), regenGuts: Math.max(0, Number(raw.thunder.regenGuts) || 0) } : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
       const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.pandoraBox.devilCombo;
@@ -1455,6 +1491,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       presentCfg: def.present ? { ...def.present } : null, present: null,
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
       pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
+      thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1509,7 +1546,15 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 // kind … 'hp' か 'guts'。regenRates があればその項目、無ければ regenRate(ライフ・ガッツ共通)
 const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  if (!unit) return 0;
+  const kindNow = tacticsExActiveEffect(state, slot, unit.id, now);
+  // 雷狼影(thunder): 雷纏のあいだ、雷の数ぶん自動回復の率へ足す(ライフ・ガッツそれぞれ regenHp・regenGuts × 雷)
+  if (kindNow === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now), cfg = normalizeTacticsExState(state).effects[slot].thunderCfg;
+    const per = Number(cfg && (kind === 'guts' ? cfg.regenGuts : cfg.regenHp));
+    return t && t.phase === 'wrap' && Number.isFinite(per) && per > 0 ? t.charge * per : 0;
+  }
+  if (kindNow !== 'statBoost') return 0;
   const effect = normalizeTacticsExState(state).effects[slot];
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
@@ -1549,6 +1594,11 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const dodges = tacticsSafeInt(mine && mine.dodges, 0), rate = Number(mine && mine.dodgeComboRate);
     return dodges > 0 && Number.isFinite(rate) && rate > 0 ? { count: dodges, rate, label: '血踊' } : null;
   }
+  // 雷狼影(thunder): 雷纏のあいだ、雷の数だけ与ダメージ comboRate の連撃が付く
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.combo ? t.combo : null;
+  }
   if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
@@ -1556,13 +1606,46 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
   // 連撃の名前は、アーク・イブリース(multiBuff)ではそのEXの名前(スイーツパラダイスは、これまでどおり名前を渡さない)
   return kind === 'multiBuff' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
 };
+// ---- ライガー(thunder): 雷狼影 ----
+// いまの雷と段階。phase は 'charge'(ためている前半)か 'wrap'(雷纏の後半)。効いていなければ null
+const tacticsExThunderOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'thunder') return null;
+  const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.thunderCfg;
+  if (!cfg) return null;
+  const charge = Math.min(99, Math.max(0, tacticsSafeInt(mine.thunder, 0)));
+  const offset = tacticsSafeInt(now && now.turn, 0) - tacticsSafeInt(mine.turn, 0);
+  const chargeTurns = tacticsSafeInt(cfg.chargeTurns, 0), total = tacticsSafeInt(mine.turns, 0);
+  const phase = offset < chargeTurns ? 'charge' : 'wrap';
+  const wrap = phase === 'wrap';
+  const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  return { slot, phase, charge, turnsLeft: Math.max(0, (wrap ? total : chargeTurns) - offset),
+    dmgMult: wrap ? 1 + charge * num(cfg.dmg) : 1, critAdd: wrap ? charge * num(cfg.crit) : 0,
+    dodgeRate: wrap ? Math.min(0.9, charge * num(cfg.dodge)) : 0,
+    combo: wrap && charge > 0 && num(cfg.comboRate) > 0 ? { count: charge, rate: num(cfg.comboRate), label: '雷纏' } : null };
+};
+// そのターンにライガーが使ったカード n 枚ぶん、雷をためる(ためている前半のターンだけ。ほかは状態をそのまま返す)
+const addTacticsExThunder = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  const t = tacticsExThunderOf(safe, units, slot, now);
+  if (!t || t.phase !== 'charge' || add <= 0) return safe;
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], thunder: Math.min(99, t.charge + add) } } };
+};
 // アーク・イブリース(multiBuff)が効いている子の、与ダメージ・被ダメージ・会心の倍率(効いていなければ全部1)
 const tacticsExMultiBuffOf = (state, units, slot, now) => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
+  if (!unit) return null;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  // 雷狼影(thunder): 雷纏のあいだだけ、雷の数ぶん与ダメージが乗り、会心率が足される(critAdd は足し算)
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.phase === 'wrap' && t.charge > 0 ? { dmg: t.dmgMult, taken: 1, critRate: 1, critAdd: t.critAdd, critDmg: 1, distMult: 0 } : null;
+  }
+  if (kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot];
   const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
-  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critDmg: 1 + num(own.critDmgRate), distMult: num(own.distMult) };
+  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critAdd: 0, critDmg: 1 + num(own.critDmgRate), distMult: num(own.distMult) };
 };
 // ---- ピクシー(guaranteeUnique): 効いているあいだ、毎ターン固有技カードを手札へ出す ----
 // 出す子の枠(効いていなければ null)。次のターンに効くかを見たいときは、now にそのターンを渡す
@@ -1629,6 +1712,26 @@ const addTacticsExVoltage = (state, units, now, n) => {
 // ---- スネグーラチカ(present): クリスマスプレゼント ----
 const TACTICS_EX_PRESENT_KINDS = Object.freeze(['dmg', 'taken', 'combo', 'heal', 'guts', 'crit']);
 const TACTICS_EX_PRESENT_LABELS = Object.freeze({ dmg: '与ダメージアップ', taken: '被ダメージダウン', combo: '連撃付与', heal: 'ライフ回復', guts: 'ガッツ追加回復', crit: '会心率アップ' });
+// 中身を、数字つきの短い言い方にする(使った直後のカットイン・ログ・詳細に出す。cfg は def.present)
+const tacticsExPresentKindText = (kind, cfg, turns = 2) => {
+  const c = cfg || {}, pct = (v) => Math.round((Number(v) || 0) * 100);
+  switch (kind) {
+    case 'dmg': return `与ダメージ+${pct(c.dmg)}%（${turns}ターン）`;
+    case 'taken': return `被ダメージ−${pct(c.taken)}%（${turns}ターン）`;
+    case 'combo': return c.combo ? `連撃 与ダメ${pct(c.combo.rate)}%×${c.combo.count}回（${turns}ターン）` : '連撃付与';
+    case 'heal': return `全員のライフが上限の${pct(c.heal)}%回復`;
+    case 'guts': return `全員のガッツがさらに上限の${pct(c.guts)}%回復`;
+    case 'crit': return `会心率×${(Number(c.crit) || 0) + 1}（${turns}ターン）`;
+    default: return '';
+  }
+};
+const tacticsExPresentNote = (roll, cfg, turns = 2) => {
+  if (!roll || !Array.isArray(roll.kinds)) return '';
+  const c = cfg || {};
+  const head = `全員のガッツが上限の${Math.round((Number(c.fixedGuts) || 0) * 100)}%回復`;
+  const body = roll.kinds.map(k => tacticsExPresentKindText(k, c, turns)).filter(Boolean).join('・');
+  return `${head}＋${roll.jackpot ? '大当たり！ ' : ''}${body}`;
+};
 // 乱数2つ(0以上1未満)から中身を決める。r1 が大当たりの確率より小さければ全部、そうでなければ r2 で1種類
 const rollTacticsExPresent = (r1, r2, jackpot = 0.1) => (Number(r1) < jackpot
   ? { jackpot: true, kinds: TACTICS_EX_PRESENT_KINDS.slice() }

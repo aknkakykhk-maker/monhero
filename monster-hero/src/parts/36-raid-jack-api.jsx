@@ -138,6 +138,34 @@ const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
   const rows = raidJackParseRows(await raidJackRequest(`raid_jack_a_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
+// 「1戦あたりの最大ダメージ」ランキング(A・B共通。kind は 'a' か 'b')。サーバーのビュー raid_jack_max_hit_ranking
+// (docs/sql/raid/RAID_JACK_MAX_HIT_RANKING.sql)。1戦の与ダメージ = 表の1行なので、人ごとに max(damage) を取る。
+// まだビューが無い間は null を返し、画面は「準備中」にする。報酬には使わない
+const sbFetchRaidJackMaxHitRanking = async (kind, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&select=breeder_id,max_damage,last_hit_at&order=max_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.max_damage) || 0 })) : null;
+};
+// 自分の最大ダメージ(無ければ 0・読めなければ null)
+const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&breeder_id=eq.${id}&select=max_damage&limit=1`));
+  if (!rows) return null;
+  return rows.length ? (Number(rows[0].max_damage) || 0) : 0;
+};
+// 最大ダメージで自分より上の人数(順位 = これ + 1)
+const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId) => {
+  const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
+  const k = kind === 'b' ? 'b' : 'a';
+  const result = await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&max_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
 // 自分の貢献(A: 段階ごと / B: 累計)。圏外でも自分の数字と順位(=自分より多い人数+1)が出せる
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
@@ -184,7 +212,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   if (!totals || !self) return none;
   const due = [];
   const noneIds = [];
-  const add = (claimId, title, reward) => { if (!claimed.has(claimId)) due.push({ id: claimId, title, reward }); };
+  const add = (claimId, title, reward, place) => { if (!claimed.has(claimId)) due.push(place ? { id: claimId, title, reward, place } : { id: claimId, title, reward }); };
   const mineA = (i) => self.a[i + 1] || 0;
   if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
   if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
@@ -199,7 +227,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);
       else noneIds.push(raidJackNoneId(rankId));
     }
   }
@@ -211,9 +239,73 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);
       else noneIds.push(raidJackNoneId(finalId));
     }
   }
   return { ok: true, due, noneIds };
+};
+
+// ---- 端末の「倒した」印の修復(2026-10-05) ----
+// デバッグの強制表示(別のイベントID)で戦った結果が、本番の端末記録(mh_raid_jack_v1)の「倒した段階」「累計」にも書かれていた。
+// グランドスラムが倒していないのに「討伐済み」になり、初討伐の報酬の判定にも使われてしまう(ユーザー指摘)。
+// 端末の印を、サーバーの本番のイベントの記録(自分の defeated=true の行)と突き合わせ、裏付けのない印を外す。
+//   ・送れていない再送待ち(pending)の中の「倒した」は、まだ送れていないだけなので残す
+//   ・通信できない・読めないときは何も変えない(直しは次の機会へ)。直せたら repaired を立てて、以後は走らない
+//   ・受け取り済みの印(claimed)・ギフトには触らない
+const sbFetchRaidJackMyDefeats = async (breederId, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_hits?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&defeated=eq.true&select=kind,tier&limit=200`));
+  return rows ? rows.filter((r) => (r.kind === 'a' || r.kind === 'b') && Number.isFinite(Number(r.tier))).map((r) => `${r.kind}${Number(r.tier)}`) : null;
+};
+const raidJackRepairState = async (state, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  if (norm.repaired) return { state: norm, changed: false };
+  const id = raidJackSafeId(breederId);
+  if (!id) return { state: norm, changed: false };
+  const [mine, self] = await Promise.all([sbFetchRaidJackMyDefeats(id, eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!mine || !self) return { state: norm, changed: false };
+  const valid = new Set(mine);
+  norm.pending.filter((p) => p.defeated).forEach((p) => valid.add(`${p.kind}${p.tier}`));
+  const next = raidJackNormalizeState(norm);
+  const before = JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]);
+  next.a.defeated = next.a.defeated.filter((v) => valid.has(v));
+  next.b.defeated = next.b.defeated.filter((v) => valid.has(v));
+  next.b.total = (Number(self.bTotal) || 0) + norm.pending.filter((p) => p.kind === 'b').reduce((sum, p) => sum + p.damage, 0);
+  next.repaired = true;
+  return { state: next, changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before };
+};
+
+// ---- 倒していない段階の初討伐報酬の取り下げ(2026-10-05) ----
+// 上の修復で「倒した」印は直せるが、それまでに印が使われて作られたグランドスラムの初討伐報酬(ギフト・受け取り済みの印 clear_bN)が残る。
+// サーバーに本番で倒した記録(defeated=true)が無い難易度のぶんだけ、次のように直す(1回だけ・giftsChecked)。
+//   ・ギフトが「まだ受け取られていない」→ ギフトを取り下げ、受け取り済みの印も外す(本当に倒したときに、改めて届く)
+//   ・ギフトを「もう受け取った」→ 中身は戻せないので、ギフトも印もそのまま残す(あとで本当に倒しても二重には届かない)
+//   ・ギフトが見つからない → 印だけ外す
+//   ・本番で本当に倒した難易度・ほかの報酬(A・順位・参加賞)・ほかのギフトには触れない。通信できないときは何も変えない
+// gifts は mh_gifts の配列。返り値 { ok, state, gifts, changed, removed }(removed=取り下げたギフトの数)
+const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (norm.giftsChecked) return { ok: true, state: norm, gifts: list, changed: false, removed: 0 };
+  const id = raidJackSafeId(breederId);
+  const mine = id ? await sbFetchRaidJackMyDefeats(id, eventId) : null;
+  if (!mine) return { ok: false, state: norm, gifts: list, changed: false, removed: 0 };
+  const earned = new Set(mine);
+  norm.pending.filter((p) => p.defeated).forEach((p) => earned.add(`${p.kind}${p.tier}`));
+  let nextGifts = list;
+  let nextClaimed = norm.claimed;
+  let removed = 0;
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    const claimId = raidJackClaimId('clear_b', i);
+    if (earned.has(tier.id) || !nextClaimed.includes(claimId)) return;
+    const giftId = `${eventId}_${claimId}`;
+    const gift = nextGifts.find((g) => g && g.id === giftId);
+    if (gift && gift.claimedAt) return;   // もう受け取った: 戻せないので残す
+    if (gift) { nextGifts = nextGifts.filter((g) => g !== gift); removed += 1; }
+    nextClaimed = nextClaimed.filter((v) => v !== claimId);
+  });
+  const next = raidJackNormalizeState({ ...norm, claimed: nextClaimed, giftsChecked: true });
+  return { ok: true, state: next, gifts: nextGifts, changed: removed > 0 || nextClaimed.length !== norm.claimed.length, removed };
 };

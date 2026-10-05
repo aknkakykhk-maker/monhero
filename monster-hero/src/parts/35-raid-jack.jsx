@@ -15,7 +15,7 @@
 const RAID_JACK_EVENT = Object.freeze({
   id: 'raid_jack_2026',
   name: 'カボチャの大王ジャック',
-  startAt: '2026-10-05T04:00:00+09:00',
+  startAt: '2026-10-05T04:00:00+09:00',   // 17-release-changelog-login-missions.jsx の RAID_JACK_START_AT と同じ値(更新履歴の公開判定が先に読むため、そちらにも置いてある。食い違いは raid-jack-check.js が見る)
   endAt: '2026-11-01T04:00:00+09:00',
 });
 
@@ -50,13 +50,19 @@ const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'rai
 // イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';   // Crazy Party Night ～ぱんぷきんの逆襲～ の全編版(2026-10-04・ユーザー指示「ハロウィンイベント関連はこの曲をデフォルトに」。1分34秒の版から替えた)
-const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
 // 絵の大きさ合わせ(2026-10-04・ユーザー指示「本体を2枚目(両腕ポーズ)ぐらいのサイズ感に」)。
 // 両腕ポーズの絵は腕が左右へ広がるので、同じ枠に収めると本体は幅の約49%。通常絵は本体が幅の約99%。
 // ポーズ絵は枠いっぱい(1倍)、通常絵は半分(0.5倍)で描くと、切り替わっても本体の大きさがそろう。
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
-// Aは、このターンになった時に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
-const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+// 小さなぱんぷきん(顔アイコンの絵)の大きさ。ジャックの通常絵(0.5)より少し小さく描いて、「小さくなった」が分かるようにする
+const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
+// Aは、このターンになった時に、編成の全員の固有技が2段階ずつ・選んだアシカが1段階ずつ上がる(Bは成長しない)
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8, 11]);
+// 固有技は、このターンのたびに2段階ずつ上がる(3・5・8・11ターン目の4回で、最大の8段階までちょうど届く・2026-10-05・ユーザー指示)。
+// アシカは同じターンに1段階ずつ上がるが、最大が2段階なので、3・5ターン目で最大になり、8・11ターン目は変わらない
+const RAID_JACK_UNIQUE_LEVEL_STEP = 2;
+const RAID_JACK_TEACHING_MAX_LEVEL = 2;
 // レイドバトル(A)のターンごとの強化。2ターン目から、1ターン進むごとに味方全員の全ステータスが5%ずつ(掛け算で)上がり、
 // ライフ・ガッツの自動回復の割合が1.5%ずつ上がる(ライフの初期値10%・ガッツはそれより5%低い)。
 // 戦闘の中身(60-app.jsx の raidJackTurnGrowth)と、画面の「強化」の表示(71-screen-battle.jsx)が同じ数字を見る
@@ -77,6 +83,7 @@ const raidJackGrowthAt = (turn) => {
     levelUps, levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
     nextLevelUpTurn: next === undefined ? null : next,
     levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+    teachingUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t) && levelUps <= RAID_JACK_TEACHING_MAX_LEVEL,   // アシカも上がるターンか(最大に届いたあとは変わらない)
   };
 };
 
@@ -94,24 +101,38 @@ const RAID_JACK_SKILL_NAMES = Object.freeze({
 });
 
 // atkPower を渡したときは、攻撃力だけこの倍率で決める(ライフは power のまま)。渡さなければ power と同じ(グランドスラム)。
-const raidJackTier = (id, name, power, actionCount, atkPower = power) => Object.freeze({
-  id, name, power, actionCount, atkPower,
-  hp: Math.round(RAID_JACK_BASE.hp * power * RAID_JACK_LIFE_MULTIPLIER),
-  atk: Math.round(RAID_JACK_BASE.atk * atkPower),
-});
+// hpOverride を渡したときは、ライフをその数字にする(2026-10-05・ユーザーが段階ごとに決めた。倍率 power は hp ÷ (35,000×10) に合わせる)。
+const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride = null) => {
+  const fixedHp = Number.isFinite(hpOverride) && hpOverride > 0 ? Math.round(hpOverride) : null;
+  const p = fixedHp ? fixedHp / (RAID_JACK_BASE.hp * RAID_JACK_LIFE_MULTIPLIER) : power;
+  return Object.freeze({
+    id, name, power: p, actionCount, atkPower,
+    hp: fixedHp || Math.round(RAID_JACK_BASE.hp * power * RAID_JACK_LIFE_MULTIPLIER),
+    atk: Math.round(RAID_JACK_BASE.atk * atkPower),
+  });
+};
 // レイドバトル(A)の攻撃力の倍率(2026-10-04・ユーザー指示)。通常バトルの難易度 Easy / Normal / Hard / Expert / Master の
 // 攻撃倍率(DIFFICULTY_SETTINGS の power: 0.5 / 1.0 / 1.5 / 3.0 / 5.0)と同じにする。ライフは変えない。
 // 数字がずれていないかは tools/mode/raid-jack-check.js が DIFFICULTY_SETTINGS と突き合わせる
 const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
 
 // A: ベースモン協力戦。段階ごとの共有HP。
+// ライフ(2026-10-05・ユーザーが段階ごとに決めた): 男爵 1,750,000 / 子爵 3,200,000 / 伯爵 8,000,000 / 公爵 14,000,000 / 大王 21,000,000(2026-10-05 に伯爵・公爵・大王を2度引き上げ。男爵・子爵は開始済みなので変えない)
 const RAID_JACK_A_TIERS = Object.freeze([
-  raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0]),    // 攻撃力は Easy
-  raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1]),    // Normal
-  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2]),    // Hard
-  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3]),   // Expert
-  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4]),   // Master
+  raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000),    // 攻撃力は Easy
+  raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000),    // Normal
+  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000),    // Hard
+  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000),   // Expert
+  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000),   // Master
 ]);
+// 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示)。大王を倒したら共有ライフは無限になり、敵は小さなぱんぷきんに替わる。
+//   ・共有ライフは減らない。毎回ぜんかいのライフからはじめ、与えたダメージだけがスコア(累計)に足される
+//   ・ライフは 4,550,000 の設定値(大王のライフとは連動しない。1戦で倒せるのはそこまで)/ 攻撃力は子爵と同じ / 技の名前は今までのまま(動きは絵に合わせる)
+//   ・サーバーへ送る段階は大王(tier 5)のまま(表の制約が 1〜5 のため)。ID は a5 を引き継ぎ、raidJackPumpkin で見分ける
+const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, RAID_JACK_A_ATK_POWERS[1], 4550000);   // ライフは 4,550,000(大王のライフを変えても連動しない・2026-10-05)
+// 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
+const raidJackBossDown = (totals) => !!totals && !!totals.a && !!totals.a[5]
+  && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 // B: マスモンの累計ダメージ。5段階(ランキングは共有)。
 const RAID_JACK_B_TIERS = Object.freeze([
   raidJackTier('b1', '初級ジャック', 0.2, 3),
@@ -170,6 +191,8 @@ const raidJackDefaultState = () => ({
   b: { day: '', used: 0, extra: 0, defeated: [], total: 0 },
   claimed: [],
   pending: [],
+  repaired: false,   // デバッグで付いた「倒した」印をサーバーの記録と突き合わせて直したか(1回だけ・raidJackRepairState)
+  giftsChecked: false,   // 倒していない段階の初討伐報酬(ギフト・受け取り済みの印)を取り下げたか(1回だけ・raidJackRevokeUnearned)
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -199,6 +222,8 @@ const raidJackNormalizeState = (raw) => {
     b: raidJackNormalizeSide(src.b, true),
     claimed: Array.isArray(src.claimed) ? src.claimed.filter((v) => typeof v === 'string').slice(0, 64) : [],
     pending: raidJackNormalizePending(src.pending),
+    repaired: src.repaired === true,
+    giftsChecked: src.giftsChecked === true,
   };
 };
 
@@ -225,10 +250,16 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
 
 // 戦闘に出すジャック本体。ライフ・攻撃は段階の値をそのまま使う(35,000×倍率×10 の端数ずれを避けるため上書きする)。
 // 技の本数は actionCount で直接指定する(再生なし。3/4/5/5/5)。createBattleEnemy は 22-enemy-and-bond-entries.jsx
-const raidJackMakeEnemy = (kind, tierIndex, mode) => {
+const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, { mode, actionCount: tier.actionCount });
   if (!enemy) return null;
+  // 大王を倒したあとのレイドバトル(大王の段階だけ): 小さなぱんぷきん。絵は通常絵のみ(ポーズ絵なし)・動きは pumpkin
+  if (opts.pumpkin === true && kind === 'a' && tierIndex === RAID_JACK_A_TIERS.length - 1) {
+    const p = RAID_JACK_PUMPKIN;
+    return { ...enemy, name: p.name, maxHp: p.hp, hp: p.hp, atk: p.atk, raidJackTier: tier.id, raidJackPumpkin: true,
+      imgUrl: (typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : enemy.imgUrl), poseImgUrl: null };
+  }
   // 名前は段階の名前(ジャック男爵・初級ジャックなど)。バトル画面のボスバーやログにそのまま出る
   return { ...enemy, name: tier.name, maxHp: tier.hp, hp: tier.hp, atk: tier.atk, raidJackTier: tier.id };
 };
@@ -341,6 +372,9 @@ const raidJackClaimId = (kind, tierIndex, rank) => {
 };
 // 受け取り済みの印のうち、「順位に入っていなかった」ことを覚えておく印(毎回サーバーへ問い合わせ直さないため)
 const raidJackNoneId = (id) => `${id}_none`;
+// 順位の報酬は、何位でギフトに届いたかも印に残す(報酬一覧で、その順位の行に印を付けるため。2026-10-05・ユーザー指摘「貢献順位のバッジが表示ミス?」)。
+// 順位ごとの行に印を付けるには、届けた順位が要る。これが無い古い印(rank_a1 だけ)は、行ではなく段階の下の一言で伝える
+const raidJackPlaceId = (rankId, place) => `${rankId}_p${Math.max(1, Math.floor(Number(place)) || 1)}`;
 // 1つの報酬の題名(ギフトの見出し)
 const raidJackRewardTitle = (kind, tierIndex, rank) => {
   const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
@@ -351,4 +385,16 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
   if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
   if (kind === 'clear_b') return `${bName} 初討伐報酬`;
   return `グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+
+// ===== ジャック戦を遊んだぶんを、クイック周回の報酬にする(2026-10-05・ユーザー指示) =====
+// プロモードのランぶんと同じ立て付け(docs/spec/QUICK_RHYTHM_LINK.md §13): 終わったときに「クイック何周ぶんか」を数えて、
+// その報酬(経験値・ダイヤなど)だけを配る。裏で2つ目のバトルを動かすのではない。与ダメージの記録(共有ライフ・ランキング)は一切動かさない。
+// ジャック戦にはWAVEがないので、プロの「進んだWAVE数」の代わりに「使ったターン数」で決める。
+//   周回数 = 使ったターン数 × 2(20ターン使い切れば40周ぶん。レイドバトルもグランドスラムも同じ式で、段階による違いは無い)
+//   全滅・リタイアも、使ったターン数ぶんだけ入る。1ターンも使っていなければ0。
+const RAID_JACK_QUICK_LOOPS_PER_TURN = 2;
+const raidJackQuickLoops = (turnsUsed) => {
+  const turns = Math.max(0, Math.min(RAID_JACK_TURNS, Math.trunc(Number(turnsUsed) || 0)));
+  return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
 };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e40944a6888a80ad
+// source-sha256: 6175b8ee7ce9b7c9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 17:50";
+const BUILD_DATE = "2026-10-05 17:52";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10620,6 +10620,7 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 const FRIENDS_PUBLIC_RELEASE = true;
+const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
@@ -10634,7 +10635,7 @@ const RELEASE_FLAGS = {
   friends: FRIENDS_PUBLIC_RELEASE,
   get raidJack() {
     try {
-      return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_EVENT.startAt);
+      return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT);
     } catch (e) {
       return false;
     }
@@ -20034,7 +20035,10 @@ const TacticsExCutin = ({
     }
   }, cutin.exName), React.createElement("div", {
     className: "ex-cutin__sub"
-  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''))), React.createElement("div", {
+  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''), cutin.note ? React.createElement("div", {
+    "data-ex-cutin-note": true,
+    className: "ex-cutin__note"
+  }, cutin.note) : null)), React.createElement("div", {
     className: "ex-cutin__flash"
   })), document.body);
 };
@@ -33563,7 +33567,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
-    desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
+    useNote: '敵の攻撃を全部モノリスが受ける',
+    desc: 'このターン、敵の攻撃をすべてモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
     maxUses: 10,
     unlimited: false,
     withCards: true,
@@ -33573,7 +33578,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mocchi: Object.freeze({
     id: 'mocchi_guts_full',
     name: 'ガッツ全開っちー',
-    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    useNote: '5ターン 全ステータス+30%・満タン・自動回復+30%',
+    desc: '5ターンのあいだ、モッチーが大きく強くなる。\n・ちから・丈夫さ・ライフ上限・ガッツ上限が+30%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の30%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33587,7 +33593,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mitarashi: Object.freeze({
     id: 'mitarashi_dragon',
     name: 'ドラゴンだっちー',
-    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    useNote: '5ターン 力・ガッツ+40% 丈夫さ・ライフ+20%・満タン',
+    desc: '5ターンのあいだ、ミタラシが強くなる。\n・ちから・ガッツ上限が+40%、丈夫さ・ライフ上限が+20%\n・ターン終わりの自動回復が、ガッツは上限の40%、ライフは上限の20%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33611,7 +33618,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
+    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
     maxUses: 3,
     unlimited: false,
     withCards: false,
@@ -33622,7 +33630,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
-    desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
+    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33634,7 +33643,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ark: Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
-    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
+    desc: '5ターンのあいだ、アークが攻めも守りも強くなる。\n・与ダメージ+30%\n・攻撃に「与ダメージ10%の連撃」が1回付く\n・受けるダメージ−20%',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33651,7 +33661,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Iblis: Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
-    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
+    desc: '最大ライフの30%を払って、5ターンのあいだ攻撃が鋭くなる。\n・攻撃に「与ダメージ5%の連撃」が5回付く\n・会心率×1.5、会心ダメージ×1.3\n・丈夫さ+30%\n・ライフが払う量より多いときだけ使える（払って倒れることはない）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33673,7 +33684,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pixie: Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
-    desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
+    useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
+    desc: '3ターンのあいだ、固有技を撃ちやすくなり、近くから殴ったことになる。\n・毎ターン、ピクシーの固有技カードが必ず手札に出る\n・距離補正が、どの距離でも×1.5（敵と同じ距離から攻撃したときと同じ）',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33686,7 +33698,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mia: Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
-    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    useNote: '4ターン カード+1・使うほどボルテージ上昇',
+    desc: '4ターンのあいだ、味方全員が動きやすくなる。\n・1ターンに使えるカードが+1枚（ミーア自身も+1）\n・味方がカードを1枚使うたびに、ボルテージが1たまる（最大10）\n・ボルテージ1段階ごとに、味方全員の与ダメージ+3%・回復カードの回復量+5%・ライフ自動回復+3%・ガッツ自動回復+2%\n・効果が終わると、ボルテージは0に戻る',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33705,7 +33718,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Snegurochka: Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
-    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    useNote: '全員のガッツ回復＋ランダムで1つ',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで1つ：\n　与ダメージ+20%（2ターン）\n　被ダメージ−20%（2ターン）\n　連撃 与ダメ10%×2回（2ターン）\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3（2ターン）\n・10%の確率で「大当たり」：6つ全部',
     maxUses: 1,
     unlimited: false,
     usesPerWave: true,
@@ -33730,7 +33744,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Undine: Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
-    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
+    useNote: '選んだ味方が満タンに・ガッツ30%回復',
+    desc: '味方1体（自分でもよい）を選んで、回復させる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%\n・どちらも、選んだ子のガッツが上限の30%回復する',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33746,7 +33761,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yaobikuni: Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
-    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    useNote: '時間停止 このターン敵は動かない',
+    desc: '時間を止める。\n・使ったターンは、敵が行動しない\n・そのターンは、WAVEの20ターンの数に入らない（ターンの数字が進まない）',
     maxUses: 2,
     unlimited: false,
     withCards: true,
@@ -33756,7 +33772,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pandora: Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
-    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
+    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・1枚目のカード＝悪魔の力：与ダメージ+50%、与ダメージ30%の連撃が1回付く\n・2枚目のカード＝天使の力：味方全員のライフ・ガッツが上限の10%回復\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：パンドラはダウンするが、ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の50%回復\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33776,10 +33793,33 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'pandoraBox',
     conditions: Object.freeze(['notActive'])
   }),
+  Tiger: Object.freeze({
+    id: 'tiger_thunder_shadow',
+    name: '雷狼影',
+    useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 6,
+    thunder: Object.freeze({
+      chargeTurns: 3,
+      dmg: 0.3,
+      crit: 0.1,
+      comboRate: 0.1,
+      dodge: 0.05,
+      regenHp: 0.05,
+      regenGuts: 0.05
+    }),
+    effect: 'thunder',
+    conditions: Object.freeze(['notActive'])
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
-    desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
+    useNote: '丈夫さが0になり、その50%が力へ',
+    desc: '丈夫さを0にして、その分を力へ足す。\n・足す量は、0にした丈夫さの50%\n・効き目は、そのWAVEが終わるまで',
     maxUses: 3,
     unlimited: false,
     withCards: false,
@@ -33790,6 +33830,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
+    useNote: '戦い方を切り替えた',
     desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n' + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n' + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n' + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
     maxUses: 5,
     unlimited: false,
@@ -33815,7 +33856,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yggdrasil: Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
-    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
+    desc: '3ターンのあいだ、味方全員を守り、癒やす。\n・味方全員の被ダメージ−30%\n・ターン終わりに、味方全員のライフが上限の20%回復',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33828,7 +33870,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   MelWhip: Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
-    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    useNote: 'このターン 連撃30%×4・先にカードで攻撃',
+    desc: 'このターンだけ、メルホイップの攻撃に連撃が付く。\n・与ダメージ30%の連撃が4回追加される\n・先にEXを使ってから、同じターンにメルホイップのカードで攻撃する',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33843,7 +33886,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -33862,6 +33905,7 @@ const normalizeTacticsExDef = raw => {
     id: raw.id,
     name: String(raw.name || raw.id),
     desc: String(raw.desc || ''),
+    useNote: String(raw.useNote || ''),
     maxUses: unlimited ? 0 : Math.max(0, tacticsSafeInt(raw.maxUses, 0)),
     unlimited,
     withCards: raw.withCards === true,
@@ -33900,6 +33944,15 @@ const normalizeTacticsExDef = raw => {
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0 ? {
+      chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)),
+      dmg: Math.max(0, Number(raw.thunder.dmg) || 0),
+      crit: Math.max(0, Number(raw.thunder.crit) || 0),
+      comboRate: Math.max(0, Number(raw.thunder.comboRate) || 0),
+      dodge: Math.max(0, Number(raw.thunder.dodge) || 0),
+      regenHp: Math.max(0, Number(raw.thunder.regenHp) || 0),
+      regenGuts: Math.max(0, Number(raw.thunder.regenGuts) || 0)
+    } : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
       const n = v => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.pandoraBox.devilCombo;
@@ -34156,6 +34209,10 @@ const applyTacticsExUse = (state, {
         pandoraBoxCfg: def.pandoraBox ? {
           ...def.pandoraBox
         } : null,
+        thunderCfg: def.thunder ? {
+          ...def.thunder
+        } : null,
+        thunder: 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -34222,7 +34279,15 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 };
 const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  if (!unit) return 0;
+  const kindNow = tacticsExActiveEffect(state, slot, unit.id, now);
+  if (kindNow === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now),
+      cfg = normalizeTacticsExState(state).effects[slot].thunderCfg;
+    const per = Number(cfg && (kind === 'guts' ? cfg.regenGuts : cfg.regenHp));
+    return t && t.phase === 'wrap' && Number.isFinite(per) && per > 0 ? t.charge * per : 0;
+  }
+  if (kindNow !== 'statBoost') return 0;
   const effect = normalizeTacticsExState(state).effects[slot];
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
@@ -34262,6 +34327,10 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
       label: '血踊'
     } : null;
   }
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.combo ? t.combo : null;
+  }
   if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0),
@@ -34276,15 +34345,73 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     rate
   };
 };
+const tacticsExThunderOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'thunder') return null;
+  const mine = normalizeTacticsExState(state).effects[slot],
+    cfg = mine.thunderCfg;
+  if (!cfg) return null;
+  const charge = Math.min(99, Math.max(0, tacticsSafeInt(mine.thunder, 0)));
+  const offset = tacticsSafeInt(now && now.turn, 0) - tacticsSafeInt(mine.turn, 0);
+  const chargeTurns = tacticsSafeInt(cfg.chargeTurns, 0),
+    total = tacticsSafeInt(mine.turns, 0);
+  const phase = offset < chargeTurns ? 'charge' : 'wrap';
+  const wrap = phase === 'wrap';
+  const num = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0;
+  return {
+    slot,
+    phase,
+    charge,
+    turnsLeft: Math.max(0, (wrap ? total : chargeTurns) - offset),
+    dmgMult: wrap ? 1 + charge * num(cfg.dmg) : 1,
+    critAdd: wrap ? charge * num(cfg.crit) : 0,
+    dodgeRate: wrap ? Math.min(0.9, charge * num(cfg.dodge)) : 0,
+    combo: wrap && charge > 0 && num(cfg.comboRate) > 0 ? {
+      count: charge,
+      rate: num(cfg.comboRate),
+      label: '雷纏'
+    } : null
+  };
+};
+const addTacticsExThunder = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  const t = tacticsExThunderOf(safe, units, slot, now);
+  if (!t || t.phase !== 'charge' || add <= 0) return safe;
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [slot]: {
+        ...safe.effects[slot],
+        thunder: Math.min(99, t.charge + add)
+      }
+    }
+  };
+};
 const tacticsExMultiBuffOf = (state, units, slot, now) => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
+  if (!unit) return null;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.phase === 'wrap' && t.charge > 0 ? {
+      dmg: t.dmgMult,
+      taken: 1,
+      critRate: 1,
+      critAdd: t.critAdd,
+      critDmg: 1,
+      distMult: 0
+    } : null;
+  }
+  if (kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot];
   const num = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0;
   return {
     dmg: 1 + num(own.dmgRate),
     taken: 1 - Math.min(0.9, num(own.selfTakenRate)),
     critRate: 1 + num(own.critRateRate),
+    critAdd: 0,
     critDmg: 1 + num(own.critDmgRate),
     distMult: num(own.distMult)
   };
@@ -34396,6 +34523,33 @@ const TACTICS_EX_PRESENT_LABELS = Object.freeze({
   guts: 'ガッツ追加回復',
   crit: '会心率アップ'
 });
+const tacticsExPresentKindText = (kind, cfg, turns = 2) => {
+  const c = cfg || {},
+    pct = v => Math.round((Number(v) || 0) * 100);
+  switch (kind) {
+    case 'dmg':
+      return `与ダメージ+${pct(c.dmg)}%（${turns}ターン）`;
+    case 'taken':
+      return `被ダメージ−${pct(c.taken)}%（${turns}ターン）`;
+    case 'combo':
+      return c.combo ? `連撃 与ダメ${pct(c.combo.rate)}%×${c.combo.count}回（${turns}ターン）` : '連撃付与';
+    case 'heal':
+      return `全員のライフが上限の${pct(c.heal)}%回復`;
+    case 'guts':
+      return `全員のガッツがさらに上限の${pct(c.guts)}%回復`;
+    case 'crit':
+      return `会心率×${(Number(c.crit) || 0) + 1}（${turns}ターン）`;
+    default:
+      return '';
+  }
+};
+const tacticsExPresentNote = (roll, cfg, turns = 2) => {
+  if (!roll || !Array.isArray(roll.kinds)) return '';
+  const c = cfg || {};
+  const head = `全員のガッツが上限の${Math.round((Number(c.fixedGuts) || 0) * 100)}%回復`;
+  const body = roll.kinds.map(k => tacticsExPresentKindText(k, c, turns)).filter(Boolean).join('・');
+  return `${head}＋${roll.jackpot ? '大当たり！ ' : ''}${body}`;
+};
 const rollTacticsExPresent = (r1, r2, jackpot = 0.1) => Number(r1) < jackpot ? {
   jackpot: true,
   kinds: TACTICS_EX_PRESENT_KINDS.slice()
@@ -35679,9 +35833,12 @@ const RAID_JACK_ENDING_NOTCLEARED_ID = 'raid_jack_ending_notcleared';
 const RAID_JACK_STORY_IDS = Object.freeze([RAID_JACK_STORY_START_ID, ...Object.values(RAID_JACK_STORY_AFTER_TIER), RAID_JACK_ENDING_CLEARED_ID, RAID_JACK_ENDING_NOTCLEARED_ID]);
 const raidJackStoryUnlockKey = id => `${String(id).replace(/^raid_jack_/, 'raidJack_').replace(/_([a-z0-9])/g, (m, c) => c.toUpperCase()).replace(/^raidJack(\w)/, (m, c) => 'raidJack' + c.toUpperCase())}Seen`;
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';
-const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
-const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8, 11]);
+const RAID_JACK_UNIQUE_LEVEL_STEP = 2;
+const RAID_JACK_TEACHING_MAX_LEVEL = 2;
 const RAID_JACK_TURN_GROWTH = 1.05;
 const RAID_JACK_TURN_REGEN_STEP = 0.015;
 const raidJackGrowthAt = turn => {
@@ -35700,7 +35857,8 @@ const raidJackGrowthAt = turn => {
     levelUps,
     levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
     nextLevelUpTurn: next === undefined ? null : next,
-    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t)
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+    teachingUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t) && levelUps <= RAID_JACK_TEACHING_MAX_LEVEL
   };
 };
 const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
@@ -35713,17 +35871,23 @@ const RAID_JACK_SKILL_NAMES = Object.freeze({
   roar: 'ハロウィンナイト',
   allout: 'おばけパレード'
 });
-const raidJackTier = (id, name, power, actionCount, atkPower = power) => Object.freeze({
-  id,
-  name,
-  power,
-  actionCount,
-  atkPower,
-  hp: Math.round(RAID_JACK_BASE.hp * power * RAID_JACK_LIFE_MULTIPLIER),
-  atk: Math.round(RAID_JACK_BASE.atk * atkPower)
-});
+const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride = null) => {
+  const fixedHp = Number.isFinite(hpOverride) && hpOverride > 0 ? Math.round(hpOverride) : null;
+  const p = fixedHp ? fixedHp / (RAID_JACK_BASE.hp * RAID_JACK_LIFE_MULTIPLIER) : power;
+  return Object.freeze({
+    id,
+    name,
+    power: p,
+    actionCount,
+    atkPower,
+    hp: fixedHp || Math.round(RAID_JACK_BASE.hp * power * RAID_JACK_LIFE_MULTIPLIER),
+    atk: Math.round(RAID_JACK_BASE.atk * atkPower)
+  });
+};
 const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
-const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0]), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1]), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2]), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3]), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4])]);
+const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000)]);
+const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, RAID_JACK_A_ATK_POWERS[1], 4550000);
+const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
 const raidJackTiers = kind => kind === 'b' ? RAID_JACK_B_TIERS : RAID_JACK_A_TIERS;
 const raidJackTierAt = (kind, index) => {
@@ -35774,7 +35938,9 @@ const raidJackDefaultState = () => ({
     total: 0
   },
   claimed: [],
-  pending: []
+  pending: [],
+  repaired: false,
+  giftsChecked: false
 });
 const raidJackNormalizeSide = (raw, withTotal) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -35808,7 +35974,9 @@ const raidJackNormalizeState = raw => {
     a: raidJackNormalizeSide(src.a, false),
     b: raidJackNormalizeSide(src.b, true),
     claimed: Array.isArray(src.claimed) ? src.claimed.filter(v => typeof v === 'string').slice(0, 64) : [],
-    pending: raidJackNormalizePending(src.pending)
+    pending: raidJackNormalizePending(src.pending),
+    repaired: src.repaired === true,
+    giftsChecked: src.giftsChecked === true
   };
 };
 const raidJackRemaining = (side, nowMs) => {
@@ -35827,13 +35995,27 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
   }
   return n;
 };
-const raidJackMakeEnemy = (kind, tierIndex, mode) => {
+const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, {
     mode,
     actionCount: tier.actionCount
   });
   if (!enemy) return null;
+  if (opts.pumpkin === true && kind === 'a' && tierIndex === RAID_JACK_A_TIERS.length - 1) {
+    const p = RAID_JACK_PUMPKIN;
+    return {
+      ...enemy,
+      name: p.name,
+      maxHp: p.hp,
+      hp: p.hp,
+      atk: p.atk,
+      raidJackTier: tier.id,
+      raidJackPumpkin: true,
+      imgUrl: typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : enemy.imgUrl,
+      poseImgUrl: null
+    };
+  }
   return {
     ...enemy,
     name: tier.name,
@@ -36121,6 +36303,7 @@ const raidJackClaimId = (kind, tierIndex, rank) => {
   return `${kind}${n}`;
 };
 const raidJackNoneId = id => `${id}_none`;
+const raidJackPlaceId = (rankId, place) => `${rankId}_p${Math.max(1, Math.floor(Number(place)) || 1)}`;
 const raidJackRewardTitle = (kind, tierIndex, rank) => {
   const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
   const bName = RAID_JACK_B_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
@@ -36130,6 +36313,11 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
   if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
   if (kind === 'clear_b') return `${bName} 初討伐報酬`;
   return `グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+const RAID_JACK_QUICK_LOOPS_PER_TURN = 2;
+const raidJackQuickLoops = turnsUsed => {
+  const turns = Math.max(0, Math.min(RAID_JACK_TURNS, Math.trunc(Number(turnsUsed) || 0)));
+  return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
 };
 const RAID_JACK_TIMEOUT_MS = 8000;
 let _raidJackUnavailable = false;
@@ -36312,6 +36500,36 @@ const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
     total: Number(r.total_damage) || 0
   })) : null;
 };
+const sbFetchRaidJackMaxHitRanking = async (kind, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&select=breeder_id,max_damage,last_hit_at&order=max_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map(r => ({
+    breederId: String(r.breeder_id),
+    total: Number(r.max_damage) || 0
+  })) : null;
+};
+const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&breeder_id=eq.${id}&select=max_damage&limit=1`));
+  if (!rows) return null;
+  return rows.length ? Number(rows[0].max_damage) || 0 : 0;
+};
+const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId) => {
+  const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
+  const k = kind === 'b' ? 'b' : 'a';
+  const result = await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&max_damage=gt.${mine}&select=breeder_id&limit=1`, {
+    headers: {
+      'Prefer': 'count=exact'
+    }
+  });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   if (!id) return null;
@@ -36361,8 +36579,13 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   if (!totals || !self) return none;
   const due = [];
   const noneIds = [];
-  const add = (claimId, title, reward) => {
-    if (!claimed.has(claimId)) due.push({
+  const add = (claimId, title, reward, place) => {
+    if (!claimed.has(claimId)) due.push(place ? {
+      id: claimId,
+      title,
+      reward,
+      place
+    } : {
       id: claimId,
       title,
       reward
@@ -36381,7 +36604,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);else noneIds.push(raidJackNoneId(rankId));
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);else noneIds.push(raidJackNoneId(rankId));
     }
   }
   RAID_JACK_B_TIERS.forEach((tier, i) => {
@@ -36392,13 +36615,97 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);else noneIds.push(raidJackNoneId(finalId));
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);else noneIds.push(raidJackNoneId(finalId));
     }
   }
   return {
     ok: true,
     due,
     noneIds
+  };
+};
+const sbFetchRaidJackMyDefeats = async (breederId, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_hits?${raidJackEventParam(eventId)}&breeder_id=eq.${id}&defeated=eq.true&select=kind,tier&limit=200`));
+  return rows ? rows.filter(r => (r.kind === 'a' || r.kind === 'b') && Number.isFinite(Number(r.tier))).map(r => `${r.kind}${Number(r.tier)}`) : null;
+};
+const raidJackRepairState = async (state, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  if (norm.repaired) return {
+    state: norm,
+    changed: false
+  };
+  const id = raidJackSafeId(breederId);
+  if (!id) return {
+    state: norm,
+    changed: false
+  };
+  const [mine, self] = await Promise.all([sbFetchRaidJackMyDefeats(id, eventId), sbFetchRaidJackSelf(id, eventId)]);
+  if (!mine || !self) return {
+    state: norm,
+    changed: false
+  };
+  const valid = new Set(mine);
+  norm.pending.filter(p => p.defeated).forEach(p => valid.add(`${p.kind}${p.tier}`));
+  const next = raidJackNormalizeState(norm);
+  const before = JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]);
+  next.a.defeated = next.a.defeated.filter(v => valid.has(v));
+  next.b.defeated = next.b.defeated.filter(v => valid.has(v));
+  next.b.total = (Number(self.bTotal) || 0) + norm.pending.filter(p => p.kind === 'b').reduce((sum, p) => sum + p.damage, 0);
+  next.repaired = true;
+  return {
+    state: next,
+    changed: JSON.stringify([next.a.defeated, next.b.defeated, next.b.total]) !== before
+  };
+};
+const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
+  const norm = raidJackNormalizeState(state);
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (norm.giftsChecked) return {
+    ok: true,
+    state: norm,
+    gifts: list,
+    changed: false,
+    removed: 0
+  };
+  const id = raidJackSafeId(breederId);
+  const mine = id ? await sbFetchRaidJackMyDefeats(id, eventId) : null;
+  if (!mine) return {
+    ok: false,
+    state: norm,
+    gifts: list,
+    changed: false,
+    removed: 0
+  };
+  const earned = new Set(mine);
+  norm.pending.filter(p => p.defeated).forEach(p => earned.add(`${p.kind}${p.tier}`));
+  let nextGifts = list;
+  let nextClaimed = norm.claimed;
+  let removed = 0;
+  RAID_JACK_B_TIERS.forEach((tier, i) => {
+    const claimId = raidJackClaimId('clear_b', i);
+    if (earned.has(tier.id) || !nextClaimed.includes(claimId)) return;
+    const giftId = `${eventId}_${claimId}`;
+    const gift = nextGifts.find(g => g && g.id === giftId);
+    if (gift && gift.claimedAt) return;
+    if (gift) {
+      nextGifts = nextGifts.filter(g => g !== gift);
+      removed += 1;
+    }
+    nextClaimed = nextClaimed.filter(v => v !== claimId);
+  });
+  const next = raidJackNormalizeState({
+    ...norm,
+    claimed: nextClaimed,
+    giftsChecked: true
+  });
+  return {
+    ok: true,
+    state: next,
+    gifts: nextGifts,
+    changed: removed > 0 || nextClaimed.length !== norm.claimed.length,
+    removed
   };
 };
 const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
@@ -36495,6 +36802,146 @@ const JackAuraLayer = ({
       '--dx': `${e.dx.toFixed(1)}%`
     }
   })));
+};
+const RaidJackIntro = ({
+  enabled,
+  enemyName,
+  title = 'レイドバトル',
+  tier = 1,
+  friendly = false
+}) => {
+  const [shown, setShown] = React.useState(null);
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!enabled) {
+      lastRef.current = null;
+      setShown(null);
+      return undefined;
+    }
+    const key = `${enemyName || ''}:${title}:${tier}`;
+    if (lastRef.current === key) return undefined;
+    lastRef.current = key;
+    setShown({
+      key: Date.now()
+    });
+    try {
+      if (typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.special) Audio_.se.special();
+    } catch (e) {}
+    const timer = setTimeout(() => setShown(null), 2600);
+    return () => clearTimeout(timer);
+  }, [enabled, enemyName, title, tier]);
+  if (!shown) return null;
+  const n = Math.min(Math.max(Math.floor(Number(tier) || 1), 1), 5);
+  return React.createElement("div", {
+    key: shown.key,
+    "data-wave-intro": "1",
+    "data-raid-jack-intro": true,
+    "data-jack-aura": n,
+    "aria-hidden": "true",
+    className: "mh-rjintro"
+  }, React.createElement("i", {
+    className: "mh-rjintro-flash"
+  }), React.createElement("i", {
+    className: "mh-rjintro-bar mh-rjintro-bar-top"
+  }), React.createElement("i", {
+    className: "mh-rjintro-bar mh-rjintro-bar-bottom"
+  }), React.createElement("i", {
+    className: "mh-rjintro-slash mh-rjintro-slash-a"
+  }), React.createElement("i", {
+    className: "mh-rjintro-slash mh-rjintro-slash-b"
+  }), React.createElement("div", {
+    className: "mh-rjintro-body"
+  }, React.createElement("span", {
+    className: "mh-rjintro-sub"
+  }, friendly ? '♪ PLAY TIME ♪' : '⚠ BOSS APPEARS ⚠'), React.createElement("b", {
+    className: "mh-rjintro-title"
+  }, title), enemyName && React.createElement("span", {
+    className: "mh-rjintro-name"
+  }, "VS ", enemyName), !friendly && React.createElement("span", {
+    className: "mh-rjintro-stars"
+  }, '★'.repeat(n), React.createElement("span", {
+    className: "mh-rjintro-stars-dim"
+  }, '★'.repeat(5 - n)))));
+};
+const RAID_JACK_STINGERS = Object.freeze({
+  defeated: {
+    text: 'VICTORY!',
+    tone: 'win'
+  },
+  turns: {
+    text: 'TIME UP',
+    tone: 'end'
+  },
+  wipe: {
+    text: 'DEFEAT',
+    tone: 'lose'
+  },
+  giveup: {
+    text: 'RETIRE',
+    tone: 'end'
+  }
+});
+const RaidJackResultStinger = ({
+  reason
+}) => {
+  const def = RAID_JACK_STINGERS[reason] || RAID_JACK_STINGERS.turns;
+  React.useEffect(() => {
+    if (reason !== 'defeated') return;
+    try {
+      if (typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.victory) Audio_.se.victory();
+    } catch (e) {}
+  }, [reason]);
+  return React.createElement("div", {
+    "data-raid-jack-stinger": def.tone,
+    "aria-hidden": "true",
+    className: `mh-rjstinger mh-rjstinger-${def.tone}`
+  }, React.createElement("i", {
+    className: "mh-rjstinger-flash"
+  }), React.createElement("i", {
+    className: "mh-rjstinger-ring"
+  }), def.tone === 'win' && React.createElement(EndConfetti, {
+    count: 30
+  }), React.createElement("b", {
+    className: "mh-rjstinger-text"
+  }, def.text));
+};
+const RAID_JACK_HOME_LINES = Object.freeze({
+  a1: Object.freeze({
+    full: Object.freeze(['吾輩は男爵ジャックであるぞ！ ひれ伏すがよい！', 'このハロウィンの夜は、吾輩のものであるぞ！', 'ふははは！ 貴様ら程度、吾輩の敵ではないのである！', 'ランタンなど、ぜんぶ吾輩が割ってやるのであるぞ！']),
+    half: Object.freeze(['ぬ、ぬぬ……なかなかやるではないか、であるぞ', 'ま、まだ本気を出していないだけであるぞ！', 'ちょっと痛いのである……い、いや痛くないのである！', 'そ、それ以上近づくでないぞ！']),
+    low: Object.freeze(['ひぃっ！ ま、待つのである、話し合おうではないか！', '吾輩、ちょっとだけ……ほんのちょっとだけ弱気になったのであるぞ……', 'き、今日のところは引いてやってもよいのであるぞ！', 'もうやめるのである～！ 瓶が……瓶が重いのであるぞ……'])
+  }),
+  a2: Object.freeze({
+    full: Object.freeze(['ほっほっほ。わたくしを止められるとお思いですかな？', '優雅に参りましょう。ランタンは、ぜんぶ割ってさしあげますぞ', '男爵などと一緒にされては困りますな。わたくしは子爵ですぞ', 'おや、また挑戦者ですかな。ご苦労なことですぞ']),
+    half: Object.freeze(['ふむ……少々、骨のある方々のようですな', 'おほん。まだ余裕ですぞ。余裕ですとも', 'なぜか胸のあたりが、すうすういたしますな……', '楽しそう？ ……いえ、わたくしには関係のないことですぞ']),
+    low: Object.freeze(['こ、これはいけませんな……紅茶が冷めてしまいますぞ', 'お待ちなさい！ もう少し、お手柔らかにお願いしたいですぞ', 'わたくしの優雅さが……崩れていきますぞ……', '……みなさん、ほんとうに楽しそうですな。うらやましい、ですぞ'])
+  }),
+  a3: Object.freeze({
+    full: Object.freeze(['フフフ……余の夜へ、ようこそ。美しい悪夢をお見せしよう', 'ほう、また来たのかね。余興としては上々だ、フフフ', 'この夜は余の舞台。観客は多いほうがよいのだよ', '美しいものほど危ないのだ。覚えておきたまえ']),
+    half: Object.freeze(['ふむ……少しだけ、舞台が揺れてきたようだね', 'フフ……やるではないか。拍手を送ろう', '余の衣装に傷がついた。これは高くつくよ、フフフ', 'どうして、そんなに楽しそうなのかね……余にも教えたまえ']),
+    low: Object.freeze(['く……幕は、まだ降りんよ。降りんとも……', 'フ、フフフ……声が震えているのは、気のせいだよ', '待ちたまえ。もう少しだけ、余の話を聞いていかないかね', '……この舞台に、ひとりきりは、少し寒いのだよ'])
+  }),
+  a4: Object.freeze({
+    full: Object.freeze(['……我が前に、ひざまずけ', '夜は、すべて我のものである', '退け。さもなくば、ひれ伏せ', '我は公爵。誰にも、我は止められぬ']),
+    half: Object.freeze(['……なかなか、やる。認めよう', 'どうせ……また、置いていくのであろう', 'み、みな、そう言う。……そう言って、去るのだ', '我は、揺るがぬ。……揺るがぬ、はずだ']),
+    low: Object.freeze(['……来い。我を、本当に止められるのなら', '……声が、震えている。気のせいである', '止めて、くれ……いや、何でもない', '畑は……暗かった。ここは、明るいな……'])
+  }),
+  a5: Object.freeze({
+    full: Object.freeze(['ガハハ！ ワシが大王じゃ！ かかってこい！', '夜の街は、ワシの庭じゃぞ！ ガハハハ！', 'ワシを楽しませてみせい！ ガハハ……ガハ……', 'どうじゃ、ワシは強かろう！ 強いのじゃぞ！']),
+    half: Object.freeze(['ガハハ……ま、まだまだ、これからじゃ！', 'む？ ワシの笑い声が、ちょっと空っぽじゃと？ ……気のせいじゃ', '楽しくなってきたわい！ ほんとうじゃぞ！', 'みんなの声が、聞こえるのう……にぎやかじゃのう……']),
+    low: Object.freeze(['ガ、ガハ……まだ、倒れんぞ……倒れんぞ……', 'ワシは、大王じゃ……強くなければ、仲間に入れんのじゃ……', '……ほんとうは、ただ……いや、何でもないわい', 'もう、強がらなくても……よいのかのう……'])
+  })
+});
+const RAID_JACK_HOME_LINES_PUMPKIN = Object.freeze(['やっほー！ ぼく、ぱんぷきん！ あそびにきたよ！', 'きょうも、みんなといっしょにあそべて、うれしいな', 'ぼく、ぜんぜんたおれないよ！ げんきいっぱいだもん！', 'ほら、もっと！ もっとあそぼうよ！', 'ぴかぴかのおなか、みてみて！ きれいでしょ？', 'ハロウィン・ナイト、たのしいね！ ぼく、だいすき！', 'みんなのこえ、はたけまでぜんぶきこえてたんだ。いまは、すぐそばにいるね', 'たくさんダメージをあたえたひとが、いちばんすごいんだって。ぼく、みてるよ！', 'ちょっとつかれた？ ぼくはまだまだいけるよー！', 'あ、おかしのにおいがする！ ……え、ちがう？ えへへ']);
+const raidJackLifeBand = rate => {
+  const r = Number(rate);
+  if (!Number.isFinite(r)) return 'full';
+  return r >= 0.7 ? 'full' : r >= 0.3 ? 'half' : 'low';
+};
+const raidJackHomeLines = (tierId, rate, pumpkin = false) => {
+  if (pumpkin === true) return RAID_JACK_HOME_LINES_PUMPKIN;
+  const set = RAID_JACK_HOME_LINES[tierId] || RAID_JACK_HOME_LINES.a1;
+  return set[raidJackLifeBand(rate)];
 };
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
@@ -47120,7 +47567,8 @@ function PickSlotScreen({
   wave,
   heroStyleDef = null,
   heroStyle = null,
-  onHeroStyle = null
+  onHeroStyle = null,
+  perSlotApt = false
 }) {
   const mon = currentPickingMon;
   const pickedStyle = heroStyleDef ? heroStyleDef.styles.some(st => st.id === heroStyle) ? heroStyle : heroStyleDef.defaultStyle : null;
@@ -47206,7 +47654,7 @@ function PickSlotScreen({
       className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
     }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), React.createElement("div", {
       className: "mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2"
-    }, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。"), React.createElement("div", {
+    }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、その子の適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
       className: "grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll"
     }, slots.map((s, i) => {
       const grade = getDistAptitude(mon, i);
@@ -47240,7 +47688,7 @@ function PickSlotScreen({
         size: 20
       }), React.createElement("span", {
         className: `relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade, " 合流後 ", formatAptPct(after))) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
+      }, grade, " ", perSlotApt ? 'この距離で' : '合流後', " ", formatAptPct(after))) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -48553,18 +49001,21 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
-const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
+const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position: 'absolute',
   left: '50%',
   top: '44%',
   transform: 'translate(-50%,-50%)',
   zIndex: 6,
+  width: '44%',
+  maxWidth: '190px',
+  minWidth: '120px'
+});
+const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  width: '44%',
-  maxWidth: '190px',
-  minWidth: '120px',
+  width: '100%',
   background: 'transparent',
   border: '0',
   padding: '0',
@@ -48575,6 +49026,7 @@ const HomeRaidJack = ({
   onOpen
 }) => {
   const [totals, setTotals] = React.useState(undefined);
+  const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-home-raid-jack-css')) return;
@@ -48618,26 +49070,86 @@ const HomeRaidJack = ({
   }, []);
   const tiers = RAID_JACK_A_TIERS;
   const totalOf = i => totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0;
-  const currentIndex = totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
-  const allDone = !!totals && currentIndex < 0;
+  const allDone = raidJackBossDown(totals);
+  const currentIndex = allDone ? -1 : totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
-  return React.createElement("button", {
+  const speechLines = raidJackHomeLines(tier.id, rate, allDone);
+  const speech = speechLines[lineNo % speechLines.length];
+  const speechAccent = allDone ? '#fdba74' : '#fb923c';
+  return React.createElement("div", {
+    "data-home-raid-jack-wrap": true,
+    style: HOME_RAID_JACK_WRAP_STYLE
+  }, React.createElement("button", {
+    type: "button",
+    key: `say${lineNo}`,
+    "data-home-raid-say": true,
+    "data-story-pop": "1",
+    onClick: () => setLineNo(n => n + 1),
+    "aria-label": "ジャックのひとこと(押すと次のセリフ)",
+    style: {
+      position: 'absolute',
+      left: '50%',
+      bottom: '100%',
+      marginLeft: -92,
+      marginBottom: '4px',
+      width: 184,
+      padding: '6px 10px',
+      borderRadius: '14px',
+      border: `2px solid ${speechAccent}`,
+      background: '#1c0a02ee',
+      color: '#ffedd5',
+      fontSize: '11px',
+      fontWeight: 900,
+      lineHeight: 1.45,
+      textAlign: 'left',
+      cursor: 'pointer',
+      boxShadow: `0 0 12px ${speechAccent}66`,
+      animation: 'storyPop .25s ease-out both',
+      zIndex: 2
+    }
+  }, React.createElement("span", {
+    style: {
+      display: 'block'
+    }
+  }, speech), React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      display: 'block',
+      textAlign: 'right',
+      fontSize: '8px',
+      opacity: .7
+    }
+  }, "▶ つぎ"), React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: '50%',
+      bottom: -9,
+      marginLeft: -8,
+      width: 0,
+      height: 0,
+      borderLeft: '8px solid transparent',
+      borderRight: '8px solid transparent',
+      borderTop: `9px solid ${speechAccent}`
+    }
+  })), React.createElement("button", {
     type: "button",
     "data-home-raid-jack": true,
     onClick: onOpen,
-    "aria-label": `${tier.name}があらわれた！タップでレイド画面を開く`,
+    "aria-label": allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`,
     style: HOME_RAID_JACK_BUTTON_STYLE
   }, React.createElement("span", {
-    "data-jack-aura": Number(String(tier.id).slice(1)) || undefined,
+    "data-jack-aura": allDone ? undefined : Number(String(tier.id).slice(1)) || undefined,
+    "data-home-raid-pumpkin": allDone ? 'true' : undefined,
     style: {
       position: 'relative',
       display: 'block',
       width: '100%',
       aspectRatio: '1024 / 640'
     }
-  }, React.createElement("span", {
+  }, !allDone && React.createElement("span", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -48646,7 +49158,21 @@ const HomeRaidJack = ({
     }
   }, React.createElement(JackAuraLayer, {
     tier: Number(String(tier.id).slice(1)) || 0
-  })), React.createElement("img", {
+  })), allDone ? React.createElement("img", {
+    className: "mh-home-raid-jack-img",
+    src: PUMPKIN_ICON_IMG,
+    alt: "",
+    draggable: false,
+    style: {
+      position: 'absolute',
+      left: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`,
+      bottom: 0,
+      width: `${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`,
+      height: 'auto',
+      filter: 'drop-shadow(0 6px 10px #000a)',
+      pointerEvents: 'none'
+    }
+  }) : React.createElement(React.Fragment, null, React.createElement("img", {
     className: "mh-home-raid-jack-img",
     src: JACK_IMG,
     alt: "",
@@ -48677,7 +49203,7 @@ const HomeRaidJack = ({
       filter: `drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`,
       pointerEvents: 'none'
     }
-  })), React.createElement("span", {
+  }))), React.createElement("span", {
     className: "mh-home-raid-jack-shadow",
     "aria-hidden": "true",
     style: {
@@ -48708,7 +49234,15 @@ const HomeRaidJack = ({
     style: {
       display: 'block'
     }
-  }, allDone ? 'ジャックを倒した！みんなありがとう' : `${tier.name}があらわれた！`), React.createElement("span", {
+  }, allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！` : `${tier.name}があらわれた！`), allDone ? React.createElement("span", {
+    "data-home-raid-pumpkin-note": true,
+    style: {
+      display: 'block',
+      marginTop: '2px',
+      fontSize: '8px',
+      opacity: .9
+    }
+  }, "ジャックを倒した！あそんでダメージを競おう") : React.createElement(React.Fragment, null, React.createElement("span", {
     style: {
       display: 'block',
       height: '7px',
@@ -48727,7 +49261,7 @@ const HomeRaidJack = ({
       display: 'block',
       height: '100%',
       width: `${rate * 100}%`,
-      background: allDone ? '#10b981' : '#f97316'
+      background: '#f97316'
     }
   })), totals === null ? React.createElement("span", {
     style: {
@@ -48747,7 +49281,7 @@ const HomeRaidJack = ({
       fontSize: '8px',
       opacity: .85
     }
-  }, "共有HP ", left.toLocaleString())));
+  }, "共有HP ", left.toLocaleString())))));
 };
 function HomeScreen({
   assistantBondUp,
@@ -49456,6 +49990,7 @@ const BATTLE_PERF = (() => {
 })();
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Kawazumo: 'kawazumo',
+  Pumpkin: 'pumpkin',
   Metalner: 'metalner',
   Inari: 'inari',
   Koinobori: 'koinobori',
@@ -49648,6 +50183,21 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
       pierceCharge: ['stance', 'lock']
     }
   },
+  pumpkin: {
+    idle: 'hop',
+    skills: {
+      normal: ['lunge', 'burst', '🎃', 'shoot'],
+      sweep: ['lunge', null, '👻', 'shoot'],
+      rush: ['flurry', 'burst', '🎃', 'shoot'],
+      pierce: ['spin', 'slash'],
+      special: ['leap', 'ring', '🍬', 'rain'],
+      allout: ['dash', 'widebeam', '👻', 'shoot'],
+      roar: ['rise', 'aura', '🌙', 'rise'],
+      regen: ['heal', 'sparkle'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
   awakenedMoo: {
     idle: null,
     skills: {
@@ -49702,6 +50252,10 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
     impact: 'nova'
   },
   jack: {
+    impact: 'stamp',
+    mark: '🎃'
+  },
+  pumpkin: {
     impact: 'stamp',
     mark: '🎃'
   }
@@ -50296,6 +50850,47 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
       flat: .45
     }]
   },
+  pumpkin: {
+    special: [{
+      t: 'bits',
+      n: 14,
+      shape: 'star',
+      dist: 140,
+      d: 280
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'flame',
+      dist: 110,
+      d: 330,
+      fall: true
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.4
+    }],
+    allout: [{
+      t: 'blade',
+      a: 0,
+      len: 420,
+      w: 16,
+      d: 240
+    }, {
+      t: 'bits',
+      n: 16,
+      shape: 'spark',
+      dist: 130,
+      d: 260
+    }, {
+      t: 'wave',
+      d: 300
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.6,
+      flat: .45
+    }]
+  },
   splatter: {
     special: [{
       t: 'blade',
@@ -50776,7 +51371,7 @@ function BattleScreen({
   const idleMotionOff = battleFx.idleMotion === 'OFF' || fxLoad === 'LIGHT';
   const shakeOff = battleFx.shake === 'OFF';
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
-  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.id] || null : null;
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id] || null : null;
   const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
   useEffect(() => {
     if (bossMovieSrc) preloadBossMovie(bossMovieSrc);
@@ -50889,7 +51484,13 @@ function BattleScreen({
     height: '100%',
     marginTop: '-6%'
   };
-  const jackAuraTier = enemy?.id === 'Jack' ? Number(String(enemy.raidJackTier || '').slice(1)) || 0 : 0;
+  const PUMPKIN_BATTLE_STYLE = {
+    width: `${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`,
+    height: `${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`,
+    marginLeft: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`,
+    marginTop: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`
+  };
+  const jackAuraTier = enemy?.id === 'Jack' && !enemy.raidJackPumpkin ? Number(String(enemy.raidJackTier || '').slice(1)) || 0 : 0;
   const enemyBossImgSrc = enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? {
     '--em-e': JSON.stringify(emSpec[2])
@@ -50897,13 +51498,14 @@ function BattleScreen({
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
   const enemyFlashOn = !!(enemyMotion && enemy?.imgUrl && (enemySkillNow || enemyHurtNow));
   const enemyFlashIsJack = enemy?.id === 'Jack';
+  const enemyJackArtStyle = enemy?.raidJackPumpkin ? PUMPKIN_BATTLE_STYLE : enemyBossImgSrc !== enemy?.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE;
   const enemyFlashNode = enemyFlashOn ? React.createElement("img", {
     "data-enemy-flash": true,
     src: enemyFlashIsJack ? enemyBossImgSrc : enemy.imgUrl,
     alt: "",
     "aria-hidden": "true",
     draggable: false,
-    style: enemyFlashIsJack ? enemyBossImgSrc !== enemy.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE : undefined
+    style: enemyFlashIsJack ? enemyJackArtStyle : undefined
   }) : null;
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? {
     '--em-dur': `${enemyAttackFx.ms}ms`
@@ -51400,7 +52002,7 @@ function BattleScreen({
     className: "text-[10px] font-black text-sky-200"
   }, "自動回復 ライフ", raidGrowth.lifeRate, "%・ガッツ", raidGrowth.gutsRate, "%"), raidGrowth.levelUpNow && React.createElement("div", {
     className: "mt-0.5 text-[11px] font-black text-amber-300"
-  }, "固有技とアシカが1段階アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
+  }, "固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階", raidGrowth.teachingUpNow ? '・アシカが1段階' : '', "アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
     "data-raid-growth-detail": true,
     className: "fixed inset-0 flex items-center justify-center bg-black/70 px-4",
     style: {
@@ -51433,7 +52035,7 @@ function BattleScreen({
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
   }, React.createElement("dt", {
     className: "font-black text-amber-200"
-  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。", React.createElement("b", {
+  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階ずつアップ(アシカは", RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL).join('・'), "ターン目に1段階ずつ・最大", RAID_JACK_TEACHING_MAX_LEVEL, "段階)。", React.createElement("b", {
     className: "text-white"
   }, " ", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回"), "済み", raidGrowth.nextLevelUpTurn ? `(次は${raidGrowth.nextLevelUpTurn}ターン目)` : '(これで最後)')), React.createElement("div", {
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
@@ -51553,7 +52155,7 @@ function BattleScreen({
     fx: enemyAttackFx,
     motion: enemyMotion,
     isMoo: enemyIsMoo,
-    enemyId: enemy?.id,
+    enemyId: enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id,
     skillLabel: enemySkillName?.label || null,
     lite: fxLoad === 'LIGHT'
   }), enemySkillName && !(enemyIsMoo && emSet && enemyAttackFx?.skill && TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill)) && ReactDOM.createPortal(React.createElement("div", {
@@ -51655,7 +52257,7 @@ function BattleScreen({
     style: {
       width: '100%',
       height: '100%',
-      ...(enemy?.id === 'Jack' ? enemyBossImgSrc !== enemy?.imgUrl ? JACK_POSE_BATTLE_STYLE : JACK_NORMAL_BATTLE_STYLE : null),
+      ...(enemy?.id === 'Jack' ? enemyJackArtStyle : null),
       animation: liteBattleView || emSpec || enemyHurtNow || emSet && !enemyAttackAnim ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
       imageRendering: 'auto'
     },
@@ -59664,16 +60266,22 @@ const RaidJackDebugScreen = ({
   }, raidJackTiers(fightKind).map((t, i) => React.createElement("option", {
     key: t.id,
     value: i + 1
-  }, i + 1, ": ", t.name)))), React.createElement("div", {
+  }, i + 1, ": ", t.name)), fightKind === 'a' && React.createElement("option", {
+    value: RAID_JACK_A_TIERS.length + 1
+  }, RAID_JACK_A_TIERS.length + 1, ": ", RAID_JACK_PUMPKIN.name, "(大王を倒したあと)"))), React.createElement("div", {
     className: "mt-1 text-[10px] text-slate-300"
   }, (() => {
-    const t = raidJackTierAt(fightKind, fightTier - 1);
-    return `${t.name}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
+    const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1;
+    const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1);
+    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8・11ターン目に固有技が2段階、3・5ターン目にアシカが1段階成長)' : '(成長なし・アシカは最大Lv)'}`;
   })()), React.createElement("button", {
     "data-raid-fight-start": true,
     className: `${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`,
     onClick: () => {
-      if (onStartBattle && onStartBattle(fightKind, fightTier - 1) === false) say('編成できるモンスターがいません');
+      const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1;
+      if (onStartBattle && (pk ? onStartBattle('a', RAID_JACK_A_TIERS.length - 1, {
+        pumpkin: true
+      }) : onStartBattle(fightKind, fightTier - 1)) === false) say('編成できるモンスターがいません');
     }
   }, "この条件でジャックと戦う")), React.createElement("section", {
     className: "space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3"
@@ -59774,7 +60382,7 @@ const RaidJackRewardRow = ({
   reward: reward
 })), got && React.createElement("span", {
   className: "shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white"
-}, "受け取り済み"));
+}, "ギフトに届いた"));
 const RaidJackTierRewards = ({
   kind,
   index,
@@ -59795,10 +60403,16 @@ const RaidJackTierRewards = ({
       dataKey: `rank-${k + 1}`,
       label: `貢献${k + 1}位`,
       reward: r,
-      got: k === 0 && have.includes(raidJackClaimId('rank_a', index))
-    })), React.createElement("div", {
+      got: have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))
+    })), have.includes(raidJackClaimId('rank_a', index)) && !RAID_JACK_REWARDS.aRank[index].some((r, k) => have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))) && React.createElement("div", {
+      "data-raid-jack-rank-note": "delivered",
+      className: "mt-1 rounded-lg bg-emerald-950/40 px-2 py-1 text-[9px] font-black text-emerald-200"
+    }, "順位の報酬は、ギフトに届いています(何位かは、ギフトの名前で分かります)"), have.includes(raidJackNoneId(raidJackClaimId('rank_a', index))) && React.createElement("div", {
+      "data-raid-jack-rank-note": "none",
+      className: "mt-1 rounded-lg bg-slate-800/60 px-2 py-1 text-[9px] font-black text-slate-300"
+    }, "この段階では、順位の報酬の対象(5位まで)になりませんでした"), React.createElement("div", {
       className: "mt-1 text-[9px] text-slate-400"
-    }, index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。倒したあとも貢献は続きます。' : '倒したときに順位が確定して、ギフトで届きます。'));
+    }, index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。' : '倒したときに順位が確定して、ギフトで届きます。'));
   }
   return React.createElement("div", {
     "data-raid-jack-tier-rewards": "b"
@@ -59880,12 +60494,195 @@ const RaidJackRewardList = ({
     dataKey: `final-${k + 1}`,
     label: `${k + 1}位`,
     reward: r,
-    got: k === 0 && have.includes(raidJackClaimId('final_b'))
+    got: have.includes(raidJackPlaceId(raidJackClaimId('final_b'), k + 1))
   })), React.createElement("div", {
     className: "mt-1 text-[9px] text-slate-400"
   }, "期間の終わり(11/1 4:00)に確定して、ギフトで届きます。")), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-300"
   }, "🔮 魂格の結晶は、マスモンの魂格特性の画面で使うと、そのマスモンの魂格Pが1個につき+1されます。", React.createElement("br", null), "🌈 虹の超越の実は、超越強化で超越ポイント+1に変えられます。")));
+};
+const RaidJackRankingRows = ({
+  rows,
+  myId,
+  renderPlace,
+  renderIcon,
+  cardClass,
+  limit = 100
+}) => {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return React.createElement("ol", {
+    "data-raid-jack-ranking": true,
+    className: "space-y-1.5"
+  }, rows.slice(0, limit).map((r, i) => {
+    const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    }) : {
+      breederId: r.breederId,
+      userName: raidJackNameOf(r.breederId)
+    };
+    const mineRow = !!myId && r.breederId === myId;
+    return React.createElement("li", {
+      key: `${r.breederId}-${i}`,
+      "data-raid-jack-ranking-row": true,
+      "data-ranking-kind": "raid-jack",
+      "aria-current": mineRow ? 'true' : undefined,
+      className: `${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`
+    }, typeof renderPlace === 'function' ? renderPlace(i) : React.createElement("span", {
+      className: "w-7 shrink-0 text-center text-[10px] font-black text-amber-200"
+    }, i + 1), typeof renderIcon === 'function' && renderIcon(entry), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+    }, entry.userName || '名無しのブリーダー', mineRow && React.createElement("span", {
+      className: "ml-1 text-[8px] text-orange-200"
+    }, "(あなた)")), React.createElement("b", {
+      className: "shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200"
+    }, r.total.toLocaleString(), React.createElement("small", {
+      className: "ml-0.5 text-[8px] text-slate-400"
+    }, "ダメージ")));
+  }));
+};
+const RaidJackRankingList = ({
+  onClose,
+  eventId,
+  initialTab = 'a',
+  initialTier = 0,
+  bossDown = false,
+  renderPlace,
+  renderIcon,
+  cardClass
+}) => {
+  const [tab, setTab] = useState(initialTab);
+  const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
+  const [allMode, setAllMode] = useState(false);
+  const [maxHit, setMaxHit] = useState(false);
+  const [rows, setRows] = useState(undefined);
+  const [self, setSelf] = useState(null);
+  const [myId, setMyId] = useState(null);
+  const [ahead, setAhead] = useState(null);
+  const [myMax, setMyMax] = useState(null);
+  const useAll = !maxHit && tab === 'a' && allMode && bossDown;
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setRows(undefined);
+      setAhead(null);
+      const meId = await ensureBreederId();
+      if (!alive) return;
+      setMyId(meId || null);
+      const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
+      if (!alive) return;
+      setSelf(mine);
+      const list = maxHit ? await sbFetchRaidJackMaxHitRanking(tab, 100, eventId) : useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      if (!alive) return;
+      if (list) {
+        try {
+          await ensureBreederProfiles('raid-jack');
+        } catch (e) {}
+      }
+      if (!alive) return;
+      setRows(list);
+      if (list && maxHit) {
+        const best = meId ? await sbFetchRaidJackMaxHitSelf(meId, tab, eventId) : null;
+        if (!alive) return;
+        setMyMax(best);
+        const count = best > 0 ? await sbCountRaidJackMaxHitAhead(tab, best, eventId) : null;
+        if (alive) setAhead(count);
+      } else if (list && mine) {
+        const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? mine.a[tierIdx + 1] || 0 : mine.bTotal;
+        const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, tierIdx + 1, myTotal, eventId) : null;
+        if (alive) setAhead(count);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [tab, tierIdx, useAll, maxHit, eventId]);
+  const myTotal = maxHit ? Number(myMax) || 0 : self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
+  const title = maxHit ? tab === 'a' ? 'レイドバトルの最大ダメージ(1戦あたり)' : 'グランドスラムの最大ダメージ(1戦あたり)' : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  return React.createElement("div", {
+    "data-raid-jack-ranking-list": true,
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "ジャックのランキング",
+    style: {
+      paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+    }
+  }, React.createElement("div", {
+    className: "mb-2 flex shrink-0 items-center justify-between"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-orange-200"
+  }, "🏆 ジャックのランキング"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-close": true,
+    onClick: onClose,
+    "aria-label": "ランキングを閉じる",
+    className: "min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95"
+  }, "閉じる")), React.createElement(ScreenTabs, {
+    items: [{
+      id: 'a',
+      label: 'レイドバトル'
+    }, {
+      id: 'b',
+      label: 'グランドスラム'
+    }],
+    value: tab,
+    onChange: setTab
+  }), React.createElement("div", {
+    "data-raid-jack-ranking-kinds": true,
+    className: "mb-2 flex shrink-0 gap-1.5 text-[10px] font-black"
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-kind": "total",
+    onClick: () => setMaxHit(false),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, tab === 'a' ? '貢献・累計' : '累計ダメージ'), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-kind": "max",
+    onClick: () => setMaxHit(true),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, "1戦の最大ダメージ")), tab === 'a' && !maxHit && React.createElement("div", {
+    "data-raid-jack-ranking-tiers": true,
+    className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
+  }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
+    type: "button",
+    key: t.id,
+    "data-raid-jack-ranking-tier": t.id,
+    onClick: () => {
+      setTierIdx(i);
+      setAllMode(false);
+    },
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, t.name.replace('ジャック', ''))), bossDown && React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-all": true,
+    onClick: () => setAllMode(true),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, "累計ダメージ")), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-3"
+  }, React.createElement("div", {
+    className: "mb-1 flex items-baseline justify-between gap-2 text-[11px]"
+  }, React.createElement("span", {
+    className: "font-black text-orange-200"
+  }, title), myTotal > 0 && React.createElement("span", {
+    "data-raid-jack-ranking-mine": true,
+    className: "shrink-0 text-[10px] text-slate-200"
+  }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
+    className: "mb-2 text-[9px] text-slate-400"
+  }, maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "読み込み中…"), rows === null && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
+    className: "py-3 text-center text-[10px] text-slate-400"
+  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+    rows: rows,
+    myId: myId,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass
+  })));
 };
 const RaidJackScreen = ({
   onBack,
@@ -59917,6 +60714,7 @@ const RaidJackScreen = ({
   const [message, setMessage] = useState('');
   const [tick, setTick] = useState(0);
   const [showRewards, setShowRewards] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
   const [aAll, setAAll] = useState(false);
   const nowMs = Date.now();
   const windowState = raidJackWindowAt(nowMs);
@@ -59928,10 +60726,8 @@ const RaidJackScreen = ({
       if (!alive) return;
       const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
       if (!alive) return;
-      if (granted > 0) {
-        loaded = await raidJackLoadState();
-        setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
-      }
+      loaded = await raidJackLoadState();
+      if (granted > 0) setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
@@ -60039,7 +60835,19 @@ const RaidJackScreen = ({
     className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
   }, "1回追加", React.createElement("br", null), React.createElement("small", {
     className: "text-[9px] opacity-80"
-  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), message && React.createElement("div", {
+  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), React.createElement("div", {
+    className: "mb-2 grid shrink-0 grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-open": true,
+    onClick: () => setShowRanking(true),
+    className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
+  }, "🏆 ランキング"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-reward-list-open-top": true,
+    onClick: () => setShowRewards(true),
+    className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
+  }, "🎁 報酬一覧")), message && React.createElement("div", {
     className: "mb-2 shrink-0 text-center text-[11px] font-black text-amber-200",
     role: "status"
   }, message), totals === null && React.createElement("div", {
@@ -60050,6 +60858,7 @@ const RaidJackScreen = ({
     const isOpen = unlocked(i);
     const left = tab === 'a' ? Math.max(0, t.hp - aTotalOf(i)) : t.hp;
     const done = tab === 'a' ? aDefeated(i) : state.b.defeated.includes(t.id);
+    const isPumpkin = tab === 'a' && i === tiers.length - 1 && done;
     const on = i === current;
     return React.createElement("button", {
       type: "button",
@@ -60061,12 +60870,17 @@ const RaidJackScreen = ({
       })),
       className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
     }, React.createElement("span", {
-      "data-jack-aura": isOpen ? i + 1 : undefined,
+      "data-jack-aura": isOpen && !isPumpkin ? i + 1 : undefined,
+      "data-raid-pumpkin": isPumpkin ? 'true' : undefined,
       className: "relative block h-14 w-16 shrink-0"
-    }, isOpen && React.createElement(JackAuraLayer, {
+    }, isOpen && !isPumpkin && React.createElement(JackAuraLayer, {
       tier: i + 1,
       limit: 8
-    }), React.createElement("img", {
+    }), isPumpkin ? React.createElement("img", {
+      src: PUMPKIN_ICON_IMG,
+      alt: "",
+      className: "relative mx-auto h-14 w-14 object-contain"
+    }) : React.createElement("img", {
       src: JACK_IMG,
       alt: "",
       className: "relative h-14 w-16 object-contain",
@@ -60082,9 +60896,12 @@ const RaidJackScreen = ({
       className: "flex items-center gap-2"
     }, React.createElement("span", {
       className: "truncate text-[13px] font-black text-white"
-    }, i + 1, ". ", t.name), React.createElement("span", {
-      className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
-    }, done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isOpen ? React.createElement(React.Fragment, null, React.createElement(RaidJackHpBar, {
+    }, i + 1, ". ", isPumpkin ? RAID_JACK_PUMPKIN.name : t.name), React.createElement("span", {
+      className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
+    }, isPumpkin ? 'あそびに来た' : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isPumpkin ? React.createElement("div", {
+      "data-raid-pumpkin-note": true,
+      className: "text-[10px] leading-snug text-amber-100"
+    }, "共有ライフは無限です。毎回ぜんかいのライフから戦い、与えたダメージが累計に足されます", totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : '') : isOpen ? React.createElement(React.Fragment, null, React.createElement(RaidJackHpBar, {
       left: left,
       max: t.hp,
       tone: done ? 'emerald' : 'orange'
@@ -60135,36 +60952,13 @@ const RaidJackScreen = ({
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
-  }, "まだ記録がありません。いちばんのりを目指そう！"), Array.isArray(rows) && rows.length > 0 && React.createElement("ol", {
-    "data-raid-jack-ranking": true,
-    className: "space-y-1.5"
-  }, rows.slice(0, 100).map((r, i) => {
-    const entry = typeof applyLatestBreederProfile === 'function' ? applyLatestBreederProfile({
-      breederId: r.breederId,
-      userName: raidJackNameOf(r.breederId)
-    }) : {
-      breederId: r.breederId,
-      userName: raidJackNameOf(r.breederId)
-    };
-    const mineRow = !!myId && r.breederId === myId;
-    return React.createElement("li", {
-      key: `${r.breederId}-${i}`,
-      "data-raid-jack-ranking-row": true,
-      "data-ranking-kind": "raid-jack",
-      "aria-current": mineRow ? 'true' : undefined,
-      className: `${typeof cardClass === 'function' ? cardClass(i) : 'rounded-xl border bg-slate-900 border-white/5'} flex min-w-0 items-center gap-1.5 px-2 py-1.5 ${mineRow ? 'ring-2 ring-orange-300/70' : ''}`
-    }, typeof renderPlace === 'function' ? renderPlace(i) : React.createElement("span", {
-      className: "w-7 shrink-0 text-center text-[10px] font-black text-amber-200"
-    }, i + 1), typeof renderIcon === 'function' && renderIcon(entry), React.createElement("span", {
-      className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
-    }, entry.userName || '名無しのブリーダー', mineRow && React.createElement("span", {
-      className: "ml-1 text-[8px] text-orange-200"
-    }, "(あなた)")), React.createElement("b", {
-      className: "shrink-0 whitespace-nowrap text-[11px] font-black text-orange-200"
-    }, r.total.toLocaleString(), React.createElement("small", {
-      className: "ml-0.5 text-[8px] text-slate-400"
-    }, "ダメージ")));
-  })))), React.createElement("div", {
+  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+    rows: rows,
+    myId: myId,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass
+  }))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
@@ -60172,7 +60966,16 @@ const RaidJackScreen = ({
     disabled: !open || !isOpenTier || closedTier || remaining <= 0,
     onClick: () => onChallenge(tab, current),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-  }, challengeLabel)), showRewards && React.createElement(RaidJackRewardList, {
+  }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
+    eventId: eventId,
+    initialTab: tab,
+    initialTier: current,
+    bossDown: bossDownNow,
+    renderPlace: renderPlace,
+    renderIcon: renderIcon,
+    cardClass: cardClass,
+    onClose: () => setShowRanking(false)
+  }), showRewards && React.createElement(RaidJackRewardList, {
     claimed: state.claimed,
     initialTab: tab,
     onClose: () => setShowRewards(false)
@@ -60184,16 +60987,18 @@ const RaidJackPrepScreen = ({
   candidates,
   teachings,
   onBack,
-  onStart
+  onStart,
+  restore = null,
+  onOpenDetail
 }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = mon => String(mon.masuId || mon.id);
-  const [heroKey, setHeroKey] = useState(null);
-  const [allyKeys, setAllyKeys] = useState([]);
-  const [teachIds, setTeachIds] = useState(() => (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map(t => t.id));
+  const [heroKey, setHeroKey] = useState(restore && restore.heroKey ? restore.heroKey : null);
+  const [allyKeys, setAllyKeys] = useState(restore && Array.isArray(restore.allyKeys) ? restore.allyKeys : []);
+  const [teachIds, setTeachIds] = useState(() => restore && Array.isArray(restore.teachIds) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map(t => t.id));
   const hero = list.find(m => keyOf(m) === heroKey) || null;
   const allies = allyKeys.map(k => list.find(m => keyOf(m) === k)).filter(Boolean);
   const toggleAlly = mon => setAllyKeys(prev => {
@@ -60202,12 +61007,14 @@ const RaidJackPrepScreen = ({
     return prev.length >= RAID_JACK_ALLY_MAX ? prev : [...prev, k];
   });
   const toggleTeach = id => setTeachIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length >= maxTeach ? maxTeach === 1 ? [id] : prev : [...prev, id]);
-  const tile = (mon, on, onClick, attrs) => React.createElement("button", _extends({
-    type: "button",
+  const tile = (mon, on, onClick, attrs) => React.createElement("div", {
     key: keyOf(mon),
+    className: "relative"
+  }, React.createElement("button", _extends({
+    type: "button",
     onClick: onClick
   }, attrs, {
-    className: `flex flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
+    className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${on ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
   }), (() => {
     const face = friendsFaceIconOf(mon.baseId || mon.id);
     return face ? React.createElement(BreederIcon, {
@@ -60221,7 +61028,16 @@ const RaidJackPrepScreen = ({
     });
   })(), React.createElement("span", {
     className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-  }, mon.name));
+  }, mon.name)), typeof onOpenDetail === 'function' && React.createElement("button", {
+    type: "button",
+    "data-raid-detail": keyOf(mon),
+    "aria-label": `${mon.name}の詳細を見る`,
+    onClick: e => {
+      e.stopPropagation();
+      onOpenDetail(mon);
+    },
+    className: "absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
+  }, "i"));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
     "data-raid-jack-prep": true
@@ -60237,7 +61053,11 @@ const RaidJackPrepScreen = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-orange-200"
-  }, "勇者モン(1体)"), React.createElement("div", {
+  }, "勇者モン(1体)", React.createElement("span", {
+    className: "ml-1 text-[9px] font-normal text-slate-300"
+  }, "右上の ", React.createElement("b", {
+    className: "text-sky-200"
+  }, "i"), " でモンスターの詳細が見られます")), React.createElement("div", {
     className: "grid grid-cols-5 gap-1.5"
   }, list.map(mon => tile(mon, heroKey === keyOf(mon), () => {
     setHeroKey(keyOf(mon));
@@ -60264,7 +61084,7 @@ const RaidJackPrepScreen = ({
     className: "ml-1 text-[9px] text-slate-300"
   }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
     className: "text-[9px] text-slate-300"
-  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
+  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
   }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
     type: "button",
@@ -60284,7 +61104,9 @@ const RaidJackPrepScreen = ({
     disabled: !hero,
     onClick: () => onStart({
       party: [hero, ...allies],
-      teachingIds: teachIds
+      teachingIds: teachIds,
+      heroKey,
+      allyKeys
     }),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
   }, hero ? 'この編成で挑戦する' : '勇者モンを選んでください')));
@@ -62454,7 +63276,9 @@ function MonsterHeroGame() {
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
+  const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);
+  const [raidJackPlace, setRaidJackPlace] = useState(null);
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
   const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);
@@ -63968,6 +64792,7 @@ function MonsterHeroGame() {
     RHYTHM_MODE_SELECT: 'rhythmModeSelect',
     RAID_JACK: 'home',
     RAID_JACK_PREP: 'home',
+    RAID_JACK_PLACE: 'home',
     FRIENDS: 'home',
     BATTLE_MENU: 'enhance',
     BATTLE_SYSTEM_SELECT: 'enhance',
@@ -69244,6 +70069,17 @@ function MonsterHeroGame() {
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
     if (loops <= 0) return null;
+    const awardedPro = await awardBackQuickLoops(loops);
+    return awardedPro ? {
+      ...awardedPro,
+      wavesCleared
+    } : null;
+  };
+  const awardBackQuickLoops = async loops => {
+    if (!autoQuickRunConfigured(autoSettings)) return null;
+    const quickDifficulty = autoSettings.quickRun.difficulty;
+    if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
+    if (!(loops > 0)) return null;
     const quickHeroMon = resolveRosterEntryToMon(autoSettings.quickRun.heroRosterEntry);
     const quickAllyMasuIds = (Array.isArray(autoSettings.allies) ? autoSettings.allies : []).map(ally => resolveRosterEntryToMon(ally?.rosterEntry)).filter(mon => mon && mon.masuId != null).map(mon => mon.masuId);
     const awarded = await awardRhythmPlayRunLoops(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, {
@@ -69257,10 +70093,10 @@ function MonsterHeroGame() {
     });
     return awarded ? {
       ...awarded,
-      quickDifficulty,
-      wavesCleared
+      quickDifficulty
     } : null;
   };
+  const awardRaidJackQuickLoops = async turnsUsed => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
   const awardRunRewards = async wavesCleared => {
     if (rewardsAwardedRef.current) return;
     rewardsAwardedRef.current = true;
@@ -71285,6 +72121,12 @@ function MonsterHeroGame() {
     const list = [own, gift, devil].filter(Boolean);
     return list.length === 0 ? null : list.length === 1 ? list[0] : list;
   };
+  const tacticsExThunderDodgeNow = slotIdx => {
+    const live = tacticsExLiveRef.current;
+    if (!live.enabled || !Number.isInteger(slotIdx)) return 0;
+    const t = tacticsExThunderOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now);
+    return t ? t.dodgeRate : 0;
+  };
   const tacticsExMultiBuffNow = slotIdx => {
     const live = tacticsExLiveRef.current;
     const mine = live.enabled && Number.isInteger(slotIdx) ? tacticsExMultiBuffOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : null;
@@ -71294,6 +72136,7 @@ function MonsterHeroGame() {
       dmg: 1,
       taken: 1,
       critRate: 1,
+      critAdd: 0,
       critDmg: 1,
       distMult: 0
     };
@@ -72106,7 +72949,7 @@ function MonsterHeroGame() {
         let tookEnemyAttack = false;
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
         const fxSkill = intent.variant || (intent.type === 'SPECIAL' ? 'special' : 'normal');
-        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? enemy?.id : null;
+        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id : null;
         const specialMovieSrc = fxSkill === 'special' && motionEnemyId && typeof enemy?.specialMovie === 'string' && normalizeBattleFxSettings(battleFxSettings).specialMovie === 'ON' && !(catchUpUntilRef.current > Date.now()) ? enemy.specialMovie : null;
         const movieShown = specialMovieSrc ? await playBossMovie(specialMovieSrc, {
           label: intent.label || enemy?.special || '',
@@ -72227,8 +73070,9 @@ function MonsterHeroGame() {
             const slotFx = {};
             targets.forEach(slotIdx => {
               const exDodge = tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist);
+              const thunderDodge = Math.random() < tacticsExThunderDodgeNow(slotIdx);
               if (exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now));
-              if (slotIdx === evadedSlot || exDodge) {
+              if (slotIdx === evadedSlot || exDodge || thunderDodge) {
                 evadedName = tacticsTargetName(units, slotIdx);
                 slotFx[slotIdx] = {
                   evade: true
@@ -72603,10 +73447,24 @@ function MonsterHeroGame() {
           text: styleLabel,
           active: isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)
         };
+        if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (th) return {
+            text: `${th.phase === 'wrap' ? '雷纏' : '雷'}${th.charge}`,
+            active: true
+          };
+        }
         if (def.duration === 'turns' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
           text: `あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン`,
           active: true
         };
+        if (def.effect === 'present' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const pr = tacticsExPresentOf(state, tacticsUnits, tacticsExNow);
+          if (pr && pr.kinds.length) return {
+            text: pr.jackpot ? '大当たり！' : TACTICS_EX_PRESENT_LABELS[pr.kinds[0]],
+            active: true
+          };
+        }
         if (isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
           text: `${def.name}中`,
           active: true
@@ -72623,7 +73481,22 @@ function MonsterHeroGame() {
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
         const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
         if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);
-        if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり（全部）' : pres.kinds.map(k => TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
+        if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (th) {
+            if (th.phase === 'charge') out.push(`雷 ${th.charge}（ためている。あと${th.turnsLeft}ターンで雷纏が始まる）`);else out.push(`雷纏中 雷${th.charge}（あと${th.turnsLeft}ターン）：与ダメ+${Math.round((th.dmgMult - 1) * 100)}%・会心率+${Math.round(th.critAdd * 100)}%・回避率+${Math.round(th.dodgeRate * 100)}%・ライフ自動回復+${Math.round(th.charge * (def.thunder.regenHp || 0) * 100)}%・ガッツ自動回復+${Math.round(th.charge * (def.thunder.regenGuts || 0) * 100)}%・連撃${th.combo ? `10%×${th.combo.count}回` : 'なし'}`);
+          }
+        }
+        if (def.effect === 'dodgeCombo' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const zc = tacticsExExtraCombosAt(state, tacticsUnits, slotIdx, tacticsExNow);
+          out.push(zc ? `回避 ${zc.count}回 → 与ダメ${Math.round(zc.rate * 100)}%の連撃が${zc.count}回付いている` : '回避 0回（回避するたびに連撃が1回ずつ増える）');
+        }
+        if (def.effect === 'pandoraBox' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const pb = def.pandoraBox;
+          out.push(`1枚目＝悪魔（与ダメ×${pb.devilDmg}・連撃${Math.round(pb.devilCombo.rate * 100)}%×${pb.devilCombo.count}）／2枚目＝天使（味方全員のライフ・ガッツが上限の${Math.round(pb.angelRate * 100)}%回復）`);
+          out.push(`あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン（ターン終わりに最大ライフの${Math.round(pb.costRate * 100)}%を払う）`);
+        }
+        if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり！ ' : ''}${pres.kinds.map(k => tacticsExPresentKindText(k, def.present, def.turns)).join('・')}`);
         return out;
       })(),
       stats: (() => {
@@ -72845,15 +73718,16 @@ function MonsterHeroGame() {
         setGraveyard(ens.graveyard);
       }
     }
+    let presentNote = null;
     if (def.effect === 'present' && def.present) {
       const roll = rollTacticsExPresent(Math.random(), Math.random(), def.present.jackpot);
       commitTacticsExState(setTacticsExPresent(tacticsExStateRef.current, slotIdx, roll));
       tacticsRateHeal(0, def.present.fixedGuts, false);
       if (roll.kinds.includes('heal')) tacticsRateHeal(def.present.heal, 0, false);
       if (roll.kinds.includes('guts')) tacticsRateHeal(0, def.present.guts, false);
-      const names = roll.kinds.map(k => TACTICS_EX_PRESENT_LABELS[k]);
-      pushBattleLog(`🎁 プレゼントの中身: ${roll.jackpot ? '大当たり！ 全部' : names.join('・')}`, 'ally');
-      addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${names[0]}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
+      presentNote = tacticsExPresentNote(roll, def.present, def.turns);
+      pushBattleLog(`🎁 プレゼントの中身: ${presentNote}`, 'ally');
+      addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${tacticsExPresentKindText(roll.kinds[0], def.present, def.turns)}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
     }
     if (def.effect === 'pandoraBox') [PANDORA_DEVIL_IMG, PANDORA_ANGEL_IMG].forEach(u => {
       try {
@@ -72863,6 +73737,8 @@ function MonsterHeroGame() {
     });
     const onUse = TACTICS_EX_ON_USE[def.effect];
     if (isTacticsExEffectImplemented(def)) {
+      const useNote = presentNote || (def.duration === 'style' ? `戦い方を${tacticsExStyleLabel(def, next, slotIdx, mon.id)}に切り替えた` : def.useNote) || '';
+      if (useNote && !presentNote) pushBattleLog(`　→ ${useNote}`, 'ally');
       addPopup(`EX ${def.name}！${toggled}`, 'hero', 'text-fuchsia-300 font-black text-xl drop-shadow-md', undefined, slotIdx);
       Audio_.se.special();
       showTacticsExCutin({
@@ -72873,7 +73749,8 @@ function MonsterHeroGame() {
         colors: mon.colors,
         monName: mon.masuName || mon.name,
         exName: def.name,
-        styleLabel: def.duration === 'style' ? tacticsExStyleLabel(def, next, slotIdx, mon.id) : ''
+        styleLabel: def.duration === 'style' ? tacticsExStyleLabel(def, next, slotIdx, mon.id) : '',
+        note: useNote
       });
       if (typeof onUse === 'function') onUse({
         def,
@@ -73260,7 +74137,7 @@ function MonsterHeroGame() {
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit'),
-          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus) * tacticsExMultiBuffNow(slotIdx).critRate),
+          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0)) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
@@ -73642,6 +74519,20 @@ function MonsterHeroGame() {
         turn: turnCount
       }, usedCardEntries.length);
       if (stVolt !== stNow) commitTacticsExState(stVolt);
+    }
+    if (isTacticsMode(runMode) && usedCardEntries.length > 0) {
+      const perSlot = {};
+      usedCardEntries.forEach(e => {
+        if (Number.isInteger(e.slotIdx) && !isAssistCard(e.card)) perSlot[e.slotIdx] = (perSlot[e.slotIdx] || 0) + 1;
+      });
+      let stTh = tacticsExStateRef.current;
+      Object.keys(perSlot).forEach(k => {
+        stTh = addTacticsExThunder(stTh, tacticsUnitsRef.current, {
+          wave,
+          turn: turnCount
+        }, Number(k), perSlot[k]);
+      });
+      if (stTh !== tacticsExStateRef.current) commitTacticsExState(stTh);
     }
     while (nextHand.length < 5 && (nextDeck.length > 0 || nextGraveyard.length > 0)) replenish(1);
     if (isTacticsMode(runMode)) {
@@ -74352,7 +75243,9 @@ function MonsterHeroGame() {
     const stagedEnemyMultiplier = extremeWaveEnemyMultiplier(specialRuleDifficulty, w);
     const raidRun = isRaidJackMode(runMode) ? raidJackRunRef.current : null;
     const tacticsEnemyBoost = isTacticsMode(runMode) && !raidRun ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now) : 1;
-    const newEnemy = raidRun ? raidJackMakeEnemy(raidRun.kind, raidRun.tierIndex, runMode) : createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost, {
+    const newEnemy = raidRun ? raidJackMakeEnemy(raidRun.kind, raidRun.tierIndex, runMode, {
+      pumpkin: raidRun.pumpkin === true
+    }) : createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost, {
       mode: runMode
     });
     if (raidRun && newEnemy && Number.isFinite(raidRun.startLife) && raidRun.startLife > 0 && raidRun.startLife < newEnemy.maxHp) newEnemy.hp = Math.floor(raidRun.startLife);
@@ -74850,11 +75743,14 @@ function MonsterHeroGame() {
     if (party.length === 0) return false;
     const isB = req.kind === 'b';
     const hero = party[0];
-    const raidSlots = [party[0] || null, party[1] || null, party[2] || null, party[3] || null];
-    const allies = raidSlots.slice(1).filter(Boolean);
+    const placed = Array.isArray(req.slots) && req.slots.length === 4 && req.slots.filter(Boolean).length === party.length ? req.slots.map(mon => mon || null) : null;
+    const raidSlots = placed || [party[0] || null, party[1] || null, party[2] || null, party[3] || null];
+    const heroSlot = placed && Number.isInteger(req.heroSlot) && req.heroSlot >= 0 && req.heroSlot < 4 ? req.heroSlot : 0;
+    initialBattleDistanceRef.current = heroSlot;
+    const allies = party.slice(1);
     const total = (key, base) => allies.reduce((value, mon) => value + (mon.plusStats?.[key] || 0), base);
     const raidDef = total('def', hero.baseDef);
-    const uniques = raidSlots.filter(Boolean).map(mon => ({
+    const uniques = party.map(mon => ({
       ...mon.unique,
       evoLevel: isB ? Math.max(0, mon.unique?.evoLevel || 0) : 0
     }));
@@ -74876,7 +75772,8 @@ function MonsterHeroGame() {
       eventId: raidJackSafeEventId(req.eventId),
       turns: 1,
       finished: false,
-      startLife: !isB && Number.isFinite(req.startLife) && req.startLife > 0 ? Math.floor(req.startLife) : null
+      startLife: !isB && Number.isFinite(req.startLife) && req.startLife > 0 ? Math.floor(req.startLife) : null,
+      pumpkin: !isB && req.pumpkin === true
     };
     raidJackDamageRef.current = 0;
     setRaidJackResult(null);
@@ -74915,9 +75812,8 @@ function MonsterHeroGame() {
     setAtk(total('atk', hero.baseAtk));
     setDef(raidDef);
     const raidRuleDifficulty = specialRuleDifficultyForRun(runMode, 'Normal', false, extremeDifficulty);
-    const raidApt = raidSlots.filter(Boolean).reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptPct(mon, raidRuleDifficulty, 1)[i]), [0, 0, 0, 0]);
-    setDistAptPct(raidApt);
-    initBattle(1, raidSlots, uniques, teachings, raidDef, 'Jack', hero, raidApt);
+    setDistAptPct(getMonsterAptPct(hero, raidRuleDifficulty, 1));
+    initBattle(1, raidSlots, uniques, teachings, raidDef, 'Jack', hero, null);
     return true;
   };
   useEffect(() => {
@@ -74967,7 +75863,7 @@ function MonsterHeroGame() {
     if (raidJackRunRef.current) raidJackRunRef.current.levelUps = (raidJackRunRef.current.levelUps || 0) + 1;
     const bumpCard = c => {
       if (c.type === 'unique') {
-        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + 1);
+        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP);
         return {
           ...c,
           evoLevel: lvl,
@@ -74978,8 +75874,8 @@ function MonsterHeroGame() {
         };
       }
       if (TEACHING_CARDS.some(t => t.id === c.id) && Number.isFinite(c.baseValue) && Number.isFinite(c.step)) {
-        const cur = Math.min(2, c.evoLevel || 0);
-        if (cur >= 2) return c;
+        const cur = Math.min(RAID_JACK_TEACHING_MAX_LEVEL, c.evoLevel || 0);
+        if (cur >= RAID_JACK_TEACHING_MAX_LEVEL) return c;
         return {
           ...c,
           evoLevel: cur + 1,
@@ -74991,9 +75887,9 @@ function MonsterHeroGame() {
     };
     setOwnedUniques(prev => prev.map(u => ({
       ...u,
-      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + 1)
+      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP)
     })));
-    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= 2 ? t : {
+    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= RAID_JACK_TEACHING_MAX_LEVEL ? t : {
       ...t,
       evoLevel: (t.evoLevel || 0) + 1,
       baseValue: t.baseValue + t.step
@@ -75001,7 +75897,8 @@ function MonsterHeroGame() {
     setHand(prev => prev.map(bumpCard));
     setDeck(prev => prev.map(bumpCard));
     setGraveyard(prev => prev.map(bumpCard));
-    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`, 'up');
+    const teachingGrew = ownedTeachings.some(t => (t.evoLevel || 0) < RAID_JACK_TEACHING_MAX_LEVEL);
+    pushBattleLog(`${turn}ターン目: 固有技が${RAID_JACK_UNIQUE_LEVEL_STEP}段階${teachingGrew ? '、アシカが1段階' : ''}強くなった！`, 'up');
     addPopup('LEVEL UP!', 'ally', 'text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
     Audio_.se.card();
   };
@@ -75026,25 +75923,40 @@ function MonsterHeroGame() {
     let outcome = 'error';
     let next = raidJackDefaultState();
     let opened = false;
+    const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
     try {
-      next = await raidJackLoadState();
-      const side = next[run.kind];
-      const before = raidJackUnlockedCount(run.kind, side.defeated);
-      if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
-      if (run.kind === 'b') side.total = (side.total || 0) + damage;
-      opened = raidJackUnlockedCount(run.kind, side.defeated) > before;
-      const breederId = await ensureBreederId();
-      const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
-      next = sent.state;
-      outcome = sent.outcome;
-      await raidJackSaveState(next);
+      if (isDebugRun) {
+        const breederId = await ensureBreederId();
+        outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
+      } else {
+        next = await raidJackLoadState();
+        const side = next[run.kind];
+        const before = raidJackUnlockedCount(run.kind, side.defeated);
+        if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+        if (run.kind === 'b') side.total = (side.total || 0) + damage;
+        opened = raidJackUnlockedCount(run.kind, side.defeated) > before;
+        const breederId = await ensureBreederId();
+        const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
+        next = sent.state;
+        outcome = sent.outcome;
+        await raidJackSaveState(next);
+      }
     } catch (error) {
       outcome = 'error';
     }
+    let quickAward = null;
+    if (!isDebugRun) {
+      try {
+        quickAward = await awardRaidJackQuickLoops(reason === 'giveup' ? Math.max(0, (run.turns || 1) - 1) : run.turns || 0);
+      } catch (error) {
+        quickAward = null;
+      }
+    }
     setRaidJackResult({
+      quickAward,
       kind: run.kind,
       tierIndex: run.tierIndex,
-      tierName: tier.name,
+      tierName: run.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
       reason,
       damage,
       defeated,
@@ -75073,7 +75985,31 @@ function MonsterHeroGame() {
     try {
       const breederId = await ensureBreederId();
       if (!breederId) return 0;
-      const state = await raidJackLoadState();
+      let state = await raidJackLoadState();
+      const repaired = await raidJackRepairState(state, breederId, RAID_JACK_EVENT.id);
+      if (repaired.state.repaired && !state.repaired) {
+        if (!(await raidJackSaveState(repaired.state))) return 0;
+        state = repaired.state;
+      }
+      if (!state.giftsChecked) {
+        const savedGiftsNow = await storeGet('mh_gifts', [], false);
+        const giftsNow = Array.isArray(savedGiftsNow) ? savedGiftsNow : [];
+        const revoked = await raidJackRevokeUnearned(state, giftsNow, breederId, RAID_JACK_EVENT.id);
+        if (revoked.ok) {
+          const savedRevoke = await saveStoredValuesOrRollback([{
+            key: 'mh_gifts',
+            before: giftsNow,
+            next: revoked.gifts
+          }, {
+            key: RAID_JACK_STORAGE_KEY,
+            before: state,
+            next: revoked.state
+          }], storeGet, storeSet);
+          if (!savedRevoke) return 0;
+          state = revoked.state;
+          if (revoked.removed > 0) setGifts(revoked.gifts);
+        }
+      }
       const found = await raidJackCollectDueRewards(state, breederId, RAID_JACK_EVENT.id, Date.now());
       if (!found.ok || found.due.length === 0 && found.noneIds.length === 0) return 0;
       const savedGifts = await storeGet('mh_gifts', [], false);
@@ -75095,7 +76031,7 @@ function MonsterHeroGame() {
       });
       const nextState = raidJackNormalizeState({
         ...state,
-        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.noneIds]
+        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.due.filter(entry => entry.place).map(entry => raidJackPlaceId(entry.id, entry.place)), ...found.noneIds]
       });
       const saved = await saveStoredValuesOrRollback([{
         key: 'mh_gifts',
@@ -75187,9 +76123,67 @@ function MonsterHeroGame() {
       marketPurchaseProcessingRef.current = false;
     }
   };
+  const beginRaidJackPlacement = ({
+    party,
+    teachingIds,
+    heroKey = null,
+    allyKeys = []
+  }) => {
+    const list = (Array.isArray(party) ? party : []).filter(Boolean);
+    if (list.length === 0) return;
+    setRaidJackPlace({
+      party: list,
+      teachingIds,
+      slots: [null, null, null, null],
+      heroSlot: 0,
+      restore: {
+        heroKey,
+        allyKeys,
+        teachIds: teachingIds
+      }
+    });
+    setGameState('RAID_JACK_PLACE');
+  };
+  const placeRaidJackMon = (mon, slotIdx) => {
+    const place = raidJackPlace;
+    if (!place || !mon || !Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || place.slots[slotIdx]) return;
+    const slots = [...place.slots];
+    const isHero = slots.every(slot => !slot);
+    slots[slotIdx] = {
+      ...mon
+    };
+    Audio_.se.join();
+    const heroSlot = isHero ? slotIdx : place.heroSlot;
+    if (slots.filter(Boolean).length >= place.party.length) {
+      setRaidJackPlace(null);
+      void startRaidJackFromPrep({
+        party: place.party,
+        teachingIds: place.teachingIds,
+        slots,
+        heroSlot
+      });
+      return;
+    }
+    setRaidJackPlace({
+      ...place,
+      slots,
+      heroSlot
+    });
+  };
+  const cancelRaidJackPlacement = () => {
+    const restore = raidJackPlace && raidJackPlace.restore;
+    setRaidJackPrep(prev => prev ? {
+      ...prev,
+      restore
+    } : prev);
+    setRaidJackPlace(null);
+    setGameState('RAID_JACK_PREP');
+  };
   const startRaidJackFromPrep = async ({
     party,
-    teachingIds
+    teachingIds,
+    slots = null,
+    heroSlot = 0
   }) => {
     const prep = raidJackPrep;
     if (!prep || !Array.isArray(party) || party.length === 0) return;
@@ -75213,12 +76207,14 @@ function MonsterHeroGame() {
     }
     const mode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
     let startLife = null;
+    let pumpkin = false;
     if (key === 'a') {
       try {
         const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
         const tierDef = raidJackTierAt('a', prep.tierIndex);
         const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
         if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+        pumpkin = prep.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
       } catch (e) {
         startLife = null;
       }
@@ -75232,8 +76228,11 @@ function MonsterHeroGame() {
       tierIndex: prep.tierIndex,
       party,
       teachingIds,
+      slots,
+      heroSlot,
       eventId: raidJackEventId,
-      startLife
+      startLife,
+      pumpkin
     });
   };
   const setupMon = (m, slotIdx) => {
@@ -83322,17 +84321,56 @@ function MonsterHeroGame() {
       renderPlace: rankingPlace,
       renderIcon: rankingBreederIcon,
       cardClass: rankingCardClass
-    }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(RaidJackPrepScreen, {
+    }), gameState === 'RAID_JACK_PLACE' && raidJackPlace && (() => {
+      const placed = raidJackPlace.slots.filter(Boolean).length;
+      const mon = raidJackPlace.party[placed] || null;
+      const placedBonus = dist => {
+        const standing = raidJackPlace.slots[dist];
+        return standing ? aptGradeToPct(getDistAptitude(standing, dist)) : 0;
+      };
+      return React.createElement(PickSlotScreen, {
+        battleTutorial: null,
+        battleTutorialSpotClass: () => '',
+        currentPickingMon: mon,
+        distTotalBonus: placedBonus,
+        getDistAptitude: getDistAptitude,
+        scenarioPicksSlot: () => true,
+        setupMon: placeRaidJackMon,
+        slots: raidJackPlace.slots,
+        perSlotApt: true,
+        phasePlan: null,
+        wave: 0,
+        heroStyleDef: null,
+        heroStyle: null,
+        onHeroStyle: null,
+        onRepick: cancelRaidJackPlacement
+      });
+    })(), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(React.Fragment, null, React.createElement(RaidJackPrepScreen, {
       kind: raidJackPrep.kind,
       tierIndex: raidJackPrep.tierIndex,
       candidates: raidJackPrep.kind === 'b' ? getActiveMonsterList() : getUnlockedBaseMonsterList(),
+      restore: raidJackPrep.restore || null,
       teachings: (() => {
         const unlocked = TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
         return unlocked.length > 0 ? unlocked : getActiveTeachingCards();
       })(),
-      onBack: () => setGameState('RAID_JACK'),
-      onStart: startRaidJackFromPrep
-    }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
+      onOpenDetail: mon => setRaidJackDetailMon(mon),
+      onBack: () => {
+        setRaidJackDetailMon(null);
+        setGameState('RAID_JACK');
+      },
+      onStart: args => {
+        setRaidJackDetailMon(null);
+        return beginRaidJackPlacement(args);
+      }
+    }), raidJackDetailMon && renderMonsterDetailModal({
+      mon: raidJackDetailMon,
+      masu: raidJackDetailMon.masuId ? getMasuMon(raidJackDetailMon.masuId) : null,
+      onClose: () => setRaidJackDetailMon(null),
+      accent: 'indigo',
+      readOnly: true,
+      label: `${raidJackDetailMon.name}の詳細`
+    })), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
       raidForce: raidJackDebugForce,
       onToggleRaidForce: () => setRaidJackDebugForce(v => !v),
@@ -83343,7 +84381,7 @@ function MonsterHeroGame() {
         await openRaidJack();
       },
       onGoHome: returnToHome,
-      onStartBattle: (kind, tierIndex) => {
+      onStartBattle: (kind, tierIndex, opts) => {
         const isB = kind === 'b';
         const mode = isB ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
         const list = isB ? getActiveMonsterList() : getUnlockedBaseMonsterList();
@@ -83358,7 +84396,8 @@ function MonsterHeroGame() {
           tierIndex,
           party: list.slice(0, 1 + RAID_JACK_ALLY_MAX),
           teachingIds,
-          eventId: RAID_JACK_DEBUG_EVENT_ID
+          eventId: RAID_JACK_DEBUG_EVENT_ID,
+          pumpkin: !isB && opts && opts.pumpkin === true
         });
         return true;
       }
@@ -87023,6 +88062,7 @@ function MonsterHeroGame() {
       scenarioPicksSlot: scenarioPicksSlot,
       setupMon: setupMon,
       slots: slots,
+      perSlotApt: isTacticsMode(runMode),
       phasePlan: mainHero ? phasePlan : null,
       wave: wave,
       heroStyleDef: (() => {
@@ -89309,20 +90349,40 @@ function MonsterHeroGame() {
           zIndex: 81000,
           backgroundColor: 'rgba(20,8,2,.97)'
         }
-      }, React.createElement("div", {
-        className: "text-[10px] font-black text-orange-300 tracking-[.35em] mb-2"
+      }, React.createElement(RaidJackResultStinger, {
+        reason: r.reason
+      }), React.createElement("div", {
+        className: "mh-rjresult-in text-[10px] font-black text-orange-300 tracking-[.35em] mb-2",
+        style: {
+          '--d': '900ms'
+        }
       }, r.kind === 'b' ? 'マスモン' : 'ベースモン'), React.createElement("h2", {
-        className: "text-2xl font-black text-orange-100 mb-1"
+        className: "mh-rjresult-in text-2xl font-black text-orange-100 mb-1",
+        style: {
+          '--d': '1000ms'
+        }
       }, r.tierName), React.createElement("div", {
-        className: "text-sm font-black text-amber-200 mb-4"
+        className: "mh-rjresult-in text-sm font-black text-amber-200 mb-4",
+        style: {
+          '--d': '1100ms'
+        }
       }, reasonLabel), React.createElement("div", {
-        className: "w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3"
+        className: "mh-rjresult-in w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3",
+        style: {
+          '--d': '1250ms'
+        }
       }, React.createElement("div", {
         className: "text-[10px] text-orange-200 font-black mb-1"
       }, "与えたダメージ"), React.createElement("div", {
         "data-raid-jack-damage": true,
         className: "text-3xl font-black text-white text-right"
-      }, r.damage.toLocaleString()), React.createElement("div", {
+      }, React.createElement(TrainingCountUp, {
+        from: 0,
+        to: r.damage,
+        delay: 1400,
+        duration: 1300,
+        format: v => v.toLocaleString()
+      })), React.createElement("div", {
         className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
       }, React.createElement("span", null, "使ったターン"), React.createElement("b", {
         className: "text-right"
@@ -89335,11 +90395,34 @@ function MonsterHeroGame() {
         hidden: true,
         "data-raid-jack-growths": true
       }, r.growths || 0)))), r.opened && React.createElement("div", {
-        className: "mb-2 text-sm font-black text-emerald-300"
-      }, "次の段階が開きました！"), React.createElement("div", {
-        className: "mb-4 text-[10px] text-slate-300"
+        className: "mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300",
+        style: {
+          '--d': '2700ms'
+        }
+      }, "次の段階が開きました！"), r.quickAward && r.quickAward.loops > 0 && React.createElement("div", {
+        "data-raid-jack-quick-award": true,
+        className: "mh-rjresult-in w-full max-w-xs rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-left mb-3",
+        style: {
+          '--d': '2000ms'
+        }
+      }, React.createElement("div", {
+        className: "flex items-center justify-between text-[11px] mb-1"
+      }, React.createElement("span", {
+        className: "text-cyan-300 font-black"
+      }, "⚔ クイック周回ぶん"), React.createElement("span", {
+        className: "text-white font-mono font-bold"
+      }, r.quickAward.loops.toLocaleString(), "周")), React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-slate-300"
+      }, [r.quickAward.xp > 0 ? `経験値 +${r.quickAward.xp.toLocaleString()}` : null, r.quickAward.gold > 0 ? `ダイヤ +${r.quickAward.gold.toLocaleString()}` : null, r.quickAward.bond > 0 ? `絆 +${r.quickAward.bond.toLocaleString()}` : null, r.quickAward.psyche > 0 ? `虹のプシュケー ×${r.quickAward.psyche.toLocaleString()}` : null, r.quickAward.shard > 0 ? `勇者の証片 ×${r.quickAward.shard.toLocaleString()}` : null].filter(Boolean).join(' ／ '))), React.createElement("div", {
+        className: "mh-rjresult-in mb-4 text-[10px] text-slate-300",
+        style: {
+          '--d': '1500ms'
+        }
       }, sendLabel, r.eventId !== RAID_JACK_EVENT.id ? '(デバッグ用の記録)' : ''), React.createElement("div", {
-        className: "w-full max-w-xs space-y-3"
+        className: "mh-rjresult-in w-full max-w-xs space-y-3",
+        style: {
+          '--d': '1600ms'
+        }
       }, React.createElement("button", {
         onClick: () => exitRaidJack(r.eventId !== RAID_JACK_EVENT.id),
         className: "w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black"
@@ -89469,11 +90552,17 @@ function MonsterHeroGame() {
         phase: phaseId,
         enabled: battleFxEffective.phaseBanner !== 'OFF' && (inPlan || atRunStart || gameState === 'QUICK_JOIN' && !!enemy)
       });
-    })(), React.createElement(WaveIntro, {
+    })(), isRaidJackMode(runMode) ? React.createElement(RaidJackIntro, {
+      enabled: battleFxEffective.waveIntro !== 'OFF' && gameState === 'BATTLE' && !!enemy,
+      enemyName: enemy?.name,
+      title: battleModeInfo(runMode).short,
+      tier: enemy?.raidJackPumpkin ? 1 : Number(String(enemy?.raidJackTier || '').slice(1)) || 1,
+      friendly: enemy?.raidJackPumpkin === true
+    }) : React.createElement(WaveIntro, {
       enabled: battleFxEffective.waveIntro !== 'OFF' && gameState === 'BATTLE' && !!enemy,
       wave: wave,
       enemyName: enemy?.name,
-      title: isRaidJackMode(runMode) ? battleModeInfo(runMode).short : ''
+      title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
     }), effect && !rhythmScreenOpen && React.createElement("div", {
@@ -91952,6 +93041,8 @@ const createAnimationStyle = () => {
     @keyframes exName { 0%,12% { opacity:0; translate:46px 0; scale:1.35; } 24% { opacity:1; translate:0 0; scale:.96; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; translate:-20px 0; } }
     .ex-cutin__sub { margin-top:6px; font:800 11px/1.2 system-ui, sans-serif; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       opacity:0; animation:exTag 1600ms ease-out 60ms forwards; }
+    .ex-cutin__note { margin-top:4px; font:800 10px/1.35 system-ui, sans-serif; color:#fde68a; max-width:100%; white-space:normal; text-shadow:0 1px 3px rgba(0,0,0,.8);
+      opacity:0; animation:exName 1600ms cubic-bezier(.2,.8,.2,1) 80ms forwards; }
     .ex-cutin__flash { inset:0; background:#fff; opacity:0; animation:exFlash 1600ms linear forwards; }
     @keyframes exFlash { 0% { opacity:0; } 5% { opacity:.7; } 15% { opacity:0; } 84% { opacity:0; } 90% { opacity:.3; } 100% { opacity:0; } }
     .ex-cutin__motif { inset:0; }
@@ -92680,6 +93771,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
+    [data-enemy-motion="pumpkin"] { --em-c: 253,186,116; }
     /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
     [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
@@ -92756,7 +93848,7 @@ const createAnimationStyle = () => {
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
-    [data-moo-stage="true"][data-enemy-motion="jack"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
+    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }
@@ -93712,6 +94804,47 @@ const createAnimationStyle = () => {
       72% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: translateY(-24px) scale(.96); }
     }
+    /* ==== レイドボス戦の入り(RaidJackIntro)。閃光 → 黒い帯 → 斜めの光 → 文字の叩きつけ → 段階の星。約2.6秒・操作は止めない ==== */
+    .mh-rjintro { position: fixed; inset: 0; z-index: 69000; pointer-events: none; overflow: hidden; --ja-c: 251,146,60; --ja-d: 253,186,116; }
+    .mh-rjintro-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 38%, rgba(255,255,255,.95), rgba(var(--ja-c),.75) 38%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .9s ease-out both; }
+    .mh-rjintro-bar { position: absolute; left: 0; right: 0; height: 15%; background: rgba(2,6,23,.9); }
+    .mh-rjintro-bar-top { top: 0; transform: translateY(-100%); animation: mhRjBarTop 2.6s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-rjintro-bar-bottom { bottom: 0; transform: translateY(100%); animation: mhRjBarBottom 2.6s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-rjintro-slash { position: absolute; left: -20%; width: 140%; height: 6px; top: 36%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 18px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-14deg) translateX(-60%); animation: mhRjSlash .7s ease-out .15s both; }
+    .mh-rjintro-slash-b { top: 52%; transform: rotate(10deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: .3s; }
+    .mh-rjintro-body { position: absolute; left: 0; right: 0; top: 32%; display: flex; flex-direction: column; align-items: center; gap: 5px; animation: mhRjBody 2.6s ease-out both; }
+    .mh-rjintro-sub { font-size: 11px; font-weight: 900; letter-spacing: .35em; color: #fca5a5; text-shadow: 0 0 10px rgba(239,68,68,.9); animation: mhRjBlink .5s steps(2) 4 both; }
+    .mh-rjintro-title { font-size: 44px; font-weight: 900; font-style: italic; letter-spacing: .05em; line-height: 1; background: linear-gradient(180deg, #fff, rgba(var(--ja-d),1) 50%, rgba(var(--ja-c),1)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 18px rgba(var(--ja-c),.9)); animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) .3s both; }
+    .mh-rjintro-name { font-size: 15px; font-weight: 900; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.95), 0 0 12px rgba(var(--ja-c),.9); animation: mhRjRise .45s ease-out .75s both; }
+    .mh-rjintro-stars { font-size: 18px; letter-spacing: .15em; color: rgb(var(--ja-d)); text-shadow: 0 0 10px rgba(var(--ja-c),1); animation: mhRjRise .45s ease-out 1s both; }
+    .mh-rjintro-stars-dim { opacity: .25; }
+    @keyframes mhRjFlash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhRjBarTop { 0% { transform: translateY(-100%); } 14%, 82% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+    @keyframes mhRjBarBottom { 0% { transform: translateY(100%); } 14%, 82% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+    @keyframes mhRjSlash { 0% { opacity: 0; transform: rotate(-14deg) translateX(-60%); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(-14deg) translateX(60%); } }
+    @keyframes mhRjSlashB { 0% { opacity: 0; transform: rotate(10deg) translateX(60%); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(10deg) translateX(-60%); } }
+    @keyframes mhRjBody { 0%, 82% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhRjSlam { 0% { opacity: 0; transform: scale(2.6); } 60% { opacity: 1; transform: scale(.94); } 80% { transform: translate(-3px, 2px) scale(1.02); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhRjRise { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhRjBlink { 0% { opacity: 1; } 50% { opacity: .2; } 100% { opacity: 1; } }
+    /* ==== レイドボス戦の終わり(RaidJackResultStinger)。結果の幕が開いた瞬間に、大きな文字を叩きつける。約1.8秒で消えて、結果が順に出る ==== */
+    .mh-rjstinger { position: absolute; inset: 0; pointer-events: none; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 2; animation: mhRjStingerOut 1.9s ease-in both; }
+    .mh-rjstinger-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.95), rgba(251,191,36,.55) 40%, rgba(251,191,36,0) 75%); opacity: 0; animation: mhRjFlash .8s ease-out both; }
+    .mh-rjstinger-lose .mh-rjstinger-flash { background: radial-gradient(circle at 50% 45%, rgba(254,202,202,.8), rgba(220,38,38,.55) 40%, rgba(220,38,38,0) 75%); }
+    .mh-rjstinger-end .mh-rjstinger-flash { background: radial-gradient(circle at 50% 45%, rgba(224,242,254,.85), rgba(56,189,248,.45) 40%, rgba(56,189,248,0) 75%); }
+    .mh-rjstinger-ring { position: absolute; left: 50%; top: 45%; width: 60vmin; height: 60vmin; margin: -30vmin 0 0 -30vmin; border-radius: 50%; border: 6px solid rgba(253,224,71,.95); box-shadow: 0 0 30px rgba(251,191,36,.9); opacity: 0; animation: mhRjRing .9s ease-out .15s both; }
+    .mh-rjstinger-lose .mh-rjstinger-ring { border-color: rgba(248,113,113,.95); box-shadow: 0 0 30px rgba(220,38,38,.9); }
+    .mh-rjstinger-end .mh-rjstinger-ring { border-color: rgba(125,211,252,.95); box-shadow: 0 0 30px rgba(56,189,248,.9); }
+    .mh-rjstinger-text { position: relative; font-size: 58px; font-weight: 900; font-style: italic; letter-spacing: .04em; line-height: 1; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px rgba(251,191,36,.9)); animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) .1s both; }
+    .mh-rjstinger-lose .mh-rjstinger-text { background: linear-gradient(180deg, #fff1f1, #fca5a5 50%, #dc2626); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px rgba(239,68,68,.9)); }
+    .mh-rjstinger-end .mh-rjstinger-text { font-size: 50px; background: linear-gradient(180deg, #fff, #bae6fd 45%, #38bdf8); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px rgba(56,189,248,.9)); }
+    .mh-rjstinger-win .mh-confetti { z-index: 0; }
+    @media (prefers-reduced-motion: reduce) { .mh-rjresult-in { animation: none !important; opacity: 1; } }
+    @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
+    @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+    /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
+    .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }
+    .mh-rjresult-pop { animation-name: mhRjSlam; animation-duration: .6s; }
     /* ==== 敵を倒した瞬間(EnemyDefeatFx)。白い閃光と大きな文字。1回きり・操作は止めない ==== */
     /* 敵が消えてから「VICTORY!」を出す(2026-10-02・ユーザー指示「倒した演出と敵が消えてからビクトリーがあっていい」)。
        敵は閃光のあいだに白く光って縮みながら消え(.6秒)、文字はそのあとに出る(delay .6秒)。 */
@@ -93747,7 +94880,7 @@ const createAnimationStyle = () => {
     [data-mh-end-fx="OFF"] .mh-confetti, [data-mh-end-fx="OFF"] .mh-end-vignette { display: none; }
     [data-mh-end-fx="OFF"] :is(.mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-flag) { animation: none !important; }
     @media (prefers-reduced-motion: reduce) {
-      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
+      .mh-waveintro, .mh-rjintro *, .mh-rjstinger, .mh-rjstinger *, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
       .mh-defeat-flash { display: none; }
       [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: none !important; opacity: 0; }
       .mh-confetti { display: none; }

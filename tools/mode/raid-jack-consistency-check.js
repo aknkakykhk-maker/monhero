@@ -28,7 +28,7 @@ vm.runInContext(`${defsSrc}\nthis.o={RAID_JACK_TURNS,RAID_JACK_FREE_PER_DAY,RAID
 const o = ctx.o;
 const growthPct = Math.round((o.RAID_JACK_TURN_GROWTH - 1) * 100);           // 5
 const regenPct = Math.round(o.RAID_JACK_TURN_REGEN_STEP * 1000) / 10;        // 1.5
-const levelUps = o.RAID_JACK_LEVEL_UP_TURNS.join('・');                        // 3・5・8
+const levelUps = o.RAID_JACK_LEVEL_UP_TURNS.join('・');                        // 3・5・8・11
 check('定義の数字が仕様どおり(20ターン / 無料3回 / 追加100P / EX2回 / アシカ3枚 / 供モン3体 / バフ5%・1.5%)',
   o.RAID_JACK_TURNS === 20 && o.RAID_JACK_FREE_PER_DAY === 3 && o.RAID_JACK_EXTRA_COST_BEAT_P === 100 && o.RAID_JACK_A_EX_MAX_USES === 2
   && o.RAID_JACK_TEACHING_MAX === 3 && o.RAID_JACK_ALLY_MAX === 3 && growthPct === 5 && regenPct === 1.5,
@@ -43,7 +43,7 @@ const assistants = read('monster-hero/data/assistants.js');
 const hw = assistants.indexOf('const ASSISTANT_RAID_JACK_HOWTO = [');
 const howto = assistants.slice(hw, assistants.indexOf('];', hw));
 const changelog = read('monster-hero/data/changelog.js');
-const ce = changelog.indexOf("title:'カボチャの大王ジャックがあらわれました'");
+const ce = changelog.indexOf("title:'【期間限定】レイドボス戦「カボチャのおばけジャック」を開催します'");
 const clRaid = changelog.slice(ce, changelog.indexOf("\n  },", ce));
 
 // ① 名前
