@@ -17,10 +17,24 @@
 // ・この画面だけ根に data-mh-screen が無く、画面ぜんぶが一枚でスクロールしていた。
 //   根は SCREEN_SHELL_CLASS、中身は根の直下の SCREEN_LIST_CLASS へ移した
 //   (横画面で「左＝見出し・助手 / 右＝メニュー」に組み替わるのも、この形が条件)
-// ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
+// ・メニューの1行は SettingsMenuLink ひとつに寄せた(以前は menuClass)。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
+// 設定のメニュー1行。「絵＋名前＋説明＋›」。押せる高さは 64px 以上
+function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent = 'text-white', ...rest }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} {...rest}
+      className="mh-button mh-button-secondary w-full min-h-[64px] flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-left active:scale-[.98] disabled:opacity-40">
+      <span aria-hidden="true" className="w-8 shrink-0 text-center text-[22px] leading-none">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className={`block text-[14px] font-black leading-tight ${accent}`}>{label}</span>
+        <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{desc}</span>
+      </span>
+      <ChevronRight size={18} className="shrink-0 opacity-60"/>
+    </button>
+  );
+}
+
 function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
-  const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
@@ -83,15 +97,17 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
       <ScreenHead title="設定" accent="text-slate-200" onBack={onBack} backLabel="HOMEへ戻る"/>
       <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div>
       <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
-        <button type="button" data-open-battle-settings onClick={() => setBattleSettingsOpen(true)} className={menuClass}>バトル設定</button>
-        <button type="button" onClick={onOpenAudioSettings} className={menuClass}>音量設定</button>
-        <button type="button" onClick={onOpenBgmArrangement} className={menuClass}>BGMアレンジ</button>
-        <button type="button" data-open-title-art onClick={onOpenTitleArt} className={menuClass}>タイトル画像アレンジ</button>
-        <button type="button" data-open-home-art onClick={onOpenHomeArt} className={menuClass}>ホーム画面アレンジ</button>
-        <button type="button" data-open-screen-theme onClick={onOpenScreenTheme} className={menuClass}>画面テーマ</button>
-        <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
-        <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
-        <button type="button" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className={`${menuClass} flex-col disabled:opacity-40`}><span className="block text-cyan-200">ゲームを更新</span><span className="mt-1 block text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
+        {/* 1行ずつ「絵＋名前＋何の設定か」を出す(2026-10-05)。名前だけのボタンが9つ同じ見た目で並び、
+            どれが何の設定か押すまで分からなかった。M/B管理・神殿のメニューと同じ形 */}
+        <SettingsMenuLink icon="⚔️" label="バトル設定" desc="タクティクスの画面・画面の軽さ・待機中の動き" onClick={() => setBattleSettingsOpen(true)} data-open-battle-settings/>
+        <SettingsMenuLink icon="🎚️" label="音量設定" desc="効果音とBGMの大きさ・音が出ないとき" onClick={onOpenAudioSettings}/>
+        <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面ごとに流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
+        <SettingsMenuLink icon="🖼️" label="タイトル画像アレンジ" desc="タイトル画面の絵を選ぶ" onClick={onOpenTitleArt} data-open-title-art/>
+        <SettingsMenuLink icon="🏡" label="ホーム画面アレンジ" desc="ホーム画面の背景を選ぶ" onClick={onOpenHomeArt} data-open-home-art/>
+        <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面ごとにハロウィン／クラシックを選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
+        <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
+        <SettingsMenuLink icon="📚" label="ヘルプ" desc="遊び方・育て方・画面の説明" onClick={onOpenHelp}/>
+        <SettingsMenuLink icon="🔄" label="ゲームを更新" desc="最新のゲームデータを読み込みます" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} accent="text-cyan-200"/>
         {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
             2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
             選べるのは3つ(UPDATE_NOTICE_STYLE_LABELS が正本。ここへ手で書き写さない)。
@@ -145,7 +161,7 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
             <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small>
           </button>;
         })}</div>
-        <button className="mh-dialog-choice justify-center" onClick={onClose}>決定</button>
+        <button type="button" className="mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" onClick={onClose}>決定</button>
       </div>
     </div>
   );
@@ -160,7 +176,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
-  const chip = (selected) => `min-h-[36px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
+  const chip = (selected) => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
   return (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
       <div className="mh-title-dialog" data-screen-theme-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
@@ -177,7 +193,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
             <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
           </div>
         ))}
-        <button className="mh-dialog-choice justify-center" onClick={onClose}>決定</button>
+        <button type="button" className="mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" onClick={onClose}>決定</button>
       </div>
     </div>
   );

@@ -35,8 +35,8 @@ const regionOf = (d, o) => {
 };
 
 (async () => {
-  // ゴースト(2026-10-05)は、見本で部位を決めて絵の色のかたまりで塗る finish-dye-mask-components.js で仕上げた
-  const TOOLS = { yggdrasil: 'finish-dye-mask.js', 'mel-whip': 'finish-dye-mask-guide.js', ghost: 'finish-dye-mask-components.js' };
+  // ゴースト・スプーキー(2026-10-05)は、見本で部位を決めて絵の色のかたまりで塗る finish-dye-mask-components.js で仕上げた
+  const TOOLS = { yggdrasil: 'finish-dye-mask.js', 'mel-whip': 'finish-dye-mask-guide.js', ghost: 'finish-dye-mask-components.js', spooky: 'finish-dye-mask-components.js' };
   for (const name of Object.keys(TOOLS)) {
     const tmp = path.join(os.tmpdir(), `finish-${name}-${process.pid}.png`);
     const tool = TOOLS[name];

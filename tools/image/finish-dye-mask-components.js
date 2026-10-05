@@ -5,7 +5,7 @@
 //   node image/finish-dye-mask-components.js ghost --out /tmp/x.png   … 配信フォルダへ書かずに試す
 //
 // 入力  tools/art-sources/dye-masks/<名前>-dye-mask-aligned.png
-//         いただいた見本を立ち絵の座標へ合わせ、色だけリポジトリの約束(赤=① / 緑=② / 青=③ / 透明=対象外)
+//         いただいた見本を立ち絵の座標へ合わせ、色だけリポジトリの約束(赤=① / 緑=② / 青=③ / 黄=④ / マゼンタ=⑤ / 透明=対象外)
 //         へそろえたもの。形には手を入れていない
 //       monster-hero/images/monsters/<名前>.png(配信中の立ち絵)
 // 出力  monster-hero/images/monsters/<名前>-dye-mask.PNG
@@ -19,6 +19,9 @@
 // やること(順番どおり)
 //   ① 立ち絵の画素を色で分ける(紺・クリーム・赤・白)
 //   ② 同じ色でつながったかたまりごとに、見本の多数決で部位を決める(見本が黒=0なら染めない。目・口)
+//   ②' 見本とのずれで取り違えるかたまりは、位置で決め直す(overrides。理由を1件ずつ書く)
+//   ②'' 顔の中の淡い色のかたまり(zeroInside)は目か歯なので染めない
+//   ③ 暗い線のかたまり(darkClass)は、目に接していれば染めない(瞳)、ほかは④で近くの部位から埋める
 //   ③ 白いかたまりは、染めないかたまり(目)に接していれば染めない(白目)。ほかは接している部位へ
 //   ④ 小さなかたまり・色の決まらない画素(輪郭線・ふちのにじみ)は、近くの部位から広げて埋める。
 //      染めないかたまりからは広げないので、目の中のハイライトは染めないまま残る
@@ -39,10 +42,41 @@ const CONFIGS = {
       return 0;
     },
     minComp: 150,
+    // 白(4)のかたまりは見本の多数決ではなく、染めないかたまり(目)に接しているかで決める
+    whiteClass: 4,
     // 白目の下の影はクリーム寄りの色で、体として塗られて目のふちがギザギザに欠けた。
     // 染めない丸いかたまり(目)を外形(凸包)で埋める。かたまりの面積が外形の minRatio 以上のものだけ
     // 口は横長の弓形なので対象外にする(maxWide = 幅÷高さの上限)。埋めると口の上の肌まで染めなくなる
     hullZero: { minRatio: 0.75, minSize: 500, maxWide: 1.5 },
+  },
+  spooky: {
+    // 色の分け方。暗い線(5) / 青緑=帽子と服(1) / クリーム色=リボンと胸元の飾り(4) / 茶=かぼちゃの顔と枝(3) /
+    // 淡い色=手・しっぽ・目・歯(2)。どのかたまりをどの部位にするかは見本の多数決で決まる
+    classify: (h, s, v) => {
+      if (v < 0.25) return 5;
+      if (h >= 155 && h < 205 && s > 0.35) return 1;
+      if (h >= 38 && h < 70 && s > 0.12 && s < 0.7 && v > 0.7) return 4;
+      if ((h < 45 || h >= 345) && s > 0.35) return 3;
+      if (s < 0.45 && v > 0.6) return 2;
+      // 目の淡い緑は彩度が0.47〜0.48あり、上の条件から漏れて右目だけ顔として塗られた
+      if (h >= 120 && h < 155 && s < 0.6 && v > 0.6) return 2;
+      return 0;
+    },
+    minComp: 150,
+    whiteClass: 0,
+    // 暗い線(5)は見本の多数決にしない。目のかたまりに接していれば染めない(瞳)、ほかは近くの部位から埋める
+    darkClass: 5,
+    // 顔(③)の中にある淡い色のかたまりは、目か歯なので染めない(見本とのずれで一部が③に入るため)
+    zeroInside: { cls: 2, within: 3 },
+    // 目は丸いので外形で埋める(ゴーストと同じ)。口は横長なので外れる
+    hullZero: { minRatio: 0.6, minSize: 500, maxWide: 1.5 },
+    // 見本とのずれで取り違えるかたまりを、位置で決め直す(near はかたまりの中心。cls はそのかたまりの色)
+    overrides: [
+      { near: [351, 424], cls: 2, label: 0, why: '口の歯。見本では口は黒(染めない)だが、ずれて顔の範囲に入る' },
+      { near: [351, 488], cls: 4, label: 4, why: '首元の結び目。見本では顔の範囲だが、色は服の黄色い飾りと同じ' },
+      { near: [544, 663], cls: 4, label: 2, why: '右手のつや。見本の手の円の外へはみ出している(左手のつやは②になっている)' },
+      { near: [618, 784], cls: 3, label: 5, why: 'しっぽの先の枝。見本ではしっぽ(②)と同じ色だが、2026-10-05 ユーザー指示「染色5にする」で5つ目の部位に分けた' },
+    ],
   },
 };
 
@@ -68,7 +102,7 @@ const hsv = (r, g, b) => {
   const pixels = (im) => { const c = createCanvas(W, H), x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H); return x.getImageData(0, 0, W, H).data; };
   const A = pixels(art), G = pixels(guide);
   const opaque = (i) => A[i * 4 + 3] >= 20;
-  const guideLabel = (i) => { const o = i * 4; if (G[o + 3] < 20) return 0; return G[o] > 200 ? 1 : G[o + 1] > 200 ? 2 : G[o + 2] > 200 ? 3 : 0; };
+  const guideLabel = (i) => { const o = i * 4; if (G[o + 3] < 20) return 0; const r = G[o], g = G[o + 1], b = G[o + 2]; if (r > 200 && g > 200 && b < 100) return 4; if (r > 200 && b > 200 && g < 100) return 5; return r > 200 ? 1 : g > 200 ? 2 : b > 200 ? 3 : 0; };
   const nb4 = (i) => { const x = i % W, out = []; if (x > 0) out.push(i - 1); if (x < W - 1) out.push(i + 1); if (i >= W) out.push(i - W); if (i < N - W) out.push(i + W); return out; };
 
   // ① 色で分ける
@@ -83,7 +117,7 @@ const hsv = (r, g, b) => {
   const comps = [];
   for (let i = 0; i < N; i++) {
     if (cls[i] <= 0 || comp[i] >= 0) continue;
-    const id = comps.length, members = [i], votes = [0, 0, 0, 0];
+    const id = comps.length, members = [i], votes = [0, 0, 0, 0, 0, 0];
     comp[i] = id;
     for (let k = 0; k < members.length; k++) {
       const j = members[k];
@@ -93,23 +127,54 @@ const hsv = (r, g, b) => {
     comps.push({ id, cls: cls[i], members, votes, label: -1 });
   }
   const big = comps.filter(c => c.members.length >= cfg.minComp);
+  const report = args.includes('--report');
   for (const c of big) {
-    if (c.cls === 4) continue;
+    if (c.cls === cfg.whiteClass) continue;
     let best = 0;
-    for (let L = 1; L <= 3; L++) if (c.votes[L] > c.votes[best]) best = L;
+    for (let L = 1; L <= 5; L++) if (c.votes[L] > c.votes[best]) best = L;
     c.label = best;
   }
-  // ③ 白いかたまり
   const touches = (c) => { const s = new Set(); for (const j of c.members) for (const n of nb4(j)) { const o = comp[n]; if (o >= 0 && o !== c.id) s.add(o); } return [...s].map(o => comps[o]); };
-  for (const c of big.filter(c => c.cls === 4)) {
+  // ②' 位置で決め直す
+  for (const o of cfg.overrides || []) {
+    let hit = null, bestD = 8;
+    for (const c of big) {
+      if (c.cls !== o.cls) continue;
+      const cx = c.members.reduce((t, j) => t + j % W, 0) / c.members.length;
+      const cy = c.members.reduce((t, j) => t + Math.floor(j / W), 0) / c.members.length;
+      const d = Math.hypot(cx - o.near[0], cy - o.near[1]);
+      if (d < bestD) { bestD = d; hit = c; }
+    }
+    if (!hit) { console.log(`⚠ 決め直す相手が見つかりません: ${o.why}`); process.exitCode = 1; continue; }
+    hit.label = o.label; hit.fixed = true;
+  }
+  // ③ 白いかたまり
+  // 顔の中の淡い色のかたまり(目・歯)は染めない。透明に接するもの(絵の外周)は対象外
+  if (cfg.zeroInside) for (const c of big.filter(c => c.cls === cfg.zeroInside.cls && !c.fixed)) {
+    let edge = false;
+    for (const j of c.members) { for (const n of nb4(j)) if (!opaque(n)) { edge = true; break; } if (edge) break; }
+    if (edge) continue;
+    const around = touches(c).filter(o => o.label > 0 && o.cls !== cfg.darkClass);
+    if (around.length && around.every(o => o.label === cfg.zeroInside.within)) c.label = 0;
+  }
+  // 暗い線のかたまり: 目に接していれば染めない、ほかは決めずに④で埋める
+  if (cfg.darkClass) for (const c of big.filter(c => c.cls === cfg.darkClass && !c.fixed)) {
+    c.label = touches(c).some(o => o.label === 0 && o.cls !== cfg.darkClass) ? 0 : -1;
+  }
+  for (const c of big.filter(c => c.cls === cfg.whiteClass)) {
     const around = touches(c).filter(o => o.label >= 0);
     if (around.some(o => o.label === 0)) { c.label = 0; continue; }
-    const cnt = [0, 0, 0, 0];
+    const cnt = [0, 0, 0, 0, 0, 0];
     for (const o of around) cnt[o.label] += o.members.length;
     c.label = cnt.indexOf(Math.max(...cnt));
   }
+  if (report) for (const c of big.slice().sort((a, b) => b.members.length - a.members.length)) {
+    const cy = Math.round(c.members.reduce((t, j) => t + Math.floor(j / W), 0) / c.members.length);
+    const cx = Math.round(c.members.reduce((t, j) => t + j % W, 0) / c.members.length);
+    console.log(`  色${c.cls} 画素${c.members.length} 中心(${cx},${cy}) 見本 ${c.votes.join('/')} → 部位${c.label}`);
+  }
   const lab = new Int8Array(N).fill(-1);   // -1 = まだ決まっていない
-  for (const c of big) for (const j of c.members) lab[j] = c.label;
+  for (const c of big) if (c.label >= 0) for (const j of c.members) lab[j] = c.label;
   // ④ 残りを近くの部位から広げて埋める(染めない部位からは広げない)
   let front = [];
   for (let i = 0; i < N; i++) if (lab[i] > 0) front.push(i);
@@ -150,9 +215,9 @@ const hsv = (r, g, b) => {
     }
   }
 
-  const count = [0, 0, 0, 0];
+  const count = [0, 0, 0, 0, 0, 0];
   const c = createCanvas(W, H), x = c.getContext('2d'), img = x.createImageData(W, H);
-  const COL = [null, [255, 0, 0], [0, 255, 0], [0, 0, 255]];
+  const COL = [null, [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255]];
   for (let i = 0; i < N; i++) {
     if (!opaque(i)) continue;
     const L = lab[i] > 0 ? lab[i] : 0;
@@ -162,6 +227,6 @@ const hsv = (r, g, b) => {
   x.putImageData(img, 0, 0);
   const out = outArg || path.join(ROOT, 'monster-hero/images/monsters', `${name}-dye-mask.PNG`);
   fs.writeFileSync(out, c.toBuffer('image/png'));
-  console.log(`しあがり  対象外/①/②/③ = ${count.join(' / ')}`);
+  console.log(`しあがり  対象外/①/②/③/④/⑤ = ${count.join(' / ')}`);
   console.log(`書き出しました: ${path.relative(process.cwd(), out)}`);
 })();

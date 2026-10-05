@@ -170,8 +170,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); c
     await page.waitForTimeout(600);
     // 設定パネルのスライダー横に出ている数値を読む
     const vols = () => page.evaluate(() => {
-      // VolumeSlider が値を出しているspan(右寄せ・等幅)だけを拾う
-      return [...document.querySelectorAll('span.w-6.text-right.font-mono')]
+      // VolumeSlider が値を出しているspan(data-volume-value)だけを拾う
+      return [...document.querySelectorAll('span[data-volume-value]')]
         .map((e) => e.textContent.trim()).slice(0, 2);
     });
     check('初期音量がSE/BGMとも1', JSON.stringify(await vols()) === '["1","1"]', JSON.stringify(await vols()));
