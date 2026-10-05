@@ -126,6 +126,18 @@ const make = () => {
     const callsMax = t.calls.length;
     const maxRank = await t.o.sbFetchRaidJackMaxHitRanking('b');
     check('最大ダメージは raid_jack_max_hit_ranking を kind で絞り、大きい順に100件', /raid_jack_max_hit_ranking\?event_id=eq\.raid_jack_2026&kind=eq\.b/.test(t.calls[callsMax].url) && /order=max_damage\.desc/.test(t.calls[callsMax].url) && /limit=100/.test(t.calls[callsMax].url) && maxRank.length === 2 && maxRank[0].total === 900);
+    // 難易度で絞るときは、難易度別のビュー raid_jack_max_hit_by_tier を読む(0 や未指定は全難易度のビュー)
+    t.setResponder(() => ({ ok: true, status: 200, body: JSON.stringify([{ breeder_id: 'm3', max_damage: 700 }]) }));
+    const callsTier = t.calls.length;
+    const tierRank = await t.o.sbFetchRaidJackMaxHitRanking('a', 100, undefined, 3);
+    check('難易度を選ぶと raid_jack_max_hit_by_tier を kind と tier で絞って読む', /raid_jack_max_hit_by_tier\?event_id=eq\.raid_jack_2026&kind=eq\.a&tier=eq\.3&select=/.test(t.calls[callsTier].url) && tierRank.length === 1 && tierRank[0].total === 700);
+    const callsTier2 = t.calls.length;
+    await t.o.sbFetchRaidJackMaxHitSelf(BID, 'b', undefined, 5);
+    await t.o.sbCountRaidJackMaxHitAhead('b', 10, undefined, 5);
+    check('自分の最大ダメージと上の人数も、同じ難易度別のビューを見る', /raid_jack_max_hit_by_tier\?.*kind=eq\.b&tier=eq\.5&breeder_id=/.test(t.calls[callsTier2].url) && /raid_jack_max_hit_by_tier\?.*tier=eq\.5&max_damage=gt\.10/.test(t.calls[callsTier2 + 1].url));
+    const callsTier3 = t.calls.length;
+    await t.o.sbFetchRaidJackMaxHitRanking('a', 100, undefined, 0);
+    check('難易度0(全難易度)は難易度別ではなく全体のビューを読む', /raid_jack_max_hit_ranking\?/.test(t.calls[callsTier3].url) && !/tier=eq/.test(t.calls[callsTier3].url));
     t.setResponder(() => ({ ok: true, status: 200, body: '[{"max_damage":321}]' }));
     check('自分の最大ダメージを読む(無ければ0)', (await t.o.sbFetchRaidJackMaxHitSelf(BID, 'a')) === 321);
     t.setResponder(() => ({ ok: true, status: 200, body: '[]' }));
