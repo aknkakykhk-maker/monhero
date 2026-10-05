@@ -65,7 +65,7 @@ vm.runInContext([
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
-    + 'tacticsExDefOf,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExDefOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -366,7 +366,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExRegenRateAt(late, [unit], 0, A(3, 1)) === 0);
   check('ほかの子に入れ替わっていたら上乗せしない', ex.tacticsExRegenRateAt(g, [{ ...unit, id: 'Golem' }], 0, A(2, 3)) === 0);
   check('自動回復は1体ずつ「上限の30%」を固定値で足す(率への倍率ではない・ライフとガッツは別々の率・倒れている子の戻りには乗せない)',
-    /const hpBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'hp'\);[\s\S]{0,160}const gutsBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'guts'\);[\s\S]{0,160}rateHealTacticsAt\(units, slotIdx, hpBoost \+ partyHpBoost, gutsBoost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
+    /const hpBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'hp'\);[\s\S]{0,160}const gutsBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'guts'\)( \+ partyGutsBoost)?;[\s\S]{0,160}rateHealTacticsAt\(units, slotIdx, hpBoost \+ partyHpBoost, gutsBoost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
 }
 
 // ---------- ⑪-2 ミタラシ「ドラゴンだっちー」(2026-09-27 ユーザー指示) ----------
@@ -454,7 +454,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     JSON.stringify(extra));
   check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
     /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken:1\)/.test(app)
-    && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\) : 0;/.test(app)
+    && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\)( \+ tacticsExPartyBoostRegenRate\(tacticsExStateRef\.current, live\.now, 'hp'\))? : 0;/.test(app)
     && (app.match(/exCombos:tacticsExCombosAt\(slotIdx(,halved|,true)?\)/g) || []).length === 3);
 }
 
@@ -742,6 +742,46 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const scr = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '71-screen-battle.jsx'), 'utf8');
   check('画面へ結線してある(札の残り・詳細の「残り」と状態のひとこと・ターン終わりのログ)', /remainText:\(\(\)=>\{/.test(app) && /stateText:\(\(\)=>\{/.test(app)
     && /data-tactics-ex-remain/.test(scr) && /data-tactics-ex-state-pill/.test(scr) && /の効果が切れた/.test(app) && /雷纏が始まる！/.test(app));
+}
+
+// ---------- ⑳ オボロゲソウ「おぼろ返し」(2026-10-05 ユーザー選択) ----------
+{
+  const ob = ex.tacticsExDefOf('Oboro');
+  check('オボロゲソウ「おぼろ返し」: ラン5回・併用できる・3ターン・受けたダメージの50%をライフへ・5%をガッツへ',
+    !!ob && ob.name === 'おぼろ返し' && ob.maxUses === 5 && !ob.unlimited && ob.withCards && ob.duration === 'turns' && ob.turns === 3
+    && ob.effect === 'damageBack' && ex.isTacticsExEffectImplemented(ob) && !!ob.damageBack && ob.damageBack.hpRate === 0.5 && ob.damageBack.gutsRate === 0.05, JSON.stringify(ob));
+  const A = (wave, turn) => ({ wave, turn });
+  const st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ob, slot: 2, monId: 'Oboro', now: A(1, 4) });
+  const on = ex.tacticsExDamageBackRates(st, A(1, 4)), on3 = ex.tacticsExDamageBackRates(st, A(1, 6));
+  check('使ったターンから3ターンだけ効く(4〜6ターン目)・7ターン目と次のWAVEでは0',
+    Math.abs(on.hp - 0.5) < 1e-9 && Math.abs(on.guts - 0.05) < 1e-9 && Math.abs(on3.hp - 0.5) < 1e-9
+    && ex.tacticsExDamageBackRates(st, A(1, 7)).hp === 0 && ex.tacticsExDamageBackRates(st, A(2, 4)).hp === 0 && ex.tacticsExDamageBackRates(ex.createTacticsExState(), A(1, 4)).guts === 0);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体へ結線してある(受けたダメージの一部をその子へ戻す・倒れた子には戻さない)', /const back=tacticsExDamageBackRates\(tacticsExStateRef\.current,tacticsExLiveRef\.current\.now\);/.test(app)
+    && /fd>0&&\(back\.hp>0\|\|back\.guts>0\)&&afterHit&&!afterHit\.downed/.test(app) && /healTacticsAt\(units,slotIdx,backHp\),slotIdx,backGuts/.test(app));
+}
+
+// ---------- ⑲ プラント「緑のめぐみ」(2026-10-05 ユーザー指示) ----------
+{
+  const pl = ex.tacticsExDefOf('Plant');
+  check('プラント「緑のめぐみ」: ラン5回・併用できる・5ターン・味方全員 力/丈夫さ+10%・ライフ/ガッツ自動回復+10%',
+    !!pl && pl.name === '緑のめぐみ' && pl.maxUses === 5 && !pl.unlimited && pl.withCards && pl.duration === 'turns' && pl.turns === 5
+    && pl.effect === 'partyBoost' && ex.isTacticsExEffectImplemented(pl) && !!pl.partyBoost && pl.partyBoost.statRate === 0.1
+    && pl.partyBoost.hpRegen === 0.1 && pl.partyBoost.gutsRegen === 0.1, JSON.stringify(pl));
+  const A = (wave, turn) => ({ wave, turn });
+  const plant = { id: 'Plant', hp: 400, maxHp: 400, atk: 100, def: 50, guts: 50, maxGuts: 135, downed: false };
+  const other = { id: 'Golem', hp: 400, maxHp: 400, atk: 100, def: 50, guts: 50, maxGuts: 135, downed: false };
+  const st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: pl, slot: 0, monId: 'Plant', now: A(1, 3) });
+  const on = ex.applyTacticsExStats(other, st, 1, A(1, 3)), onSelf = ex.applyTacticsExStats(plant, st, 0, A(1, 7));
+  const off = ex.applyTacticsExStats(other, st, 1, A(1, 8));
+  check('味方全員のちから・丈夫さが+10%(使った子も、ほかの子も)・5ターン目まで・6ターン目には元へ戻る',
+    on.atk === 110 && on.def === 55 && onSelf.atk === 110 && onSelf.def === 55 && off.atk === 100 && off.def === 50
+    && ex.applyTacticsExStats(other, st, 1, A(2, 3)).atk === 100, JSON.stringify({ on, onSelf, off }));
+  check('ターン終わりの自動回復へ、ライフ・ガッツとも+10%を足す(効いているあいだだけ)',
+    Math.abs(ex.tacticsExPartyBoostRegenRate(st, A(1, 5), 'hp') - 0.1) < 1e-9 && Math.abs(ex.tacticsExPartyBoostRegenRate(st, A(1, 5), 'guts') - 0.1) < 1e-9
+    && ex.tacticsExPartyBoostRegenRate(st, A(1, 8), 'hp') === 0 && ex.tacticsExPartyBoostRegenRate(ex.createTacticsExState(), A(1, 3), 'guts') === 0);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体へ結線してある(自動回復へ足す)', /tacticsExPartyBoostRegenRate\(tacticsExStateRef\.current, live\.now, 'hp'\)/.test(app) && /\+ partyGutsBoost;/.test(app));
 }
 
 // ---------- ⑱ ライガー「雷狼影」(2026-10-05 ユーザー指示・数字はユーザー指定) ----------

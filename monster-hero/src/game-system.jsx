@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f2791a05d3d4fe66
+// generated-sha256: 7e52200dd3267c67
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 23:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 23:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11001,6 +11001,8 @@ const ENEMY_ACTION_DEFINITIONS = [
 //   そのぶん敵を落としにくく(再生を厚く)し、休めるターン(行動なし)を戻してある。
 const TACTICS_SWEEP_MULT = 1.2;       // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
+// 手札を1枚捨てるごとに、立っている味方それぞれの最大ガッツのこの割合を回復する(2026-10-05 ユーザー指示)
+const TACTICS_DISCARD_GUTS_RATE = 0.05;
 const TACTICS_RUSH_MULT = 1.2;        // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
 const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードは1枚につき1ヒットを受け止める
 const TACTICS_PIERCE_MULT = 0.8;      // ガードを無視する。効かないぶん倍率で加減する
@@ -21530,6 +21532,31 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'thunder',
     conditions: Object.freeze(['notActive']),
   }),
+  // ★2026-10-05 ユーザー指示(プラントのEX)。名前は「緑のめぐみ」。「5ターンの間、味方全員、力10%、丈夫さ10%、
+  //   ライフ自動回復+10%、ガッツ自動回復+10%」。回数はラン5回(ユーザー選択)。カードとの併用は指定が無かったので「併用できる」。
+  //   力・丈夫さは+10%(切り捨て)、自動回復は「いまの率 + 10%」(ガッツ全開っちーと同じく固定値で足す)。味方全員が対象
+  Plant: Object.freeze({
+    id: 'plant_green_blessing',
+    name: '緑のめぐみ',
+    useNote: '5ターン 味方全員 力・丈夫さ+10%・自動回復+10%',
+    desc: '5ターンのあいだ、味方全員が緑の力に包まれる。\n・味方全員のちから・丈夫さが+10%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の10%ぶん多くなる\n・使った子が倒れても効果は続く',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    partyBoost: Object.freeze({ statRate: 0.1, hpRegen: 0.1, gutsRegen: 0.1 }),
+    effect: 'partyBoost',
+  }),
+  // ★2026-10-05 ユーザー選択(オボロゲソウのEX)。案「おぼろ返し」・ラン5回(ターン数は案のとおり3ターン)。
+  //   特性「吸収」(被ダメージをライフとガッツへ変える)の味方全員版: 3ターンのあいだ、味方が敵の攻撃で受けたダメージの
+  //   50%を、受けた子のライフへすぐ回復し、ガッツも受けたダメージの5%ぶん回復する。カードとの併用は指定が無かったので「併用できる」。
+  //   倒れた子には回復しない(ダメージで倒れたら、そのまま)
+  Oboro: Object.freeze({
+    id: 'oboro_misty_return',
+    name: 'おぼろ返し',
+    useNote: '3ターン 受けたダメージの50%がライフに戻る',
+    desc: '3ターンのあいだ、受けたダメージを回復に変える。\n・味方が敵の攻撃で受けたダメージの50%を、受けた子のライフへすぐ回復する\n・ガッツも、受けたダメージの5%ぶん回復する\n・倒れた子には回復しない\n・使った子が倒れても効果は続く',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    damageBack: Object.freeze({ hpRate: 0.5, gutsRate: 0.05 }),
+    effect: 'damageBack',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -21595,7 +21622,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -21655,6 +21682,10 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    damageBack: raw.damageBack && typeof raw.damageBack === 'object'
+      ? { hpRate: Math.max(0, Number(raw.damageBack.hpRate) || 0), gutsRate: Math.max(0, Number(raw.damageBack.gutsRate) || 0) } : null,
+    partyBoost: raw.partyBoost && typeof raw.partyBoost === 'object'
+      ? { statRate: Math.max(0, Number(raw.partyBoost.statRate) || 0), hpRegen: Math.max(0, Number(raw.partyBoost.hpRegen) || 0), gutsRegen: Math.max(0, Number(raw.partyBoost.gutsRegen) || 0) } : null,
     thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0
       ? { chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)), dmg: Math.max(0, Number(raw.thunder.dmg) || 0), crit: Math.max(0, Number(raw.thunder.crit) || 0), comboRate: Math.max(0, Number(raw.thunder.comboRate) || 0), dodge: Math.max(0, Number(raw.thunder.dodge) || 0), regenHp: Math.max(0, Number(raw.thunder.regenHp) || 0), regenGuts: Math.max(0, Number(raw.thunder.regenGuts) || 0) } : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
@@ -21812,6 +21843,8 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
       pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
       thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,
+      partyBoostCfg: def.partyBoost ? { ...def.partyBoost } : null,
+      damageBackCfg: def.damageBack ? { ...def.damageBack } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -22168,7 +22201,42 @@ const recordTacticsExDodge = (state, units, slot, now) => {
   const mine = safe.effects[slot];
   return { ...safe, effects: { ...safe.effects, [slot]: { ...mine, dodges: tacticsSafeInt(mine.dodges, 0) + 1 } } };
 };
+// 緑のめぐみ(partyBoost)が効いているとき、味方全員のちから・丈夫さへ上乗せする倍率(+statRate)。効いていなければ 0
+const tacticsExPartyStatRate = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// おぼろ返し(damageBack)が効いているとき、味方が敵の攻撃で受けたダメージのうち、ライフ・ガッツへ回復する割合。効いていなければ 0
+const tacticsExDamageBackRates = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'damageBack' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
+    const hp = Number(e.damageBackCfg && e.damageBackCfg.hpRate), guts = Number(e.damageBackCfg && e.damageBackCfg.gutsRate);
+    return { hp: acc.hp + (Number.isFinite(hp) && hp > 0 ? hp : 0), guts: acc.guts + (Number.isFinite(guts) && guts > 0 ? guts : 0) };
+  }, { hp: 0, guts: 0 });
+};
+// 緑のめぐみのターン終わりの自動回復(味方全員へ足す率)。kind … 'hp' か 'guts'
+const tacticsExPartyBoostRegenRate = (state, now, kind = 'hp') => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'partyBoost' || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyBoostCfg && (kind === 'guts' ? e.partyBoostCfg.gutsRegen : e.partyBoostCfg.hpRegen));
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
+  const own = applyTacticsExOwnStats(unit, state, slot, now);
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  return party > 0 ? { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)), def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) } : own;
+};
+const applyTacticsExOwnStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
   if (kind === 'allIn') {
@@ -31450,6 +31518,38 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
     document.body
   );
 };
+// ===== カードを「捨てる」エリア(タクティクス・2026-10-05 ユーザー案) =====
+// カードをつかんだあいだ、味方のスロットの列を「アクション」、その上(敵側)を「捨てる」エリアとして薄く出す。
+// 敵のエリアへ離すと、使わずに捨てて行動回数を1つ使い、味方全体のガッツが各自の最大の5%ずつ戻る。
+// 範囲は画面の実際の位置(スロットの列の上端)で決める。判定(inTacticsDiscardZone)と表示で同じ関数を通す
+const tacticsDiscardGeo = () => {
+  if (typeof document === 'undefined') return null;
+  const rects = [...document.querySelectorAll('[data-slot-index]')].map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+  if (rects.length === 0) return null;
+  const slotTop = Math.min(...rects.map(r => r.top)) - 6;
+  const slotBottom = Math.max(...rects.map(r => r.bottom)) + 6;
+  const ring = document.querySelector('[data-enemy-ring],[data-moo-stage]');
+  const ringTop = ring ? ring.getBoundingClientRect().top - 24 : 0;
+  return { enemyTop: Math.max(0, Math.min(ringTop, slotTop - 40)), slotTop, slotBottom };
+};
+const inTacticsDiscardZone = (x, y) => {
+  const g = tacticsDiscardGeo();
+  return !!g && y >= g.enemyTop && y < g.slotTop;
+};
+const TacticsDiscardZones = ({ full, used, limit }) => {
+  const g = tacticsDiscardGeo();
+  if (!g || typeof ReactDOM === 'undefined') return null;
+  const base = { position: 'fixed', left: 8, right: 8, pointerEvents: 'none', zIndex: 69000, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: 900, transition: 'background .12s, border-color .12s' };
+  return ReactDOM.createPortal(<div data-discard-zones aria-hidden="true">
+    <style>{'[data-discard-zone][data-hover="true"]{background:rgba(251,191,36,.30)!important;border-color:rgba(253,230,138,.95)!important}'}</style>
+    <div data-discard-zone style={{ ...base, top: g.enemyTop, height: Math.max(0, g.slotTop - g.enemyTop), background: 'rgba(251,191,36,.10)', border: '2px dashed rgba(251,191,36,.55)', color: 'rgba(253,230,138,.9)', fontSize: 13, opacity: full ? 0.45 : 1 }}>
+      <span>{full ? `行動回数がいっぱい(${used}/${limit})` : <>ここへ離すと捨てる<br /><span style={{ fontSize: 10 }}>行動回数を1つ使い、味方全体のガッツが最大の5%回復</span></>}</span>
+    </div>
+    <div style={{ ...base, top: g.slotTop, height: Math.max(0, g.slotBottom - g.slotTop), background: 'rgba(56,189,248,.07)', border: '2px dashed rgba(56,189,248,.45)', color: 'rgba(186,230,253,.55)', fontSize: 11, alignItems: 'flex-start', paddingTop: 2 }}>
+      <span>アクション(味方へ置いて使う)</span>
+    </div>
+  </div>, document.body);
+};
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -31493,7 +31593,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
@@ -33229,13 +33329,14 @@ function BattleScreen({
           <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
             {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                 「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
-            <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
+            <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{Array.isArray(tacticsUnits)?actionUsed:selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
             <div className="flex items-center gap-0.5 shrink-0">
               <button data-battle-view-button onClick={()=>setShowDeckInfo(true)} className={`flex h-8 items-center gap-0.5 px-2 bg-white/[.035] rounded-[10px] border border-white/[.08] shadow-[inset_0_1px_0_rgba(255,255,255,.04)] active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[10px]">VIEW</span></button>
               {/* 緊急回復(2026-09-22 ユーザー指示「緊急回復は手札側の効果だから位置を変えたい」)。
                   ★もとは敵の絵の左に置いていたが、あの列は「敵や自分を見る」入口を並べた場所。
                     緊急はその場で使う行動なので、カードと同じ操作の列へ移した。
                   ★AUTO の左に置く。実行(Action)のすぐ隣だと押し間違える */}
+              
               <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-[10px] border border-blue-300/55 bg-blue-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_0_10px_rgba(59,130,246,.12)] leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
               {/* モンビーへの入口(クイックモードだけ)。音に関わる入口なので、この並びに残す */}
               <div className="shrink-0 flex flex-col gap-0.5">
@@ -33245,14 +33346,14 @@ function BattleScreen({
                 <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={cycleBattleAuto} aria-pressed={autoBattle} aria-label={`AUTO ${autoRepeat?'∞':autoBattle?'ON':'OFF'}`} className={`h-8 w-full px-1 rounded-[10px] border font-black text-[10px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat?'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]':autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-white/[.12] bg-white/[.035] text-slate-300'}`}><span className="block">AUTO</span><span className="block text-[10px]">{autoRepeat?'∞':autoBattle?'ON':'OFF'}</span></button>
                 {battleScreenActive&&isQuickMode(runMode)&&autoRepeat===true&&<button type="button" onClick={cycleEcoMode} aria-label={`省エネ ${ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}`} className={`min-h-[24px] w-full rounded-md border font-black text-[10px] leading-[9px] active:scale-90 ${ecoMode==='lite'?'border-emerald-300 bg-emerald-700 text-emerald-50':ecoMode==='ultra'?'border-lime-200 bg-lime-500 text-slate-950':'border-slate-500 bg-slate-700 text-slate-200'}`}><span className="block">省エネ</span><span className="block">{ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}</span></button>}
               </div>
-              {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; // 押せないときは**理由**を出す(2026-09-18・ユーザー依頼「各コマンドをもっとよくしたい」)。
+              {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const discardCount=Array.isArray(tacticsUnits)&&discardCards?discardCards.length:0; const canAct=!autoBattle&&!isBusy&&(selectedCards.length+discardCount)>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; // 押せないときは**理由**を出す(2026-09-18・ユーザー依頼「各コマンドをもっとよくしたい」)。
                 // 灰色になるだけでは「何が足りなくて押せないのか」が分からず、
                 // カードを選んだのに置き場所を決めていない、という取りこぼしに気づけなかった。
                 // 押せるときの字は Action のまま(検査がこの字でボタンを押している)。
-                const actionHint=canAct?null:(autoBattle||isBusy?null:(selectedCards.length===0?'カードを選ぶ':(!allAttackAssigned?'置き場所を選ぶ':null)));
+                const actionHint=canAct?null:(autoBattle||isBusy?null:(selectedCards.length+discardCount===0?'カードを選ぶ':(!allAttackAssigned?'置き場所を選ぶ':null)));
                 // ★EXスキルを使ったターンは、カードを選ばずに敵の番へ進められる(タクティクス専用)。
                 //   併用できないEXを使ったターンはカードを選べないので、ここが無いとターンを終えられない
-                if(tacticsExTurnUsed&&passTacticsTurn&&selectedCards.length===0&&!autoBattle&&!isBusy&&pendingCard===null){
+                if(tacticsExTurnUsed&&passTacticsTurn&&selectedCards.length===0&&discardCount===0&&!autoBattle&&!isBusy&&pendingCard===null){
                   return(<button data-tactics-ex-pass onClick={()=>passTacticsTurn()} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-[14px] font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${battleTutorialSpotClass('action')} bg-fuchsia-200 text-black shadow-[0_0_15px_rgba(232,121,249,0.45)]`}><Play fill="currentColor" size={12}/> ターンを進める</button>);
                 }
                 return(<button data-battle-action onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint?'':' uppercase'}${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':(actionHint?'bg-slate-800 text-slate-300 border-white/20':'bg-slate-700 text-slate-500 opacity-50')}`}><Play fill="currentColor" size={12}/> {actionHint||'Action'}</button>);})()}
@@ -33288,6 +33389,7 @@ function BattleScreen({
                     見た目は data-tactics-look の CSS(70-bootstrap)がまとめて持つ。★消費ガッツはこの宝石だけに出す
                     (下のガッツの段と二重になっていた・ユーザー指摘「消費ガッツが2つある」) */}
                 {tacticsNewLayout&&<><span aria-hidden="true" data-card-pattern={(tacticsCardGenre&&tacticsCardGenre(c))||''}/><span aria-hidden="true" data-card-shine/><span aria-hidden="true" data-card-frame/><span data-card-gem aria-label={`消費ガッツ ${curGuts}`}>{curGuts}</span></>}
+                {discardCards&&discardCards.includes(i)&&(<div data-card-discard className="absolute inset-0 z-30 flex items-center justify-center rounded-[inherit] bg-black/60 text-[12px] font-black text-amber-200">捨てる</div>)}
                 {isSel&&!assignedMon&&(<div className={`absolute top-0.5 ${tacticsNewLayout?'right-0.5':'left-0.5'} z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg`}><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
                 {/* ★data-decoration は「これは絵であって読むものではない」という目じるし。
@@ -33340,7 +33442,7 @@ function BattleScreen({
               //   以前は古い見た目の写しを別に出していて、本物と写しの2枚を毎回描いていた。
               //   手札の飾り(金の縁・宝石など)は [data-tactics-look] の下でだけ効くので、同じ印を付けた箱で包む。
               //   body の直下なのは、画面の揺れ(transform)の影響を受けないようにするため
-              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">{isDragging?ReactDOM.createPortal(<div data-drag-card-layer data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>{handCardButton}</div>,document.body):handCardButton}{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{/* ★使えない理由の赤い札は、絵(アイコン)の下の端にそろえて置く。新しい盤面では左上に消費ガッツの宝石があり、
+              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">{isDragging&&Array.isArray(tacticsUnits)&&<TacticsDiscardZones full={actionUsed-(isSel?1:0)>=cardLimit} used={actionUsed} limit={cardLimit}/>}{isDragging?ReactDOM.createPortal(<div data-drag-card-layer data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>{handCardButton}</div>,document.body):handCardButton}{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{/* ★使えない理由の赤い札は、絵(アイコン)の下の端にそろえて置く。新しい盤面では左上に消費ガッツの宝石があり、
                     カードの上の端(top-1)に置くと宝石の数字を隠していた(2026-09-27・文字の重なりの検査で見つけた) */}
               {cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} style={tacticsNewLayout?{top:`calc(4px + ${HAND_CARD_FIT.iconTop} + ${HAND_CARD_FIT.icon} - 15px)`}:undefined} className={`pointer-events-none absolute inset-x-0.5 ${tacticsNewLayout?'':'top-1'} z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]`}>{cardBlock.short}</div>)}</div>);
             })}
@@ -38552,6 +38654,11 @@ function MonsterHeroGame() {
   // rosterと同じ安定IDだけを正式なラン開始時に記録する（AUTO∞からの利用は5B以降）。
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
+  // ★手札を使わずに捨てる(タクティクス専用・2026-10-05 ユーザー指示)。行動回数(cardLimit)を1枚ぶん使い、
+  //   捨てた枚数×(各自の最大ガッツの5%)を、立っている味方ぜんぶのガッツへ回復する。
+  //   カードをつかんで敵のエリアへ離すと捨てる札に入る(味方のエリアへ離すと今までどおり使う)。
+  //   discardCards は捨てると決めた手札の位置。捨てる札をタップすると取り消せる
+  const [discardCards, setDiscardCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
   // ★ターンの演出(processTurn→handleEnemyTurn)は await battleWait で繋いだ長い一本道で、
   //   途中で止める手立てが無かった。その最中にランを片付ける(returnToHome)と、
@@ -39205,10 +39312,12 @@ function MonsterHeroGame() {
     let units = alive.units, hp = alive.hp, guts = alive.guts;
     const live = tacticsExLiveRef.current;
     // ★世界樹の守りは味方全員のライフを上限の20%ぶん多く回復する(効いている子の分を足し合わせる)
-    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) : 0;
+    // ★プラントの緑のめぐみは、味方全員のライフ・ガッツの自動回復へ10%ずつ足す
+    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) + tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'hp') : 0;
+    const partyGutsBoost = live.enabled ? tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'guts') : 0;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
       const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
-      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts') + partyGutsBoost;
       if (hpBoost + partyHpBoost <= 0 && gutsBoost <= 0) return;
       const extra = rateHealTacticsAt(units, slotIdx, hpBoost + partyHpBoost, gutsBoost);
       units = extra.units; hp += extra.hp; guts += extra.guts;
@@ -43029,6 +43138,8 @@ function MonsterHeroGame() {
         setDragState(prev=>prev?{...prev,x,y,active}:null);
       }
       if(active){ setDragOverSlot(findSlot(x,y)); }
+      // 捨てるエリア(敵側)の上にいるあいだ、その枠を濃くする(位置は引きずり中に動くので直接つける)
+      if(active){ const hit=inTacticsDiscardZone(x,y)&&findSlot(x,y)==null; document.querySelectorAll('[data-discard-zone]').forEach(el=>{ if(hit) el.setAttribute('data-hover','true'); else el.removeAttribute('data-hover'); }); }
       if(active&&e.cancelable) e.preventDefault();
     };
     const onUp=(e)=>{
@@ -43040,7 +43151,9 @@ function MonsterHeroGame() {
         // iOS Safariを含むブラウザがpointerup後に生成するclickを、配置先に届く前に捨てる。
         suppressCardClickRef.current=Date.now()+500;
         const si=findSlot(pt.clientX,pt.clientY);
-        if(si!=null){
+        if(si==null&&isTacticsMode(runMode)&&inTacticsDiscardZone(pt.clientX,pt.clientY)){
+          dragDiscardCard(cardIndex);
+        } else if(si!=null){
           dragAssignToSlot(cardIndex, si);
           setSlotSettle(si);
           setTimeout(()=>{ setSlotSettle(null); }, 500);
@@ -46775,6 +46888,8 @@ function MonsterHeroGame() {
   // ★ミーアの「オン・ステージ！」が効いているあいだ、盤面ぜんぶで1ターンに使える枚数が増える(上限5は変えない。2026-10-03)
   const exCardBonus = isTacticsMode(runMode) ? tacticsExCardBonusTotal(tacticsExState,tacticsUnits,{ wave, turn:turnCount }) : 0;
   const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus+exCardBonus);
+  // 行動回数の使用済み = 使うカード + 捨てるカード(捨てるのは新モードだけなので、ほかは今までと同じ数)
+  const actionUsed = selectedCards.length + discardCards.length;
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
@@ -48154,11 +48269,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   合計で灰色にしていたころは、枠に合わせてはじめて使えないと分かり、理由も出なかった
   const tacticsCardBlock = (card, cardIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return null;
-    if(cardIndex!=null&&selectedCards.includes(cardIndex)) return { ok:true, kind:null, short:null, why:null };
+    if(cardIndex!=null&&(selectedCards.includes(cardIndex)||discardCards.includes(cardIndex))) return { ok:true, kind:null, short:null, why:null };
     if(tacticsUsableSlots(card,cardIndex).length>0){
       // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
       //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
-      return selectedCards.length>=cardLimit
+      return actionUsed>=cardLimit
         ? { ok:false, kind:'limit', short:null, why:`1ターンに選べるカードは ${cardLimit} 枚まで` }
         : { ok:true, kind:null, short:null, why:null };
     }
@@ -48209,6 +48324,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const selectCardAt = (i, showDetail = true) => {
     if(isBusy||autoBattleRef.current) return;
     const c=hand[i]; if(!c) return;
+    // 捨てる札にしたカードをタップしたら、捨てるのを取り消す
+    if(discardCards.includes(i)){ setFocusedCard(null); setDiscardCards(p=>p.filter(x=>x!==i)); return; }
     if(showDetail){
       const now=Date.now(), last=cardTapRef.current;
       if(last.i===i&&now-last.t<=CARD_DOUBLE_TAP_MS){ cardTapRef.current={ i:null, t:0 }; setFocusedCard(c); return; }
@@ -48230,7 +48347,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const curGuts=pendingCardGuts(c);
       const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
       // ★併用できないEXを使った子は tacticsUsableSlots が外すので、ここで別に見なくてよい
-      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit;
+      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && actionUsed<cardLimit;
       if(isSelectable){
         Audio_.se.card();
         setSelectedCards(p=>[...p,i]);
@@ -48242,11 +48359,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
   };
 
+  // カードを敵のエリアへ離したとき、使わずに捨てる札へ入れる(タクティクス専用)。
+  // 使うカードと行動回数(cardLimit)を分け合う。すでに使うカードに選んでいた札は、選びを外してから捨てる
+  const dragDiscardCard = (cardIndex) => {
+    if(isBusy||autoBattleRef.current||!isTacticsMode(runMode)||battleScenarioRef.current) return;
+    const c=hand[cardIndex]; if(!c||discardCards.includes(cardIndex)) { setFocusedCard(null); return; }
+    const wasSelected=selectedCards.includes(cardIndex);
+    if(actionUsed-(wasSelected?1:0)>=cardLimit){ setFocusedCard(null); return; }
+    Audio_.se.card();
+    if(wasSelected){
+      setSelectedCards(p=>p.filter(x=>x!==cardIndex));
+      setCardAssignments(p=>{const n={...p}; delete n[cardIndex]; return n;});
+      if(pendingCard===cardIndex) setPendingCard(null);
+    }
+    setDiscardCards(p=>[...p,cardIndex]);
+    setFocusedCard(null);
+  };
   // ドラッグでカードをスロットに割り当て。
   // スワイプ操作ではカード効果のパネルを出さない(出したままだと合計DMG・合計軽減が隠れるため)。
   // 効果を見たいときはカードをタップする。
   const dragAssignToSlot = (cardIndex, slotIdx) => {
     if(isBusy||autoBattleRef.current) return;
+    if(discardCards.includes(cardIndex)) { setFocusedCard(null); return; }
     const c=hand[cardIndex]; if(!c) return;
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
@@ -48265,7 +48399,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const alreadySelected=selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if(!alreadySelected){
-        if(selectedCards.length>=cardLimit){ setFocusedCard(null); return; }
+        if(actionUsed>=cardLimit){ setFocusedCard(null); return; }
         if(!tacticsMode){
           const curGuts=getCardGuts(c,slotIdx);
           const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
@@ -48992,6 +49126,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const fd=applyImmediateTakenReduction(hit.taken,slotIdx);
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
                 fx.dmg=(fx.dmg||0)+fd;
+                // ★オボロゲソウの「おぼろ返し」: 受けたダメージの一部を、その子のライフ・ガッツへすぐ戻す(倒れた子には戻さない)
+                const back=tacticsExDamageBackRates(tacticsExStateRef.current,tacticsExLiveRef.current.now);
+                const afterHit=normalizeTacticsUnit(units[slotIdx]);
+                if(fd>0&&(back.hp>0||back.guts>0)&&afterHit&&!afterHit.downed){
+                  const backHp=Math.floor(fd*back.hp), backGuts=Math.floor(fd*back.guts);
+                  units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,backHp),slotIdx,backGuts);
+                  fx.heal=(fx.heal||0)+backHp; fx.guts=(fx.guts||0)+backGuts;
+                }
                 // ★連撃は**発ごとの通る量**をそのまま出す(2026-09-22 ユーザー指摘
                 //   「ガード1枚でしたけど連撃分全部のダメージが同じだった」)。
                 //   合計を均等に割ると、ガードが効いた発も効いていない発も同じ数字になり、
@@ -49573,7 +49715,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ? explicitEntries.filter(entry=>entry&&Number.isInteger(entry.handIndex)&&hand[entry.handIndex]&&entry.card===hand[entry.handIndex])
         .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
       : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
-    if (isBusy||!enemy||usedCardEntries.length===0) return;
+    // 捨てる札(タクティクスだけ・明示entriesのAUTOでは使わない)。使う札と同じ手札の位置を取り合わない
+    const discardIdx=(!hasExplicitEntries&&isTacticsMode(runMode))
+      ? discardCards.filter(i=>hand[i]&&!usedCardEntries.some(e=>e.handIndex===i)) : [];
+    if (isBusy||!enemy||(usedCardEntries.length===0&&discardIdx.length===0)) return;
     // 併用できないEXを使った子のカードは使えない(AUTOの明示の選択もここで止める)。ほかの子のカードは使える
     if (usedCardEntries.some(entry=>tacticsExLocked.includes(entry.slotIdx))) return;
     // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
@@ -50087,11 +50232,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
     const drawCount=usedCards.filter(c=>c.type==='draw').length;
     setTacticsPandoraForms({}); // カードを切り終えたら本体の姿へ戻す
-    const usedHandIndexes=new Set(usedCardEntries.map(entry=>entry.handIndex));
+    const discardedCards=discardIdx.map(i=>hand[i]);
+    // ★捨てたぶんのガッツ回復: 捨てた枚数×5% を、立っている子それぞれの「自分の最大ガッツ」に掛けて配る
+    if(discardedCards.length>0){
+      let units=tacticsUnitsRef.current; const gutsMap={};
+      tacticsAliveSlots(units).forEach(i=>{
+        const v=normalizeTacticsUnit(units[i]);
+        const g=Math.max(0,Math.min(v.maxGuts-v.guts,Math.floor(v.maxGuts*TACTICS_DISCARD_GUTS_RATE*discardedCards.length)));
+        if(g>0){ units=recoverTacticsGutsAt(units,i,g); gutsMap[i]=g; }
+      });
+      commitTacticsUnits(units); mergeTacticsSlotFx({},gutsMap);
+      pushBattleLog(`手札を${discardedCards.length}枚捨てた。味方全体のガッツが最大の${Math.round(TACTICS_DISCARD_GUTS_RATE*discardedCards.length*100)}%ぶん回復`,'ally');
+    }
+    const usedHandIndexes=new Set([...usedCardEntries.map(entry=>entry.handIndex),...discardIdx]);
     let nextHand=hand.filter((_,i)=>!usedHandIndexes.has(i));
-    let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards];
+    let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards,...discardedCards];
     const replenish=(count)=>{for(let i=0;i<count;i++){if(nextDeck.length===0){if(nextGraveyard.length===0)break; nextDeck=[...nextGraveyard].sort(()=>Math.random()-0.5); nextGraveyard=[];} if(nextDeck.length>0)nextHand.push(nextDeck.pop());}};
-    replenish(usedCardEntries.length+drawCount);
+    replenish(usedCardEntries.length+discardedCards.length+drawCount);
     // ★ミーアのボルテージ: 使ったカードの枚数だけたまる(2026-10-03。効果が切れていれば何も起きない)
     if(isTacticsMode(runMode)&&usedCardEntries.length>0){
       const stNow=tacticsExStateRef.current;
@@ -50120,7 +50277,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   更新関数は「同じ入力なら同じ結果」でなければならないので、純関数を通す
     if(isTacticsMode(runMode)) setTurnBuffs(p=>(p.bySlot?{...p,bySlot:clearTacticsSlotFlag(p.bySlot,'zeroGuts')}:p));
     writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
-    setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
+    setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];
     { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
@@ -50192,7 +50349,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setAutoBattle(next);
     if(next){
       // 手動操作の途中状態はAUTOの明示entriesと混ぜず、開始時にまとめて破棄する。
-      setSelectedCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);
+      setSelectedCards([]);setDiscardCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);
       setDragState(null);cardDragActiveRef.current=false;
       setAutoTurnCycle(n=>n+1);
     }
@@ -50862,7 +51019,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
 
@@ -56883,7 +57040,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}

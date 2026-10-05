@@ -66,7 +66,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
       // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
-      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora']));
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora','Plant']));
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     await page.route(/supabase\.co/, (route) => route.abort());
@@ -573,6 +573,30 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await tapSlot(unSlot);
     p = await panel();
     check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
+    // --- ⑫-3 オボロゲソウ「おぼろ返し」(2026-10-05 ユーザー選択) ---
+    const obSlot = await startWith('オボロゲソウ');
+    await page.waitForTimeout(1500);
+    await tapSlot(obSlot);
+    p = await panel();
+    check('「おぼろ返し」: 5/5・カードと併用できる・3ターン', !!p && p.name === 'おぼろ返し' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    check('使うと距離枠の札が「あと3ターン」になる', await page.locator(`[data-tactics-ex-mark="${obSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと3ターン');
+
+    // --- ⑫-2 プラント「緑のめぐみ」(2026-10-05 ユーザー指示) ---
+    const plSlot = await startWith('プラント');
+    await page.waitForTimeout(1500);
+    await tapSlot(plSlot);
+    p = await panel();
+    check('「緑のめぐみ」: 5/5・カードと併用できる・5ターン', !!p && p.name === '緑のめぐみ' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /5ターン/.test(p.text), p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    check('使うと距離枠の札が「あと5ターン」になる', await page.locator(`[data-tactics-ex-mark="${plSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと5ターン');
+    await tapSlot(plSlot);
+    p = await panel();
+    check('詳細が「効果中・あと5ターン」で、ちから／丈夫さが「EXで変化中」になる', !!p && /効果中・あと5ターン/.test(p.text) && /EXで変化中/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
     // --- ⑫ ライガー「雷狼影」(2026-10-05 ユーザー指示) ---
