@@ -213,7 +213,7 @@ function MasuLevelCapCompensation({
   levelCapCompensation, onCloseLevelCapCompensation,
 }) {
   return (
-<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-amber-400 bg-slate-900 p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={onCloseLevelCapCompensation} className="w-full min-h-[52px] rounded-2xl bg-amber-500 text-sm font-black text-black active:scale-[.98]">受け取る</button></div></div>
+<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,paddingTop:'max(20px, env(safe-area-inset-top))',paddingBottom:'max(20px, env(safe-area-inset-bottom))',zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-amber-400 bg-slate-900 p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={onCloseLevelCapCompensation} className="w-full min-h-[52px] rounded-2xl bg-amber-500 text-sm font-black text-black active:scale-[.98]">受け取る</button></div></div>
   );
 }
 
@@ -221,7 +221,7 @@ function MasuInheritedUniqueCompensation({
   setInheritedUniqueCompensation,
 }) {
   return (
-<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:49999,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-fuchsia-400 bg-slate-900 p-6 text-center"><div className="text-4xl mb-3">🌈</div><h2 className="font-black text-lg mb-2">お詫びの配布</h2><p className="text-[11px] text-slate-300 leading-relaxed">継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。</p><button onClick={()=>setInheritedUniqueCompensation(false)} className="mt-5 w-full min-h-[52px] rounded-2xl bg-fuchsia-500 text-sm font-black text-white active:scale-[.98]">確認</button></div></div>
+<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,paddingTop:'max(20px, env(safe-area-inset-top))',paddingBottom:'max(20px, env(safe-area-inset-bottom))',zIndex:49999,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-fuchsia-400 bg-slate-900 p-6 text-center"><div className="text-4xl mb-3">🌈</div><h2 className="font-black text-lg mb-2">お詫びの配布</h2><p className="text-[11px] text-slate-300 leading-relaxed">継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。</p><button onClick={()=>setInheritedUniqueCompensation(false)} className="mt-5 w-full min-h-[52px] rounded-2xl bg-fuchsia-500 text-sm font-black text-white active:scale-[.98]">確認</button></div></div>
   );
 }
 
