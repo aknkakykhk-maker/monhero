@@ -141,26 +141,29 @@ const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
 // 「1戦あたりの最大ダメージ」ランキング(A・B共通。kind は 'a' か 'b')。サーバーのビュー raid_jack_max_hit_ranking
 // (docs/sql/raid/RAID_JACK_MAX_HIT_RANKING.sql)。1戦の与ダメージ = 表の1行なので、人ごとに max(damage) を取る。
 // まだビューが無い間は null を返し、画面は「準備中」にする。報酬には使わない
-const sbFetchRaidJackMaxHitRanking = async (kind, limit = 100, eventId) => {
-  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+// 難易度で絞るとき(tier=1〜5)は難易度別のビュー raid_jack_max_hit_by_tier(docs/sql/raid/RAID_JACK_MAX_HIT_BY_TIER.sql)、tier=0 か未指定は全難易度のビューを読む
+const raidJackMaxHitSource = (kind, tier) => {
+  const t = Math.floor(Number(tier)) || 0;
   const k = kind === 'b' ? 'b' : 'a';
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&select=breeder_id,max_damage,last_hit_at&order=max_damage.desc,last_hit_at.asc&limit=${n}`));
+  return t >= 1 && t <= 5 ? `raid_jack_max_hit_by_tier?kind=eq.${k}&tier=eq.${t}` : `raid_jack_max_hit_ranking?kind=eq.${k}`;
+};
+const sbFetchRaidJackMaxHitRanking = async (kind, limit = 100, eventId, tier = 0) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const rows = raidJackParseRows(await raidJackRequest(`${raidJackMaxHitSource(kind, tier).replace('?', `?${raidJackEventParam(eventId)}&`)}&select=breeder_id,max_damage,last_hit_at&order=max_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.max_damage) || 0 })) : null;
 };
 // 自分の最大ダメージ(無ければ 0・読めなければ null)
-const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId) => {
+const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId, tier = 0) => {
   const id = raidJackSafeId(breederId);
   if (!id) return null;
-  const k = kind === 'b' ? 'b' : 'a';
-  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&breeder_id=eq.${id}&select=max_damage&limit=1`));
+  const rows = raidJackParseRows(await raidJackRequest(`${raidJackMaxHitSource(kind, tier).replace('?', `?${raidJackEventParam(eventId)}&`)}&breeder_id=eq.${id}&select=max_damage&limit=1`));
   if (!rows) return null;
   return rows.length ? (Number(rows[0].max_damage) || 0) : 0;
 };
 // 最大ダメージで自分より上の人数(順位 = これ + 1)
-const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId) => {
+const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId, tier = 0) => {
   const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
-  const k = kind === 'b' ? 'b' : 'a';
-  const result = await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&max_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  const result = await raidJackRequest(`${raidJackMaxHitSource(kind, tier).replace('?', `?${raidJackEventParam(eventId)}&`)}&max_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
   if (!result.ok) return null;
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
   const m = /\/(\d+)$/.exec(String(range || ''));

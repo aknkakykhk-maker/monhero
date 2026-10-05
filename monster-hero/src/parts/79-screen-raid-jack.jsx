@@ -147,6 +147,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
   const [myId, setMyId] = useState(null);
   const [ahead, setAhead] = useState(null);
   const [myMax, setMyMax] = useState(null);
+  const [maxTier, setMaxTier] = useState(0);       // 最大ダメージの難易度(0=全難易度 / 1〜5)
   const useAll = !maxHit && tab === 'a' && allMode && bossDown;
   useEffect(() => {
     let alive = true;
@@ -158,7 +159,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
       if (!alive) return;
       setSelf(mine);
-      const list = maxHit ? await sbFetchRaidJackMaxHitRanking(tab, 100, eventId)
+      const list = maxHit ? await sbFetchRaidJackMaxHitRanking(tab, 100, eventId, maxTier)
         : useAll ? await sbFetchRaidJackARanking(100, eventId)
         : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
       if (!alive) return;
@@ -166,10 +167,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
       if (!alive) return;
       setRows(list);
       if (list && maxHit) {
-        const best = meId ? await sbFetchRaidJackMaxHitSelf(meId, tab, eventId) : null;
+        const best = meId ? await sbFetchRaidJackMaxHitSelf(meId, tab, eventId, maxTier) : null;
         if (!alive) return;
         setMyMax(best);
-        const count = best > 0 ? await sbCountRaidJackMaxHitAhead(tab, best, eventId) : null;
+        const count = best > 0 ? await sbCountRaidJackMaxHitAhead(tab, best, eventId, maxTier) : null;
         if (alive) setAhead(count);
       } else if (list && mine) {
         const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (mine.a[tierIdx + 1] || 0) : mine.bTotal;
@@ -178,9 +179,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
       }
     })();
     return () => { alive = false; };
-  }, [tab, tierIdx, useAll, maxHit, eventId]);
+  }, [tab, tierIdx, useAll, maxHit, maxTier, eventId]);
   const myTotal = maxHit ? (Number(myMax) || 0) : self ? (useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[tierIdx + 1] || 0) : self.bTotal) : 0;
-  const title = maxHit ? (tab === 'a' ? 'レイドバトルの最大ダメージ(1戦あたり)' : 'グランドスラムの最大ダメージ(1戦あたり)') : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  const maxTierName = maxTier >= 1 ? raidJackTiers(tab)[maxTier - 1].name : '全難易度';
+  const title = maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return (
     <div data-raid-jack-ranking-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3" role="dialog" aria-modal="true" aria-label="ジャックのランキング"
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
@@ -188,13 +190,21 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
         <div className="text-[14px] font-black text-orange-200">🏆 ジャックのランキング</div>
         <button type="button" data-raid-jack-ranking-close onClick={onClose} aria-label="ランキングを閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
       </div>
-      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={(next) => { setTab(next); setMaxTier(0); }} />
       <div data-raid-jack-ranking-kinds className="mb-2 flex shrink-0 gap-1.5 text-[10px] font-black">
         <button type="button" data-raid-jack-ranking-kind="total" onClick={() => setMaxHit(false)}
           className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{tab === 'a' ? '貢献・累計' : '累計ダメージ'}</button>
         <button type="button" data-raid-jack-ranking-kind="max" onClick={() => setMaxHit(true)}
           className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>1戦の最大ダメージ</button>
       </div>
+      {maxHit && (
+        <div data-raid-jack-ranking-max-tiers className="mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black">
+          {[{ id: 'all', name: '全難易度', n: 0 }, ...raidJackTiers(tab).map((t, i) => ({ id: t.id, name: t.name.replace('ジャック', ''), n: i + 1 }))].map((t) => (
+            <button type="button" key={t.id} data-raid-jack-ranking-max-tier={t.n} onClick={() => setMaxTier(t.n)}
+              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxTier === t.n ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name}</button>
+          ))}
+        </div>
+      )}
       {tab === 'a' && !maxHit && (
         <div data-raid-jack-ranking-tiers className="mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black">
           {RAID_JACK_A_TIERS.map((t, i) => (
@@ -212,7 +222,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
           <span className="font-black text-orange-200">{title}</span>
           {myTotal > 0 && <span data-raid-jack-ranking-mine className="shrink-0 text-[10px] text-slate-200">あなた {myTotal.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
         </div>
-        <div className="mb-2 text-[9px] text-slate-400">{maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
+        <div className="mb-2 text-[9px] text-slate-400">{maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
         {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
         {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
         {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
