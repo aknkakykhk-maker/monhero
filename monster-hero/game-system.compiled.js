@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7368a138770e74ed
+// source-sha256: 4897a6483b42d24b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 12:45";
+const BUILD_DATE = "2026-10-05 16:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33793,6 +33793,28 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'pandoraBox',
     conditions: Object.freeze(['notActive'])
   }),
+  Tiger: Object.freeze({
+    id: 'tiger_thunder_shadow',
+    name: '雷狼影',
+    useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 6,
+    thunder: Object.freeze({
+      chargeTurns: 3,
+      dmg: 0.3,
+      crit: 0.1,
+      comboRate: 0.1,
+      dodge: 0.05,
+      regenHp: 0.05,
+      regenGuts: 0.05
+    }),
+    effect: 'thunder',
+    conditions: Object.freeze(['notActive'])
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -33864,7 +33886,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -33922,6 +33944,15 @@ const normalizeTacticsExDef = raw => {
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0 ? {
+      chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)),
+      dmg: Math.max(0, Number(raw.thunder.dmg) || 0),
+      crit: Math.max(0, Number(raw.thunder.crit) || 0),
+      comboRate: Math.max(0, Number(raw.thunder.comboRate) || 0),
+      dodge: Math.max(0, Number(raw.thunder.dodge) || 0),
+      regenHp: Math.max(0, Number(raw.thunder.regenHp) || 0),
+      regenGuts: Math.max(0, Number(raw.thunder.regenGuts) || 0)
+    } : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
       const n = v => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.pandoraBox.devilCombo;
@@ -34178,6 +34209,10 @@ const applyTacticsExUse = (state, {
         pandoraBoxCfg: def.pandoraBox ? {
           ...def.pandoraBox
         } : null,
+        thunderCfg: def.thunder ? {
+          ...def.thunder
+        } : null,
+        thunder: 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -34244,7 +34279,15 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 };
 const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  if (!unit) return 0;
+  const kindNow = tacticsExActiveEffect(state, slot, unit.id, now);
+  if (kindNow === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now),
+      cfg = normalizeTacticsExState(state).effects[slot].thunderCfg;
+    const per = Number(cfg && (kind === 'guts' ? cfg.regenGuts : cfg.regenHp));
+    return t && t.phase === 'wrap' && Number.isFinite(per) && per > 0 ? t.charge * per : 0;
+  }
+  if (kindNow !== 'statBoost') return 0;
   const effect = normalizeTacticsExState(state).effects[slot];
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
@@ -34284,6 +34327,10 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
       label: '血踊'
     } : null;
   }
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.combo ? t.combo : null;
+  }
   if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0),
@@ -34298,15 +34345,73 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     rate
   };
 };
+const tacticsExThunderOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'thunder') return null;
+  const mine = normalizeTacticsExState(state).effects[slot],
+    cfg = mine.thunderCfg;
+  if (!cfg) return null;
+  const charge = Math.min(99, Math.max(0, tacticsSafeInt(mine.thunder, 0)));
+  const offset = tacticsSafeInt(now && now.turn, 0) - tacticsSafeInt(mine.turn, 0);
+  const chargeTurns = tacticsSafeInt(cfg.chargeTurns, 0),
+    total = tacticsSafeInt(mine.turns, 0);
+  const phase = offset < chargeTurns ? 'charge' : 'wrap';
+  const wrap = phase === 'wrap';
+  const num = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0;
+  return {
+    slot,
+    phase,
+    charge,
+    turnsLeft: Math.max(0, (wrap ? total : chargeTurns) - offset),
+    dmgMult: wrap ? 1 + charge * num(cfg.dmg) : 1,
+    critAdd: wrap ? charge * num(cfg.crit) : 0,
+    dodgeRate: wrap ? Math.min(0.9, charge * num(cfg.dodge)) : 0,
+    combo: wrap && charge > 0 && num(cfg.comboRate) > 0 ? {
+      count: charge,
+      rate: num(cfg.comboRate),
+      label: '雷纏'
+    } : null
+  };
+};
+const addTacticsExThunder = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  const t = tacticsExThunderOf(safe, units, slot, now);
+  if (!t || t.phase !== 'charge' || add <= 0) return safe;
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [slot]: {
+        ...safe.effects[slot],
+        thunder: Math.min(99, t.charge + add)
+      }
+    }
+  };
+};
 const tacticsExMultiBuffOf = (state, units, slot, now) => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
+  if (!unit) return null;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.phase === 'wrap' && t.charge > 0 ? {
+      dmg: t.dmgMult,
+      taken: 1,
+      critRate: 1,
+      critAdd: t.critAdd,
+      critDmg: 1,
+      distMult: 0
+    } : null;
+  }
+  if (kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot];
   const num = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0;
   return {
     dmg: 1 + num(own.dmgRate),
     taken: 1 - Math.min(0.9, num(own.selfTakenRate)),
     critRate: 1 + num(own.critRateRate),
+    critAdd: 0,
     critDmg: 1 + num(own.critDmgRate),
     distMult: num(own.distMult)
   };
@@ -71950,6 +72055,12 @@ function MonsterHeroGame() {
     const list = [own, gift, devil].filter(Boolean);
     return list.length === 0 ? null : list.length === 1 ? list[0] : list;
   };
+  const tacticsExThunderDodgeNow = slotIdx => {
+    const live = tacticsExLiveRef.current;
+    if (!live.enabled || !Number.isInteger(slotIdx)) return 0;
+    const t = tacticsExThunderOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now);
+    return t ? t.dodgeRate : 0;
+  };
   const tacticsExMultiBuffNow = slotIdx => {
     const live = tacticsExLiveRef.current;
     const mine = live.enabled && Number.isInteger(slotIdx) ? tacticsExMultiBuffOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : null;
@@ -71959,6 +72070,7 @@ function MonsterHeroGame() {
       dmg: 1,
       taken: 1,
       critRate: 1,
+      critAdd: 0,
       critDmg: 1,
       distMult: 0
     };
@@ -72892,8 +73004,9 @@ function MonsterHeroGame() {
             const slotFx = {};
             targets.forEach(slotIdx => {
               const exDodge = tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist);
+              const thunderDodge = Math.random() < tacticsExThunderDodgeNow(slotIdx);
               if (exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now));
-              if (slotIdx === evadedSlot || exDodge) {
+              if (slotIdx === evadedSlot || exDodge || thunderDodge) {
                 evadedName = tacticsTargetName(units, slotIdx);
                 slotFx[slotIdx] = {
                   evade: true
@@ -73268,6 +73381,13 @@ function MonsterHeroGame() {
           text: styleLabel,
           active: isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)
         };
+        if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (th) return {
+            text: `${th.phase === 'wrap' ? '雷纏' : '雷'}${th.charge}`,
+            active: true
+          };
+        }
         if (def.duration === 'turns' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
           text: `あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン`,
           active: true
@@ -73295,6 +73415,12 @@ function MonsterHeroGame() {
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
         const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
         if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);
+        if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (th) {
+            if (th.phase === 'charge') out.push(`雷 ${th.charge}（ためている。あと${th.turnsLeft}ターンで雷纏が始まる）`);else out.push(`雷纏中 雷${th.charge}（あと${th.turnsLeft}ターン）：与ダメ+${Math.round((th.dmgMult - 1) * 100)}%・会心率+${Math.round(th.critAdd * 100)}%・回避率+${Math.round(th.dodgeRate * 100)}%・ライフ自動回復+${Math.round(th.charge * (def.thunder.regenHp || 0) * 100)}%・ガッツ自動回復+${Math.round(th.charge * (def.thunder.regenGuts || 0) * 100)}%・連撃${th.combo ? `10%×${th.combo.count}回` : 'なし'}`);
+          }
+        }
         if (def.effect === 'dodgeCombo' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const zc = tacticsExExtraCombosAt(state, tacticsUnits, slotIdx, tacticsExNow);
           out.push(zc ? `回避 ${zc.count}回 → 与ダメ${Math.round(zc.rate * 100)}%の連撃が${zc.count}回付いている` : '回避 0回（回避するたびに連撃が1回ずつ増える）');
@@ -73945,7 +74071,7 @@ function MonsterHeroGame() {
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit'),
-          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus) * tacticsExMultiBuffNow(slotIdx).critRate),
+          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0)) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
@@ -74327,6 +74453,20 @@ function MonsterHeroGame() {
         turn: turnCount
       }, usedCardEntries.length);
       if (stVolt !== stNow) commitTacticsExState(stVolt);
+    }
+    if (isTacticsMode(runMode) && usedCardEntries.length > 0) {
+      const perSlot = {};
+      usedCardEntries.forEach(e => {
+        if (Number.isInteger(e.slotIdx) && !isAssistCard(e.card)) perSlot[e.slotIdx] = (perSlot[e.slotIdx] || 0) + 1;
+      });
+      let stTh = tacticsExStateRef.current;
+      Object.keys(perSlot).forEach(k => {
+        stTh = addTacticsExThunder(stTh, tacticsUnitsRef.current, {
+          wave,
+          turn: turnCount
+        }, Number(k), perSlot[k]);
+      });
+      if (stTh !== tacticsExStateRef.current) commitTacticsExState(stTh);
     }
     while (nextHand.length < 5 && (nextDeck.length > 0 || nextGraveyard.length > 0)) replenish(1);
     if (isTacticsMode(runMode)) {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f2270f333a05f07a
+// generated-sha256: 8bc8d6eb500d4480
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 12:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 16:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21471,6 +21471,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
     // ラン3回のあいだ、箱が効いている途中でもう一度使うことはできない(重ね掛けで3ターンが延びないように)
     conditions: Object.freeze(['notActive']),
   }),
+  // ★2026-10-05 ユーザー指示(ライガーのEX)。「雷狼影・3ターン・ラン5回。3ターンの間、自身の行動回数ぶん『雷』がたまる
+  //   (ガードやききの効果で増えていればそれも行動分)。3ターンのターン終了後に『雷纏』が始まり、3ターンの間、
+  //   雷の数だけ強化(雷×与ダメ30%・雷×クリ率10%・雷×連撃10%)」。のちに「雷×回避率5%」(敵の攻撃を確率で回避。上限90%)・「雷×ライフ自動回復5%」・「雷×ガッツ自動回復5%」(ターン終わりの自動回復の率へ足す)も追加。
+  //   前半3ターン=ためる(その子が使ったカード1枚につき雷+1)、後半3ターン=雷纏。効果は合計6ターン続く(WAVEをまたがない)。
+  //   連撃は「与ダメージ10%の連撃が雷の数だけ付く」、クリ率は足し算(いまの会心率に+10%×雷)、与ダメは最終ダメージへの乗算。
+  //   カードとの併用は指定が無かったので「併用できる」。雷の数に上限は設けない
+  Tiger: Object.freeze({
+    id: 'tiger_thunder_shadow',
+    name: '雷狼影',
+    useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 6,
+    thunder: Object.freeze({ chargeTurns: 3, dmg: 0.3, crit: 0.1, comboRate: 0.1, dodge: 0.05, regenHp: 0.05, regenGuts: 0.05 }),
+    effect: 'thunder',
+    conditions: Object.freeze(['notActive']),
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -21536,7 +21552,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -21596,6 +21612,8 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    thunder: raw.thunder && typeof raw.thunder === 'object' && tacticsSafeInt(raw.thunder.chargeTurns, 0) > 0
+      ? { chargeTurns: Math.min(9, tacticsSafeInt(raw.thunder.chargeTurns, 0)), dmg: Math.max(0, Number(raw.thunder.dmg) || 0), crit: Math.max(0, Number(raw.thunder.crit) || 0), comboRate: Math.max(0, Number(raw.thunder.comboRate) || 0), dodge: Math.max(0, Number(raw.thunder.dodge) || 0), regenHp: Math.max(0, Number(raw.thunder.regenHp) || 0), regenGuts: Math.max(0, Number(raw.thunder.regenGuts) || 0) } : null,
     pandoraBox: raw.pandoraBox && typeof raw.pandoraBox === 'object' ? (() => {
       const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.pandoraBox.devilCombo;
@@ -21750,6 +21768,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       presentCfg: def.present ? { ...def.present } : null, present: null,
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
       pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
+      thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -21804,7 +21823,15 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 // kind … 'hp' か 'guts'。regenRates があればその項目、無ければ regenRate(ライフ・ガッツ共通)
 const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  if (!unit) return 0;
+  const kindNow = tacticsExActiveEffect(state, slot, unit.id, now);
+  // 雷狼影(thunder): 雷纏のあいだ、雷の数ぶん自動回復の率へ足す(ライフ・ガッツそれぞれ regenHp・regenGuts × 雷)
+  if (kindNow === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now), cfg = normalizeTacticsExState(state).effects[slot].thunderCfg;
+    const per = Number(cfg && (kind === 'guts' ? cfg.regenGuts : cfg.regenHp));
+    return t && t.phase === 'wrap' && Number.isFinite(per) && per > 0 ? t.charge * per : 0;
+  }
+  if (kindNow !== 'statBoost') return 0;
   const effect = normalizeTacticsExState(state).effects[slot];
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
@@ -21844,6 +21871,11 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const dodges = tacticsSafeInt(mine && mine.dodges, 0), rate = Number(mine && mine.dodgeComboRate);
     return dodges > 0 && Number.isFinite(rate) && rate > 0 ? { count: dodges, rate, label: '血踊' } : null;
   }
+  // 雷狼影(thunder): 雷纏のあいだ、雷の数だけ与ダメージ comboRate の連撃が付く
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.combo ? t.combo : null;
+  }
   if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
@@ -21851,13 +21883,46 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
   // 連撃の名前は、アーク・イブリース(multiBuff)ではそのEXの名前(スイーツパラダイスは、これまでどおり名前を渡さない)
   return kind === 'multiBuff' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
 };
+// ---- ライガー(thunder): 雷狼影 ----
+// いまの雷と段階。phase は 'charge'(ためている前半)か 'wrap'(雷纏の後半)。効いていなければ null
+const tacticsExThunderOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'thunder') return null;
+  const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.thunderCfg;
+  if (!cfg) return null;
+  const charge = Math.min(99, Math.max(0, tacticsSafeInt(mine.thunder, 0)));
+  const offset = tacticsSafeInt(now && now.turn, 0) - tacticsSafeInt(mine.turn, 0);
+  const chargeTurns = tacticsSafeInt(cfg.chargeTurns, 0), total = tacticsSafeInt(mine.turns, 0);
+  const phase = offset < chargeTurns ? 'charge' : 'wrap';
+  const wrap = phase === 'wrap';
+  const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  return { slot, phase, charge, turnsLeft: Math.max(0, (wrap ? total : chargeTurns) - offset),
+    dmgMult: wrap ? 1 + charge * num(cfg.dmg) : 1, critAdd: wrap ? charge * num(cfg.crit) : 0,
+    dodgeRate: wrap ? Math.min(0.9, charge * num(cfg.dodge)) : 0,
+    combo: wrap && charge > 0 && num(cfg.comboRate) > 0 ? { count: charge, rate: num(cfg.comboRate), label: '雷纏' } : null };
+};
+// そのターンにライガーが使ったカード n 枚ぶん、雷をためる(ためている前半のターンだけ。ほかは状態をそのまま返す)
+const addTacticsExThunder = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  const t = tacticsExThunderOf(safe, units, slot, now);
+  if (!t || t.phase !== 'charge' || add <= 0) return safe;
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], thunder: Math.min(99, t.charge + add) } } };
+};
 // アーク・イブリース(multiBuff)が効いている子の、与ダメージ・被ダメージ・会心の倍率(効いていなければ全部1)
 const tacticsExMultiBuffOf = (state, units, slot, now) => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
+  if (!unit) return null;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  // 雷狼影(thunder): 雷纏のあいだだけ、雷の数ぶん与ダメージが乗り、会心率が足される(critAdd は足し算)
+  if (kind === 'thunder') {
+    const t = tacticsExThunderOf(state, units, slot, now);
+    return t && t.phase === 'wrap' && t.charge > 0 ? { dmg: t.dmgMult, taken: 1, critRate: 1, critAdd: t.critAdd, critDmg: 1, distMult: 0 } : null;
+  }
+  if (kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot];
   const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
-  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critDmg: 1 + num(own.critDmgRate), distMult: num(own.distMult) };
+  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critAdd: 0, critDmg: 1 + num(own.critDmgRate), distMult: num(own.distMult) };
 };
 // ---- ピクシー(guaranteeUnique): 効いているあいだ、毎ターン固有技カードを手札へ出す ----
 // 出す子の枠(効いていなければ null)。次のターンに効くかを見たいときは、now にそのターンを渡す
@@ -47794,10 +47859,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // 世界樹の守りの、味方全員の被ダメージ倍率(効いていなければ1。ほかのモードも1)
   // アーク・イブリースの与ダメ・被ダメ・会心の倍率(効いていなければ全部1。ほかのモードも1)
+  // ライガーの雷纏の回避率(雷×5%。効いていなければ0)
+  const tacticsExThunderDodgeNow = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return 0;
+    const t=tacticsExThunderOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
+    return t?t.dodgeRate:0;
+  };
   const tacticsExMultiBuffNow = (slotIdx) => {
     const live=tacticsExLiveRef.current;
     const mine=live.enabled&&Number.isInteger(slotIdx) ? tacticsExMultiBuffOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now) : null;
-    const out=mine?{ ...mine }:{dmg:1,taken:1,critRate:1,critDmg:1,distMult:0};
+    const out=mine?{ ...mine }:{dmg:1,taken:1,critRate:1,critAdd:0,critDmg:1,distMult:0};
     // ★味方全員に効くもの(ミーアのボルテージ・スネグーラチカのプレゼント)を重ねる
     if(live.enabled&&Number.isInteger(slotIdx)){
       const party=tacticsExPartyBuffNow();
@@ -48676,9 +48748,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             targets.forEach(slotIdx=>{
               // ★エイキの「緋桜瞬歩」が効いていて、敵と同じ距離の枠にいるなら、抽選に関係なく完全に回避する
               const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);
+              // ★ライガーの雷纏: 雷の数ぶん(1つ5%)、狙われた攻撃を確率で回避する
+              const thunderDodge=Math.random()<tacticsExThunderDodgeNow(slotIdx);
               // ★ザンの「血踊」は、回避した数を数える(連撃が1回ずつ増える)
               if(exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now));
-              if(slotIdx===evadedSlot||exDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
+              if(slotIdx===evadedSlot||exDodge||thunderDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
               if(slotIdx===reflectedSlot){
                 reflectedName=tacticsTargetName(units,slotIdx);
                 reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);
@@ -49010,6 +49084,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       badge:(()=>{
         const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
         if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        // 雷狼影は、雷の数と段階を札に出す(ためている間は「雷◯」、雷纏のあいだは「雷纏◯」)
+        if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+          const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
+          if(th) return { text:`${th.phase==='wrap'?'雷纏':'雷'}${th.charge}`, active:true };
+        }
         // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
         if(def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
         // プレゼントは、決まった中身を札に出す(何が効いているかが距離枠から分かる)
@@ -49028,6 +49107,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
           const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
           if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
+          // ライガーの雷狼影: いまの雷の数と、ためている/雷纏の段階
+          if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+            const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
+            if(th){
+              if(th.phase==='charge') out.push(`雷 ${th.charge}（ためている。あと${th.turnsLeft}ターンで雷纏が始まる）`);
+              else out.push(`雷纏中 雷${th.charge}（あと${th.turnsLeft}ターン）：与ダメ+${Math.round((th.dmgMult-1)*100)}%・会心率+${Math.round(th.critAdd*100)}%・回避率+${Math.round(th.dodgeRate*100)}%・ライフ自動回復+${Math.round(th.charge*(def.thunder.regenHp||0)*100)}%・ガッツ自動回復+${Math.round(th.charge*(def.thunder.regenGuts||0)*100)}%・連撃${th.combo?`10%×${th.combo.count}回`:'なし'}`);
+            }
+          }
           // ザンの血踊: いま何回避けて、連撃がいくつ付いているか
           if(def.effect==='dodgeCombo'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const zc=tacticsExExtraCombosAt(state,tacticsUnits,slotIdx,tacticsExNow);
@@ -49493,7 +49580,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus)*tacticsExMultiBuffNow(slotIdx).critRate),
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0))*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
           hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx,halved), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
@@ -49762,6 +49849,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const stNow=tacticsExStateRef.current;
       const stVolt=addTacticsExVoltage(stNow,tacticsUnitsRef.current,{ wave, turn:turnCount },usedCardEntries.length);
       if(stVolt!==stNow) commitTacticsExState(stVolt);
+    }
+    // ★ライガーの雷狼影: ためている3ターンのあいだ、その子が使ったカードの枚数だけ雷がたまる(2026-10-05)
+    if(isTacticsMode(runMode)&&usedCardEntries.length>0){
+      const perSlot={};
+      usedCardEntries.forEach(e=>{ if(Number.isInteger(e.slotIdx)&&!isAssistCard(e.card)) perSlot[e.slotIdx]=(perSlot[e.slotIdx]||0)+1; });
+      let stTh=tacticsExStateRef.current;
+      Object.keys(perSlot).forEach(k=>{ stTh=addTacticsExThunder(stTh,tacticsUnitsRef.current,{ wave, turn:turnCount },Number(k),perSlot[k]); });
+      if(stTh!==tacticsExStateRef.current) commitTacticsExState(stTh);
     }
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     // ★ピクシーの「お気に入りの魔法」: 次のターンも効いていれば、固有技のカードを手札へ必ず出す(2026-10-03)
