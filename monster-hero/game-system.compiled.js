@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9590c9bfc632db94
+// source-sha256: 16be230cc73d9253
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 10:50";
+const BUILD_DATE = "2026-10-05 11:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35728,7 +35728,7 @@ const RAID_JACK_ENDING_NOTCLEARED_ID = 'raid_jack_ending_notcleared';
 const RAID_JACK_STORY_IDS = Object.freeze([RAID_JACK_STORY_START_ID, ...Object.values(RAID_JACK_STORY_AFTER_TIER), RAID_JACK_ENDING_CLEARED_ID, RAID_JACK_ENDING_NOTCLEARED_ID]);
 const raidJackStoryUnlockKey = id => `${String(id).replace(/^raid_jack_/, 'raidJack_').replace(/_([a-z0-9])/g, (m, c) => c.toUpperCase()).replace(/^raidJack(\w)/, (m, c) => 'raidJack' + c.toUpperCase())}Seen`;
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';
-const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
 const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
@@ -60806,6 +60806,7 @@ const RaidJackPrepScreen = ({
   teachings,
   onBack,
   onStart,
+  restore = null,
   onOpenDetail
 }) => {
   const isB = kind === 'b';
@@ -60813,9 +60814,9 @@ const RaidJackPrepScreen = ({
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = mon => String(mon.masuId || mon.id);
-  const [heroKey, setHeroKey] = useState(null);
-  const [allyKeys, setAllyKeys] = useState([]);
-  const [teachIds, setTeachIds] = useState(() => (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map(t => t.id));
+  const [heroKey, setHeroKey] = useState(restore && restore.heroKey ? restore.heroKey : null);
+  const [allyKeys, setAllyKeys] = useState(restore && Array.isArray(restore.allyKeys) ? restore.allyKeys : []);
+  const [teachIds, setTeachIds] = useState(() => restore && Array.isArray(restore.teachIds) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map(t => t.id));
   const hero = list.find(m => keyOf(m) === heroKey) || null;
   const allies = allyKeys.map(k => list.find(m => keyOf(m) === k)).filter(Boolean);
   const toggleAlly = mon => setAllyKeys(prev => {
@@ -60921,7 +60922,9 @@ const RaidJackPrepScreen = ({
     disabled: !hero,
     onClick: () => onStart({
       party: [hero, ...allies],
-      teachingIds: teachIds
+      teachingIds: teachIds,
+      heroKey,
+      allyKeys
     }),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
   }, hero ? 'この編成で挑戦する' : '勇者モンを選んでください')));
@@ -63093,6 +63096,7 @@ function MonsterHeroGame() {
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);
+  const [raidJackPlace, setRaidJackPlace] = useState(null);
   const RAID_JACK_GUIDE_KEY = 'mh_raid_jack_guide_seen_v1';
   const [raidJackGuideSeen, setRaidJackGuideSeen] = useState(true);
   const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);
@@ -64606,6 +64610,7 @@ function MonsterHeroGame() {
     RHYTHM_MODE_SELECT: 'rhythmModeSelect',
     RAID_JACK: 'home',
     RAID_JACK_PREP: 'home',
+    RAID_JACK_PLACE: 'home',
     FRIENDS: 'home',
     BATTLE_MENU: 'enhance',
     BATTLE_SYSTEM_SELECT: 'enhance',
@@ -75510,11 +75515,14 @@ function MonsterHeroGame() {
     if (party.length === 0) return false;
     const isB = req.kind === 'b';
     const hero = party[0];
-    const raidSlots = [party[0] || null, party[1] || null, party[2] || null, party[3] || null];
-    const allies = raidSlots.slice(1).filter(Boolean);
+    const placed = Array.isArray(req.slots) && req.slots.length === 4 && req.slots.filter(Boolean).length === party.length ? req.slots.map(mon => mon || null) : null;
+    const raidSlots = placed || [party[0] || null, party[1] || null, party[2] || null, party[3] || null];
+    const heroSlot = placed && Number.isInteger(req.heroSlot) && req.heroSlot >= 0 && req.heroSlot < 4 ? req.heroSlot : 0;
+    initialBattleDistanceRef.current = heroSlot;
+    const allies = party.slice(1);
     const total = (key, base) => allies.reduce((value, mon) => value + (mon.plusStats?.[key] || 0), base);
     const raidDef = total('def', hero.baseDef);
-    const uniques = raidSlots.filter(Boolean).map(mon => ({
+    const uniques = party.map(mon => ({
       ...mon.unique,
       evoLevel: isB ? Math.max(0, mon.unique?.evoLevel || 0) : 0
     }));
@@ -75878,9 +75886,67 @@ function MonsterHeroGame() {
       marketPurchaseProcessingRef.current = false;
     }
   };
+  const beginRaidJackPlacement = ({
+    party,
+    teachingIds,
+    heroKey = null,
+    allyKeys = []
+  }) => {
+    const list = (Array.isArray(party) ? party : []).filter(Boolean);
+    if (list.length === 0) return;
+    setRaidJackPlace({
+      party: list,
+      teachingIds,
+      slots: [null, null, null, null],
+      heroSlot: 0,
+      restore: {
+        heroKey,
+        allyKeys,
+        teachIds: teachingIds
+      }
+    });
+    setGameState('RAID_JACK_PLACE');
+  };
+  const placeRaidJackMon = (mon, slotIdx) => {
+    const place = raidJackPlace;
+    if (!place || !mon || !Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || place.slots[slotIdx]) return;
+    const slots = [...place.slots];
+    const isHero = slots.every(slot => !slot);
+    slots[slotIdx] = {
+      ...mon
+    };
+    Audio_.se.join();
+    const heroSlot = isHero ? slotIdx : place.heroSlot;
+    if (slots.filter(Boolean).length >= place.party.length) {
+      setRaidJackPlace(null);
+      void startRaidJackFromPrep({
+        party: place.party,
+        teachingIds: place.teachingIds,
+        slots,
+        heroSlot
+      });
+      return;
+    }
+    setRaidJackPlace({
+      ...place,
+      slots,
+      heroSlot
+    });
+  };
+  const cancelRaidJackPlacement = () => {
+    const restore = raidJackPlace && raidJackPlace.restore;
+    setRaidJackPrep(prev => prev ? {
+      ...prev,
+      restore
+    } : prev);
+    setRaidJackPlace(null);
+    setGameState('RAID_JACK_PREP');
+  };
   const startRaidJackFromPrep = async ({
     party,
-    teachingIds
+    teachingIds,
+    slots = null,
+    heroSlot = 0
   }) => {
     const prep = raidJackPrep;
     if (!prep || !Array.isArray(party) || party.length === 0) return;
@@ -75925,6 +75991,8 @@ function MonsterHeroGame() {
       tierIndex: prep.tierIndex,
       party,
       teachingIds,
+      slots,
+      heroSlot,
       eventId: raidJackEventId,
       startLife,
       pumpkin
@@ -84016,10 +84084,31 @@ function MonsterHeroGame() {
       renderPlace: rankingPlace,
       renderIcon: rankingBreederIcon,
       cardClass: rankingCardClass
-    }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(React.Fragment, null, React.createElement(RaidJackPrepScreen, {
+    }), gameState === 'RAID_JACK_PLACE' && raidJackPlace && (() => {
+      const placed = raidJackPlace.slots.filter(Boolean).length;
+      const mon = raidJackPlace.party[placed] || null;
+      const placedBonus = dist => raidJackPlace.slots.reduce((sum, m) => sum + (m ? aptGradeToPct(getDistAptitude(m, dist)) : 0), 0);
+      return React.createElement(PickSlotScreen, {
+        battleTutorial: null,
+        battleTutorialSpotClass: () => '',
+        currentPickingMon: mon,
+        distTotalBonus: placedBonus,
+        getDistAptitude: getDistAptitude,
+        scenarioPicksSlot: () => true,
+        setupMon: placeRaidJackMon,
+        slots: raidJackPlace.slots,
+        phasePlan: null,
+        wave: 0,
+        heroStyleDef: null,
+        heroStyle: null,
+        onHeroStyle: null,
+        onRepick: cancelRaidJackPlacement
+      });
+    })(), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(React.Fragment, null, React.createElement(RaidJackPrepScreen, {
       kind: raidJackPrep.kind,
       tierIndex: raidJackPrep.tierIndex,
       candidates: raidJackPrep.kind === 'b' ? getActiveMonsterList() : getUnlockedBaseMonsterList(),
+      restore: raidJackPrep.restore || null,
       teachings: (() => {
         const unlocked = TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
         return unlocked.length > 0 ? unlocked : getActiveTeachingCards();
@@ -84031,7 +84120,7 @@ function MonsterHeroGame() {
       },
       onStart: args => {
         setRaidJackDetailMon(null);
-        return startRaidJackFromPrep(args);
+        return beginRaidJackPlacement(args);
       }
     }), raidJackDetailMon && renderMonsterDetailModal({
       mon: raidJackDetailMon,

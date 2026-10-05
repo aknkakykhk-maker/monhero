@@ -409,15 +409,16 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
 };
 
 // 編成。A: 解放済みのベースモンから / B: 編成に入れているマスモンから。勇者1体+供モン最大3体。アシカは A=1枚 / B=3枚まで
-const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, onOpenDetail }) => {
+const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, onStart, restore = null, onOpenDetail }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;   // レイドバトルもグランドスラムも、アシカは3枚まで(数字は 35-raid-jack.jsx)
   const tier = raidJackTierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = (mon) => String(mon.masuId || mon.id);
-  const [heroKey, setHeroKey] = useState(null);
-  const [allyKeys, setAllyKeys] = useState([]);
-  const [teachIds, setTeachIds] = useState(() => (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
+  // 配置画面から戻ってきたときは、選んでいた編成のまま(restore)
+  const [heroKey, setHeroKey] = useState(restore && restore.heroKey ? restore.heroKey : null);
+  const [allyKeys, setAllyKeys] = useState(restore && Array.isArray(restore.allyKeys) ? restore.allyKeys : []);
+  const [teachIds, setTeachIds] = useState(() => (restore && Array.isArray(restore.teachIds)) ? restore.teachIds : (Array.isArray(teachings) ? teachings : []).slice(0, maxTeach).map((t) => t.id));
   const hero = list.find((m) => keyOf(m) === heroKey) || null;
   const allies = allyKeys.map((k) => list.find((m) => keyOf(m) === k)).filter(Boolean);
   const toggleAlly = (mon) => setAllyKeys((prev) => {
@@ -485,7 +486,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
         <button type="button" data-raid-prep-start disabled={!hero}
-          onClick={() => onStart({ party: [hero, ...allies], teachingIds: teachIds })}
+          onClick={() => onStart({ party: [hero, ...allies], teachingIds: teachIds, heroKey, allyKeys })}
           className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
           {hero ? 'この編成で挑戦する' : '勇者モンを選んでください'}
         </button>
