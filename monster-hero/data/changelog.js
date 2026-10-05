@@ -34,6 +34,40 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-05 ユーザーから正式なジャケットが届いた(公開時は曲に埋め込まれていた絵を使っていた)
+    date: "2026-10-05 19:27", type:'update', group:'rhythm', title:'モンヒロビート：「Emerald Rush」のジャケットが新しくなりました', status:'new',
+    image: 'images/song-art/emerald-rush.jpg?v=d9bc5685600b',
+    items:[
+      '「Emerald Rush」のジャケットが、曲のための新しい絵になりました。曲えらびとジャケットの拡大で見られます。',
+    ],
+  },
+  {
+    // 2026-10-05 ユーザー指示(mp3だけ)。ジャケットは曲に埋め込まれていた絵、歯ごたえは自動のままとユーザーが決めた
+    date: "2026-10-05 18:50", type:'update', title:'モンヒロビート：新曲「Emerald Rush」を追加しました', status:'new',
+    image: 'images/song-art/emerald-rush.jpg?v=d9bc5685600b',
+    items:[
+      'モンヒロビートに「Emerald Rush」（2分26秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.11 ／ EXPERT Lv.18 ／ MASTER Lv.25 です。',
+      'ノーツ数は 191 ／ 218 ／ 302 ／ 365 ／ 415 です。',
+      '曲が進むにつれて少しずつテンポが速くなる曲です。ノーツもその速さに合わせて流れてきます。',
+    ],
+    assistantNotice: { id:'update_notice_emerald_rush_v1', type:'content' },
+  },
+  {
+    date: "2026-10-05 18:23", type:'fix', title:'HOMEのジャックが、通信が遅いときに男爵や満タンのライフで出てしまう不具合を直しました', status:'new', group:'battle',
+    items:[
+      'HOMEを開いたとき、段階とライフを読み込むまでのあいだ、ジャック男爵が出てから本当の段階へ切り替わったり、ライフが減ったように見えたりしていました。',
+      '読み込みが終わるまでは出さず、2回目からは前に見た段階とライフのまま出るようにしました。',
+    ],
+  },
+  {
+    date: "2026-10-05 17:51", type:'update', title:'ジャックの1戦の最大ダメージを、難易度別に見られるようになりました', status:'new', group:'battle',
+    items:[
+      'ジャックのランキング画面で「1戦の最大ダメージ」を選ぶと、「全難易度」のほか、難易度ごとの順位も選んで見られます。',
+      'レイドバトルは男爵〜大王、グランドスラムは初級〜極級です。自分の記録と順位も、選んだ難易度のものが出ます。',
+    ],
+  },
+  {
     // ライガーのEX(2026-10-05 ユーザー指示「雷狼影・3ターン・ラン5回…」)。docs/spec/TACTICS_EX_LIST.md
     date: "2026-10-05 17:03", type:'update', group:'battle', title:'ライガーがEXスキル「雷狼影」を使えるようになりました', status:'new',
     items:[

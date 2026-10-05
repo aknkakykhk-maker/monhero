@@ -244,6 +244,8 @@ node tools/build.js --check
 
 `node mode/rhythm-song-version-check.js` は、曲えらびで同じ曲の別の版をまとめる表(`RHYTHM_SONG_VERSION_GROUPS`・2026-10-03)を見張る。表の曲がどれも公開中で1曲が2つの組に入っていないこと、表示名が同じ公開曲が同じ組に入っていること(版を足したときの入れ忘れ)、実際の曲えらびで一覧の行が組ごとに1つ・行を押すといつも原曲・難易度の上の切り替えで選んでいる曲がその版になることを確かめる。
 
+`node mode/rhythm-chart-rev28-check.js` は、MHB CHART ENGINE Rev.28(人が測った拍のずれの曲線・2026-10-05)を見張る。点のあいだを直線でつなぐ計算、音源の一覧の `warpPoints` を書いた曲だけ Rev.28 で曲線を使うこと(Rev.27 以前・書いていない曲には効かない)、ゲームの拍の表(`RHYTHM_SONG_BEATS` の5つ目)が同じ点で拍の頭と線の時刻に曲線を足すこと、譜面のノーツが「格子＋曲線のずれ」に乗ることを確かめる。
+
 `node mode/rhythm-song-climax.js [--write|--check]` は、曲ごとの盛り上がる区間の表(`RHYTHM_SONG_CLIMAX`・data/rhythm-mode.js の `<rhythm-song-climax>` の間)を、解析ファイルの区切りの強さ(structure.sections の intensity)から作る(2026-09-29・オプション「盛り上がりの光」)。曲を足したら `--write` を打つ。`node mode/rhythm-climax-fx-check.js` が表の古さ・設定の既定値・CSS・叩いた場所の判定の部品の使い回し・ランクの演出の条件を見張る。
 
 `node mode/rhythm-robot-play.js --song <曲id> --difficulty <難易度> --settings '{"climaxFx":true}' --shots 20000,60000 --shot-dir <dir>` は、ロボットに演奏の設定を渡して遊ばせ、曲のその時刻で画面を撮る(2026-09-29)。盛り上がりの光が点いた・消えた時刻、叩いた場所の判定の数、ランクが上がったときの文字も最後に出す。

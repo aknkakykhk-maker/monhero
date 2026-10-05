@@ -8270,3 +8270,18 @@ mp4（4分5秒）から音を取り、songId `crazy_party_night_full` / bgmTrack
 - **BGMの初期値**: `halloweenNightEvent`（ハロウィン・ナイトのお話）は全編版が初期値。`BGM_EVENT_DEFAULT_OVERRIDES` で、
   設定を変えていない人の「M/B管理」BGM（原曲の `original_profile` のまま）だけ、ハロウィン・ナイトの期間中に全編版へ差し替える
   （鳴らす瞬間だけ。保存値は書き換えない。終わると元の曲へ戻る）
+
+## 「Emerald Rush」をモンヒロビートへ足した（2026-10-05）
+
+ユーザー指示（mp3 1本だけ）。曲名はファイル名と曲のタグ（title: Emerald Rush / artist: melosalife_24）から。
+songId `emerald_rush` / bgmTrackId `melo_emerald_rush` / 譜面は MHB CHART ENGINE Rev.28（`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` 20章）。
+
+- **ジャケット**: 画像は届かなかったが、mp3 に絵（360×360 の JPEG）が埋め込まれていた。ユーザー判断「埋め込みの絵で出す」で、
+  512×512 へ広げて使う（lanczos3・quality 80・32KB。少しぼやける）
+  → 同じ日にユーザーから正式なジャケット（1254×1254）が届いたので差し替えた（512×512・quality 80・76KB）
+- **音量**: -15.84 LUFS / -4.22 dBTP → +1.84dB で **-14.00 LUFS / -2.28 dBTP**
+- **テンポ**: 曲を通して 150.0 → 153.0 BPM と少しずつ速くなる。格子は自動判定の 151.51 BPM / 拍の頭 487.8ms のまま、
+  5秒ごとに測った拍のずれ（28点）を `warpPoints` と `RHYTHM_SONG_BEATS` の5つ目に書いた。拍の表と裏ははっきり（表が裏の2.7〜3.8倍）、
+  小節の頭は低音がいちばん強い拍（自動解析と同じ）
+- **歯ごたえはユーザーが「自動」と決めた**（`challengeFactor` は書かない）。EASY 6 / NORMAL 7 / HARD 11 / EXPERT 18 / MASTER 25、
+  ノーツ 191 / 218 / 302 / 365 / 415。候補: 1.2 で MASTER 31 ／ 1.4 で 32 ／ 1.7 は EXPERT が MASTER を追い越して出荷できない

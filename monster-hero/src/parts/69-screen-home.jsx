@@ -71,8 +71,12 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
   background:'transparent', border:'0', padding:'0', cursor:'pointer',
 });
+// 前回HOMEで取れた段階の合計(画面を出入りしても残る)。読み込みが終わるまでの間も、前回の段階・ライフで描ける
+//   (取れていないあいだを「男爵・ライフ満タン」として描くと、通信が遅いとき男爵が一瞬出て、あとから本当の段階へ切り替わって見える。2026-10-05)
+let homeRaidJackTotalsCache = { eventId: null, totals: undefined };
 const HomeRaidJack = ({ eventId, onOpen }) => {
-  const [totals, setTotals] = React.useState(undefined);
+  const [totals, setTotalsState] = React.useState(() => (homeRaidJackTotalsCache.eventId === eventId ? homeRaidJackTotalsCache.totals : undefined));
+  const setTotals = (t) => { if (t) homeRaidJackTotalsCache = { eventId, totals: t }; setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
   // ひとこと(吹き出し)。押すと次のセリフへ。最初の1つは開くたびに変わる
   const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
@@ -94,6 +98,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     loop();
     return () => { alive = false; clearTimeout(timer); };
   }, []);
+  // 初めて読み込み中(まだ一度も合計が取れていない)あいだは、段階もライフも分からないので描かない
+  if (totals === undefined) return null;
   // いま挑める段階 = まだ共有HPが残っている最初の段階。全部倒していたら「討伐おめでとう」
   const tiers = RAID_JACK_A_TIERS;
   const totalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);

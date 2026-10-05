@@ -187,3 +187,68 @@ const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
 const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
 const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
+
+// 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
+// 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
+const LINEAGE_ICON_ARC = "images/lineage-icons/arc.png?v=4f256c2605d5";
+const LINEAGE_ICON_ARROWHEAD = "images/lineage-icons/arrowhead.png?v=b7f1fb78b532";
+const LINEAGE_ICON_CENTAUR = "images/lineage-icons/centaur.png?v=2955c68a245b";
+const LINEAGE_ICON_DINO = "images/lineage-icons/dino.png?v=ee9a283c4162";
+const LINEAGE_ICON_DRAGON = "images/lineage-icons/dragon.png?v=c975ba486f66";
+const LINEAGE_ICON_DULLAHAN = "images/lineage-icons/dullahan.png?v=621b216348a4";
+const LINEAGE_ICON_GALI = "images/lineage-icons/gali.png?v=f1abdcbd5897";
+const LINEAGE_ICON_GEL = "images/lineage-icons/gel.png?v=35dc31692033";
+const LINEAGE_ICON_GHOST = "images/lineage-icons/ghost.png?v=554b9cfa2d8a";
+const LINEAGE_ICON_GOLEM = "images/lineage-icons/golem.png?v=bff6b81259a0";
+const LINEAGE_ICON_GUJIRA = "images/lineage-icons/gujira.png?v=e6943f667162";
+const LINEAGE_ICON_HAMU = "images/lineage-icons/hamu.png?v=77411bb1a419";
+const LINEAGE_ICON_HENGER = "images/lineage-icons/henger.png?v=caabf81fae57";
+const LINEAGE_ICON_HINOTORI = "images/lineage-icons/hinotori.png?v=e958afc3a95e";
+const LINEAGE_ICON_ILLUMINE = "images/lineage-icons/illumine.png?v=50d4a6ccafc0";
+const LINEAGE_ICON_JOKER = "images/lineage-icons/joker.png?v=4ad2d79131f2";
+const LINEAGE_ICON_KAWAZUMO = "images/lineage-icons/kawazumo.png?v=7f19291da113";
+const LINEAGE_ICON_KIJIN = "images/lineage-icons/kijin.png?v=78bacdd09da1";
+const LINEAGE_ICON_KYUBI = "images/lineage-icons/kyubi.png?v=4de7bcf7c677";
+const LINEAGE_ICON_LIGER = "images/lineage-icons/liger.png?v=b0f0c6f6000a";
+const LINEAGE_ICON_LORD = "images/lineage-icons/lord.png?v=58e18dc44676";
+const LINEAGE_ICON_METALNER = "images/lineage-icons/metalner.png?v=3750f738a637";
+const LINEAGE_ICON_MOCCHI = "images/lineage-icons/mocchi.png?v=27db3dc6c682";
+const LINEAGE_ICON_MONOLITH = "images/lineage-icons/monolith.png?v=bde2bf787815";
+const LINEAGE_ICON_NAGA = "images/lineage-icons/naga.png?v=e5cf63063f8f";
+const LINEAGE_ICON_NENDORO = "images/lineage-icons/nendoro.png?v=baa51ce3b5d3";
+const LINEAGE_ICON_NOBLE = "images/lineage-icons/noble.png?v=cbc850ea9a66";
+const LINEAGE_ICON_NYAA = "images/lineage-icons/nyaa.png?v=e9f36a0cbaba";
+const LINEAGE_ICON_PIXIE = "images/lineage-icons/pixie.png?v=3b9050fe7617";
+const LINEAGE_ICON_PLANT = "images/lineage-icons/plant.png?v=efb4f8fb8227";
+const LINEAGE_ICON_RAREMON = "images/lineage-icons/raremon.png?v=d9b13d66ceda";
+const LINEAGE_ICON_SHINRYU = "images/lineage-icons/shinryu.png?v=c2923e34d42c";
+const LINEAGE_ICON_SUEZO = "images/lineage-icons/suezo.png?v=e25782aef2a4";
+const LINEAGE_ICON_UNDINE = "images/lineage-icons/undine.png?v=9728d3a8bbe7";
+const LINEAGE_ICON_WORM = "images/lineage-icons/worm.png?v=3b39e38ca672";
+const LINEAGE_ICON_YGGDRASIL = "images/lineage-icons/yggdrasil.png?v=612ee0b767e7";
+const LINEAGE_ICON_ZAN = "images/lineage-icons/zan.png?v=be0f440b9156";
+
+// ---------- 血統のアイコン(エンブレム) ----------
+// 血統のid(data/lineages.js の MONSTER_LINEAGES)→ 血統別のアイコンの画像(上の LINEAGE_ICON_*)。
+// 2026-10-05・ユーザー提供。まだ画面では使っていない(ここは対応表だけ。どこへ出すかはこれから決める)。
+// ★ファイル名の綴りが血統のidと違うもの: tiger=liger / ham=hamu / monol=monolith / ark=arc / unknown=raremon(「？」のアイコン)
+// ★ゲームにまだ無い血統用の画像(naga・nendoro・lord・dino ほか)は、血統を足すときにここへ1行足して使う。
+const MONSTER_LINEAGE_ICONS = Object.freeze({
+  mocchi: LINEAGE_ICON_MOCCHI,
+  suezo: LINEAGE_ICON_SUEZO,
+  golem: LINEAGE_ICON_GOLEM,
+  tiger: LINEAGE_ICON_LIGER,
+  ham: LINEAGE_ICON_HAMU,
+  pixie: LINEAGE_ICON_PIXIE,
+  monol: LINEAGE_ICON_MONOLITH,
+  zan: LINEAGE_ICON_ZAN,
+  ark: LINEAGE_ICON_ARC,
+  undine: LINEAGE_ICON_UNDINE,
+  yggdrasil: LINEAGE_ICON_YGGDRASIL,
+  ghost: LINEAGE_ICON_GHOST,
+  dragon: LINEAGE_ICON_DRAGON,
+  joker: LINEAGE_ICON_JOKER,
+  plant: LINEAGE_ICON_PLANT,
+  gel: LINEAGE_ICON_GEL,
+  unknown: LINEAGE_ICON_RAREMON,
+});

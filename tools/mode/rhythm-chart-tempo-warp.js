@@ -53,6 +53,33 @@ const splicesOf=trackId=>{
     return list.map(s=>({atMs:Number(s.atMs),shiftMs:Number(s.shiftMs)})).filter(s=>Number.isFinite(s.atMs)&&Number.isFinite(s.shiftMs)).sort((a,b)=>a.atMs-b.atMs);
   }catch{return [];}
 };
+// Rev.28: 人が測った拍のずれの曲線(2026-10-05)。音源の一覧の `warpPoints:[[時刻ms, ずれms], …]` を直線でつなぐ。
+// 両端より外は端の値のまま。ずれは「本当の拍の時刻 − 格子の時刻」(テンポの揺れの at と同じ向き)
+const CURVE_REVISION=28;
+const curvePointsOf=trackId=>{
+  try{
+    const entry=JSON.parse(fs.readFileSync(REGISTRY_FILE,'utf8')).songs[trackId];
+    const list=entry&&Array.isArray(entry.warpPoints)?entry.warpPoints:[];
+    return list.filter(p=>Array.isArray(p)&&Number.isFinite(Number(p[0]))&&Number.isFinite(Number(p[1]))).map(p=>[Number(p[0]),Number(p[1])]).sort((a,b)=>a[0]-b[0]);
+  }catch{return [];}
+};
+const curveShiftAt=(points,ms)=>{
+  if(!points.length)return 0;
+  if(ms<=points[0][0])return points[0][1];
+  for(let i=1;i<points.length;i++)if(ms<=points[i][0]){const [x0,y0]=points[i-1],[x1,y1]=points[i];return y0+(y1-y0)*(ms-x0)/(x1-x0);}
+  return points[points.length-1][1];
+};
+const curveWarp=audio=>{
+  const timing=audio&&audio.timing;
+  const points=audio&&audio.trackId?curvePointsOf(audio.trackId):[];
+  if(!timing||points.length<2)return null;
+  const gridMs=Number(timing.gridMs)||timing.beatMs/timing.subdivisionsPerBeat;
+  const zero=Number(timing.beatZeroMs)||0;
+  const at=grid=>round(curveShiftAt(points,zero+grid*gridMs),2);
+  const values=points.map(p=>p[1]);
+  return {active:true,version:'curve',points,rangeMs:round(Math.max(...values)-Math.min(...values)),
+    reason:`人が測った拍のずれ(${points.length}点・${round(Math.min(...values))}〜${round(Math.max(...values))}ms)`,at};
+};
 const spliceWarp=audio=>{
   const timing=audio&&audio.timing;
   const splices=audio&&audio.trackId?splicesOf(audio.trackId):[];
@@ -155,13 +182,15 @@ const tempoWarpForRevision=(revision,audio)=>{
   const rev=Number(revision)||0;
   if(rev<WARP_REVISION)return {active:false,at:()=>0,points:[],reason:'Rev.21 より前'};
   // Rev.26: つなぎ目を書いた曲は、その段差を使う(なめらかな揺れとは重ねない)
+  // Rev.28: 拍のずれの曲線を書いた曲は、その曲線を使う(つなぎ目もあれば足す)
+  if(rev>=CURVE_REVISION){const curve=curveWarp(audio);if(curve){const splice=spliceWarp(audio);return splice?{...curve,at:grid=>curve.at(grid)+splice.at(grid),reason:`${curve.reason}・${splice.reason}`}:curve;}}
   if(rev>=SPLICE_REVISION){const splice=spliceWarp(audio);if(splice)return splice;}
   if(rev>=WARP_V2_REVISION){const v2=tempoWarp(audio,{v2:true});if(v2.active)return {...v2,version:2};}
   return tempoWarp(audio);
 };
 const tempoWarpForChart=(chart,audio)=>tempoWarpForRevision(chart&&chart.chartRevision,audio);
 
-module.exports={WARP_REVISION,WARP_V2_REVISION,SPLICE_REVISION,spliceWarp,tempoWarp,tempoWarpForChart,tempoWarpForRevision,WARP_MAX_STEP_MS,WARP_MIN_RANGE_MS};
+module.exports={WARP_REVISION,WARP_V2_REVISION,SPLICE_REVISION,spliceWarp,CURVE_REVISION,curveWarp,curveShiftAt,tempoWarp,tempoWarpForChart,tempoWarpForRevision,WARP_MAX_STEP_MS,WARP_MIN_RANGE_MS};
 
 if(require.main===module){
   const dir=path.join(__dirname,'authoring');
