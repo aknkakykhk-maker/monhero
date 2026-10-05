@@ -11557,8 +11557,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // パンドラの箱: 悪魔側・天使側の力と、あと何ターンか
           if(def.effect==='pandoraBox'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const pb=def.pandoraBox;
-            out.push(`1枚目＝悪魔（与ダメ×${pb.devilDmg}・連撃${Math.round(pb.devilCombo.rate*100)}%×${pb.devilCombo.count}）／2枚目＝天使（味方全員のライフ・ガッツが上限の${Math.round(pb.angelRate*100)}%回復）`);
-            out.push(`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン（ターン終わりに最大ライフの${Math.round(pb.costRate*100)}%を払う）`);
+            // 悪魔・天使の力は説明文に書いてあるので、ここは「いま何が起きているか」だけ(払うライフ)を出す
+            out.push(`ターン終わりに最大ライフの${Math.round(pb.costRate*100)}%を払う`);
           }
           if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり！ ':''}${pres.kinds.map(k=>tacticsExPresentKindText(k,def.present,def.turns)).join('・')}`);
           return out;

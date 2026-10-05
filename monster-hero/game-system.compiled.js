@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e13b496507bcad5
+// source-sha256: ec5783848dcdcf94
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 01:51";
+const BUILD_DATE = "2026-10-06 02:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -20447,6 +20447,71 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
     c2: '#db2777',
     motif: 'rise'
   },
+  distMatch: {
+    c1: '#fecdd3',
+    c2: '#e11d48',
+    motif: 'blade'
+  },
+  dodgeCombo: {
+    c1: '#fecaca',
+    c2: '#b91c1c',
+    motif: 'blade'
+  },
+  multiBuff: {
+    c1: '#fde68a',
+    c2: '#b45309',
+    motif: 'flame'
+  },
+  stage: {
+    c1: '#fbcfe8',
+    c2: '#be185d',
+    motif: 'note'
+  },
+  present: {
+    c1: '#fecaca',
+    c2: '#16a34a',
+    motif: 'petal'
+  },
+  lifeSpring: {
+    c1: '#bae6fd',
+    c2: '#0284c7',
+    motif: 'drop'
+  },
+  timeStop: {
+    c1: '#e0f2fe',
+    c2: '#475569',
+    motif: 'ring'
+  },
+  pandoraBox: {
+    c1: '#fae8ff',
+    c2: '#7e22ce',
+    motif: 'wing'
+  },
+  thunder: {
+    c1: '#fef9c3',
+    c2: '#eab308',
+    motif: 'spark'
+  },
+  partyBoost: {
+    c1: '#d9f99d',
+    c2: '#16a34a',
+    motif: 'petal'
+  },
+  damageBack: {
+    c1: '#e9d5ff',
+    c2: '#6d28d9',
+    motif: 'ring'
+  },
+  psychoLock: {
+    c1: '#fbcfe8',
+    c2: '#7c3aed',
+    motif: 'ring'
+  },
+  counter: {
+    c1: '#fed7aa',
+    c2: '#ea580c',
+    motif: 'fist'
+  },
   default: {
     c1: '#f5d0fe',
     c2: '#c026d3',
@@ -20519,6 +20584,33 @@ const TacticsExCutin = ({
   }, cutin.note) : null)), React.createElement("div", {
     className: "ex-cutin__flash"
   })), document.body);
+};
+const ExDescText = ({
+  text
+}) => {
+  const lines = String(text || '').split('\n').filter(l => l.trim() !== '');
+  if (!lines.length) return null;
+  const isBullet = l => /^[・　]/.test(l);
+  const lead = isBullet(lines[0]) ? null : lines[0];
+  const rest = lead ? lines.slice(1) : lines;
+  return React.createElement(React.Fragment, null, lead ? React.createElement("p", {
+    className: "ex-desc__lead"
+  }, lead) : null, rest.length ? React.createElement("ul", {
+    className: "ex-desc__list"
+  }, rest.map((l, i) => {
+    if (/^　/.test(l)) return React.createElement("li", {
+      key: i,
+      className: "ex-desc__sub"
+    }, l.replace(/^[　\s]+/, ''));
+    const body = l.replace(/^・/, '');
+    const m = /^([^：]{1,12})：(.*)$/.exec(body);
+    return React.createElement("li", {
+      key: i,
+      className: "ex-desc__item"
+    }, m ? React.createElement(React.Fragment, null, React.createElement("b", {
+      className: "text-fuchsia-200"
+    }, m[1]), "：", m[2]) : body);
+  })) : null);
 };
 const GUARD_BARRIER_TIERS = Object.freeze(['bronze', 'bronze', 'silver', 'silver', 'gold', 'gold', 'crystal', 'crystal', 'rainbow']);
 const guardBarrierTierOf = level => GUARD_BARRIER_TIERS[Math.max(0, Math.min(GUARD_BARRIER_TIERS.length - 1, Math.floor(Number(level) || 0)))];
@@ -41978,8 +42070,10 @@ function MonsterDexDetailScreen({
     }, "タクティクス専用")), React.createElement("div", {
       className: "mt-0.5 text-[12px] font-black text-white"
     }, "EX《", exDef.name, "》"), React.createElement("div", {
-      className: "mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
-    }, exDef.desc), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold text-slate-200"
+    }, React.createElement(ExDescText, {
+      text: exDef.desc
+    })), React.createElement("div", {
       className: "mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"
     }, React.createElement("span", {
       className: "rounded-lg bg-black/30 px-1.5 py-1"
@@ -54930,6 +55024,7 @@ function BattleScreen({
     return React.createElement("button", {
       key: i,
       "data-slot-index": i,
+      "data-tactics-ex-on": slotExInfo && slotExInfo.active && slotExInfo.def ? slotExInfo.def.effect || 'default' : undefined,
       "data-tactics-aimed": slotAimed ? 'true' : undefined,
       "data-distance-broken": distanceBroken ? 'true' : undefined,
       "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
@@ -55130,7 +55225,7 @@ function BattleScreen({
       "data-slot-ring": true
     }), React.createElement("div", {
       "data-slot-head": tacticsNewLayout ? i : undefined,
-      className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
+      className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
     }, tacticsNewLayout && React.createElement("span", {
       className: `mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
     }, RANGE_LABELS[i]), isHeroSlotMon(s) && React.createElement(Crown, {
@@ -55143,7 +55238,7 @@ function BattleScreen({
     }, "×", assignedCount), tacticsNewLayout && slotExInfo && React.createElement("span", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
-      className: `absolute right-1 top-[3px] max-w-[68px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
+      className: `absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
     }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : ''), slotBuffMarks.map(mark => React.createElement("span", {
       key: mark.text,
       "data-tactics-slot-buff": mark.text,
@@ -55857,12 +55952,41 @@ function BattleScreen({
   }, exPanel.def.name), exPanel.stateText && React.createElement("span", {
     "data-tactics-ex-state-pill": exPanel.stateText.kind,
     className: `mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black leading-none ${exPanel.stateText.kind === 'on' ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : exPanel.stateText.kind === 'ready' ? 'bg-emerald-700/70 text-emerald-100 ring-1 ring-emerald-300/60' : 'bg-slate-700 text-slate-300 ring-1 ring-white/10'}`
-  }, exPanel.stateText.text), React.createElement("p", {
+  }, exPanel.stateText.text), React.createElement("div", {
     "data-tactics-ex-desc": true,
-    className: "mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200"
-  }, exPanel.def.desc), !exPanel.implemented && React.createElement("p", {
+    className: "mt-1.5 text-[12px] font-bold text-slate-200"
+  }, React.createElement(ExDescText, {
+    text: exPanel.def.desc
+  })), !exPanel.implemented && React.createElement("p", {
     className: "mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100"
-  }, "効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。"), React.createElement("dl", {
+  }, "効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。"), (exPanel.remainText || exPanel.styleLabel || exPanel.active || (exPanel.statusLines || []).length > 0 || exPanel.stats && exPanel.stats.changed) && React.createElement("dl", {
+    "data-tactics-ex-now": true,
+    className: "mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border-2 border-fuchsia-400/60 bg-fuchsia-950/40 px-3 py-2 text-[12px] shadow-[0_0_12px_rgba(217,70,239,.25)]"
+  }, React.createElement("dt", {
+    className: "col-span-2 text-[10px] font-black tracking-widest text-fuchsia-300"
+  }, "いまの効果"), exPanel.remainText && React.createElement(React.Fragment, null, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "残り"), React.createElement("dd", {
+    "data-tactics-ex-remain": true,
+    className: "font-black text-fuchsia-200"
+  }, exPanel.remainText)), exPanel.styleLabel && React.createElement(React.Fragment, null, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "いま"), React.createElement("dd", {
+    "data-tactics-ex-style": true,
+    className: "font-black text-fuchsia-200"
+  }, exPanel.styleLabel)), (exPanel.statusLines || []).map((t, i) => React.createElement(React.Fragment, {
+    key: i
+  }, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "いまの状態"), React.createElement("dd", {
+    "data-tactics-ex-status": true,
+    className: "font-black text-fuchsia-200"
+  }, t))), exPanel.stats && exPanel.stats.changed && React.createElement(React.Fragment, null, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "ちから／丈夫さ"), React.createElement("dd", {
+    "data-tactics-ex-stats": true,
+    className: `font-black ${exPanel.stats.changed ? 'text-fuchsia-200' : 'text-white'}`
+  }, exPanel.stats.atk, "／", exPanel.stats.def, exPanel.stats.changed ? '（EXで変化中）' : ''))), React.createElement("dl", {
     className: "mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]"
   }, React.createElement("dt", {
     className: "font-bold text-slate-400"
@@ -55882,34 +56006,12 @@ function BattleScreen({
     className: "font-bold text-slate-400"
   }, "条件"), React.createElement("dd", {
     className: "font-black text-white"
-  }, exPanel.def.conditionText)), exPanel.remainText && React.createElement(React.Fragment, null, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "残り"), React.createElement("dd", {
-    "data-tactics-ex-remain": true,
-    className: "font-black text-fuchsia-200"
-  }, exPanel.remainText)), exPanel.styleLabel && React.createElement(React.Fragment, null, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "いま"), React.createElement("dd", {
-    "data-tactics-ex-style": true,
-    className: "font-black text-fuchsia-200"
-  }, exPanel.styleLabel)), !exPanel.styleLabel && exPanel.active && React.createElement(React.Fragment, null, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "いま"), React.createElement("dd", {
-    "data-tactics-ex-active": true,
-    className: "font-black text-fuchsia-200"
-  }, "効果中")), (exPanel.statusLines || []).map((t, i) => React.createElement(React.Fragment, {
-    key: i
-  }, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "いまの状態"), React.createElement("dd", {
-    "data-tactics-ex-status": true,
-    className: "font-black text-fuchsia-200"
-  }, t))), exPanel.stats && React.createElement(React.Fragment, null, React.createElement("dt", {
+  }, exPanel.def.conditionText)), exPanel.stats && !exPanel.stats.changed && React.createElement(React.Fragment, null, React.createElement("dt", {
     className: "font-bold text-slate-400"
   }, "ちから／丈夫さ"), React.createElement("dd", {
     "data-tactics-ex-stats": true,
-    className: `font-black ${exPanel.stats.changed ? 'text-fuchsia-200' : 'text-white'}`
-  }, exPanel.stats.atk, "／", exPanel.stats.def, exPanel.stats.changed ? '（EXで変化中）' : ''))), !exPanel.check.ok && React.createElement("p", {
+    className: "font-black text-white"
+  }, exPanel.stats.atk, "／", exPanel.stats.def))), !exPanel.check.ok && React.createElement("p", {
     "data-tactics-ex-why": true,
     className: "mt-2 text-[11px] font-bold leading-snug text-rose-200"
   }, exPanel.check.reason), exChoosing && exPanel.targetOptions ? React.createElement("div", {
@@ -75422,8 +75524,7 @@ function MonsterHeroGame() {
         }
         if (def.effect === 'pandoraBox' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const pb = def.pandoraBox;
-          out.push(`1枚目＝悪魔（与ダメ×${pb.devilDmg}・連撃${Math.round(pb.devilCombo.rate * 100)}%×${pb.devilCombo.count}）／2枚目＝天使（味方全員のライフ・ガッツが上限の${Math.round(pb.angelRate * 100)}%回復）`);
-          out.push(`あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン（ターン終わりに最大ライフの${Math.round(pb.costRate * 100)}%を払う）`);
+          out.push(`ターン終わりに最大ライフの${Math.round(pb.costRate * 100)}%を払う`);
         }
         if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり！ ' : ''}${pres.kinds.map(k => tacticsExPresentKindText(k, def.present, def.turns)).join('・')}`);
         return out;
@@ -95043,6 +95144,64 @@ const createAnimationStyle = () => {
       background:linear-gradient(90deg, transparent, var(--ex-c1) 30%, #fff 50%, var(--ex-c1) 70%, transparent); box-shadow:0 0 10px var(--ex-c2), 0 0 22px var(--ex-c2);
       rotate:calc(-24deg + (var(--i) - 2.5) * 6deg); animation:exBlade 520ms ease-out forwards; animation-delay:calc(200ms + var(--i) * 80ms); }
     @keyframes exBlade { 0% { opacity:0; transform:scaleX(0); } 30% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1) translateY(6px); } }
+    /* 稲妻(雷狼影): 上から折れ線の光が走る */
+    .ex-cutin__motif--spark i { top:-10%; left:calc(8% + var(--i) * 16%); width:6px; height:75vh; border-radius:3px;
+      background:linear-gradient(180deg, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2), 0 0 26px var(--ex-c1);
+      clip-path:polygon(40% 0, 100% 0, 60% 38%, 100% 38%, 20% 100%, 45% 55%, 0 55%); transform:scaleX(5);
+      animation:exSpark 520ms steps(2,end) forwards; animation-delay:calc(160ms + var(--i) * 90ms); }
+    @keyframes exSpark { 0% { opacity:0; } 20% { opacity:1; } 45% { opacity:.2; } 65% { opacity:1; } 100% { opacity:0; } }
+    /* 輪(悠久の刻・おぼろ返し・サイコロックオン): 中心から輪が何重にも広がる */
+    .ex-cutin__motif--ring i { left:50%; top:50%; width:90px; height:90px; margin:-45px 0 0 -45px; border-radius:50%;
+      border:3px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 14px var(--ex-c2);
+      animation:exRing 1000ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 120ms); }
+    @keyframes exRing { 0% { opacity:0; transform:scale(.2); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(5.5); } }
+    /* 粒・葉(クリスマスプレゼント・緑のめぐみ): 画面全体にきらきらの粒がふわっと舞う */
+    .ex-cutin__motif--petal i { top:calc(10% + var(--i) * 13%); left:calc(6% + var(--i) * 15%); width:16px; height:16px; border-radius:50% 0 50% 0;
+      background:radial-gradient(circle at 30% 30%, #fff, var(--ex-c1) 45%, var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2);
+      animation:exPetal 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 90ms); }
+    @keyframes exPetal { 0% { opacity:0; transform:translate(0,30px) rotate(0) scale(.4); } 30% { opacity:1; } 100% { opacity:0; transform:translate(40px,-70px) rotate(220deg) scale(2.2); } }
+    /* しずく(生命の泉): 下から丸い水玉が立ちのぼる */
+    .ex-cutin__motif--drop i { bottom:-20px; left:calc(8% + var(--i) * 16%); width:22px; height:22px; border-radius:50%;
+      background:radial-gradient(circle at 35% 30%, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exDrop 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exDrop { 0% { opacity:0; transform:translateY(0) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateY(-62vh) scale(1.6); } }
+    /* 音符(オン・ステージ！): 横から音符が流れる */
+    .ex-cutin__motif--note i { left:-10%; top:calc(14% + var(--i) * 12%); width:18px; height:30px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:linear-gradient(var(--ex-c1), var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2); rotate:-14deg;
+      animation:exNote 1000ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exNote { 0% { opacity:0; transform:translateX(0); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(115vw) translateY(-20px); } }
+    /* 羽(パンドラの箱): 左右から白と黒の羽が交差する */
+    .ex-cutin__motif--wing i { top:calc(18% + var(--i) * 9%); width:60%; height:10px; border-radius:999px;
+      background:linear-gradient(90deg, transparent, var(--ex-c1) 40%, #fff 55%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exWing 760ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    .ex-cutin__motif--wing i:nth-child(odd) { left:-60%; --dir:1; }
+    .ex-cutin__motif--wing i:nth-child(even) { right:-60%; --dir:-1; filter:hue-rotate(40deg) brightness(.55); }
+    @keyframes exWing { 0% { opacity:0; transform:translateX(0); } 30% { opacity:1; } 100% { opacity:0; transform:translateX(calc(var(--dir) * 150%)); } }
+    /* 拳(ハムボクシング): 中心で衝撃の輪と拳の光がはじける */
+    .ex-cutin__motif--fist i { left:50%; top:50%; width:44px; height:44px; margin:-22px 0 0 -22px; border-radius:50%;
+      background:radial-gradient(circle, #fff 0 18%, var(--ex-c1) 30%, var(--ex-c2) 62%, transparent 70%); box-shadow:0 0 22px var(--ex-c2);
+      animation:exFist 560ms cubic-bezier(.2,.9,.2,1) forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    @keyframes exFist { 0% { opacity:0; transform:translate(0,0) scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:translate(calc((var(--i) - 2.5) * 70px), calc((var(--i) % 2 - .5) * 90px)) scale(3); } }
+    /* EXが効いているあいだの、距離枠のゆっくり脈打つ光(2026-10-06 ユーザー指示「効果中の見やすさ」。使った瞬間の .ex-aura とは別に、ずっと出る) */
+    [data-tactics-ex-on] { --ex-on-c:#e879f9; }
+    /* 光は枠のうえに重ねた膜(::after)の透明度だけを動かす(バトルの飾りは transform と opacity だけを動かす決まり) */
+    [data-tactics-ex-on]::after { content:''; position:absolute; inset:-2px; z-index:58; pointer-events:none; border-radius:inherit;
+      box-shadow:0 0 0 2px var(--ex-on-c), 0 0 18px color-mix(in srgb, var(--ex-on-c) 85%, transparent), inset 0 0 14px color-mix(in srgb, var(--ex-on-c) 40%, transparent);
+      animation:exOnPulse 2200ms ease-in-out infinite; }
+    [data-tactics-ex-on="thunder"], [data-tactics-ex-on="stage"] { --ex-on-c:#facc15; }
+    [data-tactics-ex-on="counter"], [data-tactics-ex-on="allIn"], [data-tactics-ex-on="multiBuff"] { --ex-on-c:#fb923c; }
+    [data-tactics-ex-on="partyBoost"], [data-tactics-ex-on="partyGuard"], [data-tactics-ex-on="present"] { --ex-on-c:#4ade80; }
+    [data-tactics-ex-on="lifeSpring"], [data-tactics-ex-on="psychoLock"], [data-tactics-ex-on="damageBack"] { --ex-on-c:#38bdf8; }
+    [data-tactics-ex-on="statBoost"], [data-tactics-ex-on="distMatch"], [data-tactics-ex-on="dodgeCombo"], [data-tactics-ex-on="pandoraBox"] { --ex-on-c:#f472b6; }
+    @keyframes exOnPulse { 0%, 100% { opacity:.35; } 50% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { [data-tactics-ex-on]::after { animation:none; opacity:.8; } }
+    /* EXの説明文(箇条書き): 1行目は要約、「・」で始まる行は項目として段を下げる */
+    .ex-desc__lead { font-weight:900; color:#fff; line-height:1.5; }
+    .ex-desc__list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; }
+    .ex-desc__item { position:relative; padding-left:1.1em; line-height:1.5; }
+    .ex-desc__item::before { content:''; position:absolute; left:.2em; top:.62em; width:.5em; height:.5em; border-radius:50%; background:#d946ef; }
+    .ex-desc__sub { padding-left:2.1em; font-size:.92em; color:#cbd5e1; line-height:1.4; position:relative; }
+    .ex-desc__sub::before { content:'─'; position:absolute; left:1.1em; opacity:.6; }
     /* 使った子の距離枠の光 */
     .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
       border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);

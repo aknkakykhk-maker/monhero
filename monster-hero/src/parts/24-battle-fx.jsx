@@ -815,6 +815,20 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   heal:         { c1:'#bbf7d0', c2:'#10b981', motif:'rise' },   // 緊急回復(2026-09-29): 緑の光が立ちのぼる
   partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
   comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
+  // ★2026-10-06 EXが全員そろったので、効果ごとに色と動きを分けた(それまでは default の桃紫の光ばかりだった)
+  distMatch:    { c1:'#fecdd3', c2:'#e11d48', motif:'blade' },   // 緋桜瞬歩: 緋色の斬撃
+  dodgeCombo:   { c1:'#fecaca', c2:'#b91c1c', motif:'blade' },   // 血踊: 血の色の斬撃
+  multiBuff:    { c1:'#fde68a', c2:'#b45309', motif:'flame' },   // 抗えぬ宿命・堕天の烙印・お気に入りの魔法: 燃えるオーラ
+  stage:        { c1:'#fbcfe8', c2:'#be185d', motif:'note' },    // オン・ステージ！: 音符が舞う
+  present:      { c1:'#fecaca', c2:'#16a34a', motif:'petal' },   // クリスマスプレゼント: きらきらの粒
+  lifeSpring:   { c1:'#bae6fd', c2:'#0284c7', motif:'drop' },    // 生命の泉: 水のしずくが立ちのぼる
+  timeStop:     { c1:'#e0f2fe', c2:'#475569', motif:'ring' },    // 悠久の刻: 時計の輪が広がる
+  pandoraBox:   { c1:'#fae8ff', c2:'#7e22ce', motif:'wing' },    // パンドラの箱: 光と闇の羽
+  thunder:      { c1:'#fef9c3', c2:'#eab308', motif:'spark' },   // 雷狼影: 稲妻
+  partyBoost:   { c1:'#d9f99d', c2:'#16a34a', motif:'petal' },   // 緑のめぐみ: 緑の葉
+  damageBack:   { c1:'#e9d5ff', c2:'#6d28d9', motif:'ring' },    // おぼろ返し: 朧の輪
+  psychoLock:   { c1:'#fbcfe8', c2:'#7c3aed', motif:'ring' },    // サイコロックオン: 念力の輪
+  counter:      { c1:'#fed7aa', c2:'#ea580c', motif:'fist' },    // ハムボクシング: 拳の衝撃
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
@@ -853,6 +867,25 @@ const TacticsExCutin = ({ cutin }) => {
     </div>,
     document.body
   );
+};
+// ==== EXの説明文(2026-10-06 ユーザー指示「説明欄の見やすさ」) ====
+// def.desc の書き方: 1行目＝要約 / 「・」で始まる行＝効果の項目 / 全角空白で始まる行＝その項目の細かい内訳 / 「◯◯：…」の行＝名前つきの項目。
+// 図鑑と、距離枠から開く詳細の両方で同じ見た目にする(文字そのものは変えず、段と印だけを付ける)
+const ExDescText = ({ text }) => {
+  const lines = String(text || '').split('\n').filter(l => l.trim() !== '');
+  if (!lines.length) return null;
+  const isBullet = (l) => /^[・　]/.test(l);
+  const lead = isBullet(lines[0]) ? null : lines[0];
+  const rest = lead ? lines.slice(1) : lines;
+  return (<>
+    {lead ? <p className="ex-desc__lead">{lead}</p> : null}
+    {rest.length ? <ul className="ex-desc__list">{rest.map((l, i) => {
+      if (/^　/.test(l)) return <li key={i} className="ex-desc__sub">{l.replace(/^[　\s]+/, '')}</li>;
+      const body = l.replace(/^・/, '');
+      const m = /^([^：]{1,12})：(.*)$/.exec(body);
+      return <li key={i} className="ex-desc__item">{m ? <><b className="text-fuchsia-200">{m[1]}</b>：{m[2]}</> : body}</li>;
+    })}</ul> : null}
+  </>);
 };
 // ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」) ====
 // ガードを置いた子の枠に六角形の光の壁を重ねる。ガードの段階(GUARD_EVOLUTION)が上がるほど、
