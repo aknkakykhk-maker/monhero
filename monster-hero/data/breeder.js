@@ -356,22 +356,24 @@ const BREEDER_MARKET_ITEMS = [
   // 2026-09-28 ユーザー指示「近日公開予定でマーケットにおいて」で、3件とも available:false(「近日追加」)で並べた。
   // 2026-09-29 に本体を入れ、円盤石はビートP交換所で先に交換できるようにした(data/rhythm-event.js・各1,500P)。
   // 同じ日のユーザー指示「アイコンはもう販売開始してok」で、アイコン2種(本人・円盤石)の available:false を外した。
-  // ダイヤショップの円盤石(150,000ダイヤ)は、まだ available:false のまま(「近日追加」)。
+  // 2026-10-05 ユーザー指示「ゴースト、スプーキーの実装タイミングでユグとメルホイップはダイヤにも販売開始」で、
+  // ダイヤショップの円盤石(150,000ダイヤ)の available:false も外した。
   { id:'yggdrasil_icon', name:"ユグドラシルのアイコン", type:'icon', icon:YGGDRASIL_FACE_ICON, cost:1 },
   { id:'yggdrasil_disc_icon', name:"ユグドラシルの円盤石アイコン", type:'icon', icon:YGGDRASIL_DISC_ICON, cost:1 },
-  { id:'Yggdrasil', name:"ユグドラシルの円盤石", type:'disc', icon:YGGDRASIL_DISC_ICON, cost:150000, available:false },
+  { id:'Yggdrasil', name:"ユグドラシルの円盤石", type:'disc', icon:YGGDRASIL_DISC_ICON, cost:150000 },
   { id:'mel_whip_icon', name:"メルホイップのアイコン", type:'icon', icon:MEL_WHIP_FACE_ICON, cost:1 },
   { id:'mel_whip_disc_icon', name:"メルホイップの円盤石アイコン", type:'icon', icon:MEL_WHIP_DISC_ICON, cost:1 },
-  { id:'MelWhip', name:"メルホイップの円盤石", type:'disc', icon:MEL_WHIP_DISC_ICON, cost:150000, available:false },
+  { id:'MelWhip', name:"メルホイップの円盤石", type:'disc', icon:MEL_WHIP_DISC_ICON, cost:150000 },
   // ゴースト(新しい血統・ゴースト×ゴースト)とスプーキー(ゴースト×？？？のレア)。
   // 2026-10-05 ユーザー指示「マーケットに近日追加で並べる」で、6件とも available:false(「近日追加」)で並べた。
-  // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はユグドラシル種と同じ(円盤石150,000ダイヤ・アイコンは各1)。
-  // 正式実装のときに available:false を外す
-  { id:'ghost_icon', name:"ゴーストのアイコン", type:'icon', icon:GHOST_FACE_ICON, cost:1, available:false },
-  { id:'ghost_disc_icon', name:"ゴーストの円盤石アイコン", type:'icon', icon:GHOST_DISC_ICON, cost:1, available:false },
+  // 値段はユグドラシル種と同じ(円盤石150,000ダイヤ・アイコンは各1)。
+  // 2026-10-05 の正式実装で、ユグドラシル種と同じく円盤石はビートP交換所で先行公開(data/rhythm-event.js・各1,500P)し、
+  // アイコン2種(本人・円盤石)の available:false を外した。ダイヤショップの円盤石は「近日追加」のまま
+  { id:'ghost_icon', name:"ゴーストのアイコン", type:'icon', icon:GHOST_FACE_ICON, cost:1 },
+  { id:'ghost_disc_icon', name:"ゴーストの円盤石アイコン", type:'icon', icon:GHOST_DISC_ICON, cost:1 },
   { id:'Ghost', name:"ゴーストの円盤石", type:'disc', icon:GHOST_DISC_ICON, cost:150000, available:false },
-  { id:'spooky_icon', name:"スプーキーのアイコン", type:'icon', icon:SPOOKY_FACE_ICON, cost:1, available:false },
-  { id:'spooky_disc_icon', name:"スプーキーの円盤石アイコン", type:'icon', icon:SPOOKY_DISC_ICON, cost:1, available:false },
+  { id:'spooky_icon', name:"スプーキーのアイコン", type:'icon', icon:SPOOKY_FACE_ICON, cost:1 },
+  { id:'spooky_disc_icon', name:"スプーキーの円盤石アイコン", type:'icon', icon:SPOOKY_DISC_ICON, cost:1 },
   { id:'Spooky', name:"スプーキーの円盤石", type:'disc', icon:SPOOKY_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },

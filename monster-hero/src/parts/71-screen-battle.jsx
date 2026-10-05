@@ -683,7 +683,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -1023,6 +1023,8 @@ function BattleScreen({
       :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]'
       :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]'
       :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]'
+      // 乱心で「意味不明」(スプーキーのトリックコンフューズ)。敵は動けない
+      :enemyIntent.type==='CONFUSED'?'bg-violet-600 border-violet-100 text-white shadow-[0_0_14px_rgba(139,92,246,0.85)]'
       :'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
     // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
     // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
@@ -1275,6 +1277,7 @@ function BattleScreen({
               // ★再生だけは赤にしない。こちらが減るのではなく敵が戻る数字なので、
               //   右上の吹き出し(noticeHeal)と同じ緑にそろえて取り違えを防ぐ
               :enemyIntent.type==='REGEN'?'bg-emerald-950 border-emerald-500/60 text-emerald-300'
+              :enemyIntent.type==='CONFUSED'?'bg-violet-950 border-violet-400/70 text-violet-200'
               :'bg-red-950 border-red-600/50 text-red-400';
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
@@ -1293,6 +1296,7 @@ function BattleScreen({
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"><Target size={9}/>次の行動</div>
                 <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
+                {enemyIntent.type==='CONFUSED'?<div data-enemy-confused className="mt-0.5 text-[9px] font-bold leading-tight opacity-90">動けない・会心確定</div>:null}
                 {rawDmg>0&&showPlannedInBubble&&plannedText?(
                   <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
                     <div className="text-[12px] font-black tabular-nums">{plannedTotalText}</div>
@@ -1701,6 +1705,27 @@ function BattleScreen({
               'text-amber-400 border-amber-400/50');
             // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
             if(getPermaBuff('poltzCharges')>0) chip('poltz',<Zap size={9}/>,BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))],`×${Math.floor(getPermaBuff('poltzCharges'))}`,'text-lime-300 border-lime-400/50',{pulse:true});
+            // トリックスタート(ゴースト・スプーキー)で積んだもの。WAVEのあいだだけ残る。
+            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)
+            Object.entries(trickStartView||{}).forEach(([key,st])=>{
+              const parts=[st?.atk>0?`ち+${st.atk*20}%`:null,st?.def>0?`丈+${st.def*20}%`:null,st?.regen>0?`回+${st.regen*5}%`:null].filter(Boolean);
+              if(!parts.length) return;
+              const who=key==='party'?'':(slots[Number(key)]?.name||'');
+              chip(`trick${key}`,<Sparkles size={9}/>,`${who}トリック`,parts.join(' '),'text-violet-300 border-violet-400/50',{short:parts.join(' ')});
+            });
+            // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
+            {
+              const fate=getPermaBuff('fateStacks',null);
+              Object.keys(fate?.bySlot||{}).forEach(key=>{
+                const st=fateSlotStacksOf(fate,key);
+                const parts=[st.combo>0?`連撃+${st.combo*10}%`:null,st.atk>0?`ち+${st.atk*15}%`:null].filter(Boolean);
+                if(parts.length) chip(`fate${key}`,<Star size={9}/>,`${slots[Number(key)]?.name||''}運命`,parts.join(' '),'text-amber-300 border-amber-400/50',{short:parts.join(' ')});
+              });
+              if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
+            }
+            if(enemyConfuseTurns>0) chip('enemyConfuse',<Sparkles size={9}/>,'敵 乱心',`残り${enemyConfuseTurns}回`,'text-violet-300 border-violet-400/50',{pulse:true,short:`${enemyConfuseTurns}`});
+            if(fateWheelView?.atkDown>0) chip('fateAtkDown',<ArrowDownCircle size={9}/>,'運命の輪 敵与ダメ',`-30%（残り${fateWheelView.atkDown}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'-30%'});
+            if(fateWheelView?.takenUp>0) chip('fateTakenUp',<PlusCircle size={9}/>,'運命の輪 敵被ダメ',`+30%（残り${fateWheelView.takenUp}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'+30%'});
             // === ターン限定バフ（都度表示） ===
             if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
             if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});

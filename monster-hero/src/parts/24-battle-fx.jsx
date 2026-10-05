@@ -576,8 +576,46 @@ const SKILL_MOTION_SETS_MAIN = Object.freeze({
       : i === 8 ? skm('float', { c:'blue', fx:skmFx('fall', 'water', 16), over:'boom' }) : sp)),
   },
 });
+// ゴースト(2026-10-05): シルクハットの手品師のおばけ。カード・コイン・ハト・ドクロで見せる(専用の動きは無いので見せ場 sig は置かない)
+//   並びは HERO_ATK_NAMES.Ghost / unique.names と同じ段階の順
+const SKM_GHOST = Object.freeze({
+  normal:[
+    skm('jump', { c:'pink', over:'fist', burst:'star' }),                                   // ピコピコハンマー
+    skm('cast', { c:'cosmic', line:'ray', burst:'spark' }),                                 // ソウルビーム
+    skm('float', { c:'white', fx:skmFx('fall', 'feather', 12), burst:'dust' }),             // ハトのおとしもの
+    skm('warp', { c:'psy', over:'eye', burst:'star' }),                                     // びっくり
+    skm('dash', { c:'dark', burst:'dust' }),                                                // 体当たり
+    skm('toss', { c:'red', fx:skmFx('shot', 'blade', 5), burst:'spark' }),                  // カード
+    skm('cast', { c:'gold', fx:skmFx('orbit', 'star', 8, { h:45 }), burst:'star' }),        // すてきステッキ
+    skm('jab', { c:'dark', over:'fist', burst:'dust' }),                                    // 大パンチ
+    skm('spin', { c:'psy', over:'xslash', burst:'star' })],                                 // コンビネーション
+  unique:[
+    skm('toss', { c:'red', fx:skmFx('shot', 'blade', 8, { step:35 }), over:'slash', burst:'spark' }),        // 連続カード
+    skm('cast', { c:'dark', line:'ray', over:'boom', fx:skmFx('orbit', 'ghost', 6) }),                      // ドクロビーム
+    skm('float', { c:'white', fx:skmFx('fall', 'meteor', 3, { s:1.6 }), over:'boom', burst:'dust' }),       // 大きなおとしもの
+    skm('warp', { c:'dark', fx:skmFx('shot', 'ghost', 5), over:'eye', burst:'star' }),                      // びっくりドクロ
+    skm('shake', { c:'gold', fx:skmFx('shot', 'star', 7, { h:[45, 0, 45] }), over:'pillar', burst:'star' }), // スリーセブン
+    skm('cast', { c:'psy', fx:skmFx('orbit', 'orb', 8, { h:[280, 45, 190, 330] }), over:'aurora', burst:'spark' }), // Woフォーチュン
+    skm('toss', { c:'gold', fx:skmFx('shot', 'blade', 5, { h:45 }), over:'cross', burst:'star' }),          // RSF(ロイヤルストレートフラッシュ)
+    skm('hop', { c:'gold', fx:skmFx('lob', 'ring', 3, { s:1.4, h:45 }), over:'boom', burst:'star' }),       // 運命のコイン
+    skm('gather', { c:'cosmic', fx:skmFx('orbit', 'ghost', 10), over:'eclipse', burst:'star' })],           // グランドイリュージョン
+});
+// スプーキー: かぼちゃ頭の魔女。ゴーストと同じ技の並びを、炎と葉の色で。名前が違う2つ(カード・クラブ / グリンネーション)と、
+// 運命の輪(Woフォーチュン)はスプーキーらしい動きにする
+const SKM_SPOOKY = Object.freeze({
+  normal:SKM_GHOST.normal.map((sp, i) => (i === 2 ? sp
+    : i === 5 ? skm('toss', { c:'dark', fx:skmFx('shot', 'blade', 5, { h:270 }), over:'cross', burst:'spark' })   // カード・クラブ
+    : i === 6 ? skm('cast', { c:'plant', fx:skmFx('orbit', 'leaf', 8), burst:'leaf' })                             // すてきステッキ(枝)
+    : i === 8 ? skm('spin', { c:'plant', fx:skmFx('rise', 'leaf', 10), over:'tornado', burst:'leaf' })            // グリンネーション
+    : { ...sp, c:'fire' })),
+  unique:SKM_GHOST.unique.map((sp, i) => (i === 5 ? skm('spin', { c:'psy', fx:skmFx('orbit', 'orb', 8, { h:[30, 280, 120, 330] }), over:'aurora', burst:'spark' }) // Woフォーチュン(運命の輪)
+    : i === 1 ? skm('cast', { c:'fire', line:'ray', over:'boom', fx:skmFx('orbit', 'flame', 6) })
+    : i === 8 ? skm('gather', { c:'fire', fx:skmFx('orbit', 'flame', 10), over:'eclipse', burst:'star' })
+    : i === 7 ? sp
+    : { ...sp, c:sp.c === 'gold' ? 'gold' : 'fire' })),
+});
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
-const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red') });
+const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
@@ -829,6 +867,8 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   damageBack:   { c1:'#e9d5ff', c2:'#6d28d9', motif:'ring' },    // おぼろ返し: 朧の輪
   psychoLock:   { c1:'#fbcfe8', c2:'#7c3aed', motif:'ring' },    // サイコロックオン: 念力の輪
   counter:      { c1:'#fed7aa', c2:'#ea580c', motif:'fist' },    // ハムボクシング: 拳の衝撃
+  avoidCharge:  { c1:'#e9d5ff', c2:'#6d28d9', motif:'blade' },   // オフリィアボイド: 紫の残像(すり抜ける)
+  trickConfuse: { c1:'#fed7aa', c2:'#9333ea', motif:'rise' },   // トリックコンフューズ: かぼちゃ色と紫の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;

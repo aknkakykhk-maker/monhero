@@ -99,13 +99,16 @@ for (const [def,attack,expectedBase,expectedGuard,expected] of cases) {
 // targetSlot を渡さない既存モードはこれまでどおり effectiveDef が入る
 assert(game.includes('const defenseRate = Math.min(0.5,defVal*0.00015);'));
 assert(game.includes('Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))'));
-assert(game.includes(': effectiveDef;'), '渡されなければパーティの実効丈夫さへ倒す');
+// 2026-10-05: 勇者特性「トリックスタート」(ゴースト・スプーキー)で積んだ「丈夫さ+20%」を掛けるようになった。
+// 積んでいなければ1倍なので、既存モードの値は今までどおり effectiveDef のまま
+assert(game.includes(": effectiveDef)\n      * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));"), '渡されなければパーティの実効丈夫さへ倒す');
 // 2026-09-22: ガードも「構えた子の丈夫さ」で決まるようになったので、guardValueOf は
-// guardDefFor(slotIdx) を通す。枠を渡さない既存5モードでは effectiveDef へ倒れる
+// guardDefFor(slotIdx) を通す。枠を渡さない既存5モードでは effectiveDef へ倒れる(トリックスタートの倍率は被ダメージと同じ)
 assert(game.includes('Math.floor(flat + guardDefFor(slotIdx) * mult)'));
-assert(game.includes('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;'),
+assert(game.includes('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef * trickMult;'),
   'ガードも、枠を渡されなければパーティの実効丈夫さへ倒す');
-assert(game.includes('Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult)'));
+// 既存モードの実処理も guardDefFor(null)(＝effectiveDef × トリックスタートの倍率)を通す
+assert(game.includes('Math.floor(immediateEffects.guardFlat + guardDefFor(null)*immediateEffects.guardMult)'));
 // 2026-09-20: 新モードの連撃を 0.6×3 の3ヒットにし、ガードが届くのは1ヒットぶんだけにした。
 // 予告も実処理と同じ resolveTacticsGuardedHit を通す(ガードを引いてからターン軽減、の順は変わらない)
 // 2026-09-22: 予告は枠ごとになった。タクティクスは枠ごとのガード値(全体ガードのぶんも含む)、

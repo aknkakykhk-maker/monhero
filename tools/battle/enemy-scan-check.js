@@ -189,8 +189,12 @@ check('ためを止めた次のターンはふだんの出やすさに戻る',
 // actionState() はモードごとの行動表(新モードだけ別の表)と咆哮の重ねがけ回数を渡すもの。
 // aimTacticsIntent は新モードのときだけ「誰を狙うか」を足す包み(既存モードでは intent をそのまま返す)。
 // 既存モードでは今までどおりの1つの表が返り、予告の中身も変わらない
+// ★2026-10-05 乱心(スプーキーのトリックコンフューズ)が入り、狙いを付けた行動(aimed)を乱心の抽選に通してから予告にする。
+//   乱心が残っていないとき rollEnemyConfusion は渡した行動をそのまま返す(tools/mode/tactics-ex-skills-check.js が見る)
 check('予告済みの行動は抽選し直さず繰り上げる',
-  has('const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);')
+  has('const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);')
+    && has('const confusion = rollEnemyConfusion(aimed, enemyConfuseRef.current);')
+    && has('const upcoming = confusion.intent;')
     && has('setEnemyIntent(upcoming);'));
 check('戦闘開始時に2手ぶん用意する',
   has('const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);')
@@ -198,7 +202,7 @@ check('戦闘開始時に2手ぶん用意する',
 check('戦闘開始前のSCANも同じ条件で見せる', has('scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)'));
 // 予約を捨てて引き直した行動は、次のターンにそのまま実行されるのに吹き出しを出していない
 check('引き直した行動でも予告なしの移動にしない',
-  has('const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);'));
+  has('const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);'));
 check('次の行動を決めるとき直前の行動を渡している',
   /advanceEnemyIntents\(executedIntent,distForNextPredict[,)]/.test(src) && /advanceEnemyIntents\(acting,distForNextPredict[,)]/.test(src));
 
