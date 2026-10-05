@@ -118,7 +118,8 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:GHOST_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'ghost', sub:'ghost' }),
     trait:"トリックスタート",
     traitDesc:"勇者モン選択時：WAVEの1ターン目から3ターン毎に、ちから+20%・丈夫さ+20%・毎ターンライフ5%回復をそれぞれ50%で付与(重複あり・そのWAVEのあいだ)。攻撃が当たると、その技の消費ガッツの半分を回復",
-    baseHp:380, baseGuts:150, baseAtk:150, baseDef:50,
+    // 能力値は 2026-10-05 にユーザーが1つずつ決め直した(最初の案は 380/150/150/50)
+    baseHp:450, baseGuts:150, baseAtk:130, baseDef:50,
     plusStats:Object.freeze({hp:150,atk:35,def:10,guts:45}),
     distAptitude:Object.freeze(['C','C','A','C']),
     draftUniqueNames:Object.freeze(["連続カード","ドクロビーム","大きなおとしもの","びっくりドクロ","スリーセブン","Woフォーチュン","RSF","運命のコイン","グランドイリュージョン"]) }),
@@ -127,7 +128,8 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:SPOOKY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'ghost', sub:'unknown' }),
     trait:"トリックスタート",
     traitDesc:"勇者モン選択時：WAVEの1ターン目から3ターン毎に、ちから+20%・丈夫さ+20%・毎ターンライフ5%回復をそれぞれ50%で付与(重複あり・そのWAVEのあいだ)。攻撃が当たると、その技の消費ガッツの半分を回復",
-    baseHp:400, baseGuts:160, baseAtk:165, baseDef:40,
+    // 能力値は 2026-10-05 にユーザーが1つずつ決め直した(最初の案は 400/160/165/40)
+    baseHp:510, baseGuts:160, baseAtk:150, baseDef:55,
     plusStats:Object.freeze({hp:160,atk:40,def:5,guts:50}),
     distAptitude:Object.freeze(['B','D','B','A']),
     draftUniqueNames:Object.freeze(["連続カード","ドクロビーム","大きなおとしもの","びっくりドクロ","スリーセブン","Woフォーチュン","RSF","運命のコイン","グランドイリュージョン"]) }),
