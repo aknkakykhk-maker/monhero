@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a49c856a78024a93
+// generated-sha256: 4993b14135dc62cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 00:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 00:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24455,6 +24455,50 @@ const ScreenTabs = ({ items = [], value, onChange, className = '' }) => (
   </div>
 );
 
+// 強化・超越強化・オート強化の切り替え(2026-10-05)。3つの画面がそれぞれ同じタブの行を手書きしていて、
+// 選ばれている側の表し方(aria-current)・文字の色・枠がそろっていなかったので1つにする。
+//   current … 'normal' / 'transcend' / 'auto'。いまの画面のタブは押しても何もしない
+//   autoOn  … オート強化がONの個体なら、タブに小さな緑の点を付ける
+// ★data-transcend-enhance-tabs は検査(masu/transcendence-check.js)が目印にしているので残す。
+//   タブの文字は「通常強化」「超越強化」「オート強化」だけにする(検査が文字で押す)
+const ENHANCE_MODE_TABS = Object.freeze([
+  { id:'normal', label:'通常強化', color:'#f59e0b', idle:'text-amber-200' },
+  { id:'transcend', label:'超越強化', color:'#0ea5e9', idle:'text-sky-200' },
+  { id:'auto', label:'オート強化', color:'#84cc16', idle:'text-lime-200' },
+]);
+const EnhanceModeTabs = ({ current, onNormal, onTranscend, onAuto, autoOn = false }) => {
+  const handlers = { normal:onNormal, transcend:onTranscend, auto:onAuto };
+  return (
+    <div data-transcend-enhance-tabs role="tablist" className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
+      {ENHANCE_MODE_TABS.map(tab => {
+        const on = tab.id === current;
+        return (
+          <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={on ? undefined : handlers[tab.id]}
+            className={`mh-tab min-h-[44px] rounded-xl px-1 text-[11px] font-black leading-tight flex items-center justify-center gap-1 ${on ? '' : `border border-white/10 bg-slate-900 active:scale-95 ${tab.idle}`}`}
+            style={on ? { background:tab.color, color:'#0f172a' } : undefined}>
+            {tab.label}{tab.id === 'auto' && autoOn && <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-lime-400"/>}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// 「必要な量 / 持っている量 / 足りないときの一文」の3行(2026-10-05)。神殿の転生・超越で同じ3行が
+// 手書きされ、「所持ダイヤ」「所持数」のように呼び名もそろっていなかったのでまとめる。
+//   needLabel / haveLabel / shortLabel … 画面に出す言葉(「必要ダイヤ」「所持ダイヤ」「ダイヤが足りません」)
+//   icon … 必要量の前に付ける絵。okClass … 足りているときの必要量の色
+//   note … 必要量の下へ添える計算式など(省略可)
+const CostRow = ({ needLabel, haveLabel, shortLabel, need, have, icon = null, okClass = 'text-amber-300', note = null }) => {
+  const needCount = Math.max(0, Number(need) || 0), haveCount = Math.max(0, Number(have) || 0);
+  return (<>
+    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">{needLabel}</span><span className={`font-black flex items-center gap-1 ${haveCount >= needCount ? okClass : 'text-red-400'}`}>{icon}{needCount.toLocaleString()}</span></div>
+    {note}
+    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">{haveLabel}</span><span className="text-slate-300 font-black">{haveCount.toLocaleString()}</span></div>
+    {haveCount < needCount && <div className="text-[10px] text-red-400 font-black">{shortLabel}（あと {(needCount - haveCount).toLocaleString()}）</div>}
+  </>);
+};
+
 // 画面の中の小見出し(節の名前)。60-app.jsx の renderDetailSectionLabel と同じ形を、
 // 画面部品からも使えるようにしたもの。
 const ScreenSectionLabel = ({ children, note = '' }) => (
@@ -24500,6 +24544,22 @@ const QuantityStepper = ({ value, max, onChange, unit='個', maxClass='' }) => {
     <button type="button" disabled={safeMax<=0} onClick={()=>setCount(safeMax)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`}>MAX（{safeMax.toLocaleString()}{unit}）</button>
   </>;
 };
+// 名前を入れる窓(2026-10-05)。ブリーダー名とマスモンの名前の窓が、ほぼ同じ作りで別々に手書きされ、
+// ボタンが44pxに届かず、取りやめが「戻る」になっていた。外側を押すと取りやめる。
+//   zIndex … 呼ぶ側の重なり順をそのまま渡す(値は変えない。窓どうしの前後が変わるため)
+const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, border = 'border-indigo-400/70', zIndex = MODAL_Z.dialog }) => (
+  <ModalFrame label={title} border={border} onClose={onCancel} narrow zIndex={zIndex}>
+    <h3 className="text-center text-base font-black text-white">{title}</h3>
+    <input type="text" value={value} onChange={e => onChange(e.target.value)} maxLength={maxLength} aria-label={title}
+      onKeyDown={e => { if (e.key === 'Enter') onSave(); }}
+      className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
+    <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
+    </div>
+  </ModalFrame>
+);
 // 確認の窓。title は問いかけ、message は何が起きるか(取り消せるかどうかも書く)。
 // danger のときは決定ボタンを危険な操作の型(mh-button-danger)にする(削除など、元に戻せない操作)
 const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onConfirm, onCancel }) => (
@@ -25039,7 +25099,9 @@ function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent
   return (
     <button type="button" onClick={onClick} disabled={disabled} {...rest}
       className="mh-button mh-button-secondary w-full min-h-[64px] flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-left active:scale-[.98] disabled:opacity-40">
-      <span aria-hidden="true" className="w-8 shrink-0 text-center text-[22px] leading-none">{icon}</span>
+      {/* 絵文字はCSS(.mh-emoji-icon)で描き、ボタンの文字には含めない。文字が「📚ヘルプ…」になると、
+          「ヘルプ」で始まるボタンを探す検査や読み上げが絵文字に引っかかる */}
+      <span aria-hidden="true" data-icon={icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
       <span className="min-w-0 flex-1">
         <span className={`block text-[14px] font-black leading-tight ${accent}`}>{label}</span>
         <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{desc}</span>
@@ -27854,7 +27916,7 @@ function MasuRebirthScreen({
       const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
       if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)); return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="限界突破" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div>{renderScreenNote('rebirth','レベル上限に届いたマスモンを、虹のプシュケーで上へ伸ばせます。',[`30凸までは上限+${BREAKTHROUGH_LEVEL_CAP_GAIN}。31〜35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。`,'虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。',`必要な虹のプシュケーは1回目${BREAKTHROUGH_ITEM_BASE}個、以降1回ごとに+${BREAKTHROUGH_ITEM_STEP}個。チャレンジ／クイックをクリアするともらえます。`])}<div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/60 bg-fuchsia-950/30 px-3 py-2"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div>{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🌈" lines={['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-35`}>{renderMonsterCardBody({masu,base,status:<span className={`text-[10px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</span>})}</button>})}</div>}</div></div>; }
       const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
-      return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="限界突破・固有技選択" accent="text-violet-300" onBack={()=>setRebirthSelectedId(null)} backLabel="限界突破の一覧へ戻る" disabled={rebirthProcessingRef.current}/><div className="shrink-0 mb-3 flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.rebirthCount>=BREAKTHROUGH_MAX_COUNT?`次は${normalized.rebirthCount+1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount+1)}、虹★が1個増えます${normalized.rebirthCount+1>=34?`（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount+1)}）`:''}`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[10px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[10px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[10px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[10px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<ScreenLead>LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</ScreenLead><div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}>{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full min-h-[44px] rounded-xl border p-3 text-left active:scale-[.99] disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
+      return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="限界突破・固有技選択" accent="text-violet-300" onBack={()=>setRebirthSelectedId(null)} backLabel="限界突破の一覧へ戻る" disabled={rebirthProcessingRef.current}/><div className="shrink-0 mb-3 flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.rebirthCount>=BREAKTHROUGH_MAX_COUNT?`次は${normalized.rebirthCount+1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount+1)}、虹★が1個増えます${normalized.rebirthCount+1>=34?`（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount+1)}）`:''}`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"><CostRow needLabel="必要ダイヤ" haveLabel="所持ダイヤ" shortLabel="ダイヤが足りません" need={cost} have={gold} icon={<Gem size={12}/>} note={<div className="text-[10px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div>}/></div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[10px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[10px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<ScreenLead>LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</ScreenLead><div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}>{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full min-h-[44px] rounded-xl border p-3 text-left active:scale-[.99] disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
 {/* 固有技を上げずに突破する道。全部の技が最大まで育っていても限界突破できるようにするためのもの。
 残したぶんはマスモンの詳細からいつでも使える */}
 <button onClick={()=>setRebirthSkillKey('')} className={`w-full min-h-[44px] rounded-xl border p-3 text-left active:scale-[.99] ${rebirthSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div><div className="text-[10px] text-slate-300 mt-1">保留したポイントはマスモン詳細の「固有技強化」から使用できます</div></button></div>{rebirthError&&<div className="shrink-0 text-red-300 text-[10px] my-2">{rebirthError}</div>}<div className={SCREEN_FOOTER_CLASS}><button disabled={rebirthSkillKey==null||gold<cost||ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)<breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1)||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30">限界突破する</button></div></div>;
@@ -27925,8 +27987,6 @@ function MasuTranscendenceScreen({
       const lvl=masuBondLevelInfo(selected);
       const normalized=normalizeMasuProgression(selected);
       const plan=buildMasuTranscendence({ masu:selected, gold, psycheOwned:psycheHave });
-      const psycheShort=Math.max(0, TRANSCEND_PSYCHE_COST - psycheHave);
-      const goldShort=Math.max(0, TRANSCEND_DIAMOND_COST - gold);
       return <div data-mh-screen className={SCREEN_SHELL_CLASS} data-transcend-confirm={selected.id}>
         <ScreenHead title="超越の儀式" accent="text-amber-200" onBack={()=>{setTranscendSelectedId(null);setTranscendError('');}} backLabel="超越の一覧へ戻る" disabled={transcendProcessingRef.current}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}>
@@ -27947,14 +28007,10 @@ function MasuTranscendenceScreen({
             <p>超越状態と超越強化は、転生や強化ポイントリセットを行っても失われません。</p>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5">
-            <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${psycheShort===0?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{TRANSCEND_PSYCHE_COST.toLocaleString()}</span></div>
-            <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持数</span><span className="text-slate-300 font-black">{psycheHave.toLocaleString()}</span></div>
-            {psycheShort>0&&<div className="text-[10px] text-red-400 font-black">虹のプシュケーが足りません（あと {psycheShort.toLocaleString()}）</div>}
+            <CostRow needLabel="必要な虹のプシュケー" haveLabel="所持している虹のプシュケー" shortLabel="虹のプシュケーが足りません" need={TRANSCEND_PSYCHE_COST} have={psycheHave} icon={<span aria-hidden="true">🌈</span>} okClass="text-fuchsia-300"/>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5">
-            <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${goldShort===0?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{TRANSCEND_DIAMOND_COST.toLocaleString()}</span></div>
-            <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>
-            {goldShort>0&&<div className="text-[10px] text-red-400 font-black">ダイヤが足りません（あと {goldShort.toLocaleString()}）</div>}
+            <CostRow needLabel="必要ダイヤ" haveLabel="所持ダイヤ" shortLabel="ダイヤが足りません" need={TRANSCEND_DIAMOND_COST} have={gold} icon={<Gem size={12}/>}/>
           </div>
           <div className="rounded-xl border-2 border-red-400/60 bg-red-950/40 px-3 py-2 text-center text-[11px] font-black text-red-200">⚠ 超越は取り消せません</div>
           {transcendError&&<div className="text-[10px] text-red-400 font-black text-center">{transcendError}</div>}
@@ -28431,11 +28487,7 @@ function MasuTranscendEnhanceScreen({
               <span className="block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></span>
               <TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>
             </span>}/>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
-            <button type="button" onClick={onBack} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
-            <button type="button" aria-current="page" className="min-h-[44px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
-            <button type="button" onClick={onOpenAutoEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-lime-300/80 text-[11px] font-black active:scale-95">オート強化</button>
-          </div>
+          <EnhanceModeTabs current="transcend" onNormal={onBack} onAuto={onOpenAutoEnhance} autoOn={normalizeMasuAutoEnhance(masu.autoEnhance).enabled}/>
           {/* 超越の話をするセリフは、正式に超越した個体のときだけにする */}
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene={normalized.transcended?'transcendence':'masuEnhance'} compact/></div>
           <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3`}>
@@ -28453,7 +28505,7 @@ function MasuTranscendEnhanceScreen({
               </div>
               <button type="button" data-transcend-exchange-open onClick={openExchange} className="mt-3 w-full min-h-[48px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/40 text-fuchsia-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2">
                 <span aria-hidden="true">🌈</span>虹のプシュケーを変換
-                <span className="text-[10px] font-mono text-slate-300">所持 {psycheHave.toLocaleString()}</span>
+                <span className="text-[10px] font-mono text-slate-300">所持 🌈{psycheHave.toLocaleString()}</span>
               </button>
               {hasTranscendFruit&&<button type="button" data-transcend-fruit-open onClick={openFruit} className="mt-2 w-full min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-950/40 text-emerald-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2">
                 <span aria-hidden="true">🍎</span>超越の実を使う
@@ -28546,7 +28598,7 @@ function MasuTranscendEnhanceScreen({
                   <button type="button" aria-label="閉じる" onClick={()=>setTranscendExchangeOpen(false)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"><X size={18}/></button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-xl bg-black/30 p-2.5 text-center"><div className="text-[10px] font-black text-slate-400">所持している🌈</div><div className="font-mono text-lg font-black text-white">{psycheHave.toLocaleString()}</div></div>
+                  <div className="rounded-xl bg-black/30 p-2.5 text-center"><div className="text-[10px] font-black text-slate-400">所持している虹のプシュケー</div><div className="font-mono text-lg font-black text-white">{psycheHave.toLocaleString()}</div></div>
                   <div className="rounded-xl bg-black/30 p-2.5 text-center"><div className="text-[10px] font-black text-slate-400">交換レート</div><div className="font-mono text-[11px] font-black text-fuchsia-200">🌈{TRANSCEND_PSYCHE_PER_POINT.toLocaleString()} → 1P</div></div>
                 </div>
                 {exchangeMax<=0
@@ -28696,11 +28748,7 @@ function MasuEnhanceScreen({
           <ScreenHead title="マスモン強化" accent="text-amber-400" onBack={backToDetail} backLabel="マスモン詳細へ戻る"/>
           {/* どのマスモンでも通常強化・超越強化・オート強化を切り替えられる。
               超越強化が使えるかどうかと、神殿で正式に超越したかどうかは別の話 */}
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
-            <button type="button" aria-current="page" className="min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[11px] font-black">通常強化</button>
-            <button type="button" onClick={onOpenTranscendEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
-            <button type="button" onClick={onOpenAutoEnhance} className={`min-h-[44px] rounded-xl border bg-slate-900 text-[11px] font-black active:scale-95 flex items-center justify-center gap-1 ${autoEnhance.enabled?'border-lime-400/60 text-lime-200':'border-white/10 text-lime-300/80'}`}>オート強化{autoEnhance.enabled&&<span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-lime-400"/>}</button>
-          </div>
+          <EnhanceModeTabs current="normal" onTranscend={onOpenTranscendEnhance} onAuto={onOpenAutoEnhance} autoOn={autoEnhance.enabled}/>
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuEnhance" compact/></div>
           <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3`}>
             {/* どの子を強化しているかは、いちばん上で分かるようにする(下にあると最初の画面に入らない) */}
@@ -29122,7 +29170,7 @@ function MasuFusionScreen({
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">転生育成ボーナス</span><span className="text-amber-300 font-black">{reincarnateTransfer.count}回分 / +{reincarnateTransfer.points}P</span></div>
                 {reincarnateTransfer.count>0&&<div className="text-[10px] leading-relaxed text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分をすべて累積します`}</div>}
                 <div className="pt-2 border-t border-white/10 text-[11px] font-black text-violet-200 tracking-wider">ダイヤ消費</div>
-                <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{donationDiamondValue(gold).toLocaleString()}</span></div>
+                <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{Math.max(0, Math.floor(Number(gold)||0)).toLocaleString()}</span></div>
                 {fusionInheritSoulRank&&soulInheritancePreview.eligible&&<>
                   <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">魂格継承ダイヤ</span><span className="text-sky-300 font-black">{soulDiamondCost.toLocaleString()}</span></div>
                   <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">勇者の証</span><span className={soulProofShortage?'text-red-300 font-black':'text-sky-200 font-black'}>{ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)} / {soulHeroProofCost}{soulProofShortage?`（あと${soulProofShortage}）`:''}</span></div>
@@ -29752,11 +29800,11 @@ stat.label, `${stat.before} → ${stat.after}${stat.diff>0?`（+${stat.diff}）`
   extraAfterApt: (<>
 {currentPickingMon.masuId&&(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0)>0&&(
   <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
-    <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
+    <div className="text-[9px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
     <div className="grid grid-cols-4 gap-1">
       {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
         <button key={key} onClick={()=>{const updated=spendStatPoint(currentPickingMon.masuId,key); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
-          <span className="text-[7px] text-emerald-300 font-black">{label}</span>
+          <span className="text-[9px] text-emerald-300 font-black">{label}</span>
           <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
         </button>
       ))}
@@ -30026,7 +30074,7 @@ function PickTeachingScreen({
             );})()}
             <div className="relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
               {getFullEvolutionDetails(selectedTeachingCard).map(info=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const currentLvl=owned?owned.evoLevel:-1; const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
+                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[9px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
               })}
             </div>
             <div className="relative flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="mh-ph-btn-gold flex-1 min-h-[44px] py-3 rounded-xl font-black text-sm">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
@@ -33643,7 +33691,7 @@ function SoulBattleEffects({
 <div data-soul-battle-effects className="fixed inset-0 flex flex-col bg-slate-950 text-white" style={{position:'fixed',inset:0,zIndex:41000,paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
     <div className="shrink-0 flex items-center justify-between gap-3 border-b border-sky-400/20 px-4 pb-3">
       <div><div className="text-[10px] font-black tracking-[.25em] text-sky-400">SOUL RANK</div><h3 className="text-lg font-black text-sky-100">魂格効果</h3></div>
-      <button type="button" onClick={()=>setShowSoulBattleEffects(false)} className="min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95">戻る</button>
+      <button type="button" onClick={()=>setShowSoulBattleEffects(false)} className="min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95">閉じる</button>
     </div>
     <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3 space-y-3">
       <section className="rounded-2xl border border-sky-400/30 bg-sky-950/25 p-3">
@@ -33787,11 +33835,7 @@ function MasuAutoEnhanceScreen({
       return (
         <div data-mh-screen style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 overflow-hidden ${SCREEN_SHELL_CLASS}`} data-auto-enhance={masu.id}>
           <ScreenHead title="オート強化" accent="text-lime-300" onBack={onBack} backLabel="マスモン詳細へ戻る"/>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
-            <button type="button" onClick={onOpenNormalEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
-            <button type="button" onClick={onOpenTranscendEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
-            <button type="button" aria-current="page" className="min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[11px] font-black">オート強化</button>
-          </div>
+          <EnhanceModeTabs current="auto" onNormal={onOpenNormalEnhance} onTranscend={onOpenTranscendEnhance} autoOn={settings.enabled}/>
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuAutoEnhance" compact/></div>
           <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3`}>
 
@@ -53051,7 +53095,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <article key={`score-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="score" role="button" tabIndex={0} aria-label={`${entry?.userName||'名無しのブリーダー'}のパーティー詳細を見る`} onClick={()=>setRankingPartyDetail(entry)} className={`${rankingCardClass(index)} px-2 py-1.5 active:scale-[.99] cursor-pointer`}>
         <div className="flex items-center gap-1.5 min-w-0">
           {rankingPlace(index)}{rankingBreederIcon(entry)}
-          <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[7px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span>{speciesLabel&&<span data-ranking-species-label className="shrink-0 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-1.5 py-0.5 text-[7px] font-black text-cyan-200 whitespace-nowrap">{speciesLabel}</span>}</div>
+          <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[9px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span>{speciesLabel&&<span data-ranking-species-label className="shrink-0 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-1.5 py-0.5 text-[7px] font-black text-cyan-200 whitespace-nowrap">{speciesLabel}</span>}</div>
           <div className="text-right text-[10px] font-black whitespace-nowrap text-indigo-300">{scoreLabel}</div>
         </div>
         {runStat&&<div data-ranking-run-stat={runStat.cleared?'turns':'wave'} className={`mt-0.5 text-right text-[8px] font-black whitespace-nowrap ${runStat.cleared?'text-amber-300':'text-slate-400'}`}>{runStat.cleared&&<Crown size={8} className="inline mr-0.5 mb-px"/>}{runStat.text}</div>}
@@ -53092,7 +53136,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           masuId: entry.masuId, bondLevel: level, detail: entry.detail,
           colors: Array.isArray(entry.colors) ? entry.colors : [] }
       : null;
-    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[7px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[9px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
@@ -56560,26 +56604,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {showMasuRenameModal&&masuMonDetail&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:91000}}>
-            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="text-lg font-black text-white mb-1">マスモンの名前を変更</h3>
-              <input type="text" value={masuRenameInput} onChange={e=>setMasuRenameInput(e.target.value.slice(0,12))} maxLength={12} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-4"/>
-              <div className="flex gap-2">
-                <button onClick={()=>setShowMasuRenameModal(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button>
-                <button onClick={()=>{ renameMasuMon(masuMonDetail.id, masuRenameInput); setMasuMonDetail(prev=>prev?{...prev, name:(masuRenameInput||'').trim().slice(0,12)||prev.name}:prev); setShowMasuRenameModal(false); }} className="flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs">保存</button>
-              </div>
-            </div>
-          </div>
+          <NameEditModal title="マスモンの名前を変更" value={masuRenameInput} onChange={v=>setMasuRenameInput(v.slice(0,12))} maxLength={12}
+            border="border-pink-400/70" zIndex={91000} onCancel={()=>setShowMasuRenameModal(false)}
+            onSave={()=>{ renameMasuMon(masuMonDetail.id, masuRenameInput); setMasuMonDetail(prev=>prev?{...prev, name:(masuRenameInput||'').trim().slice(0,12)||prev.name}:prev); setShowMasuRenameModal(false); }}/>
         )}
 
         {showNameEdit&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="text-lg font-black text-white mb-1">ブリーダー名変更</h3>
-              <input type="text" value={tempName} onChange={e=>setTempName(e.target.value)} maxLength={10} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-4"/>
-              <div className="flex gap-2"><button onClick={()=>setShowNameEdit(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={handleSaveName} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs">保存</button></div>
-            </div>
-          </div>
+          <NameEditModal title="ブリーダー名を変更" value={tempName} onChange={setTempName} maxLength={10}
+            zIndex={90000} onCancel={()=>setShowNameEdit(false)} onSave={handleSaveName}/>
         )}
 
         {showCallStylePicker&&(
@@ -58149,7 +58181,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         </div>
       </section>}
       <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30">
-        <div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
+        <div className="text-[9px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
         {getRebirthSkillChoices(masu).map(skill=>{
           const current=uniqueSkillAtLevel(skill.unique, skill.level);
           return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
@@ -58177,7 +58209,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
               <h3 className="text-lg font-black italic uppercase text-amber-300">Battle Log</h3>
               <small className="font-black text-slate-400">古い順・いちばん下が最新（最大{BATTLE_LOG_LIMIT}件）</small>
             </div>
-            <button onClick={()=>setShowBattleLog(false)} className="min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90">戻る</button>
+            <button onClick={()=>setShowBattleLog(false)} className="min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90">閉じる</button>
           </header>
           <div data-battle-log-list ref={el=>{ if(el) el.scrollTop=el.scrollHeight; }} className="flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3">
             {battleLog.length===0
@@ -58311,8 +58343,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           一覧には技ごとの威力・消費が並ぶので、説明が無くても選べる。閉じれば元に戻る */}
       {focusedCard&&!skillPicker&&(
         <div data-tactics-card-detail={isTacticsMode(runMode)?'raised':undefined} className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={isTacticsMode(runMode)?{top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)',zIndex:110000}:{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
-          <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22,focusedCard.id)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
-          <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
+          <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22,focusedCard.id)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[9px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
+          <div className="text-[9px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
             {/* ★何をするカードか(ジャンル)と、誰に効くか(範囲)。タクティクスだけに出す。
                 1体ずつステータスを持つので、置いた子だけに効くのか味方ぜんぶに効くのかで
                 置き方がまるごと変わる(2026-09-22 ユーザー指示) */}
@@ -58322,7 +58354,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
               return(<div data-card-genre={genre||''} data-card-scope={scope} className="flex items-center gap-1 flex-wrap">
                 {genre&&<span className={`rounded border px-1.5 py-0.5 text-[9px] font-black leading-none ${CARD_GENRE_TONE[genre]}`}>{genre}</span>}
                 <span className={`rounded border px-1.5 py-0.5 text-[9px] font-black leading-none ${CARD_SCOPE_TONE[scope]}`}>{scope}</span>
-                <span className="text-[8px] font-bold text-slate-400">{CARD_SCOPE_NOTE[scope]}</span>
+                <span className="text-[9px] font-bold text-slate-400">{CARD_SCOPE_NOTE[scope]}</span>
               </div>);
             })()}
             {/* 新モードは合計のガッツでは払えない。使えないときは、ここで理由をはっきり出す */}
@@ -58330,7 +58362,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
               <div data-tactics-card-why className="rounded-lg border border-rose-400/70 bg-rose-950/70 px-1.5 py-1 text-[9px] font-black leading-snug text-rose-100"><span className="text-rose-300">いま使えない:</span> {b.why}</div>
             ):null;})()}
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>技威力:</span><span className="text-red-400 font-black">{focusedCard.type==='range_atk'?`${Math.floor(focusedCard.mult*100)} / ${Math.floor(focusedCard.mult*0.4*100)}`:Math.floor((focusedCard.type==='unique'?(focusedCard.baseMult+(focusedCard.evoLevel||0)*0.5+((focusedCard.monId==='Ark'||focusedCard.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0)):(focusedCard.mult||focusedCard.baseMult||1.0))*100)}</span></div>)}
-            {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>会心率:</span><span className="text-yellow-400 font-black">{Math.round(((focusedCard.crit||0.1)+getPermaBuff('critRatePct'))*100)}%{getPermaBuff('critRatePct')>0&&<span className="text-yellow-200 text-[8px]"> (+{Math.round(getPermaBuff('critRatePct')*100)})</span>} <span className="text-yellow-200/70 text-[8px]">×{(1.5+getPermaBuff('critDmgPct')).toFixed(2)}</span></span></div>)}
+            {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>会心率:</span><span className="text-yellow-400 font-black">{Math.round(((focusedCard.crit||0.1)+getPermaBuff('critRatePct'))*100)}%{getPermaBuff('critRatePct')>0&&<span className="text-yellow-200 text-[9px]"> (+{Math.round(getPermaBuff('critRatePct')*100)})</span>} <span className="text-yellow-200/70 text-[9px]">×{(1.5+getPermaBuff('critDmgPct')).toFixed(2)}</span></span></div>)}
             {focusedCard.type==='guard'&&(()=>{
               // 2枚目以降で使うガードは軽減量が半分になる。実際に効く値をそのまま出す。
               const raw=(focusedCard.flat||0)+def*(focusedCard.mult||0);
@@ -58346,12 +58378,12 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
               if(isTacticsMode(runMode)) return(<div className="text-center font-bold">敵の攻撃を軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ その子の丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span><span className="block text-emerald-300 font-normal">置く子で変わります。盤面の枠に出る GUARD の数字で確かめられます</span></div>);
               return(<div className="text-center font-bold">敵の攻撃を最大 {Math.floor(halved?raw*0.5:raw)} 軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span></div>);
             })()}
-            {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
-            {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[7px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
+            {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[9px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
+            {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[9px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
             {/* ★みゃるの薬は、タクティクスでは「飲んだ子だけ」に効く。自傷もその子のライフから引く
                 (2026-09-22 ユーザー指摘。それまでは盤面の合計ライフから引き、攻撃バフも全員に乗っていた) */}
-            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[7px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もその子の今のライフから引きます</div>)}
-            {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
+            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[9px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もその子の今のライフから引きます</div>)}
+            {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[9px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
           </div>
         </div>
       )}

@@ -24,7 +24,9 @@ function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent
   return (
     <button type="button" onClick={onClick} disabled={disabled} {...rest}
       className="mh-button mh-button-secondary w-full min-h-[64px] flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-left active:scale-[.98] disabled:opacity-40">
-      <span aria-hidden="true" className="w-8 shrink-0 text-center text-[22px] leading-none">{icon}</span>
+      {/* 絵文字はCSS(.mh-emoji-icon)で描き、ボタンの文字には含めない。文字が「📚ヘルプ…」になると、
+          「ヘルプ」で始まるボタンを探す検査や読み上げが絵文字に引っかかる */}
+      <span aria-hidden="true" data-icon={icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
       <span className="min-w-0 flex-1">
         <span className={`block text-[14px] font-black leading-tight ${accent}`}>{label}</span>
         <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{desc}</span>

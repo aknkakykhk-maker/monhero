@@ -132,6 +132,50 @@ const ScreenTabs = ({ items = [], value, onChange, className = '' }) => (
   </div>
 );
 
+// 強化・超越強化・オート強化の切り替え(2026-10-05)。3つの画面がそれぞれ同じタブの行を手書きしていて、
+// 選ばれている側の表し方(aria-current)・文字の色・枠がそろっていなかったので1つにする。
+//   current … 'normal' / 'transcend' / 'auto'。いまの画面のタブは押しても何もしない
+//   autoOn  … オート強化がONの個体なら、タブに小さな緑の点を付ける
+// ★data-transcend-enhance-tabs は検査(masu/transcendence-check.js)が目印にしているので残す。
+//   タブの文字は「通常強化」「超越強化」「オート強化」だけにする(検査が文字で押す)
+const ENHANCE_MODE_TABS = Object.freeze([
+  { id:'normal', label:'通常強化', color:'#f59e0b', idle:'text-amber-200' },
+  { id:'transcend', label:'超越強化', color:'#0ea5e9', idle:'text-sky-200' },
+  { id:'auto', label:'オート強化', color:'#84cc16', idle:'text-lime-200' },
+]);
+const EnhanceModeTabs = ({ current, onNormal, onTranscend, onAuto, autoOn = false }) => {
+  const handlers = { normal:onNormal, transcend:onTranscend, auto:onAuto };
+  return (
+    <div data-transcend-enhance-tabs role="tablist" className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
+      {ENHANCE_MODE_TABS.map(tab => {
+        const on = tab.id === current;
+        return (
+          <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={on ? undefined : handlers[tab.id]}
+            className={`mh-tab min-h-[44px] rounded-xl px-1 text-[11px] font-black leading-tight flex items-center justify-center gap-1 ${on ? '' : `border border-white/10 bg-slate-900 active:scale-95 ${tab.idle}`}`}
+            style={on ? { background:tab.color, color:'#0f172a' } : undefined}>
+            {tab.label}{tab.id === 'auto' && autoOn && <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-lime-400"/>}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// 「必要な量 / 持っている量 / 足りないときの一文」の3行(2026-10-05)。神殿の転生・超越で同じ3行が
+// 手書きされ、「所持ダイヤ」「所持数」のように呼び名もそろっていなかったのでまとめる。
+//   needLabel / haveLabel / shortLabel … 画面に出す言葉(「必要ダイヤ」「所持ダイヤ」「ダイヤが足りません」)
+//   icon … 必要量の前に付ける絵。okClass … 足りているときの必要量の色
+//   note … 必要量の下へ添える計算式など(省略可)
+const CostRow = ({ needLabel, haveLabel, shortLabel, need, have, icon = null, okClass = 'text-amber-300', note = null }) => {
+  const needCount = Math.max(0, Number(need) || 0), haveCount = Math.max(0, Number(have) || 0);
+  return (<>
+    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">{needLabel}</span><span className={`font-black flex items-center gap-1 ${haveCount >= needCount ? okClass : 'text-red-400'}`}>{icon}{needCount.toLocaleString()}</span></div>
+    {note}
+    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">{haveLabel}</span><span className="text-slate-300 font-black">{haveCount.toLocaleString()}</span></div>
+    {haveCount < needCount && <div className="text-[10px] text-red-400 font-black">{shortLabel}（あと {(needCount - haveCount).toLocaleString()}）</div>}
+  </>);
+};
+
 // 画面の中の小見出し(節の名前)。60-app.jsx の renderDetailSectionLabel と同じ形を、
 // 画面部品からも使えるようにしたもの。
 const ScreenSectionLabel = ({ children, note = '' }) => (
@@ -177,6 +221,22 @@ const QuantityStepper = ({ value, max, onChange, unit='個', maxClass='' }) => {
     <button type="button" disabled={safeMax<=0} onClick={()=>setCount(safeMax)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`}>MAX（{safeMax.toLocaleString()}{unit}）</button>
   </>;
 };
+// 名前を入れる窓(2026-10-05)。ブリーダー名とマスモンの名前の窓が、ほぼ同じ作りで別々に手書きされ、
+// ボタンが44pxに届かず、取りやめが「戻る」になっていた。外側を押すと取りやめる。
+//   zIndex … 呼ぶ側の重なり順をそのまま渡す(値は変えない。窓どうしの前後が変わるため)
+const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, border = 'border-indigo-400/70', zIndex = MODAL_Z.dialog }) => (
+  <ModalFrame label={title} border={border} onClose={onCancel} narrow zIndex={zIndex}>
+    <h3 className="text-center text-base font-black text-white">{title}</h3>
+    <input type="text" value={value} onChange={e => onChange(e.target.value)} maxLength={maxLength} aria-label={title}
+      onKeyDown={e => { if (e.key === 'Enter') onSave(); }}
+      className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
+    <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
+    </div>
+  </ModalFrame>
+);
 // 確認の窓。title は問いかけ、message は何が起きるか(取り消せるかどうかも書く)。
 // danger のときは決定ボタンを危険な操作の型(mh-button-danger)にする(削除など、元に戻せない操作)
 const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onConfirm, onCancel }) => (
