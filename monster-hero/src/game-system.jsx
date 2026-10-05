@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc563c1bfc9d7b6d
+// generated-sha256: b8d602f364ab0fbc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,11 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 19:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+<<<<<<< HEAD
+const BUILD_DATE = "2026-10-05 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+=======
+const BUILD_DATE = "2026-10-05 19:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+>>>>>>> origin/main
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21494,7 +21498,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'tiger_thunder_shadow',
     name: '雷狼影',
     useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
-    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 6,
     thunder: Object.freeze({ chargeTurns: 3, dmg: 0.3, crit: 0.1, comboRate: 0.1, dodge: 0.05, regenHp: 0.05, regenGuts: 0.05 }),
     effect: 'thunder',
@@ -49943,7 +49947,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ライガーの雷狼影: ためている3ターンのあいだ、その子が使ったカードの枚数だけ雷がたまる(2026-10-05)
     if(isTacticsMode(runMode)&&usedCardEntries.length>0){
       const perSlot={};
-      usedCardEntries.forEach(e=>{ if(Number.isInteger(e.slotIdx)&&!isAssistCard(e.card)) perSlot[e.slotIdx]=(perSlot[e.slotIdx]||0)+1; });
+      usedCardEntries.forEach(e=>{ if(Number.isInteger(e.slotIdx)) perSlot[e.slotIdx]=(perSlot[e.slotIdx]||0)+1; }); // アシストカード(支援カード)も、その子へ置いたぶんは行動に数える(2026-10-05 ユーザー選択)
       let stTh=tacticsExStateRef.current;
       Object.keys(perSlot).forEach(k=>{ stTh=addTacticsExThunder(stTh,tacticsUnitsRef.current,{ wave, turn:turnCount },Number(k),perSlot[k]); });
       if(stTh!==tacticsExStateRef.current) commitTacticsExState(stTh);

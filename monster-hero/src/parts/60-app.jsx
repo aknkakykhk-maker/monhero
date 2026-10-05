@@ -12130,7 +12130,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ライガーの雷狼影: ためている3ターンのあいだ、その子が使ったカードの枚数だけ雷がたまる(2026-10-05)
     if(isTacticsMode(runMode)&&usedCardEntries.length>0){
       const perSlot={};
-      usedCardEntries.forEach(e=>{ if(Number.isInteger(e.slotIdx)&&!isAssistCard(e.card)) perSlot[e.slotIdx]=(perSlot[e.slotIdx]||0)+1; });
+      usedCardEntries.forEach(e=>{ if(Number.isInteger(e.slotIdx)) perSlot[e.slotIdx]=(perSlot[e.slotIdx]||0)+1; }); // アシストカード(支援カード)も、その子へ置いたぶんは行動に数える(2026-10-05 ユーザー選択)
       let stTh=tacticsExStateRef.current;
       Object.keys(perSlot).forEach(k=>{ stTh=addTacticsExThunder(stTh,tacticsUnitsRef.current,{ wave, turn:turnCount },Number(k),perSlot[k]); });
       if(stTh!==tacticsExStateRef.current) commitTacticsExState(stTh);
