@@ -688,6 +688,50 @@
      48
     ]
    ]
+  },
+  "monster": {
+   "audio": "monster-hero/audio/bgm-monster.mp3",
+   "chartRevision": 28,
+   "audioSha256": "6b190639c3faa0f20837ef7972df4ba72143efedf54e2735c0eab6ca2d0392c7",
+   "durationMs": 265068,
+   "analyzedTiming": {
+    "bpm": 135.01,
+    "beatZeroMs": 494,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "warpPoints": [
+    [
+     54500,
+     0
+    ],
+    [
+     56500,
+     -18
+    ],
+    [
+     157500,
+     -18
+    ],
+    [
+     162500,
+     0
+    ]
+   ]
+  },
+  "monster_short": {
+   "audio": "monster-hero/audio/bgm-monster-short.mp3",
+   "chartRevision": 28,
+   "audioSha256": "415b771e9bbfc4064caec2dff6b2956f27832a9137cc779f4a817d255f239143",
+   "durationMs": 110808,
+   "analyzedTiming": {
+    "bpm": 135.01,
+    "beatZeroMs": 494,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }
