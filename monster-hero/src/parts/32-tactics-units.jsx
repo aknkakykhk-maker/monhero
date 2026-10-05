@@ -1235,6 +1235,18 @@ const TACTICS_EX_SKILLS = Object.freeze({
     damageBack: Object.freeze({ hpRate: 0.5, gutsRate: 0.05 }),
     effect: 'damageBack',
   }),
+  // ★2026-10-05 ユーザー指定(スエゾーのEX)。名前は「サイコロックオン」・ラン3回(ユーザー選択)・併用できる。
+  //   「効果時間5ターン。敵の距離を固定(行動で移動が出た場合は行動なし)。効果ターン、相手の与ダメ30%ダウン・相手の被ダメ30%アップ」。
+  //   敵の距離移動の封じ方は、絶氷の楔(iceLockTurns)と同じ「移動できない！」(その移動は何もしない)に合わせる
+  Suezo: Object.freeze({
+    id: 'suezo_psycho_lock_on',
+    name: 'サイコロックオン',
+    useNote: '5ターン 敵の距離を固定・敵の与ダメ−30%・被ダメ+30%',
+    desc: '5ターンのあいだ、念力で敵を縛りつける。\n・敵の距離を固定する（敵が「移動」を選んだときは、何もしない）\n・敵の与ダメージが30%下がる\n・敵の被ダメージが30%上がる（味方の攻撃が通りやすくなる）\n・使った子が倒れても効果は続く',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    psychoLock: Object.freeze({ enemyDmgDown: 0.3, enemyTakenUp: 0.3 }),
+    effect: 'psychoLock',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1300,7 +1312,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1360,6 +1372,8 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
+      ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
       ? { hpRate: Math.max(0, Number(raw.damageBack.hpRate) || 0), gutsRate: Math.max(0, Number(raw.damageBack.gutsRate) || 0) } : null,
     partyBoost: raw.partyBoost && typeof raw.partyBoost === 'object'
@@ -1523,6 +1537,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,
       partyBoostCfg: def.partyBoost ? { ...def.partyBoost } : null,
       damageBackCfg: def.damageBack ? { ...def.damageBack } : null,
+      psychoLockCfg: def.psychoLock ? { ...def.psychoLock } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1888,6 +1903,18 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+// サイコロックオン(psychoLock)が効いているか。効いているあいだ、敵は距離を動かせず(移動を選んでも何もしない)、
+// 敵の与ダメージが enemyDmgDown 下がり、敵の被ダメージが enemyTakenUp 上がる。効いていなければ active:false・倍率は変えない
+const tacticsExPsychoLockOf = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'psychoLock' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
+    const down = Number(e.psychoLockCfg && e.psychoLockCfg.enemyDmgDown), up = Number(e.psychoLockCfg && e.psychoLockCfg.enemyTakenUp);
+    return { active: true, enemyDmgMult: Math.min(acc.enemyDmgMult, 1 - (Number.isFinite(down) && down > 0 ? Math.min(0.9, down) : 0)),
+      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0) };
+  }, { active: false, enemyDmgMult: 1, enemyTakenBonus: 0 });
 };
 // おぼろ返し(damageBack)が効いているとき、味方が敵の攻撃で受けたダメージのうち、ライフ・ガッツへ回復する割合。効いていなければ 0
 const tacticsExDamageBackRates = (state, now) => {

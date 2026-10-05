@@ -65,7 +65,7 @@ vm.runInContext([
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
-    + 'tacticsExDefOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExDefOf,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -742,6 +742,24 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const scr = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '71-screen-battle.jsx'), 'utf8');
   check('画面へ結線してある(札の残り・詳細の「残り」と状態のひとこと・ターン終わりのログ)', /remainText:\(\(\)=>\{/.test(app) && /stateText:\(\(\)=>\{/.test(app)
     && /data-tactics-ex-remain/.test(scr) && /data-tactics-ex-state-pill/.test(scr) && /の効果が切れた/.test(app) && /雷纏が始まる！/.test(app));
+}
+
+// ---------- ㉑ スエゾー「サイコロックオン」(2026-10-05 ユーザー指定) ----------
+{
+  const su = ex.tacticsExDefOf('Suezo');
+  check('スエゾー「サイコロックオン」: ラン3回・併用できる・5ターン・敵の与ダメ−30%・敵の被ダメ+30%',
+    !!su && su.name === 'サイコロックオン' && su.maxUses === 3 && !su.unlimited && su.withCards && su.duration === 'turns' && su.turns === 5
+    && su.effect === 'psychoLock' && ex.isTacticsExEffectImplemented(su) && !!su.psychoLock && su.psychoLock.enemyDmgDown === 0.3 && su.psychoLock.enemyTakenUp === 0.3, JSON.stringify(su));
+  const A = (wave, turn) => ({ wave, turn });
+  const st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: su, slot: 1, monId: 'Suezo', now: A(1, 2) });
+  const on = ex.tacticsExPsychoLockOf(st, A(1, 2)), on5 = ex.tacticsExPsychoLockOf(st, A(1, 6)), off = ex.tacticsExPsychoLockOf(st, A(1, 7)), none = ex.tacticsExPsychoLockOf(ex.createTacticsExState(), A(1, 2));
+  check('使ったターンから5ターン(2〜6ターン目)効き、敵は与ダメ×0.7・被ダメ+0.3・距離固定。7ターン目と次のWAVEでは元へ戻る',
+    on.active && Math.abs(on.enemyDmgMult - 0.7) < 1e-9 && Math.abs(on.enemyTakenBonus - 0.3) < 1e-9 && on5.active && !off.active && off.enemyDmgMult === 1 && off.enemyTakenBonus === 0
+    && !ex.tacticsExPsychoLockOf(st, A(2, 2)).active && !none.active && none.enemyDmgMult === 1, JSON.stringify({ on, off }));
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体へ結線してある(移動封じ4か所・敵の与ダメ・敵の被ダメ)',
+    (app.match(/tacticsExPsychoLockNow\(\)\.active/g) || []).length === 4 && /\*iceLockEnemyDamageMult\*tacticsExPsychoLockNow\(\)\.enemyDmgMult\*soulDamageRemaining/.test(app)
+    && /getWaveBuff\('enemyTakenDmgBonus'\)\+tacticsExPsychoLockNow\(\)\.enemyTakenBonus\+additionalDmgMod/.test(app));
 }
 
 // ---------- ⑳ オボロゲソウ「おぼろ返し」(2026-10-05 ユーザー選択) ----------

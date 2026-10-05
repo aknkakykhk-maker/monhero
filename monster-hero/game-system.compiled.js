@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 846fb5bcb3dd2027
+// source-sha256: 714bacf90b76fc60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 00:25";
+const BUILD_DATE = "2026-10-06 00:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33997,6 +33997,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     effect: 'damageBack'
   }),
+  Suezo: Object.freeze({
+    id: 'suezo_psycho_lock_on',
+    name: 'サイコロックオン',
+    useNote: '5ターン 敵の距離を固定・敵の与ダメ−30%・被ダメ+30%',
+    desc: '5ターンのあいだ、念力で敵を縛りつける。\n・敵の距離を固定する（敵が「移動」を選んだときは、何もしない）\n・敵の与ダメージが30%下がる\n・敵の被ダメージが30%上がる（味方の攻撃が通りやすくなる）\n・使った子が倒れても効果は続く',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 5,
+    psychoLock: Object.freeze({
+      enemyDmgDown: 0.3,
+      enemyTakenUp: 0.3
+    }),
+    effect: 'psychoLock'
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -34068,7 +34084,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -34126,6 +34142,10 @@ const normalizeTacticsExDef = raw => {
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object' ? {
+      enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)),
+      enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0)
+    } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object' ? {
       hpRate: Math.max(0, Number(raw.damageBack.hpRate) || 0),
       gutsRate: Math.max(0, Number(raw.damageBack.gutsRate) || 0)
@@ -34409,6 +34429,9 @@ const applyTacticsExUse = (state, {
         } : null,
         damageBackCfg: def.damageBack ? {
           ...def.damageBack
+        } : null,
+        psychoLockCfg: def.psychoLock ? {
+          ...def.psychoLock
         } : null,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
@@ -34941,6 +34964,24 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.partyBoostCfg && e.partyBoostCfg.statRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+const tacticsExPsychoLockOf = (state, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'psychoLock' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
+    const down = Number(e.psychoLockCfg && e.psychoLockCfg.enemyDmgDown),
+      up = Number(e.psychoLockCfg && e.psychoLockCfg.enemyTakenUp);
+    return {
+      active: true,
+      enemyDmgMult: Math.min(acc.enemyDmgMult, 1 - (Number.isFinite(down) && down > 0 ? Math.min(0.9, down) : 0)),
+      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0)
+    };
+  }, {
+    active: false,
+    enemyDmgMult: 1,
+    enemyTakenBonus: 0
+  });
 };
 const tacticsExDamageBackRates = (state, now) => {
   const effects = normalizeTacticsExState(state).effects;
@@ -72558,7 +72599,7 @@ function MonsterHeroGame() {
     const defenseRate = Math.min(0.5, defVal * 0.00015);
     const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0) * lifeSourceDamageMult(traitHeroId, turnCount);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
-    return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
+    return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * tacticsExPsychoLockNow().enemyDmgMult * soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount]);
   const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1))) : 0, [turnBuffs, runMode]);
@@ -72707,6 +72748,14 @@ function MonsterHeroGame() {
     const devil = tacticsExPandoraDevilNow(slotIdx, halved).combo;
     const list = [own, gift, devil].filter(Boolean);
     return list.length === 0 ? null : list.length === 1 ? list[0] : list;
+  };
+  const tacticsExPsychoLockNow = () => {
+    const live = tacticsExLiveRef.current;
+    return live.enabled && isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExStateRef.current, live.now) : {
+      active: false,
+      enemyDmgMult: 1,
+      enemyTakenBonus: 0
+    };
   };
   const tacticsExThunderDodgeNow = slotIdx => {
     const live = tacticsExLiveRef.current;
@@ -73226,7 +73275,7 @@ function MonsterHeroGame() {
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
     const totalBuffMult = traitMult * tacticsExMultiBuffNow(slotIdx).dmg * tacticsExPandoraDevilNow(slotIdx, isSecondOrLaterAtk).dmg * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
-    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
+    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
@@ -73444,7 +73493,7 @@ function MonsterHeroGame() {
       await battleWait(1000);
     } else {
       enemyActionPerformedRef.current = true;
-      if (intent.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0) {
+      if (intent.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active)) {
         addPopup("移動できない！", 'enemy', 'text-cyan-200 font-black text-xl drop-shadow-md');
         await battleWait(800);
       } else if (intent.type === 'MOVE' && immediateEffects.distLocked) {
@@ -74043,7 +74092,7 @@ function MonsterHeroGame() {
     const acting = enemyIntent;
     const hpAfterRecovery = emergencyHp !== null ? emergencyHp : Math.min(liveEffectiveMaxHp(), hp + recoverHp);
     await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
-    const moveWasFrozen = acting && acting.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0;
+    const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? acting : null);
     advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
@@ -74454,7 +74503,7 @@ function MonsterHeroGame() {
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const acting = enemyIntent;
     await handleEnemyTurn('none', {}, acting, hp);
-    const moveWasFrozen = acting && acting.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0;
+    const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? acting : null);
     advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
@@ -75301,7 +75350,7 @@ function MonsterHeroGame() {
       setEnemyDist(forcedMoveTarget);
       syncAtkTierForDist(forcedMoveTarget);
     }
-    const moveWasFrozen = executedIntent && executedIntent.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0;
+    const moveWasFrozen = executedIntent && executedIntent.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = forcedMoveTarget != null ? forcedMoveTarget : executedIntent && executedIntent.type === 'MOVE' && !moveWasFrozen ? executedIntent.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? executedIntent : null);
     advanceEnemyIntents(executedIntent, distForNextPredict, enemyActionPerformedRef.current);
