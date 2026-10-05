@@ -111,7 +111,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const text = async () => (await page.locator('[data-raid-jack-debug]').innerText());
     let t = await text();
     check('公開フラグは false(公開前)と出る', /false\(公開前\)/.test(t));
-    check('A の5段階の名前とライフが出る', ['ジャック男爵', 'ジャック大王', '1,750,000', '7,000,000'].every((s) => t.includes(s)));
+    check('A の5段階の名前とライフが出る', ['ジャック男爵', 'ジャック大王', '1,750,000', '14,000,000'].every((s) => t.includes(s)));
     check('B の5段階の名前とライフが出る', ['初級ジャック', '極級ジャック', '70,000', '35,000,000'].every((s) => t.includes(s)));
     check('技名が出る', ['カボチャ張り手', 'おばけパレード'].every((s) => t.includes(s)));
     check('段階ごとに使う技(3本・4本・5本)が出る', t.includes('ジャック男爵(3本): ジャックラッシュ / おばけキッス / かぼちゃ延髄斬り') && t.includes('初級ジャック(3本)') && t.includes('ハロウィンナイト'));
