@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a583e3b1834a038
+// generated-sha256: d2807b4e44154de8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 20:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5765,6 +5765,13 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 60, noAAGuard: true, noEdgeGuard: true },
     { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
+  // ゴースト(2026-10-05・案の段階)。いただいた3色の見本どおり ①=帽子 / ②=体 / ③=帽子のリボン。
+  // 目(白目・瞳)と口は対象外。まだ ALL_PLAYER_MONSTERS にいないので、正式実装するまで画面には出ない
+  Ghost: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -6201,7 +6208,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -6507,6 +6514,9 @@ const MASU_COLOR_REGION_DYE = {
   // 0.7 にして、つやを残す。③フリル・白い線と④ケーキは元がほぼ白で、比例させると色が乗らないので gloss を付けない
   Yggdrasil: [{ gloss: 0.9 }, { gloss: 0.93 }, { gloss: 0.72 }],
   MelWhip: [{ gloss: 0.9 }, { gloss: 0.9 }, {}, {}, { gloss: 0.7 }],
+  // ゴースト: ①帽子は暗い紺(彩度の中央値0.35・上のほう0.42)、③リボンは濃い赤(0.89)。
+  // ②体はほぼ白に近いクリーム(0.20)で、比例させると色が乗らないので gloss を付けない
+  Ghost: [{ gloss: 0.42 }, {}, { gloss: 0.9 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -13187,6 +13197,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   KenshiMocchi: { body:'jelly', bodyMask:IDLE_KENSHI_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_KENSHI_MOCCHI_SWORD_L_MASK, origin:'29.5% 26%', anim:'swing', amp:-4, dur:2400, delay:0, layer:'back' }, { mask:IDLE_KENSHI_MOCCHI_SWORD_R_MASK, origin:'70.5% 26%', anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' }] },
   Yggdrasil: { body:'breathe', bodyMask:IDLE_YGGDRASIL_BODY_MASK, parts:[{ mask:IDLE_YGGDRASIL_LEAF_TOP_MASK, origin:'35.9% 7.3%', anim:'swingIn', amp:3, dur:3200, delay:0, layer:'front' }, { mask:IDLE_YGGDRASIL_LEAF_SIDE_MASK, origin:'27.8% 15.8%', anim:'swing', amp:-7, dur:2600, delay:700, layer:'front' }] },
   MelWhip: { body:'sway', bodyMask:IDLE_MEL_WHIP_BODY_MASK, parts:[{ mask:IDLE_MEL_WHIP_UMBRELLA_MASK, origin:'41.2% 40.5%', anim:'swing', amp:2, dur:3000, delay:0, layer:'back' }] },
+  Ghost: { body:'hover', bodyMask:IDLE_GHOST_BODY_MASK, parts:[{ mask:IDLE_GHOST_TAIL_MASK, origin:'63.8% 86%', anim:'wag', amp:6, dur:1700, delay:0, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -21485,7 +21496,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'tiger_thunder_shadow',
     name: '雷狼影',
     useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
-    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 6,
     thunder: Object.freeze({ chargeTurns: 3, dmg: 0.3, crit: 0.1, comboRate: 0.1, dodge: 0.05, regenHp: 0.05, regenGuts: 0.05 }),
     effect: 'thunder',
@@ -28167,6 +28178,9 @@ function MasuTranscendEnhanceScreen({
       const previewMasu = preview ? preview.masu : masu;
       const currentPower = masuPowerOf(masu);
       const previewPower = masuPowerOf(previewMasu);
+      // 実際のステータス(元の値＋超越の基礎UP＋通常強化)。マスモン詳細・強化画面と同じ合成結果を使う
+      const mergedNow = mergeMasuIntoMon(masu);
+      const actualStatOf = (key) => ({ hp:mergedNow?.baseHp, atk:mergedNow?.baseAtk, def:mergedNow?.baseDef, guts:mergedNow?.baseGuts }[key] || 0);
       const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0,4) : ['C','C','C','C'];
       const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length-1];
       const transcendGrade = (idx, extra=0) => raiseAptitudeGrade(baseApt[idx]||'C', normalized.transcendAptBoosts[idx] + extra);
@@ -28287,6 +28301,16 @@ function MasuTranscendEnhanceScreen({
               {spentPoints<=0&&<div className="mt-1 text-[10px] font-bold text-slate-400 text-center">リセットする超越強化がありません</div>}
               {spentPoints>0&&resetScrollHave<=0&&<div className="mt-1 text-[10px] font-bold text-slate-400 text-center">「超越ポイントリセットの書」はマーケットで買えます</div>}
             </div>
+            {/* 実際のステータス。超越の基礎UPが全体のどれだけを占めるかを、ここで見て決められる */}
+            <div data-transcend-actual-stats className="rounded-2xl border border-sky-400/30 bg-slate-900 p-3">
+              <div className="text-[11px] font-black text-sky-200 mb-1.5">現在のステータス（強化分込み）</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const up=normalized.transcendStatPoints[key]||0,add=(plan.stat[key]||0)*(STAT_POINT_GAIN[key]||1);return <div key={key} className="rounded-xl bg-black/30 px-2.5 py-1.5">
+                  <div className="flex items-baseline justify-between"><span className="text-[10px] font-black text-slate-300">{label}</span><span className="font-mono text-[15px] font-black text-white">{actualStatOf(key)}{add>0&&<span className="text-sky-300 text-[11px]"> →{actualStatOf(key)+add}</span>}</span></div>
+                  <div className="text-[9px] font-bold text-slate-400 text-right">超越の基礎UP +{up}</div>
+                </div>;})}
+              </div>
+            </div>
             {/* 振り分け。通常強化(まとめて強化)とまったく同じ並び・同じ操作にそろえている */}
             <div className="bg-slate-900 border border-sky-500/40 rounded-2xl p-3 shadow-xl">
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -28308,9 +28332,9 @@ function MasuTranscendEnhanceScreen({
               </div>
               <div className="text-[11px] text-slate-400 font-black mb-1.5">ステータス</div>
               <div className="space-y-1.5">
-                {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=normalized.transcendStatPoints[key];return <div key={key} className="grid grid-cols-[48px_1fr_56px_1fr] items-center gap-1 rounded-xl bg-black/30 p-1.5">
+                {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=normalized.transcendStatPoints[key],actual=actualStatOf(key);return <div key={key} className="grid grid-cols-[48px_1fr_56px_1fr] items-center gap-1 rounded-xl bg-black/30 p-1.5">
                   <span className="text-[10px] text-center text-sky-200 font-black">{label}</span>
-                  <div className="text-center font-mono font-black text-[11px]"><span className="text-white">基礎+{before}</span><span className="text-slate-400 mx-1">→</span><span className={gain>0?'text-sky-300':'text-slate-300'}>基礎+{before+gain}</span></div>
+                  <div className="text-center font-mono font-black leading-tight"><div className="text-[12px]"><span className="text-white">{actual}</span><span className="text-slate-400 mx-1">→</span><span className={gain>0?'text-sky-300':'text-slate-300'}>{actual+gain}</span>{gain>0&&<span className="text-sky-300 text-[10px]"> (+{gain})</span>}</div><div className="text-[9px] text-slate-400 font-bold">超越の基礎UP +{before+gain}</div></div>
                   <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="transcend-stat" aria-label={`${label}の基礎値の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={n} onFocus={e=>e.currentTarget.select()} onChange={e=>setTranscendPlanExact('stat',key,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-11 rounded-xl border border-sky-400/40 bg-slate-950/80 px-0.5 text-center text-[12px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"/><span className="text-[10px] font-black text-sky-300">P</span></label>
                   <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}の基礎値を減らす`} disabled={n<=0} onPress={()=>addStat(key,-1)} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black active:scale-95 disabled:opacity-30">−</PressRepeatButton><PressRepeatButton aria-label={`${label}の基礎値を上げる`} disabled={planLeft<=0} onPress={()=>addStat(key,1)} className="min-h-[44px] rounded-xl bg-sky-600 text-lg font-black active:scale-95 disabled:bg-slate-700 disabled:opacity-30">＋</PressRepeatButton></div>
                 </div>;})}
@@ -33528,6 +33552,24 @@ function MasuAutoEnhanceScreen({
         const captured = buildAutoEnhanceLimitsFromCurrent(masu, base);
         if (captured) { setLimitDraft(null); updateAutoEnhance(masu.id, captured); }
       };
+      // かんたん設定。1タップで目標と ON をまとめて決める(優先順位はいまのまま)。
+      // ステータスの上限なし=null、間合い適性は M を目標にすると上限なしと同じ
+      const applyPreset = (kind) => {
+        setLimitDraft(null);
+        const allStat = { hp:null, atk:null, def:null, guts:null };
+        const noStat = { hp:0, atk:0, def:0, guts:0 };
+        const allApt = ['M','M','M','M'];
+        const noApt = [null,null,null,null];
+        const patch = kind === 'all' ? { statTargets:allStat, aptLimits:allApt }
+          : kind === 'stat' ? { statTargets:allStat, aptLimits:noApt }
+          : { statTargets:noStat, aptLimits:allApt };
+        updateAutoEnhance(masu.id, { enabled:true, ...patch });
+      };
+      // OFF→ON のとき、振る先がまだ1つも無ければ「おまかせ」にして、押しただけで働くようにする
+      const toggleEnabled = () => {
+        if (!settings.enabled && !hasTarget) { applyPreset('all'); return; }
+        updateAutoEnhance(masu.id, { enabled: !settings.enabled });
+      };
       const clearAll = () => {
         setLimitDraft(null);
         updateAutoEnhance(masu.id, { statTargets:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
@@ -33564,7 +33606,7 @@ function MasuAutoEnhanceScreen({
 
             {/* オン / オフ */}
             <div className={`rounded-2xl border p-3 shadow-xl ${settings.enabled?'border-lime-400/60 bg-lime-950/25':'border-white/10 bg-slate-900'}`}>
-              <button type="button" aria-pressed={settings.enabled} onClick={()=>updateAutoEnhance(masu.id, { enabled: !settings.enabled })}
+              <button type="button" aria-pressed={settings.enabled} onClick={toggleEnabled}
                 className={`w-full min-h-[52px] rounded-xl font-black text-[13px] active:scale-95 flex items-center justify-center gap-2 ${settings.enabled?'bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}`}>
                 <Sparkles size={16}/>{settings.enabled?'オート強化 ON':'オート強化 OFF'}
               </button>
@@ -33584,6 +33626,17 @@ function MasuAutoEnhanceScreen({
                 </div>
               )}
               <div className="mt-2 text-[10px] font-bold text-slate-400 leading-relaxed">設定は転生しても残ります。目標まで届くと止まり、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。</div>
+            </div>
+
+            {/* かんたん設定: 細かい上限や順番を決めなくても、押すだけで ON になって働く */}
+            <div data-auto-enhance-presets className="rounded-2xl border border-lime-500/40 bg-slate-900 p-3">
+              <div className="text-[13px] font-black text-lime-300">かんたん設定（押すだけで ON）</div>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <button type="button" data-auto-enhance-preset="all" onClick={()=>applyPreset('all')} className="min-h-[56px] rounded-xl bg-lime-600 text-slate-950 text-[11px] font-black active:scale-95 px-1 leading-tight">おまかせ<br/><span className="text-[9px] font-bold">全部上げる</span></button>
+                <button type="button" data-auto-enhance-preset="stat" onClick={()=>applyPreset('stat')} className="min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight">ステータスだけ<br/><span className="text-[9px] font-bold text-slate-400">適性は振らない</span></button>
+                <button type="button" data-auto-enhance-preset="apt" onClick={()=>applyPreset('apt')} className="min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight">適性だけ<br/><span className="text-[9px] font-bold text-slate-400">ステは振らない</span></button>
+              </div>
+              <div className="mt-1.5 text-[10px] font-bold text-slate-400 leading-relaxed">上限なしで、下の優先順位どおりに強化ポイントを使い切ります。あとから下で細かく直せます。</div>
             </div>
 
             {/* 上限の一括操作 */}
@@ -49934,7 +49987,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ライガーの雷狼影: ためている3ターンのあいだ、その子が使ったカードの枚数だけ雷がたまる(2026-10-05)
     if(isTacticsMode(runMode)&&usedCardEntries.length>0){
       const perSlot={};
-      usedCardEntries.forEach(e=>{ if(Number.isInteger(e.slotIdx)&&!isAssistCard(e.card)) perSlot[e.slotIdx]=(perSlot[e.slotIdx]||0)+1; });
+      usedCardEntries.forEach(e=>{ if(Number.isInteger(e.slotIdx)) perSlot[e.slotIdx]=(perSlot[e.slotIdx]||0)+1; }); // アシストカード(支援カード)も、その子へ置いたぶんは行動に数える(2026-10-05 ユーザー選択)
       let stTh=tacticsExStateRef.current;
       Object.keys(perSlot).forEach(k=>{ stTh=addTacticsExThunder(stTh,tacticsUnitsRef.current,{ wave, turn:turnCount },Number(k),perSlot[k]); });
       if(stTh!==tacticsExStateRef.current) commitTacticsExState(stTh);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dffab851f472f67d
+// source-sha256: c6cc932bfa3ef3e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 19:50";
+const BUILD_DATE = "2026-10-05 20:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -8050,6 +8050,19 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Ghost: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -8484,7 +8497,8 @@ const EXACT_DYE_MASKS = Object.freeze({
   Pandora: PANDORA_DYE_MASK,
   KenshiMocchi: KENSHI_MOCCHI_DYE_MASK,
   Yggdrasil: YGGDRASIL_DYE_MASK,
-  MelWhip: MEL_WHIP_DYE_MASK
+  MelWhip: MEL_WHIP_DYE_MASK,
+  Ghost: GHOST_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -8823,6 +8837,11 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.9
   }, {}, {}, {
     gloss: 0.7
+  }],
+  Ghost: [{
+    gloss: 0.42
+  }, {}, {
+    gloss: 0.9
   }]
 };
 const _NO_REGION_DYE = {
@@ -21434,6 +21453,19 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       delay: 0,
       layer: 'back'
     }]
+  },
+  Ghost: {
+    body: 'hover',
+    bodyMask: IDLE_GHOST_BODY_MASK,
+    parts: [{
+      mask: IDLE_GHOST_TAIL_MASK,
+      origin: '63.8% 86%',
+      anim: 'wag',
+      amp: 6,
+      dur: 1700,
+      delay: 0,
+      layer: 'back'
+    }]
   }
 });
 const MONSTER_IDLE_MASK_STYLE = url => ({
@@ -33813,7 +33845,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'tiger_thunder_shadow',
     name: '雷狼影',
     useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
-    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーがカードを使う（行動する）たびに「雷」が1つたまる（ガードやききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -44443,6 +44475,13 @@ function MasuTranscendEnhanceScreen({
   const previewMasu = preview ? preview.masu : masu;
   const currentPower = masuPowerOf(masu);
   const previewPower = masuPowerOf(previewMasu);
+  const mergedNow = mergeMasuIntoMon(masu);
+  const actualStatOf = key => ({
+    hp: mergedNow?.baseHp,
+    atk: mergedNow?.baseAtk,
+    def: mergedNow?.baseDef,
+    guts: mergedNow?.baseGuts
+  })[key] || 0;
   const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0, 4) : ['C', 'C', 'C', 'C'];
   const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1];
   const transcendGrade = (idx, extra = 0) => raiseAptitudeGrade(baseApt[idx] || 'C', normalized.transcendAptBoosts[idx] + extra);
@@ -44669,6 +44708,30 @@ function MasuTranscendEnhanceScreen({
   }, "リセットする超越強化がありません"), spentPoints > 0 && resetScrollHave <= 0 && React.createElement("div", {
     className: "mt-1 text-[10px] font-bold text-slate-400 text-center"
   }, "「超越ポイントリセットの書」はマーケットで買えます")), React.createElement("div", {
+    "data-transcend-actual-stats": true,
+    className: "rounded-2xl border border-sky-400/30 bg-slate-900 p-3"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-sky-200 mb-1.5"
+  }, "現在のステータス（強化分込み）"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
+    const up = normalized.transcendStatPoints[key] || 0,
+      add = (plan.stat[key] || 0) * (STAT_POINT_GAIN[key] || 1);
+    return React.createElement("div", {
+      key: key,
+      className: "rounded-xl bg-black/30 px-2.5 py-1.5"
+    }, React.createElement("div", {
+      className: "flex items-baseline justify-between"
+    }, React.createElement("span", {
+      className: "text-[10px] font-black text-slate-300"
+    }, label), React.createElement("span", {
+      className: "font-mono text-[15px] font-black text-white"
+    }, actualStatOf(key), add > 0 && React.createElement("span", {
+      className: "text-sky-300 text-[11px]"
+    }, " →", actualStatOf(key) + add))), React.createElement("div", {
+      className: "text-[9px] font-bold text-slate-400 text-right"
+    }, "超越の基礎UP +", up));
+  }))), React.createElement("div", {
     className: "bg-slate-900 border border-sky-500/40 rounded-2xl p-3 shadow-xl"
   }, React.createElement("div", {
     className: "flex items-center justify-between gap-2 mb-2"
@@ -44756,21 +44819,28 @@ function MasuTranscendEnhanceScreen({
   }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
     const n = plan.stat[key] || 0,
       gain = n * (STAT_POINT_GAIN[key] || 1),
-      before = normalized.transcendStatPoints[key];
+      before = normalized.transcendStatPoints[key],
+      actual = actualStatOf(key);
     return React.createElement("div", {
       key: key,
       className: "grid grid-cols-[48px_1fr_56px_1fr] items-center gap-1 rounded-xl bg-black/30 p-1.5"
     }, React.createElement("span", {
       className: "text-[10px] text-center text-sky-200 font-black"
     }, label), React.createElement("div", {
-      className: "text-center font-mono font-black text-[11px]"
+      className: "text-center font-mono font-black leading-tight"
+    }, React.createElement("div", {
+      className: "text-[12px]"
     }, React.createElement("span", {
       className: "text-white"
-    }, "基礎+", before), React.createElement("span", {
+    }, actual), React.createElement("span", {
       className: "text-slate-400 mx-1"
     }, "→"), React.createElement("span", {
       className: gain > 0 ? 'text-sky-300' : 'text-slate-300'
-    }, "基礎+", before + gain)), React.createElement("label", {
+    }, actual + gain), gain > 0 && React.createElement("span", {
+      className: "text-sky-300 text-[10px]"
+    }, " (+", gain, ")")), React.createElement("div", {
+      className: "text-[9px] text-slate-400 font-bold"
+    }, "超越の基礎UP +", before + gain)), React.createElement("label", {
       className: "flex items-center gap-0.5 min-w-0"
     }, React.createElement("input", {
       "data-direct-point-input": "transcend-stat",
@@ -54780,6 +54850,46 @@ function MasuAutoEnhanceScreen({
       updateAutoEnhance(masu.id, captured);
     }
   };
+  const applyPreset = kind => {
+    setLimitDraft(null);
+    const allStat = {
+      hp: null,
+      atk: null,
+      def: null,
+      guts: null
+    };
+    const noStat = {
+      hp: 0,
+      atk: 0,
+      def: 0,
+      guts: 0
+    };
+    const allApt = ['M', 'M', 'M', 'M'];
+    const noApt = [null, null, null, null];
+    const patch = kind === 'all' ? {
+      statTargets: allStat,
+      aptLimits: allApt
+    } : kind === 'stat' ? {
+      statTargets: allStat,
+      aptLimits: noApt
+    } : {
+      statTargets: noStat,
+      aptLimits: allApt
+    };
+    updateAutoEnhance(masu.id, {
+      enabled: true,
+      ...patch
+    });
+  };
+  const toggleEnabled = () => {
+    if (!settings.enabled && !hasTarget) {
+      applyPreset('all');
+      return;
+    }
+    updateAutoEnhance(masu.id, {
+      enabled: !settings.enabled
+    });
+  };
   const clearAll = () => {
     setLimitDraft(null);
     updateAutoEnhance(masu.id, {
@@ -54865,9 +54975,7 @@ function MasuAutoEnhanceScreen({
   }, React.createElement("button", {
     type: "button",
     "aria-pressed": settings.enabled,
-    onClick: () => updateAutoEnhance(masu.id, {
-      enabled: !settings.enabled
-    }),
+    onClick: toggleEnabled,
     className: `w-full min-h-[52px] rounded-xl font-black text-[13px] active:scale-95 flex items-center justify-center gap-2 ${settings.enabled ? 'bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`
   }, React.createElement(Sparkles, {
     size: 16
@@ -54880,6 +54988,36 @@ function MasuAutoEnhanceScreen({
   }, "振ってよい先がまだ1つもないので、ONでも何も振られません。下で目標を決めるか、「いまの値を目標として取り込む」を押してください。"), React.createElement("div", {
     className: "mt-2 text-[10px] font-bold text-slate-400 leading-relaxed"
   }, "設定は転生しても残ります。目標まで届くと止まり、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。")), React.createElement("div", {
+    "data-auto-enhance-presets": true,
+    className: "rounded-2xl border border-lime-500/40 bg-slate-900 p-3"
+  }, React.createElement("div", {
+    className: "text-[13px] font-black text-lime-300"
+  }, "かんたん設定（押すだけで ON）"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-preset": "all",
+    onClick: () => applyPreset('all'),
+    className: "min-h-[56px] rounded-xl bg-lime-600 text-slate-950 text-[11px] font-black active:scale-95 px-1 leading-tight"
+  }, "おまかせ", React.createElement("br", null), React.createElement("span", {
+    className: "text-[9px] font-bold"
+  }, "全部上げる")), React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-preset": "stat",
+    onClick: () => applyPreset('stat'),
+    className: "min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight"
+  }, "ステータスだけ", React.createElement("br", null), React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "適性は振らない")), React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-preset": "apt",
+    onClick: () => applyPreset('apt'),
+    className: "min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight"
+  }, "適性だけ", React.createElement("br", null), React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "ステは振らない"))), React.createElement("div", {
+    className: "mt-1.5 text-[10px] font-bold text-slate-400 leading-relaxed"
+  }, "上限なしで、下の優先順位どおりに強化ポイントを使い切ります。あとから下で細かく直せます。")), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -74575,7 +74713,7 @@ function MonsterHeroGame() {
     if (isTacticsMode(runMode) && usedCardEntries.length > 0) {
       const perSlot = {};
       usedCardEntries.forEach(e => {
-        if (Number.isInteger(e.slotIdx) && !isAssistCard(e.card)) perSlot[e.slotIdx] = (perSlot[e.slotIdx] || 0) + 1;
+        if (Number.isInteger(e.slotIdx)) perSlot[e.slotIdx] = (perSlot[e.slotIdx] || 0) + 1;
       });
       let stTh = tacticsExStateRef.current;
       Object.keys(perSlot).forEach(k => {

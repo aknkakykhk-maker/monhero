@@ -30,6 +30,8 @@ const HERO_ATK_NAMES = {
   // 技ごとの元の値(技種・消費ガッツ・ダメージなど)は docs/spec/YGGDRASIL_SKILLS.md
   Yggdrasil: ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","苺大噴","シャドウレギオン"],
   MelWhip:   ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","ケーキ入刀","シャドウレギオン"],
+  // ゴースト(2026-10-05・案の段階)。並びと決めた経緯は docs/spec/GHOST_SKILLS.md
+  Ghost:  ["ピコピコハンマー","ソウルビーム","ハトのおとしもの","びっくり","体当たり","カード","すてきステッキ","大パンチ","コンビネーション"],
 };
 
 // atkMotion: 通常技・固有技のモーション種別。全モンスターに必須(新規追加時も必ず明示すること)。
@@ -104,7 +106,18 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // 決まっていない項目(能力値・技・勇者特性・攻撃モーション)は書かない。画面で「未設定」と赤く出るので、
 // 何が足りないかがそのまま一覧になる。正式に実装したら ALL_PLAYER_MONSTERS へ移し、ここからは消す。
 //   draftLineage … 血統の案。本体の MONSTER_LINEAGE_MAP へ足すのは正式実装のとき(lineage-dex-check.js の決まり)
-// ユグドラシルとメルホイップは 2026-09-29 に正式実装したので ALL_PLAYER_MONSTERS へ移した(ここは空)。
+// ユグドラシルとメルホイップは 2026-09-29 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
 //   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
+  // ゴースト(2026-10-05・新しい血統ゴーストの純血)。絵・顔アイコン・円盤石・染色マスク・図鑑の文・
+  // 能力値・技名・勇者特性まで決まっている。決めた中身の正本は docs/spec/GHOST_SKILLS.md。
+  // 未定: 固有技の倍率と消費ガッツ(案は2.4倍・48)・タクティクスのEX・モンヒロビートの能力・攻撃モーション
+  Ghost: Object.freeze({ id:'Ghost', name:"ゴースト", emoji:"👻", imgUrl:GHOST_IMG, iconUrl:GHOST_ICON,
+    faceIconUrl:GHOST_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'ghost', sub:'ghost' }),
+    trait:"トリックスタート",
+    traitDesc:"勇者モン選択時：WAVEの1ターン目から3ターン毎に、ちから+20%・丈夫さ+20%・毎ターンライフ5%回復をそれぞれ50%で付与(重複あり・そのWAVEのあいだ)。攻撃が当たると、その技の消費ガッツの半分を回復",
+    baseHp:380, baseGuts:150, baseAtk:150, baseDef:50,
+    plusStats:Object.freeze({hp:150,atk:35,def:10,guts:45}),
+    distAptitude:Object.freeze(['C','C','A','C']),
+    draftUniqueNames:Object.freeze(["連続カード","ドクロビーム","大きなおとしもの","びっくりドクロ","スリーセブン","Woフォーチュン","RSF","運命のコイン","グランドイリュージョン"]) }),
 });

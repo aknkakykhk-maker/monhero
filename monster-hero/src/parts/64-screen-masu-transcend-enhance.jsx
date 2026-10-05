@@ -30,6 +30,9 @@ function MasuTranscendEnhanceScreen({
       const previewMasu = preview ? preview.masu : masu;
       const currentPower = masuPowerOf(masu);
       const previewPower = masuPowerOf(previewMasu);
+      // 実際のステータス(元の値＋超越の基礎UP＋通常強化)。マスモン詳細・強化画面と同じ合成結果を使う
+      const mergedNow = mergeMasuIntoMon(masu);
+      const actualStatOf = (key) => ({ hp:mergedNow?.baseHp, atk:mergedNow?.baseAtk, def:mergedNow?.baseDef, guts:mergedNow?.baseGuts }[key] || 0);
       const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0,4) : ['C','C','C','C'];
       const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length-1];
       const transcendGrade = (idx, extra=0) => raiseAptitudeGrade(baseApt[idx]||'C', normalized.transcendAptBoosts[idx] + extra);
@@ -150,6 +153,16 @@ function MasuTranscendEnhanceScreen({
               {spentPoints<=0&&<div className="mt-1 text-[10px] font-bold text-slate-400 text-center">リセットする超越強化がありません</div>}
               {spentPoints>0&&resetScrollHave<=0&&<div className="mt-1 text-[10px] font-bold text-slate-400 text-center">「超越ポイントリセットの書」はマーケットで買えます</div>}
             </div>
+            {/* 実際のステータス。超越の基礎UPが全体のどれだけを占めるかを、ここで見て決められる */}
+            <div data-transcend-actual-stats className="rounded-2xl border border-sky-400/30 bg-slate-900 p-3">
+              <div className="text-[11px] font-black text-sky-200 mb-1.5">現在のステータス（強化分込み）</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const up=normalized.transcendStatPoints[key]||0,add=(plan.stat[key]||0)*(STAT_POINT_GAIN[key]||1);return <div key={key} className="rounded-xl bg-black/30 px-2.5 py-1.5">
+                  <div className="flex items-baseline justify-between"><span className="text-[10px] font-black text-slate-300">{label}</span><span className="font-mono text-[15px] font-black text-white">{actualStatOf(key)}{add>0&&<span className="text-sky-300 text-[11px]"> →{actualStatOf(key)+add}</span>}</span></div>
+                  <div className="text-[9px] font-bold text-slate-400 text-right">超越の基礎UP +{up}</div>
+                </div>;})}
+              </div>
+            </div>
             {/* 振り分け。通常強化(まとめて強化)とまったく同じ並び・同じ操作にそろえている */}
             <div className="bg-slate-900 border border-sky-500/40 rounded-2xl p-3 shadow-xl">
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -171,9 +184,9 @@ function MasuTranscendEnhanceScreen({
               </div>
               <div className="text-[11px] text-slate-400 font-black mb-1.5">ステータス</div>
               <div className="space-y-1.5">
-                {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=normalized.transcendStatPoints[key];return <div key={key} className="grid grid-cols-[48px_1fr_56px_1fr] items-center gap-1 rounded-xl bg-black/30 p-1.5">
+                {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=normalized.transcendStatPoints[key],actual=actualStatOf(key);return <div key={key} className="grid grid-cols-[48px_1fr_56px_1fr] items-center gap-1 rounded-xl bg-black/30 p-1.5">
                   <span className="text-[10px] text-center text-sky-200 font-black">{label}</span>
-                  <div className="text-center font-mono font-black text-[11px]"><span className="text-white">基礎+{before}</span><span className="text-slate-400 mx-1">→</span><span className={gain>0?'text-sky-300':'text-slate-300'}>基礎+{before+gain}</span></div>
+                  <div className="text-center font-mono font-black leading-tight"><div className="text-[12px]"><span className="text-white">{actual}</span><span className="text-slate-400 mx-1">→</span><span className={gain>0?'text-sky-300':'text-slate-300'}>{actual+gain}</span>{gain>0&&<span className="text-sky-300 text-[10px]"> (+{gain})</span>}</div><div className="text-[9px] text-slate-400 font-bold">超越の基礎UP +{before+gain}</div></div>
                   <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="transcend-stat" aria-label={`${label}の基礎値の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={n} onFocus={e=>e.currentTarget.select()} onChange={e=>setTranscendPlanExact('stat',key,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-11 rounded-xl border border-sky-400/40 bg-slate-950/80 px-0.5 text-center text-[12px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"/><span className="text-[10px] font-black text-sky-300">P</span></label>
                   <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}の基礎値を減らす`} disabled={n<=0} onPress={()=>addStat(key,-1)} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black active:scale-95 disabled:opacity-30">−</PressRepeatButton><PressRepeatButton aria-label={`${label}の基礎値を上げる`} disabled={planLeft<=0} onPress={()=>addStat(key,1)} className="min-h-[44px] rounded-xl bg-sky-600 text-lg font-black active:scale-95 disabled:bg-slate-700 disabled:opacity-30">＋</PressRepeatButton></div>
                 </div>;})}
