@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a0cdafbf395d3ced
+// generated-sha256: f2270f333a05f07a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 12:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21310,7 +21310,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     useNote: '敵の攻撃を全部モノリスが受ける',
-    desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
+    desc: 'このターン、敵の攻撃をすべてモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
     // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
     maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
@@ -21327,7 +21327,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     useNote: '5ターン 全ステータス+30%・満タン・自動回復+30%',
     // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
     //   上限も20%上げ、その上がった上限まで満タンにする
-    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、モッチーが大きく強くなる。\n・ちから・丈夫さ・ライフ上限・ガッツ上限が+30%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の30%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.3, regenRate: 0.3, fullRecover: true,
     effect: 'statBoost',
@@ -21340,7 +21340,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mitarashi_dragon',
     name: 'ドラゴンだっちー',
     useNote: '5ターン 力・ガッツ+40% 丈夫さ・ライフ+20%・満タン',
-    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、ミタラシが強くなる。\n・ちから・ガッツ上限が+40%、丈夫さ・ライフ上限が+20%\n・ターン終わりの自動回復が、ガッツは上限の40%、ライフは上限の20%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.2, regenRate: 0.2, fullRecover: true,
     rates: Object.freeze({ atk: 0.4, def: 0.2, hp: 0.2, guts: 0.4 }),
@@ -21358,7 +21358,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
     useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
     maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
     effect: 'distMatch',
   }),
@@ -21370,7 +21370,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
     useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
@@ -21381,7 +21381,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
     useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
-    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    desc: '5ターンのあいだ、アークが攻めも守りも強くなる。\n・与ダメージ+30%\n・攻撃に「与ダメージ10%の連撃」が1回付く\n・受けるダメージ−20%',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
     effect: 'multiBuff',
@@ -21392,7 +21392,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
     useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
-    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    desc: '最大ライフの30%を払って、5ターンのあいだ攻撃が鋭くなる。\n・攻撃に「与ダメージ5%の連撃」が5回付く\n・会心率×1.5、会心ダメージ×1.3\n・丈夫さ+30%\n・ライフが払う量より多いときだけ使える（払って倒れることはない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
     lifeCostRate: 0.3, conditionText: 'ライフが最大の30%より多いときだけ使える',
@@ -21406,7 +21406,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
     useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
-    desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
+    desc: '3ターンのあいだ、固有技を撃ちやすくなり、近くから殴ったことになる。\n・毎ターン、ピクシーの固有技カードが必ず手札に出る\n・距離補正が、どの距離でも×1.5（敵と同じ距離から攻撃したときと同じ）',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     distMult: 1.5, guaranteeUnique: true,
     effect: 'multiBuff',
@@ -21417,7 +21417,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
     useNote: '4ターン カード+1・使うほどボルテージ上昇',
-    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    desc: '4ターンのあいだ、味方全員が動きやすくなる。\n・1ターンに使えるカードが+1枚（ミーア自身も+1）\n・味方がカードを1枚使うたびに、ボルテージが1たまる（最大10）\n・ボルテージ1段階ごとに、味方全員の与ダメージ+3%・回復カードの回復量+5%・ライフ自動回復+3%・ガッツ自動回復+2%\n・効果が終わると、ボルテージは0に戻る',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
     cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02, hp: 0.03 }),
     effect: 'stage',
@@ -21428,7 +21428,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
     useNote: '全員のガッツ回復＋ランダムで1つ',
-    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで1つ：\n　与ダメージ+20%（2ターン）\n　被ダメージ−20%（2ターン）\n　連撃 与ダメ10%×2回（2ターン）\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3（2ターン）\n・10%の確率で「大当たり」：6つ全部',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 2,
     present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
@@ -21439,7 +21439,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
     useNote: '選んだ味方が満タンに・ガッツ30%回復',
-    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
+    desc: '味方1体（自分でもよい）を選んで、回復させる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%\n・どちらも、選んだ子のガッツが上限の30%回復する',
     // ★2026-10-03 ユーザー指示で 3回 → 5回
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
@@ -21451,7 +21451,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
     useNote: '時間停止 このターン敵は動かない',
-    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    desc: '時間を止める。\n・使ったターンは、敵が行動しない\n・そのターンは、WAVEの20ターンの数に入らない（ターンの数字が進まない）',
     maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
     effect: 'timeStop',
   }),
@@ -21464,7 +21464,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
     useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
-    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・1枚目のカード＝悪魔の力：与ダメージ+50%、与ダメージ30%の連撃が1回付く\n・2枚目のカード＝天使の力：味方全員のライフ・ガッツが上限の10%回復\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：パンドラはダウンするが、ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の50%回復\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
     effect: 'pandoraBox',
@@ -21475,7 +21475,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
     useNote: '丈夫さが0になり、その50%が力へ',
-    desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
+    desc: '丈夫さを0にして、その分を力へ足す。\n・足す量は、0にした丈夫さの50%\n・効き目は、そのWAVEが終わるまで',
     maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
     // ★効果中にもう一度使っても何も変わらない(丈夫さはもう0)。回数だけ減るのを防ぐ
     conditions: Object.freeze(['notActive']),
@@ -21511,7 +21511,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
     useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
-    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    desc: '3ターンのあいだ、味方全員を守り、癒やす。\n・味方全員の被ダメージ−30%\n・ターン終わりに、味方全員のライフが上限の20%回復',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     partyTakenRate: 0.3, partyRegenRate: 0.2,
     effect: 'partyGuard',
@@ -21521,7 +21521,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
     useNote: 'このターン 連撃30%×4・先にカードで攻撃',
-    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    desc: 'このターンだけ、メルホイップの攻撃に連撃が付く。\n・与ダメージ30%の連撃が4回追加される\n・先にEXを使ってから、同じターンにメルホイップのカードで攻撃する',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
     extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
     effect: 'comboBurst',
