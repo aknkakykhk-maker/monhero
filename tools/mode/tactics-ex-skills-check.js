@@ -65,7 +65,7 @@ vm.runInContext([
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
-    + 'tacticsExDefOf,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExDefOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -480,7 +480,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && !ex.tacticsExDistMatchDodges('statBoost', 2, 2) && !ex.tacticsExDistMatchDodges(null, 2, 2)
     && !ex.tacticsExDistMatchDodges('distMatch', 2, undefined) && !ex.tacticsExDistMatchDodges('distMatch', null, 2));
   check('敵の攻撃の当たり先ごとの判定に、その子の距離と敵の距離を渡している',
-    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,420}if\(slotIdx===evadedSlot\|\|exDodge\)\{ evadedName=/.test(app));
+    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,520}if\(slotIdx===evadedSlot\|\|exDodge(\|\|thunderDodge)?\)\{ evadedName=/.test(app));
 }
 
 // ---------- ⑬ ザン「血踊」(2026-10-02 ユーザー指示) ----------
@@ -512,7 +512,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const hits = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi', exCombos: c3 });
   const base = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi' });
   check('ヒット列に与ダメ10%(100)の連撃が回避した数だけ足される', hits.length - base.length === 3 && hits.slice(base.length).every(h => h.dmg === 100) , `${base.length}→${hits.length}`);
-  check('本体: 回避したら数える(結線)・連撃の名前を渡す', /const exDodge=tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,260}recordTacticsExDodge\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)[\s\S]{0,40}if\(slotIdx===evadedSlot\|\|exDodge\)/.test(app)
+  check('本体: 回避したら数える(結線)・連撃の名前を渡す', /const exDodge=tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,260}recordTacticsExDodge\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)[\s\S]{0,200}if\(slotIdx===evadedSlot\|\|exDodge(\|\|thunderDodge)?\)/.test(app)
     && readPart('22-enemy-and-bond-entries.jsx').includes("ec.label || 'スイーツパラダイス'"));
 }
 
@@ -566,7 +566,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('ヒット列に与ダメ5%(50)の連撃が5本だけ足される', withCombos.length - noCombos.length === 5 && withCombos.slice(noCombos.length).every(h => h.dmg === 50 && h.skillName === '堕天の烙印'), `${noCombos.length}→${withCombos.length}`);
   check('本体: 与ダメ(getDmg)・会心率・会心ダメ(3か所)・被ダメ(applyTurnDamageReduction)へ結線してある',
     /const totalBuffMult=traitMult\*tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
-    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
+    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus(\+\(tacticsExMultiBuffNow\(slotIdx\)\.critAdd\|\|0\))?\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
     && (app.match(/critDmgMult:tacticsExMultiBuffNow\(slotIdx\)\.critDmg/g) || []).length === 3);
 }
 
@@ -722,6 +722,53 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /if \(timeStopSlot!=null\) \{\n\s*addPopup\('⏳ 時間停止！/.test(app)
     && /const nextTurn=timeStopSlot!=null\?turnCount:turnCount\+1; setTurnCount\(nextTurn\);/.test(app)
     && /data-tactics-ex-target=\{t\.slot\}/.test(screen));
+}
+
+// ---------- ⑱ ライガー「雷狼影」(2026-10-05 ユーザー指示・数字はユーザー指定) ----------
+{
+  const tg = ex.tacticsExDefOf('Tiger');
+  check('ライガー「雷狼影」: ラン5回・併用できる・合計6ターン(ため3＋雷纏3)・雷×与ダメ30%/会心10%/連撃10%/回避5%/ライフ5%/ガッツ5%',
+    !!tg && tg.name === '雷狼影' && tg.maxUses === 5 && !tg.unlimited && tg.withCards && tg.duration === 'turns' && tg.turns === 6
+    && tg.effect === 'thunder' && ex.isTacticsExEffectImplemented(tg) && !!tg.thunder && tg.thunder.chargeTurns === 3
+    && tg.thunder.dmg === 0.3 && tg.thunder.crit === 0.1 && tg.thunder.comboRate === 0.1 && tg.thunder.dodge === 0.05
+    && tg.thunder.regenHp === 0.05 && tg.thunder.regenGuts === 0.05 && /雷纏/.test(tg.desc), JSON.stringify(tg));
+  const A = (wave, turn) => ({ wave, turn });
+  const tiger = { id: 'Tiger', hp: 400, maxHp: 400, baseMaxHp: 400, atk: 1, def: 1, guts: 50, maxGuts: 135, baseMaxGuts: 135, downed: false };
+  const units = [null, tiger];
+  let st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: tg, slot: 1, monId: 'Tiger', now: A(2, 4) });
+  const t0 = ex.tacticsExThunderOf(st, units, 1, A(2, 4));
+  check('使った直後は雷0・ためている前半(あと3ターン)・強化なし', !!t0 && t0.charge === 0 && t0.phase === 'charge' && t0.turnsLeft === 3
+    && ex.tacticsExMultiBuffOf(st, units, 1, A(2, 4)) === null && ex.tacticsExExtraCombosAt(st, units, 1, A(2, 4)) === null, JSON.stringify(t0));
+  // 行動(カード)の数だけたまる: 2枚・3枚(ガードやききで増えたぶんも含む)・1枚 → 雷6
+  st = ex.addTacticsExThunder(st, units, A(2, 4), 1, 2);
+  st = ex.addTacticsExThunder(st, units, A(2, 5), 1, 3);
+  st = ex.addTacticsExThunder(st, units, A(2, 6), 1, 1);
+  const tc = ex.tacticsExThunderOf(st, units, 1, A(2, 6));
+  check('ためている3ターンのあいだ、使ったカードの枚数だけ雷がたまる(2+3+1=6)', !!tc && tc.charge === 6 && tc.phase === 'charge' && tc.turnsLeft === 1, JSON.stringify(tc));
+  check('ためているあいだは、与ダメ・会心・連撃・回避・自動回復は変わらない', ex.tacticsExMultiBuffOf(st, units, 1, A(2, 6)) === null
+    && ex.tacticsExExtraCombosAt(st, units, 1, A(2, 6)) === null && tc.dodgeRate === 0
+    && ex.tacticsExRegenRateAt(st, units, 1, A(2, 6), 'hp') === 0 && ex.tacticsExRegenRateAt(st, units, 1, A(2, 6), 'guts') === 0);
+  const tw = ex.tacticsExThunderOf(st, units, 1, A(2, 7));
+  const mb = ex.tacticsExMultiBuffOf(st, units, 1, A(2, 7)), cb = ex.tacticsExExtraCombosAt(st, units, 1, A(2, 7));
+  check('3ターンのあと雷纏が始まる: 雷6 → 与ダメ+180%・会心率+60%・回避率+30%・連撃10%×6回',
+    !!tw && tw.phase === 'wrap' && tw.charge === 6 && tw.turnsLeft === 3 && Math.abs(mb.dmg - 2.8) < 1e-9 && Math.abs(mb.critAdd - 0.6) < 1e-9 && mb.critRate === 1
+    && Math.abs(tw.dodgeRate - 0.3) < 1e-9 && !!cb && cb.count === 6 && Math.abs(cb.rate - 0.1) < 1e-9 && cb.label === '雷纏', JSON.stringify({ tw, mb, cb }));
+  check('雷纏のあいだ、ターン終わりの自動回復へライフ・ガッツとも 雷×5% を足す(6 → 30%)',
+    Math.abs(ex.tacticsExRegenRateAt(st, units, 1, A(2, 8), 'hp') - 0.3) < 1e-9 && Math.abs(ex.tacticsExRegenRateAt(st, units, 1, A(2, 8), 'guts') - 0.3) < 1e-9);
+  const more = ex.addTacticsExThunder(st, units, A(2, 7), 1, 3);
+  check('雷纏に入ったあとは、カードを使っても雷は増えない', ex.tacticsExThunderOf(more, units, 1, A(2, 8)).charge === 6);
+  check('雷纏は3ターンで終わる(9ターン目まで・10ターン目には切れる)・次のWAVEでは切れる',
+    !!ex.tacticsExThunderOf(st, units, 1, A(2, 9)) && ex.tacticsExThunderOf(st, units, 1, A(2, 10)) === null && ex.tacticsExThunderOf(st, units, 1, A(3, 5)) === null
+    && ex.tacticsExMultiBuffOf(st, units, 1, A(2, 10)) === null && ex.tacticsExRegenRateAt(st, units, 1, A(2, 10), 'hp') === 0);
+  check('効いているあいだ(ため・雷纏とも)はもう一度使えない・切れたあとは使える(ラン5回のうち残り4回)',
+    !ex.checkTacticsExUse({ def: tg, state: st, slot: 1, monId: 'Tiger', alive: true, now: A(2, 5) }).ok
+    && !ex.checkTacticsExUse({ def: tg, state: st, slot: 1, monId: 'Tiger', alive: true, now: A(2, 8) }).ok
+    && ex.checkTacticsExUse({ def: tg, state: st, slot: 1, monId: 'Tiger', alive: true, now: A(2, 10) }).ok
+    && ex.tacticsExRemaining(tg, ex.tacticsExUsesOf(st, 1, 'Tiger')).left === 4);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体へ結線してある(カード枚数で雷をためる・回避率・会心率の足し算)', /addTacticsExThunder\(stTh,tacticsUnitsRef\.current/.test(app)
+    && /Math\.random\(\)<tacticsExThunderDodgeNow\(slotIdx\)/.test(app) && /evadedSlot\|\|exDodge\|\|thunderDodge/.test(app)
+    && /critRateBonus\+\(tacticsExMultiBuffNow\(slotIdx\)\.critAdd\|\|0\)/.test(app));
 }
 
 // ---------- ⑰ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮) ----------
