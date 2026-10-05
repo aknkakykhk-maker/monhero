@@ -23615,7 +23615,7 @@ const RHYTHM_SONG_ENTRIES = [
     songId:'emerald_rush',
     displayName:'Emerald Rush',
     bgmTrackId:'melo_emerald_rush',
-    artwork:'images/song-art/emerald-rush.jpg?v=250cdc10e93d',
+    artwork:'images/song-art/emerald-rush.jpg?v=d9bc5685600b',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,emeraldRushCharts[id]||emptyRhythmChart()
     ])))
