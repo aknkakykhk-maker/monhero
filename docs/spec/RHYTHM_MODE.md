@@ -8301,3 +8301,26 @@ songId `wrath_of_the_thorn_king` / bgmTrackId `melo_wrath_of_the_thorn_king` / �
 - **歯ごたえはユーザーが「自動」と決めた**（`challengeFactor` も `chartIntensity` も書かない）。EASY 5 / NORMAL 7 / HARD 9 / EXPERT 16 / MASTER 22、
   ノーツ 106 / 124 / 166 / 201 / 229。候補: 1.3 で MASTER 24（1.6・2.0 でも 24 のまま頭打ち）／
   `strong` で 7 / 8 / 13 / 21 / 28 ／ `strong`＋1.3 で 8 / 9 / 15 / 22 / 29
+
+## 「Monster」の全編版と short ver. をモンヒロビートへ足した（2026-10-05）
+
+ユーザー指示（mp4 2本「Monster」とジャケット1枚。1本目＝全編 4分25秒、2本目＝short 1分51秒）。
+songId `monster`（全編・副題 `full ver.`）/ `monster_short`（副題 `short ver.`）、bgmTrackId `melo_monster` / `melo_monster_short`。
+譜面は MHB CHART ENGINE Rev.28。曲えらびは `RHYTHM_SONG_VERSION_GROUPS` で1行にまとめ、先頭（行を押したとき）は全編版。
+
+- **ジャケット**: 2つの版で同じ絵。細かい絵で quality 80 だと 101KB になったので、quality 74 で **87KB**
+- **音量**: 全編 ×1.0495 で **-14.01 LUFS / -1.74 dBTP**、short ×1.0703 で **-14.00 LUFS / -2.49 dBTP**
+- **short の作り**: 5秒ごとの相関で全編と突き合わせると、頭の約57秒は全編と同じ録音（ずれ 0ms）で、そこから先は全編のどこにも一致しない
+  別の終わり方。切り貼りではなく、拍の格子も途切れないので `splices` は書かない
+- **テンポ**: どちらも 135.01 BPM / 4拍子。自動解析の拍の頭（469ms・478ms）は打点の山より約25ms早かった。
+  「拍の位置の音の変化量 ÷ 拍のあいだの音の変化量」が最大になる 494ms を、2つの版の共通の拍の頭にした（全編 1.10 → 1.25、short 1.03 → 1.42）
+- **全編の拍のずれの曲線**: 55秒から160秒あたりまでだけ、拍が約18ms前へずれる（short が別の終わり方へ分かれるのと同じ55秒から）。
+  `warpPoints` に `[[54500,0],[56500,-18],[157500,-18],[162500,0]]` を書き、`RHYTHM_SONG_BEATS` の5つ目にも同じ点を書いた。
+  その区間で解析の打点が ±15ms の格子に乗る割合は 29% → 59%
+- **歯ごたえはユーザーが「自動」と決めた**（どちらも `challengeFactor` も `chartIntensity` も書かない）。
+  全編 EASY 6 / NORMAL 7 / HARD 10 / EXPERT 17 / MASTER 24（ノーツ 316 / 359 / 494 / 601 / 675）、
+  short 6 / 7 / 9 / 16 / 22（126 / 144 / 194 / 235 / 276）。
+  候補: 全編 1.3 で MASTER 28 ／ 1.6 で 32 ／ `strong` で 7 / 8 / 13 / 23 / 36。short 1.3 で 26 ／ 1.6 で 31 ／ `strong` で 34
+- **ジャックとの戦いの曲**: ユーザー指示「フルはハロウィンイベント期間でのレイド戦用のデフォルト曲にして」。範囲は戦闘中だけ（ユーザー判断）。
+  `RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster'`（`35-raid-jack.jsx`）を、`bgmKeyForState` がジャック戦（レイドバトル・グランドスラム）で返す。
+  レイド画面・段階えらび・編成（`RAID_JACK_BGM_STATES`）と、イベント中の HOME は今までどおり Crazy Party Night の全編版

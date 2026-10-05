@@ -34,6 +34,28 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-05 ユーザー指示(mp4 2本とジャケット)。全編の版はジャックとの戦いの曲にもする(範囲は戦闘中だけ・ユーザー判断)。歯ごたえは自動のままとユーザーが決めた
+    date: "2026-10-05 21:41", type:'update', title:'モンヒロビート：新曲「Monster full ver.」（全編版）を追加しました', status:'new',
+    image: 'images/song-art/monster.jpg?v=61def8c02286',
+    items:[
+      'モンヒロビートに、ハロウィンの新曲「Monster」の全編版（4分25秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.24 です。',
+      'ノーツ数は 316 ／ 359 ／ 494 ／ 601 ／ 675 です。',
+      'ハロウィン・ナイトのあいだ、ジャックとの戦い（レイドバトル・グランドスラム）のBGMがこの曲になります。レイド画面・段階えらび・編成は今までどおり「Crazy Party Night ～ぱんぷきんの逆襲～」です。',
+    ],
+    assistantNotice: { id:'update_notice_monster_v1', type:'content' },
+  },
+  {
+    // 2026-10-05 同じ依頼の短い版。曲えらびでは全編版と1行にまとまる(行を押すと全編版・難易度ボタンの上で切り替え)
+    date: "2026-10-05 21:41", type:'update', title:'モンヒロビート：新曲「Monster short ver.」を追加しました', status:'new',
+    image: 'images/song-art/monster.jpg?v=61def8c02286',
+    items:[
+      'モンヒロビートに「Monster」の short ver.（1分51秒）も追加しました。曲えらびでは全編版と同じ行にまとまっていて、難易度ボタンの上の「short ver.」で切り替えられます。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.9 ／ EXPERT Lv.16 ／ MASTER Lv.22 です。',
+      'ノーツ数は 126 ／ 144 ／ 194 ／ 235 ／ 276 です。',
+    ],
+  },
+  {
     // 2026-10-05・ユーザー依頼「超越強化が実際のステータスが見えないから強化の値がわかりづらい / オート強化も手軽さがない」
     date: "2026-10-05 19:52", type:'update', title:'超越強化で実際のステータスが見えるようになり、オート強化がワンタップで始められます', status:'new',
     items:[
