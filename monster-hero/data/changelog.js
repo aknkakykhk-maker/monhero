@@ -75,7 +75,7 @@ const CHANGELOG = [
   },
   {
     // 2026-10-05 ユーザー指示(mp4 2本とジャケット)。全編の版はジャックとの戦いの曲にもする(範囲は戦闘中だけ・ユーザー判断)。歯ごたえは自動のままとユーザーが決めた
-    date: "2026-10-05 21:41", type:'update', title:'モンヒロビート：新曲「Monster full ver.」（全編版）を追加しました', status:'new',
+    date: "2026-10-05 21:41", type:'update', title:'モンヒロビート：新曲「Monster」を追加しました', status:'new',
     image: 'images/song-art/monster.jpg?v=61def8c02286',
     items:[
       'モンヒロビートに、ハロウィンの新曲「Monster」の全編版（4分25秒）を追加しました。曲えらびからすぐ遊べます。',
