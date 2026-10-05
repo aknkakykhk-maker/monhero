@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90e966104eee14d4
+// source-sha256: bdb1a5af029ae7e2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 11:19";
+const BUILD_DATE = "2026-10-05 12:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36205,6 +36205,11 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
   if (kind === 'clear_b') return `${bName} 初討伐報酬`;
   return `グランドスラム 累計ダメージ${rank}位の報酬`;
 };
+const RAID_JACK_QUICK_LOOPS_PER_TURN = 2;
+const raidJackQuickLoops = turnsUsed => {
+  const turns = Math.max(0, Math.min(RAID_JACK_TURNS, Math.trunc(Number(turnsUsed) || 0)));
+  return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
+};
 const RAID_JACK_TIMEOUT_MS = 8000;
 let _raidJackUnavailable = false;
 const raidJackUnavailable = () => _raidJackUnavailable;
@@ -69892,6 +69897,17 @@ function MonsterHeroGame() {
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
     if (loops <= 0) return null;
+    const awardedPro = await awardBackQuickLoops(loops);
+    return awardedPro ? {
+      ...awardedPro,
+      wavesCleared
+    } : null;
+  };
+  const awardBackQuickLoops = async loops => {
+    if (!autoQuickRunConfigured(autoSettings)) return null;
+    const quickDifficulty = autoSettings.quickRun.difficulty;
+    if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
+    if (!(loops > 0)) return null;
     const quickHeroMon = resolveRosterEntryToMon(autoSettings.quickRun.heroRosterEntry);
     const quickAllyMasuIds = (Array.isArray(autoSettings.allies) ? autoSettings.allies : []).map(ally => resolveRosterEntryToMon(ally?.rosterEntry)).filter(mon => mon && mon.masuId != null).map(mon => mon.masuId);
     const awarded = await awardRhythmPlayRunLoops(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, {
@@ -69905,10 +69921,10 @@ function MonsterHeroGame() {
     });
     return awarded ? {
       ...awarded,
-      quickDifficulty,
-      wavesCleared
+      quickDifficulty
     } : null;
   };
+  const awardRaidJackQuickLoops = async turnsUsed => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
   const awardRunRewards = async wavesCleared => {
     if (rewardsAwardedRef.current) return;
     rewardsAwardedRef.current = true;
@@ -75721,7 +75737,16 @@ function MonsterHeroGame() {
     } catch (error) {
       outcome = 'error';
     }
+    let quickAward = null;
+    if (!isDebugRun) {
+      try {
+        quickAward = await awardRaidJackQuickLoops(reason === 'giveup' ? Math.max(0, (run.turns || 1) - 1) : run.turns || 0);
+      } catch (error) {
+        quickAward = null;
+      }
+    }
     setRaidJackResult({
+      quickAward,
       kind: run.kind,
       tierIndex: run.tierIndex,
       tierName: run.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
@@ -90162,7 +90187,21 @@ function MonsterHeroGame() {
         style: {
           '--d': '2700ms'
         }
-      }, "次の段階が開きました！"), React.createElement("div", {
+      }, "次の段階が開きました！"), r.quickAward && r.quickAward.loops > 0 && React.createElement("div", {
+        "data-raid-jack-quick-award": true,
+        className: "mh-rjresult-in w-full max-w-xs rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-left mb-3",
+        style: {
+          '--d': '2000ms'
+        }
+      }, React.createElement("div", {
+        className: "flex items-center justify-between text-[11px] mb-1"
+      }, React.createElement("span", {
+        className: "text-cyan-300 font-black"
+      }, "⚔ クイック周回ぶん"), React.createElement("span", {
+        className: "text-white font-mono font-bold"
+      }, r.quickAward.loops.toLocaleString(), "周")), React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-slate-300"
+      }, [r.quickAward.xp > 0 ? `経験値 +${r.quickAward.xp.toLocaleString()}` : null, r.quickAward.gold > 0 ? `ダイヤ +${r.quickAward.gold.toLocaleString()}` : null, r.quickAward.bond > 0 ? `絆 +${r.quickAward.bond.toLocaleString()}` : null, r.quickAward.psyche > 0 ? `虹のプシュケー ×${r.quickAward.psyche.toLocaleString()}` : null, r.quickAward.shard > 0 ? `勇者の証片 ×${r.quickAward.shard.toLocaleString()}` : null].filter(Boolean).join(' ／ '))), React.createElement("div", {
         className: "mh-rjresult-in mb-4 text-[10px] text-slate-300",
         style: {
           '--d': '1500ms'

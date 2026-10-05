@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
-vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
 const o = ctx.o;
 
 // ① 段階
@@ -91,6 +91,17 @@ check('最初は1段階だけ', o.raidJackUnlockedCount('b', []) === 1);
 check('初級を倒すと中級が開く', o.raidJackUnlockedCount('b', ['b1']) === 2);
 check('飛ばしては開かない', o.raidJackUnlockedCount('b', ['b2', 'b3']) === 1);
 check('全部倒しても5段階まで', o.raidJackUnlockedCount('b', ['b1', 'b2', 'b3', 'b4', 'b5']) === 5);
+
+// ④-2 クイック周回ぶん(ジャック戦を遊んだぶんを、プロモードと同じ立て付けで経験値などにする・2026-10-05)
+check('周回数 = 使ったターン数 × 2(20ターンで40周)', o.raidJackQuickLoops(20) === 40 && o.raidJackQuickLoops(1) === 2 && o.raidJackQuickLoops(7) === 14);
+check('0ターンは0周・壊れた値も0周・20ターンを超えても40周まで', o.raidJackQuickLoops(0) === 0 && o.raidJackQuickLoops(-3) === 0 && o.raidJackQuickLoops(NaN) === 0 && o.raidJackQuickLoops(undefined) === 0 && o.raidJackQuickLoops(99) === 40);
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const fin = app.slice(app.indexOf('const finishRaidJack = async'), app.indexOf('const exitRaidJack'));
+  check('クイック周回の報酬は、本番のイベントの戦いだけに配る(デバッグの強制表示には配らない)', /if\(!isDebugRun\)\{ try \{ quickAward=await awardRaidJackQuickLoops/.test(fin));
+  check('プロモードと同じ配布の入口(awardBackQuickLoops)を通す・与ダメージの記録は変えない', /const awardRaidJackQuickLoops = async \(turnsUsed\) => awardBackQuickLoops\(raidJackQuickLoops\(turnsUsed\)\)/.test(app) && /const awarded = await awardRhythmPlayRunLoops\(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, \{[\s\S]*?countLoopProgress: false[\s\S]*?recordQuickClear: false/.test(app));
+  check('結果画面に「クイック周回ぶん」を別のまとまりで出す', /data-raid-jack-quick-award/.test(app));
+}
 
 // ⑤ 公開フラグ
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
