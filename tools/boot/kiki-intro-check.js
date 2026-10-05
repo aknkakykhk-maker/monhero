@@ -189,6 +189,25 @@ check('曲はBGMアレンジの設定から引く(直接ファイル名を書か
   /EVENT_BGM_SCENES = Object\.freeze\(\{[^}]*kiki_intro:'kikiIntro'/.test(source)
   && !/kikiIntroStep[\s\S]{0,400}bgm-event-0/.test(source));
 
+// --- みゅあはききを「ひめちん」と呼ぶ(2026-10-05・ユーザー指摘「みゅあのききの呼び方が変わってた」) ---
+// みゅあが話しているセリフ(who:'mua')に、「きき」「ききちゃん」など別の呼び方が混ざっていないこと。
+// 告知のセリフ(助手ごとに分かれた台本の mua: [ ... ])も同じ。
+{
+  const lines = assistantsSrc.split('\n');
+  const bad = [];
+  lines.forEach((line, i) => { if (/who:\s*'mua'/.test(line) && /き き|きき|キキ/.test(line.replace(/ひめちん/g, ''))) bad.push(`${i + 1}行目`); });
+  check('みゅあが話すセリフに「きき」の呼び方が混ざっていない(「ひめちん」にする)', bad.length === 0, bad.join(', '));
+  // 告知の台本: mua: [ ... ] の中(次の助手の台本が始まるまで)
+  const noticeBad = [];
+  let inMua = false;
+  lines.forEach((line, i) => {
+    if (/^\s{4}mua:\s*\[/.test(line)) { inMua = true; return; }
+    if (/^\s{4}(kiki|momosuke|dora|draken)\w*:\s*\[/.test(line) || /^\s{2}\w+:\s*\{/.test(line)) inMua = false;
+    if (inMua && /きき|キキ/.test(line.replace(/ひめちん/g, '').replace(/^\s*\/\/.*$/, ''))) noticeBad.push(`${i + 1}行目`);
+  });
+  check('告知の台本でも、みゅあは「ひめちん」と呼ぶ', noticeBad.length === 0, noticeBad.join(', '));
+}
+
 // --- 更新履歴とヘルプ ---
 check('更新履歴に書いてある', /加入会話|加入イベント/.test(changelogSrc));
 check('ヘルプに書いてある', /ききが加わったときの会話/.test(helpSrc));
