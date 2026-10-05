@@ -185,6 +185,10 @@
       "role": "画面: 神殿の限界突破・転生・超越・魂格進化と、その演出・補償告知"
     },
     {
+      "file": "62-screen-masu-offering.jsx",
+      "role": "画面: 神殿のお布施(MASU_OFFERING。ダイヤを払って絆経験値を与える・限界突破・転生を続けて行う)"
+    },
+    {
       "file": "63-screen-masu-soul-traits.jsx",
       "role": "画面: 魂格特性(MASU_SOUL_TRAITS)"
     },
