@@ -575,6 +575,20 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
+    // --- ⑫-5 ハム「ハムボクシング」(2026-10-05 ユーザー指定) ---
+    const hmSlot = await startWith('ハム');
+    await page.waitForTimeout(1500);
+    await tapSlot(hmSlot);
+    p = await panel();
+    check('「ハムボクシング」: 5/5・カードと併用できる・3ターン', !!p && p.name === 'ハムボクシング' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    check('使うと距離枠の札が「反撃1・あと3」になる', await page.locator(`[data-tactics-ex-mark="${hmSlot}"]`).getAttribute('data-tactics-ex-state') === '反撃1・あと3');
+    await tapSlot(hmSlot);
+    p = await panel();
+    check('詳細に「カウンター 1（クロスカウンターの威力：与ダメの100%…）」が出る', !!p && /カウンター 1（クロスカウンターの威力：与ダメの100%/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
     // --- ⑫-4 スエゾー「サイコロックオン」(2026-10-05 ユーザー指定) ---
     const szSlot = await startWith('スエゾー');
     await page.waitForTimeout(1500);
