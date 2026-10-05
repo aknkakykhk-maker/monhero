@@ -65,7 +65,8 @@ vm.runInContext([
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
-    + 'tacticsExDefOf,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExAvoidLeftOf,spendTacticsExAvoid,tacticsExCritFixedAt,tacticsExConfusesOnHit,rollEnemyConfusion,confusedEnemyIntent,ENEMY_CONFUSE_TURNS,ENEMY_CONFUSE_CHANCE,'
+    + 'tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterDamage,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -117,7 +118,7 @@ check('剣士モッチー「ソード・コンバージョン」: ラン5回・�
   JSON.stringify(kenshi));
 check('ソード・コンバージョンの説明だけで3つのスタイルの効き目が分かる', ['片手剣：', '片手盾：', '二刀流：', '丈夫さ', 'ソードスキル', '連撃', 'メイン']
   .every(w => kenshi.desc.includes(w)), kenshi.desc);
-check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.tacticsExDefOf(null) === null
+check('EXを持たない子は null(いまは全員が持っているので、存在しない子で確かめる)', ex.tacticsExDefOf('NoSuchMonster') === null && ex.tacticsExDefOf(null) === null
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
 check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX_SKILLS)
   .every(id => !!ex.tacticsExDurationText(ex.tacticsExDefOf(id))));
@@ -455,7 +456,84 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
     /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken:1\)/.test(app)
     && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\)( \+ tacticsExPartyBoostRegenRate\(tacticsExStateRef\.current, live\.now, 'hp'\))? : 0;/.test(app)
-    && (app.match(/exCombos:tacticsExCombosAt\(slotIdx(,halved|,true)?\)/g) || []).length === 3);
+    && (app.match(/exCombos:withFateCombo\(tacticsExCombosAt\(slotIdx(,halved|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3);
+}
+
+// ---------- ⑪-4 ゴースト「オフリィアボイド」・スプーキー「トリックコンフューズ」(2026-10-05 ユーザー指示) ----------
+// オフリィアボイド: 完全回避を2回ぶん。狙われた攻撃1回(連撃でも1回)につき1つ減る。残っているあいだ会心確定・連撃10%×3。ラン5回。
+// トリックコンフューズ: 使った瞬間に全員のライフ・ガッツ30%回復、3ターン全員ちから・丈夫さ+10%、本人の攻撃が当たると敵が3ターン乱心。ラン5回
+{
+  const A = (wave, turn) => ({ wave, turn });
+  const gh = ex.tacticsExDefOf('Ghost');
+  check('ゴースト「オフリィアボイド」: ラン5回・併用できる・使ったWAVEのあいだ・完全回避2・連撃10%×3・効果は avoidCharge(実装済み)', !!gh && gh.name === 'オフリィアボイド'
+    && gh.maxUses === 5 && !gh.unlimited && gh.withCards && gh.duration === 'wave' && gh.avoidCharges === 2
+    && JSON.stringify(gh.extraCombos) === JSON.stringify({ count: 3, rate: 0.1 }) && gh.effect === 'avoidCharge' && ex.isTacticsExEffectImplemented(gh), JSON.stringify(gh));
+  const ghost = { id: 'Ghost', hp: 450, maxHp: 450, atk: 130, def: 50 }, other = { id: 'Mocchi', hp: 300, maxHp: 600, atk: 100, def: 100 };
+  const units = [other, ghost];
+  let st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: gh, slot: 1, monId: 'Ghost', now: A(2, 3) });
+  check('オフリィアボイド: 使うと完全回避が2つ。会心確定・連撃10%×3(名前はEX名)が付く。ほかの枠には付かない',
+    ex.tacticsExAvoidLeftOf(st, units, 1, A(2, 3)) === 2 && ex.tacticsExCritFixedAt(st, units, 1, A(2, 5)) === true
+    && JSON.stringify(ex.tacticsExExtraCombosAt(st, units, 1, A(2, 4))) === JSON.stringify({ count: 3, rate: 0.1, label: 'オフリィアボイド' })
+    && ex.tacticsExAvoidLeftOf(st, units, 0, A(2, 3)) === 0 && ex.tacticsExCritFixedAt(st, units, 0, A(2, 3)) === false);
+  const st1 = ex.spendTacticsExAvoid(st, units, 1, A(2, 4));
+  const st2 = ex.spendTacticsExAvoid(st1, units, 1, A(2, 4));
+  const st3 = ex.spendTacticsExAvoid(st2, units, 1, A(2, 4));
+  check('オフリィアボイド: 1回かわすたびに1つ減り、使い切ると会心確定・連撃も終わる(それ以上は減らない)',
+    ex.tacticsExAvoidLeftOf(st1, units, 1, A(2, 4)) === 1 && ex.tacticsExAvoidLeftOf(st2, units, 1, A(2, 4)) === 0
+    && ex.tacticsExCritFixedAt(st2, units, 1, A(2, 4)) === false && ex.tacticsExExtraCombosAt(st2, units, 1, A(2, 4)) === null
+    && JSON.stringify(st3) === JSON.stringify(st2) && ex.tacticsExActiveEffect(st2, 1, 'Ghost', A(2, 4)) === null);
+  check('オフリィアボイド: WAVEが変わると残りも消える', ex.tacticsExAvoidLeftOf(st, units, 1, A(3, 1)) === 0 && ex.tacticsExCritFixedAt(st, units, 1, A(3, 1)) === false);
+  check('オフリィアボイド: 使い切ったら、同じWAVEのうちにまた使える(回数は5回まで)',
+    ex.checkTacticsExUse({ def: gh, state: st2, slot: 1, monId: 'Ghost', alive: true, now: A(2, 5) }).ok
+    && ex.tacticsExRemaining(gh, 5).left === 0);
+
+  const sp = ex.tacticsExDefOf('Spooky');
+  check('スプーキー「トリックコンフューズ」: ラン5回・併用できる・3ターン・回復30%・全員+10%・効果は trickConfuse(実装済み)', !!sp && sp.name === 'トリックコンフューズ'
+    && sp.maxUses === 5 && !sp.unlimited && sp.withCards && sp.duration === 'turns' && sp.turns === 3
+    && sp.partyHealRate === 0.3 && sp.partyStatRate === 0.1 && sp.effect === 'trickConfuse' && ex.isTacticsExEffectImplemented(sp), JSON.stringify(sp));
+  const spooky = { id: 'Spooky', hp: 510, maxHp: 510, atk: 150, def: 55 };
+  const team = [other, spooky];
+  const c = ex.applyTacticsExUse(ex.createTacticsExState(), { def: sp, slot: 1, monId: 'Spooky', now: A(1, 2) });
+  check('トリックコンフューズ: 使ったターンから3ターン(2〜4ターン目)、味方全員のちから・丈夫さ+10%。5ターン目・次のWAVEでは0',
+    Math.abs(ex.tacticsExPartyStatRate(c, A(1, 2)) - 0.1) < 1e-9 && Math.abs(ex.tacticsExPartyStatRate(c, A(1, 4)) - 0.1) < 1e-9
+    && ex.tacticsExPartyStatRate(c, A(1, 5)) === 0 && ex.tacticsExPartyStatRate(c, A(2, 2)) === 0);
+  const boosted = ex.applyTacticsExStats(other, c, 0, A(1, 3));
+  const boostedSelf = ex.applyTacticsExStats(spooky, c, 1, A(1, 3));
+  check('トリックコンフューズ: ほかの子にもスプーキー本人にも、ちから・丈夫さ+10%(切り捨て)',
+    boosted.atk === 110 && boosted.def === 110 && boostedSelf.atk === 165 && boostedSelf.def === 60
+    && ex.applyTacticsExStats(other, c, 0, A(1, 5)).atk === 100, JSON.stringify([boosted, boostedSelf]));
+  check('トリックコンフューズ: ほかのEXのちから上げのあとに掛ける(ガッツ全開っちー+30% → さらに+10%)', (() => {
+    const mo = ex.tacticsExDefOf('Mocchi');
+    const both = ex.applyTacticsExUse(c, { def: mo, slot: 0, monId: 'Mocchi', now: A(1, 3) });
+    const u = ex.applyTacticsExStats(other, both, 0, A(1, 3));
+    return u.atk === Math.floor(Math.floor(100 * 1.3) * 1.1) && u.def === Math.floor(Math.floor(100 * 1.3) * 1.1);
+  })());
+  check('トリックコンフューズ: 乱心にするのは、効いているあいだのスプーキー本人の攻撃だけ',
+    ex.tacticsExConfusesOnHit(c, team, 1, A(1, 3)) === true && ex.tacticsExConfusesOnHit(c, team, 0, A(1, 3)) === false
+    && ex.tacticsExConfusesOnHit(c, team, 1, A(1, 5)) === false);
+  const atk = { type: 'ATTACK', label: '体当たり', value: 100, targetSlot: 1, targetName: 'スプーキー' };
+  const hit = ex.rollEnemyConfusion(atk, 3, () => 0.49), miss = ex.rollEnemyConfusion(atk, 3, () => 0.5), none = ex.rollEnemyConfusion(atk, 0, () => 0);
+  check('乱心: 残りがあれば予告ごとに1つ使い、50%未満で「意味不明」(狙いなし・ダメージなし)。残りが0なら何もしない',
+    ex.ENEMY_CONFUSE_TURNS === 3 && ex.ENEMY_CONFUSE_CHANCE === 0.5
+    && hit.turns === 2 && hit.intent.type === 'CONFUSED' && hit.intent.label === '意味不明' && hit.intent.targetSlot === undefined && hit.intent.value === 0
+    && miss.turns === 2 && miss.intent === atk && none.turns === 0 && none.intent === atk, JSON.stringify(hit));
+  // 本体への結線
+  check('本体: 完全回避は狙われた枠ごとに1つ使う(ほかの回避でかわせたときは使わない)',
+    /const avoidLeft=\(slotIdx===evadedSlot\|\|exDodge\|\|thunderDodge\)\?0:tacticsExAvoidLeftNow\(slotIdx\);/.test(app)
+    && /if\(avoidDodge\)\{\s*commitTacticsExState\(spendTacticsExAvoid\(/.test(app)
+    && /if\(slotIdx===evadedSlot\|\|exDodge\|\|thunderDodge\|\|avoidDodge\)\{/.test(app));
+  check('本体: 会心確定は予測・あつの挑発・ふつうの攻撃の3か所すべて(完全回避が残る子・意味不明のターン)',
+    (app.match(/tacticsSlotFlag\(getTurnBuff\('bySlot',null\),slotIdx,'guaranteedCrit'\)\|\|tacticsCritFixedNow\(slotIdx\)/g) || []).length === 3
+    && /if\(enemyIntent\?\.type==='CONFUSED'\) return true;/.test(app));
+  check('本体: 乱心は次の予告を決めるときに振り、意味不明のターンは敵が動かない',
+    /const confusion = rollEnemyConfusion\(aimed, enemyConfuseRef\.current\);/.test(app)
+    && /\} else if \(intent && intent\.type==='CONFUSED'\) \{/.test(app));
+  check('本体: 当たったら乱心を3へ(当て直しも3へ)・WAVEが変わる/ランを始めると消える',
+    /tacticsExConfusesOnHit\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)\) \{\s*writeEnemyConfuse\(ENEMY_CONFUSE_TURNS\);/.test(app)
+    && /resetFateWheel\(\); resetEnemyConfuse\(\); \/\/ WAVE毎リ/.test(app) && (app.match(/resetTrickStart\(\); resetFateWheel\(\); resetEnemyConfuse\(\);/g) || []).length === 3);
+  check('本体: 使った瞬間に味方全員のライフ・ガッツを回復(倒れている子は起こさない)',
+    /if\(def\.partyHealRate>0\) tacticsRateHeal\(def\.partyHealRate,def\.partyHealRate,false\);/.test(app));
+  check('画面: 意味不明の予告と乱心の残りを出す', /enemyIntent\.type==='CONFUSED'\?<div data-enemy-confused/.test(screen) && /chip\('enemyConfuse'/.test(screen));
 }
 
 // ---------- ⑫ エイキ「緋桜瞬歩」(2026-10-02 ユーザー指示) ----------
@@ -480,7 +558,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && !ex.tacticsExDistMatchDodges('statBoost', 2, 2) && !ex.tacticsExDistMatchDodges(null, 2, 2)
     && !ex.tacticsExDistMatchDodges('distMatch', 2, undefined) && !ex.tacticsExDistMatchDodges('distMatch', null, 2));
   check('敵の攻撃の当たり先ごとの判定に、その子の距離と敵の距離を渡している',
-    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,520}if\(slotIdx===evadedSlot\|\|exDodge(\|\|thunderDodge)?\)\{ evadedName=/.test(app));
+    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,1500}if\(slotIdx===evadedSlot\|\|exDodge(\|\|thunderDodge)?(\|\|avoidDodge)?\)\{ evadedName=/.test(app));
 }
 
 // ---------- ⑬ ザン「血踊」(2026-10-02 ユーザー指示) ----------
@@ -512,7 +590,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const hits = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi', exCombos: c3 });
   const base = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi' });
   check('ヒット列に与ダメ10%(100)の連撃が回避した数だけ足される', hits.length - base.length === 3 && hits.slice(base.length).every(h => h.dmg === 100) , `${base.length}→${hits.length}`);
-  check('本体: 回避したら数える(結線)・連撃の名前を渡す', /const exDodge=tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,260}recordTacticsExDodge\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)[\s\S]{0,200}if\(slotIdx===evadedSlot\|\|exDodge(\|\|thunderDodge)?\)/.test(app)
+  check('本体: 回避したら数える(結線)・連撃の名前を渡す', /const exDodge=tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,260}recordTacticsExDodge\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)[\s\S]{0,1200}if\(slotIdx===evadedSlot\|\|exDodge(\|\|thunderDodge)?(\|\|avoidDodge)?\)/.test(app)
     && readPart('22-enemy-and-bond-entries.jsx').includes("ec.label || 'スイーツパラダイス'"));
 }
 
@@ -744,6 +822,33 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /data-tactics-ex-remain/.test(scr) && /data-tactics-ex-state-pill/.test(scr) && /の効果が切れた/.test(app) && /雷纏が始まる！/.test(app));
 }
 
+// ---------- ㉒ ハム「ハムボクシング」(2026-10-05 ユーザー指定) ----------
+{
+  const hm = ex.tacticsExDefOf('Ham');
+  check('ハム「ハムボクシング」: ラン5回・併用できる・3ターン・カウンター1から・威力は与ダメ100%×カウンター',
+    !!hm && hm.name === 'ハムボクシング' && hm.maxUses === 5 && !hm.unlimited && hm.withCards && hm.duration === 'turns' && hm.turns === 3
+    && hm.effect === 'counter' && ex.isTacticsExEffectImplemented(hm) && !!hm.counter && hm.counter.start === 1 && hm.counter.dmgRate === 1, JSON.stringify(hm));
+  const A = (wave, turn) => ({ wave, turn });
+  const ham = { id: 'Ham', hp: 300, maxHp: 300, atk: 100, def: 50, guts: 50, maxGuts: 120, downed: false };
+  const units = [null, ham];
+  let st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: hm, slot: 1, monId: 'Ham', now: A(1, 2) });
+  const c0 = ex.tacticsExCounterOf(st, units, 1, A(1, 2));
+  check('使うとカウンターが1付く(威力 与ダメ100%×1)・ハムが攻撃していれば その与ダメ×1 を返す', !!c0 && c0.counter === 1 && c0.dmgRate === 1
+    && ex.tacticsExCounterDamage(st, units, 1, A(1, 2), 500) === 500 && ex.tacticsExCounterDamage(st, units, 1, A(1, 2), 0) === 0);
+  st = ex.addTacticsExCounter(st, units, A(1, 2), 1, 1);
+  check('クロスカウンターが発動するとカウンター+1(次は与ダメ×2)', ex.tacticsExCounterOf(st, units, 1, A(1, 3)).counter === 2 && ex.tacticsExCounterDamage(st, units, 1, A(1, 3), 500) === 1000);
+  check('3ターンで切れる(2〜4ターン目・5ターン目には切れる)・切れるとカウンターもなくなる・次のWAVEでも切れる',
+    !!ex.tacticsExCounterOf(st, units, 1, A(1, 4)) && ex.tacticsExCounterOf(st, units, 1, A(1, 5)) === null && ex.tacticsExCounterDamage(st, units, 1, A(1, 5), 500) === 0
+    && ex.tacticsExCounterOf(st, units, 1, A(2, 2)) === null && ex.tacticsExCounterOf(ex.addTacticsExCounter(st, units, A(1, 5), 1, 1), units, 1, A(1, 5)) === null);
+  const later = ex.applyTacticsExUse(st, { def: hm, slot: 1, monId: 'Ham', now: A(1, 6) });
+  check('もう一度使うと、カウンターは1からやり直し', ex.tacticsExCounterOf(later, units, 1, A(1, 6)).counter === 1);
+  check('効いているあいだは、もう一度使えない(重ね掛けでカウンターが戻らない)', hm.conditions.includes('notActive') && !ex.checkTacticsExUse({ def: hm, state: st, slot: 1, monId: 'Ham', alive: true, now: A(1, 3) }).ok);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体へ結線してある(与ダメを控える・狙われたら回避して返す・撃破判定)', /tacticsExTurnAtkRef\.current=\{ wave:tacticsExLiveRef\.current\.now\.wave/.test(app)
+    && /tacticsExCounterDamage\(tacticsExStateRef\.current,units,slotIdx,liveNow,hamDealt\)/.test(app) && /addTacticsExCounter\(tacticsExStateRef\.current,tacticsUnitsRef\.current,liveNow,slotIdx,1\)/.test(app)
+    && /resolveEnemyDefeat\(\{remainingHp:counteredHp,damage:counterBack\}\)/.test(app));
+}
+
 // ---------- ㉑ スエゾー「サイコロックオン」(2026-10-05 ユーザー指定) ----------
 {
   const su = ex.tacticsExDefOf('Suezo');
@@ -759,7 +864,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
   check('本体へ結線してある(移動封じ4か所・敵の与ダメ・敵の被ダメ)',
     (app.match(/tacticsExPsychoLockNow\(\)\.active/g) || []).length === 4 && /\*iceLockEnemyDamageMult\*tacticsExPsychoLockNow\(\)\.enemyDmgMult\*soulDamageRemaining/.test(app)
-    && /getWaveBuff\('enemyTakenDmgBonus'\)\+tacticsExPsychoLockNow\(\)\.enemyTakenBonus\+additionalDmgMod/.test(app));
+    // 運命の輪(スプーキー)の敵の被ダメ+30%も同じ足し算の枠に並ぶ(2026-10-05)
+    && /getWaveBuff\('enemyTakenDmgBonus'\)\+fateWheelEnemyTakenBonus\(fateWheelRef\.current\)\+tacticsExPsychoLockNow\(\)\.enemyTakenBonus\+additionalDmgMod/.test(app));
 }
 
 // ---------- ⑳ オボロゲソウ「おぼろ返し」(2026-10-05 ユーザー選択) ----------
@@ -946,7 +1052,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   // 効果の結線。モンスターのidではなく「いま効いている効果の種類」を見る
   check('被ダメ・ガード・与ダメの3か所が、EXを乗せた1体ぶん(tacticsBattleUnit)を読む',
     /\? tacticsBattleUnit\(targetSlot\) : null;/.test(app)
-    && /const unit = tacticsBattleUnit\(slotIdx\);\n\s*return unit \? resolveEffectiveMaxStat/.test(app)
+    && /const unit = tacticsBattleUnit\(slotIdx\);\n\s*return \(unit \? resolveEffectiveMaxStat/.test(app) // 2026-10-05 トリックスタートの丈夫さ(trickMult)を掛けるようになった
     && /normalizeTacticsUnit\(tacticsBattleUnit\(slotIdx\)\)\.atk/.test(app));
   check('敵の攻撃の当たり先はすべて tacticsTargetsNow(かばう)を通る',
     !/tacticsIntentTargets\(intent,tacticsUnitsRef\.current,actingEnemyDist\)/.test(app)

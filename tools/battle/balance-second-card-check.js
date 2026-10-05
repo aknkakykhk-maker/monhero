@@ -119,10 +119,12 @@ check('合計軽減も置く前の予測を出す', has('const projectedGuard=')
 // 2026-09-22: タクティクスは「構えた子の丈夫さ」で軽減量が決まるので、guardValueOf は
 // guardDefFor(slotIdx) を通すようになった。既存5モード(slotIdx なし)のときに返る丈夫さが、
 // 実処理(processTurn)の見ている丈夫さと同じであることを見る
-const guardDefVar = (source.match(/if \(slotIdx == null \|\| !isTacticsMode\(runMode\)\) return (\w+);/) || [])[1];
-const enemyTurnDefVar = (source.match(/Math\.floor\(immediateEffects\.guardFlat \+ (\w+)\*immediateEffects\.guardMult\)/) || [])[1];
+// 2026-10-05: トリックスタート(丈夫さ+20%)を掛けるため、既存5モードの枝は「effectiveDef * trickMult」を返し、
+// 実処理は guardDefFor(null) そのものを通すようになった(表示と同じ関数なので、見ている丈夫さは必ず同じ)
+const guardDefVar = (source.match(/if \(slotIdx == null \|\| !isTacticsMode\(runMode\)\) return (\w+)(?: \* trickMult)?;/) || [])[1];
+const enemyTurnDefVar = (source.match(/Math\.floor\(immediateEffects\.guardFlat \+ (\w+(?:\(null\))?)\*immediateEffects\.guardMult\)/) || [])[1];
 check('合計軽減は実処理と同じ式で出す',
-  !!guardDefVar && guardDefVar === enemyTurnDefVar && has('const guardCardWeight = (card) =>')
+  !!guardDefVar && (guardDefVar === enemyTurnDefVar || enemyTurnDefVar === 'guardDefFor(null)') && has('const guardCardWeight = (card) =>')
     && has('(flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;'),
   `表示=${guardDefVar} / 実処理=${enemyTurnDefVar}`);
 check('弱ガードの重みも合計に反映する', has("card?.type === 'weak_guard' ? 0.5 : 0"));
