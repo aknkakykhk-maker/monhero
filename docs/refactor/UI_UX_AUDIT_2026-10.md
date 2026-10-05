@@ -129,3 +129,5 @@
   (ランキング系5本はこの環境で一覧が0件になる・auto-battle・unique-effect・soul-rank-step4・tactics-discard・
   meloso-assist・snegurochka・species-challenge-browser・training-reward・rhythm-chart-v2-step6・bond-levels-table)。
   rhythm-run-loop は単独で通る。
+- `masu/masu-enhance-layer-check.js` は、その日のログインボーナスの窓(z60000)が出ると覆われて落ちる(main でも同じ)。
+  検査の種でログインボーナスを受け取り済みにすれば直る(未着手)。
