@@ -1279,10 +1279,12 @@ function MonsterHeroGame() {
     let units = alive.units, hp = alive.hp, guts = alive.guts;
     const live = tacticsExLiveRef.current;
     // ★世界樹の守りは味方全員のライフを上限の20%ぶん多く回復する(効いている子の分を足し合わせる)
-    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) : 0;
+    // ★プラントの緑のめぐみは、味方全員のライフ・ガッツの自動回復へ10%ずつ足す
+    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) + tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'hp') : 0;
+    const partyGutsBoost = live.enabled ? tacticsExPartyBoostRegenRate(tacticsExStateRef.current, live.now, 'guts') : 0;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
       const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
-      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts') + partyGutsBoost;
       if (hpBoost + partyHpBoost <= 0 && gutsBoost <= 0) return;
       const extra = rateHealTacticsAt(units, slotIdx, hpBoost + partyHpBoost, gutsBoost);
       units = extra.units; hp += extra.hp; guts += extra.guts;
