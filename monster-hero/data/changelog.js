@@ -34,9 +34,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-05 ユーザーから正式なジャケットが届いた(公開時は曲に埋め込まれていた絵を使っていた)
+    date: "2026-10-05 19:27", type:'update', group:'rhythm', title:'モンヒロビート：「Emerald Rush」のジャケットが新しくなりました', status:'new',
+    image: 'images/song-art/emerald-rush.jpg?v=d9bc5685600b',
+    items:[
+      '「Emerald Rush」のジャケットが、曲のための新しい絵になりました。曲えらびとジャケットの拡大で見られます。',
+    ],
+  },
+  {
     // 2026-10-05 ユーザー指示(mp3だけ)。ジャケットは曲に埋め込まれていた絵、歯ごたえは自動のままとユーザーが決めた
     date: "2026-10-05 18:50", type:'update', title:'モンヒロビート：新曲「Emerald Rush」を追加しました', status:'new',
-    image: 'images/song-art/emerald-rush.jpg?v=250cdc10e93d',
+    image: 'images/song-art/emerald-rush.jpg?v=d9bc5685600b',
     items:[
       'モンヒロビートに「Emerald Rush」（2分26秒）を追加しました。曲えらびからすぐ遊べます。',
       'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.11 ／ EXPERT Lv.18 ／ MASTER Lv.25 です。',
