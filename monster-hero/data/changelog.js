@@ -34,6 +34,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-05 ユーザー指示(mp3だけ)。ジャケットは曲に埋め込まれていた絵、歯ごたえは自動のままとユーザーが決めた
+    date: "2026-10-05 18:50", type:'update', title:'モンヒロビート：新曲「Emerald Rush」を追加しました', status:'new',
+    image: 'images/song-art/emerald-rush.jpg?v=250cdc10e93d',
+    items:[
+      'モンヒロビートに「Emerald Rush」（2分26秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.11 ／ EXPERT Lv.18 ／ MASTER Lv.25 です。',
+      'ノーツ数は 191 ／ 218 ／ 302 ／ 365 ／ 415 です。',
+      '曲が進むにつれて少しずつテンポが速くなる曲です。ノーツもその速さに合わせて流れてきます。',
+    ],
+    assistantNotice: { id:'update_notice_emerald_rush_v1', type:'content' },
+  },
+  {
     date: "2026-10-05 18:23", type:'fix', title:'HOMEのジャックが、通信が遅いときに男爵や満タンのライフで出てしまう不具合を直しました', status:'new', group:'battle',
     items:[
       'HOMEを開いたとき、段階とライフを読み込むまでのあいだ、ジャック男爵が出てから本当の段階へ切り替わったり、ライフが減ったように見えたりしていました。',

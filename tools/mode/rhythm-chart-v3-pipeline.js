@@ -111,7 +111,7 @@ const gridMs=timing.gridMs||timing.beatMs/timing.subdivisionsPerBeat;
 // Rev.21: テンポの揺れ(rhythm-chart-tempo-warp.js)。揺れに合わせる曲だけ、書き出す時刻に揺れを足す(それ以外は0)
 const warp=tempoWarpForChart(charts[DIFFICULTIES[0]],audio);
 const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs+warp.at(grid));
-if(warp.active)console.log(`テンポの揺れに合わせて時刻を書く(${warp.version==='splice'?'Rev.26 のつなぎ目':'Rev.21'}): ${warp.reason}`);
+if(warp.active)console.log(`テンポの揺れに合わせて時刻を書く(${warp.version==='curve'?'Rev.28 の拍のずれの曲線':warp.version==='splice'?'Rev.26 のつなぎ目':'Rev.21'}): ${warp.reason}`);
 // 鳴っている場所の格子。Rev.21 の揺れに合わせる曲では、生成器と同じく打点から揺れを引いて格子に乗せ直した所も数える
 // (揺れの分だけ隣の格子へ移る打点がある。2026-09-29、これを数えずに SIX ÉTERNEL Remix(ビート版)を止めていた)
 const onsetGrids=new Set(audio.onsets.flatMap(onset=>{

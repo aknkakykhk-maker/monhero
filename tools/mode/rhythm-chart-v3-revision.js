@@ -107,7 +107,12 @@
 //        (Stay With Me / 綺季一閃 の short ver.)は、つなぎ目から先の拍の位置が、つなぎ目の前の格子から一定の量だけずれる。
 //        音源の一覧の `splices`(つなぎ目の時刻 atMs と、そこから先のずれ shiftMs)を書いた曲だけ、つなぎ目から先の打点からずれを引いて
 //        格子に乗せ、書き出す時刻にずれを足す(テンポの揺れと同じ通り道)。書いていない曲は Rev.25 と同じ譜面
-//   27〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   27 … 遊んだ記録から学んだ調整値(rhythm-chart-play-tuning.js が書き足したリビジョン)
+//   28 … 人が測った拍のずれの曲線(2026-10-05・rhythm-chart-tempo-warp.js の curveWarp)。曲が進むにつれてテンポが少しずつ変わる曲
+//        (Emerald Rush は 150.0 → 153.0 BPM)は、1つのテンポの格子から拍が最大で1拍近くずれる。なめらかな揺れ(Rev.21/23)は
+//        幅の上限(格子の間隔の0.45倍)を超えると使わないので、人が測った「時刻ごとの拍のずれ」の点を音源の一覧の `warpPoints` に書き、
+//        その曲だけ点のあいだを直線でつないだずれを使う(つなぎ目の段差 Rev.26 と同じ通り道)。書いていない曲は Rev.27 と同じ譜面
+//   29〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -118,7 +123,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=26;
+const CHART_REVISION_CODE_LATEST=28;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');

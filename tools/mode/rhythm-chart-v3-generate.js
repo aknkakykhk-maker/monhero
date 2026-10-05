@@ -596,7 +596,7 @@ const warpCorrected=onset=>{
   const grid=Math.round((timeMs-timing.beatZeroMs)/gridMs);
   return {...onset,grid,gridOffsetMs:Math.round((timeMs-(timing.beatZeroMs+grid*gridMs))*100)/100};
 };
-if(tempoWarpInfo&&tempoWarpInfo.active)console.log(`テンポの揺れに合わせる(${tempoWarpInfo.version==='splice'?'Rev.26 のつなぎ目':tempoWarpInfo.version===2?'Rev.23 の読み方':'Rev.21'}): ${tempoWarpInfo.reason}`);
+if(tempoWarpInfo&&tempoWarpInfo.active)console.log(`テンポの揺れに合わせる(${tempoWarpInfo.version==='curve'?'Rev.28 の拍のずれの曲線':tempoWarpInfo.version==='splice'?'Rev.26 のつなぎ目':tempoWarpInfo.version===2?'Rev.23 の読み方':'Rev.21'}): ${tempoWarpInfo.reason}`);
 // 打点をグリッドごとに1つへまとめる（同じ位置に2つ以上あれば強いほうを残す）
 const onsetByGrid=new Map();
 for(const rawOnset of audio.onsets){
