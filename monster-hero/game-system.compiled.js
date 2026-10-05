@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bdb1a5af029ae7e2
+// source-sha256: aa72c05099e22093
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 12:11";
+const BUILD_DATE = "2026-10-05 12:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -47423,7 +47423,8 @@ function PickSlotScreen({
   wave,
   heroStyleDef = null,
   heroStyle = null,
-  onHeroStyle = null
+  onHeroStyle = null,
+  perSlotApt = false
 }) {
   const mon = currentPickingMon;
   const pickedStyle = heroStyleDef ? heroStyleDef.styles.some(st => st.id === heroStyle) ? heroStyle : heroStyleDef.defaultStyle : null;
@@ -47509,7 +47510,7 @@ function PickSlotScreen({
       className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
     }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), React.createElement("div", {
       className: "mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2"
-    }, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。"), React.createElement("div", {
+    }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、その子の適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
       className: "grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll"
     }, slots.map((s, i) => {
       const grade = getDistAptitude(mon, i);
@@ -47543,7 +47544,7 @@ function PickSlotScreen({
         size: 20
       }), React.createElement("span", {
         className: `relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade, " 合流後 ", formatAptPct(after))) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
+      }, grade, " ", perSlotApt ? 'この距離で' : '合流後', " ", formatAptPct(after))) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -75605,9 +75606,8 @@ function MonsterHeroGame() {
     setAtk(total('atk', hero.baseAtk));
     setDef(raidDef);
     const raidRuleDifficulty = specialRuleDifficultyForRun(runMode, 'Normal', false, extremeDifficulty);
-    const raidApt = raidSlots.filter(Boolean).reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptPct(mon, raidRuleDifficulty, 1)[i]), [0, 0, 0, 0]);
-    setDistAptPct(raidApt);
-    initBattle(1, raidSlots, uniques, teachings, raidDef, 'Jack', hero, raidApt);
+    setDistAptPct(getMonsterAptPct(hero, raidRuleDifficulty, 1));
+    initBattle(1, raidSlots, uniques, teachings, raidDef, 'Jack', hero, null);
     return true;
   };
   useEffect(() => {
@@ -84117,7 +84117,10 @@ function MonsterHeroGame() {
     }), gameState === 'RAID_JACK_PLACE' && raidJackPlace && (() => {
       const placed = raidJackPlace.slots.filter(Boolean).length;
       const mon = raidJackPlace.party[placed] || null;
-      const placedBonus = dist => raidJackPlace.slots.reduce((sum, m) => sum + (m ? aptGradeToPct(getDistAptitude(m, dist)) : 0), 0);
+      const placedBonus = dist => {
+        const standing = raidJackPlace.slots[dist];
+        return standing ? aptGradeToPct(getDistAptitude(standing, dist)) : 0;
+      };
       return React.createElement(PickSlotScreen, {
         battleTutorial: null,
         battleTutorialSpotClass: () => '',
@@ -84127,6 +84130,7 @@ function MonsterHeroGame() {
         scenarioPicksSlot: () => true,
         setupMon: placeRaidJackMon,
         slots: raidJackPlace.slots,
+        perSlotApt: true,
         phasePlan: null,
         wave: 0,
         heroStyleDef: null,
@@ -87851,6 +87855,7 @@ function MonsterHeroGame() {
       scenarioPicksSlot: scenarioPicksSlot,
       setupMon: setupMon,
       slots: slots,
+      perSlotApt: isTacticsMode(runMode),
       phasePlan: mainHero ? phasePlan : null,
       wave: wave,
       heroStyleDef: (() => {

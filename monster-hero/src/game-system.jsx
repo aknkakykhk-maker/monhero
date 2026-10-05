@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: da56e075c2414523
+// generated-sha256: a0cdafbf395d3ced
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 12:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29549,7 +29549,7 @@ function PickProAlliesScreen({
 function PickSlotScreen({
   battleTutorial, battleTutorialSpotClass, currentPickingMon, distTotalBonus,
   getDistAptitude, onRepick, phasePlan, scenarioPicksSlot, setupMon, slots, wave,
-  heroStyleDef = null, heroStyle = null, onHeroStyle = null,
+  heroStyleDef = null, heroStyle = null, onHeroStyle = null, perSlotApt = false,
 }) {
   const mon=currentPickingMon;
   // 勇者モンの初期スタイル(タクティクスで、スタイル式のEXを持つ子を勇者モンにしたときだけ)。
@@ -29604,7 +29604,10 @@ function PickSlotScreen({
         </div>
       )}
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
-      <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
+      {/* タクティクスは合算しない(その距離に立っている子の適性だけが、その子の攻撃に効く)。従来のモードは編成全員ぶんの合算 */}
+      <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">{perSlotApt
+        ?<>間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。<br/>どの距離に誰を置くかで、その子の適性が決まります。</>
+        :<>間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</>}</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
       {/* 背の低い端末では、ここが縮んでスクロールする。戻るボタンを画面の外へ押し出さないため。
           となりの教えカードえらび(PickTeachingScreen)と同じ作りにそろえてある */}
@@ -29619,7 +29622,7 @@ function PickSlotScreen({
           <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
             <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
-            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>
+            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?'この距離で':'合流後'} {formatAptPct(after)}</span>
           </>):(<>
             {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="relative w-10 h-10 object-contain drop-shadow-md"/>:<span className="relative text-2xl drop-shadow-md">{s.emoji}</span>}
             <span className="relative max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>
@@ -50922,9 +50925,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
     setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
     const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
-    const raidApt=raidSlots.filter(Boolean).reduce((sum,mon)=>sum.map((v,i)=>v+getMonsterAptPct(mon,raidRuleDifficulty,1)[i]),[0,0,0,0]);
-    setDistAptPct(raidApt);
-    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,raidApt);
+    // ★距離適性は合算しない。タクティクスバトルは「その距離に立っている子の適性だけ」がその子の攻撃に効く(tacticsSlotApt)。
+    //   以前は編成全員の適性を足して渡していたので、置いた場所の子の適性にならなかった(2026-10-05・ユーザー指摘)。
+    //   distAptPct は通常のタクティクスと同じく勇者モンのぶんだけ(盤面の計算は上書きを渡さず、立っている子から数える)
+    setDistAptPct(getMonsterAptPct(hero,raidRuleDifficulty,1));
+    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null);
     return true;
   };
   // 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める
@@ -54825,13 +54830,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RAID_JACK_PLACE'&&raidJackPlace&&(()=>{
           const placed=raidJackPlace.slots.filter(Boolean).length;
           const mon=raidJackPlace.party[placed]||null;
-          // 通常バトルと同じ配置画面。間合い適性は「置いた子たちの合計」(どこに置いても4距離すべてに加算される)
-          const placedBonus=(dist)=>raidJackPlace.slots.reduce((sum,m)=>sum+(m?aptGradeToPct(getDistAptitude(m,dist)):0),0);
+          // 通常のタクティクスと同じ配置画面。距離適性は合算せず、その距離に立っている子のぶんだけ(空いている枠は0 → 置く子の適性だけが出る)
+          const placedBonus=(dist)=>{const standing=raidJackPlace.slots[dist];return standing?aptGradeToPct(getDistAptitude(standing,dist)):0;};
           return <PickSlotScreen
             battleTutorial={null} battleTutorialSpotClass={()=>''}
             currentPickingMon={mon} distTotalBonus={placedBonus}
             getDistAptitude={getDistAptitude} scenarioPicksSlot={()=>true}
-            setupMon={placeRaidJackMon} slots={raidJackPlace.slots}
+            setupMon={placeRaidJackMon} slots={raidJackPlace.slots} perSlotApt={true}
             phasePlan={null} wave={0}
             heroStyleDef={null} heroStyle={null} onHeroStyle={null}
             onRepick={cancelRaidJackPlacement}/>;
@@ -56721,7 +56726,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           battleTutorial={battleTutorial} battleTutorialSpotClass={battleTutorialSpotClass}
           currentPickingMon={currentPickingMon} distTotalBonus={distTotalBonus}
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
-          setupMon={setupMon} slots={slots}
+          setupMon={setupMon} slots={slots} perSlotApt={isTacticsMode(runMode)}
           phasePlan={mainHero?phasePlan:null} wave={wave}
           heroStyleDef={(()=>{
             // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる

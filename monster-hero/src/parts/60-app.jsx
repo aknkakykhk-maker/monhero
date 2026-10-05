@@ -13267,9 +13267,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
     setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
     const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
-    const raidApt=raidSlots.filter(Boolean).reduce((sum,mon)=>sum.map((v,i)=>v+getMonsterAptPct(mon,raidRuleDifficulty,1)[i]),[0,0,0,0]);
-    setDistAptPct(raidApt);
-    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,raidApt);
+    // ★距離適性は合算しない。タクティクスバトルは「その距離に立っている子の適性だけ」がその子の攻撃に効く(tacticsSlotApt)。
+    //   以前は編成全員の適性を足して渡していたので、置いた場所の子の適性にならなかった(2026-10-05・ユーザー指摘)。
+    //   distAptPct は通常のタクティクスと同じく勇者モンのぶんだけ(盤面の計算は上書きを渡さず、立っている子から数える)
+    setDistAptPct(getMonsterAptPct(hero,raidRuleDifficulty,1));
+    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null);
     return true;
   };
   // 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める
@@ -17170,13 +17172,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RAID_JACK_PLACE'&&raidJackPlace&&(()=>{
           const placed=raidJackPlace.slots.filter(Boolean).length;
           const mon=raidJackPlace.party[placed]||null;
-          // 通常バトルと同じ配置画面。間合い適性は「置いた子たちの合計」(どこに置いても4距離すべてに加算される)
-          const placedBonus=(dist)=>raidJackPlace.slots.reduce((sum,m)=>sum+(m?aptGradeToPct(getDistAptitude(m,dist)):0),0);
+          // 通常のタクティクスと同じ配置画面。距離適性は合算せず、その距離に立っている子のぶんだけ(空いている枠は0 → 置く子の適性だけが出る)
+          const placedBonus=(dist)=>{const standing=raidJackPlace.slots[dist];return standing?aptGradeToPct(getDistAptitude(standing,dist)):0;};
           return <PickSlotScreen
             battleTutorial={null} battleTutorialSpotClass={()=>''}
             currentPickingMon={mon} distTotalBonus={placedBonus}
             getDistAptitude={getDistAptitude} scenarioPicksSlot={()=>true}
-            setupMon={placeRaidJackMon} slots={raidJackPlace.slots}
+            setupMon={placeRaidJackMon} slots={raidJackPlace.slots} perSlotApt={true}
             phasePlan={null} wave={0}
             heroStyleDef={null} heroStyle={null} onHeroStyle={null}
             onRepick={cancelRaidJackPlacement}/>;
@@ -19066,7 +19068,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           battleTutorial={battleTutorial} battleTutorialSpotClass={battleTutorialSpotClass}
           currentPickingMon={currentPickingMon} distTotalBonus={distTotalBonus}
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
-          setupMon={setupMon} slots={slots}
+          setupMon={setupMon} slots={slots} perSlotApt={isTacticsMode(runMode)}
           phasePlan={mainHero?phasePlan:null} wave={wave}
           heroStyleDef={(()=>{
             // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
