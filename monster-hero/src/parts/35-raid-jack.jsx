@@ -367,6 +367,9 @@ const raidJackClaimId = (kind, tierIndex, rank) => {
 };
 // 受け取り済みの印のうち、「順位に入っていなかった」ことを覚えておく印(毎回サーバーへ問い合わせ直さないため)
 const raidJackNoneId = (id) => `${id}_none`;
+// 順位の報酬は、何位でギフトに届いたかも印に残す(報酬一覧で、その順位の行に印を付けるため。2026-10-05・ユーザー指摘「貢献順位のバッジが表示ミス?」)。
+// 順位ごとの行に印を付けるには、届けた順位が要る。これが無い古い印(rank_a1 だけ)は、行ではなく段階の下の一言で伝える
+const raidJackPlaceId = (rankId, place) => `${rankId}_p${Math.max(1, Math.floor(Number(place)) || 1)}`;
 // 1つの報酬の題名(ギフトの見出し)
 const raidJackRewardTitle = (kind, tierIndex, rank) => {
   const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
