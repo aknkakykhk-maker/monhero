@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a79b12afe5bc3c9
+// generated-sha256: ed44e9ea3a03db32
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 16:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23320,6 +23320,9 @@ const raidJackClaimId = (kind, tierIndex, rank) => {
 };
 // 受け取り済みの印のうち、「順位に入っていなかった」ことを覚えておく印(毎回サーバーへ問い合わせ直さないため)
 const raidJackNoneId = (id) => `${id}_none`;
+// 順位の報酬は、何位でギフトに届いたかも印に残す(報酬一覧で、その順位の行に印を付けるため。2026-10-05・ユーザー指摘「貢献順位のバッジが表示ミス?」)。
+// 順位ごとの行に印を付けるには、届けた順位が要る。これが無い古い印(rank_a1 だけ)は、行ではなく段階の下の一言で伝える
+const raidJackPlaceId = (rankId, place) => `${rankId}_p${Math.max(1, Math.floor(Number(place)) || 1)}`;
 // 1つの報酬の題名(ギフトの見出し)
 const raidJackRewardTitle = (kind, tierIndex, rank) => {
   const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
@@ -23531,7 +23534,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   if (!totals || !self) return none;
   const due = [];
   const noneIds = [];
-  const add = (claimId, title, reward) => { if (!claimed.has(claimId)) due.push({ id: claimId, title, reward }); };
+  const add = (claimId, title, reward, place) => { if (!claimed.has(claimId)) due.push(place ? { id: claimId, title, reward, place } : { id: claimId, title, reward }); };
   const mineA = (i) => self.a[i + 1] || 0;
   if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
   if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
@@ -23546,7 +23549,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);
       else noneIds.push(raidJackNoneId(rankId));
     }
   }
@@ -23558,7 +23561,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);
       else noneIds.push(raidJackNoneId(finalId));
     }
   }
@@ -37207,7 +37210,7 @@ const RaidJackRewardRow = ({ label, note, reward, got, dataKey }) => (
       {note && <div className="text-[8px] leading-tight text-slate-400">{note}</div>}
     </div>
     <div className="min-w-0 flex-1"><RaidJackRewardChips reward={reward} /></div>
-    {got && <span className="shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white">受け取り済み</span>}
+    {got && <span className="shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white">ギフトに届いた</span>}
   </div>
 );
 // 1つの段階の報酬(難易度別)。A=討伐報酬+貢献1〜5位 / B=初めて倒したとき。未解放の段階も見える
@@ -37218,8 +37221,15 @@ const RaidJackTierRewards = ({ kind, index, claimed }) => {
       <div data-raid-jack-tier-rewards="a">
         <RaidJackRewardRow dataKey="clear" label="討伐報酬" note="参加した全員" reward={RAID_JACK_REWARDS.aClear[index]} got={have.includes(raidJackClaimId('clear_a', index))} />
         {RAID_JACK_REWARDS.aRank[index].map((r, k) => (
-          <RaidJackRewardRow key={k} dataKey={`rank-${k + 1}`} label={`貢献${k + 1}位`} reward={r} got={k === 0 && have.includes(raidJackClaimId('rank_a', index))} />
+          // 印を付けるのは、実際に届いた順位の行だけ(順位つきの印がある人)。順位の印が無い古い受け取りは、下の一言で伝える
+          <RaidJackRewardRow key={k} dataKey={`rank-${k + 1}`} label={`貢献${k + 1}位`} reward={r} got={have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))} />
         ))}
+        {have.includes(raidJackClaimId('rank_a', index)) && !RAID_JACK_REWARDS.aRank[index].some((r, k) => have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))) && (
+          <div data-raid-jack-rank-note="delivered" className="mt-1 rounded-lg bg-emerald-950/40 px-2 py-1 text-[9px] font-black text-emerald-200">順位の報酬は、ギフトに届いています(何位かは、ギフトの名前で分かります)</div>
+        )}
+        {have.includes(raidJackNoneId(raidJackClaimId('rank_a', index))) && (
+          <div data-raid-jack-rank-note="none" className="mt-1 rounded-lg bg-slate-800/60 px-2 py-1 text-[9px] font-black text-slate-300">この段階では、順位の報酬の対象(5位まで)になりませんでした</div>
+        )}
         <div className="mt-1 text-[9px] text-slate-400">{index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。' : '倒したときに順位が確定して、ギフトで届きます。'}</div>
       </div>
     );
@@ -37258,7 +37268,7 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a' }) => {
           <div data-raid-jack-reward-final className="rounded-2xl border border-orange-300/30 bg-orange-950/20 p-3">
             <div className="mb-1 text-[12px] font-black text-orange-200">累計ダメージの最終順位(全難易度の合計)</div>
             {RAID_JACK_REWARDS.bFinal.map((r, k) => (
-              <RaidJackRewardRow key={k} dataKey={`final-${k + 1}`} label={`${k + 1}位`} reward={r} got={k === 0 && have.includes(raidJackClaimId('final_b'))} />
+              <RaidJackRewardRow key={k} dataKey={`final-${k + 1}`} label={`${k + 1}位`} reward={r} got={have.includes(raidJackPlaceId(raidJackClaimId('final_b'), k + 1))} />
             ))}
             <div className="mt-1 text-[9px] text-slate-400">期間の終わり(11/1 4:00)に確定して、ギフトで届きます。</div>
           </div>
@@ -51093,7 +51103,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const result = grantGiftOnce(nextGifts, gift);
         if (result.granted) { nextGifts = result.gifts; granted += 1; }
       });
-      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.noneIds] });
+      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.due.filter(entry=>entry.place).map(entry=>raidJackPlaceId(entry.id,entry.place)), ...found.noneIds] });
       const saved = await saveStoredValuesOrRollback([
         { key:'mh_gifts', before:beforeGifts, next:nextGifts },
         { key:RAID_JACK_STORAGE_KEY, before:state, next:nextState },
