@@ -227,7 +227,7 @@ function RewardPickScreen({
     // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
     // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
     <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center p-3 overflow-hidden" data-screen="training">
-      <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
+      <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'.25rem'}}>
         {/* どのWAVEを抜けたごほうびなのかを見出しの上に出す */}
         {waveResult?.wave>0&&<div className="mb-1 flex justify-center">
           <span className="mh-ph-plate">WAVE {waveResult.wave} CLEAR</span>

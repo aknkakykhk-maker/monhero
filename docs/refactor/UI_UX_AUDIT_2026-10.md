@@ -73,3 +73,14 @@
   共通バーへ寄せると並べ方そのものが変わるので触っていない。
 - D3 は C2 と一緒に直した(AUTO設定の説明文)。
 - B5(マスモン詳細の技の行 23px)は未着手。
+
+### 2本目のPR(2026-10-05)
+- 引き継ぎメモ③: バトル系6画面・勇者選択の見出し・種族チャレンジ選択・トレーニングの見出しが
+  `calc(… + env(safe-area-inset-*))` を足していた(body が取っているので二重)。`.mh-app` は position:relative で
+  body の余白の内側にあるので、absolute の画面も含めて env を足さないのが正しい(実ブラウザで確かめた)。
+  fixed の窓(inset-0)は body の余白の外なので env が要る。触っていない。
+- `.mh-dialog-head button` を 44px(余白で広げ、負の margin で見た目の位置は保つ)。
+- ランキングの失敗・0件を `ScreenEmpty` に。
+- B5(マスモン詳細の固有技の行)を 36px に。
+- マスモン詳細の「お気に入り／転生ロック」が上と下に2回出るのは意図どおり(`masu/masu-lock-check.js` が両方を見ている)。
+- `battle/battle-menu-browser-check.js` は、新曲「Emerald Rush」の告知の窓に覆われて止まる(この変更と関係なく main でも同じ)。
