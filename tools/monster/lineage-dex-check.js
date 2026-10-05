@@ -350,5 +350,18 @@ check('仕様書のモンスター数が実データと合っている',
 check('図鑑の技タブにEXスキル表示の土台がある', source.includes('data-dex-ex-skill') && source.includes("tacticsExDefOf(mon.id)") && source.includes('EX《{exDef.name}》'));
 check('図鑑のEXスキルは既存定義から回数・効果時間・通常カード併用可否を表示する', source.includes("exDef.unlimited?'無制限'") && source.includes('exDef.maxUses') && source.includes('exDef.duration') && source.includes("exDef.withCards?'併用可':'併用不可'"));
 
+// --- 血統別のアイコン(2026-10-05・ユーザー提供の37個) ---
+// すべての血統(MONSTER_LINEAGES)に、アイコンの画像が対応している。画像そのものの実在とキャッシュキーは image-asset-check が見る
+{
+  const lineageIds = Object.keys(vm.runInContext('MONSTER_LINEAGES', ctx));
+  const icons = vm.runInContext('MONSTER_LINEAGE_ICONS', ctx);
+  const noIcon = lineageIds.filter((id) => typeof icons[id] !== 'string' || !/^images\/lineage-icons\/[a-z]+\.png\?v=[0-9a-f]{12}$/.test(icons[id]));
+  check('すべての血統に、血統別のアイコンが対応している', noIcon.length === 0, noIcon.join(', ') || `${lineageIds.length}血統`);
+  const extra = Object.keys(icons).filter((id) => !lineageIds.includes(id));
+  check('対応表に、存在しない血統が混ざっていない', extra.length === 0, extra.join(', '));
+  const files = fs.readdirSync(path.join(root, 'monster-hero/images/lineage-icons')).filter((f) => f.endsWith('.png'));
+  check('血統別のアイコンの画像は37個ある', files.length === 37, `${files.length}個`);
+}
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
