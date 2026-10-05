@@ -575,6 +575,16 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
+    // --- ⑫-4 スエゾー「サイコロックオン」(2026-10-05 ユーザー指定) ---
+    const szSlot = await startWith('スエゾー');
+    await page.waitForTimeout(1500);
+    await tapSlot(szSlot);
+    p = await panel();
+    check('「サイコロックオン」: 3/3・カードと併用できる・5ターン', !!p && p.name === 'サイコロックオン' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /5ターン/.test(p.text), p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    check('使うと距離枠の札が「あと5ターン」になる', await page.locator(`[data-tactics-ex-mark="${szSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと5ターン');
+
     // --- ⑫-3 オボロゲソウ「おぼろ返し」(2026-10-05 ユーザー選択) ---
     const obSlot = await startWith('オボロゲソウ');
     await page.waitForTimeout(1500);

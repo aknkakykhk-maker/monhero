@@ -46,6 +46,8 @@ const makeIncoming = (deps) => new Function('d', `
     resolveEffectiveMaxStat,normalizeTacticsUnit,effectiveDef,getPermaBuff,
     soulBattleParty,iceLockEnemyDamageMult} = d;
   const turnCount = d.turnCount ?? 0;
+  // スエゾーのサイコロックオン(敵の与ダメ−30%)。既存モードの検査では効いていないものとして、倍率を変えない代役を置く
+  const tacticsExPsychoLockNow = d.tacticsExPsychoLockNow || (() => ({ active: false, enemyDmgMult: 1, enemyTakenBonus: 0 }));
   ${lifeSourceSrc}
   // 新モードの1体ぶんは tacticsBattleUnit で読む(EXスキルの上乗せはここでは無いものとして盤面の値を返す)
   const tacticsBattleUnit = d.tacticsBattleUnit || ((slot) => (tacticsUnitsRef.current || [])[slot]);
