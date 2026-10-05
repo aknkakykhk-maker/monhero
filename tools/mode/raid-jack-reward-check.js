@@ -111,6 +111,7 @@ const make = () => {
   check('男爵が倒れていて自分が与えていれば 討伐報酬+順位(2位)', ids(r) === 'clear_a1,part_a,rank_a1', ids(r));
   const rank = r.due.find((d) => d.id === 'rank_a1');
   check('順位は上位5人の並びどおり(2位の報酬)', rank && JSON.stringify(rank.reward) === JSON.stringify(R.aRank[0][1]) && /貢献2位/.test(rank.title), rank && rank.title);
+  check('順位の報酬は、届けた順位(place=2)を持って返る(一覧でその順位の行に印を付けるため)。順位のないものは place を持たない', rank && rank.place === 2 && r.due.filter((d) => d.id !== 'rank_a1').every((d) => !('place' in d)), rank && String(rank.place));
   r = await run({ now: open, selfA: { 2: 100 }, defeatedA: [0], tops: { a1: ['x'] } });
   check('倒れた段階に与えていない人には討伐報酬を出さない', ids(r) === 'part_a', ids(r));
   r = await run({ now: open, selfA: { 1: 100 }, defeatedA: [0], tops: { a1: ['x', 'y', 'z', 'w', 'v'] } });

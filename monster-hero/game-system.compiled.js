@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fc0c04908dcd347
+// source-sha256: bd7d6d5ede4f08f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 16:29";
+const BUILD_DATE = "2026-10-05 16:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35780,7 +35780,7 @@ const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride
   });
 };
 const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
-const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 4000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 5000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 7000000)]);
+const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 6000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 7500000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 14000000)]);
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, RAID_JACK_A_ATK_POWERS[1], 4550000);
 const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
@@ -36198,6 +36198,7 @@ const raidJackClaimId = (kind, tierIndex, rank) => {
   return `${kind}${n}`;
 };
 const raidJackNoneId = id => `${id}_none`;
+const raidJackPlaceId = (rankId, place) => `${rankId}_p${Math.max(1, Math.floor(Number(place)) || 1)}`;
 const raidJackRewardTitle = (kind, tierIndex, rank) => {
   const aName = RAID_JACK_A_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
   const bName = RAID_JACK_B_TIERS[Math.min(Math.max(tierIndex || 0, 0), 4)].name;
@@ -36473,8 +36474,13 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   if (!totals || !self) return none;
   const due = [];
   const noneIds = [];
-  const add = (claimId, title, reward) => {
-    if (!claimed.has(claimId)) due.push({
+  const add = (claimId, title, reward, place) => {
+    if (!claimed.has(claimId)) due.push(place ? {
+      id: claimId,
+      title,
+      reward,
+      place
+    } : {
       id: claimId,
       title,
       reward
@@ -36493,7 +36499,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place]);else noneIds.push(raidJackNoneId(rankId));
+      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);else noneIds.push(raidJackNoneId(rankId));
     }
   }
   RAID_JACK_B_TIERS.forEach((tier, i) => {
@@ -36504,7 +36510,7 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place]);else noneIds.push(raidJackNoneId(finalId));
+      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);else noneIds.push(raidJackNoneId(finalId));
     }
   }
   return {
@@ -60271,7 +60277,7 @@ const RaidJackRewardRow = ({
   reward: reward
 })), got && React.createElement("span", {
   className: "shrink-0 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[8px] font-black text-white"
-}, "受け取り済み"));
+}, "ギフトに届いた"));
 const RaidJackTierRewards = ({
   kind,
   index,
@@ -60292,8 +60298,14 @@ const RaidJackTierRewards = ({
       dataKey: `rank-${k + 1}`,
       label: `貢献${k + 1}位`,
       reward: r,
-      got: k === 0 && have.includes(raidJackClaimId('rank_a', index))
-    })), React.createElement("div", {
+      got: have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))
+    })), have.includes(raidJackClaimId('rank_a', index)) && !RAID_JACK_REWARDS.aRank[index].some((r, k) => have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))) && React.createElement("div", {
+      "data-raid-jack-rank-note": "delivered",
+      className: "mt-1 rounded-lg bg-emerald-950/40 px-2 py-1 text-[9px] font-black text-emerald-200"
+    }, "順位の報酬は、ギフトに届いています(何位かは、ギフトの名前で分かります)"), have.includes(raidJackNoneId(raidJackClaimId('rank_a', index))) && React.createElement("div", {
+      "data-raid-jack-rank-note": "none",
+      className: "mt-1 rounded-lg bg-slate-800/60 px-2 py-1 text-[9px] font-black text-slate-300"
+    }, "この段階では、順位の報酬の対象(5位まで)になりませんでした"), React.createElement("div", {
       className: "mt-1 text-[9px] text-slate-400"
     }, index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。' : '倒したときに順位が確定して、ギフトで届きます。'));
   }
@@ -60377,7 +60389,7 @@ const RaidJackRewardList = ({
     dataKey: `final-${k + 1}`,
     label: `${k + 1}位`,
     reward: r,
-    got: k === 0 && have.includes(raidJackClaimId('final_b'))
+    got: have.includes(raidJackPlaceId(raidJackClaimId('final_b'), k + 1))
   })), React.createElement("div", {
     className: "mt-1 text-[9px] text-slate-400"
   }, "期間の終わり(11/1 4:00)に確定して、ギフトで届きます。")), React.createElement("div", {
@@ -75879,7 +75891,7 @@ function MonsterHeroGame() {
       });
       const nextState = raidJackNormalizeState({
         ...state,
-        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.noneIds]
+        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.due.filter(entry => entry.place).map(entry => raidJackPlaceId(entry.id, entry.place)), ...found.noneIds]
       });
       const saved = await saveStoredValuesOrRollback([{
         key: 'mh_gifts',

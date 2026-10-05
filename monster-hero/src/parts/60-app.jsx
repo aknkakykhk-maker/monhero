@@ -13430,7 +13430,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const result = grantGiftOnce(nextGifts, gift);
         if (result.granted) { nextGifts = result.gifts; granted += 1; }
       });
-      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.noneIds] });
+      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.due.filter(entry=>entry.place).map(entry=>raidJackPlaceId(entry.id,entry.place)), ...found.noneIds] });
       const saved = await saveStoredValuesOrRollback([
         { key:'mh_gifts', before:beforeGifts, next:nextGifts },
         { key:RAID_JACK_STORAGE_KEY, before:state, next:nextState },
