@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f9172399a31bd48d
+// generated-sha256: 6ca99cdae6c437a0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 03:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 07:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28434,7 +28434,7 @@ function MasuRegenerationDetailScreen({
   executeMasuRegeneration, gold, onBackToBaseSelect, regenerationProcessing, regenerationSelectedId,
   regenerationUsed, renderDetailSectionLabel, renderMonsterDetailInfo,
 }) {
-const cost=regenerationUsed?REGENERATION_COST:0;const selectedBase=regenerationSelectedId?ALL_PLAYER_MONSTERS[regenerationSelectedId]:null;if(!selectedBase)return null;return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="再生詳細" accent="text-violet-300" onBack={onBackToBaseSelect} backLabel="ベースモン選択へ戻る" disabled={regenerationProcessing}/><div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}><h2 className="text-center text-xl font-black text-white">{selectedBase.name}</h2><img src={selectedBase.iconUrl} alt={selectedBase.name} className="w-32 h-32 max-w-full mx-auto object-contain"/><section className="space-y-2" aria-label={`${selectedBase.name}の基礎性能`}>{renderDetailSectionLabel('ベースモンの性能', '再生前の正式な基礎値です')}{renderMonsterDetailInfo(selectedBase)}</section><section className="rounded-2xl border border-amber-400/60 bg-amber-950/30 p-3" aria-label="再生に必要な情報"><div className="text-[10px] text-amber-200 font-black mb-1">再生に必要な情報</div><div className="flex items-center justify-between text-sm"><span className="text-slate-300">対象</span><b className="text-white">{selectedBase.name}</b></div><div className="flex items-center justify-between text-sm mt-1"><span className="text-slate-300">必要ダイヤ</span><b className="text-amber-300">{cost===0?'初回無料':cost.toLocaleString()}</b></div><div className="flex items-center justify-between text-[10px] mt-1"><span className="text-slate-400">所持ダイヤ</span><span className="text-slate-300">{gold.toLocaleString()}</span></div></section><button disabled={gold<cost||regenerationProcessing} onClick={executeMasuRegeneration} className="w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30">{regenerationProcessing?'再生中…':gold<cost?'ダイヤが不足しています':`${selectedBase.name}を再生する`}</button></div></div>;
+const cost=regenerationUsed?REGENERATION_COST:0;const selectedBase=regenerationSelectedId?ALL_PLAYER_MONSTERS[regenerationSelectedId]:null;if(!selectedBase)return null;return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="再生詳細" accent="text-violet-300" onBack={onBackToBaseSelect} backLabel="ベースモン選択へ戻る" disabled={regenerationProcessing}/><div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}><h2 className="text-center text-xl font-black text-white">{selectedBase.name}</h2><img src={selectedBase.iconUrl} alt={selectedBase.name} className="w-32 h-32 max-w-full mx-auto object-contain"/><section className="space-y-2" aria-label={`${selectedBase.name}の基礎性能`}>{renderDetailSectionLabel('ベースモンの性能', '再生前の正式な基礎値です')}{renderMonsterDetailInfo(selectedBase)}</section></div><div className={`${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto space-y-2`}><section className="rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2" aria-label="再生に必要な情報"><div className="flex items-baseline justify-between gap-2 whitespace-nowrap"><span className="text-[12px] text-slate-300">必要ダイヤ <b className={gold>=cost?"text-amber-300":"text-red-400"}>{cost===0?'初回無料':cost.toLocaleString()}</b></span><span className="min-w-0 truncate text-[10px] text-slate-400">所持ダイヤ {gold.toLocaleString()}</span></div></section><button disabled={gold<cost||regenerationProcessing} onClick={executeMasuRegeneration} className="mh-button mh-button-primary w-full min-h-[52px] rounded-2xl text-sm font-black active:scale-[.98] disabled:opacity-30">{regenerationProcessing?'再生中…':gold<cost?'ダイヤが不足しています':`${selectedBase.name}を再生する`}</button></div></div>;
 }
 
 function MasuDonationScreen({
