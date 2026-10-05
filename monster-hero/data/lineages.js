@@ -41,6 +41,30 @@ const MONSTER_LINEAGES = {
   unknown: { id:'unknown', name:'？？？', rare:true },
 };
 
+// ---------- 血統のアイコン(エンブレム) ----------
+// 血統のid → 血統別のアイコンの画像(data/images/images-ally.js の LINEAGE_ICON_*。画像は images/lineage-icons/)。
+// 2026-10-05・ユーザー提供。まだ画面では使っていない(ここは対応表だけ。どこへ出すかはこれから決める)。
+// ★ファイル名の綴りが血統のidと違うもの: tiger=liger / ham=hamu / monol=monolith / ark=arc / unknown=raremon(「？」のアイコン)
+// ★ゲームにまだ無い血統用の画像(naga・nendoro・lord・dino ほか)は、血統を足すときにここへ1行足して使う。
+const MONSTER_LINEAGE_ICONS = Object.freeze({
+  mocchi: LINEAGE_ICON_MOCCHI,
+  suezo: LINEAGE_ICON_SUEZO,
+  golem: LINEAGE_ICON_GOLEM,
+  tiger: LINEAGE_ICON_LIGER,
+  ham: LINEAGE_ICON_HAMU,
+  pixie: LINEAGE_ICON_PIXIE,
+  monol: LINEAGE_ICON_MONOLITH,
+  zan: LINEAGE_ICON_ZAN,
+  ark: LINEAGE_ICON_ARC,
+  undine: LINEAGE_ICON_UNDINE,
+  yggdrasil: LINEAGE_ICON_YGGDRASIL,
+  dragon: LINEAGE_ICON_DRAGON,
+  joker: LINEAGE_ICON_JOKER,
+  plant: LINEAGE_ICON_PLANT,
+  gel: LINEAGE_ICON_GEL,
+  unknown: LINEAGE_ICON_RAREMON,
+});
+
 // ---------- モンスターごとの血統 ----------
 // キーは ALL_PLAYER_MONSTERS のid。main が主血統、sub が副血統。
 const MONSTER_LINEAGE_MAP = {
