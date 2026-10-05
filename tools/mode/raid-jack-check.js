@@ -28,16 +28,18 @@ vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMake
 const o = ctx.o;
 
 // ① 段階
-const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 2275000, 4], ['ジャック伯爵', 2800000, 5], ['ジャック公爵', 3500000, 5], ['ジャック大王', 4550000, 5]];
+const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 3200000, 4], ['ジャック伯爵', 4000000, 5], ['ジャック公爵', 5000000, 5], ['ジャック大王', 7000000, 5]];
 const bWant = [['初級ジャック', 70000, 3], ['中級ジャック', 700000, 4], ['上級ジャック', 3500000, 5], ['超級ジャック', 14000000, 5], ['極級ジャック', 35000000, 5]];
 aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
-check('A のライフの倍率(power)は 5/6.5/8/10/13(ライフはそのまま)', o.RAID_JACK_A_TIERS.map((t) => t.power).join() === '5,6.5,8,10,13');
+// ライフは段階ごとの設定値(2026-10-05・ユーザーが決めた)。倍率 power は hp ÷ 350,000 に合わせてある(Bは今までどおり 35,000×倍率×10)
+check('A のライフは 175万 / 320万 / 400万 / 500万 / 700万(ユーザーが段階ごとに決めた値)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,4000000,5000000,7000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
+check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.power - t.hp / 350000) < 1e-9) && o.RAID_JACK_A_TIERS[0].power === 5);
 // ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は子爵と同じ / 技名はそのまま)
 {
   const p = o.RAID_JACK_PUMPKIN;
   const tier5 = o.RAID_JACK_A_TIERS[4], tier2 = o.RAID_JACK_A_TIERS[1];
-  check('ぱんぷきん: 名前は「ぱんぷきん」、ライフは大王と同じ設定、技は5本', p.name === 'ぱんぷきん' && p.hp === tier5.hp && p.actionCount === 5, `hp=${p.hp}`);
+  check('ぱんぷきん: 名前は「ぱんぷきん」、ライフは 4,550,000(大王のライフとは連動しない)、技は5本', p.name === 'ぱんぷきん' && p.hp === 4550000 && p.hp !== tier5.hp && p.actionCount === 5, `hp=${p.hp}`);
   check('ぱんぷきん: 攻撃力は子爵と同じ(Normal=700)', p.atk === tier2.atk && p.atk === 700, `atk=${p.atk} / 子爵 ${tier2.atk}`);
   const totals = (n) => ({ a: { 5: { total: n } } });
   check('大王を倒したか: 共有の合計が大王のライフ以上', o.raidJackBossDown(totals(tier5.hp)) === true && o.raidJackBossDown(totals(tier5.hp - 1)) === false && o.raidJackBossDown(null) === false && o.raidJackBossDown({ a: {} }) === false);
@@ -48,7 +50,7 @@ check('A のライフの倍率(power)は 5/6.5/8/10/13(ライフはそのまま)
   vm.runInContext(`${src}\nthis.mk=raidJackMakeEnemy;`, c2);
   const e5 = c2.mk('a', 4, 'raidJackA', { pumpkin: true });
   const jack5 = c2.mk('a', 4, 'raidJackA');
-  check('ぱんぷきんの敵: 名前・攻撃力・ライフ・絵(ポーズ絵なし)・id はジャックのまま', e5.name === 'ぱんぷきん' && e5.atk === 700 && e5.hp === tier5.hp && e5.maxHp === tier5.hp && e5.imgUrl === 'pumpkin.png' && e5.poseImgUrl === null && e5.raidJackPumpkin === true && e5.id === 'Jack' && e5.raidJackTier === 'a5');
+  check('ぱんぷきんの敵: 名前・攻撃力・ライフ・絵(ポーズ絵なし)・id はジャックのまま', e5.name === 'ぱんぷきん' && e5.atk === 700 && e5.hp === 4550000 && e5.maxHp === 4550000 && e5.imgUrl === 'pumpkin.png' && e5.poseImgUrl === null && e5.raidJackPumpkin === true && e5.id === 'Jack' && e5.raidJackTier === 'a5');
   check('ぱんぷきんにならない: 大王(ふつう)・大王以外の段階・グランドスラム', jack5.name === 'ジャック大王' && jack5.atk === tier5.atk && !jack5.raidJackPumpkin
     && !c2.mk('a', 1, 'raidJackA', { pumpkin: true }).raidJackPumpkin && !c2.mk('b', 4, 'raidJackB', { pumpkin: true }).raidJackPumpkin);
   check('ぱんぷきんの絵は、ジャックの通常絵(0.5)より小さい', o.RAID_JACK_PUMPKIN_ART_SCALE < 0.5 && o.RAID_JACK_PUMPKIN_ART_SCALE > 0.2);
