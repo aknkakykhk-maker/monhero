@@ -155,7 +155,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('ジャックはHOMEのほぼ中央にいる', jackBox && Math.abs((jackBox.x + jackBox.width / 2) - vp.width / 2) < 30, JSON.stringify(jackBox));
     check('跳ねる動き(アニメーション)が付いている', await page.locator('[data-home-raid-jack] img').first().evaluate((el) => getComputedStyle(el).animationName.includes('mhRaidJackHop')));
     await page.waitForTimeout(1500);
-    check('共有HPバーに「あらわれた」と残りHPが出る(段階2が挑戦中)', /ジャック子爵があらわれた/.test(await page.locator('[data-home-raid-jack]').innerText()) && /1,775,000/.test(await page.locator('[data-home-raid-jack]').innerText()), (await page.locator('[data-home-raid-jack]').innerText()).replace(/\s+/g, ' '));
+    check('共有HPバーに「あらわれた」と残りHPが出る(段階2が挑戦中)', /ジャック子爵があらわれた/.test(await page.locator('[data-home-raid-jack]').innerText()) && /2,700,000/.test(await page.locator('[data-home-raid-jack]').innerText()), (await page.locator('[data-home-raid-jack]').innerText()).replace(/\s+/g, ' '));
     check('HOMEのジャックにオーラ(炎の舌)が出ている', await page.evaluate(() => {
       const el = document.querySelector('[data-home-raid-jack] [data-jack-aura]');
       return !!el && el.querySelectorAll('[data-jack-aura-el] > ins').length >= 5;
@@ -179,7 +179,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     let t = await raidText();
     check('A: 5段階が並ぶ', ['ジャック男爵', 'ジャック子爵', 'ジャック伯爵', 'ジャック公爵', 'ジャック大王'].every((n) => t.includes(n)));
     check('A: 男爵は討伐済み・子爵は挑戦できる・伯爵以降は未解放', /1\. ジャック男爵\s*討伐済み/.test(t) && /2\. ジャック子爵\s*挑戦できる/.test(t) && /3\. ジャック伯爵\s*未解放/.test(t) && /5\. ジャック大王\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
-    check('A: 共有HPと参加人数が出る(子爵 2,275,000 のうち 500,000 を削った)', /共有HP 1,775,000 \/ 2,275,000/.test(t) && /7人が参加/.test(t));
+    check('A: 共有HPと参加人数が出る(子爵 3,200,000 のうち 500,000 を削った)', /共有HP 2,700,000 \/ 3,200,000/.test(t) && /7人が参加/.test(t));
     const silhouettes = await page.locator('[data-raid-jack-tier] img').evaluateAll((els) => els.map((e) => e.style.filter));
     check('A: 未解放の段階はシルエット(黒塗り)で見せる', silhouettes.slice(2).every((f) => /brightness\(0\)/.test(f)) && !/brightness\(0\)/.test(silhouettes[1]), JSON.stringify(silhouettes));
     // 報酬の中身が決まったので、「準備中」ではなく、討伐報酬と貢献ランキングの報酬が出る(2026-10-04・#2129)
@@ -250,9 +250,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const board = await page.evaluate(() => [...document.querySelectorAll('[data-slot-index]')].map((el) => ({ i: el.getAttribute('data-slot-index'), t: (el.innerText || '').replace(/\s+/g, ' ').slice(0, 40), img: !!el.querySelector('img') })));
     console.log('INFO board', JSON.stringify(board));
     check('戦闘の盤面で、置いた距離(零・中)に子がいて、置いていない距離(近・遠)は空いている', ['0', '2'].every((i) => board.some((b) => b.i === i && b.img)) && ['1', '3'].every((i) => !board.some((b) => b.i === i && b.img)), JSON.stringify(board));
-    // レイドバトルは、みんなが削った分を引き継ぐ(子爵 2,275,000 のうち 500,000 が削れている → 1,775,000 から)
-    await page.waitForFunction(() => /1,775,000\s*\/\s*2,275,000/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
-    check('A: 敵ライフが共有の残り(1,775,000 / 2,275,000)から始まる', /1,775,000\s*\/\s*2,275,000/.test(await page.locator('body').innerText()));
+    // レイドバトルは、みんなが削った分を引き継ぐ(子爵 3,200,000 のうち 500,000 が削れている → 2,700,000 から)
+    await page.waitForFunction(() => /2,700,000\s*\/\s*3,200,000/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
+    check('A: 敵ライフが共有の残り(2,700,000 / 3,200,000)から始まる', /2,700,000\s*\/\s*3,200,000/.test(await page.locator('body').innerText()));
     await page.locator('[data-battle-menu-button]').click();
     await page.locator('[data-battle-quit]').click();
     await page.getByText('降参しますか？').waitFor({ timeout: 10000 });

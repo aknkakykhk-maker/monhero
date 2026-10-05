@@ -63,7 +63,7 @@ const JackAuraLayer = ({ tier, limit = 99 }) => {
 //   WaveIntro と同じく data-wave-intro を持ち、「レイドバトル」「VS ジャック◯◯」の文字も同じ。操作は止めない(pointer-events: none)。
 // 終わり: 結果の幕が開いた瞬間に、大きな文字(VICTORY! / TIME UP / DEFEAT / RETIRE)を叩きつけて、そのあと結果を順に出す。
 //   動かすのは transform と opacity だけ。CSS は 70-bootstrap.jsx の mh-rjintro / mh-rjstinger。
-const RaidJackIntro = ({ enabled, enemyName, title = 'レイドバトル', tier = 1 }) => {
+const RaidJackIntro = ({ enabled, enemyName, title = 'レイドバトル', tier = 1, friendly = false }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
@@ -84,10 +84,10 @@ const RaidJackIntro = ({ enabled, enemyName, title = 'レイドバトル', tier 
       <i className="mh-rjintro-bar mh-rjintro-bar-top" /><i className="mh-rjintro-bar mh-rjintro-bar-bottom" />
       <i className="mh-rjintro-slash mh-rjintro-slash-a" /><i className="mh-rjintro-slash mh-rjintro-slash-b" />
       <div className="mh-rjintro-body">
-        <span className="mh-rjintro-sub">⚠ BOSS APPEARS ⚠</span>
+        <span className="mh-rjintro-sub">{friendly ? '♪ PLAY TIME ♪' : '⚠ BOSS APPEARS ⚠'}</span>
         <b className="mh-rjintro-title">{title}</b>
         {enemyName && <span className="mh-rjintro-name">VS {enemyName}</span>}
-        <span className="mh-rjintro-stars">{'★'.repeat(n)}<span className="mh-rjintro-stars-dim">{'★'.repeat(5 - n)}</span></span>
+        {!friendly && <span className="mh-rjintro-stars">{'★'.repeat(n)}<span className="mh-rjintro-stars-dim">{'★'.repeat(5 - n)}</span></span>}
       </div>
     </div>
   );

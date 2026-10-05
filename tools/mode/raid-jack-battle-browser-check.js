@@ -208,8 +208,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const pk = await page.evaluate(() => {
         const stage = document.querySelector('[data-enemy-motion]');
         const img = stage ? stage.querySelector('img:not([data-enemy-flash])') : null;
-        return { motion: stage && stage.getAttribute('data-enemy-motion'), aura: !!document.querySelector('[data-jack-aura]'), src: img ? img.getAttribute('src') : '', alt: img ? img.getAttribute('alt') : '', body: document.body.innerText.slice(0, 4000) };
+        return { motion: stage && stage.getAttribute('data-enemy-motion'), aura: !!document.querySelector('[data-enemy-motion][data-jack-aura]') || !!document.querySelector('[data-enemy-motion] [data-jack-aura-el]'), intro: (document.querySelector('[data-raid-jack-intro]') || { innerText: '' }).innerText, src: img ? img.getAttribute('src') : '', alt: img ? img.getAttribute('alt') : '', body: document.body.innerText.slice(0, 4000) };
       });
+      check('ぱんぷきん: 開始の演出は「PLAY TIME」で、ボスの警告(BOSS APPEARS・星)は出ない', !/BOSS APPEARS|★/.test(pk.intro || ''));
       check('ぱんぷきん: 動きは pumpkin・オーラは出ない・絵は小さなぱんぷきん(pumpkin-icon)・名前は「ぱんぷきん」', pk.motion === 'pumpkin' && pk.aura === false && /pumpkin-icon/.test(pk.src) && pk.alt === 'ぱんぷきん', JSON.stringify({ m: pk.motion, a: pk.aura, s: pk.src.slice(-30), alt: pk.alt }));
       if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/pumpkin-battle.png` }).catch(() => {});
       await page.locator('[data-battle-menu-button]').click();
