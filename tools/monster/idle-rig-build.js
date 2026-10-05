@@ -171,6 +171,13 @@ const RIGS = [
   { id:'Ghost', img:'images/monsters/ghost.png', body:'hover', parts:[
     { name:'tail', poly:[[70,78.5],[100,78.5],[100,95],[86,95],[79,92.5],[73,92.5],[70,90.5]], share:[[68.5,80],[72,80],[72,91],[68.5,91]], pivot:[70.5,86], anim:'wag', amp:6, dur:1700, layer:'back' },
   ]},
+  // スプーキー(2026-10-05・案の段階): ゴーストと同じく体ごとふわふわ(hover)。枝を持ったしっぽの先を付け根を軸に振り、
+  // (しっぽの上辺は78.5%。右手の下端77.4%としっぽの上端79.6%のあいだの透明な所を通す。上げると右手の端が一緒に動く)
+  // とんがり帽子の折れた先をゆっくり揺らす。帽子のつばとリボンは顔に重なっているので動かさない
+  { id:'Spooky', img:'images/monsters/spooky.png', body:'hover', parts:[
+    { name:'tail', poly:[[59,78.5],[100,78.5],[100,95],[80,95],[68,94],[59,93]], share:[[56.5,78],[61,78],[61,93],[56.5,93]], pivot:[59.5,86], anim:'wag', amp:5, dur:1900, layer:'back' },
+    { name:'hatTip', poly:[[66,0],[82,0],[82,10.5],[74,10.5],[70.5,12.5],[66,12.5]], share:[[64.5,10],[73,10],[73,15],[64.5,15]], pivot:[69,12], anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' },
+  ]},
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;
