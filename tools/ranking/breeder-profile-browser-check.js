@@ -103,7 +103,7 @@ async function run() {
   await page.evaluate(() => document.querySelector('button[aria-label="プロフィールを開く"]')?.click());
   await page.waitForTimeout(1200);
   await closeModals(5);
-  await page.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.includes('フレーム：'))?.click());
+  await page.evaluate(() => document.querySelector('button[data-profile-tile="frame"]')?.click());
   await page.waitForTimeout(800);
   await page.evaluate(() => document.querySelector('button[data-profile-frame-option="gold"]')?.click());
   await page.waitForTimeout(1200);

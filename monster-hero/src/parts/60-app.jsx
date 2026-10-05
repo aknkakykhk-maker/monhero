@@ -15343,7 +15343,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="M/B管理" accent="text-indigo-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement"/></div>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement" compact/></div>
             <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
               items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
@@ -15485,7 +15485,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="神殿" accent="text-violet-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple"/></div>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
               {templeLink(<PlusCircle size={18}/>,'再生','ベースモンから新しいマスモンを再生する',()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');})}
               {templeLink(<Layers size={18}/>,'合体','2体のマスモンを合体して新しい個体へつなぐ',()=>{resetFusionFlow();setGameState('MASU_FUSION');})}
@@ -15972,7 +15972,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 総合力は絆Lvとまったく同じ一覧を並べ直したものなので、取得も絆Lvと同じ 'bond' を呼ぶ
                     (タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になってしまう) */}
                 {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(
-                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');if(key==='power')setPowerRankMonFilter('all');loadRankings(null,true,false,key==='power'?'bond':key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
+                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');if(key==='power')setPowerRankMonFilter('all');loadRankings(null,true,false,key==='power'?'bond':key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{key!=='mode'&&<span aria-hidden="true" className="mr-0.5">🏆</span>}{label}</button>
                 ))}
               </div>
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
@@ -17824,7 +17824,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='OWNED_MONSTERS'&&(
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="ベースモン一覧" accent="text-cyan-400" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
-            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="monsterList"/></div>
+            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="monsterList" compact/></div>
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
             <div className={SCREEN_LIST_CLASS}>
@@ -19910,7 +19910,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <button onClick={()=>setShowHelp(false)} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm shadow-2xl active:scale-95">わかった！冒険に戻る</button>
+            <button onClick={()=>setShowHelp(false)} className="mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95">わかった！冒険に戻る</button>
             <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);

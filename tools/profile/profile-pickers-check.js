@@ -9,7 +9,7 @@
 //  ① プロフィール: 名刺・設定タイル(アイコン/フレーム/ひとこと/好きなモンスター)・持ちもの・フレンドとアイテムの入口が並ぶ。
 //     フレンドの入口は、バトル記録より前(開いてすぐ見える)。バトル記録は2列。横にはみ出さない
 //  ② アイコン選択: いまの選択が上に固定され、名前で探せて、「はじめから/購入ずみ」で絞れて、一覧だけスクロールする。選ぶと保存して閉じる
-//  ③ フレーム選択: 全フレームが並び(検査が前提にしている data 属性・「閉じる」・「フレーム：」の文言も保つ)、色の枠と助手の枠が見出しで分かれ、
+//  ③ フレーム選択: 全フレームが並び(検査が前提にしている data 属性・「閉じる」も保つ)、色の枠と助手の枠が見出しで分かれ、
 //     鍵の説明が一覧の下に出て(スクロールしなくても見える)、選ぶと保存される
 //  ④ 好きなモンスター: 名前で探せて、並べ替えができて、選ぶと保存される
 //  ⑤ 実行時エラーが出ない
@@ -97,7 +97,8 @@ const serve = () => new Promise(resolve => {
     ok('プロフィールに名刺・設定タイル4つ・持ちもの・入口が並ぶ', layout.card && layout.tiles >= 4 && layout.icon && layout.frame && layout.message && layout.fav && layout.stats && layout.links, JSON.stringify(layout));
     ok('フレンドの入口は、開いてすぐ見える位置(画面の中)で、バトル記録より前にある', layout.friends && layout.friendsTop < layout.vh && layout.friendsTop < layout.recordsTop, `${layout.friendsTop} / ${layout.recordsTop} / ${layout.vh}`);
     ok('バトル記録は2列で並ぶ', layout.cols === 2, `${layout.cols}列`);
-    ok('フレームのボタンは「フレーム：◯◯」の文言を保つ(既存の検査が前提にしている)', /フレーム：フレームなし/.test(layout.frameText), layout.frameText);
+    // 2026-10-05 から「フレーム」の見出しの下に名前だけを出す(「フレーム：」の重複をやめ、検査は data-profile-tile で探す)
+    ok('フレームのタイルに、いまのフレーム名が出る', /フレーム/.test(layout.frameText) && /フレームなし/.test(layout.frameText), layout.frameText);
     ok('プレイ時間のくわしい記録(今日・遊んだ日・数え始めた日)は残っている', layout.playtime);
     ok('プロフィールが横にはみ出さない', layout.overflowX === false);
     const achSelf = await page.evaluate(() => {
@@ -176,7 +177,7 @@ const serve = () => new Promise(resolve => {
     ok('フレーム選択: 選ぶと保存される(開いたまま見比べられる)', (await page.evaluate(() => localStorage.getItem('mh_profile_frame_v1'))) === '"gold"' && (await page.evaluate(() => !!document.querySelector('[data-picker-sheet=frame]'))));
     await clickText('^閉じる$');
     await page.waitForTimeout(400);
-    ok('フレームを閉じたら、プロフィールのタイルが「ゴールド」になる', (await page.evaluate(() => document.querySelector('[data-profile-tile=frame]').textContent)).includes('フレーム：ゴールド'));
+    ok('フレームを閉じたら、プロフィールのタイルが「ゴールド」になる', (await page.evaluate(() => document.querySelector('[data-profile-tile=frame]').textContent)).includes('ゴールド'));
 
     // ④ 好きなモンスター
     await page.evaluate(() => document.querySelector('[data-profile-favorite-masu]').click());

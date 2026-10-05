@@ -97,7 +97,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   return (
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="設定" accent="text-slate-200" onBack={onBack} backLabel="HOMEへ戻る"/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings" compact/></div>
       <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
         {/* 1行ずつ「絵＋名前＋何の設定か」を出す(2026-10-05)。名前だけのボタンが9つ同じ見た目で並び、
             どれが何の設定か押すまで分からなかった。M/B管理・神殿のメニューと同じ形 */}
