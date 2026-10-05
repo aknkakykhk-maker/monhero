@@ -74,6 +74,8 @@ const ENEMY_ACTION_DEFINITIONS = [
 //   そのぶん敵を落としにくく(再生を厚く)し、休めるターン(行動なし)を戻してある。
 const TACTICS_SWEEP_MULT = 1.2;       // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
+// 手札を1枚捨てるごとに、立っている味方それぞれの最大ガッツのこの割合を回復する(2026-10-05 ユーザー指示)
+const TACTICS_DISCARD_GUTS_RATE = 0.05;
 const TACTICS_RUSH_MULT = 1.2;        // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
 const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードは1枚につき1ヒットを受け止める
 const TACTICS_PIERCE_MULT = 0.8;      // ガードを無視する。効かないぶん倍率で加減する

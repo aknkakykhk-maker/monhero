@@ -155,8 +155,10 @@ check('転生の画面に古い×100の計算が残っていない', !has('cost=
 // ★文字の色(text-slate-400 など)まで固定すると、見た目を整えるたびにここだけが落ちる。
 //   見るのは「必要ダイヤと所持ダイヤが別々の行に出ているか」だけ
 check('転生の必要ダイヤを独立した枠で出す',
-  /<span className="[^"]*">必要ダイヤ<\/span>/.test(source) && /<span className="[^"]*">所持ダイヤ<\/span>/.test(source)
-    && has('ダイヤが足りません（あと '));
+  // 2026-10-05 から3行は共通の CostRow(41-screen-ui.jsx)で出す。手書きの形でも、CostRow へ言葉を渡す形でも通す
+  (/<span className="[^"]*">必要ダイヤ<\/span>/.test(source) && /<span className="[^"]*">所持ダイヤ<\/span>/.test(source)
+    && has('ダイヤが足りません（あと '))
+  || (has('<CostRow needLabel="必要ダイヤ" haveLabel="所持ダイヤ" shortLabel="ダイヤが足りません"') && has('{shortLabel}（あと ')));
 check('費用の内訳は定義した値をそのまま出す',
   has('（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}')
     && has('${FUSION_INHERIT_COST} ダイヤ'));

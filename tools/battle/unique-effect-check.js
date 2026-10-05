@@ -220,7 +220,7 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
   // 同じターンから効くもの(ローカル変数で持ち回っている)
   const immediatePairs = [
     ["攻撃アップ(おりょう・ゴーレム)", /localOryoAdd\+=/, /getPermaBuff\('atkPct'\)\+getPermaBuff\('muaAtkPct'\)\+additionalOryo/],
-    ["敵の被ダメージ増(モッチー・ミタラシ)", /localDmgModAdd\+=/, /getWaveBuff\('enemyTakenDmgBonus'\)\+fateWheelEnemyTakenBonus\(fateWheelRef\.current\)\+additionalDmgMod/],
+    ["敵の被ダメージ増(モッチー・ミタラシ)", /localDmgModAdd\+=/, /getWaveBuff\('enemyTakenDmgBonus'\)\+fateWheelEnemyTakenBonus\(fateWheelRef\.current\)\+tacticsExPsychoLockNow\(\)\.enemyTakenBonus\+additionalDmgMod/],
     ["全体連撃(きき)", /localGlobalComboAdd\+=/, /getPermaBuff\('globalComboDmgPct'\)\+localGlobalComboAdd/],
   ];
   for (const [name, add, use] of immediatePairs) {

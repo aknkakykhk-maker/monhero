@@ -48,6 +48,8 @@ const makeIncoming = (deps) => new Function('d', `
     resolveEffectiveMaxStat,normalizeTacticsUnit,effectiveDef,getPermaBuff,
     soulBattleParty,iceLockEnemyDamageMult} = d;
   const turnCount = d.turnCount ?? 0;
+  // スエゾーのサイコロックオン(敵の与ダメ−30%)。既存モードの検査では効いていないものとして、倍率を変えない代役を置く
+  const tacticsExPsychoLockNow = d.tacticsExPsychoLockNow || (() => ({ active: false, enemyDmgMult: 1, enemyTakenBonus: 0 }));
   ${lifeSourceSrc}
   ${trickStartSrc}
   const trickStartStacksAt = d.trickStartStacksAt || (() => null);

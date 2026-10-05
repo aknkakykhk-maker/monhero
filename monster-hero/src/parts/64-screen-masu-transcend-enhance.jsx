@@ -117,11 +117,7 @@ function MasuTranscendEnhanceScreen({
               <span className="block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></span>
               <TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>
             </span>}/>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
-            <button type="button" onClick={onBack} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
-            <button type="button" aria-current="page" className="min-h-[44px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
-            <button type="button" onClick={onOpenAutoEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-lime-300/80 text-[11px] font-black active:scale-95">オート強化</button>
-          </div>
+          <EnhanceModeTabs current="transcend" onNormal={onBack} onAuto={onOpenAutoEnhance} autoOn={normalizeMasuAutoEnhance(masu.autoEnhance).enabled}/>
           {/* 超越の話をするセリフは、正式に超越した個体のときだけにする */}
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene={normalized.transcended?'transcendence':'masuEnhance'} compact/></div>
           <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3`}>
@@ -139,7 +135,7 @@ function MasuTranscendEnhanceScreen({
               </div>
               <button type="button" data-transcend-exchange-open onClick={openExchange} className="mt-3 w-full min-h-[48px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/40 text-fuchsia-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2">
                 <span aria-hidden="true">🌈</span>虹のプシュケーを変換
-                <span className="text-[10px] font-mono text-slate-300">所持 {psycheHave.toLocaleString()}</span>
+                <span className="text-[10px] font-mono text-slate-300">所持 🌈{psycheHave.toLocaleString()}</span>
               </button>
               {hasTranscendFruit&&<button type="button" data-transcend-fruit-open onClick={openFruit} className="mt-2 w-full min-h-[48px] rounded-xl border border-emerald-400/60 bg-emerald-950/40 text-emerald-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2">
                 <span aria-hidden="true">🍎</span>超越の実を使う
@@ -232,7 +228,7 @@ function MasuTranscendEnhanceScreen({
                   <button type="button" aria-label="閉じる" onClick={()=>setTranscendExchangeOpen(false)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"><X size={18}/></button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-xl bg-black/30 p-2.5 text-center"><div className="text-[10px] font-black text-slate-400">所持している🌈</div><div className="font-mono text-lg font-black text-white">{psycheHave.toLocaleString()}</div></div>
+                  <div className="rounded-xl bg-black/30 p-2.5 text-center"><div className="text-[10px] font-black text-slate-400">所持している虹のプシュケー</div><div className="font-mono text-lg font-black text-white">{psycheHave.toLocaleString()}</div></div>
                   <div className="rounded-xl bg-black/30 p-2.5 text-center"><div className="text-[10px] font-black text-slate-400">交換レート</div><div className="font-mono text-[11px] font-black text-fuchsia-200">🌈{TRANSCEND_PSYCHE_PER_POINT.toLocaleString()} → 1P</div></div>
                 </div>
                 {exchangeMax<=0

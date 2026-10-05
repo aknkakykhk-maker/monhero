@@ -24812,7 +24812,6 @@ const RHYTHM_SONG_ENTRIES = [
   Object.freeze({
     songId:'monster',
     displayName:'Monster',
-    subtitle:'full ver.',
     bgmTrackId:'melo_monster',
     // 2026-10-05 追加。ハロウィンの曲。全編の版で、ジャック(レイドバトル)の戦いの曲にもなる(RAID_JACK_BGM_TRACK)
     artwork:'images/song-art/monster.jpg?v=61def8c02286',

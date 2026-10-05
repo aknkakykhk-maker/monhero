@@ -147,7 +147,7 @@ check('コインは0.5未満で表(4倍)・それ以外は裏(0.5倍)', f.rollFa
     /if \(card\.type === 'unique' && card\.monId===FATE_COIN_MONSTER_ID\) cost = Math\.floor\(cost \* fateCoinGutsMult\(livePermaBuff\('fateStacks',null\)\)\);/.test(app));
   check('敵の与ダメ−30%は敵の攻撃力へ、敵の被ダメ+30%は与ダメージの式へ',
     /intent\.value\*\(1\.0-getWaveBuff\('enemyAtkDebuffPct'\)\)\*fateWheelEnemyAtkMult\(fateWheelRef\.current\)/.test(app)
-    && /getWaveBuff\('enemyTakenDmgBonus'\)\+fateWheelEnemyTakenBonus\(fateWheelRef\.current\)\+additionalDmgMod/.test(app));
+    && /getWaveBuff\('enemyTakenDmgBonus'\)\+fateWheelEnemyTakenBonus\(fateWheelRef\.current\)\+tacticsExPsychoLockNow\(\)\.enemyTakenBonus\+additionalDmgMod/.test(app));
   check('弱体はターンが進むと減り、WAVEが変わる・ランを始めると消える',
     /writeFateWheel\(tickFateWheelDebuff\(fateWheelRef\.current\)\)/.test(app)
     && /setWaveBuffs\(\{\}\); resetFateWheel\(\);/.test(app)

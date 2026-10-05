@@ -71,12 +71,10 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
   background:'transparent', border:'0', padding:'0', cursor:'pointer',
 });
-// 前回HOMEで取れた段階の合計(画面を出入りしても残る)。読み込みが終わるまでの間も、前回の段階・ライフで描ける
-//   (取れていないあいだを「男爵・ライフ満タン」として描くと、通信が遅いとき男爵が一瞬出て、あとから本当の段階へ切り替わって見える。2026-10-05)
-let homeRaidJackTotalsCache = { eventId: null, totals: undefined };
 const HomeRaidJack = ({ eventId, onOpen }) => {
-  const [totals, setTotalsState] = React.useState(() => (homeRaidJackTotalsCache.eventId === eventId ? homeRaidJackTotalsCache.totals : undefined));
-  const setTotals = (t) => { if (t) homeRaidJackTotalsCache = { eventId, totals: t }; setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
+  // 前回取れた段階の合計から描き始める(36-raid-jack-api.jsx の raidJackTotalsCache)。読み込みが終わるまでの間を「男爵・ライフ満タン」にしない
+  const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
+  const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
   // ひとこと(吹き出し)。押すと次のセリフへ。最初の1つは開くたびに変わる
   const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
