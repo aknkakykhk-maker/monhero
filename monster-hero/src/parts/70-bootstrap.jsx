@@ -4573,6 +4573,29 @@ const createAnimationStyle = () => {
     @media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}.mh-reincarnation-mon{width:118px;height:118px}.mh-reincarnation-souls{width:160px;height:250px}.mh-reincarnation-title{top:calc(env(safe-area-inset-top) + 13%);font-size:clamp(30px,11vw,50px)}.mh-reincarnation-mark{top:64%}.mh-reincarnation-mark .mh-reincarnate-badge{padding:5px 12px;font-size:14px}}
     @media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}.mh-reincarnation-souls,.mh-reincarnation-converge,.mh-reincarnation-rays,.mh-reincarnation-halo,.mh-reincarnation-flash,.mh-reincarnation-title{display:none}.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}}
     /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
+    /* お布施の演出(神殿・お布施画面)。ダイヤの光がマスモンへ集まり、Lvが数え上がる */
+    .mh-offering-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 42%,#7c3aedaa,#1e1b4b 45%,#020617 78%);cursor:pointer;animation:mhOfferingIn .35s ease-out both}
+    .mh-offering-beams{position:absolute;inset:0;pointer-events:none}.mh-offering-beams i{position:absolute;top:-10%;left:calc(8% + var(--i)*14%);width:6%;height:75%;background:linear-gradient(#fde68aaa,#fde68a00);filter:blur(6px);transform-origin:top;animation:mhOfferingBeam 2.4s ease-in-out calc(var(--i)*.12s) infinite alternate}
+    .mh-offering-ring{position:absolute;left:50%;top:42%;width:260px;height:260px;margin:-130px 0 0 -130px;border:3px solid #fde68a;border-radius:50%;box-shadow:0 0 40px #fbbf24aa,inset 0 0 40px #fbbf2466;animation:mhOfferingRing 1.6s ease-out infinite}
+    .mh-offering-gems{position:absolute;left:50%;top:42%;width:0;height:0}.mh-offering-gems i{position:absolute;left:0;top:0;color:#67e8f9;filter:drop-shadow(0 0 6px #22d3ee);opacity:0;animation:mhOfferingGem 1.8s ease-in calc(var(--i)*.13s) infinite;--a:calc(var(--i)*25.7deg)}
+    .mh-offering-mon{position:relative;width:170px;height:170px;margin-top:-130px;animation:mhOfferingMon 1.2s ease-in-out infinite alternate;filter:drop-shadow(0 0 24px #fde68acc)}
+    .mh-offering-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhOfferingFlash 1.4s ease-out 2.2s both}
+    .mh-offering-copy{position:absolute;left:0;right:0;bottom:11%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 16px;text-align:center}
+    .mh-offering-title{font-size:15px;font-weight:900;letter-spacing:.2em;color:#ddd6fe}
+    .mh-offering-level{font-size:20px;font-weight:900;color:#f9a8d4}.mh-offering-level b{font-size:54px;font-family:ui-monospace,monospace;color:#fff;text-shadow:0 0 18px #f472b6}
+    .mh-offering-xp{font-size:13px;font-weight:900;color:#6ee7b7}
+    .mh-offering-up{font-size:22px;font-weight:900;color:#fde047;text-shadow:0 0 14px #f59e0b;opacity:0;animation:mhOfferingPop .5s ease-out 2.4s both}
+    .mh-offering-badge{padding:6px 14px;border-radius:999px;border:1px solid #c4b5fd;background:#4c1d95cc;font-size:13px;font-weight:900;color:#ede9fe;opacity:0;animation:mhOfferingPop .5s ease-out 2.7s both}.mh-offering-badge.is-reincarnate{animation-delay:3s;border-color:#fda4af;background:#881337cc;color:#ffe4e6}
+    .mh-offering-points{font-size:12px;font-weight:900;color:#fcd34d;opacity:0;animation:mhOfferingPop .5s ease-out 3.2s both}
+    .mh-offering-skip{position:absolute;right:14px;top:calc(12px + env(safe-area-inset-top));font-size:10px;font-weight:700;color:#94a3b8}
+    @keyframes mhOfferingIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhOfferingBeam{from{opacity:.25;transform:rotate(-6deg)}to{opacity:.8;transform:rotate(6deg)}}
+    @keyframes mhOfferingRing{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+    @keyframes mhOfferingGem{0%{opacity:0;transform:rotate(var(--a)) translateY(-230px) scale(1)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-10px) scale(.3)}}
+    @keyframes mhOfferingMon{from{transform:scale(1)}to{transform:scale(1.08)}}
+    @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
+    @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}

@@ -30,6 +30,7 @@ function MasuOfferingScreen({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
+  const [fx, setFx] = useState(null);
   const selected = masuMons.find(m=>String(m.id)===String(selectedId)) || null;
 
   const resetInputs = () => { setMode('diamonds'); setDiamondText(''); setLevels(1); setTimes(1); setError(''); setDone(null); setConfirmOpen(false); };
@@ -54,7 +55,11 @@ function MasuOfferingScreen({
     setBusy(true); setError(''); setConfirmOpen(false);
     try {
       const res = await executeMasuOffering({ masuId:selected.id, mode, amount, autoBreakthrough:autoBreak });
-      if (res?.ok) { setDone(res.plan); setDiamondText(''); }
+      if (res?.ok) {
+        const base = ALL_PLAYER_MONSTERS[selected.baseId];
+        setFx({ plan:res.plan, baseId:selected.baseId, name:selected.name, colors:getMasuColors(selected), src:base?.iconUrl });
+        setDiamondText('');
+      }
       else setError(res?.error || 'お布施を保存できませんでした。もう一度お試しください。');
     } finally { setBusy(false); }
   };
@@ -87,7 +92,7 @@ function MasuOfferingScreen({
   const row = (label, value, cls='text-slate-200') => <div className="flex justify-between gap-2 text-[11px] font-bold"><span className="text-slate-400">{label}</span><span className={`font-mono font-black ${cls}`}>{value}</span></div>;
 
   return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-    <ScreenHead title="お布施" accent="text-violet-300" onBack={()=>{setSelectedId(null);resetInputs();}} backLabel="お布施の一覧へ戻る" disabled={busy}/>
+    <ScreenHead title="お布施" accent="text-violet-300" onBack={()=>{setSelectedId(null);resetInputs();}} backLabel="お布施の一覧へ戻る" disabled={busy||!!fx}/>
     <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-2`}>
       <div className="flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3">
         <div className="relative w-16 h-16 shrink-0 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
@@ -161,7 +166,8 @@ function MasuOfferingScreen({
       <button disabled={!plan?.ok||busy} onClick={()=>needsConfirm?setConfirmOpen(true):run()} className="mh-button mh-button-primary w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30">お布施する</button>
     </div>
     {confirmOpen&&plan&&<ConfirmSheet title="この内容でお布施しますか？" message={`${plan.breakthroughs>0?`限界突破 ${plan.breakthroughs}回\n`:''}${plan.reincarnations>0?`転生 ${plan.reincarnations}回（強化の振り直しになります）\n`:''}合計 ${fmt(plan.spent)} ダイヤ${plan.psycheUsed>0?` ・ プシュケー${fmt(plan.psycheUsed)}個`:''} を使います。\n元には戻せません。`} confirmLabel="お布施する" onConfirm={run} onCancel={()=>setConfirmOpen(false)}/>}
-    {done&&<ModalFrame label="お布施の結果" border="border-violet-400/70" onClose={()=>setDone(null)}>
+    {fx&&<MasuOfferingAnimation fx={fx} onFinish={()=>{setDone(fx.plan);setFx(null);}}/>}
+    {done&&!fx&&<ModalFrame label="お布施の結果" border="border-violet-400/70" onClose={()=>setDone(null)}>
       <h3 className="text-center text-base font-black text-violet-200">お布施をしました</h3>
       <div className="mt-3 space-y-1.5">
         {row('絆Lv', `Lv.${done.fromLevel} → Lv.${done.toLevel}`, 'text-pink-300')}
@@ -173,5 +179,42 @@ function MasuOfferingScreen({
       </div>
       <div className="mt-4"><ModalCloseButton onClick={()=>setDone(null)} label="とじる"/></div>
     </ModalFrame>}
+  </div>;
+}
+
+// お布施の演出。ダイヤの光が集まってマスモンへ吸い込まれ、Lvが数え上がる(限界突破・転生があればその表示も重なる)。
+// 画面のどこを押しても飛ばせる。動きを減らす設定のときは短く出して終える。
+function MasuOfferingAnimation({ fx, onFinish }) {
+  const { plan, baseId, name, colors, src } = fx;
+  const reduced = prefersReducedMotion();
+  const total = reduced ? 900 : 4200;
+  const [shown, setShown] = useState(plan.fromLevel);
+  useEffect(()=>{
+    const start = Date.now(), rampMs = reduced ? 300 : 2600;
+    const tick = setInterval(()=>{
+      const t = Math.min(1, (Date.now()-start)/rampMs), eased = 1-Math.pow(1-t,3);
+      setShown(Math.round(plan.fromLevel + (plan.toLevel-plan.fromLevel)*eased));
+      if (t>=1) clearInterval(tick);
+    }, 40);
+    const end = setTimeout(onFinish, total);
+    return ()=>{ clearInterval(tick); clearTimeout(end); };
+  }, []);
+  const up = plan.toLevel - plan.fromLevel;
+  return <div className="mh-offering-animation" role="status" aria-live="polite" aria-label="お布施の演出" onClick={onFinish}>
+    <div className="mh-offering-beams" aria-hidden="true">{Array.from({length:7},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+    <div className="mh-offering-ring" aria-hidden="true"></div>
+    <div className="mh-offering-gems" aria-hidden="true">{Array.from({length:14},(_,i)=><i key={i} style={{'--i':i}}><Gem size={16}/></i>)}</div>
+    <div className="mh-offering-mon"><DyedMonsterImage baseId={baseId} src={src} alt={name} masuColors={colors} className="w-full h-full object-contain"/></div>
+    {plan.reincarnations>0&&<div className="mh-offering-flash" aria-hidden="true"></div>}
+    <div className="mh-offering-copy">
+      <div className="mh-offering-title">{plan.reincarnations>0?'お布施 ＆ 転生':plan.breakthroughs>0?'お布施 ＆ 限界突破':'お布施'}</div>
+      <div className="mh-offering-level">Lv.<b>{shown}</b></div>
+      <div className="mh-offering-xp">絆経験値 +{plan.xpGained.toLocaleString()}</div>
+      {up>0&&<div className="mh-offering-up">LEVEL UP! +{up}</div>}
+      {plan.breakthroughs>0&&<div className="mh-offering-badge">限界突破 ×{plan.breakthroughs}　上限 Lv.{plan.fromCap} → {plan.toCap}</div>}
+      {plan.reincarnations>0&&<div className="mh-offering-badge is-reincarnate">転生 ×{plan.reincarnations}</div>}
+      {plan.gainedPoints>0&&<div className="mh-offering-points">強化ポイント +{plan.gainedPoints.toLocaleString()}</div>}
+    </div>
+    <div className="mh-offering-skip">タップでスキップ</div>
   </div>;
 }
