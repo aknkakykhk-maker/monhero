@@ -2702,7 +2702,7 @@ function SoulBattleEffects({
 <div data-soul-battle-effects className="fixed inset-0 flex flex-col bg-slate-950 text-white" style={{position:'fixed',inset:0,zIndex:41000,paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
     <div className="shrink-0 flex items-center justify-between gap-3 border-b border-sky-400/20 px-4 pb-3">
       <div><div className="text-[10px] font-black tracking-[.25em] text-sky-400">SOUL RANK</div><h3 className="text-lg font-black text-sky-100">魂格効果</h3></div>
-      <button type="button" onClick={()=>setShowSoulBattleEffects(false)} className="min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95">戻る</button>
+      <button type="button" onClick={()=>setShowSoulBattleEffects(false)} className="min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95">閉じる</button>
     </div>
     <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3 space-y-3">
       <section className="rounded-2xl border border-sky-400/30 bg-sky-950/25 p-3">

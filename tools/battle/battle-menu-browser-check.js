@@ -4,7 +4,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const path = require('path');
 const { chromium } = require('playwright');
 // イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
-const { eventStorySeed } = require(path.join(TOOLS_DIR, 'boot/quiet-boot-seed'));
+const { eventStorySeed, updateNoticeSeed } = require(path.join(TOOLS_DIR, 'boot/quiet-boot-seed'));
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 
@@ -26,6 +26,8 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     put('mh_tutorial_seen_v1', true);
   });
   await page.addInitScript(eventStorySeed());
+  // 新曲などの告知の会話が画面を覆うと、モンヒロバトルのボタンを押せずに止まる(2026-10-05)
+  await page.addInitScript(updateNoticeSeed());
   await page.goto(URL, { waitUntil:'load', timeout:60000 });
   const pointerDown = (find) => page.evaluate((f) => {
     const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)

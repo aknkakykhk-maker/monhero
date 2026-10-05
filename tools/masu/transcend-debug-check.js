@@ -122,7 +122,7 @@ const seed = () => {
     // HOME → 設定 → ヘルプ → 💊 → デバッグ設定
     await page.evaluate(() => { const b = document.querySelector('button[aria-label="設定"]'); b && b.click(); });
     await page.waitForTimeout(900);
-    await clickText('^ヘルプ$');
+    await clickText('^ヘルプ');
     await page.waitForTimeout(900);
     await clickText('💊');
     await page.waitForTimeout(1200);

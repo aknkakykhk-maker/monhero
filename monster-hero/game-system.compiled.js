@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90b9f7431a646b56
+// source-sha256: 83067e1c6f10856d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 00:55";
+const BUILD_DATE = "2026-10-06 00:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37845,6 +37845,85 @@ const ScreenTabs = ({
     } : undefined
   }, tab.label, tab.badge > 0 && typeof tabCountBadge === 'function' ? tabCountBadge(tab.badge) : null);
 }));
+const ENHANCE_MODE_TABS = Object.freeze([{
+  id: 'normal',
+  label: '通常強化',
+  color: '#f59e0b',
+  idle: 'text-amber-200'
+}, {
+  id: 'transcend',
+  label: '超越強化',
+  color: '#0ea5e9',
+  idle: 'text-sky-200'
+}, {
+  id: 'auto',
+  label: 'オート強化',
+  color: '#84cc16',
+  idle: 'text-lime-200'
+}]);
+const EnhanceModeTabs = ({
+  current,
+  onNormal,
+  onTranscend,
+  onAuto,
+  autoOn = false
+}) => {
+  const handlers = {
+    normal: onNormal,
+    transcend: onTranscend,
+    auto: onAuto
+  };
+  return React.createElement("div", {
+    "data-transcend-enhance-tabs": true,
+    role: "tablist",
+    className: "shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2"
+  }, ENHANCE_MODE_TABS.map(tab => {
+    const on = tab.id === current;
+    return React.createElement("button", {
+      key: tab.id,
+      type: "button",
+      role: "tab",
+      "aria-selected": on,
+      onClick: on ? undefined : handlers[tab.id],
+      className: `mh-tab min-h-[44px] rounded-xl px-1 text-[11px] font-black leading-tight flex items-center justify-center gap-1 ${on ? '' : `border border-white/10 bg-slate-900 active:scale-95 ${tab.idle}`}`,
+      style: on ? {
+        background: tab.color,
+        color: '#0f172a'
+      } : undefined
+    }, tab.label, tab.id === 'auto' && autoOn && React.createElement("span", {
+      "aria-hidden": "true",
+      className: "w-1.5 h-1.5 rounded-full bg-lime-400"
+    }));
+  }));
+};
+const CostRow = ({
+  needLabel,
+  haveLabel,
+  shortLabel,
+  need,
+  have,
+  icon = null,
+  okClass = 'text-amber-300',
+  note = null
+}) => {
+  const needCount = Math.max(0, Number(need) || 0),
+    haveCount = Math.max(0, Number(have) || 0);
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "flex justify-between text-[10px] font-bold"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, needLabel), React.createElement("span", {
+    className: `font-black flex items-center gap-1 ${haveCount >= needCount ? okClass : 'text-red-400'}`
+  }, icon, needCount.toLocaleString())), note, React.createElement("div", {
+    className: "flex justify-between text-[10px] font-bold"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, haveLabel), React.createElement("span", {
+    className: "text-slate-300 font-black"
+  }, haveCount.toLocaleString())), haveCount < needCount && React.createElement("div", {
+    className: "text-[10px] text-red-400 font-black"
+  }, shortLabel, "（あと ", (needCount - haveCount).toLocaleString(), "）"));
+};
 const ScreenSectionLabel = ({
   children,
   note = ''
@@ -37936,6 +38015,45 @@ const QuantityStepper = ({
     className: `mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`
   }, "MAX（", safeMax.toLocaleString(), unit, "）"));
 };
+const NameEditModal = ({
+  title,
+  value,
+  onChange,
+  maxLength,
+  onCancel,
+  onSave,
+  border = 'border-indigo-400/70',
+  zIndex = MODAL_Z.dialog
+}) => React.createElement(ModalFrame, {
+  label: title,
+  border: border,
+  onClose: onCancel,
+  narrow: true,
+  zIndex: zIndex
+}, React.createElement("h3", {
+  className: "text-center text-base font-black text-white"
+}, title), React.createElement("input", {
+  type: "text",
+  value: value,
+  onChange: e => onChange(e.target.value),
+  maxLength: maxLength,
+  "aria-label": title,
+  onKeyDown: e => {
+    if (e.key === 'Enter') onSave();
+  },
+  className: "mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"
+}), React.createElement("p", {
+  className: "mt-1 text-right text-[10px] font-bold text-slate-500"
+}, String(value || '').length, " / ", maxLength, "文字"), React.createElement("div", {
+  className: "mt-3 grid grid-cols-2 gap-2"
+}, React.createElement(ModalCloseButton, {
+  onClick: onCancel,
+  label: "キャンセル"
+}), React.createElement("button", {
+  type: "button",
+  onClick: onSave,
+  className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]"
+}, "保存")));
 const ConfirmSheet = ({
   title,
   message = '',
@@ -38859,8 +38977,9 @@ function SettingsMenuLink({
     className: "mh-button mh-button-secondary w-full min-h-[64px] flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-left active:scale-[.98] disabled:opacity-40"
   }), React.createElement("span", {
     "aria-hidden": "true",
-    className: "w-8 shrink-0 text-center text-[22px] leading-none"
-  }, icon), React.createElement("span", {
+    "data-icon": icon,
+    className: "mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"
+  }), React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("span", {
     className: `block text-[14px] font-black leading-tight ${accent}`
@@ -43518,25 +43637,19 @@ function MasuRebirthScreen({
     className: "text-amber-300 text-[10px] font-black"
   }, "強化ポイント +", normalized.rebirthCount === 0 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS))), React.createElement("div", {
     className: "shrink-0 mb-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"
-  }, React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold"
-  }, React.createElement("span", {
-    className: "text-slate-400"
-  }, "必要ダイヤ"), React.createElement("span", {
-    className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
-  }, React.createElement(Gem, {
-    size: 12
-  }), cost.toLocaleString())), React.createElement("div", {
-    className: "text-[10px] text-slate-400"
-  }, "（絆Lv.", lvl.level, "）× ", REBIRTH_COST_PER_LEVEL), React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold"
-  }, React.createElement("span", {
-    className: "text-slate-400"
-  }, "所持ダイヤ"), React.createElement("span", {
-    className: "text-slate-300 font-black"
-  }, gold.toLocaleString())), gold < cost && React.createElement("div", {
-    className: "text-[10px] text-red-400 font-black"
-  }, "ダイヤが足りません（あと ", (cost - gold).toLocaleString(), "）")), (() => {
+  }, React.createElement(CostRow, {
+    needLabel: "必要ダイヤ",
+    haveLabel: "所持ダイヤ",
+    shortLabel: "ダイヤが足りません",
+    need: cost,
+    have: gold,
+    icon: React.createElement(Gem, {
+      size: 12
+    }),
+    note: React.createElement("div", {
+      className: "text-[10px] text-slate-400"
+    }, "（絆Lv.", lvl.level, "）× ", REBIRTH_COST_PER_LEVEL)
+  })), (() => {
     const need = breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1);
     const have = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
     return React.createElement("div", {
@@ -43850,8 +43963,6 @@ function MasuTranscendenceScreen({
     gold,
     psycheOwned: psycheHave
   });
-  const psycheShort = Math.max(0, TRANSCEND_PSYCHE_COST - psycheHave);
-  const goldShort = Math.max(0, TRANSCEND_DIAMOND_COST - gold);
   return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS,
@@ -43899,41 +44010,28 @@ function MasuTranscendenceScreen({
     className: "rounded-xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200 space-y-1.5"
   }, React.createElement("p", null, "Lv.", MAX_MASU_LEVEL_CAP, "・虹★", BREAKTHROUGH_STARS_PER_TIER, "まで育ったマスモンだけが行える、限界の先へ進むための特別な儀式です。"), React.createElement("p", null, "超越するとLv", MAX_MASU_LEVEL_CAP + 1, "以降の成長が解放され、Lv上限が", TRANSCEND_LEVEL_CAP, "になります。"), React.createElement("p", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "以降のレベルアップでは通常の強化ポイントではなく「超越ポイント」を獲得します。"), React.createElement("p", null, "超越ポイントは通常の強化とは別に、モンスターの基礎能力を永久的に強化できます。"), React.createElement("p", null, "超越状態と超越強化は、転生や強化ポイントリセットを行っても失われません。")), React.createElement("div", {
     className: "rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"
-  }, React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold"
-  }, React.createElement("span", {
-    className: "text-slate-400"
-  }, "必要な虹のプシュケー"), React.createElement("span", {
-    className: `font-black flex items-center gap-1 ${psycheShort === 0 ? 'text-fuchsia-300' : 'text-red-400'}`
-  }, React.createElement("span", {
-    "aria-hidden": "true"
-  }, "🌈"), TRANSCEND_PSYCHE_COST.toLocaleString())), React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold"
-  }, React.createElement("span", {
-    className: "text-slate-400"
-  }, "所持数"), React.createElement("span", {
-    className: "text-slate-300 font-black"
-  }, psycheHave.toLocaleString())), psycheShort > 0 && React.createElement("div", {
-    className: "text-[10px] text-red-400 font-black"
-  }, "虹のプシュケーが足りません（あと ", psycheShort.toLocaleString(), "）")), React.createElement("div", {
+  }, React.createElement(CostRow, {
+    needLabel: "必要な虹のプシュケー",
+    haveLabel: "所持している虹のプシュケー",
+    shortLabel: "虹のプシュケーが足りません",
+    need: TRANSCEND_PSYCHE_COST,
+    have: psycheHave,
+    icon: React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🌈"),
+    okClass: "text-fuchsia-300"
+  })), React.createElement("div", {
     className: "rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5"
-  }, React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold"
-  }, React.createElement("span", {
-    className: "text-slate-400"
-  }, "必要ダイヤ"), React.createElement("span", {
-    className: `font-black flex items-center gap-1 ${goldShort === 0 ? 'text-amber-300' : 'text-red-400'}`
-  }, React.createElement(Gem, {
-    size: 12
-  }), TRANSCEND_DIAMOND_COST.toLocaleString())), React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold"
-  }, React.createElement("span", {
-    className: "text-slate-400"
-  }, "所持ダイヤ"), React.createElement("span", {
-    className: "text-slate-300 font-black"
-  }, gold.toLocaleString())), goldShort > 0 && React.createElement("div", {
-    className: "text-[10px] text-red-400 font-black"
-  }, "ダイヤが足りません（あと ", goldShort.toLocaleString(), "）")), React.createElement("div", {
+  }, React.createElement(CostRow, {
+    needLabel: "必要ダイヤ",
+    haveLabel: "所持ダイヤ",
+    shortLabel: "ダイヤが足りません",
+    need: TRANSCEND_DIAMOND_COST,
+    have: gold,
+    icon: React.createElement(Gem, {
+      size: 12
+    })
+  })), React.createElement("div", {
     className: "rounded-xl border-2 border-red-400/60 bg-red-950/40 px-3 py-2 text-center text-[11px] font-black text-red-200"
   }, "⚠ 超越は取り消せません"), transcendError && React.createElement("div", {
     className: "text-[10px] text-red-400 font-black text-center"
@@ -45241,22 +45339,12 @@ function MasuTranscendEnhanceScreen({
       soulRankStage: normalized.soulRankStage,
       small: true
     }))
+  }), React.createElement(EnhanceModeTabs, {
+    current: "transcend",
+    onNormal: onBack,
+    onAuto: onOpenAutoEnhance,
+    autoOn: normalizeMasuAutoEnhance(masu.autoEnhance).enabled
   }), React.createElement("div", {
-    "data-transcend-enhance-tabs": true,
-    className: "shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: onBack,
-    className: "min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95"
-  }, "通常強化"), React.createElement("button", {
-    type: "button",
-    "aria-current": "page",
-    className: "min-h-[44px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black"
-  }, "超越強化"), React.createElement("button", {
-    type: "button",
-    onClick: onOpenAutoEnhance,
-    className: "min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-lime-300/80 text-[11px] font-black active:scale-95"
-  }, "オート強化")), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, React.createElement(AssistantBubble, {
     scene: normalized.transcended ? 'transcendence' : 'masuEnhance',
@@ -45287,7 +45375,7 @@ function MasuTranscendEnhanceScreen({
     "aria-hidden": "true"
   }, "🌈"), "虹のプシュケーを変換", React.createElement("span", {
     className: "text-[10px] font-mono text-slate-300"
-  }, "所持 ", psycheHave.toLocaleString())), hasTranscendFruit && React.createElement("button", {
+  }, "所持 🌈", psycheHave.toLocaleString())), hasTranscendFruit && React.createElement("button", {
     type: "button",
     "data-transcend-fruit-open": true,
     onClick: openFruit,
@@ -45607,7 +45695,7 @@ function MasuTranscendEnhanceScreen({
     className: "rounded-xl bg-black/30 p-2.5 text-center"
   }, React.createElement("div", {
     className: "text-[10px] font-black text-slate-400"
-  }, "所持している🌈"), React.createElement("div", {
+  }, "所持している虹のプシュケー"), React.createElement("div", {
     className: "font-mono text-lg font-black text-white"
   }, psycheHave.toLocaleString())), React.createElement("div", {
     className: "rounded-xl bg-black/30 p-2.5 text-center"
@@ -45932,25 +46020,12 @@ function MasuEnhanceScreen({
     accent: "text-amber-400",
     onBack: backToDetail,
     backLabel: "マスモン詳細へ戻る"
+  }), React.createElement(EnhanceModeTabs, {
+    current: "normal",
+    onTranscend: onOpenTranscendEnhance,
+    onAuto: onOpenAutoEnhance,
+    autoOn: autoEnhance.enabled
   }), React.createElement("div", {
-    "data-transcend-enhance-tabs": true,
-    className: "shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2"
-  }, React.createElement("button", {
-    type: "button",
-    "aria-current": "page",
-    className: "min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[11px] font-black"
-  }, "通常強化"), React.createElement("button", {
-    type: "button",
-    onClick: onOpenTranscendEnhance,
-    className: "min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95"
-  }, "超越強化"), React.createElement("button", {
-    type: "button",
-    onClick: onOpenAutoEnhance,
-    className: `min-h-[44px] rounded-xl border bg-slate-900 text-[11px] font-black active:scale-95 flex items-center justify-center gap-1 ${autoEnhance.enabled ? 'border-lime-400/60 text-lime-200' : 'border-white/10 text-lime-300/80'}`
-  }, "オート強化", autoEnhance.enabled && React.createElement("span", {
-    "aria-hidden": "true",
-    className: "w-1.5 h-1.5 rounded-full bg-lime-400"
-  }))), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, React.createElement(AssistantBubble, {
     scene: "masuEnhance",
@@ -46793,7 +46868,7 @@ function MasuFusionScreen({
       className: "text-slate-400"
     }, "所持ダイヤ"), React.createElement("span", {
       className: "text-white font-black"
-    }, donationDiamondValue(gold).toLocaleString())), fusionInheritSoulRank && soulInheritancePreview.eligible && React.createElement(React.Fragment, null, React.createElement("div", {
+    }, Math.max(0, Math.floor(Number(gold) || 0)).toLocaleString())), fusionInheritSoulRank && soulInheritancePreview.eligible && React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex justify-between text-[11px] font-bold"
     }, React.createElement("span", {
       className: "text-slate-400"
@@ -48055,7 +48130,7 @@ function PickHeroAllyScreen({
           extraAfterApt: React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && React.createElement("div", {
             className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
           }, React.createElement("div", {
-            className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
+            className: "text-[9px] text-emerald-400 uppercase font-bold mb-1"
           }, "ステータス強化(強化P 1つにつき使用・調整中)"), React.createElement("div", {
             className: "grid grid-cols-4 gap-1"
           }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => React.createElement("button", {
@@ -48066,7 +48141,7 @@ function PickHeroAllyScreen({
             },
             className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
           }, React.createElement("span", {
-            className: "text-[7px] text-emerald-300 font-black"
+            className: "text-[9px] text-emerald-300 font-black"
           }, label), React.createElement("span", {
             className: "text-[10px] text-white font-black"
           }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && React.createElement("div", {
@@ -48596,7 +48671,7 @@ function PickTeachingScreen({
       }, React.createElement("span", {
         className: `text-[9px] font-black ${isCurrent ? 'text-purple-300' : isNext ? 'text-amber-300' : 'text-slate-500'}`
       }, "Lv.", info.lvl, " ", info.name), isCurrent && React.createElement("span", {
-        className: "text-[7px] bg-purple-500 text-white px-1.5 rounded"
+        className: "text-[9px] bg-purple-500 text-white px-1.5 rounded"
       }, "所持"), isNext && React.createElement("span", {
         className: "text-[8px] bg-amber-600 text-white px-1.5 rounded"
       }, owned ? '強化後' : '習得後')), React.createElement("div", {
@@ -55389,7 +55464,7 @@ function SoulBattleEffects({
     type: "button",
     onClick: () => setShowSoulBattleEffects(false),
     className: "min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95"
-  }, "戻る")), React.createElement("div", {
+  }, "閉じる")), React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3 space-y-3"
   }, React.createElement("section", {
     className: "rounded-2xl border border-sky-400/30 bg-sky-950/25 p-3"
@@ -55621,22 +55696,12 @@ function MasuAutoEnhanceScreen({
     accent: "text-lime-300",
     onBack: onBack,
     backLabel: "マスモン詳細へ戻る"
+  }), React.createElement(EnhanceModeTabs, {
+    current: "auto",
+    onNormal: onOpenNormalEnhance,
+    onTranscend: onOpenTranscendEnhance,
+    autoOn: settings.enabled
   }), React.createElement("div", {
-    "data-transcend-enhance-tabs": true,
-    className: "shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: onOpenNormalEnhance,
-    className: "min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95"
-  }, "通常強化"), React.createElement("button", {
-    type: "button",
-    onClick: onOpenTranscendEnhance,
-    className: "min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95"
-  }, "超越強化"), React.createElement("button", {
-    type: "button",
-    "aria-current": "page",
-    className: "min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[11px] font-black"
-  }, "オート強化")), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, React.createElement(AssistantBubble, {
     scene: "masuAutoEnhance",
@@ -79736,7 +79801,7 @@ function MonsterHeroGame() {
     }, React.createElement("span", {
       className: "text-[10px] font-black text-white truncate"
     }, entry?.userName || '名無しのブリーダー'), React.createElement("span", {
-      className: "text-[7px] text-indigo-300 whitespace-nowrap shrink-0"
+      className: "text-[9px] text-indigo-300 whitespace-nowrap shrink-0"
     }, breederLevelLabel), speciesLabel && React.createElement("span", {
       "data-ranking-species-label": true,
       className: "shrink-0 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-1.5 py-0.5 text-[7px] font-black text-cyan-200 whitespace-nowrap"
@@ -79835,7 +79900,7 @@ function MonsterHeroGame() {
     }, entry?.userName || '名無しのブリーダー'), React.createElement("strong", {
       className: "flex items-baseline gap-1 whitespace-nowrap"
     }, React.createElement("span", {
-      className: "text-[7px] font-black uppercase tracking-widest text-amber-400/80"
+      className: "text-[9px] font-black uppercase tracking-widest text-amber-400/80"
     }, "総合力"), React.createElement("span", {
       className: "font-mono text-xs tabular-nums text-amber-200"
     }, formatMonsterPower(entry?.power)))), React.createElement("div", {
@@ -87788,66 +87853,31 @@ function MonsterHeroGame() {
         onClick: applyCustom,
         className: "flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95"
       }, "この色に決定"))));
-    })(), showMasuRenameModal && masuMonDetail && React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 91000
-      }
-    }, React.createElement("div", {
-      className: "bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
-    }, React.createElement("h3", {
-      className: "text-lg font-black text-white mb-1"
-    }, "マスモンの名前を変更"), React.createElement("input", {
-      type: "text",
+    })(), showMasuRenameModal && masuMonDetail && React.createElement(NameEditModal, {
+      title: "マスモンの名前を変更",
       value: masuRenameInput,
-      onChange: e => setMasuRenameInput(e.target.value.slice(0, 12)),
+      onChange: v => setMasuRenameInput(v.slice(0, 12)),
       maxLength: 12,
-      className: "w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-4"
-    }), React.createElement("div", {
-      className: "flex gap-2"
-    }, React.createElement("button", {
-      onClick: () => setShowMasuRenameModal(false),
-      className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "戻る"), React.createElement("button", {
-      onClick: () => {
+      border: "border-pink-400/70",
+      zIndex: 91000,
+      onCancel: () => setShowMasuRenameModal(false),
+      onSave: () => {
         renameMasuMon(masuMonDetail.id, masuRenameInput);
         setMasuMonDetail(prev => prev ? {
           ...prev,
           name: (masuRenameInput || '').trim().slice(0, 12) || prev.name
         } : prev);
         setShowMasuRenameModal(false);
-      },
-      className: "flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs"
-    }, "保存")))), showNameEdit && React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 90000
       }
-    }, React.createElement("div", {
-      className: "bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
-    }, React.createElement("h3", {
-      className: "text-lg font-black text-white mb-1"
-    }, "ブリーダー名変更"), React.createElement("input", {
-      type: "text",
+    }), showNameEdit && React.createElement(NameEditModal, {
+      title: "ブリーダー名を変更",
       value: tempName,
-      onChange: e => setTempName(e.target.value),
+      onChange: setTempName,
       maxLength: 10,
-      className: "w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-4"
-    }), React.createElement("div", {
-      className: "flex gap-2"
-    }, React.createElement("button", {
-      onClick: () => setShowNameEdit(false),
-      className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "戻る"), React.createElement("button", {
-      onClick: handleSaveName,
-      className: "flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs"
-    }, "保存")))), showCallStylePicker && React.createElement("div", {
+      zIndex: 90000,
+      onCancel: () => setShowNameEdit(false),
+      onSave: handleSaveName
+    }), showCallStylePicker && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -90662,7 +90692,7 @@ function MonsterHeroGame() {
         }, "魂格特性の振り分けなし"))), React.createElement("div", {
           className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
         }, React.createElement("div", {
-          className: "text-[7px] text-violet-300 uppercase font-bold mb-1"
+          className: "text-[9px] text-violet-300 uppercase font-bold mb-1"
         }, "所持固有技Lv"), getRebirthSkillChoices(masu).map(skill => {
           const current = uniqueSkillAtLevel(skill.unique, skill.level);
           return React.createElement("div", {
@@ -90702,7 +90732,7 @@ function MonsterHeroGame() {
     }, "古い順・いちばん下が最新（最大", BATTLE_LOG_LIMIT, "件）")), React.createElement("button", {
       onClick: () => setShowBattleLog(false),
       className: "min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90"
-    }, "戻る")), React.createElement("div", {
+    }, "閉じる")), React.createElement("div", {
       "data-battle-log-list": true,
       ref: el => {
         if (el) el.scrollTop = el.scrollHeight;
@@ -90950,11 +90980,11 @@ function MonsterHeroGame() {
     }, React.createElement("div", {
       className: "text-[9px] font-black text-white uppercase truncate"
     }, focusedCard.name || focusedCard.baseName), React.createElement("div", {
-      className: "text-[7px] font-bold text-indigo-400 flex items-center gap-1"
+      className: "text-[9px] font-bold text-indigo-400 flex items-center gap-1"
     }, React.createElement(Zap, {
       size: 7
     }), " ", getCardGuts(focusedCard), " Guts"))), React.createElement("div", {
-      className: "text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1"
+      className: "text-[9px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1"
     }, (() => {
       const genre = cardGenreLabel(focusedCard),
         scope = cardScopeLabel(focusedCard);
@@ -90968,7 +90998,7 @@ function MonsterHeroGame() {
       }, genre), React.createElement("span", {
         className: `rounded border px-1.5 py-0.5 text-[9px] font-black leading-none ${CARD_SCOPE_TONE[scope]}`
       }, scope), React.createElement("span", {
-        className: "text-[8px] font-bold text-slate-400"
+        className: "text-[9px] font-bold text-slate-400"
       }, CARD_SCOPE_NOTE[scope]));
     })(), (() => {
       const b = tacticsCardBlock(focusedCard, hand.findIndex(c => c && c.uid === focusedCard.uid));
@@ -90987,9 +91017,9 @@ function MonsterHeroGame() {
     }, React.createElement("span", null, "会心率:"), React.createElement("span", {
       className: "text-yellow-400 font-black"
     }, Math.round(((focusedCard.crit || 0.1) + getPermaBuff('critRatePct')) * 100), "%", getPermaBuff('critRatePct') > 0 && React.createElement("span", {
-      className: "text-yellow-200 text-[8px]"
+      className: "text-yellow-200 text-[9px]"
     }, " (+", Math.round(getPermaBuff('critRatePct') * 100), ")"), " ", React.createElement("span", {
-      className: "text-yellow-200/70 text-[8px]"
+      className: "text-yellow-200/70 text-[9px]"
     }, "×", (1.5 + getPermaBuff('critDmgPct')).toFixed(2)))), focusedCard.type === 'guard' && (() => {
       const raw = (focusedCard.flat || 0) + def * (focusedCard.mult || 0);
       const fIdx = hand.findIndex(c => c && c.uid === focusedCard.uid);
@@ -91024,15 +91054,15 @@ function MonsterHeroGame() {
         className: "text-slate-400 font-normal"
       }, "（", focusedCard.flat || 0, " ＋ 丈夫さ×", focusedCard.mult || 0, halved ? ' の半分' : '', "）"));
     })(), focusedCard.type === 'range_atk' && focusedCard.rangeIdx != null && React.createElement("div", {
-      className: "border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"
+      className: "border-t border-white/10 pt-1 mt-1 text-[9px] text-cyan-200 font-bold"
     }, React.createElement("span", {
       className: "text-cyan-400"
     }, "距離効果:"), " ", RANGE_LABELS[focusedCard.rangeIdx], "距離で威力アップ。攻撃後、", RANGE_LABELS[focusedCard.rangeIdx], "距離へ移動する"), ['buff', 'debuff', 'heal'].includes(focusedCard.type) && React.createElement("div", {
-      className: "text-center italic text-amber-300 font-bold text-[7px] leading-tight"
+      className: "text-center italic text-amber-300 font-bold text-[9px] leading-tight"
     }, getDynamicDesc(focusedCard, true, focusedCard.evoLevel || 0)), isTacticsMode(runMode) && focusedCard.subType === 'buff_myaru' && React.createElement("div", {
-      className: "text-center text-[7px] font-bold leading-tight text-emerald-300"
+      className: "text-center text-[9px] font-bold leading-tight text-emerald-300"
     }, "置いた子だけに効きます。自傷もその子の今のライフから引きます"), focusedCard.effectDesc && React.createElement("div", {
-      className: "border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"
+      className: "border-t border-white/10 pt-1 mt-1 text-[9px] text-amber-200 font-bold"
     }, React.createElement("span", {
       className: "text-indigo-400"
     }, "特殊効果:"), " ", focusedCard.effectDesc))), skillEffectDetail && React.createElement("div", {

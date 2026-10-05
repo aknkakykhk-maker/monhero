@@ -87,7 +87,7 @@ const SCENARIOS = [
       // HOME → 設定 → ヘルプ → 💊 → デバッグ設定 → デバッグ戦
       await page.evaluate(() => document.querySelector('button[aria-label="設定"]')?.click());
       await page.waitForTimeout(900);
-      await clickText('^ヘルプ$');
+      await clickText('^ヘルプ');
       await page.waitForTimeout(900);
       await clickText('💊');
       await page.waitForTimeout(1200);
