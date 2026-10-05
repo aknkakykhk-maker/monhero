@@ -14535,7 +14535,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const renderDetailSectionLabel = (text, note) => (
     <div className="flex items-baseline gap-2 pt-1 px-0.5">
       <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{text}</span>
-      {note && <span className="text-[7px] text-slate-500 font-bold truncate">{note}</span>}
+      {note && <span className="text-[9px] text-slate-400 font-bold truncate">{note}</span>}
     </div>
   );
 

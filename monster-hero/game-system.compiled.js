@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5fec83f34033659e
+// source-sha256: 7e799b548cae6962
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 22:13";
+const BUILD_DATE = "2026-10-05 22:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -42884,6 +42884,8 @@ function MasuDonationConfirm({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(16px, env(safe-area-inset-top))',
+      paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
       backgroundColor: 'rgba(2,6,23,.95)',
       zIndex: 32000
     },
@@ -42945,6 +42947,8 @@ function MasuDonationResult({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(16px, env(safe-area-inset-top))',
+      paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
       backgroundColor: 'rgba(2,6,23,.96)',
       zIndex: 32100
     }
@@ -43771,6 +43775,8 @@ function MasuLevelCapCompensation({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(20px, env(safe-area-inset-top))',
+      paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
       zIndex: 50000,
       backgroundColor: 'rgba(2,6,23,.96)'
     }
@@ -43798,6 +43804,8 @@ function MasuInheritedUniqueCompensation({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(20px, env(safe-area-inset-top))',
+      paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
       zIndex: 49999,
       backgroundColor: 'rgba(2,6,23,.96)'
     }
@@ -46541,6 +46549,8 @@ function MasuFusionScreen({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(24px, env(safe-area-inset-top))',
+      paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
       backgroundColor: 'rgba(2,6,23,0.97)',
       zIndex: 32000
     }
@@ -46762,6 +46772,8 @@ function SkipConfirmDialog({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(16px, env(safe-area-inset-top))',
+      paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
       backgroundColor: 'rgba(0,0,0,0.92)',
       zIndex: 41000
     },
@@ -48101,6 +48113,8 @@ function PickTeachingScreen({
       style: {
         position: 'fixed',
         inset: 0,
+        paddingTop: 'max(24px, env(safe-area-inset-top))',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
         backgroundColor: 'rgba(0,0,0,0.85)',
         zIndex: 31000
       }
@@ -48978,6 +48992,8 @@ function ChampionScreen({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(24px, env(safe-area-inset-top))',
+      paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
       zIndex: 80000,
       background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
     }
@@ -49181,6 +49197,8 @@ function MasuRegisterModal({
     style: {
       position: 'fixed',
       inset: 0,
+      paddingTop: 'max(24px, env(safe-area-inset-top))',
+      paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
       backgroundColor: 'rgba(0,0,0,0.92)',
       zIndex: 90000
     }
@@ -52011,7 +52029,7 @@ function BattleScreen({
     onClick: cycleBattleSpeed,
     "aria-label": battleTutorial ? 'バトルのれんしゅう中は1倍固定' : autoRepeat ? '∞周回中は4倍固定' : `バトル速度、現在${battleSpeed}倍。タップで切り替え`,
     title: autoRepeat ? '∞周回中は×4固定' : undefined,
-    className: "shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60",
+    className: "mh-hit-expand-y relative shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60",
     style: {
       color: '#fef3c7',
       borderColor: '#f59e0b',
@@ -52026,7 +52044,7 @@ function BattleScreen({
     onClick: () => setShowBattleMenu(true),
     "aria-label": "設定（BGM・ヘルプ・あきらめる）",
     title: "設定",
-    className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"
+    className: "mh-hit-expand-y relative shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"
   }, React.createElement(Settings, {
     size: 15
   })))), ultraBattleView ? React.createElement("div", {
@@ -53148,7 +53166,7 @@ function BattleScreen({
       "data-battle-buff-toggle": buffDetail ? 'close' : 'open',
       onClick: () => setBuffDetail(v => !v),
       "aria-label": buffDetail ? '強化の詳細を閉じる' : `強化の詳細を見る（${chips.length}件）`,
-      className: "shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center"
+      className: "mh-hit-expand relative shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center"
     }, buffDetail ? '閉じる' : `詳細 ${chips.length}`)), (() => {
       const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
       const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
@@ -78146,7 +78164,7 @@ function MonsterHeroGame() {
   }, React.createElement("span", {
     className: "text-[9px] font-black text-slate-300 uppercase tracking-widest"
   }, text), note && React.createElement("span", {
-    className: "text-[7px] text-slate-500 font-bold truncate"
+    className: "text-[9px] text-slate-400 font-bold truncate"
   }, note));
   const fusionTotalCount = (masu, history) => {
     const recorded = Math.max(0, Math.floor(Number(masu?.fusionRecordedCount) || 0));

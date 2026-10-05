@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 56aa6dbb327f0534
+// generated-sha256: c7975e95e109b05d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 22:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 22:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -27706,7 +27706,7 @@ function MasuDonationConfirm({
   donationProcessing, donationSelectedIds, draftMonsterRoster, executeMasuDonation, gold,
   masuMons, monsterRosterIds, setDonationConfirmOpen, unlockedMonsterIds,
 }) {
-const selected=donationSelectedIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(Boolean);const result=buildMasuDonations({masuMons,targetIds:donationSelectedIds,gold,monsterRosterIds,draftMonsterRoster,unlockedMonsterIds,validBaseIds:Object.keys(ALL_PLAYER_MONSTERS),requiredCount:STARTER_MONSTER_IDS.length});if(!result.ok)return null;return <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.95)',zIndex:32000}} role="dialog" aria-modal="true"><div className="w-full max-w-sm rounded-2xl border-2 border-violet-400 bg-slate-900 p-5 shadow-2xl">
+const selected=donationSelectedIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(Boolean);const result=buildMasuDonations({masuMons,targetIds:donationSelectedIds,gold,monsterRosterIds,draftMonsterRoster,unlockedMonsterIds,validBaseIds:Object.keys(ALL_PLAYER_MONSTERS),requiredCount:STARTER_MONSTER_IDS.length});if(!result.ok)return null;return <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,.95)',zIndex:32000}} role="dialog" aria-modal="true"><div className="w-full max-w-sm rounded-2xl border-2 border-violet-400 bg-slate-900 p-5 shadow-2xl">
       <h3 className="text-lg font-black text-violet-200 text-center mb-3">寄付の最終確認</h3><div className="flex -space-x-2 justify-center mb-3">{selected.slice(0,5).map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <div key={m.id} className="w-14 h-14 rounded-xl overflow-hidden border-2 border-amber-400 bg-slate-950"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-full h-full object-contain"/></div>})}{selected.length>5&&<span className="w-14 h-14 flex items-center justify-center rounded-xl border-2 border-amber-400 bg-slate-800 font-black">+{selected.length-5}</span>}</div>
       <div className="bg-black/40 rounded-2xl p-3 space-y-1 text-[12px] mb-3"><div className="flex justify-between"><span>選択数</span><b>{selected.length}体</b></div><div className="flex justify-between text-amber-300"><span>獲得ダイヤ合計</span><b>{result.diamonds.toLocaleString()}</b></div><div className="flex justify-between text-fuchsia-300"><span>虹のプシュケー合計</span><b>×{result.psyche}</b></div><div className="flex justify-between text-slate-300"><span>寄付後の所持ダイヤ</span><b>{result.nextGold.toLocaleString()}</b></div></div>
       <div className="bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"><AlertCircle size={14} className="inline mr-1"/>選択した全マスモンがいなくなります。この操作は取り消せません。</div>
@@ -27718,7 +27718,7 @@ function MasuDonationResult({
   donationResult, setDonationResult,
 }) {
   return (
-<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm rounded-2xl border-2 border-amber-400 bg-slate-900 p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.count===1?`${donationResult.name}を寄付しました`:`${donationResult.count}体をまとめて寄付しました`}</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-base text-fuchsia-300 font-black mt-1">虹のプシュケー ×{donationResult.psyche}</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="mt-5 w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-violet-600 to-amber-600 text-sm font-black text-white active:scale-[.98]">寄付一覧へ戻る</button></div></div>
+<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm rounded-2xl border-2 border-amber-400 bg-slate-900 p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.count===1?`${donationResult.name}を寄付しました`:`${donationResult.count}体をまとめて寄付しました`}</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-base text-fuchsia-300 font-black mt-1">虹のプシュケー ×{donationResult.psyche}</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="mt-5 w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-violet-600 to-amber-600 text-sm font-black text-white active:scale-[.98]">寄付一覧へ戻る</button></div></div>
   );
 }
 
@@ -27938,7 +27938,7 @@ function MasuLevelCapCompensation({
   levelCapCompensation, onCloseLevelCapCompensation,
 }) {
   return (
-<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-amber-400 bg-slate-900 p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={onCloseLevelCapCompensation} className="w-full min-h-[52px] rounded-2xl bg-amber-500 text-sm font-black text-black active:scale-[.98]">受け取る</button></div></div>
+<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,paddingTop:'max(20px, env(safe-area-inset-top))',paddingBottom:'max(20px, env(safe-area-inset-bottom))',zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-amber-400 bg-slate-900 p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={onCloseLevelCapCompensation} className="w-full min-h-[52px] rounded-2xl bg-amber-500 text-sm font-black text-black active:scale-[.98]">受け取る</button></div></div>
   );
 }
 
@@ -27946,7 +27946,7 @@ function MasuInheritedUniqueCompensation({
   setInheritedUniqueCompensation,
 }) {
   return (
-<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:49999,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-fuchsia-400 bg-slate-900 p-6 text-center"><div className="text-4xl mb-3">🌈</div><h2 className="font-black text-lg mb-2">お詫びの配布</h2><p className="text-[11px] text-slate-300 leading-relaxed">継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。</p><button onClick={()=>setInheritedUniqueCompensation(false)} className="mt-5 w-full min-h-[52px] rounded-2xl bg-fuchsia-500 text-sm font-black text-white active:scale-[.98]">確認</button></div></div>
+<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,paddingTop:'max(20px, env(safe-area-inset-top))',paddingBottom:'max(20px, env(safe-area-inset-bottom))',zIndex:49999,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full rounded-2xl border-2 border-fuchsia-400 bg-slate-900 p-6 text-center"><div className="text-4xl mb-3">🌈</div><h2 className="font-black text-lg mb-2">お詫びの配布</h2><p className="text-[11px] text-slate-300 leading-relaxed">継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。</p><button onClick={()=>setInheritedUniqueCompensation(false)} className="mt-5 w-full min-h-[52px] rounded-2xl bg-fuchsia-500 text-sm font-black text-white active:scale-[.98]">確認</button></div></div>
   );
 }
 
@@ -29095,7 +29095,7 @@ function MasuFusionScreen({
       if (!d) { resetFusionFlow(); return null; }
       const pctAfter = Math.max(0,Math.min(100,(d.after.xpIntoLevel/Math.max(1,d.after.xpForNext))*100));
       return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:32000}}>
+        <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.97)',zIndex:32000}}>
           <Sparkles size={32} className="text-amber-300 mb-2"/>
           <h2 className="text-xl font-black italic text-white mb-1">合体完了！</h2>
           <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.5)] mb-3 bg-slate-900">
@@ -29196,7 +29196,7 @@ function SkipConfirmDialog({
   difficulty, executeBattleSkip, ownedItems, setSkipConfirmOpen, skipFlow, skipFlowCount,
 }) {
 const item=BREEDER_MARKET_ITEMS.find(i=>i.id===skipFlow.itemId); const useCount=skipFlowCount(); return(
-    <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true">
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true">
       <div className="bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl text-center">
         <div className="text-4xl mb-2">{item?.emoji}</div>
         <h3 className="text-base font-black text-white mb-1">{item?.name}を{useCount}枚使いますか？</h3>
@@ -29905,7 +29905,7 @@ function PickTeachingScreen({
       </div>
       </div>
       {selectedTeachingCard&&(
-        <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
+        <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
           <div data-ph-kind={(()=>{const o=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); return kindOf(o,!!o&&o.evoLevel>=TEACHING_MAX_LEVEL);})()} data-ph-on=""
             className="mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full"><i aria-hidden="true" className="mh-ph-ring"/>
             <span aria-hidden="true" className="mh-ph-sparkle"/>
@@ -30378,7 +30378,7 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef, speciesChallengeBattleRunRef,
 }) {
   return (
-<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div><div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
+<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div><div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
 {speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
   );
 }
@@ -30406,7 +30406,7 @@ function MasuRegisterModal({
 }) {
   return (
 
-    <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+    <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
       <div className="bg-slate-900 border-2 border-pink-500 rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl">
         <div className="text-center">
           <div className="text-4xl mb-2">🐾</div>
@@ -31887,7 +31887,7 @@ function BattleScreen({
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
           </div>
-          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
+          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="mh-hit-expand-y relative shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="mh-hit-expand-y relative shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
         </header>
         {/* ★簡易画面には relative z-10 が要る。バトルの背景(data-battle-stage-bg)は
               position:absolute の z-index:0 で、CSSでは「位置指定のある要素」が static より上に描かれる。
@@ -32552,7 +32552,7 @@ function BattleScreen({
                   )}
                   <button type="button" data-battle-buff-toggle={buffDetail?'close':'open'} onClick={()=>setBuffDetail(v=>!v)}
                     aria-label={buffDetail?'強化の詳細を閉じる':`強化の詳細を見る（${chips.length}件）`}
-                    className="shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center">
+                    className="mh-hit-expand relative shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center">
                     {buffDetail?'閉じる':`詳細 ${chips.length}`}
                   </button>
                 </div>
@@ -52458,7 +52458,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const renderDetailSectionLabel = (text, note) => (
     <div className="flex items-baseline gap-2 pt-1 px-0.5">
       <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{text}</span>
-      {note && <span className="text-[7px] text-slate-500 font-bold truncate">{note}</span>}
+      {note && <span className="text-[9px] text-slate-400 font-bold truncate">{note}</span>}
     </div>
   );
 
