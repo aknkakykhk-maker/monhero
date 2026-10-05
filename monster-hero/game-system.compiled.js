@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d343f2497498a8c5
+// source-sha256: 714bacf90b76fc60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 00:45";
+const BUILD_DATE = "2026-10-06 00:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5566,178 +5566,6 @@ const mergeRhythmBestRecord = (current, result) => {
     allExcellent: previous.allExcellent || result?.allExcellent === true,
     allMarvelous: previous.allMarvelous || result?.allMarvelous === true
   });
-};
-const RHYTHM_ACHIEVEMENT_LEDGER_KEY = 'mh_rhythm_achievements_v1';
-const RHYTHM_ACHIEVEMENT_LEDGER_MAX = 4000;
-const RHYTHM_ACHIEVEMENT_KINDS = Object.freeze([Object.freeze({
-  id: 'fullCombo',
-  short: 'FC',
-  name: 'フルコンボ',
-  rank: 1
-}), Object.freeze({
-  id: 'allExcellent',
-  short: 'AE',
-  name: 'オールエクセレント',
-  rank: 2
-}), Object.freeze({
-  id: 'allMarvelous',
-  short: 'AM',
-  name: 'オールマーベラス',
-  rank: 3
-})]);
-const RHYTHM_ACHIEVEMENT_KIND_IDS = Object.freeze(RHYTHM_ACHIEVEMENT_KINDS.map(kind => kind.id));
-const rhythmAchievementId = (songId, difficultyId, kind) => `${songId}:${difficultyId}:${kind}`;
-const parseRhythmAchievementId = id => {
-  const text = String(id ?? '');
-  const second = text.lastIndexOf(':'),
-    first = second > 0 ? text.lastIndexOf(':', second - 1) : -1;
-  if (first <= 0 || second <= first + 1) return null;
-  const songId = text.slice(0, first),
-    difficultyId = text.slice(first + 1, second),
-    kind = text.slice(second + 1);
-  if (songId.length > 80 || difficultyId.length > 20 || !RHYTHM_ACHIEVEMENT_KIND_IDS.includes(kind)) return null;
-  return {
-    songId,
-    difficultyId,
-    kind
-  };
-};
-const rhythmAchievedKinds = record => {
-  const am = record?.allMarvelous === true,
-    ae = am || record?.allExcellent === true,
-    fc = ae || record?.fullCombo === true;
-  return RHYTHM_ACHIEVEMENT_KINDS.filter(kind => kind.id === 'allMarvelous' ? am : kind.id === 'allExcellent' ? ae : fc).map(kind => kind.id);
-};
-const emptyRhythmAchievementLedger = () => ({
-  v: 1,
-  items: {},
-  claimed: {}
-});
-const rhythmAchievementClaimKey = (achievementId, ruleId) => `${achievementId}#${ruleId}`;
-const rhythmAchievementTime = value => {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
-};
-const isRhythmAchievementClaimKey = key => {
-  const text = String(key ?? ''),
-    at = text.lastIndexOf('#');
-  return at > 0 && at < text.length - 1 && text.length - at - 1 <= 40 && !!parseRhythmAchievementId(text.slice(0, at));
-};
-const normalizeRhythmAchievementLedger = value => {
-  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  const isMap = v => v && typeof v === 'object' && !Array.isArray(v);
-  const items = {},
-    claimed = {};
-  let count = 0;
-  for (const [id, entry] of Object.entries(isMap(source.items) ? source.items : {})) {
-    if (count >= RHYTHM_ACHIEVEMENT_LEDGER_MAX) break;
-    if (!parseRhythmAchievementId(id)) continue;
-    items[id] = {
-      at: rhythmAchievementTime(isMap(entry) ? entry.at : entry)
-    };
-    count++;
-  }
-  for (const [key, at] of Object.entries(isMap(source.claimed) ? source.claimed : {})) {
-    if (Object.keys(claimed).length >= RHYTHM_ACHIEVEMENT_LEDGER_MAX * 4) break;
-    if (!isRhythmAchievementClaimKey(key)) continue;
-    claimed[key] = rhythmAchievementTime(at) || 1;
-  }
-  return {
-    v: 1,
-    items,
-    claimed
-  };
-};
-const syncRhythmAchievementLedger = (ledger, bestRecords, {
-  now = 0
-} = {}) => {
-  const current = normalizeRhythmAchievementLedger(ledger),
-    items = {
-      ...current.items
-    },
-    added = [];
-  const records = bestRecords && typeof bestRecords === 'object' && !Array.isArray(bestRecords) ? bestRecords : {};
-  const at = rhythmAchievementTime(now);
-  for (const songId of Object.keys(records)) {
-    const byDifficulty = records[songId];
-    if (!byDifficulty || typeof byDifficulty !== 'object') continue;
-    for (const difficultyId of Object.keys(byDifficulty)) {
-      for (const kind of rhythmAchievedKinds(byDifficulty[difficultyId])) {
-        const id = rhythmAchievementId(songId, difficultyId, kind);
-        if (items[id] || !parseRhythmAchievementId(id)) continue;
-        if (Object.keys(items).length >= RHYTHM_ACHIEVEMENT_LEDGER_MAX) break;
-        items[id] = {
-          at
-        };
-        added.push(id);
-      }
-    }
-  }
-  return {
-    ledger: {
-      ...current,
-      items
-    },
-    added
-  };
-};
-const RHYTHM_ACHIEVEMENT_REWARDS = Object.freeze([]);
-const normalizeRhythmAchievementRules = list => {
-  const seen = new Set(),
-    out = [];
-  const pick = (value, allowed) => Array.isArray(value) ? value.map(String).filter(item => !allowed || allowed.includes(item)) : null;
-  for (const rule of Array.isArray(list) ? list : []) {
-    if (!rule || typeof rule !== 'object') continue;
-    const id = String(rule.id ?? '');
-    if (!/^[A-Za-z0-9_-]{1,40}$/.test(id) || seen.has(id)) continue;
-    const reward = rule.reward;
-    if (!reward || typeof reward !== 'object' || typeof reward.type !== 'string' || !reward.type || reward.type.length > 30) continue;
-    const kinds = rule.kinds == null ? null : pick(rule.kinds, RHYTHM_ACHIEVEMENT_KIND_IDS);
-    if (kinds && !kinds.length) continue;
-    seen.add(id);
-    out.push({
-      id,
-      kinds,
-      difficulties: rule.difficulties == null ? null : pick(rule.difficulties),
-      songs: rule.songs == null ? null : pick(rule.songs),
-      since: rhythmAchievementTime(rule.since),
-      reward: {
-        ...reward
-      }
-    });
-  }
-  return out;
-};
-const rhythmAchievementPending = (ledger, rules, eligible) => {
-  const current = normalizeRhythmAchievementLedger(ledger),
-    list = normalizeRhythmAchievementRules(rules),
-    out = [];
-  if (!list.length) return out;
-  for (const achievementId of Object.keys(current.items).sort()) {
-    const parsed = parseRhythmAchievementId(achievementId);
-    if (!parsed || typeof eligible === 'function' && !eligible(parsed.songId, parsed.difficultyId)) continue;
-    const at = current.items[achievementId].at;
-    for (const rule of list) {
-      if (rule.kinds && !rule.kinds.includes(parsed.kind)) continue;
-      if (rule.difficulties && !rule.difficulties.includes(parsed.difficultyId)) continue;
-      if (rule.songs && !rule.songs.includes(parsed.songId)) continue;
-      if (rule.since > 0 && !(at >= rule.since)) continue;
-      const key = rhythmAchievementClaimKey(achievementId, rule.id);
-      if (current.claimed[key]) continue;
-      out.push({
-        key,
-        achievementId,
-        songId: parsed.songId,
-        difficultyId: parsed.difficultyId,
-        kind: parsed.kind,
-        ruleId: rule.id,
-        reward: {
-          ...rule.reward
-        }
-      });
-    }
-  }
-  return out;
 };
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
@@ -22856,114 +22684,6 @@ const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
   await storeSet(RHYTHM_BEST_RECORDS_KEY, normalized, false);
   return normalized;
 };
-const RHYTHM_ACHIEVEMENT_GRANTERS = {};
-const rhythmAchievementEligible = (songId, difficultyId) => {
-  const song = RHYTHM_SONGS.find(item => item.songId === songId);
-  if (!song || !rhythmDemoSongs([song]).length) return false;
-  return rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES).some(item => item.id === difficultyId);
-};
-let rhythmAchievementQueue = Promise.resolve();
-const rhythmAchievementEnqueue = task => {
-  const run = rhythmAchievementQueue.then(task);
-  rhythmAchievementQueue = run.catch(() => {});
-  return run;
-};
-const readRhythmAchievementLedger = async () => {
-  const raw = await storeGet(RHYTHM_ACHIEVEMENT_LEDGER_KEY, null, false);
-  return {
-    absent: raw === null || raw === undefined,
-    ledger: normalizeRhythmAchievementLedger(raw)
-  };
-};
-const syncRhythmAchievements = (bestRecords, {
-  initialRecords = null,
-  now = Date.now()
-} = {}) => rhythmAchievementEnqueue(async () => {
-  const {
-    absent,
-    ledger: start
-  } = await readRhythmAchievementLedger();
-  let ledger = start,
-    changed = false,
-    added = [];
-  if (absent) {
-    ledger = syncRhythmAchievementLedger(ledger, initialRecords || bestRecords, {
-      now: 0
-    }).ledger;
-    changed = true;
-  }
-  if (!absent || initialRecords) {
-    const result = syncRhythmAchievementLedger(ledger, bestRecords, {
-      now
-    });
-    ledger = result.ledger;
-    added = result.added;
-    if (added.length) changed = true;
-  }
-  if (changed) await storeSet(RHYTHM_ACHIEVEMENT_LEDGER_KEY, ledger, false);
-  return {
-    ledger,
-    added
-  };
-});
-const claimRhythmAchievementRewards = ({
-  granters = RHYTHM_ACHIEVEMENT_GRANTERS,
-  rules = RHYTHM_ACHIEVEMENT_REWARDS,
-  eligible = rhythmAchievementEligible,
-  now = Date.now()
-} = {}) => rhythmAchievementEnqueue(async () => {
-  if (!normalizeRhythmAchievementRules(rules).length) return {
-    granted: [],
-    pending: []
-  };
-  let {
-    ledger
-  } = await readRhythmAchievementLedger();
-  const granted = [],
-    waiting = [];
-  for (const entry of rhythmAchievementPending(ledger, rules, eligible)) {
-    const granter = granters && granters[entry.reward.type];
-    if (typeof granter !== 'function') {
-      waiting.push(entry);
-      continue;
-    }
-    let ok = false;
-    try {
-      ok = !!(await granter({
-        ...entry.reward
-      }, {
-        achievementId: entry.achievementId,
-        songId: entry.songId,
-        difficultyId: entry.difficultyId,
-        kind: entry.kind,
-        ruleId: entry.ruleId
-      }));
-    } catch {
-      ok = false;
-    }
-    if (!ok) {
-      waiting.push(entry);
-      continue;
-    }
-    ledger = {
-      ...ledger,
-      claimed: {
-        ...ledger.claimed,
-        [entry.key]: rhythmAchievementTime(now) || 1
-      }
-    };
-    await storeSet(RHYTHM_ACHIEVEMENT_LEDGER_KEY, ledger, false);
-    granted.push(entry);
-  }
-  return {
-    granted,
-    pending: waiting
-  };
-});
-const recordRhythmAchievements = (bestRecords, options) => syncRhythmAchievements(bestRecords, options).then(result => claimRhythmAchievementRewards().then(() => result)).catch(() => ({
-  ledger: null,
-  added: []
-}));
 const RHYTHM_EVENT_POINTS_KEY = 'mh_rhythm_event_points_v1';
 const normalizeRhythmEventPoints = value => {
   const n = Number(value);
@@ -36476,9 +36196,10 @@ const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride
     atk: Math.round(RAID_JACK_BASE.atk * atkPower)
   });
 };
-const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
+const RAID_JACK_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
+const RAID_JACK_A_ATK_POWERS = Object.freeze(RAID_JACK_A_ATKS.map(atk => atk / RAID_JACK_BASE.atk));
 const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000)]);
-const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, RAID_JACK_A_ATK_POWERS[1], 4550000);
+const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);
 const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
 const raidJackTiers = kind => kind === 'b' ? RAID_JACK_B_TIERS : RAID_JACK_A_TIERS;
@@ -62167,7 +61888,6 @@ function MonsterHeroGame() {
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
     setRhythmMonsterSlotIds(monsterSlots);
-    void recordRhythmAchievements(records);
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
@@ -62180,7 +61900,6 @@ function MonsterHeroGame() {
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
     setRhythmMonsterSlotIds(monsterSlots);
-    void recordRhythmAchievements(records);
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
@@ -84322,9 +84041,6 @@ function MonsterHeroGame() {
         }
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
-        void recordRhythmAchievements(records, {
-          initialRecords: rhythmBestRecords
-        });
         if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {

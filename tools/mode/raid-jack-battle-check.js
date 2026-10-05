@@ -138,7 +138,8 @@ check('A: 1ターンごとに味方全員の全ステータスが5%ずつ(掛け
   && /raidJackRunRef\.current\.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount\) raidJackTurnGrowth\(nextTurn\)/.test(app));
 check('A: EXスキルは、持つ味方ごとに RAID_JACK_A_EX_MAX_USES(=2)回まで(raidExDefOf が回数を決める。Bと通常戦は今までどおり)',
   /RAID_JACK_A_EX_MAX_USES = 2;/.test(defs35) && /const raidExDefOf = \(monId\) => \{[\s\S]{0,260}kind === 'a' \? \{ \.\.\.def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES \} : def;/.test(app)
-  && !/[^a-zA-Z]tacticsExDefOf\(/.test(app.replace(/const def = tacticsExDefOf\(monId\);/, '')));
+  // ターン終わりのEXの残りターンをログへ出すところ(dLog)は、名前と効果の種類を読むだけで、使用回数には関わらない(2026-10-06・ライガーの雷纏などで増えた)
+  && !/[^a-zA-Z]tacticsExDefOf\(/.test(app.replace(/const def = tacticsExDefOf\(monId\);/, '').replace(/const dLog=m\?tacticsExDefOf\(m\.id\):null;/, '')));
 check('AもBも、味方のライフ・ガッツは全快からはじまる(追いつき補正のあとで満タンにする)',
   /fullGuts: isRaidJackMode\(mode\)[\s\S]{0,500}isRaidJackMode\(mode\) && joined \? normalizeTacticsUnit\(\{ \.\.\.joined, hp: joined\.maxHp, guts: joined\.maxGuts \}\)/.test(app));
 
