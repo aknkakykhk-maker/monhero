@@ -1250,6 +1250,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
     psychoLock: Object.freeze({ enemyDmgDown: 0.3, enemyTakenUp: 0.3 }),
     effect: 'psychoLock',
   }),
+  // ★2026-10-05 ユーザー指定(ハムのEX)。名前は「ハムボクシング」・3ターン・ラン5回。
+  //   「使用時『カウンター』を1付与。自分が狙われたときに攻撃をすると、クロスカウンター発動。相手の攻撃を回避して、
+  //   与ダメ100%×カウンターの攻撃になる。クロスカウンターが発動するとカウンターを1付与。効果が切れるとカウンターもなくなる」。
+  //   「与ダメ100%」は、そのターンにハムが敵へ与えたダメージ(連撃も含めた合計)の100%と読んで実装した。威力は 100% × カウンターの数。
+  //   カードとの併用は指定が無かったが、攻撃しないと発動しないので「併用できる」
+  Ham: Object.freeze({
+    id: 'ham_boxing',
+    name: 'ハムボクシング',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・ハムが敵に狙われたターンに、ハムが攻撃していると「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えたダメージの100%×カウンターの数を、敵へ返す\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    counter: Object.freeze({ start: 1, dmgRate: 1 }),
+    effect: 'counter',
+    // 効いている途中でもう一度使うと、カウンターが1に戻ってしまうので使えない
+    conditions: Object.freeze(['notActive']),
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1340,7 +1356,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'avoidCharge', 'trickConfuse']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1403,6 +1419,8 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    counter: raw.counter && typeof raw.counter === 'object'
+      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), dmgRate: Math.max(0, Number(raw.counter.dmgRate) || 0) } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
       ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
@@ -1572,6 +1590,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyBoostCfg: def.partyBoost ? { ...def.partyBoost } : null,
       damageBackCfg: def.damageBack ? { ...def.damageBack } : null,
       psychoLockCfg: def.psychoLock ? { ...def.psychoLock } : null,
+      counterCfg: def.counter ? { ...def.counter } : null, counter: def.counter ? def.counter.start : 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1955,6 +1974,30 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.effect === 'partyBoost' ? (e.partyBoostCfg && e.partyBoostCfg.statRate) : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+// ---- ハム(counter): ハムボクシング ----
+// いまのカウンターの数(効いていなければ null)。dmgRate は1つあたりの威力(与ダメの割合)
+const tacticsExCounterOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'counter') return null;
+  const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.counterCfg;
+  if (!cfg) return null;
+  const rate = Number(cfg.dmgRate);
+  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), dmgRate: Number.isFinite(rate) && rate > 0 ? rate : 0 };
+};
+// クロスカウンターが発動した子のカウンターを n 増やす(効いていなければ状態をそのまま返す)
+const addTacticsExCounter = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const c = tacticsExCounterOf(safe, units, slot, now);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  if (!c || add <= 0) return safe;
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(99, c.counter + add) } } };
+};
+// クロスカウンターで敵へ返すダメージ(ハムがそのターンに与えたダメージ × 威力 × カウンターの数。切り捨て)
+const tacticsExCounterDamage = (state, units, slot, now, dealtThisTurn) => {
+  const c = tacticsExCounterOf(state, units, slot, now);
+  const dealt = Math.max(0, Number(dealtThisTurn) || 0);
+  return c && dealt > 0 ? Math.floor(dealt * c.dmgRate * c.counter) : 0;
 };
 // サイコロックオン(psychoLock)が効いているか。効いているあいだ、敵は距離を動かせず(移動を選んでも何もしない)、
 // 敵の与ダメージが enemyDmgDown 下がり、敵の被ダメージが enemyTakenUp 上がる。効いていなければ active:false・倍率は変えない

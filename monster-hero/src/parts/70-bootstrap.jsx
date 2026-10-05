@@ -2257,6 +2257,64 @@ const createAnimationStyle = () => {
       background:linear-gradient(90deg, transparent, var(--ex-c1) 30%, #fff 50%, var(--ex-c1) 70%, transparent); box-shadow:0 0 10px var(--ex-c2), 0 0 22px var(--ex-c2);
       rotate:calc(-24deg + (var(--i) - 2.5) * 6deg); animation:exBlade 520ms ease-out forwards; animation-delay:calc(200ms + var(--i) * 80ms); }
     @keyframes exBlade { 0% { opacity:0; transform:scaleX(0); } 30% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1) translateY(6px); } }
+    /* 稲妻(雷狼影): 上から折れ線の光が走る */
+    .ex-cutin__motif--spark i { top:-10%; left:calc(8% + var(--i) * 16%); width:6px; height:75vh; border-radius:3px;
+      background:linear-gradient(180deg, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2), 0 0 26px var(--ex-c1);
+      clip-path:polygon(40% 0, 100% 0, 60% 38%, 100% 38%, 20% 100%, 45% 55%, 0 55%); transform:scaleX(5);
+      animation:exSpark 520ms steps(2,end) forwards; animation-delay:calc(160ms + var(--i) * 90ms); }
+    @keyframes exSpark { 0% { opacity:0; } 20% { opacity:1; } 45% { opacity:.2; } 65% { opacity:1; } 100% { opacity:0; } }
+    /* 輪(悠久の刻・おぼろ返し・サイコロックオン): 中心から輪が何重にも広がる */
+    .ex-cutin__motif--ring i { left:50%; top:50%; width:90px; height:90px; margin:-45px 0 0 -45px; border-radius:50%;
+      border:3px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 14px var(--ex-c2);
+      animation:exRing 1000ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 120ms); }
+    @keyframes exRing { 0% { opacity:0; transform:scale(.2); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(5.5); } }
+    /* 粒・葉(クリスマスプレゼント・緑のめぐみ): 画面全体にきらきらの粒がふわっと舞う */
+    .ex-cutin__motif--petal i { top:calc(10% + var(--i) * 13%); left:calc(6% + var(--i) * 15%); width:16px; height:16px; border-radius:50% 0 50% 0;
+      background:radial-gradient(circle at 30% 30%, #fff, var(--ex-c1) 45%, var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2);
+      animation:exPetal 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 90ms); }
+    @keyframes exPetal { 0% { opacity:0; transform:translate(0,30px) rotate(0) scale(.4); } 30% { opacity:1; } 100% { opacity:0; transform:translate(40px,-70px) rotate(220deg) scale(2.2); } }
+    /* しずく(生命の泉): 下から丸い水玉が立ちのぼる */
+    .ex-cutin__motif--drop i { bottom:-20px; left:calc(8% + var(--i) * 16%); width:22px; height:22px; border-radius:50%;
+      background:radial-gradient(circle at 35% 30%, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exDrop 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exDrop { 0% { opacity:0; transform:translateY(0) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateY(-62vh) scale(1.6); } }
+    /* 音符(オン・ステージ！): 横から音符が流れる */
+    .ex-cutin__motif--note i { left:-10%; top:calc(14% + var(--i) * 12%); width:18px; height:30px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:linear-gradient(var(--ex-c1), var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2); rotate:-14deg;
+      animation:exNote 1000ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exNote { 0% { opacity:0; transform:translateX(0); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(115vw) translateY(-20px); } }
+    /* 羽(パンドラの箱): 左右から白と黒の羽が交差する */
+    .ex-cutin__motif--wing i { top:calc(18% + var(--i) * 9%); width:60%; height:10px; border-radius:999px;
+      background:linear-gradient(90deg, transparent, var(--ex-c1) 40%, #fff 55%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exWing 760ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    .ex-cutin__motif--wing i:nth-child(odd) { left:-60%; --dir:1; }
+    .ex-cutin__motif--wing i:nth-child(even) { right:-60%; --dir:-1; filter:hue-rotate(40deg) brightness(.55); }
+    @keyframes exWing { 0% { opacity:0; transform:translateX(0); } 30% { opacity:1; } 100% { opacity:0; transform:translateX(calc(var(--dir) * 150%)); } }
+    /* 拳(ハムボクシング): 中心で衝撃の輪と拳の光がはじける */
+    .ex-cutin__motif--fist i { left:50%; top:50%; width:44px; height:44px; margin:-22px 0 0 -22px; border-radius:50%;
+      background:radial-gradient(circle, #fff 0 18%, var(--ex-c1) 30%, var(--ex-c2) 62%, transparent 70%); box-shadow:0 0 22px var(--ex-c2);
+      animation:exFist 560ms cubic-bezier(.2,.9,.2,1) forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    @keyframes exFist { 0% { opacity:0; transform:translate(0,0) scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:translate(calc((var(--i) - 2.5) * 70px), calc((var(--i) % 2 - .5) * 90px)) scale(3); } }
+    /* EXが効いているあいだの、距離枠のゆっくり脈打つ光(2026-10-06 ユーザー指示「効果中の見やすさ」。使った瞬間の .ex-aura とは別に、ずっと出る) */
+    [data-tactics-ex-on] { --ex-on-c:#e879f9; }
+    /* 光は枠のうえに重ねた膜(::after)の透明度だけを動かす(バトルの飾りは transform と opacity だけを動かす決まり) */
+    [data-tactics-ex-on]::after { content:''; position:absolute; inset:-2px; z-index:58; pointer-events:none; border-radius:inherit;
+      box-shadow:0 0 0 2px var(--ex-on-c), 0 0 18px color-mix(in srgb, var(--ex-on-c) 85%, transparent), inset 0 0 14px color-mix(in srgb, var(--ex-on-c) 40%, transparent);
+      animation:exOnPulse 2200ms ease-in-out infinite; }
+    [data-tactics-ex-on="thunder"], [data-tactics-ex-on="stage"] { --ex-on-c:#facc15; }
+    [data-tactics-ex-on="counter"], [data-tactics-ex-on="allIn"], [data-tactics-ex-on="multiBuff"] { --ex-on-c:#fb923c; }
+    [data-tactics-ex-on="partyBoost"], [data-tactics-ex-on="partyGuard"], [data-tactics-ex-on="present"] { --ex-on-c:#4ade80; }
+    [data-tactics-ex-on="lifeSpring"], [data-tactics-ex-on="psychoLock"], [data-tactics-ex-on="damageBack"] { --ex-on-c:#38bdf8; }
+    [data-tactics-ex-on="statBoost"], [data-tactics-ex-on="distMatch"], [data-tactics-ex-on="dodgeCombo"], [data-tactics-ex-on="pandoraBox"] { --ex-on-c:#f472b6; }
+    @keyframes exOnPulse { 0%, 100% { opacity:.35; } 50% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { [data-tactics-ex-on]::after { animation:none; opacity:.8; } }
+    /* EXの説明文(箇条書き): 1行目は要約、「・」で始まる行は項目として段を下げる */
+    .ex-desc__lead { font-weight:900; color:#fff; line-height:1.5; }
+    .ex-desc__list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; }
+    .ex-desc__item { position:relative; padding-left:1.1em; line-height:1.5; }
+    .ex-desc__item::before { content:''; position:absolute; left:.2em; top:.62em; width:.5em; height:.5em; border-radius:50%; background:#d946ef; }
+    .ex-desc__sub { padding-left:2.1em; font-size:.92em; color:#cbd5e1; line-height:1.4; position:relative; }
+    .ex-desc__sub::before { content:'─'; position:absolute; left:1.1em; opacity:.6; }
     /* 使った子の距離枠の光 */
     .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
       border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
@@ -4573,6 +4631,29 @@ const createAnimationStyle = () => {
     @media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}.mh-reincarnation-mon{width:118px;height:118px}.mh-reincarnation-souls{width:160px;height:250px}.mh-reincarnation-title{top:calc(env(safe-area-inset-top) + 13%);font-size:clamp(30px,11vw,50px)}.mh-reincarnation-mark{top:64%}.mh-reincarnation-mark .mh-reincarnate-badge{padding:5px 12px;font-size:14px}}
     @media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}.mh-reincarnation-souls,.mh-reincarnation-converge,.mh-reincarnation-rays,.mh-reincarnation-halo,.mh-reincarnation-flash,.mh-reincarnation-title{display:none}.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}}
     /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
+    /* お布施の演出(神殿・お布施画面)。ダイヤの光がマスモンへ集まり、Lvが数え上がる */
+    .mh-offering-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 42%,#7c3aedaa,#1e1b4b 45%,#020617 78%);cursor:pointer;animation:mhOfferingIn .35s ease-out both}
+    .mh-offering-beams{position:absolute;inset:0;pointer-events:none}.mh-offering-beams i{position:absolute;top:-10%;left:calc(8% + var(--i)*14%);width:6%;height:75%;background:linear-gradient(#fde68aaa,#fde68a00);filter:blur(6px);transform-origin:top;animation:mhOfferingBeam 2.4s ease-in-out calc(var(--i)*.12s) infinite alternate}
+    .mh-offering-ring{position:absolute;left:50%;top:42%;width:260px;height:260px;margin:-130px 0 0 -130px;border:3px solid #fde68a;border-radius:50%;box-shadow:0 0 40px #fbbf24aa,inset 0 0 40px #fbbf2466;animation:mhOfferingRing 1.6s ease-out infinite}
+    .mh-offering-gems{position:absolute;left:50%;top:42%;width:0;height:0}.mh-offering-gems i{position:absolute;left:0;top:0;color:#67e8f9;filter:drop-shadow(0 0 6px #22d3ee);opacity:0;animation:mhOfferingGem 1.8s ease-in calc(var(--i)*.13s) infinite;--a:calc(var(--i)*25.7deg)}
+    .mh-offering-mon{position:relative;width:170px;height:170px;margin-top:-130px;animation:mhOfferingMon 1.2s ease-in-out infinite alternate;filter:drop-shadow(0 0 24px #fde68acc)}
+    .mh-offering-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhOfferingFlash 1.4s ease-out 2.2s both}
+    .mh-offering-copy{position:absolute;left:0;right:0;bottom:11%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 16px;text-align:center}
+    .mh-offering-title{font-size:15px;font-weight:900;letter-spacing:.2em;color:#ddd6fe}
+    .mh-offering-level{font-size:20px;font-weight:900;color:#f9a8d4}.mh-offering-level b{font-size:54px;font-family:ui-monospace,monospace;color:#fff;text-shadow:0 0 18px #f472b6}
+    .mh-offering-xp{font-size:13px;font-weight:900;color:#6ee7b7}
+    .mh-offering-up{font-size:22px;font-weight:900;color:#fde047;text-shadow:0 0 14px #f59e0b;opacity:0;animation:mhOfferingPop .5s ease-out 2.4s both}
+    .mh-offering-badge{padding:6px 14px;border-radius:999px;border:1px solid #c4b5fd;background:#4c1d95cc;font-size:13px;font-weight:900;color:#ede9fe;opacity:0;animation:mhOfferingPop .5s ease-out 2.7s both}.mh-offering-badge.is-reincarnate{animation-delay:3s;border-color:#fda4af;background:#881337cc;color:#ffe4e6}
+    .mh-offering-points{font-size:12px;font-weight:900;color:#fcd34d;opacity:0;animation:mhOfferingPop .5s ease-out 3.2s both}
+    .mh-offering-skip{position:absolute;right:14px;top:calc(12px + env(safe-area-inset-top));font-size:10px;font-weight:700;color:#94a3b8}
+    @keyframes mhOfferingIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhOfferingBeam{from{opacity:.25;transform:rotate(-6deg)}to{opacity:.8;transform:rotate(6deg)}}
+    @keyframes mhOfferingRing{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+    @keyframes mhOfferingGem{0%{opacity:0;transform:rotate(var(--a)) translateY(-230px) scale(1)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-10px) scale(.3)}}
+    @keyframes mhOfferingMon{from{transform:scale(1)}to{transform:scale(1.08)}}
+    @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
+    @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}

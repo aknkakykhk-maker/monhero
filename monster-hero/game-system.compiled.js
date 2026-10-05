@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b32c6b78367c699a
+// source-sha256: 50e447962e57554c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 01:07";
+const BUILD_DATE = "2026-10-06 02:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4071,6 +4071,197 @@ const buildMasuReincarnation = ({
     })
   };
 };
+const OFFERING_TICKET_DIAMONDS = 100;
+const OFFERING_TICKET_XP = 15;
+const OFFERING_MAX_REINCARNATIONS = 50;
+const OFFERING_MODES = Object.freeze(['diamonds', 'levels', 'reincarnate']);
+const offeringXpForDiamonds = diamonds => Math.floor(donationDiamondValue(diamonds) * OFFERING_TICKET_XP / OFFERING_TICKET_DIAMONDS);
+const offeringDiamondsForXp = xp => Math.ceil(donationDiamondValue(xp) * OFFERING_TICKET_DIAMONDS / OFFERING_TICKET_XP);
+const offeringStopMessage = reason => ({
+  funds: 'ダイヤが足りないため、ここまでで止まります。',
+  psyche: '虹のプシュケーが足りないため、ここで止まります。',
+  cap: 'レベル上限に届いたため、ここまでで止まります（限界突破も行うにすると先へ進めます）。',
+  max: 'これ以上は上げられません（Lv.400の先は超越・魂格進化が必要です）。',
+  locked: '転生ロック中のマスモンは転生できません。',
+  level: '絆Lv.100に届かないため、転生できません。',
+  none: ''
+})[reason] || '';
+const buildMasuOffering = ({
+  masu,
+  gold,
+  ownedItems,
+  lockedIds = [],
+  mode = 'diamonds',
+  amount = 0,
+  autoBreakthrough = false
+}) => {
+  const empty = {
+    ok: false,
+    changed: false,
+    reason: '',
+    stopReason: 'none',
+    stopMessage: '',
+    spent: 0,
+    xpDiamonds: 0,
+    breakDiamonds: 0,
+    reincDiamonds: 0,
+    xpGained: 0,
+    breakthroughs: 0,
+    psycheUsed: 0,
+    reincarnations: 0,
+    fromLevel: 1,
+    toLevel: 1,
+    fromCap: 0,
+    toCap: 0
+  };
+  if (!masu) return {
+    ...empty,
+    reason: '対象のマスモンが見つかりません。'
+  };
+  if (!OFFERING_MODES.includes(mode)) return {
+    ...empty,
+    reason: 'お布施の種類が正しくありません。'
+  };
+  const normalized = normalizeMasuProgression(masu);
+  const goldHave = donationDiamondValue(gold);
+  const psycheHave = Math.max(0, Math.floor(Number(ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID)) || 0));
+  const requested = donationDiamondValue(amount);
+  const fromLevel = masuBondLevelInfo(normalized).level;
+  const base = {
+    ...empty,
+    fromLevel,
+    toLevel: fromLevel,
+    fromCap: normalized.levelCap,
+    toCap: normalized.levelCap
+  };
+  if (requested <= 0) return {
+    ...base,
+    reason: mode === 'diamonds' ? 'お布施のダイヤを入力してください。' : mode === 'levels' ? '上げるレベルを選んでください。' : '転生の回数を選んでください。'
+  };
+  const limit = mode === 'diamonds' ? Math.min(goldHave, requested) : goldHave;
+  const st = {
+    masu: normalized,
+    xp: 0,
+    breakCost: 0,
+    reincCost: 0,
+    psyche: psycheHave,
+    breakthroughs: 0,
+    reincarnations: 0,
+    stop: 'none',
+    stopDetail: ''
+  };
+  const spent = () => offeringDiamondsForXp(st.xp) + st.breakCost + st.reincCost;
+  const stop = (reason, detail = '') => {
+    if (st.stop === 'none') {
+      st.stop = reason;
+      st.stopDetail = detail;
+    }
+  };
+  const offerXp = xpWanted => {
+    let left = Math.max(0, Math.floor(Number(xpWanted) || 0));
+    for (let guard = 0; guard < 2000 && left > 0 && st.stop === 'none'; guard++) {
+      const cur = st.masu;
+      const room = Math.max(0, totalBondXpForLevel(cur.levelCap) - donationDiamondValue(cur.bondXp));
+      if (room > 0) {
+        const fundsXp = Math.max(0, offeringXpForDiamonds(limit - st.breakCost - st.reincCost) - st.xp);
+        const take = Math.min(left, room, fundsXp);
+        if (take <= 0) {
+          stop('funds');
+          break;
+        }
+        const res = applyBondXpGain(cur, take);
+        if (res.xpGain <= 0) {
+          stop('cap');
+          break;
+        }
+        st.masu = res.masu;
+        st.xp += res.xpGain;
+        left -= res.xpGain;
+        if (fundsXp < Math.min(left + res.xpGain, room)) stop('funds');
+        continue;
+      }
+      if (!autoBreakthrough) {
+        stop('cap');
+        break;
+      }
+      const r = buildMasuBreakthrough({
+        masu: cur,
+        skillKey: '',
+        gold: limit - spent(),
+        psycheOwned: st.psyche
+      });
+      if (!r.ok) {
+        const levelMax = cur.levelCap >= MAX_MASU_LEVEL_CAP;
+        stop(levelMax ? 'max' : r.psycheHave < r.psycheCost ? 'psyche' : 'funds', r.reason);
+        break;
+      }
+      st.masu = r.nextMasu;
+      st.breakCost += r.cost;
+      st.psyche = r.nextPsyche;
+      st.breakthroughs++;
+    }
+    return left;
+  };
+  if (mode === 'diamonds') {
+    offerXp(autoBreakthrough ? 1e12 : offeringXpForDiamonds(limit));
+  } else if (mode === 'levels') {
+    const target = Math.min(SOUL_RANK_LEVEL_CAP, fromLevel + requested);
+    offerXp(totalBondXpForLevel(target) - donationDiamondValue(st.masu.bondXp));
+  } else {
+    const times = Math.min(OFFERING_MAX_REINCARNATIONS, requested);
+    for (let i = 0; i < times && st.stop === 'none'; i++) {
+      if (masuBondLevelInfo(st.masu).level < REINCARNATE_MIN_LEVEL) {
+        offerXp(totalBondXpForLevel(REINCARNATE_MIN_LEVEL) - donationDiamondValue(st.masu.bondXp));
+        if (masuBondLevelInfo(st.masu).level < REINCARNATE_MIN_LEVEL) {
+          stop(st.stop === 'none' ? 'level' : st.stop);
+          break;
+        }
+      }
+      const r = buildMasuReincarnation({
+        masu: st.masu,
+        skillKey: '',
+        gold: limit - spent(),
+        lockedIds
+      });
+      if (!r.ok) {
+        stop(isMasuLocked(lockedIds, st.masu.id) ? 'locked' : 'funds', r.reason);
+        break;
+      }
+      st.masu = r.nextMasu;
+      st.reincCost += r.cost;
+      st.reincarnations++;
+    }
+  }
+  const total = spent();
+  const toLevel = masuBondLevelInfo(st.masu).level;
+  const changed = st.xp > 0 || st.breakthroughs > 0 || st.reincarnations > 0;
+  return {
+    ...base,
+    ok: changed && total <= goldHave,
+    changed,
+    reason: changed ? '' : offeringStopMessage(st.stop) || 'お布施できる内容がありません。',
+    stopReason: st.stop,
+    stopMessage: offeringStopMessage(st.stop),
+    stopDetail: st.stopDetail,
+    spent: total,
+    xpDiamonds: offeringDiamondsForXp(st.xp),
+    breakDiamonds: st.breakCost,
+    reincDiamonds: st.reincCost,
+    xpGained: st.xp,
+    breakthroughs: st.breakthroughs,
+    psycheUsed: psycheHave - st.psyche,
+    reincarnations: st.reincarnations,
+    toLevel,
+    toCap: st.masu.levelCap,
+    gainedPoints: Math.max(0, (st.masu.distAptPoints || 0) - (normalized.distAptPoints || 0)),
+    nextGold: goldHave - total,
+    nextOwnedItems: {
+      ...(ownedItems || {}),
+      [BREAKTHROUGH_ITEM_ID]: st.psyche
+    },
+    nextMasu: st.masu
+  };
+};
 const donationDiamondValue = bondXp => {
   const value = Number(bondXp);
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
@@ -5950,7 +6141,7 @@ const resolveScreenTheme = (value, now = Date.now()) => value === 'halloween' ||
 const normalizeScreenThemeChoice = value => SCREEN_THEME_CHOICES.some(choice => choice.id === value) ? value : 'auto';
 const normalizeScreenTheme = value => Object.fromEntries(SCREEN_THEME_CATEGORIES.map(category => [category.id, normalizeScreenThemeChoice(value && typeof value === 'object' ? value[category.id] : null)]));
 const SCREEN_THEME_BATTLE_STATES = new Set(['BATTLE', 'BATTLE_TUTORIAL', 'BATTLE_MENU', 'BATTLE_MODE_SELECT', 'BATTLE_SYSTEM_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'BATTLE_SCORE_RANKING', 'PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN', 'SKIP_PICK', 'SKIP_RESULT', 'AUTO_SETTINGS']);
-const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_DONATION', 'MASU_FUSION', 'MASU_REBIRTH', 'MASU_REINCARNATE', 'MASU_TRANSCENDENCE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE']);
+const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_FUSION', 'MASU_REBIRTH', 'MASU_REINCARNATE', 'MASU_TRANSCENDENCE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE']);
 const screenThemeCategory = (gameState, rhythmOpen = false) => {
   if (rhythmOpen || String(gameState || '').startsWith('RHYTHM_')) return 'rhythm';
   if (SCREEN_THEME_BATTLE_STATES.has(gameState)) return 'battle';
@@ -20537,6 +20728,71 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
     c2: '#db2777',
     motif: 'rise'
   },
+  distMatch: {
+    c1: '#fecdd3',
+    c2: '#e11d48',
+    motif: 'blade'
+  },
+  dodgeCombo: {
+    c1: '#fecaca',
+    c2: '#b91c1c',
+    motif: 'blade'
+  },
+  multiBuff: {
+    c1: '#fde68a',
+    c2: '#b45309',
+    motif: 'flame'
+  },
+  stage: {
+    c1: '#fbcfe8',
+    c2: '#be185d',
+    motif: 'note'
+  },
+  present: {
+    c1: '#fecaca',
+    c2: '#16a34a',
+    motif: 'petal'
+  },
+  lifeSpring: {
+    c1: '#bae6fd',
+    c2: '#0284c7',
+    motif: 'drop'
+  },
+  timeStop: {
+    c1: '#e0f2fe',
+    c2: '#475569',
+    motif: 'ring'
+  },
+  pandoraBox: {
+    c1: '#fae8ff',
+    c2: '#7e22ce',
+    motif: 'wing'
+  },
+  thunder: {
+    c1: '#fef9c3',
+    c2: '#eab308',
+    motif: 'spark'
+  },
+  partyBoost: {
+    c1: '#d9f99d',
+    c2: '#16a34a',
+    motif: 'petal'
+  },
+  damageBack: {
+    c1: '#e9d5ff',
+    c2: '#6d28d9',
+    motif: 'ring'
+  },
+  psychoLock: {
+    c1: '#fbcfe8',
+    c2: '#7c3aed',
+    motif: 'ring'
+  },
+  counter: {
+    c1: '#fed7aa',
+    c2: '#ea580c',
+    motif: 'fist'
+  },
   avoidCharge: {
     c1: '#e9d5ff',
     c2: '#6d28d9',
@@ -20619,6 +20875,33 @@ const TacticsExCutin = ({
   }, cutin.note) : null)), React.createElement("div", {
     className: "ex-cutin__flash"
   })), document.body);
+};
+const ExDescText = ({
+  text
+}) => {
+  const lines = String(text || '').split('\n').filter(l => l.trim() !== '');
+  if (!lines.length) return null;
+  const isBullet = l => /^[・　]/.test(l);
+  const lead = isBullet(lines[0]) ? null : lines[0];
+  const rest = lead ? lines.slice(1) : lines;
+  return React.createElement(React.Fragment, null, lead ? React.createElement("p", {
+    className: "ex-desc__lead"
+  }, lead) : null, rest.length ? React.createElement("ul", {
+    className: "ex-desc__list"
+  }, rest.map((l, i) => {
+    if (/^　/.test(l)) return React.createElement("li", {
+      key: i,
+      className: "ex-desc__sub"
+    }, l.replace(/^[　\s]+/, ''));
+    const body = l.replace(/^・/, '');
+    const m = /^([^：]{1,12})：(.*)$/.exec(body);
+    return React.createElement("li", {
+      key: i,
+      className: "ex-desc__item"
+    }, m ? React.createElement(React.Fragment, null, React.createElement("b", {
+      className: "text-fuchsia-200"
+    }, m[1]), "：", m[2]) : body);
+  })) : null);
 };
 const GUARD_BARRIER_TIERS = Object.freeze(['bronze', 'bronze', 'silver', 'silver', 'gold', 'gold', 'crystal', 'crystal', 'rainbow']);
 const guardBarrierTierOf = level => GUARD_BARRIER_TIERS[Math.max(0, Math.min(GUARD_BARRIER_TIERS.length - 1, Math.floor(Number(level) || 0)))];
@@ -34587,6 +34870,23 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     effect: 'psychoLock'
   }),
+  Ham: Object.freeze({
+    id: 'ham_boxing',
+    name: 'ハムボクシング',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・ハムが敵に狙われたターンに、ハムが攻撃していると「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えたダメージの100%×カウンターの数を、敵へ返す\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    counter: Object.freeze({
+      start: 1,
+      dmgRate: 1
+    }),
+    effect: 'counter',
+    conditions: Object.freeze(['notActive'])
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -34688,7 +34988,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'avoidCharge', 'trickConfuse']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -34749,6 +35049,10 @@ const normalizeTacticsExDef = raw => {
     } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    counter: raw.counter && typeof raw.counter === 'object' ? {
+      start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)),
+      dmgRate: Math.max(0, Number(raw.counter.dmgRate) || 0)
+    } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object' ? {
       enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)),
       enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0)
@@ -35043,6 +35347,10 @@ const applyTacticsExUse = (state, {
         psychoLockCfg: def.psychoLock ? {
           ...def.psychoLock
         } : null,
+        counterCfg: def.counter ? {
+          ...def.counter
+        } : null,
+        counter: def.counter ? def.counter.start : 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -35595,6 +35903,40 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.effect === 'partyBoost' ? e.partyBoostCfg && e.partyBoostCfg.statRate : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+const tacticsExCounterOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'counter') return null;
+  const mine = normalizeTacticsExState(state).effects[slot],
+    cfg = mine.counterCfg;
+  if (!cfg) return null;
+  const rate = Number(cfg.dmgRate);
+  return {
+    slot,
+    counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))),
+    dmgRate: Number.isFinite(rate) && rate > 0 ? rate : 0
+  };
+};
+const addTacticsExCounter = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const c = tacticsExCounterOf(safe, units, slot, now);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  if (!c || add <= 0) return safe;
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [slot]: {
+        ...safe.effects[slot],
+        counter: Math.min(99, c.counter + add)
+      }
+    }
+  };
+};
+const tacticsExCounterDamage = (state, units, slot, now, dealtThisTurn) => {
+  const c = tacticsExCounterOf(state, units, slot, now);
+  const dealt = Math.max(0, Number(dealtThisTurn) || 0);
+  return c && dealt > 0 ? Math.floor(dealt * c.dmgRate * c.counter) : 0;
 };
 const tacticsExPsychoLockOf = (state, now) => {
   const effects = normalizeTacticsExState(state).effects;
@@ -36854,7 +37196,7 @@ const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride
 };
 const RAID_JACK_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_JACK_A_ATK_POWERS = Object.freeze(RAID_JACK_A_ATKS.map(atk => atk / RAID_JACK_BASE.atk));
-const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000)]);
+const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 35000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 80000000)]);
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);
 const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
@@ -42104,8 +42446,10 @@ function MonsterDexDetailScreen({
     }, "タクティクス専用")), React.createElement("div", {
       className: "mt-0.5 text-[12px] font-black text-white"
     }, "EX《", exDef.name, "》"), React.createElement("div", {
-      className: "mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
-    }, exDef.desc), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold text-slate-200"
+    }, React.createElement(ExDescText, {
+      text: exDef.desc
+    })), React.createElement("div", {
       className: "mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"
     }, React.createElement("span", {
       className: "rounded-lg bg-black/30 px-1.5 py-1"
@@ -44982,6 +45326,483 @@ function MasuDonationAnimation({
   }))), React.createElement("div", {
     className: "mh-donation-copy"
   }, "神殿へ寄付中…"));
+}
+const OFFERING_TAB_LABELS = Object.freeze({
+  diamonds: 'ダイヤ指定',
+  levels: 'レベル指定',
+  reincarnate: '転生'
+});
+const OFFERING_DIAMOND_STEPS = Object.freeze([100, 1000, 10000, 100000]);
+const OFFERING_LEVEL_STEPS = Object.freeze([1, 10, 100]);
+function MasuOfferingScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  buildUnifiedMonsterEntries,
+  executeMasuOffering,
+  gold,
+  introVisible = false,
+  lockedIds = [],
+  masuMons,
+  monsterDisplayFlags,
+  monsterEntryMatchesDisplayFlags,
+  monsterEntryMatchesLineage,
+  monsterRosterIds,
+  onBackToTemple,
+  onDismissIntro,
+  ownedItems,
+  renderMonsterCardBody,
+  renderMonsterSortFilterBar,
+  renderScreenNote,
+  sortMonsterEntries
+}) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [mode, setMode] = useState('diamonds');
+  const [diamondText, setDiamondText] = useState('');
+  const [levels, setLevels] = useState(1);
+  const [times, setTimes] = useState(1);
+  const [autoBreak, setAutoBreak] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(null);
+  const [fx, setFx] = useState(null);
+  const selected = masuMons.find(m => String(m.id) === String(selectedId)) || null;
+  const resetInputs = () => {
+    setMode('diamonds');
+    setDiamondText('');
+    setLevels(1);
+    setTimes(1);
+    setError('');
+    setDone(null);
+    setConfirmOpen(false);
+  };
+  const pick = id => {
+    resetInputs();
+    setSelectedId(id);
+  };
+  const limits = useMemo(() => {
+    if (!selected) return {
+      maxLevels: 0,
+      maxTimes: 0,
+      maxDiamonds: 0
+    };
+    const common = {
+      masu: selected,
+      gold,
+      ownedItems,
+      lockedIds,
+      autoBreakthrough: autoBreak
+    };
+    const lv = buildMasuOffering({
+      ...common,
+      mode: 'levels',
+      amount: SOUL_RANK_LEVEL_CAP
+    });
+    const rt = buildMasuOffering({
+      ...common,
+      mode: 'reincarnate',
+      amount: OFFERING_MAX_REINCARNATIONS
+    });
+    return {
+      maxLevels: Math.max(0, lv.toLevel - lv.fromLevel),
+      maxTimes: rt.reincarnations,
+      maxDiamonds: donationDiamondValue(gold)
+    };
+  }, [selected, gold, ownedItems, lockedIds, autoBreak]);
+  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(String(diamondText).replace(/[^0-9]/g, ''), 10) || 0));
+  const amount = mode === 'diamonds' ? diamondAmount : mode === 'levels' ? Math.min(levels, Math.max(1, limits.maxLevels)) : Math.min(times, Math.max(1, limits.maxTimes));
+  const plan = useMemo(() => selected ? buildMasuOffering({
+    masu: selected,
+    gold,
+    ownedItems,
+    lockedIds,
+    mode,
+    amount,
+    autoBreakthrough: autoBreak
+  }) : null, [selected, gold, ownedItems, lockedIds, mode, amount, autoBreak]);
+  const run = async () => {
+    if (busy || !plan?.ok) return;
+    setBusy(true);
+    setError('');
+    setConfirmOpen(false);
+    try {
+      const res = await executeMasuOffering({
+        masuId: selected.id,
+        mode,
+        amount,
+        autoBreakthrough: autoBreak
+      });
+      if (res?.ok) {
+        const base = ALL_PLAYER_MONSTERS[selected.baseId];
+        setFx({
+          plan: res.plan,
+          baseId: selected.baseId,
+          name: selected.name,
+          colors: getMasuColors(selected),
+          src: base?.iconUrl
+        });
+        setDiamondText('');
+      } else setError(res?.error || 'お布施を保存できませんでした。もう一度お試しください。');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const needsConfirm = !!plan && (plan.breakthroughs > 0 || plan.reincarnations > 0);
+  if (!selected) {
+    const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "お布施",
+      accent: "text-violet-300",
+      onBack: onBackToTemple,
+      backLabel: "神殿へ戻る"
+    }), React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, React.createElement(AssistantBubble, {
+      scene: "temple",
+      compact: true
+    })), introVisible && React.createElement("div", {
+      "data-offering-intro": true,
+      className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3"
+    }, React.createElement("div", {
+      className: "text-[11px] font-black text-violet-200"
+    }, "お布施の使い方"), React.createElement("ol", {
+      className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"
+    }, React.createElement("li", null, "お布施をするマスモンを選びます。"), React.createElement("li", null, "「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。"), React.createElement("li", null, "見積もりを見て「お布施する」を押します。")), React.createElement("button", {
+      type: "button",
+      onClick: onDismissIntro,
+      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98]"
+    }, "わかった")), renderScreenNote('offering', 'ダイヤを払って、マスモンへ直接絆経験値を与えられます。', ['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。', '上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。']), renderMonsterSortFilterBar({
+      singleType: true
+    }), React.createElement("div", {
+      className: SCREEN_LIST_CLASS
+    }, entries.length === 0 ? React.createElement(ScreenEmpty, {
+      emoji: "🙏",
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
+    }) : React.createElement("div", {
+      className: "grid grid-cols-3 gap-2 pb-3"
+    }, entries.map(({
+      masu
+    }) => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) return null;
+      return React.createElement("button", {
+        key: masu.id,
+        onClick: () => pick(masu.id),
+        style: MONSTER_CARD_STYLE,
+        className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900`
+      }, renderMonsterCardBody({
+        masu,
+        base,
+        status: React.createElement(ReincarnateBadge, {
+          count: masu.reincarnateCount,
+          className: "is-inline"
+        })
+      }));
+    }))));
+  }
+  const normalized = normalizeMasuProgression(selected);
+  const base = ALL_PLAYER_MONSTERS[selected.baseId];
+  const lvl = masuBondLevelInfo(selected);
+  const psyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+  const stepBtn = 'mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-[12px] font-black active:scale-95 disabled:opacity-30';
+  const fmt = n => Number(n || 0).toLocaleString();
+  const row = (label, value, cls = 'text-slate-200') => React.createElement("div", {
+    className: "flex justify-between gap-2 text-[11px] font-bold"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, label), React.createElement("span", {
+    className: `font-mono font-black ${cls}`
+  }, value));
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "お布施",
+    accent: "text-violet-300",
+    onBack: () => {
+      setSelectedId(null);
+      resetInputs();
+    },
+    backLabel: "お布施の一覧へ戻る",
+    disabled: busy || !!fx
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-3 pb-2`
+  }, React.createElement("div", {
+    className: "flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3"
+  }, React.createElement("div", {
+    className: "relative w-16 h-16 shrink-0 rounded-full overflow-hidden"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: selected.baseId,
+    src: base?.iconUrl,
+    alt: selected.name,
+    masuColors: getMasuColors(selected),
+    className: "w-full h-full object-cover"
+  }), React.createElement(RebirthStars, {
+    count: selected.rebirthCount,
+    className: "mh-rebirth-stars-overlay"
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate"
+  }, selected.name), React.createElement("div", {
+    className: "text-pink-300 text-xs font-black"
+  }, "絆Lv.", lvl.level, " / 上限Lv.", normalized.levelCap), React.createElement("div", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, "限界突破 ", normalized.rebirthCount, "回 ・ 転生 ", normalized.reincarnateCount, "回"))), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, React.createElement("div", {
+    className: SCREEN_PANEL_FLAT_CLASS
+  }, React.createElement("div", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, "所持ダイヤ"), React.createElement("div", {
+    className: "flex items-center gap-1 font-mono font-black text-amber-300"
+  }, React.createElement(Gem, {
+    size: 13
+  }), fmt(gold))), React.createElement("div", {
+    className: SCREEN_PANEL_FLAT_CLASS
+  }, React.createElement("div", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, "虹のプシュケー"), React.createElement("div", {
+    className: "font-mono font-black text-violet-200"
+  }, fmt(psyche), "個"))), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5",
+    role: "tablist"
+  }, OFFERING_MODES.map(key => React.createElement("button", {
+    key: key,
+    role: "tab",
+    "aria-selected": mode === key,
+    onClick: () => {
+      setMode(key);
+      setError('');
+    },
+    className: `min-h-[44px] rounded-xl text-xs font-black active:scale-95 ${mode === key ? 'bg-violet-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-300'}`
+  }, OFFERING_TAB_LABELS[key]))), React.createElement("div", {
+    className: "mh-panel rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2"
+  }, mode === 'diamonds' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "使うダイヤ（自由に入力できます）"), React.createElement("input", {
+    type: "text",
+    inputMode: "numeric",
+    "aria-label": "お布施に使うダイヤ",
+    value: diamondText === '' ? '' : diamondAmount.toLocaleString(),
+    placeholder: "0",
+    onChange: e => setDiamondText(e.target.value),
+    className: "w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"
+  }), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5"
+  }, OFFERING_DIAMOND_STEPS.map(step => React.createElement("button", {
+    key: step,
+    className: stepBtn,
+    onClick: () => setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount + step)))
+  }, "+", fmt(step)))), React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    className: stepBtn,
+    onClick: () => setDiamondText('')
+  }, "クリア"), React.createElement("button", {
+    className: stepBtn,
+    disabled: limits.maxDiamonds <= 0,
+    onClick: () => setDiamondText(String(limits.maxDiamonds))
+  }, "MAX（", fmt(limits.maxDiamonds), "）"))), mode === 'levels' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "上げるレベル（いまのLvから）"), React.createElement("div", {
+    className: "text-center font-mono text-2xl font-black text-white"
+  }, "+", amount, React.createElement("span", {
+    className: "ml-2 text-sm text-slate-400"
+  }, "→ Lv.", lvl.level + amount)), React.createElement("div", {
+    className: "grid grid-cols-6 gap-1.5"
+  }, [...OFFERING_LEVEL_STEPS].reverse().map(step => React.createElement("button", {
+    key: `m${step}`,
+    className: stepBtn,
+    disabled: amount <= 1,
+    onClick: () => setLevels(Math.max(1, amount - step))
+  }, "-", step)), OFFERING_LEVEL_STEPS.map(step => React.createElement("button", {
+    key: `p${step}`,
+    className: stepBtn,
+    disabled: amount >= limits.maxLevels,
+    onClick: () => setLevels(Math.min(limits.maxLevels, amount + step))
+  }, "+", step))), React.createElement("button", {
+    className: `${stepBtn} w-full`,
+    disabled: limits.maxLevels <= 0,
+    onClick: () => setLevels(limits.maxLevels)
+  }, "MAX（+", fmt(limits.maxLevels), "レベル）")), mode === 'reincarnate' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "転生する回数"), React.createElement("div", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "Lv.", REINCARNATE_MIN_LEVEL, "未満なら先に経験値を与え、Lv.", REINCARNATE_MIN_LEVEL, "以上になったところで転生します。これを回数ぶん続けます。固有技は「あとで決める」（固有技ポイント+1）になります。"), React.createElement("div", {
+    className: "text-center font-mono text-2xl font-black text-white"
+  }, amount, React.createElement("span", {
+    className: "ml-1 text-sm text-slate-400"
+  }, "回")), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5"
+  }, React.createElement("button", {
+    className: stepBtn,
+    disabled: amount <= 1,
+    onClick: () => setTimes(Math.max(1, amount - 10))
+  }, "-10"), React.createElement("button", {
+    className: stepBtn,
+    disabled: amount <= 1,
+    onClick: () => setTimes(Math.max(1, amount - 1))
+  }, "-1"), React.createElement("button", {
+    className: stepBtn,
+    disabled: amount >= limits.maxTimes,
+    onClick: () => setTimes(Math.min(limits.maxTimes, amount + 1))
+  }, "+1"), React.createElement("button", {
+    className: stepBtn,
+    disabled: amount >= limits.maxTimes,
+    onClick: () => setTimes(Math.min(limits.maxTimes, amount + 10))
+  }, "+10")), React.createElement("button", {
+    className: `${stepBtn} w-full`,
+    disabled: limits.maxTimes <= 0,
+    onClick: () => setTimes(limits.maxTimes)
+  }, "MAX（", fmt(limits.maxTimes), "回）")), React.createElement("label", {
+    className: "flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 text-[11px] font-black text-slate-200"
+  }, React.createElement("input", {
+    type: "checkbox",
+    checked: autoBreak,
+    onChange: e => setAutoBreak(e.target.checked),
+    className: "h-5 w-5"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, "上限に届いたら限界突破も続ける", React.createElement("small", {
+    className: "block text-[9px] font-bold text-slate-400"
+  }, "ダイヤ（Lv×", REBIRTH_COST_PER_LEVEL, "）と虹のプシュケーを使います。固有技はポイントとして残します")))), plan && React.createElement("div", {
+    className: "mh-panel rounded-2xl border border-violet-400/30 bg-slate-950/70 p-3 space-y-1.5"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-violet-200"
+  }, "この内容でお布施すると"), row('絆Lv', `Lv.${plan.fromLevel} → Lv.${plan.toLevel}`, 'text-pink-300'), row('絆経験値', `+${fmt(plan.xpGained)}`, 'text-emerald-300'), plan.gainedPoints > 0 && row('強化ポイント', `+${fmt(plan.gainedPoints)}`, 'text-amber-300'), plan.breakthroughs > 0 && row('限界突破', `${plan.breakthroughs}回（上限Lv.${plan.fromCap} → ${plan.toCap}）`, 'text-violet-200'), plan.reincarnations > 0 && row('転生', `${plan.reincarnations}回`, 'text-violet-200'), React.createElement("div", {
+    className: "my-1 border-t border-white/10"
+  }), row('お布施（経験値ぶん）', `${fmt(plan.xpDiamonds)} ダイヤ`), plan.breakthroughs > 0 && row('限界突破', `${fmt(plan.breakDiamonds)} ダイヤ ＋ プシュケー${fmt(plan.psycheUsed)}個`), plan.reincarnations > 0 && row('転生', `${fmt(plan.reincDiamonds)} ダイヤ`), row('合計', `${fmt(plan.spent)} ダイヤ`, 'text-amber-300'), row('お布施後の所持', `${fmt(plan.nextGold)} ダイヤ${plan.psycheUsed > 0 ? ` ／ プシュケー${fmt(psyche - plan.psycheUsed)}個` : ''}`), (plan.stopMessage || plan.reason) && React.createElement("div", {
+    className: "rounded-lg bg-amber-500/10 p-2 text-[10px] font-bold leading-relaxed text-amber-200"
+  }, plan.changed ? plan.stopMessage : plan.reason, plan.stopDetail && plan.stopReason !== 'none' ? `（${plan.stopDetail}）` : '')), error && React.createElement("div", {
+    className: "text-red-300 text-[11px] font-bold"
+  }, error)), React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, React.createElement("button", {
+    disabled: !plan?.ok || busy,
+    onClick: () => needsConfirm ? setConfirmOpen(true) : run(),
+    className: "mh-button mh-button-primary w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30"
+  }, "お布施する")), confirmOpen && plan && React.createElement(ConfirmSheet, {
+    title: "この内容でお布施しますか？",
+    message: `${plan.breakthroughs > 0 ? `限界突破 ${plan.breakthroughs}回\n` : ''}${plan.reincarnations > 0 ? `転生 ${plan.reincarnations}回（強化の振り直しになります）\n` : ''}合計 ${fmt(plan.spent)} ダイヤ${plan.psycheUsed > 0 ? ` ・ プシュケー${fmt(plan.psycheUsed)}個` : ''} を使います。\n元には戻せません。`,
+    confirmLabel: "お布施する",
+    onConfirm: run,
+    onCancel: () => setConfirmOpen(false)
+  }), fx && React.createElement(MasuOfferingAnimation, {
+    fx: fx,
+    onFinish: () => {
+      setDone(fx.plan);
+      setFx(null);
+    }
+  }), done && !fx && React.createElement(ModalFrame, {
+    label: "お布施の結果",
+    border: "border-violet-400/70",
+    onClose: () => setDone(null)
+  }, React.createElement("h3", {
+    className: "text-center text-base font-black text-violet-200"
+  }, "お布施をしました"), React.createElement("div", {
+    className: "mt-3 space-y-1.5"
+  }, row('絆Lv', `Lv.${done.fromLevel} → Lv.${done.toLevel}`, 'text-pink-300'), row('絆経験値', `+${fmt(done.xpGained)}`, 'text-emerald-300'), done.gainedPoints > 0 && row('強化ポイント', `+${fmt(done.gainedPoints)}`, 'text-amber-300'), done.breakthroughs > 0 && row('限界突破', `${done.breakthroughs}回（上限Lv.${done.toCap}）`, 'text-violet-200'), done.reincarnations > 0 && row('転生', `${done.reincarnations}回`, 'text-violet-200'), row('使ったダイヤ', fmt(done.spent), 'text-amber-300')), React.createElement("div", {
+    className: "mt-4"
+  }, React.createElement(ModalCloseButton, {
+    onClick: () => setDone(null),
+    label: "とじる"
+  }))));
+}
+function MasuOfferingAnimation({
+  fx,
+  onFinish
+}) {
+  const {
+    plan,
+    baseId,
+    name,
+    colors,
+    src
+  } = fx;
+  const reduced = prefersReducedMotion();
+  const total = reduced ? 900 : 4200;
+  const [shown, setShown] = useState(plan.fromLevel);
+  useEffect(() => {
+    const start = Date.now(),
+      rampMs = reduced ? 300 : 2600;
+    const tick = setInterval(() => {
+      const t = Math.min(1, (Date.now() - start) / rampMs),
+        eased = 1 - Math.pow(1 - t, 3);
+      setShown(Math.round(plan.fromLevel + (plan.toLevel - plan.fromLevel) * eased));
+      if (t >= 1) clearInterval(tick);
+    }, 40);
+    const end = setTimeout(onFinish, total);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(end);
+    };
+  }, []);
+  const up = plan.toLevel - plan.fromLevel;
+  return React.createElement("div", {
+    className: "mh-offering-animation",
+    role: "status",
+    "aria-live": "polite",
+    "aria-label": "お布施の演出",
+    onClick: onFinish
+  }, React.createElement("div", {
+    className: "mh-offering-beams",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 7
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }))), React.createElement("div", {
+    className: "mh-offering-ring",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-offering-gems",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 14
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }, React.createElement(Gem, {
+    size: 16
+  })))), React.createElement("div", {
+    className: "mh-offering-mon"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: baseId,
+    src: src,
+    alt: name,
+    masuColors: colors,
+    className: "w-full h-full object-contain"
+  })), plan.reincarnations > 0 && React.createElement("div", {
+    className: "mh-offering-flash",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "mh-offering-copy"
+  }, React.createElement("div", {
+    className: "mh-offering-title"
+  }, plan.reincarnations > 0 ? 'お布施 ＆ 転生' : plan.breakthroughs > 0 ? 'お布施 ＆ 限界突破' : 'お布施'), React.createElement("div", {
+    className: "mh-offering-level"
+  }, "Lv.", React.createElement("b", null, shown)), React.createElement("div", {
+    className: "mh-offering-xp"
+  }, "絆経験値 +", plan.xpGained.toLocaleString()), up > 0 && React.createElement("div", {
+    className: "mh-offering-up"
+  }, "LEVEL UP! +", up), plan.breakthroughs > 0 && React.createElement("div", {
+    className: "mh-offering-badge"
+  }, "限界突破 ×", plan.breakthroughs, "\u3000上限 Lv.", plan.fromCap, " → ", plan.toCap), plan.reincarnations > 0 && React.createElement("div", {
+    className: "mh-offering-badge is-reincarnate"
+  }, "転生 ×", plan.reincarnations), plan.gainedPoints > 0 && React.createElement("div", {
+    className: "mh-offering-points"
+  }, "強化ポイント +", plan.gainedPoints.toLocaleString())), React.createElement("div", {
+    className: "mh-offering-skip"
+  }, "タップでスキップ"));
 }
 function MasuSoulTraitsScreen({
   commitSoulCrystalUse,
@@ -54628,6 +55449,7 @@ function BattleScreen({
     return React.createElement("button", {
       key: i,
       "data-slot-index": i,
+      "data-tactics-ex-on": slotExInfo && slotExInfo.active && slotExInfo.def ? slotExInfo.def.effect || 'default' : undefined,
       "data-tactics-aimed": slotAimed ? 'true' : undefined,
       "data-distance-broken": distanceBroken ? 'true' : undefined,
       "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
@@ -54828,7 +55650,7 @@ function BattleScreen({
       "data-slot-ring": true
     }), React.createElement("div", {
       "data-slot-head": tacticsNewLayout ? i : undefined,
-      className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
+      className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
     }, tacticsNewLayout && React.createElement("span", {
       className: `mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
     }, RANGE_LABELS[i]), isHeroSlotMon(s) && React.createElement(Crown, {
@@ -54841,7 +55663,7 @@ function BattleScreen({
     }, "×", assignedCount), tacticsNewLayout && slotExInfo && React.createElement("span", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
-      className: `absolute right-1 top-[3px] max-w-[68px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
+      className: `absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
     }, "EX", slotExInfo.badge.text !== 'EX' ? ` ${slotExInfo.badge.text}` : ''), slotBuffMarks.map(mark => React.createElement("span", {
       key: mark.text,
       "data-tactics-slot-buff": mark.text,
@@ -55555,12 +56377,41 @@ function BattleScreen({
   }, exPanel.def.name), exPanel.stateText && React.createElement("span", {
     "data-tactics-ex-state-pill": exPanel.stateText.kind,
     className: `mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black leading-none ${exPanel.stateText.kind === 'on' ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : exPanel.stateText.kind === 'ready' ? 'bg-emerald-700/70 text-emerald-100 ring-1 ring-emerald-300/60' : 'bg-slate-700 text-slate-300 ring-1 ring-white/10'}`
-  }, exPanel.stateText.text), React.createElement("p", {
+  }, exPanel.stateText.text), React.createElement("div", {
     "data-tactics-ex-desc": true,
-    className: "mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200"
-  }, exPanel.def.desc), !exPanel.implemented && React.createElement("p", {
+    className: "mt-1.5 text-[12px] font-bold text-slate-200"
+  }, React.createElement(ExDescText, {
+    text: exPanel.def.desc
+  })), !exPanel.implemented && React.createElement("p", {
     className: "mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100"
-  }, "効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。"), React.createElement("dl", {
+  }, "効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。"), (exPanel.remainText || exPanel.styleLabel || exPanel.active || (exPanel.statusLines || []).length > 0 || exPanel.stats && exPanel.stats.changed) && React.createElement("dl", {
+    "data-tactics-ex-now": true,
+    className: "mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border-2 border-fuchsia-400/60 bg-fuchsia-950/40 px-3 py-2 text-[12px] shadow-[0_0_12px_rgba(217,70,239,.25)]"
+  }, React.createElement("dt", {
+    className: "col-span-2 text-[10px] font-black tracking-widest text-fuchsia-300"
+  }, "いまの効果"), exPanel.remainText && React.createElement(React.Fragment, null, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "残り"), React.createElement("dd", {
+    "data-tactics-ex-remain": true,
+    className: "font-black text-fuchsia-200"
+  }, exPanel.remainText)), exPanel.styleLabel && React.createElement(React.Fragment, null, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "いま"), React.createElement("dd", {
+    "data-tactics-ex-style": true,
+    className: "font-black text-fuchsia-200"
+  }, exPanel.styleLabel)), (exPanel.statusLines || []).map((t, i) => React.createElement(React.Fragment, {
+    key: i
+  }, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "いまの状態"), React.createElement("dd", {
+    "data-tactics-ex-status": true,
+    className: "font-black text-fuchsia-200"
+  }, t))), exPanel.stats && exPanel.stats.changed && React.createElement(React.Fragment, null, React.createElement("dt", {
+    className: "font-bold text-fuchsia-200/70"
+  }, "ちから／丈夫さ"), React.createElement("dd", {
+    "data-tactics-ex-stats": true,
+    className: `font-black ${exPanel.stats.changed ? 'text-fuchsia-200' : 'text-white'}`
+  }, exPanel.stats.atk, "／", exPanel.stats.def, exPanel.stats.changed ? '（EXで変化中）' : ''))), React.createElement("dl", {
     className: "mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]"
   }, React.createElement("dt", {
     className: "font-bold text-slate-400"
@@ -55580,34 +56431,12 @@ function BattleScreen({
     className: "font-bold text-slate-400"
   }, "条件"), React.createElement("dd", {
     className: "font-black text-white"
-  }, exPanel.def.conditionText)), exPanel.remainText && React.createElement(React.Fragment, null, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "残り"), React.createElement("dd", {
-    "data-tactics-ex-remain": true,
-    className: "font-black text-fuchsia-200"
-  }, exPanel.remainText)), exPanel.styleLabel && React.createElement(React.Fragment, null, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "いま"), React.createElement("dd", {
-    "data-tactics-ex-style": true,
-    className: "font-black text-fuchsia-200"
-  }, exPanel.styleLabel)), !exPanel.styleLabel && exPanel.active && React.createElement(React.Fragment, null, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "いま"), React.createElement("dd", {
-    "data-tactics-ex-active": true,
-    className: "font-black text-fuchsia-200"
-  }, "効果中")), (exPanel.statusLines || []).map((t, i) => React.createElement(React.Fragment, {
-    key: i
-  }, React.createElement("dt", {
-    className: "font-bold text-slate-400"
-  }, "いまの状態"), React.createElement("dd", {
-    "data-tactics-ex-status": true,
-    className: "font-black text-fuchsia-200"
-  }, t))), exPanel.stats && React.createElement(React.Fragment, null, React.createElement("dt", {
+  }, exPanel.def.conditionText)), exPanel.stats && !exPanel.stats.changed && React.createElement(React.Fragment, null, React.createElement("dt", {
     className: "font-bold text-slate-400"
   }, "ちから／丈夫さ"), React.createElement("dd", {
     "data-tactics-ex-stats": true,
-    className: `font-black ${exPanel.stats.changed ? 'text-fuchsia-200' : 'text-white'}`
-  }, exPanel.stats.atk, "／", exPanel.stats.def, exPanel.stats.changed ? '（EXで変化中）' : ''))), !exPanel.check.ok && React.createElement("p", {
+    className: "font-black text-white"
+  }, exPanel.stats.atk, "／", exPanel.stats.def))), !exPanel.check.ok && React.createElement("p", {
     "data-tactics-ex-why": true,
     className: "mt-2 text-[11px] font-bold leading-snug text-rose-200"
   }, exPanel.check.reason), exChoosing && exPanel.targetOptions ? React.createElement("div", {
@@ -63899,6 +64728,7 @@ function MonsterHeroGame() {
   const [reincarnateError, setReincarnateError] = useState('');
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
+  const offeringProcessingRef = useRef(false);
   const rebirthProcessingRef = useRef(false);
   const [transcendSelectedId, setTranscendSelectedId] = useState(null);
   const [transcendError, setTranscendError] = useState('');
@@ -66248,6 +67078,7 @@ function MonsterHeroGame() {
     MASU_DONATION: 'temple',
     MASU_REBIRTH: 'temple',
     MASU_REINCARNATE: 'temple',
+    MASU_OFFERING: 'temple',
     MASU_TRANSCENDENCE: 'temple',
     MASU_SOUL_RANK: 'temple',
     MASU_SOUL_TRAITS: 'management',
@@ -66589,6 +67420,12 @@ function MonsterHeroGame() {
   const dismissAutoEnhanceIntro = () => {
     setAutoEnhanceIntroSeen(true);
     storeSet(AUTO_ENHANCE_INTRO_KEY, true, false);
+  };
+  const OFFERING_INTRO_KEY = 'mh_masu_offering_intro_seen_v1';
+  const [offeringIntroSeen, setOfferingIntroSeen] = useState(true);
+  const dismissOfferingIntro = () => {
+    setOfferingIntroSeen(true);
+    storeSet(OFFERING_INTRO_KEY, true, false);
   };
   const TACTICS_EX_INTRO_KEY = 'mh_tactics_ex_intro_seen_v1';
   const [tacticsExIntroSeen, setTacticsExIntroSeen] = useState(true);
@@ -67670,6 +68507,7 @@ function MonsterHeroGame() {
       setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
       setRhythmLookIntroSeen((await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
+      setOfferingIntroSeen((await storeGet(OFFERING_INTRO_KEY, false, false)) === true);
       setTacticsExIntroSeen((await storeGet(TACTICS_EX_INTRO_KEY, false, false)) === true);
       {
         const seenStories = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_STORY_KEY, [], false));
@@ -71235,6 +72073,67 @@ function MonsterHeroGame() {
     });
     setTimeout(() => setTranscendAnimation(null), prefersReducedMotion() ? 900 : 4400);
   };
+  const executeMasuOffering = async ({
+    masuId,
+    mode,
+    amount,
+    autoBreakthrough
+  }) => {
+    if (offeringProcessingRef.current) return {
+      ok: false,
+      error: '処理中です。少し待ってからお試しください。'
+    };
+    const masu = masuMonsRef.current.find(m => String(m.id) === String(masuId));
+    const plan = buildMasuOffering({
+      masu,
+      gold,
+      ownedItems: ownedItemsRef.current,
+      lockedIds: rebirthLockedMasuIds,
+      mode,
+      amount,
+      autoBreakthrough
+    });
+    if (!plan.ok) return {
+      ok: false,
+      error: plan.reason || 'お布施の条件を満たしていません。'
+    };
+    offeringProcessingRef.current = true;
+    try {
+      const next = masuMonsRef.current.map(m => String(m.id) === String(masu.id) ? plan.nextMasu : m);
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_masu_mons',
+        before: masuMonsRef.current,
+        next
+      }, {
+        key: 'mh_gold',
+        before: gold,
+        next: plan.nextGold
+      }, {
+        key: 'mh_owned_items',
+        before: ownedItemsRef.current,
+        next: plan.nextOwnedItems
+      }], storeGet, storeSet);
+      if (!saved) throw new Error('offering save failed');
+      masuMonsRef.current = next;
+      ownedItemsRef.current = plan.nextOwnedItems;
+      setMasuMons(next);
+      setGold(plan.nextGold);
+      setOwnedItems(plan.nextOwnedItems);
+      addAssistantBond(plan.reincarnations > 0 ? 'reincarnate' : plan.breakthroughs > 0 ? 'breakthrough' : 'temple');
+      Audio_.se.levelUp();
+      return {
+        ok: true,
+        plan
+      };
+    } catch {
+      return {
+        ok: false,
+        error: 'お布施のデータを保存できませんでした。もう一度お試しください。'
+      };
+    } finally {
+      offeringProcessingRef.current = false;
+    }
+  };
   const executeMasuReincarnation = async () => {
     if (reincarnateProcessingRef.current || !reincarnateSelectedId) return;
     const masu = masuMonsRef.current.find(m => String(m.id) === String(reincarnateSelectedId));
@@ -73527,6 +74426,11 @@ function MonsterHeroGame() {
       turn: 1
     }
   });
+  const tacticsExTurnAtkRef = useRef({
+    wave: -1,
+    turn: -1,
+    bySlot: {}
+  });
   tacticsExLiveRef.current = {
     enabled: tacticsExEnabled,
     now: tacticsExNow
@@ -74565,7 +75469,9 @@ function MonsterHeroGame() {
             const reflectedSlot = isReflect ? pickDefenseSlot() : null;
             let evadedName = '',
               reflectedName = '',
-              reflectBack = 0;
+              reflectBack = 0,
+              counterBack = 0,
+              counterLabel = '';
             let units = tacticsUnitsRef.current,
               dealt = 0,
               saved = 0,
@@ -74574,6 +75480,23 @@ function MonsterHeroGame() {
               throughTotal = 0;
             const slotFx = {};
             targets.forEach(slotIdx => {
+              {
+                const atk = tacticsExTurnAtkRef.current,
+                  liveNow = tacticsExLiveRef.current.now;
+                const hamDealt = atk && atk.wave === liveNow.wave && atk.turn === liveNow.turn ? atk.bySlot[slotIdx] || 0 : 0;
+                const crossDmg = hamDealt > 0 ? tacticsExCounterDamage(tacticsExStateRef.current, units, slotIdx, liveNow, hamDealt) : 0;
+                if (crossDmg > 0 && counterBack === 0) {
+                  counterBack = crossDmg;
+                  counterLabel = tacticsTargetName(units, slotIdx);
+                  commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current, tacticsUnitsRef.current, liveNow, slotIdx, 1));
+                  evadedName = counterLabel;
+                  slotFx[slotIdx] = {
+                    evade: true
+                  };
+                  pushBattleLog(`🥊 ${counterLabel}のクロスカウンター！ 攻撃を回避して ${crossDmg.toLocaleString()} ダメージを返した（カウンター+1）`, 'ally');
+                  return;
+                }
+              }
               const exDodge = tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist);
               const thunderDodge = Math.random() < tacticsExThunderDodgeNow(slotIdx);
               if (exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now));
@@ -74695,9 +75618,24 @@ function MonsterHeroGame() {
             }
             if (dealt <= 0 && saved <= 0 && evadedSlot == null && !evadedName && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
+            if (counterBack > 0) {
+              addPopup(`クロスカウンター ${counterBack}!!`, 'enemy', 'text-orange-300 font-black text-4xl drop-shadow-lg');
+              const counteredHp = Math.max(0, enemyHpAtAttackStart - counterBack);
+              setCurrentWaveDamage(p => p + counterBack);
+              raidJackDamageRef.current += Number(counterBack) || 0;
+              setEnemy(prev => prev ? {
+                ...prev,
+                hp: counteredHp
+              } : prev);
+              await battleWait(1000);
+              if (await resolveEnemyDefeat({
+                remainingHp: counteredHp,
+                damage: counterBack
+              })) return;
+            }
             if (reflectBack > 0) {
               addPopup(`反射 ${reflectBack}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
-              const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectBack);
+              const reflectedHp = Math.max(0, enemyHpAtAttackStart - counterBack - reflectBack);
               setCurrentWaveDamage(p => p + reflectBack);
               raidJackDamageRef.current += Number(reflectBack) || 0;
               setEnemy(prev => prev ? {
@@ -74956,6 +75894,11 @@ function MonsterHeroGame() {
     const scenario = battleScenarioRef.current;
     const acting = enemyIntent;
     const hpAfterRecovery = emergencyHp !== null ? emergencyHp : Math.min(liveEffectiveMaxHp(), hp + recoverHp);
+    tacticsExTurnAtkRef.current = {
+      wave: -1,
+      turn: -1,
+      bySlot: {}
+    };
     await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
@@ -75035,6 +75978,13 @@ function MonsterHeroGame() {
           text: styleLabel,
           active: isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)
         };
+        if (def.effect === 'counter' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const ct = tacticsExCounterOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (ct) return {
+            text: `反撃${ct.counter}・あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}`,
+            active: true
+          };
+        }
         if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
           if (th) return {
@@ -75076,6 +76026,10 @@ function MonsterHeroGame() {
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
         const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
         if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);
+        if (def.effect === 'counter' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
+          const ct = tacticsExCounterOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメの${Math.round(ct.dmgRate * 100 * ct.counter)}%。発動するたび+1）`);
+        }
         if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
           if (th) {
@@ -75088,8 +76042,7 @@ function MonsterHeroGame() {
         }
         if (def.effect === 'pandoraBox' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const pb = def.pandoraBox;
-          out.push(`1枚目＝悪魔（与ダメ×${pb.devilDmg}・連撃${Math.round(pb.devilCombo.rate * 100)}%×${pb.devilCombo.count}）／2枚目＝天使（味方全員のライフ・ガッツが上限の${Math.round(pb.angelRate * 100)}%回復）`);
-          out.push(`あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン（ターン終わりに最大ライフの${Math.round(pb.costRate * 100)}%を払う）`);
+          out.push(`ターン終わりに最大ライフの${Math.round(pb.costRate * 100)}%を払う`);
         }
         if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり！ ' : ''}${pres.kinds.map(k => tacticsExPresentKindText(k, def.present, def.turns)).join('・')}`);
         return out;
@@ -75368,6 +76321,11 @@ function MonsterHeroGame() {
     setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const acting = enemyIntent;
+    tacticsExTurnAtkRef.current = {
+      wave: -1,
+      turn: -1,
+      bySlot: {}
+    };
     await handleEnemyTurn('none', {}, acting, hp);
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
@@ -76251,6 +77209,17 @@ function MonsterHeroGame() {
       distDamage: attackDistDamage
     }))) return;
     if (enemyRevivedHpRef.current != null) enemyHpAfterOurAttacks = enemyRevivedHpRef.current;
+    {
+      const bySlot = {};
+      attackHits.forEach(h => {
+        if (h && Number.isInteger(h.slotIdx)) bySlot[h.slotIdx] = (bySlot[h.slotIdx] || 0) + (Number(h.dmg) || 0);
+      });
+      tacticsExTurnAtkRef.current = {
+        wave: tacticsExLiveRef.current.now.wave,
+        turn: tacticsExLiveRef.current.now.turn,
+        bySlot
+      };
+    }
     const finalActionType = guardTypeInTurn !== 'none' ? guardTypeInTurn : lastType;
     const executedIntent = enemyIntent;
     await handleEnemyTurn(finalActionType, {
@@ -81837,6 +82806,10 @@ function MonsterHeroGame() {
       }), '寄付', 'マスモンを寄付して報酬を受け取る', () => {
         resetDonationFlow();
         setGameState('MASU_DONATION');
+      }), templeLink(React.createElement(Coins, {
+        size: 18
+      }), 'お布施', 'ダイヤを払ってマスモンへ直接経験値を与える', () => {
+        setGameState('MASU_OFFERING');
       }), templeLink(React.createElement(ArrowUpCircle, {
         size: 18
       }), '限界突破', 'マスモンのレベル上限を引き上げる', () => {
@@ -81913,6 +82886,26 @@ function MonsterHeroGame() {
       renderScreenNote: renderScreenNote,
       setRebirthSelectedId: setRebirthSelectedId,
       setRebirthSkillKey: setRebirthSkillKey,
+      sortMonsterEntries: sortMonsterEntries
+    }), gameState === 'MASU_OFFERING' && React.createElement(MasuOfferingScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      buildUnifiedMonsterEntries: buildUnifiedMonsterEntries,
+      executeMasuOffering: executeMasuOffering,
+      introVisible: !offeringIntroSeen,
+      onDismissIntro: dismissOfferingIntro,
+      gold: gold,
+      lockedIds: rebirthLockedMasuIds,
+      masuMons: masuMons,
+      monsterDisplayFlags: monsterDisplayFlags,
+      monsterEntryMatchesDisplayFlags: monsterEntryMatchesDisplayFlags,
+      monsterEntryMatchesLineage: monsterEntryMatchesLineage,
+      monsterRosterIds: monsterRosterIds,
+      onBackToTemple: () => setGameState('TEMPLE'),
+      ownedItems: ownedItems,
+      renderMonsterCardBody: renderMonsterCardBody,
+      renderMonsterSortFilterBar: renderMonsterSortFilterBar,
+      renderScreenNote: renderScreenNote,
       sortMonsterEntries: sortMonsterEntries
     }), gameState === 'MASU_REINCARNATE' && React.createElement(MasuReincarnateScreen, {
       rebirthLockedMasuIds: rebirthLockedMasuIds,
@@ -94773,6 +95766,64 @@ const createAnimationStyle = () => {
       background:linear-gradient(90deg, transparent, var(--ex-c1) 30%, #fff 50%, var(--ex-c1) 70%, transparent); box-shadow:0 0 10px var(--ex-c2), 0 0 22px var(--ex-c2);
       rotate:calc(-24deg + (var(--i) - 2.5) * 6deg); animation:exBlade 520ms ease-out forwards; animation-delay:calc(200ms + var(--i) * 80ms); }
     @keyframes exBlade { 0% { opacity:0; transform:scaleX(0); } 30% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1) translateY(6px); } }
+    /* 稲妻(雷狼影): 上から折れ線の光が走る */
+    .ex-cutin__motif--spark i { top:-10%; left:calc(8% + var(--i) * 16%); width:6px; height:75vh; border-radius:3px;
+      background:linear-gradient(180deg, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2), 0 0 26px var(--ex-c1);
+      clip-path:polygon(40% 0, 100% 0, 60% 38%, 100% 38%, 20% 100%, 45% 55%, 0 55%); transform:scaleX(5);
+      animation:exSpark 520ms steps(2,end) forwards; animation-delay:calc(160ms + var(--i) * 90ms); }
+    @keyframes exSpark { 0% { opacity:0; } 20% { opacity:1; } 45% { opacity:.2; } 65% { opacity:1; } 100% { opacity:0; } }
+    /* 輪(悠久の刻・おぼろ返し・サイコロックオン): 中心から輪が何重にも広がる */
+    .ex-cutin__motif--ring i { left:50%; top:50%; width:90px; height:90px; margin:-45px 0 0 -45px; border-radius:50%;
+      border:3px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 14px var(--ex-c2);
+      animation:exRing 1000ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 120ms); }
+    @keyframes exRing { 0% { opacity:0; transform:scale(.2); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(5.5); } }
+    /* 粒・葉(クリスマスプレゼント・緑のめぐみ): 画面全体にきらきらの粒がふわっと舞う */
+    .ex-cutin__motif--petal i { top:calc(10% + var(--i) * 13%); left:calc(6% + var(--i) * 15%); width:16px; height:16px; border-radius:50% 0 50% 0;
+      background:radial-gradient(circle at 30% 30%, #fff, var(--ex-c1) 45%, var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2);
+      animation:exPetal 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 90ms); }
+    @keyframes exPetal { 0% { opacity:0; transform:translate(0,30px) rotate(0) scale(.4); } 30% { opacity:1; } 100% { opacity:0; transform:translate(40px,-70px) rotate(220deg) scale(2.2); } }
+    /* しずく(生命の泉): 下から丸い水玉が立ちのぼる */
+    .ex-cutin__motif--drop i { bottom:-20px; left:calc(8% + var(--i) * 16%); width:22px; height:22px; border-radius:50%;
+      background:radial-gradient(circle at 35% 30%, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exDrop 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exDrop { 0% { opacity:0; transform:translateY(0) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateY(-62vh) scale(1.6); } }
+    /* 音符(オン・ステージ！): 横から音符が流れる */
+    .ex-cutin__motif--note i { left:-10%; top:calc(14% + var(--i) * 12%); width:18px; height:30px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:linear-gradient(var(--ex-c1), var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2); rotate:-14deg;
+      animation:exNote 1000ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exNote { 0% { opacity:0; transform:translateX(0); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(115vw) translateY(-20px); } }
+    /* 羽(パンドラの箱): 左右から白と黒の羽が交差する */
+    .ex-cutin__motif--wing i { top:calc(18% + var(--i) * 9%); width:60%; height:10px; border-radius:999px;
+      background:linear-gradient(90deg, transparent, var(--ex-c1) 40%, #fff 55%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exWing 760ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    .ex-cutin__motif--wing i:nth-child(odd) { left:-60%; --dir:1; }
+    .ex-cutin__motif--wing i:nth-child(even) { right:-60%; --dir:-1; filter:hue-rotate(40deg) brightness(.55); }
+    @keyframes exWing { 0% { opacity:0; transform:translateX(0); } 30% { opacity:1; } 100% { opacity:0; transform:translateX(calc(var(--dir) * 150%)); } }
+    /* 拳(ハムボクシング): 中心で衝撃の輪と拳の光がはじける */
+    .ex-cutin__motif--fist i { left:50%; top:50%; width:44px; height:44px; margin:-22px 0 0 -22px; border-radius:50%;
+      background:radial-gradient(circle, #fff 0 18%, var(--ex-c1) 30%, var(--ex-c2) 62%, transparent 70%); box-shadow:0 0 22px var(--ex-c2);
+      animation:exFist 560ms cubic-bezier(.2,.9,.2,1) forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    @keyframes exFist { 0% { opacity:0; transform:translate(0,0) scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:translate(calc((var(--i) - 2.5) * 70px), calc((var(--i) % 2 - .5) * 90px)) scale(3); } }
+    /* EXが効いているあいだの、距離枠のゆっくり脈打つ光(2026-10-06 ユーザー指示「効果中の見やすさ」。使った瞬間の .ex-aura とは別に、ずっと出る) */
+    [data-tactics-ex-on] { --ex-on-c:#e879f9; }
+    /* 光は枠のうえに重ねた膜(::after)の透明度だけを動かす(バトルの飾りは transform と opacity だけを動かす決まり) */
+    [data-tactics-ex-on]::after { content:''; position:absolute; inset:-2px; z-index:58; pointer-events:none; border-radius:inherit;
+      box-shadow:0 0 0 2px var(--ex-on-c), 0 0 18px color-mix(in srgb, var(--ex-on-c) 85%, transparent), inset 0 0 14px color-mix(in srgb, var(--ex-on-c) 40%, transparent);
+      animation:exOnPulse 2200ms ease-in-out infinite; }
+    [data-tactics-ex-on="thunder"], [data-tactics-ex-on="stage"] { --ex-on-c:#facc15; }
+    [data-tactics-ex-on="counter"], [data-tactics-ex-on="allIn"], [data-tactics-ex-on="multiBuff"] { --ex-on-c:#fb923c; }
+    [data-tactics-ex-on="partyBoost"], [data-tactics-ex-on="partyGuard"], [data-tactics-ex-on="present"] { --ex-on-c:#4ade80; }
+    [data-tactics-ex-on="lifeSpring"], [data-tactics-ex-on="psychoLock"], [data-tactics-ex-on="damageBack"] { --ex-on-c:#38bdf8; }
+    [data-tactics-ex-on="statBoost"], [data-tactics-ex-on="distMatch"], [data-tactics-ex-on="dodgeCombo"], [data-tactics-ex-on="pandoraBox"] { --ex-on-c:#f472b6; }
+    @keyframes exOnPulse { 0%, 100% { opacity:.35; } 50% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { [data-tactics-ex-on]::after { animation:none; opacity:.8; } }
+    /* EXの説明文(箇条書き): 1行目は要約、「・」で始まる行は項目として段を下げる */
+    .ex-desc__lead { font-weight:900; color:#fff; line-height:1.5; }
+    .ex-desc__list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; }
+    .ex-desc__item { position:relative; padding-left:1.1em; line-height:1.5; }
+    .ex-desc__item::before { content:''; position:absolute; left:.2em; top:.62em; width:.5em; height:.5em; border-radius:50%; background:#d946ef; }
+    .ex-desc__sub { padding-left:2.1em; font-size:.92em; color:#cbd5e1; line-height:1.4; position:relative; }
+    .ex-desc__sub::before { content:'─'; position:absolute; left:1.1em; opacity:.6; }
     /* 使った子の距離枠の光 */
     .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
       border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
@@ -97089,6 +98140,29 @@ const createAnimationStyle = () => {
     @media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}.mh-reincarnation-mon{width:118px;height:118px}.mh-reincarnation-souls{width:160px;height:250px}.mh-reincarnation-title{top:calc(env(safe-area-inset-top) + 13%);font-size:clamp(30px,11vw,50px)}.mh-reincarnation-mark{top:64%}.mh-reincarnation-mark .mh-reincarnate-badge{padding:5px 12px;font-size:14px}}
     @media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}.mh-reincarnation-souls,.mh-reincarnation-converge,.mh-reincarnation-rays,.mh-reincarnation-halo,.mh-reincarnation-flash,.mh-reincarnation-title{display:none}.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}}
     /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
+    /* お布施の演出(神殿・お布施画面)。ダイヤの光がマスモンへ集まり、Lvが数え上がる */
+    .mh-offering-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 42%,#7c3aedaa,#1e1b4b 45%,#020617 78%);cursor:pointer;animation:mhOfferingIn .35s ease-out both}
+    .mh-offering-beams{position:absolute;inset:0;pointer-events:none}.mh-offering-beams i{position:absolute;top:-10%;left:calc(8% + var(--i)*14%);width:6%;height:75%;background:linear-gradient(#fde68aaa,#fde68a00);filter:blur(6px);transform-origin:top;animation:mhOfferingBeam 2.4s ease-in-out calc(var(--i)*.12s) infinite alternate}
+    .mh-offering-ring{position:absolute;left:50%;top:42%;width:260px;height:260px;margin:-130px 0 0 -130px;border:3px solid #fde68a;border-radius:50%;box-shadow:0 0 40px #fbbf24aa,inset 0 0 40px #fbbf2466;animation:mhOfferingRing 1.6s ease-out infinite}
+    .mh-offering-gems{position:absolute;left:50%;top:42%;width:0;height:0}.mh-offering-gems i{position:absolute;left:0;top:0;color:#67e8f9;filter:drop-shadow(0 0 6px #22d3ee);opacity:0;animation:mhOfferingGem 1.8s ease-in calc(var(--i)*.13s) infinite;--a:calc(var(--i)*25.7deg)}
+    .mh-offering-mon{position:relative;width:170px;height:170px;margin-top:-130px;animation:mhOfferingMon 1.2s ease-in-out infinite alternate;filter:drop-shadow(0 0 24px #fde68acc)}
+    .mh-offering-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhOfferingFlash 1.4s ease-out 2.2s both}
+    .mh-offering-copy{position:absolute;left:0;right:0;bottom:11%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 16px;text-align:center}
+    .mh-offering-title{font-size:15px;font-weight:900;letter-spacing:.2em;color:#ddd6fe}
+    .mh-offering-level{font-size:20px;font-weight:900;color:#f9a8d4}.mh-offering-level b{font-size:54px;font-family:ui-monospace,monospace;color:#fff;text-shadow:0 0 18px #f472b6}
+    .mh-offering-xp{font-size:13px;font-weight:900;color:#6ee7b7}
+    .mh-offering-up{font-size:22px;font-weight:900;color:#fde047;text-shadow:0 0 14px #f59e0b;opacity:0;animation:mhOfferingPop .5s ease-out 2.4s both}
+    .mh-offering-badge{padding:6px 14px;border-radius:999px;border:1px solid #c4b5fd;background:#4c1d95cc;font-size:13px;font-weight:900;color:#ede9fe;opacity:0;animation:mhOfferingPop .5s ease-out 2.7s both}.mh-offering-badge.is-reincarnate{animation-delay:3s;border-color:#fda4af;background:#881337cc;color:#ffe4e6}
+    .mh-offering-points{font-size:12px;font-weight:900;color:#fcd34d;opacity:0;animation:mhOfferingPop .5s ease-out 3.2s both}
+    .mh-offering-skip{position:absolute;right:14px;top:calc(12px + env(safe-area-inset-top));font-size:10px;font-weight:700;color:#94a3b8}
+    @keyframes mhOfferingIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhOfferingBeam{from{opacity:.25;transform:rotate(-6deg)}to{opacity:.8;transform:rotate(6deg)}}
+    @keyframes mhOfferingRing{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+    @keyframes mhOfferingGem{0%{opacity:0;transform:rotate(var(--a)) translateY(-230px) scale(1)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-10px) scale(.3)}}
+    @keyframes mhOfferingMon{from{transform:scale(1)}to{transform:scale(1.08)}}
+    @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
+    @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}

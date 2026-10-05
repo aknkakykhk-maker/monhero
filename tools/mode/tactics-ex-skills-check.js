@@ -66,7 +66,7 @@ vm.runInContext([
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExAvoidLeftOf,spendTacticsExAvoid,tacticsExCritFixedAt,tacticsExConfusesOnHit,rollEnemyConfusion,confusedEnemyIntent,ENEMY_CONFUSE_TURNS,ENEMY_CONFUSE_CHANCE,'
-    + 'tacticsExDefOf,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterDamage,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -118,7 +118,7 @@ check('剣士モッチー「ソード・コンバージョン」: ラン5回・�
   JSON.stringify(kenshi));
 check('ソード・コンバージョンの説明だけで3つのスタイルの効き目が分かる', ['片手剣：', '片手盾：', '二刀流：', '丈夫さ', 'ソードスキル', '連撃', 'メイン']
   .every(w => kenshi.desc.includes(w)), kenshi.desc);
-check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.tacticsExDefOf(null) === null
+check('EXを持たない子は null(いまは全員が持っているので、存在しない子で確かめる)', ex.tacticsExDefOf('NoSuchMonster') === null && ex.tacticsExDefOf(null) === null
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
 check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX_SKILLS)
   .every(id => !!ex.tacticsExDurationText(ex.tacticsExDefOf(id))));
@@ -820,6 +820,33 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const scr = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '71-screen-battle.jsx'), 'utf8');
   check('画面へ結線してある(札の残り・詳細の「残り」と状態のひとこと・ターン終わりのログ)', /remainText:\(\(\)=>\{/.test(app) && /stateText:\(\(\)=>\{/.test(app)
     && /data-tactics-ex-remain/.test(scr) && /data-tactics-ex-state-pill/.test(scr) && /の効果が切れた/.test(app) && /雷纏が始まる！/.test(app));
+}
+
+// ---------- ㉒ ハム「ハムボクシング」(2026-10-05 ユーザー指定) ----------
+{
+  const hm = ex.tacticsExDefOf('Ham');
+  check('ハム「ハムボクシング」: ラン5回・併用できる・3ターン・カウンター1から・威力は与ダメ100%×カウンター',
+    !!hm && hm.name === 'ハムボクシング' && hm.maxUses === 5 && !hm.unlimited && hm.withCards && hm.duration === 'turns' && hm.turns === 3
+    && hm.effect === 'counter' && ex.isTacticsExEffectImplemented(hm) && !!hm.counter && hm.counter.start === 1 && hm.counter.dmgRate === 1, JSON.stringify(hm));
+  const A = (wave, turn) => ({ wave, turn });
+  const ham = { id: 'Ham', hp: 300, maxHp: 300, atk: 100, def: 50, guts: 50, maxGuts: 120, downed: false };
+  const units = [null, ham];
+  let st = ex.applyTacticsExUse(ex.createTacticsExState(), { def: hm, slot: 1, monId: 'Ham', now: A(1, 2) });
+  const c0 = ex.tacticsExCounterOf(st, units, 1, A(1, 2));
+  check('使うとカウンターが1付く(威力 与ダメ100%×1)・ハムが攻撃していれば その与ダメ×1 を返す', !!c0 && c0.counter === 1 && c0.dmgRate === 1
+    && ex.tacticsExCounterDamage(st, units, 1, A(1, 2), 500) === 500 && ex.tacticsExCounterDamage(st, units, 1, A(1, 2), 0) === 0);
+  st = ex.addTacticsExCounter(st, units, A(1, 2), 1, 1);
+  check('クロスカウンターが発動するとカウンター+1(次は与ダメ×2)', ex.tacticsExCounterOf(st, units, 1, A(1, 3)).counter === 2 && ex.tacticsExCounterDamage(st, units, 1, A(1, 3), 500) === 1000);
+  check('3ターンで切れる(2〜4ターン目・5ターン目には切れる)・切れるとカウンターもなくなる・次のWAVEでも切れる',
+    !!ex.tacticsExCounterOf(st, units, 1, A(1, 4)) && ex.tacticsExCounterOf(st, units, 1, A(1, 5)) === null && ex.tacticsExCounterDamage(st, units, 1, A(1, 5), 500) === 0
+    && ex.tacticsExCounterOf(st, units, 1, A(2, 2)) === null && ex.tacticsExCounterOf(ex.addTacticsExCounter(st, units, A(1, 5), 1, 1), units, 1, A(1, 5)) === null);
+  const later = ex.applyTacticsExUse(st, { def: hm, slot: 1, monId: 'Ham', now: A(1, 6) });
+  check('もう一度使うと、カウンターは1からやり直し', ex.tacticsExCounterOf(later, units, 1, A(1, 6)).counter === 1);
+  check('効いているあいだは、もう一度使えない(重ね掛けでカウンターが戻らない)', hm.conditions.includes('notActive') && !ex.checkTacticsExUse({ def: hm, state: st, slot: 1, monId: 'Ham', alive: true, now: A(1, 3) }).ok);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体へ結線してある(与ダメを控える・狙われたら回避して返す・撃破判定)', /tacticsExTurnAtkRef\.current=\{ wave:tacticsExLiveRef\.current\.now\.wave/.test(app)
+    && /tacticsExCounterDamage\(tacticsExStateRef\.current,units,slotIdx,liveNow,hamDealt\)/.test(app) && /addTacticsExCounter\(tacticsExStateRef\.current,tacticsUnitsRef\.current,liveNow,slotIdx,1\)/.test(app)
+    && /resolveEnemyDefeat\(\{remainingHp:counteredHp,damage:counterBack\}\)/.test(app));
 }
 
 // ---------- ㉑ スエゾー「サイコロックオン」(2026-10-05 ユーザー指定) ----------

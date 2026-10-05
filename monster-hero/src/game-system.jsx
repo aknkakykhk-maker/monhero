@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cea47f578bdd1c43
+// generated-sha256: 40cec20cf939b526
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 01:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 02:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3766,6 +3766,105 @@ const buildMasuReincarnation = ({ masu, skillKey, gold, lockedIds = [] }) => {
   };
 };
 
+// 【神殿のお布施】ダイヤを払って、マスモンへ直接絆経験値を与える。
+// ダイヤと経験値の割合はトレーニングチケット(100ダイヤ=15EXP)と同じ。
+// 限界突破の上限に届いたら、費用(ダイヤ・虹のプシュケー)を払って限界突破しながら先へ進める。
+// 転生は「絆Lv.100へ上げる → 転生する」を指定回数ぶん続けて行う。
+// 画面の見積もりと実際の実行は必ずこの関数1本で計算する(別々に数えると表示と実際がずれる)。
+const OFFERING_TICKET_DIAMONDS = 100;
+const OFFERING_TICKET_XP = 15;
+const OFFERING_MAX_REINCARNATIONS = 50;
+const OFFERING_MODES = Object.freeze(['diamonds', 'levels', 'reincarnate']);
+const offeringXpForDiamonds = (diamonds) => Math.floor(donationDiamondValue(diamonds) * OFFERING_TICKET_XP / OFFERING_TICKET_DIAMONDS);
+const offeringDiamondsForXp = (xp) => Math.ceil(donationDiamondValue(xp) * OFFERING_TICKET_DIAMONDS / OFFERING_TICKET_XP);
+const offeringStopMessage = (reason) => ({
+  funds:'ダイヤが足りないため、ここまでで止まります。',
+  psyche:'虹のプシュケーが足りないため、ここで止まります。',
+  cap:'レベル上限に届いたため、ここまでで止まります（限界突破も行うにすると先へ進めます）。',
+  max:'これ以上は上げられません（Lv.400の先は超越・魂格進化が必要です）。',
+  locked:'転生ロック中のマスモンは転生できません。',
+  level:'絆Lv.100に届かないため、転生できません。',
+  none:'',
+}[reason] || '');
+// amount: diamonds=使うダイヤの上限 / levels=上げたいレベル数 / reincarnate=転生の回数
+const buildMasuOffering = ({ masu, gold, ownedItems, lockedIds = [], mode = 'diamonds', amount = 0, autoBreakthrough = false }) => {
+  const empty = { ok:false, changed:false, reason:'', stopReason:'none', stopMessage:'', spent:0, xpDiamonds:0, breakDiamonds:0, reincDiamonds:0,
+    xpGained:0, breakthroughs:0, psycheUsed:0, reincarnations:0, fromLevel:1, toLevel:1, fromCap:0, toCap:0 };
+  if (!masu) return { ...empty, reason:'対象のマスモンが見つかりません。' };
+  if (!OFFERING_MODES.includes(mode)) return { ...empty, reason:'お布施の種類が正しくありません。' };
+  const normalized = normalizeMasuProgression(masu);
+  const goldHave = donationDiamondValue(gold);
+  const psycheHave = Math.max(0, Math.floor(Number(ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID)) || 0));
+  const requested = donationDiamondValue(amount);
+  const fromLevel = masuBondLevelInfo(normalized).level;
+  const base = { ...empty, fromLevel, toLevel:fromLevel, fromCap:normalized.levelCap, toCap:normalized.levelCap };
+  if (requested <= 0) return { ...base, reason:mode === 'diamonds' ? 'お布施のダイヤを入力してください。' : mode === 'levels' ? '上げるレベルを選んでください。' : '転生の回数を選んでください。' };
+  // 「ダイヤ指定」は、経験値・限界突破・転生を全部ふくめて使うダイヤの上限。それ以外は持っているダイヤが上限
+  const limit = mode === 'diamonds' ? Math.min(goldHave, requested) : goldHave;
+  const st = { masu:normalized, xp:0, breakCost:0, reincCost:0, psyche:psycheHave, breakthroughs:0, reincarnations:0, stop:'none', stopDetail:'' };
+  const spent = () => offeringDiamondsForXp(st.xp) + st.breakCost + st.reincCost;
+  const stop = (reason, detail = '') => { if (st.stop === 'none') { st.stop = reason; st.stopDetail = detail; } };
+  // xpWanted ぶんの経験値を与える。上限なら(許可があれば)限界突破して続ける。止まった理由は st.stop へ
+  const offerXp = (xpWanted) => {
+    let left = Math.max(0, Math.floor(Number(xpWanted) || 0));
+    for (let guard = 0; guard < 2000 && left > 0 && st.stop === 'none'; guard++) {
+      const cur = st.masu;
+      const room = Math.max(0, totalBondXpForLevel(cur.levelCap) - donationDiamondValue(cur.bondXp));
+      if (room > 0) {
+        const fundsXp = Math.max(0, offeringXpForDiamonds(limit - st.breakCost - st.reincCost) - st.xp);
+        const take = Math.min(left, room, fundsXp);
+        if (take <= 0) { stop('funds'); break; }
+        const res = applyBondXpGain(cur, take);
+        if (res.xpGain <= 0) { stop('cap'); break; }
+        st.masu = res.masu; st.xp += res.xpGain; left -= res.xpGain;
+        if (fundsXp < Math.min(left + res.xpGain, room)) stop('funds');
+        continue;
+      }
+      if (!autoBreakthrough) { stop('cap'); break; }
+      const r = buildMasuBreakthrough({ masu:cur, skillKey:'', gold:limit - spent(), psycheOwned:st.psyche });
+      if (!r.ok) {
+        const levelMax = cur.levelCap >= MAX_MASU_LEVEL_CAP;
+        stop(levelMax ? 'max' : (r.psycheHave < r.psycheCost ? 'psyche' : 'funds'), r.reason);
+        break;
+      }
+      st.masu = r.nextMasu; st.breakCost += r.cost; st.psyche = r.nextPsyche; st.breakthroughs++;
+    }
+    return left;
+  };
+  if (mode === 'diamonds') {
+    offerXp(autoBreakthrough ? 1e12 : offeringXpForDiamonds(limit));
+  } else if (mode === 'levels') {
+    const target = Math.min(SOUL_RANK_LEVEL_CAP, fromLevel + requested);
+    offerXp(totalBondXpForLevel(target) - donationDiamondValue(st.masu.bondXp));
+  } else {
+    const times = Math.min(OFFERING_MAX_REINCARNATIONS, requested);
+    for (let i = 0; i < times && st.stop === 'none'; i++) {
+      if (masuBondLevelInfo(st.masu).level < REINCARNATE_MIN_LEVEL) {
+        offerXp(totalBondXpForLevel(REINCARNATE_MIN_LEVEL) - donationDiamondValue(st.masu.bondXp));
+        if (masuBondLevelInfo(st.masu).level < REINCARNATE_MIN_LEVEL) { stop(st.stop === 'none' ? 'level' : st.stop); break; }
+      }
+      const r = buildMasuReincarnation({ masu:st.masu, skillKey:'', gold:limit - spent(), lockedIds });
+      if (!r.ok) { stop(isMasuLocked(lockedIds, st.masu.id) ? 'locked' : 'funds', r.reason); break; }
+      st.masu = r.nextMasu; st.reincCost += r.cost; st.reincarnations++;
+    }
+  }
+  const total = spent();
+  const toLevel = masuBondLevelInfo(st.masu).level;
+  const changed = st.xp > 0 || st.breakthroughs > 0 || st.reincarnations > 0;
+  return {
+    ...base,
+    ok:changed && total <= goldHave, changed, reason:changed ? '' : (offeringStopMessage(st.stop) || 'お布施できる内容がありません。'),
+    stopReason:st.stop, stopMessage:offeringStopMessage(st.stop), stopDetail:st.stopDetail,
+    spent:total, xpDiamonds:offeringDiamondsForXp(st.xp), breakDiamonds:st.breakCost, reincDiamonds:st.reincCost,
+    xpGained:st.xp, breakthroughs:st.breakthroughs, psycheUsed:psycheHave - st.psyche, reincarnations:st.reincarnations,
+    toLevel, toCap:st.masu.levelCap,
+    gainedPoints:Math.max(0, (st.masu.distAptPoints || 0) - (normalized.distAptPoints || 0)),
+    nextGold:goldHave - total,
+    nextOwnedItems:{ ...(ownedItems || {}), [BREAKTHROUGH_ITEM_ID]:st.psyche },
+    nextMasu:st.masu,
+  };
+};
+
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
 const donationDiamondValue = (bondXp) => {
   const value = Number(bondXp);
@@ -4906,7 +5005,7 @@ const normalizeScreenThemeChoice = value => SCREEN_THEME_CHOICES.some(choice => 
 const normalizeScreenTheme = value => Object.fromEntries(SCREEN_THEME_CATEGORIES.map(category => [category.id, normalizeScreenThemeChoice(value && typeof value === 'object' ? value[category.id] : null)]));
 // いま描いている画面(gameState)がどの種類か
 const SCREEN_THEME_BATTLE_STATES = new Set(['BATTLE','BATTLE_TUTORIAL','BATTLE_MENU','BATTLE_MODE_SELECT','BATTLE_SYSTEM_SELECT','BATTLE_DIFFICULTY_SELECT','EXTREME_DIFFICULTY_SELECT','SPECIES_CHALLENGE_SELECT','BATTLE_SCORE_RANKING','PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN','SKIP_PICK','SKIP_RESULT','AUTO_SETTINGS']);
-const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE','MASU_REGENERATION','MASU_REGENERATION_DETAIL','MASU_DONATION','MASU_FUSION','MASU_REBIRTH','MASU_REINCARNATE','MASU_TRANSCENDENCE','MASU_SOUL_RANK','MASU_SOUL_TRAITS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE']);
+const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE','MASU_REGENERATION','MASU_REGENERATION_DETAIL','MASU_DONATION','MASU_OFFERING','MASU_FUSION','MASU_REBIRTH','MASU_REINCARNATE','MASU_TRANSCENDENCE','MASU_SOUL_RANK','MASU_SOUL_TRAITS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE']);
 const screenThemeCategory = (gameState, rhythmOpen = false) => {
   if (rhythmOpen || String(gameState || '').startsWith('RHYTHM_')) return 'rhythm';
   if (SCREEN_THEME_BATTLE_STATES.has(gameState)) return 'battle';
@@ -13233,7 +13332,21 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   heal:         { c1:'#bbf7d0', c2:'#10b981', motif:'rise' },   // 緊急回復(2026-09-29): 緑の光が立ちのぼる
   partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
   comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
-  avoidCharge:  { c1:'#e9d5ff', c2:'#6d28d9', motif:'blade' },  // オフリィアボイド: 紫の残像(すり抜ける)
+  // ★2026-10-06 EXが全員そろったので、効果ごとに色と動きを分けた(それまでは default の桃紫の光ばかりだった)
+  distMatch:    { c1:'#fecdd3', c2:'#e11d48', motif:'blade' },   // 緋桜瞬歩: 緋色の斬撃
+  dodgeCombo:   { c1:'#fecaca', c2:'#b91c1c', motif:'blade' },   // 血踊: 血の色の斬撃
+  multiBuff:    { c1:'#fde68a', c2:'#b45309', motif:'flame' },   // 抗えぬ宿命・堕天の烙印・お気に入りの魔法: 燃えるオーラ
+  stage:        { c1:'#fbcfe8', c2:'#be185d', motif:'note' },    // オン・ステージ！: 音符が舞う
+  present:      { c1:'#fecaca', c2:'#16a34a', motif:'petal' },   // クリスマスプレゼント: きらきらの粒
+  lifeSpring:   { c1:'#bae6fd', c2:'#0284c7', motif:'drop' },    // 生命の泉: 水のしずくが立ちのぼる
+  timeStop:     { c1:'#e0f2fe', c2:'#475569', motif:'ring' },    // 悠久の刻: 時計の輪が広がる
+  pandoraBox:   { c1:'#fae8ff', c2:'#7e22ce', motif:'wing' },    // パンドラの箱: 光と闇の羽
+  thunder:      { c1:'#fef9c3', c2:'#eab308', motif:'spark' },   // 雷狼影: 稲妻
+  partyBoost:   { c1:'#d9f99d', c2:'#16a34a', motif:'petal' },   // 緑のめぐみ: 緑の葉
+  damageBack:   { c1:'#e9d5ff', c2:'#6d28d9', motif:'ring' },    // おぼろ返し: 朧の輪
+  psychoLock:   { c1:'#fbcfe8', c2:'#7c3aed', motif:'ring' },    // サイコロックオン: 念力の輪
+  counter:      { c1:'#fed7aa', c2:'#ea580c', motif:'fist' },    // ハムボクシング: 拳の衝撃
+  avoidCharge:  { c1:'#e9d5ff', c2:'#6d28d9', motif:'blade' },   // オフリィアボイド: 紫の残像(すり抜ける)
   trickConfuse: { c1:'#fed7aa', c2:'#9333ea', motif:'rise' },   // トリックコンフューズ: かぼちゃ色と紫の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
@@ -13273,6 +13386,25 @@ const TacticsExCutin = ({ cutin }) => {
     </div>,
     document.body
   );
+};
+// ==== EXの説明文(2026-10-06 ユーザー指示「説明欄の見やすさ」) ====
+// def.desc の書き方: 1行目＝要約 / 「・」で始まる行＝効果の項目 / 全角空白で始まる行＝その項目の細かい内訳 / 「◯◯：…」の行＝名前つきの項目。
+// 図鑑と、距離枠から開く詳細の両方で同じ見た目にする(文字そのものは変えず、段と印だけを付ける)
+const ExDescText = ({ text }) => {
+  const lines = String(text || '').split('\n').filter(l => l.trim() !== '');
+  if (!lines.length) return null;
+  const isBullet = (l) => /^[・　]/.test(l);
+  const lead = isBullet(lines[0]) ? null : lines[0];
+  const rest = lead ? lines.slice(1) : lines;
+  return (<>
+    {lead ? <p className="ex-desc__lead">{lead}</p> : null}
+    {rest.length ? <ul className="ex-desc__list">{rest.map((l, i) => {
+      if (/^　/.test(l)) return <li key={i} className="ex-desc__sub">{l.replace(/^[　\s]+/, '')}</li>;
+      const body = l.replace(/^・/, '');
+      const m = /^([^：]{1,12})：(.*)$/.exec(body);
+      return <li key={i} className="ex-desc__item">{m ? <><b className="text-fuchsia-200">{m[1]}</b>：{m[2]}</> : body}</li>;
+    })}</ul> : null}
+  </>);
 };
 // ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」) ====
 // ガードを置いた子の枠に六角形の光の壁を重ねる。ガードの段階(GUARD_EVOLUTION)が上がるほど、
@@ -21929,6 +22061,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
     psychoLock: Object.freeze({ enemyDmgDown: 0.3, enemyTakenUp: 0.3 }),
     effect: 'psychoLock',
   }),
+  // ★2026-10-05 ユーザー指定(ハムのEX)。名前は「ハムボクシング」・3ターン・ラン5回。
+  //   「使用時『カウンター』を1付与。自分が狙われたときに攻撃をすると、クロスカウンター発動。相手の攻撃を回避して、
+  //   与ダメ100%×カウンターの攻撃になる。クロスカウンターが発動するとカウンターを1付与。効果が切れるとカウンターもなくなる」。
+  //   「与ダメ100%」は、そのターンにハムが敵へ与えたダメージ(連撃も含めた合計)の100%と読んで実装した。威力は 100% × カウンターの数。
+  //   カードとの併用は指定が無かったが、攻撃しないと発動しないので「併用できる」
+  Ham: Object.freeze({
+    id: 'ham_boxing',
+    name: 'ハムボクシング',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・ハムが敵に狙われたターンに、ハムが攻撃していると「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えたダメージの100%×カウンターの数を、敵へ返す\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    counter: Object.freeze({ start: 1, dmgRate: 1 }),
+    effect: 'counter',
+    // 効いている途中でもう一度使うと、カウンターが1に戻ってしまうので使えない
+    conditions: Object.freeze(['notActive']),
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -22019,7 +22167,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'avoidCharge', 'trickConfuse']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -22082,6 +22230,8 @@ const normalizeTacticsExDef = (raw) => {
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0), hp: Math.max(0, Number(raw.voltage.hp) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
+    counter: raw.counter && typeof raw.counter === 'object'
+      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), dmgRate: Math.max(0, Number(raw.counter.dmgRate) || 0) } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
       ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
@@ -22251,6 +22401,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyBoostCfg: def.partyBoost ? { ...def.partyBoost } : null,
       damageBackCfg: def.damageBack ? { ...def.damageBack } : null,
       psychoLockCfg: def.psychoLock ? { ...def.psychoLock } : null,
+      counterCfg: def.counter ? { ...def.counter } : null, counter: def.counter ? def.counter.start : 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -22634,6 +22785,30 @@ const tacticsExPartyStatRate = (state, now) => {
     const rate = Number(e.effect === 'partyBoost' ? (e.partyBoostCfg && e.partyBoostCfg.statRate) : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+// ---- ハム(counter): ハムボクシング ----
+// いまのカウンターの数(効いていなければ null)。dmgRate は1つあたりの威力(与ダメの割合)
+const tacticsExCounterOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'counter') return null;
+  const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.counterCfg;
+  if (!cfg) return null;
+  const rate = Number(cfg.dmgRate);
+  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), dmgRate: Number.isFinite(rate) && rate > 0 ? rate : 0 };
+};
+// クロスカウンターが発動した子のカウンターを n 増やす(効いていなければ状態をそのまま返す)
+const addTacticsExCounter = (state, units, now, slot, n) => {
+  const safe = normalizeTacticsExState(state);
+  const c = tacticsExCounterOf(safe, units, slot, now);
+  const add = Math.max(0, tacticsSafeInt(n, 0));
+  if (!c || add <= 0) return safe;
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(99, c.counter + add) } } };
+};
+// クロスカウンターで敵へ返すダメージ(ハムがそのターンに与えたダメージ × 威力 × カウンターの数。切り捨て)
+const tacticsExCounterDamage = (state, units, slot, now, dealtThisTurn) => {
+  const c = tacticsExCounterOf(state, units, slot, now);
+  const dealt = Math.max(0, Number(dealtThisTurn) || 0);
+  return c && dealt > 0 ? Math.floor(dealt * c.dmgRate * c.counter) : 0;
 };
 // サイコロックオン(psychoLock)が効いているか。効いているあいだ、敵は距離を動かせず(移動を選んでも何もしない)、
 // 敵の与ダメージが enemyDmgDown 下がり、敵の被ダメージが enemyTakenUp 上がる。効いていなければ active:false・倍率は変えない
@@ -23714,13 +23889,13 @@ const RAID_JACK_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_JACK_A_ATK_POWERS = Object.freeze(RAID_JACK_A_ATKS.map((atk) => atk / RAID_JACK_BASE.atk));
 
 // A: ベースモン協力戦。段階ごとの共有HP。
-// ライフ(2026-10-05・ユーザーが段階ごとに決めた): 男爵 1,750,000 / 子爵 3,200,000 / 伯爵 8,000,000 / 公爵 14,000,000 / 大王 21,000,000(2026-10-05 に伯爵・公爵・大王を2度引き上げ。男爵・子爵は開始済みなので変えない)
+// ライフ(2026-10-05・ユーザーが段階ごとに決めた): 男爵 1,750,000 / 子爵 3,200,000 / 伯爵 8,000,000 / 公爵 35,000,000 / 大王 80,000,000(2026-10-05 に伯爵・公爵・大王を何度か引き上げ、公爵・大王は最後に 3,500万・8,000万へ。男爵・子爵は開始済みなので変えない)
 const RAID_JACK_A_TIERS = Object.freeze([
   raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000),    // 攻撃力 350
   raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000),    // 攻撃力 500
   raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000),    // 攻撃力 600
-  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000),   // 攻撃力 800
-  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000),   // 攻撃力 1,000
+  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 35000000),   // 攻撃力 800
+  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 80000000),   // 攻撃力 1,000
 ]);
 // 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示)。大王を倒したら共有ライフは無限になり、敵は小さなぱんぷきんに替わる。
 //   ・共有ライフは減らない。毎回ぜんかいのライフからはじめ、与えたダメージだけがスコア(累計)に足される
@@ -27075,7 +27250,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
                     const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
                     if(!exDef)return null;
                     const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
-                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.usesPerWave?'各WAVE ':'ラン'}${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
+                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 text-[10px] font-bold text-slate-200"><ExDescText text={exDef.desc}/></div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.usesPerWave?'各WAVE ':'ラン'}${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
                   })()}
                 </div>)}
               </div>
@@ -28622,6 +28797,228 @@ function MasuDonationAnimation({
   return (
 <div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>
   );
+}
+
+// ---- part: 62-screen-masu-offering.jsx ----
+// ==== 画面: 神殿のお布施(MASU_OFFERING) ====
+//
+// ダイヤを払って、選んだマスモンへ直接絆経験値を与える画面。
+// ダイヤと経験値の割合はトレーニングチケットと同じ(100ダイヤ=15EXP)。
+// 「ダイヤ指定」「レベル指定」「転生」の3つの頼み方があり、見積もりと実行は
+// どちらも buildMasuOffering(11-masu-progression.jsx)1本で計算する。
+//
+// 【この画面ならではの注意】
+// ・保存は一切していない。個体・ダイヤ・プシュケーの更新は MonsterHeroGame 側の
+//   executeMasuOffering が担う(実行時に最新の所持数で計算し直す)
+// ・状態(選んだ子・頼み方・入力)は画面の中に持つ。画面を出るたびに白紙へ戻ってよい
+
+const OFFERING_TAB_LABELS = Object.freeze({ diamonds:'ダイヤ指定', levels:'レベル指定', reincarnate:'転生' });
+const OFFERING_DIAMOND_STEPS = Object.freeze([100, 1000, 10000, 100000]);
+const OFFERING_LEVEL_STEPS = Object.freeze([1, 10, 100]);
+
+function MasuOfferingScreen({
+  MONSTER_CARD_CLASS, MONSTER_CARD_STYLE, buildUnifiedMonsterEntries, executeMasuOffering,
+  gold, introVisible = false, lockedIds = [], masuMons, monsterDisplayFlags, monsterEntryMatchesDisplayFlags, monsterEntryMatchesLineage,
+  monsterRosterIds, onBackToTemple, onDismissIntro, ownedItems, renderMonsterCardBody, renderMonsterSortFilterBar, renderScreenNote,
+  sortMonsterEntries,
+}) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [mode, setMode] = useState('diamonds');
+  const [diamondText, setDiamondText] = useState('');
+  const [levels, setLevels] = useState(1);
+  const [times, setTimes] = useState(1);
+  const [autoBreak, setAutoBreak] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(null);
+  const [fx, setFx] = useState(null);
+  const selected = masuMons.find(m=>String(m.id)===String(selectedId)) || null;
+
+  const resetInputs = () => { setMode('diamonds'); setDiamondText(''); setLevels(1); setTimes(1); setError(''); setDone(null); setConfirmOpen(false); };
+  const pick = (id) => { resetInputs(); setSelectedId(id); };
+
+  // 上限まで頼んだときの見積もり(MAXの値になる)。入力のたびに数え直す必要はないので個体と所持が変わったときだけ
+  const limits = useMemo(()=>{
+    if (!selected) return { maxLevels:0, maxTimes:0, maxDiamonds:0 };
+    const common = { masu:selected, gold, ownedItems, lockedIds, autoBreakthrough:autoBreak };
+    const lv = buildMasuOffering({ ...common, mode:'levels', amount:SOUL_RANK_LEVEL_CAP });
+    const rt = buildMasuOffering({ ...common, mode:'reincarnate', amount:OFFERING_MAX_REINCARNATIONS });
+    return { maxLevels:Math.max(0, lv.toLevel-lv.fromLevel), maxTimes:rt.reincarnations, maxDiamonds:donationDiamondValue(gold) };
+  }, [selected, gold, ownedItems, lockedIds, autoBreak]);
+
+  const diamondAmount = Math.min(limits.maxDiamonds, Math.max(0, parseInt(String(diamondText).replace(/[^0-9]/g,''),10) || 0));
+  const amount = mode==='diamonds' ? diamondAmount : mode==='levels' ? Math.min(levels, Math.max(1, limits.maxLevels)) : Math.min(times, Math.max(1, limits.maxTimes));
+  const plan = useMemo(()=>selected ? buildMasuOffering({ masu:selected, gold, ownedItems, lockedIds, mode, amount, autoBreakthrough:autoBreak }) : null,
+    [selected, gold, ownedItems, lockedIds, mode, amount, autoBreak]);
+
+  const run = async () => {
+    if (busy || !plan?.ok) return;
+    setBusy(true); setError(''); setConfirmOpen(false);
+    try {
+      const res = await executeMasuOffering({ masuId:selected.id, mode, amount, autoBreakthrough:autoBreak });
+      if (res?.ok) {
+        const base = ALL_PLAYER_MONSTERS[selected.baseId];
+        setFx({ plan:res.plan, baseId:selected.baseId, name:selected.name, colors:getMasuColors(selected), src:base?.iconUrl });
+        setDiamondText('');
+      }
+      else setError(res?.error || 'お布施を保存できませんでした。もう一度お試しください。');
+    } finally { setBusy(false); }
+  };
+  const needsConfirm = !!plan && (plan.breakthroughs>0 || plan.reincarnations>0);
+
+  if (!selected) {
+    const entries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
+    return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="お布施" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+      {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3">
+        <div className="text-[11px] font-black text-violet-200">お布施の使い方</div>
+        <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"><li>お布施をするマスモンを選びます。</li><li>「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。</li><li>見積もりを見て「お布施する」を押します。</li></ol>
+        <button type="button" onClick={onDismissIntro} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98]">わかった</button>
+      </div>}
+      {renderScreenNote('offering','ダイヤを払って、マスモンへ直接絆経験値を与えられます。',['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。','上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。'])}
+      {renderMonsterSortFilterBar({singleType:true})}
+      <div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🙏" lines={['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:
+        <div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;
+          return <button key={masu.id} onClick={()=>pick(masu.id)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900`}>{renderMonsterCardBody({masu,base,status:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>;})}</div>}</div>
+    </div>;
+  }
+
+  const normalized = normalizeMasuProgression(selected);
+  const base = ALL_PLAYER_MONSTERS[selected.baseId];
+  const lvl = masuBondLevelInfo(selected);
+  const psyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+  const stepBtn = 'mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-[12px] font-black active:scale-95 disabled:opacity-30';
+  const fmt = (n) => Number(n || 0).toLocaleString();
+  const row = (label, value, cls='text-slate-200') => <div className="flex justify-between gap-2 text-[11px] font-bold"><span className="text-slate-400">{label}</span><span className={`font-mono font-black ${cls}`}>{value}</span></div>;
+
+  return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+    <ScreenHead title="お布施" accent="text-violet-300" onBack={()=>{setSelectedId(null);resetInputs();}} backLabel="お布施の一覧へ戻る" disabled={busy||!!fx}/>
+    <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-2`}>
+      <div className="flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3">
+        <div className="relative w-16 h-16 shrink-0 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+        <div className="min-w-0 flex-1">
+          <b className="block truncate">{selected.name}</b>
+          <div className="text-pink-300 text-xs font-black">絆Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div>
+          <div className="text-[10px] font-bold text-slate-400">限界突破 {normalized.rebirthCount}回 ・ 転生 {normalized.reincarnateCount}回</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className={SCREEN_PANEL_FLAT_CLASS}><div className="text-[10px] font-bold text-slate-400">所持ダイヤ</div><div className="flex items-center gap-1 font-mono font-black text-amber-300"><Gem size={13}/>{fmt(gold)}</div></div>
+        <div className={SCREEN_PANEL_FLAT_CLASS}><div className="text-[10px] font-bold text-slate-400">虹のプシュケー</div><div className="font-mono font-black text-violet-200">{fmt(psyche)}個</div></div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5" role="tablist">
+        {OFFERING_MODES.map(key=><button key={key} role="tab" aria-selected={mode===key} onClick={()=>{setMode(key);setError('');}} className={`min-h-[44px] rounded-xl text-xs font-black active:scale-95 ${mode===key?'bg-violet-600 text-white':'bg-slate-900 border border-slate-700 text-slate-300'}`}>{OFFERING_TAB_LABELS[key]}</button>)}
+      </div>
+
+      <div className="mh-panel rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2">
+        {mode==='diamonds'&&<>
+          <div className="text-[11px] font-black text-slate-300">使うダイヤ（自由に入力できます）</div>
+          <input type="text" inputMode="numeric" aria-label="お布施に使うダイヤ" value={diamondText===''?'':diamondAmount.toLocaleString()} placeholder="0" onChange={e=>setDiamondText(e.target.value)} className="w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"/>
+          <div className="grid grid-cols-4 gap-1.5">{OFFERING_DIAMOND_STEPS.map(step=><button key={step} className={stepBtn} onClick={()=>setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount+step)))}>+{fmt(step)}</button>)}</div>
+          <div className="grid grid-cols-2 gap-1.5"><button className={stepBtn} onClick={()=>setDiamondText('')}>クリア</button><button className={stepBtn} disabled={limits.maxDiamonds<=0} onClick={()=>setDiamondText(String(limits.maxDiamonds))}>MAX（{fmt(limits.maxDiamonds)}）</button></div>
+        </>}
+        {mode==='levels'&&<>
+          <div className="text-[11px] font-black text-slate-300">上げるレベル（いまのLvから）</div>
+          <div className="text-center font-mono text-2xl font-black text-white">+{amount}<span className="ml-2 text-sm text-slate-400">→ Lv.{lvl.level+amount}</span></div>
+          <div className="grid grid-cols-6 gap-1.5">
+            {[...OFFERING_LEVEL_STEPS].reverse().map(step=><button key={`m${step}`} className={stepBtn} disabled={amount<=1} onClick={()=>setLevels(Math.max(1,amount-step))}>-{step}</button>)}
+            {OFFERING_LEVEL_STEPS.map(step=><button key={`p${step}`} className={stepBtn} disabled={amount>=limits.maxLevels} onClick={()=>setLevels(Math.min(limits.maxLevels,amount+step))}>+{step}</button>)}
+          </div>
+          <button className={`${stepBtn} w-full`} disabled={limits.maxLevels<=0} onClick={()=>setLevels(limits.maxLevels)}>MAX（+{fmt(limits.maxLevels)}レベル）</button>
+        </>}
+        {mode==='reincarnate'&&<>
+          <div className="text-[11px] font-black text-slate-300">転生する回数</div>
+          <div className="text-[10px] font-bold leading-relaxed text-slate-400">Lv.{REINCARNATE_MIN_LEVEL}未満なら先に経験値を与え、Lv.{REINCARNATE_MIN_LEVEL}以上になったところで転生します。これを回数ぶん続けます。固有技は「あとで決める」（固有技ポイント+1）になります。</div>
+          <div className="text-center font-mono text-2xl font-black text-white">{amount}<span className="ml-1 text-sm text-slate-400">回</span></div>
+          <div className="grid grid-cols-4 gap-1.5">
+            <button className={stepBtn} disabled={amount<=1} onClick={()=>setTimes(Math.max(1,amount-10))}>-10</button>
+            <button className={stepBtn} disabled={amount<=1} onClick={()=>setTimes(Math.max(1,amount-1))}>-1</button>
+            <button className={stepBtn} disabled={amount>=limits.maxTimes} onClick={()=>setTimes(Math.min(limits.maxTimes,amount+1))}>+1</button>
+            <button className={stepBtn} disabled={amount>=limits.maxTimes} onClick={()=>setTimes(Math.min(limits.maxTimes,amount+10))}>+10</button>
+          </div>
+          <button className={`${stepBtn} w-full`} disabled={limits.maxTimes<=0} onClick={()=>setTimes(limits.maxTimes)}>MAX（{fmt(limits.maxTimes)}回）</button>
+        </>}
+        <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 text-[11px] font-black text-slate-200">
+          <input type="checkbox" checked={autoBreak} onChange={e=>setAutoBreak(e.target.checked)} className="h-5 w-5"/>
+          <span className="min-w-0 flex-1">上限に届いたら限界突破も続ける<small className="block text-[9px] font-bold text-slate-400">ダイヤ（Lv×{REBIRTH_COST_PER_LEVEL}）と虹のプシュケーを使います。固有技はポイントとして残します</small></span>
+        </label>
+      </div>
+
+      {plan&&<div className="mh-panel rounded-2xl border border-violet-400/30 bg-slate-950/70 p-3 space-y-1.5">
+        <div className="text-[11px] font-black text-violet-200">この内容でお布施すると</div>
+        {row('絆Lv', `Lv.${plan.fromLevel} → Lv.${plan.toLevel}`, 'text-pink-300')}
+        {row('絆経験値', `+${fmt(plan.xpGained)}`, 'text-emerald-300')}
+        {plan.gainedPoints>0&&row('強化ポイント', `+${fmt(plan.gainedPoints)}`, 'text-amber-300')}
+        {plan.breakthroughs>0&&row('限界突破', `${plan.breakthroughs}回（上限Lv.${plan.fromCap} → ${plan.toCap}）`, 'text-violet-200')}
+        {plan.reincarnations>0&&row('転生', `${plan.reincarnations}回`, 'text-violet-200')}
+        <div className="my-1 border-t border-white/10"/>
+        {row('お布施（経験値ぶん）', `${fmt(plan.xpDiamonds)} ダイヤ`)}
+        {plan.breakthroughs>0&&row('限界突破', `${fmt(plan.breakDiamonds)} ダイヤ ＋ プシュケー${fmt(plan.psycheUsed)}個`)}
+        {plan.reincarnations>0&&row('転生', `${fmt(plan.reincDiamonds)} ダイヤ`)}
+        {row('合計', `${fmt(plan.spent)} ダイヤ`, 'text-amber-300')}
+        {row('お布施後の所持', `${fmt(plan.nextGold)} ダイヤ${plan.psycheUsed>0?` ／ プシュケー${fmt(psyche-plan.psycheUsed)}個`:''}`)}
+        {(plan.stopMessage||plan.reason)&&<div className="rounded-lg bg-amber-500/10 p-2 text-[10px] font-bold leading-relaxed text-amber-200">{plan.changed?plan.stopMessage:plan.reason}{plan.stopDetail&&plan.stopReason!=='none'?`（${plan.stopDetail}）`:''}</div>}
+      </div>}
+      {error&&<div className="text-red-300 text-[11px] font-bold">{error}</div>}
+    </div>
+    <div className={SCREEN_FOOTER_CLASS}>
+      <button disabled={!plan?.ok||busy} onClick={()=>needsConfirm?setConfirmOpen(true):run()} className="mh-button mh-button-primary w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30">お布施する</button>
+    </div>
+    {confirmOpen&&plan&&<ConfirmSheet title="この内容でお布施しますか？" message={`${plan.breakthroughs>0?`限界突破 ${plan.breakthroughs}回\n`:''}${plan.reincarnations>0?`転生 ${plan.reincarnations}回（強化の振り直しになります）\n`:''}合計 ${fmt(plan.spent)} ダイヤ${plan.psycheUsed>0?` ・ プシュケー${fmt(plan.psycheUsed)}個`:''} を使います。\n元には戻せません。`} confirmLabel="お布施する" onConfirm={run} onCancel={()=>setConfirmOpen(false)}/>}
+    {fx&&<MasuOfferingAnimation fx={fx} onFinish={()=>{setDone(fx.plan);setFx(null);}}/>}
+    {done&&!fx&&<ModalFrame label="お布施の結果" border="border-violet-400/70" onClose={()=>setDone(null)}>
+      <h3 className="text-center text-base font-black text-violet-200">お布施をしました</h3>
+      <div className="mt-3 space-y-1.5">
+        {row('絆Lv', `Lv.${done.fromLevel} → Lv.${done.toLevel}`, 'text-pink-300')}
+        {row('絆経験値', `+${fmt(done.xpGained)}`, 'text-emerald-300')}
+        {done.gainedPoints>0&&row('強化ポイント', `+${fmt(done.gainedPoints)}`, 'text-amber-300')}
+        {done.breakthroughs>0&&row('限界突破', `${done.breakthroughs}回（上限Lv.${done.toCap}）`, 'text-violet-200')}
+        {done.reincarnations>0&&row('転生', `${done.reincarnations}回`, 'text-violet-200')}
+        {row('使ったダイヤ', fmt(done.spent), 'text-amber-300')}
+      </div>
+      <div className="mt-4"><ModalCloseButton onClick={()=>setDone(null)} label="とじる"/></div>
+    </ModalFrame>}
+  </div>;
+}
+
+// お布施の演出。ダイヤの光が集まってマスモンへ吸い込まれ、Lvが数え上がる(限界突破・転生があればその表示も重なる)。
+// 画面のどこを押しても飛ばせる。動きを減らす設定のときは短く出して終える。
+function MasuOfferingAnimation({ fx, onFinish }) {
+  const { plan, baseId, name, colors, src } = fx;
+  const reduced = prefersReducedMotion();
+  const total = reduced ? 900 : 4200;
+  const [shown, setShown] = useState(plan.fromLevel);
+  useEffect(()=>{
+    const start = Date.now(), rampMs = reduced ? 300 : 2600;
+    const tick = setInterval(()=>{
+      const t = Math.min(1, (Date.now()-start)/rampMs), eased = 1-Math.pow(1-t,3);
+      setShown(Math.round(plan.fromLevel + (plan.toLevel-plan.fromLevel)*eased));
+      if (t>=1) clearInterval(tick);
+    }, 40);
+    const end = setTimeout(onFinish, total);
+    return ()=>{ clearInterval(tick); clearTimeout(end); };
+  }, []);
+  const up = plan.toLevel - plan.fromLevel;
+  return <div className="mh-offering-animation" role="status" aria-live="polite" aria-label="お布施の演出" onClick={onFinish}>
+    <div className="mh-offering-beams" aria-hidden="true">{Array.from({length:7},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+    <div className="mh-offering-ring" aria-hidden="true"></div>
+    <div className="mh-offering-gems" aria-hidden="true">{Array.from({length:14},(_,i)=><i key={i} style={{'--i':i}}><Gem size={16}/></i>)}</div>
+    <div className="mh-offering-mon"><DyedMonsterImage baseId={baseId} src={src} alt={name} masuColors={colors} className="w-full h-full object-contain"/></div>
+    {plan.reincarnations>0&&<div className="mh-offering-flash" aria-hidden="true"></div>}
+    <div className="mh-offering-copy">
+      <div className="mh-offering-title">{plan.reincarnations>0?'お布施 ＆ 転生':plan.breakthroughs>0?'お布施 ＆ 限界突破':'お布施'}</div>
+      <div className="mh-offering-level">Lv.<b>{shown}</b></div>
+      <div className="mh-offering-xp">絆経験値 +{plan.xpGained.toLocaleString()}</div>
+      {up>0&&<div className="mh-offering-up">LEVEL UP! +{up}</div>}
+      {plan.breakthroughs>0&&<div className="mh-offering-badge">限界突破 ×{plan.breakthroughs}　上限 Lv.{plan.fromCap} → {plan.toCap}</div>}
+      {plan.reincarnations>0&&<div className="mh-offering-badge is-reincarnate">転生 ×{plan.reincarnations}</div>}
+      {plan.gainedPoints>0&&<div className="mh-offering-points">強化ポイント +{plan.gainedPoints.toLocaleString()}</div>}
+    </div>
+    <div className="mh-offering-skip">タップでスキップ</div>
+  </div>;
 }
 
 // ---- part: 63-screen-masu-soul-traits.jsx ----
@@ -33519,7 +33916,7 @@ function BattleScreen({
                 };
                 return <span data-pandora-pair className="relative inline-block" style={{ width: ph, height: ph }}>{fig(PANDORA_DEVIL_IMG, 'devil', 0)}{fig(PANDORA_ANGEL_IMG, 'angel', ph - pw)}</span>;
               })() : null;
-              return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
+              return(<button key={i} data-slot-index={i} data-tactics-ex-on={slotExInfo&&slotExInfo.active&&slotExInfo.def?(slotExInfo.def.effect||'default'):undefined} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
                   setCardAssignments(p=>({...p,[pendingCard]:i}));
@@ -33638,7 +34035,7 @@ function BattleScreen({
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                 {/* 縁を回る光。回すのは中の大きな光の輪(transform)だけにして、塗りを毎コマ描き直さない(70-bootstrap の data-slot-ring) */}
                 {tacticsNewLayout&&<i aria-hidden="true" data-slot-ring/>}
-                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsNewLayout&&slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`absolute right-1 top-[3px] max-w-[68px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:''}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
+                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[84px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsNewLayout&&slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`absolute right-1 top-[3px] max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:''}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`${tacticsNewLayout?'absolute left-1 top-[20px]':'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -34008,8 +34405,17 @@ function BattleScreen({
               </div>
               <div data-tactics-ex-name className="mt-1 text-[18px] font-black leading-tight text-fuchsia-100">{exPanel.def.name}</div>
               {exPanel.stateText&&<span data-tactics-ex-state-pill={exPanel.stateText.kind} className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black leading-none ${exPanel.stateText.kind==='on'?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':exPanel.stateText.kind==='ready'?'bg-emerald-700/70 text-emerald-100 ring-1 ring-emerald-300/60':'bg-slate-700 text-slate-300 ring-1 ring-white/10'}`}>{exPanel.stateText.text}</span>}
-              <p data-tactics-ex-desc className="mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
+              <div data-tactics-ex-desc className="mt-1.5 text-[12px] font-bold text-slate-200"><ExDescText text={exPanel.def.desc}/></div>
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
+              {(exPanel.remainText||exPanel.styleLabel||exPanel.active||(exPanel.statusLines||[]).length>0||(exPanel.stats&&exPanel.stats.changed))&&(
+                // ★効いているあいだの状態は、ほかの決まりごと(回数・カード・効果時間)とは別の目立つ箱にまとめる(2026-10-06 ユーザー指示「効果中の見やすさ」)
+                <dl data-tactics-ex-now className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border-2 border-fuchsia-400/60 bg-fuchsia-950/40 px-3 py-2 text-[12px] shadow-[0_0_12px_rgba(217,70,239,.25)]">
+                  <dt className="col-span-2 text-[10px] font-black tracking-widest text-fuchsia-300">いまの効果</dt>
+                {exPanel.remainText&&<><dt className="font-bold text-fuchsia-200/70">残り</dt><dd data-tactics-ex-remain className="font-black text-fuchsia-200">{exPanel.remainText}</dd></>}
+                {exPanel.styleLabel&&<><dt className="font-bold text-fuchsia-200/70">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
+                {(exPanel.statusLines||[]).map((t,i)=><React.Fragment key={i}><dt className="font-bold text-fuchsia-200/70">いまの状態</dt><dd data-tactics-ex-status className="font-black text-fuchsia-200">{t}</dd></React.Fragment>)}
+                {exPanel.stats&&exPanel.stats.changed&&<><dt className="font-bold text-fuchsia-200/70">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
+                </dl>)}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
                 <dt className="font-bold text-slate-400">使える回数</dt>
                 <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
@@ -34017,11 +34423,7 @@ function BattleScreen({
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
-                {exPanel.remainText&&<><dt className="font-bold text-slate-400">残り</dt><dd data-tactics-ex-remain className="font-black text-fuchsia-200">{exPanel.remainText}</dd></>}
-                {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
-                {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
-                {(exPanel.statusLines||[]).map((t,i)=><React.Fragment key={i}><dt className="font-bold text-slate-400">いまの状態</dt><dd data-tactics-ex-status className="font-black text-fuchsia-200">{t}</dd></React.Fragment>)}
-                {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
+                {exPanel.stats&&!exPanel.stats.changed&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className="font-black text-white">{exPanel.stats.atk}／{exPanel.stats.def}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
               {exChoosing&&exPanel.targetOptions?(
@@ -40140,6 +40542,7 @@ function MonsterHeroGame() {
   const [reincarnateError, setReincarnateError] = useState('');
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
+  const offeringProcessingRef = useRef(false);
   const rebirthProcessingRef = useRef(false);
   // 超越: 選択中の個体・エラー・演出・二重処理ロック
   const [transcendSelectedId, setTranscendSelectedId] = useState(null);
@@ -42246,6 +42649,7 @@ function MonsterHeroGame() {
     MASU_DONATION: 'temple',    // 寄付ページも神殿の曲を続ける
     MASU_REBIRTH: 'temple',     // 限界突破ページも神殿の曲を継続する
     MASU_REINCARNATE: 'temple', // 転生ページも同じ
+    MASU_OFFERING: 'temple',    // お布施ページも同じ
     MASU_TRANSCENDENCE: 'temple', // 超越ページも神殿の曲を継続する
     MASU_SOUL_RANK: 'temple',      // 魂格進化も神殿の曲を継続する
     MASU_SOUL_TRAITS: 'management', // 魂格特性はマスモン詳細と同じ管理系BGM
@@ -42718,6 +43122,10 @@ function MonsterHeroGame() {
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
   const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
+  // 神殿のお布施の使い方案内。初めて画面を開いたときに1度だけ出す(保存キーは新しく足したもの)
+  const OFFERING_INTRO_KEY = 'mh_masu_offering_intro_seen_v1';
+  const [offeringIntroSeen, setOfferingIntroSeen] = useState(true);
+  const dismissOfferingIntro = () => { setOfferingIntroSeen(true); storeSet(OFFERING_INTRO_KEY, true, false); };
   // ---- タクティクスEXスキルの使い方案内(CLAUDE.md ⑤。2026-09-23 β版でお試し公開) ----
   // 「距離枠をタップするとEXが開く」は遊んでいるだけでは気づけないので、EXを持つ子が
   // 盤面にいるバトルで1度だけ伝える。出す条件は tacticsExIntroVisible(EXの判定のあと)で決める。
@@ -43950,6 +44358,7 @@ function MonsterHeroGame() {
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
+      setOfferingIntroSeen(await storeGet(OFFERING_INTRO_KEY, false, false) === true);
       setTacticsExIntroSeen(await storeGet(TACTICS_EX_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
@@ -46723,6 +47132,35 @@ function MonsterHeroGame() {
     setTimeout(()=>setTranscendAnimation(null), prefersReducedMotion()?900:4400);
   };
   // 転生: レベルを99ぶん返して、振った強化をすべて振り直す
+  // お布施: ダイヤを払って絆経験値を与え、頼まれれば限界突破・転生まで続ける。
+  // 見積もりと同じ buildMasuOffering を、実行の瞬間の最新の所持数で計算し直して確定する
+  // (画面の見積もりが古くても、足りない状態で成立させない)。保存に失敗したら何も減らさない。
+  const executeMasuOffering = async ({ masuId, mode, amount, autoBreakthrough }) => {
+    if (offeringProcessingRef.current) return { ok:false, error:'処理中です。少し待ってからお試しください。' };
+    const masu = masuMonsRef.current.find(m=>String(m.id)===String(masuId));
+    const plan = buildMasuOffering({ masu, gold, ownedItems:ownedItemsRef.current, lockedIds:rebirthLockedMasuIds, mode, amount, autoBreakthrough });
+    if (!plan.ok) return { ok:false, error:plan.reason || 'お布施の条件を満たしていません。' };
+    offeringProcessingRef.current = true;
+    try {
+      const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?plan.nextMasu:m);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:plan.nextGold },
+        { key:'mh_owned_items', before:ownedItemsRef.current, next:plan.nextOwnedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('offering save failed');
+      masuMonsRef.current = next;
+      ownedItemsRef.current = plan.nextOwnedItems;
+      setMasuMons(next); setGold(plan.nextGold); setOwnedItems(plan.nextOwnedItems);
+      addAssistantBond(plan.reincarnations>0?'reincarnate':plan.breakthroughs>0?'breakthrough':'temple');
+      Audio_.se.levelUp();
+      return { ok:true, plan };
+    } catch {
+      return { ok:false, error:'お布施のデータを保存できませんでした。もう一度お試しください。' };
+    } finally {
+      offeringProcessingRef.current = false;
+    }
+  };
   const executeMasuReincarnation = async () => {
     if (reincarnateProcessingRef.current || !reincarnateSelectedId) return;
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(reincarnateSelectedId));
@@ -48698,6 +49136,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★ダメージの式は useCallback で古い描画の関数が残ることがある(依存に wave・turnCount が無いものもある)。
   //   EXの効き目は「いま」を ref から読むので、どの描画の関数から呼ばれても同じ答えになる
   const tacticsExLiveRef = useRef({ enabled:false, now:{ wave:1, turn:1 } });
+  // ハムのクロスカウンター用: そのターンに、どの枠が敵へ何ダメージ与えたか(ターンの印つき。別のターンの値は見ない)
+  const tacticsExTurnAtkRef = useRef({ wave:-1, turn:-1, bySlot:{} });
   tacticsExLiveRef.current = { enabled:tacticsExEnabled, now:tacticsExNow };
   // 併用できないEXを使ったので、このターンはカードを使えない枠。★止まるのは使った子だけで、
   //   ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示「EXで他行動禁止はそのモンスターだけ」)
@@ -49673,13 +50113,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   その子は受けずに、受けるはずだった量を敵へ返す。ほかの子は普通に受ける。
             //   固有技の確定反射は上の枝(味方全体)で処理しているのでここへは来ない
             const reflectedSlot=isReflect?pickDefenseSlot():null;
-            let evadedName='', reflectedName='', reflectBack=0;
+            let evadedName='', reflectedName='', reflectBack=0, counterBack=0, counterLabel='';
             let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0, throughTotal=0;
             // ★枠ごとに「何が起きたか」を控える。合計の数字だけでは、全体攻撃のときに
             //   誰がどれだけ減って、誰が受け止めたのかが分からない
             const slotFx={};
             targets.forEach(slotIdx=>{
               // ★エイキの「緋桜瞬歩」が効いていて、敵と同じ距離の枠にいるなら、抽選に関係なく完全に回避する
+              // ★ハムの「クロスカウンター」: 狙われたハムがそのターンに攻撃していれば、攻撃を回避して、与えたダメージ×カウンターを敵へ返す
+              {
+                const atk=tacticsExTurnAtkRef.current, liveNow=tacticsExLiveRef.current.now;
+                const hamDealt=atk&&atk.wave===liveNow.wave&&atk.turn===liveNow.turn?(atk.bySlot[slotIdx]||0):0;
+                const crossDmg=hamDealt>0?tacticsExCounterDamage(tacticsExStateRef.current,units,slotIdx,liveNow,hamDealt):0;
+                if(crossDmg>0&&counterBack===0){
+                  counterBack=crossDmg; counterLabel=tacticsTargetName(units,slotIdx);
+                  commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current,tacticsUnitsRef.current,liveNow,slotIdx,1));
+                  evadedName=counterLabel; slotFx[slotIdx]={evade:true};
+                  pushBattleLog(`🥊 ${counterLabel}のクロスカウンター！ 攻撃を回避して ${crossDmg.toLocaleString()} ダメージを返した（カウンター+1）`,'ally');
+                  return;
+                }
+              }
               const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);
               // ★ライガーの雷纏: 雷の数ぶん(1つ5%)、狙われた攻撃を確率で回避する
               const thunderDodge=Math.random()<tacticsExThunderDodgeNow(slotIdx);
@@ -49807,9 +50260,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(dealt<=0&&saved<=0&&evadedSlot==null&&!evadedName&&reflectedSlot==null) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             // 味方の増減を確定させてから敵へ返す。撃破したらここで止める(回復・次ターンへ進ませない)
+            // ★クロスカウンター: 回避したぶんを敵へ返す。撃破したらここで止める
+            if(counterBack>0){
+              addPopup(`クロスカウンター ${counterBack}!!`,'enemy','text-orange-300 font-black text-4xl drop-shadow-lg');
+              const counteredHp=Math.max(0,enemyHpAtAttackStart-counterBack);
+              setCurrentWaveDamage(p=>p+counterBack); raidJackDamageRef.current+=Number(counterBack)||0;
+              setEnemy(prev=>prev?{...prev,hp:counteredHp}:prev); await battleWait(1000);
+              if (await resolveEnemyDefeat({remainingHp:counteredHp,damage:counterBack})) return;
+            }
             if(reflectBack>0){
               addPopup(`反射 ${reflectBack}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
-              const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectBack);
+              const reflectedHp=Math.max(0,enemyHpAtAttackStart-counterBack-reflectBack);
               setCurrentWaveDamage(p=>p+reflectBack); raidJackDamageRef.current+=Number(reflectBack)||0;
               setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
               if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;
@@ -50037,6 +50498,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const scenario=battleScenarioRef.current;
     const acting=enemyIntent;
     const hpAfterRecovery=emergencyHp!==null?emergencyHp:Math.min(liveEffectiveMaxHp(),hp+recoverHp);
+    tacticsExTurnAtkRef.current={ wave:-1, turn:-1, bySlot:{} }; // カードを切らない番では、クロスカウンターの元になるダメージは無い
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
@@ -50092,6 +50554,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       badge:(()=>{
         const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
         if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        // ハムボクシングは、カウンターの数と残りを札に出す
+        if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+          const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
+          if(ct) return { text:`反撃${ct.counter}・あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}`, active:true };
+        }
         // 雷狼影は、雷の数と段階を札に出す(ためている間は「雷◯」、雷纏のあいだは「雷纏◯」)
         if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
           const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
@@ -50116,6 +50583,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
           const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
           if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
+          // ハムのハムボクシング: いまのカウンターの数と、クロスカウンターの威力
+          if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+            const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
+            if(ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメの${Math.round(ct.dmgRate*100*ct.counter)}%。発動するたび+1）`);
+          }
           // ライガーの雷狼影: いまの雷の数と、ためている/雷纏の段階
           if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
@@ -50132,8 +50604,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // パンドラの箱: 悪魔側・天使側の力と、あと何ターンか
           if(def.effect==='pandoraBox'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const pb=def.pandoraBox;
-            out.push(`1枚目＝悪魔（与ダメ×${pb.devilDmg}・連撃${Math.round(pb.devilCombo.rate*100)}%×${pb.devilCombo.count}）／2枚目＝天使（味方全員のライフ・ガッツが上限の${Math.round(pb.angelRate*100)}%回復）`);
-            out.push(`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン（ターン終わりに最大ライフの${Math.round(pb.costRate*100)}%を払う）`);
+            // 悪魔・天使の力は説明文に書いてあるので、ここは「いま何が起きているか」だけ(払うライフ)を出す
+            out.push(`ターン終わりに最大ライフの${Math.round(pb.costRate*100)}%を払う`);
           }
           if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり！ ':''}${pres.kinds.map(k=>tacticsExPresentKindText(k,def.present,def.turns)).join('・')}`);
           return out;
@@ -50324,6 +50796,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setFocusedCard(null); setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const acting=enemyIntent;
+    tacticsExTurnAtkRef.current={ wave:-1, turn:-1, bySlot:{} };
     await handleEnemyTurn('none',{},acting,hp);
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
@@ -50957,6 +51430,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // (0のままだと、反射で殴り返したときに「HP0の敵をもう一度倒した」ことになってしまう)
     if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
+    // ★ハムボクシング: このターンに各枠が与えたダメージ(連撃も含む)を控える。敵の番のクロスカウンターが読む
+    { const bySlot={}; attackHits.forEach(h=>{ if(h&&Number.isInteger(h.slotIdx)) bySlot[h.slotIdx]=(bySlot[h.slotIdx]||0)+(Number(h.dmg)||0); });
+      tacticsExTurnAtkRef.current={ wave:tacticsExLiveRef.current.now.wave, turn:tacticsExLiveRef.current.now.turn, bySlot }; }
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
@@ -54210,6 +54686,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {templeLink(<PlusCircle size={18}/>,'再生','ベースモンから新しいマスモンを再生する',()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');})}
               {templeLink(<Layers size={18}/>,'合体','2体のマスモンを合体して新しい個体へつなぐ',()=>{resetFusionFlow();setGameState('MASU_FUSION');})}
               {templeLink(<Gem size={18}/>,'寄付','マスモンを寄付して報酬を受け取る',()=>{resetDonationFlow();setGameState('MASU_DONATION');})}
+              {templeLink(<Coins size={18}/>,'お布施','ダイヤを払ってマスモンへ直接経験値を与える',()=>{setGameState('MASU_OFFERING');})}
               {templeLink(<ArrowUpCircle size={18}/>,'限界突破','マスモンのレベル上限を引き上げる',()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');})}
               {templeLink(<RotateCcw size={18}/>,'転生','Lvを99下げて強化Pを獲得し、育成を振り直す',()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
               {templeLink(<Sparkles size={18}/>,'超越','さらなる成長へ進むための限界を超える',()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');},{className:'mh-transcend-link'})}
@@ -54270,6 +54747,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {/* 転生: Lv100以上で使える。レベルを99ぶん返す代わりに、振った強化をすべて振り直せる */}
+        {gameState==='MASU_OFFERING'&&(
+          <MasuOfferingScreen
+            MONSTER_CARD_CLASS={MONSTER_CARD_CLASS}
+            MONSTER_CARD_STYLE={MONSTER_CARD_STYLE}
+            buildUnifiedMonsterEntries={buildUnifiedMonsterEntries}
+            executeMasuOffering={executeMasuOffering}
+            introVisible={!offeringIntroSeen}
+            onDismissIntro={dismissOfferingIntro}
+            gold={gold}
+            lockedIds={rebirthLockedMasuIds}
+            masuMons={masuMons}
+            monsterDisplayFlags={monsterDisplayFlags}
+            monsterEntryMatchesDisplayFlags={monsterEntryMatchesDisplayFlags}
+            monsterEntryMatchesLineage={monsterEntryMatchesLineage}
+            monsterRosterIds={monsterRosterIds}
+            onBackToTemple={()=>setGameState('TEMPLE')}
+            ownedItems={ownedItems}
+            renderMonsterCardBody={renderMonsterCardBody}
+            renderMonsterSortFilterBar={renderMonsterSortFilterBar}
+            renderScreenNote={renderScreenNote}
+            sortMonsterEntries={sortMonsterEntries}
+          />
+        )}
+
         {gameState==='MASU_REINCARNATE'&&(
           <MasuReincarnateScreen
             rebirthLockedMasuIds={rebirthLockedMasuIds}
@@ -61551,6 +62052,64 @@ const createAnimationStyle = () => {
       background:linear-gradient(90deg, transparent, var(--ex-c1) 30%, #fff 50%, var(--ex-c1) 70%, transparent); box-shadow:0 0 10px var(--ex-c2), 0 0 22px var(--ex-c2);
       rotate:calc(-24deg + (var(--i) - 2.5) * 6deg); animation:exBlade 520ms ease-out forwards; animation-delay:calc(200ms + var(--i) * 80ms); }
     @keyframes exBlade { 0% { opacity:0; transform:scaleX(0); } 30% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1) translateY(6px); } }
+    /* 稲妻(雷狼影): 上から折れ線の光が走る */
+    .ex-cutin__motif--spark i { top:-10%; left:calc(8% + var(--i) * 16%); width:6px; height:75vh; border-radius:3px;
+      background:linear-gradient(180deg, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2), 0 0 26px var(--ex-c1);
+      clip-path:polygon(40% 0, 100% 0, 60% 38%, 100% 38%, 20% 100%, 45% 55%, 0 55%); transform:scaleX(5);
+      animation:exSpark 520ms steps(2,end) forwards; animation-delay:calc(160ms + var(--i) * 90ms); }
+    @keyframes exSpark { 0% { opacity:0; } 20% { opacity:1; } 45% { opacity:.2; } 65% { opacity:1; } 100% { opacity:0; } }
+    /* 輪(悠久の刻・おぼろ返し・サイコロックオン): 中心から輪が何重にも広がる */
+    .ex-cutin__motif--ring i { left:50%; top:50%; width:90px; height:90px; margin:-45px 0 0 -45px; border-radius:50%;
+      border:3px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 14px var(--ex-c2);
+      animation:exRing 1000ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 120ms); }
+    @keyframes exRing { 0% { opacity:0; transform:scale(.2); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(5.5); } }
+    /* 粒・葉(クリスマスプレゼント・緑のめぐみ): 画面全体にきらきらの粒がふわっと舞う */
+    .ex-cutin__motif--petal i { top:calc(10% + var(--i) * 13%); left:calc(6% + var(--i) * 15%); width:16px; height:16px; border-radius:50% 0 50% 0;
+      background:radial-gradient(circle at 30% 30%, #fff, var(--ex-c1) 45%, var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2);
+      animation:exPetal 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 90ms); }
+    @keyframes exPetal { 0% { opacity:0; transform:translate(0,30px) rotate(0) scale(.4); } 30% { opacity:1; } 100% { opacity:0; transform:translate(40px,-70px) rotate(220deg) scale(2.2); } }
+    /* しずく(生命の泉): 下から丸い水玉が立ちのぼる */
+    .ex-cutin__motif--drop i { bottom:-20px; left:calc(8% + var(--i) * 16%); width:22px; height:22px; border-radius:50%;
+      background:radial-gradient(circle at 35% 30%, #fff, var(--ex-c1) 40%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exDrop 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exDrop { 0% { opacity:0; transform:translateY(0) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateY(-62vh) scale(1.6); } }
+    /* 音符(オン・ステージ！): 横から音符が流れる */
+    .ex-cutin__motif--note i { left:-10%; top:calc(14% + var(--i) * 12%); width:18px; height:30px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:linear-gradient(var(--ex-c1), var(--ex-c2)); box-shadow:0 0 10px var(--ex-c2); rotate:-14deg;
+      animation:exNote 1000ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 80ms); }
+    @keyframes exNote { 0% { opacity:0; transform:translateX(0); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(115vw) translateY(-20px); } }
+    /* 羽(パンドラの箱): 左右から白と黒の羽が交差する */
+    .ex-cutin__motif--wing i { top:calc(18% + var(--i) * 9%); width:60%; height:10px; border-radius:999px;
+      background:linear-gradient(90deg, transparent, var(--ex-c1) 40%, #fff 55%, var(--ex-c2)); box-shadow:0 0 12px var(--ex-c2);
+      animation:exWing 760ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    .ex-cutin__motif--wing i:nth-child(odd) { left:-60%; --dir:1; }
+    .ex-cutin__motif--wing i:nth-child(even) { right:-60%; --dir:-1; filter:hue-rotate(40deg) brightness(.55); }
+    @keyframes exWing { 0% { opacity:0; transform:translateX(0); } 30% { opacity:1; } 100% { opacity:0; transform:translateX(calc(var(--dir) * 150%)); } }
+    /* 拳(ハムボクシング): 中心で衝撃の輪と拳の光がはじける */
+    .ex-cutin__motif--fist i { left:50%; top:50%; width:44px; height:44px; margin:-22px 0 0 -22px; border-radius:50%;
+      background:radial-gradient(circle, #fff 0 18%, var(--ex-c1) 30%, var(--ex-c2) 62%, transparent 70%); box-shadow:0 0 22px var(--ex-c2);
+      animation:exFist 560ms cubic-bezier(.2,.9,.2,1) forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    @keyframes exFist { 0% { opacity:0; transform:translate(0,0) scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:translate(calc((var(--i) - 2.5) * 70px), calc((var(--i) % 2 - .5) * 90px)) scale(3); } }
+    /* EXが効いているあいだの、距離枠のゆっくり脈打つ光(2026-10-06 ユーザー指示「効果中の見やすさ」。使った瞬間の .ex-aura とは別に、ずっと出る) */
+    [data-tactics-ex-on] { --ex-on-c:#e879f9; }
+    /* 光は枠のうえに重ねた膜(::after)の透明度だけを動かす(バトルの飾りは transform と opacity だけを動かす決まり) */
+    [data-tactics-ex-on]::after { content:''; position:absolute; inset:-2px; z-index:58; pointer-events:none; border-radius:inherit;
+      box-shadow:0 0 0 2px var(--ex-on-c), 0 0 18px color-mix(in srgb, var(--ex-on-c) 85%, transparent), inset 0 0 14px color-mix(in srgb, var(--ex-on-c) 40%, transparent);
+      animation:exOnPulse 2200ms ease-in-out infinite; }
+    [data-tactics-ex-on="thunder"], [data-tactics-ex-on="stage"] { --ex-on-c:#facc15; }
+    [data-tactics-ex-on="counter"], [data-tactics-ex-on="allIn"], [data-tactics-ex-on="multiBuff"] { --ex-on-c:#fb923c; }
+    [data-tactics-ex-on="partyBoost"], [data-tactics-ex-on="partyGuard"], [data-tactics-ex-on="present"] { --ex-on-c:#4ade80; }
+    [data-tactics-ex-on="lifeSpring"], [data-tactics-ex-on="psychoLock"], [data-tactics-ex-on="damageBack"] { --ex-on-c:#38bdf8; }
+    [data-tactics-ex-on="statBoost"], [data-tactics-ex-on="distMatch"], [data-tactics-ex-on="dodgeCombo"], [data-tactics-ex-on="pandoraBox"] { --ex-on-c:#f472b6; }
+    @keyframes exOnPulse { 0%, 100% { opacity:.35; } 50% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { [data-tactics-ex-on]::after { animation:none; opacity:.8; } }
+    /* EXの説明文(箇条書き): 1行目は要約、「・」で始まる行は項目として段を下げる */
+    .ex-desc__lead { font-weight:900; color:#fff; line-height:1.5; }
+    .ex-desc__list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; }
+    .ex-desc__item { position:relative; padding-left:1.1em; line-height:1.5; }
+    .ex-desc__item::before { content:''; position:absolute; left:.2em; top:.62em; width:.5em; height:.5em; border-radius:50%; background:#d946ef; }
+    .ex-desc__sub { padding-left:2.1em; font-size:.92em; color:#cbd5e1; line-height:1.4; position:relative; }
+    .ex-desc__sub::before { content:'─'; position:absolute; left:1.1em; opacity:.6; }
     /* 使った子の距離枠の光 */
     .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
       border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
@@ -63867,6 +64426,29 @@ const createAnimationStyle = () => {
     @media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}.mh-reincarnation-mon{width:118px;height:118px}.mh-reincarnation-souls{width:160px;height:250px}.mh-reincarnation-title{top:calc(env(safe-area-inset-top) + 13%);font-size:clamp(30px,11vw,50px)}.mh-reincarnation-mark{top:64%}.mh-reincarnation-mark .mh-reincarnate-badge{padding:5px 12px;font-size:14px}}
     @media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}.mh-reincarnation-souls,.mh-reincarnation-converge,.mh-reincarnation-rays,.mh-reincarnation-halo,.mh-reincarnation-flash,.mh-reincarnation-title{display:none}.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}}
     /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
+    /* お布施の演出(神殿・お布施画面)。ダイヤの光がマスモンへ集まり、Lvが数え上がる */
+    .mh-offering-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 42%,#7c3aedaa,#1e1b4b 45%,#020617 78%);cursor:pointer;animation:mhOfferingIn .35s ease-out both}
+    .mh-offering-beams{position:absolute;inset:0;pointer-events:none}.mh-offering-beams i{position:absolute;top:-10%;left:calc(8% + var(--i)*14%);width:6%;height:75%;background:linear-gradient(#fde68aaa,#fde68a00);filter:blur(6px);transform-origin:top;animation:mhOfferingBeam 2.4s ease-in-out calc(var(--i)*.12s) infinite alternate}
+    .mh-offering-ring{position:absolute;left:50%;top:42%;width:260px;height:260px;margin:-130px 0 0 -130px;border:3px solid #fde68a;border-radius:50%;box-shadow:0 0 40px #fbbf24aa,inset 0 0 40px #fbbf2466;animation:mhOfferingRing 1.6s ease-out infinite}
+    .mh-offering-gems{position:absolute;left:50%;top:42%;width:0;height:0}.mh-offering-gems i{position:absolute;left:0;top:0;color:#67e8f9;filter:drop-shadow(0 0 6px #22d3ee);opacity:0;animation:mhOfferingGem 1.8s ease-in calc(var(--i)*.13s) infinite;--a:calc(var(--i)*25.7deg)}
+    .mh-offering-mon{position:relative;width:170px;height:170px;margin-top:-130px;animation:mhOfferingMon 1.2s ease-in-out infinite alternate;filter:drop-shadow(0 0 24px #fde68acc)}
+    .mh-offering-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhOfferingFlash 1.4s ease-out 2.2s both}
+    .mh-offering-copy{position:absolute;left:0;right:0;bottom:11%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 16px;text-align:center}
+    .mh-offering-title{font-size:15px;font-weight:900;letter-spacing:.2em;color:#ddd6fe}
+    .mh-offering-level{font-size:20px;font-weight:900;color:#f9a8d4}.mh-offering-level b{font-size:54px;font-family:ui-monospace,monospace;color:#fff;text-shadow:0 0 18px #f472b6}
+    .mh-offering-xp{font-size:13px;font-weight:900;color:#6ee7b7}
+    .mh-offering-up{font-size:22px;font-weight:900;color:#fde047;text-shadow:0 0 14px #f59e0b;opacity:0;animation:mhOfferingPop .5s ease-out 2.4s both}
+    .mh-offering-badge{padding:6px 14px;border-radius:999px;border:1px solid #c4b5fd;background:#4c1d95cc;font-size:13px;font-weight:900;color:#ede9fe;opacity:0;animation:mhOfferingPop .5s ease-out 2.7s both}.mh-offering-badge.is-reincarnate{animation-delay:3s;border-color:#fda4af;background:#881337cc;color:#ffe4e6}
+    .mh-offering-points{font-size:12px;font-weight:900;color:#fcd34d;opacity:0;animation:mhOfferingPop .5s ease-out 3.2s both}
+    .mh-offering-skip{position:absolute;right:14px;top:calc(12px + env(safe-area-inset-top));font-size:10px;font-weight:700;color:#94a3b8}
+    @keyframes mhOfferingIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhOfferingBeam{from{opacity:.25;transform:rotate(-6deg)}to{opacity:.8;transform:rotate(6deg)}}
+    @keyframes mhOfferingRing{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+    @keyframes mhOfferingGem{0%{opacity:0;transform:rotate(var(--a)) translateY(-230px) scale(1)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-10px) scale(.3)}}
+    @keyframes mhOfferingMon{from{transform:scale(1)}to{transform:scale(1.08)}}
+    @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
+    @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}
