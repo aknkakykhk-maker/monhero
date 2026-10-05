@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c7a28dcc5111559e
+// source-sha256: 3fc0c04908dcd347
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 13:01";
+const BUILD_DATE = "2026-10-05 16:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36394,6 +36394,36 @@ const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
     total: Number(r.total_damage) || 0
   })) : null;
 };
+const sbFetchRaidJackMaxHitRanking = async (kind, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&select=breeder_id,max_damage,last_hit_at&order=max_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map(r => ({
+    breederId: String(r.breeder_id),
+    total: Number(r.max_damage) || 0
+  })) : null;
+};
+const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&breeder_id=eq.${id}&select=max_damage&limit=1`));
+  if (!rows) return null;
+  return rows.length ? Number(rows[0].max_damage) || 0 : 0;
+};
+const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId) => {
+  const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
+  const k = kind === 'b' ? 'b' : 'a';
+  const result = await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&max_damage=gt.${mine}&select=breeder_id&limit=1`, {
+    headers: {
+      'Prefer': 'count=exact'
+    }
+  });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);
   if (!id) return null;
@@ -60407,11 +60437,13 @@ const RaidJackRankingList = ({
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
   const [allMode, setAllMode] = useState(false);
+  const [maxHit, setMaxHit] = useState(false);
   const [rows, setRows] = useState(undefined);
   const [self, setSelf] = useState(null);
   const [myId, setMyId] = useState(null);
   const [ahead, setAhead] = useState(null);
-  const useAll = tab === 'a' && allMode && bossDown;
+  const [myMax, setMyMax] = useState(null);
+  const useAll = !maxHit && tab === 'a' && allMode && bossDown;
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -60423,7 +60455,7 @@ const RaidJackRankingList = ({
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
       if (!alive) return;
       setSelf(mine);
-      const list = useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
+      const list = maxHit ? await sbFetchRaidJackMaxHitRanking(tab, 100, eventId) : useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
       if (!alive) return;
       if (list) {
         try {
@@ -60432,7 +60464,13 @@ const RaidJackRankingList = ({
       }
       if (!alive) return;
       setRows(list);
-      if (list && mine) {
+      if (list && maxHit) {
+        const best = meId ? await sbFetchRaidJackMaxHitSelf(meId, tab, eventId) : null;
+        if (!alive) return;
+        setMyMax(best);
+        const count = best > 0 ? await sbCountRaidJackMaxHitAhead(tab, best, eventId) : null;
+        if (alive) setAhead(count);
+      } else if (list && mine) {
         const myTotal = useAll ? Object.values(mine.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? mine.a[tierIdx + 1] || 0 : mine.bTotal;
         const count = myTotal > 0 ? await sbCountRaidJackAhead(useAll ? 'a_all' : tab, tierIdx + 1, myTotal, eventId) : null;
         if (alive) setAhead(count);
@@ -60441,9 +60479,9 @@ const RaidJackRankingList = ({
     return () => {
       alive = false;
     };
-  }, [tab, tierIdx, useAll, eventId]);
-  const myTotal = self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
-  const title = useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  }, [tab, tierIdx, useAll, maxHit, eventId]);
+  const myTotal = maxHit ? Number(myMax) || 0 : self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
+  const title = maxHit ? tab === 'a' ? 'レイドバトルの最大ダメージ(1戦あたり)' : 'グランドスラムの最大ダメージ(1戦あたり)' : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
     className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
@@ -60474,7 +60512,20 @@ const RaidJackRankingList = ({
     }],
     value: tab,
     onChange: setTab
-  }), tab === 'a' && React.createElement("div", {
+  }), React.createElement("div", {
+    "data-raid-jack-ranking-kinds": true,
+    className: "mb-2 flex shrink-0 gap-1.5 text-[10px] font-black"
+  }, React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-kind": "total",
+    onClick: () => setMaxHit(false),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, tab === 'a' ? '貢献・累計' : '累計ダメージ'), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-kind": "max",
+    onClick: () => setMaxHit(true),
+    className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, "1戦の最大ダメージ")), tab === 'a' && !maxHit && React.createElement("div", {
     "data-raid-jack-ranking-tiers": true,
     className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
   }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
@@ -60502,7 +60553,7 @@ const RaidJackRankingList = ({
     className: "shrink-0 text-[10px] text-slate-200"
   }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
     className: "mb-2 text-[9px] text-slate-400"
-  }, useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+  }, maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "読み込み中…"), rows === null && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
