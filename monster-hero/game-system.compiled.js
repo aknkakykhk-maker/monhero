@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afd309991a4986c3
+// source-sha256: e5b38866bd9a6e3d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 20:17";
+const BUILD_DATE = "2026-10-05 20:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4845,6 +4845,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_wrath_of_the_thorn_king',
+  name: 'Wrath of the Thorn King「茨の王の怒り」',
+  creator: 'オリジナル',
+  src: 'audio/bgm-wrath-of-the-thorn-king.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -5977,6 +5984,7 @@ const Audio_ = (() => {
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
+    "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1"
@@ -34899,6 +34907,36 @@ const tacticsExTurnsLeft = (state, slot, monId, now) => {
   if (!effect || effect.duration !== 'turns' || !isTacticsExEffectActive(state, slot, monId, now)) return 0;
   return tacticsSafeInt(effect.turn, 0) + tacticsSafeInt(effect.turns, 0) - tacticsSafeInt(now.turn, 0);
 };
+const tacticsExRemainOf = (def, state, slot, monId, now) => {
+  if (!def || !isTacticsExEffectActive(state, slot, monId, now)) return null;
+  if (def.duration === 'turns') {
+    const left = tacticsExTurnsLeft(state, slot, monId, now);
+    return {
+      kind: 'turns',
+      turns: left,
+      text: `あと${left}ターン（このターンを含む）`,
+      short: `あと${left}ターン`
+    };
+  }
+  if (def.duration === 'wave') return {
+    kind: 'wave',
+    turns: null,
+    text: 'このWAVEが終わるまで',
+    short: 'WAVE中'
+  };
+  if (def.duration === 'style') return {
+    kind: 'style',
+    turns: null,
+    text: '切り替えるまでずっと',
+    short: ''
+  };
+  return {
+    kind: 'turn',
+    turns: 0,
+    text: 'このターンだけ',
+    short: 'このターン'
+  };
+};
 const tacticsExActiveStyle = (state, slot, monId, now) => {
   if (!tacticsExActiveEffect(state, slot, monId, now)) return null;
   const style = normalizeTacticsExState(state).effects[slot].style;
@@ -44513,6 +44551,13 @@ function MasuTranscendEnhanceScreen({
   const previewMasu = preview ? preview.masu : masu;
   const currentPower = masuPowerOf(masu);
   const previewPower = masuPowerOf(previewMasu);
+  const mergedNow = mergeMasuIntoMon(masu);
+  const actualStatOf = key => ({
+    hp: mergedNow?.baseHp,
+    atk: mergedNow?.baseAtk,
+    def: mergedNow?.baseDef,
+    guts: mergedNow?.baseGuts
+  })[key] || 0;
   const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0, 4) : ['C', 'C', 'C', 'C'];
   const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1];
   const transcendGrade = (idx, extra = 0) => raiseAptitudeGrade(baseApt[idx] || 'C', normalized.transcendAptBoosts[idx] + extra);
@@ -44739,6 +44784,30 @@ function MasuTranscendEnhanceScreen({
   }, "リセットする超越強化がありません"), spentPoints > 0 && resetScrollHave <= 0 && React.createElement("div", {
     className: "mt-1 text-[10px] font-bold text-slate-400 text-center"
   }, "「超越ポイントリセットの書」はマーケットで買えます")), React.createElement("div", {
+    "data-transcend-actual-stats": true,
+    className: "rounded-2xl border border-sky-400/30 bg-slate-900 p-3"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-sky-200 mb-1.5"
+  }, "現在のステータス（強化分込み）"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
+    const up = normalized.transcendStatPoints[key] || 0,
+      add = (plan.stat[key] || 0) * (STAT_POINT_GAIN[key] || 1);
+    return React.createElement("div", {
+      key: key,
+      className: "rounded-xl bg-black/30 px-2.5 py-1.5"
+    }, React.createElement("div", {
+      className: "flex items-baseline justify-between"
+    }, React.createElement("span", {
+      className: "text-[10px] font-black text-slate-300"
+    }, label), React.createElement("span", {
+      className: "font-mono text-[15px] font-black text-white"
+    }, actualStatOf(key), add > 0 && React.createElement("span", {
+      className: "text-sky-300 text-[11px]"
+    }, " →", actualStatOf(key) + add))), React.createElement("div", {
+      className: "text-[9px] font-bold text-slate-400 text-right"
+    }, "超越の基礎UP +", up));
+  }))), React.createElement("div", {
     className: "bg-slate-900 border border-sky-500/40 rounded-2xl p-3 shadow-xl"
   }, React.createElement("div", {
     className: "flex items-center justify-between gap-2 mb-2"
@@ -44826,21 +44895,28 @@ function MasuTranscendEnhanceScreen({
   }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
     const n = plan.stat[key] || 0,
       gain = n * (STAT_POINT_GAIN[key] || 1),
-      before = normalized.transcendStatPoints[key];
+      before = normalized.transcendStatPoints[key],
+      actual = actualStatOf(key);
     return React.createElement("div", {
       key: key,
       className: "grid grid-cols-[48px_1fr_56px_1fr] items-center gap-1 rounded-xl bg-black/30 p-1.5"
     }, React.createElement("span", {
       className: "text-[10px] text-center text-sky-200 font-black"
     }, label), React.createElement("div", {
-      className: "text-center font-mono font-black text-[11px]"
+      className: "text-center font-mono font-black leading-tight"
+    }, React.createElement("div", {
+      className: "text-[12px]"
     }, React.createElement("span", {
       className: "text-white"
-    }, "基礎+", before), React.createElement("span", {
+    }, actual), React.createElement("span", {
       className: "text-slate-400 mx-1"
     }, "→"), React.createElement("span", {
       className: gain > 0 ? 'text-sky-300' : 'text-slate-300'
-    }, "基礎+", before + gain)), React.createElement("label", {
+    }, actual + gain), gain > 0 && React.createElement("span", {
+      className: "text-sky-300 text-[10px]"
+    }, " (+", gain, ")")), React.createElement("div", {
+      className: "text-[9px] text-slate-400 font-bold"
+    }, "超越の基礎UP +", before + gain)), React.createElement("label", {
       className: "flex items-center gap-0.5 min-w-0"
     }, React.createElement("input", {
       "data-direct-point-input": "transcend-stat",
@@ -54364,7 +54440,10 @@ function BattleScreen({
   }, "開発中")), React.createElement("div", {
     "data-tactics-ex-name": true,
     className: "mt-1 text-[18px] font-black leading-tight text-fuchsia-100"
-  }, exPanel.def.name), React.createElement("p", {
+  }, exPanel.def.name), exPanel.stateText && React.createElement("span", {
+    "data-tactics-ex-state-pill": exPanel.stateText.kind,
+    className: `mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black leading-none ${exPanel.stateText.kind === 'on' ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : exPanel.stateText.kind === 'ready' ? 'bg-emerald-700/70 text-emerald-100 ring-1 ring-emerald-300/60' : 'bg-slate-700 text-slate-300 ring-1 ring-white/10'}`
+  }, exPanel.stateText.text), React.createElement("p", {
     "data-tactics-ex-desc": true,
     className: "mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200"
   }, exPanel.def.desc), !exPanel.implemented && React.createElement("p", {
@@ -54389,7 +54468,12 @@ function BattleScreen({
     className: "font-bold text-slate-400"
   }, "条件"), React.createElement("dd", {
     className: "font-black text-white"
-  }, exPanel.def.conditionText)), exPanel.styleLabel && React.createElement(React.Fragment, null, React.createElement("dt", {
+  }, exPanel.def.conditionText)), exPanel.remainText && React.createElement(React.Fragment, null, React.createElement("dt", {
+    className: "font-bold text-slate-400"
+  }, "残り"), React.createElement("dd", {
+    "data-tactics-ex-remain": true,
+    className: "font-black text-fuchsia-200"
+  }, exPanel.remainText)), exPanel.styleLabel && React.createElement(React.Fragment, null, React.createElement("dt", {
     className: "font-bold text-slate-400"
   }, "いま"), React.createElement("dd", {
     "data-tactics-ex-style": true,
@@ -54850,6 +54934,46 @@ function MasuAutoEnhanceScreen({
       updateAutoEnhance(masu.id, captured);
     }
   };
+  const applyPreset = kind => {
+    setLimitDraft(null);
+    const allStat = {
+      hp: null,
+      atk: null,
+      def: null,
+      guts: null
+    };
+    const noStat = {
+      hp: 0,
+      atk: 0,
+      def: 0,
+      guts: 0
+    };
+    const allApt = ['M', 'M', 'M', 'M'];
+    const noApt = [null, null, null, null];
+    const patch = kind === 'all' ? {
+      statTargets: allStat,
+      aptLimits: allApt
+    } : kind === 'stat' ? {
+      statTargets: allStat,
+      aptLimits: noApt
+    } : {
+      statTargets: noStat,
+      aptLimits: allApt
+    };
+    updateAutoEnhance(masu.id, {
+      enabled: true,
+      ...patch
+    });
+  };
+  const toggleEnabled = () => {
+    if (!settings.enabled && !hasTarget) {
+      applyPreset('all');
+      return;
+    }
+    updateAutoEnhance(masu.id, {
+      enabled: !settings.enabled
+    });
+  };
   const clearAll = () => {
     setLimitDraft(null);
     updateAutoEnhance(masu.id, {
@@ -54935,9 +55059,7 @@ function MasuAutoEnhanceScreen({
   }, React.createElement("button", {
     type: "button",
     "aria-pressed": settings.enabled,
-    onClick: () => updateAutoEnhance(masu.id, {
-      enabled: !settings.enabled
-    }),
+    onClick: toggleEnabled,
     className: `w-full min-h-[52px] rounded-xl font-black text-[13px] active:scale-95 flex items-center justify-center gap-2 ${settings.enabled ? 'bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`
   }, React.createElement(Sparkles, {
     size: 16
@@ -54950,6 +55072,36 @@ function MasuAutoEnhanceScreen({
   }, "振ってよい先がまだ1つもないので、ONでも何も振られません。下で目標を決めるか、「いまの値を目標として取り込む」を押してください。"), React.createElement("div", {
     className: "mt-2 text-[10px] font-bold text-slate-400 leading-relaxed"
   }, "設定は転生しても残ります。目標まで届くと止まり、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。")), React.createElement("div", {
+    "data-auto-enhance-presets": true,
+    className: "rounded-2xl border border-lime-500/40 bg-slate-900 p-3"
+  }, React.createElement("div", {
+    className: "text-[13px] font-black text-lime-300"
+  }, "かんたん設定（押すだけで ON）"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-preset": "all",
+    onClick: () => applyPreset('all'),
+    className: "min-h-[56px] rounded-xl bg-lime-600 text-slate-950 text-[11px] font-black active:scale-95 px-1 leading-tight"
+  }, "おまかせ", React.createElement("br", null), React.createElement("span", {
+    className: "text-[9px] font-bold"
+  }, "全部上げる")), React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-preset": "stat",
+    onClick: () => applyPreset('stat'),
+    className: "min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight"
+  }, "ステータスだけ", React.createElement("br", null), React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "適性は振らない")), React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-preset": "apt",
+    onClick: () => applyPreset('apt'),
+    className: "min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight"
+  }, "適性だけ", React.createElement("br", null), React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "ステは振らない"))), React.createElement("div", {
+    className: "mt-1.5 text-[10px] font-bold text-slate-400 leading-relaxed"
+  }, "上限なしで、下の優先順位どおりに強化ポイントを使い切ります。あとから下で細かく直せます。")), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -73455,6 +73607,24 @@ function MonsterHeroGame() {
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
     if (timeStopSlot == null && isTacticsMode(runMode) && tacticsExEnabled) {
+      const stLog = tacticsExStateRef.current,
+        unitsLog = tacticsUnitsRef.current,
+        nowLog = tacticsExLiveRef.current.now;
+      slots.forEach((m, i) => {
+        const dLog = m ? tacticsExDefOf(m.id) : null;
+        if (!dLog || dLog.duration !== 'turns') return;
+        const who = `EX ${battleActorName(i)}「${dLog.name}」`;
+        if (dLog.effect === 'thunder') {
+          const th = tacticsExThunderOf(stLog, unitsLog, i, nowLog);
+          if (!th) return;
+          if (th.phase === 'charge') pushBattleLog(th.turnsLeft > 1 ? `${who} 雷${th.charge}（雷纏まであと${th.turnsLeft - 1}ターン）` : `⚡ ${who} 雷纏が始まる！ 雷${th.charge}`, 'ally');else pushBattleLog(th.turnsLeft > 1 ? `${who} 雷纏 あと${th.turnsLeft - 1}ターン` : `${who} 雷纏が終わった`, 'ally');
+          return;
+        }
+        const left = tacticsExTurnsLeft(stLog, i, m.id, nowLog);
+        if (left > 1) pushBattleLog(`${who} あと${left - 1}ターン`, 'ally');else if (left === 1) pushBattleLog(`${who} の効果が切れた`, 'ally');
+      });
+    }
+    if (timeStopSlot == null && isTacticsMode(runMode) && tacticsExEnabled) {
       const boxStep = tacticsExPandoraTurnEnd(tacticsExStateRef.current, tacticsUnitsRef.current, tacticsExLiveRef.current.now);
       if (boxStep) await settleTacticsExPandoraBox(boxStep);
     }
@@ -73555,6 +73725,30 @@ function MonsterHeroGame() {
         current: tacticsExStyleOf(def, state, slotIdx, mon.id) === st.id
       })) : null,
       durationText: tacticsExDurationText(def),
+      remainText: (() => {
+        const rm = tacticsExRemainOf(def, state, slotIdx, mon.id, tacticsExNow);
+        if (!rm) return null;
+        if (def.effect === 'thunder') {
+          const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
+          if (th) return th.phase === 'charge' ? `雷をためる あと${th.turnsLeft}ターン（そのあと雷纏が${def.turns - def.thunder.chargeTurns}ターン）` : `雷纏 あと${th.turnsLeft}ターン`;
+        }
+        return rm.text;
+      })(),
+      stateText: (() => {
+        const rm = tacticsExRemainOf(def, state, slotIdx, mon.id, tacticsExNow);
+        if (rm) return {
+          kind: 'on',
+          text: rm.kind === 'turns' ? `効果中・あと${rm.kind === 'turns' ? rm.turns : 0}ターン` : `効果中・${rm.text}`
+        };
+        if (check.ok) return {
+          kind: 'ready',
+          text: '使える'
+        };
+        return {
+          kind: 'off',
+          text: 'いまは使えない'
+        };
+      })(),
       targetOptions: (() => {
         const opts = tacticsExTargetOptions(def, tacticsUnits);
         return opts ? opts.map(o => ({
@@ -73572,23 +73766,30 @@ function MonsterHeroGame() {
         if (def.effect === 'thunder' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const th = tacticsExThunderOf(state, tacticsUnits, slotIdx, tacticsExNow);
           if (th) return {
-            text: `${th.phase === 'wrap' ? '雷纏' : '雷'}${th.charge}`,
+            text: `${th.phase === 'wrap' ? '雷纏' : '雷'}${th.charge}・あと${th.turnsLeft}`,
             active: true
           };
         }
-        if (def.duration === 'turns' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
+        if (def.effect !== 'present' && def.duration === 'turns' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
           text: `あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン`,
           active: true
         };
         if (def.effect === 'present' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const pr = tacticsExPresentOf(state, tacticsUnits, tacticsExNow);
           if (pr && pr.kinds.length) return {
-            text: pr.jackpot ? '大当たり！' : TACTICS_EX_PRESENT_LABELS[pr.kinds[0]],
+            text: `${pr.jackpot ? '大当たり' : {
+              dmg: '与ダメ↑',
+              taken: '被ダメ↓',
+              combo: '連撃',
+              heal: '回復',
+              guts: 'ガッツ',
+              crit: '会心↑'
+            }[pr.kinds[0]] || '中身'}・あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}`,
             active: true
           };
         }
         if (isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
-          text: `${def.name}中`,
+          text: tacticsExRemainOf(def, state, slotIdx, mon.id, tacticsExNow).short || `${def.name}中`,
           active: true
         };
         return {

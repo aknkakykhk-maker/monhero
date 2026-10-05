@@ -2531,6 +2531,7 @@ function BattleScreen({
                 {!exPanel.implemented&&<span data-tactics-ex-dev className="ml-auto shrink-0 rounded-full border border-amber-300/60 bg-amber-900/60 px-2 py-0.5 text-[10px] font-black text-amber-100">開発中</span>}
               </div>
               <div data-tactics-ex-name className="mt-1 text-[18px] font-black leading-tight text-fuchsia-100">{exPanel.def.name}</div>
+              {exPanel.stateText&&<span data-tactics-ex-state-pill={exPanel.stateText.kind} className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black leading-none ${exPanel.stateText.kind==='on'?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':exPanel.stateText.kind==='ready'?'bg-emerald-700/70 text-emerald-100 ring-1 ring-emerald-300/60':'bg-slate-700 text-slate-300 ring-1 ring-white/10'}`}>{exPanel.stateText.text}</span>}
               <p data-tactics-ex-desc className="mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
@@ -2540,6 +2541,7 @@ function BattleScreen({
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
+                {exPanel.remainText&&<><dt className="font-bold text-slate-400">残り</dt><dd data-tactics-ex-remain className="font-black text-fuchsia-200">{exPanel.remainText}</dd></>}
                 {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
                 {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
                 {(exPanel.statusLines||[]).map((t,i)=><React.Fragment key={i}><dt className="font-bold text-slate-400">いまの状態</dt><dd data-tactics-ex-status className="font-black text-fuchsia-200">{t}</dd></React.Fragment>)}
