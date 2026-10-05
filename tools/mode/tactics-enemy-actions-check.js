@@ -304,7 +304,7 @@ check('新モードは回避を「回避！」の枝へ落とさない',
 //   「無傷！」は evadedName でも止める
 check('避けた子・反射した子はダメージ処理を飛ばす',
   has('const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);')
-    && has('if(slotIdx===evadedSlot||exDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
+    && has('if(slotIdx===evadedSlot||exDodge||thunderDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
     && has('if(slotIdx===reflectedSlot){') && has('slotFx[slotIdx]={reflect:true};'));
 check('確率で出た反射は、その子が受けるはずだった量を返す',
   has('reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);'));

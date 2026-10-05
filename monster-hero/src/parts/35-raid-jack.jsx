@@ -117,13 +117,13 @@ const raidJackTier = (id, name, power, actionCount, atkPower = power, hpOverride
 const RAID_JACK_A_ATK_POWERS = Object.freeze([0.5, 1.0, 1.5, 3.0, 5.0]);
 
 // A: ベースモン協力戦。段階ごとの共有HP。
-// ライフ(2026-10-05・ユーザーが段階ごとに決めた): 男爵 1,750,000 / 子爵 3,200,000 / 伯爵 6,000,000 / 公爵 7,500,000 / 大王 14,000,000(2026-10-05 に伯爵・公爵・大王を引き上げ。男爵・子爵は開始済みなので変えない)
+// ライフ(2026-10-05・ユーザーが段階ごとに決めた): 男爵 1,750,000 / 子爵 3,200,000 / 伯爵 8,000,000 / 公爵 14,000,000 / 大王 21,000,000(2026-10-05 に伯爵・公爵・大王を2度引き上げ。男爵・子爵は開始済みなので変えない)
 const RAID_JACK_A_TIERS = Object.freeze([
   raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000),    // 攻撃力は Easy
   raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000),    // Normal
-  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 6000000),    // Hard
-  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 7500000),   // Expert
-  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 14000000),   // Master
+  raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000),    // Hard
+  raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 14000000),   // Expert
+  raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 21000000),   // Master
 ]);
 // 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示)。大王を倒したら共有ライフは無限になり、敵は小さなぱんぷきんに替わる。
 //   ・共有ライフは減らない。毎回ぜんかいのライフからはじめ、与えたダメージだけがスコア(累計)に足される

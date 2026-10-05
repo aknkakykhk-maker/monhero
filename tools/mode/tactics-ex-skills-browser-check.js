@@ -575,6 +575,20 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
+    // --- ⑫ ライガー「雷狼影」(2026-10-05 ユーザー指示) ---
+    const tgSlot = await startWith('ライガー');
+    await page.waitForTimeout(1500);
+    await tapSlot(tgSlot);
+    p = await panel();
+    check('「雷狼影」: 5/5・カードと併用できる・6ターン(ため3＋雷纏3)', !!p && p.name === '雷狼影' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /6ターン/.test(p.text), p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    check('使うと距離枠の札に「雷0」が出る', await page.locator(`[data-tactics-ex-mark="${tgSlot}"]`).getAttribute('data-tactics-ex-state') === '雷0');
+    await tapSlot(tgSlot);
+    p = await panel();
+    check('詳細に「雷 0（ためている。あと3ターンで雷纏が始まる）」が出る', !!p && /雷 0（ためている。あと3ターンで雷纏が始まる）/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
     // --- ⑪ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮。ひとりだけの盤面) ---
     const pdSlot = await startWith('パンドラ');
     const pdLimit0 = await limitOf();
