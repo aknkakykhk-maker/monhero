@@ -104,14 +104,19 @@ assert(help.includes('次のWAVEへ持ち越されません'));
 // DRIFT GUARD: 下のモデルが写している式が実コードに残っているか先に確かめる。
 // 丈夫さのバランス調整で式が変わると、モデルだけ古いまま通り続けてしまうため。
 // 丈夫さは defVal(ふだんのバトルは effectiveDef・タクティクスは狙われた子の丈夫さ)という名前へ切り出した。式は同じ
-const defValIsEffectiveDef = game.includes('resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff(\'defPct\')) : effectiveDef;');
+// 2026-10-05: ゴースト・スプーキーの勇者特性「トリックスタート」で積んだ丈夫さを最後に掛けるようになった。
+//   積んでいなければ1倍(勇者モンがゴースト・スプーキーでなければ常に1倍)なので、ここで見るメロソの場面の式は同じ
+const defValIsEffectiveDef = game.includes('resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff(\'defPct\')) : effectiveDef;')
+  || game.includes("resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)\n      * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));");
 assert(game.includes(`const defenseRate = Math.min(0.5,effectiveDef*0.00015);`)
   || (defValIsEffectiveDef && game.includes(`const defenseRate = Math.min(0.5,defVal*0.00015);`)),
   '丈夫さの割合軽減の式が変わっている。モデル側も新しい式へ直すこと');
 assert(game.includes(`Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))`)
   || (defValIsEffectiveDef && game.includes(`Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))`)),
   '丈夫さの固定軽減と下限の式が変わっている。モデル側も新しい式へ直すこと');
-assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining))`),
+// 2026-10-05: スエゾーのEX「サイコロックオン」の敵の与ダメ倍率が氷結のあとに並んだ(効いていなければ1。既存5モードでは常に1)
+assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining))`)
+  || game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*tacticsExPsychoLockNow().enemyDmgMult*soulDamageRemaining))`),
   '永続軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // タクティクスでは「狙われた子だけ」のぶん(tacticsSlotRate)も掛ける形になった。ふだんのバトルは bySlot を渡さないので 1.0 で今までと同じ
 // ふだんのバトルでは追加の掛け算がすべて 1 のままで、今までと同じ式。タクティクスだけ「狙われた子のぶん」と、EXの被ダメ軽減(世界樹の守り・複数効果・パーティ効果)が最後に掛かる。

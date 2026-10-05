@@ -39,7 +39,8 @@ const checks = [
   ['マーケット150000ダイヤ', /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?cost:150000/.test(breeder)],
   ['専用円盤石画像を商品に使用', /const SNEGUROCHKA_DISC_ICON = "images\/disc-icons\/snegurochka-disc\.PNG\?v=[a-f0-9]{12}"/.test(breeder) && /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?icon:SNEGUROCHKA_DISC_ICON/.test(breeder)],
   ['円盤石の商品詳細も共通表示を使用', game.includes('marketDiscIcon:item.icon') && game.includes('detailOpts.marketDiscIcon')],
-  ['移動封印は有効中のMOVEを失敗し行動済みを維持', /intent\.type==='MOVE' && getWaveBuff\('iceLockTurns'\)>0[\s\S]*?移動できない！/.test(game)],
+  // 2026-10-05: スエゾーのEX「サイコロックオン」も同じ枝で移動を止める(iceLockTurns と並べて || で見る)
+  ['移動封印は有効中のMOVEを失敗し行動済みを維持', /intent\.type==='MOVE' && \(?getWaveBuff\('iceLockTurns'\)>0(\|\|tacticsExPsychoLockNow\(\)\.active\))?\)?[\s\S]*?移動できない！/.test(game)],
   ['付与ターンは減算せず次ターンから5ターン', /iceLockTurns:5/.test(game) && /getWaveBuff\('iceLockTurns'\)>0 && !immediateEffects\.iceLockRefreshed/.test(game) && /iceLockTurns:Math\.max\(0,\(p\.iceLockTurns\|\|0\)-1\)/.test(game)],
   ['初回付与ターンは準備中として次ターンに解除', /iceLockPreparing:\(p\.iceLockTurns\|\|0\)<=0/.test(game) && /iceLockRefreshed\) setWaveBuffs\(p=>\(\{\.\.\.p,iceLockPreparing:false\}\)\)/.test(game)],
   ['消費ガッツ3%累積・安全な下限', /Math\.max\(0\.1, 1 - 0\.03\*getPermaBuff\('snegurochkaGutsDiscountStacks'\)\)/.test(game)],
