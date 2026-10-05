@@ -8316,6 +8316,16 @@ function MonsterHeroGame() {
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
     if (loops <= 0) return null;
+    const awardedPro = await awardBackQuickLoops(loops);
+    return awardedPro ? { ...awardedPro, wavesCleared } : null;
+  };
+  // クイック周回ぶんの報酬を配る共通の入口(プロモードとジャック戦が使う)。条件が欠けたら null
+  // (AUTO設定がそろっていない・基準の難易度をクイックでクリアしていない)。スコアとランキングには触れない
+  const awardBackQuickLoops = async (loops) => {
+    if (!autoQuickRunConfigured(autoSettings)) return null;
+    const quickDifficulty = autoSettings.quickRun.difficulty;
+    if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
+    if (!(loops > 0)) return null;
     // 絆経験値の行き先は、裏でクイックを回していたときとそろえる
     // (AUTO設定の勇者モン＝1倍 / AUTO設定の供モン①②③＝1/2 / モンスター編成の控え＝1/4)。
     // プロで戦った編成ではなく、**クイックを回していたら育っていたはずの顔ぶれ**へ入れる
@@ -8333,8 +8343,10 @@ function MonsterHeroGame() {
       bondHeroMasuId: quickHeroMon?.masuId ?? undefined,
       bondParticipantMasuIds: quickAllyMasuIds,
     });
-    return awarded ? { ...awarded, quickDifficulty, wavesCleared } : null;
+    return awarded ? { ...awarded, quickDifficulty } : null;
   };
+  // ジャック戦のぶん。周回数は使ったターン数×2(raidJackQuickLoops)。デバッグの強制表示(別のイベントID)の戦いには配らない
+  const awardRaidJackQuickLoops = async (turnsUsed) => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
   const awardRunRewards = async (wavesCleared) => {
     // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
     if (rewardsAwardedRef.current) return;
@@ -13354,7 +13366,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await raidJackSaveState(next);
       }
     } catch (error) { outcome='error'; }
-    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
+    // クイック周回ぶんの報酬(経験値など)。本番のイベントの戦いだけ。与ダメージの記録とは別のまとまりで、失敗しても戦いの結果には影響しない
+    let quickAward=null;
+    // リタイアは「いま進行中のターン」を数えない(1ターン目で降参しても0周)
+    if(!isDebugRun){ try { quickAward=await awardRaidJackQuickLoops(reason==='giveup'?Math.max(0,(run.turns||1)-1):(run.turns||0)); } catch (error) { quickAward=null; } }
+    setRaidJackResult({quickAward,kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
       lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
   };
   // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
@@ -20255,6 +20271,18 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
           </div>
           {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
+          {r.quickAward&&r.quickAward.loops>0&&(
+            <div data-raid-jack-quick-award className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-left mb-3" style={{'--d':'2000ms'}}>
+              <div className="flex items-center justify-between text-[11px] mb-1"><span className="text-cyan-300 font-black">⚔ クイック周回ぶん</span><span className="text-white font-mono font-bold">{r.quickAward.loops.toLocaleString()}周</span></div>
+              <p className="text-[9px] leading-relaxed text-slate-300">{[
+                r.quickAward.xp>0?`経験値 +${r.quickAward.xp.toLocaleString()}`:null,
+                r.quickAward.gold>0?`ダイヤ +${r.quickAward.gold.toLocaleString()}`:null,
+                r.quickAward.bond>0?`絆 +${r.quickAward.bond.toLocaleString()}`:null,
+                r.quickAward.psyche>0?`虹のプシュケー ×${r.quickAward.psyche.toLocaleString()}`:null,
+                r.quickAward.shard>0?`勇者の証片 ×${r.quickAward.shard.toLocaleString()}`:null,
+              ].filter(Boolean).join(' ／ ')}</p>
+            </div>
+          )}
           <div className="mh-rjresult-in mb-4 text-[10px] text-slate-300" style={{'--d':'1500ms'}}>{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
           <div className="mh-rjresult-in w-full max-w-xs space-y-3" style={{'--d':'1600ms'}}>
             <button onClick={()=>exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>

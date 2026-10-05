@@ -378,3 +378,15 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
   if (kind === 'clear_b') return `${bName} 初討伐報酬`;
   return `グランドスラム 累計ダメージ${rank}位の報酬`;
 };
+
+// ===== ジャック戦を遊んだぶんを、クイック周回の報酬にする(2026-10-05・ユーザー指示) =====
+// プロモードのランぶんと同じ立て付け(docs/spec/QUICK_RHYTHM_LINK.md §13): 終わったときに「クイック何周ぶんか」を数えて、
+// その報酬(経験値・ダイヤなど)だけを配る。裏で2つ目のバトルを動かすのではない。与ダメージの記録(共有ライフ・ランキング)は一切動かさない。
+// ジャック戦にはWAVEがないので、プロの「進んだWAVE数」の代わりに「使ったターン数」で決める。
+//   周回数 = 使ったターン数 × 2(20ターン使い切れば40周ぶん。レイドバトルもグランドスラムも同じ式で、段階による違いは無い)
+//   全滅・リタイアも、使ったターン数ぶんだけ入る。1ターンも使っていなければ0。
+const RAID_JACK_QUICK_LOOPS_PER_TURN = 2;
+const raidJackQuickLoops = (turnsUsed) => {
+  const turns = Math.max(0, Math.min(RAID_JACK_TURNS, Math.trunc(Number(turnsUsed) || 0)));
+  return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
+};
