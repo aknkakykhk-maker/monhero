@@ -1559,6 +1559,7 @@ function MonsterHeroGame() {
   const [reincarnateError, setReincarnateError] = useState('');
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
+  const offeringProcessingRef = useRef(false);
   const rebirthProcessingRef = useRef(false);
   // 超越: 選択中の個体・エラー・演出・二重処理ロック
   const [transcendSelectedId, setTranscendSelectedId] = useState(null);
@@ -3665,6 +3666,7 @@ function MonsterHeroGame() {
     MASU_DONATION: 'temple',    // 寄付ページも神殿の曲を続ける
     MASU_REBIRTH: 'temple',     // 限界突破ページも神殿の曲を継続する
     MASU_REINCARNATE: 'temple', // 転生ページも同じ
+    MASU_OFFERING: 'temple',    // お布施ページも同じ
     MASU_TRANSCENDENCE: 'temple', // 超越ページも神殿の曲を継続する
     MASU_SOUL_RANK: 'temple',      // 魂格進化も神殿の曲を継続する
     MASU_SOUL_TRAITS: 'management', // 魂格特性はマスモン詳細と同じ管理系BGM
@@ -4137,6 +4139,10 @@ function MonsterHeroGame() {
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
   const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
+  // 神殿のお布施の使い方案内。初めて画面を開いたときに1度だけ出す(保存キーは新しく足したもの)
+  const OFFERING_INTRO_KEY = 'mh_masu_offering_intro_seen_v1';
+  const [offeringIntroSeen, setOfferingIntroSeen] = useState(true);
+  const dismissOfferingIntro = () => { setOfferingIntroSeen(true); storeSet(OFFERING_INTRO_KEY, true, false); };
   // ---- タクティクスEXスキルの使い方案内(CLAUDE.md ⑤。2026-09-23 β版でお試し公開) ----
   // 「距離枠をタップするとEXが開く」は遊んでいるだけでは気づけないので、EXを持つ子が
   // 盤面にいるバトルで1度だけ伝える。出す条件は tacticsExIntroVisible(EXの判定のあと)で決める。
@@ -5369,6 +5375,7 @@ function MonsterHeroGame() {
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
+      setOfferingIntroSeen(await storeGet(OFFERING_INTRO_KEY, false, false) === true);
       setTacticsExIntroSeen(await storeGet(TACTICS_EX_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
@@ -8142,6 +8149,35 @@ function MonsterHeroGame() {
     setTimeout(()=>setTranscendAnimation(null), prefersReducedMotion()?900:4400);
   };
   // 転生: レベルを99ぶん返して、振った強化をすべて振り直す
+  // お布施: ダイヤを払って絆経験値を与え、頼まれれば限界突破・転生まで続ける。
+  // 見積もりと同じ buildMasuOffering を、実行の瞬間の最新の所持数で計算し直して確定する
+  // (画面の見積もりが古くても、足りない状態で成立させない)。保存に失敗したら何も減らさない。
+  const executeMasuOffering = async ({ masuId, mode, amount, autoBreakthrough }) => {
+    if (offeringProcessingRef.current) return { ok:false, error:'処理中です。少し待ってからお試しください。' };
+    const masu = masuMonsRef.current.find(m=>String(m.id)===String(masuId));
+    const plan = buildMasuOffering({ masu, gold, ownedItems:ownedItemsRef.current, lockedIds:rebirthLockedMasuIds, mode, amount, autoBreakthrough });
+    if (!plan.ok) return { ok:false, error:plan.reason || 'お布施の条件を満たしていません。' };
+    offeringProcessingRef.current = true;
+    try {
+      const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?plan.nextMasu:m);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:plan.nextGold },
+        { key:'mh_owned_items', before:ownedItemsRef.current, next:plan.nextOwnedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('offering save failed');
+      masuMonsRef.current = next;
+      ownedItemsRef.current = plan.nextOwnedItems;
+      setMasuMons(next); setGold(plan.nextGold); setOwnedItems(plan.nextOwnedItems);
+      addAssistantBond(plan.reincarnations>0?'reincarnate':plan.breakthroughs>0?'breakthrough':'temple');
+      Audio_.se.levelUp();
+      return { ok:true, plan };
+    } catch {
+      return { ok:false, error:'お布施のデータを保存できませんでした。もう一度お試しください。' };
+    } finally {
+      offeringProcessingRef.current = false;
+    }
+  };
   const executeMasuReincarnation = async () => {
     if (reincarnateProcessingRef.current || !reincarnateSelectedId) return;
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(reincarnateSelectedId));
@@ -10106,6 +10142,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★ダメージの式は useCallback で古い描画の関数が残ることがある(依存に wave・turnCount が無いものもある)。
   //   EXの効き目は「いま」を ref から読むので、どの描画の関数から呼ばれても同じ答えになる
   const tacticsExLiveRef = useRef({ enabled:false, now:{ wave:1, turn:1 } });
+  // ハムのクロスカウンター用: そのターンに、どの枠が敵へ何ダメージ与えたか(ターンの印つき。別のターンの値は見ない)
+  const tacticsExTurnAtkRef = useRef({ wave:-1, turn:-1, bySlot:{} });
   tacticsExLiveRef.current = { enabled:tacticsExEnabled, now:tacticsExNow };
   // 併用できないEXを使ったので、このターンはカードを使えない枠。★止まるのは使った子だけで、
   //   ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示「EXで他行動禁止はそのモンスターだけ」)
@@ -11059,13 +11097,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   その子は受けずに、受けるはずだった量を敵へ返す。ほかの子は普通に受ける。
             //   固有技の確定反射は上の枝(味方全体)で処理しているのでここへは来ない
             const reflectedSlot=isReflect?pickDefenseSlot():null;
-            let evadedName='', reflectedName='', reflectBack=0;
+            let evadedName='', reflectedName='', reflectBack=0, counterBack=0, counterLabel='';
             let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0, throughTotal=0;
             // ★枠ごとに「何が起きたか」を控える。合計の数字だけでは、全体攻撃のときに
             //   誰がどれだけ減って、誰が受け止めたのかが分からない
             const slotFx={};
             targets.forEach(slotIdx=>{
               // ★エイキの「緋桜瞬歩」が効いていて、敵と同じ距離の枠にいるなら、抽選に関係なく完全に回避する
+              // ★ハムの「クロスカウンター」: 狙われたハムがそのターンに攻撃していれば、攻撃を回避して、与えたダメージ×カウンターを敵へ返す
+              {
+                const atk=tacticsExTurnAtkRef.current, liveNow=tacticsExLiveRef.current.now;
+                const hamDealt=atk&&atk.wave===liveNow.wave&&atk.turn===liveNow.turn?(atk.bySlot[slotIdx]||0):0;
+                const crossDmg=hamDealt>0?tacticsExCounterDamage(tacticsExStateRef.current,units,slotIdx,liveNow,hamDealt):0;
+                if(crossDmg>0&&counterBack===0){
+                  counterBack=crossDmg; counterLabel=tacticsTargetName(units,slotIdx);
+                  commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current,tacticsUnitsRef.current,liveNow,slotIdx,1));
+                  evadedName=counterLabel; slotFx[slotIdx]={evade:true};
+                  pushBattleLog(`🥊 ${counterLabel}のクロスカウンター！ 攻撃を回避して ${crossDmg.toLocaleString()} ダメージを返した（カウンター+1）`,'ally');
+                  return;
+                }
+              }
               const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);
               // ★ライガーの雷纏: 雷の数ぶん(1つ5%)、狙われた攻撃を確率で回避する
               const thunderDodge=Math.random()<tacticsExThunderDodgeNow(slotIdx);
@@ -11184,9 +11235,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(dealt<=0&&saved<=0&&evadedSlot==null&&!evadedName&&reflectedSlot==null) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             // 味方の増減を確定させてから敵へ返す。撃破したらここで止める(回復・次ターンへ進ませない)
+            // ★クロスカウンター: 回避したぶんを敵へ返す。撃破したらここで止める
+            if(counterBack>0){
+              addPopup(`クロスカウンター ${counterBack}!!`,'enemy','text-orange-300 font-black text-4xl drop-shadow-lg');
+              const counteredHp=Math.max(0,enemyHpAtAttackStart-counterBack);
+              setCurrentWaveDamage(p=>p+counterBack); raidJackDamageRef.current+=Number(counterBack)||0;
+              setEnemy(prev=>prev?{...prev,hp:counteredHp}:prev); await battleWait(1000);
+              if (await resolveEnemyDefeat({remainingHp:counteredHp,damage:counterBack})) return;
+            }
             if(reflectBack>0){
               addPopup(`反射 ${reflectBack}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
-              const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectBack);
+              const reflectedHp=Math.max(0,enemyHpAtAttackStart-counterBack-reflectBack);
               setCurrentWaveDamage(p=>p+reflectBack); raidJackDamageRef.current+=Number(reflectBack)||0;
               setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
               if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;
@@ -11392,6 +11451,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const scenario=battleScenarioRef.current;
     const acting=enemyIntent;
     const hpAfterRecovery=emergencyHp!==null?emergencyHp:Math.min(liveEffectiveMaxHp(),hp+recoverHp);
+    tacticsExTurnAtkRef.current={ wave:-1, turn:-1, bySlot:{} }; // カードを切らない番では、クロスカウンターの元になるダメージは無い
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
@@ -11447,6 +11507,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       badge:(()=>{
         const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
         if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        // ハムボクシングは、カウンターの数と残りを札に出す
+        if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+          const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
+          if(ct) return { text:`反撃${ct.counter}・あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}`, active:true };
+        }
         // 雷狼影は、雷の数と段階を札に出す(ためている間は「雷◯」、雷纏のあいだは「雷纏◯」)
         if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
           const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
@@ -11471,6 +11536,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
           const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
           if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
+          // ハムのハムボクシング: いまのカウンターの数と、クロスカウンターの威力
+          if(def.effect==='counter'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
+            const ct=tacticsExCounterOf(state,tacticsUnits,slotIdx,tacticsExNow);
+            if(ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメの${Math.round(ct.dmgRate*100*ct.counter)}%。発動するたび+1）`);
+          }
           // ライガーの雷狼影: いまの雷の数と、ためている/雷纏の段階
           if(def.effect==='thunder'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)){
             const th=tacticsExThunderOf(state,tacticsUnits,slotIdx,tacticsExNow);
@@ -11677,6 +11747,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setFocusedCard(null); setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const acting=enemyIntent;
+    tacticsExTurnAtkRef.current={ wave:-1, turn:-1, bySlot:{} };
     await handleEnemyTurn('none',{},acting,hp);
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
@@ -12264,6 +12335,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // (0のままだと、反射で殴り返したときに「HP0の敵をもう一度倒した」ことになってしまう)
     if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
+    // ★ハムボクシング: このターンに各枠が与えたダメージ(連撃も含む)を控える。敵の番のクロスカウンターが読む
+    { const bySlot={}; attackHits.forEach(h=>{ if(h&&Number.isInteger(h.slotIdx)) bySlot[h.slotIdx]=(bySlot[h.slotIdx]||0)+(Number(h.dmg)||0); });
+      tacticsExTurnAtkRef.current={ wave:tacticsExLiveRef.current.now.wave, turn:tacticsExLiveRef.current.now.turn, bySlot }; }
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
@@ -15492,6 +15566,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {templeLink(<PlusCircle size={18}/>,'再生','ベースモンから新しいマスモンを再生する',()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');})}
               {templeLink(<Layers size={18}/>,'合体','2体のマスモンを合体して新しい個体へつなぐ',()=>{resetFusionFlow();setGameState('MASU_FUSION');})}
               {templeLink(<Gem size={18}/>,'寄付','マスモンを寄付して報酬を受け取る',()=>{resetDonationFlow();setGameState('MASU_DONATION');})}
+              {templeLink(<Coins size={18}/>,'お布施','ダイヤを払ってマスモンへ直接経験値を与える',()=>{setGameState('MASU_OFFERING');})}
               {templeLink(<ArrowUpCircle size={18}/>,'限界突破','マスモンのレベル上限を引き上げる',()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');})}
               {templeLink(<RotateCcw size={18}/>,'転生','Lvを99下げて強化Pを獲得し、育成を振り直す',()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
               {templeLink(<Sparkles size={18}/>,'超越','さらなる成長へ進むための限界を超える',()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');},{className:'mh-transcend-link'})}
@@ -15552,6 +15627,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {/* 転生: Lv100以上で使える。レベルを99ぶん返す代わりに、振った強化をすべて振り直せる */}
+        {gameState==='MASU_OFFERING'&&(
+          <MasuOfferingScreen
+            MONSTER_CARD_CLASS={MONSTER_CARD_CLASS}
+            MONSTER_CARD_STYLE={MONSTER_CARD_STYLE}
+            buildUnifiedMonsterEntries={buildUnifiedMonsterEntries}
+            executeMasuOffering={executeMasuOffering}
+            introVisible={!offeringIntroSeen}
+            onDismissIntro={dismissOfferingIntro}
+            gold={gold}
+            lockedIds={rebirthLockedMasuIds}
+            masuMons={masuMons}
+            monsterDisplayFlags={monsterDisplayFlags}
+            monsterEntryMatchesDisplayFlags={monsterEntryMatchesDisplayFlags}
+            monsterEntryMatchesLineage={monsterEntryMatchesLineage}
+            monsterRosterIds={monsterRosterIds}
+            onBackToTemple={()=>setGameState('TEMPLE')}
+            ownedItems={ownedItems}
+            renderMonsterCardBody={renderMonsterCardBody}
+            renderMonsterSortFilterBar={renderMonsterSortFilterBar}
+            renderScreenNote={renderScreenNote}
+            sortMonsterEntries={sortMonsterEntries}
+          />
+        )}
+
         {gameState==='MASU_REINCARNATE'&&(
           <MasuReincarnateScreen
             rebirthLockedMasuIds={rebirthLockedMasuIds}
