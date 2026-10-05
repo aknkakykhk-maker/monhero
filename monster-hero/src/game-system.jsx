@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f014b3ceed8a4713
+// generated-sha256: ee649d759bda5359
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 17:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 18:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30406,8 +30406,12 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
   background:'transparent', border:'0', padding:'0', cursor:'pointer',
 });
+// 前回HOMEで取れた段階の合計(画面を出入りしても残る)。読み込みが終わるまでの間も、前回の段階・ライフで描ける
+//   (取れていないあいだを「男爵・ライフ満タン」として描くと、通信が遅いとき男爵が一瞬出て、あとから本当の段階へ切り替わって見える。2026-10-05)
+let homeRaidJackTotalsCache = { eventId: null, totals: undefined };
 const HomeRaidJack = ({ eventId, onOpen }) => {
-  const [totals, setTotals] = React.useState(undefined);
+  const [totals, setTotalsState] = React.useState(() => (homeRaidJackTotalsCache.eventId === eventId ? homeRaidJackTotalsCache.totals : undefined));
+  const setTotals = (t) => { if (t) homeRaidJackTotalsCache = { eventId, totals: t }; setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
   // ひとこと(吹き出し)。押すと次のセリフへ。最初の1つは開くたびに変わる
   const [lineNo, setLineNo] = React.useState(() => Math.floor(Math.random() * 1000));
   const [pose, setPose] = React.useState(false);
@@ -30429,6 +30433,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     loop();
     return () => { alive = false; clearTimeout(timer); };
   }, []);
+  // 初めて読み込み中(まだ一度も合計が取れていない)あいだは、段階もライフも分からないので描かない
+  if (totals === undefined) return null;
   // いま挑める段階 = まだ共有HPが残っている最初の段階。全部倒していたら「討伐おめでとう」
   const tiers = RAID_JACK_A_TIERS;
   const totalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
