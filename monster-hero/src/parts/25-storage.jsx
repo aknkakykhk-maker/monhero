@@ -149,6 +149,72 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
 };
+// <rhythm-achievement-io>
+// ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====
+// 報酬を渡す処理。キー=報酬の種類(ルールの reward.type)、値=async (reward, info) => 渡せたら true。
+// ★いまは空。RHYTHM_ACHIEVEMENT_REWARDS にルールを足したら、ここへ同じ種類の処理を足す。
+//   無い種類の報酬は渡さず、受け取り待ちのまま残す(印は付けない)。渡す処理が false を返したり例外を投げたときも同じ。
+//   渡せた直後に1件ずつ「受け取り済み」を書くので、途中で落ちても渡し済みのぶんは二重に渡さない
+const RHYTHM_ACHIEVEMENT_GRANTERS = {};
+// 報酬の対象にしてよい実績か。公開している曲 × 公開している難易度だけ(デバッグ用の曲・難易度で取れた実績には出さない)
+const rhythmAchievementEligible = (songId,difficultyId) => {
+  const song=RHYTHM_SONGS.find(item=>item.songId===songId);
+  if(!song||!rhythmDemoSongs([song]).length)return false;
+  return rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES).some(item=>item.id===difficultyId);
+};
+// 「読む → 待つ → 書く」なので、待たずに続けて呼ぶと古い値を書き戻してしまう(ビートPで一度踏んだ)。
+// 台帳に触る処理は、前の処理が書き終わってから次を始める順番待ちにする
+let rhythmAchievementQueue = Promise.resolve();
+const rhythmAchievementEnqueue = task => {
+  const run=rhythmAchievementQueue.then(task);
+  rhythmAchievementQueue=run.catch(()=>{});
+  return run;
+};
+const readRhythmAchievementLedger = async () => {
+  const raw=await storeGet(RHYTHM_ACHIEVEMENT_LEDGER_KEY,null,false);
+  return {absent:raw===null||raw===undefined,ledger:normalizeRhythmAchievementLedger(raw)};
+};
+// BEST記録を台帳へそろえる。足すだけで、消さない。
+//  ・台帳がまだ無いとき(初回)は、すでに取れていたぶんを「時刻は不明(0)」で取り込む。
+//    取り込む元は initialRecords(あれば。「いまのプレイを反映する前」のBEST) → なければ bestRecords
+//  ・initialRecords を渡したときは、そのあとで bestRecords との差を「いま取れた」として時刻を付けて足す
+//    (初めて遊んだ人でも、そのプレイで取れた実績が「すでに取っていたぶん」に混ざらない)
+// 返すもの … { ledger, added }。added は今回新しく取れた実績のid(報酬や「達成」の表示を出すときの種)
+const syncRhythmAchievements = (bestRecords,{initialRecords=null,now=Date.now()}={}) => rhythmAchievementEnqueue(async () => {
+  const {absent,ledger:start}=await readRhythmAchievementLedger();
+  let ledger=start,changed=false,added=[];
+  if(absent){ledger=syncRhythmAchievementLedger(ledger,initialRecords||bestRecords,{now:0}).ledger;changed=true;}
+  if(!absent||initialRecords){
+    const result=syncRhythmAchievementLedger(ledger,bestRecords,{now});
+    ledger=result.ledger;added=result.added;
+    if(added.length)changed=true;
+  }
+  if(changed)await storeSet(RHYTHM_ACHIEVEMENT_LEDGER_KEY,ledger,false);
+  return {ledger,added};
+});
+// 受け取り待ちの報酬を渡す。報酬ルールが空のあいだは、読み書きもせず何もしない。
+// 返すもの … { granted: 渡せたもの, pending: 渡せなくて待っているもの }
+const claimRhythmAchievementRewards = ({granters=RHYTHM_ACHIEVEMENT_GRANTERS,rules=RHYTHM_ACHIEVEMENT_REWARDS,eligible=rhythmAchievementEligible,now=Date.now()}={}) => rhythmAchievementEnqueue(async () => {
+  if(!normalizeRhythmAchievementRules(rules).length)return {granted:[],pending:[]};
+  let {ledger}=await readRhythmAchievementLedger();
+  const granted=[],waiting=[];
+  for(const entry of rhythmAchievementPending(ledger,rules,eligible)){
+    const granter=granters&&granters[entry.reward.type];
+    if(typeof granter!=='function'){waiting.push(entry);continue;}
+    let ok=false;
+    try{ok=!!(await granter({...entry.reward},{achievementId:entry.achievementId,songId:entry.songId,difficultyId:entry.difficultyId,kind:entry.kind,ruleId:entry.ruleId}));}catch{ok=false;}
+    if(!ok){waiting.push(entry);continue;}
+    ledger={...ledger,claimed:{...ledger.claimed,[entry.key]:rhythmAchievementTime(now)||1}};
+    await storeSet(RHYTHM_ACHIEVEMENT_LEDGER_KEY,ledger,false);
+    granted.push(entry);
+  }
+  return {granted,pending:waiting};
+});
+// 画面側から呼ぶ入口。失敗しても遊びを止めない(実績が書けなくても、BEST記録の保存には影響しない)
+const recordRhythmAchievements = (bestRecords,options) => syncRhythmAchievements(bestRecords,options)
+  .then(result => claimRhythmAchievementRewards().then(() => result))
+  .catch(() => ({ledger:null,added:[]}));
+// </rhythm-achievement-io>
 // イベントPは通常イベント共通の恒久残高。イベント終了では消さない。
 const RHYTHM_EVENT_POINTS_KEY='mh_rhythm_event_points_v1';
 const normalizeRhythmEventPoints=value=>{

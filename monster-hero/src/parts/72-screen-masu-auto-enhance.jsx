@@ -109,11 +109,7 @@ function MasuAutoEnhanceScreen({
       return (
         <div data-mh-screen style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 overflow-hidden ${SCREEN_SHELL_CLASS}`} data-auto-enhance={masu.id}>
           <ScreenHead title="オート強化" accent="text-lime-300" onBack={onBack} backLabel="マスモン詳細へ戻る"/>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto mb-2 grid grid-cols-3 gap-2">
-            <button type="button" onClick={onOpenNormalEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
-            <button type="button" onClick={onOpenTranscendEnhance} className="min-h-[44px] rounded-xl border border-white/10 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
-            <button type="button" aria-current="page" className="min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[11px] font-black">オート強化</button>
-          </div>
+          <EnhanceModeTabs current="auto" onNormal={onOpenNormalEnhance} onTranscend={onOpenTranscendEnhance} autoOn={settings.enabled}/>
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuAutoEnhance" compact/></div>
           <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3`}>
 

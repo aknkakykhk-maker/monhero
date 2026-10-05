@@ -181,7 +181,7 @@ check('図鑑の攻撃アクションでも、技を1つずつ選んで再生で
       if (!closed && !(await page.evaluate(() => !!document.querySelector('[role="dialog"]')))) break;
     }
     await clickSel('button[aria-label="設定"]'); await page.waitForTimeout(900);
-    await clickText('^ヘルプ$'); await page.waitForTimeout(900);
+    await clickText('^ヘルプ'); await page.waitForTimeout(900);
     await clickText('💊'); await page.waitForTimeout(1200);
     await clickSel('[data-debug-monster-check]'); await page.waitForTimeout(1500);
     // 実ブラウザは、ユグドラシル種と、見せ場の出し方が違う代表(型の子・歌・連撃・水)だけ見る(全22体だと数分かかる)

@@ -28,19 +28,19 @@ vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMake
 const o = ctx.o;
 
 // ① 段階
-const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 3200000, 4], ['ジャック伯爵', 8000000, 5], ['ジャック公爵', 14000000, 5], ['ジャック大王', 21000000, 5]];
+const aWant = [['ジャック男爵', 1750000, 3], ['ジャック子爵', 3200000, 4], ['ジャック伯爵', 8000000, 5], ['ジャック公爵', 35000000, 5], ['ジャック大王', 80000000, 5]];
 const bWant = [['初級ジャック', 70000, 3], ['中級ジャック', 700000, 4], ['上級ジャック', 3500000, 5], ['超級ジャック', 14000000, 5], ['極級ジャック', 35000000, 5]];
 aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 // ライフは段階ごとの設定値(2026-10-05・ユーザーが決めた)。倍率 power は hp ÷ 350,000 に合わせてある(Bは今までどおり 35,000×倍率×10)
-check('A のライフは 175万 / 320万 / 800万 / 1,400万 / 2,100万(ユーザーが段階ごとに決めた値。伯爵・公爵・大王は2026-10-05に引き上げ)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,8000000,14000000,21000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
+check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユーザーが段階ごとに決めた値。伯爵・公爵・大王は2026-10-05に引き上げ)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,8000000,35000000,80000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
 check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.power - t.hp / 350000) < 1e-9) && o.RAID_JACK_A_TIERS[0].power === 5);
-// ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は子爵と同じ / 技名はそのまま)
+// ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は 700(はじめは子爵と同じ。子爵を 500 に決め直したあとも 700 のまま) / 技名はそのまま)
 {
   const p = o.RAID_JACK_PUMPKIN;
   const tier5 = o.RAID_JACK_A_TIERS[4], tier2 = o.RAID_JACK_A_TIERS[1];
   check('ぱんぷきん: 名前は「ぱんぷきん」、ライフは 4,550,000(大王のライフとは連動しない)、技は5本', p.name === 'ぱんぷきん' && p.hp === 4550000 && p.hp !== tier5.hp && p.actionCount === 5, `hp=${p.hp}`);
-  check('ぱんぷきん: 攻撃力は子爵と同じ(Normal=700)', p.atk === tier2.atk && p.atk === 700, `atk=${p.atk} / 子爵 ${tier2.atk}`);
+  check('ぱんぷきん: 攻撃力は 700(子爵の値とは連動しない)', p.atk === 700, `atk=${p.atk} / 子爵 ${tier2.atk}`);
   const totals = (n) => ({ a: { 5: { total: n } } });
   check('大王を倒したか: 共有の合計が大王のライフ以上', o.raidJackBossDown(totals(tier5.hp)) === true && o.raidJackBossDown(totals(tier5.hp - 1)) === false && o.raidJackBossDown(null) === false && o.raidJackBossDown({ a: {} }) === false);
   check('技の名前は今までのまま(ぱんぷきんでも変えない)', Object.keys(o.RAID_JACK_SKILL_NAMES).length === 7 && o.RAID_JACK_SKILL_NAMES.normal === 'カボチャ張り手' && o.RAID_JACK_SKILL_NAMES.allout === 'おばけパレード');
@@ -55,12 +55,10 @@ check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.ev
     && !c2.mk('a', 1, 'raidJackA', { pumpkin: true }).raidJackPumpkin && !c2.mk('b', 4, 'raidJackB', { pumpkin: true }).raidJackPumpkin);
   check('ぱんぷきんの絵は、ジャックの通常絵(0.5)より小さい', o.RAID_JACK_PUMPKIN_ART_SCALE < 0.5 && o.RAID_JACK_PUMPKIN_ART_SCALE > 0.2);
 }
-// レイドバトルの攻撃力は、通常バトルの Easy / Normal / Hard / Expert / Master の攻撃倍率(DIFFICULTY_SETTINGS の power)と同じ(2026-10-04)
-const diffSrc = read('monster-hero/src/parts/19-difficulties-and-rules.jsx');
-const diffPower = (id) => Number((new RegExp(`${id}:\\s*\\{[^}]*?power:\\s*([0-9.]+)`).exec(diffSrc) || [])[1]);
-const aAtkWant = ['Easy', 'Normal', 'Hard', 'Expert', 'Master'].map(diffPower);
-check('A の攻撃倍率は Easy/Normal/Hard/Expert/Master と同じ(0.5/1/1.5/3/5)', o.RAID_JACK_A_TIERS.map((t) => t.atkPower).join() === aAtkWant.join() && aAtkWant.join() === '0.5,1,1.5,3,5', `${o.RAID_JACK_A_TIERS.map((t) => t.atkPower).join()} / 難易度表 ${aAtkWant.join()}`);
-check('A の攻撃力は 基礎700 × その倍率 = 350/700/1050/2100/3500', o.RAID_JACK_A_TIERS.map((t) => t.atk).join() === '350,700,1050,2100,3500', o.RAID_JACK_A_TIERS.map((t) => t.atk).join());
+// レイドバトルの攻撃力は、2026-10-04 は通常バトルの Easy〜Master と同じ倍率だったが、2026-10-05 にユーザーが段階ごとに決め直した(350/500/600/800/1,000)
+check('A の攻撃力は 男爵350 / 子爵500 / 伯爵600 / 公爵800 / 大王1,000(ユーザーが段階ごとに決めた値)。倍率は基礎700で割った値', o.RAID_JACK_A_TIERS.map((t) => t.atk).join() === '350,500,600,800,1000' && o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.atkPower * 700 - t.atk) < 1e-6), o.RAID_JACK_A_TIERS.map((t) => `${t.atkPower}/${t.atk}`).join());
+check('A の攻撃力は段階が上がるほど増える', o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.atk > a[i - 1].atk));
+check('ぱんぷきんの攻撃力は 700(子爵の値を変えても連動しない)', o.RAID_JACK_PUMPKIN.atk === 700 && o.RAID_JACK_PUMPKIN.atkPower === 1);
 check('B の攻撃力は変えない(段階の power のまま)', o.RAID_JACK_B_TIERS.every((t) => t.atkPower === t.power && t.atk === Math.round(700 * t.power)));
 check('B の倍率は 0.2/2/10/40/100', o.RAID_JACK_B_TIERS.map((t) => t.power).join() === '0.2,2,10,40,100');
 check('技に「再生」が無い', !o.RAID_JACK_ACTION_IDS.includes('regen') && o.RAID_JACK_ACTION_IDS.length === 5);

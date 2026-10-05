@@ -904,6 +904,7 @@ PR #901〜#904、#943等で画面遷移・再マウント・監視ループの�
 - 設定: `mh_rhythm_settings_v1`
 - BEST: `mh_rhythm_best_v1`
 - モンスターノーツ用のマスモン設定: `mh_rhythm_monsters_v1`
+- 実績の台帳（フルコンボ・オールエクセレント・オールマーベラス。報酬の受け取り済みを含む）: `mh_rhythm_achievements_v1`（`docs/spec/RHYTHM_ACHIEVEMENTS.md`）
 
 これらを勝手に改名・削除・意味変更しない。
 
