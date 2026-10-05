@@ -80,7 +80,7 @@ assert(source.includes('normalRate-effectiveRate'), 'Quick ULTIMATE result must 
 assert(source.includes('setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts);'), 'HP/guts full recovery must remain');
 assert(source.includes('if(penaltyRate==null) return QUICK_GROWTH_MULT-1;'), 'other quick difficulties must keep 10% growth');
 assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');
-assert(source.includes("quick?'h-[366px] flex flex-col':''"), 'fixed quick card height must remain unchanged');
+assert(source.includes("quick?'h-[384px] flex flex-col':''"), 'fixed quick card height must remain unchanged');
 assert(source.includes('if (isQuickMode(runMode)) {') && source.includes('return;'), 'quick ranking exclusion path must remain present');
 const changelog=fs.readFileSync('monster-hero/data/changelog.js','utf8');
 const assistants=fs.readFileSync('monster-hero/data/assistants.js','utf8');

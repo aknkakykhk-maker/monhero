@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":19891,"data/images/images-enemy.js":2926,"data/ally-monsters.js":32165,"data/lineages.js":11607,"data/breeder.js":85266,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":1994591,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":74781,"data/changelog.js":1163783,"data/help.js":513218,"data/rhythm-step3-release.js":8517,"data/assistants.js":576300,"tailwind.css":198551,"game-system.compiled.js":4640564,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":20726,"data/images/images-enemy.js":2926,"data/ally-monsters.js":33844,"data/lineages.js":11607,"data/breeder.js":86589,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2066565,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":74781,"data/changelog.js":1173893,"data/help.js":514297,"data/rhythm-step3-release.js":8517,"data/assistants.js":576460,"tailwind.css":198685,"game-system.compiled.js":4652543,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610052306';
+var GAME_BUILD = '202610052322';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -132,7 +132,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=0ab80dc4791c" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=1412e395d8e0" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -182,6 +182,15 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     outline: 2px solid var(--mh-gold-light); outline-offset: 2px;
   }
   .mh-button:enabled:active { filter: brightness(.92); }
+  /* 見た目は小さいままで、押せる範囲だけを広げる(2026-10-05)。「詳細」の札(20px)や
+     カード右上の i(28px)は、指では押しそこねる大きさだった。広げるのは上下左右 8px まで
+     (隣の購入ボタンなどへ食い込むと、押したつもりのない方が反応するため) */
+  /* 使う側で relative か absolute を付けておくこと(ここで position を決めると、absolute の i を上書きしてしまう) */
+  .mh-hit-expand::before { content: ''; position: absolute; inset: -8px; }
+  /* 下へだけ広げる版。上にカード本体のボタンがある帯(バトル選択の「詳しいルール」)用 */
+  .mh-hit-expand-down::before { content: ''; position: absolute; inset: 0 0 -7px 0; }
+  /* 上下にだけ広げる版。左右に別のボタンが接して並ぶところ(バトル中の速度と設定)用 */
+  .mh-hit-expand-y::before { content: ''; position: absolute; inset: -8px 0; }
   .mh-button.mh-button:disabled {
     background: #1b2639; border-color: #344157; color: #a7b3c6;
     opacity: .65; box-shadow: none; text-shadow: none; filter: none; transform: none; cursor: not-allowed;
@@ -217,7 +226,8 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     --mh-gold-light: #ffc680;
     --mh-on-gold: #2a1203;
     --mh-bubble-bg: rgba(33,14,50,.94);
-    --mh-halloween-sky: radial-gradient(circle at 88% 5%, #ffe7ad 0 20px, rgba(255,214,130,.35) 22px, transparent 62px),
+    /* 月は右上の角から少しのぞかせる。見出しの高さ(右上の「1 / 5」や長い題名)へ重ねると、明るい月の上で文字が読めなくなった(2026-10-05) */
+    --mh-halloween-sky: radial-gradient(circle at calc(100% - 30px) -6px, #ffe7ad 0 19px, rgba(255,214,130,.24) 21px, transparent 50px),
       radial-gradient(ellipse at 50% 112%, rgba(255,122,24,.46), transparent 62%),
       linear-gradient(180deg, #221038 0%, #170a26 52%, #1b0a1d 100%);
     --mh-halloween-bat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 30'%3E%3Cpath fill='%23a78bcf' fill-opacity='.55' d='M32 9c1.5-3 3-5 3-5s1 3.5.3 5.6C39 6.6 45 5.4 50 7c-3 1-5 3.6-5.3 6.6 3.3-1.8 8.5-1.6 12.3 1.2-5 .2-8.8 3-10 7-3.2-2.8-8.3-3.6-12.2-1.8-.9-2.6-1.9-3.7-2.8-3.7s-1.9 1.1-2.8 3.7c-3.9-1.8-9-1-12.2 1.8-1.2-4-5-6.8-10-7 3.8-2.8 9-3 12.3-1.2C19 10.6 17 8 14 7c5-1.6 11-.4 14.7 2.6-.7-2.1.3-5.6.3-5.6s1.5 2 3 5z'/%3E%3C/svg%3E");
@@ -228,7 +238,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     /* 画面の枠(.mh-screen-shell)を使わないバトル系の画面にも、同じ夜空と飾りが透けて見えるようにする */
     background-image: var(--mh-halloween-bat), var(--mh-halloween-bat), var(--mh-halloween-pumpkin), var(--mh-halloween-pumpkin), var(--mh-halloween-sky);
     background-repeat: no-repeat;
-    background-position: right 62px top 10px, right 112px top 34px, left -8px bottom -6px, right -6px bottom -4px, 0 0, 0 0, 0 0;
+    background-position: right 66px top 0, right 112px top 4px, left -8px bottom -6px, right -6px bottom -4px, 0 0, 0 0, 0 0;
     background-size: 44px auto, 28px auto, 64px auto, 48px auto, 100% 100%, 100% 100%, 100% 100%;
   }
   [data-mh-theme="halloween"] .mh-screen-shell {
@@ -236,7 +246,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     background-image: var(--mh-halloween-bat), var(--mh-halloween-bat), var(--mh-halloween-pumpkin), var(--mh-halloween-pumpkin), var(--mh-halloween-sky);
     background-repeat: no-repeat;
     /* 夜空(--mh-halloween-sky)はグラデーション3枚の重ね。飾り4枚と合わせて7枚ぶん並べる(数がずれると先頭の指定が繰り返される) */
-    background-position: right 62px top 10px, right 112px top 34px, left -8px bottom -6px, right -6px bottom -4px, 0 0, 0 0, 0 0;
+    background-position: right 66px top 0, right 112px top 4px, left -8px bottom -6px, right -6px bottom -4px, 0 0, 0 0, 0 0;
     background-size: 44px auto, 28px auto, 64px auto, 48px auto, 100% 100%, 100% 100%, 100% 100%;
   }
   [data-mh-theme="halloween"] .mh-screen-head h2 { color: #ffb45e; text-shadow: 0 0 14px rgba(255,140,40,.6); }
@@ -1800,25 +1810,25 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <body>
 <div id="loading"><div class="static-mocchi"><img id="static-mocchi-image" alt="モッチー"><span></span></div><section class="static-copy"><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div class="static-progress"><span></span></div><strong>0%</strong><p>ゲームシステムを起動中</p></section></div>
 <div id="root"></div>
-<script src="data/images/images-ally.js?v=4d94fa774c9f" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
+<script src="data/images/images-ally.js?v=3902b348b5b2" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
 <script>try{document.getElementById('static-mocchi-image').src=MOCCHI_IMG}catch(e){}</script>
 <script src="data/images/images-enemy.js?v=f10f6ad82110" onload="__mhBoot.done('data/images/images-enemy.js','敵モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-enemy.js')"></script>
-<script src="data/ally-monsters.js?v=7baf023c4593" onload="__mhBoot.done('data/ally-monsters.js','モンスターデータを読み込み中')" onerror="__mhBoot.fail('data/ally-monsters.js')"></script>
+<script src="data/ally-monsters.js?v=3ba68abcc371" onload="__mhBoot.done('data/ally-monsters.js','モンスターデータを読み込み中')" onerror="__mhBoot.fail('data/ally-monsters.js')"></script>
 <script src="data/lineages.js?v=ccec00f31137" onload="__mhBoot.done('data/lineages.js','血統データを読み込み中')" onerror="__mhBoot.fail('data/lineages.js')"></script>
-<script src="data/breeder.js?v=3c24a0500585" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
+<script src="data/breeder.js?v=cf32340c92b1" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=6811f59c3732" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=fa621c553795" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=547593eb9e19" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=ad47da271965" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=25bbc1a0cc30" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=514289b18b23" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=05e0f44533bd" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=2b3315222f20" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=691017ec4a5f" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
-<script src="data/assistants.js?v=0650f7afe1a9" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
+<script src="data/assistants.js?v=4bf50e9cb692" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
 <script>
 (function(){
   // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。
