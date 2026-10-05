@@ -621,6 +621,11 @@ function MonsterHeroGame() {
   // rosterと同じ安定IDだけを正式なラン開始時に記録する（AUTO∞からの利用は5B以降）。
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
+  // ★手札を使わずに捨てる(タクティクス専用・2026-10-05 ユーザー指示)。行動回数(cardLimit)を1枚ぶん使い、
+  //   捨てた枚数×(各自の最大ガッツの5%)を、立っている味方ぜんぶのガッツへ回復する。
+  //   カードをつかんで敵のエリアへ離すと捨てる札に入る(味方のエリアへ離すと今までどおり使う)。
+  //   discardCards は捨てると決めた手札の位置。捨てる札をタップすると取り消せる
+  const [discardCards, setDiscardCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
   // ★ターンの演出(processTurn→handleEnemyTurn)は await battleWait で繋いだ長い一本道で、
   //   途中で止める手立てが無かった。その最中にランを片付ける(returnToHome)と、
@@ -5098,6 +5103,8 @@ function MonsterHeroGame() {
         setDragState(prev=>prev?{...prev,x,y,active}:null);
       }
       if(active){ setDragOverSlot(findSlot(x,y)); }
+      // 捨てるエリア(敵側)の上にいるあいだ、その枠を濃くする(位置は引きずり中に動くので直接つける)
+      if(active){ const hit=inTacticsDiscardZone(x,y)&&findSlot(x,y)==null; document.querySelectorAll('[data-discard-zone]').forEach(el=>{ if(hit) el.setAttribute('data-hover','true'); else el.removeAttribute('data-hover'); }); }
       if(active&&e.cancelable) e.preventDefault();
     };
     const onUp=(e)=>{
@@ -5109,7 +5116,9 @@ function MonsterHeroGame() {
         // iOS Safariを含むブラウザがpointerup後に生成するclickを、配置先に届く前に捨てる。
         suppressCardClickRef.current=Date.now()+500;
         const si=findSlot(pt.clientX,pt.clientY);
-        if(si!=null){
+        if(si==null&&isTacticsMode(runMode)&&inTacticsDiscardZone(pt.clientX,pt.clientY)){
+          dragDiscardCard(cardIndex);
+        } else if(si!=null){
           dragAssignToSlot(cardIndex, si);
           setSlotSettle(si);
           setTimeout(()=>{ setSlotSettle(null); }, 500);
@@ -8844,6 +8853,8 @@ function MonsterHeroGame() {
   // ★ミーアの「オン・ステージ！」が効いているあいだ、盤面ぜんぶで1ターンに使える枚数が増える(上限5は変えない。2026-10-03)
   const exCardBonus = isTacticsMode(runMode) ? tacticsExCardBonusTotal(tacticsExState,tacticsUnits,{ wave, turn:turnCount }) : 0;
   const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus+exCardBonus);
+  // 行動回数の使用済み = 使うカード + 捨てるカード(捨てるのは新モードだけなので、ほかは今までと同じ数)
+  const actionUsed = selectedCards.length + discardCards.length;
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
@@ -10223,11 +10234,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   合計で灰色にしていたころは、枠に合わせてはじめて使えないと分かり、理由も出なかった
   const tacticsCardBlock = (card, cardIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return null;
-    if(cardIndex!=null&&selectedCards.includes(cardIndex)) return { ok:true, kind:null, short:null, why:null };
+    if(cardIndex!=null&&(selectedCards.includes(cardIndex)||discardCards.includes(cardIndex))) return { ok:true, kind:null, short:null, why:null };
     if(tacticsUsableSlots(card,cardIndex).length>0){
       // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
       //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
-      return selectedCards.length>=cardLimit
+      return actionUsed>=cardLimit
         ? { ok:false, kind:'limit', short:null, why:`1ターンに選べるカードは ${cardLimit} 枚まで` }
         : { ok:true, kind:null, short:null, why:null };
     }
@@ -10278,6 +10289,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const selectCardAt = (i, showDetail = true) => {
     if(isBusy||autoBattleRef.current) return;
     const c=hand[i]; if(!c) return;
+    // 捨てる札にしたカードをタップしたら、捨てるのを取り消す
+    if(discardCards.includes(i)){ setFocusedCard(null); setDiscardCards(p=>p.filter(x=>x!==i)); return; }
     if(showDetail){
       const now=Date.now(), last=cardTapRef.current;
       if(last.i===i&&now-last.t<=CARD_DOUBLE_TAP_MS){ cardTapRef.current={ i:null, t:0 }; setFocusedCard(c); return; }
@@ -10299,7 +10312,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const curGuts=pendingCardGuts(c);
       const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
       // ★併用できないEXを使った子は tacticsUsableSlots が外すので、ここで別に見なくてよい
-      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit;
+      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && actionUsed<cardLimit;
       if(isSelectable){
         Audio_.se.card();
         setSelectedCards(p=>[...p,i]);
@@ -10311,11 +10324,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
   };
 
+  // カードを敵のエリアへ離したとき、使わずに捨てる札へ入れる(タクティクス専用)。
+  // 使うカードと行動回数(cardLimit)を分け合う。すでに使うカードに選んでいた札は、選びを外してから捨てる
+  const dragDiscardCard = (cardIndex) => {
+    if(isBusy||autoBattleRef.current||!isTacticsMode(runMode)||battleScenarioRef.current) return;
+    const c=hand[cardIndex]; if(!c||discardCards.includes(cardIndex)) { setFocusedCard(null); return; }
+    const wasSelected=selectedCards.includes(cardIndex);
+    if(actionUsed-(wasSelected?1:0)>=cardLimit){ setFocusedCard(null); return; }
+    Audio_.se.card();
+    if(wasSelected){
+      setSelectedCards(p=>p.filter(x=>x!==cardIndex));
+      setCardAssignments(p=>{const n={...p}; delete n[cardIndex]; return n;});
+      if(pendingCard===cardIndex) setPendingCard(null);
+    }
+    setDiscardCards(p=>[...p,cardIndex]);
+    setFocusedCard(null);
+  };
   // ドラッグでカードをスロットに割り当て。
   // スワイプ操作ではカード効果のパネルを出さない(出したままだと合計DMG・合計軽減が隠れるため)。
   // 効果を見たいときはカードをタップする。
   const dragAssignToSlot = (cardIndex, slotIdx) => {
     if(isBusy||autoBattleRef.current) return;
+    if(discardCards.includes(cardIndex)) { setFocusedCard(null); return; }
     const c=hand[cardIndex]; if(!c) return;
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
@@ -10334,7 +10364,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const alreadySelected=selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if(!alreadySelected){
-        if(selectedCards.length>=cardLimit){ setFocusedCard(null); return; }
+        if(actionUsed>=cardLimit){ setFocusedCard(null); return; }
         if(!tacticsMode){
           const curGuts=getCardGuts(c,slotIdx);
           const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
@@ -11642,7 +11672,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ? explicitEntries.filter(entry=>entry&&Number.isInteger(entry.handIndex)&&hand[entry.handIndex]&&entry.card===hand[entry.handIndex])
         .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
       : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
-    if (isBusy||!enemy||usedCardEntries.length===0) return;
+    // 捨てる札(タクティクスだけ・明示entriesのAUTOでは使わない)。使う札と同じ手札の位置を取り合わない
+    const discardIdx=(!hasExplicitEntries&&isTacticsMode(runMode))
+      ? discardCards.filter(i=>hand[i]&&!usedCardEntries.some(e=>e.handIndex===i)) : [];
+    if (isBusy||!enemy||(usedCardEntries.length===0&&discardIdx.length===0)) return;
     // 併用できないEXを使った子のカードは使えない(AUTOの明示の選択もここで止める)。ほかの子のカードは使える
     if (usedCardEntries.some(entry=>tacticsExLocked.includes(entry.slotIdx))) return;
     // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
@@ -12156,11 +12189,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
     const drawCount=usedCards.filter(c=>c.type==='draw').length;
     setTacticsPandoraForms({}); // カードを切り終えたら本体の姿へ戻す
-    const usedHandIndexes=new Set(usedCardEntries.map(entry=>entry.handIndex));
+    const discardedCards=discardIdx.map(i=>hand[i]);
+    // ★捨てたぶんのガッツ回復: 捨てた枚数×5% を、立っている子それぞれの「自分の最大ガッツ」に掛けて配る
+    if(discardedCards.length>0){
+      let units=tacticsUnitsRef.current; const gutsMap={};
+      tacticsAliveSlots(units).forEach(i=>{
+        const v=normalizeTacticsUnit(units[i]);
+        const g=Math.max(0,Math.min(v.maxGuts-v.guts,Math.floor(v.maxGuts*TACTICS_DISCARD_GUTS_RATE*discardedCards.length)));
+        if(g>0){ units=recoverTacticsGutsAt(units,i,g); gutsMap[i]=g; }
+      });
+      commitTacticsUnits(units); mergeTacticsSlotFx({},gutsMap);
+      pushBattleLog(`手札を${discardedCards.length}枚捨てた。味方全体のガッツが最大の${Math.round(TACTICS_DISCARD_GUTS_RATE*discardedCards.length*100)}%ぶん回復`,'ally');
+    }
+    const usedHandIndexes=new Set([...usedCardEntries.map(entry=>entry.handIndex),...discardIdx]);
     let nextHand=hand.filter((_,i)=>!usedHandIndexes.has(i));
-    let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards];
+    let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards,...discardedCards];
     const replenish=(count)=>{for(let i=0;i<count;i++){if(nextDeck.length===0){if(nextGraveyard.length===0)break; nextDeck=[...nextGraveyard].sort(()=>Math.random()-0.5); nextGraveyard=[];} if(nextDeck.length>0)nextHand.push(nextDeck.pop());}};
-    replenish(usedCardEntries.length+drawCount);
+    replenish(usedCardEntries.length+discardedCards.length+drawCount);
     // ★ミーアのボルテージ: 使ったカードの枚数だけたまる(2026-10-03。効果が切れていれば何も起きない)
     if(isTacticsMode(runMode)&&usedCardEntries.length>0){
       const stNow=tacticsExStateRef.current;
@@ -12189,7 +12234,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   更新関数は「同じ入力なら同じ結果」でなければならないので、純関数を通す
     if(isTacticsMode(runMode)) setTurnBuffs(p=>(p.bySlot?{...p,bySlot:clearTacticsSlotFlag(p.bySlot,'zeroGuts')}:p));
     writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
-    setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
+    setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];
     { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
@@ -12261,7 +12306,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setAutoBattle(next);
     if(next){
       // 手動操作の途中状態はAUTOの明示entriesと混ぜず、開始時にまとめて破棄する。
-      setSelectedCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);
+      setSelectedCards([]);setDiscardCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);
       setDragState(null);cardDragActiveRef.current=false;
       setAutoTurnCycle(n=>n+1);
     }
@@ -12931,7 +12976,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
 
@@ -18952,7 +18997,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}

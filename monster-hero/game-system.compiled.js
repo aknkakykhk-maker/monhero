@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42d4e23dd242d9de
+// source-sha256: 410891bacb68e644
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 22:51";
+const BUILD_DATE = "2026-10-05 23:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15492,6 +15492,7 @@ const ENEMY_ACTION_DEFINITIONS = [{
 }];
 const TACTICS_SWEEP_MULT = 1.2;
 const TACTICS_SWEEP_MISS_MULT = 0.4;
+const TACTICS_DISCARD_GUTS_RATE = 0.05;
 const TACTICS_RUSH_MULT = 1.2;
 const TACTICS_RUSH_HITS = 3;
 const TACTICS_PIERCE_MULT = 0.8;
@@ -51470,6 +51471,78 @@ const TacticsEnemyStageFx = ({
     }))));
   })()), document.body);
 };
+const tacticsDiscardGeo = () => {
+  if (typeof document === 'undefined') return null;
+  const rects = [...document.querySelectorAll('[data-slot-index]')].map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+  if (rects.length === 0) return null;
+  const slotTop = Math.min(...rects.map(r => r.top)) - 6;
+  const slotBottom = Math.max(...rects.map(r => r.bottom)) + 6;
+  const ring = document.querySelector('[data-enemy-ring],[data-moo-stage]');
+  const ringTop = ring ? ring.getBoundingClientRect().top - 24 : 0;
+  return {
+    enemyTop: Math.max(0, Math.min(ringTop, slotTop - 40)),
+    slotTop,
+    slotBottom
+  };
+};
+const inTacticsDiscardZone = (x, y) => {
+  const g = tacticsDiscardGeo();
+  return !!g && y >= g.enemyTop && y < g.slotTop;
+};
+const TacticsDiscardZones = ({
+  full,
+  used,
+  limit
+}) => {
+  const g = tacticsDiscardGeo();
+  if (!g || typeof ReactDOM === 'undefined') return null;
+  const base = {
+    position: 'fixed',
+    left: 8,
+    right: 8,
+    pointerEvents: 'none',
+    zIndex: 69000,
+    borderRadius: 16,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    fontWeight: 900,
+    transition: 'background .12s, border-color .12s'
+  };
+  return ReactDOM.createPortal(React.createElement("div", {
+    "data-discard-zones": true,
+    "aria-hidden": "true"
+  }, React.createElement("style", null, '[data-discard-zone][data-hover="true"]{background:rgba(251,191,36,.30)!important;border-color:rgba(253,230,138,.95)!important}'), React.createElement("div", {
+    "data-discard-zone": true,
+    style: {
+      ...base,
+      top: g.enemyTop,
+      height: Math.max(0, g.slotTop - g.enemyTop),
+      background: 'rgba(251,191,36,.10)',
+      border: '2px dashed rgba(251,191,36,.55)',
+      color: 'rgba(253,230,138,.9)',
+      fontSize: 13,
+      opacity: full ? 0.45 : 1
+    }
+  }, React.createElement("span", null, full ? `行動回数がいっぱい(${used}/${limit})` : React.createElement(React.Fragment, null, "ここへ離すと捨てる", React.createElement("br", null), React.createElement("span", {
+    style: {
+      fontSize: 10
+    }
+  }, "行動回数を1つ使い、味方全体のガッツが最大の5%回復")))), React.createElement("div", {
+    style: {
+      ...base,
+      top: g.slotTop,
+      height: Math.max(0, g.slotBottom - g.slotTop),
+      background: 'rgba(56,189,248,.07)',
+      border: '2px dashed rgba(56,189,248,.45)',
+      color: 'rgba(186,230,253,.55)',
+      fontSize: 11,
+      alignItems: 'flex-start',
+      paddingTop: 2
+    }
+  }, React.createElement("span", null, "アクション(味方へ置いて使う)"))), document.body);
+};
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -51602,6 +51675,8 @@ function BattleScreen({
   suppressCardClickRef,
   tacticsCanAssign,
   tacticsCardBlock,
+  discardCards,
+  actionUsed,
   tacticsCardGenre,
   tacticsCardScope,
   tacticsSlotFx,
@@ -54250,7 +54325,7 @@ function BattleScreen({
     className: "whitespace-nowrap"
   }, "Action Cards"), " ", React.createElement("span", {
     className: "shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
-  }, selectedCards.length, "/", cardLimit), heroCardBonus > 0 && React.createElement("span", {
+  }, Array.isArray(tacticsUnits) ? actionUsed : selectedCards.length, "/", cardLimit), heroCardBonus > 0 && React.createElement("span", {
     className: "shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"
   }, React.createElement(Crown, {
     size: 8
@@ -54306,9 +54381,10 @@ function BattleScreen({
     className: "block"
   }, ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'))), (() => {
     const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
-    const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
-    const actionHint = canAct ? null : autoBattle || isBusy ? null : selectedCards.length === 0 ? 'カードを選ぶ' : !allAttackAssigned ? '置き場所を選ぶ' : null;
-    if (tacticsExTurnUsed && passTacticsTurn && selectedCards.length === 0 && !autoBattle && !isBusy && pendingCard === null) {
+    const discardCount = Array.isArray(tacticsUnits) && discardCards ? discardCards.length : 0;
+    const canAct = !autoBattle && !isBusy && selectedCards.length + discardCount > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
+    const actionHint = canAct ? null : autoBattle || isBusy ? null : selectedCards.length + discardCount === 0 ? 'カードを選ぶ' : !allAttackAssigned ? '置き場所を選ぶ' : null;
+    if (tacticsExTurnUsed && passTacticsTurn && selectedCards.length === 0 && discardCount === 0 && !autoBattle && !isBusy && pendingCard === null) {
       return React.createElement("button", {
         "data-tactics-ex-pass": true,
         onClick: () => passTacticsTurn(),
@@ -54392,7 +54468,10 @@ function BattleScreen({
     }), React.createElement("span", {
       "data-card-gem": true,
       "aria-label": `消費ガッツ ${curGuts}`
-    }, curGuts)), isSel && !assignedMon && React.createElement("div", {
+    }, curGuts)), discardCards && discardCards.includes(i) && React.createElement("div", {
+      "data-card-discard": true,
+      className: "absolute inset-0 z-30 flex items-center justify-center rounded-[inherit] bg-black/60 text-[12px] font-black text-amber-200"
+    }, "捨てる"), isSel && !assignedMon && React.createElement("div", {
       className: `absolute top-0.5 ${tacticsNewLayout ? 'right-0.5' : 'left-0.5'} z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg`
     }, React.createElement(Check, {
       size: 10,
@@ -54511,7 +54590,11 @@ function BattleScreen({
     return React.createElement("div", {
       key: c.uid,
       className: "relative flex-1 min-w-0 max-w-[20%] flex"
-    }, isDragging ? ReactDOM.createPortal(React.createElement("div", {
+    }, isDragging && Array.isArray(tacticsUnits) && React.createElement(TacticsDiscardZones, {
+      full: actionUsed - (isSel ? 1 : 0) >= cardLimit,
+      used: actionUsed,
+      limit: cardLimit
+    }), isDragging ? ReactDOM.createPortal(React.createElement("div", {
       "data-drag-card-layer": true,
       "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined
     }, handCardButton), document.body) : handCardButton, isDragging && React.createElement("div", {
@@ -62124,6 +62207,7 @@ function MonsterHeroGame() {
   const initialBattleDistanceRef = useRef(2);
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
+  const [discardCards, setDiscardCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
   const runGenerationRef = useRef(0);
   const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
@@ -66392,6 +66476,12 @@ function MonsterHeroGame() {
       if (active) {
         setDragOverSlot(findSlot(x, y));
       }
+      if (active) {
+        const hit = inTacticsDiscardZone(x, y) && findSlot(x, y) == null;
+        document.querySelectorAll('[data-discard-zone]').forEach(el => {
+          if (hit) el.setAttribute('data-hover', 'true');else el.removeAttribute('data-hover');
+        });
+      }
       if (active && e.cancelable) e.preventDefault();
     };
     const onUp = e => {
@@ -66402,7 +66492,9 @@ function MonsterHeroGame() {
       if (wasActive) {
         suppressCardClickRef.current = Date.now() + 500;
         const si = findSlot(pt.clientX, pt.clientY);
-        if (si != null) {
+        if (si == null && isTacticsMode(runMode) && inTacticsDiscardZone(pt.clientX, pt.clientY)) {
+          dragDiscardCard(cardIndex);
+        } else if (si != null) {
           dragAssignToSlot(cardIndex, si);
           setSlotSettle(si);
           setTimeout(() => {
@@ -71005,6 +71097,7 @@ function MonsterHeroGame() {
     turn: turnCount
   }) : 0;
   const cardLimit = Math.min(5, baseCardLimit + soulCoordinationCardBonus + exCardBonus);
+  const actionUsed = selectedCards.length + discardCards.length;
   const slotMaxUses = (mon, slotIdx = null) => {
     const coordinationHolder = Number.isInteger(slotIdx) && soulCoordinationSlots.includes(slotIdx);
     if (isTacticsMode(runMode)) {
@@ -72633,14 +72726,14 @@ function MonsterHeroGame() {
   };
   const tacticsCardBlock = (card, cardIndex = null) => {
     if (!isTacticsMode(runMode) || !card) return null;
-    if (cardIndex != null && selectedCards.includes(cardIndex)) return {
+    if (cardIndex != null && (selectedCards.includes(cardIndex) || discardCards.includes(cardIndex))) return {
       ok: true,
       kind: null,
       short: null,
       why: null
     };
     if (tacticsUsableSlots(card, cardIndex).length > 0) {
-      return selectedCards.length >= cardLimit ? {
+      return actionUsed >= cardLimit ? {
         ok: false,
         kind: 'limit',
         short: null,
@@ -72721,6 +72814,11 @@ function MonsterHeroGame() {
     if (isBusy || autoBattleRef.current) return;
     const c = hand[i];
     if (!c) return;
+    if (discardCards.includes(i)) {
+      setFocusedCard(null);
+      setDiscardCards(p => p.filter(x => x !== i));
+      return;
+    }
     if (showDetail) {
       const now = Date.now(),
         last = cardTapRef.current;
@@ -72759,7 +72857,7 @@ function MonsterHeroGame() {
       const usable = tacticsMode ? tacticsUsableSlots(c) : [];
       const curGuts = pendingCardGuts(c);
       const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
-      const isSelectable = (tacticsMode ? usable.length > 0 : remainingGuts >= curGuts) && selectedCards.length < cardLimit;
+      const isSelectable = (tacticsMode ? usable.length > 0 : remainingGuts >= curGuts) && actionUsed < cardLimit;
       if (isSelectable) {
         Audio_.se.card();
         setSelectedCards(p => [...p, i]);
@@ -72777,8 +72875,39 @@ function MonsterHeroGame() {
       }
     }
   };
+  const dragDiscardCard = cardIndex => {
+    if (isBusy || autoBattleRef.current || !isTacticsMode(runMode) || battleScenarioRef.current) return;
+    const c = hand[cardIndex];
+    if (!c || discardCards.includes(cardIndex)) {
+      setFocusedCard(null);
+      return;
+    }
+    const wasSelected = selectedCards.includes(cardIndex);
+    if (actionUsed - (wasSelected ? 1 : 0) >= cardLimit) {
+      setFocusedCard(null);
+      return;
+    }
+    Audio_.se.card();
+    if (wasSelected) {
+      setSelectedCards(p => p.filter(x => x !== cardIndex));
+      setCardAssignments(p => {
+        const n = {
+          ...p
+        };
+        delete n[cardIndex];
+        return n;
+      });
+      if (pendingCard === cardIndex) setPendingCard(null);
+    }
+    setDiscardCards(p => [...p, cardIndex]);
+    setFocusedCard(null);
+  };
   const dragAssignToSlot = (cardIndex, slotIdx) => {
     if (isBusy || autoBattleRef.current) return;
+    if (discardCards.includes(cardIndex)) {
+      setFocusedCard(null);
+      return;
+    }
     const c = hand[cardIndex];
     if (!c) return;
     const targetMon = slots[slotIdx];
@@ -72800,7 +72929,7 @@ function MonsterHeroGame() {
       const maxUses = slotMaxUses(targetMon, slotIdx);
       const alreadySelected = selectedCards.includes(cardIndex);
       if (!alreadySelected) {
-        if (selectedCards.length >= cardLimit) {
+        if (actionUsed >= cardLimit) {
           setFocusedCard(null);
           return;
         }
@@ -74239,7 +74368,8 @@ function MonsterHeroGame() {
       handIndex: i,
       slotIdx: cardAssignments[i] != null ? cardAssignments[i] : null
     }));
-    if (isBusy || !enemy || usedCardEntries.length === 0) return;
+    const discardIdx = !hasExplicitEntries && isTacticsMode(runMode) ? discardCards.filter(i => hand[i] && !usedCardEntries.some(e => e.handIndex === i)) : [];
+    if (isBusy || !enemy || usedCardEntries.length === 0 && discardIdx.length === 0) return;
     if (usedCardEntries.some(entry => tacticsExLocked.includes(entry.slotIdx))) return;
     if (isTacticsMode(runMode) && usedCardEntries.some(e => isAttackCard(e.card) && Number.isInteger(e.slotIdx) && tacticsUnitsRef.current[e.slotIdx]?.id === 'Suezo') && Math.random() < TACTICS_INTIMIDATE_RATE) {
       setImmediateTurnBuff('stunEnemy', true);
@@ -74947,10 +75077,26 @@ function MonsterHeroGame() {
     }
     const drawCount = usedCards.filter(c => c.type === 'draw').length;
     setTacticsPandoraForms({});
-    const usedHandIndexes = new Set(usedCardEntries.map(entry => entry.handIndex));
+    const discardedCards = discardIdx.map(i => hand[i]);
+    if (discardedCards.length > 0) {
+      let units = tacticsUnitsRef.current;
+      const gutsMap = {};
+      tacticsAliveSlots(units).forEach(i => {
+        const v = normalizeTacticsUnit(units[i]);
+        const g = Math.max(0, Math.min(v.maxGuts - v.guts, Math.floor(v.maxGuts * TACTICS_DISCARD_GUTS_RATE * discardedCards.length)));
+        if (g > 0) {
+          units = recoverTacticsGutsAt(units, i, g);
+          gutsMap[i] = g;
+        }
+      });
+      commitTacticsUnits(units);
+      mergeTacticsSlotFx({}, gutsMap);
+      pushBattleLog(`手札を${discardedCards.length}枚捨てた。味方全体のガッツが最大の${Math.round(TACTICS_DISCARD_GUTS_RATE * discardedCards.length * 100)}%ぶん回復`, 'ally');
+    }
+    const usedHandIndexes = new Set([...usedCardEntries.map(entry => entry.handIndex), ...discardIdx]);
     let nextHand = hand.filter((_, i) => !usedHandIndexes.has(i));
     let nextDeck = [...deck],
-      nextGraveyard = [...graveyard, ...usedCards];
+      nextGraveyard = [...graveyard, ...usedCards, ...discardedCards];
     const replenish = count => {
       for (let i = 0; i < count; i++) {
         if (nextDeck.length === 0) {
@@ -74961,7 +75107,7 @@ function MonsterHeroGame() {
         if (nextDeck.length > 0) nextHand.push(nextDeck.pop());
       }
     };
-    replenish(usedCardEntries.length + drawCount);
+    replenish(usedCardEntries.length + discardedCards.length + drawCount);
     if (isTacticsMode(runMode) && usedCardEntries.length > 0) {
       const stNow = tacticsExStateRef.current;
       const stVolt = addTacticsExVoltage(stNow, tacticsUnitsRef.current, {
@@ -75014,6 +75160,7 @@ function MonsterHeroGame() {
     setDeck(nextDeck);
     setGraveyard(nextGraveyard);
     setSelectedCards([]);
+    setDiscardCards([]);
     setLastActionSlot(null);
     setCardAssignments({});
     setPendingCard(null);
@@ -75102,6 +75249,7 @@ function MonsterHeroGame() {
     setAutoBattle(next);
     if (next) {
       setSelectedCards([]);
+      setDiscardCards([]);
       setCardAssignments({});
       setPendingCard(null);
       setFocusedCard(null);
@@ -75779,6 +75927,7 @@ function MonsterHeroGame() {
     pushBattleLog(isRaidJackMode(runMode) ? `── ${battleModeInfo(runMode).short}：${newEnemy.name} ──` : `── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1);
     setSelectedCards([]);
+    setDiscardCards([]);
     setLastActionSlot(null);
     setCardAssignments({});
     setPendingCard(null);
@@ -88208,6 +88357,8 @@ function MonsterHeroGame() {
       tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       tacticsCanAssign: tacticsCanAssign,
       tacticsCardBlock: tacticsCardBlock,
+      discardCards: discardCards,
+      actionUsed: actionUsed,
       tacticsSlotFx: tacticsSlotFx,
       tacticsCardGenre: cardGenreLabel,
       tacticsCardScope: cardScopeLabel,

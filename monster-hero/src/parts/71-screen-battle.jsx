@@ -606,6 +606,38 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
     document.body
   );
 };
+// ===== カードを「捨てる」エリア(タクティクス・2026-10-05 ユーザー案) =====
+// カードをつかんだあいだ、味方のスロットの列を「アクション」、その上(敵側)を「捨てる」エリアとして薄く出す。
+// 敵のエリアへ離すと、使わずに捨てて行動回数を1つ使い、味方全体のガッツが各自の最大の5%ずつ戻る。
+// 範囲は画面の実際の位置(スロットの列の上端)で決める。判定(inTacticsDiscardZone)と表示で同じ関数を通す
+const tacticsDiscardGeo = () => {
+  if (typeof document === 'undefined') return null;
+  const rects = [...document.querySelectorAll('[data-slot-index]')].map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+  if (rects.length === 0) return null;
+  const slotTop = Math.min(...rects.map(r => r.top)) - 6;
+  const slotBottom = Math.max(...rects.map(r => r.bottom)) + 6;
+  const ring = document.querySelector('[data-enemy-ring],[data-moo-stage]');
+  const ringTop = ring ? ring.getBoundingClientRect().top - 24 : 0;
+  return { enemyTop: Math.max(0, Math.min(ringTop, slotTop - 40)), slotTop, slotBottom };
+};
+const inTacticsDiscardZone = (x, y) => {
+  const g = tacticsDiscardGeo();
+  return !!g && y >= g.enemyTop && y < g.slotTop;
+};
+const TacticsDiscardZones = ({ full, used, limit }) => {
+  const g = tacticsDiscardGeo();
+  if (!g || typeof ReactDOM === 'undefined') return null;
+  const base = { position: 'fixed', left: 8, right: 8, pointerEvents: 'none', zIndex: 69000, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontWeight: 900, transition: 'background .12s, border-color .12s' };
+  return ReactDOM.createPortal(<div data-discard-zones aria-hidden="true">
+    <style>{'[data-discard-zone][data-hover="true"]{background:rgba(251,191,36,.30)!important;border-color:rgba(253,230,138,.95)!important}'}</style>
+    <div data-discard-zone style={{ ...base, top: g.enemyTop, height: Math.max(0, g.slotTop - g.enemyTop), background: 'rgba(251,191,36,.10)', border: '2px dashed rgba(251,191,36,.55)', color: 'rgba(253,230,138,.9)', fontSize: 13, opacity: full ? 0.45 : 1 }}>
+      <span>{full ? `行動回数がいっぱい(${used}/${limit})` : <>ここへ離すと捨てる<br /><span style={{ fontSize: 10 }}>行動回数を1つ使い、味方全体のガッツが最大の5%回復</span></>}</span>
+    </div>
+    <div style={{ ...base, top: g.slotTop, height: Math.max(0, g.slotBottom - g.slotTop), background: 'rgba(56,189,248,.07)', border: '2px dashed rgba(56,189,248,.45)', color: 'rgba(186,230,253,.55)', fontSize: 11, alignItems: 'flex-start', paddingTop: 2 }}>
+      <span>アクション(味方へ置いて使う)</span>
+    </div>
+  </div>, document.body);
+};
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -649,7 +681,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
@@ -2385,13 +2417,14 @@ function BattleScreen({
           <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
             {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                 「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
-            <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
+            <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{Array.isArray(tacticsUnits)?actionUsed:selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
             <div className="flex items-center gap-0.5 shrink-0">
               <button data-battle-view-button onClick={()=>setShowDeckInfo(true)} className={`flex h-8 items-center gap-0.5 px-2 bg-white/[.035] rounded-[10px] border border-white/[.08] shadow-[inset_0_1px_0_rgba(255,255,255,.04)] active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[10px]">VIEW</span></button>
               {/* 緊急回復(2026-09-22 ユーザー指示「緊急回復は手札側の効果だから位置を変えたい」)。
                   ★もとは敵の絵の左に置いていたが、あの列は「敵や自分を見る」入口を並べた場所。
                     緊急はその場で使う行動なので、カードと同じ操作の列へ移した。
                   ★AUTO の左に置く。実行(Action)のすぐ隣だと押し間違える */}
+              
               <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-[10px] border border-blue-300/55 bg-blue-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_0_10px_rgba(59,130,246,.12)] leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
               {/* モンビーへの入口(クイックモードだけ)。音に関わる入口なので、この並びに残す */}
               <div className="shrink-0 flex flex-col gap-0.5">
@@ -2401,14 +2434,14 @@ function BattleScreen({
                 <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={cycleBattleAuto} aria-pressed={autoBattle} aria-label={`AUTO ${autoRepeat?'∞':autoBattle?'ON':'OFF'}`} className={`h-8 w-full px-1 rounded-[10px] border font-black text-[10px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat?'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]':autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-white/[.12] bg-white/[.035] text-slate-300'}`}><span className="block">AUTO</span><span className="block text-[10px]">{autoRepeat?'∞':autoBattle?'ON':'OFF'}</span></button>
                 {battleScreenActive&&isQuickMode(runMode)&&autoRepeat===true&&<button type="button" onClick={cycleEcoMode} aria-label={`省エネ ${ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}`} className={`min-h-[24px] w-full rounded-md border font-black text-[10px] leading-[9px] active:scale-90 ${ecoMode==='lite'?'border-emerald-300 bg-emerald-700 text-emerald-50':ecoMode==='ultra'?'border-lime-200 bg-lime-500 text-slate-950':'border-slate-500 bg-slate-700 text-slate-200'}`}><span className="block">省エネ</span><span className="block">{ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}</span></button>}
               </div>
-              {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; // 押せないときは**理由**を出す(2026-09-18・ユーザー依頼「各コマンドをもっとよくしたい」)。
+              {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const discardCount=Array.isArray(tacticsUnits)&&discardCards?discardCards.length:0; const canAct=!autoBattle&&!isBusy&&(selectedCards.length+discardCount)>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; // 押せないときは**理由**を出す(2026-09-18・ユーザー依頼「各コマンドをもっとよくしたい」)。
                 // 灰色になるだけでは「何が足りなくて押せないのか」が分からず、
                 // カードを選んだのに置き場所を決めていない、という取りこぼしに気づけなかった。
                 // 押せるときの字は Action のまま(検査がこの字でボタンを押している)。
-                const actionHint=canAct?null:(autoBattle||isBusy?null:(selectedCards.length===0?'カードを選ぶ':(!allAttackAssigned?'置き場所を選ぶ':null)));
+                const actionHint=canAct?null:(autoBattle||isBusy?null:(selectedCards.length+discardCount===0?'カードを選ぶ':(!allAttackAssigned?'置き場所を選ぶ':null)));
                 // ★EXスキルを使ったターンは、カードを選ばずに敵の番へ進められる(タクティクス専用)。
                 //   併用できないEXを使ったターンはカードを選べないので、ここが無いとターンを終えられない
-                if(tacticsExTurnUsed&&passTacticsTurn&&selectedCards.length===0&&!autoBattle&&!isBusy&&pendingCard===null){
+                if(tacticsExTurnUsed&&passTacticsTurn&&selectedCards.length===0&&discardCount===0&&!autoBattle&&!isBusy&&pendingCard===null){
                   return(<button data-tactics-ex-pass onClick={()=>passTacticsTurn()} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-[14px] font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${battleTutorialSpotClass('action')} bg-fuchsia-200 text-black shadow-[0_0_15px_rgba(232,121,249,0.45)]`}><Play fill="currentColor" size={12}/> ターンを進める</button>);
                 }
                 return(<button data-battle-action onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint?'':' uppercase'}${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':(actionHint?'bg-slate-800 text-slate-300 border-white/20':'bg-slate-700 text-slate-500 opacity-50')}`}><Play fill="currentColor" size={12}/> {actionHint||'Action'}</button>);})()}
@@ -2444,6 +2477,7 @@ function BattleScreen({
                     見た目は data-tactics-look の CSS(70-bootstrap)がまとめて持つ。★消費ガッツはこの宝石だけに出す
                     (下のガッツの段と二重になっていた・ユーザー指摘「消費ガッツが2つある」) */}
                 {tacticsNewLayout&&<><span aria-hidden="true" data-card-pattern={(tacticsCardGenre&&tacticsCardGenre(c))||''}/><span aria-hidden="true" data-card-shine/><span aria-hidden="true" data-card-frame/><span data-card-gem aria-label={`消費ガッツ ${curGuts}`}>{curGuts}</span></>}
+                {discardCards&&discardCards.includes(i)&&(<div data-card-discard className="absolute inset-0 z-30 flex items-center justify-center rounded-[inherit] bg-black/60 text-[12px] font-black text-amber-200">捨てる</div>)}
                 {isSel&&!assignedMon&&(<div className={`absolute top-0.5 ${tacticsNewLayout?'right-0.5':'left-0.5'} z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg`}><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
                 {/* ★data-decoration は「これは絵であって読むものではない」という目じるし。
@@ -2496,7 +2530,7 @@ function BattleScreen({
               //   以前は古い見た目の写しを別に出していて、本物と写しの2枚を毎回描いていた。
               //   手札の飾り(金の縁・宝石など)は [data-tactics-look] の下でだけ効くので、同じ印を付けた箱で包む。
               //   body の直下なのは、画面の揺れ(transform)の影響を受けないようにするため
-              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">{isDragging?ReactDOM.createPortal(<div data-drag-card-layer data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>{handCardButton}</div>,document.body):handCardButton}{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{/* ★使えない理由の赤い札は、絵(アイコン)の下の端にそろえて置く。新しい盤面では左上に消費ガッツの宝石があり、
+              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">{isDragging&&Array.isArray(tacticsUnits)&&<TacticsDiscardZones full={actionUsed-(isSel?1:0)>=cardLimit} used={actionUsed} limit={cardLimit}/>}{isDragging?ReactDOM.createPortal(<div data-drag-card-layer data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>{handCardButton}</div>,document.body):handCardButton}{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{/* ★使えない理由の赤い札は、絵(アイコン)の下の端にそろえて置く。新しい盤面では左上に消費ガッツの宝石があり、
                     カードの上の端(top-1)に置くと宝石の数字を隠していた(2026-09-27・文字の重なりの検査で見つけた) */}
               {cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} style={tacticsNewLayout?{top:`calc(4px + ${HAND_CARD_FIT.iconTop} + ${HAND_CARD_FIT.icon} - 15px)`}:undefined} className={`pointer-events-none absolute inset-x-0.5 ${tacticsNewLayout?'':'top-1'} z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]`}>{cardBlock.short}</div>)}</div>);
             })}
