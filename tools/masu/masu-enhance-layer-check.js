@@ -115,6 +115,15 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
       await page.waitForTimeout(800);
     }
 
+    // ログインボーナスは日付が変わった最初の1回、HOMEへ着いたあとで出ることがある(2026-10-05に確認)。
+    // 重なったまま進めると、以降の「画面いっぱいのレイヤー」の数が必ず1枚多くなる
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      const d = document.querySelector('[role="dialog"][aria-label="ログインボーナス"]');
+      const b = d && [...d.querySelectorAll('button')].find(x => x.textContent.includes('閉じる'));
+      if (b) b.click();
+    });
+    await page.waitForTimeout(500);
     check('HOMEまで進める', await clickAria('M/B管理')); await page.waitForTimeout(1200);
     await clickText('^マスモン一覧'); await page.waitForTimeout(1500);
     await clickText('^確認$'); await page.waitForTimeout(700);
