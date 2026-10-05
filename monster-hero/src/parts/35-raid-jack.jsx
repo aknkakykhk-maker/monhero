@@ -47,10 +47,13 @@ const RAID_JACK_STORY_IDS = Object.freeze([
 ]);
 // EVENT_REPLAYS の unlockedKey(例: raid_jack_story_2 → raidJackStory2Seen / raid_jack_ending_cleared → raidJackEndingClearedSeen)
 const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'raidJack_').replace(/_([a-z0-9])/g, (m, c) => c.toUpperCase()).replace(/^raidJack(\w)/, (m, c) => 'raidJack' + c.toUpperCase())}Seen`;
-// イベント中のBGM(2026-10-04・ユーザー指示)。ジャック戦・レイド画面・段階えらび・編成は、この曲に固定する。
+// イベント中のBGM(2026-10-04・ユーザー指示)。レイド画面・段階えらび・編成は、この曲に固定する(ジャック戦は 2026-10-05 から下の RAID_JACK_BATTLE_BGM_TRACK)。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';   // Crazy Party Night ～ぱんぷきんの逆襲～ の全編版(2026-10-04・ユーザー指示「ハロウィンイベント関連はこの曲をデフォルトに」。1分34秒の版から替えた)
 const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
+// ジャックとの戦い(レイドバトルもグランドスラムも)だけは、ハロウィンの曲「Monster」の全編の版にする(2026-10-05・ユーザー指示
+// 「フルはハロウィンイベント期間でのレイド戦用のデフォルト曲にして」。範囲は戦闘中だけ・ユーザー判断)。レイド画面・段階えらび・編成は上の曲のまま
+const RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster';
 // 絵の大きさ合わせ(2026-10-04・ユーザー指示「本体を2枚目(両腕ポーズ)ぐらいのサイズ感に」)。
 // 両腕ポーズの絵は腕が左右へ広がるので、同じ枠に収めると本体は幅の約49%。通常絵は本体が幅の約99%。
 // ポーズ絵は枠いっぱい(1倍)、通常絵は半分(0.5倍)で描くと、切り替わっても本体の大きさがそろう。

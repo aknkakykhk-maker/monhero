@@ -1,0 +1,224 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step7-autofix",
+ "trackId": "monster_short",
+ "source": "v3",
+ "sourceLabel": "V3 生成",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 150,
+  "restrikeLimitMs": 105,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30,
+  "endFlickReleaseMs": 80
+ },
+ "weights": {
+  "impossible": 10000,
+  "reach": 10000,
+  "strained": 100,
+  "hardJump": 120,
+  "laneSpread": 1,
+  "move": 3,
+  "maxPasses": 8
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 126,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 29,
+    "cost": 29
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 29,
+    "cost": 29
+   },
+   "fixes": []
+  },
+  "NORMAL": {
+   "noteCount": 144,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 36,
+    "cost": 36
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 36,
+    "cost": 36
+   },
+   "fixes": []
+  },
+  "HARD": {
+   "noteCount": 194,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 1,
+    "overSteps": 0,
+    "spread": 53,
+    "cost": 173
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 1,
+    "overSteps": 0,
+    "spread": 53,
+    "cost": 173
+   },
+   "fixes": []
+  },
+  "EXPERT": {
+   "noteCount": 235,
+   "fixCount": 1,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 1,
+    "hardJumps": 4,
+    "overSteps": 0,
+    "spread": 54,
+    "cost": 10534
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 4,
+    "overSteps": 0,
+    "spread": 54,
+    "cost": 534
+   },
+   "fixes": [
+    {
+     "grid": 272,
+     "bar": 17,
+     "timeMs": 30714,
+     "type": "HOLD",
+     "move": "サブレーン7→5",
+     "pass": 1,
+     "costBefore": 10534,
+     "costAfter": 534,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    }
+   ]
+  },
+  "MASTER": {
+   "noteCount": 276,
+   "fixCount": 5,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 4,
+    "reach": 1,
+    "hardJumps": 7,
+    "overSteps": 0,
+    "spread": 46,
+    "cost": 11286
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 1,
+    "reach": 0,
+    "hardJumps": 5,
+    "overSteps": 0,
+    "spread": 46,
+    "cost": 746
+   },
+   "fixes": [
+    {
+     "grid": 504,
+     "bar": 31,
+     "timeMs": 56490,
+     "type": "TAP",
+     "move": "サブレーン8→7",
+     "pass": 1,
+     "costBefore": 11286,
+     "costAfter": 1286,
+     "impossibleAfter": 0,
+     "strainedAfter": 4
+    },
+    {
+     "grid": 562,
+     "bar": 35,
+     "timeMs": 62934,
+     "type": "TAP",
+     "move": "サブレーン0→5",
+     "pass": 1,
+     "costBefore": 1286,
+     "costAfter": 1065,
+     "impossibleAfter": 0,
+     "strainedAfter": 3
+    },
+    {
+     "grid": 614,
+     "bar": 38,
+     "timeMs": 68711,
+     "type": "TAP",
+     "move": "サブレーン1→5",
+     "pass": 1,
+     "costBefore": 1065,
+     "costAfter": 966,
+     "impossibleAfter": 0,
+     "strainedAfter": 2
+    },
+    {
+     "grid": 796,
+     "bar": 49,
+     "timeMs": 88932,
+     "type": "TAP",
+     "move": "サブレーン2→10",
+     "pass": 1,
+     "costBefore": 966,
+     "costAfter": 846,
+     "impossibleAfter": 0,
+     "strainedAfter": 2
+    },
+    {
+     "grid": 926,
+     "bar": 57,
+     "timeMs": 103375,
+     "type": "TAP",
+     "move": "サブレーン9→7",
+     "pass": 1,
+     "costBefore": 846,
+     "costAfter": 746,
+     "impossibleAfter": 0,
+     "strainedAfter": 1
+    }
+   ]
+  }
+ }
+}
