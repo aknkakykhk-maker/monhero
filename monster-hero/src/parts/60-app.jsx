@@ -9952,7 +9952,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 生命の源(ユグドラシル・メルホイップ): WAVEの1〜5ターン目は被ダメ30%軽減
     const dmgBase = Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))*((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0)*lifeSourceDamageMult(traitHeroId,turnCount);
     const soulDamageRemaining=Math.max(0,1-(soulBattleParty.damageReduction/100));
-    return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining));
+    return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*tacticsExPsychoLockNow().enemyDmgMult*soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
@@ -10152,6 +10152,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // 世界樹の守りの、味方全員の被ダメージ倍率(効いていなければ1。ほかのモードも1)
   // アーク・イブリースの与ダメ・被ダメ・会心の倍率(効いていなければ全部1。ほかのモードも1)
+  // スエゾーのサイコロックオン(敵の距離固定・敵の与ダメ−30%・敵の被ダメ+30%)。効いていなければ active:false・倍率は変えない
+  const tacticsExPsychoLockNow = () => {
+    const live=tacticsExLiveRef.current;
+    return live.enabled&&isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExStateRef.current,live.now) : { active:false, enemyDmgMult:1, enemyTakenBonus:0 };
+  };
   // ライガーの雷纏の回避率(雷×5%。効いていなければ0)
   const tacticsExThunderDodgeNow = (slotIdx) => {
     const live=tacticsExLiveRef.current;
@@ -10578,7 +10583,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
       ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
-    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
+    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+tacticsExPsychoLockNow().enemyTakenBonus+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
@@ -10770,7 +10775,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else {
       // 距離撃で移動を封じたときだけは、この中でも「行動しなかった扱い」に戻す
       enemyActionPerformedRef.current = true;
-      if (intent.type==='MOVE' && getWaveBuff('iceLockTurns')>0) {
+      if (intent.type==='MOVE' && (getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active)) {
         // 予約済みMOVEも再抽選せず失敗させる。行動済みのままなので、このターンは確実に消費される。
         addPopup("移動できない！",'enemy','text-cyan-200 font-black text-xl drop-shadow-md');
         await battleWait(800);
@@ -11387,7 +11392,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const hpAfterRecovery=emergencyHp!==null?emergencyHp:Math.min(liveEffectiveMaxHp(),hp+recoverHp);
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
-    const moveWasFrozen=acting&&acting.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
+    const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
     if (scenario) setBattleTutorialLastAction('emergency');
@@ -11671,7 +11676,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const acting=enemyIntent;
     await handleEnemyTurn('none',{},acting,hp);
-    const moveWasFrozen=acting&&acting.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
+    const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
   };
@@ -12268,7 +12273,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
-    const moveWasFrozen=executedIntent&&executedIntent.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
+    const moveWasFrozen=executedIntent&&executedIntent.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=forcedMoveTarget!=null?forcedMoveTarget:((executedIntent&&executedIntent.type==='MOVE'&&!moveWasFrozen)?executedIntent.targetDist:enemyDist);
     setEnemyLastIntent(enemyActionPerformedRef.current?executedIntent:null); advanceEnemyIntents(executedIntent,distForNextPredict,enemyActionPerformedRef.current);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
