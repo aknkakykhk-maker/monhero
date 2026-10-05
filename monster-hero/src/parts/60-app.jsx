@@ -8316,6 +8316,16 @@ function MonsterHeroGame() {
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
     if (loops <= 0) return null;
+    const awardedPro = await awardBackQuickLoops(loops);
+    return awardedPro ? { ...awardedPro, wavesCleared } : null;
+  };
+  // クイック周回ぶんの報酬を配る共通の入口(プロモードとジャック戦が使う)。条件が欠けたら null
+  // (AUTO設定がそろっていない・基準の難易度をクイックでクリアしていない)。スコアとランキングには触れない
+  const awardBackQuickLoops = async (loops) => {
+    if (!autoQuickRunConfigured(autoSettings)) return null;
+    const quickDifficulty = autoSettings.quickRun.difficulty;
+    if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
+    if (!(loops > 0)) return null;
     // 絆経験値の行き先は、裏でクイックを回していたときとそろえる
     // (AUTO設定の勇者モン＝1倍 / AUTO設定の供モン①②③＝1/2 / モンスター編成の控え＝1/4)。
     // プロで戦った編成ではなく、**クイックを回していたら育っていたはずの顔ぶれ**へ入れる
@@ -8333,8 +8343,10 @@ function MonsterHeroGame() {
       bondHeroMasuId: quickHeroMon?.masuId ?? undefined,
       bondParticipantMasuIds: quickAllyMasuIds,
     });
-    return awarded ? { ...awarded, quickDifficulty, wavesCleared } : null;
+    return awarded ? { ...awarded, quickDifficulty } : null;
   };
+  // ジャック戦のぶん。周回数は使ったターン数×2(raidJackQuickLoops)。デバッグの強制表示(別のイベントID)の戦いには配らない
+  const awardRaidJackQuickLoops = async (turnsUsed) => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
   const awardRunRewards = async (wavesCleared) => {
     // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
     if (rewardsAwardedRef.current) return;
@@ -11255,7 +11267,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(raidJackRunRef.current){
       raidJackRunRef.current.turns=Math.min(nextTurn,RAID_JACK_TURNS);
       if(nextTurn>RAID_JACK_TURNS){ finishRaidJack('turns'); return; }
-      // Aは 3 / 5 / 8 ターン目に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
+      // Aは 3 / 5 / 8 / 11 ターン目に、編成の全員の固有技が2段階ずつ・選んだアシカが1段階ずつ上がる(Bは成長しない)
       // レイドバトル専用: ターンが進むたびに味方全員が強くなり、自動回復の割合も上がる
       if(raidJackRunRef.current.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount) raidJackTurnGrowth(nextTurn);
       if(raidJackRunRef.current.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn)&&nextTurn!==turnCount) raidJackLevelUp(nextTurn);
@@ -13235,7 +13247,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const allies=party.slice(1);
     const total=(key,base)=>allies.reduce((value,mon)=>value+(mon.plusStats?.[key]||0),base);
     const raidDef=total('def',hero.baseDef);
-    // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
+    // 固有技: Aはベースモンの0から(3/5/8/11ターン目に+2)。Bはそのマスモンの段階のまま(成長しない)
     const uniques=party.map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));   // 並びは編成順(勇者が先)。立ち位置とは関係しない
     const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,RAID_JACK_TEACHING_MAX);
     const teachings=cards.map(card=>isB
@@ -13255,9 +13267,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
     setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
     const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
-    const raidApt=raidSlots.filter(Boolean).reduce((sum,mon)=>sum.map((v,i)=>v+getMonsterAptPct(mon,raidRuleDifficulty,1)[i]),[0,0,0,0]);
-    setDistAptPct(raidApt);
-    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,raidApt);
+    // ★距離適性は合算しない。タクティクスバトルは「その距離に立っている子の適性だけ」がその子の攻撃に効く(tacticsSlotApt)。
+    //   以前は編成全員の適性を足して渡していたので、置いた場所の子の適性にならなかった(2026-10-05・ユーザー指摘)。
+    //   distAptPct は通常のタクティクスと同じく勇者モンのぶんだけ(盤面の計算は上書きを渡さず、立っている子から数える)
+    setDistAptPct(getMonsterAptPct(hero,raidRuleDifficulty,1));
+    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null);
     return true;
   };
   // 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める
@@ -13267,7 +13281,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setRaidJackStartRequest(null);
     startRaidJackBattle(req);
   },[raidJackStartRequest,runMode]);
-  // 3 / 5 / 8 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)と、選んだアシカ(上限Lv2)を1段階ずつ上げる。
+  // 3 / 5 / 8 / 11 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)を2段階ずつ(RAID_JACK_UNIQUE_LEVEL_STEP)、選んだアシカ(上限Lv2)を1段階ずつ上げる。
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
   // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが5%ずつ(RAID_JACK_TURN_GROWTH・掛け算で)上がり、
   // ライフ・ガッツの自動回復の割合が1.5%ずつ(RAID_JACK_TURN_REGEN_STEP)上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
@@ -13298,20 +13312,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(raidJackRunRef.current) raidJackRunRef.current.levelUps=(raidJackRunRef.current.levelUps||0)+1;
     const bumpCard=(c)=>{
       if(c.type==='unique'){
-        const lvl=Math.min(MAX_UNIQUE_SKILL_LEVEL,(c.evoLevel||0)+1);
+        const lvl=Math.min(MAX_UNIQUE_SKILL_LEVEL,(c.evoLevel||0)+RAID_JACK_UNIQUE_LEVEL_STEP);
         return {...c,evoLevel:lvl,crit:0.10+0.05*Math.min(lvl,8),...(Array.isArray(c.names)?{name:c.names[Math.min(lvl,c.names.length-1)]}:{})};
       }
       if(TEACHING_CARDS.some(t=>t.id===c.id)&&Number.isFinite(c.baseValue)&&Number.isFinite(c.step)){
-        const cur=Math.min(2,c.evoLevel||0);
-        if(cur>=2) return c;
+        const cur=Math.min(RAID_JACK_TEACHING_MAX_LEVEL,c.evoLevel||0);
+        if(cur>=RAID_JACK_TEACHING_MAX_LEVEL) return c;
         return {...c,evoLevel:cur+1,baseValue:c.baseValue+c.step,name:BREEDER_EVO_NAMES[c.id]?.[cur+1]||c.name};
       }
       return c;
     };
-    setOwnedUniques(prev=>prev.map(u=>({...u,evoLevel:Math.min(MAX_UNIQUE_SKILL_LEVEL,(u.evoLevel||0)+1)})));
-    setOwnedTeachings(prev=>prev.map(t=>(t.evoLevel||0)>=2?t:{...t,evoLevel:(t.evoLevel||0)+1,baseValue:t.baseValue+t.step}));
+    setOwnedUniques(prev=>prev.map(u=>({...u,evoLevel:Math.min(MAX_UNIQUE_SKILL_LEVEL,(u.evoLevel||0)+RAID_JACK_UNIQUE_LEVEL_STEP)})));
+    setOwnedTeachings(prev=>prev.map(t=>(t.evoLevel||0)>=RAID_JACK_TEACHING_MAX_LEVEL?t:{...t,evoLevel:(t.evoLevel||0)+1,baseValue:t.baseValue+t.step}));
     setHand(prev=>prev.map(bumpCard)); setDeck(prev=>prev.map(bumpCard)); setGraveyard(prev=>prev.map(bumpCard));
-    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`,'up');
+    // アシカは最大(2段階)に届いたあとは変わらないので、上がったときだけログに書く
+    const teachingGrew=ownedTeachings.some(t=>(t.evoLevel||0)<RAID_JACK_TEACHING_MAX_LEVEL);
+    pushBattleLog(`${turn}ターン目: 固有技が${RAID_JACK_UNIQUE_LEVEL_STEP}段階${teachingGrew?'、アシカが1段階':''}強くなった！`,'up');
     addPopup('LEVEL UP!','ally','text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
     Audio_.se.card();
   };
@@ -13354,7 +13370,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await raidJackSaveState(next);
       }
     } catch (error) { outcome='error'; }
-    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
+    // クイック周回ぶんの報酬(経験値など)。本番のイベントの戦いだけ。与ダメージの記録とは別のまとまりで、失敗しても戦いの結果には影響しない
+    let quickAward=null;
+    // リタイアは「いま進行中のターン」を数えない(1ターン目で降参しても0周)
+    if(!isDebugRun){ try { quickAward=await awardRaidJackQuickLoops(reason==='giveup'?Math.max(0,(run.turns||1)-1):(run.turns||0)); } catch (error) { quickAward=null; } }
+    setRaidJackResult({quickAward,kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
       lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
   };
   // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
@@ -17154,13 +17174,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RAID_JACK_PLACE'&&raidJackPlace&&(()=>{
           const placed=raidJackPlace.slots.filter(Boolean).length;
           const mon=raidJackPlace.party[placed]||null;
-          // 通常バトルと同じ配置画面。間合い適性は「置いた子たちの合計」(どこに置いても4距離すべてに加算される)
-          const placedBonus=(dist)=>raidJackPlace.slots.reduce((sum,m)=>sum+(m?aptGradeToPct(getDistAptitude(m,dist)):0),0);
+          // 通常のタクティクスと同じ配置画面。距離適性は合算せず、その距離に立っている子のぶんだけ(空いている枠は0 → 置く子の適性だけが出る)
+          const placedBonus=(dist)=>{const standing=raidJackPlace.slots[dist];return standing?aptGradeToPct(getDistAptitude(standing,dist)):0;};
           return <PickSlotScreen
             battleTutorial={null} battleTutorialSpotClass={()=>''}
             currentPickingMon={mon} distTotalBonus={placedBonus}
             getDistAptitude={getDistAptitude} scenarioPicksSlot={()=>true}
-            setupMon={placeRaidJackMon} slots={raidJackPlace.slots}
+            setupMon={placeRaidJackMon} slots={raidJackPlace.slots} perSlotApt={true}
             phasePlan={null} wave={0}
             heroStyleDef={null} heroStyle={null} onHeroStyle={null}
             onRepick={cancelRaidJackPlacement}/>;
@@ -19050,7 +19070,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           battleTutorial={battleTutorial} battleTutorialSpotClass={battleTutorialSpotClass}
           currentPickingMon={currentPickingMon} distTotalBonus={distTotalBonus}
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
-          setupMon={setupMon} slots={slots}
+          setupMon={setupMon} slots={slots} perSlotApt={isTacticsMode(runMode)}
           phasePlan={mainHero?phasePlan:null} wave={wave}
           heroStyleDef={(()=>{
             // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
@@ -20255,6 +20275,18 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
           </div>
           {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
+          {r.quickAward&&r.quickAward.loops>0&&(
+            <div data-raid-jack-quick-award className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-left mb-3" style={{'--d':'2000ms'}}>
+              <div className="flex items-center justify-between text-[11px] mb-1"><span className="text-cyan-300 font-black">⚔ クイック周回ぶん</span><span className="text-white font-mono font-bold">{r.quickAward.loops.toLocaleString()}周</span></div>
+              <p className="text-[9px] leading-relaxed text-slate-300">{[
+                r.quickAward.xp>0?`経験値 +${r.quickAward.xp.toLocaleString()}`:null,
+                r.quickAward.gold>0?`ダイヤ +${r.quickAward.gold.toLocaleString()}`:null,
+                r.quickAward.bond>0?`絆 +${r.quickAward.bond.toLocaleString()}`:null,
+                r.quickAward.psyche>0?`虹のプシュケー ×${r.quickAward.psyche.toLocaleString()}`:null,
+                r.quickAward.shard>0?`勇者の証片 ×${r.quickAward.shard.toLocaleString()}`:null,
+              ].filter(Boolean).join(' ／ ')}</p>
+            </div>
+          )}
           <div className="mh-rjresult-in mb-4 text-[10px] text-slate-300" style={{'--d':'1500ms'}}>{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
           <div className="mh-rjresult-in w-full max-w-xs space-y-3" style={{'--d':'1600ms'}}>
             <button onClick={()=>exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>

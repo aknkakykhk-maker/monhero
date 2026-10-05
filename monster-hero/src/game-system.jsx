@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3cd94dc66e70c497
+// generated-sha256: ed44e9ea3a03db32
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 16:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21310,7 +21310,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     useNote: '敵の攻撃を全部モノリスが受ける',
-    desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
+    desc: 'このターン、敵の攻撃をすべてモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
     // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
     maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
@@ -21327,7 +21327,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     useNote: '5ターン 全ステータス+30%・満タン・自動回復+30%',
     // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
     //   上限も20%上げ、その上がった上限まで満タンにする
-    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、モッチーが大きく強くなる。\n・ちから・丈夫さ・ライフ上限・ガッツ上限が+30%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の30%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.3, regenRate: 0.3, fullRecover: true,
     effect: 'statBoost',
@@ -21340,7 +21340,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mitarashi_dragon',
     name: 'ドラゴンだっちー',
     useNote: '5ターン 力・ガッツ+40% 丈夫さ・ライフ+20%・満タン',
-    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、ミタラシが強くなる。\n・ちから・ガッツ上限が+40%、丈夫さ・ライフ上限が+20%\n・ターン終わりの自動回復が、ガッツは上限の40%、ライフは上限の20%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.2, regenRate: 0.2, fullRecover: true,
     rates: Object.freeze({ atk: 0.4, def: 0.2, hp: 0.2, guts: 0.4 }),
@@ -21358,7 +21358,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
     useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
     maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
     effect: 'distMatch',
   }),
@@ -21370,7 +21370,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
     useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
@@ -21381,7 +21381,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
     useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
-    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    desc: '5ターンのあいだ、アークが攻めも守りも強くなる。\n・与ダメージ+30%\n・攻撃に「与ダメージ10%の連撃」が1回付く\n・受けるダメージ−20%',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
     effect: 'multiBuff',
@@ -21392,7 +21392,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
     useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
-    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    desc: '最大ライフの30%を払って、5ターンのあいだ攻撃が鋭くなる。\n・攻撃に「与ダメージ5%の連撃」が5回付く\n・会心率×1.5、会心ダメージ×1.3\n・丈夫さ+30%\n・ライフが払う量より多いときだけ使える（払って倒れることはない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
     lifeCostRate: 0.3, conditionText: 'ライフが最大の30%より多いときだけ使える',
@@ -21406,7 +21406,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
     useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
-    desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
+    desc: '3ターンのあいだ、固有技を撃ちやすくなり、近くから殴ったことになる。\n・毎ターン、ピクシーの固有技カードが必ず手札に出る\n・距離補正が、どの距離でも×1.5（敵と同じ距離から攻撃したときと同じ）',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     distMult: 1.5, guaranteeUnique: true,
     effect: 'multiBuff',
@@ -21417,7 +21417,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
     useNote: '4ターン カード+1・使うほどボルテージ上昇',
-    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    desc: '4ターンのあいだ、味方全員が動きやすくなる。\n・1ターンに使えるカードが+1枚（ミーア自身も+1）\n・味方がカードを1枚使うたびに、ボルテージが1たまる（最大10）\n・ボルテージ1段階ごとに、味方全員の与ダメージ+3%・回復カードの回復量+5%・ライフ自動回復+3%・ガッツ自動回復+2%\n・効果が終わると、ボルテージは0に戻る',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
     cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02, hp: 0.03 }),
     effect: 'stage',
@@ -21428,7 +21428,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
     useNote: '全員のガッツ回復＋ランダムで1つ',
-    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで1つ：\n　与ダメージ+20%（2ターン）\n　被ダメージ−20%（2ターン）\n　連撃 与ダメ10%×2回（2ターン）\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3（2ターン）\n・10%の確率で「大当たり」：6つ全部',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 2,
     present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
@@ -21439,7 +21439,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
     useNote: '選んだ味方が満タンに・ガッツ30%回復',
-    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
+    desc: '味方1体（自分でもよい）を選んで、回復させる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%\n・どちらも、選んだ子のガッツが上限の30%回復する',
     // ★2026-10-03 ユーザー指示で 3回 → 5回
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
@@ -21451,7 +21451,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
     useNote: '時間停止 このターン敵は動かない',
-    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    desc: '時間を止める。\n・使ったターンは、敵が行動しない\n・そのターンは、WAVEの20ターンの数に入らない（ターンの数字が進まない）',
     maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
     effect: 'timeStop',
   }),
@@ -21464,7 +21464,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
     useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
-    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・1枚目のカード＝悪魔の力：与ダメージ+50%、与ダメージ30%の連撃が1回付く\n・2枚目のカード＝天使の力：味方全員のライフ・ガッツが上限の10%回復\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：パンドラはダウンするが、ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の50%回復\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 1.5, devilCombo: Object.freeze({ count: 1, rate: 0.3 }), angelRate: 0.1, hopeGutsRate: 0.5 }),
     effect: 'pandoraBox',
@@ -21475,7 +21475,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
     useNote: '丈夫さが0になり、その50%が力へ',
-    desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
+    desc: '丈夫さを0にして、その分を力へ足す。\n・足す量は、0にした丈夫さの50%\n・効き目は、そのWAVEが終わるまで',
     maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
     // ★効果中にもう一度使っても何も変わらない(丈夫さはもう0)。回数だけ減るのを防ぐ
     conditions: Object.freeze(['notActive']),
@@ -21511,7 +21511,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
     useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
-    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    desc: '3ターンのあいだ、味方全員を守り、癒やす。\n・味方全員の被ダメージ−30%\n・ターン終わりに、味方全員のライフが上限の20%回復',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     partyTakenRate: 0.3, partyRegenRate: 0.2,
     effect: 'partyGuard',
@@ -21521,7 +21521,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
     useNote: 'このターン 連撃30%×4・先にカードで攻撃',
-    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    desc: 'このターンだけ、メルホイップの攻撃に連撃が付く。\n・与ダメージ30%の連撃が4回追加される\n・先にEXを使ってから、同じターンにメルホイップのカードで攻撃する',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
     extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
     effect: 'comboBurst',
@@ -23005,8 +23005,12 @@ const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 // 小さなぱんぷきん(顔アイコンの絵)の大きさ。ジャックの通常絵(0.5)より少し小さく描いて、「小さくなった」が分かるようにする
 const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
-// Aは、このターンになった時に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
-const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+// Aは、このターンになった時に、編成の全員の固有技が2段階ずつ・選んだアシカが1段階ずつ上がる(Bは成長しない)
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8, 11]);
+// 固有技は、このターンのたびに2段階ずつ上がる(3・5・8・11ターン目の4回で、最大の8段階までちょうど届く・2026-10-05・ユーザー指示)。
+// アシカは同じターンに1段階ずつ上がるが、最大が2段階なので、3・5ターン目で最大になり、8・11ターン目は変わらない
+const RAID_JACK_UNIQUE_LEVEL_STEP = 2;
+const RAID_JACK_TEACHING_MAX_LEVEL = 2;
 // レイドバトル(A)のターンごとの強化。2ターン目から、1ターン進むごとに味方全員の全ステータスが5%ずつ(掛け算で)上がり、
 // ライフ・ガッツの自動回復の割合が1.5%ずつ上がる(ライフの初期値10%・ガッツはそれより5%低い)。
 // 戦闘の中身(60-app.jsx の raidJackTurnGrowth)と、画面の「強化」の表示(71-screen-battle.jsx)が同じ数字を見る
@@ -23027,6 +23031,7 @@ const raidJackGrowthAt = (turn) => {
     levelUps, levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
     nextLevelUpTurn: next === undefined ? null : next,
     levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+    teachingUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t) && levelUps <= RAID_JACK_TEACHING_MAX_LEVEL,   // アシカも上がるターンか(最大に届いたあとは変わらない)
   };
 };
 
@@ -23328,6 +23333,18 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
   if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
   if (kind === 'clear_b') return `${bName} 初討伐報酬`;
   return `グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+
+// ===== ジャック戦を遊んだぶんを、クイック周回の報酬にする(2026-10-05・ユーザー指示) =====
+// プロモードのランぶんと同じ立て付け(docs/spec/QUICK_RHYTHM_LINK.md §13): 終わったときに「クイック何周ぶんか」を数えて、
+// その報酬(経験値・ダイヤなど)だけを配る。裏で2つ目のバトルを動かすのではない。与ダメージの記録(共有ライフ・ランキング)は一切動かさない。
+// ジャック戦にはWAVEがないので、プロの「進んだWAVE数」の代わりに「使ったターン数」で決める。
+//   周回数 = 使ったターン数 × 2(20ターン使い切れば40周ぶん。レイドバトルもグランドスラムも同じ式で、段階による違いは無い)
+//   全滅・リタイアも、使ったターン数ぶんだけ入る。1ターンも使っていなければ0。
+const RAID_JACK_QUICK_LOOPS_PER_TURN = 2;
+const raidJackQuickLoops = (turnsUsed) => {
+  const turns = Math.max(0, Math.min(RAID_JACK_TURNS, Math.trunc(Number(turnsUsed) || 0)));
+  return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
 };
 
 // ---- part: 36-raid-jack-api.jsx ----
@@ -29540,7 +29557,7 @@ function PickProAlliesScreen({
 function PickSlotScreen({
   battleTutorial, battleTutorialSpotClass, currentPickingMon, distTotalBonus,
   getDistAptitude, onRepick, phasePlan, scenarioPicksSlot, setupMon, slots, wave,
-  heroStyleDef = null, heroStyle = null, onHeroStyle = null,
+  heroStyleDef = null, heroStyle = null, onHeroStyle = null, perSlotApt = false,
 }) {
   const mon=currentPickingMon;
   // 勇者モンの初期スタイル(タクティクスで、スタイル式のEXを持つ子を勇者モンにしたときだけ)。
@@ -29595,7 +29612,10 @@ function PickSlotScreen({
         </div>
       )}
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
-      <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
+      {/* タクティクスは合算しない(その距離に立っている子の適性だけが、その子の攻撃に効く)。従来のモードは編成全員ぶんの合算 */}
+      <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">{perSlotApt
+        ?<>間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。<br/>どの距離に誰を置くかで、その子の適性が決まります。</>
+        :<>間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</>}</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
       {/* 背の低い端末では、ここが縮んでスクロールする。戻るボタンを画面の外へ押し出さないため。
           となりの教えカードえらび(PickTeachingScreen)と同じ作りにそろえてある */}
@@ -29610,7 +29630,7 @@ function PickSlotScreen({
           <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
             <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
-            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>
+            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?'この距離で':'合流後'} {formatAptPct(after)}</span>
           </>):(<>
             {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="relative w-10 h-10 object-contain drop-shadow-md"/>:<span className="relative text-2xl drop-shadow-md">{s.emoji}</span>}
             <span className="relative max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>
@@ -31777,7 +31797,7 @@ function BattleScreen({
             <div className="text-[13px] font-black text-emerald-300">⬆ {raidGrowth.turn}ターン目 強化！</div>
             <div className="mt-0.5 text-[11px] font-black text-white">味方の全ステータス +{raidGrowth.stepPct}%<span className="text-slate-300">(ここまで合計 +{raidGrowth.statPct}%)</span></div>
             <div className="text-[10px] font-black text-sky-200">自動回復 ライフ{raidGrowth.lifeRate}%・ガッツ{raidGrowth.gutsRate}%</div>
-            {raidGrowth.levelUpNow&&<div className="mt-0.5 text-[11px] font-black text-amber-300">固有技とアシカが1段階アップ！({raidGrowth.levelUps}/{raidGrowth.levelUpMax}回目)</div>}
+            {raidGrowth.levelUpNow&&<div className="mt-0.5 text-[11px] font-black text-amber-300">固有技が{RAID_JACK_UNIQUE_LEVEL_STEP}段階{raidGrowth.teachingUpNow?'・アシカが1段階':''}アップ！({raidGrowth.levelUps}/{raidGrowth.levelUpMax}回目)</div>}
           </div>
         )}
         {raidGrowth&&raidGrowthOpen&&(
@@ -31787,7 +31807,7 @@ function BattleScreen({
               <dl className="mt-2 space-y-1.5 text-[11px]">
                 <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-emerald-200">全ステータス</dt><dd>2ターン目から、1ターンごとに味方全員が +{raidGrowth.stepPct}%(掛け算)。いまは<b className="text-white"> 合計 +{raidGrowth.statPct}%</b>。ライフ・ガッツの上限が増えたぶんは、いまの値にも足されます</dd></div>
                 <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-sky-200">自動回復</dt><dd>1ターンごとに +1.5%。いまは<b className="text-white"> ライフ {raidGrowth.lifeRate}%・ガッツ {raidGrowth.gutsRate}%</b></dd></div>
-                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-amber-200">固有技・アシカ</dt><dd>{RAID_JACK_LEVEL_UP_TURNS.join('・')}ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。<b className="text-white"> {raidGrowth.levelUps}/{raidGrowth.levelUpMax}回</b>済み{raidGrowth.nextLevelUpTurn?`(次は${raidGrowth.nextLevelUpTurn}ターン目)`:'(これで最後)'}</dd></div>
+                <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-amber-200">固有技・アシカ</dt><dd>{RAID_JACK_LEVEL_UP_TURNS.join('・')}ターン目に、編成全員の固有技が{RAID_JACK_UNIQUE_LEVEL_STEP}段階ずつアップ(アシカは{RAID_JACK_LEVEL_UP_TURNS.slice(0,RAID_JACK_TEACHING_MAX_LEVEL).join('・')}ターン目に1段階ずつ・最大{RAID_JACK_TEACHING_MAX_LEVEL}段階)。<b className="text-white"> {raidGrowth.levelUps}/{raidGrowth.levelUpMax}回</b>済み{raidGrowth.nextLevelUpTurn?`(次は${raidGrowth.nextLevelUpTurn}ターン目)`:'(これで最後)'}</dd></div>
                 <div className="rounded-lg bg-slate-900 px-2 py-1.5"><dt className="font-black text-rose-200">EXスキル</dt><dd>持っている味方ごとに2回まで</dd></div>
               </dl>
               <button type="button" data-raid-growth-close onClick={()=>setRaidGrowthOpen(false)} className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-white active:scale-95">閉じる</button>
@@ -37117,7 +37137,7 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
               {fightKind === 'a' && <option value={RAID_JACK_A_TIERS.length + 1}>{RAID_JACK_A_TIERS.length + 1}: {RAID_JACK_PUMPKIN.name}(大王を倒したあと)</option>}
             </select>
           </div>
-          <div className="mt-1 text-[10px] text-slate-300">{(() => { const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1; const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1); return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
+          <div className="mt-1 text-[10px] text-slate-300">{(() => { const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1; const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1); return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8・11ターン目に固有技が2段階、3・5ターン目にアシカが1段階成長)' : '(成長なし・アシカは最大Lv)'}`; })()}</div>
           <button data-raid-fight-start className={`${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`} onClick={() => { const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1; if (onStartBattle && (pk ? onStartBattle('a', RAID_JACK_A_TIERS.length - 1, { pumpkin: true }) : onStartBattle(fightKind, fightTier - 1)) === false) say('編成できるモンスターがいません'); }}>この条件でジャックと戦う</button>
         </section>
 
@@ -37623,7 +37643,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         </section>
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span></div>
-          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
+          <div className="text-[9px] text-slate-300">{isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'}</div>
           <div className="mt-1 grid grid-cols-4 gap-1.5">
             {(Array.isArray(teachings) ? teachings : []).map((t) => (
               <button type="button" key={t.id} data-raid-teach={t.id} onClick={() => toggleTeach(t.id)}
@@ -45969,6 +45989,16 @@ function MonsterHeroGame() {
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
     if (loops <= 0) return null;
+    const awardedPro = await awardBackQuickLoops(loops);
+    return awardedPro ? { ...awardedPro, wavesCleared } : null;
+  };
+  // クイック周回ぶんの報酬を配る共通の入口(プロモードとジャック戦が使う)。条件が欠けたら null
+  // (AUTO設定がそろっていない・基準の難易度をクイックでクリアしていない)。スコアとランキングには触れない
+  const awardBackQuickLoops = async (loops) => {
+    if (!autoQuickRunConfigured(autoSettings)) return null;
+    const quickDifficulty = autoSettings.quickRun.difficulty;
+    if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
+    if (!(loops > 0)) return null;
     // 絆経験値の行き先は、裏でクイックを回していたときとそろえる
     // (AUTO設定の勇者モン＝1倍 / AUTO設定の供モン①②③＝1/2 / モンスター編成の控え＝1/4)。
     // プロで戦った編成ではなく、**クイックを回していたら育っていたはずの顔ぶれ**へ入れる
@@ -45986,8 +46016,10 @@ function MonsterHeroGame() {
       bondHeroMasuId: quickHeroMon?.masuId ?? undefined,
       bondParticipantMasuIds: quickAllyMasuIds,
     });
-    return awarded ? { ...awarded, quickDifficulty, wavesCleared } : null;
+    return awarded ? { ...awarded, quickDifficulty } : null;
   };
+  // ジャック戦のぶん。周回数は使ったターン数×2(raidJackQuickLoops)。デバッグの強制表示(別のイベントID)の戦いには配らない
+  const awardRaidJackQuickLoops = async (turnsUsed) => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
   const awardRunRewards = async (wavesCleared) => {
     // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
     if (rewardsAwardedRef.current) return;
@@ -48908,7 +48940,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(raidJackRunRef.current){
       raidJackRunRef.current.turns=Math.min(nextTurn,RAID_JACK_TURNS);
       if(nextTurn>RAID_JACK_TURNS){ finishRaidJack('turns'); return; }
-      // Aは 3 / 5 / 8 ターン目に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
+      // Aは 3 / 5 / 8 / 11 ターン目に、編成の全員の固有技が2段階ずつ・選んだアシカが1段階ずつ上がる(Bは成長しない)
       // レイドバトル専用: ターンが進むたびに味方全員が強くなり、自動回復の割合も上がる
       if(raidJackRunRef.current.kind==='a'&&nextTurn>=2&&nextTurn!==turnCount) raidJackTurnGrowth(nextTurn);
       if(raidJackRunRef.current.kind==='a'&&RAID_JACK_LEVEL_UP_TURNS.includes(nextTurn)&&nextTurn!==turnCount) raidJackLevelUp(nextTurn);
@@ -50888,7 +50920,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const allies=party.slice(1);
     const total=(key,base)=>allies.reduce((value,mon)=>value+(mon.plusStats?.[key]||0),base);
     const raidDef=total('def',hero.baseDef);
-    // 固有技: Aはベースモンの0から(3/5/8ターン目に+1)。Bはそのマスモンの段階のまま(成長しない)
+    // 固有技: Aはベースモンの0から(3/5/8/11ターン目に+2)。Bはそのマスモンの段階のまま(成長しない)
     const uniques=party.map(mon=>({...mon.unique,evoLevel:isB?Math.max(0,mon.unique?.evoLevel||0):0}));   // 並びは編成順(勇者が先)。立ち位置とは関係しない
     const cards=TEACHING_CARDS.filter(t=>(Array.isArray(req.teachingIds)?req.teachingIds:[]).includes(t.id)).slice(0,RAID_JACK_TEACHING_MAX);
     const teachings=cards.map(card=>isB
@@ -50908,9 +50940,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
     setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
     const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
-    const raidApt=raidSlots.filter(Boolean).reduce((sum,mon)=>sum.map((v,i)=>v+getMonsterAptPct(mon,raidRuleDifficulty,1)[i]),[0,0,0,0]);
-    setDistAptPct(raidApt);
-    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,raidApt);
+    // ★距離適性は合算しない。タクティクスバトルは「その距離に立っている子の適性だけ」がその子の攻撃に効く(tacticsSlotApt)。
+    //   以前は編成全員の適性を足して渡していたので、置いた場所の子の適性にならなかった(2026-10-05・ユーザー指摘)。
+    //   distAptPct は通常のタクティクスと同じく勇者モンのぶんだけ(盤面の計算は上書きを渡さず、立っている子から数える)
+    setDistAptPct(getMonsterAptPct(hero,raidRuleDifficulty,1));
+    initBattle(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null);
     return true;
   };
   // 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める
@@ -50920,7 +50954,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setRaidJackStartRequest(null);
     startRaidJackBattle(req);
   },[raidJackStartRequest,runMode]);
-  // 3 / 5 / 8 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)と、選んだアシカ(上限Lv2)を1段階ずつ上げる。
+  // 3 / 5 / 8 / 11 ターン目(Aだけ): 編成の全員の固有技(上限Lv8)を2段階ずつ(RAID_JACK_UNIQUE_LEVEL_STEP)、選んだアシカ(上限Lv2)を1段階ずつ上げる。
   // 山札・手札・捨て札にすでに配られているカードも、名前と段階をその場で差し替える
   // レイドバトル専用ルール: 1ターン進むごとに、味方全員の全ステータスが5%ずつ(RAID_JACK_TURN_GROWTH・掛け算で)上がり、
   // ライフ・ガッツの自動回復の割合が1.5%ずつ(RAID_JACK_TURN_REGEN_STEP)上がる。上がった上限のぶんは、いまのライフ・ガッツにも足す
@@ -50951,20 +50985,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(raidJackRunRef.current) raidJackRunRef.current.levelUps=(raidJackRunRef.current.levelUps||0)+1;
     const bumpCard=(c)=>{
       if(c.type==='unique'){
-        const lvl=Math.min(MAX_UNIQUE_SKILL_LEVEL,(c.evoLevel||0)+1);
+        const lvl=Math.min(MAX_UNIQUE_SKILL_LEVEL,(c.evoLevel||0)+RAID_JACK_UNIQUE_LEVEL_STEP);
         return {...c,evoLevel:lvl,crit:0.10+0.05*Math.min(lvl,8),...(Array.isArray(c.names)?{name:c.names[Math.min(lvl,c.names.length-1)]}:{})};
       }
       if(TEACHING_CARDS.some(t=>t.id===c.id)&&Number.isFinite(c.baseValue)&&Number.isFinite(c.step)){
-        const cur=Math.min(2,c.evoLevel||0);
-        if(cur>=2) return c;
+        const cur=Math.min(RAID_JACK_TEACHING_MAX_LEVEL,c.evoLevel||0);
+        if(cur>=RAID_JACK_TEACHING_MAX_LEVEL) return c;
         return {...c,evoLevel:cur+1,baseValue:c.baseValue+c.step,name:BREEDER_EVO_NAMES[c.id]?.[cur+1]||c.name};
       }
       return c;
     };
-    setOwnedUniques(prev=>prev.map(u=>({...u,evoLevel:Math.min(MAX_UNIQUE_SKILL_LEVEL,(u.evoLevel||0)+1)})));
-    setOwnedTeachings(prev=>prev.map(t=>(t.evoLevel||0)>=2?t:{...t,evoLevel:(t.evoLevel||0)+1,baseValue:t.baseValue+t.step}));
+    setOwnedUniques(prev=>prev.map(u=>({...u,evoLevel:Math.min(MAX_UNIQUE_SKILL_LEVEL,(u.evoLevel||0)+RAID_JACK_UNIQUE_LEVEL_STEP)})));
+    setOwnedTeachings(prev=>prev.map(t=>(t.evoLevel||0)>=RAID_JACK_TEACHING_MAX_LEVEL?t:{...t,evoLevel:(t.evoLevel||0)+1,baseValue:t.baseValue+t.step}));
     setHand(prev=>prev.map(bumpCard)); setDeck(prev=>prev.map(bumpCard)); setGraveyard(prev=>prev.map(bumpCard));
-    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`,'up');
+    // アシカは最大(2段階)に届いたあとは変わらないので、上がったときだけログに書く
+    const teachingGrew=ownedTeachings.some(t=>(t.evoLevel||0)<RAID_JACK_TEACHING_MAX_LEVEL);
+    pushBattleLog(`${turn}ターン目: 固有技が${RAID_JACK_UNIQUE_LEVEL_STEP}段階${teachingGrew?'、アシカが1段階':''}強くなった！`,'up');
     addPopup('LEVEL UP!','ally','text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
     Audio_.se.card();
   };
@@ -51007,7 +51043,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await raidJackSaveState(next);
       }
     } catch (error) { outcome='error'; }
-    setRaidJackResult({kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
+    // クイック周回ぶんの報酬(経験値など)。本番のイベントの戦いだけ。与ダメージの記録とは別のまとまりで、失敗しても戦いの結果には影響しない
+    let quickAward=null;
+    // リタイアは「いま進行中のターン」を数えない(1ターン目で降参しても0周)
+    if(!isDebugRun){ try { quickAward=await awardRaidJackQuickLoops(reason==='giveup'?Math.max(0,(run.turns||1)-1):(run.turns||0)); } catch (error) { quickAward=null; } }
+    setRaidJackResult({quickAward,kind:run.kind,tierIndex:run.tierIndex,tierName:run.pumpkin?RAID_JACK_PUMPKIN.name:tier.name,reason,damage,defeated,turns:run.turns||1,levelUps:run.levelUps||0,growths:run.growths||0,outcome,opened,eventId:run.eventId,
       lifeLeft:Math.max(0,(Number.isFinite(run.startLife)&&run.startLife>0?run.startLife:tier.hp)-damage)});
   };
   // 結果画面を閉じてHOMEへ戻る。デバッグの確認から始めたときは、ジャック確認の画面へ戻す
@@ -54807,13 +54847,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RAID_JACK_PLACE'&&raidJackPlace&&(()=>{
           const placed=raidJackPlace.slots.filter(Boolean).length;
           const mon=raidJackPlace.party[placed]||null;
-          // 通常バトルと同じ配置画面。間合い適性は「置いた子たちの合計」(どこに置いても4距離すべてに加算される)
-          const placedBonus=(dist)=>raidJackPlace.slots.reduce((sum,m)=>sum+(m?aptGradeToPct(getDistAptitude(m,dist)):0),0);
+          // 通常のタクティクスと同じ配置画面。距離適性は合算せず、その距離に立っている子のぶんだけ(空いている枠は0 → 置く子の適性だけが出る)
+          const placedBonus=(dist)=>{const standing=raidJackPlace.slots[dist];return standing?aptGradeToPct(getDistAptitude(standing,dist)):0;};
           return <PickSlotScreen
             battleTutorial={null} battleTutorialSpotClass={()=>''}
             currentPickingMon={mon} distTotalBonus={placedBonus}
             getDistAptitude={getDistAptitude} scenarioPicksSlot={()=>true}
-            setupMon={placeRaidJackMon} slots={raidJackPlace.slots}
+            setupMon={placeRaidJackMon} slots={raidJackPlace.slots} perSlotApt={true}
             phasePlan={null} wave={0}
             heroStyleDef={null} heroStyle={null} onHeroStyle={null}
             onRepick={cancelRaidJackPlacement}/>;
@@ -56703,7 +56743,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           battleTutorial={battleTutorial} battleTutorialSpotClass={battleTutorialSpotClass}
           currentPickingMon={currentPickingMon} distTotalBonus={distTotalBonus}
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
-          setupMon={setupMon} slots={slots}
+          setupMon={setupMon} slots={slots} perSlotApt={isTacticsMode(runMode)}
           phasePlan={mainHero?phasePlan:null} wave={wave}
           heroStyleDef={(()=>{
             // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
@@ -57908,6 +57948,18 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
           </div>
           {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
+          {r.quickAward&&r.quickAward.loops>0&&(
+            <div data-raid-jack-quick-award className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-left mb-3" style={{'--d':'2000ms'}}>
+              <div className="flex items-center justify-between text-[11px] mb-1"><span className="text-cyan-300 font-black">⚔ クイック周回ぶん</span><span className="text-white font-mono font-bold">{r.quickAward.loops.toLocaleString()}周</span></div>
+              <p className="text-[9px] leading-relaxed text-slate-300">{[
+                r.quickAward.xp>0?`経験値 +${r.quickAward.xp.toLocaleString()}`:null,
+                r.quickAward.gold>0?`ダイヤ +${r.quickAward.gold.toLocaleString()}`:null,
+                r.quickAward.bond>0?`絆 +${r.quickAward.bond.toLocaleString()}`:null,
+                r.quickAward.psyche>0?`虹のプシュケー ×${r.quickAward.psyche.toLocaleString()}`:null,
+                r.quickAward.shard>0?`勇者の証片 ×${r.quickAward.shard.toLocaleString()}`:null,
+              ].filter(Boolean).join(' ／ ')}</p>
+            </div>
+          )}
           <div className="mh-rjresult-in mb-4 text-[10px] text-slate-300" style={{'--d':'1500ms'}}>{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
           <div className="mh-rjresult-in w-full max-w-xs space-y-3" style={{'--d':'1600ms'}}>
             <button onClick={()=>exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>

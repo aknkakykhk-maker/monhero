@@ -57,8 +57,12 @@ const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 // 小さなぱんぷきん(顔アイコンの絵)の大きさ。ジャックの通常絵(0.5)より少し小さく描いて、「小さくなった」が分かるようにする
 const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
-// Aは、このターンになった時に、編成の全員の固有技と選んだアシカが1段階ずつ上がる(Bは成長しない)
-const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+// Aは、このターンになった時に、編成の全員の固有技が2段階ずつ・選んだアシカが1段階ずつ上がる(Bは成長しない)
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8, 11]);
+// 固有技は、このターンのたびに2段階ずつ上がる(3・5・8・11ターン目の4回で、最大の8段階までちょうど届く・2026-10-05・ユーザー指示)。
+// アシカは同じターンに1段階ずつ上がるが、最大が2段階なので、3・5ターン目で最大になり、8・11ターン目は変わらない
+const RAID_JACK_UNIQUE_LEVEL_STEP = 2;
+const RAID_JACK_TEACHING_MAX_LEVEL = 2;
 // レイドバトル(A)のターンごとの強化。2ターン目から、1ターン進むごとに味方全員の全ステータスが5%ずつ(掛け算で)上がり、
 // ライフ・ガッツの自動回復の割合が1.5%ずつ上がる(ライフの初期値10%・ガッツはそれより5%低い)。
 // 戦闘の中身(60-app.jsx の raidJackTurnGrowth)と、画面の「強化」の表示(71-screen-battle.jsx)が同じ数字を見る
@@ -79,6 +83,7 @@ const raidJackGrowthAt = (turn) => {
     levelUps, levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
     nextLevelUpTurn: next === undefined ? null : next,
     levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+    teachingUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t) && levelUps <= RAID_JACK_TEACHING_MAX_LEVEL,   // アシカも上がるターンか(最大に届いたあとは変わらない)
   };
 };
 
@@ -380,4 +385,16 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
   if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
   if (kind === 'clear_b') return `${bName} 初討伐報酬`;
   return `グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+
+// ===== ジャック戦を遊んだぶんを、クイック周回の報酬にする(2026-10-05・ユーザー指示) =====
+// プロモードのランぶんと同じ立て付け(docs/spec/QUICK_RHYTHM_LINK.md §13): 終わったときに「クイック何周ぶんか」を数えて、
+// その報酬(経験値・ダイヤなど)だけを配る。裏で2つ目のバトルを動かすのではない。与ダメージの記録(共有ライフ・ランキング)は一切動かさない。
+// ジャック戦にはWAVEがないので、プロの「進んだWAVE数」の代わりに「使ったターン数」で決める。
+//   周回数 = 使ったターン数 × 2(20ターン使い切れば40周ぶん。レイドバトルもグランドスラムも同じ式で、段階による違いは無い)
+//   全滅・リタイアも、使ったターン数ぶんだけ入る。1ターンも使っていなければ0。
+const RAID_JACK_QUICK_LOOPS_PER_TURN = 2;
+const raidJackQuickLoops = (turnsUsed) => {
+  const turns = Math.max(0, Math.min(RAID_JACK_TURNS, Math.trunc(Number(turnsUsed) || 0)));
+  return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
 };

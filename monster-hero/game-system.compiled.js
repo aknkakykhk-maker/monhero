@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f439356b789a7fd9
+// source-sha256: 8c481b6a3ba1ae0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 16:20";
+const BUILD_DATE = "2026-10-05 16:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33568,7 +33568,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     useNote: '敵の攻撃を全部モノリスが受ける',
-    desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
+    desc: 'このターン、敵の攻撃をすべてモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
     maxUses: 10,
     unlimited: false,
     withCards: true,
@@ -33579,7 +33579,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mocchi_guts_full',
     name: 'ガッツ全開っちー',
     useNote: '5ターン 全ステータス+30%・満タン・自動回復+30%',
-    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、モッチーが大きく強くなる。\n・ちから・丈夫さ・ライフ上限・ガッツ上限が+30%\n・ターン終わりの自動回復が、ライフ・ガッツとも上限の30%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33594,7 +33594,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mitarashi_dragon',
     name: 'ドラゴンだっちー',
     useNote: '5ターン 力・ガッツ+40% 丈夫さ・ライフ+20%・満タン',
-    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、ミタラシが強くなる。\n・ちから・ガッツ上限が+40%、丈夫さ・ライフ上限が+20%\n・ターン終わりの自動回復が、ガッツは上限の40%、ライフは上限の20%ぶん多くなる\n・使った瞬間に、ライフとガッツが満タンになる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33619,7 +33619,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
     useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '3ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
     maxUses: 3,
     unlimited: false,
     withCards: false,
@@ -33631,7 +33631,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
     useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '3ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33644,7 +33644,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
     useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
-    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    desc: '5ターンのあいだ、アークが攻めも守りも強くなる。\n・与ダメージ+30%\n・攻撃に「与ダメージ10%の連撃」が1回付く\n・受けるダメージ−20%',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33662,7 +33662,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
     useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
-    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    desc: '最大ライフの30%を払って、5ターンのあいだ攻撃が鋭くなる。\n・攻撃に「与ダメージ5%の連撃」が5回付く\n・会心率×1.5、会心ダメージ×1.3\n・丈夫さ+30%\n・ライフが払う量より多いときだけ使える（払って倒れることはない）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33685,7 +33685,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
     useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
-    desc: '3ターンのあいだ、毎ターン、ピクシーの固有技カードが必ず手札に出る。さらに、どの距離にいても距離補正が×1.5になる（敵と同じ距離から攻撃したときと同じ）。',
+    desc: '3ターンのあいだ、固有技を撃ちやすくなり、近くから殴ったことになる。\n・毎ターン、ピクシーの固有技カードが必ず手札に出る\n・距離補正が、どの距離でも×1.5（敵と同じ距離から攻撃したときと同じ）',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33699,7 +33699,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
     useNote: '4ターン カード+1・使うほどボルテージ上昇',
-    desc: '4ターンのあいだ、1ターンに使えるカード枚数が+1される（ミーア自身も+1）。味方がカードを1枚使うたびにボルテージが1たまり（最大10）、たまるほど味方全員の与ダメージ・回復量・ライフとガッツの自動回復が上がる。終わるとボルテージは0に戻る。',
+    desc: '4ターンのあいだ、味方全員が動きやすくなる。\n・1ターンに使えるカードが+1枚（ミーア自身も+1）\n・味方がカードを1枚使うたびに、ボルテージが1たまる（最大10）\n・ボルテージ1段階ごとに、味方全員の与ダメージ+3%・回復カードの回復量+5%・ライフ自動回復+3%・ガッツ自動回復+2%\n・効果が終わると、ボルテージは0に戻る',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33719,7 +33719,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
     useNote: '全員のガッツ回復＋ランダムで1つ',
-    desc: '味方全員にプレゼントを配る。必ず全員のガッツが上限の20%回復し、さらにランダムで1つ：与ダメージ+20%（2ターン）／被ダメージ−20%（2ターン）／連撃（与ダメ10%×2回・2ターン）／ライフが上限の20%回復／ガッツも追加で上限の20%回復／会心率×1.3（2ターン）。低い確率（10%）で「大当たり」になり、6つ全部が起きる。回数は各WAVEで1回。',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで1つ：\n　与ダメージ+20%（2ターン）\n　被ダメージ−20%（2ターン）\n　連撃 与ダメ10%×2回（2ターン）\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3（2ターン）\n・10%の確率で「大当たり」：6つ全部',
     maxUses: 1,
     unlimited: false,
     usesPerWave: true,
@@ -33745,7 +33745,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
     useNote: '選んだ味方が満タンに・ガッツ30%回復',
-    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%回復する。',
+    desc: '味方1体（自分でもよい）を選んで、回復させる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%\n・どちらも、選んだ子のガッツが上限の30%回復する',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33762,7 +33762,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
     useNote: '時間停止 このターン敵は動かない',
-    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    desc: '時間を止める。\n・使ったターンは、敵が行動しない\n・そのターンは、WAVEの20ターンの数に入らない（ターンの数字が進まない）',
     maxUses: 2,
     unlimited: false,
     withCards: true,
@@ -33773,7 +33773,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
     useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
-    desc: '天使側と悪魔側に分かれて、3ターンのあいだ戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。1・2ターン目の終わりに最大ライフの30%ずつ払い、パンドラが使えるカードが1枚増える。パンドラの1枚目のカードは悪魔側の力で与ダメージ+50%・与ダメージ30%の連撃が1回付き、2枚目のカードを使うと天使側の力で味方全員のライフとガッツが上限の10%回復する。3ターン生き残ると、パンドラ自身がダウンして「最後の希望」が起きる：ダウン中の味方がすぐ立ち上がり、味方全員のライフが満タンになり、ガッツが上限の50%回復する。途中で倒れると「最後の希望」は起きず、倒れたときのパンドラのガッツが、生きている味方へ均等に分けられる。',
+    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・1枚目のカード＝悪魔の力：与ダメージ+50%、与ダメージ30%の連撃が1回付く\n・2枚目のカード＝天使の力：味方全員のライフ・ガッツが上限の10%回復\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：パンドラはダウンするが、ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の50%回復\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -33797,7 +33797,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
     useNote: '丈夫さが0になり、その50%が力へ',
-    desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
+    desc: '丈夫さを0にして、その分を力へ足す。\n・足す量は、0にした丈夫さの50%\n・効き目は、そのWAVEが終わるまで',
     maxUses: 3,
     unlimited: false,
     withCards: false,
@@ -33835,7 +33835,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
     useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
-    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    desc: '3ターンのあいだ、味方全員を守り、癒やす。\n・味方全員の被ダメージ−30%\n・ターン終わりに、味方全員のライフが上限の20%回復',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -33849,7 +33849,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
     useNote: 'このターン 連撃30%×4・先にカードで攻撃',
-    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    desc: 'このターンだけ、メルホイップの攻撃に連撃が付く。\n・与ダメージ30%の連撃が4回追加される\n・先にEXを使ってから、同じターンにメルホイップのカードで攻撃する',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -35731,7 +35731,9 @@ const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';
 const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
 const RAID_JACK_NORMAL_ART_SCALE = 0.5;
 const RAID_JACK_PUMPKIN_ART_SCALE = 0.42;
-const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8]);
+const RAID_JACK_LEVEL_UP_TURNS = Object.freeze([3, 5, 8, 11]);
+const RAID_JACK_UNIQUE_LEVEL_STEP = 2;
+const RAID_JACK_TEACHING_MAX_LEVEL = 2;
 const RAID_JACK_TURN_GROWTH = 1.05;
 const RAID_JACK_TURN_REGEN_STEP = 0.015;
 const raidJackGrowthAt = turn => {
@@ -35750,7 +35752,8 @@ const raidJackGrowthAt = turn => {
     levelUps,
     levelUpMax: RAID_JACK_LEVEL_UP_TURNS.length,
     nextLevelUpTurn: next === undefined ? null : next,
-    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t)
+    levelUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t),
+    teachingUpNow: RAID_JACK_LEVEL_UP_TURNS.includes(t) && levelUps <= RAID_JACK_TEACHING_MAX_LEVEL
   };
 };
 const RAID_JACK_ACTION_IDS = Object.freeze(['rush', 'sweep', 'roar', 'pierce', 'allout']);
@@ -36205,6 +36208,11 @@ const raidJackRewardTitle = (kind, tierIndex, rank) => {
   if (kind === 'rank_a') return `${aName} 貢献${rank}位の報酬`;
   if (kind === 'clear_b') return `${bName} 初討伐報酬`;
   return `グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+const RAID_JACK_QUICK_LOOPS_PER_TURN = 2;
+const raidJackQuickLoops = turnsUsed => {
+  const turns = Math.max(0, Math.min(RAID_JACK_TURNS, Math.trunc(Number(turnsUsed) || 0)));
+  return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
 };
 const RAID_JACK_TIMEOUT_MS = 8000;
 let _raidJackUnavailable = false;
@@ -47424,7 +47432,8 @@ function PickSlotScreen({
   wave,
   heroStyleDef = null,
   heroStyle = null,
-  onHeroStyle = null
+  onHeroStyle = null,
+  perSlotApt = false
 }) {
   const mon = currentPickingMon;
   const pickedStyle = heroStyleDef ? heroStyleDef.styles.some(st => st.id === heroStyle) ? heroStyle : heroStyleDef.defaultStyle : null;
@@ -47510,7 +47519,7 @@ function PickSlotScreen({
       className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
     }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), React.createElement("div", {
       className: "mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2"
-    }, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。"), React.createElement("div", {
+    }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、その子の適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
       className: "grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll"
     }, slots.map((s, i) => {
       const grade = getDistAptitude(mon, i);
@@ -47544,7 +47553,7 @@ function PickSlotScreen({
         size: 20
       }), React.createElement("span", {
         className: `relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade, " 合流後 ", formatAptPct(after))) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
+      }, grade, " ", perSlotApt ? 'この距離で' : '合流後', " ", formatAptPct(after))) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -51858,7 +51867,7 @@ function BattleScreen({
     className: "text-[10px] font-black text-sky-200"
   }, "自動回復 ライフ", raidGrowth.lifeRate, "%・ガッツ", raidGrowth.gutsRate, "%"), raidGrowth.levelUpNow && React.createElement("div", {
     className: "mt-0.5 text-[11px] font-black text-amber-300"
-  }, "固有技とアシカが1段階アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
+  }, "固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階", raidGrowth.teachingUpNow ? '・アシカが1段階' : '', "アップ！(", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回目)")), raidGrowth && raidGrowthOpen && React.createElement("div", {
     "data-raid-growth-detail": true,
     className: "fixed inset-0 flex items-center justify-center bg-black/70 px-4",
     style: {
@@ -51891,7 +51900,7 @@ function BattleScreen({
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
   }, React.createElement("dt", {
     className: "font-black text-amber-200"
-  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技と選んだアシカが1段階ずつアップ。", React.createElement("b", {
+  }, "固有技・アシカ"), React.createElement("dd", null, RAID_JACK_LEVEL_UP_TURNS.join('・'), "ターン目に、編成全員の固有技が", RAID_JACK_UNIQUE_LEVEL_STEP, "段階ずつアップ(アシカは", RAID_JACK_LEVEL_UP_TURNS.slice(0, RAID_JACK_TEACHING_MAX_LEVEL).join('・'), "ターン目に1段階ずつ・最大", RAID_JACK_TEACHING_MAX_LEVEL, "段階)。", React.createElement("b", {
     className: "text-white"
   }, " ", raidGrowth.levelUps, "/", raidGrowth.levelUpMax, "回"), "済み", raidGrowth.nextLevelUpTurn ? `(次は${raidGrowth.nextLevelUpTurn}ターン目)` : '(これで最後)')), React.createElement("div", {
     className: "rounded-lg bg-slate-900 px-2 py-1.5"
@@ -60129,7 +60138,7 @@ const RaidJackDebugScreen = ({
   }, (() => {
     const pk = fightKind === 'a' && fightTier === RAID_JACK_A_TIERS.length + 1;
     const t = pk ? RAID_JACK_PUMPKIN : raidJackTierAt(fightKind, fightTier - 1);
-    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8ターン目に固有技とアシカが成長)' : '(成長なし・アシカは最大Lv)'}`;
+    return `${t.name}${pk ? '(共有ライフは無限・毎回ぜんかいから)' : ''}: ライフ ${t.hp.toLocaleString()} / 攻撃 ${t.atk.toLocaleString()} / 技 ${t.actionCount}本 / ${RAID_JACK_TURNS}ターン${fightKind === 'a' ? '(3・5・8・11ターン目に固有技が2段階、3・5ターン目にアシカが1段階成長)' : '(成長なし・アシカは最大Lv)'}`;
   })()), React.createElement("button", {
     "data-raid-fight-start": true,
     className: `${btn} mt-2 w-full border-orange-400/60 bg-orange-950/40`,
@@ -60919,7 +60928,7 @@ const RaidJackPrepScreen = ({
     className: "ml-1 text-[9px] text-slate-300"
   }, teachIds.length, " / ", maxTeach)), React.createElement("div", {
     className: "text-[9px] text-slate-300"
-  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '3・5・8ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
+  }, isB ? '最大レベルから始まります(戦闘中は成長しません)' : '固有技は3・5・8・11ターン目に2段階ずつ、アシカは3・5ターン目に1段階ずつ強くなります(3枚まで選べます)'), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
   }, (Array.isArray(teachings) ? teachings : []).map(t => React.createElement("button", {
     type: "button",
@@ -69904,6 +69913,17 @@ function MonsterHeroGame() {
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
     if (loops <= 0) return null;
+    const awardedPro = await awardBackQuickLoops(loops);
+    return awardedPro ? {
+      ...awardedPro,
+      wavesCleared
+    } : null;
+  };
+  const awardBackQuickLoops = async loops => {
+    if (!autoQuickRunConfigured(autoSettings)) return null;
+    const quickDifficulty = autoSettings.quickRun.difficulty;
+    if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
+    if (!(loops > 0)) return null;
     const quickHeroMon = resolveRosterEntryToMon(autoSettings.quickRun.heroRosterEntry);
     const quickAllyMasuIds = (Array.isArray(autoSettings.allies) ? autoSettings.allies : []).map(ally => resolveRosterEntryToMon(ally?.rosterEntry)).filter(mon => mon && mon.masuId != null).map(mon => mon.masuId);
     const awarded = await awardRhythmPlayRunLoops(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, {
@@ -69917,10 +69937,10 @@ function MonsterHeroGame() {
     });
     return awarded ? {
       ...awarded,
-      quickDifficulty,
-      wavesCleared
+      quickDifficulty
     } : null;
   };
+  const awardRaidJackQuickLoops = async turnsUsed => awardBackQuickLoops(raidJackQuickLoops(turnsUsed));
   const awardRunRewards = async wavesCleared => {
     if (rewardsAwardedRef.current) return;
     rewardsAwardedRef.current = true;
@@ -75601,9 +75621,8 @@ function MonsterHeroGame() {
     setAtk(total('atk', hero.baseAtk));
     setDef(raidDef);
     const raidRuleDifficulty = specialRuleDifficultyForRun(runMode, 'Normal', false, extremeDifficulty);
-    const raidApt = raidSlots.filter(Boolean).reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptPct(mon, raidRuleDifficulty, 1)[i]), [0, 0, 0, 0]);
-    setDistAptPct(raidApt);
-    initBattle(1, raidSlots, uniques, teachings, raidDef, 'Jack', hero, raidApt);
+    setDistAptPct(getMonsterAptPct(hero, raidRuleDifficulty, 1));
+    initBattle(1, raidSlots, uniques, teachings, raidDef, 'Jack', hero, null);
     return true;
   };
   useEffect(() => {
@@ -75653,7 +75672,7 @@ function MonsterHeroGame() {
     if (raidJackRunRef.current) raidJackRunRef.current.levelUps = (raidJackRunRef.current.levelUps || 0) + 1;
     const bumpCard = c => {
       if (c.type === 'unique') {
-        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + 1);
+        const lvl = Math.min(MAX_UNIQUE_SKILL_LEVEL, (c.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP);
         return {
           ...c,
           evoLevel: lvl,
@@ -75664,8 +75683,8 @@ function MonsterHeroGame() {
         };
       }
       if (TEACHING_CARDS.some(t => t.id === c.id) && Number.isFinite(c.baseValue) && Number.isFinite(c.step)) {
-        const cur = Math.min(2, c.evoLevel || 0);
-        if (cur >= 2) return c;
+        const cur = Math.min(RAID_JACK_TEACHING_MAX_LEVEL, c.evoLevel || 0);
+        if (cur >= RAID_JACK_TEACHING_MAX_LEVEL) return c;
         return {
           ...c,
           evoLevel: cur + 1,
@@ -75677,9 +75696,9 @@ function MonsterHeroGame() {
     };
     setOwnedUniques(prev => prev.map(u => ({
       ...u,
-      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + 1)
+      evoLevel: Math.min(MAX_UNIQUE_SKILL_LEVEL, (u.evoLevel || 0) + RAID_JACK_UNIQUE_LEVEL_STEP)
     })));
-    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= 2 ? t : {
+    setOwnedTeachings(prev => prev.map(t => (t.evoLevel || 0) >= RAID_JACK_TEACHING_MAX_LEVEL ? t : {
       ...t,
       evoLevel: (t.evoLevel || 0) + 1,
       baseValue: t.baseValue + t.step
@@ -75687,7 +75706,8 @@ function MonsterHeroGame() {
     setHand(prev => prev.map(bumpCard));
     setDeck(prev => prev.map(bumpCard));
     setGraveyard(prev => prev.map(bumpCard));
-    pushBattleLog(`${turn}ターン目: 固有技とアシカが強くなった！`, 'up');
+    const teachingGrew = ownedTeachings.some(t => (t.evoLevel || 0) < RAID_JACK_TEACHING_MAX_LEVEL);
+    pushBattleLog(`${turn}ターン目: 固有技が${RAID_JACK_UNIQUE_LEVEL_STEP}段階${teachingGrew ? '、アシカが1段階' : ''}強くなった！`, 'up');
     addPopup('LEVEL UP!', 'ally', 'text-amber-300 font-black text-3xl drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]');
     Audio_.se.card();
   };
@@ -75733,7 +75753,16 @@ function MonsterHeroGame() {
     } catch (error) {
       outcome = 'error';
     }
+    let quickAward = null;
+    if (!isDebugRun) {
+      try {
+        quickAward = await awardRaidJackQuickLoops(reason === 'giveup' ? Math.max(0, (run.turns || 1) - 1) : run.turns || 0);
+      } catch (error) {
+        quickAward = null;
+      }
+    }
     setRaidJackResult({
+      quickAward,
       kind: run.kind,
       tierIndex: run.tierIndex,
       tierName: run.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
@@ -84104,7 +84133,10 @@ function MonsterHeroGame() {
     }), gameState === 'RAID_JACK_PLACE' && raidJackPlace && (() => {
       const placed = raidJackPlace.slots.filter(Boolean).length;
       const mon = raidJackPlace.party[placed] || null;
-      const placedBonus = dist => raidJackPlace.slots.reduce((sum, m) => sum + (m ? aptGradeToPct(getDistAptitude(m, dist)) : 0), 0);
+      const placedBonus = dist => {
+        const standing = raidJackPlace.slots[dist];
+        return standing ? aptGradeToPct(getDistAptitude(standing, dist)) : 0;
+      };
       return React.createElement(PickSlotScreen, {
         battleTutorial: null,
         battleTutorialSpotClass: () => '',
@@ -84114,6 +84146,7 @@ function MonsterHeroGame() {
         scenarioPicksSlot: () => true,
         setupMon: placeRaidJackMon,
         slots: raidJackPlace.slots,
+        perSlotApt: true,
         phasePlan: null,
         wave: 0,
         heroStyleDef: null,
@@ -87838,6 +87871,7 @@ function MonsterHeroGame() {
       scenarioPicksSlot: scenarioPicksSlot,
       setupMon: setupMon,
       slots: slots,
+      perSlotApt: isTacticsMode(runMode),
       phasePlan: mainHero ? phasePlan : null,
       wave: wave,
       heroStyleDef: (() => {
@@ -90174,7 +90208,21 @@ function MonsterHeroGame() {
         style: {
           '--d': '2700ms'
         }
-      }, "次の段階が開きました！"), React.createElement("div", {
+      }, "次の段階が開きました！"), r.quickAward && r.quickAward.loops > 0 && React.createElement("div", {
+        "data-raid-jack-quick-award": true,
+        className: "mh-rjresult-in w-full max-w-xs rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-left mb-3",
+        style: {
+          '--d': '2000ms'
+        }
+      }, React.createElement("div", {
+        className: "flex items-center justify-between text-[11px] mb-1"
+      }, React.createElement("span", {
+        className: "text-cyan-300 font-black"
+      }, "⚔ クイック周回ぶん"), React.createElement("span", {
+        className: "text-white font-mono font-bold"
+      }, r.quickAward.loops.toLocaleString(), "周")), React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-slate-300"
+      }, [r.quickAward.xp > 0 ? `経験値 +${r.quickAward.xp.toLocaleString()}` : null, r.quickAward.gold > 0 ? `ダイヤ +${r.quickAward.gold.toLocaleString()}` : null, r.quickAward.bond > 0 ? `絆 +${r.quickAward.bond.toLocaleString()}` : null, r.quickAward.psyche > 0 ? `虹のプシュケー ×${r.quickAward.psyche.toLocaleString()}` : null, r.quickAward.shard > 0 ? `勇者の証片 ×${r.quickAward.shard.toLocaleString()}` : null].filter(Boolean).join(' ／ '))), React.createElement("div", {
         className: "mh-rjresult-in mb-4 text-[10px] text-slate-300",
         style: {
           '--d': '1500ms'

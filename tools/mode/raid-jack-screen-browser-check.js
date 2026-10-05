@@ -231,6 +231,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-ph-range]').first().waitFor({ timeout: 20000 });
     check('始める前に配置画面(通常バトルと同じ)が出る', /配置場所を決定せよ/.test(await page.locator('body').innerText()));
     check('回数は、配置のあいだは減らない(まだ戦闘を始めていない)', await page.evaluate(() => { const st = JSON.parse(localStorage.getItem('mh_raid_jack_v1') || '{}'); return !st.a || !st.a.used; }));
+    check('配置画面の説明が、タクティクスの仕様(置いた距離にいる子のぶんだけ・足し算にならない)になっている', /置いた距離にいる子のぶんだけ/.test(await page.locator('body').innerText()) && !/4距離すべてに加算されます/.test(await page.locator('body').innerText()));
     check('4つの距離が選べる(零・近・中・遠)', await page.locator('[data-ph-range]').count() === 4 && await page.locator('[data-ph-range][data-ph-on]').count() === 4);
     // 配置画面から編成へ戻れる(選び直し)。戻っても回数は減らず、もう一度始めると配置からやり直せる
     await page.getByRole('button', { name: /モンスターを選び直す/ }).click();
@@ -242,6 +243,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-ph-range="2"]').click();
     const afterHero = await page.locator('body').innerText();
     check('勇者モンを置いたあと、供モンの配置になる(置いた枠は選べない)', await page.locator('[data-ph-range="2"]').isDisabled() && await page.locator('[data-ph-range][data-ph-on]').count() === 3, afterHero.replace(/\s+/g, ' ').slice(0, 80));
+    // 供モンの配置では、空いている枠の表示は「その子の適性だけ」(勇者モンのぶんを足さない)。スエゾーは零距離E(-10%)
+    const slot0 = (await page.locator('[data-ph-range="0"]').innerText()).replace(/\s+/g, ' ');
+    check('空いている枠には、置く子の適性だけが出る(すでに置いた勇者モンのぶんを足さない)', /E\s*この距離で\s*-10\.?0?%/.test(slot0) || /この距離で\s*-10/.test(slot0), slot0);
     await page.locator('[data-ph-range="0"]').click();
     await page.locator('[data-battle-controls]').waitFor({ timeout: 30000 });
     check('編成と配置からジャック戦が始まる', true);

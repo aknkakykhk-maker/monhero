@@ -126,7 +126,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // ターンごとの強化の表示(2026-10-04・ユーザー指示)。1ターン目は +0%、タップで内訳が開く
     await page.locator('[data-raid-growth-chip]').waitFor({ timeout: 30000 }).catch(() => {});
     const chipText = (await page.locator('[data-raid-growth-chip]').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
-    check('A: 敵のライフの下に「強化」の行が出る(全ステ +0%・技・アシカ 0/3・次の技強化 3ターン目)', /全ステ\s*\+0%/.test(chipText) && /0\/3/.test(chipText) && /3ターン目/.test(chipText), chipText);
+    check('A: 敵のライフの下に「強化」の行が出る(全ステ +0%・技・アシカ 0/4・次の技強化 3ターン目)', /全ステ\s*\+0%/.test(chipText) && /0\/4/.test(chipText) && /3ターン目/.test(chipText), chipText);
     await page.locator('[data-raid-growth-chip]').first().click().catch(() => {});
     const detailText = await page.locator('[data-raid-growth-detail]').innerText().catch(() => '');
     check('A: 強化の行をタップすると内訳(全ステータス・自動回復・固有技とアシカ・EXスキル)が開く', /全ステータス/.test(detailText) && /自動回復/.test(detailText) && /固有技・アシカ/.test(detailText) && /EXスキル/.test(detailText) && /2回まで/.test(detailText), detailText.slice(0, 80));
@@ -250,8 +250,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('送った与ダメージは画面の数字と同じで、0より大きい', autoRow.damage === shown && shown > 0, `${autoRow.damage} / ${shown}`);
     check('倒した/倒していないが結果と合っている', autoRow.defeated === /ジャックを倒した/.test(autoText), JSON.stringify(autoRow));
     const levelUps = Number((await page.locator('[data-raid-jack-levelups]').innerText()).replace(/[^0-9]/g, ''));
-    const expectLevelUps = [3, 5, 8].filter((n) => n <= turnsUsed).length;
-    check('Aの固有技とアシカの成長は 3/5/8 ターン目に1回ずつ(使ったターンまでの回数)', levelUps === expectLevelUps, `ターン${turnsUsed} → 成長${levelUps}回(期待${expectLevelUps}回)`);
+    const expectLevelUps = [3, 5, 8, 11].filter((n) => n <= turnsUsed).length;
+    check('Aの固有技とアシカの成長は 3/5/8/11 ターン目に1回ずつ(使ったターンまでの回数)', levelUps === expectLevelUps, `ターン${turnsUsed} → 成長${levelUps}回(期待${expectLevelUps}回)`);
     await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     // ⑤ B(マスモン)・初級ジャック。強い個体で倒すと、その場で終わり(倒したら終わり)・次の段階が開く・成長なし

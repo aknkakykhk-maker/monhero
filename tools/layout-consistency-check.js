@@ -206,6 +206,10 @@ const COMPONENT_OWNED_SCREENS = {
   // 元からスクロール領域を持たない。2026-09-10 に画面を切り出して初めてそれが見えた
   // (それまでは 9000 文字の窓が隣の画面へはみ出し、隣の overflow-y-auto を拾って通っていた)
   MONSTER_ATTACK_PREVIEW: 'MonsterAttackPreviewScreen（演出を見せる専用画面。元からスクロールしない）',
+  // レイドの編成画面は RaidJackPrepScreen、配置画面は PickSlotScreen が持ち主(どちらも中で縦スクロールする)。
+  // 呼び出しが <> で包まれていたり IIFE の中だったりして、分岐の周りには overflow-y-auto が出てこない
+  RAID_JACK_PREP: 'RaidJackPrepScreen（79-screen-raid-jack.jsx。一覧の中で縦スクロールする）',
+  RAID_JACK_PLACE: 'PickSlotScreen（配置画面。中身の領域がスクロールする）',
 };
 // 共有層(10〜30番台の部品)に置いてある画面部品の中身を取り出す。
 // 定義の先頭から、次のトップレベル定義の手前までを1つの部品とみなす。

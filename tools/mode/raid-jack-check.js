@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
-vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
 const o = ctx.o;
 
 // ① 段階
@@ -92,6 +92,35 @@ check('初級を倒すと中級が開く', o.raidJackUnlockedCount('b', ['b1']) 
 check('飛ばしては開かない', o.raidJackUnlockedCount('b', ['b2', 'b3']) === 1);
 check('全部倒しても5段階まで', o.raidJackUnlockedCount('b', ['b1', 'b2', 'b3', 'b4', 'b5']) === 5);
 
+// ④-2 クイック周回ぶん(ジャック戦を遊んだぶんを、プロモードと同じ立て付けで経験値などにする・2026-10-05)
+check('周回数 = 使ったターン数 × 2(20ターンで40周)', o.raidJackQuickLoops(20) === 40 && o.raidJackQuickLoops(1) === 2 && o.raidJackQuickLoops(7) === 14);
+check('0ターンは0周・壊れた値も0周・20ターンを超えても40周まで', o.raidJackQuickLoops(0) === 0 && o.raidJackQuickLoops(-3) === 0 && o.raidJackQuickLoops(NaN) === 0 && o.raidJackQuickLoops(undefined) === 0 && o.raidJackQuickLoops(99) === 40);
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const fin = app.slice(app.indexOf('const finishRaidJack = async'), app.indexOf('const exitRaidJack'));
+  check('クイック周回の報酬は、本番のイベントの戦いだけに配る(デバッグの強制表示には配らない)', /if\(!isDebugRun\)\{ try \{ quickAward=await awardRaidJackQuickLoops/.test(fin));
+  check('プロモードと同じ配布の入口(awardBackQuickLoops)を通す・与ダメージの記録は変えない', /const awardRaidJackQuickLoops = async \(turnsUsed\) => awardBackQuickLoops\(raidJackQuickLoops\(turnsUsed\)\)/.test(app) && /const awarded = await awardRhythmPlayRunLoops\(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, \{[\s\S]*?countLoopProgress: false[\s\S]*?recordQuickClear: false/.test(app));
+  check('結果画面に「クイック周回ぶん」を別のまとまりで出す', /data-raid-jack-quick-award/.test(app));
+}
+
+// ④-4 ターンごとの強化(固有技は3・5・8・11ターン目に2段階ずつ=4回で最大の8段階・アシカは1段階ずつ=3・5ターン目で最大の2段階・2026-10-05)
+check('固有技の強化は 3・5・8・11 ターン目の4回・1回2段階 → ちょうど最大の8段階', o.RAID_JACK_LEVEL_UP_TURNS.join(',') === '3,5,8,11' && o.RAID_JACK_UNIQUE_LEVEL_STEP === 2 && o.RAID_JACK_LEVEL_UP_TURNS.length * o.RAID_JACK_UNIQUE_LEVEL_STEP === 8);
+check('アシカは1段階ずつ・最大2段階(3・5ターン目で最大)', o.RAID_JACK_TEACHING_MAX_LEVEL === 2 && [3, 5, 8, 11].map((t) => o.raidJackGrowthAt(t).teachingUpNow).join() === 'true,true,false,false');
+check('強化の表示(回数)は 4回・次の強化のターンが出る', o.raidJackGrowthAt(1).levelUpMax === 4 && o.raidJackGrowthAt(1).nextLevelUpTurn === 3 && o.raidJackGrowthAt(9).nextLevelUpTurn === 11 && o.raidJackGrowthAt(11).nextLevelUpTurn === null && o.raidJackGrowthAt(11).levelUps === 4);
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const up = app.slice(app.indexOf('const raidJackLevelUp = (turn) => {'), app.indexOf('// 終わり方(撃破'));
+  check('戦闘の強化は、固有技を RAID_JACK_UNIQUE_LEVEL_STEP ずつ・手札と山札と捨て札のカードにも反映する', (up.match(/RAID_JACK_UNIQUE_LEVEL_STEP/g) || []).length >= 3 && /setHand\(prev=>prev\.map\(bumpCard\)\); setDeck\(prev=>prev\.map\(bumpCard\)\); setGraveyard/.test(up));
+}
+
+// ④-3 距離適性はタクティクスバトルの仕様(合算しない。その距離に立っている子の適性だけ)・2026-10-05・ユーザー指摘
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const start = app.slice(app.indexOf('const startRaidJackBattle = (req) => {'), app.indexOf('// 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める'));
+  check('ジャック戦の開始で、編成全員の距離適性を合算して渡さない(立っている子の適性だけが効く)', start.length > 0 && !/raidApt/.test(start) && /initBattle\(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null\)/.test(start));
+  check('配置画面の「いまの適性」は、その距離に立っている子のぶんだけ(合計ではない)', /const standing=raidJackPlace\.slots\[dist\]/.test(app) && /perSlotApt=\{true\}/.test(app));
+}
+
 // ⑤ 公開フラグ
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJack は開始日時までは偽を返す(見るたびに数え直す getter・読み込み時に touch しても落ちない)',
@@ -116,7 +145,8 @@ check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJa
 
 // ⑥ 公開の準備(更新履歴・告知・ヘルプ・案内が公開フラグで隠れる)
 const changelog = read('monster-hero/data/changelog.js');
-const entry = changelog.slice(changelog.indexOf('const CHANGELOG = ['), changelog.indexOf('const CHANGELOG = [') + 4000);
+const jackAt = changelog.indexOf("title:'【期間限定】レイドボス戦「カボチャのおばけジャック」を開催します'");
+const entry = changelog.slice(Math.max(0, jackAt - 200), jackAt + 2500);   // 先頭からの固定の長さではなく、この項目の位置から読む(新しい項目が先頭へ足されても、ずれない)
 check('更新履歴の項目は公開フラグ raidJack が立つまで出ない', /releaseFlag:'raidJack'/.test(entry) && /カボチャのおばけジャック/.test(entry));
 check('大きい追加なので助手の告知(content)が付く', /assistantNotice:\{ id:'update_notice_raid_jack_v1', type:'content', notifyFrom:'2026-10-05T04:00:00\+09:00'/.test(entry) && /visibleFrom:'2026-10-05T04:00:00\+09:00'/.test(entry));
 const help = read('monster-hero/data/help.js');
