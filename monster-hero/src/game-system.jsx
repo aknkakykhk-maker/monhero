@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: af9ec5d6faca6aa1
+// generated-sha256: c9a0a7b633d148d9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 20:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-05 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5772,13 +5772,15 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
   ],
-  // スプーキー(2026-10-05・案の段階・4部位)。いただいた4色の見本どおり ①=帽子・服 / ②=手・しっぽ(しっぽの先の枝も) /
-  // ③=かぼちゃの顔 / ④=帽子のリボン・胸元の飾り・首元の結び目。目・鼻・口は対象外
+  // スプーキー(2026-10-05・案の段階・5部位)。いただいた4色の見本どおり ①=帽子・服 / ②=手・しっぽ /
+  // ③=かぼちゃの顔 / ④=帽子のリボン・胸元の飾り・首元の結び目。⑤=しっぽの先の枝(見本では②だったが、
+  // 2026-10-05 ユーザー指示「染色5にする」で分けた)。目・鼻・口は対象外
   Spooky: [
     { hue: 0, noAAGuard: true, noEdgeGuard: true },
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
     { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
@@ -6526,8 +6528,9 @@ const MASU_COLOR_REGION_DYE = {
   // ②体はほぼ白に近いクリーム(0.20)で、比例させると色が乗らないので gloss を付けない
   Ghost: [{ gloss: 0.42 }, {}, { gloss: 0.9 }],
   // スプーキー: ①帽子・服(彩度の中央値0.92)と③かぼちゃの顔(0.78)は濃い。②手・しっぽはほぼ白(0.17)なので付けない。
-  // ④リボンと胸元の飾りは淡いクリーム(0.36・上のほう0.51)なので、上のほうに合わせて淡い所を淡いまま残す
-  Spooky: [{ gloss: 0.92 }, {}, { gloss: 0.78 }, { gloss: 0.51 }],
+  // ④リボンと胸元の飾りは淡いクリーム(0.36・上のほう0.51)なので、上のほうに合わせて淡い所を淡いまま残す。
+  // ⑤しっぽの先の枝は茶色の木(0.60)
+  Spooky: [{ gloss: 0.92 }, {}, { gloss: 0.78 }, { gloss: 0.51 }, { gloss: 0.6 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
