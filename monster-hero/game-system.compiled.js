@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 50e447962e57554c
+// source-sha256: 4222751f0c57e82c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 02:37";
+const BUILD_DATE = "2026-10-06 03:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39803,7 +39803,8 @@ function SettingsScreen({
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
   }, React.createElement(AssistantBubble, {
-    scene: "settings"
+    scene: "settings",
+    compact: true
   })), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
   }, React.createElement(SettingsMenuLink, {
@@ -40558,8 +40559,8 @@ function BreederMarketScreen({
           frameCondition
         })
       }) : item.type === 'item' ? React.createElement(React.Fragment, null, React.createElement("span", {
-        className: `text-[11px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-400'}`
-      }, "×", ownedItems[item.id] || 0), item.desc && React.createElement(MarketDetailChip, {
+        className: `whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-400'}`
+      }, "所持 ", ownedItems[item.id] || 0), item.desc && React.createElement(MarketDetailChip, {
         label: `${item.name}の効果を見る`,
         onClick: () => onOpenItemDetail(item)
       })) : null
@@ -40650,8 +40651,8 @@ function BreederMarketScreen({
     emoji: '🔄',
     label: 'アイテム交換所',
     titleLines: ['アイテム', '交換所'],
-    value: null,
-    hint: 'プシュケー・証など',
+    value: `🌈${ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}`,
+    hint: '所持している虹のプシュケー',
     border: 'border-emerald-400/35',
     title: 'text-emerald-200',
     arrow: 'text-emerald-300/80'
@@ -41155,7 +41156,8 @@ function ProfileScreen({
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
   }, React.createElement(AssistantBubble, {
-    scene: "profile"
+    scene: "profile",
+    compact: true
   })), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-4`
   }, (!onboarded || onboardingPreview) && (() => {
@@ -41279,7 +41281,7 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-amber-300"
     }, "フレーム"), React.createElement("b", {
       className: "block break-words text-[11px] font-black leading-tight text-white"
-    }, "フレーム：", frameName))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
+    }, frameName))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
       type: "button",
       "data-profile-tile": "costume",
       onClick: onOpenCostumePicker,
@@ -41293,7 +41295,7 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-pink-300"
     }, "着替え"), React.createElement("b", {
       className: "block break-words text-[11px] font-black leading-tight text-white"
-    }, "着替え：", wornCostume ? wornCostume.name : '元の服'))), showFriendTiles && React.createElement("button", {
+    }, wornCostume ? wornCostume.name : '元の服'))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-message": true,
       onClick: onOpenMessageEditor,
@@ -42076,7 +42078,8 @@ function MonsterDexScreen({
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, React.createElement(AssistantBubble, {
-    scene: "monsterDex"
+    scene: "monsterDex",
+    compact: true
   })), React.createElement("div", {
     "data-dex-count": true,
     className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-amber-500/60 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2"
@@ -43822,7 +43825,8 @@ function MasuMonsScreen({
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, React.createElement(AssistantBubble, {
-    scene: "masuList"
+    scene: "masuList",
+    compact: true
   })), React.createElement(ScreenLead, null, "勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。"), renderMonsterSortFilterBar({
     singleType: true
   }), React.createElement("div", {
@@ -44028,9 +44032,12 @@ function MasuDonationScreen({
   }), React.createElement("p", {
     className: "shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
-    className: "grid grid-cols-4 gap-1 mb-2 shrink-0",
+    className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
+    role: "group",
     "aria-label": "寄付一覧の並べ替え"
-  }, options.map(o => {
+  }, React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black text-slate-400"
+  }, "並べ替え"), options.map(o => {
     const active = donationSortKey === o.key;
     const direction = donationSortDir === 'asc' ? '低い順' : '高い順';
     const activeLabel = o.key === 'power' ? `${o.label}：${direction}` : `${o.label}${donationSortDir === 'asc' ? ' ▲' : ' ▼'}`;
@@ -44044,7 +44051,7 @@ function MasuDonationScreen({
       },
       "aria-pressed": active,
       "aria-label": o.key === 'power' ? active ? `総合力を${direction}で表示中。押すと${donationSortDir === 'asc' ? '高い順' : '低い順'}に変更` : '総合力を高い順に並べ替え' : undefined,
-      className: `min-w-0 min-h-[44px] px-1 py-1 rounded-xl text-[10px] leading-tight font-black border active:scale-95 ${active ? 'bg-violet-600 border-violet-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'} ${o.key === 'power' ? 'col-span-2' : ''}`
+      className: `shrink-0 min-h-[44px] px-3 rounded-xl text-[11px] leading-tight font-black border whitespace-nowrap active:scale-95 ${active ? 'border-amber-300/70 bg-amber-500/25 text-amber-100' : 'bg-slate-900 border-white/10 text-slate-300'}`
     }, active ? activeLabel : o.label);
   })), donationError && React.createElement("div", {
     className: "shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"
@@ -44304,21 +44311,29 @@ function MasuRebirthScreen({
       const need = breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount + 1);
       const enoughPsyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) >= need;
       const can = lvl.level === cap && cap < MAX_MASU_LEVEL_CAP && enoughPsyche;
+      const why = cap >= MAX_MASU_LEVEL_CAP ? '最大まで突破済み' : lvl.level < cap ? `あとLv.${cap - lvl.level}で突破` : !enoughPsyche ? `🌈あと${(need - ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID)).toLocaleString()}個` : '';
       return React.createElement("button", {
         key: masu.id,
         disabled: !can,
+        "data-breakthrough-why": why || undefined,
         onClick: () => {
           setRebirthSelectedId(masu.id);
           setRebirthSkillKey(null);
         },
         style: MONSTER_CARD_STYLE,
-        className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-35`
+        className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-60`
       }, renderMonsterCardBody({
         masu,
         base,
         status: React.createElement("span", {
+          className: "block text-center leading-tight"
+        }, React.createElement("span", {
           className: `text-[10px] font-black ${enoughPsyche ? 'text-fuchsia-300' : 'text-red-400'}`
-        }, "🌈", need)
+        }, "🌈", need), !can && why && React.createElement("small", {
+          className: "block text-[10px] font-bold text-slate-300"
+        }, why), can && React.createElement("small", {
+          className: "block text-[10px] font-black text-emerald-300"
+        }, "突破できます"))
       }));
     }))));
   }
@@ -44492,13 +44507,15 @@ function MasuReincarnateScreen({
           setReincarnateError('');
         },
         style: MONSTER_CARD_STYLE,
-        className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-35`
+        className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-60`
       }, renderMonsterCardBody({
         masu,
         base,
         status: locked ? React.createElement("span", {
           className: "text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100"
-        }, "🔁 転生ロック") : React.createElement(ReincarnateBadge, {
+        }, "🔁 転生ロック") : lvl.level < REINCARNATE_MIN_LEVEL ? React.createElement("span", {
+          className: "block text-center text-[10px] font-bold leading-tight text-slate-300"
+        }, "あとLv.", REINCARNATE_MIN_LEVEL - lvl.level, "で転生") : React.createElement(ReincarnateBadge, {
           count: masu.reincarnateCount,
           className: "is-inline"
         })
@@ -44665,13 +44682,13 @@ function MasuTranscendenceScreen({
           setTranscendError('');
         },
         style: MONSTER_CARD_STYLE,
-        className: `${MONSTER_CARD_CLASS} border-amber-400/40 bg-slate-900 disabled:opacity-35`
+        className: `${MONSTER_CARD_CLASS} border-amber-400/40 bg-slate-900 disabled:opacity-60`
       }, renderMonsterCardBody({
         masu,
         base,
         status: React.createElement("span", {
           className: `text-[10px] font-black leading-tight ${normalized.transcended ? 'text-amber-300' : eligible.ok ? 'text-emerald-300' : 'text-slate-400'}`
-        }, normalized.transcended ? '超越済み' : eligible.ok ? '超越できます' : '条件未達')
+        }, normalized.transcended ? '超越済み' : eligible.ok ? '超越できます' : !isFinalBreakthroughCount(normalized.rebirthCount) ? `突破あと${FINAL_BREAKTHROUGH_COUNT - normalized.rebirthCount}回` : `あとLv.${MAX_MASU_LEVEL_CAP - lvl.level}`)
       }));
     }))));
   }
@@ -44839,7 +44856,7 @@ function MasuSoulRankScreen({
           setSoulRankError('');
         },
         style: MONSTER_CARD_STYLE,
-        className: MONSTER_CARD_CLASS + ' border-sky-400/40 bg-slate-900 disabled:opacity-35'
+        className: MONSTER_CARD_CLASS + ' border-sky-400/40 bg-slate-900 disabled:opacity-60'
       }, renderMonsterCardBody({
         masu,
         base,
@@ -47269,15 +47286,16 @@ function MasuEnhanceScreen({
   }, renderPowerBadge(currentPower, {
     dense: true,
     size: 'sm'
-  }))))), React.createElement("div", {
-    className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center justify-between`
+  })))), React.createElement("div", {
+    "data-enhance-points": true,
+    className: "shrink-0 self-stretch flex flex-col items-center justify-center rounded-xl border border-amber-400/40 bg-black/30 px-2.5"
   }, React.createElement("div", {
-    className: "text-[11px] text-amber-300 font-black flex items-center gap-1.5"
+    className: "text-[10px] text-amber-300 font-black flex items-center gap-1"
   }, React.createElement(Sparkles, {
-    size: 12
-  }), "強化ポイント"), React.createElement("div", {
-    className: "text-xl text-white font-black font-mono"
-  }, points)), autoEnhanceIntroVisible && React.createElement("div", {
+    size: 11
+  }), "強化P"), React.createElement("div", {
+    className: "text-2xl text-white font-black font-mono leading-none mt-0.5"
+  }, points))), autoEnhanceIntroVisible && React.createElement("div", {
     className: "rounded-2xl border border-lime-400/60 bg-lime-950/30 p-3"
   }, React.createElement("div", {
     className: "text-[13px] font-black text-lime-200"
@@ -47326,7 +47344,38 @@ function MasuEnhanceScreen({
     "aria-pressed": bulkEnhanceUnit === unit,
     onClick: () => setBulkEnhanceUnit(unit),
     className: `min-h-[44px] rounded-xl text-[11px] font-black active:scale-95 ${bulkEnhanceUnit === unit ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
-  }, unit === 'MAX' ? 'MAX' : `${unit}P`))), restoreDraft && restoreDraft.requested > 0 && React.createElement("div", {
+  }, unit === 'MAX' ? 'MAX' : `${unit}P`))), (() => {
+    const draft = buildMasuAutoEnhancePlan({
+      ...masu,
+      autoEnhance: {
+        ...autoEnhance,
+        enabled: true
+      }
+    }, base);
+    return React.createElement("button", {
+      type: "button",
+      "data-enhance-auto-draft": draft ? 'fill' : 'setup',
+      onClick: () => draft ? setBulkPlan({
+        apt: [...draft.plan.apt],
+        stat: {
+          ...draft.plan.stat
+        }
+      }) : onOpenAutoEnhance(),
+      className: "mb-3 w-full min-h-[44px] rounded-xl border border-lime-400/50 bg-lime-950/25 px-3 text-left active:scale-[.98] flex items-center gap-2"
+    }, React.createElement(Sparkles, {
+      size: 14,
+      className: "shrink-0 text-lime-300"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "block text-[12px] font-black text-lime-200"
+    }, draft ? 'オート強化の設定で下書きする' : 'いつもの振り方をオート強化で決めておく'), React.createElement("span", {
+      className: "block text-[10px] font-bold text-slate-400"
+    }, draft ? `決めた上限と優先順位どおりに ${draft.used}P を入れます(まだ保存しません)` : '決めておくと、ここから1回で下書きできます')), React.createElement(ChevronRight, {
+      size: 16,
+      className: "shrink-0 text-lime-300"
+    }));
+  })(), restoreDraft && restoreDraft.requested > 0 && React.createElement("div", {
     className: "mb-3 rounded-xl border border-cyan-400/40 bg-cyan-950/20 p-2"
   }, React.createElement("button", {
     type: "button",
@@ -47586,8 +47635,12 @@ function MasuFusionScreen({
     });
   };
   const fusionSortBar = React.createElement("div", {
-    className: "flex gap-1.5 mb-2 shrink-0 overflow-x-auto"
-  }, FUSION_SORT_OPTIONS.map(o => {
+    className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
+    role: "group",
+    "aria-label": "合体一覧の並べ替え"
+  }, React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black text-slate-400"
+  }, "並べ替え"), FUSION_SORT_OPTIONS.map(o => {
     const active = fusionSortKey === o.key;
     return React.createElement("button", {
       key: o.key,
@@ -47597,7 +47650,8 @@ function MasuFusionScreen({
           setFusionSortDir('desc');
         }
       },
-      className: `shrink-0 min-h-[44px] px-3.5 rounded-xl text-[11px] font-black border active:scale-95 ${active ? 'bg-violet-600 border-violet-400/60 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`
+      "aria-pressed": active,
+      className: `shrink-0 min-h-[44px] px-3 rounded-xl text-[11px] font-black border whitespace-nowrap active:scale-95 ${active ? 'border-amber-300/70 bg-amber-500/25 text-amber-100' : 'bg-slate-900 border-white/10 text-slate-300'}`
     }, o.label, active && React.createElement("span", {
       className: "ml-0.5"
     }, fusionSortDir === 'asc' ? '▲' : '▼'));
@@ -48335,8 +48389,10 @@ function SkipPickScreen({
   }, React.createElement("div", {
     className: "mb-2 flex items-center justify-between px-2 shrink-0"
   }, React.createElement("button", {
+    type: "button",
+    "aria-label": "戻る",
     onClick: closeBattleSkip,
-    className: "p-3 text-slate-400 active:scale-90"
+    className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
   }, React.createElement(ArrowLeft, {
     size: 20
   })), React.createElement("h2", {
@@ -48947,9 +49003,11 @@ function PickHeroAllyScreen({
     }, React.createElement("div", {
       className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
     }, React.createElement("button", {
+      type: "button",
+      "aria-label": "戻る",
       disabled: !!battleTutorial,
       onClick: onBack,
-      className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
+      className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"
     }, React.createElement(ArrowLeft, {
       size: 20
     })), React.createElement("h2", {
@@ -49422,9 +49480,10 @@ function PickProAlliesScreen({
       paddingTop: '.35rem'
     }
   }, React.createElement("button", {
+    type: "button",
     "aria-label": "戻る",
     onClick: returnToHero,
-    className: "p-3 text-slate-400 active:scale-90"
+    className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
   }, React.createElement(ArrowLeft, {
     size: 20
   })), React.createElement("h2", {
@@ -82371,7 +82430,8 @@ function MonsterHeroGame() {
       }), React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto mb-2"
       }, React.createElement(AssistantBubble, {
-        scene: "mbManagement"
+        scene: "mbManagement",
+        compact: true
       })), React.createElement(ScreenTabs, {
         className: "w-full max-w-md mx-auto",
         value: managementTab,
@@ -82787,7 +82847,8 @@ function MonsterHeroGame() {
       }), React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto mb-2"
       }, React.createElement(AssistantBubble, {
-        scene: "temple"
+        scene: "temple",
+        compact: true
       })), React.createElement("div", {
         className: `w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`
       }, templeLink(React.createElement(PlusCircle, {
@@ -83683,7 +83744,10 @@ function MonsterHeroGame() {
         },
         "aria-label": key === 'mode' ? 'モード選択' : `${label}ランキング`,
         className: `min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab === key ? 'bg-indigo-600 text-white' : 'text-slate-400'}`
-      }, label))), modeSelectTab === 'mode' && React.createElement("div", {
+      }, key !== 'mode' && React.createElement("span", {
+        "aria-hidden": "true",
+        className: "mr-0.5"
+      }, "🏆"), label))), modeSelectTab === 'mode' && React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
@@ -88283,7 +88347,8 @@ function MonsterHeroGame() {
     }), React.createElement("div", {
       className: "shrink-0 w-full mb-2"
     }, React.createElement(AssistantBubble, {
-      scene: "monsterList"
+      scene: "monsterList",
+      compact: true
     })), React.createElement(ScreenLead, null, "解放済み", unlockedMonsterIds.length, "体・タップで詳細を確認できます"), renderMonsterSortFilterBar({
       singleType: true
     }), React.createElement("div", {
@@ -92029,7 +92094,7 @@ function MonsterHeroGame() {
         }
       }, React.createElement("button", {
         onClick: () => setShowHelp(false),
-        className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm shadow-2xl active:scale-95"
+        className: "mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95"
       }, "わかった！冒険に戻る"), React.createElement("button", {
         "aria-label": "",
         onClick: () => {
