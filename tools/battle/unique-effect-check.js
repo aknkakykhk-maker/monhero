@@ -197,7 +197,7 @@ check('丈夫さバフを乗せた実効値がある',
 // 渡されなければ effectiveDef へ倒すので、既存モードの計算は変わらない
 check('被ダメージの固定軽減に実効の丈夫さを使う',
   /Math\.max\(30,\(atkVal-defVal\*[\d.]+\)\*\(1-defenseRate\)\)/.test(source)
-    && source.includes(': effectiveDef;'));
+    && source.includes(': effectiveDef)\n      * trickStartDefMult('));
 check('被ダメージの割合軽減に実効の丈夫さを使う',
   /const defenseRate = Math\.min\(0\.5,defVal\*[\d.]+\);/.test(source));
 // 表示は guardDefFor(slotIdx) を通す形になった(2026-09-22・タクティクスではその子の丈夫さを使う)。
@@ -205,8 +205,9 @@ check('被ダメージの割合軽減に実効の丈夫さを使う',
 check('ガードの軽減量(表示)に実効の丈夫さを使う',
   /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source)
   || (/Math\.floor\(flat \+ guardDefFor\(slotIdx\) \* mult\)/.test(source)
-    && /const guardDefFor = \(slotIdx = null\) => \{\s*if \(slotIdx == null \|\| !isTacticsMode\(runMode\)\) return effectiveDef;/.test(source)));
-check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ effectiveDef\*immediateEffects\.guardMult\)/.test(source));
+    && /const guardDefFor = \(slotIdx = null\) => \{[\s\S]{0,200}?if \(slotIdx == null \|\| !isTacticsMode\(runMode\)\) return effectiveDef \* trickMult;/.test(source)));
+// 2026-10-05: 既存モードの実処理も guardDefFor(null)(＝effectiveDef × トリックスタートの丈夫さの倍率)を通すようになった
+check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ guardDefFor\(null\)\*immediateEffects\.guardMult\)/.test(source));
 
 // --- 「そのターンから効く」か「次のターンから効く」かが説明文と合っていること ---
 // processTurn / handleEnemyTurn は await を挟んで進むため、途中で付けた permaBuffs /
@@ -219,7 +220,7 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
   // 同じターンから効くもの(ローカル変数で持ち回っている)
   const immediatePairs = [
     ["攻撃アップ(おりょう・ゴーレム)", /localOryoAdd\+=/, /getPermaBuff\('atkPct'\)\+getPermaBuff\('muaAtkPct'\)\+additionalOryo/],
-    ["敵の被ダメージ増(モッチー・ミタラシ)", /localDmgModAdd\+=/, /getWaveBuff\('enemyTakenDmgBonus'\)\+additionalDmgMod/],
+    ["敵の被ダメージ増(モッチー・ミタラシ)", /localDmgModAdd\+=/, /getWaveBuff\('enemyTakenDmgBonus'\)\+fateWheelEnemyTakenBonus\(fateWheelRef\.current\)\+additionalDmgMod/],
     ["全体連撃(きき)", /localGlobalComboAdd\+=/, /getPermaBuff\('globalComboDmgPct'\)\+localGlobalComboAdd/],
   ];
   for (const [name, add, use] of immediatePairs) {

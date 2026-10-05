@@ -337,6 +337,118 @@ const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Numbe
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
 const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
 const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+// ==== 勇者特性「トリックスタート」(ゴースト・スプーキー。2026-10-05 ユーザーと決めた値) ====
+// WAVEの1ターン目と、そこから3ターンごと(1・4・7・10…ターン目)に抽選する。
+// 「ちから+20%」「丈夫さ+20%」「毎ターン、最大ライフの5%回復」を**それぞれ50%**で当て、当たったぶんを積む。
+// 重複あり・上限なし。積んだ数は**そのWAVEのあいだ**残る(WAVEが変わると0から)。
+// 抽選とは別に常に: 攻撃が当たったら、その技の消費ガッツの半分のガッツを回復する。
+// 既存5モードは勇者モンが持っているとき(パーティ全体に1つ)、タクティクスは持っている子それぞれ(枠ごとに積む)。
+// 積んだ数の持ち方: { atk, def, regen }(どれも当たった回数)。読み書きは 60-app の trickStartRef
+const TRICK_START_MONSTER_IDS = Object.freeze(['Ghost', 'Spooky']);
+const TRICK_START_EVERY = 3;
+const TRICK_START_CHANCE = 0.5;
+const TRICK_START_ATK_RATE = 0.2;
+const TRICK_START_DEF_RATE = 0.2;
+const TRICK_START_REGEN_RATE = 0.05;
+const TRICK_START_KEYS = Object.freeze(['atk', 'def', 'regen']);
+const hasTrickStartTrait = (id) => TRICK_START_MONSTER_IDS.includes(id);
+// その番のターンに抽選するか(1・4・7…)
+const trickStartRollTurn = (turn) => Number.isInteger(Number(turn)) && Number(turn) >= 1 && (Number(turn) - 1) % TRICK_START_EVERY === 0;
+const trickStartStacksOf = (stacks) => ({
+  atk: Math.max(0, Math.floor(Number(stacks?.atk) || 0)),
+  def: Math.max(0, Math.floor(Number(stacks?.def) || 0)),
+  regen: Math.max(0, Math.floor(Number(stacks?.regen) || 0)),
+});
+// 1回の抽選。rnd は 0〜1 の乱数を返す関数(検査から決め打ちできるように渡す)。返すのは積んだあとと、今回当たったもの
+const rollTrickStart = (stacks, rnd = Math.random) => {
+  const before = trickStartStacksOf(stacks);
+  const gained = { atk: 0, def: 0, regen: 0 };
+  TRICK_START_KEYS.forEach(key => { if (rnd() < TRICK_START_CHANCE) gained[key] = 1; });
+  return { stacks: { atk: before.atk + gained.atk, def: before.def + gained.def, regen: before.regen + gained.regen }, gained };
+};
+const trickStartAtkMult = (stacks) => 1 + TRICK_START_ATK_RATE * trickStartStacksOf(stacks).atk;
+const trickStartDefMult = (stacks) => 1 + TRICK_START_DEF_RATE * trickStartStacksOf(stacks).def;
+const trickStartRegenRate = (stacks) => TRICK_START_REGEN_RATE * trickStartStacksOf(stacks).regen;
+// 攻撃が当たったときに戻るガッツ(払った消費ガッツの半分・切り捨て)
+const trickStartGutsRefund = (paidCost) => Math.floor(Math.max(0, Number(paidCost) || 0) / 2);
+// 当たったものを画面に出す文
+const trickStartGainText = (gained) => {
+  const parts = [];
+  if (gained?.atk) parts.push(`ちから+${Math.round(TRICK_START_ATK_RATE * 100)}%`);
+  if (gained?.def) parts.push(`丈夫さ+${Math.round(TRICK_START_DEF_RATE * 100)}%`);
+  if (gained?.regen) parts.push(`毎ターン回復+${Math.round(TRICK_START_REGEN_RATE * 100)}%`);
+  return parts.join('・');
+};
+// ==== 固有技「運命のコイン」(ゴースト)・「運命の輪」(スプーキー)。2026-10-05 ユーザーと決めた値 ====
+// 正本: docs/spec/GHOST_SKILLS.md。効き目は技の出自(card.monId)で決める(合体で引き継いだ固有技でも同じ)。
+// 運命のコイン: 使うたびに表・裏50%。表=その固有技のダメージ4倍＋「この子の連撃+10%」を1つ積む。
+//              裏=ダメージ0.5倍＋「ゴーストの固有技の消費ガッツ+20%」を1つ積む。
+// 運命の輪: 当てるたびに6つから1つ(外れなし)。敵の与ダメ−30%(2ターン) / 敵の被ダメ+30%(2ターン) /
+//           この技のダメージ3倍 / 2倍 / この子の連撃+10%(積む) / この子のちから+15%(積む)。
+// 「積む」ものはバトル(ラン)が終わるまで残り、重なり、上限なし。持ち方は permaBuffs.fateStacks:
+//   { bySlot: { '<枠>': { combo, atk } }, coinGuts }。連撃とちからは**その枠の子の攻撃だけ**に効く。
+//   消費ガッツは手札に並んでいるとき(まだ枠が決まっていない)にも同じ値を出したいので、技(ゴーストの固有技)の側に持つ
+const FATE_COIN_MONSTER_ID = 'Ghost';
+const FATE_WHEEL_MONSTER_ID = 'Spooky';
+const FATE_COIN_HEADS_MULT = 4;
+const FATE_COIN_TAILS_MULT = 0.5;
+const FATE_COMBO_RATE = 0.1;
+const FATE_COIN_GUTS_RATE = 0.2;
+const FATE_WHEEL_ATK_RATE = 0.15;
+const FATE_WHEEL_DEBUFF_RATE = 0.3;
+const FATE_WHEEL_DEBUFF_TURNS = 2;
+const FATE_WHEEL_OUTCOMES = Object.freeze([
+  Object.freeze({ id: 'enemyAtkDown', label: '敵の与ダメ−30%(2ターン)' }),
+  Object.freeze({ id: 'enemyTakenUp', label: '敵の被ダメ+30%(2ターン)' }),
+  Object.freeze({ id: 'dmg3', label: 'ダメージ3倍', dmgMult: 3 }),
+  Object.freeze({ id: 'dmg2', label: 'ダメージ2倍', dmgMult: 2 }),
+  Object.freeze({ id: 'combo', label: '連撃+10%' }),
+  Object.freeze({ id: 'atk', label: 'ちから+15%' }),
+]);
+// rnd は 0〜1 の乱数を返す関数(検査から決め打ちできるように渡す)
+const rollFateCoin = (rnd = Math.random) => (rnd() < 0.5 ? 'heads' : 'tails');
+const fateCoinDmgMult = (side) => (side === 'heads' ? FATE_COIN_HEADS_MULT : FATE_COIN_TAILS_MULT);
+const rollFateWheel = (rnd = Math.random) => FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+const fateCount = (v) => Math.max(0, Math.floor(Number(v) || 0));
+const fateSlotStacksOf = (fateStacks, slotIdx) => {
+  const raw = fateStacks && typeof fateStacks === 'object' && fateStacks.bySlot && typeof fateStacks.bySlot === 'object'
+    ? fateStacks.bySlot[String(slotIdx)] : null;
+  return { combo: fateCount(raw?.combo), atk: fateCount(raw?.atk) };
+};
+// その枠へ1つ積んだあとの fateStacks を返す(元は書き換えない)。key は 'combo' / 'atk'
+const withFateSlotStack = (fateStacks, slotIdx, key) => {
+  const base = fateStacks && typeof fateStacks === 'object' ? fateStacks : {};
+  const bySlot = base.bySlot && typeof base.bySlot === 'object' ? base.bySlot : {};
+  const cur = fateSlotStacksOf(base, slotIdx);
+  return { ...base, bySlot: { ...bySlot, [String(slotIdx)]: { ...cur, [key]: cur[key] + 1 } } };
+};
+const withFateCoinGuts = (fateStacks) => {
+  const base = fateStacks && typeof fateStacks === 'object' ? fateStacks : {};
+  return { ...base, coinGuts: fateCount(base.coinGuts) + 1 };
+};
+// この子の攻撃に付く連撃({count:1, rate})。積んでいなければ null
+const fateComboOf = (fateStacks, slotIdx) => {
+  const n = Number.isInteger(slotIdx) ? fateSlotStacksOf(fateStacks, slotIdx).combo : 0;
+  return n > 0 ? { count: 1, rate: FATE_COMBO_RATE * n, label: '運命の連撃' } : null;
+};
+// buildAttackHits へ渡す exCombos(タクティクスEXの連撃と並べる。null・1件・配列のどれでも受ける)
+const withFateCombo = (exCombos, fateStacks, slotIdx) => {
+  const fate = fateComboOf(fateStacks, slotIdx);
+  if (!fate) return exCombos;
+  const list = (Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean);
+  return [...list, fate];
+};
+const fateAtkMult = (fateStacks, slotIdx) => 1 + FATE_WHEEL_ATK_RATE * (Number.isInteger(slotIdx) ? fateSlotStacksOf(fateStacks, slotIdx).atk : 0);
+const fateCoinGutsMult = (fateStacks) => 1 + FATE_COIN_GUTS_RATE * fateCount(fateStacks?.coinGuts);
+// 運命の輪の弱体(敵の与ダメ−30%・敵の被ダメ+30%)。残りターン数を持つ。持ち方: { atkDown, takenUp }
+const fateWheelDebuffOf = (debuff) => ({ atkDown: fateCount(debuff?.atkDown), takenUp: fateCount(debuff?.takenUp) });
+const fateWheelEnemyAtkMult = (debuff) => (fateWheelDebuffOf(debuff).atkDown > 0 ? 1 - FATE_WHEEL_DEBUFF_RATE : 1);
+const fateWheelEnemyTakenBonus = (debuff) => (fateWheelDebuffOf(debuff).takenUp > 0 ? FATE_WHEEL_DEBUFF_RATE : 0);
+// 次のターンへ進むとき1つ減らす(使ったターンを1ターン目と数えるので、2ターン = 使ったターンと次のターン)
+const tickFateWheelDebuff = (debuff) => {
+  const d = fateWheelDebuffOf(debuff);
+  return { atkDown: Math.max(0, d.atkDown - 1), takenUp: Math.max(0, d.takenUp - 1) };
+};
 // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
 //   options.mode にそのランのモードを渡すと、そちらの10体が出る。
 //   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、

@@ -34,6 +34,10 @@ const slice = (from, to, fromIndex = 0) => {
 // --- 予測: useCallback の中の関数だけを取り出す ---
 const pred = slice('const getAttackPredictedDmg = useCallback(', ', [mainHero, turnBuffs, permaBuffs]);');
 const predictedArrow = pred.text.slice('const getAttackPredictedDmg = useCallback('.length);
+// 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだ「この子の連撃+10%」も、予測と実処理へ同じ本数が渡る。
+// 決めごと(withFateCombo ほか)は本体から取り出して、両方へ同じものを入れる
+const fateSrc = slice('// ==== 固有技「運命のコイン」', '// ★タクティクスバトルは敵の並びが別').text;
+const fate = Function(`${fateSrc}\nreturn { withFateCombo };`)();
 // 共通の正本(buildAttackHits / attackAtonementDmg)も本体から取り出す
 const rules = slice('const ATTACK_COMBO_RULES = Object.freeze({', '\n// 贖罪の追撃(アーク・イブリースの固有技)');
 // attackAtonementDmg は1行から複数行の関数になったので、閉じの「};」まで取り出す
@@ -48,15 +52,17 @@ const tacticsSlotFlag = Function(`${slotFlagSrc.text}\nreturn tacticsSlotFlag;`)
 // この検査が見るのは**既存5モードのぶん**なので、持ち主は勇者モンで固定する。
 // タクティクスで「札を出した子」になることは tools/mode/tactics-enemy-actions-check.js が見る
 const traitOwnerOfFor = (mainHero) => () => (mainHero && mainHero.id) || null;
-const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `const tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
+const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `${fateSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
-const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist)");
+const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult)");
 if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つからない');
 const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
 const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
   const halved = false; // 「同じ子の2枚目」ではない(パンドラの箱の悪魔側が見る値)
+  ${fateSrc}
+  const livePermaBuff = getPermaBuff; // ターン途中の永続バフ(ref)。ここでは同じ値
   const tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない
   ${act.text}
   return { totalDmg, attackHits, hasCrit };
@@ -75,12 +81,14 @@ for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo']) for (co
     for (const critMode of ['none', 'guaranteed']) for (const extra of [0, 2]) {
       // 剣士モッチーの永久追加連撃(ソードスキルで増える本数)も、予測と実処理の両方へ同じ数が
       // 渡っていなければならない。0本と2本の両方を回す(組み合わせは extra で分ける)
-      const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0, kenshiExtraCombo: extra };
+      const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0, kenshiExtraCombo: extra,
+        // 運命のコイン・運命の輪の「この子の連撃+10%」(枠1の子に extra 個積んだ)。予測も実処理も枠1で呼ぶ
+        fateStacks: extra > 0 ? { bySlot: { 1: { combo: extra } } } : null };
       const turn = { guaranteedCrit: critMode === 'guaranteed' };
       const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
       const getTurnBuff = (k, def) => (k in turn ? turn[k] : def);
       const mainHero = { id: heroId }; const mon = { id: attackerId };
-      const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(card, mon, d, localGlobal);
+      const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(card, mon, d, localGlobal, 1);
       const M = mathWith(() => 1); // 乱数会心は起きない(guaranteedCrit だけが会心)
       const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, M, shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
       // 贖罪の追撃は予測にだけ入っている(実処理では固有技の効果ブロック側)
@@ -115,6 +123,8 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
     let totalDmg = 0, hasCrit = false, attackCount = 0; const attackHits = [];
     const slots = { [slotIdx]: stunMon0 }; const effMul = 1; const localOryoAdd = 0, localDmgModAdd = 0;
     const getDmg = () => d0; const setImmediateTurnBuff = () => {};
+    ${fateSrc}
+    const livePermaBuff = getPermaBuff;
     const tacticsExCombosAt = () => null; const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); // スイーツパラダイス(タクティクスのEX)は既存5モードでは効かない
     ${stun.text.replace(/\}\s*$/, '')}
     return { totalDmg, attackHits, hasCrit, attackCount };
@@ -125,18 +135,20 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
     for (const d of [100, 333]) for (const combo of [0, 0.05]) for (const global of [0, 0.1]) for (const localGlobal of [0, 0.03])
       for (const critMode of ['none', 'guaranteed']) for (const extra of [0, 2]) {
         // あつの挑発でも、剣士モッチーの永久追加連撃の本数は予測と実処理へ同じ数が渡る
-        const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0, kenshiExtraCombo: extra };
+        const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0, kenshiExtraCombo: extra,
+        // 運命のコイン・運命の輪の「この子の連撃+10%」(枠1の子に extra 個積んだ)。予測も実処理も枠1で呼ぶ
+        fateStacks: extra > 0 ? { bySlot: { 1: { combo: extra } } } : null };
         const turn = { guaranteedCrit: critMode === 'guaranteed' };
         const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
         const getTurnBuff = (k, def) => (k in turn ? turn[k] : def);
         const mainHero = { id: heroId }; const mon = { id: attackerId };
         const actual = makeStun()(d, stunCard, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
-        const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(stunCard, mon, d, localGlobal);
+        const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(stunCard, mon, d, localGlobal, 1);
         // 予測側も mainCanCrit:false を渡すので、確定会心のときもメインには会心が乗らず、実処理と完全に一致する
         const knownGap = 0;
         // 実処理・予測と同じ引数で呼ぶ。永久追加連撃の本数(kenshiExtraCombos)を渡し忘れると、
         // ここだけ剣士モッチーの追撃が抜けて「実と予測は合っているのに直接だけ足りない」になる
-        const direct = shared.buildAttackHits({ d, card: stunCard, attackerId, heroId, comboDmgBonus: combo, critDmgBonus: 0.1, guaranteedCrit: turn.guaranteedCrit, rollCrit: () => false, globalComboRate: global + localGlobal, mainCanCrit: false, kenshiExtraCombos: extra });
+        const direct = shared.buildAttackHits({ d, card: stunCard, attackerId, heroId, comboDmgBonus: combo, critDmgBonus: 0.1, guaranteedCrit: turn.guaranteedCrit, rollCrit: () => false, globalComboRate: global + localGlobal, mainCanCrit: false, kenshiExtraCombos: extra, exCombos: fate.withFateCombo(null, perma.fateStacks, 1) });
         stunCases++;
         if (actual.totalDmg !== predicted - knownGap || actual.totalDmg !== direct.reduce((s, h) => s + h.dmg, 0)
           || actual.attackHits[0].isCrit !== false || actual.attackCount !== 1)

@@ -651,7 +651,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -1669,6 +1669,26 @@ function BattleScreen({
               'text-amber-400 border-amber-400/50');
             // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
             if(getPermaBuff('poltzCharges')>0) chip('poltz',<Zap size={9}/>,BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))],`×${Math.floor(getPermaBuff('poltzCharges'))}`,'text-lime-300 border-lime-400/50',{pulse:true});
+            // トリックスタート(ゴースト・スプーキー)で積んだもの。WAVEのあいだだけ残る。
+            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)
+            Object.entries(trickStartView||{}).forEach(([key,st])=>{
+              const parts=[st?.atk>0?`ち+${st.atk*20}%`:null,st?.def>0?`丈+${st.def*20}%`:null,st?.regen>0?`回+${st.regen*5}%`:null].filter(Boolean);
+              if(!parts.length) return;
+              const who=key==='party'?'':(slots[Number(key)]?.name||'');
+              chip(`trick${key}`,<Sparkles size={9}/>,`${who}トリック`,parts.join(' '),'text-violet-300 border-violet-400/50',{short:parts.join(' ')});
+            });
+            // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
+            {
+              const fate=getPermaBuff('fateStacks',null);
+              Object.keys(fate?.bySlot||{}).forEach(key=>{
+                const st=fateSlotStacksOf(fate,key);
+                const parts=[st.combo>0?`連撃+${st.combo*10}%`:null,st.atk>0?`ち+${st.atk*15}%`:null].filter(Boolean);
+                if(parts.length) chip(`fate${key}`,<Star size={9}/>,`${slots[Number(key)]?.name||''}運命`,parts.join(' '),'text-amber-300 border-amber-400/50',{short:parts.join(' ')});
+              });
+              if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
+            }
+            if(fateWheelView?.atkDown>0) chip('fateAtkDown',<ArrowDownCircle size={9}/>,'運命の輪 敵与ダメ',`-30%（残り${fateWheelView.atkDown}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'-30%'});
+            if(fateWheelView?.takenUp>0) chip('fateTakenUp',<PlusCircle size={9}/>,'運命の輪 敵被ダメ',`+30%（残り${fateWheelView.takenUp}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'+30%'});
             // === ターン限定バフ（都度表示） ===
             if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
             if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});

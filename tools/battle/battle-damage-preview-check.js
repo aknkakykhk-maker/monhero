@@ -34,8 +34,9 @@ assert(source.includes('if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSp
 // ★swordSkill はタクティクスのEX「ソード・コンバージョン」(片手盾)だけが false、hitRepeat は二刀流だけが 2 にする。既存5モードは渡さないので常に true / 1
 assert(source.includes("if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);")
   && source.includes('kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null'), 'ソードスキルの連撃'); // 引数の並びの最後は固定しない(critDmgMult などが後ろへ足される)
-// ★exCombos はタクティクスのEX「スイーツパラダイス」だけが渡す。予測と実処理(3か所)の両方へ同じ値を渡す
-assert((source.match(/exCombos:tacticsExCombosAt\(slotIdx(,halved|,true)?\)/g) || []).length === 3, 'スイーツパラダイスの連撃を予測と実処理の両方へ渡す');
+// ★exCombos はタクティクスのEX「スイーツパラダイス」と、運命のコイン・運命の輪で積んだ「この子の連撃+10%」が渡す。
+//   予測と実処理(3か所)の両方へ同じ値を渡す(2026-10-05 運命の連撃を withFateCombo で並べるようになった)
+assert((source.match(/exCombos:withFateCombo\(tacticsExCombosAt\(slotIdx(,halved|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3, 'スイーツパラダイス・運命の連撃を予測と実処理の両方へ渡す');
 // 永久追加連撃の本数は永続バフから読む。予測(getAttackPredictedDmg)にも同じ本数を渡していないと
 // 「予測より実際が多い」になるので、buildAttackHits を呼ぶ3か所すべてで渡していることを見る
 assert((source.match(/kenshiExtraCombos:getPermaBuff\('kenshiExtraCombo'\)/g) || []).length === 3,

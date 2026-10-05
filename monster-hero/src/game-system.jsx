@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 012e0fa1a514198b
+// generated-sha256: 1442198740a6c3d6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-05 22:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 00:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11264,6 +11264,118 @@ const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Numbe
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
 const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
 const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+// ==== 勇者特性「トリックスタート」(ゴースト・スプーキー。2026-10-05 ユーザーと決めた値) ====
+// WAVEの1ターン目と、そこから3ターンごと(1・4・7・10…ターン目)に抽選する。
+// 「ちから+20%」「丈夫さ+20%」「毎ターン、最大ライフの5%回復」を**それぞれ50%**で当て、当たったぶんを積む。
+// 重複あり・上限なし。積んだ数は**そのWAVEのあいだ**残る(WAVEが変わると0から)。
+// 抽選とは別に常に: 攻撃が当たったら、その技の消費ガッツの半分のガッツを回復する。
+// 既存5モードは勇者モンが持っているとき(パーティ全体に1つ)、タクティクスは持っている子それぞれ(枠ごとに積む)。
+// 積んだ数の持ち方: { atk, def, regen }(どれも当たった回数)。読み書きは 60-app の trickStartRef
+const TRICK_START_MONSTER_IDS = Object.freeze(['Ghost', 'Spooky']);
+const TRICK_START_EVERY = 3;
+const TRICK_START_CHANCE = 0.5;
+const TRICK_START_ATK_RATE = 0.2;
+const TRICK_START_DEF_RATE = 0.2;
+const TRICK_START_REGEN_RATE = 0.05;
+const TRICK_START_KEYS = Object.freeze(['atk', 'def', 'regen']);
+const hasTrickStartTrait = (id) => TRICK_START_MONSTER_IDS.includes(id);
+// その番のターンに抽選するか(1・4・7…)
+const trickStartRollTurn = (turn) => Number.isInteger(Number(turn)) && Number(turn) >= 1 && (Number(turn) - 1) % TRICK_START_EVERY === 0;
+const trickStartStacksOf = (stacks) => ({
+  atk: Math.max(0, Math.floor(Number(stacks?.atk) || 0)),
+  def: Math.max(0, Math.floor(Number(stacks?.def) || 0)),
+  regen: Math.max(0, Math.floor(Number(stacks?.regen) || 0)),
+});
+// 1回の抽選。rnd は 0〜1 の乱数を返す関数(検査から決め打ちできるように渡す)。返すのは積んだあとと、今回当たったもの
+const rollTrickStart = (stacks, rnd = Math.random) => {
+  const before = trickStartStacksOf(stacks);
+  const gained = { atk: 0, def: 0, regen: 0 };
+  TRICK_START_KEYS.forEach(key => { if (rnd() < TRICK_START_CHANCE) gained[key] = 1; });
+  return { stacks: { atk: before.atk + gained.atk, def: before.def + gained.def, regen: before.regen + gained.regen }, gained };
+};
+const trickStartAtkMult = (stacks) => 1 + TRICK_START_ATK_RATE * trickStartStacksOf(stacks).atk;
+const trickStartDefMult = (stacks) => 1 + TRICK_START_DEF_RATE * trickStartStacksOf(stacks).def;
+const trickStartRegenRate = (stacks) => TRICK_START_REGEN_RATE * trickStartStacksOf(stacks).regen;
+// 攻撃が当たったときに戻るガッツ(払った消費ガッツの半分・切り捨て)
+const trickStartGutsRefund = (paidCost) => Math.floor(Math.max(0, Number(paidCost) || 0) / 2);
+// 当たったものを画面に出す文
+const trickStartGainText = (gained) => {
+  const parts = [];
+  if (gained?.atk) parts.push(`ちから+${Math.round(TRICK_START_ATK_RATE * 100)}%`);
+  if (gained?.def) parts.push(`丈夫さ+${Math.round(TRICK_START_DEF_RATE * 100)}%`);
+  if (gained?.regen) parts.push(`毎ターン回復+${Math.round(TRICK_START_REGEN_RATE * 100)}%`);
+  return parts.join('・');
+};
+// ==== 固有技「運命のコイン」(ゴースト)・「運命の輪」(スプーキー)。2026-10-05 ユーザーと決めた値 ====
+// 正本: docs/spec/GHOST_SKILLS.md。効き目は技の出自(card.monId)で決める(合体で引き継いだ固有技でも同じ)。
+// 運命のコイン: 使うたびに表・裏50%。表=その固有技のダメージ4倍＋「この子の連撃+10%」を1つ積む。
+//              裏=ダメージ0.5倍＋「ゴーストの固有技の消費ガッツ+20%」を1つ積む。
+// 運命の輪: 当てるたびに6つから1つ(外れなし)。敵の与ダメ−30%(2ターン) / 敵の被ダメ+30%(2ターン) /
+//           この技のダメージ3倍 / 2倍 / この子の連撃+10%(積む) / この子のちから+15%(積む)。
+// 「積む」ものはバトル(ラン)が終わるまで残り、重なり、上限なし。持ち方は permaBuffs.fateStacks:
+//   { bySlot: { '<枠>': { combo, atk } }, coinGuts }。連撃とちからは**その枠の子の攻撃だけ**に効く。
+//   消費ガッツは手札に並んでいるとき(まだ枠が決まっていない)にも同じ値を出したいので、技(ゴーストの固有技)の側に持つ
+const FATE_COIN_MONSTER_ID = 'Ghost';
+const FATE_WHEEL_MONSTER_ID = 'Spooky';
+const FATE_COIN_HEADS_MULT = 4;
+const FATE_COIN_TAILS_MULT = 0.5;
+const FATE_COMBO_RATE = 0.1;
+const FATE_COIN_GUTS_RATE = 0.2;
+const FATE_WHEEL_ATK_RATE = 0.15;
+const FATE_WHEEL_DEBUFF_RATE = 0.3;
+const FATE_WHEEL_DEBUFF_TURNS = 2;
+const FATE_WHEEL_OUTCOMES = Object.freeze([
+  Object.freeze({ id: 'enemyAtkDown', label: '敵の与ダメ−30%(2ターン)' }),
+  Object.freeze({ id: 'enemyTakenUp', label: '敵の被ダメ+30%(2ターン)' }),
+  Object.freeze({ id: 'dmg3', label: 'ダメージ3倍', dmgMult: 3 }),
+  Object.freeze({ id: 'dmg2', label: 'ダメージ2倍', dmgMult: 2 }),
+  Object.freeze({ id: 'combo', label: '連撃+10%' }),
+  Object.freeze({ id: 'atk', label: 'ちから+15%' }),
+]);
+// rnd は 0〜1 の乱数を返す関数(検査から決め打ちできるように渡す)
+const rollFateCoin = (rnd = Math.random) => (rnd() < 0.5 ? 'heads' : 'tails');
+const fateCoinDmgMult = (side) => (side === 'heads' ? FATE_COIN_HEADS_MULT : FATE_COIN_TAILS_MULT);
+const rollFateWheel = (rnd = Math.random) => FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+const fateCount = (v) => Math.max(0, Math.floor(Number(v) || 0));
+const fateSlotStacksOf = (fateStacks, slotIdx) => {
+  const raw = fateStacks && typeof fateStacks === 'object' && fateStacks.bySlot && typeof fateStacks.bySlot === 'object'
+    ? fateStacks.bySlot[String(slotIdx)] : null;
+  return { combo: fateCount(raw?.combo), atk: fateCount(raw?.atk) };
+};
+// その枠へ1つ積んだあとの fateStacks を返す(元は書き換えない)。key は 'combo' / 'atk'
+const withFateSlotStack = (fateStacks, slotIdx, key) => {
+  const base = fateStacks && typeof fateStacks === 'object' ? fateStacks : {};
+  const bySlot = base.bySlot && typeof base.bySlot === 'object' ? base.bySlot : {};
+  const cur = fateSlotStacksOf(base, slotIdx);
+  return { ...base, bySlot: { ...bySlot, [String(slotIdx)]: { ...cur, [key]: cur[key] + 1 } } };
+};
+const withFateCoinGuts = (fateStacks) => {
+  const base = fateStacks && typeof fateStacks === 'object' ? fateStacks : {};
+  return { ...base, coinGuts: fateCount(base.coinGuts) + 1 };
+};
+// この子の攻撃に付く連撃({count:1, rate})。積んでいなければ null
+const fateComboOf = (fateStacks, slotIdx) => {
+  const n = Number.isInteger(slotIdx) ? fateSlotStacksOf(fateStacks, slotIdx).combo : 0;
+  return n > 0 ? { count: 1, rate: FATE_COMBO_RATE * n, label: '運命の連撃' } : null;
+};
+// buildAttackHits へ渡す exCombos(タクティクスEXの連撃と並べる。null・1件・配列のどれでも受ける)
+const withFateCombo = (exCombos, fateStacks, slotIdx) => {
+  const fate = fateComboOf(fateStacks, slotIdx);
+  if (!fate) return exCombos;
+  const list = (Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean);
+  return [...list, fate];
+};
+const fateAtkMult = (fateStacks, slotIdx) => 1 + FATE_WHEEL_ATK_RATE * (Number.isInteger(slotIdx) ? fateSlotStacksOf(fateStacks, slotIdx).atk : 0);
+const fateCoinGutsMult = (fateStacks) => 1 + FATE_COIN_GUTS_RATE * fateCount(fateStacks?.coinGuts);
+// 運命の輪の弱体(敵の与ダメ−30%・敵の被ダメ+30%)。残りターン数を持つ。持ち方: { atkDown, takenUp }
+const fateWheelDebuffOf = (debuff) => ({ atkDown: fateCount(debuff?.atkDown), takenUp: fateCount(debuff?.takenUp) });
+const fateWheelEnemyAtkMult = (debuff) => (fateWheelDebuffOf(debuff).atkDown > 0 ? 1 - FATE_WHEEL_DEBUFF_RATE : 1);
+const fateWheelEnemyTakenBonus = (debuff) => (fateWheelDebuffOf(debuff).takenUp > 0 ? FATE_WHEEL_DEBUFF_RATE : 0);
+// 次のターンへ進むとき1つ減らす(使ったターンを1ターン目と数えるので、2ターン = 使ったターンと次のターン)
+const tickFateWheelDebuff = (debuff) => {
+  const d = fateWheelDebuffOf(debuff);
+  return { atkDown: Math.max(0, d.atkDown - 1), takenUp: Math.max(0, d.takenUp - 1) };
+};
 // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
 //   options.mode にそのランのモードを渡すと、そちらの10体が出る。
 //   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
@@ -31492,7 +31604,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -32510,6 +32622,26 @@ function BattleScreen({
               'text-amber-400 border-amber-400/50');
             // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
             if(getPermaBuff('poltzCharges')>0) chip('poltz',<Zap size={9}/>,BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))],`×${Math.floor(getPermaBuff('poltzCharges'))}`,'text-lime-300 border-lime-400/50',{pulse:true});
+            // トリックスタート(ゴースト・スプーキー)で積んだもの。WAVEのあいだだけ残る。
+            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)
+            Object.entries(trickStartView||{}).forEach(([key,st])=>{
+              const parts=[st?.atk>0?`ち+${st.atk*20}%`:null,st?.def>0?`丈+${st.def*20}%`:null,st?.regen>0?`回+${st.regen*5}%`:null].filter(Boolean);
+              if(!parts.length) return;
+              const who=key==='party'?'':(slots[Number(key)]?.name||'');
+              chip(`trick${key}`,<Sparkles size={9}/>,`${who}トリック`,parts.join(' '),'text-violet-300 border-violet-400/50',{short:parts.join(' ')});
+            });
+            // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
+            {
+              const fate=getPermaBuff('fateStacks',null);
+              Object.keys(fate?.bySlot||{}).forEach(key=>{
+                const st=fateSlotStacksOf(fate,key);
+                const parts=[st.combo>0?`連撃+${st.combo*10}%`:null,st.atk>0?`ち+${st.atk*15}%`:null].filter(Boolean);
+                if(parts.length) chip(`fate${key}`,<Star size={9}/>,`${slots[Number(key)]?.name||''}運命`,parts.join(' '),'text-amber-300 border-amber-400/50',{short:parts.join(' ')});
+              });
+              if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
+            }
+            if(fateWheelView?.atkDown>0) chip('fateAtkDown',<ArrowDownCircle size={9}/>,'運命の輪 敵与ダメ',`-30%（残り${fateWheelView.atkDown}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'-30%'});
+            if(fateWheelView?.takenUp>0) chip('fateTakenUp',<PlusCircle size={9}/>,'運命の輪 敵被ダメ',`+30%（残り${fateWheelView.takenUp}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'+30%'});
             // === ターン限定バフ（都度表示） ===
             if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
             if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});
@@ -38916,6 +39048,22 @@ function MonsterHeroGame() {
   const [waveBuffs, setWaveBuffs] = useState({});
   const addWaveBuff = (key, delta) => setWaveBuffs(p => ({ ...p, [key]: (p[key] || 0) + delta }));
   const getWaveBuff = (key, def = 0) => waveBuffs[key] ?? def;
+  // 勇者特性「トリックスタート」(ゴースト・スプーキー)の積んだ数。そのWAVEのあいだだけ残る。
+  //   bySlot のキーは既存5モードが 'party'(勇者モンが持つときパーティ全体に1つ)、タクティクスは枠の番号。
+  //   ダメージ計算はターンの途中でも読むので ref が正本。画面の描き直しのために同じ中身を state にも置く。
+  //   wave / turn は「どのWAVEの何ターン目まで抽選したか」(同じターンに2回抽選しないため)
+  const trickStartRef = useRef({ wave: null, turn: null, bySlot: {} });
+  const [trickStartView, setTrickStartView] = useState({});
+  const resetTrickStart = () => { trickStartRef.current = { wave: null, turn: null, bySlot: {} }; setTrickStartView({}); };
+  const trickStartKeyOf = (slotIdx) => (isTacticsMode(runMode) ? (Number.isInteger(slotIdx) ? String(slotIdx) : null) : 'party');
+  const trickStartStacksAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? (trickStartRef.current.bySlot[key] || null) : null; };
+  // スプーキーの固有技「運命の輪」で敵にかけた弱体の残りターン数 { atkDown, takenUp }。
+  //   敵1体ぶんなのでWAVEが変わると消す。ダメージ計算はターンの途中でも読むので ref が正本、画面のために state にも置く。
+  //   積む強化(連撃・ちから)と運命のコインの消費ガッツは permaBuffs.fateStacks(ランが終わるまで残る)
+  const fateWheelRef = useRef({ atkDown: 0, takenUp: 0 });
+  const [fateWheelView, setFateWheelView] = useState({ atkDown: 0, takenUp: 0 });
+  const writeFateWheel = (next) => { const value = fateWheelDebuffOf(next); fateWheelRef.current = value; setFateWheelView(value); return value; };
+  const resetFateWheel = () => writeFateWheel(null);
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
@@ -46800,6 +46948,8 @@ function MonsterHeroGame() {
       if (actualBaseMult > 0) { const increaseRate = actualCurrentMult / actualBaseMult; cost = Math.floor(actualBaseGuts * increaseRate); }
       // 中二病特性: 固有技使用のたびに永続で消費ガッツ+10%(重複可)
       if (card.type === 'unique' && (card.monId==='Ark'||card.monId==='Iblis')) cost = Math.floor(cost * (1 + 0.1*getPermaBuff('chuuniUniqueStack')));
+      // 運命のコイン(ゴースト): 裏が出るたびに、ゴーストの固有技の消費ガッツ+20%(重複可・ランが終わるまで)
+      if (card.type === 'unique' && card.monId===FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks',null)));
     }
     // ★タクティクスは「その子だけ」のぶんも見る(2026-09-22 ユーザー選択)。
     //   ピクシー/ミーアの消費0・アーク/イブリースの消費+15%・パンドラの共鳴は、
@@ -47837,7 +47987,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
-    const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
+    // ★運命の輪(スプーキー)の「敵の与ダメ−30%」は、モノリスの敵攻撃ダウンと同じく敵の攻撃力へ掛ける
+    const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct'))*fateWheelEnemyAtkMult(fateWheelRef.current));
     // ★特性は「その子の能力」。タクティクスバトルでは**狙われた子自身の特性**が効く
     //   (2026-09-20 ユーザー提案「とももんも勇者特性がかかるようにしてもいいかと思う」)。
     //   もとは勇者モンだけだったが、ステータスを1体ずつ持つのに特性だけ勇者モンのもの、
@@ -47854,8 +48005,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   isTacticsMode で締めて、既存モードは必ず effectiveDef(パーティの丈夫さ)を通す
     const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot)
       ? tacticsBattleUnit(targetSlot) : null;
-    const defVal = targetUnit
-      ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
+    // ★トリックスタート(ゴースト・スプーキー)で積んだ「丈夫さ+20%」を、狙われた子の丈夫さへ掛ける
+    const defVal = (targetUnit
+      ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)
+      * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5,defVal*0.00015);
@@ -47863,7 +48016,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const dmgBase = Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))*((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0)*lifeSourceDamageMult(traitHeroId,turnCount);
     const soulDamageRemaining=Math.max(0,1-(soulBattleParty.damageReduction/100));
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount, fateWheelView]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
@@ -48352,10 +48505,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   今までどおりパーティの値(既存5モード)。2026-09-22 ユーザー指摘で分かったとおり、
   //   実際の計算(processTurnの新モード分岐)はその子の丈夫さを使っているのに、画面だけが
   //   パーティの平均で出していた。硬い子が構えれば実際はもっと受け止めるので、数字が合わない
+  // ★トリックスタート(ゴースト・スプーキー)の「丈夫さ+20%」はガードの軽減量にも効く(被ダメージの式と同じ倍率)
   const guardDefFor = (slotIdx = null) => {
-    if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;
+    const trickMult = trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? slotIdx : null));
+    if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef * trickMult;
     const unit = tacticsBattleUnit(slotIdx);
-    return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
+    return (unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef) * trickMult;
   };
   const guardValueOf = (flat, mult, slotIdx = null) =>
     (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
@@ -48437,7 +48592,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const pendingHalved=counter.peek(pendingCard,excludeIdx!=null&&cardAssignments[excludeIdx]!=null?cardAssignments[excludeIdx]:null);
     return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
   };
-  const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
+  const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist, skillDmgMult=1) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx-attackStartDist);
     // ★エイキの「緋桜瞬歩」が効いているあいだは、距離補正が距離の差に関係なく ×1.7
@@ -48467,9 +48622,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     const totalBuffMult=traitMult*tacticsExMultiBuffNow(slotIdx).dmg*tacticsExPandoraDevilNow(slotIdx,isSecondOrLaterAtk).dmg*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
-    const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
-      ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
-    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
+    // ★トリックスタート(ゴースト・スプーキー)で積んだ「ちから+20%」を、攻撃した子のちからへ掛ける
+    //   (既存5モードはパーティ共通のちから。積んでいなければ1倍)
+    const attackerAtk=(isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
+      ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk)*trickStartAtkMult(trickStartStacksAt(slotIdx))
+      *fateAtkMult(livePermaBuff('fateStacks',null),slotIdx);
+    // ★skillDmgMult … 運命のコイン(表4倍・裏0.5倍)・運命の輪(3倍・2倍)の「この技のダメージ」。ほかの呼び出しは渡さないので1倍
+    // ★運命の輪の「敵の被ダメ+30%」は、モッチーの被ダメUPと同じ足し算の枠へ入れる
+    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*(Number(skillDmgMult)>0?Number(skillDmgMult):1)*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+fateWheelEnemyTakenBonus(fateWheelRef.current)+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
@@ -48497,7 +48657,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx,halved), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,halved),getPermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -48758,7 +48918,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           && !isTacticsSweepOnSpot(intent,tacticsUnitsRef.current,actingEnemyDist);
         const actingIntent = tacticsSweepIntent(intent,tacticsUnitsRef.current,actingEnemyDist);
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
-        const baseGuardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
+        const baseGuardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + guardDefFor(null)*immediateEffects.guardMult) : 0;
         // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
         //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
         const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;
@@ -49144,6 +49304,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const showRegenTotal=!isTacticsMode(runMode);
     if (autoHealVal>0) { if(showRegenTotal) addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (gutsRegen>0) { if(showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+    // 運命の輪(スプーキー)の弱体は、使ったターンを1ターン目と数えて2ターン。次のターンへ進むここで1つ減らす
+    if (fateWheelRef.current.atkDown>0||fateWheelRef.current.takenUp>0) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
     // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
     {
@@ -49158,6 +49320,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (lifeSourceGain>0) gainGuts(lifeSourceGain);
       }
       if (lifeSourceGain>0) { addPopup(`🌳 生命の源 ガッツ +${lifeSourceGain}`,'guts','text-lime-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+    }
+    // トリックスタート(ゴースト・スプーキー): 積んだ「毎ターン回復」の数ぶん、ライフを最大の5%ずつ回復する。
+    // タクティクスは積んだ子それぞれ(その子の上限×率)、既存5モードは勇者モンが積んだぶんをパーティへ(合計上限×率)
+    {
+      let trickHeal=0;
+      if (isTacticsMode(runMode)) {
+        tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx=>{
+          const rate=trickStartRegenRate(trickStartRef.current.bySlot[String(slotIdx)]);
+          if (rate<=0) return;
+          const healed=tacticsRateHealAt(slotIdx,rate,0);
+          if (healed) { trickHeal+=healed.hp; currentHp=healed.total; }
+        });
+      } else {
+        const rate=trickStartRegenRate(trickStartRef.current.bySlot.party);
+        if (rate>0) {
+          trickHeal=Math.floor(liveEffectiveMaxHp()*rate);
+          if (trickHeal>0) setHp(p=>Math.min(liveEffectiveMaxHp(),p+trickHeal));
+        }
+      }
+      if (trickHeal>0) { addPopup(`🎩 トリックスタート ライフ +${trickHeal}`,'life','text-violet-200 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     }
     if (didRegen) { await battleWait(500); }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
@@ -49701,7 +49883,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx,true), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
@@ -49779,6 +49961,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
         const activeMon=slots[slotIdx];
+        // 運命のコイン・運命の輪で決まる「この技のダメージ」の倍率と、運命の輪の出目(当たったあとに効かせる)
+        let fateDmgMult=1, fateWheelPick=null;
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの固有技効果を正しく再現するため
@@ -49811,9 +49995,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               addPopup(`ソードスキル! 連撃パワー ${nextPower}/${KENSHI_COMBO_POWER_MAX}`,'hero','text-violet-300 text-lg font-bold');
             }
           }
+          // 運命のコイン(ゴースト): 使うたびに表・裏50%。表=この技4倍＋この子の連撃+10%、裏=この技0.5倍＋ゴーストの固有技の消費ガッツ+20%。
+          //   積むものは permaBuffs.fateStacks(ランが終わるまで残る・重なる)。この技の消費ガッツはもう払ってあるので、裏の増加は次の使用から
+          else if(card.monId===FATE_COIN_MONSTER_ID){
+            const side=rollFateCoin();
+            fateDmgMult=fateCoinDmgMult(side);
+            if(side==='heads'){
+              writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
+              addPopup(`🪙 運命のコイン 表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`,'hero','text-amber-300 text-lg font-black drop-shadow-md');
+            }else{
+              writePermaBuffs(p=>({...p,fateStacks:withFateCoinGuts(p.fateStacks)}));
+              addPopup(`🪙 運命のコイン 裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`,'hero','text-slate-300 text-lg font-bold');
+            }
+          }
+          // 運命の輪(スプーキー): 6つから1つ。ダメージ3倍・2倍はこの技に、ほかは当たったあとに効かせる(下の固有技の効果)
+          else if(card.monId===FATE_WHEEL_MONSTER_ID){
+            fateWheelPick=rollFateWheel();
+            if(fateWheelPick.dmgMult) fateDmgMult=fateWheelPick.dmgMult;
+          }
         }
         const attackStartDist=attackDistance;
-        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult); attackCount++;
         const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
         const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
@@ -49823,7 +50025,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0))*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx,halved), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,halved),livePermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -49833,6 +50035,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const themeOf={skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined};
         for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, themeOf, ...(hit.noAnim?{noAnim:true}:{})}); }
         if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
+        // ★トリックスタート(ゴースト・スプーキー): 攻撃が当たったら、その技で払った消費ガッツの半分を回復する。
+        //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
+        {
+          const trickOwnerId=isTacticsMode(runMode)?tacticsUnitsRef.current[slotIdx]?.id:mainHero?.id;
+          if (hasTrickStartTrait(trickOwnerId) && finalD>0) {
+            const refund=trickStartGutsRefund(cardCost);
+            if (refund>0) { gainGutsAt(slotIdx,refund); addPopup(`🎩 ガッツ +${refund}`,'guts','text-violet-200 text-base font-bold drop-shadow-md'); }
+          }
+        }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
@@ -49874,6 +50085,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             }
             addPopup(`大樹の加護！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION*effMul*100)}%減`,'hero','text-emerald-300 text-lg font-bold');
             if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');
+          }
+          // 運命の輪(スプーキー): 当たったときだけ出目を効かせる(外したら何も起きない。ダメージ倍率はもう掛けてある)
+          else if(card.monId===FATE_WHEEL_MONSTER_ID){
+            if(fateWheelPick && finalD>0){
+              const id=fateWheelPick.id;
+              if(id==='enemyAtkDown') writeFateWheel({...fateWheelRef.current,atkDown:FATE_WHEEL_DEBUFF_TURNS});
+              else if(id==='enemyTakenUp') writeFateWheel({...fateWheelRef.current,takenUp:FATE_WHEEL_DEBUFF_TURNS});
+              else if(id==='combo') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
+              else if(id==='atk') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'atk')}));
+              addPopup(`🎡 運命の輪！ ${fateWheelPick.label}`,'hero','text-fuchsia-300 text-lg font-black drop-shadow-md');
+            }
           }
           else if(card.monId==='Pandora'){
             // 双極共振は次ターンから2ターン。再使用時は加算せず2へ更新する。
@@ -50854,9 +51076,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); resetFateWheel(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
+  // 勇者特性「トリックスタート」(ゴースト・スプーキー)の抽選。WAVEの1ターン目と、そこから3ターンごと。
+  //   ターン数が変わったのを見て1回だけ抽選する(時間停止でターン数が進まなかったときは抽選しない)。
+  //   WAVEが変わったら積んだ数を0から。持ち主: 既存5モードは勇者モン(パーティに1つ)、タクティクスは立っている持ち主それぞれ
+  useEffect(() => {
+    if (gameState !== 'BATTLE') return;
+    const cur = trickStartRef.current;
+    if (cur.wave !== wave) { cur.wave = wave; cur.turn = null; cur.bySlot = {}; setTrickStartView({}); }
+    if (cur.turn === turnCount || !trickStartRollTurn(turnCount)) return;
+    cur.turn = turnCount;
+    const units = tacticsUnitsRef.current;
+    const holders = isTacticsMode(runMode)
+      ? tacticsAliveSlots(units).filter(slotIdx => hasTrickStartTrait(units[slotIdx]?.id)).map(slotIdx => ({ key: String(slotIdx), name: ALL_PLAYER_MONSTERS[units[slotIdx]?.id]?.name || '' }))
+      : (hasTrickStartTrait(mainHero?.id) ? [{ key: 'party', name: '' }] : []);
+    if (!holders.length) return;
+    const next = { ...cur.bySlot };
+    holders.forEach(({ key, name }) => {
+      const rolled = rollTrickStart(next[key]);
+      next[key] = rolled.stacks;
+      const text = trickStartGainText(rolled.gained);
+      const who = name ? `${name}の` : '';
+      addPopup(text ? `🎩 ${who}トリックスタート！ ${text}` : `🎩 ${who}トリックスタート… はずれ`, 'hero', text ? 'text-violet-200 text-lg font-black drop-shadow-md' : 'text-slate-300 text-base font-bold');
+    });
+    cur.bySlot = next;
+    setTrickStartView(next);
+  }, [gameState, wave, turnCount, runMode, mainHero?.id]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleTraining等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -51009,7 +51256,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
     resetTacticsJoinCatchUp(); // あとから入る子の追いつき補正は1周ごとに数え直す
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
@@ -51205,7 +51452,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     resetTacticsJoinCatchUp();
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
@@ -51253,7 +51500,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugBattleRef.current=true; extremeRunRef.current=false; debugResultRef.current=false;
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     resetTacticsJoinCatchUp();
-    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({}); resetTrickStart(); resetFateWheel();
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection();
@@ -56857,7 +57104,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} fateWheelView={fateWheelView}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}

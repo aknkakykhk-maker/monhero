@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1967bd4218752774
+// source-sha256: 22b5680b77a44a3b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-05 22:45";
+const BUILD_DATE = "2026-10-06 00:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15899,6 +15899,142 @@ const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Numbe
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
 const isLifeTreeGuardCard = card => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
 const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+const TRICK_START_MONSTER_IDS = Object.freeze(['Ghost', 'Spooky']);
+const TRICK_START_EVERY = 3;
+const TRICK_START_CHANCE = 0.5;
+const TRICK_START_ATK_RATE = 0.2;
+const TRICK_START_DEF_RATE = 0.2;
+const TRICK_START_REGEN_RATE = 0.05;
+const TRICK_START_KEYS = Object.freeze(['atk', 'def', 'regen']);
+const hasTrickStartTrait = id => TRICK_START_MONSTER_IDS.includes(id);
+const trickStartRollTurn = turn => Number.isInteger(Number(turn)) && Number(turn) >= 1 && (Number(turn) - 1) % TRICK_START_EVERY === 0;
+const trickStartStacksOf = stacks => ({
+  atk: Math.max(0, Math.floor(Number(stacks?.atk) || 0)),
+  def: Math.max(0, Math.floor(Number(stacks?.def) || 0)),
+  regen: Math.max(0, Math.floor(Number(stacks?.regen) || 0))
+});
+const rollTrickStart = (stacks, rnd = Math.random) => {
+  const before = trickStartStacksOf(stacks);
+  const gained = {
+    atk: 0,
+    def: 0,
+    regen: 0
+  };
+  TRICK_START_KEYS.forEach(key => {
+    if (rnd() < TRICK_START_CHANCE) gained[key] = 1;
+  });
+  return {
+    stacks: {
+      atk: before.atk + gained.atk,
+      def: before.def + gained.def,
+      regen: before.regen + gained.regen
+    },
+    gained
+  };
+};
+const trickStartAtkMult = stacks => 1 + TRICK_START_ATK_RATE * trickStartStacksOf(stacks).atk;
+const trickStartDefMult = stacks => 1 + TRICK_START_DEF_RATE * trickStartStacksOf(stacks).def;
+const trickStartRegenRate = stacks => TRICK_START_REGEN_RATE * trickStartStacksOf(stacks).regen;
+const trickStartGutsRefund = paidCost => Math.floor(Math.max(0, Number(paidCost) || 0) / 2);
+const trickStartGainText = gained => {
+  const parts = [];
+  if (gained?.atk) parts.push(`ちから+${Math.round(TRICK_START_ATK_RATE * 100)}%`);
+  if (gained?.def) parts.push(`丈夫さ+${Math.round(TRICK_START_DEF_RATE * 100)}%`);
+  if (gained?.regen) parts.push(`毎ターン回復+${Math.round(TRICK_START_REGEN_RATE * 100)}%`);
+  return parts.join('・');
+};
+const FATE_COIN_MONSTER_ID = 'Ghost';
+const FATE_WHEEL_MONSTER_ID = 'Spooky';
+const FATE_COIN_HEADS_MULT = 4;
+const FATE_COIN_TAILS_MULT = 0.5;
+const FATE_COMBO_RATE = 0.1;
+const FATE_COIN_GUTS_RATE = 0.2;
+const FATE_WHEEL_ATK_RATE = 0.15;
+const FATE_WHEEL_DEBUFF_RATE = 0.3;
+const FATE_WHEEL_DEBUFF_TURNS = 2;
+const FATE_WHEEL_OUTCOMES = Object.freeze([Object.freeze({
+  id: 'enemyAtkDown',
+  label: '敵の与ダメ−30%(2ターン)'
+}), Object.freeze({
+  id: 'enemyTakenUp',
+  label: '敵の被ダメ+30%(2ターン)'
+}), Object.freeze({
+  id: 'dmg3',
+  label: 'ダメージ3倍',
+  dmgMult: 3
+}), Object.freeze({
+  id: 'dmg2',
+  label: 'ダメージ2倍',
+  dmgMult: 2
+}), Object.freeze({
+  id: 'combo',
+  label: '連撃+10%'
+}), Object.freeze({
+  id: 'atk',
+  label: 'ちから+15%'
+})]);
+const rollFateCoin = (rnd = Math.random) => rnd() < 0.5 ? 'heads' : 'tails';
+const fateCoinDmgMult = side => side === 'heads' ? FATE_COIN_HEADS_MULT : FATE_COIN_TAILS_MULT;
+const rollFateWheel = (rnd = Math.random) => FATE_WHEEL_OUTCOMES[Math.min(FATE_WHEEL_OUTCOMES.length - 1, Math.max(0, Math.floor(rnd() * FATE_WHEEL_OUTCOMES.length)))];
+const fateCount = v => Math.max(0, Math.floor(Number(v) || 0));
+const fateSlotStacksOf = (fateStacks, slotIdx) => {
+  const raw = fateStacks && typeof fateStacks === 'object' && fateStacks.bySlot && typeof fateStacks.bySlot === 'object' ? fateStacks.bySlot[String(slotIdx)] : null;
+  return {
+    combo: fateCount(raw?.combo),
+    atk: fateCount(raw?.atk)
+  };
+};
+const withFateSlotStack = (fateStacks, slotIdx, key) => {
+  const base = fateStacks && typeof fateStacks === 'object' ? fateStacks : {};
+  const bySlot = base.bySlot && typeof base.bySlot === 'object' ? base.bySlot : {};
+  const cur = fateSlotStacksOf(base, slotIdx);
+  return {
+    ...base,
+    bySlot: {
+      ...bySlot,
+      [String(slotIdx)]: {
+        ...cur,
+        [key]: cur[key] + 1
+      }
+    }
+  };
+};
+const withFateCoinGuts = fateStacks => {
+  const base = fateStacks && typeof fateStacks === 'object' ? fateStacks : {};
+  return {
+    ...base,
+    coinGuts: fateCount(base.coinGuts) + 1
+  };
+};
+const fateComboOf = (fateStacks, slotIdx) => {
+  const n = Number.isInteger(slotIdx) ? fateSlotStacksOf(fateStacks, slotIdx).combo : 0;
+  return n > 0 ? {
+    count: 1,
+    rate: FATE_COMBO_RATE * n,
+    label: '運命の連撃'
+  } : null;
+};
+const withFateCombo = (exCombos, fateStacks, slotIdx) => {
+  const fate = fateComboOf(fateStacks, slotIdx);
+  if (!fate) return exCombos;
+  const list = (Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean);
+  return [...list, fate];
+};
+const fateAtkMult = (fateStacks, slotIdx) => 1 + FATE_WHEEL_ATK_RATE * (Number.isInteger(slotIdx) ? fateSlotStacksOf(fateStacks, slotIdx).atk : 0);
+const fateCoinGutsMult = fateStacks => 1 + FATE_COIN_GUTS_RATE * fateCount(fateStacks?.coinGuts);
+const fateWheelDebuffOf = debuff => ({
+  atkDown: fateCount(debuff?.atkDown),
+  takenUp: fateCount(debuff?.takenUp)
+});
+const fateWheelEnemyAtkMult = debuff => fateWheelDebuffOf(debuff).atkDown > 0 ? 1 - FATE_WHEEL_DEBUFF_RATE : 1;
+const fateWheelEnemyTakenBonus = debuff => fateWheelDebuffOf(debuff).takenUp > 0 ? FATE_WHEEL_DEBUFF_RATE : 0;
+const tickFateWheelDebuff = debuff => {
+  const d = fateWheelDebuffOf(debuff);
+  return {
+    atkDown: Math.max(0, d.atkDown - 1),
+    takenUp: Math.max(0, d.takenUp - 1)
+  };
+};
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null, enemyTurnMultiplier = 1, options = {}) => {
   const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode) && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
   const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
@@ -51611,6 +51747,8 @@ function BattleScreen({
   tacticsExIntroVisible,
   dismissTacticsExIntro,
   tacticsPandoraForms,
+  trickStartView,
+  fateWheelView,
   teachingFx,
   totalTurnCount,
   turnCount,
@@ -53066,6 +53204,43 @@ function BattleScreen({
       size: 9
     }), BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], `×${Math.floor(getPermaBuff('poltzCharges'))}`, 'text-lime-300 border-lime-400/50', {
       pulse: true
+    });
+    Object.entries(trickStartView || {}).forEach(([key, st]) => {
+      const parts = [st?.atk > 0 ? `ち+${st.atk * 20}%` : null, st?.def > 0 ? `丈+${st.def * 20}%` : null, st?.regen > 0 ? `回+${st.regen * 5}%` : null].filter(Boolean);
+      if (!parts.length) return;
+      const who = key === 'party' ? '' : slots[Number(key)]?.name || '';
+      chip(`trick${key}`, React.createElement(Sparkles, {
+        size: 9
+      }), `${who}トリック`, parts.join(' '), 'text-violet-300 border-violet-400/50', {
+        short: parts.join(' ')
+      });
+    });
+    {
+      const fate = getPermaBuff('fateStacks', null);
+      Object.keys(fate?.bySlot || {}).forEach(key => {
+        const st = fateSlotStacksOf(fate, key);
+        const parts = [st.combo > 0 ? `連撃+${st.combo * 10}%` : null, st.atk > 0 ? `ち+${st.atk * 15}%` : null].filter(Boolean);
+        if (parts.length) chip(`fate${key}`, React.createElement(Star, {
+          size: 9
+        }), `${slots[Number(key)]?.name || ''}運命`, parts.join(' '), 'text-amber-300 border-amber-400/50', {
+          short: parts.join(' ')
+        });
+      });
+      if (fateCount(fate?.coinGuts) > 0) chip('fateCoinGuts', React.createElement(Zap, {
+        size: 9
+      }), '運命のコイン消費', `+${fateCount(fate.coinGuts) * 20}%`, 'text-slate-300 border-slate-400/50');
+    }
+    if (fateWheelView?.atkDown > 0) chip('fateAtkDown', React.createElement(ArrowDownCircle, {
+      size: 9
+    }), '運命の輪 敵与ダメ', `-30%（残り${fateWheelView.atkDown}T）`, 'text-fuchsia-300 border-fuchsia-400/50', {
+      pulse: true,
+      short: '-30%'
+    });
+    if (fateWheelView?.takenUp > 0) chip('fateTakenUp', React.createElement(PlusCircle, {
+      size: 9
+    }), '運命の輪 敵被ダメ', `+30%（残り${fateWheelView.takenUp}T）`, 'text-fuchsia-300 border-fuchsia-400/50', {
+      pulse: true,
+      short: '+30%'
     });
     if (getNextTurnBuff('melosoFullRecoveryMult', 0) > 0) chip('meloso', React.createElement(Heart, {
       size: 9
@@ -62359,6 +62534,40 @@ function MonsterHeroGame() {
     [key]: (p[key] || 0) + delta
   }));
   const getWaveBuff = (key, def = 0) => waveBuffs[key] ?? def;
+  const trickStartRef = useRef({
+    wave: null,
+    turn: null,
+    bySlot: {}
+  });
+  const [trickStartView, setTrickStartView] = useState({});
+  const resetTrickStart = () => {
+    trickStartRef.current = {
+      wave: null,
+      turn: null,
+      bySlot: {}
+    };
+    setTrickStartView({});
+  };
+  const trickStartKeyOf = slotIdx => isTacticsMode(runMode) ? Number.isInteger(slotIdx) ? String(slotIdx) : null : 'party';
+  const trickStartStacksAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    return key ? trickStartRef.current.bySlot[key] || null : null;
+  };
+  const fateWheelRef = useRef({
+    atkDown: 0,
+    takenUp: 0
+  });
+  const [fateWheelView, setFateWheelView] = useState({
+    atkDown: 0,
+    takenUp: 0
+  });
+  const writeFateWheel = next => {
+    const value = fateWheelDebuffOf(next);
+    fateWheelRef.current = value;
+    setFateWheelView(value);
+    return value;
+  };
+  const resetFateWheel = () => writeFateWheel(null);
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   const nextTurnBuffsRef = useRef({});
@@ -71028,6 +71237,7 @@ function MonsterHeroGame() {
         cost = Math.floor(actualBaseGuts * increaseRate);
       }
       if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) cost = Math.floor(cost * (1 + 0.1 * getPermaBuff('chuuniUniqueStack')));
+      if (card.type === 'unique' && card.monId === FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks', null)));
     }
     const slotBuffs = isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null;
     if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts')) && ['atk', 'range_atk', 'unique'].includes(card.type)) cost = 0;
@@ -72352,16 +72562,16 @@ function MonsterHeroGame() {
   const soulBattleSummaryParts = soulBattleHasEffects ? [soulBattleParty.damageReduction > 0 ? `被ダメ -${soulBattleParty.damageReduction.toFixed(1).replace(/\\.0$/, '')}%` : null, unifiedSpecialDefense.rate > 0 ? `特殊防御 ${unifiedSpecialDefense.rate.toFixed(1).replace(/\\.0$/, '')}%` : null, battleIntimidate > 0 ? `威圧 ${battleIntimidate.toFixed(1).replace(/\\.0$/, '')}%` : null, soulBattleParty.autoGutsMultiplier > 1 ? `自動G ×${soulBattleParty.autoGutsMultiplier.toFixed(3)}` : null, soulBattleParty.coordinationCardBonus > 0 ? `カード +${soulBattleParty.coordinationCardBonus}` : null].filter(Boolean) : [];
   const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot = null) => {
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
-    const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
+    const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')) * fateWheelEnemyAtkMult(fateWheelRef.current));
     const traitHeroId = !isTacticsMode(runMode) ? mainHero?.id : Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot]?.id || null : mainHero?.id;
     const chuuniCutActive = (traitHeroId === 'Ark' || traitHeroId === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2;
     const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot) ? tacticsBattleUnit(targetSlot) : null;
-    const defVal = targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
+    const defVal = (targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef) * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));
     const defenseRate = Math.min(0.5, defVal * 0.00015);
     const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0) * lifeSourceDamageMult(traitHeroId, turnCount);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount, fateWheelView]);
   const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1))) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
@@ -72877,9 +73087,10 @@ function MonsterHeroGame() {
   const cardHalveGroup = slotIdx => isTacticsMode(runMode) ? `slot${Number.isInteger(slotIdx) ? slotIdx : 'none'}` : 'turn';
   const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
   const guardDefFor = (slotIdx = null) => {
-    if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;
+    const trickMult = trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? slotIdx : null));
+    if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef * trickMult;
     const unit = tacticsBattleUnit(slotIdx);
-    return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
+    return (unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef) * trickMult;
   };
   const guardValueOf = (flat, mult, slotIdx = null) => flat > 0 || mult > 0 ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   const tacticsSpreadGuardValue = slotIdx => {
@@ -72967,7 +73178,7 @@ function MonsterHeroGame() {
       }, pendingCard, pendingHalved)
     };
   };
-  const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
+  const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist, skillDmgMult = 1) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
     const exDistMult = tacticsExMultiBuffNow(slotIdx).distMult;
@@ -72991,8 +73202,8 @@ function MonsterHeroGame() {
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
     const totalBuffMult = traitMult * tacticsExMultiBuffNow(slotIdx).dmg * tacticsExPandoraDevilNow(slotIdx, isSecondOrLaterAtk).dmg * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
-    const attackerAtk = isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
-    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
+    const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
+    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
@@ -73024,7 +73235,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: tacticsExCombosAt(slotIdx, halved),
+      exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved), getPermaBuff('fateStacks', null), slotIdx),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -73299,7 +73510,7 @@ function MonsterHeroGame() {
         const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
         const sweptAway = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && !isTacticsSweepOnSpot(intent, tacticsUnitsRef.current, actingEnemyDist);
         const actingIntent = tacticsSweepIntent(intent, tacticsUnitsRef.current, actingEnemyDist);
-        const baseGuardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
+        const baseGuardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + guardDefFor(null) * immediateEffects.guardMult) : 0;
         const guardValue = intent.variant === 'pierce' ? 0 : baseGuardValue;
         if (sweptAway) {
           addPopup('間合いが外れた！ 威力ダウン', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
@@ -73680,6 +73891,7 @@ function MonsterHeroGame() {
       if (showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`, 'guts', 'text-cyan-300 font-black text-lg italic drop-shadow-md');
       didRegen = true;
     }
+    if (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -73693,6 +73905,30 @@ function MonsterHeroGame() {
       }
       if (lifeSourceGain > 0) {
         addPopup(`🌳 生命の源 ガッツ +${lifeSourceGain}`, 'guts', 'text-lime-300 font-black text-lg italic drop-shadow-md');
+        didRegen = true;
+      }
+    }
+    {
+      let trickHeal = 0;
+      if (isTacticsMode(runMode)) {
+        tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx => {
+          const rate = trickStartRegenRate(trickStartRef.current.bySlot[String(slotIdx)]);
+          if (rate <= 0) return;
+          const healed = tacticsRateHealAt(slotIdx, rate, 0);
+          if (healed) {
+            trickHeal += healed.hp;
+            currentHp = healed.total;
+          }
+        });
+      } else {
+        const rate = trickStartRegenRate(trickStartRef.current.bySlot.party);
+        if (rate > 0) {
+          trickHeal = Math.floor(liveEffectiveMaxHp() * rate);
+          if (trickHeal > 0) setHp(p => Math.min(liveEffectiveMaxHp(), p + trickHeal));
+        }
+      }
+      if (trickHeal > 0) {
+        addPopup(`🎩 トリックスタート ライフ +${trickHeal}`, 'life', 'text-violet-200 font-black text-lg italic drop-shadow-md');
         didRegen = true;
       }
     }
@@ -74400,7 +74636,7 @@ function MonsterHeroGame() {
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
-            exCombos: tacticsExCombosAt(slotIdx, true),
+            exCombos: withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
           totalDmg += d;
@@ -74519,6 +74755,8 @@ function MonsterHeroGame() {
         }
       } else if (card.type !== 'guard' && card.type !== 'weak_guard') {
         const activeMon = slots[slotIdx];
+        let fateDmgMult = 1,
+          fateWheelPick = null;
         if (card.type === 'unique') {
           if (card.monId === 'Mocchi' || card.monId === 'Mitarashi') {
             addPermaBuff('dmgCutPct', 0.03 * effMul);
@@ -74557,10 +74795,29 @@ function MonsterHeroGame() {
               }));
               addPopup(`ソードスキル! 連撃パワー ${nextPower}/${KENSHI_COMBO_POWER_MAX}`, 'hero', 'text-violet-300 text-lg font-bold');
             }
+          } else if (card.monId === FATE_COIN_MONSTER_ID) {
+            const side = rollFateCoin();
+            fateDmgMult = fateCoinDmgMult(side);
+            if (side === 'heads') {
+              writePermaBuffs(p => ({
+                ...p,
+                fateStacks: withFateSlotStack(p.fateStacks, slotIdx, 'combo')
+              }));
+              addPopup(`🪙 運命のコイン 表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE * 100)}%`, 'hero', 'text-amber-300 text-lg font-black drop-shadow-md');
+            } else {
+              writePermaBuffs(p => ({
+                ...p,
+                fateStacks: withFateCoinGuts(p.fateStacks)
+              }));
+              addPopup(`🪙 運命のコイン 裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE * 100)}%`, 'hero', 'text-slate-300 text-lg font-bold');
+            }
+          } else if (card.monId === FATE_WHEEL_MONSTER_ID) {
+            fateWheelPick = rollFateWheel();
+            if (fateWheelPick.dmgMult) fateDmgMult = fateWheelPick.dmgMult;
           }
         }
         const attackStartDist = attackDistance;
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist);
+        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult);
         attackCount++;
         const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
@@ -74580,7 +74837,7 @@ function MonsterHeroGame() {
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: tacticsExCombosAt(slotIdx, halved),
+          exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved), livePermaBuff('fateStacks', null), slotIdx),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
@@ -74622,6 +74879,16 @@ function MonsterHeroGame() {
         if (rangeMoveTarget != null) {
           forcedMoveTarget = rangeMoveTarget;
           attackDistance = rangeMoveTarget;
+        }
+        {
+          const trickOwnerId = isTacticsMode(runMode) ? tacticsUnitsRef.current[slotIdx]?.id : mainHero?.id;
+          if (hasTrickStartTrait(trickOwnerId) && finalD > 0) {
+            const refund = trickStartGutsRefund(cardCost);
+            if (refund > 0) {
+              gainGutsAt(slotIdx, refund);
+              addPopup(`🎩 ガッツ +${refund}`, 'guts', 'text-violet-200 text-base font-bold drop-shadow-md');
+            }
+          }
         }
         if (card.type === 'unique') {
           if (card.monId === 'Ham') {
@@ -74700,6 +74967,24 @@ function MonsterHeroGame() {
             }
             addPopup(`大樹の加護！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION * effMul * 100)}%減`, 'hero', 'text-emerald-300 text-lg font-bold');
             if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
+          } else if (card.monId === FATE_WHEEL_MONSTER_ID) {
+            if (fateWheelPick && finalD > 0) {
+              const id = fateWheelPick.id;
+              if (id === 'enemyAtkDown') writeFateWheel({
+                ...fateWheelRef.current,
+                atkDown: FATE_WHEEL_DEBUFF_TURNS
+              });else if (id === 'enemyTakenUp') writeFateWheel({
+                ...fateWheelRef.current,
+                takenUp: FATE_WHEEL_DEBUFF_TURNS
+              });else if (id === 'combo') writePermaBuffs(p => ({
+                ...p,
+                fateStacks: withFateSlotStack(p.fateStacks, slotIdx, 'combo')
+              }));else if (id === 'atk') writePermaBuffs(p => ({
+                ...p,
+                fateStacks: withFateSlotStack(p.fateStacks, slotIdx, 'atk')
+              }));
+              addPopup(`🎡 運命の輪！ ${fateWheelPick.label}`, 'hero', 'text-fuchsia-300 text-lg font-black drop-shadow-md');
+            }
           } else if (card.monId === 'Pandora') {
             if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'pandoraResonanceTurns', 2);else setNextTurnBuff('pandoraResonanceTurns', 2);
             addPopup('双極共振！ 次の2ターン消費半減', 'hero', 'text-fuchsia-300 text-lg font-bold');
@@ -75773,8 +76058,45 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(0);
     setWaveDistDamage([0, 0, 0, 0]);
     setWaveBuffs({});
+    resetFateWheel();
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
+  useEffect(() => {
+    if (gameState !== 'BATTLE') return;
+    const cur = trickStartRef.current;
+    if (cur.wave !== wave) {
+      cur.wave = wave;
+      cur.turn = null;
+      cur.bySlot = {};
+      setTrickStartView({});
+    }
+    if (cur.turn === turnCount || !trickStartRollTurn(turnCount)) return;
+    cur.turn = turnCount;
+    const units = tacticsUnitsRef.current;
+    const holders = isTacticsMode(runMode) ? tacticsAliveSlots(units).filter(slotIdx => hasTrickStartTrait(units[slotIdx]?.id)).map(slotIdx => ({
+      key: String(slotIdx),
+      name: ALL_PLAYER_MONSTERS[units[slotIdx]?.id]?.name || ''
+    })) : hasTrickStartTrait(mainHero?.id) ? [{
+      key: 'party',
+      name: ''
+    }] : [];
+    if (!holders.length) return;
+    const next = {
+      ...cur.bySlot
+    };
+    holders.forEach(({
+      key,
+      name
+    }) => {
+      const rolled = rollTrickStart(next[key]);
+      next[key] = rolled.stacks;
+      const text = trickStartGainText(rolled.gained);
+      const who = name ? `${name}の` : '';
+      addPopup(text ? `🎩 ${who}トリックスタート！ ${text}` : `🎩 ${who}トリックスタート… はずれ`, 'hero', text ? 'text-violet-200 text-lg font-black drop-shadow-md' : 'text-slate-300 text-base font-bold');
+    });
+    cur.bySlot = next;
+    setTrickStartView(next);
+  }, [gameState, wave, turnCount, runMode, mainHero?.id]);
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null, restoredStats = null) => {
     setPhasePlan(null);
     setDefeatFx(null);
@@ -75938,6 +76260,8 @@ function MonsterHeroGame() {
     setWaveBuffs({});
     setTurnBuffs({});
     writeNextTurnBuffs({});
+    resetTrickStart();
+    resetFateWheel();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -76146,6 +76470,8 @@ function MonsterHeroGame() {
     setWaveBuffs({});
     setTurnBuffs({});
     writeNextTurnBuffs({});
+    resetTrickStart();
+    resetFateWheel();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -76233,6 +76559,8 @@ function MonsterHeroGame() {
     setWaveBuffs({});
     setTurnBuffs({});
     writeNextTurnBuffs({});
+    resetTrickStart();
+    resetFateWheel();
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     writeTotalAllDamage(0);
@@ -88142,6 +88470,8 @@ function MonsterHeroGame() {
       tacticsExIntroVisible: tacticsExIntroVisible,
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
+      trickStartView: trickStartView,
+      fateWheelView: fateWheelView,
       tacticsExTurnUsed: tacticsExTurnUsed,
       passTacticsTurn: passTacticsTurn,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
