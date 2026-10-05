@@ -8285,3 +8285,19 @@ songId `emerald_rush` / bgmTrackId `melo_emerald_rush` / 譜面は MHB CHART ENG
   小節の頭は低音がいちばん強い拍（自動解析と同じ）
 - **歯ごたえはユーザーが「自動」と決めた**（`challengeFactor` は書かない）。EASY 6 / NORMAL 7 / HARD 11 / EXPERT 18 / MASTER 25、
   ノーツ 191 / 218 / 302 / 365 / 415。候補: 1.2 で MASTER 31 ／ 1.4 で 32 ／ 1.7 は EXPERT が MASTER を追い越して出荷できない
+
+## 「Wrath of the Thorn King」をモンヒロビートへ足した（2026-10-05）
+
+ユーザー指示（mp3 1本とジャケット1枚）。曲名はファイル名から、副題「茨の王の怒り」はジャケットの文字から。
+songId `wrath_of_the_thorn_king` / bgmTrackId `melo_wrath_of_the_thorn_king` / 譜面は MHB CHART ENGINE Rev.28（`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` 20章）。
+
+- **ジャケット**: 512×512 の JPEG（fit:cover・quality 80・mozjpeg・66KB）
+- **音量**: ×1.2202（+1.73dB）で **-14.03 LUFS / -1.35 dBTP**。長さ 96.4 秒
+- **テンポ**: 曲を通して 138 → 143 BPM くらいへじわじわ速くなる。格子は 141.507 BPM / 拍の頭 234ms の1本にし、
+  5秒ごとに測った拍のずれ（19点・48〜511ms）を `warpPoints` と `RHYTHM_SONG_BEATS` の5つ目に書いた。
+  固定の格子のままだと、真ん中（42秒あたり）で拍が 0.5 秒遅れる。
+  この曲は解析の音の立ち上がりが格子にほとんど乗らない（偶然と同じくらい）ので、当たり具合は
+  「拍の位置の音の変化量 ÷ 拍のあいだの音の変化量」で確かめた（曲線なし 1.14 → 曲線あり 1.34）
+- **歯ごたえはユーザーが「自動」と決めた**（`challengeFactor` も `chartIntensity` も書かない）。EASY 5 / NORMAL 7 / HARD 9 / EXPERT 16 / MASTER 22、
+  ノーツ 106 / 124 / 166 / 201 / 229。候補: 1.3 で MASTER 24（1.6・2.0 でも 24 のまま頭打ち）／
+  `strong` で 7 / 8 / 13 / 21 / 28 ／ `strong`＋1.3 で 8 / 9 / 15 / 22 / 29

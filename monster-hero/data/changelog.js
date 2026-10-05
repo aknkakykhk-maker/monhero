@@ -34,6 +34,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-05 ユーザー指示(mp3とジャケット)。歯ごたえは自動のままとユーザーが決めた
+    date: "2026-10-05 19:49", type:'update', title:'モンヒロビート：新曲「Wrath of the Thorn King」を追加しました', status:'new',
+    image: 'images/song-art/wrath-of-the-thorn-king.jpg?v=e65c5105b221',
+    items:[
+      'モンヒロビートに「Wrath of the Thorn King」（茨の王の怒り・1分36秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.5 ／ NORMAL Lv.7 ／ HARD Lv.9 ／ EXPERT Lv.16 ／ MASTER Lv.22 です。',
+      'ノーツ数は 106 ／ 124 ／ 166 ／ 201 ／ 229 です。',
+      '曲が進むにつれてテンポがじわじわ速くなっていく曲です。ノーツもその速さに合わせて流れてきます。',
+    ],
+    assistantNotice: { id:'update_notice_wrath_of_the_thorn_king_v1', type:'content' },
+  },
+  {
     // 2026-10-05 ユーザーから正式なジャケットが届いた(公開時は曲に埋め込まれていた絵を使っていた)
     date: "2026-10-05 19:27", type:'update', group:'rhythm', title:'モンヒロビート：「Emerald Rush」のジャケットが新しくなりました', status:'new',
     image: 'images/song-art/emerald-rush.jpg?v=d9bc5685600b',
