@@ -574,7 +574,7 @@ check('クイック難易度画面に同じ高さで状態が分かる3択を出
     && has("[QUICK_REWARD_POLICY_DIAMOND,'ダイヤ優先','経験値0・ダイヤ×2']")
     && has('grid grid-cols-3 gap-1') && has('aria-pressed={selected}') && has('min-h-[44px]'));
 check('クイックの全難易度カードは報酬方針で外寸とボタン位置が変わらない',
-  has("quick?'h-[366px] flex flex-col':''") && has("${quick?'mt-auto':''}")
+  has("quick?'h-[384px] flex flex-col':''") && has("${quick?'mt-auto':''}")
     && has('data-difficulty-card={key}') && has('data-difficulty-carousel'));
 // ★見た目は組み直したが、守りたいのは「折り返さない(whitespace-nowrap)」ことと
 //   「経験値・虹のプシュケー・ダイヤの3行が同じ大きさで並ぶ」こと

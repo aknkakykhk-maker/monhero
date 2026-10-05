@@ -24,7 +24,7 @@ const order = source.indexOf("Legend:") < source.indexOf("EXTREME: { label:'EXTR
   && source.indexOf("EXTREME: { label:'EXTREME'") < source.indexOf("NIGHTMARE: { label:'NIGHTMARE'")
   && source.indexOf("NIGHTMARE: { label:'NIGHTMARE'") < source.indexOf("CHAOS: { label:'CHAOS'");
 assert(order, 'Legend → EXTREME → NIGHTMARE → CHAOSの順序');
-assert(source.includes("quick?'h-[366px] flex flex-col':''"), 'クイックカードの固定高を共用');
+assert(source.includes("quick?'h-[384px] flex flex-col':''"), 'クイックカードの固定高を共用');
 assert(source.includes('data-difficulty-assistant') && source.includes('compact={quick}'), '助手コメントをカード外のコンパクト枠へ配置');
 assert(changelog.includes("id:'update_notice_quick_chaos_v1'") && changelog.includes("id:'update_notice_chaos_v1'"), '極限CHAOSとは別IDの通知');
 assert(help.includes("title:'クイック CHAOS'") && help.includes('経験値×45・ダイヤ×13.5'), 'ヘルプに正式仕様を掲載');

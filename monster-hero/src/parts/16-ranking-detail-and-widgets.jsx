@@ -428,19 +428,23 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
     onChange(valueFromClientX(e.clientX));
   };
   const step = (delta) => { onInteractStart && onInteractStart(); onChange(Math.max(0, Math.min(100, value + delta))); };
+  // −／＋は 40px、つまみは上下 16px ぶん外からでもつかめるようにする(2026-10-05。24px の −／＋ と
+  // 高さ8pxの溝は、指では押しそこねやすかった)。見た目の溝の太さは変えない
   return (
     <div className="flex items-center gap-1.5">
       <div className="w-9 shrink-0 flex flex-col items-center gap-0.5">
-        <span className="text-xs leading-none">{icon}</span>
-        <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none">{label}</span>
+        <span className="text-sm leading-none">{icon}</span>
+        <span className="text-[10px] font-black text-slate-300 uppercase tracking-wider leading-none">{label}</span>
       </div>
-      <button onClick={()=>step(-1)} className="shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">−</button>
-      <div ref={trackRef} onPointerDown={startDrag} className="relative flex-1 h-2 rounded-full bg-slate-800 border border-white/10 cursor-pointer touch-none">
-        <div className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${gradient}`} style={{width:`${value}%`}}></div>
-        <div className={`absolute top-1/2 rounded-full bg-white border-2 ${thumbRing} shadow-[0_0_6px_rgba(255,255,255,0.7)] transition-transform ${dragging?'scale-125':''}`} style={{left:`${value}%`, width:'14px', height:'14px', transform:'translate(-50%,-50%)'}}></div>
+      <button type="button" aria-label={`${label}の音量を下げる`} onClick={()=>step(-1)} className="shrink-0 w-10 h-10 rounded-xl bg-slate-800 border border-white/10 text-slate-300 font-black text-sm active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">−</button>
+      <div ref={trackRef} onPointerDown={startDrag} role="slider" aria-label={`${label}の音量`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value} className="relative flex-1 h-10 flex items-center cursor-pointer touch-none">
+        <div className="relative w-full h-2 rounded-full bg-slate-800 border border-white/10">
+          <div className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${gradient}`} style={{width:`${value}%`}}></div>
+          <div className={`absolute top-1/2 rounded-full bg-white border-2 ${thumbRing} shadow-[0_0_6px_rgba(255,255,255,0.7)] transition-transform ${dragging?'scale-125':''}`} style={{left:`${value}%`, width:'18px', height:'18px', transform:'translate(-50%,-50%)'}}></div>
+        </div>
       </div>
-      <button onClick={()=>step(1)} className="shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">＋</button>
-      <span className="w-6 shrink-0 text-right text-[9px] font-mono font-black text-slate-300">{value}</span>
+      <button type="button" aria-label={`${label}の音量を上げる`} onClick={()=>step(1)} className="shrink-0 w-10 h-10 rounded-xl bg-slate-800 border border-white/10 text-slate-300 font-black text-sm active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">＋</button>
+      <span data-volume-value className="w-7 shrink-0 text-right text-[11px] font-mono font-black text-slate-200">{value}</span>
     </div>
   );
 };

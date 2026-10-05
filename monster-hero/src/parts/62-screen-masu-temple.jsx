@@ -161,7 +161,8 @@ function MasuSoulRankScreen({
             const normalized=normalizeMasuProgression(masu);
             const canOpen=status.ok;
             const label=normalized.soulRankStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][normalized.soulRankStage]:normalized.transcended?'超越済み':'未超越';
-            const sub=!status.ok?status.reason:status.levelReady?status.next.label+'へ進化可能':'Lv.'+status.next.requiredLevel+'で'+status.next.label;
+            // カードの幅に収まらない長い理由(「先に神殿で超越する必要があります。」)は、短い言い方にして枠からはみ出させない
+            const sub=!normalized.transcended?'先に超越が必要':!status.ok?status.reason:status.levelReady?status.next.label+'へ進化可能':'Lv.'+status.next.requiredLevel+'で'+status.next.label;
             return <button key={masu.id} data-soul-rank-candidate={masu.id} disabled={!canOpen} onClick={()=>{setSoulRankSelectedId(masu.id);setSoulRankError('');}} style={MONSTER_CARD_STYLE} className={MONSTER_CARD_CLASS+' border-sky-400/40 bg-slate-900 disabled:opacity-35'}>
               {renderMonsterCardBody({masu,base,nameBand:true,status:<span className="block text-center"><b className="text-[10px] text-sky-200">{label}</b><small className={'block text-[10px] leading-tight '+(status.levelReady?'text-emerald-300':'text-slate-400')}>{sub}</small></span>})}
             </button>;
