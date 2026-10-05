@@ -388,7 +388,7 @@ function MasuFusionScreen({
       if (!d) { resetFusionFlow(); return null; }
       const pctAfter = Math.max(0,Math.min(100,(d.after.xpIntoLevel/Math.max(1,d.after.xpForNext))*100));
       return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:32000}}>
+        <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.97)',zIndex:32000}}>
           <Sparkles size={32} className="text-amber-300 mb-2"/>
           <h2 className="text-xl font-black italic text-white mb-1">合体完了！</h2>
           <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.5)] mb-3 bg-slate-900">
