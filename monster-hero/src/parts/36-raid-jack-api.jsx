@@ -138,6 +138,34 @@ const sbFetchRaidJackARanking = async (limit = 100, eventId) => {
   const rows = raidJackParseRows(await raidJackRequest(`raid_jack_a_ranking?${raidJackEventParam(eventId)}&select=breeder_id,total_damage,last_hit_at&order=total_damage.desc,last_hit_at.asc&limit=${n}`));
   return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.total_damage) || 0 })) : null;
 };
+// 「1戦あたりの最大ダメージ」ランキング(A・B共通。kind は 'a' か 'b')。サーバーのビュー raid_jack_max_hit_ranking
+// (docs/sql/raid/RAID_JACK_MAX_HIT_RANKING.sql)。1戦の与ダメージ = 表の1行なので、人ごとに max(damage) を取る。
+// まだビューが無い間は null を返し、画面は「準備中」にする。報酬には使わない
+const sbFetchRaidJackMaxHitRanking = async (kind, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&select=breeder_id,max_damage,last_hit_at&order=max_damage.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r.max_damage) || 0 })) : null;
+};
+// 自分の最大ダメージ(無ければ 0・読めなければ null)
+const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const k = kind === 'b' ? 'b' : 'a';
+  const rows = raidJackParseRows(await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&breeder_id=eq.${id}&select=max_damage&limit=1`));
+  if (!rows) return null;
+  return rows.length ? (Number(rows[0].max_damage) || 0) : 0;
+};
+// 最大ダメージで自分より上の人数(順位 = これ + 1)
+const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId) => {
+  const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
+  const k = kind === 'b' ? 'b' : 'a';
+  const result = await raidJackRequest(`raid_jack_max_hit_ranking?${raidJackEventParam(eventId)}&kind=eq.${k}&max_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
 // 自分の貢献(A: 段階ごと / B: 累計)。圏外でも自分の数字と順位(=自分より多い人数+1)が出せる
 const sbFetchRaidJackSelf = async (breederId, eventId) => {
   const id = raidJackSafeId(breederId);

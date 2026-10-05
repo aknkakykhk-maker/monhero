@@ -37,7 +37,7 @@ const make = () => {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(`${defs}\n${api}\nthis.o={RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackARanking,sbFetchRaidJackSelf,sbCountRaidJackAhead};`, ctx);
+  vm.runInContext(`${defs}\n${api}\nthis.o={RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackARanking,sbFetchRaidJackSelf,sbCountRaidJackAhead,sbFetchRaidJackMaxHitRanking,sbFetchRaidJackMaxHitSelf,sbCountRaidJackMaxHitAhead};`, ctx);
   return { o: ctx.o, calls, store, setResponder: (f) => { responder = f; } };
 };
 
@@ -121,6 +121,19 @@ const make = () => {
     t.setResponder(() => ({ ok: true, status: 206, body: '[]', headers: { 'content-range': '0-0/4' } }));
     const callsBefore2 = t.calls.length;
     check('A累計の自分より多い人数も、専用のビューで数える(段階では絞らない)', (await t.o.sbCountRaidJackAhead('a_all', 3, 500)) === 4 && /raid_jack_a_ranking\?/.test(t.calls[callsBefore2].url) && !/tier=eq/.test(t.calls[callsBefore2].url));
+    // 1戦あたりの最大ダメージ(A・B共通のビュー raid_jack_max_hit_ranking。報酬には使わない)
+    t.setResponder(() => ({ ok: true, status: 200, body: JSON.stringify([{ breeder_id: 'm1', max_damage: 900 }, { breeder_id: 'm2', max_damage: 500 }]) }));
+    const callsMax = t.calls.length;
+    const maxRank = await t.o.sbFetchRaidJackMaxHitRanking('b');
+    check('最大ダメージは raid_jack_max_hit_ranking を kind で絞り、大きい順に100件', /raid_jack_max_hit_ranking\?event_id=eq\.raid_jack_2026&kind=eq\.b/.test(t.calls[callsMax].url) && /order=max_damage\.desc/.test(t.calls[callsMax].url) && /limit=100/.test(t.calls[callsMax].url) && maxRank.length === 2 && maxRank[0].total === 900);
+    t.setResponder(() => ({ ok: true, status: 200, body: '[{"max_damage":321}]' }));
+    check('自分の最大ダメージを読む(無ければ0)', (await t.o.sbFetchRaidJackMaxHitSelf(BID, 'a')) === 321);
+    t.setResponder(() => ({ ok: true, status: 200, body: '[]' }));
+    check('記録が無い人の最大ダメージは0', (await t.o.sbFetchRaidJackMaxHitSelf(BID, 'a')) === 0);
+    t.setResponder(() => ({ ok: true, status: 206, body: '[]', headers: { 'content-range': '0-0/6' } }));
+    check('最大ダメージで自分より上の人数を Content-Range から読む', (await t.o.sbCountRaidJackMaxHitAhead('a', 100)) === 6);
+    t.setResponder(() => ({ ok: true, status: 404, body: '' }));
+    check('最大ダメージのビューがまだ無い(404)ときは null(画面は準備中)', (await t.o.sbFetchRaidJackMaxHitRanking('a')) === null);
     t.setResponder(() => ({ ok: true, status: 404, body: '' }));
     check('ビューがまだ無い(404)ときは null(画面は準備中)', (await t.o.sbFetchRaidJackARanking()) === null);
     // 後から足したビュー(raid_jack_a_ranking)だけが無いとき、与ダメージの送信・段階の合計・報酬は止めない(2026-10-05)
