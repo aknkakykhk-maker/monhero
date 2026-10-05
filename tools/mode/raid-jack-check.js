@@ -103,6 +103,14 @@ check('0ターンは0周・壊れた値も0周・20ターンを超えても40周
   check('結果画面に「クイック周回ぶん」を別のまとまりで出す', /data-raid-jack-quick-award/.test(app));
 }
 
+// ④-3 距離適性はタクティクスバトルの仕様(合算しない。その距離に立っている子の適性だけ)・2026-10-05・ユーザー指摘
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const start = app.slice(app.indexOf('const startRaidJackBattle = (req) => {'), app.indexOf('// 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める'));
+  check('ジャック戦の開始で、編成全員の距離適性を合算して渡さない(立っている子の適性だけが効く)', start.length > 0 && !/raidApt/.test(start) && /initBattle\(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null\)/.test(start));
+  check('配置画面の「いまの適性」は、その距離に立っている子のぶんだけ(合計ではない)', /const standing=raidJackPlace\.slots\[dist\]/.test(app) && /perSlotApt=\{true\}/.test(app));
+}
+
 // ⑤ 公開フラグ
 const rel = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJack は開始日時までは偽を返す(見るたびに数え直す getter・読み込み時に touch しても落ちない)',
