@@ -575,6 +575,16 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
+    // --- ⑫-3 オボロゲソウ「おぼろ返し」(2026-10-05 ユーザー選択) ---
+    const obSlot = await startWith('オボロゲソウ');
+    await page.waitForTimeout(1500);
+    await tapSlot(obSlot);
+    p = await panel();
+    check('「おぼろ返し」: 5/5・カードと併用できる・3ターン', !!p && p.name === 'おぼろ返し' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 260));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    check('使うと距離枠の札が「あと3ターン」になる', await page.locator(`[data-tactics-ex-mark="${obSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと3ターン');
+
     // --- ⑫-2 プラント「緑のめぐみ」(2026-10-05 ユーザー指示) ---
     const plSlot = await startWith('プラント');
     await page.waitForTimeout(1500);
