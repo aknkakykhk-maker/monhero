@@ -164,7 +164,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
                 <div className="text-[10px] font-black tracking-widest" style={{ color }}>{who.name}</div>
                 <div className="text-[12px] text-white leading-relaxed">{text}</div>
               </div>
-              <button onClick={()=>setOpen(false)} aria-label="説明を閉じる" className="shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={18}/></button>
+              <button onClick={()=>setOpen(false)} aria-label="説明を閉じる" className="mh-hit-expand relative shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={18}/></button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5">
               {topic
