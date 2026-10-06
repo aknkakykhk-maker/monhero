@@ -10097,7 +10097,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const id = Date.now()+Math.random();
     const slotOf = slot !== undefined ? slot : popupSlotRef.current;
     const popupSlot = isTacticsMode(runMode) && side !== 'enemy' && Number.isInteger(slotOf) ? slotOf : null;
-    setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot}]);
+    // ★敵の上に出す文字のうち、ダメージの数字ではないもの(スタン・咆哮・再生・移動など)は fx 印を付ける。
+    //   画面は fx を小さな札にして敵の足元へ並べ、大きなダメージの数字とは別の場所に出す(重なって読めなかった・2026-10-06 ユーザー指示)
+    const fx = side === 'enemy' && !isEnemyDamagePopupText(text);
+    setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot,fx}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
