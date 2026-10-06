@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 49b672e1b1bffdb9
+// generated-sha256: 96dd40dc3e8faac9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 18:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 19:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24091,6 +24091,8 @@ const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ JUST: 1.0, MARVELOUS: 0.
 const RAID_JACK_RHYTHM_BASE = 1000;   // MASTER のジャスト1個
 const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;   // 1コンボあたりの上乗せ(100コンボで +5%)
+// 達成の補正: ふつうの演奏は基準の半分。オールマーベラス=1.0(従来どおり)・オールエクセレント=0.9・フルコンボ=0.7(いずれも従来比)
+const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({ NONE: 0.5, FULL_COMBO: 0.7, ALL_EXCELLENT: 0.9, ALL_MARVELOUS: 1.0 });
 const RAID_JACK_RHYTHM_DAMAGE_LIMIT = null;   // null = 上限なし
 const RAID_JACK_RHYTHM_SEND_MAX = 100000000;   // 1回の送信の上限(桁あふれを弾くだけ。ほかの挑み方と同じ)
 // 判定1個あたりのダメージ(難易度ごと)= round(1000 × 難易度の補正) を基準に、判定の割合を掛けて四捨五入
@@ -24112,14 +24114,16 @@ const raidJackRhythmDamage = (input) => {
   Object.keys(table).forEach((j) => { raw += counts[j] * table[j]; });
   if (raw <= 0) return 0;
   const combo = num(i.maxCombo);
-  let damage = Math.floor(raw * (1 + combo * RAID_JACK_RHYTHM_COMBO_PER_COMBO) + 1e-9);
+  const F = RAID_JACK_RHYTHM_ACHIEVE_FACTORS;
+    const achieve = i.allMarvelous === true ? F.ALL_MARVELOUS : i.allExcellent === true ? F.ALL_EXCELLENT : i.fullCombo === true ? F.FULL_COMBO : F.NONE;
+    let damage = Math.floor(raw * (1 + combo * RAID_JACK_RHYTHM_COMBO_PER_COMBO) * achieve + 1e-9);
   if (Number.isFinite(RAID_JACK_RHYTHM_DAMAGE_LIMIT)) damage = Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, damage);
   return Math.max(0, Math.min(RAID_JACK_RHYTHM_SEND_MAX, damage));
 };
 // 演奏の結果(result・difficulty)から、ダメージを出す
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
-  return raidJackRhythmDamage({ judgments: r.judgments, precise: r.precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true });
+  return raidJackRhythmDamage({ judgments: r.judgments, precise: r.precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true, fullCombo: r.fullCombo === true, allExcellent: r.allExcellent === true, allMarvelous: r.allMarvelous === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す

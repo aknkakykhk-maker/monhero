@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 74b8e756172bbb1b
+// source-sha256: 52a2249e8d149e7e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 18:38";
+const BUILD_DATE = "2026-10-06 19:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37545,6 +37545,12 @@ const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({
   MASTER: 1.0
 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;
+const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({
+  NONE: 0.5,
+  FULL_COMBO: 0.7,
+  ALL_EXCELLENT: 0.9,
+  ALL_MARVELOUS: 1.0
+});
 const RAID_JACK_RHYTHM_DAMAGE_LIMIT = null;
 const RAID_JACK_RHYTHM_SEND_MAX = 100000000;
 const RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT = Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_DIFFICULTY_FACTORS).map(([id, factor]) => {
@@ -37577,7 +37583,9 @@ const raidJackRhythmDamage = input => {
   });
   if (raw <= 0) return 0;
   const combo = num(i.maxCombo);
-  let damage = Math.floor(raw * (1 + combo * RAID_JACK_RHYTHM_COMBO_PER_COMBO) + 1e-9);
+  const F = RAID_JACK_RHYTHM_ACHIEVE_FACTORS;
+  const achieve = i.allMarvelous === true ? F.ALL_MARVELOUS : i.allExcellent === true ? F.ALL_EXCELLENT : i.fullCombo === true ? F.FULL_COMBO : F.NONE;
+  let damage = Math.floor(raw * (1 + combo * RAID_JACK_RHYTHM_COMBO_PER_COMBO) * achieve + 1e-9);
   if (Number.isFinite(RAID_JACK_RHYTHM_DAMAGE_LIMIT)) damage = Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, damage);
   return Math.max(0, Math.min(RAID_JACK_RHYTHM_SEND_MAX, damage));
 };
@@ -37588,7 +37596,10 @@ const raidJackRhythmDamageOf = (result, difficulty) => {
     precise: r.precise,
     maxCombo: r.maxCombo,
     difficultyId: difficulty && difficulty.id,
-    assist: r.assist === true
+    assist: r.assist === true,
+    fullCombo: r.fullCombo === true,
+    allExcellent: r.allExcellent === true,
+    allMarvelous: r.allMarvelous === true
   });
 };
 const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
