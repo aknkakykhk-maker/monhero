@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 665254ec7ebaea47
+// generated-sha256: 4f935e4638608076
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 00:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 00:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4116,6 +4116,7 @@ const BGM_TRACKS = [
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
   { id:'melo_monster_short', name:'Monster short ver.', creator:'オリジナル', src:'audio/bgm-monster-short.mp3', gain:1, loop:true },
+  { id:'melo_anima', name:'ANiMA', creator:'オリジナル', src:'audio/bgm-anima.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -5153,6 +5154,7 @@ const Audio_ = (() => {
   const AUDIO_CACHE_KEYS = {
 // <audio-cache-keys>
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
+    "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
@@ -8622,6 +8624,58 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
 const playtimeTodayMs = (value, now=Date.now()) => {
   const base = normalizePlaytime(value);
   return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+};
+// --- 端末ごとのプレイ時間(2026-10-06) ---
+// ユーザー報告「プレイ時間が短くなるバグ」。プレイ時間(mh_playtime_v1)は端末の中だけで数え、
+// フレンドの表(friend_profiles)は1人1行を「最後に送った端末」の値で上書きしていた。
+// しかもデータ引き継ぎでブリーダーIDもプレイ時間もコピーされるので、2台で遊ぶと
+// 「あまり使っていない端末で開いたとたんに短くなる」。ユーザーの選択は「2台の合計を出す」。
+// そこで端末ごとに次の2つを持ち、フレンドの表とは別の表(friend_playtime_devices)へ端末ごとに送る。
+//   baseMs … この仕組みが入った時点でその端末が持っていたプレイ時間(引き継ぎでコピーされた昔のぶんを含む)
+//   ownMs  … そのあとこの端末で遊んだぶんだけ
+// 合計 = (端末たちの baseMs のうち一番大きいもの) ＋ (全端末の ownMs の和)。
+// 昔のぶんは引き継ぎで同じものが何台にもコピーされているので、足さずに1つだけ数える。
+// ★保存キーは mh_ で始めない。データ引き継ぎ(バックアップ)は mh_ のキーだけを写すので、
+//   端末のIDと「この端末で遊んだぶん」が別の端末へコピーされない(コピーされると二重に数えてしまう)。
+const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
+const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
+const normalizePlaytimeDevice = (value) => {
+  if (!value || typeof value !== 'object' || !PLAYTIME_DEVICE_ID_RE.test(String(value.deviceId || ''))) return null;
+  const ms = (x) => { const n = Number(x); return Number.isFinite(n) && n >= 0 ? n : 0; };
+  return { deviceId: String(value.deviceId), baseMs: ms(value.baseMs), ownMs: ms(value.ownMs), since: playtimeDayValue(value.since) };
+};
+const newPlaytimeDeviceId = () => {
+  let id = '';
+  try {
+    const bytes = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(bytes);
+    id = Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('');
+  } catch (error) { id = ''; }
+  while (id.length < 20) id += Math.random().toString(36).slice(2);
+  return id.slice(0, 24);
+};
+// 保存先(localStorage)は呼ぶ側から渡す(この部品は画面・保存を外から掴まない決まり)
+const loadPlaytimeDevice = (storage) => {
+  try { return normalizePlaytimeDevice(JSON.parse(storage.getItem(PLAYTIME_DEVICE_KEY) || 'null')); }
+  catch (error) { return null; }
+};
+const savePlaytimeDevice = (storage, value) => {
+  const device = normalizePlaytimeDevice(value);
+  if (!device) return false;
+  try {
+    storage.setItem(PLAYTIME_DEVICE_KEY, JSON.stringify({ ...device, baseMs: Math.round(device.baseMs), ownMs: Math.round(device.ownMs) }));
+    return true;
+  } catch (error) { return false; }
+};
+// サーバーの端末ごとの行(秒)から、その人の合計を出す。行が無ければ null(呼ぶ側は今までの値を使う)
+const combineDevicePlaytime = (rows) => {
+  const list = (Array.isArray(rows) ? rows : []).filter((row) => row && typeof row === 'object');
+  if (!list.length) return null;
+  const sec = (x) => { const n = Number(x); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; };
+  const base = list.reduce((max, row) => Math.max(max, sec(row.base_seconds)), 0);
+  const own = list.reduce((sum, row) => sum + sec(row.own_seconds), 0);
+  const days = list.map((row) => playtimeDayValue(row.started_on)).filter(Boolean).sort();
+  return { seconds: base + own, startedOn: days[0] || null, devices: list.length };
 };
 const formatPlaytime = (ms) => {
   const seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -23219,6 +23273,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;           // 最後に開いてから5分以内は「いま」
 let _friendsUnavailable = false;                   // 表が無いと分かったら、ページを閉じるまで使わない
+let _friendPlaytimeDevicesUnavailable = false;   // 端末ごとのプレイ時間の表(friend_playtime_devices)がまだ無いとき(第4弾のSQL未適用)。送らない・読まない
 let _friendProfileExtraUnavailable = false;        // friend_profiles に message / records の列がまだ無いとき(第3弾のSQL未適用)。外して送り直す
 let _friendProfilesUnavailable = false;           // friend_profiles だけ無いと分かったとき(SQL未適用)。フレンド本体は止めない
 let _friendCodeCache = null;                       // { breederId, code }
@@ -23935,6 +23990,40 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     return false;
   }
 };
+// 端末ごとのプレイ時間を送る(2026-10-06)。1人×1端末で1行を上書きする。表がまだ無ければ黙って何もしない
+const sbUpsertFriendPlaytimeDevice = async (breederIdRaw, device) => {
+  const id = friendsSafeId(breederIdRaw);
+  const dev = typeof normalizePlaytimeDevice === 'function' ? normalizePlaytimeDevice(device) : null;
+  if (!id || !dev || _friendPlaytimeDevicesUnavailable) return false;
+  try {
+    await friendsRequest('friend_playtime_devices?on_conflict=breeder_id,device_id', {
+      method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal',
+      body: [{ breeder_id: id, device_id: dev.deviceId, base_seconds: Math.floor(dev.baseMs / 1000), own_seconds: Math.floor(dev.ownMs / 1000), started_on: dev.since }],
+    });
+    return true;
+  } catch (error) {
+    if (error && (error.softMissing || error.notReady)) { if (error.softMissing) _friendPlaytimeDevicesUnavailable = true; return false; }
+    console.error('[friends]', error && error.message ? error.message : error);
+    return false;
+  }
+};
+// 何人かぶんの端末ごとの行を読み、1人ずつ合計にする。表が無い・読めないときは空
+const sbFetchFriendPlaytimeTotals = async (ids) => {
+  const totals = {};
+  if (_friendPlaytimeDevicesUnavailable || typeof combineDevicePlaytime !== 'function') return totals;
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  if (!safe.length) return totals;
+  try {
+    const rows = await friendsRequest(`friend_playtime_devices?select=breeder_id,base_seconds,own_seconds,started_on&breeder_id=in.(${safe.join(',')})`, { soft: true });
+    const byId = {};
+    (Array.isArray(rows) ? rows : []).forEach((row) => { if (row && typeof row.breeder_id === 'string') (byId[row.breeder_id] = byId[row.breeder_id] || []).push(row); });
+    Object.keys(byId).forEach((id) => { const total = combineDevicePlaytime(byId[id]); if (total) totals[id] = total; });
+  } catch (error) {
+    if (error && error.softMissing) _friendPlaytimeDevicesUnavailable = true;
+    else if (!(error && error.notReady)) console.error('[friends]', error && error.message ? error.message : error);
+  }
+  return totals;
+};
 // フレンドたちの「見せる情報」を読む。表が無い・通信できないときは空(その場合、画面は名前と見た目だけを出す)
 const sbFetchFriendSummaries = async (ids) => {
   const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
@@ -23972,6 +24061,14 @@ const sbFetchFriendSummaries = async (ids) => {
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
   }
+  // 端末ごとの合計があれば、そちらを出す(2台で遊ぶ人の時間が、最後に開いた端末のぶんだけにならないように)。
+  // どちらか大きいほうを出すので、表がまだそろっていない人でも今より短くはならない
+  const totals = await sbFetchFriendPlaytimeTotals(Object.keys(byId));
+  Object.keys(totals).forEach((id) => {
+    const view = byId[id], total = totals[id];
+    view.playSeconds = Math.max(Number(view.playSeconds) || 0, total.seconds);
+    if (total.startedOn && (!view.startedOn || total.startedOn < view.startedOn)) view.startedOn = total.startedOn;
+  });
   return byId;
 };
 // 届いている申請の件数(HOME・プロフィールのバッジ用)。通信できない・準備中は 0
@@ -26911,7 +27008,7 @@ function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
-  onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
+  onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, playtimeAllDevicesMs = 0, proHighScores,
   profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
@@ -27045,7 +27142,8 @@ function ProfileScreen({
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
-            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
+            {/* ほかの端末でも遊んでいれば、その合計を出す(2026-10-06。この端末のぶんだけだと、端末を替えたときに減って見えた) */}
+            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))}</span>
           </div>
         </div>
         <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
@@ -27060,6 +27158,9 @@ function ProfileScreen({
               <div className="text-[10px] text-slate-400 font-bold">いちばん長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
+            {(Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs&&(
+              <div data-profile-playtime-devices className="text-[10px] text-sky-300 font-bold">ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは {formatPlaytime(playtimeView.totalMs)}）</div>
+            )}
           </div>
         </details>
         {/* ④ よく使う入口。フレンド(申請が届くと赤いバッジ)とアイテムを同じ大きさで並べる。フレンドは公開前は出さない */}
@@ -39509,7 +39610,12 @@ function MonsterHeroGame() {
   // 遊んだ時間。数えるのはrefだけにして、画面の描き直しを起こさない
   // (15秒ごとにstateを書き換えると、バトル中や音ゲー中に毎回描き直しが走ってしまう)。
   const playtimeRef = useRef(normalizePlaytime(null));
+  // この端末で遊んだぶん(端末ごとのプレイ時間。17-release…jsx の PLAYTIME_DEVICE_KEY)。読み込むまでは null
+  const playtimeDeviceRef = useRef(null);
+  // 端末ごとのプレイ時間の保存先。localStorage に触れない環境では null(読み書きは黙って何もしない)
+  const playtimeDeviceStorage = () => { try { return window.localStorage; } catch (error) { return null; } };
   const [playtimeView, setPlaytimeView] = useState(() => normalizePlaytime(null)); // プロフィールを開いたときだけ写す
+  const [playtimeAllDevicesMs, setPlaytimeAllDevicesMs] = useState(0); // ほかの端末のぶんも合わせた合計(フレンドの表から。取れなければ0)
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -39838,6 +39944,7 @@ function MonsterHeroGame() {
         today: { day: value.today.day, ms: Math.round(value.today.ms) },
         longest: { day: value.longest.day, ms: Math.round(value.longest.ms) },
       }, false);
+      if (playtimeDeviceRef.current) savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       sinceLastSave = 0;
     };
     const accumulate = () => {
@@ -39849,6 +39956,7 @@ function MonsterHeroGame() {
       if (!(delta > 0 && delta <= PLAYTIME_MAX_STEP_MS)) return;
       playtimeRef.current = advancePlaytime(playtimeRef.current, delta, now);
       sinceLastSave += delta;
+      if (playtimeDeviceRef.current) playtimeDeviceRef.current = { ...playtimeDeviceRef.current, ownMs: playtimeDeviceRef.current.ownMs + delta };
       if (sinceLastSave >= PLAYTIME_SAVE_MS) persist();
     };
     const onVisibility = () => {
@@ -39860,7 +39968,13 @@ function MonsterHeroGame() {
       const saved = normalizePlaytime(await storeGet(PLAYTIME_KEY, null, false));
       if (disposed) return;
       // 読み込みの前に数えたぶんがあれば足しておく(読み込みを待つあいだも遊んでいるため)
-      playtimeRef.current = advancePlaytime(saved, playtimeRef.current.totalMs);
+      const beforeLoadMs = playtimeRef.current.totalMs;
+      playtimeRef.current = advancePlaytime(saved, beforeLoadMs);
+      // 端末ごとのぶん。この端末で初めて動いたときは、いま持っているプレイ時間を「昔のぶん」として控え、
+      // ここから先にこの端末で遊んだぶんだけを ownMs に数える(引き継ぎでコピーされた時間を二重に数えないため)
+      const device = loadPlaytimeDevice(playtimeDeviceStorage()) || { deviceId:newPlaytimeDeviceId(), baseMs:saved.totalMs, ownMs:0, since:saved.since };
+      playtimeDeviceRef.current = { ...device, ownMs: device.ownMs + Math.max(0, Number(beforeLoadMs) || 0), since: device.since || playtimeRef.current.since };
+      savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       last = Date.now();
     })();
     const timer = setInterval(accumulate, PLAYTIME_TICK_MS);
@@ -41349,7 +41463,21 @@ function MonsterHeroGame() {
       favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
       message: latest.profileMessage, records,
     }));
+    // 端末ごとのプレイ時間(2台で遊ぶ人の合計を出すため)。表がまだ無ければ何もしない
+    await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);
+  // プロフィールを開いたら、ほかの端末のぶんも合わせた合計を取りに行く(取れなければこの端末のぶんだけを出す)
+  useEffect(() => {
+    if (gameState !== 'PROFILE' || !friendsActive) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (!id || cancelled) return;
+      const totals = await sbFetchFriendPlaytimeTotals([id]);
+      if (!cancelled) setPlaytimeAllDevicesMs((totals[friendsSafeId(id)]?.devices || 0) > 1 ? totals[friendsSafeId(id)].seconds * 1000 : 0);
+    })();
+    return () => { cancelled = true; };
+  }, [gameState, friendsActive]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
@@ -57580,6 +57708,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onboardingPreview={onboardingPreview}
             ownedItems={ownedItems}
             playtimeView={playtimeView}
+            playtimeAllDevicesMs={playtimeAllDevicesMs}
             proHighScores={proHighScores}
             profileBattleMode={profileBattleMode}
             profileFrameId={profileFrameId}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b47b787424f30878
+// source-sha256: cc4c2621b047e21a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 00:23";
+const BUILD_DATE = "2026-10-07 00:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5109,6 +5109,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_anima',
+  name: 'ANiMA',
+  creator: 'オリジナル',
+  src: 'audio/bgm-anima.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -6356,6 +6363,7 @@ const Audio_ = (() => {
   };
   const AUDIO_CACHE_KEYS = {
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
+    "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
@@ -11983,6 +11991,70 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
 const playtimeTodayMs = (value, now = Date.now()) => {
   const base = normalizePlaytime(value);
   return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+};
+const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
+const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
+const normalizePlaytimeDevice = value => {
+  if (!value || typeof value !== 'object' || !PLAYTIME_DEVICE_ID_RE.test(String(value.deviceId || ''))) return null;
+  const ms = x => {
+    const n = Number(x);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+  return {
+    deviceId: String(value.deviceId),
+    baseMs: ms(value.baseMs),
+    ownMs: ms(value.ownMs),
+    since: playtimeDayValue(value.since)
+  };
+};
+const newPlaytimeDeviceId = () => {
+  let id = '';
+  try {
+    const bytes = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(bytes);
+    id = Array.from(bytes, b => b.toString(36).padStart(2, '0')).join('');
+  } catch (error) {
+    id = '';
+  }
+  while (id.length < 20) id += Math.random().toString(36).slice(2);
+  return id.slice(0, 24);
+};
+const loadPlaytimeDevice = storage => {
+  try {
+    return normalizePlaytimeDevice(JSON.parse(storage.getItem(PLAYTIME_DEVICE_KEY) || 'null'));
+  } catch (error) {
+    return null;
+  }
+};
+const savePlaytimeDevice = (storage, value) => {
+  const device = normalizePlaytimeDevice(value);
+  if (!device) return false;
+  try {
+    storage.setItem(PLAYTIME_DEVICE_KEY, JSON.stringify({
+      ...device,
+      baseMs: Math.round(device.baseMs),
+      ownMs: Math.round(device.ownMs)
+    }));
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+const combineDevicePlaytime = rows => {
+  const list = (Array.isArray(rows) ? rows : []).filter(row => row && typeof row === 'object');
+  if (!list.length) return null;
+  const sec = x => {
+    const n = Number(x);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+  };
+  const base = list.reduce((max, row) => Math.max(max, sec(row.base_seconds)), 0);
+  const own = list.reduce((sum, row) => sum + sec(row.own_seconds), 0);
+  const days = list.map(row => playtimeDayValue(row.started_on)).filter(Boolean).sort();
+  return {
+    seconds: base + own,
+    startedOn: days[0] || null,
+    devices: list.length
+  };
 };
 const formatPlaytime = ms => {
   const seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -36585,6 +36657,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;
 let _friendsUnavailable = false;
+let _friendPlaytimeDevicesUnavailable = false;
 let _friendProfileExtraUnavailable = false;
 let _friendProfilesUnavailable = false;
 let _friendCodeCache = null;
@@ -37471,6 +37544,55 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     return false;
   }
 };
+const sbUpsertFriendPlaytimeDevice = async (breederIdRaw, device) => {
+  const id = friendsSafeId(breederIdRaw);
+  const dev = typeof normalizePlaytimeDevice === 'function' ? normalizePlaytimeDevice(device) : null;
+  if (!id || !dev || _friendPlaytimeDevicesUnavailable) return false;
+  try {
+    await friendsRequest('friend_playtime_devices?on_conflict=breeder_id,device_id', {
+      method: 'POST',
+      soft: true,
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: [{
+        breeder_id: id,
+        device_id: dev.deviceId,
+        base_seconds: Math.floor(dev.baseMs / 1000),
+        own_seconds: Math.floor(dev.ownMs / 1000),
+        started_on: dev.since
+      }]
+    });
+    return true;
+  } catch (error) {
+    if (error && (error.softMissing || error.notReady)) {
+      if (error.softMissing) _friendPlaytimeDevicesUnavailable = true;
+      return false;
+    }
+    console.error('[friends]', error && error.message ? error.message : error);
+    return false;
+  }
+};
+const sbFetchFriendPlaytimeTotals = async ids => {
+  const totals = {};
+  if (_friendPlaytimeDevicesUnavailable || typeof combineDevicePlaytime !== 'function') return totals;
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  if (!safe.length) return totals;
+  try {
+    const rows = await friendsRequest(`friend_playtime_devices?select=breeder_id,base_seconds,own_seconds,started_on&breeder_id=in.(${safe.join(',')})`, {
+      soft: true
+    });
+    const byId = {};
+    (Array.isArray(rows) ? rows : []).forEach(row => {
+      if (row && typeof row.breeder_id === 'string') (byId[row.breeder_id] = byId[row.breeder_id] || []).push(row);
+    });
+    Object.keys(byId).forEach(id => {
+      const total = combineDevicePlaytime(byId[id]);
+      if (total) totals[id] = total;
+    });
+  } catch (error) {
+    if (error && error.softMissing) _friendPlaytimeDevicesUnavailable = true;else if (!(error && error.notReady)) console.error('[friends]', error && error.message ? error.message : error);
+  }
+  return totals;
+};
 const sbFetchFriendSummaries = async ids => {
   const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
   const byId = {};
@@ -37513,6 +37635,13 @@ const sbFetchFriendSummaries = async ids => {
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
   }
+  const totals = await sbFetchFriendPlaytimeTotals(Object.keys(byId));
+  Object.keys(totals).forEach(id => {
+    const view = byId[id],
+      total = totals[id];
+    view.playSeconds = Math.max(Number(view.playSeconds) || 0, total.seconds);
+    if (total.startedOn && (!view.startedOn || total.startedOn < view.startedOn)) view.startedOn = total.startedOn;
+  });
   return byId;
 };
 const sbCountIncomingFriendRequests = async breederIdRaw => {
@@ -41784,6 +41913,7 @@ function ProfileScreen({
   onboardingPreview,
   ownedItems,
   playtimeView,
+  playtimeAllDevicesMs = 0,
   proHighScores,
   profileBattleMode,
   profileFrameId,
@@ -42045,7 +42175,7 @@ function ProfileScreen({
     size: 11
   }), "プレイ時間"), React.createElement("span", {
     className: "text-[13px] font-black text-white font-mono"
-  }, formatPlaytime(playtimeView.totalMs)))), React.createElement("details", {
+  }, formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))))), React.createElement("details", {
     "data-profile-playtime": true,
     className: "mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2"
   }, React.createElement("summary", {
@@ -42064,7 +42194,10 @@ function ProfileScreen({
     className: "text-[10px] text-slate-400 font-bold"
   }, "いちばん長かった日 ", formatPlaytime(playtimeView.longest.ms), "（", playtimeView.longest.day, "）"), React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold"
-  }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), React.createElement("div", {
+  }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'), (Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs && React.createElement("div", {
+    "data-profile-playtime-devices": true,
+    className: "text-[10px] text-sky-300 font-bold"
+  }, "ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは ", formatPlaytime(playtimeView.totalMs), "）"))), React.createElement("div", {
     className: `mb-4 grid gap-2 ${onboarded && !onboardingPreview && friendsEnabled ? 'grid-cols-2' : 'grid-cols-1'}`,
     "data-profile-links": true
   }, onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
@@ -64228,7 +64361,16 @@ function MonsterHeroGame() {
   const [modeInfoId, setModeInfoId] = useState(null);
   const [profileBattleMode, setProfileBattleMode] = useState(null);
   const playtimeRef = useRef(normalizePlaytime(null));
+  const playtimeDeviceRef = useRef(null);
+  const playtimeDeviceStorage = () => {
+    try {
+      return window.localStorage;
+    } catch (error) {
+      return null;
+    }
+  };
   const [playtimeView, setPlaytimeView] = useState(() => normalizePlaytime(null));
+  const [playtimeAllDevicesMs, setPlaytimeAllDevicesMs] = useState(0);
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
   const [quickRewardPolicy, setQuickRewardPolicy] = useState(QUICK_REWARD_POLICY_GROWTH);
   const quickRewardPolicyRunRef = useRef(QUICK_REWARD_POLICY_GROWTH);
@@ -64568,6 +64710,7 @@ function MonsterHeroGame() {
           ms: Math.round(value.longest.ms)
         }
       }, false);
+      if (playtimeDeviceRef.current) savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       sinceLastSave = 0;
     };
     const accumulate = () => {
@@ -64578,6 +64721,10 @@ function MonsterHeroGame() {
       if (!(delta > 0 && delta <= PLAYTIME_MAX_STEP_MS)) return;
       playtimeRef.current = advancePlaytime(playtimeRef.current, delta, now);
       sinceLastSave += delta;
+      if (playtimeDeviceRef.current) playtimeDeviceRef.current = {
+        ...playtimeDeviceRef.current,
+        ownMs: playtimeDeviceRef.current.ownMs + delta
+      };
       if (sinceLastSave >= PLAYTIME_SAVE_MS) persist();
     };
     const onVisibility = () => {
@@ -64590,7 +64737,20 @@ function MonsterHeroGame() {
     (async () => {
       const saved = normalizePlaytime(await storeGet(PLAYTIME_KEY, null, false));
       if (disposed) return;
-      playtimeRef.current = advancePlaytime(saved, playtimeRef.current.totalMs);
+      const beforeLoadMs = playtimeRef.current.totalMs;
+      playtimeRef.current = advancePlaytime(saved, beforeLoadMs);
+      const device = loadPlaytimeDevice(playtimeDeviceStorage()) || {
+        deviceId: newPlaytimeDeviceId(),
+        baseMs: saved.totalMs,
+        ownMs: 0,
+        since: saved.since
+      };
+      playtimeDeviceRef.current = {
+        ...device,
+        ownMs: device.ownMs + Math.max(0, Number(beforeLoadMs) || 0),
+        since: device.since || playtimeRef.current.since
+      };
+      savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       last = Date.now();
     })();
     const timer = setInterval(accumulate, PLAYTIME_TICK_MS);
@@ -65847,7 +66007,21 @@ function MonsterHeroGame() {
       message: latest.profileMessage,
       records
     }));
+    await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);
+  useEffect(() => {
+    if (gameState !== 'PROFILE' || !friendsActive) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (!id || cancelled) return;
+      const totals = await sbFetchFriendPlaytimeTotals([id]);
+      if (!cancelled) setPlaytimeAllDevicesMs((totals[friendsSafeId(id)]?.devices || 0) > 1 ? totals[friendsSafeId(id)].seconds * 1000 : 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gameState, friendsActive]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
@@ -89224,6 +89398,7 @@ function MonsterHeroGame() {
       onboardingPreview: onboardingPreview,
       ownedItems: ownedItems,
       playtimeView: playtimeView,
+      playtimeAllDevicesMs: playtimeAllDevicesMs,
       proHighScores: proHighScores,
       profileBattleMode: profileBattleMode,
       profileFrameId: profileFrameId,
