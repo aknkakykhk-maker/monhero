@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 968f4fe436fa0fdb
+// generated-sha256: d89425e21312da2c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 11:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24199,6 +24199,9 @@ const raidJackQuickLoops = (turnsUsed) => {
 //  ・表がまだ無い環境(SQL未適用)は「準備中」として扱う。エラー扱いにして画面を壊さない。
 //  ・このファイルは公開フラグ(RELEASE_FLAGS.raidJack)を見ない。呼ぶ側が見る。
 const RAID_JACK_TIMEOUT_MS = 8000;
+// 与ダメージを送る通信だけは長めに待つ(2026-10-06・通信の弱い4Gで8秒を超えて打ち切られ、送れないまま残る人がいた)
+const RAID_JACK_SEND_TIMEOUT_MS = 20000;
+const RAID_JACK_SEND_RETRY_WAITS = Object.freeze([1500, 3500]);   // 失敗したとき、この間隔で再試行する(合計3回まで)
 let _raidJackUnavailable = false;                  // 土台の表(raid_jack_hits)・段階の合計が無いと分かったら、ページを閉じるまで全部使わない
 const raidJackUnavailable = () => _raidJackUnavailable;
 // 後から足した「ランキングのビュー」だけが無いときは、そのビューだけを「準備中」にして、与ダメージの送信・段階の合計・報酬の受け取りは止めない。
@@ -24223,10 +24226,11 @@ const raidJackRequest = async (pathAndQuery, init = {}) => {
   const scope = raidJackScopeOf(pathAndQuery);
   if (_raidJackUnavailable || _raidJackUnavailableScopes.has(scope)) return { ok: false, status: 0, body: '', notReady: true, error: null };
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), RAID_JACK_TIMEOUT_MS);
+  const { timeoutMs, ...fetchInit } = init;
+  const timer = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : RAID_JACK_TIMEOUT_MS);
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathAndQuery}`, {
-      cache: 'no-store', ...init, headers: { ...SB_HEADERS, ...(init.headers || {}) }, signal: controller.signal,
+      cache: 'no-store', ...fetchInit, headers: { ...SB_HEADERS, ...(init.headers || {}) }, signal: controller.signal,
     });
     const body = await res.text();
     if (!res.ok && (_isMissingTableError(res.status, body) || res.status === 404)) {
@@ -24257,7 +24261,7 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
     app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
   };
   const result = await raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
-    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row),
+    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row), timeoutMs: RAID_JACK_SEND_TIMEOUT_MS,
   });
   if (result.ok) return 'sent';
   if (result.notReady) return 'notready';
@@ -24276,7 +24280,13 @@ const raidJackSaveState = async (state) => {
 // 送る。送れなければ pending に残す(戻り値は送れたかどうか)。state は呼び出し側が持つ最新を渡し、更新後を返す
 const raidJackSubmitHit = async (state, hit, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
-  const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  let outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  // 通信が弱くて失敗したときは、その場で少し待って送り直す(同じ hit_id なので二重には数えられない)
+  for (const wait of RAID_JACK_SEND_RETRY_WAITS) {
+    if (outcome !== 'error') break;
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  }
   if (outcome === 'error' || outcome === 'notready') {
     const [clean] = raidJackNormalizePending([hit]);
     if (clean && !next.pending.some((p) => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
@@ -24294,6 +24304,27 @@ const raidJackFlushPending = async (state, breederId, eventId) => {
   }
   next.pending = keep;
   return next;
+};
+
+// 端末に残っている再送待ちを、保存から読んで送り直し、結果を保存する(2026-10-06)。
+// 以前は再送待ちに残すだけで、本番のゲームは送り直していなかった(デバッグ画面だけが送り直せた)。
+// そのため通信の弱い場所で一度失敗した与ダメージは、ランキングへいつまでも載らなかった。
+// HOME とレイド画面を開いたときに呼ぶ。再送待ちが空なら通信しない。返り値は送れた件数(読み・送りに失敗したら 0)
+const raidJackFlushStoredPending = async (breederId, eventId) => {
+  try {
+    const state = await raidJackLoadState();
+    if (!state.pending.length || !raidJackSafeId(breederId)) return 0;
+    const before = state.pending.length;
+    const next = await raidJackFlushPending(state, breederId, eventId);
+    if (next.pending.length !== before) {
+      // 送っているあいだに別の処理が保存を更新していても、巻き戻さないように、いまの保存へ再送待ちの差分だけを反映する
+      const latest = await raidJackLoadState();
+      const left = new Set(next.pending.map((p) => p.hitId));
+      latest.pending = latest.pending.filter((p) => left.has(p.hitId));
+      await raidJackSaveState(latest);
+    }
+    return before - next.pending.length;
+  } catch (e) { return 0; }
 };
 
 // ---- 読み出し(失敗は null を返し、画面は「準備中」にする) ----
@@ -31527,7 +31558,9 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   }, []);
   React.useEffect(() => {
     let alive = true;
-    const load = async () => { const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
+    // 通信が弱くて送れなかった与ダメージが端末に残っていれば、ここで送り直す(空なら通信しない)。本番のイベントだけ
+    const flush = async () => { if (eventId !== RAID_JACK_EVENT.id) return; try { const id = await ensureBreederId(); await raidJackFlushStoredPending(id, eventId); } catch (e) { /* 次に開いたときに送り直す */ } };
+    const load = async () => { await flush(); const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
     load();
     const id = setInterval(load, 60000);
     return () => { alive = false; clearInterval(id); };
@@ -38753,7 +38786,14 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
-      const t = await totalsPromise;
+      // 通信が弱くて送れなかった与ダメージが残っていれば、読む前に送り直す(本番のイベントだけ。デバッグの別イベントには出さない)
+      let flushed = 0;
+      if (!forced && eventId === RAID_JACK_EVENT.id && loaded.pending && loaded.pending.length > 0) {
+        flushed = await raidJackFlushStoredPending(meId, eventId);
+        if (!alive) return;
+        if (flushed > 0) { setMessage(`送れていなかった与ダメージを${flushed}件、送り直しました`); loaded = await raidJackLoadState(); if (!alive) return; setState(loaded); }
+      }
+      const t = flushed > 0 ? await sbFetchRaidJackTierTotals(eventId) : await totalsPromise;
       if (!alive) return;
       setTotals(t);
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
@@ -59666,7 +59706,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {raidJackResult&&(()=>{
         const r=raidJackResult;
         const reasonLabel={defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
-        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(あとで自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした(あとで自動で送り直します)'}[r.outcome]||'';
+        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(HOMEかレイド画面を開くと、自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした。通信のよい場所でHOMEかレイド画面を開くと、自動で送り直します'}[r.outcome]||'';
         return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
           <RaidJackResultStinger reason={r.reason}/>
           <div className="mh-rjresult-in text-[10px] font-black text-orange-300 tracking-[.35em] mb-2" style={{'--d':'900ms'}}>{r.kind==='b'?'マスモン':'ベースモン'}</div>

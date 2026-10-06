@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e6b1ee99478dc23
+// source-sha256: f7c56029478212d5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 11:38";
+const BUILD_DATE = "2026-10-06 11:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37680,6 +37680,8 @@ const raidJackQuickLoops = turnsUsed => {
   return turns * RAID_JACK_QUICK_LOOPS_PER_TURN;
 };
 const RAID_JACK_TIMEOUT_MS = 8000;
+const RAID_JACK_SEND_TIMEOUT_MS = 20000;
+const RAID_JACK_SEND_RETRY_WAITS = Object.freeze([1500, 3500]);
 let _raidJackUnavailable = false;
 const raidJackUnavailable = () => _raidJackUnavailable;
 const _raidJackUnavailableScopes = new Set();
@@ -37703,11 +37705,15 @@ const raidJackRequest = async (pathAndQuery, init = {}) => {
     error: null
   };
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), RAID_JACK_TIMEOUT_MS);
+  const {
+    timeoutMs,
+    ...fetchInit
+  } = init;
+  const timer = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : RAID_JACK_TIMEOUT_MS);
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathAndQuery}`, {
       cache: 'no-store',
-      ...init,
+      ...fetchInit,
       headers: {
         ...SB_HEADERS,
         ...(init.headers || {})
@@ -37773,7 +37779,8 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
     headers: {
       'Prefer': 'resolution=ignore-duplicates,return=minimal'
     },
-    body: JSON.stringify(row)
+    body: JSON.stringify(row),
+    timeoutMs: RAID_JACK_SEND_TIMEOUT_MS
   });
   if (result.ok) return 'sent';
   if (result.notReady) return 'notready';
@@ -37797,7 +37804,12 @@ const raidJackSaveState = async state => {
 };
 const raidJackSubmitHit = async (state, hit, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
-  const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  let outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  for (const wait of RAID_JACK_SEND_RETRY_WAITS) {
+    if (outcome !== 'error') break;
+    await new Promise(resolve => setTimeout(resolve, wait));
+    outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  }
   if (outcome === 'error' || outcome === 'notready') {
     const [clean] = raidJackNormalizePending([hit]);
     if (clean && !next.pending.some(p => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
@@ -37817,6 +37829,23 @@ const raidJackFlushPending = async (state, breederId, eventId) => {
   }
   next.pending = keep;
   return next;
+};
+const raidJackFlushStoredPending = async (breederId, eventId) => {
+  try {
+    const state = await raidJackLoadState();
+    if (!state.pending.length || !raidJackSafeId(breederId)) return 0;
+    const before = state.pending.length;
+    const next = await raidJackFlushPending(state, breederId, eventId);
+    if (next.pending.length !== before) {
+      const latest = await raidJackLoadState();
+      const left = new Set(next.pending.map(p => p.hitId));
+      latest.pending = latest.pending.filter(p => left.has(p.hitId));
+      await raidJackSaveState(latest);
+    }
+    return before - next.pending.length;
+  } catch (e) {
+    return 0;
+  }
 };
 const sbFetchRaidJackTierTotals = async eventId => {
   const rows = raidJackParseRows(await raidJackRequest(`raid_jack_tier_totals?${raidJackEventParam(eventId)}&select=kind,tier,total_damage,player_count,any_defeated`));
@@ -51164,7 +51193,15 @@ const HomeRaidJack = ({
   }, []);
   React.useEffect(() => {
     let alive = true;
+    const flush = async () => {
+      if (eventId !== RAID_JACK_EVENT.id) return;
+      try {
+        const id = await ensureBreederId();
+        await raidJackFlushStoredPending(id, eventId);
+      } catch (e) {}
+    };
     const load = async () => {
+      await flush();
       const t = await sbFetchRaidJackTierTotals(eventId);
       if (alive) setTotals(t);
     };
@@ -63103,7 +63140,18 @@ const RaidJackScreen = ({
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
-      const t = await totalsPromise;
+      let flushed = 0;
+      if (!forced && eventId === RAID_JACK_EVENT.id && loaded.pending && loaded.pending.length > 0) {
+        flushed = await raidJackFlushStoredPending(meId, eventId);
+        if (!alive) return;
+        if (flushed > 0) {
+          setMessage(`送れていなかった与ダメージを${flushed}件、送り直しました`);
+          loaded = await raidJackLoadState();
+          if (!alive) return;
+          setState(loaded);
+        }
+      }
+      const t = flushed > 0 ? await sbFetchRaidJackTierTotals(eventId) : await totalsPromise;
       if (!alive) return;
       setTotals(t);
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
@@ -93210,9 +93258,9 @@ function MonsterHeroGame() {
       }[r.reason] || '';
       const sendLabel = {
         sent: '与ダメージを送りました',
-        notready: 'サーバーの準備中です(あとで自動で送り直します)',
+        notready: 'サーバーの準備中です(HOMEかレイド画面を開くと、自動で送り直します)',
         invalid: 'この記録は送れませんでした',
-        error: '通信できませんでした(あとで自動で送り直します)'
+        error: '通信できませんでした。通信のよい場所でHOMEかレイド画面を開くと、自動で送り直します'
       }[r.outcome] || '';
       return React.createElement("div", {
         "data-raid-jack-result": true,
