@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 68b44772e57c5b94
+// source-sha256: 5268b1254c47f6ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 20:13";
+const BUILD_DATE = "2026-10-06 20:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -29456,6 +29456,10 @@ const rhythmPlayLogSend = async ({
 const RHYTHM_TOUCH_DIAG_KEY = 'mh_rhythm_touch_diag_v1';
 const RHYTHM_TOUCH_DIAG_KEEP = 20;
 const RHYTHM_TOUCH_DIAG_VERSION = 1;
+const RHYTHM_RECORD_FX_COUNT_DELAY_MS = 600;
+const RHYTHM_RECORD_FX_COUNT_MS = 1500;
+const RHYTHM_RECORD_FX_TOTAL_MS = 3300;
+const RHYTHM_RECORD_FX_SPARKLES = 18;
 const rhythmTouchDiagPlayId = () => {
   let id = '';
   for (let i = 0; i < 12; i++) id += '0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 36)];
@@ -31392,6 +31396,12 @@ const RhythmTapTest = ({
     const liveLog = rhythmLiveLogSections(run.liveLog, liveLogEndMs);
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
     const showCelebrate = !!celebrateTitle && !failed && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+    const previousBestScore = Math.max(0, Math.floor(Number(run.startBestScore) || 0));
+    const recordFx = isNewRecord && previousBestScore > 0 && !failed && !tutorial && !calibrating && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? {
+      id: `${Date.now()}-${score}`,
+      previous: previousBestScore,
+      score
+    } : null;
     setView(v => ({
       ...v,
       status: showCelebrate ? 'celebrate' : 'result',
@@ -31407,6 +31417,8 @@ const RhythmTapTest = ({
       result: {
         ...result,
         isNewRecord,
+        previousBestScore,
+        recordFx,
         bestScore: merged.bestScore,
         eventPointAward,
         liveLog,
@@ -31442,6 +31454,36 @@ const RhythmTapTest = ({
   }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
   const celebrateTimerRef = useRef(null);
   const [touchReportSent, setTouchReportSent] = useState(null);
+  const recordFxId = view.status === 'result' && view.result && view.result.recordFx ? view.result.recordFx.id : null;
+  const [recordFxHiddenFor, setRecordFxHiddenFor] = useState(null);
+  const recordScoreRef = useRef(null);
+  useEffect(() => {
+    if (!recordFxId) return undefined;
+    const fx = view.result.recordFx,
+      el = recordScoreRef.current;
+    RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
+    let raf = 0;
+    const reduce = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const put = value => {
+      if (el) el.textContent = Math.round(value).toLocaleString();
+    };
+    if (reduce || typeof requestAnimationFrame !== 'function') put(fx.score);else {
+      put(fx.previous);
+      let start = 0;
+      const step = now => {
+        if (!start) start = now;
+        const p = Math.max(0, Math.min(1, (now - start - RHYTHM_RECORD_FX_COUNT_DELAY_MS) / RHYTHM_RECORD_FX_COUNT_MS));
+        put(fx.previous + (fx.score - fx.previous) * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+    const timer = setTimeout(() => setRecordFxHiddenFor(recordFxId), RHYTHM_RECORD_FX_TOTAL_MS);
+    return () => {
+      if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, [recordFxId]);
   useEffect(() => {
     if (view.status !== 'celebrate') return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -32745,7 +32787,56 @@ const RhythmTapTest = ({
       style: {
         paddingTop: 'var(--mh-sa-top)'
       }
-    }, hudArtSrc && React.createElement("div", {
+    }, result.recordFx && recordFxHiddenFor !== result.recordFx.id && React.createElement("div", {
+      "data-rhythm-record-fx": true,
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute inset-0 z-[60] flex items-center justify-center overflow-hidden"
+    }, React.createElement("i", {
+      "data-rhythm-record-fx-dim": true,
+      className: "absolute inset-0 block"
+    }), React.createElement("i", {
+      "data-rhythm-record-fx-rays": true,
+      className: "absolute left-1/2 top-1/2 block"
+    }), Array.from({
+      length: RHYTHM_RECORD_FX_SPARKLES
+    }, (_, i) => {
+      const angle = i * 137.5 * Math.PI / 180,
+        radius = 70 + i % 5 * 26;
+      return React.createElement("i", {
+        key: i,
+        "data-rhythm-record-fx-spark": true,
+        className: "absolute left-1/2 top-1/2 block rounded-full",
+        style: {
+          '--x': `${Math.round(Math.cos(angle) * radius * 1.5)}px`,
+          '--y': `${Math.round(Math.sin(angle) * radius)}px`,
+          '--d': `${i % 6 * 70 + 380}ms`,
+          '--s': `${4 + i % 4 * 2}px`,
+          background: i % 3 === 0 ? '#fff' : i % 3 === 1 ? '#fde68a' : '#f0abfc'
+        }
+      });
+    }), React.createElement("div", {
+      className: "relative px-6 text-center"
+    }, React.createElement("b", {
+      "data-rhythm-record-fx-title": true,
+      className: "block text-5xl font-black italic leading-tight"
+    }, "NEW RECORD!"), React.createElement("div", {
+      "data-rhythm-record-fx-scorebox": true,
+      className: "mt-1 flex items-baseline justify-center gap-1.5"
+    }, React.createElement("small", {
+      className: "text-[11px] font-black italic tracking-[.25em] text-amber-200"
+    }, "SCORE"), React.createElement("span", {
+      "data-rhythm-record-fx-score": true,
+      ref: recordScoreRef,
+      className: "text-[44px] font-black leading-none tabular-nums text-white"
+    })), React.createElement("div", {
+      className: "mt-1.5 flex items-center justify-center gap-2"
+    }, React.createElement("b", {
+      "data-rhythm-record-fx-gain": true,
+      className: "rounded-full border border-lime-300/80 bg-lime-400/20 px-3 py-0.5 text-lg font-black leading-tight tabular-nums text-lime-200"
+    }, "+", (result.recordFx.score - result.recordFx.previous).toLocaleString()), React.createElement("small", {
+      "data-rhythm-record-fx-prev": true,
+      className: "text-[11px] font-bold tabular-nums text-amber-100/90"
+    }, "前回のベスト ", result.recordFx.previous.toLocaleString())))), hudArtSrc && React.createElement("div", {
       "data-rhythm-result-backdrop": true,
       "aria-hidden": "true",
       style: {
@@ -32933,6 +33024,7 @@ const RhythmTapTest = ({
       className: "rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100"
     }, "↔ ミラー譜面")), React.createElement("section", {
       "data-rhythm-result-score-card": true,
+      "data-new-record": result.isNewRecord ? '1' : '0',
       className: "mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0"
     }, React.createElement("div", {
       className: "flex items-center gap-2"
@@ -32950,16 +33042,25 @@ const RhythmTapTest = ({
     })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("div", {
-      className: "flex items-center gap-1.5"
+      className: "flex flex-wrap items-center gap-1.5"
     }, React.createElement("small", {
       className: "text-[11px] font-black italic tracking-[.25em] text-slate-300"
     }, "SCORE"), result.isNewRecord && React.createElement("b", {
       "data-rhythm-new-record": true,
-      className: "whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-black leading-none text-slate-950"
-    }, "NEW RECORD")), React.createElement("div", {
+      style: {
+        '--mh-record-badge-delay': result.recordFx ? '3s' : '.15s'
+      },
+      className: "whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black leading-none text-slate-950"
+    }, "✨ NEW RECORD"), result.isNewRecord && Number(result.previousBestScore) > 0 && view.score > result.previousBestScore && React.createElement("b", {
+      "data-rhythm-record-gain": true,
+      className: "whitespace-nowrap rounded-full border border-lime-300/70 bg-lime-400/15 px-2 py-0.5 text-[10px] font-black leading-none tabular-nums text-lime-200"
+    }, "+", (view.score - result.previousBestScore).toLocaleString())), React.createElement("div", {
       "data-rhythm-result-score": true,
       className: "text-[42px] font-black leading-none tabular-nums [@container(min-width:680px)]:text-[38px]"
-    }, view.score.toLocaleString()), (() => {
+    }, view.score.toLocaleString()), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
+      "data-rhythm-record-prev": true,
+      className: "mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90"
+    }, "前回のベスト ", Number(result.previousBestScore).toLocaleString()), (() => {
       const failed = result.cleared === false;
       return React.createElement("div", {
         "data-rhythm-result-clear": true,
