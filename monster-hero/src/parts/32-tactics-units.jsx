@@ -2007,9 +2007,11 @@ const tacticsExPsychoLockOf = (state, now) => {
     const e = effects[key];
     if (!e || e.effect !== 'psychoLock' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
     const down = Number(e.psychoLockCfg && e.psychoLockCfg.enemyDmgDown), up = Number(e.psychoLockCfg && e.psychoLockCfg.enemyTakenUp);
+    // 残りターン(画面の「敵の状態」に出す)。ターン数で切れるものだけ。いまのターンを含めて数える
+    const left = e.duration === 'turns' && now ? Math.max(0, tacticsSafeInt(e.turn, 0) + tacticsSafeInt(e.turns, 0) - tacticsSafeInt(now.turn, 0)) : 0;
     return { active: true, enemyDmgMult: Math.min(acc.enemyDmgMult, 1 - (Number.isFinite(down) && down > 0 ? Math.min(0.9, down) : 0)),
-      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0) };
-  }, { active: false, enemyDmgMult: 1, enemyTakenBonus: 0 });
+      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0), turnsLeft: Math.max(acc.turnsLeft || 0, left) };
+  }, { active: false, enemyDmgMult: 1, enemyTakenBonus: 0, turnsLeft: 0 });
 };
 // おぼろ返し(damageBack)が効いているとき、味方が敵の攻撃で受けたダメージのうち、ライフ・ガッツへ回復する割合。効いていなければ 0
 const tacticsExDamageBackRates = (state, now) => {

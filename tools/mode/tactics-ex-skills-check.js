@@ -533,7 +533,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /resetFateWheel\(\); resetEnemyConfuse\(\); \/\/ WAVE毎リ/.test(app) && (app.match(/resetTrickStart\(\); resetFateWheel\(\); resetEnemyConfuse\(\);/g) || []).length === 3);
   check('本体: 使った瞬間に味方全員のライフ・ガッツを回復(倒れている子は起こさない)',
     /if\(def\.partyHealRate>0\) tacticsRateHeal\(def\.partyHealRate,def\.partyHealRate,false\);/.test(app));
-  check('画面: 意味不明の予告と乱心の残りを出す', /enemyIntent\.type==='CONFUSED'\?<div data-enemy-confused/.test(screen) && /chip\('enemyConfuse'/.test(screen));
+  check('画面: 意味不明の予告と乱心の残りを出す', /enemyIntent\.type==='CONFUSED'\?<div data-enemy-confused/.test(screen) && /data-enemy-debuff=\{d\.key\}/.test(screen) && /add\('confuse'/.test(app));
 }
 
 // ---------- ⑫ エイキ「緋桜瞬歩」(2026-10-02 ユーザー指示) ----------

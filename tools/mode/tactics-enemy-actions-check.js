@@ -269,9 +269,10 @@ check('ダメージだけの技に効果の説明は足さない',
 check('いま何回咆哮したかを敵にも持たせる(refは画面から見えない)',
   has('const roarStacks = tacticsRoarStacksRef.current;')
     && has('*TACTICS_ROAR_ATK_RATE),roarStacks}:prev)'));
-check('強化の札に敵の咆哮を出す',
-  screen.includes("if(enemy?.roarStacks>0) chip('roarUp'")
-    && screen.includes('`×${enemy.roarStacks}`'));
+// 2026-10-06 から、敵の咆哮は味方の強化の札ではなく、敵の帯の下の「敵の状態」の列へ出す
+check('敵の状態の列に敵の咆哮を出す',
+  has("if (enemy.roarStacks > 0) add('roar'") && has('`攻撃上昇 ×${enemy.roarStacks}`')
+    && screen.includes('data-enemy-debuff={d.key}'));
 
 // --- 反射も狙われた子の丈夫さで返す(2026-09-20) ---
 // ★incomingDmg はパーティの丈夫さから出した値。1体ずつにした今は実際に受ける量とずれる

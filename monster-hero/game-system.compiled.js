@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 91f8bc58542bab44
+// source-sha256: 08004e9ad69d72ca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 11:56";
+const BUILD_DATE = "2026-10-06 12:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35994,15 +35994,18 @@ const tacticsExPsychoLockOf = (state, now) => {
     if (!e || e.effect !== 'psychoLock' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
     const down = Number(e.psychoLockCfg && e.psychoLockCfg.enemyDmgDown),
       up = Number(e.psychoLockCfg && e.psychoLockCfg.enemyTakenUp);
+    const left = e.duration === 'turns' && now ? Math.max(0, tacticsSafeInt(e.turn, 0) + tacticsSafeInt(e.turns, 0) - tacticsSafeInt(now.turn, 0)) : 0;
     return {
       active: true,
       enemyDmgMult: Math.min(acc.enemyDmgMult, 1 - (Number.isFinite(down) && down > 0 ? Math.min(0.9, down) : 0)),
-      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0)
+      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0),
+      turnsLeft: Math.max(acc.turnsLeft || 0, left)
     };
   }, {
     active: false,
     enemyDmgMult: 1,
-    enemyTakenBonus: 0
+    enemyTakenBonus: 0,
+    turnsLeft: 0
   });
 };
 const tacticsExDamageBackRates = (state, now) => {
@@ -53549,6 +53552,7 @@ function BattleScreen({
   suppressCardClickRef,
   tacticsCanAssign,
   tacticsCardBlock,
+  enemyDebuffs,
   discardCards,
   actionUsed,
   tacticsCardGenre,
@@ -54209,7 +54213,19 @@ function BattleScreen({
     style: {
       background: 'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'
     }
-  })), raidGrowth && React.createElement("button", {
+  })), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("div", {
+    "data-enemy-debuffs": enemyDebuffs.length,
+    className: "mt-1 flex flex-wrap items-center gap-1"
+  }, enemyDebuffs.map(d => React.createElement("span", {
+    key: d.key,
+    "data-enemy-debuff": d.key,
+    title: d.note || undefined,
+    className: `inline-flex max-w-full items-center gap-1 rounded-full border bg-black/60 px-1.5 py-0.5 text-[10px] font-black not-italic leading-none tracking-normal normal-case ${d.tone}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, d.mark), React.createElement("span", null, d.label), React.createElement("span", {
+    className: "font-mono"
+  }, d.value)))), raidGrowth && React.createElement("button", {
     type: "button",
     "data-raid-growth-chip": true,
     onClick: () => setRaidGrowthOpen(true),
@@ -55083,24 +55099,6 @@ function BattleScreen({
         size: 9
       }), '運命のコイン消費', `+${fateCount(fate.coinGuts) * 20}%`, 'text-slate-300 border-slate-400/50');
     }
-    if (enemyConfuseTurns > 0) chip('enemyConfuse', React.createElement(Sparkles, {
-      size: 9
-    }), '敵 乱心', `残り${enemyConfuseTurns}回`, 'text-violet-300 border-violet-400/50', {
-      pulse: true,
-      short: `${enemyConfuseTurns}`
-    });
-    if (fateWheelView?.atkDown > 0) chip('fateAtkDown', React.createElement(ArrowDownCircle, {
-      size: 9
-    }), '運命の輪 敵与ダメ', `-30%（残り${fateWheelView.atkDown}T）`, 'text-fuchsia-300 border-fuchsia-400/50', {
-      pulse: true,
-      short: '-30%'
-    });
-    if (fateWheelView?.takenUp > 0) chip('fateTakenUp', React.createElement(PlusCircle, {
-      size: 9
-    }), '運命の輪 敵被ダメ', `+30%（残り${fateWheelView.takenUp}T）`, 'text-fuchsia-300 border-fuchsia-400/50', {
-      pulse: true,
-      short: '+30%'
-    });
     if (getNextTurnBuff('melosoFullRecoveryMult', 0) > 0) chip('meloso', React.createElement(Heart, {
       size: 9
     }), '次ターン全回復', '', 'text-rose-300 border-rose-400/50', {
@@ -55109,11 +55107,6 @@ function BattleScreen({
     if (getTurnBuff('atkMult', 1.0) > 1) chip('boost', React.createElement(Sparkles, {
       size: 9
     }), 'Boost', `x${getTurnBuff('atkMult', 1.0).toFixed(1)}`, 'text-red-500 border-red-500/50', {
-      pulse: true
-    });
-    if (getTurnBuff('stunEnemy', false)) chip('stun', React.createElement(Zap, {
-      size: 9
-    }), 'スタン予約', '', 'text-yellow-400 border-yellow-500/50', {
       pulse: true
     });
     if (getTurnBuff('guaranteedCrit', false)) chip('critFix', React.createElement(Target, {
@@ -55134,21 +55127,6 @@ function BattleScreen({
     if (getTurnBuff('reflect', false)) chip('reflectNow', React.createElement(RefreshCcw, {
       size: 9
     }), '反射待機', '', 'text-purple-300 border-purple-400', {
-      pulse: true
-    });
-    if (enemy?.roarStacks > 0) chip('roarUp', React.createElement(ArrowUpCircle, {
-      size: 9
-    }), '敵の咆哮', `×${enemy.roarStacks}`, 'text-orange-400 border-orange-500/50', {
-      pulse: true
-    });
-    if (getWaveBuff('enemyAtkDebuffPct') > 0) chip('enemyAtkDown', React.createElement(ArrowDownCircle, {
-      size: 9
-    }), '敵攻', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`, 'text-indigo-400 border-indigo-500/50', {
-      pulse: true
-    });
-    if (getWaveBuff('enemyTakenDmgBonus') > 0) chip('enemyTaken', React.createElement(PlusCircle, {
-      size: 9
-    }), '敵被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-400 border-orange-500/50', {
       pulse: true
     });
     if (getNextTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNext', React.createElement(Shield, {
@@ -73180,6 +73158,31 @@ function MonsterHeroGame() {
     turn: turnCount
   }) : 0;
   const cardLimit = Math.min(5, baseCardLimit + soulCoordinationCardBonus + exCardBonus);
+  const enemyDebuffs = (() => {
+    const list = [];
+    const add = (key, mark, label, value, tone, note) => list.push({
+      key,
+      mark,
+      label,
+      value,
+      tone,
+      note
+    });
+    if (!enemy) return list;
+    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない');
+    const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, {
+      wave,
+      turn: turnCount
+    }) : null;
+    if (psycho && psycho.active) add('psycho', '🎯', 'ロックオン', `与ダメ-${Math.round((1 - psycho.enemyDmgMult) * 100)}% 被ダメ+${Math.round(psycho.enemyTakenBonus * 100)}%${psycho.turnsLeft > 0 ? ` 残り${psycho.turnsLeft}T` : ''}`, 'text-sky-200 border-sky-400/60');
+    if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪 敵与ダメ', `-30% 残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60');
+    if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪 敵被ダメ', `+30% 残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60');
+    if (getTurnBuff('stunEnemy', false)) add('stun', '⚡', 'スタン', '次の敵の番', 'text-yellow-200 border-yellow-400/60');
+    if (getWaveBuff('enemyAtkDebuffPct') > 0) add('atkDown', '⬇', '敵のちから', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}% WAVE中`, 'text-indigo-200 border-indigo-400/60');
+    if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}% WAVE中`, 'text-orange-200 border-orange-400/60');
+    if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `攻撃上昇 ×${enemy.roarStacks}`, 'text-red-200 border-red-400/60');
+    return list;
+  })();
   const actionUsed = selectedCards.length + discardCards.length;
   const slotMaxUses = (mon, slotIdx = null) => {
     const coordinationHolder = Number.isInteger(slotIdx) && soulCoordinationSlots.includes(slotIdx);
@@ -90750,6 +90753,7 @@ function MonsterHeroGame() {
       tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       tacticsCanAssign: tacticsCanAssign,
       tacticsCardBlock: tacticsCardBlock,
+      enemyDebuffs: enemyDebuffs,
       discardCards: discardCards,
       actionUsed: actionUsed,
       tacticsSlotFx: tacticsSlotFx,

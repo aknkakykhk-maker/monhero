@@ -8916,6 +8916,24 @@ function MonsterHeroGame() {
   // ★ミーアの「オン・ステージ！」が効いているあいだ、盤面ぜんぶで1ターンに使える枚数が増える(上限5は変えない。2026-10-03)
   const exCardBonus = isTacticsMode(runMode) ? tacticsExCardBonusTotal(tacticsExState,tacticsUnits,{ wave, turn:turnCount }) : 0;
   const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus+exCardBonus);
+  // ★敵にかかっているデバフ・敵の強化を、画面の「敵の状態」の列へ並べるための一覧(2026-10-06 ユーザー指示
+  //   「乱心や敵へのデバフなど、かかっていることとあと何ターンかが分からない」)。
+  //   味方の強化の札とは別に、敵の名前の帯の下へ出す。残りターンがあるものは「残りNT」まで出す
+  const enemyDebuffs = (() => {
+    const list = [];
+    const add = (key, mark, label, value, tone, note) => list.push({ key, mark, label, value, tone, note });
+    if (!enemy) return list;
+    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない');
+    const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
+    if (psycho && psycho.active) add('psycho', '🎯', 'ロックオン', `与ダメ-${Math.round((1 - psycho.enemyDmgMult) * 100)}% 被ダメ+${Math.round(psycho.enemyTakenBonus * 100)}%${psycho.turnsLeft > 0 ? ` 残り${psycho.turnsLeft}T` : ''}`, 'text-sky-200 border-sky-400/60');
+    if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪 敵与ダメ', `-30% 残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60');
+    if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪 敵被ダメ', `+30% 残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60');
+    if (getTurnBuff('stunEnemy', false)) add('stun', '⚡', 'スタン', '次の敵の番', 'text-yellow-200 border-yellow-400/60');
+    if (getWaveBuff('enemyAtkDebuffPct') > 0) add('atkDown', '⬇', '敵のちから', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}% WAVE中`, 'text-indigo-200 border-indigo-400/60');
+    if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}% WAVE中`, 'text-orange-200 border-orange-400/60');
+    if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `攻撃上昇 ×${enemy.roarStacks}`, 'text-red-200 border-red-400/60');
+    return list;
+  })();
   // 行動回数の使用済み = 使うカード + 捨てるカード(捨てるのは新モードだけなので、ほかは今までと同じ数)
   const actionUsed = selectedCards.length + discardCards.length;
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
@@ -19288,7 +19306,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
