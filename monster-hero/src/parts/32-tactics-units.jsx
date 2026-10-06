@@ -1248,17 +1248,19 @@ const TACTICS_EX_SKILLS = Object.freeze({
     effect: 'psychoLock',
   }),
   // ★2026-10-05 ユーザー指定(ハムのEX)。名前は「ハムボクシング」・3ターン・ラン5回。
-  //   「使用時『カウンター』を1付与。自分が狙われたときに攻撃をすると、クロスカウンター発動。相手の攻撃を回避して、
-  //   与ダメ100%×カウンターの攻撃になる。クロスカウンターが発動するとカウンターを1付与。効果が切れるとカウンターもなくなる」。
-  //   「与ダメ100%」は、そのターンにハムが敵へ与えたダメージ(連撃も含めた合計)の100%と読んで実装した。威力は 100% × カウンターの数。
+  //   「使用時『カウンター』を1付与。自分が狙われたときに攻撃をすると、クロスカウンター発動。相手の攻撃を回避して…
+  //   クロスカウンターが発動するとカウンターを1付与。効果が切れるとカウンターもなくなる」。
+  //   2026-10-06 ユーザー指示で発動の形を確定: 敵が攻撃を予告していて、それがハムを狙っているターンに、ハムが攻撃すると、
+  //   ハムの攻撃のタイミングで「クロスカウンター」が出て、与えるはずだったダメージが「2×カウンターの数」倍になる
+  //   (そのターンにハムが与えるダメージ全部。連撃も含む)。敵の攻撃は回避し、カウンターが1つ増える。
   //   カードとの併用は指定が無かったが、攻撃しないと発動しないので「併用できる」
   Ham: Object.freeze({
     id: 'ham_boxing',
     name: 'ハムボクシング',
-    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター',
-    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・ハムが敵に狙われたターンに、ハムが攻撃していると「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えたダメージの100%×カウンターの数を、敵へ返す\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター(与ダメ×2×カウンター)',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングで「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる（カウンター1なら2倍、2なら4倍）\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
-    counter: Object.freeze({ start: 1, dmgRate: 1 }),
+    counter: Object.freeze({ start: 1, mult: 2 }),
     effect: 'counter',
     // 効いている途中でもう一度使うと、カウンターが1に戻ってしまうので使えない
     conditions: Object.freeze(['notActive']),
@@ -1389,7 +1391,7 @@ const normalizeTacticsExDef = (raw) => {
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
     counter: raw.counter && typeof raw.counter === 'object'
-      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), dmgRate: Math.max(0, Number(raw.counter.dmgRate) || 0) } : null,
+      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), mult: Math.max(0, Number(raw.counter.mult) || 0) } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
       ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
@@ -1924,14 +1926,14 @@ const tacticsExPartyStatRate = (state, now) => {
   }, 0);
 };
 // ---- ハム(counter): ハムボクシング ----
-// いまのカウンターの数(効いていなければ null)。dmgRate は1つあたりの威力(与ダメの割合)
+// いまのカウンターの数(効いていなければ null)。mult は「カウンター1つあたりの与ダメ倍率」(2 なら 1つで×2・2つで×4)
 const tacticsExCounterOf = (state, units, slot, now) => {
   const unit = Array.isArray(units) ? units[slot] : null;
   if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'counter') return null;
   const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.counterCfg;
   if (!cfg) return null;
-  const rate = Number(cfg.dmgRate);
-  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), dmgRate: Number.isFinite(rate) && rate > 0 ? rate : 0 };
+  const mult = Number(cfg.mult);
+  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), mult: Number.isFinite(mult) && mult > 0 ? mult : 0 };
 };
 // クロスカウンターが発動した子のカウンターを n 増やす(効いていなければ状態をそのまま返す)
 const addTacticsExCounter = (state, units, now, slot, n) => {
@@ -1941,11 +1943,10 @@ const addTacticsExCounter = (state, units, now, slot, n) => {
   if (!c || add <= 0) return safe;
   return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(99, c.counter + add) } } };
 };
-// クロスカウンターで敵へ返すダメージ(ハムがそのターンに与えたダメージ × 威力 × カウンターの数。切り捨て)
-const tacticsExCounterDamage = (state, units, slot, now, dealtThisTurn) => {
+// クロスカウンターが発動したときの、ハムの与ダメ倍率(2 × カウンターの数。カウンター1なら×2・2なら×4・3なら×6)。効いていなければ 1
+const tacticsExCounterMult = (state, units, slot, now) => {
   const c = tacticsExCounterOf(state, units, slot, now);
-  const dealt = Math.max(0, Number(dealtThisTurn) || 0);
-  return c && dealt > 0 ? Math.floor(dealt * c.dmgRate * c.counter) : 0;
+  return c && c.counter > 0 && c.mult > 0 ? c.mult * c.counter : 1;
 };
 // サイコロックオン(psychoLock)が効いているか。効いているあいだ、敵は距離を動かせず(移動を選んでも何もしない)、
 // 敵の与ダメージが enemyDmgDown 下がり、敵の被ダメージが enemyTakenUp 上がる。効いていなければ active:false・倍率は変えない
