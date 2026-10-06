@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45a7e48276b8a6c1
+// source-sha256: e1741026963df272
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 17:41";
+const BUILD_DATE = "2026-10-06 17:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -11128,6 +11128,7 @@ const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
+const RAID_JACK_RHYTHM_PUBLIC_RELEASE = false;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
@@ -11139,6 +11140,7 @@ const RELEASE_FLAGS = {
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
   friends: FRIENDS_PUBLIC_RELEASE,
+  raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE,
   get raidJack() {
     try {
       return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT);
@@ -63881,7 +63883,7 @@ const RaidJackScreen = ({
     cardClass: cardClass
   }))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
-  }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 ? React.createElement("div", {
+  }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -88177,7 +88179,7 @@ function MonsterHeroGame() {
       },
       onChallenge: (kind, tierIndex, way) => {
         if (kind === 'a' && way === 'rhythm') {
-          void startRaidJackRhythmSelect(tierIndex);
+          if (RELEASE_FLAGS.raidJackRhythm === true || raidJackDebugForce) void startRaidJackRhythmSelect(tierIndex);
           return;
         }
         setRaidJackPrep({
