@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 83650f6d3aa13464
+// source-sha256: afc4d0b9c5a5e55b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 08:06";
+const BUILD_DATE = "2026-10-07 08:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -44573,7 +44573,7 @@ function RhythmRankingScreen({
   }, React.createElement("div", {
     className: "w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4",
     style: {
-      maxHeight: 'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'
+      maxHeight: RHYTHM_VIEW_ROTATION.active() && typeof window !== 'undefined' ? `calc(${window.innerWidth || 0}px - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))` : 'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
     className: "mb-2 text-center text-[10px] font-black tracking-widest text-amber-300"

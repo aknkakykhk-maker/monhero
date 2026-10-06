@@ -1016,9 +1016,14 @@ function RhythmRankingScreen({
           style={{paddingTop:'calc(1rem + var(--mh-sa-top))',paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
           {/* ★高さは --mh-vh から引いて決める。%(max-h-full)に頼ると、端末によっては
               画面より高い箱になり「とじる」が下へはみ出す(2026-09-11・ユーザー指摘「下にずれてる？」)。
-              --mh-vh はiPhoneのアドレスバーを除いた実際の高さを入れてあるもの */}
+              --mh-vh はiPhoneのアドレスバーを除いた実際の高さを入れてあるもの
+              ★横画面ボタンで絵だけ90度回しているときは、器の高さが「端末の横幅」になる
+              (RHYTHM_VIEW_ROTATION.frameStyle)。--mh-vh(端末の縦)のままだと器より背の高い箱になり、
+              上下が切れて「閉じる」に届かず、開き直すしかなくなっていた(2026-10-06・プレイボットが発見) */}
           <div className="w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4"
-            style={{maxHeight:'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'}}>
+            style={{maxHeight:RHYTHM_VIEW_ROTATION.active()&&typeof window!=='undefined'
+              ?`calc(${window.innerWidth||0}px - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))`
+              :'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'}}>
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">{eventWeekly?'WEEKLY':'EVENT'}</p>
             {/* 告知画像。開いたときだけ読むので、ここへ置いても起動は重くならない */}
             <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
