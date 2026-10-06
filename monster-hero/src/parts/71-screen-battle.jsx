@@ -689,7 +689,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -1332,6 +1332,19 @@ function BattleScreen({
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
+              </div>,document.body
+            )}
+            {/* 運しだいで決まった結果の帯(運命のコイン・運命の輪・トリックスタート・乱心・眼力。2026-10-06 ユーザー指摘
+                「ランダム効果のものが何が発動したかわからない」)。技名の札(上の14%)と重ならないよう、その下へ縦に並べる。
+                押せる場所は塞がない。body へ出すのは技名の札と同じ理由(画面の揺れで位置がずれないように) */}
+            {Array.isArray(luckBanners)&&luckBanners.length>0&&ReactDOM.createPortal(
+              <div data-battle-luck-banners className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
+                {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
+                  className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
+                  style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
+                  <div data-battle-luck-title className="text-[11px] font-black leading-tight opacity-90">{b.icon} {b.title}</div>
+                  <div data-battle-luck-result className="mt-0.5 text-[15px] font-black leading-snug">{b.result}</div>
+                </div>))}
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(

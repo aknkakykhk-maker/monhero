@@ -526,7 +526,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     (app.match(/tacticsSlotFlag\(getTurnBuff\('bySlot',null\),slotIdx,'guaranteedCrit'\)\|\|tacticsCritFixedNow\(slotIdx\)/g) || []).length === 3
     && /if\(enemyIntent\?\.type==='CONFUSED'\) return true;/.test(app));
   check('本体: 乱心は次の予告を決めるときに振り、意味不明のターンは敵が動かない',
-    /const confusion = rollEnemyConfusion\(aimed, enemyConfuseRef\.current\);/.test(app)
+    /const confusion = rollEnemyConfusion\(aimed, confuseBefore\);/.test(app) && /const confuseBefore = enemyConfuseRef\.current;/.test(app)
     && /\} else if \(intent && intent\.type==='CONFUSED'\) \{/.test(app));
   check('本体: 当たったら乱心を3へ(当て直しも3へ)・WAVEが変わる/ランを始めると消える',
     /tacticsExConfusesOnHit\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)\) \{\s*writeEnemyConfuse\(ENEMY_CONFUSE_TURNS\);/.test(app)
