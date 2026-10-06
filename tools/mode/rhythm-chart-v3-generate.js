@@ -296,11 +296,30 @@ INTENSITY_STYLES_STRONG:{
     strong[difficulty]=Object.freeze(Object.fromEntries(Object.entries(extreme[difficulty]).map(([key,value])=>[key,half(key,value)])));
   INTENSITY_STYLES_EXTRA.strong=Object.freeze(strong);
 }
+// mild … strong のさらに半分(extreme の4分の1。2026-10-07)。難易度ごとの上書き(下)で、上位の難易度を1段だけ軽くするとき用。
+//   16分裏の残し方などの曲まるごとの設定は持たない(曲の chartIntensity のものを使う)
+INTENSITY_STYLES_MILD:{
+  const strong=INTENSITY_STYLES_EXTRA.strong,mild={};
+  for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER'])
+    mild[difficulty]=Object.freeze(Object.fromEntries(Object.entries(strong[difficulty]).map(([key,value])=>[key,
+      key==='ceiling'||key==='tapDuringHold'||key==='maxLaneStep'||key==='lattice'?value
+        :typeof value==='number'&&value>0?Math.round(Math.sqrt(value)*1000)/1000:value])));
+  INTENSITY_STYLES_EXTRA.mild=Object.freeze(mild);
+}
 // 書いていない曲・知らない名前のときは「何も変えない」を返す。
 const NO_INTENSITY=Object.freeze({narrow:1,chord:1,chordRun:1,cross:1,hold:1,flick:1,
   tapDuringHold:null,minGapLanes:1,maxLaneStep:0,density:1,ceiling:0,lattice:0});
+// 難易度ごとの激しさの上書き(2026-10-07・ユーザー指摘「ANiMA はマスターよりエキスパートのほうがむずい」)。
+// 曲の一覧の chartIntensityByDifficulty に { EXPERT:'mild', MASTER:'extreme' } のように書くと、その難易度だけ
+// 曲の chartIntensity のかわりにその激しさの倍率を使う('none' は倍率なし)。16分裏の残し方などの曲まるごとの設定
+// (songIntensityCommon)は曲の chartIntensity のまま変えない(下の難易度が上の難易度の部分集合という決めごとを守る)。
+// **書いた曲だけに効く**。書いていない曲は今までと1音も変わらない
 const songIntensity=(audio,difficulty)=>{
-  const style=INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')]||INTENSITY_STYLES_EXTRA[String(audio&&audio.chartIntensity||'')];
+  const byDifficulty=audio&&audio.chartIntensityByDifficulty;
+  const override=byDifficulty&&typeof byDifficulty==='object'?byDifficulty[difficulty]:undefined;
+  if(override==='none')return NO_INTENSITY;
+  const name=typeof override==='string'&&override?override:String(audio&&audio.chartIntensity||'');
+  const style=INTENSITY_STYLES[name]||INTENSITY_STYLES_EXTRA[name];
   return (style&&style[difficulty])||NO_INTENSITY;
 };
 // 難易度によらない、曲まるごとの設定（拾う音の選び方は難易度で変えない。
@@ -445,6 +464,9 @@ let registryEntry=null;
     // 曲ごとの「激しさ」。書いた曲だけに効く（書いていない曲は今までと1音も変わらない）。
     const style=entry&&entry.chartIntensity;
     if(typeof style==='string'&&style)audio.chartIntensity=style;
+    // 難易度ごとの激しさの上書き(上の songIntensity)。書いた曲だけ
+    const byDifficulty=entry&&entry.chartIntensityByDifficulty;
+    if(byDifficulty&&typeof byDifficulty==='object'&&!Array.isArray(byDifficulty))audio.chartIntensityByDifficulty=byDifficulty;
     registryEntry=entry||null;
   }
 }

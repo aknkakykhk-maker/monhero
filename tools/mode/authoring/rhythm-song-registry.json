@@ -745,7 +745,11 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    },
-   "chartIntensity": "strong"
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   }
   }
  }
 }
