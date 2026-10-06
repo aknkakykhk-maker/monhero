@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 571306d2e332c261
+// source-sha256: 3a8404a46ad550cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 16:56";
+const BUILD_DATE = "2026-10-06 17:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37251,14 +37251,14 @@ const RAID_JACK_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_JACK_A_ATK_POWERS = Object.freeze(RAID_JACK_A_ATKS.map(atk => atk / RAID_JACK_BASE.atk));
 const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 35000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 80000000)]);
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);
-const RAID_JACK_RHYTHM_DAMAGE_MAX = Object.freeze({
-  EASY: 120000,
-  NORMAL: 165000,
-  HARD: 210000,
-  EXPERT: 255000,
-  MASTER: 300000
+const RAID_JACK_RHYTHM_DAMAGE_PER_COMBO = Object.freeze({
+  EASY: 200,
+  NORMAL: 240,
+  HARD: 280,
+  EXPERT: 320,
+  MASTER: 340
 });
-const RAID_JACK_RHYTHM_SCORE_WEIGHT = 0.7;
+const RAID_JACK_RHYTHM_DAMAGE_LIMIT = 300000;
 const RAID_JACK_RHYTHM_MAX_SCORES = Object.freeze({
   EASY: 600000,
   NORMAL: 700000,
@@ -37275,22 +37275,19 @@ const raidJackRhythmRate = (value, max) => {
 const raidJackRhythmDamage = input => {
   const i = input && typeof input === 'object' ? input : {};
   if (i.assist === true) return 0;
-  const cap = RAID_JACK_RHYTHM_DAMAGE_MAX[i.difficultyId];
-  if (!Number.isFinite(cap)) return 0;
+  const perCombo = RAID_JACK_RHYTHM_DAMAGE_PER_COMBO[i.difficultyId];
+  if (!Number.isFinite(perCombo)) return 0;
+  const combo = Number(i.maxCombo);
+  if (!Number.isFinite(combo) || combo <= 0) return 0;
   const maxScore = Number.isFinite(Number(i.maxScore)) && Number(i.maxScore) > 0 ? Number(i.maxScore) : RAID_JACK_RHYTHM_MAX_SCORES[i.difficultyId];
   const scoreRate = raidJackRhythmRate(i.score, maxScore);
-  const comboRate = raidJackRhythmRate(i.maxCombo, i.totalNotes);
-  const rate = RAID_JACK_RHYTHM_SCORE_WEIGHT * scoreRate + (1 - RAID_JACK_RHYTHM_SCORE_WEIGHT) * comboRate;
-  return Math.max(0, Math.min(cap, Math.floor(cap * rate + 1e-9)));
+  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(perCombo * combo * scoreRate + 1e-9)));
 };
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
-  const counts = r.judgments && typeof r.judgments === 'object' ? Object.values(r.judgments) : [];
-  const totalNotes = counts.reduce((sum, n) => sum + (Number.isFinite(Number(n)) ? Math.max(0, Number(n)) : 0), 0);
   return raidJackRhythmDamage({
     score: r.score,
     maxCombo: r.maxCombo,
-    totalNotes,
     difficultyId: difficulty && difficulty.id,
     maxScore: difficulty && difficulty.maxScore,
     assist: r.assist === true
