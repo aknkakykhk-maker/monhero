@@ -34,6 +34,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-06 ユーザー指示(mp4とジャケット)。歯ごたえは激しさの中間(chartIntensity:'strong')とユーザーが決めた
+    date: "2026-10-07 00:04", type:'update', title:'モンヒロビート：新曲「ANiMA」を追加しました', status:'new',
+    image: 'images/song-art/anima.jpg?v=2d830b603ed9',
+    items:[
+      'モンヒロビートに「ANiMA」（1分55秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.17 ／ EXPERT Lv.33 ／ MASTER Lv.40 です。',
+      'ノーツ数は 215 ／ 255 ／ 358 ／ 532 ／ 537 です。',
+      'EXPERTとMASTERはノーツの数がほぼ同じですが、MASTERは同時押しやスライド、レーンを大きく跳ぶ動きが増えて、指がもっと忙しくなります。',
+    ],
+    assistantNotice: { id:'update_notice_anima_v1', type:'content' },
+  },
+  {
     // 2026-10-06・ユーザー報告「プレイ時間が短くなるバグが起きてる。端末切り替えとか？」→「2台の合計を出す」
     date: "2026-10-06 22:58", type:'fix', title:'2台で遊んでいるとき、フレンドから見たプレイ時間が短くなることがあったのを直しました', status:'new',
     items:[

@@ -208,6 +208,7 @@ const RELEASED_MARKERS=Object.freeze({
   wrath_of_the_thorn_king:'wrath-of-the-thorn-king-v3',
   monster:'monster-v3',
   monster_short:'monster-short-v3',
+  anima:'anima-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -249,6 +250,7 @@ const RELEASED_TRACKS=Object.freeze({
   wrath_of_the_thorn_king:'wrath_of_the_thorn_king',
   monster:'monster',
   monster_short:'monster_short',
+  anima:'anima',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
