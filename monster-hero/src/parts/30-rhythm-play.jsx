@@ -1320,7 +1320,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     measure();frame=requestAnimationFrame(measure);const later=setTimeout(measure,400);
     window.addEventListener('resize',measure);
     return()=>{cancelAnimationFrame(frame);clearTimeout(later);window.removeEventListener('resize',measure);};
-  },[clockOnLeft,song.songId,view.status]);
+  // roadFactor(道の幅の倍率)も入れる。向きが変わると台形の幅が変わるので、変わったあとにも測り直す(2026-10-07・向きを切り替えた直後に箱の幅が6〜11px古かった)
+  },[clockOnLeft,song.songId,view.status,roadFactor]);
   /* 横持ちのライフゲージの長さの上限(2026-09-25)。ライフ表示を200%にすると、左はしのハートがレーンのふちに7pxほどかかっていた。
      横持ちの器は「🔄 横」で回したときも端末の幅(vw)と合わないので、CSSの vw では決められない。器の幅を測って上限を渡す。
      上限 = 器の幅×0.38 − 150px(ライフの行の右はしはポーズの手前、左はしはレーンの右ふち+8px。そこからハートと数字の幅を引いたもの) */
@@ -2109,7 +2110,9 @@ scheduleTick();};
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
         return;
       }
-      if(!target){if(!input.rejudge)RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      // 指を滑らせたときの取り直し(rejudge)で取れるノーツが無いのは、押し損ねではない。空押しの音は鳴らさない
+      // (2026-10-07・成功したタップのあとに指が数px動くと、空押しの音が余分に鳴っていた)
+      if(!target){if(!input.rejudge){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
       // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;

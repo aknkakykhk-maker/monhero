@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a9618b735898a9a
+// generated-sha256: a8d7ffd42ea29501
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 01:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 01:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19562,7 +19562,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     measure();frame=requestAnimationFrame(measure);const later=setTimeout(measure,400);
     window.addEventListener('resize',measure);
     return()=>{cancelAnimationFrame(frame);clearTimeout(later);window.removeEventListener('resize',measure);};
-  },[clockOnLeft,song.songId,view.status]);
+  // roadFactor(道の幅の倍率)も入れる。向きが変わると台形の幅が変わるので、変わったあとにも測り直す(2026-10-07・向きを切り替えた直後に箱の幅が6〜11px古かった)
+  },[clockOnLeft,song.songId,view.status,roadFactor]);
   /* 横持ちのライフゲージの長さの上限(2026-09-25)。ライフ表示を200%にすると、左はしのハートがレーンのふちに7pxほどかかっていた。
      横持ちの器は「🔄 横」で回したときも端末の幅(vw)と合わないので、CSSの vw では決められない。器の幅を測って上限を渡す。
      上限 = 器の幅×0.38 − 150px(ライフの行の右はしはポーズの手前、左はしはレーンの右ふち+8px。そこからハートと数字の幅を引いたもの) */
@@ -20351,7 +20352,9 @@ scheduleTick();};
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
         return;
       }
-      if(!target){if(!input.rejudge)RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      // 指を滑らせたときの取り直し(rejudge)で取れるノーツが無いのは、押し損ねではない。空押しの音は鳴らさない
+      // (2026-10-07・成功したタップのあとに指が数px動くと、空押しの音が余分に鳴っていた)
+      if(!target){if(!input.rejudge){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
       // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;

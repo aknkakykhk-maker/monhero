@@ -3086,6 +3086,9 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
           action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane,baseKey));
         });
         if(!eligible)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
+        // 押したあとの動き(指の太さが変わった・転がった)で新しく重なったサブレーンは、取れるノーツが無くても空押しの音を鳴らさない。
+        // 空押しは「押した瞬間にノーツが無かった」ときだけ(2026-10-07・成功したタップのあとに指が太くなると、音が余分に鳴っていた)
+        if(!isStart)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
         applyTouchSpanGlow();
       }finally{RHYTHM_NOTE_SE_RUNTIME.endInputGroup?.();}
     });
