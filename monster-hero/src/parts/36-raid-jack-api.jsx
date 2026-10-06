@@ -14,6 +14,7 @@ const RAID_JACK_SEND_TIMEOUT_MS = 20000;
 const RAID_JACK_SEND_RETRY_WAITS = Object.freeze([1500, 3500]);   // 失敗したとき、この間隔で再試行する(合計3回まで)
 let _raidJackUnavailable = false;                  // 土台の表(raid_jack_hits)・段階の合計が無いと分かったら、ページを閉じるまで全部使わない
 const raidJackUnavailable = () => _raidJackUnavailable;
+let _raidJackSourceColumn = null;                  // 表に source 列があるか(null=未確認 / true / false)
 // 後から足した「ランキングのビュー」だけが無いときは、そのビューだけを「準備中」にして、与ダメージの送信・段階の合計・報酬の受け取りは止めない。
 // (以前は、どれか1つでも無いと全部が止まった。大王のあとの累計ダメージのビュー raid_jack_a_ranking が未適用のとき、一覧を開いただけで通信が全部止まる)
 const _raidJackUnavailableScopes = new Set();
@@ -70,9 +71,22 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
     breeder_id: id, damage: clean.damage, defeated: clean.defeated,
     app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
   };
-  const result = await raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
-    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row), timeoutMs: RAID_JACK_SEND_TIMEOUT_MS,
+  // 与ダメージの種類(source: 'battle' / 'rhythm')。表に列が無い(SQL未適用)と分かったら、列を付けずに送る。
+  // 列付きで400になって「形が違う」として捨てられ、与ダメージが消えるのを防ぐ
+  const send = (r) => raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
+    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(r), timeoutMs: RAID_JACK_SEND_TIMEOUT_MS,
   });
+  let result;
+  if (_raidJackSourceColumn === false) {
+    result = await send(row);
+  } else {
+    result = await send({ ...row, source: clean.source });
+    if (result.ok) _raidJackSourceColumn = true;
+    else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
+      _raidJackSourceColumn = false;
+      result = await send(row);
+    }
+  }
   if (result.ok) return 'sent';
   if (result.notReady) return 'notready';
   // 形がサーバーの決まりに合わない(400・409・422)は、何度送っても通らないので捨てる
@@ -200,6 +214,39 @@ const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId, tier = 0) => 
 const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId, tier = 0) => {
   const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
   const result = await raidJackRequest(`${raidJackMaxHitSource(kind, tier).replace('?', `?${raidJackEventParam(eventId)}&`)}&max_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
+// 「バトル」「モンヒロビート」別のランキング(A=レイドバトルだけ。サーバーのビュー raid_jack_source_ranking / raid_jack_source_by_tier・
+// docs/sql/raid/RAID_JACK_SOURCE.sql)。source は 'battle' か 'rhythm'、tier は 0=全段階 / 1〜5、metric は 'total'(合計) か 'max'(1回の最大)。
+// ビューが無い間は null を返し、画面は「準備中」にする。報酬には使わない
+const raidJackSourceBase = (source, tier, metric) => {
+  const src = source === 'rhythm' ? 'rhythm' : 'battle';
+  const t = Math.floor(Number(tier)) || 0;
+  const col = metric === 'max' ? 'max_damage' : 'total_damage';
+  return { col, path: t >= 1 && t <= 5 ? `raid_jack_source_by_tier?kind=eq.a&source=eq.${src}&tier=eq.${t}` : `raid_jack_source_ranking?kind=eq.a&source=eq.${src}` };
+};
+const raidJackSourceUrl = (b, eventId) => b.path.replace('?', `?${raidJackEventParam(eventId)}&`);
+const sbFetchRaidJackSourceRanking = async (source, tier, metric, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const b = raidJackSourceBase(source, tier, metric);
+  const rows = raidJackParseRows(await raidJackRequest(`${raidJackSourceUrl(b, eventId)}&select=breeder_id,${b.col},last_hit_at&order=${b.col}.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r[b.col]) || 0 })) : null;
+};
+const sbFetchRaidJackSourceSelf = async (breederId, source, tier, metric, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const b = raidJackSourceBase(source, tier, metric);
+  const rows = raidJackParseRows(await raidJackRequest(`${raidJackSourceUrl(b, eventId)}&breeder_id=eq.${id}&select=${b.col}&limit=1`));
+  if (!rows) return null;
+  return rows.length ? (Number(rows[0][b.col]) || 0) : 0;
+};
+const sbCountRaidJackSourceAhead = async (source, tier, metric, mine, eventId) => {
+  const my = Math.max(0, Math.floor(Number(mine)) || 0);
+  const b = raidJackSourceBase(source, tier, metric);
+  const result = await raidJackRequest(`${raidJackSourceUrl(b, eventId)}&${b.col}=gt.${my}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
   if (!result.ok) return null;
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
   const m = /\/(\d+)$/.exec(String(range || ''));
