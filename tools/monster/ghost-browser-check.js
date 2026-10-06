@@ -79,7 +79,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       // すぐ消える表示(ポップアップ)は、出た瞬間に文を拾ってためる
       document.addEventListener('DOMContentLoaded', () => {
         window.__pops = [];
-        new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { const t = (n.textContent || '').trim(); if (t && t.length < 120 && /🎩|トリックスタート|コイン|運命の輪|乱心|オフリィアボイド|トリックコンフューズ|完全回避|意味不明/.test(t)) window.__pops.push(t); } })
+        // 運しだいの結果は画面上の帯(data-battle-luck-banner)に出る。「帯:見出し 結果」の形でためる(2026-10-06)
+        new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { if (n.nodeType === 1) n.querySelectorAll?.('[data-battle-luck-banner]').forEach(b => { if (!b.__seen) { b.__seen = true; window.__pops.push(`帯:${b.querySelector('[data-battle-luck-title]')?.textContent} ${b.querySelector('[data-battle-luck-result]')?.textContent}`); window.__bannerGeo = window.__bannerGeo || []; const r = b.getBoundingClientRect(), res = b.querySelector('[data-battle-luck-result]'); window.__bannerGeo.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight, cut: !!res && res.scrollWidth > res.clientWidth + 1 }); } }); if (n.nodeType === 1 && n.matches?.('[data-battle-luck-banner]') && !n.__seen) { n.__seen = true; window.__pops.push(`帯:${n.querySelector('[data-battle-luck-title]')?.textContent} ${n.querySelector('[data-battle-luck-result]')?.textContent}`); window.__bannerGeo = window.__bannerGeo || []; const r = n.getBoundingClientRect(), res = n.querySelector('[data-battle-luck-result]'); window.__bannerGeo.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight, cut: !!res && res.scrollWidth > res.clientWidth + 1 }); } const t = (n.textContent || '').trim(); if (t && t.length < 120 && /🎩|トリックスタート|コイン|運命の輪|乱心|オフリィアボイド|トリックコンフューズ|完全回避|意味不明/.test(t)) window.__pops.push(t); } })
           .observe(document.documentElement, { childList: true, subtree: true });
       });
     });
@@ -309,7 +310,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       for (let k = 0; k < 6 && (await turnNo()) < 4; k += 1) await playAttackTurn(false);
       check('攻撃以外のカードで4ターン目まで進められた', (await turnNo()) === 4, `TURN ${await turnNo()}`);
       p = await pops();
-      const rolls = p.filter(t => /トリックスタート[！…]/.test(t)).length;
+      const rolls = p.filter(t => /^帯:🎩 ゴーストのトリックスタート (当たり！|はずれ…)/.test(t)).length;
       check('4ターン目にもう一度抽選が出る(1・4ターン目で2回)', rolls >= 2 && (await turnNo()) === 4, `${rolls}回 / TURN ${await turnNo()}`);
       check('2・3ターン目には抽選しない(1・4ターン目の2回だけ)', rolls === 2, `${rolls}回`);
       // 3ターンのあいだに敵が殴ってきていれば、完全回避でかわしている(殴られた回数ぶん、2回まで)
@@ -328,7 +329,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       p = await pops();
       check('攻撃カードでターンを進められた', attacked > 0, `${attacked}回`);
       check('攻撃が当たるとガッツが戻る(🎩 ガッツ +)', p.some(t => /🎩 ガッツ \+\d+/.test(t)), p.slice(0, 10).join(' / '));
-      check('ゴーストの固有技で運命のコイン(表・裏)が出る', p.some(t => /🪙 運命のコイン (表！ ダメージ4倍・連撃\+10%|裏… ダメージ0\.5倍・消費ガッツ\+20%)/.test(t)), p.filter(t => /🪙|コイン/.test(t)).slice(0, 4).join(' / ') || `${(await text()).slice(0, 160)} || ` + await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].map(c => `${c.getAttribute('data-card-type')}:${c.getAttribute('data-card-usable')}:${c.getAttribute('data-card-cost')}`).join(' ')));
+      check('ゴーストの固有技で運命のコイン(表・裏)が出る', p.some(t => /^帯:🪙 ゴーストの運命のコイン (表！ ダメージ4倍・連撃\+10%|裏… ダメージ0\.5倍・消費ガッツ\+20%)/.test(t)), p.filter(t => /🪙|コイン/.test(t)).slice(0, 4).join(' / ') || `${(await text()).slice(0, 160)} || ` + await page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].map(c => `${c.getAttribute('data-card-type')}:${c.getAttribute('data-card-usable')}:${c.getAttribute('data-card-cost')}`).join(' ')));
     }
     // スプーキー: 運命の輪(当てるたびに6つから1つ)
     // ★乱心の表示(意味不明の予告・敵が動かないターン)を見るため、この回だけ敵のライフを40倍にする。
@@ -362,9 +363,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       }
       const p2 = await pops();
       check('スプーキーのEX「トリックコンフューズ」を使える', exUsed && p2.some(t => /EX トリックコンフューズ！/.test(t)), p2.slice(-6).join(' / '));
-      check('効いているあいだにスプーキーの攻撃を当てると、敵が乱心になる', p2.some(t => /🌀 乱心！ 敵は3ターン惑わされる/.test(t)), p2.slice(-6).join(' / '));
+      check('効いているあいだにスプーキーの攻撃を当てると、敵が乱心になる', p2.some(t => /^帯:🌀 スプーキーのトリックコンフューズ 敵が乱心！ 次の3回の行動が、50%で意味不明になる/.test(t)), p2.slice(-6).join(' / '));
       // 乱心の振り方を確かめるため、次の予告を決めるあいだだけ乱数を小さくする(50%未満 → 意味不明)
-      if (p2.some(t => /🌀 乱心/.test(t)) && !/CLEAR|GAME OVER/.test(await text())) {
+      if (p2.some(t => /敵が乱心！/.test(t)) && !/CLEAR|GAME OVER/.test(await text())) {
         const confusedShown = await page.evaluate(() => !!document.querySelector('[data-enemy-confused]'));
         // 札はアイコン表示だと文字が短いので、名前は title(aria-label)で見る
         const chip = await page.evaluate(() => { const box = document.querySelector('[data-battle-buffs]'); return !!box && (/乱心/.test(box.innerText) || [...box.querySelectorAll('[title]')].some(el => /敵 乱心/.test(el.getAttribute('title')))); });
@@ -378,10 +379,16 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         check('乱心で「意味不明」になった行動が、次の行動の札に出る', /意味不明/.test(intentText) && /動けない・会心確定/.test(intentText), intentText);
         if (/意味不明/.test(intentText) && !/CLEAR|GAME OVER/.test(await text())) {
           await playAttackTurn(false);
+          check('意味不明になったことが帯にも出る', (await pops()).some(t => /^帯:❓ 乱心 敵の次の行動が「意味不明」に！/.test(t)), (await pops()).filter(t => /^帯:/.test(t)).slice(-3).join(' / '));
           check('意味不明のターン、敵は動かない', (await pops()).some(t => /❓ 意味不明！ 敵は動けない/.test(t)), (await pops()).slice(-4).join(' / '));
         }
       }
-      check('スプーキーの固有技で運命の輪が出る(6つのどれか)', p2.some(t => /🎡 運命の輪！ (敵の与ダメ−30%\(2ターン\)|敵の被ダメ\+30%\(2ターン\)|ダメージ3倍|ダメージ2倍|連撃\+10%|ちから\+15%)/.test(t)), p2.slice(-6).join(' / '));
+      check('スプーキーの固有技で運命の輪が出る(6つのどれか)', p2.some(t => /^帯:🎡 スプーキーの運命の輪 (敵の与ダメ−30%\(2ターン\)|敵の被ダメ\+30%\(2ターン\)|ダメージ3倍|ダメージ2倍|連撃\+10%|ちから\+15%)/.test(t)), p2.slice(-6).join(' / '));
+    }
+    {
+      const geo = await page.evaluate(() => window.__bannerGeo || []);
+      const bad = geo.filter(g => g.left < 0 || g.right > g.vw || g.top < 0 || g.bottom > g.vh || g.cut);
+      check('運しだいの結果の帯は、狭い画面(375px)でも画面の中に収まり、文字が切れない', geo.length > 0 && bad.length === 0, `${geo.length}枚 / はみ出し${bad.length}枚 ${JSON.stringify(bad[0] || {})}`);
     }
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {

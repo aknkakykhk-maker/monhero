@@ -9945,9 +9945,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★乱心(スプーキーのトリックコンフューズ): 残っていれば1つ使い、50%で「意味不明」へ差し替える。
     //   予告として出す前に決めるので、意味不明かどうかは「次の行動」の札に出る。
     //   意味不明の行動はしない前提なので、2手先は今の間合いのまま・直前の行動なしで選ぶ
-    const confusion = rollEnemyConfusion(aimed, enemyConfuseRef.current);
-    if (confusion.turns !== enemyConfuseRef.current) writeEnemyConfuse(confusion.turns);
+    const confuseBefore = enemyConfuseRef.current;
+    const confusion = rollEnemyConfusion(aimed, confuseBefore);
+    if (confusion.turns !== confuseBefore) writeEnemyConfuse(confusion.turns);
     const upcoming = confusion.intent;
+    // 乱心の抽選をしたときは、どちらになったかを帯で見せる(意味不明は「次の行動」の札にも出る)
+    if (aimed && confuseBefore > 0) {
+      if (upcoming?.type==='CONFUSED') showLuckBanner({ icon:'❓', title:'乱心', result:'敵の次の行動が「意味不明」に！ 動けず、味方の攻撃は会心確定', tone:'enemy' });
+      else showLuckBanner({ icon:'🌀', title:'乱心', result:confusion.turns>0 ? `敵は持ちこたえた(乱心はあと${confusion.turns}回)` : '敵は持ちこたえた(乱心が解けた)', tone:'bad' });
+    }
     setEnemyIntent(upcoming);
     reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming?.type==='CONFUSED' ? null : upcoming, actionState()));
   };
@@ -10100,6 +10106,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
+  };
+
+  // ★運しだいで結果が決まる効果の「何が出たか」を、画面の上のほうへ大きく出す帯(2026-10-06 ユーザー指摘
+  //   「ゴーストやスプーキーのランダム効果のものが何が発動したかわからない」)。
+  //   タクティクスの味方の吹き出しは枠の中で1行に切り詰められ、すぐ次の吹き出し(ガッツ+・ダメージ)に押し出されるので、
+  //   抽選の結果はそこへ出さずにこの帯で見せる。同時に3つまで縦に並べる。ログには log の文を残す
+  //   tone … 'good'(当たり・強化) / 'bad'(はずれ・裏) / 'enemy'(敵にかかった効果)
+  const [luckBanners, setLuckBanners] = useState([]);
+  const showLuckBanner = ({ icon = '🎲', title = '', result = '', tone = 'good', log = null }) => {
+    const id = Date.now()+Math.random();
+    setLuckBanners(prev => [...prev.slice(-2), { id, icon, title, result, tone }]);
+    setTimeout(() => setLuckBanners(p => p.filter(x => x.id !== id)), battleMs(2800));
+    pushBattleLog(log || `${icon} ${title}：${result}`, tone === 'enemy' ? 'enemy' : 'ally');
   };
 
   // ブリーダー教えカード使用時の専用演出を発火
@@ -11863,6 +11882,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         && tacticsUnitsRef.current[e.slotIdx]?.id==='Suezo')
       && Math.random()<TACTICS_INTIMIDATE_RATE) {
       setImmediateTurnBuff('stunEnemy',true);
+      // 敵の番には「スタン！」としか出ないので、眼力が出たことをここで見せる(2026-10-06)
+      showLuckBanner({ icon:'👁', title:'スエゾーの眼力', result:'発動！ 敵はこのターン動けない', tone:'enemy' });
     }
     setFocusedCard(null); setPendingCard(null);
     // ターンの区切り。あとから読むとき、どこからどこまでが1ターンなのかの目印になる
@@ -12107,10 +12128,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             fateDmgMult=fateCoinDmgMult(side);
             if(side==='heads'){
               writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
-              addPopup(`🪙 運命のコイン 表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`,'hero','text-amber-300 text-lg font-black drop-shadow-md');
+              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`, tone:'good' });
             }else{
               writePermaBuffs(p=>({...p,fateStacks:withFateCoinGuts(p.fateStacks)}));
-              addPopup(`🪙 運命のコイン 裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`,'hero','text-slate-300 text-lg font-bold');
+              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`, tone:'bad' });
             }
           }
           // 運命の輪(スプーキー): 6つから1つ。ダメージ3倍・2倍はこの技に、ほかは当たったあとに効かせる(下の固有技の効果)
@@ -12153,7 +12174,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
           && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
-          addPopup(`🌀 乱心！ 敵は${ENEMY_CONFUSE_TURNS}ターン惑わされる`,'enemy','text-violet-300 text-lg font-black drop-shadow-md');
+          showLuckBanner({ icon:'🌀', title:`${battleActorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`, tone:'enemy' });
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -12205,7 +12226,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               else if(id==='enemyTakenUp') writeFateWheel({...fateWheelRef.current,takenUp:FATE_WHEEL_DEBUFF_TURNS});
               else if(id==='combo') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
               else if(id==='atk') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'atk')}));
-              addPopup(`🎡 運命の輪！ ${fateWheelPick.label}`,'hero','text-fuchsia-300 text-lg font-black drop-shadow-md');
+              showLuckBanner({ icon:'🎡', title:`${battleActorName(slotIdx)}の運命の輪`, result:fateWheelPick.label, tone:(id==='enemyAtkDown'||id==='enemyTakenUp')?'enemy':'good' });
             }
           }
           else if(card.monId==='Pandora'){
@@ -13217,7 +13238,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const units = tacticsUnitsRef.current;
     const holders = isTacticsMode(runMode)
       ? tacticsAliveSlots(units).filter(slotIdx => hasTrickStartTrait(units[slotIdx]?.id)).map(slotIdx => ({ key: String(slotIdx), name: ALL_PLAYER_MONSTERS[units[slotIdx]?.id]?.name || '' }))
-      : (hasTrickStartTrait(mainHero?.id) ? [{ key: 'party', name: '' }] : []);
+      : (hasTrickStartTrait(mainHero?.id) ? [{ key: 'party', name: mainHero?.name || '' }] : []);
     if (!holders.length) return;
     const next = { ...cur.bySlot };
     holders.forEach(({ key, name }) => {
@@ -13225,7 +13246,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       next[key] = rolled.stacks;
       const text = trickStartGainText(rolled.gained);
       const who = name ? `${name}の` : '';
-      addPopup(text ? `🎩 ${who}トリックスタート！ ${text}` : `🎩 ${who}トリックスタート… はずれ`, 'hero', text ? 'text-violet-200 text-lg font-black drop-shadow-md' : 'text-slate-300 text-base font-bold');
+      showLuckBanner({ icon:'🎩', title:`${who}トリックスタート`, result:text ? `当たり！ ${text}` : 'はずれ…', tone:text ? 'good' : 'bad',
+        log:text ? `🎩 ${who}トリックスタート！ ${text}` : `🎩 ${who}トリックスタート… はずれ` });
     });
     cur.bySlot = next;
     setTrickStartView(next);
@@ -19245,7 +19267,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}

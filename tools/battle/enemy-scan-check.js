@@ -193,7 +193,7 @@ check('ためを止めた次のターンはふだんの出やすさに戻る',
 //   乱心が残っていないとき rollEnemyConfusion は渡した行動をそのまま返す(tools/mode/tactics-ex-skills-check.js が見る)
 check('予告済みの行動は抽選し直さず繰り上げる',
   has('const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);')
-    && has('const confusion = rollEnemyConfusion(aimed, enemyConfuseRef.current);')
+    && has('const confusion = rollEnemyConfusion(aimed, confuseBefore);')
     && has('const upcoming = confusion.intent;')
     && has('setEnemyIntent(upcoming);'));
 check('戦闘開始時に2手ぶん用意する',

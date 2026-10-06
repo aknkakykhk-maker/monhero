@@ -78,7 +78,7 @@ check('抽選はターン数が変わったときに1回だけ(同じターン�
   /if \(cur\.turn === turnCount \|\| !trickStartRollTurn\(turnCount\)\) return;/.test(app) && /\}, \[gameState, wave, turnCount, runMode, mainHero\?\.id\]\);/.test(app));
 check('持ち主: 既存5モードは勇者モン、タクティクスは立っている持ち主それぞれ',
   /tacticsAliveSlots\(units\)\.filter\(slotIdx => hasTrickStartTrait\(units\[slotIdx\]\?\.id\)\)/.test(app)
-  && /hasTrickStartTrait\(mainHero\?\.id\) \? \[\{ key: 'party', name: '' \}\]/.test(app));
+  && /hasTrickStartTrait\(mainHero\?\.id\) \? \[\{ key: 'party', name: mainHero\?\.name \|\| '' \}\]/.test(app));
 check('ちからは与ダメージの式に入る(攻撃した子のちからに掛ける)', /\*trickStartAtkMult\(trickStartStacksAt\(slotIdx\)\)\s*\*fateAtkMult\(livePermaBuff\('fateStacks',null\),slotIdx\);/.test(app));
 check('丈夫さは被ダメージの式とガードの軽減量の両方に入る',
   /\* trickStartDefMult\(trickStartStacksAt\(isTacticsMode\(runMode\) \? targetSlot : null\)\);/.test(app)
