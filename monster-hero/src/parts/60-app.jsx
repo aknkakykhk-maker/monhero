@@ -4259,11 +4259,13 @@ function MonsterHeroGame() {
   // ハロウィン・ナイト第1部を見終えたら続けて1度だけ流す。公開フラグ(raidJack)が立つまでは流さない
   const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
+  // モンヒロビート挑戦のサブストーリー「ドラのビート」(2026-10-06・ユーザー指示)。公開フラグ(raidJackRhythm)が立ったあと、HOMEで1度だけ流す
+  const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   // ハロウィン・ナイト(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり、週ごとに更新の5部構成」)。
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -4387,6 +4389,9 @@ function MonsterHeroGame() {
         && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_STORY_START_ID);
       const raidHowtoReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
         && !notPlayedYet(RAID_JACK_STORY_START_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
+      // モンヒロビート挑戦のサブストーリー。公開されていて、遊び方のお話まで見終えていれば、まだ見ていない人に1度だけ流す
+      const raidRhythmStoryReady = RELEASE_FLAGS.raidJackRhythm === true && RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_HOWTO_STORY_ID) && notPlayedYet(RAID_JACK_RHYTHM_STORY_ID);
       // 段階を倒したあと(第2〜6部)と、期間が終わったあと(終章)。みんなに1回ずつ。
       // 順番は 第1部 → 第1.5部 → 遊び方 → 第2部… 。共有の合計は1分おきの見回りのたびに取り直す(取れなければ今回は出さない)
       let raidProgressStoryId = null;
@@ -4405,6 +4410,7 @@ function MonsterHeroGame() {
       if (!liveEvent) {
         if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
         else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -4420,6 +4426,7 @@ function MonsterHeroGame() {
       }
       else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
       else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+      else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
       else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -6910,6 +6917,7 @@ function MonsterHeroGame() {
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
+    raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];

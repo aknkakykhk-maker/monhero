@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 21637eecc8144191
+// generated-sha256: 49b672e1b1bffdb9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 18:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 18:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -294,6 +294,7 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   // ジャックのストーリーと遊び方の話(releaseFlag: 'raidJack')。RELEASE_FLAGS は後ろの部品で作られるので、読み込み時ではなく見るたびに引く。
   // ★値で書くと、あとの部品の const を読み込み時に触って「初期化の前に使っている」で画面が真っ白になる(2026-10-04に実際に起きた)
   get raidJack() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidJack === true; },
+  get raidJackRhythm() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidJackRhythm === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -7876,9 +7877,9 @@ const FRIENDS_PUBLIC_RELEASE = true;
 // 開始日時はここにも置く(35-raid-jack.jsx の RAID_JACK_EVENT.startAt と同じ値。食い違いは tools/mode/raid-jack-check.js が見る)。
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
-// レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止める(ユーザー指示)。仕様が決まって実装し直したら true にする。
-// 偽のあいだは、レイド画面のボタンも、更新履歴・ヘルプの説明も出ない(デバッグの強制表示では、確認のためボタンだけ出る)
-const RAID_JACK_RHYTHM_PUBLIC_RELEASE = false;
+// レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止めていた(ユーザー指示)が、仕様の確定・実装・サブストーリー(ドラのビート)の用意ができたので、
+// 2026-10-06 にユーザーの「出して」で公開した。偽にすると、レイド画面のボタン・サブストーリー・更新履歴・ヘルプの説明が出なくなる(デバッグの強制表示では、確認のためボタンだけ出る)
+const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
@@ -43609,11 +43610,13 @@ function MonsterHeroGame() {
   // ハロウィン・ナイト第1部を見終えたら続けて1度だけ流す。公開フラグ(raidJack)が立つまでは流さない
   const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
+  // モンヒロビート挑戦のサブストーリー「ドラのビート」(2026-10-06・ユーザー指示)。公開フラグ(raidJackRhythm)が立ったあと、HOMEで1度だけ流す
+  const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   // ハロウィン・ナイト(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり、週ごとに更新の5部構成」)。
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -43737,6 +43740,9 @@ function MonsterHeroGame() {
         && !notPlayedYet(RAID_JACK_HOWTO_AFTER_STORY_ID) && notPlayedYet(RAID_JACK_STORY_START_ID);
       const raidHowtoReady = RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
         && !notPlayedYet(RAID_JACK_STORY_START_ID) && notPlayedYet(RAID_JACK_HOWTO_STORY_ID);
+      // モンヒロビート挑戦のサブストーリー。公開されていて、遊び方のお話まで見終えていれば、まだ見ていない人に1度だけ流す
+      const raidRhythmStoryReady = RELEASE_FLAGS.raidJackRhythm === true && RELEASE_FLAGS.raidJack === true && RELEASE_FLAGS.rhythmEventPoints === true
+        && !notPlayedYet(RAID_JACK_HOWTO_STORY_ID) && notPlayedYet(RAID_JACK_RHYTHM_STORY_ID);
       // 段階を倒したあと(第2〜6部)と、期間が終わったあと(終章)。みんなに1回ずつ。
       // 順番は 第1部 → 第1.5部 → 遊び方 → 第2部… 。共有の合計は1分おきの見回りのたびに取り直す(取れなければ今回は出さない)
       let raidProgressStoryId = null;
@@ -43755,6 +43761,7 @@ function MonsterHeroGame() {
       if (!liveEvent) {
         if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+        else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
         else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -43770,6 +43777,7 @@ function MonsterHeroGame() {
       }
       else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
       else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
+      else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
       else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -46260,6 +46268,7 @@ function MonsterHeroGame() {
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
+    raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];

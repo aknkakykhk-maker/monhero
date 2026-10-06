@@ -6663,6 +6663,31 @@ const ASSISTANT_RAID_JACK_HOWTO = [
 ];
 const ASSISTANT_RAID_JACK_HOWTO_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
 
+// ---- モンヒロビート挑戦のサブストーリー「ドラのビート ～音でジャックへ～」 ----
+// ハロウィンのレイド用のサブストーリー(2026-10-06・ユーザー指示。仕様と初稿: docs/spec/RAID_JACK_RHYTHM_STORY.md)。
+// モンヒロビート挑戦の公開(RELEASE_FLAGS.raidJackRhythm)と同時に、HOMEで1度だけ流れる。見のがしても回想から見返せる。
+// ★数字(ダメージ・割合・回数の数)は書かない。ジャックの正体・段階を倒したあとの展開・結末にも触れない(ネタバレを書かない)
+const ASSISTANT_RAID_JACK_RHYTHM_STORY = [
+  { who:'dra',      e:'normal',   t:'みゅあ、ちょっといいか。ジャックのことで、思いついたことがある' },
+  { who:'mua',      e:'surprise', t:'ドラケンが思いつくなんて、珍しい！ なになに？' },
+  { who:'dra',      e:'normal',   t:'ジャックと向き合ってたとき、おでの曲が流れてただろ。あのとき、ジャックがリズムに合わせて揺れてたんだ' },
+  { who:'kiki',     e:'surprise', t:'たしかに、体を揺らしていたでつね。' },
+  { who:'momosuke', e:'wink',     t:'ふふ、音に反応してるってこと？ かわいいとこあるじゃん♡' },
+  { who:'dra',      e:'happy',    t:'だったら、殴るだけじゃなくて、音でも届けられるんじゃないかと思ってさ' },
+  { who:'mua',      e:'excited',  t:'音で届ける……！ それ、モンヒロビートじゃん！' },
+  { who:'dra',      e:'normal',   t:'そうだ。曲を最後まで演奏して、そのビートをジャックにぶつけるんだ' },
+  { who:'kiki',     e:'normal',   t:'ジャストでぴったり叩くほど、ビートが強く響きまつ。' },
+  { who:'momosuke', e:'normal',   t:'逆に、ミスしたり、ずれたりすると、せっかくのビートが弱まっちゃうの' },
+  { who:'mua',      e:'happy',    t:'コンボがつながるほど、ビートが重なって強くなるんだね！' },
+  { who:'dra',      e:'normal',   t:'ああ。難しい曲ほど、強い音が出せる。かんたんな曲は、ちょっと控えめだな' },
+  { who:'kiki',     e:'normal',   t:'挑戦は、バトルと同じ回数を使いまつ。始めたら、1回ぶん数えまつ。' },
+  { who:'mua',      e:'troubled', t:'途中でやめちゃったら、何も届かないってことか……' },
+  { who:'dra',      e:'normal',   t:'そうだ。最後まで鳴らしきらないと、だめだ' },
+  { who:'momosuke', e:'wink',     t:'ももたちも応援してるから、思いっきり叩いてきてね♡' },
+  { who:'mua',      e:'excited',  t:'よーし、ジャックにビートを届けるよ！ トリック・オア・ビート！' },
+];
+const ASSISTANT_RAID_JACK_RHYTHM_STORY_CALLS = { mua: 'ドラケン／もも', kiki: 'ドラさん', momosuke: 'ドラちゃん／みゅあねぇ', dra: 'みゅあ／靴下さん／もも' };
+
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -6714,6 +6739,8 @@ const EVENT_REPLAYS = [
   // (出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。id はそこと同じ)
   { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
   // レイドの遊び方(2026-10-04)。第1部を見終えたあとにHOMEで1度だけ続けて流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
+  // モンヒロビート挑戦のサブストーリー(2026-10-06)。公開と同時にHOMEで1度だけ流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
+  { id: 'raid_jack_rhythm_story_2026_10_06', date: '2026-10-06 18:37', title: 'ドラのビート ～音でジャックへ～', script: ASSISTANT_RAID_JACK_RHYTHM_STORY, calls: ASSISTANT_RAID_JACK_RHYTHM_STORY_CALLS, unlockedKey: 'raidJackRhythmStorySeen', releaseFlag: 'raidJackRhythm', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
 ];
 
