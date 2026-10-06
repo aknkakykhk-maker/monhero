@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bc8cf36b5eb21340
+// generated-sha256: 010d99397ecd9704
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 17:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 17:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23955,26 +23955,36 @@ const raidJackRhythmDamageByCombo = (input) => {
   const scoreRate = raidJackRhythmRate(i.score, maxScore);
   return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(perCombo * combo * scoreRate + 1e-9)));
 };
-// 【式②(判定)】(2026-10-06・ユーザー提案②「難易度と判定でみるダメージ計算。難易度ごとに、マーベラスなどの判定1個あたりのダメージ換算を決める」)
-//   ダメージ = Σ(その判定の数 × 難易度ごとの判定1個あたりのダメージ)。ミスは0。30万で頭打ち。
-//   1個あたりは「難易度ごとの基準(MARVELOUS)× 判定の割合」。割合は MARVELOUS 1.0 / EXCELLENT 0.9 / GREAT 0.7 / GOOD 0.4 / BAD 0.1 / MISS 0。
-//   基準は式①の1コンボあたりと同じ(EASY 200 〜 MASTER 340)なので、公開中の曲でいちばんノーツの多い曲を全部 MARVELOUS で叩いても、MASTER でほぼ30万。
-//   スコアやコンボは見ない(判定の質と、叩いた数そのものが効く。ノーツの少ないかんたんな曲は、同じ難易度でも少なくなる)
-const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ MARVELOUS: 1.0, EXCELLENT: 0.9, GREAT: 0.7, GOOD: 0.4, BAD: 0.1, MISS: 0 });
+// 【式②(判定)】(2026-10-06・ユーザー提案②「難易度と判定でみるダメージ計算。難易度ごとに、マーベラスなどの判定1個あたりのダメージ換算を決める」
+//   →「ジャストマーベラスを最大基準にして。バッド以下はマイナス補正。最大コンボ数の補正も掛けて(少なめ)」)
+//   ダメージ = max(0, Σ(その判定の数 × 難易度ごとの判定1個あたりのダメージ)) × 最大コンボの補正。30万で頭打ち。
+//   ・ジャストマーベラス(MARVELOUS のうち、ズレが±20ms以内のもの。result.precise)を**最大基準(1.0)**にする。ふつうのマーベラスはその少し下
+//   ・判定の割合: JUST 1.0 / MARVELOUS 0.95 / EXCELLENT 0.85 / GREAT 0.65 / GOOD 0.35 / **BAD -0.15 / MISS -0.30(マイナス補正。バッド以下は、稼いだダメージから引く)**
+//   ・最大コンボの補正(少なめ): 0.9 + 0.1 × (最大コンボ ÷ ノーツの数)。フルコンボで1.0、まったくつながらなくても0.9。掛けるだけで、増えはしない(30万を超えない)
+//   ・基準(JUST の1個あたり)は難易度ごとに 200 / 240 / 280 / 320 / 340。公開中の曲でいちばんノーツの多い曲を全部ジャストマーベラスで叩いても、MASTER でほぼ30万
+//   ・スコアは見ない(判定の質・叩いた数・コンボの長さが効く。ノーツの少ないかんたんな曲は、同じ難易度でも少なくなる)
+const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ JUST: 1.0, MARVELOUS: 0.95, EXCELLENT: 0.85, GREAT: 0.65, GOOD: 0.35, BAD: -0.15, MISS: -0.30 });
+const RAID_JACK_RHYTHM_COMBO_FLOOR = 0.9;   // 最大コンボの補正の下限(上限は1.0)
 const RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT = Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_DAMAGE_PER_COMBO).map(([id, base]) => [id,
   Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_JUDGMENT_RATES).map(([j, rate]) => [j, Math.round(base * rate)])))])));
-// input = { judgments: { MARVELOUS: 数, EXCELLENT: 数, ... }, difficultyId, assist }
+// input = { judgments: { MARVELOUS: 数, EXCELLENT: 数, ... }, precise(MARVELOUS のうちジャストの数), maxCombo, difficultyId, assist }
 const raidJackRhythmDamageByJudgment = (input) => {
   const i = input && typeof input === 'object' ? input : {};
   if (i.assist === true) return 0;
   const table = RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT[i.difficultyId];
   if (!table || !i.judgments || typeof i.judgments !== 'object') return 0;
-  let total = 0;
-  Object.keys(table).forEach((j) => {
-    const n = Number(i.judgments[j]);
-    if (Number.isFinite(n) && n > 0) total += Math.floor(n) * table[j];
-  });
-  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(total)));
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
+  const marvelous = num(i.judgments.MARVELOUS);
+  const just = Math.min(marvelous, num(i.precise));   // ジャストは MARVELOUS の中の数(多くても MARVELOUS の数まで)
+  const counts = { JUST: just, MARVELOUS: marvelous - just, EXCELLENT: num(i.judgments.EXCELLENT), GREAT: num(i.judgments.GREAT), GOOD: num(i.judgments.GOOD), BAD: num(i.judgments.BAD), MISS: num(i.judgments.MISS) };
+  const totalNotes = Object.keys(counts).reduce((sum, j) => sum + counts[j], 0);
+  if (totalNotes <= 0) return 0;
+  let raw = 0;
+  Object.keys(table).forEach((j) => { raw += counts[j] * table[j]; });
+  if (raw <= 0) return 0;
+  const comboRate = raidJackRhythmRate(i.maxCombo, totalNotes);
+  const comboFactor = RAID_JACK_RHYTHM_COMBO_FLOOR + (1 - RAID_JACK_RHYTHM_COMBO_FLOOR) * comboRate;
+  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(raw * comboFactor + 1e-9)));
 };
 // どちらの式を使うか。'judgment'(式②・判定)/ 'combo'(式①・コンボ×スコアの割合)。切り替えはここの1行だけ
 const RAID_JACK_RHYTHM_FORMULA = 'judgment';
@@ -23982,7 +23992,7 @@ const raidJackRhythmDamage = (input) => (RAID_JACK_RHYTHM_FORMULA === 'combo' ? 
 // 演奏の結果(result・difficulty)から、ダメージを出す
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
-  return raidJackRhythmDamage({ score: r.score, maxCombo: r.maxCombo, judgments: r.judgments, difficultyId: difficulty && difficulty.id, maxScore: difficulty && difficulty.maxScore, assist: r.assist === true });
+  return raidJackRhythmDamage({ score: r.score, maxCombo: r.maxCombo, judgments: r.judgments, precise: r.precise, difficultyId: difficulty && difficulty.id, maxScore: difficulty && difficulty.maxScore, assist: r.assist === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す

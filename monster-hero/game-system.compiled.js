@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e174af3351bc6f56
+// source-sha256: ce7f4e1b406cd3f6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 17:21";
+const BUILD_DATE = "2026-10-06 17:31";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37284,25 +37284,46 @@ const raidJackRhythmDamageByCombo = input => {
   return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(perCombo * combo * scoreRate + 1e-9)));
 };
 const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({
-  MARVELOUS: 1.0,
-  EXCELLENT: 0.9,
-  GREAT: 0.7,
-  GOOD: 0.4,
-  BAD: 0.1,
-  MISS: 0
+  JUST: 1.0,
+  MARVELOUS: 0.95,
+  EXCELLENT: 0.85,
+  GREAT: 0.65,
+  GOOD: 0.35,
+  BAD: -0.15,
+  MISS: -0.30
 });
+const RAID_JACK_RHYTHM_COMBO_FLOOR = 0.9;
 const RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT = Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_DAMAGE_PER_COMBO).map(([id, base]) => [id, Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_JUDGMENT_RATES).map(([j, rate]) => [j, Math.round(base * rate)])))])));
 const raidJackRhythmDamageByJudgment = input => {
   const i = input && typeof input === 'object' ? input : {};
   if (i.assist === true) return 0;
   const table = RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT[i.difficultyId];
   if (!table || !i.judgments || typeof i.judgments !== 'object') return 0;
-  let total = 0;
+  const num = v => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  };
+  const marvelous = num(i.judgments.MARVELOUS);
+  const just = Math.min(marvelous, num(i.precise));
+  const counts = {
+    JUST: just,
+    MARVELOUS: marvelous - just,
+    EXCELLENT: num(i.judgments.EXCELLENT),
+    GREAT: num(i.judgments.GREAT),
+    GOOD: num(i.judgments.GOOD),
+    BAD: num(i.judgments.BAD),
+    MISS: num(i.judgments.MISS)
+  };
+  const totalNotes = Object.keys(counts).reduce((sum, j) => sum + counts[j], 0);
+  if (totalNotes <= 0) return 0;
+  let raw = 0;
   Object.keys(table).forEach(j => {
-    const n = Number(i.judgments[j]);
-    if (Number.isFinite(n) && n > 0) total += Math.floor(n) * table[j];
+    raw += counts[j] * table[j];
   });
-  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(total)));
+  if (raw <= 0) return 0;
+  const comboRate = raidJackRhythmRate(i.maxCombo, totalNotes);
+  const comboFactor = RAID_JACK_RHYTHM_COMBO_FLOOR + (1 - RAID_JACK_RHYTHM_COMBO_FLOOR) * comboRate;
+  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(raw * comboFactor + 1e-9)));
 };
 const RAID_JACK_RHYTHM_FORMULA = 'judgment';
 const raidJackRhythmDamage = input => RAID_JACK_RHYTHM_FORMULA === 'combo' ? raidJackRhythmDamageByCombo(input) : raidJackRhythmDamageByJudgment(input);
@@ -37312,6 +37333,7 @@ const raidJackRhythmDamageOf = (result, difficulty) => {
     score: r.score,
     maxCombo: r.maxCombo,
     judgments: r.judgments,
+    precise: r.precise,
     difficultyId: difficulty && difficulty.id,
     maxScore: difficulty && difficulty.maxScore,
     assist: r.assist === true
