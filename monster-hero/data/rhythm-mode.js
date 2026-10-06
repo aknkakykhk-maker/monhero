@@ -188,7 +188,7 @@ const sanitizeRhythmMonsterSlotIds=value=>{
   }
   return ids;
 };
-// 同じ能力(元気・無敵・我慢・根性・必死)のマスモンを編成できる数(2026-10-04・ユーザー指示「モンビーのマスモンで状態変化の被りを2つまでに」)。
+// 同じ能力(元気・無敵・我慢・根性・必死・いたずら)のマスモンを編成できる数(2026-10-04・ユーザー指示「モンビーのマスモンで状態変化の被りを2つまでに」)。
 // 能力は主血統で決まる(§4.5)ので、血統が違っても能力が同じなら被りに数える。能力の無いマスモンは数えない
 const RHYTHM_MONSTER_SAME_ABILITY_MAX=2;
 // そのマスモンの能力の名前(無ければ '')。能力の表(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)と血統の引き方は、
@@ -326,6 +326,9 @@ const RHYTHM_MONSTER_ABILITIES=Object.freeze({
   // 必死(2026-09-29 ユーザー指示「必死 10秒の間、グレート以上がジャストマーベラスになる」→「やっぱり7秒で」)。
   // 7秒のあいだ、GREAT・EXCELLENT・MARVELOUS をすべてジャストマーベラス(ぴったりのMARVELOUS)として数える
   HISSHI:Object.freeze({id:'HISSHI',name:'必死',durationMs:7000}),
+  // いたずら(2026-10-05 ユーザー選択「新しい能力「いたずら」」)。ゴースト血統の能力。
+  // 6秒のあいだ、ライフが減らず(無敵と同じ)、BAD・MISSでもコンボが切れない。判定そのものは変えない
+  ITAZURA:Object.freeze({id:'ITAZURA',name:'いたずら',durationMs:6000}),
 });
 const RHYTHM_MONSTER_ABILITY_BY_LINEAGE=Object.freeze({
   pixie:'GENKI', undine:'GENKI', plant:'GENKI', suezo:'GENKI', tiger:'GENKI',
@@ -333,6 +336,7 @@ const RHYTHM_MONSTER_ABILITY_BY_LINEAGE=Object.freeze({
   golem:'GAMAN', mocchi:'GAMAN',
   ham:'KONJO', zan:'KONJO',
   yggdrasil:'HISSHI',
+  ghost:'ITAZURA',
 });
 const rhythmMonsterAbilityForLineage=lineageId=>
   RHYTHM_MONSTER_ABILITIES[RHYTHM_MONSTER_ABILITY_BY_LINEAGE[String(lineageId||'')]]||null;
@@ -341,9 +345,9 @@ const RHYTHM_MONSTER_ABILITY_JUDGMENTS=Object.freeze(['MARVELOUS','EXCELLENT','G
 const rhythmMonsterAbilityTriggers=judgment=>RHYTHM_MONSTER_ABILITY_JUDGMENTS.includes(judgment);
 
 // 能力の状態。プレイ中のライフ計算へ差し込む。runへ持たせて毎フレーム作り直さない。
-const createRhythmMonsterAbilityState=()=>({mutekiUntilMs:0,gamanUntilMs:0,konjoStock:0,hisshiUntilMs:0});
+const createRhythmMonsterAbilityState=()=>({mutekiUntilMs:0,gamanUntilMs:0,konjoStock:0,hisshiUntilMs:0,itazuraUntilMs:0});
 // 時間で切れる能力の「終わり」を持つ項目名
-const RHYTHM_MONSTER_ABILITY_UNTIL_KEYS=Object.freeze({MUTEKI:'mutekiUntilMs',GAMAN:'gamanUntilMs',HISSHI:'hisshiUntilMs'});
+const RHYTHM_MONSTER_ABILITY_UNTIL_KEYS=Object.freeze({MUTEKI:'mutekiUntilMs',GAMAN:'gamanUntilMs',HISSHI:'hisshiUntilMs',ITAZURA:'itazuraUntilMs'});
 const rhythmMonsterAbilityRemainingMs=(state,abilityId,songTimeMs)=>{
   const key=RHYTHM_MONSTER_ABILITY_UNTIL_KEYS[abilityId];
   const until=key?Number(state?.[key]):0;
@@ -361,7 +365,8 @@ const rhythmMonsterAbilityActive=(state,abilityId,songTimeMs)=>rhythmMonsterAbil
 const rhythmApplyMonsterAbilityToLifeDelta=(state,delta,songTimeMs)=>{
   const raw=Number(delta)||0;
   if(raw>=0)return raw;
-  if(rhythmMonsterAbilityActive(state,'MUTEKI',songTimeMs))return 0;
+  // いたずらも無敵と同じくライフを減らさない(コンボを守るのは rhythmItazuraKeepsCombo)
+  if(rhythmMonsterAbilityActive(state,'MUTEKI',songTimeMs)||rhythmMonsterAbilityActive(state,'ITAZURA',songTimeMs))return 0;
   if(rhythmMonsterAbilityActive(state,'GAMAN',songTimeMs))
     return -Math.round(Math.abs(raw)*(1-RHYTHM_MONSTER_ABILITIES.GAMAN.reduceRate));
   return raw;
@@ -370,6 +375,9 @@ const rhythmApplyMonsterAbilityToLifeDelta=(state,delta,songTimeMs)=>{
 // 引き上げるなら true(呼び出し側で判定を MARVELOUS・ズレを0にする。スコア・コンボ・ライフ・判定数もそれで数える)
 const rhythmHisshiUpgrades=(state,judgment,songTimeMs)=>
   RHYTHM_MONSTER_ABILITY_JUDGMENTS.includes(judgment)&&rhythmMonsterAbilityActive(state,'HISSHI',songTimeMs);
+// いたずらのあいだは BAD・MISS でもコンボを切らない(判定の数・スコアは変えない)。守るなら true
+const rhythmItazuraKeepsCombo=(state,judgment,songTimeMs)=>
+  (judgment==='BAD'||judgment==='MISS')&&rhythmMonsterAbilityActive(state,'ITAZURA',songTimeMs);
 // 能力を通したライフ計算。既存の rhythmLifeAfter は変えずに別入口として足す。
 const rhythmLifeAfterWithMonsterAbilities=(life,judgment,state,songTimeMs)=>{
   if(rhythmLifeValue(life)<=0)return 0;
@@ -393,7 +401,7 @@ const rhythmActivateMonsterAbility=({ability,state,life,songTimeMs}={})=>{
     if(lifeNow<=0)return stay;
     return {...stay,life:Math.min(RHYTHM_LIFE_MAX,lifeNow+ability.lifeGain),applied:true};
   }
-  if(ability.id==='MUTEKI'||ability.id==='GAMAN'||ability.id==='HISSHI'){
+  if(ability.id==='MUTEKI'||ability.id==='GAMAN'||ability.id==='HISSHI'||ability.id==='ITAZURA'){
     // 無敵と我慢はそれぞれ別に持つので、片方を取ってももう片方の残り時間は消えない(§4.7)。
     // 同じ能力を続けて取ったときは、終わりが遅いほう(=いま取ったぶん)まで効く。
     // 率を足したり残り時間へ足したりはしない。

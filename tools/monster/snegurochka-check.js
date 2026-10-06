@@ -39,7 +39,8 @@ const checks = [
   ['マーケット150000ダイヤ', /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?cost:150000/.test(breeder)],
   ['専用円盤石画像を商品に使用', /const SNEGUROCHKA_DISC_ICON = "images\/disc-icons\/snegurochka-disc\.PNG\?v=[a-f0-9]{12}"/.test(breeder) && /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?icon:SNEGUROCHKA_DISC_ICON/.test(breeder)],
   ['円盤石の商品詳細も共通表示を使用', game.includes('marketDiscIcon:item.icon') && game.includes('detailOpts.marketDiscIcon')],
-  ['移動封印は有効中のMOVEを失敗し行動済みを維持', /intent\.type==='MOVE' && getWaveBuff\('iceLockTurns'\)>0[\s\S]*?移動できない！/.test(game)],
+  // 2026-10-05: スエゾーのEX「サイコロックオン」も同じ枝で移動を止める(iceLockTurns と並べて || で見る)
+  ['移動封印は有効中のMOVEを失敗し行動済みを維持', /intent\.type==='MOVE' && \(?getWaveBuff\('iceLockTurns'\)>0(\|\|tacticsExPsychoLockNow\(\)\.active\))?\)?[\s\S]*?移動できない！/.test(game)],
   ['付与ターンは減算せず次ターンから5ターン', /iceLockTurns:5/.test(game) && /getWaveBuff\('iceLockTurns'\)>0 && !immediateEffects\.iceLockRefreshed/.test(game) && /iceLockTurns:Math\.max\(0,\(p\.iceLockTurns\|\|0\)-1\)/.test(game)],
   ['初回付与ターンは準備中として次ターンに解除', /iceLockPreparing:\(p\.iceLockTurns\|\|0\)<=0/.test(game) && /iceLockRefreshed\) setWaveBuffs\(p=>\(\{\.\.\.p,iceLockPreparing:false\}\)\)/.test(game)],
   ['消費ガッツ3%累積・安全な下限', /Math\.max\(0\.1, 1 - 0\.03\*getPermaBuff\('snegurochkaGutsDiscountStacks'\)\)/.test(game)],
@@ -52,7 +53,7 @@ const checks = [
     && game.includes('? Math.min(1, currentRate + 0.5)')],
   ['旧与ダメージ1.5倍処理を削除', !game.includes('iceRulerMult') && !game.includes('isIceRulerActive') && !game.includes('data-ice-ruler-active')],
   ['準備中は特性を発動しない', game.includes('const iceLockActive = iceLockTurns>0 && !iceLockPreparing') && !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
-  ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':[\s\S]*?iceLockTurns\}T　⬇30%/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
+  ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /add\('ice'[\s\S]*?iceLockPreparing \? '準備' : `残り\$\{iceLockTurns\}T`[\s\S]*?30%/.test(game) /* 2026-10-06 から、絶氷の表示は敵の名前の横の簡易表示(敵の状態)へまとめた */ && /'❄️', '絶氷の楔'/.test(game)],
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
   ['固有技の共通タメは専用モーションより先に下沈みを行う', game.includes('setAttackAnim({slotIndex: animSlot, charge:true});')
     && !game.includes("setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});")

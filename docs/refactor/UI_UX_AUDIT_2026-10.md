@@ -114,3 +114,20 @@
 窓の残り(ModalFrame へ寄せるのは個別の窓ごとに外側タップの挙動を決める必要がある)。
 - **index.html は生成物ではない**(CSS の本体が書いてある)。main を取り込んで衝突したとき `--theirs` で丸ごと取ると、
   こちらで足した CSS(`.mh-emoji-icon`)が消える。取り込んだあとは `git diff origin/main -- monster-hero/index.html` で確かめる。
+
+### 5本目のPR(2026-10-06・「UIをもっとよくできそうなとこはないの？」→「全部。マスモン強化周りと神殿の操作性も」)
+- 神殿の限界突破・転生・超越の一覧: 押せないカードに理由(あとLv.◯で突破／最大まで突破済み／🌈あと◯個／突破あと◯回)。
+  薄さは opacity-35 → 60(理由が読めるように)。
+- 通常強化: 強化Pを見出しのカードの右へ。「オート強化の設定で下書きする」(buildMasuAutoEnhancePlan を下書きへ入れるだけ。保存は強化するを押したとき)。
+- 合体・寄付の並べ替え: 並べ方は変えず、「並べ替え＋横に流れるボタン」の同じ形へ。
+- 助手の顔: 大きい(88px)7画面を compact(48px)へ。
+- モード選択の上のタブのランキング3つに🏆。ヘルプの決定ボタンを金色。勇者選択などの戻るボタンを枠つきへ。
+- プロフィールのタイルの「フレーム：」「着替え：」の重複をやめ、検査は data-profile-tile で探す形へ(4本)。
+- アイテム交換所: 入口に🌈の所持数、商品は「所持 ◯」。
+- マスモン詳細の「育成・カスタム」は窓の下に固定されていて、もともとスクロール無しで押せた(候補2は不要だった)。
+- `--area all`(595本): 579 OK。落ちる16本のうち15本はこの作業の元の main でも落ちる
+  (ランキング系5本はこの環境で一覧が0件になる・auto-battle・unique-effect・soul-rank-step4・tactics-discard・
+  meloso-assist・snegurochka・species-challenge-browser・training-reward・rhythm-chart-v2-step6・bond-levels-table)。
+  rhythm-run-loop は単独で通る。
+- `masu/masu-enhance-layer-check.js` は、その日のログインボーナスの窓(z60000)が出ると覆われて落ちる(main でも同じ)。
+  検査の種でログインボーナスを受け取り済みにすれば直る(未着手)。

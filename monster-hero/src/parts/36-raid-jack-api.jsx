@@ -9,6 +9,9 @@
 //  ・表がまだ無い環境(SQL未適用)は「準備中」として扱う。エラー扱いにして画面を壊さない。
 //  ・このファイルは公開フラグ(RELEASE_FLAGS.raidJack)を見ない。呼ぶ側が見る。
 const RAID_JACK_TIMEOUT_MS = 8000;
+// 与ダメージを送る通信だけは長めに待つ(2026-10-06・通信の弱い4Gで8秒を超えて打ち切られ、送れないまま残る人がいた)
+const RAID_JACK_SEND_TIMEOUT_MS = 20000;
+const RAID_JACK_SEND_RETRY_WAITS = Object.freeze([1500, 3500]);   // 失敗したとき、この間隔で再試行する(合計3回まで)
 let _raidJackUnavailable = false;                  // 土台の表(raid_jack_hits)・段階の合計が無いと分かったら、ページを閉じるまで全部使わない
 const raidJackUnavailable = () => _raidJackUnavailable;
 // 後から足した「ランキングのビュー」だけが無いときは、そのビューだけを「準備中」にして、与ダメージの送信・段階の合計・報酬の受け取りは止めない。
@@ -33,10 +36,11 @@ const raidJackRequest = async (pathAndQuery, init = {}) => {
   const scope = raidJackScopeOf(pathAndQuery);
   if (_raidJackUnavailable || _raidJackUnavailableScopes.has(scope)) return { ok: false, status: 0, body: '', notReady: true, error: null };
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), RAID_JACK_TIMEOUT_MS);
+  const { timeoutMs, ...fetchInit } = init;
+  const timer = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : RAID_JACK_TIMEOUT_MS);
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathAndQuery}`, {
-      cache: 'no-store', ...init, headers: { ...SB_HEADERS, ...(init.headers || {}) }, signal: controller.signal,
+      cache: 'no-store', ...fetchInit, headers: { ...SB_HEADERS, ...(init.headers || {}) }, signal: controller.signal,
     });
     const body = await res.text();
     if (!res.ok && (_isMissingTableError(res.status, body) || res.status === 404)) {
@@ -67,7 +71,7 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
     app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
   };
   const result = await raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
-    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row),
+    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row), timeoutMs: RAID_JACK_SEND_TIMEOUT_MS,
   });
   if (result.ok) return 'sent';
   if (result.notReady) return 'notready';
@@ -86,7 +90,13 @@ const raidJackSaveState = async (state) => {
 // 送る。送れなければ pending に残す(戻り値は送れたかどうか)。state は呼び出し側が持つ最新を渡し、更新後を返す
 const raidJackSubmitHit = async (state, hit, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
-  const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  let outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  // 通信が弱くて失敗したときは、その場で少し待って送り直す(同じ hit_id なので二重には数えられない)
+  for (const wait of RAID_JACK_SEND_RETRY_WAITS) {
+    if (outcome !== 'error') break;
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  }
   if (outcome === 'error' || outcome === 'notready') {
     const [clean] = raidJackNormalizePending([hit]);
     if (clean && !next.pending.some((p) => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
@@ -104,6 +114,27 @@ const raidJackFlushPending = async (state, breederId, eventId) => {
   }
   next.pending = keep;
   return next;
+};
+
+// 端末に残っている再送待ちを、保存から読んで送り直し、結果を保存する(2026-10-06)。
+// 以前は再送待ちに残すだけで、本番のゲームは送り直していなかった(デバッグ画面だけが送り直せた)。
+// そのため通信の弱い場所で一度失敗した与ダメージは、ランキングへいつまでも載らなかった。
+// HOME とレイド画面を開いたときに呼ぶ。再送待ちが空なら通信しない。返り値は送れた件数(読み・送りに失敗したら 0)
+const raidJackFlushStoredPending = async (breederId, eventId) => {
+  try {
+    const state = await raidJackLoadState();
+    if (!state.pending.length || !raidJackSafeId(breederId)) return 0;
+    const before = state.pending.length;
+    const next = await raidJackFlushPending(state, breederId, eventId);
+    if (next.pending.length !== before) {
+      // 送っているあいだに別の処理が保存を更新していても、巻き戻さないように、いまの保存へ再送待ちの差分だけを反映する
+      const latest = await raidJackLoadState();
+      const left = new Set(next.pending.map((p) => p.hitId));
+      latest.pending = latest.pending.filter((p) => left.has(p.hitId));
+      await raidJackSaveState(latest);
+    }
+    return before - next.pending.length;
+  } catch (e) { return 0; }
 };
 
 // ---- 読み出し(失敗は null を返し、画面は「準備中」にする) ----

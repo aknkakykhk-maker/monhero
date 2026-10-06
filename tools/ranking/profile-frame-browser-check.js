@@ -157,8 +157,9 @@ async function run() {
   await page.waitForTimeout(1200);
   check('プロフィールが開く', await page.evaluate(() => document.body.innerText.includes('プロフィール')));
   check('フレームのボタンがあり、はじめは「フレームなし」',
-    await page.evaluate(() => [...document.querySelectorAll('button')].some(b => b.textContent.includes('フレーム：フレームなし'))));
-  await clickText('フレーム：');
+    // 2026-10-05 からタイルは「フレーム」の見出しの下に名前だけを出す(「フレーム：」の重複をやめた)
+    await page.evaluate(() => (document.querySelector('button[data-profile-tile="frame"]')?.textContent || '').includes('フレームなし')));
+  await page.evaluate(() => document.querySelector('button[data-profile-tile="frame"]')?.click());
   await page.waitForTimeout(800);
 
   const options = await page.evaluate(() => [...document.querySelectorAll('button[data-profile-frame-option]')].map(b => b.textContent.trim()));

@@ -314,7 +314,9 @@ if (REWARD_PICK_HEAD.test(component)) {
   // iPhone縦画面で見切れない作り
   check('縦画面ではみ出さない作りになっている',
     /overflow-y-auto/.test(jsx) && /flex-1 min-h-0/.test(jsx)
-      && /env\(safe-area-inset-top\)/.test(jsx) && /env\(safe-area-inset-bottom\)/.test(jsx));
+      // 上の切り欠きの余白は、画面の外側(アプリの殻)が取る。画面の根でさらに足すと二重になるので足さない決まりになった(UI/UX総点検・2026-10-05。41-screen-ui.jsx のコメント)。
+      // 画面側で要るのは、下のホームバーの余白だけ
+      && /env\(safe-area-inset-bottom\)/.test(jsx) && !/calc\(1rem \+ env\(safe-area-inset-top\)\)/.test(jsx));
   check('タップ領域を十分にとる(項目・ボタンとも)',
     /min-h-\[112px\]/.test(jsx) && (jsx.match(/min-h-\[52px\]/g) || []).length >= 2);
   check('ULTIMATE補正の表示は実処理と同じ低下倍率を使う（別計算を作っていない）',

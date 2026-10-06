@@ -48,12 +48,13 @@ function MasuFusionScreen({
         });
       };
       const fusionSortBar = (
-        <div className="flex gap-1.5 mb-2 shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="合体一覧の並べ替え">
+          <span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>
           {FUSION_SORT_OPTIONS.map(o=>{
             const active = fusionSortKey === o.key;
             return (
               <button key={o.key} onClick={()=>{ if(active) setFusionSortDir(d=>d==='asc'?'desc':'asc'); else { setFusionSortKey(o.key); setFusionSortDir('desc'); } }}
-                className={`shrink-0 min-h-[44px] px-3.5 rounded-xl text-[11px] font-black border active:scale-95 ${active?'bg-violet-600 border-violet-400/60 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>
+                aria-pressed={active} className={`shrink-0 min-h-[44px] px-3 rounded-xl text-[11px] font-black border whitespace-nowrap active:scale-95 ${active?'border-amber-300/70 bg-amber-500/25 text-amber-100':'bg-slate-900 border-white/10 text-slate-300'}`}>
                 {o.label}{active&&<span className="ml-0.5">{fusionSortDir==='asc'?'▲':'▼'}</span>}
               </button>
             );

@@ -1,5 +1,5 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
-// EXの通し検査(2026-10-06): 全22体で「EXを使う→カードを切る→ターンが進む(または敵を倒してWAVEクリア)」を実際のブラウザで通し、
+// EXの通し検査(2026-10-06): 全24体(2026-10-06 ゴースト・スプーキーを足した)で「EXを使う→カードを切る→ターンが進む(または敵を倒してWAVEクリア)」を実際のブラウザで通し、
 // ページのエラーや進行の止まりが無いかを見る。時間がかかるので EX_SMOKE=1 を付けたときだけ回る。
 // 設計の正本: docs/spec/TACTICS_EX_SKILLS.md
 //
@@ -44,7 +44,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
   fs.readFileSync(path.join(root, 'monster-hero/src/parts/10-core.jsx'), 'utf8'));
 
 (async () => {
-  // 全22体を順に通すので30分近くかかる。ふだんの検査(run-checks)では回さず、EXをいじったあとに手で回す: EX_SMOKE=1 node tools/mode/tactics-ex-turn-smoke-check.js
+  // 全24体を順に通すので30分以上かかる。ふだんの検査(run-checks)では回さず、EXをいじったあとに手で回す: EX_SMOKE=1 node tools/mode/tactics-ex-turn-smoke-check.js
   if (!process.env.EX_SMOKE) { console.log('SKIP: 時間がかかるので EX_SMOKE=1 を付けたときだけ回します'); process.exit(0); }
   let playwright;
   try { playwright = require('playwright'); }
@@ -69,7 +69,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
       // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
-      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora','Plant','Ark','Iblis','Yggdrasil','MelWhip','Zan','Eiki','Mitarashi']));
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora','Plant','Ark','Iblis','Yggdrasil','MelWhip','Zan','Eiki','Mitarashi','Ghost','Spooky']));
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     await page.route(/supabase\.co/, (route) => route.abort());
@@ -236,7 +236,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       if (r !== 'ok') throw new Error(r);
       return heroSlot();
     };
-    const names = ['モノリス', 'モッチー', 'ミタラシ', 'エイキ', 'ザン', 'アーク', 'イブリース', 'ピクシー', 'ミーア', 'スネグーラチカ', 'ウンディーネ', 'ヤオビクニ', 'パンドラ', 'ゴーレム', '剣士モッチー', 'ユグドラシル', 'メルホイップ', 'ライガー', 'プラント', 'オボロゲソウ', 'スエゾー', 'ハム'];
+    const names = ['モノリス', 'モッチー', 'ミタラシ', 'エイキ', 'ザン', 'アーク', 'イブリース', 'ピクシー', 'ミーア', 'スネグーラチカ', 'ウンディーネ', 'ヤオビクニ', 'パンドラ', 'ゴーレム', '剣士モッチー', 'ユグドラシル', 'メルホイップ', 'ライガー', 'プラント', 'オボロゲソウ', 'スエゾー', 'ハム', 'ゴースト', 'スプーキー'];
     const turnOf = async () => { const m = (await text()).match(/TURN\s*(\d+)\s*\/\s*20/i); return m ? Number(m[1]) : null; };
     for (const nm of names) {
       const e0 = errors.length;

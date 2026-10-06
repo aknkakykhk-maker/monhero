@@ -246,11 +246,14 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.waitForTimeout(400);
       check('使う札にしたカードも、敵側へ運べば捨てる札に替わる', await page.locator('[data-card-discard]').count() === 1 && (await actionCards()).used === 1, JSON.stringify(await actionCards()));
       // Action で実行 → ターンが進み、手札が元の枚数へ引き直される
+      // ドラッグを離した直後(500ms)のクリックは、画面が「引きずりの余波のクリック」として捨てる。その時間が過ぎてから押す
+      await page.waitForTimeout(700);
       const act = page.locator('[data-battle-action]');
       check('捨てる札だけでも Action が押せる', await act.isEnabled());
       await act.click();
       let turn2 = false;
-      for (let k = 0; k < 40; k += 1) {
+      // 敵の番の演出が長いので、進むまで見張って、上限だけ決める(60秒)
+      for (let k = 0; k < 120; k += 1) {
         if (/TURN 2\/20/.test(await text())) { turn2 = true; break; }
         await page.waitForTimeout(500);
       }
