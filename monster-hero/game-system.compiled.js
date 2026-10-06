@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e174af3351bc6f56
+// source-sha256: 775ae60098588324
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 17:21";
+const BUILD_DATE = "2026-10-06 17:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15219,7 +15219,7 @@ const rhythmAbilityEffectText = ability => {
   if (ability.id === 'GENKI') return `取るとライフが +${ability.lifeGain}`;
   if (ability.id === 'MUTEKI') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフが減らない`;
   if (ability.id === 'GAMAN') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフの減りが${Math.round((1 - ability.reduceRate) * 100)}%小さくなる`;
-  if (ability.id === 'HISSHI') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
+  if (ability.id === 'HISSHI') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、GREAT・EXCELLENTの判定がMARVELOUSになる`;
   if (ability.id === 'ITAZURA') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、BAD・MISSでもライフが減らず、コンボも切れない`;
   if (ability.id === 'KONJO') return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
@@ -29201,7 +29201,7 @@ const RhythmMonsterNoteGuide = () => {
     className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
   }, "主血統: ", lineages.join(' / '))))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
+  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもMARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
 };
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
@@ -30999,10 +30999,7 @@ const RhythmTapTest = ({
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
-    if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) {
-      judgment = 'MARVELOUS';
-      deltaMs = 0;
-    }
+    if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
     if (note.activePointerId !== null) {
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;

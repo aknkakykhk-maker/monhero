@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bc8cf36b5eb21340
+// generated-sha256: 20b3d0484a2939b4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 17:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10656,7 +10656,7 @@ const rhythmAbilityEffectText=ability=>{
   if(ability.id==='GENKI')return `取るとライフが +${ability.lifeGain}`;
   if(ability.id==='MUTEKI')return `${Math.round(ability.durationMs/1000)}秒のあいだライフが減らない`;
   if(ability.id==='GAMAN')return `${Math.round(ability.durationMs/1000)}秒のあいだライフの減りが${Math.round((1-ability.reduceRate)*100)}%小さくなる`;
-  if(ability.id==='HISSHI')return `${Math.round(ability.durationMs/1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
+  if(ability.id==='HISSHI')return `${Math.round(ability.durationMs/1000)}秒のあいだ、GREAT・EXCELLENTの判定がMARVELOUSになる`;
   if(ability.id==='ITAZURA')return `${Math.round(ability.durationMs/1000)}秒のあいだ、BAD・MISSでもライフが減らず、コンボも切れない`;
   if(ability.id==='KONJO')return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
@@ -18682,7 +18682,7 @@ const RhythmMonsterNoteGuide=()=>{
       <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">
         無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
         両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
-        必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
+        必死のあいだは、GREAT・EXCELLENTもMARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
         いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
@@ -19640,8 +19640,9 @@ useEffect(()=>{
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
   const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
-// 必死(ユグドラシル血統の能力)のあいだは、GREAT以上をジャストマーベラスとして数える(判定もズレもここで置き換える)
-if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0)){judgment='MARVELOUS';deltaMs=0;}
+// 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
+// ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
+if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
 if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、

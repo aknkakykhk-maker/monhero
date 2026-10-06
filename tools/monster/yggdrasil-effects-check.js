@@ -8,7 +8,8 @@
 //   ① 勇者特性「生命の源」: 1〜5ターン目は被ダメ×0.7、6・9・12…ターン目の頭にガッツを上限の30%回復(WAVEごとに数え直す)
 //   ② 固有技「大樹の加護」: 使ったターンから2ターン被ダメ30%軽減(このターンは即時倍率・次のターンは予約を掛け算)＋ガッツ20%
 //      予告(71-screen-battle)にも同じ倍率が入る
-//   ③ モンヒロビートの能力「必死」: 7秒のあいだ GREAT 以上をジャストマーベラスに引き上げる(GOOD 以下は変えない)
+//   ③ モンヒロビートの能力「必死」: 7秒のあいだ GREAT・EXCELLENT を MARVELOUS に引き上げる(ずれは変えない。GOOD 以下は変えない)
+//      2026-10-06 ユーザー指示「ジャストマーベラスじゃなくてマーベラス以上が出る変更」。それまではずれ0のジャストにしていた
 // タクティクスのEX(世界樹の守り・スイーツパラダイス)は tools/mode/tactics-ex-skills-check.js が見る。
 const fs = require('fs');
 const path = require('path');
@@ -85,15 +86,16 @@ check('主血統ユグドラシルの能力は「必死」(7秒)', !!hisshi && h
 const on = r.rhythmActivateMonsterAbility({ ability: hisshi, state: r.createRhythmMonsterAbilityState(), life: 500, songTimeMs: 10000 });
 check('取ると7秒の終わりを持つ(ライフは変えない)', on.applied && on.life === 500 && on.state.hisshiUntilMs === 17000
   && r.rhythmMonsterAbilityRemainingMs(on.state, 'HISSHI', 12000) === 5000);
-check('効いているあいだ GREAT・EXCELLENT・MARVELOUS を引き上げる。GOOD・BAD・MISS はそのまま',
-  ['GREAT', 'EXCELLENT', 'MARVELOUS'].every(j => r.rhythmHisshiUpgrades(on.state, j, 16999))
-  && !['GOOD', 'BAD', 'MISS'].some(j => r.rhythmHisshiUpgrades(on.state, j, 12000)));
+check('効いているあいだ GREAT・EXCELLENT を引き上げる。MARVELOUS(もともとマーベラス以上)・GOOD・BAD・MISS はそのまま',
+  ['GREAT', 'EXCELLENT'].every(j => r.rhythmHisshiUpgrades(on.state, j, 16999))
+  && !['MARVELOUS', 'GOOD', 'BAD', 'MISS'].some(j => r.rhythmHisshiUpgrades(on.state, j, 12000)));
 check('7秒を過ぎたら・取る前は引き上げない',
   !r.rhythmHisshiUpgrades(on.state, 'GREAT', 17000) && !r.rhythmHisshiUpgrades(r.createRhythmMonsterAbilityState(), 'GREAT', 12000));
 check('無敵・我慢の残り時間は今までどおり別々に持つ',
   r.rhythmActivateMonsterAbility({ ability: r.RHYTHM_MONSTER_ABILITIES.MUTEKI, state: on.state, life: 500, songTimeMs: 11000 }).state.hisshiUntilMs === 17000);
-check('判定の入口で置き換える(判定を MARVELOUS・ズレを0。スコア・コンボ・ライフ・判定数もそれで数える)',
-  /if\(rhythmHisshiUpgrades\(run\.abilities,judgment,run\.audio\?\.songTimeMs\?\.\(\)\?\?0\)\)\{judgment='MARVELOUS';deltaMs=0;\}/.test(play)
+check('判定の入口で判定だけを MARVELOUS に置き換える(ずれは0にしない＝ジャストはぴったりのときだけ。スコア・コンボ・ライフ・判定数は MARVELOUS で数える)',
+  /if\(rhythmHisshiUpgrades\(run\.abilities,judgment,run\.audio\?\.songTimeMs\?\.\(\)\?\?0\)\)judgment='MARVELOUS';/.test(play)
+  && !/judgment='MARVELOUS';deltaMs=0;/.test(play)
   && play.indexOf('rhythmHisshiUpgrades(run.abilities') < play.indexOf('note._rhythmFinalJudgment=judgment'));
 check('演奏中の右上に残り時間を出し、持ち主の枠を光らせる',
   /hisshiMs>0\?`必死 \$\{\(hisshiMs\/1000\)\.toFixed\(1\)\}s`/.test(play)
@@ -106,7 +108,7 @@ const katakanaHits = [['help.js', read('monster-hero/data/help.js')], ['changelo
   ['20-market-notices-help.jsx', read('monster-hero/src/parts/20-market-notices-help.jsx')], ['30-rhythm-play.jsx', play]]
   .flatMap(([name, text]) => visibleLines(text).filter(l => l.includes('ジャストマーベラス')).map(() => name));
 check('判定名は「JUST MARVELOUS」と英語で書く(カタカナで出さない)', katakanaHits.length === 0
-  && /GREAT以上の判定がすべてJUST MARVELOUSになる/.test(read('monster-hero/src/parts/20-market-notices-help.jsx')), katakanaHits.join('・'));
+  && /GREAT・EXCELLENTの判定がMARVELOUSになる/.test(read('monster-hero/src/parts/20-market-notices-help.jsx')), katakanaHits.join('・'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

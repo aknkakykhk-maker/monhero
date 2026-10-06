@@ -324,7 +324,9 @@ const RHYTHM_MONSTER_ABILITIES=Object.freeze({
   GAMAN:Object.freeze({id:'GAMAN',name:'我慢',durationMs:15000,reduceRate:.5}),
   KONJO:Object.freeze({id:'KONJO',name:'根性',reviveLife:50,stockLifeGain:50}),
   // 必死(2026-09-29 ユーザー指示「必死 10秒の間、グレート以上がジャストマーベラスになる」→「やっぱり7秒で」)。
-  // 7秒のあいだ、GREAT・EXCELLENT・MARVELOUS をすべてジャストマーベラス(ぴったりのMARVELOUS)として数える
+  // 2026-10-06 ユーザー指示「ジャストマーベラスじゃなくてマーベラス以上が出る変更」で、
+  // 7秒のあいだ GREAT・EXCELLENT を MARVELOUS へ引き上げる形にした(ずれはそのまま。ぴったりだったときだけジャスト)。
+  // それまでは GREAT 以上をすべてジャストマーベラス(ずれ0)として数えていた
   HISSHI:Object.freeze({id:'HISSHI',name:'必死',durationMs:7000}),
   // いたずら(2026-10-05 ユーザー選択「新しい能力「いたずら」」)。ゴースト血統の能力。
   // 6秒のあいだ、ライフが減らず(無敵と同じ)、BAD・MISSでもコンボが切れない。判定そのものは変えない
@@ -371,10 +373,12 @@ const rhythmApplyMonsterAbilityToLifeDelta=(state,delta,songTimeMs)=>{
     return -Math.round(Math.abs(raw)*(1-RHYTHM_MONSTER_ABILITIES.GAMAN.reduceRate));
   return raw;
 };
-// 必死のあいだは GREAT 以上をジャストマーベラスへ引き上げる。GOOD・BAD・MISS はそのまま。
-// 引き上げるなら true(呼び出し側で判定を MARVELOUS・ズレを0にする。スコア・コンボ・ライフ・判定数もそれで数える)
+// 必死のあいだは GREAT・EXCELLENT を MARVELOUS へ引き上げる(マーベラス以上が出る)。MARVELOUS・GOOD・BAD・MISS はそのまま。
+// 引き上げるなら true(呼び出し側で判定を MARVELOUS にする。ずれは変えないので、ジャストになるのはぴったりだったときだけ。
+// スコア・コンボ・ライフ・判定数は MARVELOUS で数える)
+const RHYTHM_HISSHI_UPGRADE_JUDGMENTS=Object.freeze(['EXCELLENT','GREAT']);
 const rhythmHisshiUpgrades=(state,judgment,songTimeMs)=>
-  RHYTHM_MONSTER_ABILITY_JUDGMENTS.includes(judgment)&&rhythmMonsterAbilityActive(state,'HISSHI',songTimeMs);
+  RHYTHM_HISSHI_UPGRADE_JUDGMENTS.includes(judgment)&&rhythmMonsterAbilityActive(state,'HISSHI',songTimeMs);
 // いたずらのあいだは BAD・MISS でもコンボを切らない(判定の数・スコアは変えない)。守るなら true
 const rhythmItazuraKeepsCombo=(state,judgment,songTimeMs)=>
   (judgment==='BAD'||judgment==='MISS')&&rhythmMonsterAbilityActive(state,'ITAZURA',songTimeMs);
