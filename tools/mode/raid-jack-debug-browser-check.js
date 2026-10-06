@@ -113,6 +113,19 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('公開フラグは false(公開前)と出る', /false\(公開前\)/.test(t));
     check('A の5段階の名前とライフが出る', ['ジャック男爵', 'ジャック大王', '1,750,000', '80,000,000'].every((s) => t.includes(s)));
     check('B の5段階の名前とライフが出る', ['初級ジャック', '極級ジャック', '70,000', '35,000,000'].every((s) => t.includes(s)));
+    // モンヒロビート挑戦の「ダメージを与える演出」(見本)。曲を遊ばずに見られる。数字が駆け上がり、約4.3秒で消える
+    for (const [kind, label] of [['hit', 'ヒット'], ['down', '撃破'], ['none', 'ダメージなし']]) {
+      await page.locator(`[data-raid-damage-fx-${kind}]`).click();
+      await page.locator('[data-raid-jack-damage-fx]').waitFor({ timeout: 10000 });
+      await page.waitForTimeout(2800);
+      if (process.env.RAID_SHOT_DIR) await page.screenshot({ path: `${process.env.RAID_SHOT_DIR}/damage-fx-${kind}.png` }).catch(() => {});
+      const fxText = (await page.locator('[data-raid-jack-damage-fx]').innerText()).replace(/\s+/g, ' ');
+      const okText = kind === 'none' ? /SCORE/.test(fxText) && /ダメージにならない/.test(fxText)
+        : /SCORE/.test(fxText) && /DAMAGE/.test(fxText) && (kind !== 'down' || /撃破/.test(fxText));
+      check(`ダメージ演出(${label}): スコア・ダメージ${kind === 'down' ? '・撃破' : ''}が出る`, okText, fxText.slice(0, 120));
+      await page.waitForFunction(() => !document.querySelector('[data-raid-jack-damage-fx]'), null, { timeout: 8000 });
+      check(`ダメージ演出(${label}): しばらくすると自分で消える`, true);
+    }
     check('技名が出る', ['カボチャ張り手', 'おばけパレード'].every((s) => t.includes(s)));
     check('段階ごとに使う技(3本・4本・5本)が出る', t.includes('ジャック男爵(3本): ジャックラッシュ / おばけキッス / かぼちゃ延髄斬り') && t.includes('初級ジャック(3本)') && t.includes('ハロウィンナイト'));
     const imgs = await page.locator('[data-raid-jack-debug] img').evaluateAll((els) => els.map((e) => ({ ok: e.complete && e.naturalWidth > 0, src: e.getAttribute('src') })));

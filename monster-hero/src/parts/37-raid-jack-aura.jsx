@@ -97,6 +97,7 @@ const RAID_JACK_STINGERS = Object.freeze({
   turns: { text: 'TIME UP', tone: 'end' },
   wipe: { text: 'DEFEAT', tone: 'lose' },
   giveup: { text: 'RETIRE', tone: 'end' },
+  rhythm: { text: 'FINISH', tone: 'end' },   // モンヒロビートで挑戦したとき(倒さなかったとき)
 });
 const RaidJackResultStinger = ({ reason }) => {
   const def = RAID_JACK_STINGERS[reason] || RAID_JACK_STINGERS.turns;
@@ -110,6 +111,60 @@ const RaidJackResultStinger = ({ reason }) => {
       <i className="mh-rjstinger-ring" />
       {def.tone === 'win' && <EndConfetti count={30} />}
       <b className="mh-rjstinger-text">{def.text}</b>
+    </div>
+  );
+};
+
+// ===== レイドバトルのモンヒロビート挑戦: 演奏が終わった直後の「ダメージを与える演出」(2026-10-06・ユーザー指示) =====
+// スコア → ジャックにヒット → ダメージの数字が駆け上がる → ライフの帯が減る(倒したら「撃破!」)を約4秒で出して、
+// そのあと下にあるモンヒロビートの結果(演奏のリザルト)が現れる。画面のどこかを押すと、少し経ってから飛ばせる。
+// ダメージの計算そのものは 35-raid-jack.jsx の raidJackRhythmDamage(ここは受け取った数字を見せるだけ)。
+// fx = { tierIndex, tierName, score, damage, assist, lifeBefore(わからないとき null), max, pumpkin }
+const RaidJackDamageFx = ({ fx, onDone }) => {
+  const doneRef = React.useRef(false);
+  const startedRef = React.useRef(Date.now());
+  const finish = React.useCallback(() => { if (doneRef.current) return; doneRef.current = true; onDone(); }, [onDone]);
+  React.useEffect(() => {
+    const total = setTimeout(finish, 4300);
+    const se = setTimeout(() => { try { if (fx.damage > 0 && typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.crit) Audio_.se.crit(); } catch (e) { /* 音が出なくても演出は出す */ } }, 1000);
+    return () => { clearTimeout(total); clearTimeout(se); };
+  }, [finish, fx.damage]);
+  const n = Math.min(Math.max(Math.floor(Number(fx.tierIndex) || 0) + 1, 1), 5);
+  const hasLife = Number.isFinite(fx.lifeBefore) && fx.lifeBefore >= 0 && fx.max > 0;
+  const lifeAfter = hasLife ? (fx.pumpkin ? fx.lifeBefore : Math.max(0, fx.lifeBefore - fx.damage)) : null;
+  const from = hasLife ? Math.min(1, fx.lifeBefore / fx.max) : 1;
+  const to = hasLife ? Math.min(1, lifeAfter / fx.max) : 1;
+  const defeated = hasLife && !fx.pumpkin && fx.damage > 0 && fx.damage >= fx.lifeBefore;
+  const none = !(fx.damage > 0);
+  return (
+    <div data-raid-jack-damage-fx data-jack-aura={fx.pumpkin ? undefined : n} className="mh-rjdmg" role="status"
+      onClick={() => { if (Date.now() - startedRef.current > 1500) finish(); }}>
+      <i className="mh-rjdmg-flash" />
+      <div className="mh-rjdmg-score">
+        <small>SCORE</small>
+        <b><TrainingCountUp from={0} to={Math.max(0, fx.score)} delay={250} duration={700} format={(v) => v.toLocaleString()} /></b>
+      </div>
+      <div className="mh-rjdmg-stage">
+        {!fx.pumpkin && <JackAuraLayer tier={n} limit={10} />}
+        <img src={fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG} alt="" draggable={false} className={`mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`}
+          style={fx.pumpkin ? undefined : { filter: raidJackAuraGlowFilter(n, 0.5) }} />
+        {!none && <><i className="mh-rjdmg-slash mh-rjdmg-slash-a" /><i className="mh-rjdmg-slash mh-rjdmg-slash-b" /></>}
+      </div>
+      <div className="mh-rjdmg-name">{fx.tierName}</div>
+      {hasLife && (
+        <div className="mh-rjdmg-bar" aria-hidden="true">
+          <div className="mh-rjdmg-bar-fill" style={{ '--from': from, '--to': to, transform: `scaleX(${from})` }} />
+        </div>
+      )}
+      {hasLife && <div className="mh-rjdmg-life">{lifeAfter.toLocaleString()} / {fx.max.toLocaleString()}</div>}
+      <div className={`mh-rjdmg-damage${none ? ' mh-rjdmg-damage-none' : ''}`}>
+        {none
+          ? <b>{fx.assist ? 'ダメージにならない' : 'ダメージ 0'}</b>
+          : <><small>DAMAGE</small><b style={{ fontSize: fx.damage >= 10000000 ? 40 : fx.damage >= 1000000 ? 46 : 52 }}><TrainingCountUp from={0} to={fx.damage} delay={1000} duration={1000} format={(v) => v.toLocaleString()} /></b></>}
+        {none && fx.assist && <small>アシストモードで遊んだので、ダメージになりません</small>}
+      </div>
+      {defeated && <div className="mh-rjdmg-down">撃破！</div>}
+      <div className="mh-rjdmg-skip">タップでとばす</div>
     </div>
   );
 };

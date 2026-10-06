@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
-vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+vm.runInContext(`${src}\nthis.o={raidJackRhythmDamage,raidJackRhythmDamageByCombo,raidJackRhythmDamageByJudgment,RAID_JACK_RHYTHM_FORMULA,RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT,raidJackRhythmDamageOf,RAID_JACK_RHYTHM_DAMAGE_PER_COMBO,RAID_JACK_RHYTHM_DAMAGE_LIMIT,RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
 const o = ctx.o;
 
 // ① 段階
@@ -34,6 +34,63 @@ aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${
 bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 // ライフは段階ごとの設定値(2026-10-05・ユーザーが決めた)。倍率 power は hp ÷ 350,000 に合わせてある(Bは今までどおり 35,000×倍率×10)
 check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユーザーが段階ごとに決めた値。伯爵・公爵・大王は2026-10-05に引き上げ)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,8000000,35000000,80000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
+// モンヒロビート挑戦(2026-10-06・ユーザー指示)。換算は暫定(ユーザー「順に検討」)なので、ここでは形だけ見る(式を変えたらここも直す)
+check('モンヒロビート挑戦: 1コンボあたりのダメージは難易度が高いほど大きい(200 / 240 / 280 / 320 / 340)・上限は30万',
+  JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DAMAGE_PER_COMBO)) === JSON.stringify([200, 240, 280, 320, 340]) && o.RAID_JACK_RHYTHM_DAMAGE_LIMIT === 300000);
+{
+  const d = o.raidJackRhythmDamageByCombo;   // 式①(コンボ)
+  // 公開中の曲の、各難易度の最大のノーツ数(2026-10-06 時点)。満点・フルコンボでも、どの難易度も30万を超えず、MASTER の最大がほぼ30万
+  const maxNotes = { EASY: 394, NORMAL: 470, HARD: 628, EXPERT: 761, MASTER: 882 };
+  const maxScores = { EASY: 600000, NORMAL: 700000, HARD: 800000, EXPERT: 900000, MASTER: 1000000 };
+  const top = (id) => d({ score: maxScores[id], maxCombo: maxNotes[id], difficultyId: id });
+  check('モンヒロビート挑戦: 公開中の曲でいちばんノーツの多い曲を満点・フルコンボで遊んでも30万以内(MASTER はほぼ30万)',
+    Object.keys(maxNotes).every((id) => top(id) <= 300000) && top('MASTER') >= 299000 && top('EASY') === 78800 && top('NORMAL') === 112800 && top('HARD') === 175840 && top('EXPERT') === 243520, JSON.stringify(Object.keys(maxNotes).map(top)));
+  check('モンヒロビート挑戦: ダメージ = 1コンボあたり × 最大コンボ数 × スコアの割合(MASTER・コンボ500・スコア満点 → 17万 / スコア8割 → 13.6万)',
+    d({ score: 1000000, maxCombo: 500, difficultyId: 'MASTER' }) === 170000 && d({ score: 800000, maxCombo: 500, difficultyId: 'MASTER' }) === 136000);
+  check('モンヒロビート挑戦: コンボの数を掛ける(同じ難易度・同じスコアの割合なら、コンボが2倍でダメージも2倍)。ノーツの少ないかんたんな曲は、同じ難易度でも少なくなる',
+    d({ score: 500000, maxCombo: 600, difficultyId: 'MASTER' }) === 2 * d({ score: 500000, maxCombo: 300, difficultyId: 'MASTER' })
+    && d({ score: 600000, maxCombo: 100, difficultyId: 'EASY' }) < d({ score: 1000000, maxCombo: 500, difficultyId: 'MASTER' }));
+  check('モンヒロビート挑戦: 上限を超えない(コンボやスコアが範囲外でも30万まで)・不正な値・アシストモード・コンボ0は0',
+    d({ score: 9e9, maxCombo: 9e9, difficultyId: 'MASTER' }) === 300000 && d({ score: 1000000, maxCombo: 500, difficultyId: 'MASTER', assist: true }) === 0
+    && d({ score: 'abc', maxCombo: NaN, difficultyId: 'MASTER' }) === 0 && d({ score: 500000, maxCombo: 5, difficultyId: 'UNKNOWN' }) === 0 && d({ score: 1000000, maxCombo: 0, difficultyId: 'MASTER' }) === 0 && d(null) === 0 && d(undefined) === 0);
+  // 式②(判定)。いまの式(RAID_JACK_RHYTHM_FORMULA)はこちら(2026-10-06: ジャストマーベラスを最大基準・バッド以下はマイナス・最大コンボの補正は少なめ)
+  const dj = o.raidJackRhythmDamageByJudgment;
+  const T = o.RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT;
+  const allJust = (id, n) => dj({ difficultyId: id, judgments: { MARVELOUS: n }, precise: n, maxCombo: n });
+  check('モンヒロビート挑戦: 使う式は「判定」(式②)。式①(コンボ)は切り替えで戻せる', o.RAID_JACK_RHYTHM_FORMULA === 'judgment');
+  check('モンヒロビート挑戦: 判定1個あたり(MASTER は ジャスト340 / マーベラス323 / エクセレント289 / グレート221 / グッド119 / バッド-51 / ミス-102、EASY は 200 / 190 / 170 / 130 / 70 / -30 / -60)',
+    JSON.stringify(Object.values(T.MASTER)) === JSON.stringify([340, 323, 289, 221, 119, -51, -102]) && JSON.stringify(Object.values(T.EASY)) === JSON.stringify([200, 190, 170, 130, 70, -30, -60]));
+  check('モンヒロビート挑戦: ジャストマーベラスが最大基準(どの難易度でも、ジャスト > マーベラス > エクセレント > グレート > グッド > 0 > バッド > ミス)。難易度が高いほど1個あたりの大きさは大きい',
+    ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER'].every((id) => { const t = T[id]; return t.JUST > t.MARVELOUS && t.MARVELOUS > t.EXCELLENT && t.EXCELLENT > t.GREAT && t.GREAT > t.GOOD && t.GOOD > 0 && 0 > t.BAD && t.BAD > t.MISS; })
+    && Object.keys(T.MASTER).every((j) => ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER'].map((id) => Math.abs(T[id][j])).every((v, i, a) => i === 0 || v >= a[i - 1])));
+  check('モンヒロビート挑戦: 公開中の曲でいちばんノーツの多い曲を全部ジャストマーベラスのフルコンボで叩いても30万以内(MASTER はほぼ30万)',
+    allJust('EASY', 394) === 78800 && allJust('NORMAL', 470) === 112800 && allJust('HARD', 628) === 175840 && allJust('EXPERT', 761) === 243520 && allJust('MASTER', 882) === 299880);
+  check('モンヒロビート挑戦: ジャストでないマーベラスは、ジャストより少ない(全部ふつうのマーベラス < 全部ジャスト)。ジャストの数は MARVELOUS の数を超えて数えない',
+    dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 0, maxCombo: 500 }) === 500 * 323 && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 9999, maxCombo: 500 }) === 500 * 340);
+  check('モンヒロビート挑戦: バッド以下はマイナス補正(稼いだダメージから引く)。BAD は -51・MISS は -102(MASTER)。全部ミス・引くほうが多いときは0',
+    dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 100, BAD: 10 }, precise: 100, maxCombo: 100 }) === Math.floor((100 * 340 - 10 * 51) * (0.9 + 0.1 * (100 / 110)))
+    && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 100, MISS: 10 }, precise: 100, maxCombo: 100 }) === Math.floor((100 * 340 - 10 * 102) * (0.9 + 0.1 * (100 / 110)))
+    && dj({ difficultyId: 'MASTER', judgments: { MISS: 500 }, maxCombo: 0 }) === 0 && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 3, MISS: 50 }, precise: 3, maxCombo: 3 }) === 0);
+  check('モンヒロビート挑戦: 最大コンボの補正は少なめ(0.9〜1.0 を掛ける)。フルコンボで1.0、つながらなくても0.9。増えはしない',
+    dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 500, maxCombo: 500 }) === 170000 && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 500, maxCombo: 0 }) === 153000
+    && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 500, maxCombo: 250 }) === 161500);
+  check('モンヒロビート挑戦: 叩いた数そのものが効く(ノーツが2倍・同じ内容ならダメージも2倍)。ノーツの少ない簡単な曲は、同じ難易度でも少なくなる',
+    dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 400, GREAT: 200 }, precise: 400, maxCombo: 600 }) === 2 * dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 200, GREAT: 100 }, precise: 200, maxCombo: 300 }) && allJust('EASY', 100) < allJust('MASTER', 500));
+  check('モンヒロビート挑戦: 上限30万・不正な値・アシスト・難易度不明・ノーツ0は0',
+    allJust('MASTER', 99999) === 300000 && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 500, maxCombo: 500, assist: true }) === 0
+    && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 'abc', GREAT: NaN, GOOD: -5 } }) === 0 && dj({ difficultyId: 'UNKNOWN', judgments: { MARVELOUS: 500 } }) === 0 && dj({ difficultyId: 'MASTER' }) === 0 && dj(null) === 0 && dj(undefined) === 0);
+  const r = { score: 900000, maxCombo: 420, precise: 200, judgments: { MARVELOUS: 300, EXCELLENT: 100, GOOD: 70, MISS: 30 } };   // ノーツ500
+  check('モンヒロビート挑戦: 演奏の結果から出す(判定の数・ジャストの数・最大コンボ・難易度を使う。アシストは0)',
+    o.raidJackRhythmDamageOf(r, { id: 'MASTER', maxScore: 1000000 }) === Math.floor((200 * 340 + 100 * 323 + 100 * 289 + 70 * 119 - 30 * 102) * (0.9 + 0.1 * (420 / 500))) && o.raidJackRhythmDamageOf({ ...r, assist: true }, { id: 'MASTER', maxScore: 1000000 }) === 0);
+}
+{
+  const appSrc = read('monster-hero/src/parts/60-app.jsx');
+  check('モンヒロビート挑戦: 演奏の完了は from===\'raid\' で専用の処理だけを通り、自己ベスト・ランキング・周回の報酬へ進まない(return で抜ける)',
+    /if\(rhythmPlay\.from==='raid'\)\{void completeRaidJackRhythm\([^)]*\);return;\}/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = finishRaidJackRhythm\(/.test(appSrc));
+  check('モンヒロビート挑戦: 回数はバトルと同じもの(state.a の used / extra・raidJackRemaining)を使い、始めた時点で1回使う',
+    /const startRaidJackRhythmPlay = async[\s\S]{0,900}raidJackRemaining\(side, nowMs\) <= 0[\s\S]{0,200}side\.used \+= 1;/.test(appSrc));
+  check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated \};/.test(appSrc));
+}
 check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.power - t.hp / 350000) < 1e-9) && o.RAID_JACK_A_TIERS[0].power === 5);
 // ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は 700(はじめは子爵と同じ。子爵を 500 に決め直したあとも 700 のまま) / 技名はそのまま)
 {

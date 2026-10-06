@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11f57f79d59a7e94
+// source-sha256: 45a7e48276b8a6c1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 17:17";
+const BUILD_DATE = "2026-10-06 17:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15219,7 +15219,7 @@ const rhythmAbilityEffectText = ability => {
   if (ability.id === 'GENKI') return `取るとライフが +${ability.lifeGain}`;
   if (ability.id === 'MUTEKI') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフが減らない`;
   if (ability.id === 'GAMAN') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフの減りが${Math.round((1 - ability.reduceRate) * 100)}%小さくなる`;
-  if (ability.id === 'HISSHI') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
+  if (ability.id === 'HISSHI') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、GREAT・EXCELLENTの判定がMARVELOUSになる`;
   if (ability.id === 'ITAZURA') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、BAD・MISSでもライフが減らず、コンボも切れない`;
   if (ability.id === 'KONJO') return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
@@ -29201,7 +29201,7 @@ const RhythmMonsterNoteGuide = () => {
     className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
   }, "主血統: ", lineages.join(' / '))))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
+  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもMARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
 };
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
@@ -29999,6 +29999,7 @@ const RhythmTapTest = ({
   monsterEntries,
   onComplete,
   onExit,
+  raidPlay = false,
   quickRunAward = null,
   debugPlay = false,
   tutorial = false,
@@ -30998,10 +30999,7 @@ const RhythmTapTest = ({
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
-    if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) {
-      judgment = 'MARVELOUS';
-      deltaMs = 0;
-    }
+    if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
     if (note.activePointerId !== null) {
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;
@@ -33237,16 +33235,17 @@ const RhythmTapTest = ({
         paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
       }
     }, React.createElement("div", {
-      className: multi ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"
-    }, !multi && React.createElement("button", {
+      className: multi || raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"
+    }, !multi && !raidPlay && React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
       disabled: startLockRef.current,
       onClick: () => beginRun(mergeRhythmBestRecord(runRef.current?.startBest, result))
     }, "もう一度プレイ"), React.createElement("button", {
       "data-rhythm-multi-result-back": multi ? "" : undefined,
+      "data-rhythm-raid-result-back": raidPlay ? "" : undefined,
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort
-    }, multi && 'みんなの結果を見る', !multi && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る')))))));
+    }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る')))))));
   }
   return React.createElement("main", {
     "data-rhythm-tap-test": true,
@@ -33774,7 +33773,7 @@ const RhythmTapTest = ({
     "data-rhythm-pause-resume": true,
     className: "min-h-[48px] w-full rounded-xl bg-cyan-700 font-black",
     onClick: resume
-  }, "再開"), !multi && React.createElement("button", {
+  }, "再開"), !multi && !raidPlay && React.createElement("button", {
     "data-rhythm-pause-restart": true,
     className: "min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black",
     onClick: restart
@@ -37451,7 +37450,7 @@ const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_A_EX_MAX_USES = 2;
 const RAID_JACK_TEACHING_MAX = 3;
 const RAID_JACK_ALLY_MAX = 3;
-const RAID_JACK_EXTRA_COST_BEAT_P = 100;
+const RAID_JACK_EXTRA_COST_BEAT_P = 300;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
 const RAID_JACK_STORY_START_ID = 'raid_jack_story_1b';
 const RAID_JACK_STORY_AFTER_TIER = Object.freeze({
@@ -37522,6 +37521,94 @@ const RAID_JACK_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_JACK_A_ATK_POWERS = Object.freeze(RAID_JACK_A_ATKS.map(atk => atk / RAID_JACK_BASE.atk));
 const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 35000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 80000000)]);
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);
+const RAID_JACK_RHYTHM_DAMAGE_PER_COMBO = Object.freeze({
+  EASY: 200,
+  NORMAL: 240,
+  HARD: 280,
+  EXPERT: 320,
+  MASTER: 340
+});
+const RAID_JACK_RHYTHM_DAMAGE_LIMIT = 300000;
+const RAID_JACK_RHYTHM_MAX_SCORES = Object.freeze({
+  EASY: 600000,
+  NORMAL: 700000,
+  HARD: 800000,
+  EXPERT: 900000,
+  MASTER: 1000000
+});
+const raidJackRhythmRate = (value, max) => {
+  const v = Number(value),
+    m = Number(max);
+  if (!Number.isFinite(v) || !Number.isFinite(m) || m <= 0 || v <= 0) return 0;
+  return Math.min(1, v / m);
+};
+const raidJackRhythmDamageByCombo = input => {
+  const i = input && typeof input === 'object' ? input : {};
+  if (i.assist === true) return 0;
+  const perCombo = RAID_JACK_RHYTHM_DAMAGE_PER_COMBO[i.difficultyId];
+  if (!Number.isFinite(perCombo)) return 0;
+  const combo = Number(i.maxCombo);
+  if (!Number.isFinite(combo) || combo <= 0) return 0;
+  const maxScore = Number.isFinite(Number(i.maxScore)) && Number(i.maxScore) > 0 ? Number(i.maxScore) : RAID_JACK_RHYTHM_MAX_SCORES[i.difficultyId];
+  const scoreRate = raidJackRhythmRate(i.score, maxScore);
+  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(perCombo * combo * scoreRate + 1e-9)));
+};
+const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({
+  JUST: 1.0,
+  MARVELOUS: 0.95,
+  EXCELLENT: 0.85,
+  GREAT: 0.65,
+  GOOD: 0.35,
+  BAD: -0.15,
+  MISS: -0.30
+});
+const RAID_JACK_RHYTHM_COMBO_FLOOR = 0.9;
+const RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT = Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_DAMAGE_PER_COMBO).map(([id, base]) => [id, Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_JUDGMENT_RATES).map(([j, rate]) => [j, Math.round(base * rate)])))])));
+const raidJackRhythmDamageByJudgment = input => {
+  const i = input && typeof input === 'object' ? input : {};
+  if (i.assist === true) return 0;
+  const table = RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT[i.difficultyId];
+  if (!table || !i.judgments || typeof i.judgments !== 'object') return 0;
+  const num = v => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  };
+  const marvelous = num(i.judgments.MARVELOUS);
+  const just = Math.min(marvelous, num(i.precise));
+  const counts = {
+    JUST: just,
+    MARVELOUS: marvelous - just,
+    EXCELLENT: num(i.judgments.EXCELLENT),
+    GREAT: num(i.judgments.GREAT),
+    GOOD: num(i.judgments.GOOD),
+    BAD: num(i.judgments.BAD),
+    MISS: num(i.judgments.MISS)
+  };
+  const totalNotes = Object.keys(counts).reduce((sum, j) => sum + counts[j], 0);
+  if (totalNotes <= 0) return 0;
+  let raw = 0;
+  Object.keys(table).forEach(j => {
+    raw += counts[j] * table[j];
+  });
+  if (raw <= 0) return 0;
+  const comboRate = raidJackRhythmRate(i.maxCombo, totalNotes);
+  const comboFactor = RAID_JACK_RHYTHM_COMBO_FLOOR + (1 - RAID_JACK_RHYTHM_COMBO_FLOOR) * comboRate;
+  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(raw * comboFactor + 1e-9)));
+};
+const RAID_JACK_RHYTHM_FORMULA = 'judgment';
+const raidJackRhythmDamage = input => RAID_JACK_RHYTHM_FORMULA === 'combo' ? raidJackRhythmDamageByCombo(input) : raidJackRhythmDamageByJudgment(input);
+const raidJackRhythmDamageOf = (result, difficulty) => {
+  const r = result && typeof result === 'object' ? result : {};
+  return raidJackRhythmDamage({
+    score: r.score,
+    maxCombo: r.maxCombo,
+    judgments: r.judgments,
+    precise: r.precise,
+    difficultyId: difficulty && difficulty.id,
+    maxScore: difficulty && difficulty.maxScore,
+    assist: r.assist === true
+  });
+};
 const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
 const raidJackTiers = kind => kind === 'b' ? RAID_JACK_B_TIERS : RAID_JACK_A_TIERS;
@@ -38556,6 +38643,10 @@ const RAID_JACK_STINGERS = Object.freeze({
   giveup: {
     text: 'RETIRE',
     tone: 'end'
+  },
+  rhythm: {
+    text: 'FINISH',
+    tone: 'end'
   }
 });
 const RaidJackResultStinger = ({
@@ -38581,6 +38672,103 @@ const RaidJackResultStinger = ({
   }), React.createElement("b", {
     className: "mh-rjstinger-text"
   }, def.text));
+};
+const RaidJackDamageFx = ({
+  fx,
+  onDone
+}) => {
+  const doneRef = React.useRef(false);
+  const startedRef = React.useRef(Date.now());
+  const finish = React.useCallback(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onDone();
+  }, [onDone]);
+  React.useEffect(() => {
+    const total = setTimeout(finish, 4300);
+    const se = setTimeout(() => {
+      try {
+        if (fx.damage > 0 && typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.crit) Audio_.se.crit();
+      } catch (e) {}
+    }, 1000);
+    return () => {
+      clearTimeout(total);
+      clearTimeout(se);
+    };
+  }, [finish, fx.damage]);
+  const n = Math.min(Math.max(Math.floor(Number(fx.tierIndex) || 0) + 1, 1), 5);
+  const hasLife = Number.isFinite(fx.lifeBefore) && fx.lifeBefore >= 0 && fx.max > 0;
+  const lifeAfter = hasLife ? fx.pumpkin ? fx.lifeBefore : Math.max(0, fx.lifeBefore - fx.damage) : null;
+  const from = hasLife ? Math.min(1, fx.lifeBefore / fx.max) : 1;
+  const to = hasLife ? Math.min(1, lifeAfter / fx.max) : 1;
+  const defeated = hasLife && !fx.pumpkin && fx.damage > 0 && fx.damage >= fx.lifeBefore;
+  const none = !(fx.damage > 0);
+  return React.createElement("div", {
+    "data-raid-jack-damage-fx": true,
+    "data-jack-aura": fx.pumpkin ? undefined : n,
+    className: "mh-rjdmg",
+    role: "status",
+    onClick: () => {
+      if (Date.now() - startedRef.current > 1500) finish();
+    }
+  }, React.createElement("i", {
+    className: "mh-rjdmg-flash"
+  }), React.createElement("div", {
+    className: "mh-rjdmg-score"
+  }, React.createElement("small", null, "SCORE"), React.createElement("b", null, React.createElement(TrainingCountUp, {
+    from: 0,
+    to: Math.max(0, fx.score),
+    delay: 250,
+    duration: 700,
+    format: v => v.toLocaleString()
+  }))), React.createElement("div", {
+    className: "mh-rjdmg-stage"
+  }, !fx.pumpkin && React.createElement(JackAuraLayer, {
+    tier: n,
+    limit: 10
+  }), React.createElement("img", {
+    src: fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG,
+    alt: "",
+    draggable: false,
+    className: `mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`,
+    style: fx.pumpkin ? undefined : {
+      filter: raidJackAuraGlowFilter(n, 0.5)
+    }
+  }), !none && React.createElement(React.Fragment, null, React.createElement("i", {
+    className: "mh-rjdmg-slash mh-rjdmg-slash-a"
+  }), React.createElement("i", {
+    className: "mh-rjdmg-slash mh-rjdmg-slash-b"
+  }))), React.createElement("div", {
+    className: "mh-rjdmg-name"
+  }, fx.tierName), hasLife && React.createElement("div", {
+    className: "mh-rjdmg-bar",
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "mh-rjdmg-bar-fill",
+    style: {
+      '--from': from,
+      '--to': to,
+      transform: `scaleX(${from})`
+    }
+  })), hasLife && React.createElement("div", {
+    className: "mh-rjdmg-life"
+  }, lifeAfter.toLocaleString(), " / ", fx.max.toLocaleString()), React.createElement("div", {
+    className: `mh-rjdmg-damage${none ? ' mh-rjdmg-damage-none' : ''}`
+  }, none ? React.createElement("b", null, fx.assist ? 'ダメージにならない' : 'ダメージ 0') : React.createElement(React.Fragment, null, React.createElement("small", null, "DAMAGE"), React.createElement("b", {
+    style: {
+      fontSize: fx.damage >= 10000000 ? 40 : fx.damage >= 1000000 ? 46 : 52
+    }
+  }, React.createElement(TrainingCountUp, {
+    from: 0,
+    to: fx.damage,
+    delay: 1000,
+    duration: 1000,
+    format: v => v.toLocaleString()
+  }))), none && fx.assist && React.createElement("small", null, "アシストモードで遊んだので、ダメージになりません")), defeated && React.createElement("div", {
+    className: "mh-rjdmg-down"
+  }, "撃破！"), React.createElement("div", {
+    className: "mh-rjdmg-skip"
+  }, "タップでとばす"));
 };
 const RAID_JACK_HOME_LINES = Object.freeze({
   a1: Object.freeze({
@@ -42929,7 +43117,8 @@ function RhythmSongSelectScreen({
   spotClass,
   startQuickRunFromRhythm,
   wave,
-  monsterSlots = []
+  monsterSlots = [],
+  raidChallenge = null
 }) {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
   const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
@@ -43063,7 +43252,11 @@ function RhythmSongSelectScreen({
     className: "text-base leading-none"
   }, "⚙️"), React.createElement("span", {
     className: "text-[9px] font-black leading-none"
-  }, "設定"))), quickRunProgress && React.createElement("div", {
+  }, "設定"))), raidChallenge && React.createElement("div", {
+    "data-raid-challenge-banner": true,
+    role: "status",
+    className: "shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100"
+  }, "🎃 レイドバトル「", raidChallenge.tierName, "」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)"), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
   }, React.createElement("div", {
@@ -62644,7 +62837,8 @@ const RaidJackDebugScreen = ({
   realRules = false,
   onToggleRealRules,
   onOpenRaid,
-  onGoHome
+  onGoHome,
+  onPreviewDamageFx
 }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -62916,7 +63110,19 @@ const RaidJackDebugScreen = ({
     "data-raid-go-home": true,
     className: `${btn} col-span-2 border-orange-400/60 bg-orange-950/40`,
     onClick: () => onGoHome && onGoHome()
-  }, "HOMEを見る(ジャックが出ているか確認)"))), React.createElement("section", {
+  }, "HOMEを見る(ジャックが出ているか確認)"), React.createElement("button", {
+    "data-raid-damage-fx-hit": true,
+    className: `${btn} border-fuchsia-400/60 bg-fuchsia-950/40`,
+    onClick: () => onPreviewDamageFx && onPreviewDamageFx('hit')
+  }, "ダメージ演出(ヒット)"), React.createElement("button", {
+    "data-raid-damage-fx-down": true,
+    className: `${btn} border-fuchsia-400/60 bg-fuchsia-950/40`,
+    onClick: () => onPreviewDamageFx && onPreviewDamageFx('down')
+  }, "ダメージ演出(撃破)"), React.createElement("button", {
+    "data-raid-damage-fx-none": true,
+    className: `${btn} col-span-2 border-fuchsia-400/60 bg-fuchsia-950/40`,
+    onClick: () => onPreviewDamageFx && onPreviewDamageFx('none')
+  }, "ダメージ演出(ダメージなし・アシスト)"))), React.createElement("section", {
     className: "rounded-2xl border border-orange-400/40 bg-orange-950/20 p-3 text-[11px] text-slate-100"
   }, React.createElement("div", {
     className: "mb-1 font-black text-orange-200"
@@ -63380,6 +63586,7 @@ const RaidJackRankingList = ({
   })));
 };
 const RaidJackScreen = ({
+  initialTier = 0,
   onBack,
   onChallenge,
   onPurchase,
@@ -63395,10 +63602,10 @@ const RaidJackScreen = ({
   cardClass
 }) => {
   const [tab, setTab] = useState('a');
-  const [sel, setSel] = useState({
-    a: 0,
+  const [sel, setSel] = useState(() => ({
+    a: Math.min(Math.max(Math.floor(Number(initialTier) || 0), 0), RAID_JACK_A_TIERS.length - 1),
     b: 0
-  });
+  }));
   const [state, setState] = useState(() => raidJackDefaultState());
   const [totals, setTotalsState] = useState(() => raidJackCachedTotals(eventId));
   const setTotals = t => {
@@ -63674,11 +63881,23 @@ const RaidJackScreen = ({
     cardClass: cardClass
   }))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
+  }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 ? React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
     "data-raid-jack-challenge": true,
+    onClick: () => onChallenge(tab, current, 'battle'),
+    className: "min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95"
+  }, "バトルで", React.createElement("br", null), "挑戦する"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-challenge-rhythm": true,
+    onClick: () => onChallenge(tab, current, 'rhythm'),
+    className: "min-h-[48px] rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-800 px-2 text-[12px] font-black leading-tight text-white active:scale-95"
+  }, "モンヒロビートで", React.createElement("br", null), "挑戦する")) : React.createElement("button", {
+    type: "button",
+    "data-raid-jack-challenge": true,
     disabled: !open || !isOpenTier || closedTier || remaining <= 0,
-    onClick: () => onChallenge(tab, current),
+    onClick: () => onChallenge(tab, current, 'battle'),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
   }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
     eventId: eventId,
@@ -63981,7 +64200,7 @@ function MonsterHeroGame() {
     setRhythmSelectView(value);
     storeSet(RHYTHM_SELECT_VIEW_KEY, value, false);
   };
-  const openRhythmDemo = async () => {
+  const openRhythmDemo = async opts => {
     const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
     const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
     const monsterSlots = sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY, [], false));
@@ -63992,7 +64211,7 @@ function MonsterHeroGame() {
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
-    setGameState('RHYTHM_MODE_SELECT');
+    setGameState(opts && typeof opts.to === 'string' ? opts.to : 'RHYTHM_MODE_SELECT');
   };
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false)));
@@ -66038,6 +66257,15 @@ function MonsterHeroGame() {
     } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
+  const [raidRhythm, setRaidRhythm] = useState(null);
+  const raidJackReturnTierRef = useRef(0);
+  const raidRhythmRunRef = useRef(null);
+  const [raidDamageFx, setRaidDamageFx] = useState(null);
+  useEffect(() => {
+    if (!raidRhythm) return;
+    if (['RHYTHM_DEMO_HOME', 'RHYTHM_PLAY', 'RHYTHM_OPTIONS', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'].includes(gameState)) return;
+    setRaidRhythm(null);
+  }, [gameState, raidRhythm]);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);
   const [raidJackPrep, setRaidJackPrep] = useState(null);
@@ -79343,6 +79571,210 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_CHALLENGE);
     if (toDebug) setGameState('RAID_JACK_DEBUG');
   };
+  const startRaidJackRhythmSelect = async tierIndex => {
+    raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
+    await openRhythmDemo({
+      to: 'RHYTHM_DEMO_HOME'
+    });
+    setRaidRhythm({
+      tierIndex: Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), RAID_JACK_A_TIERS.length - 1)
+    });
+  };
+  const cancelRaidJackRhythm = () => {
+    raidRhythmRunRef.current = null;
+    setRaidRhythm(null);
+    setGameState('RAID_JACK');
+  };
+  const startRaidJackRhythmPlay = async (song, difficulty) => {
+    const rr = raidRhythm;
+    if (!rr) return;
+    const nowMs = Date.now();
+    if (!raidJackDebugForce || raidJackDebugRealRules) {
+      const state = await raidJackLoadState();
+      const side = state.a;
+      const today = raidJackDayKey(nowMs);
+      if (side.day !== today) {
+        side.day = today;
+        side.used = 0;
+        side.extra = 0;
+      }
+      if (raidJackRemaining(side, nowMs) <= 0) {
+        cancelRaidJackRhythm();
+        return;
+      }
+      side.used += 1;
+      if (!(await raidJackSaveState(state))) return;
+    }
+    const run = {
+      tierIndex: rr.tierIndex,
+      hitId: raidJackMakeHitId(),
+      eventId: raidJackSafeEventId(raidJackEventId),
+      finished: false,
+      completing: false,
+      promise: null,
+      lifePromise: null
+    };
+    run.lifePromise = (async () => {
+      try {
+        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+        const tierDef = raidJackTierAt('a', rr.tierIndex);
+        const done = totals && totals.a && totals.a[rr.tierIndex + 1] ? Number(totals.a[rr.tierIndex + 1].total) || 0 : 0;
+        const pumpkin = rr.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
+        return {
+          lifeBefore: totals ? pumpkin ? tierDef.hp : Math.max(0, tierDef.hp - done) : null,
+          pumpkin
+        };
+      } catch (e) {
+        return null;
+      }
+    })();
+    raidRhythmRunRef.current = run;
+    setRhythmPlay({
+      song,
+      difficulty,
+      from: 'raid'
+    });
+    setGameState('RHYTHM_PLAY');
+  };
+  const completeRaidJackRhythm = async (result, song, difficulty) => {
+    const run = raidRhythmRunRef.current;
+    if (!run || run.completing) return;
+    run.completing = true;
+    const tier = raidJackTierAt('a', run.tierIndex);
+    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
+    const assist = !!(result && result.assist === true);
+    const damage = raidJackRhythmDamageOf(result, difficulty);
+    const info = await Promise.race([run.lifePromise || Promise.resolve(null), new Promise(resolve => setTimeout(() => resolve(null), 500))]);
+    setRaidDamageFx({
+      key: `${run.hitId}`,
+      tierIndex: run.tierIndex,
+      tierName: info && info.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
+      score,
+      damage,
+      assist,
+      lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null,
+      max: tier.hp,
+      pumpkin: !!(info && info.pumpkin)
+    });
+    run.promise = finishRaidJackRhythm(result, song, difficulty);
+  };
+  const finishRaidJackRhythm = async (result, song, difficulty) => {
+    const run = raidRhythmRunRef.current;
+    if (!run || run.finished) return null;
+    run.finished = true;
+    const tier = raidJackTierAt('a', run.tierIndex);
+    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
+    const assist = !!(result && result.assist === true);
+    const damage = raidJackRhythmDamageOf(result, difficulty);
+    let startLife = null;
+    let pumpkin = false;
+    try {
+      const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+      const done = totals && totals.a && totals.a[run.tierIndex + 1] ? Number(totals.a[run.tierIndex + 1].total) || 0 : 0;
+      if (totals && tier.hp - done > 0) startLife = tier.hp - done;
+      pumpkin = run.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
+    } catch (e) {
+      startLife = null;
+    }
+    const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
+    const hit = {
+      hitId: run.hitId,
+      kind: 'a',
+      tier: run.tierIndex + 1,
+      damage,
+      defeated
+    };
+    let outcome = 'error';
+    let opened = false;
+    const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
+    try {
+      if (damage <= 0) outcome = 'sent';else if (isDebugRun) {
+        const breederId = await ensureBreederId();
+        outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
+      } else {
+        let next = await raidJackLoadState();
+        const side = next.a;
+        const before = raidJackUnlockedCount('a', side.defeated);
+        if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+        opened = raidJackUnlockedCount('a', side.defeated) > before;
+        const breederId = await ensureBreederId();
+        const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
+        next = sent.state;
+        outcome = sent.outcome;
+        await raidJackSaveState(next);
+      }
+    } catch (error) {
+      outcome = 'error';
+    }
+    return {
+      way: 'rhythm',
+      songName: song && song.displayName || '',
+      difficultyName: difficulty && difficulty.id || '',
+      score,
+      assist,
+      kind: 'a',
+      tierIndex: run.tierIndex,
+      tierName: pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
+      reason: defeated ? 'defeated' : 'rhythm',
+      damage,
+      defeated,
+      turns: 0,
+      levelUps: 0,
+      growths: 0,
+      outcome,
+      opened,
+      eventId: run.eventId,
+      quickAward: null,
+      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage)
+    };
+  };
+  const exitRaidJackRhythmPlay = () => {
+    const run = raidRhythmRunRef.current;
+    const tierIndex = run ? run.tierIndex : raidRhythm ? raidRhythm.tierIndex : 0;
+    setRhythmPlay(null);
+    setRaidRhythm(null);
+    setRaidDamageFx(null);
+    setGameState('RAID_JACK');
+    (async () => {
+      let r = null;
+      try {
+        if (run && run.promise) r = await run.promise;
+      } catch (e) {
+        r = null;
+      }
+      if (!r && run) {
+        const tier = raidJackTierAt('a', tierIndex);
+        r = {
+          way: 'rhythm',
+          songName: '',
+          difficultyName: '',
+          score: 0,
+          assist: false,
+          kind: 'a',
+          tierIndex,
+          tierName: tier.name,
+          reason: 'giveup',
+          damage: 0,
+          defeated: false,
+          turns: 0,
+          levelUps: 0,
+          growths: 0,
+          outcome: 'sent',
+          opened: false,
+          eventId: run.eventId,
+          quickAward: null,
+          lifeLeft: tier.hp
+        };
+      }
+      raidRhythmRunRef.current = null;
+      if (r) setRaidJackResult(r);
+    })();
+  };
+  const exitRaidJackRhythmResult = (toDebug = false) => {
+    raidJackLastClaimRef.current = 0;
+    setRaidJackResult(null);
+    setGameState(toDebug ? 'RAID_JACK_DEBUG' : 'RAID_JACK');
+  };
   const claimRaidJackRewards = async () => {
     if (RELEASE_FLAGS.raidJack !== true || raidJackDebugForce) return 0;
     if (raidJackClaimingRef.current) return 0;
@@ -86621,7 +87053,12 @@ function MonsterHeroGame() {
           setGameState('DEBUG_SETTINGS');
         }
       }, "デバッグ設定へ戻る")));
-    })(), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
+    })(), raidDamageFx && (gameState === 'RHYTHM_PLAY' && rhythmPlay && rhythmPlay.from === 'raid' || gameState === 'RAID_JACK_DEBUG') && React.createElement(RaidJackDamageFx, {
+      key: raidDamageFx.key,
+      fx: raidDamageFx,
+      onDone: () => setRaidDamageFx(null)
+    }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
+      raidPlay: rhythmPlay.from === 'raid',
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
@@ -86631,6 +87068,10 @@ function MonsterHeroGame() {
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
+        if (rhythmPlay.from === 'raid') {
+          void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
+          return;
+        }
         const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak) : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
@@ -86694,6 +87135,10 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {
+        if (rhythmPlay.from === 'raid') {
+          exitRaidJackRhythmPlay();
+          return;
+        }
         if (rhythmPlay.from === 'multi' && !RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId)) RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, null, true, {
           diffId: rhythmPlay.difficulty.id
         });
@@ -86874,7 +87319,10 @@ function MonsterHeroGame() {
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
       exitingQuickRun: rhythmExitingRun,
-      onExit: () => setGameState('RHYTHM_MODE_SELECT'),
+      raidChallenge: raidRhythm ? {
+        tierName: raidJackTierAt('a', raidRhythm.tierIndex).name
+      } : null,
+      onExit: raidRhythm ? cancelRaidJackRhythm : () => setGameState('RHYTHM_MODE_SELECT'),
       onOpenEventRanking: () => {
         const kind = rhythmSongSelectEvent && rhythmSongSelectEvent.kind === 'limited' ? 'limited' : 'weekly';
         dismissRhythmEventNotice();
@@ -86901,6 +87349,10 @@ function MonsterHeroGame() {
       },
       onPlaySong: (song, difficulty) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+        if (raidRhythm) {
+          void startRaidJackRhythmPlay(song, difficulty);
+          return;
+        }
         setRhythmPlay({
           song,
           difficulty,
@@ -87718,8 +88170,16 @@ function MonsterHeroGame() {
       onClick: () => setDebugThrowScreenError(true),
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null))))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
-      onBack: () => setGameState(raidJackDebugForce && !RELEASE_FLAGS.raidJack ? 'RAID_JACK_DEBUG' : 'HOME'),
-      onChallenge: (kind, tierIndex) => {
+      initialTier: raidJackReturnTierRef.current,
+      onBack: () => {
+        raidJackReturnTierRef.current = 0;
+        setGameState(raidJackDebugForce && !RELEASE_FLAGS.raidJack ? 'RAID_JACK_DEBUG' : 'HOME');
+      },
+      onChallenge: (kind, tierIndex, way) => {
+        if (kind === 'a' && way === 'rhythm') {
+          void startRaidJackRhythmSelect(tierIndex);
+          return;
+        }
         setRaidJackPrep({
           kind,
           tierIndex
@@ -87797,6 +88257,31 @@ function MonsterHeroGame() {
         await openRaidJack();
       },
       onGoHome: returnToHome,
+      onPreviewDamageFx: kind => {
+        const t = RAID_JACK_A_TIERS[2];
+        const hp = t.hp;
+        setRaidDamageFx(kind === 'none' ? {
+          key: `preview-${Date.now()}`,
+          tierIndex: 2,
+          tierName: t.name,
+          score: 0,
+          damage: 0,
+          assist: true,
+          lifeBefore: Math.floor(hp * 0.6),
+          max: hp,
+          pumpkin: false
+        } : {
+          key: `preview-${Date.now()}`,
+          tierIndex: 2,
+          tierName: t.name,
+          score: 523456,
+          damage: kind === 'down' ? hp : 523456,
+          assist: false,
+          lifeBefore: kind === 'down' ? Math.floor(hp * 0.05) : Math.floor(hp * 0.6),
+          max: hp,
+          pumpkin: false
+        });
+      },
       onStartBattle: (kind, tierIndex, opts) => {
         const isB = kind === 'b';
         const mode = isB ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
@@ -93717,12 +94202,16 @@ function MonsterHeroGame() {
       className: "w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95"
     }, "戦いを続ける"))), document.body), raidJackResult && (() => {
       const r = raidJackResult;
-      const reasonLabel = {
+      const reasonLabel = (r.way === 'rhythm' ? {
+        defeated: 'ジャックを倒した！',
+        rhythm: 'モンヒロビートで挑戦した',
+        giveup: '途中でやめた'
+      } : {
         defeated: 'ジャックを倒した！',
         turns: '20ターンを使い切った',
         wipe: '全滅した',
         giveup: 'リタイアした'
-      }[r.reason] || '';
+      })[r.reason] || '';
       const sendLabel = {
         sent: '与ダメージを送りました',
         notready: 'サーバーの準備中です(HOMEかレイド画面を開くと、自動で送り直します)',
@@ -93771,7 +94260,18 @@ function MonsterHeroGame() {
         delay: 1400,
         duration: 1300,
         format: v => v.toLocaleString()
-      })), React.createElement("div", {
+      })), r.way === 'rhythm' ? React.createElement("div", {
+        "data-raid-jack-rhythm-rows": true,
+        className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
+      }, React.createElement("span", null, "曲"), React.createElement("b", {
+        className: "truncate text-right"
+      }, r.songName || '-', r.difficultyName ? `(${r.difficultyName})` : ''), React.createElement("span", null, "スコア"), React.createElement("b", {
+        className: "text-right"
+      }, r.score.toLocaleString()), r.assist && React.createElement(React.Fragment, null, React.createElement("span", null, "アシストモード"), React.createElement("b", {
+        className: "text-right"
+      }, "ダメージにならない")), React.createElement("span", null, "ジャックの残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
+        className: "text-right"
+      }, r.lifeLeft.toLocaleString())) : React.createElement("div", {
         className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
       }, React.createElement("span", null, "使ったターン"), React.createElement("b", {
         className: "text-right"
@@ -93813,7 +94313,7 @@ function MonsterHeroGame() {
           '--d': '1600ms'
         }
       }, React.createElement("button", {
-        onClick: () => exitRaidJack(r.eventId !== RAID_JACK_EVENT.id),
+        onClick: () => r.way === 'rhythm' ? exitRaidJackRhythmResult(r.eventId !== RAID_JACK_EVENT.id) : exitRaidJack(r.eventId !== RAID_JACK_EVENT.id),
         className: "w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black"
       }, "もどる")));
     })(), debugBattle && debugOutcome && React.createElement("div", {
@@ -98289,6 +98789,35 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) { .mh-rjresult-in { animation: none !important; opacity: 1; } }
     @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
     @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+    /* ==== レイドボス戦のモンヒロビート挑戦: 演奏が終わった直後のダメージ演出(RaidJackDamageFx)。約4.3秒・タップで飛ばせる ==== */
+    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px;
+      background: radial-gradient(circle at 50% 48%, rgba(120,40,10,.55), rgba(12,4,24,0) 62%), #0c0418; color: #fff; --ja-c: 251,146,60; --ja-d: 253,186,116; animation: mhRjDmgIn .3s ease-out both, mhRjDmgOut .45s ease-in 3.85s forwards; }
+    .mh-rjdmg-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 46%, #fff, rgba(var(--ja-c),.7) 40%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .7s ease-out 1s both; }
+    .mh-rjdmg-score { position: relative; text-align: center; animation: mhRjRise .4s ease-out .1s both; }
+    .mh-rjdmg-score small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fde68a; }
+    .mh-rjdmg-score b { display: block; font-size: 40px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 rgba(0,0,0,.8), 0 0 18px rgba(253,224,71,.7); }
+    .mh-rjdmg-stage { position: relative; width: min(64vw, 270px); aspect-ratio: 1024 / 880; margin-top: 4px; }
+    .mh-rjdmg-jack { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; animation: mhRjJackIn .5s ease-out .2s both, mhRjJackHit .7s ease-out 1s both; }
+    .mh-rjdmg-jack-none { animation: mhRjJackIn .5s ease-out .2s both; }
+    .mh-rjdmg-slash { position: absolute; z-index: 2; left: -10%; width: 120%; height: 6px; top: 40%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 16px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-24deg) translateX(-60%); animation: mhRjSlash .5s ease-out 1s both; }
+    .mh-rjdmg-slash-b { top: 52%; transform: rotate(20deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: 1.1s; }
+    .mh-rjdmg-name { position: relative; font-size: 14px; font-weight: 900; text-shadow: 0 2px 4px #000; animation: mhRjRise .4s ease-out .5s both; }
+    .mh-rjdmg-bar { position: relative; width: min(78vw, 330px); height: 16px; overflow: hidden; border-radius: 9999px; border: 2px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); animation: mhRjRise .4s ease-out .6s both; }
+    .mh-rjdmg-bar-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 40%, #b91c1c 75%, #7f1d1d); animation: mhRjBarDrop 1.2s cubic-bezier(.2,.8,.3,1) 1.05s forwards; }
+    .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
+    .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
+    .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
+    .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
+    .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }
+    .mh-rjdmg-skip { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 900; color: rgba(226,232,240,.55); animation: mhRjRise .4s ease-out 1.5s both; }
+    @keyframes mhRjDmgIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes mhRjDmgOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
+    @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-rjdmg, .mh-rjdmg * { animation-duration: .01s !important; animation-delay: 0s !important; } .mh-rjdmg-bar-fill { transform: scaleX(var(--to)); } .mh-rjdmg-damage, .mh-rjdmg-down { opacity: 1; } }
     /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
     .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }
     .mh-rjresult-pop { animation-name: mhRjSlam; animation-duration: .6s; }
