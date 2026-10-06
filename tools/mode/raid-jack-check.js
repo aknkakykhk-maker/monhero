@@ -37,7 +37,8 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
 // モンヒロビート挑戦(2026-10-06・ユーザー指示)。換算は暫定(ユーザー「順に検討」)なので、ここでは形だけ見る(式を変えたらここも直す)
 // モンヒロビート挑戦のダメージ(仕様の正本: docs/spec/RAID_JACK_RHYTHM_DAMAGE.md。2026-10-06 にユーザーが「これでおーけー」と確認した案)。数字を変えたら仕様書とここを直す
 {
-  const dj = o.raidJackRhythmDamage;
+  const dj0 = o.raidJackRhythmDamage;
+  const dj = (i) => dj0(i && typeof i === 'object' ? { allMarvelous: true, ...i } : i);   // 以下の式の検査は「達成の補正 1.0(オールマーベラス)」の数字で見る
   const T = o.RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT;
   const mk = (id, n, extra = {}) => dj({ difficultyId: id, judgments: { MARVELOUS: n }, precise: n, maxCombo: n, ...extra });
   check('モンヒロビート挑戦: 判定の割合(ジャスト1.0 / マーベラス0.95 / エクセレント0.70 / グレート0.50 / グッド0.25 / バッド-0.15 / ミス-0.30)',
@@ -73,9 +74,13 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
     o.RAID_JACK_RHYTHM_DAMAGE_LIMIT === null && mk('MASTER', 99999) <= 100000000 && mk('MASTER', 99999) > 300000
     && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 500, maxCombo: 500, assist: true }) === 0
     && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 'abc', GREAT: NaN, GOOD: -5 } }) === 0 && dj({ difficultyId: 'UNKNOWN', judgments: { MARVELOUS: 500 } }) === 0 && dj({ difficultyId: 'MASTER' }) === 0 && dj(null) === 0 && dj(undefined) === 0);
+  const base = { difficultyId: 'MASTER', judgments: { MARVELOUS: 1000 }, precise: 1000, maxCombo: 0 };
+  check('モンヒロビート挑戦: 達成の補正(2026-10-06): ふつうの演奏は基準の半分・フルコンボ0.7・オールエクセレント0.9・オールマーベラス1.0(従来の数字)。どれもない場合は 0.5',
+    dj0(base) === 500000 && dj0({ ...base, fullCombo: true }) === 700000 && dj0({ ...base, allExcellent: true }) === 900000 && dj0({ ...base, allMarvelous: true }) === 1000000
+    && dj0({ ...base, allMarvelous: true, allExcellent: true, fullCombo: true }) === 1000000 && dj0({ ...base, allExcellent: true, fullCombo: true }) === 900000);
   const r = { score: 900000, maxCombo: 420, precise: 200, judgments: { MARVELOUS: 300, EXCELLENT: 100, GOOD: 70, MISS: 30 } };   // ノーツ500
   check('モンヒロビート挑戦: 演奏の結果から出す(判定の数・ジャストの数・最大コンボ・難易度を使う。スコアは使わない。アシストは0)',
-    o.raidJackRhythmDamageOf(r, { id: 'MASTER' }) === Math.floor((200 * 1000 + 100 * 950 + 100 * 700 + 70 * 250 - 30 * 300) * (1 + 420 * 0.0005)) && o.raidJackRhythmDamageOf({ ...r, score: 1 }, { id: 'MASTER' }) === o.raidJackRhythmDamageOf(r, { id: 'MASTER' })
+    o.raidJackRhythmDamageOf(r, { id: 'MASTER' }) === Math.floor((200 * 1000 + 100 * 950 + 100 * 700 + 70 * 250 - 30 * 300) * (1 + 420 * 0.0005) * 0.5) && o.raidJackRhythmDamageOf({ ...r, fullCombo: true }, { id: 'MASTER' }) === Math.floor((200 * 1000 + 100 * 950 + 100 * 700 + 70 * 250 - 30 * 300) * (1 + 420 * 0.0005) * 0.7) && o.raidJackRhythmDamageOf({ ...r, score: 1 }, { id: 'MASTER' }) === o.raidJackRhythmDamageOf(r, { id: 'MASTER' })
     && o.raidJackRhythmDamageOf({ ...r, assist: true }, { id: 'MASTER' }) === 0);
 }
 {
