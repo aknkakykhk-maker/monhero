@@ -498,7 +498,7 @@ const RhythmMonsterNoteGuide=()=>{
       <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">
         無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
         両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
-        必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
+        必死のあいだは、GREAT・EXCELLENTもMARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
         いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
@@ -1456,8 +1456,9 @@ useEffect(()=>{
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
   const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
-// 必死(ユグドラシル血統の能力)のあいだは、GREAT以上をジャストマーベラスとして数える(判定もズレもここで置き換える)
-if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0)){judgment='MARVELOUS';deltaMs=0;}
+// 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
+// ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
+if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
 if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
