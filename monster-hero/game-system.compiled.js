@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 814985eec9d10102
+// source-sha256: a4ab15b9ea590956
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 15:23";
+const BUILD_DATE = "2026-10-06 16:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37180,7 +37180,7 @@ const RAID_JACK_FREE_PER_DAY = 3;
 const RAID_JACK_A_EX_MAX_USES = 2;
 const RAID_JACK_TEACHING_MAX = 3;
 const RAID_JACK_ALLY_MAX = 3;
-const RAID_JACK_EXTRA_COST_BEAT_P = 100;
+const RAID_JACK_EXTRA_COST_BEAT_P = 300;
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
 const RAID_JACK_STORY_START_ID = 'raid_jack_story_1b';
 const RAID_JACK_STORY_AFTER_TIER = Object.freeze({

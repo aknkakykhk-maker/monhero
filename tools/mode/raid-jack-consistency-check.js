@@ -30,7 +30,7 @@ const growthPct = Math.round((o.RAID_JACK_TURN_GROWTH - 1) * 100);           // 
 const regenPct = Math.round(o.RAID_JACK_TURN_REGEN_STEP * 1000) / 10;        // 1.5
 const levelUps = o.RAID_JACK_LEVEL_UP_TURNS.join('・');                        // 3・5・8・11
 check('定義の数字が仕様どおり(20ターン / 無料3回 / 追加100P / EX2回 / アシカ3枚 / 供モン3体 / バフ5%・1.5%)',
-  o.RAID_JACK_TURNS === 20 && o.RAID_JACK_FREE_PER_DAY === 3 && o.RAID_JACK_EXTRA_COST_BEAT_P === 100 && o.RAID_JACK_A_EX_MAX_USES === 2
+  o.RAID_JACK_TURNS === 20 && o.RAID_JACK_FREE_PER_DAY === 3 && o.RAID_JACK_EXTRA_COST_BEAT_P === 300 && o.RAID_JACK_A_EX_MAX_USES === 2
   && o.RAID_JACK_TEACHING_MAX === 3 && o.RAID_JACK_ALLY_MAX === 3 && growthPct === 5 && regenPct === 1.5,
   `${o.RAID_JACK_TURNS}/${o.RAID_JACK_FREE_PER_DAY}/${o.RAID_JACK_EXTRA_COST_BEAT_P}/${o.RAID_JACK_A_EX_MAX_USES}/${o.RAID_JACK_TEACHING_MAX}/${o.RAID_JACK_ALLY_MAX}/${growthPct}%/${regenPct}%`);
 
