@@ -26796,6 +26796,14 @@ const rhythmLayoutPlayArea=area=>{
   Array.from(area.querySelectorAll('[data-rhythm-sublane-boundary]')).forEach((boundary,index)=>{
     boundary.style.setProperty('--rhythm-sub-clip',rhythmBoundaryLinePolygon(index+.5));
   });
+  // 押したサブレーンの光(指の位置で光る台形)も、道の幅に合わせて切り直す。
+  // 【2026-10-07・ユーザー報告「押している位置に発光位置がずれている(横向きのときだけ)」】
+  // この台形は演奏画面を作るときに一度だけ切り抜いていて、横向きの道の幅(ふつう・細い)を選んでいても
+  // 「広い」のまま残っていた。判定は選んだ幅で測るので、外側のサブレーンほど指の位置とずれて光っていた。
+  Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]')).forEach(glow=>{
+    const subLane=Number(glow.getAttribute('data-rhythm-sublane-feedback'));
+    if(Number.isFinite(subLane))glow.style.clipPath=rhythmSubLanePolygon(subLane);
+  });
   rhythmLayoutSideMonsters(area);
   const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=RHYTHM_VIEW_ROTATION.rectOf(line);
   if(line&&lineRect){
