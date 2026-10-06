@@ -697,6 +697,8 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // 敵のデバフの詳細(名前の横の簡易表示を押すと開く)
+  const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
   // 敵のライフの下に「いまの強化」を1行で出し、タップで内訳を開く。強化が入ったターンは、真ん中の上に数秒だけ帯を出す。
   // 数字は 35-raid-jack.jsx の raidJackGrowthAt(戦闘本体と同じ定数)から出す。グランドスラム(B)は強化が無いので出さない
@@ -1159,7 +1161,7 @@ function BattleScreen({
         {enemy&&(
           <div data-enemy-bar className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
             <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tighter mb-0.5">
-              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[10px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%</>}</span>}</span>
+              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&<button type="button" data-enemy-debuffs={enemyDebuffs.length} aria-expanded={enemyDebuffOpen} aria-label={`敵の状態 ${enemyDebuffs.map(d=>`${d.label} ${d.value}`).join('、')}（押すと詳細）`} onClick={()=>setEnemyDebuffOpen(v=>!v)} className="mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95">{enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} aria-label={`${d.label} ${d.value}`} className={`inline-flex items-center gap-px ${d.tone.split(' ')[0]}`}><span aria-hidden="true">{d.mark}</span>{d.short?<span className="font-mono">{d.short}</span>:null}</span>))}<span aria-hidden="true" className="text-slate-300">{enemyDebuffOpen?'▲':'▼'}</span></button>}</span>
               <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
             </div>
             {/* 敵のライフ(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
@@ -1172,10 +1174,13 @@ function BattleScreen({
               <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
-            {/* 敵にかかっているデバフ・強化と、残りターン(2026-10-06 ユーザー指示)。味方の強化の札とは別に、敵の帯の中へ出す。無いときは何も出さず、高さも取らない */}
-            {Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
-              <div data-enemy-debuffs={enemyDebuffs.length} className="mt-1 flex flex-wrap items-center gap-1">
-                {enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} title={d.note||undefined} className={`inline-flex max-w-full items-center gap-1 rounded-full border bg-black/60 px-1.5 py-0.5 text-[10px] font-black not-italic leading-none tracking-normal normal-case ${d.tone}`}><span aria-hidden="true">{d.mark}</span><span>{d.label}</span><span className="font-mono">{d.value}</span></span>))}
+            {/* 敵にかかっているデバフの詳細(2026-10-06 ユーザー指示「全部ウンディーネの絶氷の位置にまとめて、簡易表示して押したら詳細が見える」)。
+                名前の横の簡易表示を押したときだけ開く。デバフが無くなったら、開いたままでも何も出さない */}
+            {enemyDebuffOpen&&Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
+              <div data-enemy-debuff-detail className="mt-1 flex flex-col gap-0.5 rounded-lg border border-white/15 bg-black/60 px-2 py-1 not-italic normal-case tracking-normal">
+                {enemyDebuffs.map(d=>(<div key={d.key} className="flex items-baseline gap-1.5 text-[11px] font-black leading-tight">
+                  <span aria-hidden="true">{d.mark}</span><span className={`shrink-0 ${d.tone.split(' ')[0]}`}>{d.label}</span><span className="shrink-0 font-mono text-slate-100">{d.value}</span>{d.note?<span className="min-w-0 truncate text-[10px] font-bold text-slate-400">{d.note}</span>:null}
+                </div>))}
               </div>
             )}
             {raidGrowth&&(

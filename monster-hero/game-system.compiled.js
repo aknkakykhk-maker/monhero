@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 08004e9ad69d72ca
+// source-sha256: 3375e72850e01830
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 12:26";
+const BUILD_DATE = "2026-10-06 13:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -53583,6 +53583,7 @@ function BattleScreen({
   wave
 }) {
   const [buffDetail, setBuffDetail] = useState(false);
+  const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   const raidGrowthOn = runMode === BATTLE_MODE_RAID_JACK_A;
   const raidGrowth = raidGrowthOn ? raidJackGrowthAt(turnCount) : null;
   const [raidGrowthOpen, setRaidGrowthOpen] = useState(false);
@@ -54190,10 +54191,26 @@ function BattleScreen({
     className: "max-w-[34vw] truncate"
   }, enemy.name), React.createElement("span", {
     className: `shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
-  }, RANGE_LABELS[enemyDist]), iceLockTurns > 0 && React.createElement("span", {
-    "data-ice-lock-status": true,
-    className: "shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[10px] not-italic tracking-tighter whitespace-nowrap text-cyan-100"
-  }, "❄️絶氷 ", iceLockPreparing ? '準備' : React.createElement(React.Fragment, null, iceLockTurns, "T\u3000⬇30%"))), React.createElement("span", {
+  }, RANGE_LABELS[enemyDist]), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("button", {
+    type: "button",
+    "data-enemy-debuffs": enemyDebuffs.length,
+    "aria-expanded": enemyDebuffOpen,
+    "aria-label": `敵の状態 ${enemyDebuffs.map(d => `${d.label} ${d.value}`).join('、')}（押すと詳細）`,
+    onClick: () => setEnemyDebuffOpen(v => !v),
+    className: "mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95"
+  }, enemyDebuffs.map(d => React.createElement("span", {
+    key: d.key,
+    "data-enemy-debuff": d.key,
+    "aria-label": `${d.label} ${d.value}`,
+    className: `inline-flex items-center gap-px ${d.tone.split(' ')[0]}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, d.mark), d.short ? React.createElement("span", {
+    className: "font-mono"
+  }, d.short) : null)), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-slate-300"
+  }, enemyDebuffOpen ? '▲' : '▼'))), React.createElement("span", {
     className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
   }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), React.createElement("div", {
     "data-enemy-hpbar": true,
@@ -54213,19 +54230,21 @@ function BattleScreen({
     style: {
       background: 'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'
     }
-  })), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("div", {
-    "data-enemy-debuffs": enemyDebuffs.length,
-    className: "mt-1 flex flex-wrap items-center gap-1"
-  }, enemyDebuffs.map(d => React.createElement("span", {
+  })), enemyDebuffOpen && Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("div", {
+    "data-enemy-debuff-detail": true,
+    className: "mt-1 flex flex-col gap-0.5 rounded-lg border border-white/15 bg-black/60 px-2 py-1 not-italic normal-case tracking-normal"
+  }, enemyDebuffs.map(d => React.createElement("div", {
     key: d.key,
-    "data-enemy-debuff": d.key,
-    title: d.note || undefined,
-    className: `inline-flex max-w-full items-center gap-1 rounded-full border bg-black/60 px-1.5 py-0.5 text-[10px] font-black not-italic leading-none tracking-normal normal-case ${d.tone}`
+    className: "flex items-baseline gap-1.5 text-[11px] font-black leading-tight"
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, d.mark), React.createElement("span", null, d.label), React.createElement("span", {
-    className: "font-mono"
-  }, d.value)))), raidGrowth && React.createElement("button", {
+  }, d.mark), React.createElement("span", {
+    className: `shrink-0 ${d.tone.split(' ')[0]}`
+  }, d.label), React.createElement("span", {
+    className: "shrink-0 font-mono text-slate-100"
+  }, d.value), d.note ? React.createElement("span", {
+    className: "min-w-0 truncate text-[10px] font-bold text-slate-400"
+  }, d.note) : null))), raidGrowth && React.createElement("button", {
     type: "button",
     "data-raid-growth-chip": true,
     onClick: () => setRaidGrowthOpen(true),
@@ -73158,31 +73177,6 @@ function MonsterHeroGame() {
     turn: turnCount
   }) : 0;
   const cardLimit = Math.min(5, baseCardLimit + soulCoordinationCardBonus + exCardBonus);
-  const enemyDebuffs = (() => {
-    const list = [];
-    const add = (key, mark, label, value, tone, note) => list.push({
-      key,
-      mark,
-      label,
-      value,
-      tone,
-      note
-    });
-    if (!enemy) return list;
-    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない');
-    const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, {
-      wave,
-      turn: turnCount
-    }) : null;
-    if (psycho && psycho.active) add('psycho', '🎯', 'ロックオン', `与ダメ-${Math.round((1 - psycho.enemyDmgMult) * 100)}% 被ダメ+${Math.round(psycho.enemyTakenBonus * 100)}%${psycho.turnsLeft > 0 ? ` 残り${psycho.turnsLeft}T` : ''}`, 'text-sky-200 border-sky-400/60');
-    if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪 敵与ダメ', `-30% 残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60');
-    if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪 敵被ダメ', `+30% 残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60');
-    if (getTurnBuff('stunEnemy', false)) add('stun', '⚡', 'スタン', '次の敵の番', 'text-yellow-200 border-yellow-400/60');
-    if (getWaveBuff('enemyAtkDebuffPct') > 0) add('atkDown', '⬇', '敵のちから', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}% WAVE中`, 'text-indigo-200 border-indigo-400/60');
-    if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}% WAVE中`, 'text-orange-200 border-orange-400/60');
-    if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `攻撃上昇 ×${enemy.roarStacks}`, 'text-red-200 border-red-400/60');
-    return list;
-  })();
   const actionUsed = selectedCards.length + discardCards.length;
   const slotMaxUses = (mon, slotIdx = null) => {
     const coordinationHolder = Number.isInteger(slotIdx) && soulCoordinationSlots.includes(slotIdx);
@@ -74532,6 +74526,33 @@ function MonsterHeroGame() {
   const iceLockTurns = getWaveBuff('iceLockTurns');
   const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
   const iceLockActive = iceLockTurns > 0 && !iceLockPreparing;
+  const enemyDebuffs = (() => {
+    const list = [];
+    const add = (key, mark, label, value, tone, note, short = '') => list.push({
+      key,
+      mark,
+      label,
+      value,
+      tone,
+      note,
+      short
+    });
+    if (!enemy) return list;
+    if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
+    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
+    const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, {
+      wave,
+      turn: turnCount
+    }) : null;
+    if (psycho && psycho.active) add('psycho', '🎯', 'サイコロックオン', `残り${psycho.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵は間合いを動けず、与ダメージ-${Math.round((1 - psycho.enemyDmgMult) * 100)}%・被ダメージ+${Math.round(psycho.enemyTakenBonus * 100)}%`, psycho.turnsLeft > 0 ? `${psycho.turnsLeft}T` : '');
+    if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪(敵の与ダメ)', `残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の与えるダメージが30%下がる', `${fateWheelView.atkDown}T`);
+    if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪(敵の被ダメ)', `残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の受けるダメージが30%上がる', `${fateWheelView.takenUp}T`);
+    if (getTurnBuff('stunEnemy', false)) add('stun', '⚡', 'スタン', '次の敵の番', 'text-yellow-200 border-yellow-400/60', '次の敵の番、敵は動けない');
+    if (getWaveBuff('enemyAtkDebuffPct') > 0) add('atkDown', '⬇', '敵のちから低下', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`, 'text-indigo-200 border-indigo-400/60', 'このWAVEのあいだ続く', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`);
+    if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ上昇', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-200 border-orange-400/60', 'このWAVEのあいだ続く', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`);
+    if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `×${enemy.roarStacks}`, 'text-red-200 border-red-400/60', '敵の攻撃が上がっている(元には戻らない)', `×${enemy.roarStacks}`);
+    return list;
+  })();
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
   const battleSoulMasus = slots.map(mon => mon?.masuId ? getMasuMon(mon.masuId) : null).filter(Boolean);

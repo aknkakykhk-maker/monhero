@@ -368,8 +368,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       if (p2.some(t => /敵が乱心！/.test(t)) && !/CLEAR|GAME OVER/.test(await text())) {
         const confusedShown = await page.evaluate(() => !!document.querySelector('[data-enemy-confused]'));
         // 札はアイコン表示だと文字が短いので、名前は title(aria-label)で見る
-        // 2026-10-06 から、乱心の残りターンは敵の帯の下の「敵の状態」の列に出る(味方の強化の札とは別)
-        const chip = await page.evaluate(() => { const el = document.querySelector('[data-enemy-debuff="confuse"]'); return !!el && /残り\d+T/.test(el.innerText); });
+        // 2026-10-06 から、乱心の残りターンは敵の名前の横の簡易表示「敵の状態」に出る(味方の強化の札とは別)
+        const chip = await page.evaluate(() => { const el = document.querySelector('[data-enemy-debuff="confuse"]'); return !!el && /残り\d+T/.test(el.getAttribute('aria-label') || ''); });
         check('乱心の残りターンが敵の状態の列に出る', chip || confusedShown);
         if (!confusedShown) {
           await page.evaluate(() => { window.__realRandom = Math.random; Math.random = () => 0.1; });

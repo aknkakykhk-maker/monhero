@@ -53,7 +53,7 @@ const checks = [
     && game.includes('? Math.min(1, currentRate + 0.5)')],
   ['旧与ダメージ1.5倍処理を削除', !game.includes('iceRulerMult') && !game.includes('isIceRulerActive') && !game.includes('data-ice-ruler-active')],
   ['準備中は特性を発動しない', game.includes('const iceLockActive = iceLockTurns>0 && !iceLockPreparing') && !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
-  ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':[\s\S]*?iceLockTurns\}T　⬇30%/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
+  ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /add\('ice'[\s\S]*?iceLockPreparing \? '準備' : `残り\$\{iceLockTurns\}T`[\s\S]*?30%/.test(game) /* 2026-10-06 から、絶氷の表示は敵の名前の横の簡易表示(敵の状態)へまとめた */ && /'❄️', '絶氷の楔'/.test(game)],
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
   ['固有技の共通タメは専用モーションより先に下沈みを行う', game.includes('setAttackAnim({slotIndex: animSlot, charge:true});')
     && !game.includes("setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});")
