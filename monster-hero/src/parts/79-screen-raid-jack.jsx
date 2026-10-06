@@ -234,9 +234,9 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
 
 // renderPlace / renderIcon / cardClass … 通常バトルの全国ランキングと同じ部品(60-app.jsx の rankingPlace / rankingBreederIcon / rankingCardClass)。
 //   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
-const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
+const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
   const [tab, setTab] = useState('a');
-  const [sel, setSel] = useState({ a: 0, b: 0 });
+  const [sel, setSel] = useState(() => ({ a: Math.min(Math.max(Math.floor(Number(initialTier) || 0), 0), RAID_JACK_A_TIERS.length - 1), b: 0 }));   // モンヒロビート挑戦から戻ったときは、挑んでいた段階を選んだまま
   const [state, setState] = useState(() => raidJackDefaultState());
   const [totals, setTotalsState] = useState(() => raidJackCachedTotals(eventId));   // undefined=読み込み中 / null=準備中 / object(前回取れた値から描き始める)
   const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
@@ -440,11 +440,22 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       </div>
 
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
-          onClick={() => onChallenge(tab, current)}
-          className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-          {challengeLabel}
-        </button>
+        {/* レイドバトルは「バトル」と「モンヒロビート」の2つの挑み方(2026-10-06・ユーザー指示)。回数は同じものを使う。
+            挑めないとき(開始前・未解放・倒された・回数切れ)は、これまでどおり理由を出す1つのボタンにする */}
+        {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" data-raid-jack-challenge onClick={() => onChallenge(tab, current, 'battle')}
+              className="min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95">バトルで<br />挑戦する</button>
+            <button type="button" data-raid-jack-challenge-rhythm onClick={() => onChallenge(tab, current, 'rhythm')}
+              className="min-h-[48px] rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-800 px-2 text-[12px] font-black leading-tight text-white active:scale-95">モンヒロビートで<br />挑戦する</button>
+          </div>
+        ) : (
+          <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
+            onClick={() => onChallenge(tab, current, 'battle')}
+            className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+            {challengeLabel}
+          </button>
+        )}
       </div>
       {showRanking && <RaidJackRankingList eventId={eventId} initialTab={tab} initialTier={current} bossDown={bossDownNow} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
       {showRewards && <RaidJackRewardList claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}

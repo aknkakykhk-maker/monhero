@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a3b9f2971f704df
+// generated-sha256: 25c9cd852b0760c0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 15:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18973,7 +18973,7 @@ const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTex
 //   アプリを開き直すまで下げたまま、しかも知らせも出なかった(2026-09-27 の点検で見つけた)
 const rhythmAutoEffectMemory={level:0};
 const rhythmResetAutoEffect=()=>{rhythmAutoEffectMemory.level=0;};
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1})=>{
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
   const settings=useMemo(()=>settingsIn&&settingsIn.autoEffectDown!==false?rhythmCapEffects(settingsIn,effectCap):settingsIn,[settingsIn,effectCap]);
@@ -20634,7 +20634,7 @@ scheduleTick();};
 {/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
-<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><div className={multi?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2"}>{!multi&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></main>}
+<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><div className={multi||raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2"}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、
@@ -20762,7 +20762,7 @@ scheduleTick();};
   <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 leading-none">{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
-<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</>}</button></div>}</div></main>;
+<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</>}</button></div>}</div></main>;
 };
 
 // ---- part: 31-debug-ui.jsx ----
@@ -23921,6 +23921,20 @@ const RAID_JACK_A_TIERS = Object.freeze([
 //   ・ライフは 4,550,000 の設定値(大王のライフとは連動しない。1戦で倒せるのはそこまで)/ 攻撃力は子爵と同じ / 技の名前は今までのまま(動きは絵に合わせる)
 //   ・サーバーへ送る段階は大王(tier 5)のまま(表の制約が 1〜5 のため)。ID は a5 を引き継ぎ、raidJackPumpkin で見分ける
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);   // 攻撃力は 700(1.0倍・子爵を変えても連動しない・2026-10-05)/ ライフは 4,550,000(大王のライフを変えても連動しない・2026-10-05)
+// ===== レイドバトルのモンヒロビート挑戦(2026-10-06・ユーザー指示) =====
+// レイドバトル(A)は、バトルのほかに「モンヒロビートを1曲遊んで、そのスコアをダメージに換える」挑み方ができる。
+//   ・回数は、バトルと同じもの(side.used / extra)を使う。始めた時点で1回使い、途中でやめても戻らない
+//   ・与えたダメージは、バトルと同じく共有ライフから引かれ、貢献ランキングに足される(kind:'a' の同じ表へ送る)
+//   ・スコアからダメージへの換算は、ここの1か所だけ。**暫定**(ユーザー「順に検討」)なので、数字や式は後で直す
+//   ・アシストモードで遊んだぶんはダメージにしない(ランキングと同じ扱い)
+const RAID_JACK_RHYTHM_DAMAGE_PER_SCORE = 1;   // 暫定: スコア1点につきダメージ1
+const raidJackRhythmDamage = (score, opts = {}) => {
+  if (opts && opts.assist === true) return 0;
+  const n = Number(score);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(100000000, Math.floor(n * RAID_JACK_RHYTHM_DAMAGE_PER_SCORE));
+};
+
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
 const raidJackBossDown = (totals) => !!totals && !!totals.a && !!totals.a[5]
   && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
@@ -24642,6 +24656,7 @@ const RAID_JACK_STINGERS = Object.freeze({
   turns: { text: 'TIME UP', tone: 'end' },
   wipe: { text: 'DEFEAT', tone: 'lose' },
   giveup: { text: 'RETIRE', tone: 'end' },
+  rhythm: { text: 'FINISH', tone: 'end' },   // モンヒロビートで挑戦したとき(倒さなかったとき)
 });
 const RaidJackResultStinger = ({ reason }) => {
   const def = RAID_JACK_STINGERS[reason] || RAID_JACK_STINGERS.turns;
@@ -27368,7 +27383,7 @@ function RhythmSongSelectScreen({
   rhythmBackgroundRun, rhythmBestRecords, rhythmSettings, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
   rhythmSongListScrollRef, runStage, runStageRef, saveRhythmSelectView, setQuickRunDetailOpen,
   setQuickRunStartError, setQuickRunStopConfirm, setRhythmSelectedDifficultyId, setRhythmSelectedSongId, spotClass,
-  startQuickRunFromRhythm, wave, monsterSlots=[],
+  startQuickRunFromRhythm, wave, monsterSlots=[], raidChallenge=null,
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
       const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
@@ -27508,6 +27523,10 @@ function RhythmSongSelectScreen({
             onClick={onOpenOptions}
             className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`}><span aria-hidden="true" className="text-base leading-none">⚙️</span><span className="text-[9px] font-black leading-none">設定</span></button>
         </header>
+        {/* レイドバトルのモンヒロビート挑戦で開いたときの帯(2026-10-06・ユーザー指示)。遊んだ1曲のスコアが、ジャックへのダメージになる */}
+        {raidChallenge&&<div data-raid-challenge-banner role="status" className="shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100">
+          🎃 レイドバトル「{raidChallenge.tierName}」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)
+        </div>}
         {/* ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
             常に出すのは1行だけ。曲の一覧を押し下げないよう、詳細はタップで開く。
             演奏中(RHYTHM_PLAY)はこの画面ではないので、そもそも出ない */}
@@ -38768,9 +38787,9 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
 
 // renderPlace / renderIcon / cardClass … 通常バトルの全国ランキングと同じ部品(60-app.jsx の rankingPlace / rankingBreederIcon / rankingCardClass)。
 //   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
-const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
+const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
   const [tab, setTab] = useState('a');
-  const [sel, setSel] = useState({ a: 0, b: 0 });
+  const [sel, setSel] = useState(() => ({ a: Math.min(Math.max(Math.floor(Number(initialTier) || 0), 0), RAID_JACK_A_TIERS.length - 1), b: 0 }));   // モンヒロビート挑戦から戻ったときは、挑んでいた段階を選んだまま
   const [state, setState] = useState(() => raidJackDefaultState());
   const [totals, setTotalsState] = useState(() => raidJackCachedTotals(eventId));   // undefined=読み込み中 / null=準備中 / object(前回取れた値から描き始める)
   const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
@@ -38974,11 +38993,22 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       </div>
 
       <div className={SCREEN_FOOTER_CLASS}>
-        <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
-          onClick={() => onChallenge(tab, current)}
-          className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-          {challengeLabel}
-        </button>
+        {/* レイドバトルは「バトル」と「モンヒロビート」の2つの挑み方(2026-10-06・ユーザー指示)。回数は同じものを使う。
+            挑めないとき(開始前・未解放・倒された・回数切れ)は、これまでどおり理由を出す1つのボタンにする */}
+        {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" data-raid-jack-challenge onClick={() => onChallenge(tab, current, 'battle')}
+              className="min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95">バトルで<br />挑戦する</button>
+            <button type="button" data-raid-jack-challenge-rhythm onClick={() => onChallenge(tab, current, 'rhythm')}
+              className="min-h-[48px] rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-800 px-2 text-[12px] font-black leading-tight text-white active:scale-95">モンヒロビートで<br />挑戦する</button>
+          </div>
+        ) : (
+          <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
+            onClick={() => onChallenge(tab, current, 'battle')}
+            className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+            {challengeLabel}
+          </button>
+        )}
       </div>
       {showRanking && <RaidJackRankingList eventId={eventId} initialTab={tab} initialTier={current} bossDown={bossDownNow} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
       {showRewards && <RaidJackRewardList claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
@@ -39237,7 +39267,7 @@ function MonsterHeroGame() {
     setRhythmSelectView(value);
     storeSet(RHYTHM_SELECT_VIEW_KEY,value,false);
   };
-  const openRhythmDemo = async () => {
+  const openRhythmDemo = async (opts) => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
@@ -39247,7 +39277,7 @@ function MonsterHeroGame() {
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY,DEFAULT_RHYTHM_SELECT_VIEW,false)));
     // どこから入っても、まずモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
     // ソロはそこから曲えらび(RHYTHM_DEMO_HOME)へ進む
-    setGameState('RHYTHM_MODE_SELECT');
+    setGameState(opts&&typeof opts.to==='string'?opts.to:'RHYTHM_MODE_SELECT');
   };
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
@@ -41449,6 +41479,16 @@ function MonsterHeroGame() {
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
+  // レイドバトルのモンヒロビート挑戦(2026-10-06・ユーザー指示)。曲えらび〜演奏〜結果のあいだだけ入る。
+  // raidRhythm={tierIndex}(曲えらびの帯と、決定ボタンの分かれ道に使う) / raidRhythmRunRef={tierIndex,hitId,eventId,finished,promise}(1回の挑戦)
+  const [raidRhythm, setRaidRhythm] = useState(null);
+  const raidJackReturnTierRef = useRef(0);   // モンヒロビート挑戦から戻ったとき、レイド画面で選んでおく段階
+  const raidRhythmRunRef = useRef(null);
+  useEffect(() => {
+    if (!raidRhythm) return;
+    if (['RHYTHM_DEMO_HOME', 'RHYTHM_PLAY', 'RHYTHM_OPTIONS', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'].includes(gameState)) return;
+    setRaidRhythm(null);   // 曲えらび以外へ出たら、レイドの挑戦ではなくなる(あとでふつうに遊んで回数を使わないように)
+  }, [gameState, raidRhythm]);
   const [raidJackStartRequest, setRaidJackStartRequest] = useState(null);
   const [raidJackDetailMon, setRaidJackDetailMon] = useState(null);       // 編成画面で詳細を見ているモンスター(確認専用)
   const [raidJackPrep, setRaidJackPrep] = useState(null);                 // 編成画面で挑む段階 {kind,tierIndex}
@@ -52885,6 +52925,103 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setRunMode(BATTLE_MODE_CHALLENGE);
     if(toDebug) setGameState('RAID_JACK_DEBUG');
   };
+  // ===== レイドバトルのモンヒロビート挑戦(2026-10-06・ユーザー指示。設計: 35-raid-jack.jsx の raidJackRhythmDamage の上のコメント) =====
+  // 流れ: レイド画面で「モンヒロビートで挑戦する」→ 曲えらび(帯つき)→ 決定で回数を1回使って演奏 → 最後まで遊ぶとスコアをダメージに換えて送る
+  //       → 演奏のリザルトを出ていくと、レイドの結果が出る。途中でやめたときは回数だけ使い、ダメージは0(送らない)。
+  // 自己ベスト・全国ランキング・周回の報酬・ビートP以外の記録には一切つなげない(onComplete の from==='raid' は、ここだけで終わる)
+  const startRaidJackRhythmSelect = async (tierIndex) => {
+    raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
+    await openRhythmDemo({ to: 'RHYTHM_DEMO_HOME' });
+    setRaidRhythm({ tierIndex: Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), RAID_JACK_A_TIERS.length - 1) });
+  };
+  const cancelRaidJackRhythm = () => { raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState('RAID_JACK'); };
+  const startRaidJackRhythmPlay = async (song, difficulty) => {
+    const rr = raidRhythm;
+    if (!rr) return;
+    const nowMs = Date.now();
+    // 回数はバトルと同じもの。デバッグの強制表示中は数えない(startRaidJackFromPrep と同じ)
+    if (!raidJackDebugForce || raidJackDebugRealRules) {
+      const state = await raidJackLoadState();
+      const side = state.a;
+      const today = raidJackDayKey(nowMs);
+      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+      if (raidJackRemaining(side, nowMs) <= 0) { cancelRaidJackRhythm(); return; }
+      side.used += 1;
+      if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    }
+    raidRhythmRunRef.current = { tierIndex: rr.tierIndex, hitId: raidJackMakeHitId(), eventId: raidJackSafeEventId(raidJackEventId), finished: false, promise: null };
+    setRhythmPlay({ song, difficulty, from: 'raid' });
+    setGameState('RHYTHM_PLAY');
+  };
+  // 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
+  const finishRaidJackRhythm = async (result, song, difficulty) => {
+    const run = raidRhythmRunRef.current;
+    if (!run || run.finished) return null;
+    run.finished = true;
+    const tier = raidJackTierAt('a', run.tierIndex);
+    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
+    const assist = !!(result && result.assist === true);
+    const damage = raidJackRhythmDamage(score, { assist });
+    // 倒しきったか: いまの共有ライフの残りと比べる。大王を倒したあとの「ぱんぷきん」は共有ライフが無限なので、倒した扱いにしない
+    let startLife = null;
+    let pumpkin = false;
+    try {
+      const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+      const done = totals && totals.a && totals.a[run.tierIndex + 1] ? Number(totals.a[run.tierIndex + 1].total) || 0 : 0;
+      if (totals && tier.hp - done > 0) startLife = tier.hp - done;
+      pumpkin = run.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
+    } catch (e) { startLife = null; }
+    const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
+    const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated };
+    let outcome = 'error';
+    let opened = false;
+    const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
+    try {
+      if (damage <= 0) outcome = 'sent';   // 送るものが無い(アシストモードなど)
+      else if (isDebugRun) {
+        const breederId = await ensureBreederId();
+        outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
+      } else {
+        let next = await raidJackLoadState();
+        const side = next.a;
+        const before = raidJackUnlockedCount('a', side.defeated);
+        if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+        opened = raidJackUnlockedCount('a', side.defeated) > before;
+        const breederId = await ensureBreederId();
+        const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
+        next = sent.state; outcome = sent.outcome;
+        await raidJackSaveState(next);
+      }
+    } catch (error) { outcome = 'error'; }
+    return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,
+      kind: 'a', tierIndex: run.tierIndex, tierName: pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, reason: defeated ? 'defeated' : 'rhythm',
+      damage, defeated, turns: 0, levelUps: 0, growths: 0, outcome, opened, eventId: run.eventId, quickAward: null,
+      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage) };
+  };
+  // 演奏の画面を出ていく(リザルトを見終えた・途中でやめた)。レイド画面へ戻って、結果を出す
+  const exitRaidJackRhythmPlay = () => {
+    const run = raidRhythmRunRef.current;
+    const tierIndex = run ? run.tierIndex : (raidRhythm ? raidRhythm.tierIndex : 0);
+    setRhythmPlay(null); setRaidRhythm(null); setGameState('RAID_JACK');
+    (async () => {
+      let r = null;
+      try { if (run && run.promise) r = await run.promise; } catch (e) { r = null; }
+      if (!r && run) {
+        // 最後まで遊ばなかった: 回数は使ったまま、ダメージは0(送らない)
+        const tier = raidJackTierAt('a', tierIndex);
+        r = { way: 'rhythm', songName: '', difficultyName: '', score: 0, assist: false, kind: 'a', tierIndex, tierName: tier.name, reason: 'giveup', damage: 0, defeated: false,
+          turns: 0, levelUps: 0, growths: 0, outcome: 'sent', opened: false, eventId: run.eventId, quickAward: null, lifeLeft: tier.hp };
+      }
+      raidRhythmRunRef.current = null;
+      if (r) setRaidJackResult(r);
+    })();
+  };
+  // レイドの結果(モンヒロビート)を閉じてレイド画面へ戻る
+  const exitRaidJackRhythmResult = (toDebug = false) => {
+    raidJackLastClaimRef.current = 0;   // 倒した直後の報酬を、すぐ確かめる
+    setRaidJackResult(null);
+    setGameState(toDebug ? 'RAID_JACK_DEBUG' : 'RAID_JACK');
+  };
   // ジャックの報酬を受け取れるぶんだけギフトで届ける(設計書「報酬の表」)。
   // ★先に「ギフト」と「受け取り済みの印(mh_raid_jack_v1 の claimed)」を取引保存する。同じIDのギフトは
   //   grantGiftOnce が二重に作らないので、途中で止まっても二重には届かない(CLAUDE.md ⑦)。
@@ -56202,7 +56339,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+          // レイドバトルのモンヒロビート挑戦は、ここだけで終わる(自己ベスト・全国ランキング・周回の報酬・みんなで対戦には一切つなげない)
+          if(rhythmPlay.from==='raid'){const run=raidRhythmRunRef.current;if(run&&!run.promise)run.promise=finishRaidJackRhythm(result,rhythmPlay.song,rhythmPlay.difficulty);return;}
           // みんなで対戦の演奏は、まずスコアをルームへ知らせる。そのうえで、ひとりで遊ぶときと同じく
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
@@ -56263,7 +56402,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 通算クリア回数を数える(スエゾービートのフレームの条件)。ライフを残して終えたときだけ。
           // 練習・アシストモードは上で除いてある。数えられなくても記録の保存は止めない
           if(result?.cleared!==false){ try{ setRhythmClearTotal(await addRhythmClearTotal()); }catch{} }
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -56351,7 +56490,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             exitingQuickRun={rhythmExitingRun}
-            onExit={()=>setGameState('RHYTHM_MODE_SELECT')}
+            raidChallenge={raidRhythm?{tierName:raidJackTierAt('a',raidRhythm.tierIndex).name}:null}
+            onExit={raidRhythm?cancelRaidJackRhythm:()=>setGameState('RHYTHM_MODE_SELECT')}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
               const kind=rhythmSongSelectEvent&&rhythmSongSelectEvent.kind==='limited'?'limited':'weekly';
@@ -56364,7 +56504,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
             onOpenRanking={(song)=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
-            onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
+            onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();if(raidRhythm){void startRaidJackRhythmPlay(song,difficulty);return;}setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
             quickClearCounts={quickClearCounts}
             quickRhythmBackgroundVisible={quickRhythmBackgroundVisible}
             rhythmSixLaneIntroVisible={rhythmSixLaneIntroVisible}
@@ -56695,8 +56835,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {gameState==='RAID_JACK'&&(<RaidJackScreen
-          onBack={()=>setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME')}
-          onChallenge={(kind,tierIndex)=>{setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
+          initialTier={raidJackReturnTierRef.current}
+          onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME');}}
+          onChallenge={(kind,tierIndex,way)=>{if(kind==='a'&&way==='rhythm'){void startRaidJackRhythmSelect(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
           onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidJackRewards} beatPoints={rhythmEventPoints} eventId={raidJackEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
           guideVisible={(RELEASE_FLAGS.raidJack===true||raidJackDebugForce)&&!raidJackGuideSeen} onDismissGuide={dismissRaidJackGuide}
           renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
@@ -59779,7 +59920,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
 
       {raidJackResult&&(()=>{
         const r=raidJackResult;
-        const reasonLabel={defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
+        const reasonLabel=(r.way==='rhythm'?{defeated:'ジャックを倒した！',rhythm:'モンヒロビートで挑戦した',giveup:'途中でやめた'}:{defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'})[r.reason]||'';
         const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(HOMEかレイド画面を開くと、自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした。通信のよい場所でHOMEかレイド画面を開くと、自動で送り直します'}[r.outcome]||'';
         return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
           <RaidJackResultStinger reason={r.reason}/>
@@ -59789,7 +59930,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <div className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3" style={{'--d':'1250ms'}}>
             <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
             <div data-raid-jack-damage className="text-3xl font-black text-white text-right"><TrainingCountUp from={0} to={r.damage} delay={1400} duration={1300} format={v=>v.toLocaleString()}/></div>
-            <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>
+            {r.way==='rhythm'?<div data-raid-jack-rhythm-rows className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>曲</span><b className="truncate text-right">{r.songName||'-'}{r.difficultyName?`(${r.difficultyName})`:''}</b><span>スコア</span><b className="text-right">{r.score.toLocaleString()}</b>{r.assist&&<><span>アシストモード</span><b className="text-right">ダメージにならない</b></>}<span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b></div>:<div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>}
           </div>
           {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
           {r.quickAward&&r.quickAward.loops>0&&(
@@ -59806,7 +59947,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           )}
           <div className="mh-rjresult-in mb-4 text-[10px] text-slate-300" style={{'--d':'1500ms'}}>{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
           <div className="mh-rjresult-in w-full max-w-xs space-y-3" style={{'--d':'1600ms'}}>
-            <button onClick={()=>exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>
+            <button onClick={()=>r.way==='rhythm'?exitRaidJackRhythmResult(r.eventId!==RAID_JACK_EVENT.id):exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>
           </div>
         </div>);
       })()}

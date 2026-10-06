@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
-vm.runInContext(`${src}\nthis.o={RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+vm.runInContext(`${src}\nthis.o={raidJackRhythmDamage,RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
 const o = ctx.o;
 
 // ① 段階
@@ -34,6 +34,18 @@ aWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_A_TIERS[i]; check(`A${
 bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${i + 1} ${n}`, t.name === n && t.hp === hp && t.actionCount === ac, `hp=${t.hp} 技=${t.actionCount}`); });
 // ライフは段階ごとの設定値(2026-10-05・ユーザーが決めた)。倍率 power は hp ÷ 350,000 に合わせてある(Bは今までどおり 35,000×倍率×10)
 check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユーザーが段階ごとに決めた値。伯爵・公爵・大王は2026-10-05に引き上げ)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,8000000,35000000,80000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
+// モンヒロビート挑戦(2026-10-06・ユーザー指示)。換算は暫定(ユーザー「順に検討」)なので、ここでは形だけ見る(式を変えたらここも直す)
+check('モンヒロビート挑戦: スコアをダメージに換える(暫定は1点=1ダメージ)・不正な値とアシストモードは0・1億で頭打ち',
+  o.raidJackRhythmDamage(523456) === 523456 && o.raidJackRhythmDamage(0) === 0 && o.raidJackRhythmDamage(-5) === 0 && o.raidJackRhythmDamage(NaN) === 0
+  && o.raidJackRhythmDamage('abc') === 0 && o.raidJackRhythmDamage(900000, { assist: true }) === 0 && o.raidJackRhythmDamage(1e12) === 100000000);
+{
+  const appSrc = read('monster-hero/src/parts/60-app.jsx');
+  check('モンヒロビート挑戦: 演奏の完了は from===\'raid\' で専用の処理だけを通り、自己ベスト・ランキング・周回の報酬へ進まない(return で抜ける)',
+    /if\(rhythmPlay\.from==='raid'\)\{const run=raidRhythmRunRef\.current;if\(run&&!run\.promise\)run\.promise=finishRaidJackRhythm\([^)]*\);return;\}/.test(appSrc));
+  check('モンヒロビート挑戦: 回数はバトルと同じもの(state.a の used / extra・raidJackRemaining)を使い、始めた時点で1回使う',
+    /const startRaidJackRhythmPlay = async[\s\S]{0,900}raidJackRemaining\(side, nowMs\) <= 0[\s\S]{0,200}side\.used \+= 1;/.test(appSrc));
+  check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated \};/.test(appSrc));
+}
 check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.power - t.hp / 350000) < 1e-9) && o.RAID_JACK_A_TIERS[0].power === 5);
 // ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は 700(はじめは子爵と同じ。子爵を 500 に決め直したあとも 700 のまま) / 技名はそのまま)
 {

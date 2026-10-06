@@ -97,6 +97,7 @@ const RAID_JACK_STINGERS = Object.freeze({
   turns: { text: 'TIME UP', tone: 'end' },
   wipe: { text: 'DEFEAT', tone: 'lose' },
   giveup: { text: 'RETIRE', tone: 'end' },
+  rhythm: { text: 'FINISH', tone: 'end' },   // モンヒロビートで挑戦したとき(倒さなかったとき)
 });
 const RaidJackResultStinger = ({ reason }) => {
   const def = RAID_JACK_STINGERS[reason] || RAID_JACK_STINGERS.turns;
