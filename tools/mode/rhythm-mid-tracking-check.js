@@ -143,6 +143,19 @@ const advance=ms=>{
   check('HOLD: 細くなって十分たち、まだ外れたままならMISS',play(560+700)==='MISS','holdJudgment='+play(560+700));
 }
 
+// --- 押さえ始めの時計は、押した瞬間の遅れぶん巻き戻して数える(2026-10-07・点検) ---
+{
+  const note0=()=>({type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false});
+  now=500;runtime.record('touch:1',clientXFor(2),clientY);
+  runtime.setInputAge(60);runtime.bind('touch:1',note0(),'HOLD',1000,0);
+  const withAge=runtime._sessions.get('touch:1')?.startPerfMs;runtime.clear();
+  runtime.record('touch:1',clientXFor(2),clientY);
+  runtime.setInputAge(0);runtime.bind('touch:1',note0(),'HOLD',1000,0);
+  const noAge=runtime._sessions.get('touch:1')?.startPerfMs;runtime.clear();
+  check('押さえ始めの時計: 遅れ60msのとき、数え始めを60ms巻き戻す',withAge===now-60,'startPerfMs='+withAge);
+  check('押さえ始めの時計: 遅れが無いときはこれまでどおり',noAge===now,'startPerfMs='+noAge);
+}
+
 // --- HOLD: 猶予未満の一瞬のズレは失敗にしない ---
 {
   const note={type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};

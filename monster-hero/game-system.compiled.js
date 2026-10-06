@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 873f53330b69435d
+// source-sha256: a9270a5bec719b0a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 02:17";
+const BUILD_DATE = "2026-10-07 07:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31400,6 +31400,7 @@ const RhythmTapTest = ({
     RHYTHM_GESTURE_RUNTIME.clear();
     run.activePointers.clear();
     run.activeTouchInputs?.clear();
+    run.outsideStartInputs?.clear();
     run.audio?.stop();
     const score = run.lifeDepleted ? run.lockedScore : run.score;
     const achievements = rhythmResultAchievements(run.counts, chart.totalNotes);
@@ -32086,6 +32087,7 @@ const RhythmTapTest = ({
       run.activePointers.clear();
       run.standbyPointers?.clear();
       run.activeTouchInputs?.clear();
+      run.outsideStartInputs?.clear();
       run.inputFeedbackState?.clear();
       run.audio?.stop();
     }
@@ -32285,6 +32287,7 @@ const RhythmTapTest = ({
     run.activePointers.clear();
     run.standbyPointers?.clear();
     run.activeTouchInputs?.clear();
+    run.outsideStartInputs?.clear();
     run.inputFeedbackState?.clear();
     run.activePointerFeedback?.clear();
     setPressedLanes([]);
@@ -32336,7 +32339,10 @@ const RhythmTapTest = ({
     const now = run.audio.songTimeMs() - (Number(ageMs) > 0 ? Number(ageMs) : 0);
     if (Array.isArray(run.inputTimes) && run.inputTimes.length < 20000 && inputs.some(input => !input?.rejudge)) run.inputTimes.push(now);
     run.inputFeedbackState = run.inputFeedbackState || new Map();
-    rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs).forEach(({
+    RHYTHM_GESTURE_RUNTIME.setInputAge?.(ageMs);
+    const matchedInputs = rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs);
+    RHYTHM_GESTURE_RUNTIME.setInputAge?.(0);
+    matchedInputs.forEach(({
       input,
       target,
       deltaMs,
@@ -32538,6 +32544,7 @@ const RhythmTapTest = ({
         lane,
         subLaneCoordinate,
         inputKey: rhythmInputKey('pointer', entry.id),
+        subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
         pointerId: entry.id
       }], rawAge > 0 && rawAge < 300 ? rawAge : rhythmInputAgeMs(entry.stamp, nowMs()));
       if (entry.upAt != null) endRecovered(entry);
@@ -32650,13 +32657,16 @@ const RhythmTapTest = ({
       run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
       setPressedLanes(pressedLanesNow());
     }
+    const originStamp = Number(e.nativeEvent?.__mhOriginStamp);
+    const perfNow = typeof performance !== 'undefined' ? performance.now() : NaN;
     inputStarts([{
       lane,
       subLaneCoordinate,
       inputKey: rhythmInputKey('pointer', e.pointerId),
+      subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
-    }], rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN));
+    }], Number.isFinite(originStamp) ? rhythmInputAgeMs(originStamp, perfNow) : rhythmInputAgeMs(e.timeStamp, perfNow));
   };
   const pointerMove = e => {
     if (e.pointerType === 'touch' && !RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId)) return;
@@ -32707,6 +32717,16 @@ const RhythmTapTest = ({
           subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(tp.x, tp.y, rect);
         if (subLaneCoordinate !== null) liveSubLanes.push(subLaneCoordinate);
         if (current.activeTouchInputs.has(inputKey)) {
+          if (current.outsideStartInputs?.has(inputKey) && movedTouchInputs?.has(inputKey) && lane !== null && subLaneCoordinate !== null) {
+            current.outsideStartInputs.delete(inputKey);
+            starts.push({
+              lane,
+              subLaneCoordinate,
+              inputKey,
+              subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect)
+            });
+            return;
+          }
           if (movedTouchInputs?.has(inputKey) && subLaneCoordinate !== null) inputMoves(inputKey, subLaneCoordinate);
           return;
         }
@@ -32720,8 +32740,12 @@ const RhythmTapTest = ({
         if (lane !== null && subLaneCoordinate !== null) starts.push({
           lane,
           subLaneCoordinate,
-          inputKey
-        });else RHYTHM_PERF.touchIgnored();
+          inputKey,
+          subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect)
+        });else {
+          RHYTHM_PERF.touchIgnored();
+          (current.outsideStartInputs = current.outsideStartInputs || new Set()).add(inputKey);
+        }
       });
       liveTouchSubLanesRef.current = liveSubLanes;
       setPressedLanes(pressedLanesNow());
@@ -32731,6 +32755,7 @@ const RhythmTapTest = ({
       Array.from(current.activeTouchInputs).forEach(inputKey => {
         if (!live.has(inputKey)) {
           current.activeTouchInputs.delete(inputKey);
+          current.outsideStartInputs?.delete(inputKey);
           ended.push({
             inputKey
           });
