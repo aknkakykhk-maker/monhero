@@ -4089,6 +4089,35 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) { .mh-rjresult-in { animation: none !important; opacity: 1; } }
     @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
     @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+    /* ==== レイドボス戦のモンヒロビート挑戦: 演奏が終わった直後のダメージ演出(RaidJackDamageFx)。約4.3秒・タップで飛ばせる ==== */
+    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px;
+      background: radial-gradient(circle at 50% 48%, rgba(120,40,10,.55), rgba(12,4,24,0) 62%), #0c0418; color: #fff; --ja-c: 251,146,60; --ja-d: 253,186,116; animation: mhRjDmgIn .3s ease-out both, mhRjDmgOut .45s ease-in 3.85s forwards; }
+    .mh-rjdmg-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 46%, #fff, rgba(var(--ja-c),.7) 40%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .7s ease-out 1s both; }
+    .mh-rjdmg-score { position: relative; text-align: center; animation: mhRjRise .4s ease-out .1s both; }
+    .mh-rjdmg-score small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fde68a; }
+    .mh-rjdmg-score b { display: block; font-size: 40px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 rgba(0,0,0,.8), 0 0 18px rgba(253,224,71,.7); }
+    .mh-rjdmg-stage { position: relative; width: min(64vw, 270px); aspect-ratio: 1024 / 880; margin-top: 4px; }
+    .mh-rjdmg-jack { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; animation: mhRjJackIn .5s ease-out .2s both, mhRjJackHit .7s ease-out 1s both; }
+    .mh-rjdmg-jack-none { animation: mhRjJackIn .5s ease-out .2s both; }
+    .mh-rjdmg-slash { position: absolute; z-index: 2; left: -10%; width: 120%; height: 6px; top: 40%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 16px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-24deg) translateX(-60%); animation: mhRjSlash .5s ease-out 1s both; }
+    .mh-rjdmg-slash-b { top: 52%; transform: rotate(20deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: 1.1s; }
+    .mh-rjdmg-name { position: relative; font-size: 14px; font-weight: 900; text-shadow: 0 2px 4px #000; animation: mhRjRise .4s ease-out .5s both; }
+    .mh-rjdmg-bar { position: relative; width: min(78vw, 330px); height: 16px; overflow: hidden; border-radius: 9999px; border: 2px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); animation: mhRjRise .4s ease-out .6s both; }
+    .mh-rjdmg-bar-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 40%, #b91c1c 75%, #7f1d1d); animation: mhRjBarDrop 1.2s cubic-bezier(.2,.8,.3,1) 1.05s forwards; }
+    .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
+    .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
+    .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
+    .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
+    .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }
+    .mh-rjdmg-skip { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 900; color: rgba(226,232,240,.55); animation: mhRjRise .4s ease-out 1.5s both; }
+    @keyframes mhRjDmgIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes mhRjDmgOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
+    @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-rjdmg, .mh-rjdmg * { animation-duration: .01s !important; animation-delay: 0s !important; } .mh-rjdmg-bar-fill { transform: scaleX(var(--to)); } .mh-rjdmg-damage, .mh-rjdmg-down { opacity: 1; } }
     /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
     .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }
     .mh-rjresult-pop { animation-name: mhRjSlam; animation-duration: .6s; }
