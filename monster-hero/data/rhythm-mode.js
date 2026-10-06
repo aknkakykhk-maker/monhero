@@ -2244,7 +2244,38 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  // ハイスコアを更新したときの、結果画面に重ねる演出で鳴らす1回だけの合成音(2026-10-06・ユーザー指示「ハイスコア更新したときは
+  // もっとちゃんと演出がほしい」)。フルコンボの上昇アルペジオより長く、最後に和音で伸ばして「更新した」を伝える。
+  // 設定(音量・ON/OFF・全体ミュート)と鳴らし終えた後の片付けは playFullCombo と同じ。
+  const playNewRecord=()=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,level=rhythmNoteSeLevel(.05,settings.volume/100);
+    const voice=(type,freq,start,sustain,gainScale)=>{
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type=type;
+      oscillator.frequency.setValueAtTime(freq,start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(.0002,level*gainScale),start+.012);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      oscillator.connect(gain);
+      gain.connect(output(audio));
+      oscillator.start(start);
+      oscillator.stop(start+sustain+.02);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    };
+    // G5 → B5 → D6 → G6 と駆け上がり(80msずつ)、そのあと G5・D6・G6 の和音を長く伸ばす
+    [783.99,987.77,1174.66,1567.98].forEach((freq,index)=>voice('triangle',freq,now+index*.08,.18,1));
+    const chord=now+.34;
+    [[783.99,.9],[1174.66,.8],[1567.98,1]].forEach(([freq,scale])=>voice('triangle',freq,chord,.78,scale));
+    // 厚みを出す低音(G3)。上より小さくして、音量が跳ねないようにする
+    voice('sine',196.00,chord,.7,.7);
+    return true;
+  };
+  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。

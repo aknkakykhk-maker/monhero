@@ -662,6 +662,11 @@ const rhythmPlayLogSend=async({song,difficulty,rawChart,notes,settings,mirror,cl
 const RHYTHM_TOUCH_DIAG_KEY='mh_rhythm_touch_diag_v1';
 const RHYTHM_TOUCH_DIAG_KEEP=20;
 const RHYTHM_TOUCH_DIAG_VERSION=1;
+// ハイスコア更新の演出の長さ(2026-10-06)。数字のカウントアップは、題名が入ってから始めて、止まったところで差を出す
+const RHYTHM_RECORD_FX_COUNT_DELAY_MS=600;
+const RHYTHM_RECORD_FX_COUNT_MS=1500;
+const RHYTHM_RECORD_FX_TOTAL_MS=3300;   // この長さのあと外す。CSS の mhRhythmRecordFxLife(3.2秒で消える)より少し長く
+const RHYTHM_RECORD_FX_SPARKLES=18;
 // 1曲ごとのでたらめな番号。リザルトの「押したのに反応しないことがあった」の報告の行を、この曲の診断の行と結ぶ(2026-10-01)
 const rhythmTouchDiagPlayId=()=>{let id='';for(let i=0;i<12;i++)id+='0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random()*36)];return id;};
 const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared})=>{
@@ -1696,7 +1701,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
-    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
+    // ハイスコアを更新したときの演出(2026-10-06・ユーザー指示「ハイスコア更新したときはもっとちゃんと演出がほしい」)の材料。
+    // previousBestScore … 更新前のBEST(初めての記録は0)。recordFx … 結果画面の上に重ねる演出を出すときだけ入れる。
+    //   初めての記録(前のBESTが0)・失敗・練習・タイミング合わせ・演出量MINIMAL・軽量モードでは出さない(札と数字だけ)。
+    //   id は演出ごとの印。結果へあとから項目が足されても(ラッキーラッシュなど)、効果音とタイマーが走り直さないために使う
+    const previousBestScore=Math.max(0,Math.floor(Number(run.startBestScore)||0));
+    const recordFx=isNewRecord&&previousBestScore>0&&!failed&&!tutorial&&!calibrating&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
+      ?{id:`${Date.now()}-${score}`,previous:previousBestScore,score}:null;
+    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,previousBestScore,recordFx,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
     /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント・キャンペーンの期間外は1/5 */
     setLuckyRush(false);
@@ -1716,6 +1728,34 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   const celebrateTimerRef=useRef(null);
   // リザルトの「押したのに反応しないことがあった」を送った曲(playId)。同じ曲では1回だけ
   const [touchReportSent,setTouchReportSent]=useState(null);
+  // ハイスコア更新の演出(結果画面の上に重ねる。2026-10-06)。効果音を1回鳴らし、スコアを前のBESTから新しい値まで数え上げ、
+  // 時間がたったら外す。**依存は演出の印(id)だけ**にする(結果へあとから項目が足されても、音とタイマーが走り直さないため。
+  // celebrate と同じ注意)。数字は React を通さず ref の文字を直接書き換える(毎フレーム描き直さない。中身は React が持たない空の枠)
+  const recordFxId=view.status==='result'&&view.result&&view.result.recordFx?view.result.recordFx.id:null;
+  const [recordFxHiddenFor,setRecordFxHiddenFor]=useState(null);
+  const recordScoreRef=useRef(null);
+  useEffect(()=>{
+    if(!recordFxId)return undefined;
+    const fx=view.result.recordFx,el=recordScoreRef.current;
+    RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
+    let raf=0;
+    const reduce=typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const put=value=>{if(el)el.textContent=Math.round(value).toLocaleString();};
+    if(reduce||typeof requestAnimationFrame!=='function')put(fx.score);
+    else{
+      put(fx.previous);
+      let start=0;
+      const step=now=>{
+        if(!start)start=now;
+        const p=Math.max(0,Math.min(1,(now-start-RHYTHM_RECORD_FX_COUNT_DELAY_MS)/RHYTHM_RECORD_FX_COUNT_MS));
+        put(fx.previous+(fx.score-fx.previous)*(1-Math.pow(1-p,3)));
+        if(p<1)raf=requestAnimationFrame(step);
+      };
+      raf=requestAnimationFrame(step);
+    }
+    const timer=setTimeout(()=>setRecordFxHiddenFor(recordFxId),RHYTHM_RECORD_FX_TOTAL_MS);
+    return ()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);clearTimeout(timer);};
+  },[recordFxId]);
   useEffect(()=>{
     if(view.status!=='celebrate')return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -2263,6 +2303,20 @@ scheduleTick();};
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
       data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)]" style={{paddingTop:'var(--mh-sa-top)'}}>
+{/* ===== ハイスコア更新の演出(2026-10-06・ユーザー指示「ハイスコア更新したときはもっとちゃんと演出がほしい」) =====
+    結果画面の上へ重ねて出し、約3秒で引く。タップは下の画面へ通す(pointer-events:none)ので、ボタンは待たずに押せる。
+    動かすのは transform と opacity だけ。演出量「最小」・軽量モード・動きを減らす設定では、重ねるもの自体を出さない/止める。
+    数字(data-rhythm-record-fx-score の中)は React が持たず、上のカウントアップが書き換える */}
+{result.recordFx&&recordFxHiddenFor!==result.recordFx.id&&<div data-rhythm-record-fx aria-hidden="true" className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center overflow-hidden">
+  <i data-rhythm-record-fx-dim className="absolute inset-0 block"/>
+  <i data-rhythm-record-fx-rays className="absolute left-1/2 top-1/2 block"/>
+  {Array.from({length:RHYTHM_RECORD_FX_SPARKLES},(_,i)=>{const angle=(i*137.5)*Math.PI/180,radius=70+(i%5)*26;return <i key={i} data-rhythm-record-fx-spark className="absolute left-1/2 top-1/2 block rounded-full" style={{'--x':`${Math.round(Math.cos(angle)*radius*1.5)}px`,'--y':`${Math.round(Math.sin(angle)*radius)}px`,'--d':`${(i%6)*70+380}ms`,'--s':`${4+(i%4)*2}px`,background:i%3===0?'#fff':i%3===1?'#fde68a':'#f0abfc'}}/>;})}
+  <div className="relative px-6 text-center">
+    <b data-rhythm-record-fx-title className="block text-5xl font-black italic leading-tight">NEW RECORD!</b>
+    <div data-rhythm-record-fx-scorebox className="mt-1 flex items-baseline justify-center gap-1.5"><small className="text-[11px] font-black italic tracking-[.25em] text-amber-200">SCORE</small><span data-rhythm-record-fx-score ref={recordScoreRef} className="text-[44px] font-black leading-none tabular-nums text-white"/></div>
+    <div className="mt-1.5 flex items-center justify-center gap-2"><b data-rhythm-record-fx-gain className="rounded-full border border-lime-300/80 bg-lime-400/20 px-3 py-0.5 text-lg font-black leading-tight tabular-nums text-lime-200">+{(result.recordFx.score-result.recordFx.previous).toLocaleString()}</b><small data-rhythm-record-fx-prev className="text-[11px] font-bold tabular-nums text-amber-100/90">前回のベスト {result.recordFx.previous.toLocaleString()}</small></div>
+  </div>
+</div>}
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
     そのあとに周回・ビートP・解放・ライブログを並べ、ボタンは下の帯へ固定する(スクロールしても隠れない・中身も隠さない)。
@@ -2331,14 +2385,16 @@ scheduleTick();};
 </section>
 {/* アシストモード・ミラー譜面で遊んだことを、結果の上で言う。アシストは記録に残らないことも添える */}
 {(result.assist||result.mirror)&&<div data-rhythm-result-play-mode className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">{result.assist&&<span className="rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2 py-0.5 text-emerald-100">🛟 アシストモード（スコア8割・記録には残りません{Number(result.assistGuarded)>0?`・ガード${Number(result.assistGuarded)}回`:''}）</span>}{result.mirror&&<span className="rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100">↔ ミラー譜面</span>}</div>}
-<section data-rhythm-result-score-card className="mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
+<section data-rhythm-result-score-card data-new-record={result.isNewRecord?'1':'0'} className="mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
   {/* 2026-09-26 に見本の大きさへ(ユーザー指示「見本のほうがサイズ感が見やすい」)。SCOREの数字を大きく、
       縦持ちでも左にマスモンを出す(横に広いときは左の欄に出ているので、ここでは出さない) */}
   <div className="flex items-center gap-2">
     {heroArt&&<div data-rhythm-result-hero-portrait aria-hidden="true" className="-my-1 w-[34%] max-w-[150px] shrink-0 [@container(min-width:680px)]:hidden"><img data-rhythm-result-hero-art src={heroArt} alt="" draggable={false} decoding="async" className="max-h-[140px] w-full object-contain"/></div>}
     <div className="min-w-0 flex-1">
-      <div className="flex items-center gap-1.5"><small className="text-[11px] font-black italic tracking-[.25em] text-slate-300">SCORE</small>{result.isNewRecord&&<b data-rhythm-new-record className="whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-black leading-none text-slate-950">NEW RECORD</b>}</div>
+      {/* ハイスコア更新(2026-10-06): 札を大きくし、前より何点伸びたかと前回のBESTを添える。演出が重なるときは、それが引いてから札を弾ませる */}
+      <div className="flex flex-wrap items-center gap-1.5"><small className="text-[11px] font-black italic tracking-[.25em] text-slate-300">SCORE</small>{result.isNewRecord&&<b data-rhythm-new-record style={{'--mh-record-badge-delay':result.recordFx?'3s':'.15s'}} className="whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black leading-none text-slate-950">✨ NEW RECORD</b>}{result.isNewRecord&&Number(result.previousBestScore)>0&&view.score>result.previousBestScore&&<b data-rhythm-record-gain className="whitespace-nowrap rounded-full border border-lime-300/70 bg-lime-400/15 px-2 py-0.5 text-[10px] font-black leading-none tabular-nums text-lime-200">+{(view.score-result.previousBestScore).toLocaleString()}</b>}</div>
       <div data-rhythm-result-score className="text-[42px] font-black leading-none tabular-nums [@container(min-width:680px)]:text-[38px]">{view.score.toLocaleString()}</div>
+      {result.isNewRecord&&Number(result.previousBestScore)>0&&<small data-rhythm-record-prev className="mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90">前回のベスト {Number(result.previousBestScore).toLocaleString()}</small>}
     {/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
     「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」。
     ランクやスコアより先に、まずここで結果を言い切る。失敗はライフが0になったまま

@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":20726,"data/images/images-enemy.js":2926,"data/ally-monsters.js":34218,"data/lineages.js":11204,"data/breeder.js":86808,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2067919,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":75056,"data/changelog.js":1198686,"data/help.js":530413,"data/rhythm-step3-release.js":8517,"data/assistants.js":580054,"tailwind.css":200850,"game-system.compiled.js":4803263,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":20726,"data/images/images-enemy.js":2926,"data/ally-monsters.js":34218,"data/lineages.js":11204,"data/breeder.js":86808,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":2069948,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":75056,"data/changelog.js":1199758,"data/help.js":531411,"data/rhythm-step3-release.js":8517,"data/assistants.js":580054,"tailwind.css":201097,"game-system.compiled.js":4808638,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610061954';
+var GAME_BUILD = '202610062011';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -132,7 +132,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=1ff6f7064126" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=066c22f1e039" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -1172,6 +1172,95 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-rhythm-result] [data-rhythm-judgment-row="MARVELOUS"]{animation:mhRhythmJudgmentSweep 2.6s linear infinite}
   [data-rhythm-result] [data-rhythm-judgment-row="JUST"]{animation:mhRhythmJudgmentRowRainbow 2.4s linear infinite}
   /* ★リザルトの内訳用。0%→100% でちょうど虹の1周分を流す(上の2周分の並びと対) */
+  /* ===== ハイスコア更新の演出(2026-10-06・ユーザー指示「ハイスコア更新したときはもっとちゃんと演出がほしい」) =====
+     結果画面の上へ約3秒だけ重ねる(中身は 30-rhythm-play.jsx の data-rhythm-record-fx)。タップは下の画面へ通す。
+     ★動かすのは transform と opacity だけ(ぼかしの半径は動かさない。rhythm-keyframe-blur-check.js)。
+     ★演出量「最小」・軽量モードでは、そもそも重ねるものを出さない(finish が recordFx を入れない)。念のためここでも隠す。
+     ★動きを減らす設定では、光の筋・火花・弾みを止めて、題名と数字だけを静かに見せる。 */
+  [data-rhythm-record-fx]{animation:mhRhythmRecordFxLife 3.2s linear both}
+  @keyframes mhRhythmRecordFxLife{0%{opacity:0}7%{opacity:1}86%{opacity:1}100%{opacity:0}}
+  [data-rhythm-record-fx-dim]{background:radial-gradient(75% 65% at 50% 50%,rgba(2,6,23,.82) 0%,rgba(2,6,23,.62) 55%,rgba(2,6,23,.28) 100%)}
+  /* 後ろで回る光の筋。大きな1枚の板を回すだけ(transform) */
+  [data-rhythm-record-fx-rays]{
+    width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;
+    background:repeating-conic-gradient(from 0deg,rgba(251,191,36,.20) 0deg 7deg,rgba(251,191,36,0) 7deg 22deg);
+    -webkit-mask-image:radial-gradient(circle,#000 0%,rgba(0,0,0,.55) 22%,transparent 58%);
+    mask-image:radial-gradient(circle,#000 0%,rgba(0,0,0,.55) 22%,transparent 58%);
+    animation:mhRhythmRecordRays 9s linear infinite;
+  }
+  @keyframes mhRhythmRecordRays{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  [data-rhythm-record-fx-title]{
+    position:relative;
+    background:linear-gradient(180deg,#fff 0%,#fde68a 38%,#f59e0b 72%,#f0abfc 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 3px 10px rgba(2,6,23,.9)) drop-shadow(0 0 24px rgba(251,191,36,.85));
+    animation:mhRhythmRecordTitle .7s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  [data-rhythm-record-fx-title]::before,[data-rhythm-record-fx-title]::after{
+    content:"";position:absolute;left:50%;top:50%;width:1px;height:1px;border-radius:9999px;
+    border:3px solid rgba(255,255,255,.85);transform:translate(-50%,-50%);
+    animation:mhRhythmComboRing 1s .2s cubic-bezier(.15,.7,.3,1) both;pointer-events:none;
+  }
+  [data-rhythm-record-fx-title]::after{border-color:rgba(251,191,36,.85);animation-delay:.4s}
+  @keyframes mhRhythmRecordTitle{
+    0%{opacity:0;transform:scale(2.4) rotate(-5deg)}
+    55%{opacity:1;transform:scale(.92) rotate(1deg)}
+    78%{transform:scale(1.05) rotate(0deg)}
+    100%{opacity:1;transform:scale(1) rotate(0deg)}
+  }
+  [data-rhythm-record-fx-scorebox]{animation:mhRhythmRecordFxIn .45s .35s ease-out both}
+  [data-rhythm-record-fx-score]{text-shadow:0 0 14px rgba(251,191,36,.7),0 2px 6px rgba(2,6,23,.9)}
+  [data-rhythm-record-fx-prev]{animation:mhRhythmRecordFxIn .5s .9s ease-out both}
+  /* 数字が止まる頃(カウントアップは0.6〜2.1秒)に、伸びた点数を弾ませて出す */
+  [data-rhythm-record-fx-gain]{animation:mhRhythmRecordGain .5s 2.1s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes mhRhythmRecordFxIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes mhRhythmRecordGain{
+    0%{opacity:0;transform:scale(.3)}
+    70%{opacity:1;transform:scale(1.18)}
+    100%{opacity:1;transform:scale(1)}
+  }
+  /* 火花。中心から、角度と距離を変えて飛び散って消える(--x --y --d --s は JSX が決める) */
+  [data-rhythm-record-fx-spark]{
+    width:var(--s,6px);height:var(--s,6px);margin:calc(var(--s,6px) / -2) 0 0 calc(var(--s,6px) / -2);
+    opacity:0;animation:mhRhythmRecordSpark 1.5s var(--d,0ms) cubic-bezier(.15,.7,.3,1) both;
+  }
+  @keyframes mhRhythmRecordSpark{
+    0%{opacity:0;transform:translate(0,0) scale(.2)}
+    18%{opacity:1}
+    100%{opacity:0;transform:translate(var(--x,0),var(--y,0)) scale(1)}
+  }
+  /* 結果画面そのもの: スコアのカードを金色に。演出が引いたあとも、更新したことが残る(動きは札の弾みだけ) */
+  [data-rhythm-result-score-card][data-new-record="1"]{
+    border-color:rgba(251,191,36,.75);
+    background:linear-gradient(135deg,rgba(120,53,15,.38) 0%,rgba(15,23,42,.88) 58%);
+    box-shadow:0 0 0 1px rgba(251,191,36,.3),0 0 22px rgba(251,191,36,.32);
+  }
+  [data-rhythm-result-score-card][data-new-record="1"] [data-rhythm-result-score]{
+    background:linear-gradient(180deg,#fff 0%,#fde68a 45%,#f59e0b 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 10px rgba(251,191,36,.45));
+  }
+  [data-rhythm-new-record]{
+    background:linear-gradient(90deg,#fbbf24,#fde68a 50%,#fbbf24);
+    box-shadow:0 0 12px rgba(251,191,36,.55);
+    animation:mhRhythmRecordBadge .55s var(--mh-record-badge-delay,.15s) cubic-bezier(.2,1.6,.4,1) both;
+  }
+  @keyframes mhRhythmRecordBadge{
+    0%{opacity:0;transform:scale(.4)}
+    70%{opacity:1;transform:scale(1.15)}
+    100%{opacity:1;transform:scale(1)}
+  }
+  [data-rhythm-result][data-rhythm-effect="MINIMAL"] [data-rhythm-record-fx],
+  [data-rhythm-result][data-rhythm-lightweight="true"] [data-rhythm-record-fx]{display:none}
+  [data-rhythm-result][data-rhythm-effect="MINIMAL"] [data-rhythm-new-record],
+  [data-rhythm-result][data-rhythm-lightweight="true"] [data-rhythm-new-record]{animation:none}
+  @media (prefers-reduced-motion:reduce){
+    [data-rhythm-record-fx]{animation:none}
+    [data-rhythm-record-fx-rays],[data-rhythm-record-fx-spark]{display:none}
+    [data-rhythm-record-fx-title],[data-rhythm-record-fx-scorebox],[data-rhythm-record-fx-prev],[data-rhythm-record-fx-gain],[data-rhythm-new-record]{animation:none;opacity:1}
+    [data-rhythm-record-fx-title]::before,[data-rhythm-record-fx-title]::after{animation:none;opacity:0}
+  }
+
   @keyframes mhRhythmJudgmentRowRainbow{0%{background-position:0% 50%}100%{background-position:100% 50%}}
   /* 「演出量」が最小・軽量モードのときは、色は残して動きだけ止める(ランクの丸と同じ考え方) */
   [data-rhythm-result][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-row],
@@ -1820,13 +1909,13 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/breeder.js?v=a4c67a1745a5" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=6811f59c3732" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=e1dce1a07877" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=c01f80ea9817" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=ad47da271965" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=e6ba24d7df1e" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=089ea20505ce" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=a616aeaf7513" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=c19d409e5b6b" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=1054170b41f7" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
