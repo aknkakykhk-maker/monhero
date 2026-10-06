@@ -29,7 +29,12 @@ function MonsterHeroGame() {
   // 遊んだ時間。数えるのはrefだけにして、画面の描き直しを起こさない
   // (15秒ごとにstateを書き換えると、バトル中や音ゲー中に毎回描き直しが走ってしまう)。
   const playtimeRef = useRef(normalizePlaytime(null));
+  // この端末で遊んだぶん(端末ごとのプレイ時間。17-release…jsx の PLAYTIME_DEVICE_KEY)。読み込むまでは null
+  const playtimeDeviceRef = useRef(null);
+  // 端末ごとのプレイ時間の保存先。localStorage に触れない環境では null(読み書きは黙って何もしない)
+  const playtimeDeviceStorage = () => { try { return window.localStorage; } catch (error) { return null; } };
   const [playtimeView, setPlaytimeView] = useState(() => normalizePlaytime(null)); // プロフィールを開いたときだけ写す
+  const [playtimeAllDevicesMs, setPlaytimeAllDevicesMs] = useState(0); // ほかの端末のぶんも合わせた合計(フレンドの表から。取れなければ0)
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -358,6 +363,7 @@ function MonsterHeroGame() {
         today: { day: value.today.day, ms: Math.round(value.today.ms) },
         longest: { day: value.longest.day, ms: Math.round(value.longest.ms) },
       }, false);
+      if (playtimeDeviceRef.current) savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       sinceLastSave = 0;
     };
     const accumulate = () => {
@@ -369,6 +375,7 @@ function MonsterHeroGame() {
       if (!(delta > 0 && delta <= PLAYTIME_MAX_STEP_MS)) return;
       playtimeRef.current = advancePlaytime(playtimeRef.current, delta, now);
       sinceLastSave += delta;
+      if (playtimeDeviceRef.current) playtimeDeviceRef.current = { ...playtimeDeviceRef.current, ownMs: playtimeDeviceRef.current.ownMs + delta };
       if (sinceLastSave >= PLAYTIME_SAVE_MS) persist();
     };
     const onVisibility = () => {
@@ -380,7 +387,13 @@ function MonsterHeroGame() {
       const saved = normalizePlaytime(await storeGet(PLAYTIME_KEY, null, false));
       if (disposed) return;
       // 読み込みの前に数えたぶんがあれば足しておく(読み込みを待つあいだも遊んでいるため)
-      playtimeRef.current = advancePlaytime(saved, playtimeRef.current.totalMs);
+      const beforeLoadMs = playtimeRef.current.totalMs;
+      playtimeRef.current = advancePlaytime(saved, beforeLoadMs);
+      // 端末ごとのぶん。この端末で初めて動いたときは、いま持っているプレイ時間を「昔のぶん」として控え、
+      // ここから先にこの端末で遊んだぶんだけを ownMs に数える(引き継ぎでコピーされた時間を二重に数えないため)
+      const device = loadPlaytimeDevice(playtimeDeviceStorage()) || { deviceId:newPlaytimeDeviceId(), baseMs:saved.totalMs, ownMs:0, since:saved.since };
+      playtimeDeviceRef.current = { ...device, ownMs: device.ownMs + Math.max(0, Number(beforeLoadMs) || 0), since: device.since || playtimeRef.current.since };
+      savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       last = Date.now();
     })();
     const timer = setInterval(accumulate, PLAYTIME_TICK_MS);
@@ -1869,7 +1882,21 @@ function MonsterHeroGame() {
       favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
       message: latest.profileMessage, records,
     }));
+    // 端末ごとのプレイ時間(2台で遊ぶ人の合計を出すため)。表がまだ無ければ何もしない
+    await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);
+  // プロフィールを開いたら、ほかの端末のぶんも合わせた合計を取りに行く(取れなければこの端末のぶんだけを出す)
+  useEffect(() => {
+    if (gameState !== 'PROFILE' || !friendsActive) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (!id || cancelled) return;
+      const totals = await sbFetchFriendPlaytimeTotals([id]);
+      if (!cancelled) setPlaytimeAllDevicesMs((totals[friendsSafeId(id)]?.devices || 0) > 1 ? totals[friendsSafeId(id)].seconds * 1000 : 0);
+    })();
+    return () => { cancelled = true; };
+  }, [gameState, friendsActive]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
@@ -18100,6 +18127,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onboardingPreview={onboardingPreview}
             ownedItems={ownedItems}
             playtimeView={playtimeView}
+            playtimeAllDevicesMs={playtimeAllDevicesMs}
             proHighScores={proHighScores}
             profileBattleMode={profileBattleMode}
             profileFrameId={profileFrameId}

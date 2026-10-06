@@ -21,6 +21,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;           // 最後に開いてから5分以内は「いま」
 let _friendsUnavailable = false;                   // 表が無いと分かったら、ページを閉じるまで使わない
+let _friendPlaytimeDevicesUnavailable = false;   // 端末ごとのプレイ時間の表(friend_playtime_devices)がまだ無いとき(第4弾のSQL未適用)。送らない・読まない
 let _friendProfileExtraUnavailable = false;        // friend_profiles に message / records の列がまだ無いとき(第3弾のSQL未適用)。外して送り直す
 let _friendProfilesUnavailable = false;           // friend_profiles だけ無いと分かったとき(SQL未適用)。フレンド本体は止めない
 let _friendCodeCache = null;                       // { breederId, code }
@@ -737,6 +738,40 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     return false;
   }
 };
+// 端末ごとのプレイ時間を送る(2026-10-06)。1人×1端末で1行を上書きする。表がまだ無ければ黙って何もしない
+const sbUpsertFriendPlaytimeDevice = async (breederIdRaw, device) => {
+  const id = friendsSafeId(breederIdRaw);
+  const dev = typeof normalizePlaytimeDevice === 'function' ? normalizePlaytimeDevice(device) : null;
+  if (!id || !dev || _friendPlaytimeDevicesUnavailable) return false;
+  try {
+    await friendsRequest('friend_playtime_devices?on_conflict=breeder_id,device_id', {
+      method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal',
+      body: [{ breeder_id: id, device_id: dev.deviceId, base_seconds: Math.floor(dev.baseMs / 1000), own_seconds: Math.floor(dev.ownMs / 1000), started_on: dev.since }],
+    });
+    return true;
+  } catch (error) {
+    if (error && (error.softMissing || error.notReady)) { if (error.softMissing) _friendPlaytimeDevicesUnavailable = true; return false; }
+    console.error('[friends]', error && error.message ? error.message : error);
+    return false;
+  }
+};
+// 何人かぶんの端末ごとの行を読み、1人ずつ合計にする。表が無い・読めないときは空
+const sbFetchFriendPlaytimeTotals = async (ids) => {
+  const totals = {};
+  if (_friendPlaytimeDevicesUnavailable || typeof combineDevicePlaytime !== 'function') return totals;
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  if (!safe.length) return totals;
+  try {
+    const rows = await friendsRequest(`friend_playtime_devices?select=breeder_id,base_seconds,own_seconds,started_on&breeder_id=in.(${safe.join(',')})`, { soft: true });
+    const byId = {};
+    (Array.isArray(rows) ? rows : []).forEach((row) => { if (row && typeof row.breeder_id === 'string') (byId[row.breeder_id] = byId[row.breeder_id] || []).push(row); });
+    Object.keys(byId).forEach((id) => { const total = combineDevicePlaytime(byId[id]); if (total) totals[id] = total; });
+  } catch (error) {
+    if (error && error.softMissing) _friendPlaytimeDevicesUnavailable = true;
+    else if (!(error && error.notReady)) console.error('[friends]', error && error.message ? error.message : error);
+  }
+  return totals;
+};
 // フレンドたちの「見せる情報」を読む。表が無い・通信できないときは空(その場合、画面は名前と見た目だけを出す)
 const sbFetchFriendSummaries = async (ids) => {
   const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
@@ -774,6 +809,14 @@ const sbFetchFriendSummaries = async (ids) => {
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
   }
+  // 端末ごとの合計があれば、そちらを出す(2台で遊ぶ人の時間が、最後に開いた端末のぶんだけにならないように)。
+  // どちらか大きいほうを出すので、表がまだそろっていない人でも今より短くはならない
+  const totals = await sbFetchFriendPlaytimeTotals(Object.keys(byId));
+  Object.keys(totals).forEach((id) => {
+    const view = byId[id], total = totals[id];
+    view.playSeconds = Math.max(Number(view.playSeconds) || 0, total.seconds);
+    if (total.startedOn && (!view.startedOn || total.startedOn < view.startedOn)) view.startedOn = total.startedOn;
+  });
   return byId;
 };
 // 届いている申請の件数(HOME・プロフィールのバッジ用)。通信できない・準備中は 0

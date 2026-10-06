@@ -786,6 +786,58 @@ const playtimeTodayMs = (value, now=Date.now()) => {
   const base = normalizePlaytime(value);
   return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
 };
+// --- 端末ごとのプレイ時間(2026-10-06) ---
+// ユーザー報告「プレイ時間が短くなるバグ」。プレイ時間(mh_playtime_v1)は端末の中だけで数え、
+// フレンドの表(friend_profiles)は1人1行を「最後に送った端末」の値で上書きしていた。
+// しかもデータ引き継ぎでブリーダーIDもプレイ時間もコピーされるので、2台で遊ぶと
+// 「あまり使っていない端末で開いたとたんに短くなる」。ユーザーの選択は「2台の合計を出す」。
+// そこで端末ごとに次の2つを持ち、フレンドの表とは別の表(friend_playtime_devices)へ端末ごとに送る。
+//   baseMs … この仕組みが入った時点でその端末が持っていたプレイ時間(引き継ぎでコピーされた昔のぶんを含む)
+//   ownMs  … そのあとこの端末で遊んだぶんだけ
+// 合計 = (端末たちの baseMs のうち一番大きいもの) ＋ (全端末の ownMs の和)。
+// 昔のぶんは引き継ぎで同じものが何台にもコピーされているので、足さずに1つだけ数える。
+// ★保存キーは mh_ で始めない。データ引き継ぎ(バックアップ)は mh_ のキーだけを写すので、
+//   端末のIDと「この端末で遊んだぶん」が別の端末へコピーされない(コピーされると二重に数えてしまう)。
+const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
+const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
+const normalizePlaytimeDevice = (value) => {
+  if (!value || typeof value !== 'object' || !PLAYTIME_DEVICE_ID_RE.test(String(value.deviceId || ''))) return null;
+  const ms = (x) => { const n = Number(x); return Number.isFinite(n) && n >= 0 ? n : 0; };
+  return { deviceId: String(value.deviceId), baseMs: ms(value.baseMs), ownMs: ms(value.ownMs), since: playtimeDayValue(value.since) };
+};
+const newPlaytimeDeviceId = () => {
+  let id = '';
+  try {
+    const bytes = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(bytes);
+    id = Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('');
+  } catch (error) { id = ''; }
+  while (id.length < 20) id += Math.random().toString(36).slice(2);
+  return id.slice(0, 24);
+};
+// 保存先(localStorage)は呼ぶ側から渡す(この部品は画面・保存を外から掴まない決まり)
+const loadPlaytimeDevice = (storage) => {
+  try { return normalizePlaytimeDevice(JSON.parse(storage.getItem(PLAYTIME_DEVICE_KEY) || 'null')); }
+  catch (error) { return null; }
+};
+const savePlaytimeDevice = (storage, value) => {
+  const device = normalizePlaytimeDevice(value);
+  if (!device) return false;
+  try {
+    storage.setItem(PLAYTIME_DEVICE_KEY, JSON.stringify({ ...device, baseMs: Math.round(device.baseMs), ownMs: Math.round(device.ownMs) }));
+    return true;
+  } catch (error) { return false; }
+};
+// サーバーの端末ごとの行(秒)から、その人の合計を出す。行が無ければ null(呼ぶ側は今までの値を使う)
+const combineDevicePlaytime = (rows) => {
+  const list = (Array.isArray(rows) ? rows : []).filter((row) => row && typeof row === 'object');
+  if (!list.length) return null;
+  const sec = (x) => { const n = Number(x); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; };
+  const base = list.reduce((max, row) => Math.max(max, sec(row.base_seconds)), 0);
+  const own = list.reduce((sum, row) => sum + sec(row.own_seconds), 0);
+  const days = list.map((row) => playtimeDayValue(row.started_on)).filter(Boolean).sort();
+  return { seconds: base + own, startedOn: days[0] || null, devices: list.length };
+};
 const formatPlaytime = (ms) => {
   const seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
   const hours = Math.floor(seconds / 3600);
