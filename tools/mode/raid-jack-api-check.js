@@ -38,7 +38,7 @@ const make = () => {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(`${defs}\n${api}\nthis.o={RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackARanking,sbFetchRaidJackSelf,sbCountRaidJackAhead,raidJackFlushStoredPending,sbFetchRaidJackMaxHitRanking,sbFetchRaidJackMaxHitSelf,sbCountRaidJackMaxHitAhead};`, ctx);
+  vm.runInContext(`${defs}\n${api}\nthis.o={sbFetchRaidJackSourceRanking,sbFetchRaidJackSourceSelf,sbCountRaidJackSourceAhead,raidJackNormalizePending,RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackARanking,sbFetchRaidJackSelf,sbCountRaidJackAhead,raidJackFlushStoredPending,sbFetchRaidJackMaxHitRanking,sbFetchRaidJackMaxHitSelf,sbCountRaidJackMaxHitAhead};`, ctx);
   return { o: ctx.o, calls, store, setResponder: (f) => { responder = f; } };
 };
 
@@ -60,6 +60,36 @@ const make = () => {
     check('ほかの表へは送らない', t.calls.every((x) => /raid_jack_/.test(x.url) && !/rankings|breeder_profiles|bond_levels/.test(x.url)));
     check('形が違うものは送らない(段階7)', (await t.o.sbSendRaidJackHit({ hitId: id, kind: 'a', tier: 7, damage: 1, defeated: false }, BID)) === 'invalid' && t.calls.length === 1);
     check('ブリーダーIDが無ければ送らない', (await t.o.sbSendRaidJackHit({ hitId: id, kind: 'a', tier: 1, damage: 1, defeated: false }, '')) === 'invalid' && t.calls.length === 1);
+  }
+  // ①-2 与ダメージの種類(source: battle / rhythm)。2026-10-06・ユーザー指示「モンビーのダメージとバトルのダメージに分ける」
+  {
+    const t = make();
+    const out = await t.o.sbSendRaidJackHit({ hitId: 'srcrhythm01', kind: 'a', tier: 1, damage: 500, defeated: false, source: 'rhythm' }, BID);
+    check('モンヒロビートの与ダメージは source:rhythm を付けて送る', out === 'sent' && JSON.parse(t.calls[0].init.body).source === 'rhythm');
+    await t.o.sbSendRaidJackHit({ hitId: 'srcbattle01', kind: 'a', tier: 1, damage: 500, defeated: false }, BID);
+    check('種類のない(従来の)与ダメージはバトル扱い(source:battle)', JSON.parse(t.calls[1].init.body).source === 'battle');
+    check('再送待ちを通しても種類が残る(rhythm のまま・不正な値は battle)', t.o.raidJackNormalizePending([{ hitId: 'srcrhythm02', kind: 'a', tier: 1, damage: 5, source: 'rhythm' }, { hitId: 'srcrhythm03', kind: 'a', tier: 1, damage: 5, source: 'x' }]).map((h) => h.source).join() === 'rhythm,battle');
+  }
+  {
+    // 表に source 列がまだ無い(SQL未適用): 400 で「列が無い」と返る → 列なしで送り直して、与ダメージを捨てない。以後は最初から列なしで送る
+    const t = make();
+    t.setResponder((url, init) => (JSON.parse(init.body).source ? { ok: false, status: 400, body: '{"code":"PGRST204","message":"Could not find the \'source\' column of \'raid_jack_hits\'"}' } : { ok: true, status: 201, body: '' }));
+    const out = await t.o.sbSendRaidJackHit({ hitId: 'nosrccol01', kind: 'a', tier: 1, damage: 500, defeated: false, source: 'rhythm' }, BID);
+    check('source 列が無い表でも与ダメージは送れる(列なしで送り直す)', out === 'sent' && t.calls.length === 2 && !('source' in JSON.parse(t.calls[1].init.body)));
+    await t.o.sbSendRaidJackHit({ hitId: 'nosrccol02', kind: 'a', tier: 1, damage: 500, defeated: false, source: 'battle' }, BID);
+    check('列が無いと分かったあとは、最初から列なしで1回だけ送る', t.calls.length === 3 && !('source' in JSON.parse(t.calls[2].init.body)));
+  }
+  {
+    const t = make();
+    t.setResponder(() => ({ ok: true, status: 200, body: JSON.stringify([{ breeder_id: 'breeder-bbbb2222', total_damage: 900, max_damage: 400, last_hit_at: 'x' }]) }));
+    const tot = await t.o.sbFetchRaidJackSourceRanking('rhythm', 0, 'total', 100, 'raid_jack_2026');
+    const mx = await t.o.sbFetchRaidJackSourceRanking('battle', 3, 'max', 100, 'raid_jack_2026');
+    check('種類別の合計(全段階)は raid_jack_source_ranking・kind=a・source を絞り、合計の多い順', /raid_jack_source_ranking\?event_id=eq\.raid_jack_2026&kind=eq\.a&source=eq\.rhythm&select=breeder_id,total_damage,last_hit_at&order=total_damage\.desc/.test(t.calls[0].url) && tot[0].total === 900, t.calls[0].url);
+    check('種類別の最大(難易度つき)は raid_jack_source_by_tier・tier を絞り、最大の多い順', /raid_jack_source_by_tier\?event_id=eq\.raid_jack_2026&kind=eq\.a&source=eq\.battle&tier=eq\.3&select=breeder_id,max_damage,last_hit_at&order=max_damage\.desc/.test(t.calls[1].url) && mx[0].total === 400, t.calls[1].url);
+    t.setResponder(() => ({ ok: true, status: 200, body: '[]' }));
+    check('自分の種類別の数字は、記録がなければ 0', await t.o.sbFetchRaidJackSourceSelf(BID, 'rhythm', 0, 'max', 'raid_jack_2026') === 0);
+    t.setResponder(() => ({ ok: true, status: 206, body: '[]', headers: { 'content-range': '0-0/7' } }));
+    check('自分より上の人数は Content-Range の総数', await t.o.sbCountRaidJackSourceAhead('rhythm', 0, 'max', 400, 'raid_jack_2026') === 7);
   }
   // ② 失敗の扱い
   {

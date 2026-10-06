@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b5d245e78eae76ed
+// generated-sha256: c78fa1e8bc8a91d1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 20:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 20:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24265,7 +24265,7 @@ const raidJackNormalizePending = (raw) => (Array.isArray(raw) ? raw : []).map((h
   if (typeof x.hitId !== 'string' || !/^[0-9A-Za-z_-]{8,64}$/.test(x.hitId)) return null;
   if (x.kind !== 'a' && x.kind !== 'b') return null;
   if (tier < 1 || tier > 5 || damage < 0 || damage > 100000000) return null;
-  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true };
+  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true, source: x.source === 'rhythm' ? 'rhythm' : 'battle' };
 }).filter(Boolean).slice(0, 30);
 const raidJackNormalizeState = (raw) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -24468,6 +24468,7 @@ const RAID_JACK_SEND_TIMEOUT_MS = 20000;
 const RAID_JACK_SEND_RETRY_WAITS = Object.freeze([1500, 3500]);   // 失敗したとき、この間隔で再試行する(合計3回まで)
 let _raidJackUnavailable = false;                  // 土台の表(raid_jack_hits)・段階の合計が無いと分かったら、ページを閉じるまで全部使わない
 const raidJackUnavailable = () => _raidJackUnavailable;
+let _raidJackSourceColumn = null;                  // 表に source 列があるか(null=未確認 / true / false)
 // 後から足した「ランキングのビュー」だけが無いときは、そのビューだけを「準備中」にして、与ダメージの送信・段階の合計・報酬の受け取りは止めない。
 // (以前は、どれか1つでも無いと全部が止まった。大王のあとの累計ダメージのビュー raid_jack_a_ranking が未適用のとき、一覧を開いただけで通信が全部止まる)
 const _raidJackUnavailableScopes = new Set();
@@ -24524,9 +24525,22 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
     breeder_id: id, damage: clean.damage, defeated: clean.defeated,
     app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
   };
-  const result = await raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
-    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row), timeoutMs: RAID_JACK_SEND_TIMEOUT_MS,
+  // 与ダメージの種類(source: 'battle' / 'rhythm')。表に列が無い(SQL未適用)と分かったら、列を付けずに送る。
+  // 列付きで400になって「形が違う」として捨てられ、与ダメージが消えるのを防ぐ
+  const send = (r) => raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
+    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(r), timeoutMs: RAID_JACK_SEND_TIMEOUT_MS,
   });
+  let result;
+  if (_raidJackSourceColumn === false) {
+    result = await send(row);
+  } else {
+    result = await send({ ...row, source: clean.source });
+    if (result.ok) _raidJackSourceColumn = true;
+    else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
+      _raidJackSourceColumn = false;
+      result = await send(row);
+    }
+  }
   if (result.ok) return 'sent';
   if (result.notReady) return 'notready';
   // 形がサーバーの決まりに合わない(400・409・422)は、何度送っても通らないので捨てる
@@ -24654,6 +24668,39 @@ const sbFetchRaidJackMaxHitSelf = async (breederId, kind, eventId, tier = 0) => 
 const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId, tier = 0) => {
   const mine = Math.max(0, Math.floor(Number(myMax)) || 0);
   const result = await raidJackRequest(`${raidJackMaxHitSource(kind, tier).replace('?', `?${raidJackEventParam(eventId)}&`)}&max_damage=gt.${mine}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
+  if (!result.ok) return null;
+  const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
+  const m = /\/(\d+)$/.exec(String(range || ''));
+  return m ? Number(m[1]) : null;
+};
+// 「バトル」「モンヒロビート」別のランキング(A=レイドバトルだけ。サーバーのビュー raid_jack_source_ranking / raid_jack_source_by_tier・
+// docs/sql/raid/RAID_JACK_SOURCE.sql)。source は 'battle' か 'rhythm'、tier は 0=全段階 / 1〜5、metric は 'total'(合計) か 'max'(1回の最大)。
+// ビューが無い間は null を返し、画面は「準備中」にする。報酬には使わない
+const raidJackSourceBase = (source, tier, metric) => {
+  const src = source === 'rhythm' ? 'rhythm' : 'battle';
+  const t = Math.floor(Number(tier)) || 0;
+  const col = metric === 'max' ? 'max_damage' : 'total_damage';
+  return { col, path: t >= 1 && t <= 5 ? `raid_jack_source_by_tier?kind=eq.a&source=eq.${src}&tier=eq.${t}` : `raid_jack_source_ranking?kind=eq.a&source=eq.${src}` };
+};
+const raidJackSourceUrl = (b, eventId) => b.path.replace('?', `?${raidJackEventParam(eventId)}&`);
+const sbFetchRaidJackSourceRanking = async (source, tier, metric, limit = 100, eventId) => {
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 200);
+  const b = raidJackSourceBase(source, tier, metric);
+  const rows = raidJackParseRows(await raidJackRequest(`${raidJackSourceUrl(b, eventId)}&select=breeder_id,${b.col},last_hit_at&order=${b.col}.desc,last_hit_at.asc&limit=${n}`));
+  return rows ? rows.map((r) => ({ breederId: String(r.breeder_id), total: Number(r[b.col]) || 0 })) : null;
+};
+const sbFetchRaidJackSourceSelf = async (breederId, source, tier, metric, eventId) => {
+  const id = raidJackSafeId(breederId);
+  if (!id) return null;
+  const b = raidJackSourceBase(source, tier, metric);
+  const rows = raidJackParseRows(await raidJackRequest(`${raidJackSourceUrl(b, eventId)}&breeder_id=eq.${id}&select=${b.col}&limit=1`));
+  if (!rows) return null;
+  return rows.length ? (Number(rows[0][b.col]) || 0) : 0;
+};
+const sbCountRaidJackSourceAhead = async (source, tier, metric, mine, eventId) => {
+  const my = Math.max(0, Math.floor(Number(mine)) || 0);
+  const b = raidJackSourceBase(source, tier, metric);
+  const result = await raidJackRequest(`${raidJackSourceUrl(b, eventId)}&${b.col}=gt.${my}&select=breeder_id&limit=1`, { headers: { 'Prefer': 'count=exact' } });
   if (!result.ok) return null;
   const range = result.headers && result.headers.get ? result.headers.get('content-range') : '';
   const m = /\/(\d+)$/.exec(String(range || ''));
@@ -39006,7 +39053,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
   const [ahead, setAhead] = useState(null);
   const [myMax, setMyMax] = useState(null);
   const [maxTier, setMaxTier] = useState(0);       // 最大ダメージの難易度(0=全難易度 / 1〜5)
-  const useAll = !maxHit && tab === 'a' && allMode && bossDown;
+  const [src, setSrc] = useState('all');         // A の与ダメージの種類: 'all'(合計) / 'battle'(バトル) / 'rhythm'(モンヒロビート)
+  const useSrc = tab === 'a' && src !== 'all';
+  const srcName = src === 'rhythm' ? 'モンヒロビート' : 'バトル';
+  const useAll = !maxHit && tab === 'a' && allMode && (bossDown || useSrc);
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -39017,14 +39067,23 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
       if (!alive) return;
       setSelf(mine);
-      const list = maxHit ? await sbFetchRaidJackMaxHitRanking(tab, 100, eventId, maxTier)
+      const list = useSrc ? await sbFetchRaidJackSourceRanking(src, maxHit ? maxTier : useAll ? 0 : tierIdx + 1, maxHit ? 'max' : 'total', 100, eventId)
+        : maxHit ? await sbFetchRaidJackMaxHitRanking(tab, 100, eventId, maxTier)
         : useAll ? await sbFetchRaidJackARanking(100, eventId)
         : tab === 'a' ? await sbFetchRaidJackContributions(tierIdx + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
       if (!alive) return;
       if (list) { try { await ensureBreederProfiles('raid-jack'); } catch (e) { /* 名前が引けなくても順位は出る */ } }
       if (!alive) return;
       setRows(list);
-      if (list && maxHit) {
+      if (list && useSrc) {
+        const tierArg = maxHit ? maxTier : useAll ? 0 : tierIdx + 1;
+        const metric = maxHit ? 'max' : 'total';
+        const best = meId ? await sbFetchRaidJackSourceSelf(meId, src, tierArg, metric, eventId) : null;
+        if (!alive) return;
+        setMyMax(best);
+        const count = best > 0 ? await sbCountRaidJackSourceAhead(src, tierArg, metric, best, eventId) : null;
+        if (alive) setAhead(count);
+      } else if (list && maxHit) {
         const best = meId ? await sbFetchRaidJackMaxHitSelf(meId, tab, eventId, maxTier) : null;
         if (!alive) return;
         setMyMax(best);
@@ -39037,10 +39096,12 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
       }
     })();
     return () => { alive = false; };
-  }, [tab, tierIdx, useAll, maxHit, maxTier, eventId]);
-  const myTotal = maxHit ? (Number(myMax) || 0) : self ? (useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[tierIdx + 1] || 0) : self.bTotal) : 0;
+  }, [tab, tierIdx, useAll, maxHit, maxTier, src, eventId]);
+  const myTotal = (useSrc || maxHit) ? (Number(myMax) || 0) : self ? (useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[tierIdx + 1] || 0) : self.bTotal) : 0;
   const maxTierName = maxTier >= 1 ? raidJackTiers(tab)[maxTier - 1].name : '全難易度';
-  const title = maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${src === 'rhythm' ? '1曲' : '1戦'}あたり・${maxTierName})`
+    : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${RAID_JACK_A_TIERS[tierIdx].name.replace('ジャック', '')}`})`
+    : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return (
     <div data-raid-jack-ranking-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3" role="dialog" aria-modal="true" aria-label="ジャックのランキング"
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
@@ -39048,13 +39109,21 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
         <div className="text-[14px] font-black text-orange-200">🏆 ジャックのランキング</div>
         <button type="button" data-raid-jack-ranking-close onClick={onClose} aria-label="ランキングを閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
       </div>
-      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={(next) => { setTab(next); setMaxTier(0); }} />
+      <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={(next) => { setTab(next); setMaxTier(0); setSrc('all'); }} />
       <div data-raid-jack-ranking-kinds className="mb-2 flex shrink-0 gap-1.5 text-[10px] font-black">
         <button type="button" data-raid-jack-ranking-kind="total" onClick={() => setMaxHit(false)}
           className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{tab === 'a' ? '貢献・累計' : '累計ダメージ'}</button>
         <button type="button" data-raid-jack-ranking-kind="max" onClick={() => setMaxHit(true)}
           className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>1戦の最大ダメージ</button>
       </div>
+      {tab === 'a' && (
+        <div data-raid-jack-ranking-sources className="mb-2 flex shrink-0 gap-1.5 text-[10px] font-black">
+          {[['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート']].map(([id, label]) => (
+            <button type="button" key={id} data-raid-jack-ranking-source={id} onClick={() => setSrc(id)}
+              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${src === id ? 'border-fuchsia-300 bg-fuchsia-900 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{label}</button>
+          ))}
+        </div>
+      )}
       {maxHit && (
         <div data-raid-jack-ranking-max-tiers className="mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black">
           {[{ id: 'all', name: '全難易度', n: 0 }, ...raidJackTiers(tab).map((t, i) => ({ id: t.id, name: t.name.replace('ジャック', ''), n: i + 1 }))].map((t) => (
@@ -39069,7 +39138,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
             <button type="button" key={t.id} data-raid-jack-ranking-tier={t.id} onClick={() => { setTierIdx(i); setAllMode(false); }}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name.replace('ジャック', '')}</button>
           ))}
-          {bossDown && (
+          {(bossDown || useSrc) && (
             <button type="button" data-raid-jack-ranking-all onClick={() => setAllMode(true)}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>累計ダメージ</button>
           )}
@@ -39080,7 +39149,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
           <span className="font-black text-orange-200">{title}</span>
           {myTotal > 0 && <span data-raid-jack-ranking-mine className="shrink-0 text-[10px] text-slate-200">あなた {myTotal.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
         </div>
-        <div className="mb-2 text-[9px] text-slate-400">{maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
+        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
         {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
         {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
         {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
@@ -53374,7 +53443,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       pumpkin = run.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
     } catch (e) { startLife = null; }
     const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
-    const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated };
+    const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated, source: 'rhythm' };
     let outcome = 'error';
     let opened = false;
     const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
