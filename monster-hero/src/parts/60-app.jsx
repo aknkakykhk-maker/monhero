@@ -10103,7 +10103,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const id = Date.now()+Math.random();
     const slotOf = slot !== undefined ? slot : popupSlotRef.current;
     const popupSlot = isTacticsMode(runMode) && side !== 'enemy' && Number.isInteger(slotOf) ? slotOf : null;
-    setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot}]);
+    // ★敵の上に出す文字のうち、ダメージの数字ではないもの(スタン・咆哮・再生・移動など)は fx 印を付ける。
+    //   画面は fx を小さな札にして敵の足元へ並べ、大きなダメージの数字とは別の場所に出す(重なって読めなかった・2026-10-06 ユーザー指示)
+    const fx = side === 'enemy' && !isEnemyDamagePopupText(text);
+    setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot,fx}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
@@ -20669,7 +20672,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {raidJackResult&&(()=>{
         const r=raidJackResult;
         const reasonLabel={defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
-        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(あとで自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした(あとで自動で送り直します)'}[r.outcome]||'';
+        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(HOMEかレイド画面を開くと、自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした。通信のよい場所でHOMEかレイド画面を開くと、自動で送り直します'}[r.outcome]||'';
         return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
           <RaidJackResultStinger reason={r.reason}/>
           <div className="mh-rjresult-in text-[10px] font-black text-orange-300 tracking-[.35em] mb-2" style={{'--d':'900ms'}}>{r.kind==='b'?'マスモン':'ベースモン'}</div>

@@ -606,6 +606,12 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
     document.body
   );
 };
+// 敵の上の文字のうち、ダメージの数字(与えた数・合計・反射・クロスカウンター)かどうか。
+// それ以外(スタン・咆哮・再生・移動の予告など)は「効果」として、敵の足元の小さな札へ回す
+const isEnemyDamagePopupText = (text) => /^(\d[\d,]*!*|合計\s|反射\s*\d|クロスカウンター\s*\d)/.test(String(text == null ? '' : text));
+// 札の文字の色は、もとの色の指定(text-◯◯-300 など)だけ残す。大きさの指定(text-xl など)は札の側で決める
+const enemyFxChipTone = (color) => String(color || '').split(/\s+/)
+  .filter(c => /^text-[a-z]+-\d{2,3}$/.test(c) || /^text-(white|black)$/.test(c)).join(' ') || 'text-white';
 // ===== カードを「捨てる」エリア(タクティクス・2026-10-05 ユーザー案) =====
 // カードをつかんだあいだ、味方のスロットの列を「アクション」、その上(敵側)を「捨てる」エリアとして薄く出す。
 // 敵のエリアへ離すと、使わずに捨てて行動回数を1つ使い、味方全体のガッツが各自の最大の5%ずつ戻る。
@@ -1565,7 +1571,8 @@ function BattleScreen({
             </div>
             {getTurnBuff('stunEnemy',false)&&<div className="absolute inset-0 flex items-center justify-center text-3xl bg-indigo-500/20 rounded-full border-4 border-indigo-500 animate-pulse">💫</div>}
             {(() => {
-    const enemyPopups=popups.filter(p=>p.side==='enemy');
+    const enemyPopups=popups.filter(p=>p.side==='enemy'&&!p.fx);
+    const enemyFxPopups=popups.filter(p=>p.side==='enemy'&&p.fx).slice(-3);
     const wrapEnemyPopups=!liteBattleView&&enemyPopups.length>4;
     const popupColumns=wrapEnemyPopups?Math.ceil(enemyPopups.length/4):1;
     const popupGridStyle=wrapEnemyPopups?{
@@ -1585,9 +1592,16 @@ function BattleScreen({
       paddingLeft:'2px',
       paddingRight:'2px'
     }:undefined;
+    // ★効果の小さな札は上の端へ1列に並べ、大きなダメージの数字はその下へ置く。縦の流れにするので重ならない
+    //   (下の端へ置くと、盤面の上の縁に出る「合計DMG」の予測や味方の枠の裏に隠れた)
     return (
-      <div className={`absolute inset-0 z-50 pointer-events-none ${wrapEnemyPopups?'':'flex flex-col items-center justify-start pt-1 gap-0.5'}`} style={popupGridStyle}>
-        {enemyPopups.map(p=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} style={compactPopupStyle} className={`text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
+      <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5">
+        {enemyFxPopups.length>0&&<div data-enemy-fx-chips className="flex flex-col items-center gap-0.5 px-2">
+          {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
+        </div>}
+        <div className={`${wrapEnemyPopups?'':'flex flex-col items-center justify-start gap-0.5'}`} style={popupGridStyle}>
+          {enemyPopups.map(p=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} style={compactPopupStyle} className={`text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
+        </div>
       </div>
     );
   })()}
