@@ -34,6 +34,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-07 ユーザー指摘「アニマがマスターよりエキスパートのほうがむずいという声がある」→「エキスパートを軽くしてマスターをむずくする」。
+    // EXPERT は速い単押しの連打が MASTER より多く(叩く回数 522 対 494)、MASTER は同時押しで数を稼いでいた。
+    // 難易度ごとの激しさの上書き(chartIntensityByDifficulty: EXPERT mild / MASTER extreme)で作り直した。EASY〜HARD は1音も変わらない
+    date: "2026-10-07 01:28", type:'issue', group:'rhythm', title:'モンヒロビート「ANiMA」で、EXPERTのほうがMASTERより難しく感じられたのを直しました', status:'new',
+    items:[
+      'EXPERTは速い連打を減らして、叩きやすくしました。レベルは Lv.26、ノーツ数は 444 です。',
+      'MASTERは同時押しとレーンを大きく跳ぶ動きを増やして、いちばん難しい譜面にしました。レベルは Lv.44、ノーツ数は 567 です。',
+      'EASY・NORMAL・HARDの譜面は変わりません。これまでの自己ベストやランキングの記録は、そのまま残ります。',
+    ],
+  },
+  {
     // 2026-10-07 ユーザー報告「『ハルカ』でホールド中に外れ判定になったり、離すときにハズレ判定になったりする。実際に押している所と、ゲームが押したと見ている所が半レーンほど左にずれている」
     date: "2026-10-07 01:03", type:'fix', group:'rhythm', title:'モンヒロビートで、ホールドの外れ判定と、横向きの押したレーンの光のずれを直しました', status:'new',
     items:[
@@ -51,9 +62,8 @@ const CHANGELOG = [
     image: 'images/song-art/anima.jpg?v=2d830b603ed9',
     items:[
       'モンヒロビートに「ANiMA」（1分55秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.17 ／ EXPERT Lv.33 ／ MASTER Lv.40 です。',
-      'ノーツ数は 215 ／ 255 ／ 358 ／ 532 ／ 537 です。',
-      'EXPERTとMASTERはノーツの数がほぼ同じですが、MASTERは同時押しやスライド、レーンを大きく跳ぶ動きが増えて、指がもっと忙しくなります。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.17 ／ EXPERT Lv.26 ／ MASTER Lv.44 です。',
+      'ノーツ数は 215 ／ 255 ／ 358 ／ 444 ／ 567 です。',
     ],
     assistantNotice: { id:'update_notice_anima_v1', type:'content' },
   },

@@ -258,6 +258,11 @@ console.log('最密4秒',best+'打  最短',g[0]+'ms');"
 `extreme` は全難易度が大きく上がる（Stay With Me short ver. で MASTER 20 → 34）。**中間がほしいときは `chartIntensity:'strong'`**
 （extreme の倍率の平方根・16分裏は65%まで残す。同じ曲で 26。2026-10-03）。
 音が格子に乗りにくい曲は `challengeFactor` を上げても MASTER が増えず、EXPERT が MASTER を追い越して「難易度の順が崩れている」で止まる。
+
+> ⚠️ **`strong` / `extreme` で短い曲を作ると、EXPERT のほうが体感で難しくなることがある**(2026-10-07・ANiMA)。
+> 置ける音を EXPERT の時点で使い切り、MASTER は同時押しで数を稼ぐので、Lv. は MASTER が上でも「叩く回数」「速い連打」は EXPERT が多い。
+> 難易度を聞く前に `node tools/mode/rhythm-expert-master-order-check.js` を通す。逆転していたら、曲の一覧の
+> `chartIntensityByDifficulty`(例 `{"EXPERT":"mild","MASTER":"extreme"}`。`mild` は strong の半分・`none` は倍率なし)で EXPERT を軽く・MASTER を重くした候補も並べる。
 そのときは `challengeFactor` ではなく `chartIntensity` を使う。
 
 決まったら `challengeFactor` に書く。**測り方（`CHALLENGE_*`）は触らない**（ほかの曲まで変わる）。
