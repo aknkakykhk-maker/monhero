@@ -586,7 +586,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('使うと距離枠の札が「反撃1・あと3」になる', await page.locator(`[data-tactics-ex-mark="${hmSlot}"]`).getAttribute('data-tactics-ex-state') === '反撃1・あと3');
     await tapSlot(hmSlot);
     p = await panel();
-    check('詳細に「カウンター 1（クロスカウンターの威力：与ダメの100%…）」が出る', !!p && /カウンター 1（クロスカウンターの威力：与ダメの100%/.test(p.text), p && p.text.slice(0, 300));
+    check('詳細に「カウンター 1（クロスカウンターの威力：与ダメ×2…）」が出る', !!p && /カウンター 1（クロスカウンターの威力：与ダメ×2/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
 
     // --- ⑫-4 スエゾー「サイコロックオン」(2026-10-05 ユーザー指定) ---
