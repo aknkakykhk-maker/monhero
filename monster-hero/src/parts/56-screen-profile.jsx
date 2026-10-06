@@ -43,7 +43,7 @@ function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
-  onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
+  onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, playtimeAllDevicesMs = 0, proHighScores,
   profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
@@ -177,7 +177,8 @@ function ProfileScreen({
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
-            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
+            {/* ほかの端末でも遊んでいれば、その合計を出す(2026-10-06。この端末のぶんだけだと、端末を替えたときに減って見えた) */}
+            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))}</span>
           </div>
         </div>
         <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
@@ -192,6 +193,9 @@ function ProfileScreen({
               <div className="text-[10px] text-slate-400 font-bold">いちばん長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
+            {(Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs&&(
+              <div data-profile-playtime-devices className="text-[10px] text-sky-300 font-bold">ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは {formatPlaytime(playtimeView.totalMs)}）</div>
+            )}
           </div>
         </details>
         {/* ④ よく使う入口。フレンド(申請が届くと赤いバッジ)とアイテムを同じ大きさで並べる。フレンドは公開前は出さない */}

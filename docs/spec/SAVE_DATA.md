@@ -122,6 +122,7 @@
 | `mh_battle_fx_v1` | object / `{idleMotion:'ON', shake:'ON', autoLoad:'OFF'}`(`autoLoad` の既定は 2026-10-01 に ON→OFF。以前 ON で保存していた人は一度きりの移行で OFF にし、済みの印は `mh_battle_fx_autoload_default_off_v1`) | バトル設定の「待機中の動き」「画面の揺れ」(`normalizeBattleFxSettings` で既定へ。項目が無い・不正値は `'ON'`)。見た目だけで戦闘には影響しない |
 | `mh_login_bonus` | object / `LOGIN_BONUS_DEFAULT` | ログインボーナスの受取状況(期間キーと日数) |
 | `mh_playtime_v1` | object | プレイ時間の累計と日別(`normalizePlaytime`) |
+| `mhdev_playtime_device_v1` | object | **端末ごと**のプレイ時間(`normalizePlaytimeDevice`)。`deviceId`・`baseMs`(この仕組みが入った時点でその端末が持っていた時間)・`ownMs`(そのあとこの端末で遊んだぶん)・`since`。**わざと `mh_` で始めていない**: データ引き継ぎは `mh_` のキーだけを写すので、別の端末へコピーされない(コピーされると2台で二重に数える)。2026-10-06 |
 | `mh_player_id` | string | ランキング送信に使う端末ID。`localStorage` 直接アクセス(`storeGet` を通さない) |
 | `mh_ranking_cache` | object | 全国ランキングの取得結果の控え(表示用。無くても取り直す)。**保存する形は軽くする**(下記) |
 | `mh_bond_live_sync_v1` | object / `{version:1,sent:{}}` | 絆Lv・総合力ランキング(`bond_levels`)へリアルタイムで送った行の指紋。見出しは「ブリーダー名＋個体ID」、値は行の内容から作った短い文字列。前と同じ行は送らないために使うだけで、壊れていたら空から数え直す(全員を1回送り直すだけで記録は壊れない)。送れた行だけ覚える(2026-09-27) |
