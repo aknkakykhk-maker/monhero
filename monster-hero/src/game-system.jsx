@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f23cb078e4c59cf
+// generated-sha256: 9a3b9f2971f704df
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 13:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -49378,6 +49378,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(!aim.intent||!tacticsTargetsNow(aim.intent,aim.dist).includes(slotIdx)) return 1;
     return tacticsExCounterMult(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
   };
+  // ハムのクロスカウンターを出す: 攻撃のタイミングで名前を出し、出した枠を控える(ターンごとに1回だけ。与ダメの倍率は getDmg の中で掛かっている)。
+  // カウンター+1は、同じターンの次の攻撃まで倍率が変わらないよう、カードを出し終えてから(下の commitTacticsExCrossCounters)入れる
+  const fireTacticsExCross = (slotIdx) => {
+    const crossMult=tacticsExCrossMultNow(slotIdx), liveNow=tacticsExLiveRef.current.now, cx=tacticsExCrossRef.current;
+    const mine=cx.wave===liveNow.wave&&cx.turn===liveNow.turn?cx.slots:{};
+    if(crossMult<=1||mine[slotIdx]) return;
+    tacticsExCrossRef.current={ wave:liveNow.wave, turn:liveNow.turn, slots:{ ...mine, [slotIdx]:true } };
+    addPopup(`🥊 クロスカウンター ×${crossMult}!`,'hero','text-orange-300 font-black text-3xl drop-shadow-lg');
+  };
+  const commitTacticsExCrossCounters = () => {
+    const cx=tacticsExCrossRef.current, liveNow=tacticsExLiveRef.current.now;
+    if(cx.wave!==liveNow.wave||cx.turn!==liveNow.turn) return;
+    Object.keys(cx.slots).forEach(key=>{ commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current,tacticsUnitsRef.current,liveNow,Number(key),1)); });
+  };
   const tacticsExMultiBuffNow = (slotIdx) => {
     const live=tacticsExLiveRef.current;
     const mine=live.enabled&&Number.isInteger(slotIdx) ? tacticsExMultiBuffOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now) : null;
@@ -50294,9 +50308,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const cx=tacticsExCrossRef.current, liveNow=tacticsExLiveRef.current.now;
                 if(cx.wave===liveNow.wave&&cx.turn===liveNow.turn&&cx.slots[slotIdx]){
                   const hamName=tacticsTargetName(units,slotIdx);
-                  commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current,tacticsUnitsRef.current,liveNow,slotIdx,1));
                   evadedName=hamName; slotFx[slotIdx]={evade:true};
-                  pushBattleLog(`🥊 ${hamName}のクロスカウンター！ 攻撃を回避した（カウンター+1）`,'ally');
+                  pushBattleLog(`🥊 ${hamName}のクロスカウンター！ 攻撃を回避した`,'ally');
                   return;
                 }
               }
@@ -51109,6 +51122,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
             globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
+          fireTacticsExCross(slotIdx);
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
         else if (card.subType==='buff_myaru') {
@@ -51251,14 +51265,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
           hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withFateCombo(tacticsExCombosAt(slotIdx,halved),livePermaBuff('fateStacks',null),slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
-        // ★ハムのクロスカウンター: 狙われたハムが攻撃したら、攻撃のタイミングで名前を出す(与ダメの倍率は getDmg の中で掛かっている)。
-        //   敵の番で回避とカウンター+1を行うために、出した枠を控える(ターンごとに1回だけ)
-        { const crossMult=tacticsExCrossMultNow(slotIdx), liveNow=tacticsExLiveRef.current.now, cx=tacticsExCrossRef.current;
-          const mine=cx.wave===liveNow.wave&&cx.turn===liveNow.turn?cx.slots:{};
-          if(crossMult>1&&!mine[slotIdx]){
-            tacticsExCrossRef.current={ wave:liveNow.wave, turn:liveNow.turn, slots:{ ...mine, [slotIdx]:true } };
-            addPopup(`🥊 クロスカウンター ×${crossMult}!`,'hero','text-orange-300 font-black text-3xl drop-shadow-lg');
-          } }
+        fireTacticsExCross(slotIdx); // ★ハムのクロスカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
         // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
@@ -51597,6 +51604,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // (0のままだと、反射で殴り返したときに「HP0の敵をもう一度倒した」ことになってしまう)
     if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
+    commitTacticsExCrossCounters(); // ★クロスカウンターを出したハムのカウンター+1(敵が動かない止め技のターンも入れる)
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする

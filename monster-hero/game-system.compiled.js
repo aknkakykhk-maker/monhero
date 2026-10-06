@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0fb002946ade18f0
+// source-sha256: 7a19e548d59c043b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 13:47";
+const BUILD_DATE = "2026-10-06 14:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -74803,6 +74803,30 @@ function MonsterHeroGame() {
     if (!aim.intent || !tacticsTargetsNow(aim.intent, aim.dist).includes(slotIdx)) return 1;
     return tacticsExCounterMult(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now);
   };
+  const fireTacticsExCross = slotIdx => {
+    const crossMult = tacticsExCrossMultNow(slotIdx),
+      liveNow = tacticsExLiveRef.current.now,
+      cx = tacticsExCrossRef.current;
+    const mine = cx.wave === liveNow.wave && cx.turn === liveNow.turn ? cx.slots : {};
+    if (crossMult <= 1 || mine[slotIdx]) return;
+    tacticsExCrossRef.current = {
+      wave: liveNow.wave,
+      turn: liveNow.turn,
+      slots: {
+        ...mine,
+        [slotIdx]: true
+      }
+    };
+    addPopup(`🥊 クロスカウンター ×${crossMult}!`, 'hero', 'text-orange-300 font-black text-3xl drop-shadow-lg');
+  };
+  const commitTacticsExCrossCounters = () => {
+    const cx = tacticsExCrossRef.current,
+      liveNow = tacticsExLiveRef.current.now;
+    if (cx.wave !== liveNow.wave || cx.turn !== liveNow.turn) return;
+    Object.keys(cx.slots).forEach(key => {
+      commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current, tacticsUnitsRef.current, liveNow, Number(key), 1));
+    });
+  };
   const tacticsExMultiBuffNow = slotIdx => {
     const live = tacticsExLiveRef.current;
     const mine = live.enabled && Number.isInteger(slotIdx) ? tacticsExMultiBuffOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : null;
@@ -75792,12 +75816,11 @@ function MonsterHeroGame() {
                   liveNow = tacticsExLiveRef.current.now;
                 if (cx.wave === liveNow.wave && cx.turn === liveNow.turn && cx.slots[slotIdx]) {
                   const hamName = tacticsTargetName(units, slotIdx);
-                  commitTacticsExState(addTacticsExCounter(tacticsExStateRef.current, tacticsUnitsRef.current, liveNow, slotIdx, 1));
                   evadedName = hamName;
                   slotFx[slotIdx] = {
                     evade: true
                   };
-                  pushBattleLog(`🥊 ${hamName}のクロスカウンター！ 攻撃を回避した（カウンター+1）`, 'ally');
+                  pushBattleLog(`🥊 ${hamName}のクロスカウンター！ 攻撃を回避した`, 'ally');
                   return;
                 }
               }
@@ -76812,6 +76835,7 @@ function MonsterHeroGame() {
             isCrit: false,
             slotIdx
           });
+          fireTacticsExCross(slotIdx);
           for (const hit of stunHits.slice(1)) {
             if (hit.crit) hasCrit = true;
             totalDmg += hit.dmg;
@@ -77020,23 +77044,7 @@ function MonsterHeroGame() {
         const finalD = hits[0].dmg;
         if (isCrit) hasCrit = true;
         totalDmg += finalD;
-        {
-          const crossMult = tacticsExCrossMultNow(slotIdx),
-            liveNow = tacticsExLiveRef.current.now,
-            cx = tacticsExCrossRef.current;
-          const mine = cx.wave === liveNow.wave && cx.turn === liveNow.turn ? cx.slots : {};
-          if (crossMult > 1 && !mine[slotIdx]) {
-            tacticsExCrossRef.current = {
-              wave: liveNow.wave,
-              turn: liveNow.turn,
-              slots: {
-                ...mine,
-                [slotIdx]: true
-              }
-            };
-            addPopup(`🥊 クロスカウンター ×${crossMult}!`, 'hero', 'text-orange-300 font-black text-3xl drop-shadow-lg');
-          }
-        }
+        fireTacticsExCross(slotIdx);
         const rangeMoveTarget = card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : null;
         attackHits.push({
           dmg: finalD,
@@ -77531,6 +77539,7 @@ function MonsterHeroGame() {
       distDamage: attackDistDamage
     }))) return;
     if (enemyRevivedHpRef.current != null) enemyHpAfterOurAttacks = enemyRevivedHpRef.current;
+    commitTacticsExCrossCounters();
     const finalActionType = guardTypeInTurn !== 'none' ? guardTypeInTurn : lastType;
     const executedIntent = enemyIntent;
     await handleEnemyTurn(finalActionType, {

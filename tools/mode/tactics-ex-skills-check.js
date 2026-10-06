@@ -847,7 +847,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
   check('本体へ結線してある(狙いを読んで与ダメを倍にする・攻撃時に名前を出す・敵の番で回避してカウンター+1)',
     /out\.dmg\*=tacticsExCrossMultNow\(slotIdx\)/.test(app) && /tacticsExCounterMult\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,live\.now\)/.test(app)
-    && /クロスカウンター ×\$\{crossMult\}/.test(app) && /cx\.slots\[slotIdx\]/.test(app) && /addTacticsExCounter\(tacticsExStateRef\.current,tacticsUnitsRef\.current,liveNow,slotIdx,1\)/.test(app)
+    && /クロスカウンター ×\$\{crossMult\}/.test(app) && /cx\.slots\[slotIdx\]/.test(app) && /commitTacticsExCrossCounters\(\);/.test(app) && (app.match(/fireTacticsExCross\(slotIdx\)/g) || []).length >= 2
+    && /addTacticsExCounter\(tacticsExStateRef\.current,tacticsUnitsRef\.current,liveNow,Number\(key\),1\)/.test(app)
     && !/counterBack/.test(app));
 }
 
