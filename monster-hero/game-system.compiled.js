@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 86dfa9133deb0996
+// source-sha256: 9efce67bb95a2476
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 07:10";
+const BUILD_DATE = "2026-10-07 07:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5109,6 +5109,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_anima',
+  name: 'ANiMA',
+  creator: 'オリジナル',
+  src: 'audio/bgm-anima.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -6356,6 +6363,7 @@ const Audio_ = (() => {
   };
   const AUDIO_CACHE_KEYS = {
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
+    "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
@@ -11983,6 +11991,70 @@ const advancePlaytime = (current, deltaMs, now = Date.now()) => {
 const playtimeTodayMs = (value, now = Date.now()) => {
   const base = normalizePlaytime(value);
   return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+};
+const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
+const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
+const normalizePlaytimeDevice = value => {
+  if (!value || typeof value !== 'object' || !PLAYTIME_DEVICE_ID_RE.test(String(value.deviceId || ''))) return null;
+  const ms = x => {
+    const n = Number(x);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+  return {
+    deviceId: String(value.deviceId),
+    baseMs: ms(value.baseMs),
+    ownMs: ms(value.ownMs),
+    since: playtimeDayValue(value.since)
+  };
+};
+const newPlaytimeDeviceId = () => {
+  let id = '';
+  try {
+    const bytes = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(bytes);
+    id = Array.from(bytes, b => b.toString(36).padStart(2, '0')).join('');
+  } catch (error) {
+    id = '';
+  }
+  while (id.length < 20) id += Math.random().toString(36).slice(2);
+  return id.slice(0, 24);
+};
+const loadPlaytimeDevice = storage => {
+  try {
+    return normalizePlaytimeDevice(JSON.parse(storage.getItem(PLAYTIME_DEVICE_KEY) || 'null'));
+  } catch (error) {
+    return null;
+  }
+};
+const savePlaytimeDevice = (storage, value) => {
+  const device = normalizePlaytimeDevice(value);
+  if (!device) return false;
+  try {
+    storage.setItem(PLAYTIME_DEVICE_KEY, JSON.stringify({
+      ...device,
+      baseMs: Math.round(device.baseMs),
+      ownMs: Math.round(device.ownMs)
+    }));
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+const combineDevicePlaytime = rows => {
+  const list = (Array.isArray(rows) ? rows : []).filter(row => row && typeof row === 'object');
+  if (!list.length) return null;
+  const sec = x => {
+    const n = Number(x);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+  };
+  const base = list.reduce((max, row) => Math.max(max, sec(row.base_seconds)), 0);
+  const own = list.reduce((sum, row) => sum + sec(row.own_seconds), 0);
+  const days = list.map(row => playtimeDayValue(row.started_on)).filter(Boolean).sort();
+  return {
+    seconds: base + own,
+    startedOn: days[0] || null,
+    devices: list.length
+  };
 };
 const formatPlaytime = ms => {
   const seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -29456,6 +29528,10 @@ const rhythmPlayLogSend = async ({
 const RHYTHM_TOUCH_DIAG_KEY = 'mh_rhythm_touch_diag_v1';
 const RHYTHM_TOUCH_DIAG_KEEP = 20;
 const RHYTHM_TOUCH_DIAG_VERSION = 1;
+const RHYTHM_RECORD_FX_COUNT_DELAY_MS = 600;
+const RHYTHM_RECORD_FX_COUNT_MS = 1500;
+const RHYTHM_RECORD_FX_TOTAL_MS = 3300;
+const RHYTHM_RECORD_FX_SPARKLES = 18;
 const rhythmTouchDiagPlayId = () => {
   let id = '';
   for (let i = 0; i < 12; i++) id += '0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 36)];
@@ -30835,7 +30911,7 @@ const RhythmTapTest = ({
       clearTimeout(later);
       window.removeEventListener('resize', measure);
     };
-  }, [clockOnLeft, song.songId, view.status]);
+  }, [clockOnLeft, song.songId, view.status, roadFactor]);
   useEffect(() => {
     const box = lifeBoxRef.current;
     if (!box) return;
@@ -31392,6 +31468,12 @@ const RhythmTapTest = ({
     const liveLog = rhythmLiveLogSections(run.liveLog, liveLogEndMs);
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
     const showCelebrate = !!celebrateTitle && !failed && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+    const previousBestScore = Math.max(0, Math.floor(Number(run.startBestScore) || 0));
+    const recordFx = isNewRecord && previousBestScore > 0 && !failed && !tutorial && !calibrating && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? {
+      id: `${Date.now()}-${score}`,
+      previous: previousBestScore,
+      score
+    } : null;
     setView(v => ({
       ...v,
       status: showCelebrate ? 'celebrate' : 'result',
@@ -31407,6 +31489,8 @@ const RhythmTapTest = ({
       result: {
         ...result,
         isNewRecord,
+        previousBestScore,
+        recordFx,
         bestScore: merged.bestScore,
         eventPointAward,
         liveLog,
@@ -31442,6 +31526,36 @@ const RhythmTapTest = ({
   }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
   const celebrateTimerRef = useRef(null);
   const [touchReportSent, setTouchReportSent] = useState(null);
+  const recordFxId = view.status === 'result' && view.result && view.result.recordFx ? view.result.recordFx.id : null;
+  const [recordFxHiddenFor, setRecordFxHiddenFor] = useState(null);
+  const recordScoreRef = useRef(null);
+  useEffect(() => {
+    if (!recordFxId) return undefined;
+    const fx = view.result.recordFx,
+      el = recordScoreRef.current;
+    RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
+    let raf = 0;
+    const reduce = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const put = value => {
+      if (el) el.textContent = Math.round(value).toLocaleString();
+    };
+    if (reduce || typeof requestAnimationFrame !== 'function') put(fx.score);else {
+      put(fx.previous);
+      let start = 0;
+      const step = now => {
+        if (!start) start = now;
+        const p = Math.max(0, Math.min(1, (now - start - RHYTHM_RECORD_FX_COUNT_DELAY_MS) / RHYTHM_RECORD_FX_COUNT_MS));
+        put(fx.previous + (fx.score - fx.previous) * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+    const timer = setTimeout(() => setRecordFxHiddenFor(recordFxId), RHYTHM_RECORD_FX_TOTAL_MS);
+    return () => {
+      if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, [recordFxId]);
   useEffect(() => {
     if (view.status !== 'celebrate') return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -32244,8 +32358,10 @@ const RhythmTapTest = ({
         return;
       }
       if (!target) {
-        if (!input.rejudge) RHYTHM_PERF.emptyTap();
-        RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+        if (!input.rejudge) {
+          RHYTHM_PERF.emptyTap();
+          RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+        }
         if (input.captureTarget && input.pointerId !== undefined) {
           try {
             input.captureTarget.setPointerCapture(input.pointerId);
@@ -32745,7 +32861,56 @@ const RhythmTapTest = ({
       style: {
         paddingTop: 'var(--mh-sa-top)'
       }
-    }, hudArtSrc && React.createElement("div", {
+    }, result.recordFx && recordFxHiddenFor !== result.recordFx.id && React.createElement("div", {
+      "data-rhythm-record-fx": true,
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute inset-0 z-[60] flex items-center justify-center overflow-hidden"
+    }, React.createElement("i", {
+      "data-rhythm-record-fx-dim": true,
+      className: "absolute inset-0 block"
+    }), React.createElement("i", {
+      "data-rhythm-record-fx-rays": true,
+      className: "absolute left-1/2 top-1/2 block"
+    }), Array.from({
+      length: RHYTHM_RECORD_FX_SPARKLES
+    }, (_, i) => {
+      const angle = i * 137.5 * Math.PI / 180,
+        radius = 70 + i % 5 * 26;
+      return React.createElement("i", {
+        key: i,
+        "data-rhythm-record-fx-spark": true,
+        className: "absolute left-1/2 top-1/2 block rounded-full",
+        style: {
+          '--x': `${Math.round(Math.cos(angle) * radius * 1.5)}px`,
+          '--y': `${Math.round(Math.sin(angle) * radius)}px`,
+          '--d': `${i % 6 * 70 + 380}ms`,
+          '--s': `${4 + i % 4 * 2}px`,
+          background: i % 3 === 0 ? '#fff' : i % 3 === 1 ? '#fde68a' : '#f0abfc'
+        }
+      });
+    }), React.createElement("div", {
+      className: "relative px-6 text-center"
+    }, React.createElement("b", {
+      "data-rhythm-record-fx-title": true,
+      className: "block text-5xl font-black italic leading-tight"
+    }, "NEW RECORD!"), React.createElement("div", {
+      "data-rhythm-record-fx-scorebox": true,
+      className: "mt-1 flex items-baseline justify-center gap-1.5"
+    }, React.createElement("small", {
+      className: "text-[11px] font-black italic tracking-[.25em] text-amber-200"
+    }, "SCORE"), React.createElement("span", {
+      "data-rhythm-record-fx-score": true,
+      ref: recordScoreRef,
+      className: "text-[44px] font-black leading-none tabular-nums text-white"
+    })), React.createElement("div", {
+      className: "mt-1.5 flex items-center justify-center gap-2"
+    }, React.createElement("b", {
+      "data-rhythm-record-fx-gain": true,
+      className: "rounded-full border border-lime-300/80 bg-lime-400/20 px-3 py-0.5 text-lg font-black leading-tight tabular-nums text-lime-200"
+    }, "+", (result.recordFx.score - result.recordFx.previous).toLocaleString()), React.createElement("small", {
+      "data-rhythm-record-fx-prev": true,
+      className: "text-[11px] font-bold tabular-nums text-amber-100/90"
+    }, "前回のベスト ", result.recordFx.previous.toLocaleString())))), hudArtSrc && React.createElement("div", {
       "data-rhythm-result-backdrop": true,
       "aria-hidden": "true",
       style: {
@@ -32933,6 +33098,7 @@ const RhythmTapTest = ({
       className: "rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100"
     }, "↔ ミラー譜面")), React.createElement("section", {
       "data-rhythm-result-score-card": true,
+      "data-new-record": result.isNewRecord ? '1' : '0',
       className: "mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0"
     }, React.createElement("div", {
       className: "flex items-center gap-2"
@@ -32950,16 +33116,25 @@ const RhythmTapTest = ({
     })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("div", {
-      className: "flex items-center gap-1.5"
+      className: "flex flex-wrap items-center gap-1.5"
     }, React.createElement("small", {
       className: "text-[11px] font-black italic tracking-[.25em] text-slate-300"
     }, "SCORE"), result.isNewRecord && React.createElement("b", {
       "data-rhythm-new-record": true,
-      className: "whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-black leading-none text-slate-950"
-    }, "NEW RECORD")), React.createElement("div", {
+      style: {
+        '--mh-record-badge-delay': result.recordFx ? '3s' : '.15s'
+      },
+      className: "whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black leading-none text-slate-950"
+    }, "✨ NEW RECORD"), result.isNewRecord && Number(result.previousBestScore) > 0 && view.score > result.previousBestScore && React.createElement("b", {
+      "data-rhythm-record-gain": true,
+      className: "whitespace-nowrap rounded-full border border-lime-300/70 bg-lime-400/15 px-2 py-0.5 text-[10px] font-black leading-none tabular-nums text-lime-200"
+    }, "+", (view.score - result.previousBestScore).toLocaleString())), React.createElement("div", {
       "data-rhythm-result-score": true,
       className: "text-[42px] font-black leading-none tabular-nums [@container(min-width:680px)]:text-[38px]"
-    }, view.score.toLocaleString()), (() => {
+    }, view.score.toLocaleString()), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
+      "data-rhythm-record-prev": true,
+      className: "mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90"
+    }, "前回のベスト ", Number(result.previousBestScore).toLocaleString()), (() => {
       const failed = result.cleared === false;
       return React.createElement("div", {
         "data-rhythm-result-clear": true,
@@ -36484,6 +36659,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;
 let _friendsUnavailable = false;
+let _friendPlaytimeDevicesUnavailable = false;
 let _friendProfileExtraUnavailable = false;
 let _friendProfilesUnavailable = false;
 let _friendCodeCache = null;
@@ -37370,6 +37546,55 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     return false;
   }
 };
+const sbUpsertFriendPlaytimeDevice = async (breederIdRaw, device) => {
+  const id = friendsSafeId(breederIdRaw);
+  const dev = typeof normalizePlaytimeDevice === 'function' ? normalizePlaytimeDevice(device) : null;
+  if (!id || !dev || _friendPlaytimeDevicesUnavailable) return false;
+  try {
+    await friendsRequest('friend_playtime_devices?on_conflict=breeder_id,device_id', {
+      method: 'POST',
+      soft: true,
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: [{
+        breeder_id: id,
+        device_id: dev.deviceId,
+        base_seconds: Math.floor(dev.baseMs / 1000),
+        own_seconds: Math.floor(dev.ownMs / 1000),
+        started_on: dev.since
+      }]
+    });
+    return true;
+  } catch (error) {
+    if (error && (error.softMissing || error.notReady)) {
+      if (error.softMissing) _friendPlaytimeDevicesUnavailable = true;
+      return false;
+    }
+    console.error('[friends]', error && error.message ? error.message : error);
+    return false;
+  }
+};
+const sbFetchFriendPlaytimeTotals = async ids => {
+  const totals = {};
+  if (_friendPlaytimeDevicesUnavailable || typeof combineDevicePlaytime !== 'function') return totals;
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  if (!safe.length) return totals;
+  try {
+    const rows = await friendsRequest(`friend_playtime_devices?select=breeder_id,base_seconds,own_seconds,started_on&breeder_id=in.(${safe.join(',')})`, {
+      soft: true
+    });
+    const byId = {};
+    (Array.isArray(rows) ? rows : []).forEach(row => {
+      if (row && typeof row.breeder_id === 'string') (byId[row.breeder_id] = byId[row.breeder_id] || []).push(row);
+    });
+    Object.keys(byId).forEach(id => {
+      const total = combineDevicePlaytime(byId[id]);
+      if (total) totals[id] = total;
+    });
+  } catch (error) {
+    if (error && error.softMissing) _friendPlaytimeDevicesUnavailable = true;else if (!(error && error.notReady)) console.error('[friends]', error && error.message ? error.message : error);
+  }
+  return totals;
+};
 const sbFetchFriendSummaries = async ids => {
   const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
   const byId = {};
@@ -37412,6 +37637,13 @@ const sbFetchFriendSummaries = async ids => {
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
   }
+  const totals = await sbFetchFriendPlaytimeTotals(Object.keys(byId));
+  Object.keys(totals).forEach(id => {
+    const view = byId[id],
+      total = totals[id];
+    view.playSeconds = Math.max(Number(view.playSeconds) || 0, total.seconds);
+    if (total.startedOn && (!view.startedOn || total.startedOn < view.startedOn)) view.startedOn = total.startedOn;
+  });
   return byId;
 };
 const sbCountIncomingFriendRequests = async breederIdRaw => {
@@ -41683,6 +41915,7 @@ function ProfileScreen({
   onboardingPreview,
   ownedItems,
   playtimeView,
+  playtimeAllDevicesMs = 0,
   proHighScores,
   profileBattleMode,
   profileFrameId,
@@ -41944,7 +42177,7 @@ function ProfileScreen({
     size: 11
   }), "プレイ時間"), React.createElement("span", {
     className: "text-[13px] font-black text-white font-mono"
-  }, formatPlaytime(playtimeView.totalMs)))), React.createElement("details", {
+  }, formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))))), React.createElement("details", {
     "data-profile-playtime": true,
     className: "mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2"
   }, React.createElement("summary", {
@@ -41963,7 +42196,10 @@ function ProfileScreen({
     className: "text-[10px] text-slate-400 font-bold"
   }, "いちばん長かった日 ", formatPlaytime(playtimeView.longest.ms), "（", playtimeView.longest.day, "）"), React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold"
-  }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), React.createElement("div", {
+  }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'), (Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs && React.createElement("div", {
+    "data-profile-playtime-devices": true,
+    className: "text-[10px] text-sky-300 font-bold"
+  }, "ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは ", formatPlaytime(playtimeView.totalMs), "）"))), React.createElement("div", {
     className: `mb-4 grid gap-2 ${onboarded && !onboardingPreview && friendsEnabled ? 'grid-cols-2' : 'grid-cols-1'}`,
     "data-profile-links": true
   }, onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
@@ -64127,7 +64363,16 @@ function MonsterHeroGame() {
   const [modeInfoId, setModeInfoId] = useState(null);
   const [profileBattleMode, setProfileBattleMode] = useState(null);
   const playtimeRef = useRef(normalizePlaytime(null));
+  const playtimeDeviceRef = useRef(null);
+  const playtimeDeviceStorage = () => {
+    try {
+      return window.localStorage;
+    } catch (error) {
+      return null;
+    }
+  };
   const [playtimeView, setPlaytimeView] = useState(() => normalizePlaytime(null));
+  const [playtimeAllDevicesMs, setPlaytimeAllDevicesMs] = useState(0);
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
   const [quickRewardPolicy, setQuickRewardPolicy] = useState(QUICK_REWARD_POLICY_GROWTH);
   const quickRewardPolicyRunRef = useRef(QUICK_REWARD_POLICY_GROWTH);
@@ -64467,6 +64712,7 @@ function MonsterHeroGame() {
           ms: Math.round(value.longest.ms)
         }
       }, false);
+      if (playtimeDeviceRef.current) savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       sinceLastSave = 0;
     };
     const accumulate = () => {
@@ -64477,6 +64723,10 @@ function MonsterHeroGame() {
       if (!(delta > 0 && delta <= PLAYTIME_MAX_STEP_MS)) return;
       playtimeRef.current = advancePlaytime(playtimeRef.current, delta, now);
       sinceLastSave += delta;
+      if (playtimeDeviceRef.current) playtimeDeviceRef.current = {
+        ...playtimeDeviceRef.current,
+        ownMs: playtimeDeviceRef.current.ownMs + delta
+      };
       if (sinceLastSave >= PLAYTIME_SAVE_MS) persist();
     };
     const onVisibility = () => {
@@ -64489,7 +64739,20 @@ function MonsterHeroGame() {
     (async () => {
       const saved = normalizePlaytime(await storeGet(PLAYTIME_KEY, null, false));
       if (disposed) return;
-      playtimeRef.current = advancePlaytime(saved, playtimeRef.current.totalMs);
+      const beforeLoadMs = playtimeRef.current.totalMs;
+      playtimeRef.current = advancePlaytime(saved, beforeLoadMs);
+      const device = loadPlaytimeDevice(playtimeDeviceStorage()) || {
+        deviceId: newPlaytimeDeviceId(),
+        baseMs: saved.totalMs,
+        ownMs: 0,
+        since: saved.since
+      };
+      playtimeDeviceRef.current = {
+        ...device,
+        ownMs: device.ownMs + Math.max(0, Number(beforeLoadMs) || 0),
+        since: device.since || playtimeRef.current.since
+      };
+      savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       last = Date.now();
     })();
     const timer = setInterval(accumulate, PLAYTIME_TICK_MS);
@@ -65746,7 +66009,21 @@ function MonsterHeroGame() {
       message: latest.profileMessage,
       records
     }));
+    await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);
+  useEffect(() => {
+    if (gameState !== 'PROFILE' || !friendsActive) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (!id || cancelled) return;
+      const totals = await sbFetchFriendPlaytimeTotals([id]);
+      if (!cancelled) setPlaytimeAllDevicesMs((totals[friendsSafeId(id)]?.devices || 0) > 1 ? totals[friendsSafeId(id)].seconds * 1000 : 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gameState, friendsActive]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
@@ -89135,6 +89412,7 @@ function MonsterHeroGame() {
       onboardingPreview: onboardingPreview,
       ownedItems: ownedItems,
       playtimeView: playtimeView,
+      playtimeAllDevicesMs: playtimeAllDevicesMs,
       proHighScores: proHighScores,
       profileBattleMode: profileBattleMode,
       profileFrameId: profileFrameId,

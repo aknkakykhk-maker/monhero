@@ -61,7 +61,7 @@ const context={
   rhythmInputEdgeMarginSubLanes:()=>1, // 切り出し範囲の外の関数の代役(既定の余白1)
 };
 vm.createContext(context);
-vm.runInContext(`${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${slideCheckpoints}\n${releaseHelpers}\n${floatingHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.tracked=rhythmHoldTrackedLane;`,context);
+vm.runInContext(`${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${slideCheckpoints}\n${releaseHelpers}\n${floatingHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.margin=rhythmHoldTrackingMarginLanes;this.tracked=rhythmHoldTrackedLane;`,context);
 const runtime=context.out;
 
 // レーン座標→実座標(クリック位置)への変換。rhythmLaneCoordinateAtPointの逆算。
@@ -90,6 +90,57 @@ const advance=ms=>{
   for(let i=0;i<20;i++){advance(50);runtime.record('touch:1',clientXFor(2),clientY);}
   check('HOLD: 中心に置き続ける限り途中失敗しない',note.holdJudgment==='MARVELOUS','holdJudgment='+note.holdJudgment);
   runtime.clear();
+}
+
+// --- HOLD: 判定ラインより奥を押さえた指でも、帯の上に居れば失敗しない(2026-10-06・ハルカ MASTER 15.26秒の端の細いHOLD) ---
+// 追従は、押し始めのタップと同じ「指のその場の高さ」で位置を測る。判定ラインの高さへ直して測ると、
+// 奥を押さえた指が中央寄りへずれて見え、押し始めは通ったのに押している最中に外れ扱いになっていた。
+{
+  const depth=.62,fingerY=rect.top+rect.height*depth;
+  const stripeX=lane=>rect.left+vm.runInContext(`rhythmProjectLane(${lane},${depth}).center`,context)*rect.width;
+  const run=(lane,subLane,width)=>{
+    const note={type:'HOLD',timeMs:1000,endTimeMs:3000,lane,subLane,subLaneWidth:width,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};
+    now=0;
+    runtime.record('touch:1',stripeX(lane),fingerY);
+    runtime.bind('touch:1',note,'HOLD',1000,0);
+    for(let i=0;i<30;i++){advance(50);runtime.record('touch:1',stripeX(lane),fingerY);}
+    const result=note.holdJudgment;runtime.clear();return result;
+  };
+  check('HOLD: 奥を押さえた指が端のレーンの帯の上に居続けても失敗しない(幅2)',run(4,8,2)==='MARVELOUS','holdJudgment='+run(4,8,2));
+  check('HOLD: 奥を押さえた指が端のレーンの細い帯(幅1)の上に居続けても失敗しない',run(4,9,1)==='MARVELOUS','holdJudgment='+run(4,9,1));
+  check('HOLD: 追従の許容は押し始めのタップの受付と同じ広がり(細い帯 .45 / それ以外 .6 サブレーン)',
+    context.margin(1)===.45/2&&context.margin(2)===.6/2,'細い='+context.margin(1)+' ふつう='+context.margin(2));
+}
+
+// --- HOLD: 終わりの100msは外れを見ない(離すときの接点の動きで外れ扱いにしない・2026-10-07) ---
+{
+  const run=(farFromElapsed)=>{
+    const note={type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};
+    const tracked=context.tracked(note),farLane=tracked.center+tracked.half+1;
+    now=0;runtime.record('touch:1',clientXFor(2),clientY);runtime.bind('touch:1',note,'HOLD',1000,0);
+    let t=0;while(t<farFromElapsed){advance(50);t+=50;runtime.record('touch:1',clientXFor(2),clientY);}
+    for(let i=0;i<4;i++){advance(50);runtime.record('touch:1',clientXFor(farLane),clientY);}
+    const result=note.holdJudgment;runtime.clear();return result;
+  };
+  check('HOLD: 終わりの100ms以内に外れても(猶予を超えても)MISSにしない',run(1950)==='MARVELOUS','holdJudgment='+run(1950));
+  check('HOLD: 終わりの100msより前に外れて猶予を超えたらMISS(従来どおり)',run(1000)==='MISS','holdJudgment='+run(1000));
+}
+
+// --- HOLD: 帯が細くなっていくとき、少し前の太さまでは外れにしない(指は目で見て動くので帯の変化に遅れる・2026-10-07) ---
+{
+  const mk=()=>({type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:2,subLaneWidth:6,
+    holdPoints:[{timeMs:1000,subLane:2,subLaneWidth:6},{timeMs:1500,subLane:2,subLaneWidth:6},{timeMs:1560,subLane:4,subLaneWidth:2}],
+    activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false});
+  const note0=mk(),wide=context.tracked(note0);
+  const edgeLane=wide.center+wide.half-.1; // 太い帯のふちの内側(細くなると帯の外)
+  const play=(elapsedEnd)=>{
+    const note=mk();now=0;runtime.record('touch:1',clientXFor(wide.center),clientY);runtime.bind('touch:1',note,'HOLD',1000,0);
+    let t=0;while(t<450){advance(50);t+=50;runtime.record('touch:1',clientXFor(edgeLane),clientY);}
+    while(t<elapsedEnd){advance(20);t+=20;runtime.record('touch:1',clientXFor(edgeLane),clientY);}
+    const result=note.holdJudgment;runtime.clear();return result;
+  };
+  check('HOLD: 帯が細くなった直後(少し前の太さの間)は、ふちにいた指を外れにしない',play(560+140)==='MARVELOUS','holdJudgment='+play(560+140));
+  check('HOLD: 細くなって十分たち、まだ外れたままならMISS',play(560+700)==='MISS','holdJudgment='+play(560+700));
 }
 
 // --- HOLD: 猶予未満の一瞬のズレは失敗にしない ---

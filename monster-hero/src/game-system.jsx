@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ba8756d4158e3b7
+// generated-sha256: 27ad88d46a99531c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 07:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 07:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4116,6 +4116,7 @@ const BGM_TRACKS = [
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
   { id:'melo_monster_short', name:'Monster short ver.', creator:'オリジナル', src:'audio/bgm-monster-short.mp3', gain:1, loop:true },
+  { id:'melo_anima', name:'ANiMA', creator:'オリジナル', src:'audio/bgm-anima.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -5153,6 +5154,7 @@ const Audio_ = (() => {
   const AUDIO_CACHE_KEYS = {
 // <audio-cache-keys>
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
+    "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
@@ -8622,6 +8624,58 @@ const advancePlaytime = (current, deltaMs, now=Date.now()) => {
 const playtimeTodayMs = (value, now=Date.now()) => {
   const base = normalizePlaytime(value);
   return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
+};
+// --- 端末ごとのプレイ時間(2026-10-06) ---
+// ユーザー報告「プレイ時間が短くなるバグ」。プレイ時間(mh_playtime_v1)は端末の中だけで数え、
+// フレンドの表(friend_profiles)は1人1行を「最後に送った端末」の値で上書きしていた。
+// しかもデータ引き継ぎでブリーダーIDもプレイ時間もコピーされるので、2台で遊ぶと
+// 「あまり使っていない端末で開いたとたんに短くなる」。ユーザーの選択は「2台の合計を出す」。
+// そこで端末ごとに次の2つを持ち、フレンドの表とは別の表(friend_playtime_devices)へ端末ごとに送る。
+//   baseMs … この仕組みが入った時点でその端末が持っていたプレイ時間(引き継ぎでコピーされた昔のぶんを含む)
+//   ownMs  … そのあとこの端末で遊んだぶんだけ
+// 合計 = (端末たちの baseMs のうち一番大きいもの) ＋ (全端末の ownMs の和)。
+// 昔のぶんは引き継ぎで同じものが何台にもコピーされているので、足さずに1つだけ数える。
+// ★保存キーは mh_ で始めない。データ引き継ぎ(バックアップ)は mh_ のキーだけを写すので、
+//   端末のIDと「この端末で遊んだぶん」が別の端末へコピーされない(コピーされると二重に数えてしまう)。
+const PLAYTIME_DEVICE_KEY = 'mhdev_playtime_device_v1';
+const PLAYTIME_DEVICE_ID_RE = /^[a-z0-9]{12,40}$/;
+const normalizePlaytimeDevice = (value) => {
+  if (!value || typeof value !== 'object' || !PLAYTIME_DEVICE_ID_RE.test(String(value.deviceId || ''))) return null;
+  const ms = (x) => { const n = Number(x); return Number.isFinite(n) && n >= 0 ? n : 0; };
+  return { deviceId: String(value.deviceId), baseMs: ms(value.baseMs), ownMs: ms(value.ownMs), since: playtimeDayValue(value.since) };
+};
+const newPlaytimeDeviceId = () => {
+  let id = '';
+  try {
+    const bytes = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(bytes);
+    id = Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('');
+  } catch (error) { id = ''; }
+  while (id.length < 20) id += Math.random().toString(36).slice(2);
+  return id.slice(0, 24);
+};
+// 保存先(localStorage)は呼ぶ側から渡す(この部品は画面・保存を外から掴まない決まり)
+const loadPlaytimeDevice = (storage) => {
+  try { return normalizePlaytimeDevice(JSON.parse(storage.getItem(PLAYTIME_DEVICE_KEY) || 'null')); }
+  catch (error) { return null; }
+};
+const savePlaytimeDevice = (storage, value) => {
+  const device = normalizePlaytimeDevice(value);
+  if (!device) return false;
+  try {
+    storage.setItem(PLAYTIME_DEVICE_KEY, JSON.stringify({ ...device, baseMs: Math.round(device.baseMs), ownMs: Math.round(device.ownMs) }));
+    return true;
+  } catch (error) { return false; }
+};
+// サーバーの端末ごとの行(秒)から、その人の合計を出す。行が無ければ null(呼ぶ側は今までの値を使う)
+const combineDevicePlaytime = (rows) => {
+  const list = (Array.isArray(rows) ? rows : []).filter((row) => row && typeof row === 'object');
+  if (!list.length) return null;
+  const sec = (x) => { const n = Number(x); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; };
+  const base = list.reduce((max, row) => Math.max(max, sec(row.base_seconds)), 0);
+  const own = list.reduce((sum, row) => sum + sec(row.own_seconds), 0);
+  const days = list.map((row) => playtimeDayValue(row.started_on)).filter(Boolean).sort();
+  return { seconds: base + own, startedOn: days[0] || null, devices: list.length };
 };
 const formatPlaytime = (ms) => {
   const seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -18850,6 +18904,11 @@ const rhythmPlayLogSend=async({song,difficulty,rawChart,notes,settings,mirror,cl
 const RHYTHM_TOUCH_DIAG_KEY='mh_rhythm_touch_diag_v1';
 const RHYTHM_TOUCH_DIAG_KEEP=20;
 const RHYTHM_TOUCH_DIAG_VERSION=1;
+// ハイスコア更新の演出の長さ(2026-10-06)。数字のカウントアップは、題名が入ってから始めて、止まったところで差を出す
+const RHYTHM_RECORD_FX_COUNT_DELAY_MS=600;
+const RHYTHM_RECORD_FX_COUNT_MS=1500;
+const RHYTHM_RECORD_FX_TOTAL_MS=3300;   // この長さのあと外す。CSS の mhRhythmRecordFxLife(3.2秒で消える)より少し長く
+const RHYTHM_RECORD_FX_SPARKLES=18;
 // 1曲ごとのでたらめな番号。リザルトの「押したのに反応しないことがあった」の報告の行を、この曲の診断の行と結ぶ(2026-10-01)
 const rhythmTouchDiagPlayId=()=>{let id='';for(let i=0;i<12;i++)id+='0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random()*36)];return id;};
 const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared})=>{
@@ -19503,7 +19562,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     measure();frame=requestAnimationFrame(measure);const later=setTimeout(measure,400);
     window.addEventListener('resize',measure);
     return()=>{cancelAnimationFrame(frame);clearTimeout(later);window.removeEventListener('resize',measure);};
-  },[clockOnLeft,song.songId,view.status]);
+  // roadFactor(道の幅の倍率)も入れる。向きが変わると台形の幅が変わるので、変わったあとにも測り直す(2026-10-07・向きを切り替えた直後に箱の幅が6〜11px古かった)
+  },[clockOnLeft,song.songId,view.status,roadFactor]);
   /* 横持ちのライフゲージの長さの上限(2026-09-25)。ライフ表示を200%にすると、左はしのハートがレーンのふちに7pxほどかかっていた。
      横持ちの器は「🔄 横」で回したときも端末の幅(vw)と合わないので、CSSの vw では決められない。器の幅を測って上限を渡す。
      上限 = 器の幅×0.38 − 150px(ライフの行の右はしはポーズの手前、左はしはレーンの右ふち+8px。そこからハートと数字の幅を引いたもの) */
@@ -19884,7 +19944,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
-    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
+    // ハイスコアを更新したときの演出(2026-10-06・ユーザー指示「ハイスコア更新したときはもっとちゃんと演出がほしい」)の材料。
+    // previousBestScore … 更新前のBEST(初めての記録は0)。recordFx … 結果画面の上に重ねる演出を出すときだけ入れる。
+    //   初めての記録(前のBESTが0)・失敗・練習・タイミング合わせ・演出量MINIMAL・軽量モードでは出さない(札と数字だけ)。
+    //   id は演出ごとの印。結果へあとから項目が足されても(ラッキーラッシュなど)、効果音とタイマーが走り直さないために使う
+    const previousBestScore=Math.max(0,Math.floor(Number(run.startBestScore)||0));
+    const recordFx=isNewRecord&&previousBestScore>0&&!failed&&!tutorial&&!calibrating&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
+      ?{id:`${Date.now()}-${score}`,previous:previousBestScore,score}:null;
+    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,previousBestScore,recordFx,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
     /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント・キャンペーンの期間外は1/5 */
     setLuckyRush(false);
@@ -19904,6 +19971,34 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   const celebrateTimerRef=useRef(null);
   // リザルトの「押したのに反応しないことがあった」を送った曲(playId)。同じ曲では1回だけ
   const [touchReportSent,setTouchReportSent]=useState(null);
+  // ハイスコア更新の演出(結果画面の上に重ねる。2026-10-06)。効果音を1回鳴らし、スコアを前のBESTから新しい値まで数え上げ、
+  // 時間がたったら外す。**依存は演出の印(id)だけ**にする(結果へあとから項目が足されても、音とタイマーが走り直さないため。
+  // celebrate と同じ注意)。数字は React を通さず ref の文字を直接書き換える(毎フレーム描き直さない。中身は React が持たない空の枠)
+  const recordFxId=view.status==='result'&&view.result&&view.result.recordFx?view.result.recordFx.id:null;
+  const [recordFxHiddenFor,setRecordFxHiddenFor]=useState(null);
+  const recordScoreRef=useRef(null);
+  useEffect(()=>{
+    if(!recordFxId)return undefined;
+    const fx=view.result.recordFx,el=recordScoreRef.current;
+    RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
+    let raf=0;
+    const reduce=typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const put=value=>{if(el)el.textContent=Math.round(value).toLocaleString();};
+    if(reduce||typeof requestAnimationFrame!=='function')put(fx.score);
+    else{
+      put(fx.previous);
+      let start=0;
+      const step=now=>{
+        if(!start)start=now;
+        const p=Math.max(0,Math.min(1,(now-start-RHYTHM_RECORD_FX_COUNT_DELAY_MS)/RHYTHM_RECORD_FX_COUNT_MS));
+        put(fx.previous+(fx.score-fx.previous)*(1-Math.pow(1-p,3)));
+        if(p<1)raf=requestAnimationFrame(step);
+      };
+      raf=requestAnimationFrame(step);
+    }
+    const timer=setTimeout(()=>setRecordFxHiddenFor(recordFxId),RHYTHM_RECORD_FX_TOTAL_MS);
+    return ()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);clearTimeout(timer);};
+  },[recordFxId]);
   useEffect(()=>{
     if(view.status!=='celebrate')return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -20257,7 +20352,9 @@ scheduleTick();};
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
         return;
       }
-      if(!target){if(!input.rejudge)RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      // 指を滑らせたときの取り直し(rejudge)で取れるノーツが無いのは、押し損ねではない。空押しの音は鳴らさない
+      // (2026-10-07・成功したタップのあとに指が数px動くと、空押しの音が余分に鳴っていた)
+      if(!target){if(!input.rejudge){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
       // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;
@@ -20451,6 +20548,20 @@ scheduleTick();};
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
       data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)]" style={{paddingTop:'var(--mh-sa-top)'}}>
+{/* ===== ハイスコア更新の演出(2026-10-06・ユーザー指示「ハイスコア更新したときはもっとちゃんと演出がほしい」) =====
+    結果画面の上へ重ねて出し、約3秒で引く。タップは下の画面へ通す(pointer-events:none)ので、ボタンは待たずに押せる。
+    動かすのは transform と opacity だけ。演出量「最小」・軽量モード・動きを減らす設定では、重ねるもの自体を出さない/止める。
+    数字(data-rhythm-record-fx-score の中)は React が持たず、上のカウントアップが書き換える */}
+{result.recordFx&&recordFxHiddenFor!==result.recordFx.id&&<div data-rhythm-record-fx aria-hidden="true" className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center overflow-hidden">
+  <i data-rhythm-record-fx-dim className="absolute inset-0 block"/>
+  <i data-rhythm-record-fx-rays className="absolute left-1/2 top-1/2 block"/>
+  {Array.from({length:RHYTHM_RECORD_FX_SPARKLES},(_,i)=>{const angle=(i*137.5)*Math.PI/180,radius=70+(i%5)*26;return <i key={i} data-rhythm-record-fx-spark className="absolute left-1/2 top-1/2 block rounded-full" style={{'--x':`${Math.round(Math.cos(angle)*radius*1.5)}px`,'--y':`${Math.round(Math.sin(angle)*radius)}px`,'--d':`${(i%6)*70+380}ms`,'--s':`${4+(i%4)*2}px`,background:i%3===0?'#fff':i%3===1?'#fde68a':'#f0abfc'}}/>;})}
+  <div className="relative px-6 text-center">
+    <b data-rhythm-record-fx-title className="block text-5xl font-black italic leading-tight">NEW RECORD!</b>
+    <div data-rhythm-record-fx-scorebox className="mt-1 flex items-baseline justify-center gap-1.5"><small className="text-[11px] font-black italic tracking-[.25em] text-amber-200">SCORE</small><span data-rhythm-record-fx-score ref={recordScoreRef} className="text-[44px] font-black leading-none tabular-nums text-white"/></div>
+    <div className="mt-1.5 flex items-center justify-center gap-2"><b data-rhythm-record-fx-gain className="rounded-full border border-lime-300/80 bg-lime-400/20 px-3 py-0.5 text-lg font-black leading-tight tabular-nums text-lime-200">+{(result.recordFx.score-result.recordFx.previous).toLocaleString()}</b><small data-rhythm-record-fx-prev className="text-[11px] font-bold tabular-nums text-amber-100/90">前回のベスト {result.recordFx.previous.toLocaleString()}</small></div>
+  </div>
+</div>}
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
     そのあとに周回・ビートP・解放・ライブログを並べ、ボタンは下の帯へ固定する(スクロールしても隠れない・中身も隠さない)。
@@ -20519,14 +20630,16 @@ scheduleTick();};
 </section>
 {/* アシストモード・ミラー譜面で遊んだことを、結果の上で言う。アシストは記録に残らないことも添える */}
 {(result.assist||result.mirror)&&<div data-rhythm-result-play-mode className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">{result.assist&&<span className="rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2 py-0.5 text-emerald-100">🛟 アシストモード（スコア8割・記録には残りません{Number(result.assistGuarded)>0?`・ガード${Number(result.assistGuarded)}回`:''}）</span>}{result.mirror&&<span className="rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100">↔ ミラー譜面</span>}</div>}
-<section data-rhythm-result-score-card className="mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
+<section data-rhythm-result-score-card data-new-record={result.isNewRecord?'1':'0'} className="mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
   {/* 2026-09-26 に見本の大きさへ(ユーザー指示「見本のほうがサイズ感が見やすい」)。SCOREの数字を大きく、
       縦持ちでも左にマスモンを出す(横に広いときは左の欄に出ているので、ここでは出さない) */}
   <div className="flex items-center gap-2">
     {heroArt&&<div data-rhythm-result-hero-portrait aria-hidden="true" className="-my-1 w-[34%] max-w-[150px] shrink-0 [@container(min-width:680px)]:hidden"><img data-rhythm-result-hero-art src={heroArt} alt="" draggable={false} decoding="async" className="max-h-[140px] w-full object-contain"/></div>}
     <div className="min-w-0 flex-1">
-      <div className="flex items-center gap-1.5"><small className="text-[11px] font-black italic tracking-[.25em] text-slate-300">SCORE</small>{result.isNewRecord&&<b data-rhythm-new-record className="whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-black leading-none text-slate-950">NEW RECORD</b>}</div>
+      {/* ハイスコア更新(2026-10-06): 札を大きくし、前より何点伸びたかと前回のBESTを添える。演出が重なるときは、それが引いてから札を弾ませる */}
+      <div className="flex flex-wrap items-center gap-1.5"><small className="text-[11px] font-black italic tracking-[.25em] text-slate-300">SCORE</small>{result.isNewRecord&&<b data-rhythm-new-record style={{'--mh-record-badge-delay':result.recordFx?'3s':'.15s'}} className="whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black leading-none text-slate-950">✨ NEW RECORD</b>}{result.isNewRecord&&Number(result.previousBestScore)>0&&view.score>result.previousBestScore&&<b data-rhythm-record-gain className="whitespace-nowrap rounded-full border border-lime-300/70 bg-lime-400/15 px-2 py-0.5 text-[10px] font-black leading-none tabular-nums text-lime-200">+{(view.score-result.previousBestScore).toLocaleString()}</b>}</div>
       <div data-rhythm-result-score className="text-[42px] font-black leading-none tabular-nums [@container(min-width:680px)]:text-[38px]">{view.score.toLocaleString()}</div>
+      {result.isNewRecord&&Number(result.previousBestScore)>0&&<small data-rhythm-record-prev className="mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90">前回のベスト {Number(result.previousBestScore).toLocaleString()}</small>}
     {/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
     「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」。
     ランクやスコアより先に、まずここで結果を言い切る。失敗はライフが0になったまま
@@ -23163,6 +23276,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;           // 最後に開いてから5分以内は「いま」
 let _friendsUnavailable = false;                   // 表が無いと分かったら、ページを閉じるまで使わない
+let _friendPlaytimeDevicesUnavailable = false;   // 端末ごとのプレイ時間の表(friend_playtime_devices)がまだ無いとき(第4弾のSQL未適用)。送らない・読まない
 let _friendProfileExtraUnavailable = false;        // friend_profiles に message / records の列がまだ無いとき(第3弾のSQL未適用)。外して送り直す
 let _friendProfilesUnavailable = false;           // friend_profiles だけ無いと分かったとき(SQL未適用)。フレンド本体は止めない
 let _friendCodeCache = null;                       // { breederId, code }
@@ -23879,6 +23993,40 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     return false;
   }
 };
+// 端末ごとのプレイ時間を送る(2026-10-06)。1人×1端末で1行を上書きする。表がまだ無ければ黙って何もしない
+const sbUpsertFriendPlaytimeDevice = async (breederIdRaw, device) => {
+  const id = friendsSafeId(breederIdRaw);
+  const dev = typeof normalizePlaytimeDevice === 'function' ? normalizePlaytimeDevice(device) : null;
+  if (!id || !dev || _friendPlaytimeDevicesUnavailable) return false;
+  try {
+    await friendsRequest('friend_playtime_devices?on_conflict=breeder_id,device_id', {
+      method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal',
+      body: [{ breeder_id: id, device_id: dev.deviceId, base_seconds: Math.floor(dev.baseMs / 1000), own_seconds: Math.floor(dev.ownMs / 1000), started_on: dev.since }],
+    });
+    return true;
+  } catch (error) {
+    if (error && (error.softMissing || error.notReady)) { if (error.softMissing) _friendPlaytimeDevicesUnavailable = true; return false; }
+    console.error('[friends]', error && error.message ? error.message : error);
+    return false;
+  }
+};
+// 何人かぶんの端末ごとの行を読み、1人ずつ合計にする。表が無い・読めないときは空
+const sbFetchFriendPlaytimeTotals = async (ids) => {
+  const totals = {};
+  if (_friendPlaytimeDevicesUnavailable || typeof combineDevicePlaytime !== 'function') return totals;
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  if (!safe.length) return totals;
+  try {
+    const rows = await friendsRequest(`friend_playtime_devices?select=breeder_id,base_seconds,own_seconds,started_on&breeder_id=in.(${safe.join(',')})`, { soft: true });
+    const byId = {};
+    (Array.isArray(rows) ? rows : []).forEach((row) => { if (row && typeof row.breeder_id === 'string') (byId[row.breeder_id] = byId[row.breeder_id] || []).push(row); });
+    Object.keys(byId).forEach((id) => { const total = combineDevicePlaytime(byId[id]); if (total) totals[id] = total; });
+  } catch (error) {
+    if (error && error.softMissing) _friendPlaytimeDevicesUnavailable = true;
+    else if (!(error && error.notReady)) console.error('[friends]', error && error.message ? error.message : error);
+  }
+  return totals;
+};
 // フレンドたちの「見せる情報」を読む。表が無い・通信できないときは空(その場合、画面は名前と見た目だけを出す)
 const sbFetchFriendSummaries = async (ids) => {
   const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
@@ -23916,6 +24064,14 @@ const sbFetchFriendSummaries = async (ids) => {
   } catch (error) {
     if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
   }
+  // 端末ごとの合計があれば、そちらを出す(2台で遊ぶ人の時間が、最後に開いた端末のぶんだけにならないように)。
+  // どちらか大きいほうを出すので、表がまだそろっていない人でも今より短くはならない
+  const totals = await sbFetchFriendPlaytimeTotals(Object.keys(byId));
+  Object.keys(totals).forEach((id) => {
+    const view = byId[id], total = totals[id];
+    view.playSeconds = Math.max(Number(view.playSeconds) || 0, total.seconds);
+    if (total.startedOn && (!view.startedOn || total.startedOn < view.startedOn)) view.startedOn = total.startedOn;
+  });
   return byId;
 };
 // 届いている申請の件数(HOME・プロフィールのバッジ用)。通信できない・準備中は 0
@@ -26855,7 +27011,7 @@ function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
-  onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
+  onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, playtimeAllDevicesMs = 0, proHighScores,
   profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
@@ -26989,7 +27145,8 @@ function ProfileScreen({
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
-            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
+            {/* ほかの端末でも遊んでいれば、その合計を出す(2026-10-06。この端末のぶんだけだと、端末を替えたときに減って見えた) */}
+            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))}</span>
           </div>
         </div>
         <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
@@ -27004,6 +27161,9 @@ function ProfileScreen({
               <div className="text-[10px] text-slate-400 font-bold">いちばん長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
+            {(Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs&&(
+              <div data-profile-playtime-devices className="text-[10px] text-sky-300 font-bold">ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは {formatPlaytime(playtimeView.totalMs)}）</div>
+            )}
           </div>
         </details>
         {/* ④ よく使う入口。フレンド(申請が届くと赤いバッジ)とアイテムを同じ大きさで並べる。フレンドは公開前は出さない */}
@@ -39453,7 +39613,12 @@ function MonsterHeroGame() {
   // 遊んだ時間。数えるのはrefだけにして、画面の描き直しを起こさない
   // (15秒ごとにstateを書き換えると、バトル中や音ゲー中に毎回描き直しが走ってしまう)。
   const playtimeRef = useRef(normalizePlaytime(null));
+  // この端末で遊んだぶん(端末ごとのプレイ時間。17-release…jsx の PLAYTIME_DEVICE_KEY)。読み込むまでは null
+  const playtimeDeviceRef = useRef(null);
+  // 端末ごとのプレイ時間の保存先。localStorage に触れない環境では null(読み書きは黙って何もしない)
+  const playtimeDeviceStorage = () => { try { return window.localStorage; } catch (error) { return null; } };
   const [playtimeView, setPlaytimeView] = useState(() => normalizePlaytime(null)); // プロフィールを開いたときだけ写す
+  const [playtimeAllDevicesMs, setPlaytimeAllDevicesMs] = useState(0); // ほかの端末のぶんも合わせた合計(フレンドの表から。取れなければ0)
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -39782,6 +39947,7 @@ function MonsterHeroGame() {
         today: { day: value.today.day, ms: Math.round(value.today.ms) },
         longest: { day: value.longest.day, ms: Math.round(value.longest.ms) },
       }, false);
+      if (playtimeDeviceRef.current) savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       sinceLastSave = 0;
     };
     const accumulate = () => {
@@ -39793,6 +39959,7 @@ function MonsterHeroGame() {
       if (!(delta > 0 && delta <= PLAYTIME_MAX_STEP_MS)) return;
       playtimeRef.current = advancePlaytime(playtimeRef.current, delta, now);
       sinceLastSave += delta;
+      if (playtimeDeviceRef.current) playtimeDeviceRef.current = { ...playtimeDeviceRef.current, ownMs: playtimeDeviceRef.current.ownMs + delta };
       if (sinceLastSave >= PLAYTIME_SAVE_MS) persist();
     };
     const onVisibility = () => {
@@ -39804,7 +39971,13 @@ function MonsterHeroGame() {
       const saved = normalizePlaytime(await storeGet(PLAYTIME_KEY, null, false));
       if (disposed) return;
       // 読み込みの前に数えたぶんがあれば足しておく(読み込みを待つあいだも遊んでいるため)
-      playtimeRef.current = advancePlaytime(saved, playtimeRef.current.totalMs);
+      const beforeLoadMs = playtimeRef.current.totalMs;
+      playtimeRef.current = advancePlaytime(saved, beforeLoadMs);
+      // 端末ごとのぶん。この端末で初めて動いたときは、いま持っているプレイ時間を「昔のぶん」として控え、
+      // ここから先にこの端末で遊んだぶんだけを ownMs に数える(引き継ぎでコピーされた時間を二重に数えないため)
+      const device = loadPlaytimeDevice(playtimeDeviceStorage()) || { deviceId:newPlaytimeDeviceId(), baseMs:saved.totalMs, ownMs:0, since:saved.since };
+      playtimeDeviceRef.current = { ...device, ownMs: device.ownMs + Math.max(0, Number(beforeLoadMs) || 0), since: device.since || playtimeRef.current.since };
+      savePlaytimeDevice(playtimeDeviceStorage(), playtimeDeviceRef.current);
       last = Date.now();
     })();
     const timer = setInterval(accumulate, PLAYTIME_TICK_MS);
@@ -41293,7 +41466,21 @@ function MonsterHeroGame() {
       favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
       message: latest.profileMessage, records,
     }));
+    // 端末ごとのプレイ時間(2台で遊ぶ人の合計を出すため)。表がまだ無ければ何もしない
+    await sbUpsertFriendPlaytimeDevice(id, playtimeDeviceRef.current);
   }, [friendsActive]);
+  // プロフィールを開いたら、ほかの端末のぶんも合わせた合計を取りに行く(取れなければこの端末のぶんだけを出す)
+  useEffect(() => {
+    if (gameState !== 'PROFILE' || !friendsActive) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (!id || cancelled) return;
+      const totals = await sbFetchFriendPlaytimeTotals([id]);
+      if (!cancelled) setPlaytimeAllDevicesMs((totals[friendsSafeId(id)]?.devices || 0) > 1 ? totals[friendsSafeId(id)].seconds * 1000 : 0);
+    })();
+    return () => { cancelled = true; };
+  }, [gameState, friendsActive]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
@@ -57539,6 +57726,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onboardingPreview={onboardingPreview}
             ownedItems={ownedItems}
             playtimeView={playtimeView}
+            playtimeAllDevicesMs={playtimeAllDevicesMs}
             proHighScores={proHighScores}
             profileBattleMode={profileBattleMode}
             profileFrameId={profileFrameId}

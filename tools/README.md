@@ -246,6 +246,8 @@ node tools/build.js --check
 
 `node mode/rhythm-chart-rev28-check.js` は、MHB CHART ENGINE Rev.28(人が測った拍のずれの曲線・2026-10-05)を見張る。点のあいだを直線でつなぐ計算、音源の一覧の `warpPoints` を書いた曲だけ Rev.28 で曲線を使うこと(Rev.27 以前・書いていない曲には効かない)、ゲームの拍の表(`RHYTHM_SONG_BEATS` の5つ目)が同じ点で拍の頭と線の時刻に曲線を足すこと、譜面のノーツが「格子＋曲線のずれ」に乗ることを確かめる。
 
+`node mode/rhythm-expert-master-order-check.js` は、公開中の曲で EXPERT のほうが MASTER より「叩く回数」(同じ時刻は1回)・「速い連打」(90ms 以内)が3%より多くないかを見る(2026-10-07・ANiMA で体感の難しさが逆転していた)。直し方は曲の一覧の `chartIntensityByDifficulty`(難易度ごとの激しさの上書き。`mild` / `strong` / `extreme` / `none`)。
+
 `node mode/rhythm-song-climax.js [--write|--check]` は、曲ごとの盛り上がる区間の表(`RHYTHM_SONG_CLIMAX`・data/rhythm-mode.js の `<rhythm-song-climax>` の間)を、解析ファイルの区切りの強さ(structure.sections の intensity)から作る(2026-09-29・オプション「盛り上がりの光」)。曲を足したら `--write` を打つ。`node mode/rhythm-climax-fx-check.js` が表の古さ・設定の既定値・CSS・叩いた場所の判定の部品の使い回し・ランクの演出の条件を見張る。
 
 `node mode/rhythm-robot-play.js --song <曲id> --difficulty <難易度> --settings '{"climaxFx":true}' --shots 20000,60000 --shot-dir <dir>` は、ロボットに演奏の設定を渡して遊ばせ、曲のその時刻で画面を撮る(2026-09-29)。盛り上がりの光が点いた・消えた時刻、叩いた場所の判定の数、ランクが上がったときの文字も最後に出す。
@@ -331,6 +333,8 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 
 `node mode/rhythm-perf-check.js` は、音ゲーの性能計測(デバッグ限定)が「計測のために本体を重くしていない」ことを確かめる。記録器を実際にNode上で動かし、既定OFF・OFFのあいだは一切記録しないこと・フレーム時間と16.7/25/33ms超の数え方・一時停止で空いた数秒を平均へ混ぜないことを検証する。あわせて、計測用のrequestAnimationFrameを増やしていないこと、各計測箇所(measureTravel / areaRect / ジェスチャー側rAF / SLIDE polygon / サブレーン発光)へ結線されていること、判定窓・スコア式・既存の保存キーを変えていないこと、デバッグ専用なので更新履歴・ヘルプへ載せていないことも固定する。
 
+`node mode/rhythm-record-fx-check.js` は、モンヒロビートでハイスコアを更新したときの演出(結果画面に重なる「NEW RECORD!」・数字の数え上げ・約3秒で外れる・金色の札が残る。2026-10-06)を、曲を最後まで流して実際の画面で確かめる(約3分。`SHOT=/tmp/x` で途中の画面写真も撮る)。出す条件(初めて・失敗・練習・演出量最小・軽量モードでは出さない)と、transform・opacity だけを動かすことも文字列で見る。
+
 `node mode/rhythm-achievement-check.js` は、モンヒロビートの実績の仕組み(フルコンボ・オールエクセレント・オールマーベラスの台帳と、後から足す報酬の受け口。2026-10-05)の実装を取り出して、偽の保存で動かして確かめる。称号の数え方・壊れた保存値・BESTとの同期・報酬ルールの検証と一度だけ渡すこと・順番待ち・画面側の配線を見る。`node mode/rhythm-achievement-browser-check.js` は、本物のゲームを開いて、開いたときの取り込みと、BESTの保存値が書き換わらないことを見る。
 
 `node mode/rhythm-monster-slots-check.js` は、モンスターノーツ用のマスモン設定(最大4体)を実際にNode上で動かして確かめる。最大4体・1〜3体でも成立すること・1〜4枠の並び順がそのまま登場順になること・同じベースモンスターは別個体でも重ねられないこと(ミーア＋ミーアは不可／ミーア＋パンドラは可／ハム＋ザンは可)を固定する。とくに重視するのは**保存を壊さないこと**で、保存値の正規化は形だけを整え所持確認をしない(マスモン一覧を読む前でも設定が消えない)こと、手放した個体や重複は使うときにだけ落として保存値を書き換えないことを検証する。あわせて新しい保存キー `mh_rhythm_monsters_v1` へ分けていること、マスモン本体(`mh_masu_mons`)へ書き込まないこと、判定窓・スコア式・ライフを変えていないことも確認する。
@@ -344,6 +348,8 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 
 `node mode/rhythm-life-check.js` は、音ゲーの既存ライフ値・判定窓・スコア式を保ったまま、ライフ1以上での回復、0以降の不可逆DOWN、0到達判定までの加点と以降のスコア固定、曲・判定・コンボの継続、リザルトscore・ランク・BESTの固定スコア利用、保存キー不変を実処理で確認する。
 `node mode/rhythm-mid-tracking-check.js` は、HOLD/SLIDEの途中追従判定(暫定値)を確認する。猶予(暫定120ms)を超えて経路・帯から外れたままの場合だけMISSを確定すること、猶予内に戻ればカウントをリセットすること、HOLDにも横ズレ判定(帯の半分幅+0.15レーン)が効くこと、途中失敗時は指を離す前にその場でMISS確定させることを、擬似DOM上でbind/record/releaseを直接動かして検証する。
+
+`node mode/rhythm-glow-road-width-check.js` は、押したサブレーンの光(指の位置で光る台形)が、横向きの「道の幅」(ふつう・細い)に合わせて切り直されることを確認する(2026-10-07・横向きでだけ光が押した位置からずれていた)。
 `node mode/rhythm-audio-independence-check.js` は、音ゲーのBGM専用gainがメインのbgmGainを経由せずdestinationへ直結していること、曲ごとの音量差はsafeTrackGainで正規化すること、タップ音がもともとメインのSE音量と無関係であること、そして全体ミュート(タイトルの「音がオフです」)だけは`window.__mhAudioEnabled`経由で両方に共通で効くことを確認する。
 `node mode/rhythm-failed-hold-trail-check.js` は、MISSになったHOLD／SLIDEを譜面上の終端まで薄いグレーで流し続け、TAP／FLICKは従来どおり消えること、判定・コンボ・スコアへ影響していないことを確認する。
 `node mode/rhythm-screen-layout-check.js` は、音ゲーのデバッグ／オプション／プレイの各画面が「固定ヘッダー＋スクロール1つ（＋固定フッター）」で閉じ、座標校正などのデバッグUIが `document.body` 直下の固定レイヤーとしてプレイ画面へ重ならないことを確認する。あわせて実ブラウザで座標校正スクリプトを動かし、トグルがデバッグ画面とポーズメニューの中へ入ること、プレイ中に画面へ浮かないこと、ON/OFFが画面をまたいで保持されることを実測する。

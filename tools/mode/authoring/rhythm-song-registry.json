@@ -421,7 +421,11 @@
      "shiftMs": -278.7
     }
    ],
-   "chartIntensity": "strong"
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   }
   },
   "kiki_issen_short": {
    "audio": "monster-hero/audio/bgm-kiki-issen-short.mp3",
@@ -731,6 +735,24 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "command"
+   }
+  },
+  "anima": {
+   "audio": "monster-hero/audio/bgm-anima.mp3",
+   "chartRevision": 28,
+   "audioSha256": "c81adf3d2fffcd0c7adacc9374ad18ebb6663f6ae589b8c3b7d189dad938d4dc",
+   "durationMs": 115344,
+   "analyzedTiming": {
+    "bpm": 183.5,
+    "beatZeroMs": 200,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
    }
   }
  }

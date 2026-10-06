@@ -21,7 +21,7 @@ const fs=require('fs'),path=require('path'),{spawnSync}=require('child_process')
 const ROOT=path.resolve(__dirname,'..');
 const PROJECT_REF='zrzevudkbgtxlbvmuziy';
 const API=`https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
-const SQL_DIRS=['docs/sql/rankings','docs/sql/bond-levels','docs/sql/raid','docs/sql'];
+const SQL_DIRS=['docs/sql/rankings','docs/sql/bond-levels','docs/sql/raid','docs/sql/friends','docs/sql'];
 const FORBIDDEN=/\b(drop\s+table|truncate\b|delete\s+from|drop\s+schema|drop\s+database|drop\s+column)/i;
 
 const stripComments=sql=>String(sql).replace(/--[^\n]*/g,'').replace(/\/\*[\s\S]*?\*\//g,'');
