@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9270a5bec719b0a
+// source-sha256: 83650f6d3aa13464
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 07:41";
+const BUILD_DATE = "2026-10-07 08:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87445,10 +87445,7 @@ function MonsterHeroGame() {
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
-        if (rhythmPlay.from === 'raid') {
-          void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
-          return;
-        }
+        if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
         const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak) : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
@@ -87509,7 +87506,7 @@ function MonsterHeroGame() {
         void recordRhythmAchievements(records, {
           initialRecords: rhythmBestRecords
         });
-        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
+        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {
         if (rhythmPlay.from === 'raid') {
