@@ -81,10 +81,22 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
 {
   const appSrc = read('monster-hero/src/parts/60-app.jsx');
   // 一時停止(2026-10-06・ユーザー指示。仕様が固まるまで)。公開フラグが偽のあいだは、ボタン・更新履歴・ヘルプが出ない(デバッグの強制表示ではボタンだけ出る)
+  // サブストーリー「ドラのビート ～音でジャックへ～」(2026-10-06。仕様: docs/spec/RAID_JACK_RHYTHM_STORY.md)
+  const asst = read('monster-hero/data/assistants.js');
+  const sa = asst.indexOf('const ASSISTANT_RAID_JACK_RHYTHM_STORY = [');
+  const storyBody = asst.slice(sa, asst.indexOf('];', sa));
+  const storyLines = storyBody.split('\n').filter((l) => /^\s*\{ who:/.test(l));
+  check('サブストーリー(ドラのビート): 15〜20行・ドラが主役(いちばん多く話す)・数字(ダメージなど)とネタバレ(正体・結末・段階を倒したあと)を書かない',
+    storyLines.length >= 15 && storyLines.length <= 20 && storyLines.filter((l) => /who:'dra'/.test(l)).length >= Math.max(...['mua', 'kiki', 'momosuke'].map((w) => storyLines.filter((l) => l.includes(`who:'${w}'`)).length))
+    && !/\d{2,}|%|％/.test(storyBody) && !/正体|ぱんぷきん|結末|終章|大王を倒|倒したあと|ふくれ/.test(storyBody));
+  check('サブストーリー(ドラのビート): 回想へ載せ(公開フラグ raidJackRhythm で出し入れ・ハロウィンの衣装)、本編では公開後・遊び方のお話のあとに1度だけ流れる',
+    /id: 'raid_jack_rhythm_story_2026_10_06'[^\n]*unlockedKey: 'raidJackRhythmStorySeen', releaseFlag: 'raidJackRhythm', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES/.test(asst)
+    && /const raidRhythmStoryReady = RELEASE_FLAGS\.raidJackRhythm === true[\s\S]{0,260}notPlayedYet\(RAID_JACK_HOWTO_STORY_ID\) && notPlayedYet\(RAID_JACK_RHYTHM_STORY_ID\)/.test(appSrc)
+    && /get raidJackRhythm\(\)/.test(read('monster-hero/src/parts/10-core.jsx')) && /raidJackRhythmStorySeen: Array\.isArray\(rhythmEventStorySeen\)/.test(appSrc));
   const relSrc = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
   const screenSrc = read('monster-hero/src/parts/79-screen-raid-jack.jsx');
-  check('モンヒロビート挑戦: 公開フラグ(RAID_JACK_RHYTHM_PUBLIC_RELEASE)が偽のあいだは、ボタンも更新履歴・ヘルプも出ない(仕様が固まるまで一時停止中)',
-    /const RAID_JACK_RHYTHM_PUBLIC_RELEASE = false;/.test(relSrc) && /raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE/.test(relSrc)
+  check('モンヒロビート挑戦: 公開フラグ(RAID_JACK_RHYTHM_PUBLIC_RELEASE)で、ボタン・サブストーリー・更新履歴・ヘルプを出し入れする(2026-10-06 に公開。偽にすると全部出なくなる)',
+    /const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;/.test(relSrc) && /raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE/.test(relSrc)
     && /RELEASE_FLAGS\.raidJackRhythm === true \|\| forced/.test(screenSrc) && /RELEASE_FLAGS\.raidJackRhythm===true\|\|raidJackDebugForce/.test(appSrc)
     && /releaseFlag:'raidJackRhythm'/.test(read('monster-hero/data/changelog.js')) && (read('monster-hero/data/help.js').match(/releaseFlag:'raidJackRhythm'/g) || []).length === 2);
   check('モンヒロビート挑戦: 演奏の完了は from===\'raid\' で専用の処理だけを通り、自己ベスト・ランキング・周回の報酬へ進まない(return で抜ける)',
@@ -187,7 +199,7 @@ check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJa
   const vm2 = require('vm');
   const fl = rel.slice(rel.indexOf('const RELEASE_FLAGS = {'), rel.indexOf('};', rel.indexOf('const RELEASE_FLAGS = {')) + 2);
   const base = { SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: true, TACTICS_BETA_PRO_RELEASE: true, TACTICS_EX_SKILLS_RELEASE: true, RHYTHM_MODE_PUBLIC_RELEASE: true, RHYTHM_MULTI_PUBLIC_RELEASE: true, FRIENDS_PUBLIC_RELEASE: true,
-    QUICK_RHYTHM_LINK_PUBLIC_RELEASE: true, RAID_JACK_RHYTHM_PUBLIC_RELEASE: false, RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE: true, RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE: true, RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE: true, RHYTHM_EVENT_POINTS_PUBLIC_RELEASE: true, RAID_JACK_PUBLIC_RELEASE: true };
+    QUICK_RHYTHM_LINK_PUBLIC_RELEASE: true, RAID_JACK_RHYTHM_PUBLIC_RELEASE: true, RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE: true, RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE: true, RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE: true, RHYTHM_EVENT_POINTS_PUBLIC_RELEASE: true, RAID_JACK_PUBLIC_RELEASE: true };
   const at = (ms, withEvent = true) => {
     const c = { ...base, Date: class extends Date { static now() { return ms; } }, Object, Number, Math, Array };
     vm2.createContext(c);
