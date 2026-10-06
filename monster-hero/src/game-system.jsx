@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ca00bd99942fe956
+// generated-sha256: db9a0837bc3df5ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 13:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32587,6 +32587,8 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // 敵のデバフの詳細(名前の横の簡易表示を押すと開く)
+  const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
   // 敵のライフの下に「いまの強化」を1行で出し、タップで内訳を開く。強化が入ったターンは、真ん中の上に数秒だけ帯を出す。
   // 数字は 35-raid-jack.jsx の raidJackGrowthAt(戦闘本体と同じ定数)から出す。グランドスラム(B)は強化が無いので出さない
@@ -33049,7 +33051,7 @@ function BattleScreen({
         {enemy&&(
           <div data-enemy-bar className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
             <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tighter mb-0.5">
-              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[10px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%</>}</span>}</span>
+              <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&<button type="button" data-enemy-debuffs={enemyDebuffs.length} aria-expanded={enemyDebuffOpen} aria-label={`敵の状態 ${enemyDebuffs.map(d=>`${d.label} ${d.value}`).join('、')}（押すと詳細）`} onClick={()=>setEnemyDebuffOpen(v=>!v)} className="mh-hit-expand relative shrink-0 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-1.5 py-0.5 text-[10px] not-italic font-black leading-none tracking-normal normal-case text-slate-100 active:scale-95">{enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} aria-label={`${d.label} ${d.value}`} className={`inline-flex items-center gap-px ${d.tone.split(' ')[0]}`}><span aria-hidden="true">{d.mark}</span>{d.short?<span className="font-mono">{d.short}</span>:null}</span>))}<span aria-hidden="true" className="text-slate-300">{enemyDebuffOpen?'▲':'▼'}</span></button>}</span>
               <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
             </div>
             {/* 敵のライフ(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
@@ -33062,10 +33064,13 @@ function BattleScreen({
               <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
-            {/* 敵にかかっているデバフ・強化と、残りターン(2026-10-06 ユーザー指示)。味方の強化の札とは別に、敵の帯の中へ出す。無いときは何も出さず、高さも取らない */}
-            {Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
-              <div data-enemy-debuffs={enemyDebuffs.length} className="mt-1 flex flex-wrap items-center gap-1">
-                {enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} title={d.note||undefined} className={`inline-flex max-w-full items-center gap-1 rounded-full border bg-black/60 px-1.5 py-0.5 text-[10px] font-black not-italic leading-none tracking-normal normal-case ${d.tone}`}><span aria-hidden="true">{d.mark}</span><span>{d.label}</span><span className="font-mono">{d.value}</span></span>))}
+            {/* 敵にかかっているデバフの詳細(2026-10-06 ユーザー指示「全部ウンディーネの絶氷の位置にまとめて、簡易表示して押したら詳細が見える」)。
+                名前の横の簡易表示を押したときだけ開く。デバフが無くなったら、開いたままでも何も出さない */}
+            {enemyDebuffOpen&&Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
+              <div data-enemy-debuff-detail className="mt-1 flex flex-col gap-0.5 rounded-lg border border-white/15 bg-black/60 px-2 py-1 not-italic normal-case tracking-normal">
+                {enemyDebuffs.map(d=>(<div key={d.key} className="flex items-baseline gap-1.5 text-[11px] font-black leading-tight">
+                  <span aria-hidden="true">{d.mark}</span><span className={`shrink-0 ${d.tone.split(' ')[0]}`}>{d.label}</span><span className="shrink-0 font-mono text-slate-100">{d.value}</span>{d.note?<span className="min-w-0 truncate text-[10px] font-bold text-slate-400">{d.note}</span>:null}
+                </div>))}
               </div>
             )}
             {raidGrowth&&(
@@ -47986,24 +47991,6 @@ function MonsterHeroGame() {
   // ★ミーアの「オン・ステージ！」が効いているあいだ、盤面ぜんぶで1ターンに使える枚数が増える(上限5は変えない。2026-10-03)
   const exCardBonus = isTacticsMode(runMode) ? tacticsExCardBonusTotal(tacticsExState,tacticsUnits,{ wave, turn:turnCount }) : 0;
   const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus+exCardBonus);
-  // ★敵にかかっているデバフ・敵の強化を、画面の「敵の状態」の列へ並べるための一覧(2026-10-06 ユーザー指示
-  //   「乱心や敵へのデバフなど、かかっていることとあと何ターンかが分からない」)。
-  //   味方の強化の札とは別に、敵の名前の帯の下へ出す。残りターンがあるものは「残りNT」まで出す
-  const enemyDebuffs = (() => {
-    const list = [];
-    const add = (key, mark, label, value, tone, note) => list.push({ key, mark, label, value, tone, note });
-    if (!enemy) return list;
-    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない');
-    const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
-    if (psycho && psycho.active) add('psycho', '🎯', 'ロックオン', `与ダメ-${Math.round((1 - psycho.enemyDmgMult) * 100)}% 被ダメ+${Math.round(psycho.enemyTakenBonus * 100)}%${psycho.turnsLeft > 0 ? ` 残り${psycho.turnsLeft}T` : ''}`, 'text-sky-200 border-sky-400/60');
-    if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪 敵与ダメ', `-30% 残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60');
-    if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪 敵被ダメ', `+30% 残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60');
-    if (getTurnBuff('stunEnemy', false)) add('stun', '⚡', 'スタン', '次の敵の番', 'text-yellow-200 border-yellow-400/60');
-    if (getWaveBuff('enemyAtkDebuffPct') > 0) add('atkDown', '⬇', '敵のちから', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}% WAVE中`, 'text-indigo-200 border-indigo-400/60');
-    if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}% WAVE中`, 'text-orange-200 border-orange-400/60');
-    if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `攻撃上昇 ×${enemy.roarStacks}`, 'text-red-200 border-red-400/60');
-    return list;
-  })();
   // 行動回数の使用済み = 使うカード + 捨てるカード(捨てるのは新モードだけなので、ほかは今までと同じ数)
   const actionUsed = selectedCards.length + discardCards.length;
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
@@ -49050,6 +49037,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const iceLockTurns = getWaveBuff('iceLockTurns');
   const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
   const iceLockActive = iceLockTurns>0 && !iceLockPreparing;
+  // ★敵にかかっているデバフ・敵の強化を、画面の「敵の状態」(名前の横の簡易表示と、押したときの詳細)に出すための一覧(2026-10-06 ユーザー指示
+  //   「乱心や敵へのデバフなど、かかっていることとあと何ターンかが分からない」)。
+  //   味方の強化の札とは別に、敵の名前の横へまとめる(絶氷も同じ場所)。残りターンがあるものは「残りNT」まで出す
+  const enemyDebuffs = (() => {
+    const list = [];
+    // short … 名前の横の簡易表示に添える短い字(残りターンなど)。value … 詳細の中の言い方。note … 詳細の説明
+    const add = (key, mark, label, value, tone, note, short = '') => list.push({ key, mark, label, value, tone, note, short });
+    if (!enemy) return list;
+    if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
+    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
+    const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
+    if (psycho && psycho.active) add('psycho', '🎯', 'サイコロックオン', `残り${psycho.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵は間合いを動けず、与ダメージ-${Math.round((1 - psycho.enemyDmgMult) * 100)}%・被ダメージ+${Math.round(psycho.enemyTakenBonus * 100)}%`, psycho.turnsLeft > 0 ? `${psycho.turnsLeft}T` : '');
+    if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪(敵の与ダメ)', `残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の与えるダメージが30%下がる', `${fateWheelView.atkDown}T`);
+    if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪(敵の被ダメ)', `残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の受けるダメージが30%上がる', `${fateWheelView.takenUp}T`);
+    if (getTurnBuff('stunEnemy', false)) add('stun', '⚡', 'スタン', '次の敵の番', 'text-yellow-200 border-yellow-400/60', '次の敵の番、敵は動けない');
+    if (getWaveBuff('enemyAtkDebuffPct') > 0) add('atkDown', '⬇', '敵のちから低下', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`, 'text-indigo-200 border-indigo-400/60', 'このWAVEのあいだ続く', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`);
+    if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ上昇', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-200 border-orange-400/60', 'このWAVEのあいだ続く', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`);
+    if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `×${enemy.roarStacks}`, 'text-red-200 border-red-400/60', '敵の攻撃が上がっている(元には戻らない)', `×${enemy.roarStacks}`);
+    return list;
+  })();
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
   // 実戦では「現在参加中のマスモン」だけを魂格効果の合成対象にする。

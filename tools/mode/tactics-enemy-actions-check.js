@@ -271,7 +271,7 @@ check('いま何回咆哮したかを敵にも持たせる(refは画面から見
     && has('*TACTICS_ROAR_ATK_RATE),roarStacks}:prev)'));
 // 2026-10-06 から、敵の咆哮は味方の強化の札ではなく、敵の帯の下の「敵の状態」の列へ出す
 check('敵の状態の列に敵の咆哮を出す',
-  has("if (enemy.roarStacks > 0) add('roar'") && has('`攻撃上昇 ×${enemy.roarStacks}`')
+  has("if (enemy.roarStacks > 0) add('roar'") && has('`×${enemy.roarStacks}`')
     && screen.includes('data-enemy-debuff={d.key}'));
 
 // --- 反射も狙われた子の丈夫さで返す(2026-09-20) ---
