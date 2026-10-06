@@ -1145,6 +1145,17 @@ const RHYTHM_JUDGMENT_LINE_Y={
 // 追従の的(rhythmSlideExpectedLane)は「いまの時刻＝判定ラインの上」の位置なので、
 // 比べる相手も判定ラインの高さで測るのが筋。指のxはそのまま使い、高さだけを揃える。
 // 許容の数字は1つも変えていない。
+// 判定ラインより下を押した指の、判定ラインの高さに直した位置(サブレーン座標)。
+// 判定ラインより下は、指の高さで測ると外側のレーンが中央寄りの座標になる(例: 外側の幅1のノーツの真下の画面位置を、画面の一番下で押すと範囲外)。
+// 押し始めの受付では、指の高さで測った位置と、これのどちらかが帯の中なら受け付ける(2026-10-07・ユーザー指示「中央寄りを緩める」)。
+// 判定ラインより上(奥)を押したときは undefined(外側へ膨らむので使わない)。
+const rhythmSubLaneCoordinateAtLineIfBelow=(clientX,clientY,rect)=>{
+  if(!rect||!(Number(rect.height)>0))return undefined;
+  const yRatio=(Number(clientY)-Number(rect.top))/Number(rect.height);
+  if(!(yRatio>RHYTHM_JUDGMENT_LINE_Y.ratio))return undefined;
+  const lane=rhythmTrackingLaneCoordinateAtPoint(clientX,clientY,rect);
+  return lane===null||!Number.isFinite(lane)?undefined:(lane+.5)*2;
+};
 const rhythmTrackingLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   if(!rect||!Number.isFinite(rect.height)||rect.height<=0)return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
   return rhythmLaneCoordinateAtPoint(clientX,rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y.ratio,rect);
@@ -2858,6 +2869,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     sessions.delete(id);
   };
+  // 押した瞬間の古さ(イベントが起きてから処理されるまでの遅れ)。押し始めを処理する間だけ入れる。
+  // 押さえ始めの時計は「押した時刻の曲の時刻」から数え始めるので、数え始めの perf も同じだけ巻き戻す。
+  // 【2026-10-07・点検】これが無いと、長押し・スライド・フリック中の時計が、押した瞬間の遅れ(5〜30ms、取り戻しで最大300ms)ぶん遅れていた
+  let pendingInputAgeMs=0;
+  const setInputAge=value=>{const v=Number(value);pendingInputAgeMs=Number.isFinite(v)&&v>0?Math.min(v,300):0;};
   const bind=(inputKeyValue,note,kind,startSongMs,offsetMs)=>{
     const key=String(inputKeyValue||'');
     if(!key||!note||(kind!=='HOLD'&&kind!=='FLICK'&&kind!=='SLIDE'))return;
@@ -2877,7 +2893,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf-pendingInputAgeMs,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
@@ -2909,7 +2925,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('click',event=>{const button=event.target?.closest?.('[data-rhythm-pause-menu] button');if(button&&/リスタート|中断/.test(button.textContent||''))clear();},true);
   }
 
-  return {bind,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
+  return {bind,setInputAge,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
@@ -2991,7 +3007,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     Object.entries(init).forEach(([key,value])=>{try{Object.defineProperty(event,key,{value,configurable:true});}catch{}});
     return event;
   };
-  const dispatchTapProbe=(area,touch,subLane,sourceKey)=>{
+  const dispatchTapProbe=(area,touch,subLane,sourceKey,originStamp)=>{
     if(!area?.dispatchEvent)return false;
     const rect=RHYTHM_VIEW_ROTATION.rectOf(area);
     if(!(rect&&rect.width>0&&rect.height>0))return false;
@@ -3002,7 +3018,11 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     syntheticTapKeys.add(key);
     syntheticTapSources.set(key,String(sourceKey));
     try{
-      area.dispatchEvent(makePointerEvent('pointerdown',id,point));
+      // 本物の指が触れた時刻(イベントの timeStamp)を持たせる。受け側が、触れてからの遅れを引けるように
+      // (2026-10-07・点検: 疑似TAPは生成した時刻が timeStamp になるので、遅れの補正が効かず判定が遅れ側へずれていた)
+      const downEvent=makePointerEvent('pointerdown',id,point);
+      if(Number.isFinite(Number(originStamp)))downEvent.__mhOriginStamp=Number(originStamp);
+      area.dispatchEvent(downEvent);
       area.dispatchEvent(makePointerEvent('pointerup',id,point));
       return true;
     }finally{syntheticTapKeys.delete(key);syntheticTapSources.delete(key);}
@@ -3083,7 +3103,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
           const baseKey=`touch:${action.id}`;
           if(RHYTHM_GESTURE_RUNTIME._sessions?.has(baseKey))return;
           eligible=true;
-          action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane,baseKey));
+          action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane,baseKey,event?.timeStamp));
         });
         if(!eligible)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
         // 押したあとの動き(指の太さが変わった・転がった)で新しく重なったサブレーンは、取れるノーツが無くても空押しの音を鳴らさない。
@@ -3192,7 +3212,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   // 相手を決める前に、選べる先が狭い入力から順に並べ替える(上の説明)。
   // 見るのは位置だけで、時刻の取り合い(switchAt)には一切触れない。
   const insideSomeNote=input=>{
-    const coordinate=Number(input?.subLaneCoordinate);
+    const coordinate=Number(input?.subLaneCoordinate),altCoordinate=Number(input?.subLaneCoordinateAtLine);
     if(!Number.isFinite(coordinate))return false;
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
@@ -3203,7 +3223,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
                return {start:projected.subLane,end:projected.subLane+projected.subLaneWidth};})()
         :rhythmSlideInputSpan(note);
       if(!span)continue;
-      if(coordinate>=span.start&&coordinate<=span.end)return true;
+      if((coordinate>=span.start&&coordinate<=span.end)||(Number.isFinite(altCoordinate)&&altCoordinate>=span.start&&altCoordinate<=span.end))return true;
     }
     return false;
   };
@@ -3212,7 +3232,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
     const rejudge=input?.rejudge===true;
-    const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate),tapOnly=RHYTHM_TOUCH_SPAN_RUNTIME.isSyntheticTapKey(key),syntheticTime=RHYTHM_TOUCH_SPAN_RUNTIME.syntheticTargetTime(key);
+    const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate),altCoordinate=Number(input?.subLaneCoordinateAtLine),tapOnly=RHYTHM_TOUCH_SPAN_RUNTIME.isSyntheticTapKey(key),syntheticTime=RHYTHM_TOUCH_SPAN_RUNTIME.syntheticTargetTime(key);
     const inputSpan=note=>{
       if(rhythmNoteHasVariableSpan(note)){
         const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
@@ -3225,12 +3245,14 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(!span)return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return note.lane===lane;
       const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
-      return subCoordinate>=span.start-tolerance&&subCoordinate<=span.end+tolerance;
+      // 判定ラインより下を押した指は、判定ラインの高さに直した位置でも見る(どちらかが帯の中なら受け付ける)
+      const within=coordinate=>Number.isFinite(coordinate)&&coordinate>=span.start-tolerance&&coordinate<=span.end+tolerance;
+      return within(subCoordinate)||within(altCoordinate);
     };
     const spatialDistance=note=>{
       if(!Number.isFinite(subCoordinate))return 0;
       const span=inputSpan(note);
-      return span?Math.abs(subCoordinate-span.center):0;
+      return span?Math.min(Math.abs(subCoordinate-span.center),Number.isFinite(altCoordinate)?Math.abs(altCoordinate-span.center):Infinity):0;
     };
     // いま押さえられている HOLD/SLIDE の帯の上へ置いた指か(＝持ち替えの2本目)を探す。
     // withTolerance=false なら帯の内側そのもの、true なら受付の広がりぶんまで見る。
