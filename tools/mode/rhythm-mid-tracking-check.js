@@ -112,6 +112,37 @@ const advance=ms=>{
     context.margin(1)===.45/2&&context.margin(2)===.6/2,'細い='+context.margin(1)+' ふつう='+context.margin(2));
 }
 
+// --- HOLD: 終わりの100msは外れを見ない(離すときの接点の動きで外れ扱いにしない・2026-10-07) ---
+{
+  const run=(farFromElapsed)=>{
+    const note={type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};
+    const tracked=context.tracked(note),farLane=tracked.center+tracked.half+1;
+    now=0;runtime.record('touch:1',clientXFor(2),clientY);runtime.bind('touch:1',note,'HOLD',1000,0);
+    let t=0;while(t<farFromElapsed){advance(50);t+=50;runtime.record('touch:1',clientXFor(2),clientY);}
+    for(let i=0;i<4;i++){advance(50);runtime.record('touch:1',clientXFor(farLane),clientY);}
+    const result=note.holdJudgment;runtime.clear();return result;
+  };
+  check('HOLD: 終わりの100ms以内に外れても(猶予を超えても)MISSにしない',run(1950)==='MARVELOUS','holdJudgment='+run(1950));
+  check('HOLD: 終わりの100msより前に外れて猶予を超えたらMISS(従来どおり)',run(1000)==='MISS','holdJudgment='+run(1000));
+}
+
+// --- HOLD: 帯が細くなっていくとき、少し前の太さまでは外れにしない(指は目で見て動くので帯の変化に遅れる・2026-10-07) ---
+{
+  const mk=()=>({type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:2,subLaneWidth:6,
+    holdPoints:[{timeMs:1000,subLane:2,subLaneWidth:6},{timeMs:1500,subLane:2,subLaneWidth:6},{timeMs:1560,subLane:4,subLaneWidth:2}],
+    activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false});
+  const note0=mk(),wide=context.tracked(note0);
+  const edgeLane=wide.center+wide.half-.1; // 太い帯のふちの内側(細くなると帯の外)
+  const play=(elapsedEnd)=>{
+    const note=mk();now=0;runtime.record('touch:1',clientXFor(wide.center),clientY);runtime.bind('touch:1',note,'HOLD',1000,0);
+    let t=0;while(t<450){advance(50);t+=50;runtime.record('touch:1',clientXFor(edgeLane),clientY);}
+    while(t<elapsedEnd){advance(20);t+=20;runtime.record('touch:1',clientXFor(edgeLane),clientY);}
+    const result=note.holdJudgment;runtime.clear();return result;
+  };
+  check('HOLD: 帯が細くなった直後(少し前の太さの間)は、ふちにいた指を外れにしない',play(560+140)==='MARVELOUS','holdJudgment='+play(560+140));
+  check('HOLD: 細くなって十分たち、まだ外れたままならMISS',play(560+700)==='MISS','holdJudgment='+play(560+700));
+}
+
 // --- HOLD: 猶予未満の一瞬のズレは失敗にしない ---
 {
   const note={type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};

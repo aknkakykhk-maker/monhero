@@ -2285,6 +2285,10 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
 //   HOLDは動かない的なので、経路を追従するSLIDEより厳しめにしている。
 const RHYTHM_MID_TRACKING_GRACE_MS=120;
 const RHYTHM_HOLD_TRACKING_MARGIN_LANES=.15;
+// 帯が細くなっていくとき、追従の許容に残す「少し前の太さ」までの長さ(ms)。指の反応の遅れぶん。
+const RHYTHM_HOLD_NARROWING_LOOKBACK_MS=150;
+// HOLDの終わりのこの長さ(ms)は追従の外れを見ない(RHYTHM_HOLD_RELEASE_GRACE_MS と同じ長さ。離すときの接点の動きで外れ扱いにしない)。
+const RHYTHM_HOLD_END_TRACKING_SKIP_MS=100;
 // HOLDを押さえている最中の横ズレの許容(帯の外側へ足すレーン数)は、押し始めのタップが受け付ける広がりと同じにする。
 // タップは帯の幅が1サブレーンのとき RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES、それ以外は RHYTHM_TAP_TOLERANCE_SUB_LANES だけ外まで受け付ける
 // (サブレーン=レーンの半分)。追従がこれより狭いと、押し始めで通った指が、動かしていないのに外れ扱いになる。
@@ -2673,8 +2677,18 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const chartNow=estimatedSongMs(session)-session.offsetMs;
     let bad;
     if(session.kind==='SLIDE'){
-      const actual=laneCoordinate(pos.clientX,pos.clientY);
-      bad=actual===null||Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);
+      // SLIDEは動く的を追うので、これまでどおり判定ラインの高さに直した位置で測る。
+      // 加えて、指のその場の高さ(タップと同じ測り方)で測った位置も的の中なら、外れとは数えない。
+      // 判定ラインより奥を押さえた指が中央寄りへずれて見えて、帯の上なのに外れになるのを防ぐ(厳しくなることはない)。
+      const target=rhythmSlideExpectedLane(session.note,chartNow),tolerance=rhythmSlideTrackingTolerance(session.note,chartNow);
+      const atLine=laneCoordinate(pos.clientX,pos.clientY);
+      const areaBox=areaRect();
+      const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
+      const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
+      bad=off(atLine)&&off(atFinger);
+    }else if(chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS){
+      // 終わりの100msは外れを見ない。指を離すときに接点が動く・もう成立する時間なので、ここで外れ扱いにしない。
+      bad=false;
     }else{
       // HOLDは、押し始めのタップと**同じ測り方・同じ受付の広がり(タップ範囲)**で見る。
       // 【2026-10-06・ユーザー報告「ハルカのホールドで、実際に押している所とゲームが押したと見ている所が半レーンほど左にずれる」】
@@ -2683,7 +2697,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       const areaBox=areaRect();
       const actual=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
       const tracked=rhythmHoldTrackedLane(session.note,chartNow);
-      bad=actual===null||Math.abs(actual-tracked.center)>tracked.half+rhythmHoldTrackingMarginLanes(tracked.half*4);
+      // 帯が細くなっていくときは、少し前の太さまで許す。指は目で見て動くので帯の変化に遅れる(細くなる途中で外れ扱いになるのを防ぐ)。
+      const before=rhythmHoldTrackedLane(session.note,Math.max(Number(session.note?.timeMs)||0,chartNow-RHYTHM_HOLD_NARROWING_LOOKBACK_MS));
+      const half=Math.max(tracked.half,before.half);
+      bad=actual===null||Math.abs(actual-tracked.center)>half+rhythmHoldTrackingMarginLanes(tracked.half*4);
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
