@@ -8433,3 +8433,23 @@ songId `anima` / bgmTrackId `melo_anima` / 譜面は MHB CHART ENGINE Rev.28。
   1.6 は EXPERT が MASTER を追い越して出荷できない（EXPERT 478 → MASTER 466）。
   この曲は短く、音の位置に限りがあるので、1.3 と `strong` では EXPERT の時点で置ける位置をほぼ使い切り、MASTER はノーツ数がほとんど増えない。
   その差は置き方（同時押し・スライド・押さえ・跳び・最も忙しい4秒の打数）で付く。ユーザーにそれを説明したうえで `strong` に決まった
+
+### 「ANiMA」の EXPERT と MASTER の逆転を直した（2026-10-07）
+
+ユーザー指摘「アニマがマスターよりエキスパートのほうがむずいという声がある」→ 判断「エキスパートを軽くしてマスターをむずくする」。
+
+- **原因**: `strong` の EXPERT は速い単押しの連打が多く(叩く回数 522・90ms 以内の連打 176)、MASTER は置ける音を EXPERT の時点で
+  使い切ったため同時押しで数を稼いでいた(叩く回数 494・連打 166・同時押し 43組)。Lv. は同時押し・跳び・押さえを重く数えるので
+  EXPERT 33 / MASTER 40 になったが、体感は逆だった
+- **直し方**: 曲の一覧に**難易度ごとの激しさの上書き** `chartIntensityByDifficulty` を足した(`rhythm-chart-v3-generate.js` の `songIntensity`)。
+  ANiMA は `{"EXPERT":"mild","MASTER":"extreme"}`。`mild` は `strong` のさらに半分(extreme の4分の1)。16分裏の残し方などの曲まるごとの設定は
+  曲の `chartIntensity`(strong)のまま。**書いた曲だけに効く**(変更前後の生成器で freedom_dive・stay_with_me_short・emerald_rush の
+  15譜面 6462ノーツが一致することを確かめた)
+- **結果**: EASY〜HARD は1音も変わらない。EXPERT Lv.26(444ノーツ・叩く回数 430・連打 85)、MASTER Lv.44(567ノーツ・叩く回数 493・連打 166・
+  同時押し 74組・大きい跳び 47)。試した組み合わせ: EXPERT none + MASTER extreme は HARD 358 → EXPERT 347 で順が崩れて作れない
+- **見張り**: `tools/mode/rhythm-expert-master-order-check.js`(EXPERT が MASTER を叩く回数・速い連打で3%より多く上回ったら NG)。
+  同じ形が Stay With Me short ver.(strong・EXPERT 518回・連打120 / MASTER 484回・106)にもあり、直すかはユーザーに聞いている(検査の `KNOWN`)
+- **Stay With Me short ver. も同じやり方で直した**(2026-10-07・ユーザー判断「同じやり方で直す」)。直す前は EXPERT 叩く回数 518・連打 120 / MASTER 484・106。
+  `{"EXPERT":"mild","MASTER":"extreme"}` で EXPERT Lv.21(498ノーツ・叩く回数 479・連打 95)、MASTER Lv.29(571ノーツ・474・105・同時押し 97組・大きい跳び 45)。
+  EASY〜HARD は1音も変わらない(設定を変えずに作り直すと5難易度とも一致することも先に確かめた)。EXPERT を `none` にすると叩く回数 372・連打 46 で
+  HARD(384・65)より軽くなるので採らなかった。検査の `KNOWN` は空にした
