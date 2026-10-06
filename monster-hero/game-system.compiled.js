@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9efce67bb95a2476
+// source-sha256: 7ce600f00fe08b14
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 07:15";
+const BUILD_DATE = "2026-10-07 07:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87420,22 +87420,7 @@ function MonsterHeroGame() {
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
-        if (rhythmPlay.from === 'raid') {
-          const raidSong = rhythmPlay.song,
-            raidDifficulty = rhythmPlay.difficulty;
-          void completeRaidJackRhythm(result, raidSong, raidDifficulty);
-          if (result?.assist !== true) {
-            try {
-              if (result?.cleared !== false) setRhythmClearTotal(await addRhythmClearTotal());
-              const records = await saveRhythmBestRecord(rhythmBestRecords, raidSong.songId, raidDifficulty.id, merged);
-              setRhythmBestRecords(records);
-              void recordRhythmAchievements(records, {
-                initialRecords: rhythmBestRecords
-              });
-            } catch {}
-          }
-          return;
-        }
+        if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
         const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak) : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
@@ -87496,7 +87481,7 @@ function MonsterHeroGame() {
         void recordRhythmAchievements(records, {
           initialRecords: rhythmBestRecords
         });
-        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
+        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {
         if (rhythmPlay.from === 'raid') {

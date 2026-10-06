@@ -104,8 +104,8 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
     /const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;/.test(relSrc) && /raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE/.test(relSrc)
     && /RELEASE_FLAGS\.raidJackRhythm === true \|\| forced/.test(screenSrc) && /RELEASE_FLAGS\.raidJackRhythm===true\|\|raidJackDebugForce/.test(appSrc)
     && /releaseFlag:'raidJackRhythm'/.test(read('monster-hero/data/changelog.js')) && (read('monster-hero/data/help.js').match(/releaseFlag:'raidJackRhythm'/g) || []).length === 3);
-  check('モンヒロビート挑戦: 演奏の完了は from===\'raid\' で専用の処理だけを通り、自己ベスト・ランキング・周回の報酬へ進まない(return で抜ける)',
-    /if\(rhythmPlay\.from==='raid'\)\{[\s\S]{0,200}void completeRaidJackRhythm\([^)]*\);[\s\S]{0,900}saveRhythmBestRecord\(rhythmBestRecords,raidSong\.songId[\s\S]{0,300}return;\s*\}/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = finishRaidJackRhythm\(/.test(appSrc));
+  check('モンヒロビート挑戦: 演奏の完了は、ダメージの処理を始めたうえで、ふつうの演奏と同じ共通の処理(自己ベスト・周回の報酬・全国ランキング)へ進む',
+    /if\(rhythmPlay\.from==='raid'\)void completeRaidJackRhythm\([^)]*\);/.test(appSrc) && /rhythmPlay\.from==='multi'\|\|rhythmPlay\.from==='raid'\)submitRhythmRankingScore/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = finishRaidJackRhythm\(/.test(appSrc));
   check('モンヒロビート挑戦: 回数はバトルと同じもの(state.a の used / extra・raidJackRemaining)を使い、始めた時点で1回使う',
     /const startRaidJackRhythmPlay = async[\s\S]{0,900}raidJackRemaining\(side, nowMs\) <= 0[\s\S]{0,200}side\.used \+= 1;/.test(appSrc));
   check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated, source: 'rhythm' \};/.test(appSrc));
