@@ -135,6 +135,20 @@ const RAID_JACK_A_TIERS = Object.freeze([
 //   ・ライフは 4,550,000 の設定値(大王のライフとは連動しない。1戦で倒せるのはそこまで)/ 攻撃力は子爵と同じ / 技の名前は今までのまま(動きは絵に合わせる)
 //   ・サーバーへ送る段階は大王(tier 5)のまま(表の制約が 1〜5 のため)。ID は a5 を引き継ぎ、raidJackPumpkin で見分ける
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);   // 攻撃力は 700(1.0倍・子爵を変えても連動しない・2026-10-05)/ ライフは 4,550,000(大王のライフを変えても連動しない・2026-10-05)
+// ===== レイドバトルのモンヒロビート挑戦(2026-10-06・ユーザー指示) =====
+// レイドバトル(A)は、バトルのほかに「モンヒロビートを1曲遊んで、そのスコアをダメージに換える」挑み方ができる。
+//   ・回数は、バトルと同じもの(side.used / extra)を使う。始めた時点で1回使い、途中でやめても戻らない
+//   ・与えたダメージは、バトルと同じく共有ライフから引かれ、貢献ランキングに足される(kind:'a' の同じ表へ送る)
+//   ・スコアからダメージへの換算は、ここの1か所だけ。**暫定**(ユーザー「順に検討」)なので、数字や式は後で直す
+//   ・アシストモードで遊んだぶんはダメージにしない(ランキングと同じ扱い)
+const RAID_JACK_RHYTHM_DAMAGE_PER_SCORE = 1;   // 暫定: スコア1点につきダメージ1
+const raidJackRhythmDamage = (score, opts = {}) => {
+  if (opts && opts.assist === true) return 0;
+  const n = Number(score);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(100000000, Math.floor(n * RAID_JACK_RHYTHM_DAMAGE_PER_SCORE));
+};
+
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
 const raidJackBossDown = (totals) => !!totals && !!totals.a && !!totals.a[5]
   && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;

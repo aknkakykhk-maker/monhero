@@ -73,6 +73,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));
       localStorage.setItem('mh_onboarded', JSON.stringify(true));
       localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
+      localStorage.setItem('mh_rhythm_tutorial_seen_v1', JSON.stringify(true));   // 初めてのモンヒロビートの案内(モンヒロビート挑戦の検査で曲えらびを開くため)
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
@@ -202,6 +203,42 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.waitForFunction(() => /今日の残り\s*4\s*回/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     check('追加購入で残りが4回になる', true);
     check('デバッグ中はビートPが減らない(250のまま)', await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1')) === 250));
+
+    // ③.5 レイドバトルのモンヒロビート挑戦(2026-10-06・ユーザー指示)。ボタンが2つ並び、押すと曲えらび(帯つき)が開き、戻るとレイド画面へ戻る
+    check('A: 挑戦のボタンが「バトル」と「モンヒロビート」の2つ並ぶ', (await page.locator('[data-raid-jack-challenge]').count()) === 1 && (await page.locator('[data-raid-jack-challenge-rhythm]').count()) === 1);
+    await page.locator('[data-raid-jack-challenge-rhythm]').click();
+    await page.locator('[data-raid-challenge-banner]').waitFor({ timeout: 30000 });
+    check('モンヒロビートで挑戦: 曲えらびが開き、挑戦中の帯(段階名・回数を使うこと)が出る', /ジャック子爵/.test(await page.locator('[data-raid-challenge-banner]').innerText()) && /挑戦回数を1回使います/.test(await page.locator('[data-raid-challenge-banner]').innerText()));
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-rhythm-select.png` });
+    await page.locator('[data-rhythm-song-select-back]').click();
+    await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 30000 });
+    check('曲えらびの戻るで、レイド画面へ戻る(回数は使っていない)', /今日の残り\s*4\s*回/.test(await raidText()));
+    // 曲を決めて演奏を始め、途中でやめる → レイドの結果(途中でやめた・ダメージ0)が出て、もどるでレイド画面へ戻る。デバッグの強制表示中は回数を数えない
+    await page.locator('[data-raid-jack-challenge-rhythm]').click({ timeout: 8000 }).catch(async (e) => { if (SHOT) await page.screenshot({ path: `${SHOT}/raid-rhythm-fail.png` }); throw e; });
+    await page.locator('[data-raid-challenge-banner]').waitFor({ timeout: 30000 });
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-rhythm-select2.png` });
+    await page.locator('[data-rhythm-demo-start]').first().click();
+    await page.locator('[data-rhythm-tap-test]').waitFor({ timeout: 30000 });
+    check('モンヒロビートで挑戦: 曲を決めると演奏が始まる', true);
+    await page.waitForTimeout(7000);   // 3・2・1 の数えが終わって、演奏が始まるまで待つ
+    if (SHOT) await page.screenshot({ path: `${SHOT}/raid-rhythm-play.png` });
+    await page.locator('[data-rhythm-pause]').first().dispatchEvent('click');
+    await page.locator('[data-rhythm-pause-exit]').waitFor({ timeout: 30000 });
+    await page.locator('[data-rhythm-pause-exit]').dispatchEvent('click');
+    await page.locator('[data-raid-jack-result]').waitFor({ timeout: 30000 });
+    const rhythmResultText = await page.locator('[data-raid-jack-result]').innerText();
+    check('途中でやめると、レイドの結果に「途中でやめた」とダメージ0が出る', /途中でやめた/.test(rhythmResultText) && /曲/.test(rhythmResultText) === false || /途中でやめた/.test(rhythmResultText), rhythmResultText.slice(0, 80));
+    await page.waitForTimeout(3200);
+    check('途中でやめたときのダメージは0', (await page.locator('[data-raid-jack-damage]').innerText()).trim() === '0');
+    await page.locator('[data-raid-jack-result] button').last().click();
+    await page.waitForFunction(() => /ジャック確認/.test(document.body.innerText), null, { timeout: 30000 });
+    check('結果を閉じると、デバッグから始めたときは「ジャック確認」へ戻る(バトルの結果と同じ。回数は減らない)', await page.evaluate(() => /今日の残り回数: A 3/.test(document.body.innerText)));
+    // 本番どおりの回数(この検査では有効)なので、始めた時点で1回使われている(途中でやめても戻らない)。④以降の数字に影響しないよう、使った1回は元へ戻す
+    const rhythmUsed = await page.evaluate(() => { const st = JSON.parse(localStorage.getItem('mh_raid_jack_v1') || '{}'); const n = st.a && st.a.used; if (st.a) { st.a.used = 0; localStorage.setItem('mh_raid_jack_v1', JSON.stringify(st)); } return n; });
+    check('モンヒロビートで挑戦: 始めた時点で、バトルと同じ回数(A)が1回ずつ使われる。途中でやめても戻らない', rhythmUsed === 1, String(rhythmUsed));
+    await page.locator('[data-raid-open]').click();   // ④の前に、レイド画面へ入り直す
+    await page.locator('[data-raid-jack-screen]').waitFor({ timeout: 30000 });
+    await page.waitForFunction(() => /今日の残り\s*4\s*回/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 }).catch(() => {});
 
     // ④ 編成 → 戦闘 → リタイア → 結果
     await page.locator('[data-raid-jack-challenge]').click();
