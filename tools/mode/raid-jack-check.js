@@ -75,12 +75,12 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
     && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, precise: 500, maxCombo: 500, assist: true }) === 0
     && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 'abc', GREAT: NaN, GOOD: -5 } }) === 0 && dj({ difficultyId: 'UNKNOWN', judgments: { MARVELOUS: 500 } }) === 0 && dj({ difficultyId: 'MASTER' }) === 0 && dj(null) === 0 && dj(undefined) === 0);
   const base = { difficultyId: 'MASTER', judgments: { MARVELOUS: 1000 }, precise: 1000, maxCombo: 0 };
-  check('モンヒロビート挑戦: 達成の補正(2026-10-06): ふつうの演奏は基準の半分・フルコンボ0.7・オールエクセレント0.9・オールマーベラス1.0(従来の数字)。どれもない場合は 0.5',
-    dj0(base) === 500000 && dj0({ ...base, fullCombo: true }) === 700000 && dj0({ ...base, allExcellent: true }) === 900000 && dj0({ ...base, allMarvelous: true }) === 1000000
+  check('モンヒロビート挑戦: 達成の補正(2026-10-06): ふつうの演奏は基準の0.35倍・フルコンボ0.7・オールエクセレント0.9・オールマーベラス1.0(従来の数字)。どれもない場合は 0.5',
+    dj0(base) === 350000 && dj0({ ...base, fullCombo: true }) === 700000 && dj0({ ...base, allExcellent: true }) === 900000 && dj0({ ...base, allMarvelous: true }) === 1000000
     && dj0({ ...base, allMarvelous: true, allExcellent: true, fullCombo: true }) === 1000000 && dj0({ ...base, allExcellent: true, fullCombo: true }) === 900000);
   const r = { score: 900000, maxCombo: 420, precise: 200, judgments: { MARVELOUS: 300, EXCELLENT: 100, GOOD: 70, MISS: 30 } };   // ノーツ500
   check('モンヒロビート挑戦: 演奏の結果から出す(判定の数・ジャストの数・最大コンボ・難易度を使う。スコアは使わない。アシストは0)',
-    o.raidJackRhythmDamageOf(r, { id: 'MASTER' }) === Math.floor((200 * 1000 + 100 * 950 + 100 * 700 + 70 * 250 - 30 * 300) * (1 + 420 * 0.0005) * 0.5) && o.raidJackRhythmDamageOf({ ...r, fullCombo: true }, { id: 'MASTER' }) === Math.floor((200 * 1000 + 100 * 950 + 100 * 700 + 70 * 250 - 30 * 300) * (1 + 420 * 0.0005) * 0.7) && o.raidJackRhythmDamageOf({ ...r, score: 1 }, { id: 'MASTER' }) === o.raidJackRhythmDamageOf(r, { id: 'MASTER' })
+    o.raidJackRhythmDamageOf(r, { id: 'MASTER' }) === Math.floor((200 * 1000 + 100 * 950 + 100 * 700 + 70 * 250 - 30 * 300) * (1 + 420 * 0.0005) * 0.35) && o.raidJackRhythmDamageOf({ ...r, fullCombo: true }, { id: 'MASTER' }) === Math.floor((200 * 1000 + 100 * 950 + 100 * 700 + 70 * 250 - 30 * 300) * (1 + 420 * 0.0005) * 0.7) && o.raidJackRhythmDamageOf({ ...r, score: 1 }, { id: 'MASTER' }) === o.raidJackRhythmDamageOf(r, { id: 'MASTER' })
     && o.raidJackRhythmDamageOf({ ...r, assist: true }, { id: 'MASTER' }) === 0);
 }
 {
@@ -103,12 +103,12 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
   check('モンヒロビート挑戦: 公開フラグ(RAID_JACK_RHYTHM_PUBLIC_RELEASE)で、ボタン・サブストーリー・更新履歴・ヘルプを出し入れする(2026-10-06 に公開。偽にすると全部出なくなる)',
     /const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;/.test(relSrc) && /raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE/.test(relSrc)
     && /RELEASE_FLAGS\.raidJackRhythm === true \|\| forced/.test(screenSrc) && /RELEASE_FLAGS\.raidJackRhythm===true\|\|raidJackDebugForce/.test(appSrc)
-    && /releaseFlag:'raidJackRhythm'/.test(read('monster-hero/data/changelog.js')) && (read('monster-hero/data/help.js').match(/releaseFlag:'raidJackRhythm'/g) || []).length === 2);
+    && /releaseFlag:'raidJackRhythm'/.test(read('monster-hero/data/changelog.js')) && (read('monster-hero/data/help.js').match(/releaseFlag:'raidJackRhythm'/g) || []).length === 3);
   check('モンヒロビート挑戦: 演奏の完了は from===\'raid\' で専用の処理だけを通り、自己ベスト・ランキング・周回の報酬へ進まない(return で抜ける)',
     /if\(rhythmPlay\.from==='raid'\)\{void completeRaidJackRhythm\([^)]*\);return;\}/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = finishRaidJackRhythm\(/.test(appSrc));
   check('モンヒロビート挑戦: 回数はバトルと同じもの(state.a の used / extra・raidJackRemaining)を使い、始めた時点で1回使う',
     /const startRaidJackRhythmPlay = async[\s\S]{0,900}raidJackRemaining\(side, nowMs\) <= 0[\s\S]{0,200}side\.used \+= 1;/.test(appSrc));
-  check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated \};/.test(appSrc));
+  check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated, source: 'rhythm' \};/.test(appSrc));
 }
 check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.power - t.hp / 350000) < 1e-9) && o.RAID_JACK_A_TIERS[0].power === 5);
 // ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は 700(はじめは子爵と同じ。子爵を 500 に決め直したあとも 700 のまま) / 技名はそのまま)
