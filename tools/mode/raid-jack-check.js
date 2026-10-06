@@ -35,13 +35,13 @@ bWant.forEach(([n, hp, ac], i) => { const t = o.RAID_JACK_B_TIERS[i]; check(`B${
 // ライフは段階ごとの設定値(2026-10-05・ユーザーが決めた)。倍率 power は hp ÷ 350,000 に合わせてある(Bは今までどおり 35,000×倍率×10)
 check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユーザーが段階ごとに決めた値。伯爵・公爵・大王は2026-10-05に引き上げ)。段階が上がるほど増える', o.RAID_JACK_A_TIERS.map((t) => t.hp).join() === '1750000,3200000,8000000,35000000,80000000' && o.RAID_JACK_A_TIERS.every((t, i, a) => i === 0 || t.hp > a[i - 1].hp));
 // モンヒロビート挑戦(2026-10-06・ユーザー指示)。換算は暫定(ユーザー「順に検討」)なので、ここでは形だけ見る(式を変えたらここも直す)
-check('モンヒロビート挑戦: スコアをダメージに換える(暫定は1点=1ダメージ)・不正な値とアシストモードは0・1億で頭打ち',
+check('モンヒロビート挑戦: スコアをダメージに換える(暫定は1点=1ダメージ。決めたらここと、この検査を直す)・不正な値とアシストモードは0・1億で頭打ち',
   o.raidJackRhythmDamage(523456) === 523456 && o.raidJackRhythmDamage(0) === 0 && o.raidJackRhythmDamage(-5) === 0 && o.raidJackRhythmDamage(NaN) === 0
   && o.raidJackRhythmDamage('abc') === 0 && o.raidJackRhythmDamage(900000, { assist: true }) === 0 && o.raidJackRhythmDamage(1e12) === 100000000);
 {
   const appSrc = read('monster-hero/src/parts/60-app.jsx');
   check('モンヒロビート挑戦: 演奏の完了は from===\'raid\' で専用の処理だけを通り、自己ベスト・ランキング・周回の報酬へ進まない(return で抜ける)',
-    /if\(rhythmPlay\.from==='raid'\)\{const run=raidRhythmRunRef\.current;if\(run&&!run\.promise\)run\.promise=finishRaidJackRhythm\([^)]*\);return;\}/.test(appSrc));
+    /if\(rhythmPlay\.from==='raid'\)\{void completeRaidJackRhythm\([^)]*\);return;\}/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = finishRaidJackRhythm\(/.test(appSrc));
   check('モンヒロビート挑戦: 回数はバトルと同じもの(state.a の used / extra・raidJackRemaining)を使い、始めた時点で1回使う',
     /const startRaidJackRhythmPlay = async[\s\S]{0,900}raidJackRemaining\(side, nowMs\) <= 0[\s\S]{0,200}side\.used \+= 1;/.test(appSrc));
   check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated \};/.test(appSrc));
