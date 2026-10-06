@@ -687,7 +687,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
@@ -1172,6 +1172,12 @@ function BattleScreen({
               <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
+            {/* 敵にかかっているデバフ・強化と、残りターン(2026-10-06 ユーザー指示)。味方の強化の札とは別に、敵の帯の中へ出す。無いときは何も出さず、高さも取らない */}
+            {Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
+              <div data-enemy-debuffs={enemyDebuffs.length} className="mt-1 flex flex-wrap items-center gap-1">
+                {enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} title={d.note||undefined} className={`inline-flex max-w-full items-center gap-1 rounded-full border bg-black/60 px-1.5 py-0.5 text-[10px] font-black not-italic leading-none tracking-normal normal-case ${d.tone}`}><span aria-hidden="true">{d.mark}</span><span>{d.label}</span><span className="font-mono">{d.value}</span></span>))}
+              </div>
+            )}
             {raidGrowth&&(
               <button type="button" data-raid-growth-chip onClick={()=>setRaidGrowthOpen(true)} aria-label="レイドバトルのターンごとの強化の内訳を開く"
                 className="mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]">
@@ -1737,13 +1743,9 @@ function BattleScreen({
               });
               if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
             }
-            if(enemyConfuseTurns>0) chip('enemyConfuse',<Sparkles size={9}/>,'敵 乱心',`残り${enemyConfuseTurns}回`,'text-violet-300 border-violet-400/50',{pulse:true,short:`${enemyConfuseTurns}`});
-            if(fateWheelView?.atkDown>0) chip('fateAtkDown',<ArrowDownCircle size={9}/>,'運命の輪 敵与ダメ',`-30%（残り${fateWheelView.atkDown}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'-30%'});
-            if(fateWheelView?.takenUp>0) chip('fateTakenUp',<PlusCircle size={9}/>,'運命の輪 敵被ダメ',`+30%（残り${fateWheelView.takenUp}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'+30%'});
             // === ターン限定バフ（都度表示） ===
             if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
             if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});
-            if(getTurnBuff('stunEnemy',false)) chip('stun',<Zap size={9}/>,'スタン予約','','text-yellow-400 border-yellow-500/50',{pulse:true});
             if(getTurnBuff('guaranteedCrit',false)) chip('critFix',<Target size={9}/>,'会心予約','','text-orange-400 border-orange-500/50',{pulse:true});
             if(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false)) chip('zeroGuts',<Star size={9}/>,'0消費中','','text-blue-400 border-blue-500/50',{pulse:true});
             if(getNextTurnBuff('reflect',false)) chip('reflectNext',<RefreshCcw size={9}/>,'次反射','','text-purple-400 border-purple-500/50',{pulse:true});
@@ -1751,9 +1753,6 @@ function BattleScreen({
             // 敵の咆哮(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
             // ★ポップアップは一瞬で消えるので、いま何回かかっているかがどこにも出ていなかった。
             //   敵の攻撃そのものを上げる(元に戻らない)ので、札に出し続ける
-            if(enemy?.roarStacks>0) chip('roarUp',<ArrowUpCircle size={9}/>,'敵の咆哮',`×${enemy.roarStacks}`,'text-orange-400 border-orange-500/50',{pulse:true});
-            if(getWaveBuff('enemyAtkDebuffPct')>0) chip('enemyAtkDown',<ArrowDownCircle size={9}/>,'敵攻',`-${Math.round(getWaveBuff('enemyAtkDebuffPct')*100)}%`,'text-indigo-400 border-indigo-500/50',{pulse:true});
-            if(getWaveBuff('enemyTakenDmgBonus')>0) chip('enemyTaken',<PlusCircle size={9}/>,'敵被ダメ',`+${Math.round(getWaveBuff('enemyTakenDmgBonus')*100)}%`,'text-orange-400 border-orange-500/50',{pulse:true});
             if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
             if(getTurnBuff('takenDamageMult',1.0)<1) chip('takenNow',<Shield size={9}/>,'被ダメ',`-${Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-300 border-pink-400',{pulse:true});
             if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次ターン消費ガッツ',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});

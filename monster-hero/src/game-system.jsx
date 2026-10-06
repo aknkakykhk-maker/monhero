@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 968f4fe436fa0fdb
+// generated-sha256: 330f9652dc2a6db0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 12:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22834,9 +22834,11 @@ const tacticsExPsychoLockOf = (state, now) => {
     const e = effects[key];
     if (!e || e.effect !== 'psychoLock' || !isTacticsExEffectActive(state, key, e.monId, now)) return acc;
     const down = Number(e.psychoLockCfg && e.psychoLockCfg.enemyDmgDown), up = Number(e.psychoLockCfg && e.psychoLockCfg.enemyTakenUp);
+    // 残りターン(画面の「敵の状態」に出す)。ターン数で切れるものだけ。いまのターンを含めて数える
+    const left = e.duration === 'turns' && now ? Math.max(0, tacticsSafeInt(e.turn, 0) + tacticsSafeInt(e.turns, 0) - tacticsSafeInt(now.turn, 0)) : 0;
     return { active: true, enemyDmgMult: Math.min(acc.enemyDmgMult, 1 - (Number.isFinite(down) && down > 0 ? Math.min(0.9, down) : 0)),
-      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0) };
-  }, { active: false, enemyDmgMult: 1, enemyTakenBonus: 0 });
+      enemyTakenBonus: Math.max(acc.enemyTakenBonus, Number.isFinite(up) && up > 0 ? up : 0), turnsLeft: Math.max(acc.turnsLeft || 0, left) };
+  }, { active: false, enemyDmgMult: 1, enemyTakenBonus: 0, turnsLeft: 0 });
 };
 // おぼろ返し(damageBack)が効いているとき、味方が敵の攻撃で受けたダメージのうち、ライフ・ガッツへ回復する割合。効いていなければ 0
 const tacticsExDamageBackRates = (state, now) => {
@@ -32542,7 +32544,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, enemyDebuffs, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
@@ -33027,6 +33029,12 @@ function BattleScreen({
               <div className="h-full w-full origin-left transition-transform duration-1000" style={{transform:`scaleX(${Math.min(1,Math.max(0,enemy.hp)/(enemy.maxHp||1))})`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
+            {/* 敵にかかっているデバフ・強化と、残りターン(2026-10-06 ユーザー指示)。味方の強化の札とは別に、敵の帯の中へ出す。無いときは何も出さず、高さも取らない */}
+            {Array.isArray(enemyDebuffs)&&enemyDebuffs.length>0&&(
+              <div data-enemy-debuffs={enemyDebuffs.length} className="mt-1 flex flex-wrap items-center gap-1">
+                {enemyDebuffs.map(d=>(<span key={d.key} data-enemy-debuff={d.key} title={d.note||undefined} className={`inline-flex max-w-full items-center gap-1 rounded-full border bg-black/60 px-1.5 py-0.5 text-[10px] font-black not-italic leading-none tracking-normal normal-case ${d.tone}`}><span aria-hidden="true">{d.mark}</span><span>{d.label}</span><span className="font-mono">{d.value}</span></span>))}
+              </div>
+            )}
             {raidGrowth&&(
               <button type="button" data-raid-growth-chip onClick={()=>setRaidGrowthOpen(true)} aria-label="レイドバトルのターンごとの強化の内訳を開く"
                 className="mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]">
@@ -33592,13 +33600,9 @@ function BattleScreen({
               });
               if(fateCount(fate?.coinGuts)>0) chip('fateCoinGuts',<Zap size={9}/>,'運命のコイン消費',`+${fateCount(fate.coinGuts)*20}%`,'text-slate-300 border-slate-400/50');
             }
-            if(enemyConfuseTurns>0) chip('enemyConfuse',<Sparkles size={9}/>,'敵 乱心',`残り${enemyConfuseTurns}回`,'text-violet-300 border-violet-400/50',{pulse:true,short:`${enemyConfuseTurns}`});
-            if(fateWheelView?.atkDown>0) chip('fateAtkDown',<ArrowDownCircle size={9}/>,'運命の輪 敵与ダメ',`-30%（残り${fateWheelView.atkDown}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'-30%'});
-            if(fateWheelView?.takenUp>0) chip('fateTakenUp',<PlusCircle size={9}/>,'運命の輪 敵被ダメ',`+30%（残り${fateWheelView.takenUp}T）`,'text-fuchsia-300 border-fuchsia-400/50',{pulse:true,short:'+30%'});
             // === ターン限定バフ（都度表示） ===
             if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
             if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});
-            if(getTurnBuff('stunEnemy',false)) chip('stun',<Zap size={9}/>,'スタン予約','','text-yellow-400 border-yellow-500/50',{pulse:true});
             if(getTurnBuff('guaranteedCrit',false)) chip('critFix',<Target size={9}/>,'会心予約','','text-orange-400 border-orange-500/50',{pulse:true});
             if(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false)) chip('zeroGuts',<Star size={9}/>,'0消費中','','text-blue-400 border-blue-500/50',{pulse:true});
             if(getNextTurnBuff('reflect',false)) chip('reflectNext',<RefreshCcw size={9}/>,'次反射','','text-purple-400 border-purple-500/50',{pulse:true});
@@ -33606,9 +33610,6 @@ function BattleScreen({
             // 敵の咆哮(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
             // ★ポップアップは一瞬で消えるので、いま何回かかっているかがどこにも出ていなかった。
             //   敵の攻撃そのものを上げる(元に戻らない)ので、札に出し続ける
-            if(enemy?.roarStacks>0) chip('roarUp',<ArrowUpCircle size={9}/>,'敵の咆哮',`×${enemy.roarStacks}`,'text-orange-400 border-orange-500/50',{pulse:true});
-            if(getWaveBuff('enemyAtkDebuffPct')>0) chip('enemyAtkDown',<ArrowDownCircle size={9}/>,'敵攻',`-${Math.round(getWaveBuff('enemyAtkDebuffPct')*100)}%`,'text-indigo-400 border-indigo-500/50',{pulse:true});
-            if(getWaveBuff('enemyTakenDmgBonus')>0) chip('enemyTaken',<PlusCircle size={9}/>,'敵被ダメ',`+${Math.round(getWaveBuff('enemyTakenDmgBonus')*100)}%`,'text-orange-400 border-orange-500/50',{pulse:true});
             if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
             if(getTurnBuff('takenDamageMult',1.0)<1) chip('takenNow',<Shield size={9}/>,'被ダメ',`-${Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-300 border-pink-400',{pulse:true});
             if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次ターン消費ガッツ',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
@@ -47932,6 +47933,24 @@ function MonsterHeroGame() {
   // ★ミーアの「オン・ステージ！」が効いているあいだ、盤面ぜんぶで1ターンに使える枚数が増える(上限5は変えない。2026-10-03)
   const exCardBonus = isTacticsMode(runMode) ? tacticsExCardBonusTotal(tacticsExState,tacticsUnits,{ wave, turn:turnCount }) : 0;
   const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus+exCardBonus);
+  // ★敵にかかっているデバフ・敵の強化を、画面の「敵の状態」の列へ並べるための一覧(2026-10-06 ユーザー指示
+  //   「乱心や敵へのデバフなど、かかっていることとあと何ターンかが分からない」)。
+  //   味方の強化の札とは別に、敵の名前の帯の下へ出す。残りターンがあるものは「残りNT」まで出す
+  const enemyDebuffs = (() => {
+    const list = [];
+    const add = (key, mark, label, value, tone, note) => list.push({ key, mark, label, value, tone, note });
+    if (!enemy) return list;
+    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない');
+    const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
+    if (psycho && psycho.active) add('psycho', '🎯', 'ロックオン', `与ダメ-${Math.round((1 - psycho.enemyDmgMult) * 100)}% 被ダメ+${Math.round(psycho.enemyTakenBonus * 100)}%${psycho.turnsLeft > 0 ? ` 残り${psycho.turnsLeft}T` : ''}`, 'text-sky-200 border-sky-400/60');
+    if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪 敵与ダメ', `-30% 残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60');
+    if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪 敵被ダメ', `+30% 残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60');
+    if (getTurnBuff('stunEnemy', false)) add('stun', '⚡', 'スタン', '次の敵の番', 'text-yellow-200 border-yellow-400/60');
+    if (getWaveBuff('enemyAtkDebuffPct') > 0) add('atkDown', '⬇', '敵のちから', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}% WAVE中`, 'text-indigo-200 border-indigo-400/60');
+    if (getWaveBuff('enemyTakenDmgBonus') > 0) add('taken', '⬆', '敵の被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}% WAVE中`, 'text-orange-200 border-orange-400/60');
+    if (enemy.roarStacks > 0) add('roar', '📢', '咆哮', `攻撃上昇 ×${enemy.roarStacks}`, 'text-red-200 border-red-400/60');
+    return list;
+  })();
   // 行動回数の使用済み = 使うカード + 捨てるカード(捨てるのは新モードだけなので、ほかは今までと同じ数)
   const actionUsed = selectedCards.length + discardCards.length;
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
@@ -58282,7 +58301,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} enemyDebuffs={enemyDebuffs} discardCards={discardCards} actionUsed={actionUsed} tacticsSlotFx={tacticsSlotFx} tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
