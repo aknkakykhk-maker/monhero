@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: de0823b7e54cdcc2
+// generated-sha256: 0ff26a0deca1387d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 16:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 16:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23816,7 +23816,7 @@ const RAID_JACK_A_EX_MAX_USES = 2;
 const RAID_JACK_TEACHING_MAX = 3;
 //   編成: 勇者モン1体 + 供モン最大3体
 const RAID_JACK_ALLY_MAX = 3;
-const RAID_JACK_EXTRA_COST_BEAT_P = 100;
+const RAID_JACK_EXTRA_COST_BEAT_P = 300;   // 2026-10-06・ユーザー指示で 100 から変更
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
 // ぱんぷきん×ジャックのストーリー(台本は docs/spec/RAID_JACK_STORY.md、データは data/assistants.js の EVENT_REPLAYS)。
 // 第1.5部=レイド開始 / 第2〜6部=段階(男爵〜大王)を倒したあと / 終章=期間終了後(大王まで倒せたかで2本)。

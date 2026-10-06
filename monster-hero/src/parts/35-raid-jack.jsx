@@ -30,7 +30,7 @@ const RAID_JACK_A_EX_MAX_USES = 2;
 const RAID_JACK_TEACHING_MAX = 3;
 //   編成: 勇者モン1体 + 供モン最大3体
 const RAID_JACK_ALLY_MAX = 3;
-const RAID_JACK_EXTRA_COST_BEAT_P = 100;
+const RAID_JACK_EXTRA_COST_BEAT_P = 300;   // 2026-10-06・ユーザー指示で 100 から変更
 const RAID_JACK_STORAGE_KEY = 'mh_raid_jack_v1';
 // ぱんぷきん×ジャックのストーリー(台本は docs/spec/RAID_JACK_STORY.md、データは data/assistants.js の EVENT_REPLAYS)。
 // 第1.5部=レイド開始 / 第2〜6部=段階(男爵〜大王)を倒したあと / 終章=期間終了後(大王まで倒せたかで2本)。
