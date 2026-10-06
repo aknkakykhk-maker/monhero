@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7a19e548d59c043b
+// source-sha256: 11f57f79d59a7e94
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 14:06";
+const BUILD_DATE = "2026-10-06 17:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34739,8 +34739,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pixie: Object.freeze({
     id: 'pixie_favorite_magic',
     name: 'お気に入りの魔法',
-    useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5',
-    desc: '3ターンのあいだ、固有技を撃ちやすくなり、近くから殴ったことになる。\n・毎ターン、ピクシーの固有技カードが必ず手札に出る\n・距離補正が、どの距離でも×1.5（敵と同じ距離から攻撃したときと同じ）',
+    useNote: '3ターン 毎ターン固有技が手札に・距離補正×1.5・固有技は必ず会心',
+    desc: '3ターンのあいだ、固有技を撃ちやすくなり、近くから殴ったことになる。\n・毎ターン、ピクシーの固有技カードが必ず手札に出る\n・距離補正が、どの距離でも×1.5（敵と同じ距離から攻撃したときと同じ）\n・ピクシーの固有技が、必ず会心になる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -34748,6 +34748,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     turns: 3,
     distMult: 1.5,
     guaranteeUnique: true,
+    uniqueCrit: true,
     effect: 'multiBuff'
   }),
   Mia: Object.freeze({
@@ -34773,15 +34774,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Snegurochka: Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
-    useNote: '全員のガッツ回復＋ランダムで1つ',
-    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで1つ：\n　与ダメージ+20%（2ターン）\n　被ダメージ−20%（2ターン）\n　連撃 与ダメ10%×2回（2ターン）\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3（2ターン）\n・10%の確率で「大当たり」：6つ全部',
+    useNote: '全員のガッツ回復＋ランダムで2つ(使うほど豪華に)',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）',
     maxUses: 1,
     unlimited: false,
     usesPerWave: true,
     withCards: true,
     duration: 'turns',
-    turns: 2,
+    turns: 3,
     present: Object.freeze({
+      draws: 2,
+      grow: Object.freeze({
+        effect: 0.1,
+        fixedGuts: 0.02,
+        jackpot: 0.02,
+        maxLevel: 10
+      }),
       fixedGuts: 0.2,
       jackpot: 0.1,
       dmg: 0.2,
@@ -34799,8 +34807,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Undine: Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
-    useNote: '選んだ味方が満タンに・ガッツ30%回復',
-    desc: '味方1体（自分でもよい）を選んで、回復させる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%\n・どちらも、選んだ子のガッツが上限の30%回復する',
+    useNote: '選んだ味方が満タン・ガッツ30%回復＋アクアフィールド(水牢/氷結)',
+    desc: '味方1体（自分でもよい）を選んで、立て直す。使うと「アクアフィールド」も広がる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる。3ターンのあいだ「根性」がつく（ライフが0になる攻撃を、1回だけライフ1で踏ん張る）\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%・与ダメージ+20%\n・どちらも、選んだ子のガッツが上限の30%回復する\n・アクアフィールド（3ターン）：広がった瞬間、味方全員のデバフが消える\n　ウンディーネ・ヤオビクニ・スネグーラチカが、フィールドで最初に使った技で道が決まる\n　通常技を最初に使う→「水牢」：通常技を使うたびに1たまり、1つごとに敵の与ダメージ−10%\n　固有技を最初に使う→「氷結」：固有技を使うたびに1たまり、1つごとに敵の被ダメージ+10%\n　決まった道は変わらず、水牢と氷結は同時にたまらない\n　3つたまると「アクアフィナーレ」：3つ使い切り、敵は1ターン動けず、2ターンのあいだ敵の被ダメージが+50%',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -34809,15 +34817,24 @@ const TACTICS_EX_SKILLS = Object.freeze({
     target: 'ally',
     lifeSpring: Object.freeze({
       maxUpRate: 0.3,
-      gutsRate: 0.3
+      gutsRate: 0.3,
+      konjo: 1,
+      dmgUp: 0.2
+    }),
+    aqua: Object.freeze({
+      needed: 3,
+      dmgPerStack: 0.1,
+      takenPerStack: 0.1,
+      finaleTaken: 0.5,
+      finaleTurns: 2
     }),
     effect: 'lifeSpring'
   }),
   Yaobikuni: Object.freeze({
     id: 'yaobikuni_eternal_moment',
     name: '悠久の刻',
-    useNote: '時間停止 このターン敵は動かない',
-    desc: '時間を止める。\n・使ったターンは、敵が行動しない\n・そのターンは、WAVEの20ターンの数に入らない（ターンの数字が進まない）',
+    useNote: '時間停止 このターン敵は動かない・味方の強化をコピー',
+    desc: '時間を止める。\n・使ったターンは、敵が行動しない\n・そのターンは、WAVEの20ターンの数に入らない（ターンの数字が進まない）\n・止まっているあいだ、味方のバフ・敵のデバフの残りターンは減らない（味方だけが動ける）\n・使った瞬間、ほかの味方にかかっている強化をヤオビクニもそのターンだけ受ける\n　コピーする：与ダメ・被ダメ軽減・力・丈夫さ・会心率・会心ダメージ・ライフ／ガッツの自動回復\n　コピーしない：完全回避・連撃・カード枚数・形態変化・フィールド効果（全体バフは元から全員に効いている）',
     maxUses: 2,
     unlimited: false,
     withCards: true,
@@ -34827,8 +34844,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Pandora: Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
-    useNote: '3ターン 悪魔と天使・毎ターン終わりに最大ライフ30%を払う',
-    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・1枚目のカード＝悪魔の力：与ダメージ+50%、与ダメージ30%の連撃が1回付く\n・2枚目のカード＝天使の力：味方全員のライフ・ガッツが上限の10%回復\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：パンドラはダウンするが、ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の50%回復\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
+    useNote: '3ターン 毎ターン固有技が出る(強化ダイスキライライ)・最後の希望で味方全回復',
+    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・毎ターン、パンドラの固有技のカードが必ず手札に出る\n・箱のあいだの固有技は「強化ダイスキライライ」になる：威力が2倍・悪魔の力で与ダメージ50%の連撃が2回付く・天使の力で味方全員のライフ・ガッツが上限の15%回復する\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の80%回復する。パンドラはダウンしないが、反動で次の1ターンは動けない（味方のデバフ。アクアフィールドで消せる）\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -34837,13 +34854,15 @@ const TACTICS_EX_SKILLS = Object.freeze({
     pandoraBox: Object.freeze({
       costRate: 0.3,
       selfCardBonus: 1,
-      devilDmg: 1.5,
+      devilDmg: 2,
       devilCombo: Object.freeze({
-        count: 1,
-        rate: 0.3
+        count: 2,
+        rate: 0.5
       }),
-      angelRate: 0.1,
-      hopeGutsRate: 0.5
+      angelRate: 0.15,
+      hopeGutsRate: 0.8,
+      guaranteeUnique: true,
+      lockTurns: 1
     }),
     effect: 'pandoraBox',
     conditions: Object.freeze(['notActive'])
@@ -35088,6 +35107,7 @@ const normalizeTacticsExDef = raw => {
     partyStatRate: Math.min(1, Math.max(0, Number.isFinite(Number(raw.partyStatRate)) ? Number(raw.partyStatRate) : 0)),
     distMult: Math.max(0, Number.isFinite(Number(raw.distMult)) ? Number(raw.distMult) : 0),
     guaranteeUnique: raw.guaranteeUnique === true,
+    uniqueCrit: raw.uniqueCrit === true,
     cardBonus: Math.min(3, Math.max(0, tacticsSafeInt(raw.cardBonus, 0))),
     voltage: raw.voltage && typeof raw.voltage === 'object' && tacticsSafeInt(raw.voltage.max, 0) > 0 ? {
       max: Math.min(99, tacticsSafeInt(raw.voltage.max, 0)),
@@ -35131,6 +35151,8 @@ const normalizeTacticsExDef = raw => {
         costRate: Math.min(0.9, n(raw.pandoraBox.costRate)),
         selfCardBonus: Math.min(3, tacticsSafeInt(raw.pandoraBox.selfCardBonus, 0)),
         devilDmg: Math.max(1, n(raw.pandoraBox.devilDmg) || 1),
+        guaranteeUnique: raw.pandoraBox.guaranteeUnique === true,
+        lockTurns: Math.min(1, tacticsSafeInt(raw.pandoraBox.lockTurns, 0)),
         angelRate: n(raw.pandoraBox.angelRate),
         hopeGutsRate: n(raw.pandoraBox.hopeGutsRate),
         devilCombo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? {
@@ -35141,8 +35163,20 @@ const normalizeTacticsExDef = raw => {
     })() : null,
     lifeSpring: raw.lifeSpring && typeof raw.lifeSpring === 'object' ? {
       maxUpRate: Math.max(0, Number(raw.lifeSpring.maxUpRate) || 0),
-      gutsRate: Math.max(0, Number(raw.lifeSpring.gutsRate) || 0)
+      gutsRate: Math.max(0, Number(raw.lifeSpring.gutsRate) || 0),
+      konjo: Math.min(3, tacticsSafeInt(raw.lifeSpring.konjo, 0)),
+      dmgUp: Math.max(0, Number(raw.lifeSpring.dmgUp) || 0)
     } : null,
+    aqua: raw.aqua && typeof raw.aqua === 'object' && tacticsSafeInt(raw.aqua.needed, 0) > 0 ? (() => {
+      const n = v => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
+      return {
+        needed: Math.min(9, tacticsSafeInt(raw.aqua.needed, 0)),
+        dmgPerStack: Math.min(0.3, n(raw.aqua.dmgPerStack)),
+        takenPerStack: n(raw.aqua.takenPerStack),
+        finaleTaken: n(raw.aqua.finaleTaken),
+        finaleTurns: Math.min(5, Math.max(1, tacticsSafeInt(raw.aqua.finaleTurns, 1)))
+      };
+    })() : null,
     present: raw.present && typeof raw.present === 'object' ? (() => {
       const n = v => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.present.combo;
@@ -35154,6 +35188,13 @@ const normalizeTacticsExDef = raw => {
         crit: n(raw.present.crit),
         heal: n(raw.present.heal),
         guts: n(raw.present.guts),
+        draws: Math.min(6, Math.max(1, tacticsSafeInt(raw.present.draws, 1))),
+        grow: raw.present.grow && typeof raw.present.grow === 'object' ? {
+          effect: n(raw.present.grow.effect),
+          fixedGuts: n(raw.present.grow.fixedGuts),
+          jackpot: n(raw.present.grow.jackpot),
+          maxLevel: Math.min(30, tacticsSafeInt(raw.present.grow.maxLevel, 0))
+        } : null,
         combo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? {
           count: tacticsSafeInt(c.count, 0),
           rate: Number(c.rate)
@@ -35204,6 +35245,33 @@ const sameTacticsExTurn = (stamp, now) => !!(stamp && now && tacticsSafeInt(stam
 const tacticsExUsesOf = (state, slot, monId) => {
   const own = normalizeTacticsExState(state).uses[slot];
   return own && own.monId === monId ? Math.max(0, tacticsSafeInt(own.count, 0)) : 0;
+};
+const tacticsExTotalUsesOf = (state, slot, monId) => {
+  const own = normalizeTacticsExState(state).uses[slot];
+  return own && own.monId === monId ? Math.max(tacticsSafeInt(own.count, 0), tacticsSafeInt(own.total, 0)) : 0;
+};
+const tacticsExPresentScaled = (cfg, level) => {
+  if (!cfg) return cfg;
+  const g = cfg.grow,
+    lv = g ? Math.min(tacticsSafeInt(g.maxLevel, 0), Math.max(0, tacticsSafeInt(level, 0))) : 0;
+  if (!g || lv <= 0) return {
+    ...cfg
+  };
+  const k = 1 + (Number(g.effect) || 0) * lv;
+  return {
+    ...cfg,
+    fixedGuts: Math.min(0.6, cfg.fixedGuts + (Number(g.fixedGuts) || 0) * lv),
+    jackpot: Math.min(0.5, cfg.jackpot + (Number(g.jackpot) || 0) * lv),
+    dmg: cfg.dmg * k,
+    taken: Math.min(0.9, cfg.taken * k),
+    crit: cfg.crit * k,
+    heal: cfg.heal * k,
+    guts: cfg.guts * k,
+    combo: cfg.combo ? {
+      count: cfg.combo.count,
+      rate: cfg.combo.rate * k
+    } : null
+  };
 };
 const tacticsExRemaining = (def, count) => {
   if (!def) return {
@@ -35329,7 +35397,8 @@ const applyTacticsExUse = (state, {
       ...safe.uses,
       [slot]: {
         monId,
-        count
+        count,
+        total: tacticsExTotalUsesOf(safe, slot, monId) + 1
       }
     },
     effects: {
@@ -35367,19 +35436,28 @@ const applyTacticsExUse = (state, {
         critDmgRate: def.critDmgRate || 0,
         distMult: def.distMult || 0,
         guaranteeUnique: def.guaranteeUnique === true,
+        uniqueCrit: def.uniqueCrit === true,
         cardBonus: def.cardBonus || 0,
         voltageCfg: def.voltage ? {
           ...def.voltage
         } : null,
         voltage: 0,
-        presentCfg: def.present ? {
-          ...def.present
-        } : null,
+        presentCfg: def.present ? tacticsExPresentScaled(def.present, tacticsExTotalUsesOf(safe, slot, monId)) : null,
         present: null,
         target: Number.isInteger(target) ? target : null,
         lifeSpringCfg: def.lifeSpring ? {
           ...def.lifeSpring
         } : null,
+        aquaCfg: def.aqua ? {
+          ...def.aqua
+        } : null,
+        aqua: def.aqua ? {
+          route: null,
+          stacks: 0,
+          finale: null
+        } : null,
+        springDown: false,
+        konjoLeft: 0,
         pandoraBoxCfg: def.pandoraBox ? {
           ...def.pandoraBox
         } : null,
@@ -35473,6 +35551,12 @@ const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
       cfg = normalizeTacticsExState(state).effects[slot].thunderCfg;
     const per = Number(cfg && (kind === 'guts' ? cfg.regenGuts : cfg.regenHp));
     return t && t.phase === 'wrap' && Number.isFinite(per) && per > 0 ? t.charge * per : 0;
+  }
+  if (kindNow === 'timeStop') {
+    const cp = normalizeTacticsExState(state).effects[slot].snapshot,
+      c = cp && cp.copied;
+    const v = Number(c && (kind === 'guts' ? c.regenGuts : c.regenHp));
+    return Number.isFinite(v) && v > 0 ? v : 0;
   }
   if (kindNow !== 'statBoost') return 0;
   const effect = normalizeTacticsExState(state).effects[slot];
@@ -35591,6 +35675,18 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
       distMult: 0
     } : null;
   }
+  if (kind === 'timeStop') {
+    const cp = normalizeTacticsExState(state).effects[slot].snapshot;
+    const c = cp && cp.copied;
+    return c ? {
+      dmg: c.dmg,
+      taken: c.taken,
+      critRate: c.critRate,
+      critAdd: c.critAdd,
+      critDmg: c.critDmg,
+      distMult: 0
+    } : null;
+  }
   if (kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot];
   const num = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0;
@@ -35600,6 +35696,7 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
     critRate: 1 + num(own.critRateRate),
     critAdd: 0,
     critDmg: 1 + num(own.critDmgRate),
+    uniqueCrit: own.uniqueCrit === true,
     distMult: num(own.distMult)
   };
 };
@@ -35607,7 +35704,9 @@ const tacticsExUniqueGuaranteeSlot = (state, units, now) => {
   const effects = normalizeTacticsExState(state).effects;
   const hit = Object.keys(effects).map(Number).find(slot => {
     const unit = Array.isArray(units) ? units[slot] : null;
-    return unit && effects[slot].guaranteeUnique === true && tacticsExActiveEffect(state, slot, unit.id, now) === 'multiBuff';
+    if (!unit) return false;
+    const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+    return effects[slot].guaranteeUnique === true && kind === 'multiBuff' || kind === 'pandoraBox' && !!(effects[slot].pandoraBoxCfg && effects[slot].pandoraBoxCfg.guaranteeUnique);
   });
   return hit == null ? null : hit;
 };
@@ -35710,7 +35809,7 @@ const TACTICS_EX_PRESENT_LABELS = Object.freeze({
   guts: 'ガッツ追加回復',
   crit: '会心率アップ'
 });
-const tacticsExPresentKindText = (kind, cfg, turns = 2) => {
+const tacticsExPresentKindText = (kind, cfg, turns = 3) => {
   const c = cfg || {},
     pct = v => Math.round((Number(v) || 0) * 100);
   switch (kind) {
@@ -35730,19 +35829,30 @@ const tacticsExPresentKindText = (kind, cfg, turns = 2) => {
       return '';
   }
 };
-const tacticsExPresentNote = (roll, cfg, turns = 2) => {
+const tacticsExPresentNote = (roll, cfg, turns = 3) => {
   if (!roll || !Array.isArray(roll.kinds)) return '';
   const c = cfg || {};
   const head = `全員のガッツが上限の${Math.round((Number(c.fixedGuts) || 0) * 100)}%回復`;
   const body = roll.kinds.map(k => tacticsExPresentKindText(k, c, turns)).filter(Boolean).join('・');
   return `${head}＋${roll.jackpot ? '大当たり！ ' : ''}${body}`;
 };
-const rollTacticsExPresent = (r1, r2, jackpot = 0.1) => Number(r1) < jackpot ? {
-  jackpot: true,
-  kinds: TACTICS_EX_PRESENT_KINDS.slice()
-} : {
-  jackpot: false,
-  kinds: [TACTICS_EX_PRESENT_KINDS[Math.min(TACTICS_EX_PRESENT_KINDS.length - 1, Math.max(0, Math.floor(Number(r2) * TACTICS_EX_PRESENT_KINDS.length)))]]
+const rollTacticsExPresent = (rands, jackpot = 0.1, draws = 2) => {
+  const list = Array.isArray(rands) ? rands : [];
+  const left = TACTICS_EX_PRESENT_KINDS.slice(),
+    kinds = [];
+  for (let d = 0; d < Math.max(1, tacticsSafeInt(draws, 1)) && left.length; d++) {
+    const rJ = Number(list[d * 2]),
+      rP = Number(list[d * 2 + 1]);
+    if (rJ < jackpot) return {
+      jackpot: true,
+      kinds: TACTICS_EX_PRESENT_KINDS.slice()
+    };
+    kinds.push(left.splice(Math.min(left.length - 1, Math.max(0, Math.floor((Number.isFinite(rP) ? rP : 0) * left.length))), 1)[0]);
+  }
+  return {
+    jackpot: false,
+    kinds
+  };
 };
 const setTacticsExPresent = (state, slot, roll) => {
   const safe = normalizeTacticsExState(state);
@@ -35812,6 +35922,120 @@ const resetTacticsExWaveUses = state => {
     ...safe,
     uses
   } : state;
+};
+const setTacticsExSpringKind = (state, casterSlot, wasDown) => {
+  const safe = normalizeTacticsExState(state),
+    mine = safe.effects[casterSlot];
+  if (!mine || !mine.lifeSpringCfg) return safe;
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [casterSlot]: {
+        ...mine,
+        springDown: wasDown === true,
+        konjoLeft: wasDown === true ? tacticsSafeInt(mine.lifeSpringCfg.konjo, 0) : 0
+      }
+    }
+  };
+};
+const tacticsExSpringEntries = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).map(Number).filter(from => {
+    const caster = Array.isArray(units) ? units[from] : null;
+    return caster && effects[from] && effects[from].lifeSpringCfg && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring';
+  }).map(from => ({
+    from,
+    mine: effects[from]
+  }));
+};
+const tacticsExSpringDmgMult = (state, units, slot, now) => tacticsExSpringEntries(state, units, now).filter(e => e.mine.target === slot && !e.mine.springDown).reduce((mult, e) => mult * (1 + Math.max(0, Number(e.mine.lifeSpringCfg.dmgUp) || 0)), 1);
+const tacticsExKonjoLeftOf = (state, units, slot, now) => tacticsExSpringEntries(state, units, now).filter(e => e.mine.target === slot).reduce((sum, e) => sum + Math.max(0, tacticsSafeInt(e.mine.konjoLeft, 0)), 0);
+const spendTacticsExKonjo = (state, units, slot, now) => {
+  const hit = tacticsExSpringEntries(state, units, now).find(e => e.mine.target === slot && tacticsSafeInt(e.mine.konjoLeft, 0) > 0);
+  if (!hit) return state;
+  const safe = normalizeTacticsExState(state);
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [hit.from]: {
+        ...hit.mine,
+        konjoLeft: tacticsSafeInt(hit.mine.konjoLeft, 0) - 1
+      }
+    }
+  };
+};
+const TACTICS_EX_AQUA_SPECIES = Object.freeze(['Undine', 'Yaobikuni', 'Snegurochka']);
+const tacticsExAquaOf = (state, units, now) => {
+  const out = {
+    active: false,
+    slot: null,
+    route: null,
+    stacks: 0,
+    needed: 0,
+    enemyDmgMult: 1,
+    enemyTakenBonus: 0,
+    finale: false,
+    turnsLeft: 0
+  };
+  const hit = tacticsExSpringEntries(state, units, now).find(e => e.mine.aquaCfg && e.mine.aqua);
+  if (!hit) return out;
+  const cfg = hit.mine.aquaCfg,
+    a = hit.mine.aqua;
+  const stacks = Math.max(0, tacticsSafeInt(a.stacks, 0));
+  const fin = a.finale && Number.isFinite(Number(a.finale.wave)) && Number.isFinite(Number(a.finale.turn)) ? a.finale : null;
+  const finaleOn = !!fin && tacticsSafeInt(fin.wave, -1) === tacticsSafeInt(now && now.wave, -2) && tacticsSafeInt(now && now.turn, 0) - tacticsSafeInt(fin.turn, 0) >= 0 && tacticsSafeInt(now && now.turn, 0) - tacticsSafeInt(fin.turn, 0) < tacticsSafeInt(cfg.finaleTurns, 1);
+  return {
+    active: true,
+    slot: hit.from,
+    route: a.route === 'prison' || a.route === 'freeze' ? a.route : null,
+    stacks,
+    needed: tacticsSafeInt(cfg.needed, 3),
+    enemyDmgMult: a.route === 'prison' ? 1 - Math.min(0.9, stacks * (Number(cfg.dmgPerStack) || 0)) : 1,
+    enemyTakenBonus: (a.route === 'freeze' ? stacks * (Number(cfg.takenPerStack) || 0) : 0) + (finaleOn ? Number(cfg.finaleTaken) || 0 : 0),
+    finale: finaleOn,
+    turnsLeft: tacticsExTurnsLeft(state, hit.from, units[hit.from].id, now)
+  };
+};
+const addTacticsExAquaStack = (state, units, now, slot, kind) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  const none = {
+    state,
+    event: null
+  };
+  if (!unit || !TACTICS_EX_AQUA_SPECIES.includes(unit.id) || kind !== 'normal' && kind !== 'unique') return none;
+  const hit = tacticsExSpringEntries(state, units, now).find(e => e.mine.aquaCfg && e.mine.aqua);
+  if (!hit) return none;
+  const route = kind === 'normal' ? 'prison' : 'freeze';
+  const cur = hit.mine.aqua.route === 'prison' || hit.mine.aqua.route === 'freeze' ? hit.mine.aqua.route : null;
+  if (cur && cur !== route) return none;
+  const stacks = Math.max(0, tacticsSafeInt(hit.mine.aqua.stacks, 0)) + 1;
+  const done = stacks >= tacticsSafeInt(hit.mine.aquaCfg.needed, 3);
+  const aqua = {
+    route,
+    stacks: done ? 0 : stacks,
+    finale: done ? {
+      wave: tacticsSafeInt(now && now.wave, 0),
+      turn: tacticsSafeInt(now && now.turn, 0)
+    } : hit.mine.aqua.finale
+  };
+  const safe = normalizeTacticsExState(state);
+  return {
+    state: {
+      ...safe,
+      effects: {
+        ...safe.effects,
+        [hit.from]: {
+          ...hit.mine,
+          aqua
+        }
+      }
+    },
+    event: done ? 'finale' : 'stack',
+    route,
+    stacks: aqua.stacks
+  };
 };
 const tacticsExTargetOptions = (def, units) => def && def.target === 'ally' ? (Array.isArray(units) ? units : []).map((unit, slot) => ({
   unit: normalizeTacticsUnit(unit),
@@ -35888,6 +36112,45 @@ const tacticsExTimeStopSlot = (state, units, now) => {
     return unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'timeStop';
   });
   return hit == null ? null : hit;
+};
+const tacticsExCopyableBuffs = (state, units, now, exceptSlot) => {
+  const out = {
+    dmg: 1,
+    taken: 1,
+    critRate: 1,
+    critAdd: 0,
+    critDmg: 1,
+    atk: 0,
+    def: 0,
+    regenHp: 0,
+    regenGuts: 0
+  };
+  const effects = normalizeTacticsExState(state).effects;
+  Object.keys(effects).map(Number).forEach(slot => {
+    if (slot === exceptSlot || !Array.isArray(units) || !units[slot]) return;
+    const kind = tacticsExActiveEffect(state, slot, units[slot].id, now);
+    if (!kind) return;
+    const mb = tacticsExMultiBuffOf(state, units, slot, now);
+    if (mb) {
+      out.dmg = Math.max(out.dmg, mb.dmg);
+      out.taken = Math.min(out.taken, mb.taken);
+      out.critRate = Math.max(out.critRate, mb.critRate);
+      out.critAdd = Math.max(out.critAdd, mb.critAdd);
+      out.critDmg = Math.max(out.critDmg, mb.critDmg);
+    }
+    if (kind === 'statBoost' || kind === 'multiBuff') {
+      const e = effects[slot];
+      const rateOf = key => {
+        const own = Number(e.rates && e.rates[key]);
+        return Math.max(0, Number.isFinite(own) ? own : Number(e.statRate) || 0);
+      };
+      out.atk = Math.max(out.atk, rateOf('atk'));
+      out.def = Math.max(out.def, rateOf('def'));
+    }
+    out.regenHp = Math.max(out.regenHp, tacticsExRegenRateAt(state, units, slot, now, 'hp'));
+    out.regenGuts = Math.max(out.regenGuts, tacticsExRegenRateAt(state, units, slot, now, 'guts'));
+  });
+  return out;
 };
 const spendTacticsExTimeStop = state => {
   const safe = normalizeTacticsExState(state);
@@ -36088,6 +36351,16 @@ const applyTacticsExOwnStats = (unit, state, slot, now) => {
       ...unit,
       atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rateOf('atk'))),
       def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rateOf('def')))
+    };
+  }
+  if (kind === 'timeStop') {
+    const cp = normalizeTacticsExState(state).effects[slot].snapshot,
+      c = cp && cp.copied;
+    if (!c) return unit;
+    return {
+      ...unit,
+      atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + (Number(c.atk) || 0))),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + (Number(c.def) || 0)))
     };
   }
   if (kind === 'weaponChange') {
@@ -74543,6 +74816,13 @@ function MonsterHeroGame() {
       wave,
       turn: turnCount
     }) : null;
+    const aquaNow = isTacticsMode(runMode) ? tacticsExAquaOf(tacticsExState, tacticsUnits, {
+      wave,
+      turn: turnCount
+    }) : null;
+    if (aquaNow && aquaNow.active && aquaNow.route === 'prison' && aquaNow.stacks > 0) add('aquaPrison', '🌊', '水牢', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵の与ダメージ-${Math.round((1 - aquaNow.enemyDmgMult) * 100)}%(水牢1つごとに-10%)`);
+    if (aquaNow && aquaNow.active && aquaNow.route === 'freeze' && aquaNow.stacks > 0) add('aquaFreeze', '🧊', '氷結', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-cyan-200 border-cyan-400/60', `敵の被ダメージ+${aquaNow.stacks * 10}%(氷結1つごとに+10%)`);
+    if (aquaNow && aquaNow.active && aquaNow.finale) add('aquaFinale', '🌊', 'アクアフィナーレ', '被ダメ大幅アップ', 'text-sky-100 border-sky-300/70', '敵の被ダメージが大きく上がっている');
     if (psycho && psycho.active) add('psycho', '🎯', 'サイコロックオン', `残り${psycho.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵は間合いを動けず、与ダメージ-${Math.round((1 - psycho.enemyDmgMult) * 100)}%・被ダメージ+${Math.round(psycho.enemyTakenBonus * 100)}%`, psycho.turnsLeft > 0 ? `${psycho.turnsLeft}T` : '');
     if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪(敵の与ダメ)', `残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の与えるダメージが30%下がる', `${fateWheelView.atkDown}T`);
     if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪(敵の被ダメ)', `残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の受けるダメージが30%上がる', `${fateWheelView.takenUp}T`);
@@ -74719,6 +74999,7 @@ function MonsterHeroGame() {
       turn: 1
     }
   });
+  const tacticsExFrozenRef = useRef(false);
   const tacticsExAimRef = useRef({
     intent: null,
     dist: 2
@@ -74736,7 +75017,7 @@ function MonsterHeroGame() {
     enabled: tacticsExEnabled,
     now: tacticsExNow
   };
-  const tacticsExLocked = tacticsExEnabled ? tacticsExLockedSlots(tacticsExState, tacticsExNow) : [];
+  const tacticsExLocked = tacticsExEnabled ? [...new Set([...tacticsExLockedSlots(tacticsExState, tacticsExNow), ...Object.keys(turnBuffs && turnBuffs.bySlot || {}).map(Number).filter(i => tacticsSlotTurns(turnBuffs.bySlot, i, 'pandoraLockTurns') > 0)])] : [];
   const tacticsSlotCardCount = slotIdx => Object.values(cardAssignments).filter(v => v === slotIdx).length;
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
   useEffect(() => {
@@ -74768,27 +75049,62 @@ function MonsterHeroGame() {
     const live = tacticsExLiveRef.current;
     return live.enabled && Number.isInteger(slotIdx) ? tacticsExAvoidLeftOf(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now) : 0;
   };
-  const tacticsCritFixedNow = slotIdx => {
+  const tacticsCritFixedNow = (slotIdx, card = null) => {
     if (!isTacticsMode(runMode)) return false;
     if (enemyIntent?.type === 'CONFUSED') return true;
+    if (card && card.type === 'unique' && tacticsExMultiBuffNow(slotIdx).uniqueCrit) return true;
     return tacticsExAvoidLeftNow(slotIdx) > 0;
   };
-  const tacticsExCombosAt = (slotIdx, halved = false) => {
+  const tacticsExCombosAt = (slotIdx, halved = false, card = null) => {
     const live = tacticsExLiveRef.current;
     if (!live.enabled || !Number.isInteger(slotIdx)) return null;
     const own = tacticsExExtraCombosAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now);
     const gift = tacticsExPartyBuffNow().combo;
-    const devil = tacticsExPandoraDevilNow(slotIdx, halved).combo;
+    const devil = card && card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).combo : null;
     const list = [own, gift, devil].filter(Boolean);
     return list.length === 0 ? null : list.length === 1 ? list[0] : list;
   };
   const tacticsExPsychoLockNow = () => {
     const live = tacticsExLiveRef.current;
-    return live.enabled && isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExStateRef.current, live.now) : {
+    if (!(live.enabled && isTacticsMode(runMode))) return {
       active: false,
       enemyDmgMult: 1,
       enemyTakenBonus: 0
     };
+    const p = tacticsExPsychoLockOf(tacticsExStateRef.current, live.now);
+    const aq = tacticsExAquaOf(tacticsExStateRef.current, tacticsUnitsRef.current, live.now);
+    return aq.active ? {
+      ...p,
+      enemyDmgMult: p.enemyDmgMult * aq.enemyDmgMult,
+      enemyTakenBonus: p.enemyTakenBonus + aq.enemyTakenBonus
+    } : p;
+  };
+  const clearTacticsAllyDebuffs = () => {
+    ['gutsCostMult', 'pandoraLockTurns'].forEach(key => {
+      setTurnBuffs(p => p.bySlot ? {
+        ...p,
+        bySlot: clearTacticsSlotFlag(p.bySlot, key)
+      } : p);
+      writeNextTurnBuffs(p => p.bySlot ? {
+        ...p,
+        bySlot: clearTacticsSlotFlag(p.bySlot, key)
+      } : p);
+    });
+  };
+  const aquaStackFromCard = (slotIdx, card) => {
+    if (!isTacticsMode(runMode) || !card || !tacticsExLiveRef.current.enabled) return null;
+    const kind = card.type === 'unique' ? 'unique' : card.type === 'atk' || card.type === 'range_atk' ? 'normal' : null;
+    if (!kind) return null;
+    const live = tacticsExLiveRef.current.now;
+    const r = addTacticsExAquaStack(tacticsExStateRef.current, tacticsUnitsRef.current, live, slotIdx, kind);
+    if (!r.event) return null;
+    commitTacticsExState(r.state);
+    const label = r.route === 'prison' ? '水牢' : '氷結';
+    if (r.event === 'finale') {
+      addPopup('🌊 アクアフィナーレ！', 'hero', 'text-sky-300 font-black text-2xl drop-shadow-md');
+      pushBattleLog(`🌊 ${label}が3つたまり、アクアフィナーレ！ 敵は1ターン動けず、敵の被ダメージが大きく上がった`, 'ally');
+    } else pushBattleLog(`🌊 ${label} ${r.stacks}/${tacticsExAquaOf(r.state, tacticsUnitsRef.current, live).needed}`, 'ally');
+    return r.event;
   };
   const tacticsExThunderDodgeNow = slotIdx => {
     const live = tacticsExLiveRef.current;
@@ -74838,13 +75154,15 @@ function MonsterHeroGame() {
       critRate: 1,
       critAdd: 0,
       critDmg: 1,
-      distMult: 0
+      distMult: 0,
+      uniqueCrit: false
     };
     if (live.enabled && Number.isInteger(slotIdx)) {
       const party = tacticsExPartyBuffNow();
       out.dmg *= party.dmg;
       out.critRate *= party.critRate;
       out.dmg *= tacticsExCrossMultNow(slotIdx);
+      out.dmg *= tacticsExSpringDmgMult(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now);
     }
     return out;
   };
@@ -75339,7 +75657,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * tacticsExMultiBuffNow(slotIdx).dmg * tacticsExPandoraDevilNow(slotIdx, isSecondOrLaterAtk).dmg * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -75366,14 +75684,14 @@ function MonsterHeroGame() {
       comboDmgBonus: getPermaBuff('comboDmgPct'),
       critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
       kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-      guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx),
+      guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
       rollCrit: () => false,
       globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo,
       mainCanCrit: card.subType !== 'stun_atsu',
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved), getPermaBuff('fateStacks', null), slotIdx),
+      exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -75533,6 +75851,7 @@ function MonsterHeroGame() {
     };
     const applyImmediateTakenReduction = (damage, slotIdx = null) => applyTurnDamageReduction(damage > 0 ? damage * immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent || enemyIntent;
+    tacticsExFrozenRef.current = false;
     const timeStopSlot = isTacticsMode(runMode) && tacticsExEnabled ? tacticsExTimeStopSlot(tacticsExStateRef.current, tacticsUnitsRef.current, tacticsExLiveRef.current.now) : null;
     setEnemySkillName({
       label: intent.label,
@@ -75543,6 +75862,7 @@ function MonsterHeroGame() {
     let currentHp = hpAtAttackStart;
     enemyActionPerformedRef.current = false;
     if (timeStopSlot != null) {
+      tacticsExFrozenRef.current = true;
       addPopup('⏳ 時間停止！ 敵は動けない', 'enemy', 'text-sky-300 font-black text-xl drop-shadow-md');
       pushBattleLog('⏳ 時間が止まっている。敵は行動しない', 'info');
       await battleWait(1000);
@@ -75865,7 +76185,14 @@ function MonsterHeroGame() {
               const fx = slotFx[slotIdx] || (slotFx[slotIdx] = {});
               if (slotGuard > 0) fx.guard = true;
               if (hit.taken > 0) {
-                const fd = applyImmediateTakenReduction(hit.taken, slotIdx);
+                let fd = applyImmediateTakenReduction(hit.taken, slotIdx);
+                const konjoUnit = normalizeTacticsUnit(units[slotIdx]);
+                if (konjoUnit && !konjoUnit.downed && fd >= konjoUnit.hp && tacticsExKonjoLeftOf(tacticsExStateRef.current, units, slotIdx, tacticsExLiveRef.current.now) > 0) {
+                  fd = Math.max(0, konjoUnit.hp - 1);
+                  commitTacticsExState(spendTacticsExKonjo(tacticsExStateRef.current, units, slotIdx, tacticsExLiveRef.current.now));
+                  addPopup('💪 根性！ 踏ん張った', 'hero', 'text-amber-300 font-black text-lg drop-shadow-md', undefined, slotIdx);
+                  pushBattleLog(`💪 ${battleActorName(slotIdx)}は根性でライフ1で踏ん張った`, 'ally');
+                }
                 units = damageTacticsTargets(units, [slotIdx], fd);
                 dealt += fd;
                 fx.dmg = (fx.dmg || 0) + fd;
@@ -76000,7 +76327,7 @@ function MonsterHeroGame() {
       }
     }
     setEnemySkillName(null);
-    if (getWaveBuff('iceLockTurns') > 0 && !immediateEffects.iceLockRefreshed) {
+    if (getWaveBuff('iceLockTurns') > 0 && !immediateEffects.iceLockRefreshed && timeStopSlot == null) {
       setWaveBuffs(p => ({
         ...p,
         iceLockTurns: Math.max(0, (p.iceLockTurns || 0) - 1)
@@ -76062,7 +76389,7 @@ function MonsterHeroGame() {
       if (showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`, 'guts', 'text-cyan-300 font-black text-lg italic drop-shadow-md');
       didRegen = true;
     }
-    if (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
+    if (timeStopSlot == null && (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -76106,7 +76433,12 @@ function MonsterHeroGame() {
     if (didRegen) {
       await battleWait(500);
     }
-    const pendingNextTurnBuffs = nextTurnBuffsRef.current;
+    if (timeStopSlot != null) setTurnBuffs(p => ({
+      ...p,
+      invincible: false,
+      stunEnemy: false
+    }));
+    const pendingNextTurnBuffs = timeStopSlot == null ? nextTurnBuffsRef.current : {};
     const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
     if (recoveryMult > 0) {
       const melosoRes = tacticsRateHeal(recoveryMult, recoveryMult);
@@ -76126,8 +76458,10 @@ function MonsterHeroGame() {
     if (resonanceRefresh == null && resonanceCarry > 0) activeTurnBuffs.pandoraResonanceTurns = resonanceCarry;
     const carriedBySlot = carryTacticsSlotBuffs(activeTurnBuffs.bySlot, turnBuffs.bySlot, 'pandoraResonanceTurns');
     if (Object.keys(carriedBySlot).length > 0) activeTurnBuffs.bySlot = carriedBySlot;else delete activeTurnBuffs.bySlot;
-    setTurnBuffs(activeTurnBuffs);
-    writeNextTurnBuffs({});
+    if (timeStopSlot == null) {
+      setTurnBuffs(activeTurnBuffs);
+      writeNextTurnBuffs({});
+    }
     if (timeStopSlot == null && isTacticsMode(runMode) && tacticsExEnabled) {
       const stLog = tacticsExStateRef.current,
         unitsLog = tacticsUnitsRef.current,
@@ -76210,7 +76544,7 @@ function MonsterHeroGame() {
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? acting : null);
-    advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
+    if (!tacticsExFrozenRef.current) advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
     if (scenario) setBattleTutorialLastAction('emergency');
   };
   const tacticsExInfo = slotIdx => {
@@ -76333,6 +76667,11 @@ function MonsterHeroGame() {
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
         const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
         if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);
+        if (def.effect === 'lifeSpring' && def.aqua) {
+          const aq = tacticsExAquaOf(state, tacticsUnits, tacticsExNow);
+          if (aq.active) out.push(`アクアフィールド: ${aq.route === 'prison' ? '水牢' : aq.route === 'freeze' ? '氷結' : '道はまだ決まっていない'} ${aq.stacks} / ${aq.needed}${aq.finale ? '（アクアフィナーレ中：敵の被ダメ大幅アップ）' : ''}`);
+          if (spring && Number.isInteger(spring.target) && tacticsSafeInt(spring.konjoLeft, 0) > 0) out.push(`根性: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}があと${spring.konjoLeft}回 踏ん張れる`);
+        }
         if (def.effect === 'counter' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) {
           const ct = tacticsExCounterOf(state, tacticsUnits, slotIdx, tacticsExNow);
           if (ct) out.push(`カウンター ${ct.counter}（クロスカウンターの威力：与ダメ×${ct.mult * ct.counter}。発動するたび+1）`);
@@ -76351,7 +76690,11 @@ function MonsterHeroGame() {
           const pb = def.pandoraBox;
           out.push(`ターン終わりに最大ライフの${Math.round(pb.costRate * 100)}%を払う`);
         }
-        if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり！ ' : ''}${pres.kinds.map(k => tacticsExPresentKindText(k, def.present, def.turns)).join('・')}`);
+        if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり！ ' : ''}${pres.kinds.map(k => tacticsExPresentKindText(k, state.effects?.[slotIdx]?.presentCfg || def.present, def.turns)).join('・')}`);
+        if (def.effect === 'present' && def.present?.grow) {
+          const lv = Math.min(def.present.grow.maxLevel, tacticsExTotalUsesOf(state, slotIdx, mon.id));
+          out.push(`プレゼントの豪華さ ${lv} / ${def.present.grow.maxLevel}（使うたびに上がる）`);
+        }
         return out;
       })(),
       stats: (() => {
@@ -76425,7 +76768,6 @@ function MonsterHeroGame() {
       if (othersOf().length === 0) {
         pushBattleLog(`${name}の「最後の希望」…助ける味方がいなかった`, 'ally');
       } else {
-        units = damageTacticsTargets(units, [slot], normalizeTacticsUnit(units[slot]).hp);
         const hpMap = {},
           gutsMap = {};
         othersOf().forEach(i => {
@@ -76446,6 +76788,10 @@ function MonsterHeroGame() {
         mergeTacticsSlotFx(hpMap, gutsMap);
         addPopup('✨ 最後の希望', 'hero', 'text-amber-200 font-black text-2xl drop-shadow-md');
         pushBattleLog(`✨ ${name}の「最後の希望」。ダウンの味方が立ち上がり、全員のライフが満タンになった`, 'ally');
+        if (cfg.lockTurns > 0) {
+          setTacticsNextSlotBuff(slot, 'pandoraLockTurns', 1);
+          pushBattleLog(`💤 ${name}は反動で、次のターンは動けない`, 'ally');
+        }
         await battleWait(900);
       }
     } else if (phase === 'died') {
@@ -76505,7 +76851,10 @@ function MonsterHeroGame() {
       now: tacticsExNow,
       snapshot: usedUnit ? {
         atk: usedUnit.atk,
-        def: usedUnit.def
+        def: usedUnit.def,
+        ...(def.effect === 'timeStop' ? {
+          copied: tacticsExCopyableBuffs(state, tacticsUnitsRef.current, tacticsExNow, slotIdx)
+        } : {})
       } : null,
       choice,
       target: def.target === 'ally' ? choice : null
@@ -76533,7 +76882,12 @@ function MonsterHeroGame() {
           [choice]: gutsGain
         });
         const targetName = slots[choice]?.masuName || slots[choice]?.name || '味方';
-        pushBattleLog(wasDown ? `${targetName}が立ち上がった！ ライフ満タン` : `${targetName}のライフが満タン。上限が${Math.round(def.lifeSpring.maxUpRate * 100)}%上がった`, 'ally');
+        commitTacticsExState(setTacticsExSpringKind(tacticsExStateRef.current, slotIdx, wasDown));
+        if (def.aqua) {
+          clearTacticsAllyDebuffs();
+          pushBattleLog('🌊 アクアフィールドが広がった。味方のデバフが消えた', 'ally');
+        }
+        pushBattleLog(wasDown ? `${targetName}が立ち上がった！ ライフ満タン。根性がついた` : `${targetName}のライフが満タン。上限が${Math.round(def.lifeSpring.maxUpRate * 100)}%上がり、与ダメージが${Math.round(def.lifeSpring.dmgUp * 100)}%上がった`, 'ally');
       }
     }
     if (def.lifeCostRate > 0 && lifeNow) {
@@ -76565,7 +76919,7 @@ function MonsterHeroGame() {
         });
       }
     }
-    if (def.guaranteeUnique && (hand.length < 5 || !selectedCards.includes(hand.length - 1))) {
+    if ((def.guaranteeUnique || def.pandoraBox?.guaranteeUnique) && (hand.length < 5 || !selectedCards.includes(hand.length - 1))) {
       const ens = ensureTacticsExUniqueInHand(handPileRef.current, c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx);
       if (ens.moved) {
         setHand(ens.hand);
@@ -76575,14 +76929,17 @@ function MonsterHeroGame() {
     }
     let presentNote = null;
     if (def.effect === 'present' && def.present) {
-      const roll = rollTacticsExPresent(Math.random(), Math.random(), def.present.jackpot);
+      const pc = tacticsExStateRef.current.effects?.[slotIdx]?.presentCfg || def.present;
+      const roll = rollTacticsExPresent(Array.from({
+        length: pc.draws * 2
+      }, () => Math.random()), pc.jackpot, pc.draws);
       commitTacticsExState(setTacticsExPresent(tacticsExStateRef.current, slotIdx, roll));
-      tacticsRateHeal(0, def.present.fixedGuts, false);
-      if (roll.kinds.includes('heal')) tacticsRateHeal(def.present.heal, 0, false);
-      if (roll.kinds.includes('guts')) tacticsRateHeal(0, def.present.guts, false);
-      presentNote = tacticsExPresentNote(roll, def.present, def.turns);
+      tacticsRateHeal(0, pc.fixedGuts, false);
+      if (roll.kinds.includes('heal')) tacticsRateHeal(pc.heal, 0, false);
+      if (roll.kinds.includes('guts')) tacticsRateHeal(0, pc.guts, false);
+      presentNote = tacticsExPresentNote(roll, pc, def.turns);
       pushBattleLog(`🎁 プレゼントの中身: ${presentNote}`, 'ally');
-      addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${tacticsExPresentKindText(roll.kinds[0], def.present, def.turns)}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
+      addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${roll.kinds.map(k => tacticsExPresentKindText(k, pc, def.turns)).join('＋')}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
     }
     if (def.partyHealRate > 0) tacticsRateHeal(def.partyHealRate, def.partyHealRate, false);
     if (def.effect === 'pandoraBox') [PANDORA_DEVIL_IMG, PANDORA_ANGEL_IMG].forEach(u => {
@@ -76632,7 +76989,7 @@ function MonsterHeroGame() {
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? acting : null);
-    advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
+    if (!tacticsExFrozenRef.current) advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
   };
   const processTurn = async (explicitEntries = null) => {
     const hasExplicitEntries = Array.isArray(explicitEntries);
@@ -76712,7 +77069,6 @@ function MonsterHeroGame() {
     let attackDistance = enemyDist;
     const attackHits = [];
     const halveCounter = makeHalveCounter();
-    const pandoraCardNo = {};
     let pdTagFrom = 0,
       pdTagForm = null;
     const pdTag = () => {
@@ -76740,26 +77096,20 @@ function MonsterHeroGame() {
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       lastType = card.type;
       if (isTacticsMode(runMode) && !isBreeder && entry.slotIdx != null) {
-        pandoraCardNo[entry.slotIdx] = (pandoraCardNo[entry.slotIdx] || 0) + 1;
-        const boxNow = pandoraCardNo[entry.slotIdx] === 2 ? tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now) : null;
         pdTag();
         pdTagForm = null;
-        if (pandoraCardNo[entry.slotIdx] === 1 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) {
+        const boxNow = tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now);
+        if (boxNow) {
           pdTagForm = 'devil';
           setTacticsPandoraForms({
             [entry.slotIdx]: 'devil'
           });
-        } else if (boxNow || pandoraCardNo[entry.slotIdx] > 2 && tacticsExPandoraBoxOf(tacticsExStateRef.current, tacticsUnitsRef.current, entry.slotIdx, tacticsExLiveRef.current.now)) {
-          pdTagForm = 'angel';
-          setTacticsPandoraForms({
-            [entry.slotIdx]: 'angel'
-          });
-        }
-        if (boxNow && boxNow.angelRate > 0) {
-          const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
-          if (angel) hpBeforeEnemyAttack = angel.total;
-          addPopup('👼 天使の力 全員回復', 'hero', 'text-sky-200 font-black text-xl drop-shadow-md');
-          pushBattleLog(`👼 ${battleActorName(entry.slotIdx)}の2枚目。天使の力で味方全員のライフ・ガッツが戻った`, 'ally');
+          if (card.type === 'unique' && boxNow.angelRate > 0) {
+            const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
+            if (angel) hpBeforeEnemyAttack = angel.total;
+            addPopup('👼 天使の力 全員回復', 'hero', 'text-sky-200 font-black text-xl drop-shadow-md');
+            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
+          }
         }
       }
       if (card.type === 'guard') {
@@ -76820,7 +77170,7 @@ function MonsterHeroGame() {
             comboDmgBonus: getPermaBuff('comboDmgPct'),
             critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
             kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-            guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx),
+            guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
             rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus),
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
@@ -77031,19 +77381,23 @@ function MonsterHeroGame() {
           comboDmgBonus: getPermaBuff('comboDmgPct'),
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx),
+          guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
           rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0)) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved), livePermaBuff('fateStacks', null), slotIdx),
+          exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
         const finalD = hits[0].dmg;
         if (isCrit) hasCrit = true;
         totalDmg += finalD;
+        if (aquaStackFromCard(slotIdx, card) === 'finale') {
+          immediateStun = true;
+          setImmediateTurnBuff('stunEnemy', true);
+        }
         fireTacticsExCross(slotIdx);
         const rangeMoveTarget = card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : null;
         attackHits.push({
@@ -77561,7 +77915,7 @@ function MonsterHeroGame() {
     const moveWasFrozen = executedIntent && executedIntent.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = forcedMoveTarget != null ? forcedMoveTarget : executedIntent && executedIntent.type === 'MOVE' && !moveWasFrozen ? executedIntent.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? executedIntent : null);
-    advanceEnemyIntents(executedIntent, distForNextPredict, enemyActionPerformedRef.current);
+    if (!tacticsExFrozenRef.current) advanceEnemyIntents(executedIntent, distForNextPredict, enemyActionPerformedRef.current);
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
   };
   const runAutoTurnOnce = () => {

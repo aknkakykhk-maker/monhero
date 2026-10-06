@@ -66,7 +66,7 @@ vm.runInContext([
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExAvoidLeftOf,spendTacticsExAvoid,tacticsExCritFixedAt,tacticsExConfusesOnHit,rollEnemyConfusion,confusedEnemyIntent,ENEMY_CONFUSE_TURNS,ENEMY_CONFUSE_CHANCE,'
-    + 'tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterMult,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
+    + 'tacticsExTotalUsesOf,tacticsExPresentScaled,tacticsExCopyableBuffs,setTacticsExSpringKind,tacticsExSpringDmgMult,tacticsExKonjoLeftOf,spendTacticsExKonjo,tacticsExAquaOf,addTacticsExAquaStack,tacticsExUniqueGuaranteeSlot,tacticsExDefOf,tacticsExCounterOf,addTacticsExCounter,tacticsExCounterMult,tacticsExPsychoLockOf,tacticsExDamageBackRates,tacticsExPartyStatRate,tacticsExPartyBoostRegenRate,tacticsExRemainOf,tacticsExThunderOf,addTacticsExThunder,tacticsExMultiBuffOf,tacticsExExtraCombosAt,tacticsExPresentNote,tacticsExPresentKindText,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,tacticsExPandoraBoxOf,tacticsExPandoraDevil,tacticsExPandoraTurnEnd,spendTacticsExPandoraBox,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
@@ -135,7 +135,7 @@ check('どのEXも使った直後の一言(useNote)を持つ', Object.keys(ex.TA
   const sn = ex.tacticsExDefOf('Snegurochka');
   const one = ex.tacticsExPresentNote({ jackpot: false, kinds: ['dmg'] }, sn.present, sn.turns);
   const all = ex.tacticsExPresentNote({ jackpot: true, kinds: ['dmg', 'taken', 'combo', 'heal', 'guts', 'crit'] }, sn.present, sn.turns);
-  check('プレゼントの中身は数字つきで言う(1つ・大当たり)', one === '全員のガッツが上限の20%回復＋与ダメージ+20%（2ターン）'
+  check('プレゼントの中身は数字つきで言う(1つ・大当たり)', one === '全員のガッツが上限の20%回復＋与ダメージ+20%（3ターン）'
     && all.startsWith('全員のガッツが上限の20%回復＋大当たり！ ') && ['与ダメージ+20%', '被ダメージ−20%', '連撃 与ダメ10%×2回', 'ライフが上限の20%回復', 'ガッツがさらに上限の20%回復', '会心率×1.3'].every(w => all.includes(w)), one + ' / ' + all);
 }
 const ids = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id).id);
@@ -456,7 +456,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
     /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken:1\)/.test(app)
     && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\)( \+ tacticsExPartyBoostRegenRate\(tacticsExStateRef\.current, live\.now, 'hp'\))? : 0;/.test(app)
-    && (app.match(/exCombos:withFateCombo\(tacticsExCombosAt\(slotIdx(,halved|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3);
+    && (app.match(/exCombos:withFateCombo\(tacticsExCombosAt\(slotIdx(,halved,card|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3);
 }
 
 // ---------- ⑪-4 ゴースト「オフリィアボイド」・スプーキー「トリックコンフューズ」(2026-10-05 ユーザー指示) ----------
@@ -523,7 +523,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /if\(avoidDodge\)\{\s*commitTacticsExState\(spendTacticsExAvoid\(/.test(app)
     && /if\(slotIdx===evadedSlot\|\|exDodge\|\|thunderDodge\|\|avoidDodge\)\{/.test(app));
   check('本体: 会心確定は予測・あつの挑発・ふつうの攻撃の3か所すべて(完全回避が残る子・意味不明のターン)',
-    (app.match(/tacticsSlotFlag\(getTurnBuff\('bySlot',null\),slotIdx,'guaranteedCrit'\)\|\|tacticsCritFixedNow\(slotIdx\)/g) || []).length === 3
+    (app.match(/tacticsSlotFlag\(getTurnBuff\('bySlot',null\),slotIdx,'guaranteedCrit'\)\|\|tacticsCritFixedNow\(slotIdx,card\)/g) || []).length === 3
     && /if\(enemyIntent\?\.type==='CONFUSED'\) return true;/.test(app));
   check('本体: 乱心は次の予告を決めるときに振り、意味不明のターンは敵が動かない',
     /const confusion = rollEnemyConfusion\(aimed, confuseBefore\);/.test(app) && /const confuseBefore = enemyConfuseRef\.current;/.test(app)
@@ -652,12 +652,12 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 {
   const px = ex.tacticsExDefOf('Pixie'), mi = ex.tacticsExDefOf('Mia'), sn = ex.tacticsExDefOf('Snegurochka');
   check('ピクシー「お気に入りの魔法」: 3回・併用できる・3ターン・距離補正×1.5・固有技が必ず出る', !!px && px.name === 'お気に入りの魔法' && px.maxUses === 3 && px.withCards
-    && px.duration === 'turns' && px.turns === 3 && px.distMult === 1.5 && px.guaranteeUnique && px.effect === 'multiBuff' && ex.isTacticsExEffectImplemented(px), JSON.stringify(px));
+    && px.duration === 'turns' && px.turns === 3 && px.distMult === 1.5 && px.uniqueCrit === true && px.guaranteeUnique && px.effect === 'multiBuff' && ex.isTacticsExEffectImplemented(px), JSON.stringify(px));
   check('ミーア「オン・ステージ！」: 3回・併用できる・4ターン・枚数+1・ボルテージ(最大10・与ダメ3%・回復5%・ガッツ2%)', !!mi && mi.name === 'オン・ステージ！' && mi.maxUses === 3 && mi.withCards
     && mi.turns === 4 && mi.cardBonus === 1 && mi.voltage && mi.voltage.max === 10 && mi.voltage.dmg === 0.03 && mi.voltage.heal === 0.05 && mi.voltage.guts === 0.02 && mi.voltage.hp === 0.03
     && mi.effect === 'stage' && ex.isTacticsExEffectImplemented(mi), JSON.stringify(mi));
-  check('スネグーラチカ「クリスマスプレゼント」: 各WAVE1回・併用できる・2ターン・ガッツ20%・大当たり10%', !!sn && sn.name === 'クリスマスプレゼント' && sn.maxUses === 1 && sn.usesPerWave && sn.withCards
-    && sn.turns === 2 && sn.present && sn.present.fixedGuts === 0.2 && sn.present.jackpot === 0.1 && sn.present.combo.count === 2 && sn.effect === 'present' && ex.isTacticsExEffectImplemented(sn), JSON.stringify(sn));
+  check('スネグーラチカ「クリスマスプレゼント」: 各WAVE1回・併用できる・3ターン・2回引く・ガッツ20%・大当たり10%', !!sn && sn.name === 'クリスマスプレゼント' && sn.maxUses === 1 && sn.usesPerWave && sn.withCards
+    && sn.turns === 3 && sn.present && sn.present.draws === 2 && sn.present.fixedGuts === 0.2 && sn.present.jackpot === 0.1 && sn.present.combo.count === 2 && sn.effect === 'present' && ex.isTacticsExEffectImplemented(sn), JSON.stringify(sn));
   const A = (wave, turn) => ({ wave, turn });
   const units = [{ id: 'Pixie' }, { id: 'Mia' }, { id: 'Snegurochka' }, { id: 'Golem' }];
   const use = (state, def, slot, id, now) => ex.applyTacticsExUse(state, { def, slot, monId: id, now });
@@ -715,11 +715,13 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('回数を戻す必要がなければ、同じ state をそのまま返す', ex.resetTacticsExWaveUses(ex.createTacticsExState()) === ex.createTacticsExState() || (() => { const st = ex.createTacticsExState(); return ex.resetTacticsExWaveUses(st) === st; })());
   const kinds = ex.TACTICS_EX_PRESENT_KINDS;
   check('プレゼント: 6種(与ダメ・被ダメ・連撃・ライフ・ガッツ・会心率)', kinds.length === 6 && ['dmg', 'taken', 'combo', 'heal', 'guts', 'crit'].every(k => kinds.includes(k)));
-  const jp = ex.rollTacticsExPresent(0.05, 0.5, 0.1), r0 = ex.rollTacticsExPresent(0.5, 0, 0.1), r5 = ex.rollTacticsExPresent(0.5, 0.999, 0.1), edge = ex.rollTacticsExPresent(0.1, 0.5, 0.1);
-  check('プレゼント: 乱数が0.1より小さければ大当たり(6つ全部)・そうでなければ1つ(乱数0で最初・0.999で最後)・ちょうど0.1は大当たりではない',
-    jp.jackpot && jp.kinds.length === 6 && !r0.jackpot && r0.kinds.length === 1 && r0.kinds[0] === 'dmg' && r5.kinds[0] === 'crit' && !edge.jackpot);
-  const allKinds = new Set(Array.from({ length: 60 }, (_, i) => ex.rollTacticsExPresent(0.5, i / 60, 0.1).kinds[0]));
-  check('乱数を均等に振ると6種ぜんぶ出る', allKinds.size === 6);
+  const R = (a, jackpot = 0.1, draws = 2) => ex.rollTacticsExPresent(a, jackpot, draws);
+  const jp = R([0.05, 0.5, 0.5, 0.5]), r0 = R([0.5, 0, 0.5, 0]), r5 = R([0.5, 0.999, 0.5, 0.999]), edge = R([0.1, 0.5, 0.5, 0.5]), jp2 = R([0.5, 0, 0.05, 0]);
+  check('プレゼント: 2回引く・引くたびに乱数が0.1より小さければ大当たり(6つ全部)・そうでなければ1種類(同じものは出ない)・ちょうど0.1は大当たりではない',
+    jp.jackpot && jp.kinds.length === 6 && !r0.jackpot && r0.kinds.join() === 'dmg,taken' && r5.kinds.join() === 'crit,guts' && !edge.jackpot && edge.kinds.length === 2);
+  check('大当たりは残りの抽選を打ち切る(2回目で出ても6つ全部・1回目で出たら2回目は引かない)', jp2.jackpot && jp2.kinds.length === 6 && jp.kinds.length === 6);
+  const allKinds = new Set(Array.from({ length: 60 }, (_, i) => R([0.5, i / 60, 0.5, 0.5]).kinds[0]));
+  check('乱数を均等に振ると6種ぜんぶ出る・2つは必ず別の種類', allKinds.size === 6 && Array.from({ length: 36 }, (_, i) => R([0.5, (i % 6) / 6, 0.5, Math.floor(i / 6) / 6]).kinds).every(k => k.length === 2 && k[0] !== k[1]));
   const gift = (roll) => ex.tacticsExPresentOf(ex.setTacticsExPresent(ss, 2, roll), units, A(1, 2));
   const gD = gift({ jackpot: false, kinds: ['dmg'] }), gT = gift({ jackpot: false, kinds: ['taken'] }), gC = gift({ jackpot: false, kinds: ['combo'] }), gK = gift({ jackpot: false, kinds: ['crit'] }), gH = gift({ jackpot: false, kinds: ['heal'] });
   check('プレゼントの持続4種: 与ダメ×1.2・被ダメ×0.8・連撃(10%×2回)・会心率×1.3。回復・ガッツはその場だけで持続しない',
@@ -727,8 +729,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && Math.abs(gK.critRate - 1.3) < 1e-9 && gH.dmg === 1 && gH.taken === 1 && gH.critRate === 1 && gH.combo === null);
   const gJ = gift({ jackpot: true, kinds: kinds.slice() });
   check('大当たりは持続4種がぜんぶ重なる', gJ.jackpot && Math.abs(gJ.dmg - 1.2) < 1e-9 && Math.abs(gJ.taken - 0.8) < 1e-9 && Math.abs(gJ.critRate - 1.3) < 1e-9 && !!gJ.combo);
-  check('プレゼントは2ターンで切れる・WAVEが変わったら切れる・中身を決める前は何も起きない',
-    ex.tacticsExPresentOf(ex.setTacticsExPresent(ss, 2, { jackpot: false, kinds: ['dmg'] }), units, A(1, 4)).dmg === 1
+  check('プレゼントは3ターンで切れる・WAVEが変わったら切れる・中身を決める前は何も起きない',
+    ex.tacticsExPresentOf(ex.setTacticsExPresent(ss, 2, { jackpot: false, kinds: ['dmg'] }), units, A(1, 5)).dmg === 1
     && ex.tacticsExPresentOf(ex.setTacticsExPresent(ss, 2, { jackpot: false, kinds: ['dmg'] }), units, A(2, 2)).dmg === 1
     && ex.tacticsExPresentOf(ss, units, A(1, 2)).dmg === 1);
   const ecA = { count: 1, rate: 0.1, label: 'A' }, ecB = { count: 2, rate: 0.05, label: 'B' };
@@ -745,9 +747,9 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('本体: ターン終わりにボルテージをため、次のターンも効くならピクシーの固有技を手札へ出す・使ったときにも出す',
     /addTacticsExVoltage\(stNow,tacticsUnitsRef\.current,\{ wave, turn:turnCount \},usedCardEntries\.length\)/.test(app)
     && /tacticsExUniqueGuaranteeSlot\(tacticsExStateRef\.current,tacticsUnitsRef\.current,\{ wave, turn:turnCount\+1 \}\)/.test(app)
-    && /if\(def\.guaranteeUnique&&\(hand\.length<5\|\|!selectedCards\.includes\(hand\.length-1\)\)\)/.test(app));
+    && /if\(\(def\.guaranteeUnique\|\|def\.pandoraBox\?\.guaranteeUnique\)&&\(hand\.length<5\|\|!selectedCards\.includes\(hand\.length-1\)\)\)/.test(app));
   check('本体: 使ったときにプレゼントの中身を決めて(必ず全員のガッツ)・WAVEが変わったら回数を戻す・詳細に状態を出す',
-    /rollTacticsExPresent\(Math\.random\(\),Math\.random\(\),def\.present\.jackpot\)/.test(app) && /tacticsRateHeal\(0,def\.present\.fixedGuts,false\)/.test(app)
+    /rollTacticsExPresent\(Array\.from\(\{length:pc\.draws\*2\},\(\)=>Math\.random\(\)\),pc\.jackpot,pc\.draws\)/.test(app) && /tacticsRateHeal\(0,pc\.fixedGuts,false\)/.test(app)
     && /resetTacticsExWaveUses\(tacticsExStateRef\.current\)[\s\S]{0,160}\}, \[wave, runMode\]\);/.test(app)
     && /statusLines:\(\(\)=>\{/.test(app) && /data-tactics-ex-status/.test(screen));
 }
@@ -797,7 +799,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /if\(def\.lifeSpring&&Number\.isInteger\(choice\)\)\{/.test(app) && /setTacticsExMaxHpRate\(units,choice,def\.lifeSpring\.maxUpRate\)/.test(app)
     && /targetOptions:\(\(\)=>\{ const opts=tacticsExTargetOptions\(def,tacticsUnits\)/.test(app)
     && /const timeStopSlot = isTacticsMode\(runMode\)&&tacticsExEnabled \? tacticsExTimeStopSlot\(/.test(app)
-    && /if \(timeStopSlot!=null\) \{\n\s*addPopup\('⏳ 時間停止！/.test(app)
+    && /if \(timeStopSlot!=null\) \{\n\s*(tacticsExFrozenRef\.current = true;\n\s*)?addPopup\('⏳ 時間停止！/.test(app)
     && /const nextTurn=timeStopSlot!=null\?turnCount:turnCount\+1; setTurnCount\(nextTurn\);/.test(app)
     && /data-tactics-ex-target=\{t\.slot\}/.test(screen));
 }
@@ -961,10 +963,10 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 // ---------- ⑰ パンドラ「パンドラの箱」(2026-10-03 ユーザーの案・数字は仮) ----------
 {
   const pd = ex.tacticsExDefOf('Pandora');
-  check('パンドラ「パンドラの箱」: ラン3回・併用できる・3ターン・ライフ30%・自分+1枚・悪魔側 与ダメ×1.5と連撃30%×1・天使側10%・最後の希望ガッツ50%', !!pd && pd.name === 'パンドラの箱' && pd.maxUses === 3 && pd.withCards
+  check('パンドラ「パンドラの箱」: ラン3回・併用できる・3ターン・ライフ30%・自分+1枚・強化ダイスキライライ(威力×2・連撃50%×2・天使15%)・最後の希望ガッツ80%・反動で1ターン動けない', !!pd && pd.name === 'パンドラの箱' && pd.maxUses === 3 && pd.withCards
     && pd.duration === 'turns' && pd.turns === 3 && pd.effect === 'pandoraBox' && ex.isTacticsExEffectImplemented(pd) && !!pd.pandoraBox
-    && pd.pandoraBox.costRate === 0.3 && pd.pandoraBox.selfCardBonus === 1 && pd.pandoraBox.devilDmg === 1.5 && pd.pandoraBox.devilCombo.count === 1 && pd.pandoraBox.devilCombo.rate === 0.3
-    && pd.pandoraBox.angelRate === 0.1 && pd.pandoraBox.hopeGutsRate === 0.5, JSON.stringify(pd));
+    && pd.pandoraBox.costRate === 0.3 && pd.pandoraBox.selfCardBonus === 1 && pd.pandoraBox.devilDmg === 2 && pd.pandoraBox.devilCombo.count === 2 && pd.pandoraBox.devilCombo.rate === 0.5
+    && pd.pandoraBox.angelRate === 0.15 && pd.pandoraBox.hopeGutsRate === 0.8 && pd.pandoraBox.guaranteeUnique === true && pd.pandoraBox.lockTurns === 1, JSON.stringify(pd));
   const A = (wave, turn) => ({ wave, turn });
   const mk = (id, hp, downed = false) => ({ id, hp, maxHp: 400, baseMaxHp: 400, atk: 1, def: 1, guts: 50, maxGuts: 135, baseMaxGuts: 135, downed });
   const units = [mk('Pandora', 400), mk('Golem', 400), mk('Mocchi', 200, true)];
@@ -974,8 +976,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExPandoraBoxOf(st, units, 0, A(3, 3)) === null && ex.tacticsExPandoraBoxOf(st, units, 1, A(2, 3)) === null
     && ex.tacticsExPandoraBoxOf(ex.createTacticsExState(), units, 0, A(2, 3)) === null);
   const dv = ex.tacticsExPandoraDevil(st, units, 0, A(2, 3), false);
-  check('悪魔側の力: 1枚目だけ 与ダメ×1.5・連撃30%×1(名前「悪魔の力」)。「同じ子の2枚目」・箱が無いときは null',
-    !!dv && dv.dmg === 1.5 && dv.combo.count === 1 && dv.combo.rate === 0.3 && dv.combo.label === '悪魔の力'
+  check('強化ダイスキライライ: 固有技の与ダメ×2・連撃50%×2(名前「悪魔の力」)。箱が無いときは null',
+    !!dv && dv.dmg === 2 && dv.combo.count === 2 && dv.combo.rate === 0.5 && dv.combo.label === '悪魔の力'
     && ex.tacticsExPandoraDevil(st, units, 0, A(2, 3), true) === null && ex.tacticsExPandoraDevil(ex.createTacticsExState(), units, 0, A(2, 3), false) === null);
   check('パンドラ自身が使えるカードが+1(自分の枠+1・盤面の枚数も+1・ほかの子の枠は+0)', ex.tacticsExCardBonusAt(st, units, 0, A(2, 3)) === 1 && ex.tacticsExCardBonusAt(st, units, 1, A(2, 3)) === 0
     && ex.tacticsExCardBonusTotal(st, units, A(2, 3)) === 1 && ex.tacticsExCardBonusTotal(st, units, A(2, 6)) === 0);
@@ -990,12 +992,12 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && (() => { const e = ex.createTacticsExState(); return ex.spendTacticsExPandoraBox(e) === e; })());
   check('箱が効いているあいだは、もう一度使えない(ラン3回のうち、切れたあとなら使える)', !ex.checkTacticsExUse({ def: pd, state: st, slot: 0, monId: 'Pandora', alive: true, now: A(2, 4) }).ok && ex.checkTacticsExUse({ def: pd, state: ex.spendTacticsExPandoraBox(st), slot: 0, monId: 'Pandora', alive: true, now: A(3, 1) }).ok);
   check('本体: 悪魔側(与ダメ・連撃・予測)・天使側(2枚目)・ターン終わりの始末へ結線してある',
-    /tacticsExPandoraDevilNow\(slotIdx,isSecondOrLaterAtk\)\.dmg\*/.test(app)
-    && /const devil=tacticsExPandoraDevilNow\(slotIdx,halved\)\.combo;/.test(app)
+    /\(card\.type==='unique'\?tacticsExPandoraDevilNow\(slotIdx,false\)\.dmg:1\)\*/.test(app)
+    && /const devil=card&&card\.type==='unique'\?tacticsExPandoraDevilNow\(slotIdx,false\)\.combo:null;/.test(app)
     && /getAttackPredictedDmg = useCallback\(\(card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null, halved=false\)/.test(app)
     && (screen.match(/getAttackPredictedDmg\([^;]*,(halved|pendingHalved|isSecondOrLater)\)/g) || []).length === 4
-    && /pandoraCardNo\[entry\.slotIdx\]===2\?tacticsExPandoraBoxOf\(/.test(app) && /tacticsRateHeal\(boxNow\.angelRate,boxNow\.angelRate,false\)/.test(app)
-    && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'devil'\}\)/.test(app) && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'angel'\}\)/.test(app) && /setTacticsPandoraForms\(\{\}\);/.test(app)
+    && /card\.type==='unique'&&boxNow\.angelRate>0/.test(app) && /tacticsRateHeal\(boxNow\.angelRate,boxNow\.angelRate,false\)/.test(app)
+    && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'devil'\}\)/.test(app) && /setTacticsPandoraForms\(\{\}\);/.test(app)
     && /attackHits\[k\]\.pandoraForm=pdTagForm/.test(app) && /setTacticsPandoraForms\(hit&&hit\.pandoraForm&&hit\.slotIdx!=null\?/.test(app)
     && /data-pandora-pair/.test(screen) && /\{pandoraArt\?pandoraArt:s\?\.imgUrl\?/.test(screen) && /tacticsPandoraForms=\{tacticsPandoraForms\}/.test(app)
     && /const boxStep=tacticsExPandoraTurnEnd\(tacticsExStateRef\.current,tacticsUnitsRef\.current,tacticsExLiveRef\.current\.now\);\s*if\(boxStep\) await settleTacticsExPandoraBox\(boxStep\);/.test(app)
@@ -1084,6 +1086,70 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /data-tactics-ex-use disabled=\{!exPanel\.check\.ok\}/.test(screen)
     && /data-tactics-ex-choice=\{st\.id\} disabled=\{st\.current\|\|!exPanel\.check\.ok\}/.test(screen)
     && /data-tactics-ex-target=\{t\.slot\} data-tactics-ex-target-downed=\{t\.downed\?'yes':'no'\} disabled=\{!exPanel\.check\.ok\}/.test(screen));
+}
+
+// ---------- ㉓ 強化案(2026-10-06): ピクシー・スネグーラチカ・ヤオビクニ・ウンディーネ・パンドラ ----------
+{
+  const A = (wave, turn) => ({ wave, turn });
+  const mk = (id, hp = 300, downed = false) => ({ id, hp, maxHp: 400, baseMaxHp: 400, atk: 100, def: 50, guts: 50, maxGuts: 135, baseMaxGuts: 135, downed });
+  const use = (state, id, slot, now, extra = {}) => ex.applyTacticsExUse(state, { def: ex.tacticsExDefOf(id), slot, monId: id, now, ...extra });
+  // ピクシー: 固有技は必ず会心(効いているあいだだけ)
+  const px = use(ex.createTacticsExState(), 'Pixie', 0, A(1, 2));
+  check('ピクシー: 効いているあいだ固有技が必ず会心になる(切れたら null)', ex.tacticsExMultiBuffOf(px, [mk('Pixie')], 0, A(1, 3)).uniqueCrit === true && ex.tacticsExMultiBuffOf(px, [mk('Pixie')], 0, A(1, 5)) === null);
+  // スネグーラチカ: 使うほど豪華に(WAVEで回数が戻っても合計は戻らない)・上限あり
+  const sn = ex.tacticsExDefOf('Snegurochka');
+  let st = ex.createTacticsExState();
+  const levels = [];
+  for (let i = 0; i < 12; i++) { st = use(st, 'Snegurochka', 2, A(1 + i, 2)); levels.push(st.effects[2].presentCfg); st = ex.resetTacticsExWaveUses(st); }
+  check('プレゼントは使うほど豪華になる(1回目は基本値・WAVEで回数が戻っても合計は戻らない・上限あり)', Math.abs(levels[0].dmg - 0.2) < 1e-9 && Math.abs(levels[0].jackpot - 0.1) < 1e-9
+    && levels[1].dmg > levels[0].dmg && levels[1].fixedGuts > levels[0].fixedGuts && levels[1].jackpot > levels[0].jackpot && ex.tacticsExTotalUsesOf(st, 2, 'Snegurochka') === 12
+    && Math.abs(levels[11].dmg - levels[10].dmg) < 1e-9 && levels[11].jackpot <= 0.5 && ex.tacticsExPresentScaled(sn.present, 0).dmg === sn.present.dmg);
+  // ヤオビクニ: 使った瞬間に、ほかの味方の強化を集めてそのターンだけ受ける(完全回避・連撃は集めない)
+  const ark = use(ex.createTacticsExState(), 'Ark', 0, A(1, 3));
+  const units = [mk('Ark'), mk('Yaobikuni')];
+  const copied = ex.tacticsExCopyableBuffs(ark, units, A(1, 3), 1);
+  check('悠久の刻: ほかの味方の与ダメ・被ダメ・会心の強化を集める(自分の枠は除く)・何もなければ変化なし', copied.dmg >= 1 && ex.tacticsExCopyableBuffs(ex.createTacticsExState(), units, A(1, 3), 1).dmg === 1
+    && ex.tacticsExCopyableBuffs(ark, units, A(1, 3), 0).dmg === 1);
+  const withCopy = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ex.tacticsExDefOf('Yaobikuni'), slot: 1, monId: 'Yaobikuni', now: A(1, 3), snapshot: { atk: 100, def: 50, copied: { dmg: 1.3, taken: 0.8, critRate: 1.2, critAdd: 0, critDmg: 1.1, atk: 0.2, def: 0.1, regenHp: 0.05, regenGuts: 0 } } });
+  const mbY = ex.tacticsExMultiBuffOf(withCopy, units, 1, A(1, 3));
+  check('悠久の刻: コピーした強化を、止まったターンだけ受ける(次のターンは受けない)・力と丈夫さ・自動回復にも乗る',
+    !!mbY && mbY.dmg === 1.3 && mbY.taken === 0.8 && mbY.critRate === 1.2 && mbY.critDmg === 1.1 && ex.tacticsExMultiBuffOf(withCopy, units, 1, A(1, 4)) === null
+    && ex.applyTacticsExStats(units[1], withCopy, 1, A(1, 3)).atk === 120 && ex.applyTacticsExStats(units[1], withCopy, 1, A(1, 3)).def === 55 && ex.tacticsExRegenRateAt(withCopy, units, 1, A(1, 3), 'hp') === 0.05);
+  // ウンディーネ: 根性(立ち上がった子だけ・1回)・与ダメアップ(立っていた子だけ)・アクアフィールド
+  const un = ex.tacticsExDefOf('Undine');
+  const u3 = [mk('Undine'), mk('Golem', 0, true), mk('Mocchi')];
+  let us = ex.applyTacticsExUse(ex.createTacticsExState(), { def: un, slot: 0, monId: 'Undine', now: A(1, 2), target: 1 });
+  us = ex.setTacticsExSpringKind(us, 0, true);
+  check('生命の泉: ダウンから立ち上がった子には根性が1回・切れたら無い・踏ん張ると使い切る', ex.tacticsExKonjoLeftOf(us, u3, 1, A(1, 3)) === 1 && ex.tacticsExKonjoLeftOf(us, u3, 2, A(1, 3)) === 0
+    && ex.tacticsExKonjoLeftOf(us, u3, 1, A(1, 5)) === 0 && ex.tacticsExKonjoLeftOf(ex.spendTacticsExKonjo(us, u3, 1, A(1, 3)), u3, 1, A(1, 3)) === 0 && ex.tacticsExSpringDmgMult(us, u3, 1, A(1, 3)) === 1);
+  let us2 = ex.applyTacticsExUse(ex.createTacticsExState(), { def: un, slot: 0, monId: 'Undine', now: A(1, 2), target: 2 });
+  us2 = ex.setTacticsExSpringKind(us2, 0, false);
+  check('生命の泉: 立っていた子は与ダメ+20%・根性は付かない', Math.abs(ex.tacticsExSpringDmgMult(us2, u3, 2, A(1, 3)) - 1.2) < 1e-9 && ex.tacticsExKonjoLeftOf(us2, u3, 2, A(1, 3)) === 0 && ex.tacticsExSpringDmgMult(us2, u3, 0, A(1, 3)) === 1);
+  const aq0 = ex.tacticsExAquaOf(us2, u3, A(1, 3));
+  check('アクアフィールド: 使った直後は道が決まっておらず倍率は変わらない・フィールドが無ければ active:false', aq0.active && aq0.route === null && aq0.stacks === 0 && aq0.enemyDmgMult === 1 && aq0.enemyTakenBonus === 0
+    && ex.tacticsExAquaOf(ex.createTacticsExState(), u3, A(1, 3)).active === false);
+  const speciesUnits = [mk('Undine'), mk('Yaobikuni'), mk('Snegurochka'), mk('Ark')];
+  let a1 = ex.addTacticsExAquaStack(us2, speciesUnits, A(1, 3), 1, 'normal');
+  check('水牢: 通常技を最初に使うと水牢の道に固定され、1つごとに敵の与ダメ−10%', a1.event === 'stack' && a1.route === 'prison' && Math.abs(ex.tacticsExAquaOf(a1.state, speciesUnits, A(1, 3)).enemyDmgMult - 0.9) < 1e-9);
+  const wrong = ex.addTacticsExAquaStack(a1.state, speciesUnits, A(1, 3), 2, 'unique');
+  check('道が決まったら、反対の技(固有技)は積めない・ウンディーネ種でない子の技も積めない', wrong.event === null && ex.addTacticsExAquaStack(a1.state, speciesUnits, A(1, 3), 3, 'normal').event === null);
+  const a2 = ex.addTacticsExAquaStack(a1.state, speciesUnits, A(1, 3), 2, 'normal'), a3 = ex.addTacticsExAquaStack(a2.state, speciesUnits, A(1, 3), 0, 'normal');
+  const aqF = ex.tacticsExAquaOf(a3.state, speciesUnits, A(1, 3));
+  check('アクアフィナーレ: 3つたまると使い切り(0に戻る)・敵の被ダメ+50%が2ターン続く(3ターン目は戻る)', a3.event === 'finale' && aqF.stacks === 0 && aqF.finale && Math.abs(aqF.enemyTakenBonus - 0.5) < 1e-9
+    && Math.abs(ex.tacticsExAquaOf(a3.state, speciesUnits, A(1, 4)).enemyTakenBonus - 0.5) < 1e-9 && ex.tacticsExAquaOf(a3.state, speciesUnits, A(1, 5)).enemyTakenBonus === 0);
+  const f1 = ex.addTacticsExAquaStack(us2, speciesUnits, A(1, 3), 0, 'unique');
+  check('氷結: 固有技を最初に使うと氷結の道に固定され、1つごとに敵の被ダメ+10%(敵の与ダメは変わらない)', f1.route === 'freeze' && Math.abs(ex.tacticsExAquaOf(f1.state, speciesUnits, A(1, 3)).enemyTakenBonus - 0.1) < 1e-9
+    && ex.tacticsExAquaOf(f1.state, speciesUnits, A(1, 3)).enemyDmgMult === 1 && ex.addTacticsExAquaStack(f1.state, speciesUnits, A(1, 3), 1, 'normal').event === null);
+  // パンドラ: 毎ターン固有技が手札に出る
+  const pd = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ex.tacticsExDefOf('Pandora'), slot: 0, monId: 'Pandora', now: A(2, 3) });
+  check('パンドラの箱: 効いているあいだ毎ターン固有技が手札に出る(切れたら null)', ex.tacticsExUniqueGuaranteeSlot(pd, [mk('Pandora')], A(2, 4)) === 0 && ex.tacticsExUniqueGuaranteeSlot(pd, [mk('Pandora')], A(2, 6)) === null);
+  const app = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('本体: 時間停止中は残りターンを減らさない・敵の次の行動を決め直さない・根性・アクアフィールド・パンドラの反動へ結線してある',
+    /tacticsExFrozenRef\.current = true;/.test(app) && (app.match(/if\(!tacticsExFrozenRef\.current\) advanceEnemyIntents\(/g) || []).length === 3
+    && /iceLockRefreshed && timeStopSlot==null/.test(app) && /timeStopSlot==null&&\(fateWheelRef/.test(app) && /if\(timeStopSlot==null\)\{ setTurnBuffs\(activeTurnBuffs\); writeNextTurnBuffs\(\{\}\); \}/.test(app)
+    && /spendTacticsExKonjo\(tacticsExStateRef\.current,units,slotIdx/.test(app) && /aquaStackFromCard\(slotIdx,card\)==='finale'/.test(app) && /clearTacticsAllyDebuffs\(\)/.test(app)
+    && /tacticsExAquaOf\(tacticsExStateRef\.current,tacticsUnitsRef\.current,live\.now\)/.test(app) && /setTacticsNextSlotBuff\(slot,'pandoraLockTurns',1\)/.test(app)
+    && /tacticsCritFixedNow\(slotIdx,card\)/.test(app) && /copied:tacticsExCopyableBuffs\(/.test(app));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
