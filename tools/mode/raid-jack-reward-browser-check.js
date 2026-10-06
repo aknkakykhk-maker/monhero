@@ -83,6 +83,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         if (req.method() === 'POST') { posts.push({ url, body: req.postData() }); await route.fulfill({ status: 201, body: '' }); return; }
         // ランキングの確認用: 子爵(段階2)の貢献には3人、グランドスラムの累計には2人を返す
         if (/raid_jack_contributions\?.*kind=eq\.a&tier=eq\.2/.test(decodeURIComponent(url))) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ breeder_id: 'rank-aaaa0001', total_damage: 900, last_hit_at: 't' }, { breeder_id: 'rank-aaaa0002', total_damage: 500, last_hit_at: 't' }, { breeder_id: 'rank-aaaa0003', total_damage: 100, last_hit_at: 't' }]) }); return; }
+        // 種類別(バトル / モンヒロビート): 合計は 2人、最大は 1人
+        if (/raid_jack_source_/.test(url)) { await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '0-0/1', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' }, body: JSON.stringify(/max_damage/.test(url) && !/total_damage/.test(url.split('select=')[1] || '') ? [{ breeder_id: 'rank-rrrr0001', max_damage: 123456, last_hit_at: 't' }] : [{ breeder_id: 'rank-rrrr0001', total_damage: 555000, last_hit_at: 't' }, { breeder_id: 'rank-rrrr0002', total_damage: 444000, last_hit_at: 't' }]) }); return; }
         if (/raid_jack_b_ranking/.test(url)) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ breeder_id: 'rank-bbbb0001', total_damage: 7000, last_hit_at: 't' }, { breeder_id: 'rank-bbbb0002', total_damage: 3000, last_hit_at: 't' }]) }); return; }
         await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }); return;
       }
@@ -144,6 +146,20 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 3, null, { timeout: 10000 });
     check('子爵を選ぶと、その段階の貢献ランキング(3人)が出る', true);
     check('段階名が見出しに出る', /ジャック子爵への貢献ランキング/.test(await page.locator('[data-raid-jack-ranking-list]').innerText()));
+    // 種類別(2026-10-06): 合計 / バトル / モンヒロビート。モンヒロビートの合計・1曲の最大ダメージが見られる
+    check('レイドバトルのランキングに「合計・バトル・モンヒロビート」の切り替えが出る', await page.locator('[data-raid-jack-ranking-source]').count() === 3);
+    await page.locator('[data-raid-jack-ranking-source="rhythm"]').click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 2, null, { timeout: 10000 });
+    check('モンヒロビートを選ぶと、その合計ダメージのランキング(2人)が出る', /モンヒロビートで与えたダメージの合計/.test(await page.locator('[data-raid-jack-ranking-list]').innerText()));
+    await page.locator('[data-raid-jack-ranking-kind="max"]').click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 1, null, { timeout: 10000 });
+    const rhythmMaxText = await page.locator('[data-raid-jack-ranking-list]').innerText();
+    check('モンヒロビート × 最大ダメージは「1曲あたり」の最大が出る(1人・123,456)', /モンヒロビートの最大ダメージ\(1曲あたり/.test(rhythmMaxText) && /123,456/.test(rhythmMaxText), rhythmMaxText.replace(/\s+/g, ' ').slice(0, 120));
+    await page.locator('[data-raid-jack-ranking-source="battle"]').click();
+    await page.waitForFunction(() => /バトルの最大ダメージ\(1戦あたり/.test(document.querySelector('[data-raid-jack-ranking-list]').innerText), null, { timeout: 10000 });
+    check('バトル × 最大ダメージは「1戦あたり」', true);
+    await page.locator('[data-raid-jack-ranking-source="all"]').click();
+    await page.locator('[data-raid-jack-ranking-kind="total"]').click();
     await page.locator('[data-raid-jack-ranking-list]').getByText('グランドスラム', { exact: true }).first().click();
     await page.waitForFunction(() => document.querySelectorAll('[data-raid-jack-ranking-list] [data-raid-jack-ranking-row]').length === 2, null, { timeout: 10000 });
     check('グランドスラムは累計ダメージのランキング(2人)が出る', /グランドスラムの累計ダメージ/.test(await page.locator('[data-raid-jack-ranking-list]').innerText()));

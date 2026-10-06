@@ -273,7 +273,7 @@ const raidJackNormalizePending = (raw) => (Array.isArray(raw) ? raw : []).map((h
   if (typeof x.hitId !== 'string' || !/^[0-9A-Za-z_-]{8,64}$/.test(x.hitId)) return null;
   if (x.kind !== 'a' && x.kind !== 'b') return null;
   if (tier < 1 || tier > 5 || damage < 0 || damage > 100000000) return null;
-  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true };
+  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true, source: x.source === 'rhythm' ? 'rhythm' : 'battle' };
 }).filter(Boolean).slice(0, 30);
 const raidJackNormalizeState = (raw) => {
   const src = raw && typeof raw === 'object' ? raw : {};

@@ -13963,7 +13963,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       pumpkin = run.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
     } catch (e) { startLife = null; }
     const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
-    const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated };
+    const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated, source: 'rhythm' };
     let outcome = 'error';
     let opened = false;
     const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
