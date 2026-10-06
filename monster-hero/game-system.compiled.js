@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c10e8236f8e6acca
+// source-sha256: b05fbd7f1bea9d84
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 16:38";
+const BUILD_DATE = "2026-10-06 16:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37251,12 +37251,50 @@ const RAID_JACK_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_JACK_A_ATK_POWERS = Object.freeze(RAID_JACK_A_ATKS.map(atk => atk / RAID_JACK_BASE.atk));
 const RAID_JACK_A_TIERS = Object.freeze([raidJackTier('a1', 'ジャック男爵', 5.0, 3, RAID_JACK_A_ATK_POWERS[0], 1750000), raidJackTier('a2', 'ジャック子爵', 6.5, 4, RAID_JACK_A_ATK_POWERS[1], 3200000), raidJackTier('a3', 'ジャック伯爵', 8.0, 5, RAID_JACK_A_ATK_POWERS[2], 8000000), raidJackTier('a4', 'ジャック公爵', 10.0, 5, RAID_JACK_A_ATK_POWERS[3], 35000000), raidJackTier('a5', 'ジャック大王', 13.0, 5, RAID_JACK_A_ATK_POWERS[4], 80000000)]);
 const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 4550000);
-const RAID_JACK_RHYTHM_DAMAGE_PER_SCORE = 1;
-const raidJackRhythmDamage = (score, opts = {}) => {
-  if (opts && opts.assist === true) return 0;
-  const n = Number(score);
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(100000000, Math.floor(n * RAID_JACK_RHYTHM_DAMAGE_PER_SCORE));
+const RAID_JACK_RHYTHM_DAMAGE_MAX = Object.freeze({
+  EASY: 120000,
+  NORMAL: 165000,
+  HARD: 210000,
+  EXPERT: 255000,
+  MASTER: 300000
+});
+const RAID_JACK_RHYTHM_SCORE_WEIGHT = 0.7;
+const RAID_JACK_RHYTHM_MAX_SCORES = Object.freeze({
+  EASY: 600000,
+  NORMAL: 700000,
+  HARD: 800000,
+  EXPERT: 900000,
+  MASTER: 1000000
+});
+const raidJackRhythmRate = (value, max) => {
+  const v = Number(value),
+    m = Number(max);
+  if (!Number.isFinite(v) || !Number.isFinite(m) || m <= 0 || v <= 0) return 0;
+  return Math.min(1, v / m);
+};
+const raidJackRhythmDamage = input => {
+  const i = input && typeof input === 'object' ? input : {};
+  if (i.assist === true) return 0;
+  const cap = RAID_JACK_RHYTHM_DAMAGE_MAX[i.difficultyId];
+  if (!Number.isFinite(cap)) return 0;
+  const maxScore = Number.isFinite(Number(i.maxScore)) && Number(i.maxScore) > 0 ? Number(i.maxScore) : RAID_JACK_RHYTHM_MAX_SCORES[i.difficultyId];
+  const scoreRate = raidJackRhythmRate(i.score, maxScore);
+  const comboRate = raidJackRhythmRate(i.maxCombo, i.totalNotes);
+  const rate = RAID_JACK_RHYTHM_SCORE_WEIGHT * scoreRate + (1 - RAID_JACK_RHYTHM_SCORE_WEIGHT) * comboRate;
+  return Math.max(0, Math.min(cap, Math.floor(cap * rate + 1e-9)));
+};
+const raidJackRhythmDamageOf = (result, difficulty) => {
+  const r = result && typeof result === 'object' ? result : {};
+  const counts = r.judgments && typeof r.judgments === 'object' ? Object.values(r.judgments) : [];
+  const totalNotes = counts.reduce((sum, n) => sum + (Number.isFinite(Number(n)) ? Math.max(0, Number(n)) : 0), 0);
+  return raidJackRhythmDamage({
+    score: r.score,
+    maxCombo: r.maxCombo,
+    totalNotes,
+    difficultyId: difficulty && difficulty.id,
+    maxScore: difficulty && difficulty.maxScore,
+    assist: r.assist === true
+  });
 };
 const raidJackBossDown = totals => !!totals && !!totals.a && !!totals.a[5] && (Number(totals.a[5].total) || 0) >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
 const RAID_JACK_B_TIERS = Object.freeze([raidJackTier('b1', '初級ジャック', 0.2, 3), raidJackTier('b2', '中級ジャック', 2, 4), raidJackTier('b3', '上級ジャック', 10, 5), raidJackTier('b4', '超級ジャック', 40, 5), raidJackTier('b5', '極級ジャック', 100, 5)]);
@@ -79211,9 +79249,7 @@ function MonsterHeroGame() {
     const tier = raidJackTierAt('a', run.tierIndex);
     const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
     const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamage(score, {
-      assist
-    });
+    const damage = raidJackRhythmDamageOf(result, difficulty);
     const info = await Promise.race([run.lifePromise || Promise.resolve(null), new Promise(resolve => setTimeout(() => resolve(null), 500))]);
     setRaidDamageFx({
       key: `${run.hitId}`,
@@ -79235,9 +79271,7 @@ function MonsterHeroGame() {
     const tier = raidJackTierAt('a', run.tierIndex);
     const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
     const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamage(score, {
-      assist
-    });
+    const damage = raidJackRhythmDamageOf(result, difficulty);
     let startLife = null;
     let pumpkin = false;
     try {

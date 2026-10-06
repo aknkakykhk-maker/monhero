@@ -13867,7 +13867,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const tier = raidJackTierAt('a', run.tierIndex);
     const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
     const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamage(score, { assist });
+    const damage = raidJackRhythmDamageOf(result, difficulty);
     const info = await Promise.race([run.lifePromise || Promise.resolve(null), new Promise((resolve) => setTimeout(() => resolve(null), 500))]);
     setRaidDamageFx({ key: `${run.hitId}`, tierIndex: run.tierIndex, tierName: info && info.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, score, damage, assist,
       lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin) });
@@ -13881,7 +13881,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const tier = raidJackTierAt('a', run.tierIndex);
     const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
     const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamage(score, { assist });
+    const damage = raidJackRhythmDamageOf(result, difficulty);
     // 倒しきったか: いまの共有ライフの残りと比べる。大王を倒したあとの「ぱんぷきん」は共有ライフが無限なので、倒した扱いにしない
     let startLife = null;
     let pumpkin = false;
