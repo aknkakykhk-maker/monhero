@@ -19,9 +19,8 @@ let failed=0;
 const ok=(label,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${label}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 
 // ユーザーに直すかどうかを聞いている曲(公開中の譜面なので勝手に作り直さない。決まったらここから外す)
-const KNOWN=Object.freeze({
-  stay_with_me_short:'2026-10-07 に見つけた。EXPERT 518回・連打120 / MASTER 484回・連打106(激しさ strong)',
-});
+// 2026-10-07 に Stay With Me short ver.(EXPERT 518回・連打120 / MASTER 484回・106)もユーザー判断で直したので、いまは空
+const KNOWN=Object.freeze({});
 
 const ctx={Object,Number,Math,JSON,Array,String};
 vm.runInNewContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8')}
