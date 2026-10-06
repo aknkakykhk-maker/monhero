@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f2cada297285b3b9
+// generated-sha256: 0ff26a0deca1387d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 16:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 16:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23925,14 +23925,40 @@ const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 45
 // レイドバトル(A)は、バトルのほかに「モンヒロビートを1曲遊んで、そのスコアをダメージに換える」挑み方ができる。
 //   ・回数は、バトルと同じもの(side.used / extra)を使う。始めた時点で1回使い、途中でやめても戻らない
 //   ・与えたダメージは、バトルと同じく共有ライフから引かれ、貢献ランキングに足される(kind:'a' の同じ表へ送る)
-//   ・スコアからダメージへの換算は、ここの1か所だけ。**暫定**(ユーザー「順に検討」)なので、数字や式は後で直す
+//   ・スコアからダメージへの換算は、ここの1か所だけ(2026-10-06・ユーザー「難易度とスコアとコンボ数でダメージを出す。どんなに高くても30万を想定」)
 //   ・アシストモードで遊んだぶんはダメージにしない(ランキングと同じ扱い)
-const RAID_JACK_RHYTHM_DAMAGE_PER_SCORE = 1;   // 暫定: スコア1点につきダメージ1
-const raidJackRhythmDamage = (score, opts = {}) => {
-  if (opts && opts.assist === true) return 0;
-  const n = Number(score);
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(100000000, Math.floor(n * RAID_JACK_RHYTHM_DAMAGE_PER_SCORE));
+//
+// ダメージ = 難易度の上限 × (スコアの割合 × 0.7 + コンボの割合 × 0.3)
+//   ・難易度の上限 … その難易度で「満点・ずっとつながった」ときのダメージ。いちばん高い MASTER が30万(想定の最大)
+//   ・スコアの割合 … スコア ÷ その難易度の満点(0〜1)
+//   ・コンボの割合 … 最大コンボ ÷ ノーツの数(0〜1。フルコンボで1)
+// ★数字は下の表の1か所だけ。変えたら、更新履歴・ヘルプの文面と tools/mode/raid-jack-check.js の期待値も直す
+const RAID_JACK_RHYTHM_DAMAGE_MAX = Object.freeze({ EASY: 120000, NORMAL: 165000, HARD: 210000, EXPERT: 255000, MASTER: 300000 });
+const RAID_JACK_RHYTHM_SCORE_WEIGHT = 0.7;   // 残り(0.3)がコンボの割合
+const RAID_JACK_RHYTHM_MAX_SCORES = Object.freeze({ EASY: 600000, NORMAL: 700000, HARD: 800000, EXPERT: 900000, MASTER: 1000000 });   // 満点(data/rhythm-mode.js の RHYTHM_DIFFICULTIES と同じ)
+const raidJackRhythmRate = (value, max) => {
+  const v = Number(value), m = Number(max);
+  if (!Number.isFinite(v) || !Number.isFinite(m) || m <= 0 || v <= 0) return 0;
+  return Math.min(1, v / m);
+};
+// input = { score, maxCombo, totalNotes, difficultyId, maxScore(省くと難易度の満点), assist }
+const raidJackRhythmDamage = (input) => {
+  const i = input && typeof input === 'object' ? input : {};
+  if (i.assist === true) return 0;
+  const cap = RAID_JACK_RHYTHM_DAMAGE_MAX[i.difficultyId];
+  if (!Number.isFinite(cap)) return 0;
+  const maxScore = Number.isFinite(Number(i.maxScore)) && Number(i.maxScore) > 0 ? Number(i.maxScore) : RAID_JACK_RHYTHM_MAX_SCORES[i.difficultyId];
+  const scoreRate = raidJackRhythmRate(i.score, maxScore);
+  const comboRate = raidJackRhythmRate(i.maxCombo, i.totalNotes);
+  const rate = RAID_JACK_RHYTHM_SCORE_WEIGHT * scoreRate + (1 - RAID_JACK_RHYTHM_SCORE_WEIGHT) * comboRate;
+  return Math.max(0, Math.min(cap, Math.floor(cap * rate + 1e-9)));
+};
+// 演奏の結果(result・difficulty)から、ダメージを出す。ノーツの数は、判定ごとの数(MISS も含む)の合計
+const raidJackRhythmDamageOf = (result, difficulty) => {
+  const r = result && typeof result === 'object' ? result : {};
+  const counts = r.judgments && typeof r.judgments === 'object' ? Object.values(r.judgments) : [];
+  const totalNotes = counts.reduce((sum, n) => sum + (Number.isFinite(Number(n)) ? Math.max(0, Number(n)) : 0), 0);
+  return raidJackRhythmDamage({ score: r.score, maxCombo: r.maxCombo, totalNotes, difficultyId: difficulty && difficulty.id, maxScore: difficulty && difficulty.maxScore, assist: r.assist === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
@@ -24670,6 +24696,60 @@ const RaidJackResultStinger = ({ reason }) => {
       <i className="mh-rjstinger-ring" />
       {def.tone === 'win' && <EndConfetti count={30} />}
       <b className="mh-rjstinger-text">{def.text}</b>
+    </div>
+  );
+};
+
+// ===== レイドバトルのモンヒロビート挑戦: 演奏が終わった直後の「ダメージを与える演出」(2026-10-06・ユーザー指示) =====
+// スコア → ジャックにヒット → ダメージの数字が駆け上がる → ライフの帯が減る(倒したら「撃破!」)を約4秒で出して、
+// そのあと下にあるモンヒロビートの結果(演奏のリザルト)が現れる。画面のどこかを押すと、少し経ってから飛ばせる。
+// ダメージの計算そのものは 35-raid-jack.jsx の raidJackRhythmDamage(ここは受け取った数字を見せるだけ)。
+// fx = { tierIndex, tierName, score, damage, assist, lifeBefore(わからないとき null), max, pumpkin }
+const RaidJackDamageFx = ({ fx, onDone }) => {
+  const doneRef = React.useRef(false);
+  const startedRef = React.useRef(Date.now());
+  const finish = React.useCallback(() => { if (doneRef.current) return; doneRef.current = true; onDone(); }, [onDone]);
+  React.useEffect(() => {
+    const total = setTimeout(finish, 4300);
+    const se = setTimeout(() => { try { if (fx.damage > 0 && typeof Audio_ !== 'undefined' && Audio_.se && Audio_.se.crit) Audio_.se.crit(); } catch (e) { /* 音が出なくても演出は出す */ } }, 1000);
+    return () => { clearTimeout(total); clearTimeout(se); };
+  }, [finish, fx.damage]);
+  const n = Math.min(Math.max(Math.floor(Number(fx.tierIndex) || 0) + 1, 1), 5);
+  const hasLife = Number.isFinite(fx.lifeBefore) && fx.lifeBefore >= 0 && fx.max > 0;
+  const lifeAfter = hasLife ? (fx.pumpkin ? fx.lifeBefore : Math.max(0, fx.lifeBefore - fx.damage)) : null;
+  const from = hasLife ? Math.min(1, fx.lifeBefore / fx.max) : 1;
+  const to = hasLife ? Math.min(1, lifeAfter / fx.max) : 1;
+  const defeated = hasLife && !fx.pumpkin && fx.damage > 0 && fx.damage >= fx.lifeBefore;
+  const none = !(fx.damage > 0);
+  return (
+    <div data-raid-jack-damage-fx data-jack-aura={fx.pumpkin ? undefined : n} className="mh-rjdmg" role="status"
+      onClick={() => { if (Date.now() - startedRef.current > 1500) finish(); }}>
+      <i className="mh-rjdmg-flash" />
+      <div className="mh-rjdmg-score">
+        <small>SCORE</small>
+        <b><TrainingCountUp from={0} to={Math.max(0, fx.score)} delay={250} duration={700} format={(v) => v.toLocaleString()} /></b>
+      </div>
+      <div className="mh-rjdmg-stage">
+        {!fx.pumpkin && <JackAuraLayer tier={n} limit={10} />}
+        <img src={fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG} alt="" draggable={false} className={`mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`}
+          style={fx.pumpkin ? undefined : { filter: raidJackAuraGlowFilter(n, 0.5) }} />
+        {!none && <><i className="mh-rjdmg-slash mh-rjdmg-slash-a" /><i className="mh-rjdmg-slash mh-rjdmg-slash-b" /></>}
+      </div>
+      <div className="mh-rjdmg-name">{fx.tierName}</div>
+      {hasLife && (
+        <div className="mh-rjdmg-bar" aria-hidden="true">
+          <div className="mh-rjdmg-bar-fill" style={{ '--from': from, '--to': to, transform: `scaleX(${from})` }} />
+        </div>
+      )}
+      {hasLife && <div className="mh-rjdmg-life">{lifeAfter.toLocaleString()} / {fx.max.toLocaleString()}</div>}
+      <div className={`mh-rjdmg-damage${none ? ' mh-rjdmg-damage-none' : ''}`}>
+        {none
+          ? <b>{fx.assist ? 'ダメージにならない' : 'ダメージ 0'}</b>
+          : <><small>DAMAGE</small><b style={{ fontSize: fx.damage >= 10000000 ? 40 : fx.damage >= 1000000 ? 46 : 52 }}><TrainingCountUp from={0} to={fx.damage} delay={1000} duration={1000} format={(v) => v.toLocaleString()} /></b></>}
+        {none && fx.assist && <small>アシストモードで遊んだので、ダメージになりません</small>}
+      </div>
+      {defeated && <div className="mh-rjdmg-down">撃破！</div>}
+      <div className="mh-rjdmg-skip">タップでとばす</div>
     </div>
   );
 };
@@ -38385,7 +38465,7 @@ const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([
   { id: 'after', label: '終了の1分後', at: () => Date.parse(RAID_JACK_EVENT.endAt) + 60000 },
 ]);
 
-const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome }) => {
+const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggleRaidForce, realRules = false, onToggleRealRules, onOpenRaid, onGoHome, onPreviewDamageFx }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
   const [log, setLog] = useState([]);
@@ -38510,6 +38590,10 @@ const RaidJackDebugScreen = ({ onBack, onStartBattle, raidForce = false, onToggl
             <button data-raid-real-rules-toggle className={`${btn} col-span-2 ${realRules ? 'border-amber-300 bg-amber-900/50 text-amber-50' : 'border-orange-400/60 bg-orange-950/40'}`} onClick={() => onToggleRealRules && onToggleRealRules()}>本番どおりの回数・解放で確認: {realRules ? 'ON' : 'OFF'}(OFFは何度でも・全段階)</button>
             <button data-raid-open className={`${btn} border-orange-400/60 bg-orange-950/40`} onClick={() => onOpenRaid && onOpenRaid()}>レイド画面を開く</button>
             <button data-raid-go-home className={`${btn} col-span-2 border-orange-400/60 bg-orange-950/40`} onClick={() => onGoHome && onGoHome()}>HOMEを見る(ジャックが出ているか確認)</button>
+            {/* モンヒロビート挑戦の、演奏が終わった直後の「ダメージを与える演出」を、曲を遊ばずに見る(見本の数字・記録には何も書かない) */}
+            <button data-raid-damage-fx-hit className={`${btn} border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('hit')}>ダメージ演出(ヒット)</button>
+            <button data-raid-damage-fx-down className={`${btn} border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('down')}>ダメージ演出(撃破)</button>
+            <button data-raid-damage-fx-none className={`${btn} col-span-2 border-fuchsia-400/60 bg-fuchsia-950/40`} onClick={() => onPreviewDamageFx && onPreviewDamageFx('none')}>ダメージ演出(ダメージなし・アシスト)</button>
           </div>
         </section>
 
@@ -41484,6 +41568,7 @@ function MonsterHeroGame() {
   const [raidRhythm, setRaidRhythm] = useState(null);
   const raidJackReturnTierRef = useRef(0);   // モンヒロビート挑戦から戻ったとき、レイド画面で選んでおく段階
   const raidRhythmRunRef = useRef(null);
+  const [raidDamageFx, setRaidDamageFx] = useState(null);   // 演奏が終わった直後の「ダメージを与える演出」(RaidJackDamageFx)
   useEffect(() => {
     if (!raidRhythm) return;
     if (['RHYTHM_DEMO_HOME', 'RHYTHM_PLAY', 'RHYTHM_OPTIONS', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'].includes(gameState)) return;
@@ -52949,9 +53034,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       side.used += 1;
       if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
     }
-    raidRhythmRunRef.current = { tierIndex: rr.tierIndex, hitId: raidJackMakeHitId(), eventId: raidJackSafeEventId(raidJackEventId), finished: false, promise: null };
+    const run = { tierIndex: rr.tierIndex, hitId: raidJackMakeHitId(), eventId: raidJackSafeEventId(raidJackEventId), finished: false, completing: false, promise: null, lifePromise: null };
+    // 演出で見せる「いまのジャックのライフ」を、演奏が始まる前から裏で取っておく(取れなくても演出は出す)
+    run.lifePromise = (async () => {
+      try {
+        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+        const tierDef = raidJackTierAt('a', rr.tierIndex);
+        const done = totals && totals.a && totals.a[rr.tierIndex + 1] ? Number(totals.a[rr.tierIndex + 1].total) || 0 : 0;
+        const pumpkin = rr.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
+        return { lifeBefore: totals ? (pumpkin ? tierDef.hp : Math.max(0, tierDef.hp - done)) : null, pumpkin };
+      } catch (e) { return null; }
+    })();
+    raidRhythmRunRef.current = run;
     setRhythmPlay({ song, difficulty, from: 'raid' });
     setGameState('RHYTHM_PLAY');
+  };
+  // 演奏が最後まで終わった: まず「ダメージを与える演出」を出して、裏でバトルと同じ表へ送る(結果は演奏のリザルトを見終えたあとに出る)
+  const completeRaidJackRhythm = async (result, song, difficulty) => {
+    const run = raidRhythmRunRef.current;
+    if (!run || run.completing) return;
+    run.completing = true;
+    const tier = raidJackTierAt('a', run.tierIndex);
+    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
+    const assist = !!(result && result.assist === true);
+    const damage = raidJackRhythmDamageOf(result, difficulty);
+    const info = await Promise.race([run.lifePromise || Promise.resolve(null), new Promise((resolve) => setTimeout(() => resolve(null), 500))]);
+    setRaidDamageFx({ key: `${run.hitId}`, tierIndex: run.tierIndex, tierName: info && info.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, score, damage, assist,
+      lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin) });
+    run.promise = finishRaidJackRhythm(result, song, difficulty);
   };
   // 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
   const finishRaidJackRhythm = async (result, song, difficulty) => {
@@ -52961,7 +53071,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const tier = raidJackTierAt('a', run.tierIndex);
     const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
     const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamage(score, { assist });
+    const damage = raidJackRhythmDamageOf(result, difficulty);
     // 倒しきったか: いまの共有ライフの残りと比べる。大王を倒したあとの「ぱんぷきん」は共有ライフが無限なので、倒した扱いにしない
     let startLife = null;
     let pumpkin = false;
@@ -53002,7 +53112,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const exitRaidJackRhythmPlay = () => {
     const run = raidRhythmRunRef.current;
     const tierIndex = run ? run.tierIndex : (raidRhythm ? raidRhythm.tierIndex : 0);
-    setRhythmPlay(null); setRaidRhythm(null); setGameState('RAID_JACK');
+    setRhythmPlay(null); setRaidRhythm(null); setRaidDamageFx(null); setGameState('RAID_JACK');
     (async () => {
       let r = null;
       try { if (run && run.promise) r = await run.promise; } catch (e) { r = null; }
@@ -56339,9 +56449,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
+        {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // レイドバトルのモンヒロビート挑戦は、ここだけで終わる(自己ベスト・全国ランキング・周回の報酬・みんなで対戦には一切つなげない)
-          if(rhythmPlay.from==='raid'){const run=raidRhythmRunRef.current;if(run&&!run.promise)run.promise=finishRaidJackRhythm(result,rhythmPlay.song,rhythmPlay.difficulty);return;}
+          if(rhythmPlay.from==='raid'){void completeRaidJackRhythm(result,rhythmPlay.song,rhythmPlay.difficulty);return;}
           // みんなで対戦の演奏は、まずスコアをルームへ知らせる。そのうえで、ひとりで遊ぶときと同じく
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
@@ -56868,7 +56979,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onClose:()=>setRaidJackDetailMon(null),accent:'indigo',readOnly:true,
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
-        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onStartBattle={(kind,tierIndex,opts)=>{
+        {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
           const list=isB?getActiveMonsterList():getUnlockedBaseMonsterList();
@@ -64200,6 +64311,35 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) { .mh-rjresult-in { animation: none !important; opacity: 1; } }
     @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
     @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+    /* ==== レイドボス戦のモンヒロビート挑戦: 演奏が終わった直後のダメージ演出(RaidJackDamageFx)。約4.3秒・タップで飛ばせる ==== */
+    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px;
+      background: radial-gradient(circle at 50% 48%, rgba(120,40,10,.55), rgba(12,4,24,0) 62%), #0c0418; color: #fff; --ja-c: 251,146,60; --ja-d: 253,186,116; animation: mhRjDmgIn .3s ease-out both, mhRjDmgOut .45s ease-in 3.85s forwards; }
+    .mh-rjdmg-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 46%, #fff, rgba(var(--ja-c),.7) 40%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .7s ease-out 1s both; }
+    .mh-rjdmg-score { position: relative; text-align: center; animation: mhRjRise .4s ease-out .1s both; }
+    .mh-rjdmg-score small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fde68a; }
+    .mh-rjdmg-score b { display: block; font-size: 40px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 rgba(0,0,0,.8), 0 0 18px rgba(253,224,71,.7); }
+    .mh-rjdmg-stage { position: relative; width: min(64vw, 270px); aspect-ratio: 1024 / 880; margin-top: 4px; }
+    .mh-rjdmg-jack { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; animation: mhRjJackIn .5s ease-out .2s both, mhRjJackHit .7s ease-out 1s both; }
+    .mh-rjdmg-jack-none { animation: mhRjJackIn .5s ease-out .2s both; }
+    .mh-rjdmg-slash { position: absolute; z-index: 2; left: -10%; width: 120%; height: 6px; top: 40%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 16px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-24deg) translateX(-60%); animation: mhRjSlash .5s ease-out 1s both; }
+    .mh-rjdmg-slash-b { top: 52%; transform: rotate(20deg) translateX(60%); animation-name: mhRjSlashB; animation-delay: 1.1s; }
+    .mh-rjdmg-name { position: relative; font-size: 14px; font-weight: 900; text-shadow: 0 2px 4px #000; animation: mhRjRise .4s ease-out .5s both; }
+    .mh-rjdmg-bar { position: relative; width: min(78vw, 330px); height: 16px; overflow: hidden; border-radius: 9999px; border: 2px solid rgba(255,255,255,.3); background: rgba(2,6,23,.9); animation: mhRjRise .4s ease-out .6s both; }
+    .mh-rjdmg-bar-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(180deg, #fca5a5, #ef4444 40%, #b91c1c 75%, #7f1d1d); animation: mhRjBarDrop 1.2s cubic-bezier(.2,.8,.3,1) 1.05s forwards; }
+    .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
+    .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
+    .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
+    .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
+    .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }
+    .mh-rjdmg-skip { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 900; color: rgba(226,232,240,.55); animation: mhRjRise .4s ease-out 1.5s both; }
+    @keyframes mhRjDmgIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes mhRjDmgOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
+    @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
+    @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-rjdmg, .mh-rjdmg * { animation-duration: .01s !important; animation-delay: 0s !important; } .mh-rjdmg-bar-fill { transform: scaleX(var(--to)); } .mh-rjdmg-damage, .mh-rjdmg-down { opacity: 1; } }
     /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
     .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }
     .mh-rjresult-pop { animation-name: mhRjSlam; animation-duration: .6s; }

@@ -139,14 +139,40 @@ const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 45
 // レイドバトル(A)は、バトルのほかに「モンヒロビートを1曲遊んで、そのスコアをダメージに換える」挑み方ができる。
 //   ・回数は、バトルと同じもの(side.used / extra)を使う。始めた時点で1回使い、途中でやめても戻らない
 //   ・与えたダメージは、バトルと同じく共有ライフから引かれ、貢献ランキングに足される(kind:'a' の同じ表へ送る)
-//   ・スコアからダメージへの換算は、ここの1か所だけ。**暫定**(ユーザー「順に検討」)なので、数字や式は後で直す
+//   ・スコアからダメージへの換算は、ここの1か所だけ(2026-10-06・ユーザー「難易度とスコアとコンボ数でダメージを出す。どんなに高くても30万を想定」)
 //   ・アシストモードで遊んだぶんはダメージにしない(ランキングと同じ扱い)
-const RAID_JACK_RHYTHM_DAMAGE_PER_SCORE = 1;   // 暫定: スコア1点につきダメージ1
-const raidJackRhythmDamage = (score, opts = {}) => {
-  if (opts && opts.assist === true) return 0;
-  const n = Number(score);
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(100000000, Math.floor(n * RAID_JACK_RHYTHM_DAMAGE_PER_SCORE));
+//
+// ダメージ = 難易度の上限 × (スコアの割合 × 0.7 + コンボの割合 × 0.3)
+//   ・難易度の上限 … その難易度で「満点・ずっとつながった」ときのダメージ。いちばん高い MASTER が30万(想定の最大)
+//   ・スコアの割合 … スコア ÷ その難易度の満点(0〜1)
+//   ・コンボの割合 … 最大コンボ ÷ ノーツの数(0〜1。フルコンボで1)
+// ★数字は下の表の1か所だけ。変えたら、更新履歴・ヘルプの文面と tools/mode/raid-jack-check.js の期待値も直す
+const RAID_JACK_RHYTHM_DAMAGE_MAX = Object.freeze({ EASY: 120000, NORMAL: 165000, HARD: 210000, EXPERT: 255000, MASTER: 300000 });
+const RAID_JACK_RHYTHM_SCORE_WEIGHT = 0.7;   // 残り(0.3)がコンボの割合
+const RAID_JACK_RHYTHM_MAX_SCORES = Object.freeze({ EASY: 600000, NORMAL: 700000, HARD: 800000, EXPERT: 900000, MASTER: 1000000 });   // 満点(data/rhythm-mode.js の RHYTHM_DIFFICULTIES と同じ)
+const raidJackRhythmRate = (value, max) => {
+  const v = Number(value), m = Number(max);
+  if (!Number.isFinite(v) || !Number.isFinite(m) || m <= 0 || v <= 0) return 0;
+  return Math.min(1, v / m);
+};
+// input = { score, maxCombo, totalNotes, difficultyId, maxScore(省くと難易度の満点), assist }
+const raidJackRhythmDamage = (input) => {
+  const i = input && typeof input === 'object' ? input : {};
+  if (i.assist === true) return 0;
+  const cap = RAID_JACK_RHYTHM_DAMAGE_MAX[i.difficultyId];
+  if (!Number.isFinite(cap)) return 0;
+  const maxScore = Number.isFinite(Number(i.maxScore)) && Number(i.maxScore) > 0 ? Number(i.maxScore) : RAID_JACK_RHYTHM_MAX_SCORES[i.difficultyId];
+  const scoreRate = raidJackRhythmRate(i.score, maxScore);
+  const comboRate = raidJackRhythmRate(i.maxCombo, i.totalNotes);
+  const rate = RAID_JACK_RHYTHM_SCORE_WEIGHT * scoreRate + (1 - RAID_JACK_RHYTHM_SCORE_WEIGHT) * comboRate;
+  return Math.max(0, Math.min(cap, Math.floor(cap * rate + 1e-9)));
+};
+// 演奏の結果(result・difficulty)から、ダメージを出す。ノーツの数は、判定ごとの数(MISS も含む)の合計
+const raidJackRhythmDamageOf = (result, difficulty) => {
+  const r = result && typeof result === 'object' ? result : {};
+  const counts = r.judgments && typeof r.judgments === 'object' ? Object.values(r.judgments) : [];
+  const totalNotes = counts.reduce((sum, n) => sum + (Number.isFinite(Number(n)) ? Math.max(0, Number(n)) : 0), 0);
+  return raidJackRhythmDamage({ score: r.score, maxCombo: r.maxCombo, totalNotes, difficultyId: difficulty && difficulty.id, maxScore: difficulty && difficulty.maxScore, assist: r.assist === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
