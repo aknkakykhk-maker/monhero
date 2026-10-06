@@ -2285,6 +2285,10 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
 //   HOLDは動かない的なので、経路を追従するSLIDEより厳しめにしている。
 const RHYTHM_MID_TRACKING_GRACE_MS=120;
 const RHYTHM_HOLD_TRACKING_MARGIN_LANES=.15;
+// HOLDを押さえている最中の横ズレの許容(帯の外側へ足すレーン数)は、押し始めのタップが受け付ける広がりと同じにする。
+// タップは帯の幅が1サブレーンのとき RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES、それ以外は RHYTHM_TAP_TOLERANCE_SUB_LANES だけ外まで受け付ける
+// (サブレーン=レーンの半分)。追従がこれより狭いと、押し始めで通った指が、動かしていないのに外れ扱いになる。
+const rhythmHoldTrackingMarginLanes=widthSubLanes=>(widthSubLanes<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES)/2;
 // note.lane / rhythmLaneCoordinateAtPoint と同じ「整数=レーン中心」座標系で、
 // HOLDの中心と半幅を返す。subLane/width指定はboundary座標系(整数=境界)なので
 // -0.5して中心座標系へ揃える。
@@ -2666,16 +2670,20 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         return;
       }
     }
-    const actual=laneCoordinate(pos.clientX,pos.clientY);
     const chartNow=estimatedSongMs(session)-session.offsetMs;
     let bad;
-    if(actual===null){
-      bad=true;
-    }else if(session.kind==='SLIDE'){
-      bad=Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);
+    if(session.kind==='SLIDE'){
+      const actual=laneCoordinate(pos.clientX,pos.clientY);
+      bad=actual===null||Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);
     }else{
+      // HOLDは、押し始めのタップと**同じ測り方・同じ受付の広がり(タップ範囲)**で見る。
+      // 【2026-10-06・ユーザー報告「ハルカのホールドで、実際に押している所とゲームが押したと見ている所が半レーンほど左にずれる」】
+      // 追従だけが「判定ラインの高さに直した位置」で測っていたので、判定ラインより奥を押さえた指が中央寄りへずれて見え、
+      // 押し始めは通ったのに押している最中に外れ扱いになった。いまは指のその場の高さで測る(タップと同じ rhythmLaneCoordinateAtPoint)。
+      const areaBox=areaRect();
+      const actual=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
       const tracked=rhythmHoldTrackedLane(session.note,chartNow);
-      bad=Math.abs(actual-tracked.center)>tracked.half+RHYTHM_HOLD_TRACKING_MARGIN_LANES;
+      bad=actual===null||Math.abs(actual-tracked.center)>tracked.half+rhythmHoldTrackingMarginLanes(tracked.half*4);
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
@@ -26787,6 +26795,14 @@ const rhythmLayoutPlayArea=area=>{
   });
   Array.from(area.querySelectorAll('[data-rhythm-sublane-boundary]')).forEach((boundary,index)=>{
     boundary.style.setProperty('--rhythm-sub-clip',rhythmBoundaryLinePolygon(index+.5));
+  });
+  // 押したサブレーンの光(指の位置で光る台形)も、道の幅に合わせて切り直す。
+  // 【2026-10-07・ユーザー報告「押している位置に発光位置がずれている(横向きのときだけ)」】
+  // この台形は演奏画面を作るときに一度だけ切り抜いていて、横向きの道の幅(ふつう・細い)を選んでいても
+  // 「広い」のまま残っていた。判定は選んだ幅で測るので、外側のサブレーンほど指の位置とずれて光っていた。
+  Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]')).forEach(glow=>{
+    const subLane=Number(glow.getAttribute('data-rhythm-sublane-feedback'));
+    if(Number.isFinite(subLane))glow.style.clipPath=rhythmSubLanePolygon(subLane);
   });
   rhythmLayoutSideMonsters(area);
   const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=RHYTHM_VIEW_ROTATION.rectOf(line);

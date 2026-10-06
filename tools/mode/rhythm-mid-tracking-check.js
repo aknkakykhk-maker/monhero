@@ -61,7 +61,7 @@ const context={
   rhythmInputEdgeMarginSubLanes:()=>1, // 切り出し範囲の外の関数の代役(既定の余白1)
 };
 vm.createContext(context);
-vm.runInContext(`${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${slideCheckpoints}\n${releaseHelpers}\n${floatingHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.tracked=rhythmHoldTrackedLane;`,context);
+vm.runInContext(`${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${slideCheckpoints}\n${releaseHelpers}\n${floatingHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.margin=rhythmHoldTrackingMarginLanes;this.tracked=rhythmHoldTrackedLane;`,context);
 const runtime=context.out;
 
 // レーン座標→実座標(クリック位置)への変換。rhythmLaneCoordinateAtPointの逆算。
@@ -90,6 +90,26 @@ const advance=ms=>{
   for(let i=0;i<20;i++){advance(50);runtime.record('touch:1',clientXFor(2),clientY);}
   check('HOLD: 中心に置き続ける限り途中失敗しない',note.holdJudgment==='MARVELOUS','holdJudgment='+note.holdJudgment);
   runtime.clear();
+}
+
+// --- HOLD: 判定ラインより奥を押さえた指でも、帯の上に居れば失敗しない(2026-10-06・ハルカ MASTER 15.26秒の端の細いHOLD) ---
+// 追従は、押し始めのタップと同じ「指のその場の高さ」で位置を測る。判定ラインの高さへ直して測ると、
+// 奥を押さえた指が中央寄りへずれて見え、押し始めは通ったのに押している最中に外れ扱いになっていた。
+{
+  const depth=.62,fingerY=rect.top+rect.height*depth;
+  const stripeX=lane=>rect.left+vm.runInContext(`rhythmProjectLane(${lane},${depth}).center`,context)*rect.width;
+  const run=(lane,subLane,width)=>{
+    const note={type:'HOLD',timeMs:1000,endTimeMs:3000,lane,subLane,subLaneWidth:width,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false};
+    now=0;
+    runtime.record('touch:1',stripeX(lane),fingerY);
+    runtime.bind('touch:1',note,'HOLD',1000,0);
+    for(let i=0;i<30;i++){advance(50);runtime.record('touch:1',stripeX(lane),fingerY);}
+    const result=note.holdJudgment;runtime.clear();return result;
+  };
+  check('HOLD: 奥を押さえた指が端のレーンの帯の上に居続けても失敗しない(幅2)',run(4,8,2)==='MARVELOUS','holdJudgment='+run(4,8,2));
+  check('HOLD: 奥を押さえた指が端のレーンの細い帯(幅1)の上に居続けても失敗しない',run(4,9,1)==='MARVELOUS','holdJudgment='+run(4,9,1));
+  check('HOLD: 追従の許容は押し始めのタップの受付と同じ広がり(細い帯 .45 / それ以外 .6 サブレーン)',
+    context.margin(1)===.45/2&&context.margin(2)===.6/2,'細い='+context.margin(1)+' ふつう='+context.margin(2));
 }
 
 // --- HOLD: 猶予未満の一瞬のズレは失敗にしない ---
