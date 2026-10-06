@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0d8ba717c7a928af
+// source-sha256: 5e6b1ee99478dc23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 07:35";
+const BUILD_DATE = "2026-10-06 11:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -53306,6 +53306,8 @@ const TacticsEnemyStageFx = ({
     }))));
   })()), document.body);
 };
+const isEnemyDamagePopupText = text => /^(\d[\d,]*!*|合計\s|反射\s*\d|クロスカウンター\s*\d)/.test(String(text == null ? '' : text));
+const enemyFxChipTone = color => String(color || '').split(/\s+/).filter(c => /^text-[a-z]+-\d{2,3}$/.test(c) || /^text-(white|black)$/.test(c)).join(' ') || 'text-white';
 const tacticsDiscardGeo = () => {
   if (typeof document === 'undefined') return null;
   const rects = [...document.querySelectorAll('[data-slot-index]')].map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
@@ -54822,7 +54824,8 @@ function BattleScreen({
   })()), getTurnBuff('stunEnemy', false) && React.createElement("div", {
     className: "absolute inset-0 flex items-center justify-center text-3xl bg-indigo-500/20 rounded-full border-4 border-indigo-500 animate-pulse"
   }, "💫"), (() => {
-    const enemyPopups = popups.filter(p => p.side === 'enemy');
+    const enemyPopups = popups.filter(p => p.side === 'enemy' && !p.fx);
+    const enemyFxPopups = popups.filter(p => p.side === 'enemy' && p.fx).slice(-3);
     const wrapEnemyPopups = !liteBattleView && enemyPopups.length > 4;
     const popupColumns = wrapEnemyPopups ? Math.ceil(enemyPopups.length / 4) : 1;
     const popupGridStyle = wrapEnemyPopups ? {
@@ -54843,14 +54846,23 @@ function BattleScreen({
       paddingRight: '2px'
     } : undefined;
     return React.createElement("div", {
-      className: `absolute inset-0 z-50 pointer-events-none ${wrapEnemyPopups ? '' : 'flex flex-col items-center justify-start pt-1 gap-0.5'}`,
+      className: "absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5"
+    }, enemyFxPopups.length > 0 && React.createElement("div", {
+      "data-enemy-fx-chips": true,
+      className: "flex flex-col items-center gap-0.5 px-2"
+    }, enemyFxPopups.map(p => React.createElement("div", {
+      key: p.id,
+      "data-enemy-fx-chip": true,
+      className: `max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`
+    }, p.text))), React.createElement("div", {
+      className: `${wrapEnemyPopups ? '' : 'flex flex-col items-center justify-start gap-0.5'}`,
       style: popupGridStyle
     }, enemyPopups.map(p => React.createElement("div", {
       key: p.id,
       "data-lite-damage": liteBattleView ? 'true' : undefined,
       style: compactPopupStyle,
       className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
-    }, p.text)));
+    }, p.text))));
   })())), !tacticsNewLayout && Array.isArray(tacticsUnits) && enemy && (() => {
     const moveTo = enemyNextIntent && enemyNextIntent.type === 'MOVE' && Number.isFinite(enemyNextIntent.targetDist) ? enemyNextIntent.targetDist : null;
     const here = Number.isFinite(enemyDist) ? enemyDist : 0;
@@ -74505,12 +74517,14 @@ function MonsterHeroGame() {
     const id = Date.now() + Math.random();
     const slotOf = slot !== undefined ? slot : popupSlotRef.current;
     const popupSlot = isTacticsMode(runMode) && side !== 'enemy' && Number.isInteger(slotOf) ? slotOf : null;
+    const fx = side === 'enemy' && !isEnemyDamagePopupText(text);
     setPopups(prev => [...prev, {
       id,
       text,
       side,
       color,
-      slot: popupSlot
+      slot: popupSlot,
+      fx
     }]);
     setTimeout(() => setPopups(p => p.filter(x => x.id !== id)), battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
