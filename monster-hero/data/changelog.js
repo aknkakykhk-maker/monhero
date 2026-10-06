@@ -8,8 +8,9 @@
 // 守れているかは node tools/assistant/assistant-update-notice-check.js が見る。
 //
 // 【種別(type)について】
-// 画面のタブは「更新情報」「不具合情報」の2つ。issue は不具合情報タブへ、
-// それ以外(update / fix / feature / market / mode)はすべて更新情報タブへ出る。
+// 画面のタブは「更新情報」「不具合情報」の2つ。issue(調査中)と fix(直した)は不具合情報タブへ、
+// それ以外(update / feature / market / mode)はすべて更新情報タブへ出る(17-release-changelog-login-missions.jsx の
+// CHANGELOG_ISSUE_TAB_TYPES。2026-09-05から。2026-10-07 にこの説明が古いままだったのを直した)。
 // 以前は type がタブ名と完全一致するものだけを出していたため、fix や feature と
 // 書いた項目がどちらにも出ず、書いたのに載っていない状態になっていた(2026-09-05に修正)。
 //
@@ -33,6 +34,16 @@
 //   ・作っている途中の調整・内部の作り直し・見たこともない不具合の修正 → dev:true も付ける
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
+  {
+    // 2026-10-07 ANiMA と同じく EXPERT の速い連打が MASTER より多かった(EXPERT 叩く回数 518・連打 120 / MASTER 484・106)。ユーザー判断で同じやり方で直した
+    // (chartIntensityByDifficulty: EXPERT mild / MASTER extreme)。EASY〜HARD は1音も変わらない
+    date: "2026-10-07 01:51", type:'issue', group:'rhythm', title:'モンヒロビート「Stay With Me ～Locked Fate～ short ver.」で、EXPERTのほうがMASTERより難しく感じられたのを直しました', status:'new',
+    items:[
+      'EXPERTは速い連打を減らして、叩きやすくしました。レベルは Lv.21、ノーツ数は 498 です。',
+      'MASTERは同時押しとレーンを大きく跳ぶ動きを増やして、いちばん難しい譜面にしました。レベルは Lv.29、ノーツ数は 571 です。',
+      'EASY・NORMAL・HARDの譜面は変わりません。これまでの自己ベストやランキングの記録は、そのまま残ります。',
+    ],
+  },
   {
     // 2026-10-07 ユーザー指摘「アニマがマスターよりエキスパートのほうがむずいという声がある」→「エキスパートを軽くしてマスターをむずくする」。
     // EXPERT は速い単押しの連打が MASTER より多く(叩く回数 522 対 494)、MASTER は同時押しで数を稼いでいた。
@@ -994,8 +1005,8 @@ const CHANGELOG = [
     image: 'images/song-art/stay-with-me.jpg?v=0a8784f80cf1',
     items:[
       'モンヒロビートに「Stay With Me ～Locked Fate～ short ver.」（2分57秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.22 ／ MASTER Lv.26 です。',
-      'ノーツ数は 242 ／ 291 ／ 397 ／ 531 ／ 536 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
+      'ノーツ数は 242 ／ 291 ／ 397 ／ 498 ／ 571 です。',
     ],
     assistantNotice: { id:'update_notice_stay_with_me_short_v1', type:'content' },
   },

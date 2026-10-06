@@ -8433,3 +8433,7 @@ songId `anima` / bgmTrackId `melo_anima` / 譜面は MHB CHART ENGINE Rev.28。
   同時押し 74組・大きい跳び 47)。試した組み合わせ: EXPERT none + MASTER extreme は HARD 358 → EXPERT 347 で順が崩れて作れない
 - **見張り**: `tools/mode/rhythm-expert-master-order-check.js`(EXPERT が MASTER を叩く回数・速い連打で3%より多く上回ったら NG)。
   同じ形が Stay With Me short ver.(strong・EXPERT 518回・連打120 / MASTER 484回・106)にもあり、直すかはユーザーに聞いている(検査の `KNOWN`)
+- **Stay With Me short ver. も同じやり方で直した**(2026-10-07・ユーザー判断「同じやり方で直す」)。直す前は EXPERT 叩く回数 518・連打 120 / MASTER 484・106。
+  `{"EXPERT":"mild","MASTER":"extreme"}` で EXPERT Lv.21(498ノーツ・叩く回数 479・連打 95)、MASTER Lv.29(571ノーツ・474・105・同時押し 97組・大きい跳び 45)。
+  EASY〜HARD は1音も変わらない(設定を変えずに作り直すと5難易度とも一致することも先に確かめた)。EXPERT を `none` にすると叩く回数 372・連打 46 で
+  HARD(384・65)より軽くなるので採らなかった。検査の `KNOWN` は空にした

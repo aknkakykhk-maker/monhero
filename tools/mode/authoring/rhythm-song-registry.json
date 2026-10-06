@@ -421,7 +421,11 @@
      "shiftMs": -278.7
     }
    ],
-   "chartIntensity": "strong"
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   }
   },
   "kiki_issen_short": {
    "audio": "monster-hero/audio/bgm-kiki-issen-short.mp3",
