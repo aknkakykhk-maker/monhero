@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 330f9652dc2a6db0
+// generated-sha256: ca00bd99942fe956
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 12:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24201,6 +24201,9 @@ const raidJackQuickLoops = (turnsUsed) => {
 //  ・表がまだ無い環境(SQL未適用)は「準備中」として扱う。エラー扱いにして画面を壊さない。
 //  ・このファイルは公開フラグ(RELEASE_FLAGS.raidJack)を見ない。呼ぶ側が見る。
 const RAID_JACK_TIMEOUT_MS = 8000;
+// 与ダメージを送る通信だけは長めに待つ(2026-10-06・通信の弱い4Gで8秒を超えて打ち切られ、送れないまま残る人がいた)
+const RAID_JACK_SEND_TIMEOUT_MS = 20000;
+const RAID_JACK_SEND_RETRY_WAITS = Object.freeze([1500, 3500]);   // 失敗したとき、この間隔で再試行する(合計3回まで)
 let _raidJackUnavailable = false;                  // 土台の表(raid_jack_hits)・段階の合計が無いと分かったら、ページを閉じるまで全部使わない
 const raidJackUnavailable = () => _raidJackUnavailable;
 // 後から足した「ランキングのビュー」だけが無いときは、そのビューだけを「準備中」にして、与ダメージの送信・段階の合計・報酬の受け取りは止めない。
@@ -24225,10 +24228,11 @@ const raidJackRequest = async (pathAndQuery, init = {}) => {
   const scope = raidJackScopeOf(pathAndQuery);
   if (_raidJackUnavailable || _raidJackUnavailableScopes.has(scope)) return { ok: false, status: 0, body: '', notReady: true, error: null };
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), RAID_JACK_TIMEOUT_MS);
+  const { timeoutMs, ...fetchInit } = init;
+  const timer = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : RAID_JACK_TIMEOUT_MS);
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathAndQuery}`, {
-      cache: 'no-store', ...init, headers: { ...SB_HEADERS, ...(init.headers || {}) }, signal: controller.signal,
+      cache: 'no-store', ...fetchInit, headers: { ...SB_HEADERS, ...(init.headers || {}) }, signal: controller.signal,
     });
     const body = await res.text();
     if (!res.ok && (_isMissingTableError(res.status, body) || res.status === 404)) {
@@ -24259,7 +24263,7 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
     app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE.replace(/[^0-9]/g, '').slice(0, 12) : '',
   };
   const result = await raidJackRequest('raid_jack_hits?on_conflict=hit_id', {
-    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row),
+    method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row), timeoutMs: RAID_JACK_SEND_TIMEOUT_MS,
   });
   if (result.ok) return 'sent';
   if (result.notReady) return 'notready';
@@ -24278,7 +24282,13 @@ const raidJackSaveState = async (state) => {
 // 送る。送れなければ pending に残す(戻り値は送れたかどうか)。state は呼び出し側が持つ最新を渡し、更新後を返す
 const raidJackSubmitHit = async (state, hit, breederId, eventId) => {
   const next = raidJackNormalizeState(state);
-  const outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  let outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  // 通信が弱くて失敗したときは、その場で少し待って送り直す(同じ hit_id なので二重には数えられない)
+  for (const wait of RAID_JACK_SEND_RETRY_WAITS) {
+    if (outcome !== 'error') break;
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    outcome = await sbSendRaidJackHit(hit, breederId, eventId);
+  }
   if (outcome === 'error' || outcome === 'notready') {
     const [clean] = raidJackNormalizePending([hit]);
     if (clean && !next.pending.some((p) => p.hitId === clean.hitId)) next.pending = [...next.pending, clean].slice(-30);
@@ -24296,6 +24306,27 @@ const raidJackFlushPending = async (state, breederId, eventId) => {
   }
   next.pending = keep;
   return next;
+};
+
+// 端末に残っている再送待ちを、保存から読んで送り直し、結果を保存する(2026-10-06)。
+// 以前は再送待ちに残すだけで、本番のゲームは送り直していなかった(デバッグ画面だけが送り直せた)。
+// そのため通信の弱い場所で一度失敗した与ダメージは、ランキングへいつまでも載らなかった。
+// HOME とレイド画面を開いたときに呼ぶ。再送待ちが空なら通信しない。返り値は送れた件数(読み・送りに失敗したら 0)
+const raidJackFlushStoredPending = async (breederId, eventId) => {
+  try {
+    const state = await raidJackLoadState();
+    if (!state.pending.length || !raidJackSafeId(breederId)) return 0;
+    const before = state.pending.length;
+    const next = await raidJackFlushPending(state, breederId, eventId);
+    if (next.pending.length !== before) {
+      // 送っているあいだに別の処理が保存を更新していても、巻き戻さないように、いまの保存へ再送待ちの差分だけを反映する
+      const latest = await raidJackLoadState();
+      const left = new Set(next.pending.map((p) => p.hitId));
+      latest.pending = latest.pending.filter((p) => left.has(p.hitId));
+      await raidJackSaveState(latest);
+    }
+    return before - next.pending.length;
+  } catch (e) { return 0; }
 };
 
 // ---- 読み出し(失敗は null を返し、画面は「準備中」にする) ----
@@ -31529,7 +31560,9 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   }, []);
   React.useEffect(() => {
     let alive = true;
-    const load = async () => { const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
+    // 通信が弱くて送れなかった与ダメージが端末に残っていれば、ここで送り直す(空なら通信しない)。本番のイベントだけ
+    const flush = async () => { if (eventId !== RAID_JACK_EVENT.id) return; try { const id = await ensureBreederId(); await raidJackFlushStoredPending(id, eventId); } catch (e) { /* 次に開いたときに送り直す */ } };
+    const load = async () => { await flush(); const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
     load();
     const id = setInterval(load, 60000);
     return () => { alive = false; clearInterval(id); };
@@ -32546,7 +32579,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -33195,6 +33228,19 @@ function BattleScreen({
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
+              </div>,document.body
+            )}
+            {/* 運しだいで決まった結果の帯(運命のコイン・運命の輪・トリックスタート・乱心・眼力。2026-10-06 ユーザー指摘
+                「ランダム効果のものが何が発動したかわからない」)。技名の札(上の14%)と重ならないよう、その下へ縦に並べる。
+                押せる場所は塞がない。body へ出すのは技名の札と同じ理由(画面の揺れで位置がずれないように) */}
+            {Array.isArray(luckBanners)&&luckBanners.length>0&&ReactDOM.createPortal(
+              <div data-battle-luck-banners className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
+                {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
+                  className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
+                  style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
+                  <div data-battle-luck-title className="text-[11px] font-black leading-tight opacity-90">{b.icon} {b.title}</div>
+                  <div data-battle-luck-result className="mt-0.5 text-[15px] font-black leading-snug">{b.result}</div>
+                </div>))}
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
@@ -38754,7 +38800,14 @@ const RaidJackScreen = ({ onBack, onChallenge, onPurchase, onClaimRewards, beatP
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
-      const t = await totalsPromise;
+      // 通信が弱くて送れなかった与ダメージが残っていれば、読む前に送り直す(本番のイベントだけ。デバッグの別イベントには出さない)
+      let flushed = 0;
+      if (!forced && eventId === RAID_JACK_EVENT.id && loaded.pending && loaded.pending.length > 0) {
+        flushed = await raidJackFlushStoredPending(meId, eventId);
+        if (!alive) return;
+        if (flushed > 0) { setMessage(`送れていなかった与ダメージを${flushed}件、送り直しました`); loaded = await raidJackLoadState(); if (!alive) return; setState(loaded); }
+      }
+      const t = flushed > 0 ? await sbFetchRaidJackTierTotals(eventId) : await totalsPromise;
       if (!alive) return;
       setTotals(t);
       const mine = meId ? await sbFetchRaidJackSelf(meId, eventId) : null;
@@ -48980,9 +49033,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★乱心(スプーキーのトリックコンフューズ): 残っていれば1つ使い、50%で「意味不明」へ差し替える。
     //   予告として出す前に決めるので、意味不明かどうかは「次の行動」の札に出る。
     //   意味不明の行動はしない前提なので、2手先は今の間合いのまま・直前の行動なしで選ぶ
-    const confusion = rollEnemyConfusion(aimed, enemyConfuseRef.current);
-    if (confusion.turns !== enemyConfuseRef.current) writeEnemyConfuse(confusion.turns);
+    const confuseBefore = enemyConfuseRef.current;
+    const confusion = rollEnemyConfusion(aimed, confuseBefore);
+    if (confusion.turns !== confuseBefore) writeEnemyConfuse(confusion.turns);
     const upcoming = confusion.intent;
+    // 乱心の抽選をしたときは、どちらになったかを帯で見せる(意味不明は「次の行動」の札にも出る)
+    if (aimed && confuseBefore > 0) {
+      if (upcoming?.type==='CONFUSED') showLuckBanner({ icon:'❓', title:'乱心', result:'敵の次の行動が「意味不明」に！ 動けず、味方の攻撃は会心確定', tone:'enemy' });
+      else showLuckBanner({ icon:'🌀', title:'乱心', result:confusion.turns>0 ? `敵は持ちこたえた(乱心はあと${confusion.turns}回)` : '敵は持ちこたえた(乱心が解けた)', tone:'bad' });
+    }
     setEnemyIntent(upcoming);
     reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming?.type==='CONFUSED' ? null : upcoming, actionState()));
   };
@@ -49138,6 +49197,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot,fx}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
+  };
+
+  // ★運しだいで結果が決まる効果の「何が出たか」を、画面の上のほうへ大きく出す帯(2026-10-06 ユーザー指摘
+  //   「ゴーストやスプーキーのランダム効果のものが何が発動したかわからない」)。
+  //   タクティクスの味方の吹き出しは枠の中で1行に切り詰められ、すぐ次の吹き出し(ガッツ+・ダメージ)に押し出されるので、
+  //   抽選の結果はそこへ出さずにこの帯で見せる。同時に3つまで縦に並べる。ログには log の文を残す
+  //   tone … 'good'(当たり・強化) / 'bad'(はずれ・裏) / 'enemy'(敵にかかった効果)
+  const [luckBanners, setLuckBanners] = useState([]);
+  const showLuckBanner = ({ icon = '🎲', title = '', result = '', tone = 'good', log = null }) => {
+    const id = Date.now()+Math.random();
+    setLuckBanners(prev => [...prev.slice(-2), { id, icon, title, result, tone }]);
+    setTimeout(() => setLuckBanners(p => p.filter(x => x.id !== id)), battleMs(2800));
+    pushBattleLog(log || `${icon} ${title}：${result}`, tone === 'enemy' ? 'enemy' : 'ally');
   };
 
   // ブリーダー教えカード使用時の専用演出を発火
@@ -50901,6 +50973,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         && tacticsUnitsRef.current[e.slotIdx]?.id==='Suezo')
       && Math.random()<TACTICS_INTIMIDATE_RATE) {
       setImmediateTurnBuff('stunEnemy',true);
+      // 敵の番には「スタン！」としか出ないので、眼力が出たことをここで見せる(2026-10-06)
+      showLuckBanner({ icon:'👁', title:'スエゾーの眼力', result:'発動！ 敵はこのターン動けない', tone:'enemy' });
     }
     setFocusedCard(null); setPendingCard(null);
     // ターンの区切り。あとから読むとき、どこからどこまでが1ターンなのかの目印になる
@@ -51145,10 +51219,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             fateDmgMult=fateCoinDmgMult(side);
             if(side==='heads'){
               writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
-              addPopup(`🪙 運命のコイン 表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`,'hero','text-amber-300 text-lg font-black drop-shadow-md');
+              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`, tone:'good' });
             }else{
               writePermaBuffs(p=>({...p,fateStacks:withFateCoinGuts(p.fateStacks)}));
-              addPopup(`🪙 運命のコイン 裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`,'hero','text-slate-300 text-lg font-bold');
+              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`, tone:'bad' });
             }
           }
           // 運命の輪(スプーキー): 6つから1つ。ダメージ3倍・2倍はこの技に、ほかは当たったあとに効かせる(下の固有技の効果)
@@ -51191,7 +51265,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
           && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
-          addPopup(`🌀 乱心！ 敵は${ENEMY_CONFUSE_TURNS}ターン惑わされる`,'enemy','text-violet-300 text-lg font-black drop-shadow-md');
+          showLuckBanner({ icon:'🌀', title:`${battleActorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`, tone:'enemy' });
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -51243,7 +51317,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               else if(id==='enemyTakenUp') writeFateWheel({...fateWheelRef.current,takenUp:FATE_WHEEL_DEBUFF_TURNS});
               else if(id==='combo') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
               else if(id==='atk') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'atk')}));
-              addPopup(`🎡 運命の輪！ ${fateWheelPick.label}`,'hero','text-fuchsia-300 text-lg font-black drop-shadow-md');
+              showLuckBanner({ icon:'🎡', title:`${battleActorName(slotIdx)}の運命の輪`, result:fateWheelPick.label, tone:(id==='enemyAtkDown'||id==='enemyTakenUp')?'enemy':'good' });
             }
           }
           else if(card.monId==='Pandora'){
@@ -52255,7 +52329,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const units = tacticsUnitsRef.current;
     const holders = isTacticsMode(runMode)
       ? tacticsAliveSlots(units).filter(slotIdx => hasTrickStartTrait(units[slotIdx]?.id)).map(slotIdx => ({ key: String(slotIdx), name: ALL_PLAYER_MONSTERS[units[slotIdx]?.id]?.name || '' }))
-      : (hasTrickStartTrait(mainHero?.id) ? [{ key: 'party', name: '' }] : []);
+      : (hasTrickStartTrait(mainHero?.id) ? [{ key: 'party', name: mainHero?.name || '' }] : []);
     if (!holders.length) return;
     const next = { ...cur.bySlot };
     holders.forEach(({ key, name }) => {
@@ -52263,7 +52337,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       next[key] = rolled.stacks;
       const text = trickStartGainText(rolled.gained);
       const who = name ? `${name}の` : '';
-      addPopup(text ? `🎩 ${who}トリックスタート！ ${text}` : `🎩 ${who}トリックスタート… はずれ`, 'hero', text ? 'text-violet-200 text-lg font-black drop-shadow-md' : 'text-slate-300 text-base font-bold');
+      showLuckBanner({ icon:'🎩', title:`${who}トリックスタート`, result:text ? `当たり！ ${text}` : 'はずれ…', tone:text ? 'good' : 'bad',
+        log:text ? `🎩 ${who}トリックスタート！ ${text}` : `🎩 ${who}トリックスタート… はずれ` });
     });
     cur.bySlot = next;
     setTrickStartView(next);
@@ -58283,7 +58358,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
@@ -59685,7 +59760,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {raidJackResult&&(()=>{
         const r=raidJackResult;
         const reasonLabel={defeated:'ジャックを倒した！',turns:'20ターンを使い切った',wipe:'全滅した',giveup:'リタイアした'}[r.reason]||'';
-        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(あとで自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした(あとで自動で送り直します)'}[r.outcome]||'';
+        const sendLabel={sent:'与ダメージを送りました',notready:'サーバーの準備中です(HOMEかレイド画面を開くと、自動で送り直します)',invalid:'この記録は送れませんでした',error:'通信できませんでした。通信のよい場所でHOMEかレイド画面を開くと、自動で送り直します'}[r.outcome]||'';
         return (<div data-raid-jack-result className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(20,8,2,.97)'}}>
           <RaidJackResultStinger reason={r.reason}/>
           <div className="mh-rjresult-in text-[10px] font-black text-orange-300 tracking-[.35em] mb-2" style={{'--d':'900ms'}}>{r.kind==='b'?'マスモン':'ベースモン'}</div>

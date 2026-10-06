@@ -1,4 +1,4 @@
-# 画面ライフサイクルの分類表 — setTimeout 92 箇所を「画面専用 / 進行 / 対象外」に仕分ける
+# 画面ライフサイクルの分類表 — setTimeout 94 箇所を「画面専用 / 進行 / 対象外」に仕分ける
 
 2026-09-10 作成(STEP 6-1)。対象は `monster-hero/src/parts/60-app.jsx`(`MonsterHeroGame`)。
 `tools/ui/screen-effects-check.js` がこの表を読み、目印が本体にちょうど1つあることと、
@@ -83,6 +83,8 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(()=>{ setRein` | progress | 投げっぱなし | 転生の演出終了と `reincarnateProcessingRef=false`。止めると二度と転生できない |
 | `setResultActionPending(false)` | progress | 投げっぱなし | リザルトの連打防止を戻す。止めると次の周回を始められない |
 | `setTimeout(()=>setPopups` | progress | 投げっぱなし | バトルのダメージ表示を1件消す。止めると溜まり続ける |
+| `setTimeout(() => setLuckBanners(` | progress | 投げっぱなし | 運しだいの結果の帯(運命のコイン・運命の輪・トリックスタート・乱心・眼力)を1枚消す。吹き出しと同じく、止めると溜まり続ける(2026-10-06) |
+| `const end = setTimeout(onFinish, total);` | screen | 止める | お布施の演出を見せ終えて閉じる。部品が外れたら `clearTimeout` で止まる(62-screen-masu-offering.jsx) |
 | `advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn` | progress | 投げっぱなし | 撃破演出を消して WAVE リザルトへ進む。止めるとバトルが終わらない |
 | `setTimeout(()=>{setUltim` | progress | 投げっぱなし | 極限の距離開放の表示を消し `setIsBusy(false)`。止めると操作を受け付けない |
 | `advanceRunStage('UPGRADE_SKILL');},battleMs(joinBaseMs` | progress | 投げっぱなし | 合流演出のあと固有技強化へ進む。止めると進行が止まる |

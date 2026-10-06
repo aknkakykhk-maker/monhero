@@ -84,7 +84,9 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   }, []);
   React.useEffect(() => {
     let alive = true;
-    const load = async () => { const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
+    // 通信が弱くて送れなかった与ダメージが端末に残っていれば、ここで送り直す(空なら通信しない)。本番のイベントだけ
+    const flush = async () => { if (eventId !== RAID_JACK_EVENT.id) return; try { const id = await ensureBreederId(); await raidJackFlushStoredPending(id, eventId); } catch (e) { /* 次に開いたときに送り直す */ } };
+    const load = async () => { await flush(); const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
     load();
     const id = setInterval(load, 60000);
     return () => { alive = false; clearInterval(id); };

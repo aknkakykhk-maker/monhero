@@ -22,7 +22,8 @@ const make = () => {
   const store = {};
   let responder = () => ({ ok: true, status: 201, body: '' });
   const ctx = {
-    console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN, Promise, encodeURIComponent, setTimeout, clearTimeout,
+    console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN, Promise, encodeURIComponent, setTimeout: (f) => { f(); return 0; }, clearTimeout,   // 再試行の待ち時間を飛ばして、検査を速くする
+   ensureBreederId: async () => 'breeder-aaaa1111',
     AbortController, RegExp, Error,
     SUPABASE_URL: 'https://example.supabase.co', SB_HEADERS: { apikey: 'k', 'Content-Type': 'application/json' },
     BUILD_DATE: '2026-10-04 12:00',
@@ -37,7 +38,7 @@ const make = () => {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(`${defs}\n${api}\nthis.o={RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackARanking,sbFetchRaidJackSelf,sbCountRaidJackAhead,sbFetchRaidJackMaxHitRanking,sbFetchRaidJackMaxHitSelf,sbCountRaidJackMaxHitAhead};`, ctx);
+  vm.runInContext(`${defs}\n${api}\nthis.o={RAID_JACK_EVENT,raidJackMakeHitId,sbSendRaidJackHit,raidJackSubmitHit,raidJackFlushPending,raidJackLoadState,raidJackSaveState,raidJackUnavailable,raidJackDefaultState,raidJackNormalizeState,sbFetchRaidJackTierTotals,sbFetchRaidJackContributions,sbFetchRaidJackBRanking,sbFetchRaidJackARanking,sbFetchRaidJackSelf,sbCountRaidJackAhead,raidJackFlushStoredPending,sbFetchRaidJackMaxHitRanking,sbFetchRaidJackMaxHitSelf,sbCountRaidJackMaxHitAhead};`, ctx);
   return { o: ctx.o, calls, store, setResponder: (f) => { responder = f; } };
 };
 
@@ -87,6 +88,8 @@ const make = () => {
     check('送れなかった2件が再送待ちに残る', state.pending.length === 2);
     ({ state } = await t.o.raidJackSubmitHit(state, h1, BID));
     check('同じ hit_id は再送待ちへ二重に入らない', state.pending.length === 2);
+    // 失敗したときは、その場で2回まで再試行する(合計3回)。ここまでの送信は3回(h1・h2・h1)なので 3×3=9回
+    check('送れないときは、その場で合計3回まで再試行する(送信3回ぶんで 3×3=9回)', t.calls.filter((c) => c.init.method === 'POST').length === 9, String(t.calls.filter((c) => c.init.method === 'POST').length));
     await t.o.raidJackSaveState(state);
     const loaded = await t.o.raidJackLoadState();
     check('再送待ちは新しい保存キーに残る', loaded.pending.length === 2 && 'mh_raid_jack_v1' in t.store && Object.keys(t.store).every((k) => k === 'mh_raid_jack_v1'));
@@ -95,6 +98,34 @@ const make = () => {
     check('通信が戻ったら送り直せて空になる', flushed.pending.length === 0);
     const sentIds = t.calls.filter((c) => c.init.method === 'POST').map((c) => JSON.parse(c.init.body).hit_id);
     check('送り直しは元と同じ hit_id', sentIds.includes(h1.hitId) && sentIds.includes(h2.hitId));
+  }
+  // ③-2 通信が弱くて1回目だけ失敗 → その場の再試行で届く。長く待つ設定になっている
+  {
+    const t = make();
+    let n = 0;
+    t.setResponder(() => (++n === 1 ? 'throw' : { ok: true, status: 201, body: '' }));
+    const h = { hitId: t.o.raidJackMakeHitId(), kind: 'a', tier: 3, damage: 700000, defeated: false };
+    const r = await t.o.raidJackSubmitHit(t.o.raidJackDefaultState(), h, BID);
+    check('1回目だけ失敗しても、再試行で届いて再送待ちに残らない', r.outcome === 'sent' && r.state.pending.length === 0 && n === 2, `outcome=${r.outcome} n=${n}`);
+    check('与ダメージを送る通信は、ランキングの読み出し(8秒)より長く待つ', /RAID_JACK_SEND_TIMEOUT_MS = 20000/.test(api) && /timeoutMs: RAID_JACK_SEND_TIMEOUT_MS/.test(api));
+  }
+  // ③-3 端末に残った再送待ちを、保存から読んで送り直す(HOMEとレイド画面を開いたとき。2026-10-06・ユーザー指摘「70万出したのに反映されてない」)
+  {
+    const t = make();
+    t.setResponder(() => ({ ok: false, status: 500, body: '' }));
+    const h = { hitId: t.o.raidJackMakeHitId(), kind: 'a', tier: 3, damage: 700000, defeated: false };
+    const first = await t.o.raidJackSubmitHit(t.o.raidJackDefaultState(), h, BID);
+    await t.o.raidJackSaveState(first.state);
+    check('送れなかった700,000は端末に残る', (await t.o.raidJackLoadState()).pending.length === 1);
+    const callsBefore = t.calls.length;
+    t.setResponder(() => ({ ok: false, status: 500, body: '' }));
+    check('まだ通信できないあいだは、0件で再送待ちが残る', (await t.o.raidJackFlushStoredPending(BID, 'raid_jack_2026')) === 0 && (await t.o.raidJackLoadState()).pending.length === 1);
+    t.setResponder(() => ({ ok: true, status: 201, body: '' }));
+    check('通信が戻ってHOME・レイド画面を開くと、保存から読んで1件送れて、再送待ちが空になる', (await t.o.raidJackFlushStoredPending(BID, 'raid_jack_2026')) === 1 && (await t.o.raidJackLoadState()).pending.length === 0);
+    const posts = t.calls.slice(callsBefore).filter((c) => c.init.method === 'POST').map((c) => JSON.parse(c.init.body));
+    check('送り直しは元と同じ hit_id・同じダメージ', posts.some((b) => b.hit_id === h.hitId && b.damage === 700000));
+    const n2 = t.calls.length;
+    check('再送待ちが空のときは通信しない', (await t.o.raidJackFlushStoredPending(BID, 'raid_jack_2026')) === 0 && t.calls.length === n2);
   }
   // ④ 取得
   {
