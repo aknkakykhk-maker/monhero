@@ -137,7 +137,8 @@ const EX_TEXT = {
   Yggdrasil: { name: '世界樹の守り', desc: '3ターンのあいだ、味方全員の受けるダメージが30%減る。\nターンの終わりに全員のライフが20%回復する(1ラン5回)。' },
   MelWhip: { name: 'スイーツパラダイス', desc: '使ったターン、メルホイップの攻撃に\n与ダメージ30%の連撃が4回追加される(1ラン3回)。' },
 };
-const BEAT_TEXT = { name: '必死', desc: 'モンスターノーツを取ると、7秒のあいだ\nGREAT以上の判定がすべてJUST MARVELOUSになる。' };
+// 2026-10-06 必死の中身を「GREAT・EXCELLENT が MARVELOUS になる」へ変えた(ユーザー指示「マーベラス以上が出る変更」)
+const BEAT_TEXT = { name: '必死', desc: 'モンスターノーツを取ると、7秒のあいだ\nGREAT・EXCELLENTの判定がMARVELOUSになる。' };
 const APT_LABELS = ['零', '近', '中', '遠'];
 const APT_COLORS = { S: '#f472b6', A: '#f59e0b', B: '#22c55e', C: '#38bdf8', D: '#94a3b8', E: '#64748b', F: '#475569', G: '#334155' };
 

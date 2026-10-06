@@ -172,7 +172,11 @@ unique:{ name:"スターボム", icon:YGGDRASIL_ICON, monId:"Yggdrasil", baseMul
 主血統「ユグドラシル」の能力(`data/rhythm-mode.js` の `RHYTHM_MONSTER_ABILITY_BY_LINEAGE` へ `yggdrasil:'HISSHI'`)。
 新しい能力なので、`RHYTHM_MONSTER_ABILITIES` へ足し、判定の処理に差し込む必要がある。
 
-> **必死**:7秒のあいだ、GREAT・EXCELLENT・MARVELOUS がすべて JUST MARVELOUS になる
+> **必死**:7秒のあいだ、GREAT・EXCELLENT が MARVELOUS になる(マーベラス以上が出る)
+>
+> 2026-10-06 ユーザー指示「ジャストマーベラスじゃなくてマーベラス以上が出る変更」で変えた。それまでは GREAT 以上を
+> すべて JUST MARVELOUS(ずれ0)にしていた。いまは判定だけを MARVELOUS にし、ずれは変えないので、JUST になるのは
+> 本当にぴったり叩けたときだけ(点数は MARVELOUS と JUST MARVELOUS で同じなので、変わるのは JUST の数と FAST/SLOW の数え方)
 >
 > ★画面・ヘルプ・更新履歴では判定名を**英語のまま**「JUST MARVELOUS」と書く(2026-09-29 ユーザー指摘「ジャストマーベラスは英語ね」)。カタカナで書かない
 
