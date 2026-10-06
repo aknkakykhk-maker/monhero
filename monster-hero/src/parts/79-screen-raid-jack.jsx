@@ -442,7 +442,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
       <div className={SCREEN_FOOTER_CLASS}>
         {/* レイドバトルは「バトル」と「モンヒロビート」の2つの挑み方(2026-10-06・ユーザー指示)。回数は同じものを使う。
             挑めないとき(開始前・未解放・倒された・回数切れ)は、これまでどおり理由を出す1つのボタンにする */}
-        {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 ? (
+        {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? (
           <div className="grid grid-cols-2 gap-2">
             <button type="button" data-raid-jack-challenge onClick={() => onChallenge(tab, current, 'battle')}
               className="min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95">バトルで<br />挑戦する</button>

@@ -85,6 +85,13 @@ check('モンヒロビート挑戦: 1コンボあたりのダメージは難易�
 }
 {
   const appSrc = read('monster-hero/src/parts/60-app.jsx');
+  // 一時停止(2026-10-06・ユーザー指示。仕様が固まるまで)。公開フラグが偽のあいだは、ボタン・更新履歴・ヘルプが出ない(デバッグの強制表示ではボタンだけ出る)
+  const relSrc = read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
+  const screenSrc = read('monster-hero/src/parts/79-screen-raid-jack.jsx');
+  check('モンヒロビート挑戦: 公開フラグ(RAID_JACK_RHYTHM_PUBLIC_RELEASE)が偽のあいだは、ボタンも更新履歴・ヘルプも出ない(仕様が固まるまで一時停止中)',
+    /const RAID_JACK_RHYTHM_PUBLIC_RELEASE = false;/.test(relSrc) && /raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE/.test(relSrc)
+    && /RELEASE_FLAGS\.raidJackRhythm === true \|\| forced/.test(screenSrc) && /RELEASE_FLAGS\.raidJackRhythm===true\|\|raidJackDebugForce/.test(appSrc)
+    && /releaseFlag:'raidJackRhythm'/.test(read('monster-hero/data/changelog.js')) && (read('monster-hero/data/help.js').match(/releaseFlag:'raidJackRhythm'/g) || []).length === 2);
   check('モンヒロビート挑戦: 演奏の完了は from===\'raid\' で専用の処理だけを通り、自己ベスト・ランキング・周回の報酬へ進まない(return で抜ける)',
     /if\(rhythmPlay\.from==='raid'\)\{void completeRaidJackRhythm\([^)]*\);return;\}/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = finishRaidJackRhythm\(/.test(appSrc));
   check('モンヒロビート挑戦: 回数はバトルと同じもの(state.a の used / extra・raidJackRemaining)を使い、始めた時点で1回使う',
@@ -185,7 +192,7 @@ check('公開フラグは true(2026-10-05 4:00 公開)で、RELEASE_FLAGS.raidJa
   const vm2 = require('vm');
   const fl = rel.slice(rel.indexOf('const RELEASE_FLAGS = {'), rel.indexOf('};', rel.indexOf('const RELEASE_FLAGS = {')) + 2);
   const base = { SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: true, TACTICS_BETA_PRO_RELEASE: true, TACTICS_EX_SKILLS_RELEASE: true, RHYTHM_MODE_PUBLIC_RELEASE: true, RHYTHM_MULTI_PUBLIC_RELEASE: true, FRIENDS_PUBLIC_RELEASE: true,
-    QUICK_RHYTHM_LINK_PUBLIC_RELEASE: true, RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE: true, RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE: true, RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE: true, RHYTHM_EVENT_POINTS_PUBLIC_RELEASE: true, RAID_JACK_PUBLIC_RELEASE: true };
+    QUICK_RHYTHM_LINK_PUBLIC_RELEASE: true, RAID_JACK_RHYTHM_PUBLIC_RELEASE: false, RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE: true, RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE: true, RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE: true, RHYTHM_EVENT_POINTS_PUBLIC_RELEASE: true, RAID_JACK_PUBLIC_RELEASE: true };
   const at = (ms, withEvent = true) => {
     const c = { ...base, Date: class extends Date { static now() { return ms; } }, Object, Number, Math, Array };
     vm2.createContext(c);
