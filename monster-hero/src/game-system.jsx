@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5d6a564bcef081b8
+// generated-sha256: a55b727d02ff1451
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-06 17:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-06 18:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21987,7 +21987,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
     useNote: '全員のガッツ回復＋ランダムで2つ(使うほど豪華に)',
-    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）\n・レイドバトルでは、WAVEの代わりに戦闘ターンが進むほど豪華になる（2ターンごとに1段階）。早く使えば安定、温存すれば強いプレゼントを狙える',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 3,
     present: Object.freeze({ draws: 2, grow: Object.freeze({ effect: 0.1, fixedGuts: 0.02, jackpot: 0.02, maxLevel: 10 }), fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
@@ -22422,7 +22422,7 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
 // choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
 // target … 味方を選んで使うEX(生命の泉)で、選んだ味方の枠
-const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null } = {}) => {
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null, presentLevel = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
   // スタイル式は、選べないスタイル(いまのもの・知らないもの)なら何もしない(回数も減らさない)
@@ -22444,7 +22444,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, uniqueCrit: def.uniqueCrit === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
-      presentCfg: def.present ? tacticsExPresentScaled(def.present, tacticsExTotalUsesOf(safe, slot, monId)) : null, present: null,
+      presentCfg: def.present ? tacticsExPresentScaled(def.present, Number.isInteger(presentLevel) ? presentLevel : tacticsExTotalUsesOf(safe, slot, monId)) : null, present: null,
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null, aquaCfg: def.aqua ? { ...def.aqua } : null, aqua: def.aqua ? { route: null, stacks: 0, finale: null } : null, springDown: false, konjoLeft: 0,
       pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
       thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,
@@ -41741,6 +41741,8 @@ function MonsterHeroGame() {
   const raidJackLastClaimRef = useRef(0);       // HOMEへ戻るたびに問い合わせ直さない(5分あける。戦闘のあとは0に戻して今すぐ確かめる)
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
   // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
+  // レイドバトルのプレゼントの豪華さ(段階): WAVEが無いので、戦闘ターンが進むほど上がる(2ターンごとに1段階。2026-10-06 ユーザー指示)
+  const tacticsRaidPresentLevel = (turn) => Math.max(0, Math.floor((Number(turn)||0)/2));
   const raidExDefOf = (monId) => {
     const def = tacticsExDefOf(monId);
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES } : def;
@@ -51143,7 +51145,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり！ ':''}${pres.kinds.map(k=>tacticsExPresentKindText(k,state.effects?.[slotIdx]?.presentCfg||def.present,def.turns)).join('・')}`);
           // プレゼントの豪華さ(WAVEをまたいで使うほど上がる)
-          if(def.effect==='present'&&def.present?.grow){ const lv=Math.min(def.present.grow.maxLevel,tacticsExTotalUsesOf(state,slotIdx,mon.id)); out.push(`プレゼントの豪華さ ${lv} / ${def.present.grow.maxLevel}（使うたびに上がる）`); }
+          if(def.effect==='present'&&def.present?.grow){ const lv=Math.min(def.present.grow.maxLevel,raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):tacticsExTotalUsesOf(state,slotIdx,mon.id)); out.push(`プレゼントの豪華さ ${lv} / ${def.present.grow.maxLevel}（${raidJackRunRef.current?'ターンが進むほど上がる':'使うたびに上がる'}）`); }
           return out;
         })(),
         stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
@@ -51242,7 +51244,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
+      presentLevel:def.present&&raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):null, snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';

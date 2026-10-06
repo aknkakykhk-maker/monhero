@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1741026963df272
+// source-sha256: 1c1e01e3628f9e46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-06 17:44";
+const BUILD_DATE = "2026-10-06 18:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34776,7 +34776,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
     useNote: '全員のガッツ回復＋ランダムで2つ(使うほど豪華に)',
-    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）\n・レイドバトルでは、WAVEの代わりに戦闘ターンが進むほど豪華になる（2ターンごとに1段階）。早く使えば安定、温存すれば強いプレゼントを狙える',
     maxUses: 1,
     unlimited: false,
     usesPerWave: true,
@@ -35382,7 +35382,8 @@ const applyTacticsExUse = (state, {
   now,
   snapshot = null,
   choice = null,
-  target = null
+  target = null,
+  presentLevel = null
 } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
@@ -35443,7 +35444,7 @@ const applyTacticsExUse = (state, {
           ...def.voltage
         } : null,
         voltage: 0,
-        presentCfg: def.present ? tacticsExPresentScaled(def.present, tacticsExTotalUsesOf(safe, slot, monId)) : null,
+        presentCfg: def.present ? tacticsExPresentScaled(def.present, Number.isInteger(presentLevel) ? presentLevel : tacticsExTotalUsesOf(safe, slot, monId)) : null,
         present: null,
         target: Number.isInteger(target) ? target : null,
         lifeSpringCfg: def.lifeSpring ? {
@@ -66250,6 +66251,7 @@ function MonsterHeroGame() {
   const raidJackClaimingRef = useRef(false);
   const raidJackLastClaimRef = useRef(0);
   const raidJackDamageRef = useRef(0);
+  const tacticsRaidPresentLevel = turn => Math.max(0, Math.floor((Number(turn) || 0) / 2));
   const raidExDefOf = monId => {
     const def = tacticsExDefOf(monId);
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? {
@@ -76922,8 +76924,8 @@ function MonsterHeroGame() {
         }
         if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり！ ' : ''}${pres.kinds.map(k => tacticsExPresentKindText(k, state.effects?.[slotIdx]?.presentCfg || def.present, def.turns)).join('・')}`);
         if (def.effect === 'present' && def.present?.grow) {
-          const lv = Math.min(def.present.grow.maxLevel, tacticsExTotalUsesOf(state, slotIdx, mon.id));
-          out.push(`プレゼントの豪華さ ${lv} / ${def.present.grow.maxLevel}（使うたびに上がる）`);
+          const lv = Math.min(def.present.grow.maxLevel, raidJackRunRef.current ? tacticsRaidPresentLevel(tacticsExNow.turn) : tacticsExTotalUsesOf(state, slotIdx, mon.id));
+          out.push(`プレゼントの豪華さ ${lv} / ${def.present.grow.maxLevel}（${raidJackRunRef.current ? 'ターンが進むほど上がる' : '使うたびに上がる'}）`);
         }
         return out;
       })(),
@@ -77079,6 +77081,7 @@ function MonsterHeroGame() {
       slot: slotIdx,
       monId: mon.id,
       now: tacticsExNow,
+      presentLevel: def.present && raidJackRunRef.current ? tacticsRaidPresentLevel(tacticsExNow.turn) : null,
       snapshot: usedUnit ? {
         atk: usedUnit.atk,
         def: usedUnit.def,

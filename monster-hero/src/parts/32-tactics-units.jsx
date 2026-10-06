@@ -1156,7 +1156,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
     useNote: '全員のガッツ回復＋ランダムで2つ(使うほど豪華に)',
-    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）\n・レイドバトルでは、WAVEの代わりに戦闘ターンが進むほど豪華になる（2ターンごとに1段階）。早く使えば安定、温存すれば強いプレゼントを狙える',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 3,
     present: Object.freeze({ draws: 2, grow: Object.freeze({ effect: 0.1, fixedGuts: 0.02, jackpot: 0.02, maxLevel: 10 }), fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
@@ -1591,7 +1591,7 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
 // choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
 // target … 味方を選んで使うEX(生命の泉)で、選んだ味方の枠
-const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null } = {}) => {
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null, presentLevel = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
   // スタイル式は、選べないスタイル(いまのもの・知らないもの)なら何もしない(回数も減らさない)
@@ -1613,7 +1613,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, uniqueCrit: def.uniqueCrit === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
-      presentCfg: def.present ? tacticsExPresentScaled(def.present, tacticsExTotalUsesOf(safe, slot, monId)) : null, present: null,
+      presentCfg: def.present ? tacticsExPresentScaled(def.present, Number.isInteger(presentLevel) ? presentLevel : tacticsExTotalUsesOf(safe, slot, monId)) : null, present: null,
       target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null, aquaCfg: def.aqua ? { ...def.aqua } : null, aqua: def.aqua ? { route: null, stacks: 0, finale: null } : null, springDown: false, konjoLeft: 0,
       pandoraBoxCfg: def.pandoraBox ? { ...def.pandoraBox } : null,
       thunderCfg: def.thunder ? { ...def.thunder } : null, thunder: 0,

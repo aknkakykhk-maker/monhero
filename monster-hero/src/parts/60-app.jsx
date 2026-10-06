@@ -2368,6 +2368,8 @@ function MonsterHeroGame() {
   const raidJackLastClaimRef = useRef(0);       // HOMEへ戻るたびに問い合わせ直さない(5分あける。戦闘のあとは0に戻して今すぐ確かめる)
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
   // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
+  // レイドバトルのプレゼントの豪華さ(段階): WAVEが無いので、戦闘ターンが進むほど上がる(2ターンごとに1段階。2026-10-06 ユーザー指示)
+  const tacticsRaidPresentLevel = (turn) => Math.max(0, Math.floor((Number(turn)||0)/2));
   const raidExDefOf = (monId) => {
     const def = tacticsExDefOf(monId);
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES } : def;
@@ -11770,7 +11772,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり！ ':''}${pres.kinds.map(k=>tacticsExPresentKindText(k,state.effects?.[slotIdx]?.presentCfg||def.present,def.turns)).join('・')}`);
           // プレゼントの豪華さ(WAVEをまたいで使うほど上がる)
-          if(def.effect==='present'&&def.present?.grow){ const lv=Math.min(def.present.grow.maxLevel,tacticsExTotalUsesOf(state,slotIdx,mon.id)); out.push(`プレゼントの豪華さ ${lv} / ${def.present.grow.maxLevel}（使うたびに上がる）`); }
+          if(def.effect==='present'&&def.present?.grow){ const lv=Math.min(def.present.grow.maxLevel,raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):tacticsExTotalUsesOf(state,slotIdx,mon.id)); out.push(`プレゼントの豪華さ ${lv} / ${def.present.grow.maxLevel}（${raidJackRunRef.current?'ターンが進むほど上がる':'使うたびに上がる'}）`); }
           return out;
         })(),
         stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
@@ -11869,7 +11871,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
+      presentLevel:def.present&&raidJackRunRef.current?tacticsRaidPresentLevel(tacticsExNow.turn):null, snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def, ...(def.effect==='timeStop'?{ copied:tacticsExCopyableBuffs(state,tacticsUnitsRef.current,tacticsExNow,slotIdx) }:{}) }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';

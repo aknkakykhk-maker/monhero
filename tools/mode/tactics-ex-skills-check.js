@@ -1104,6 +1104,9 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('プレゼントは使うほど豪華になる(1回目は基本値・WAVEで回数が戻っても合計は戻らない・上限あり)', Math.abs(levels[0].dmg - 0.2) < 1e-9 && Math.abs(levels[0].jackpot - 0.1) < 1e-9
     && levels[1].dmg > levels[0].dmg && levels[1].fixedGuts > levels[0].fixedGuts && levels[1].jackpot > levels[0].jackpot && ex.tacticsExTotalUsesOf(st, 2, 'Snegurochka') === 12
     && Math.abs(levels[11].dmg - levels[10].dmg) < 1e-9 && levels[11].jackpot <= 0.5 && ex.tacticsExPresentScaled(sn.present, 0).dmg === sn.present.dmg);
+  const raidSn = ex.applyTacticsExUse(ex.createTacticsExState(), { def: sn, slot: 2, monId: 'Snegurochka', now: A(1, 8), presentLevel: 4 });
+  check('レイドのプレゼント: 段階を渡すとその段階の数字になる(使った回数に関係しない)・渡さなければ使った回数', Math.abs(raidSn.effects[2].presentCfg.dmg - 0.2 * 1.4) < 1e-9
+    && Math.abs(ex.applyTacticsExUse(ex.createTacticsExState(), { def: sn, slot: 2, monId: 'Snegurochka', now: A(1, 8) }).effects[2].presentCfg.dmg - 0.2) < 1e-9);
   // ヤオビクニ: 使った瞬間に、ほかの味方の強化を集めてそのターンだけ受ける(完全回避・連撃は集めない)
   const ark = use(ex.createTacticsExState(), 'Ark', 0, A(1, 3));
   const units = [mk('Ark'), mk('Yaobikuni')];
@@ -1149,7 +1152,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /iceLockRefreshed && timeStopSlot==null/.test(app) && /timeStopSlot==null&&\(fateWheelRef/.test(app) && /if\(timeStopSlot==null\)\{ setTurnBuffs\(activeTurnBuffs\); writeNextTurnBuffs\(\{\}\); \}/.test(app)
     && /spendTacticsExKonjo\(tacticsExStateRef\.current,units,slotIdx/.test(app) && /aquaStackFromCard\(slotIdx,card\)==='finale'/.test(app) && /clearTacticsAllyDebuffs\(\)/.test(app)
     && /tacticsExAquaOf\(tacticsExStateRef\.current,tacticsUnitsRef\.current,live\.now\)/.test(app) && /setTacticsNextSlotBuff\(slot,'pandoraLockTurns',1\)/.test(app)
-    && /tacticsCritFixedNow\(slotIdx,card\)/.test(app) && /copied:tacticsExCopyableBuffs\(/.test(app));
+    && /presentLevel:def\.present&&raidJackRunRef\.current\?tacticsRaidPresentLevel\(tacticsExNow\.turn\):null/.test(app) && /tacticsCritFixedNow\(slotIdx,card\)/.test(app) && /copied:tacticsExCopyableBuffs\(/.test(app));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
