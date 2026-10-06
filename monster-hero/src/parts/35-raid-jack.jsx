@@ -142,7 +142,7 @@ const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 45
 //   ・スコアからダメージへの換算は、ここの1か所だけ(2026-10-06・ユーザー「難易度とスコアとコンボ数でダメージを出す。どんなに高くても30万を想定」)
 //   ・アシストモードで遊んだぶんはダメージにしない(ランキングと同じ扱い)
 //
-// ダメージ = 1コンボあたりのダメージ(難易度ごと) × 最大コンボ数 × スコアの割合
+// 【式①(コンボ)】ダメージ = 1コンボあたりのダメージ(難易度ごと) × 最大コンボ数 × スコアの割合
 //   ・コンボ数は割合ではなく**数そのものを掛ける**(2026-10-06・ユーザー「コンボ数は割合じゃなくてシンプルにコンボの数を掛ける。
 //     そうじゃないと、かんたんな曲のほうがダメージが出ちゃう」)。ノーツの多い(長い・難しい)曲ほど、つながる数が増えてダメージが大きくなる
 //   ・スコアの割合 … スコア ÷ その難易度の満点(0〜1)。ミスや判定の悪さが響く
@@ -157,8 +157,8 @@ const raidJackRhythmRate = (value, max) => {
   if (!Number.isFinite(v) || !Number.isFinite(m) || m <= 0 || v <= 0) return 0;
   return Math.min(1, v / m);
 };
-// input = { score, maxCombo, difficultyId, maxScore(省くと難易度の満点), assist }
-const raidJackRhythmDamage = (input) => {
+// 【式①(コンボ)】input = { score, maxCombo, difficultyId, maxScore(省くと難易度の満点), assist }
+const raidJackRhythmDamageByCombo = (input) => {
   const i = input && typeof input === 'object' ? input : {};
   if (i.assist === true) return 0;
   const perCombo = RAID_JACK_RHYTHM_DAMAGE_PER_COMBO[i.difficultyId];
@@ -169,10 +169,34 @@ const raidJackRhythmDamage = (input) => {
   const scoreRate = raidJackRhythmRate(i.score, maxScore);
   return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(perCombo * combo * scoreRate + 1e-9)));
 };
+// 【式②(判定)】(2026-10-06・ユーザー提案②「難易度と判定でみるダメージ計算。難易度ごとに、マーベラスなどの判定1個あたりのダメージ換算を決める」)
+//   ダメージ = Σ(その判定の数 × 難易度ごとの判定1個あたりのダメージ)。ミスは0。30万で頭打ち。
+//   1個あたりは「難易度ごとの基準(MARVELOUS)× 判定の割合」。割合は MARVELOUS 1.0 / EXCELLENT 0.9 / GREAT 0.7 / GOOD 0.4 / BAD 0.1 / MISS 0。
+//   基準は式①の1コンボあたりと同じ(EASY 200 〜 MASTER 340)なので、公開中の曲でいちばんノーツの多い曲を全部 MARVELOUS で叩いても、MASTER でほぼ30万。
+//   スコアやコンボは見ない(判定の質と、叩いた数そのものが効く。ノーツの少ないかんたんな曲は、同じ難易度でも少なくなる)
+const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ MARVELOUS: 1.0, EXCELLENT: 0.9, GREAT: 0.7, GOOD: 0.4, BAD: 0.1, MISS: 0 });
+const RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT = Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_DAMAGE_PER_COMBO).map(([id, base]) => [id,
+  Object.freeze(Object.fromEntries(Object.entries(RAID_JACK_RHYTHM_JUDGMENT_RATES).map(([j, rate]) => [j, Math.round(base * rate)])))])));
+// input = { judgments: { MARVELOUS: 数, EXCELLENT: 数, ... }, difficultyId, assist }
+const raidJackRhythmDamageByJudgment = (input) => {
+  const i = input && typeof input === 'object' ? input : {};
+  if (i.assist === true) return 0;
+  const table = RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT[i.difficultyId];
+  if (!table || !i.judgments || typeof i.judgments !== 'object') return 0;
+  let total = 0;
+  Object.keys(table).forEach((j) => {
+    const n = Number(i.judgments[j]);
+    if (Number.isFinite(n) && n > 0) total += Math.floor(n) * table[j];
+  });
+  return Math.max(0, Math.min(RAID_JACK_RHYTHM_DAMAGE_LIMIT, Math.floor(total)));
+};
+// どちらの式を使うか。'judgment'(式②・判定)/ 'combo'(式①・コンボ×スコアの割合)。切り替えはここの1行だけ
+const RAID_JACK_RHYTHM_FORMULA = 'judgment';
+const raidJackRhythmDamage = (input) => (RAID_JACK_RHYTHM_FORMULA === 'combo' ? raidJackRhythmDamageByCombo(input) : raidJackRhythmDamageByJudgment(input));
 // 演奏の結果(result・difficulty)から、ダメージを出す
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
-  return raidJackRhythmDamage({ score: r.score, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, maxScore: difficulty && difficulty.maxScore, assist: r.assist === true });
+  return raidJackRhythmDamage({ score: r.score, maxCombo: r.maxCombo, judgments: r.judgments, difficultyId: difficulty && difficulty.id, maxScore: difficulty && difficulty.maxScore, assist: r.assist === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す

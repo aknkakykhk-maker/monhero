@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const src = read('monster-hero/src/parts/35-raid-jack.jsx');
 const ctx = { console, Object, Number, Math, Array, JSON, String, Boolean, Date, isNaN };
 vm.createContext(ctx);
-vm.runInContext(`${src}\nthis.o={raidJackRhythmDamage,raidJackRhythmDamageOf,RAID_JACK_RHYTHM_DAMAGE_PER_COMBO,RAID_JACK_RHYTHM_DAMAGE_LIMIT,RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
+vm.runInContext(`${src}\nthis.o={raidJackRhythmDamage,raidJackRhythmDamageByCombo,raidJackRhythmDamageByJudgment,RAID_JACK_RHYTHM_FORMULA,RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT,raidJackRhythmDamageOf,RAID_JACK_RHYTHM_DAMAGE_PER_COMBO,RAID_JACK_RHYTHM_DAMAGE_LIMIT,RAID_JACK_PUMPKIN,raidJackBossDown,raidJackMakeEnemy,RAID_JACK_PUMPKIN_ART_SCALE,RAID_JACK_A_TIERS,RAID_JACK_B_TIERS,RAID_JACK_EVENT,RAID_JACK_STORAGE_KEY,RAID_JACK_ACTION_IDS,RAID_JACK_SKILL_NAMES,raidJackWindowAt,raidJackQuickLoops,RAID_JACK_QUICK_LOOPS_PER_TURN,raidJackGrowthAt,RAID_JACK_LEVEL_UP_TURNS,RAID_JACK_UNIQUE_LEVEL_STEP,RAID_JACK_TEACHING_MAX_LEVEL,raidJackDayKey,raidJackNormalizeState,raidJackDefaultState,raidJackRemaining,raidJackUnlockedCount,raidJackTierAt};`, ctx);
 const o = ctx.o;
 
 // ① 段階
@@ -38,7 +38,7 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
 check('モンヒロビート挑戦: 1コンボあたりのダメージは難易度が高いほど大きい(200 / 240 / 280 / 320 / 340)・上限は30万',
   JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DAMAGE_PER_COMBO)) === JSON.stringify([200, 240, 280, 320, 340]) && o.RAID_JACK_RHYTHM_DAMAGE_LIMIT === 300000);
 {
-  const d = o.raidJackRhythmDamage;
+  const d = o.raidJackRhythmDamageByCombo;   // 式①(コンボ)
   // 公開中の曲の、各難易度の最大のノーツ数(2026-10-06 時点)。満点・フルコンボでも、どの難易度も30万を超えず、MASTER の最大がほぼ30万
   const maxNotes = { EASY: 394, NORMAL: 470, HARD: 628, EXPERT: 761, MASTER: 882 };
   const maxScores = { EASY: 600000, NORMAL: 700000, HARD: 800000, EXPERT: 900000, MASTER: 1000000 };
@@ -53,8 +53,26 @@ check('モンヒロビート挑戦: 1コンボあたりのダメージは難易�
   check('モンヒロビート挑戦: 上限を超えない(コンボやスコアが範囲外でも30万まで)・不正な値・アシストモード・コンボ0は0',
     d({ score: 9e9, maxCombo: 9e9, difficultyId: 'MASTER' }) === 300000 && d({ score: 1000000, maxCombo: 500, difficultyId: 'MASTER', assist: true }) === 0
     && d({ score: 'abc', maxCombo: NaN, difficultyId: 'MASTER' }) === 0 && d({ score: 500000, maxCombo: 5, difficultyId: 'UNKNOWN' }) === 0 && d({ score: 1000000, maxCombo: 0, difficultyId: 'MASTER' }) === 0 && d(null) === 0 && d(undefined) === 0);
+  // 式②(判定)。いまの式(RAID_JACK_RHYTHM_FORMULA)はこちら
+  const dj = o.raidJackRhythmDamageByJudgment;
+  const full = (id, n) => dj({ difficultyId: id, judgments: { MARVELOUS: n } });
+  check('モンヒロビート挑戦: 使う式は「判定」(式②)。式①(コンボ)は切り替えで戻せる', o.RAID_JACK_RHYTHM_FORMULA === 'judgment');
+  check('モンヒロビート挑戦: 判定1個あたりのダメージ(MASTER は 340 / 306 / 238 / 136 / 34 / 0、EASY は 200 / 180 / 140 / 80 / 20 / 0)',
+    JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT.MASTER)) === JSON.stringify([340, 306, 238, 136, 34, 0]) && JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT.EASY)) === JSON.stringify([200, 180, 140, 80, 20, 0]));
+  check('モンヒロビート挑戦: どの判定も、難易度が高いほど1個あたりが大きい。判定がよいほど大きく、MISS は0',
+    Object.keys(o.RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT.MASTER).every((j) => ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER'].map((id) => o.RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT[id][j]).every((v, i, a) => i === 0 || v >= a[i - 1]))
+    && ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER'].every((id) => { const t = o.RAID_JACK_RHYTHM_DAMAGE_PER_JUDGMENT[id]; return t.MARVELOUS > t.EXCELLENT && t.EXCELLENT > t.GREAT && t.GREAT > t.GOOD && t.GOOD > t.BAD && t.BAD > t.MISS && t.MISS === 0; }));
+  check('モンヒロビート挑戦: 公開中の曲でいちばんノーツの多い曲を全部 MARVELOUS で叩いても30万以内(MASTER はほぼ30万)',
+    full('EASY', 394) === 78800 && full('NORMAL', 470) === 112800 && full('HARD', 628) === 175840 && full('EXPERT', 761) === 243520 && full('MASTER', 882) === 299880);
+  check('モンヒロビート挑戦: ダメージ = 判定ごとの(数 × 1個あたり)の合計(MASTER・MARVELOUS 300 / EXCELLENT 100 / GREAT 50 / GOOD 20 / BAD 5 / MISS 25)',
+    dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 300, EXCELLENT: 100, GREAT: 50, GOOD: 20, BAD: 5, MISS: 25 } }) === 300 * 340 + 100 * 306 + 50 * 238 + 20 * 136 + 5 * 34);
+  check('モンヒロビート挑戦: 叩いた数そのものが効く(同じ判定の割合でも、ノーツが2倍ならダメージも2倍)。ノーツの少ない簡単な曲は、同じ難易度でも少なくなる',
+    dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 400, GREAT: 200 } }) === 2 * dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 200, GREAT: 100 } }) && full('EASY', 100) < full('MASTER', 500));
+  check('モンヒロビート挑戦: 判定がよいほど大きい(全部 GREAT より全部 MARVELOUS が大きい)・上限30万・不正な値・アシスト・難易度不明は0',
+    dj({ difficultyId: 'MASTER', judgments: { GREAT: 500 } }) < full('MASTER', 500) && full('MASTER', 99999) === 300000 && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 500 }, assist: true }) === 0
+    && dj({ difficultyId: 'MASTER', judgments: { MARVELOUS: 'abc', GREAT: NaN, GOOD: -5 } }) === 0 && dj({ difficultyId: 'UNKNOWN', judgments: { MARVELOUS: 500 } }) === 0 && dj({ difficultyId: 'MASTER' }) === 0 && dj(null) === 0 && dj(undefined) === 0);
   const r = { score: 900000, maxCombo: 420, judgments: { MARVELOUS: 300, EXCELLENT: 100, GOOD: 70, MISS: 30 } };
-  check('モンヒロビート挑戦: 演奏の結果から出す(スコア・最大コンボ・難易度・満点を使う)', o.raidJackRhythmDamageOf(r, { id: 'MASTER', maxScore: 1000000 }) === Math.floor(340 * 420 * 0.9) && o.raidJackRhythmDamageOf({ ...r, assist: true }, { id: 'MASTER', maxScore: 1000000 }) === 0);
+  check('モンヒロビート挑戦: 演奏の結果から出す(判定の数と難易度を使う。アシストは0)', o.raidJackRhythmDamageOf(r, { id: 'MASTER', maxScore: 1000000 }) === 300 * 340 + 100 * 306 + 70 * 136 && o.raidJackRhythmDamageOf({ ...r, assist: true }, { id: 'MASTER', maxScore: 1000000 }) === 0);
 }
 {
   const appSrc = read('monster-hero/src/parts/60-app.jsx');
