@@ -155,8 +155,8 @@ const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ JUST: 1.0, MARVELOUS: 0.
 const RAID_JACK_RHYTHM_BASE = 1000;   // MASTER のジャスト1個
 const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;   // 1コンボあたりの上乗せ(100コンボで +5%)
-// 達成の補正: ふつうの演奏は基準の半分。オールマーベラス=1.0(従来どおり)・オールエクセレント=0.9・フルコンボ=0.7(いずれも従来比)
-const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({ NONE: 0.5, FULL_COMBO: 0.7, ALL_EXCELLENT: 0.9, ALL_MARVELOUS: 1.0 });
+// 達成の補正: ふつうの演奏は基準の0.35倍(半分からさらに30%下げた)。オールマーベラス=1.0(従来どおり)・オールエクセレント=0.9・フルコンボ=0.7(いずれも従来比)
+const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({ NONE: 0.35, FULL_COMBO: 0.7, ALL_EXCELLENT: 0.9, ALL_MARVELOUS: 1.0 });
 const RAID_JACK_RHYTHM_DAMAGE_LIMIT = null;   // null = 上限なし
 const RAID_JACK_RHYTHM_SEND_MAX = 100000000;   // 1回の送信の上限(桁あふれを弾くだけ。ほかの挑み方と同じ)
 // 判定1個あたりのダメージ(難易度ごと)= round(1000 × 難易度の補正) を基準に、判定の割合を掛けて四捨五入
