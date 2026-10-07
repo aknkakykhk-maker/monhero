@@ -111,6 +111,8 @@ async function auditBuild(playwright, root, label, port) {
     }
     await s.close().catch(() => {});
     results.push(row);
+    // 1曲ごとに途中経過を書いておく(長い調査の途中で止まっても、そこまでの数が残る)
+    try { fs.writeFileSync(path.join(OUT, `partial-${label.replace(/[^\w]/g, '_')}.json`), JSON.stringify(results, null, 1)); } catch { /* 書けなくても調査は続ける */ }
   }
   server.close();
   return results;
