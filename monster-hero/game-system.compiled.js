@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 63f7fb2159503b66
+// source-sha256: 6e7fba5ebd47b981
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 13:25";
+const BUILD_DATE = "2026-10-07 13:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -60846,9 +60846,12 @@ const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({
   ...((RHYTHM_LOOK_PRESETS.find(preset => preset.id === 'LIGHT') || {}).values || {})
 });
 const RHYTHM_MULTI_REWARD_STEP = 0.5;
-const rhythmMultiRewardScale = count => {
+const RHYTHM_MULTI_CPU_REWARD_STEPS = Object.freeze([0.3, 0.2, 0.1, 0.1]);
+const rhythmMultiRewardScale = (count, cpus = 0) => {
   const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
-  return 1 + RHYTHM_MULTI_REWARD_STEP * (n - 1);
+  const c = Math.max(0, Math.min(n - 1, Math.floor(Number(cpus) || 0)));
+  const cpuBonus = RHYTHM_MULTI_CPU_REWARD_STEPS.slice(0, c).reduce((a, b) => a + b, 0);
+  return Math.round((1 + RHYTHM_MULTI_REWARD_STEP * (n - c - 1) + cpuBonus) * 100) / 100;
 };
 const RHYTHM_MULTI_STREAK_STEP = 0.1;
 const RHYTHM_MULTI_ALONE_HINT_MS = 45000;
@@ -60858,7 +60861,7 @@ const rhythmMultiStreakBonus = streak => {
   const n = Number.isFinite(v) ? Math.max(1, Math.floor(v)) : 1;
   return Math.min(RHYTHM_MULTI_STREAK_MAX_BONUS, Math.round(RHYTHM_MULTI_STREAK_STEP * (n - 1) * 100) / 100);
 };
-const rhythmMultiTotalScale = (count, streak) => Math.round(rhythmMultiRewardScale(count) * (1 + rhythmMultiStreakBonus(streak)) * 100) / 100;
+const rhythmMultiTotalScale = (count, streak, cpus = 0) => Math.round(rhythmMultiRewardScale(count, cpus) * (1 + rhythmMultiStreakBonus(streak)) * 100) / 100;
 const RHYTHM_MULTI_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 const rhythmMultiMakeCode = () => {
   let code = '';
@@ -61144,10 +61147,10 @@ const RHYTHM_MULTI = (() => {
           t: 'bye',
           id: s.selfId
         });
-        if (s.cpu) socket.send({
+        s.cpus.forEach(c => socket.send({
           t: 'bye',
-          id: s.cpu.id
-        });
+          id: c.id
+        }));
       }
     });
   }
@@ -61158,7 +61161,7 @@ const RHYTHM_MULTI = (() => {
       } catch (_) {}
     });
   };
-  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId || s.cpu && m.id === s.cpu.id || m.playing && s.room.phase === 'playing' && Date.now() < s.playUntil) : [];
+  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId || s.cpus.some(c => c.id === m.id) || m.playing && s.room.phase === 'playing' && Date.now() < s.playUntil) : [];
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
   const selfMember = () => s ? s.members[s.selfId] : null;
   const isHostNow = () => {
@@ -61201,8 +61204,12 @@ const RHYTHM_MULTI = (() => {
     });
     sendCpuHb();
   };
+  const myCpu = id => s && s.cpus.some(c => c.id === id) ? s.members[id] : null;
   const sendCpuHb = () => {
-    const c = s && s.cpu ? s.members[s.cpu.id] : null;
+    if (s) s.cpus.forEach(x => sendOneCpuHb(x.id));
+  };
+  const sendOneCpuHb = cpuId => {
+    const c = myCpu(cpuId);
     if (!c || !socket) return;
     socket.send({
       t: 'hb',
@@ -61227,14 +61234,17 @@ const RHYTHM_MULTI = (() => {
     });
   };
   const reportCpuResult = round => {
-    const c = s && s.cpu ? s.members[s.cpu.id] : null;
+    if (s) s.cpus.slice().forEach(x => reportOneCpuResult(round, x));
+  };
+  const reportOneCpuResult = (round, x) => {
+    const c = myCpu(x.id);
     if (!c || !round || !c.playing || c.res && c.res.startId === round) return;
     let result = null;
     try {
       result = cpuBrain && cpuBrain.play ? cpuBrain.play({
         songId: s.room.songId,
         diffId: c.diff,
-        masuId: s.cpu.masuId,
+        masuId: x.masuId,
         round
       }) : null;
     } catch (_) {
@@ -61376,21 +61386,25 @@ const RHYTHM_MULTI = (() => {
     }
   };
   const dropCpuIfBumped = () => {
-    if (!s || !s.cpu || s.room.phase === 'playing') return;
-    if (ordered().some(m => m.id === s.cpu.id)) return;
-    const gone = s.cpu;
-    delete s.members[gone.id];
-    s.cpu = null;
-    if (socket) socket.send({
-      t: 'bye',
-      id: gone.id
+    if (!s || !s.cpus.length || s.room.phase === 'playing') return;
+    const kept = new Set(ordered().map(m => m.id));
+    s.cpus.filter(c => !kept.has(c.id)).forEach(gone => {
+      delete s.members[gone.id];
+      s.cpus = s.cpus.filter(c => c.id !== gone.id);
+      if (socket) socket.send({
+        t: 'bye',
+        id: gone.id
+      });
+      try {
+        if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId);
+      } catch (_) {}
     });
-    try {
-      if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId);
-    } catch (_) {}
   };
   const cpuTick = () => {
-    const c = s && s.cpu ? s.members[s.cpu.id] : null;
+    if (s) s.cpus.forEach(x => oneCpuTick(x));
+  };
+  const oneCpuTick = x => {
+    const c = myCpu(x.id);
     const me = selfMember();
     if (!c || !me) return;
     const r = s.room;
@@ -61402,7 +61416,7 @@ const RHYTHM_MULTI = (() => {
     if (r.phase === 'select' && c.pickRound !== r.round) {
       let pick = '';
       try {
-        pick = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, s.cpu.masuId) : '';
+        pick = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
       } catch (_) {
         pick = '';
       }
@@ -61414,7 +61428,7 @@ const RHYTHM_MULTI = (() => {
       c.readyRound = r.round;
       changed = true;
     }
-    if (changed) sendCpuHb();
+    if (changed) sendOneCpuHb(x.id);
   };
   const syncLobby = () => {
     if (!s) {
@@ -61460,7 +61474,7 @@ const RHYTHM_MULTI = (() => {
       });
     }
     const recentlySawOthers = Object.values(s.members).some(m => m.id !== s.selfId && Date.now() - m.seen < RHYTHM_MULTI_MERGE_QUIET_MS);
-    if (order.length === 1 && !s.cpu && s.mode !== 'private' && !recentlySawOthers && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
+    if (order.length === 1 && !s.cpus.length && s.mode !== 'private' && !recentlySawOthers && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
       const other = rhythmMultiBestRoom(lobby.rooms, s.code);
       if (other && other < s.code) {
         api.join(other, {
@@ -61538,7 +61552,7 @@ const RHYTHM_MULTI = (() => {
       res: null
     };
     if (msg.t === 'hb') {
-      if (msg.id === s.selfId || s.cpu && msg.id === s.cpu.id) {
+      if (msg.id === s.selfId || myCpu(msg.id)) {
         prev.seen = Date.now();
         emit();
         return;
@@ -61575,7 +61589,7 @@ const RHYTHM_MULTI = (() => {
         };
       }
     } else if (msg.t === 'res') {
-      if (s.cpu && msg.id === s.cpu.id) {
+      if (myCpu(msg.id)) {
         emit();
         return;
       }
@@ -61608,7 +61622,9 @@ const RHYTHM_MULTI = (() => {
         msg.participants.forEach(pid => {
           if (s.members[pid]) s.members[pid].playing = true;
         });
-        if (s.cpu && s.members[s.cpu.id]) s.members[s.cpu.id].res = null;
+        s.cpus.forEach(c => {
+          if (s.members[c.id]) s.members[c.id].res = null;
+        });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true;
@@ -61616,19 +61632,21 @@ const RHYTHM_MULTI = (() => {
           const kept = s.liveIds.length > 0 && s.liveIds.every(pid => msg.participants.includes(pid));
           s.liveStreak = kept ? s.liveStreak + 1 : 1;
           s.liveIds = msg.participants.slice();
+          const cpus = msg.participants.filter(pid => s.members[pid] && s.members[pid].cpu).length;
           startListeners.forEach(fn => {
             try {
               fn({
                 round: msg.round,
                 songId: msg.songId,
                 count: msg.participants.length,
+                cpus,
                 streak: s.liveStreak
               });
             } catch (_) {}
           });
         }
         sendHb(true);
-        if (s.cpu && msg.participants.includes(s.cpu.id) && !msg.participants.includes(s.selfId)) reportCpuResult(msg.round);
+        if (!msg.participants.includes(s.selfId)) s.cpus.filter(c => msg.participants.includes(c.id)).forEach(c => reportOneCpuResult(msg.round, c));
       }
     }
     emit();
@@ -61673,17 +61691,19 @@ const RHYTHM_MULTI = (() => {
       cpuBrain = brain && typeof brain === 'object' ? brain : null;
     },
     canSummon() {
-      if (!s || s.cpu || s.status !== 'open') return false;
+      if (!s || s.status !== 'open') return false;
       return ordered().length < RHYTHM_MULTI_ROOM_MAX && s.room.phase !== 'playing';
     },
     summon(buddy) {
       if (!this.canSummon() || !buddy) return false;
       const me = selfMember();
       const id = rhythmMultiMakeId('c');
-      s.cpu = {
+      const masuId = rhythmMultiText(buddy.masuId, 80);
+      if (s.cpus.some(c => c.masuId === masuId)) return false;
+      s.cpus.push({
         id,
-        masuId: rhythmMultiText(buddy.masuId, 80)
-      };
+        masuId
+      });
       s.members[id] = {
         id,
         cpu: true,
@@ -61705,17 +61725,17 @@ const RHYTHM_MULTI = (() => {
         res: null,
         seen: Date.now()
       };
-      cpuTick();
-      sendCpuHb();
+      oneCpuTick(s.cpus[s.cpus.length - 1]);
+      sendOneCpuHb(id);
       emit();
       return true;
     },
-    myBuddy() {
-      return s && s.cpu && s.members[s.cpu.id] ? {
-        id: s.cpu.id,
-        masuId: s.cpu.masuId,
-        res: s.members[s.cpu.id].res
-      } : null;
+    myBuddies() {
+      return s ? s.cpus.filter(c => s.members[c.id]).map(c => ({
+        id: c.id,
+        masuId: c.masuId,
+        res: s.members[c.id].res
+      })) : [];
     },
     setCatalog(songIds, songDurations) {
       catalog = Array.isArray(songIds) ? songIds.slice() : [];
@@ -61744,8 +61764,10 @@ const RHYTHM_MULTI = (() => {
         resultSeen: s.resultSeen,
         chat: s.chat.slice(),
         streak: s.liveStreak,
-        cpuId: s.cpu ? s.cpu.id : '',
-        cpuMasuId: s.cpu ? s.cpu.masuId : ''
+        myCpus: s.cpus.map(c => ({
+          id: c.id,
+          masuId: c.masuId
+        }))
       };
     },
     join(code, profile, mode) {
@@ -61778,7 +61800,7 @@ const RHYTHM_MULTI = (() => {
         playUntil: 0,
         liveIds: [],
         liveStreak: 0,
-        cpu: null
+        cpus: []
       };
       s.members[id] = {
         id,
@@ -61809,10 +61831,10 @@ const RHYTHM_MULTI = (() => {
             t: 'bye',
             id: s && s.selfId
           });
-          if (s && s.cpu) socket.send({
+          if (s) s.cpus.forEach(c => socket.send({
             t: 'bye',
-            id: s.cpu.id
-          });
+            id: c.id
+          }));
         } catch (_) {}
         socket.close();
       }
@@ -62786,7 +62808,8 @@ function RhythmMultiScreen({
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
-    onClose: () => setBuddySheet('')
+    onClose: () => setBuddySheet(''),
+    calledIds: (view && view.myCpus ? view.myCpus : []).map(c => c.masuId)
   }) : null;
   const buddyCallButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
     "data-rhythm-buddy-open": true,
@@ -62900,7 +62923,7 @@ function RhythmMultiScreen({
       const open = song ? diffs.filter(d => rhythmDifficultyUnlocked(song.songId, d.id, bestRecords)) : [];
       const diff = song ? rhythmMultiPickDifficulty(open.length ? open : diffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds) : null;
       setCountdown(null);
-      if (song && diff) onStartPlay(song, diff, countdown.info.round, countdown.info.count, countdown.info.streak);else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, {
+      if (song && diff) onStartPlay(song, diff, countdown.info.round, countdown.info.count, countdown.info.streak, countdown.info.cpus || 0);else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, {
         noPenalty: true
       });
       return undefined;
@@ -63700,13 +63723,24 @@ function RhythmMultiScreen({
       limit: 6,
       className: "min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
     }), rankingButton(), chatLatestButton()), (() => {
-      const cpuRow = view.cpuId ? team.rows.find(row => row.m.id === view.cpuId) : null;
-      const masu = cpuRow && cpuRow.res && !team.waiting ? masuMons.find(x => x && x.id === view.cpuMasuId) : null;
-      if (!masu) return null;
+      if (team.waiting) return null;
       const song = songById(room.songId);
+      const grown = (view.myCpus || []).map(c => {
+        const cpuRow = team.rows.find(row => row.m.id === c.id);
+        const masu = cpuRow && cpuRow.res ? masuMons.find(x => x && x.id === c.masuId) : null;
+        return masu ? {
+          masu,
+          cpuRow
+        } : null;
+      }).filter(Boolean);
+      if (!grown.length) return null;
       return React.createElement("div", {
-        className: "shrink-0 px-3 pt-1"
-      }, React.createElement(RhythmBuddyGrowth, {
+        className: "shrink-0 space-y-1 px-3 pt-1"
+      }, grown.map(({
+        masu,
+        cpuRow
+      }) => React.createElement(RhythmBuddyGrowth, {
+        key: masu.id,
         masu: masu,
         round: room.round,
         songId: room.songId,
@@ -63715,7 +63749,7 @@ function RhythmMultiScreen({
         teamRank: team.rank,
         score: cpuRow.res.score,
         maxScore: ((typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
-      }));
+      })));
     })(), React.createElement("div", {
       className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1",
       style: {
@@ -64485,7 +64519,8 @@ function RhythmBuddyList({
   onOpen,
   onPick = null,
   busy = false,
-  canPay = true
+  canPay = true,
+  calledIds = []
 }) {
   const list = (Array.isArray(masuMons) ? masuMons : []).filter(x => x && x.id && x.baseId).map(masu => {
     const mon = state.mons[masu.id];
@@ -64533,13 +64568,16 @@ function RhythmBuddyList({
       className: "block text-lg leading-none"
     }, mood.icon), React.createElement("small", {
       className: "block text-[8px] font-black text-slate-400"
-    }, mood.label))), onPick && React.createElement("button", {
+    }, mood.label))), onPick && (calledIds.includes(masu.id) ? React.createElement("span", {
+      "data-rhythm-buddy-called": true,
+      className: "min-h-[44px] shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
+    }, "呼んでいる") : React.createElement("button", {
       "data-rhythm-buddy-call": true,
       type: "button",
       disabled: busy || !canPay,
       onClick: () => onPick(masu),
       className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-3 text-xs font-black text-slate-950 disabled:opacity-40"
-    }, "呼ぶ"));
+    }, "呼ぶ")));
   }));
 }
 function RhythmBuddySheet({
@@ -64547,7 +64585,8 @@ function RhythmBuddySheet({
   songName,
   tickets = 0,
   pick,
-  onClose
+  onClose,
+  calledIds = []
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -64593,7 +64632,7 @@ function RhythmBuddySheet({
     className: "mb-1 text-slate-200"
   }), React.createElement("p", {
     className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "マスモンを1体えらんで、CPUとしてこの部屋に呼べます。部屋にいるあいだは何曲でも一緒に遊びます。1日", RHYTHM_BUDDY_FREE_PER_DAY, "回までは無料、そのあとはセッション券を1枚使います。"), React.createElement("div", {
+  }, "マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日", RHYTHM_BUDDY_FREE_PER_DAY, "回までは無料、そのあとはセッション券を1枚使います。"), React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
   }, detail ? React.createElement(RhythmBuddyDetail, {
     masu: detail,
@@ -64608,7 +64647,8 @@ function RhythmBuddySheet({
     onOpen: setDetailId,
     onPick: choose,
     busy: busy,
-    canPay: canPay
+    canPay: canPay,
+    calledIds: calledIds
   })), !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
@@ -89085,12 +89125,12 @@ function MonsterHeroGame() {
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
       multi: rhythmPlay.from === 'multi',
-      multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak) : 1,
+      multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
-        const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak) : 1;
+        const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
         });
@@ -89287,7 +89327,7 @@ function MonsterHeroGame() {
           setRhythmSettings(saved);
         }
       } : null,
-      onStartPlay: (song, difficulty, startId, count, streak) => {
+      onStartPlay: (song, difficulty, startId, count, streak, cpus) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
         setRhythmPlay({
           song,
@@ -89295,7 +89335,8 @@ function MonsterHeroGame() {
           from: 'multi',
           multiStartId: startId,
           multiCount: count,
-          multiStreak: streak
+          multiStreak: streak,
+          multiCpus: cpus || 0
         });
         setGameState('RHYTHM_PLAY');
       }
