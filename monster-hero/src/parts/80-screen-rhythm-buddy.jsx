@@ -75,7 +75,7 @@ const rhythmBuddyMasuName = (masu) => {
 
 // 部屋の中で相棒が演奏と選曲をするための「頭」。RHYTHM_MULTI.setCpuBrain へ渡す
 const rhythmBuddyMakeBrain = (songs) => ({
-  play({ songId, diffId, masuId }) {
+  play({ songId, diffId, masuId, humans = 1 }) {
     const song = (songs || []).find((x) => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
     const totalNotes = chart ? (Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300) : 300;
@@ -85,7 +85,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
     return rhythmBuddyPlay({
       mon, songId, diffId, totalNotes, maxScore: diffDef ? diffDef.maxScore : 1000000,
       durationMs: (chart && Number(chart.durationMs)) || (song ? Number(song.playDurationMs) || 0 : 0), mood, rand: Math.random,
-      chartLevel: chart ? Number(chart.level) || 0 : 0,
+      chartLevel: chart ? Number(chart.level) || 0 : 0, humans,
     });
   },
   // 得意な曲(上位3曲)から選ぶ。遊べる曲の中に無ければおまかせ('')
@@ -188,6 +188,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
   const lean = rhythmBuddyTraitOf(rhythmBuddyLeanOf(masu.baseId));
   const comfort = rhythmBuddyComfortLevelOf(m);
   const [allSongs, setAllSongs] = React.useState(false);
+  const [traitsOpen, setTraitsOpen] = React.useState(false);
   const songs = rhythmBuddyTopSongs(m, allSongs ? RHYTHM_BUDDY_SONG_KEEP : 5);
   const songCount = Object.keys(m.songs).length;
   return (
@@ -221,6 +222,20 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
             : <><p className="text-sm font-black text-slate-400">まだ見えない</p><small className="block text-[9px] font-bold leading-snug text-slate-500">ビートLv.{RHYTHM_BUDDY_TRAIT_LEVEL}で決まります。{lean ? `${lean.label}になりやすい種類です` : ''}</small></>}
         </section>
       </div>
+      <button data-rhythm-buddy-traits-toggle type="button" onClick={() => setTraitsOpen((v) => !v)} className="min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
+        {traitsOpen ? '性格の一覧をとじる' : '性格の一覧を見る(9つ)'}
+      </button>
+      {traitsOpen && (
+        <ul data-rhythm-buddy-traits className="space-y-1 rounded-xl bg-slate-950/60 p-2">
+          {RHYTHM_BUDDY_TRAITS.map((t) => (
+            <li key={t.id} className={`rounded-lg px-2 py-1 ${trait && trait.id === t.id ? 'bg-amber-900/40 ring-1 ring-amber-300/60' : ''}`}>
+              <b className="text-[12px] font-black text-amber-200">{t.label}</b>
+              <small className="block text-[10px] font-bold leading-snug text-slate-300">{t.note}</small>
+              <small className="block text-[9px] font-bold leading-snug text-slate-500">なりやすい育て方: {t.how}</small>
+            </li>
+          ))}
+        </ul>
+      )}
       <section className="rounded-xl bg-slate-950/60 p-2">
         <h4 className="mb-1 text-[10px] font-black text-slate-400">スコアの伸び(最近{RHYTHM_BUDDY_RECENT_KEEP}回)</h4>
         <RhythmBuddyScoreChart recent={m.recent} songName={songName} />
@@ -362,7 +377,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
 }
 
 // 結果画面で、呼んだマスモンを育てる(1ライブ1回。同じ回は2度数えない)。育ったことを短く見せる
-function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0 }) {
+function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, score = 0, maxScore = 0, chartLevel = 0, humans = 1 }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
     if (!masu || !round) return undefined;
@@ -370,7 +385,8 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
     let outcome = null;
     const dayKey = rhythmBuddyDayKey(Date.now());
     RHYTHM_BUDDY_STORE.update((st) => {
-      const r = rhythmBuddyApplyLive(st.mons[masu.id], { round, songId, diffId, durationMs, teamRank, dayKey, lean: rhythmBuddyLeanOf(masu.baseId), nowMs: Date.now(), score, maxScore });
+      const moodId = rhythmBuddyMood(masu.id, dayKey, st.mons[masu.id]).id;
+      const r = rhythmBuddyApplyLive(st.mons[masu.id], { round, songId, diffId, durationMs, teamRank, dayKey, lean: rhythmBuddyLeanOf(masu.baseId), nowMs: Date.now(), score, maxScore, chartLevel, humans, moodId });
       if (!r.gain) return null;
       outcome = r;
       return { ...st, mons: { ...st.mons, [masu.id]: r.mon } };

@@ -382,7 +382,8 @@ const RHYTHM_MULTI = (() => {
     const c = myCpu(x.id);
     if (!c || !round || !c.playing || (c.res && c.res.startId === round)) return;
     let result = null;
-    try { result = cpuBrain && cpuBrain.play ? cpuBrain.play({ songId: s.room.songId, diffId: c.diff, masuId: x.masuId, round }) : null; } catch (_) { result = null; }
+    const humans = Math.max(1, ordered().filter((m) => !m.cpu).length);
+    try { result = cpuBrain && cpuBrain.play ? cpuBrain.play({ songId: s.room.songId, diffId: c.diff, masuId: x.masuId, round, humans }) : null; } catch (_) { result = null; }
     c.res = rhythmMultiCleanResult({
       startId: round, score: result && result.score, maxCombo: result && result.maxCombo, cleared: true, quit: false, diffId: c.diff,
       fc: result ? (result.allMarvelous ? 3 : result.allExcellent ? 2 : result.fullCombo ? 1 : 0) : 0,
@@ -1949,6 +1950,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
           if (!grown.length) return null;
           return <div className="shrink-0 space-y-1 px-3 pt-1">{grown.map(({ masu, cpuRow }) => (
             <RhythmBuddyGrowth key={masu.id} masu={masu} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
+              chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
+              humans={team.rows.filter((row) => !row.m.cpu).length}
               score={cpuRow.res.score} maxScore={((typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === cpuRow.res.diffId) || {}).maxScore || 0} />
           ))}</div>;
         })()}

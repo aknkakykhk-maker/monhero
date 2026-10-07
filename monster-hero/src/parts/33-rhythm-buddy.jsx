@@ -23,17 +23,26 @@ const RHYTHM_BUDDY_SONG_KEEP = 80;
 const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
 // 相棒が取ったスコアを覚えておく回数(伸びのグラフ)
 const RHYTHM_BUDDY_RECENT_KEEP = 30;
-// 長い曲(粘り型が育つ・強い)のしきい
+// 長い曲(のんびり屋が育つ・強い)のしきい
 const RHYTHM_BUDDY_LONG_SONG_MS = 150000;
 
 // 性格。上限は上げず、得意・不得意の形だけを変える
+// 2026-10-07 ユーザー指示「性格一覧に各効果を設定して」で9つにした(はじめは4つ)。
+// how … なりやすい育て方(画面に出す)
 const RHYTHM_BUDDY_TRAITS = Object.freeze([
-  Object.freeze({ id: 'steady', label: '安定型', note: 'ブレが小さく、調子の影響を受けにくい' }),
-  Object.freeze({ id: 'burst', label: '一発型', note: 'ブレが大きく、たまに大きく当てる' }),
-  Object.freeze({ id: 'stamina', label: '粘り型', note: '長い曲ほど強い' }),
-  Object.freeze({ id: 'artisan', label: '職人型', note: 'なじみが早くたまり、得意な曲に強い' }),
+  Object.freeze({ id: 'jester', label: 'ひょうきん', note: '当たり外れが大きい。たまに大きく当てるが、たまに大きく外す', how: 'EXPERT・MASTERをよく遊ぶ' }),
+  Object.freeze({ id: 'brave', label: '勇敢', note: '難しい譜面に強い(叩けるLv.を超えても落ちにくい)', how: '自分より難しい譜面によく挑む' }),
+  Object.freeze({ id: 'clingy', label: '甘えん坊', note: '毎日呼ぶとご機嫌になりやすい。何日もあくと、すねて不機嫌になりやすい', how: '毎日続けて呼ぶ' }),
+  Object.freeze({ id: 'smart', label: 'インテリ', note: '曲の得意が早くたまる', how: 'いろいろな曲を遊ぶ' }),
+  Object.freeze({ id: 'serious', label: '真面目', note: 'ブレが小さく、調子の影響を受けにくい', how: 'EASY〜HARDをよく遊ぶ' }),
+  Object.freeze({ id: 'proud', label: 'プライドが高い', note: '部屋に人が多いほど張り切って上手になる', how: '人の多い部屋でよく遊ぶ' }),
+  Object.freeze({ id: 'worrier', label: '心配性', note: '大きなミスが少なく、コンボが切れにくい。最高判定はやや少ない', how: '調子の悪い日にもよく遊ぶ' }),
+  Object.freeze({ id: 'stubborn', label: '頑固', note: 'よく遊ぶ難易度ではとても強いが、慣れていない難易度ではかなり落ちる', how: '同じ難易度ばかり遊ぶ' }),
+  Object.freeze({ id: 'easygoing', label: 'のんびり屋', note: '長い曲に強いが、ノーツが詰まった譜面は苦手', how: '長い曲をよく遊ぶ' }),
 ]);
 const RHYTHM_BUDDY_TRAIT_IDS = Object.freeze(RHYTHM_BUDDY_TRAITS.map((t) => t.id));
+// はじめの4つで決まっていた子の性格は、読み込むときに置き換える(保存データを壊さない)
+const RHYTHM_BUDDY_OLD_TRAITS = Object.freeze({ steady: 'serious', burst: 'jester', stamina: 'easygoing', artisan: 'smart' });
 
 // その日の調子。weight は出やすさ(%)、acc は判定の良さへの足し引き、spread はブレの倍率
 const RHYTHM_BUDDY_MOODS = Object.freeze([
@@ -45,6 +54,9 @@ const RHYTHM_BUDDY_MOODS = Object.freeze([
 ]);
 // 前の日に一緒に遊んでいると、不機嫌・超不機嫌が出にくい(減ったぶんは「普通」へ)
 const RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS = Object.freeze({ great: 10, good: 25, normal: 47, bad: 13, awful: 5 });
+// 甘えん坊は、前の日にも遊んでいるとご機嫌になりやすく、3日以上あくと不機嫌になりやすい
+const RHYTHM_BUDDY_MOOD_CLINGY_KEPT_WEIGHTS = Object.freeze({ great: 22, good: 35, normal: 33, bad: 7, awful: 3 });
+const RHYTHM_BUDDY_MOOD_CLINGY_SULK_WEIGHTS = Object.freeze({ great: 5, good: 15, normal: 30, bad: 30, awful: 20 });
 
 const rhythmBuddyInt = (v, max = 1e9) => {
   const n = Math.floor(Number(v));
@@ -82,7 +94,10 @@ const rhythmBuddyNormalizeMon = (raw) => {
     songs,
     diffs,
     longLives: rhythmBuddyInt(o.longLives),
-    trait: RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait) ? o.trait : '',
+    trait: RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait) ? o.trait : (RHYTHM_BUDDY_OLD_TRAITS[o.trait] || ''),
+    // 性格を決めるための記録(2026-10-07 追加。無ければ0)
+    hardLives: rhythmBuddyInt(o.hardLives), crowdLives: rhythmBuddyInt(o.crowdLives), badMoodLives: rhythmBuddyInt(o.badMoodLives),
+    streakDays: rhythmBuddyInt(o.streakDays, 9999), bestStreakDays: rhythmBuddyInt(o.bestStreakDays, 9999),
     traitAt: rhythmBuddyInt(o.traitAt),
     lastRound: rhythmBuddyStr(o.lastRound, 40),
     lastDay: rhythmBuddyStr(o.lastDay, 10),
@@ -150,8 +165,8 @@ const rhythmBuddyExpGain = (diffId, teamRank) => {
 // ---- 曲のなじみ(星0〜5) ----
 const RHYTHM_BUDDY_FAMILIAR_STEPS = Object.freeze([1, 3, 6, 10, 15]);
 const rhythmBuddyFamiliarStars = (plays, trait) => {
-  // 職人型は1.5倍の速さでたまる
-  const n = rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1);
+  // インテリは1.5倍の速さでたまる
+  const n = rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1);
   return RHYTHM_BUDDY_FAMILIAR_STEPS.filter((step) => n >= step).length;
 };
 // 得意な曲(回数の多い順)
@@ -166,13 +181,13 @@ const rhythmBuddyMastery = (plays) => 1 - Math.exp(-rhythmBuddyInt(plays) / 15);
 
 // ---- 種類ごとの、なりやすい性格 ----
 // 基本の能力値のうち、全種類の中でいちばん抜けているもので決める
-//   丈夫さ → 安定型 / ちから → 一発型 / ライフ → 粘り型 / ガッツ → 職人型
+//   丈夫さ → 真面目 / ちから → 勇敢 / ライフ → のんびり屋 / ガッツ → ひょうきん
 // allBases は全種類の { baseHp, baseAtk, baseDef, baseGuts } の一覧(新しい種類が増えても表を足さなくてよい)
 const rhythmBuddySpeciesLean = (base, allBases) => {
   const list = Array.isArray(allBases) ? allBases.filter((b) => b && typeof b === 'object') : [];
-  if (!base || !list.length) return 'steady';
-  const keys = [['baseDef', 'steady'], ['baseAtk', 'burst'], ['baseHp', 'stamina'], ['baseGuts', 'artisan']];
-  let best = 'steady';
+  if (!base || !list.length) return 'serious';
+  const keys = [['baseDef', 'serious'], ['baseAtk', 'brave'], ['baseHp', 'easygoing'], ['baseGuts', 'jester']];
+  let best = 'serious';
   let bestZ = -Infinity;
   keys.forEach(([k, trait]) => {
     const vals = list.map((b) => Number(b[k]) || 0);
@@ -185,16 +200,26 @@ const rhythmBuddySpeciesLean = (base, allBases) => {
 };
 
 // ---- 性格を育ち方から決める ----
-// 4つの点数のいちばん高いもの。種類の傾向は、はじめに少しだけ点を足す(育て方で上書きできる)
+// 9つの点数(0〜1くらい)のいちばん高いもの。種類の傾向は、はじめに少しだけ点を足す(育て方で上書きできる)
 const rhythmBuddyTraitScores = (mon, lean) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, m.lives);
-  const low = (m.diffs.EASY + m.diffs.NORMAL + m.diffs.HARD) / total;
-  const high = (m.diffs.EXPERT + m.diffs.MASTER) / total;
-  const long = m.longLives / total;
-  const top = Object.values(m.songs).reduce((a, b) => Math.max(a, b), 0);
-  const repeat = Math.min(1, (top / total) * 3);
-  const scores = { steady: low * 0.8, burst: high * 1.1, stamina: long * 1.4, artisan: repeat * 0.9 };
+  const share = (n) => Math.min(1, n / total);
+  const low = share(m.diffs.EASY + m.diffs.NORMAL + m.diffs.HARD);
+  const high = share(m.diffs.EXPERT + m.diffs.MASTER);
+  const topDiff = share(Math.max(...RHYTHM_BUDDY_DIFF_IDS.map((id) => m.diffs[id])));
+  const variety = Math.min(1, Object.keys(m.songs).length / total * 1.5);
+  const scores = {
+    jester: high * 0.9,
+    brave: share(m.hardLives) * 1.2,
+    clingy: Math.min(1, m.bestStreakDays / 10) * 0.9,
+    smart: variety * 0.8,
+    serious: low * 0.8,
+    proud: share(m.crowdLives) * 1.1,
+    worrier: share(m.badMoodLives) * 2,
+    stubborn: Math.max(0, (topDiff - 0.6) / 0.4) * 0.9,
+    easygoing: share(m.longLives) * 1.4,
+  };
   if (RHYTHM_BUDDY_TRAIT_IDS.includes(lean)) scores[lean] += 0.25;
   return scores;
 };
@@ -221,7 +246,14 @@ const rhythmBuddyHash = (text) => {
 const rhythmBuddyMood = (masuId, dayKey, mon) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const kept = !!m.lastDay && m.lastDay === rhythmBuddyPrevDayKey(dayKey);
-  const weights = RHYTHM_BUDDY_MOODS.map((mood) => (kept ? RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS[mood.id] : mood.weight));
+  // 甘えん坊: 毎日呼ぶとご機嫌になりやすく、3日以上あくと、すねて不機嫌になりやすい
+  const lastT = Date.parse(`${m.lastDay}T00:00:00Z`);
+  const nowT = Date.parse(`${dayKey}T00:00:00Z`);
+  const gapDays = Number.isFinite(lastT) && Number.isFinite(nowT) ? Math.round((nowT - lastT) / 86400000) : 0;
+  const table = m.trait === 'clingy' && kept ? RHYTHM_BUDDY_MOOD_CLINGY_KEPT_WEIGHTS
+    : m.trait === 'clingy' && gapDays >= 3 ? RHYTHM_BUDDY_MOOD_CLINGY_SULK_WEIGHTS
+      : kept ? RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS : null;
+  const weights = RHYTHM_BUDDY_MOODS.map((mood) => (table ? table[mood.id] : mood.weight));
   const sum = weights.reduce((a, b) => a + b, 0);
   let r = rhythmBuddyHash(`${masuId}|${dayKey}`) * sum;
   for (let i = 0; i < RHYTHM_BUDDY_MOODS.length; i += 1) { r -= weights[i]; if (r < 0) return RHYTHM_BUDDY_MOODS[i]; }
@@ -238,7 +270,7 @@ const rhythmBuddyComfortLevelOf = (mon) => {
   return Math.floor(rhythmBuddyComfortLevel(rhythmBuddyLevelInfo(m.exp).level, 0, m.trait));
 };
 const rhythmBuddyComfortLevel = (level, songPlays, trait) => 14 + 40 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
-const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel, density }) => {
+const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel, density, humans = 1 }) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const { level } = rhythmBuddyLevelInfo(m.exp);
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
@@ -250,29 +282,35 @@ const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel
   // 遊んだ曲ほど得意になる(2026-10-07・ユーザー指示)。最大 +0.06(無理なく叩けるLv.も最大+5)
   acc += 0.6 * rhythmBuddySongSkill(m.songs[songId], m.trait);
   // 難易度の種類ごとの慣れ(譜面のLv.と役目が重なるので小さめ)
-  acc += 0.03 * mastery - d * 0.012 * (1 - mastery);
+  // 頑固は、慣れた難易度でとても強く、慣れていない難易度でかなり落ちる(効き目2倍)
+  const masteryRate = m.trait === 'stubborn' ? 2 : 1;
+  acc += (0.03 * mastery - d * 0.012 * (1 - mastery)) * masteryRate;
   // 譜面のLv.: 無理なく叩けるLv.を超えたぶん1つごとに -0.015(最大 -0.35)。下回るぶんは少しだけ楽(最大 +0.02)
   const over = chartLv - rhythmBuddyComfortLevel(level, m.songs[songId], m.trait);
-  acc -= over > 0 ? Math.min(0.35, over * 0.015) : -Math.min(0.02, -over * 0.002);
-  // 密度: Lv.の割に詰まっているぶん(1秒あたり1つ多いごとに -0.04)。一発型は半分
+  // 勇敢は、超えたぶんの落ち方が7割
+  acc -= over > 0 ? Math.min(0.35, over * 0.015) * (m.trait === 'brave' ? 0.7 : 1) : -Math.min(0.02, -over * 0.002);
+  // 密度: Lv.の割に詰まっているぶん(1秒あたり1つ多いごとに -0.04)
   const dens = Number(density);
   if (Number.isFinite(dens) && dens > 0) {
     const extra = dens - (1 + chartLv / 10);
-    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'burst' ? 0.5 : 1);
+    // のんびり屋は、詰まった譜面が苦手(1.5倍落ちる)
+    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'easygoing' ? 1.5 : 1);
   }
-  if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
+  if (m.trait === 'easygoing') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
+  // プライドが高い: 部屋の人(呼んだマスモンを除く)が多いほど張り切る。ひとりだと少し手を抜く
+  if (m.trait === 'proud') acc += Math.max(-0.01, Math.min(0.04, 0.012 * (Math.floor(Number(humans) || 1) - 1) - (Number(humans) <= 1 ? 0.01 : 0)));
   const moodAcc = mood ? mood.acc : 0;
-  acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
+  acc += m.trait === 'serious' ? moodAcc * 0.5 : moodAcc;
   // 上限は満点(判定の良さ1)。満点まで届くかは、うまさとブレしだい
   return Math.max(0.1, Math.min(1, acc));
 };
 // Lv の伸び(0〜1)。はじめのうちほど大きく伸びる
 const rhythmBuddyGrowthRate = (level) => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 0.7);
-// その曲の得意(0〜0.10)。遊んだ回数でなだらかに増える。職人型は1.5倍の速さ
-const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1) / 12));
+// その曲の得意(0〜0.10)。遊んだ回数でなだらかに増える。インテリは1.5倍の速さ
+const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1) / 12));
 // ブレ(標準偏差)。うまくなるほど小さくなる(育てはじめは日によって大きく外す)。性格と調子でも変わる
 const rhythmBuddySpread = (trait, mood, level = 1) => {
-  const base = trait === 'steady' ? 0.02 : trait === 'burst' ? 0.055 : 0.035;
+  const base = trait === 'serious' ? 0.02 : trait === 'jester' ? 0.055 : 0.035;
   return base * (1.6 - 1.1 * rhythmBuddyGrowthRate(level)) * (mood ? mood.spread : 1);
 };
 
@@ -283,23 +321,27 @@ const rhythmBuddyNormal = (rand) => {
   const v = rand();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 };
-const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs, mood, rand, chartLevel = 0 }) => {
+const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs, mood, rand, chartLevel = 0, humans = 1 }) => {
   const r = typeof rand === 'function' ? rand : Math.random;
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, rhythmBuddyInt(totalNotes, 100000));
   const max = Number(maxScore) > 0 ? Number(maxScore) : 1000000;
   const level = rhythmBuddyLevelInfo(m.exp).level;
   const density = Number(durationMs) > 0 ? total / (Number(durationMs) / 1000) : 0;
-  let acc = rhythmBuddyAccuracy({ mon: m, songId, diffId, durationMs, mood, chartLevel, density }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
-  // 一発型は、たまに(8%)大きく当てる
-  if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
+  let acc = rhythmBuddyAccuracy({ mon: m, songId, diffId, durationMs, mood, chartLevel, density, humans }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
+  // ひょうきんは、たまに(8%)大きく当て、たまに(8%)大きく外す
+  if (m.trait === 'jester') { const roll = r(); if (roll < 0.08) acc += 0.06; else if (roll < 0.16) acc -= 0.06; }
   acc = Math.max(0.1, Math.min(1, acc));
   const miss = 1 - acc;
-  const share = { MISS: miss * 0.45, BAD: miss * 0.15, GOOD: miss * 0.2, GREAT: miss * 0.2 };
+  // 心配性は、大きなミス(MISS・BAD)が少ないかわりに、GOOD・GREATが多い
+  const share = m.trait === 'worrier'
+    ? { MISS: miss * 0.25, BAD: miss * 0.1, GOOD: miss * 0.35, GREAT: miss * 0.3 }
+    : { MISS: miss * 0.45, BAD: miss * 0.15, GOOD: miss * 0.2, GREAT: miss * 0.2 };
   const counts = { MARVELOUS: 0, EXCELLENT: 0, GREAT: 0, GOOD: 0, BAD: 0, MISS: 0 };
   ['MISS', 'BAD', 'GOOD', 'GREAT'].forEach((id) => { counts[id] = Math.round(total * share[id]); });
   const rest = Math.max(0, total - counts.MISS - counts.BAD - counts.GOOD - counts.GREAT);
-  counts.MARVELOUS = Math.round(rest * acc);
+  // 心配性は、最高判定がやや少ない
+  counts.MARVELOUS = Math.round(rest * acc * (m.trait === 'worrier' ? 0.92 : 1));
   counts.EXCELLENT = rest - counts.MARVELOUS;
   const breaks = counts.MISS + counts.BAD;
   // 切れた数で割った長さに、ばらつきを少し(いちばん長いつながりは平均より長い)
@@ -317,7 +359,7 @@ const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs
 
 // ---- 1ライブぶん育てる ----
 // 同じ回(round)は2度数えない。戻り値の gain/levelUp/familiarUp/traitNew は結果画面に出す
-const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank, dayKey, lean, nowMs, score, maxScore }) => {
+const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank, dayKey, lean, nowMs, score, maxScore, chartLevel = 0, humans = 1, moodId = '' }) => {
   const before = rhythmBuddyNormalizeMon(mon);
   if (!round || before.lastRound === round) return { mon: before, gain: 0, levelUp: 0, familiarUp: false, traitNew: '' };
   const gain = rhythmBuddyExpGain(diffId, teamRank);
@@ -334,12 +376,18 @@ const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank
   const after = {
     ...before, exp: before.exp + gain, lives: before.lives + 1, songs, diffs,
     longLives: before.longLives + (Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 1 : 0),
+    // 性格を決めるための記録: 自分より難しい譜面 / 人が3人以上の部屋 / 調子の悪い日 / 毎日続けて呼んだ日数
+    hardLives: before.hardLives + (Number(chartLevel) > rhythmBuddyComfortLevel(rhythmBuddyLevelInfo(before.exp).level, before.songs[sid] || 0, before.trait) ? 1 : 0),
+    crowdLives: before.crowdLives + (Number(humans) >= 3 ? 1 : 0),
+    badMoodLives: before.badMoodLives + (moodId === 'bad' || moodId === 'awful' ? 1 : 0),
+    streakDays: before.lastDay === dayKey ? Math.max(1, before.streakDays) : before.lastDay && before.lastDay === rhythmBuddyPrevDayKey(dayKey) ? before.streakDays + 1 : 1,
     lastRound: rhythmBuddyStr(round, 40), lastDay: rhythmBuddyStr(dayKey, 10),
     firstAt: before.firstAt || rhythmBuddyInt(nowMs, 9e15),
     recent: Number.isFinite(Number(score)) && Number(maxScore) > 0
       ? [{ at: rhythmBuddyInt(nowMs, 9e15), songId: sid, diffId: RHYTHM_BUDDY_DIFF_IDS.includes(diffId) ? diffId : '', score: Math.min(rhythmBuddyInt(score, 1e7), rhythmBuddyInt(maxScore, 1e7)), max: rhythmBuddyInt(maxScore, 1e7) }, ...before.recent].slice(0, RHYTHM_BUDDY_RECENT_KEEP)
       : before.recent,
   };
+  after.bestStreakDays = Math.max(before.bestStreakDays, after.streakDays);
   const trait = rhythmBuddyNextTrait(after, lean);
   const traitNew = trait && trait !== before.trait ? trait : '';
   if (traitNew) { after.trait = traitNew; after.traitAt = after.lives; }

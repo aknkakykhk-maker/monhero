@@ -70,17 +70,48 @@ const pure = (() => {
   check('叩ける譜面Lv.の目安は、育つほど上がる(Lv.1 で14前後・Lv.100 で50台)', b.comfort(null) >= 12 && b.comfort(null) <= 16 && b.comfort({ exp: 1e9 }) >= 50, `${b.comfort(null)} → ${b.comfort({ exp: 1e9 })}`);
   check('難しい難易度・高いチームランクほど経験値が多い',
     b.apply(null, { round: 'x', diffId: 'MASTER', teamRank: 'S' }).gain > b.apply(null, { round: 'x', diffId: 'EASY', teamRank: 'C' }).gain);
-  check('なじみは0〜5の星。職人型は早くたまる', b.stars(0, '') === 0 && b.stars(1, '') === 1 && b.stars(99, '') === 5 && b.stars(4, 'artisan') > b.stars(4, ''));
+  check('得意度は0〜5の星。インテリは早くたまる', b.stars(0, '') === 0 && b.stars(1, '') === 1 && b.stars(99, '') === 5 && b.stars(4, 'smart') > b.stars(4, ''));
 
   // 性格は Lv.10 まで見えない
   let mon = null; let traitAtLevel = 0;
   for (let i = 0; i < 400 && !traitAtLevel; i += 1) {
-    const r = b.apply(mon, { round: `r${i}`, songId: 'songA', diffId: 'MASTER', durationMs: 60000, teamRank: 'B', dayKey: d1, lean: 'steady', nowMs: 1 });
+    const r = b.apply(mon, { round: `r${i}`, songId: 'songA', diffId: i % 2 ? 'MASTER' : 'EXPERT', durationMs: 60000, teamRank: 'B', dayKey: d1, lean: '', nowMs: 1 });
     mon = r.mon;
     if (mon.trait) traitAtLevel = b.level(mon.exp).level;
   }
   check('性格は Lv.50 で決まる', traitAtLevel === 50, `Lv.${traitAtLevel}`);
-  check('MASTER ばかり遊ぶと一発型(種類の傾向より育て方が勝つ)', mon && mon.trait === 'burst', mon && mon.trait);
+  check('EXPERT・MASTER をよく遊ぶとひょうきん(種類の傾向より育て方が勝つ)', mon && mon.trait === 'jester', mon && mon.trait);
+
+  // 9つの性格: 育て方ごとに決まる
+  const grow = (opts) => {
+    let m2 = null;
+    for (let i = 0; i < 60; i += 1) {
+      const day = new Date(Date.UTC(2026, 9, 1) + (opts.daily ? i : 0) * 86400000).toISOString().slice(0, 10);
+      const diffId = typeof opts.diff === 'function' ? opts.diff(i) : opts.diff;
+      m2 = b.apply(m2, { round: `g${i}`, songId: opts.songs ? `s${i}` : 'songA', diffId, durationMs: opts.long ? 200000 : 100000, teamRank: 'B', dayKey: day, lean: '', nowMs: i,
+        chartLevel: opts.hard ? 99 : 1, humans: opts.crowd ? 4 : 1, moodId: opts.bad ? 'bad' : 'normal' }).mon;
+    }
+    return m2.trait;
+  };
+  const mixed = (i) => ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER'][i % 5];
+  const cases = {
+    brave: grow({ diff: mixed, hard: true }), proud: grow({ diff: mixed, crowd: true }), worrier: grow({ diff: mixed, bad: true }),
+    clingy: grow({ diff: mixed, daily: true }), smart: grow({ diff: mixed, songs: true }), easygoing: grow({ diff: mixed, long: true }),
+    stubborn: grow({ diff: 'NORMAL' }), serious: grow({ diff: (i) => ['EASY', 'NORMAL', 'HARD'][i % 3] }),
+  };
+  check('9つの性格は、それぞれの育て方で決まる', Object.entries(cases).every(([want, got]) => want === got), JSON.stringify(cases));
+  check('はじめの4つで決まっていた性格は、読み込むときに置き換える', ['steady', 'burst', 'stamina', 'artisan'].map((t) => b.normMon({ trait: t }).trait).join(',') === 'serious,jester,easygoing,smart');
+  // 効き目
+  const seqT = (seed) => { let x = seed; return () => { x = (x * 1103515245 + 12345) % 2147483648; return x / 2147483648; }; };
+  const normalT = b.moods.find((m) => m.id === 'normal');
+  const playAvg = (trait, extra = {}) => { const rand = seqT(11); let sum = 0; let miss = 0; for (let i = 0; i < 300; i += 1) { const r = b.play({ mon: { exp: 3000, trait, diffs: { MASTER: 30, EASY: 0 } }, songId: 's', diffId: 'MASTER', totalNotes: 330, maxScore: 1000000, durationMs: 100000, mood: normalT, rand, chartLevel: 26, ...extra }); sum += r.score; miss += r.judgments.MISS; } return { avg: sum / 300, miss: miss / 300 }; };
+  check('勇敢は、難しい譜面で落ちにくい', playAvg('brave', { chartLevel: 47 }).avg > playAvg('serious', { chartLevel: 47 }).avg);
+  check('心配性は、MISSが少ない', playAvg('worrier').miss < playAvg('serious').miss);
+  check('プライドが高いは、人が多い部屋ほど上手', playAvg('proud', { humans: 5 }).avg > playAvg('proud', { humans: 1 }).avg);
+  const stubEasy = (() => { const rand = seqT(5); let s1 = 0; for (let i = 0; i < 300; i += 1) s1 += b.play({ mon: { exp: 3000, trait: 'stubborn', diffs: {} }, songId: 's', diffId: 'MASTER', totalNotes: 330, maxScore: 1000000, durationMs: 100000, mood: normalT, rand, chartLevel: 26 }).score; return s1 / 300; })();
+  check('頑固は、慣れていない難易度でかなり落ちる', stubEasy < playAvg('stubborn').avg - 30000, `${Math.round(stubEasy)}`);
+  const clingyBad = (lastDay) => { let n = 0; for (let i = 0; i < 2000; i += 1) if (['bad', 'awful'].includes(b.mood(`c${i}`, d1, { trait: 'clingy', lastDay }).id)) n += 1; return n; };
+  check('甘えん坊は、毎日呼ぶと不機嫌になりにくく、何日もあくと不機嫌になりやすい', clingyBad('2026-10-06') < 300 && clingyBad('2026-09-30') > 800, `${clingyBad('2026-10-06')} / ${clingyBad('2026-09-30')}`);
 
   const counts = {};
   for (let i = 0; i < 4000; i += 1) { const m = b.mood(`masu_${i}`, d1, null); counts[m.id] = (counts[m.id] || 0) + 1; }
@@ -141,8 +172,8 @@ const pure = (() => {
   check('調子が良い日ほどスコアが高い', byMood(great) > byMood(normal) && byMood(normal) > byMood(awful));
 
   const bases = [{ baseHp: 900, baseAtk: 100, baseDef: 60, baseGuts: 120 }, { baseHp: 300, baseAtk: 220, baseDef: 50, baseGuts: 100 }, { baseHp: 500, baseAtk: 100, baseDef: 250, baseGuts: 80 }, { baseHp: 300, baseAtk: 120, baseDef: 50, baseGuts: 180 }];
-  check('種類の傾向は能力値でいちばん抜けたもの(ライフ→粘り・ちから→一発・丈夫さ→安定・ガッツ→職人)',
-    bases.map((x) => b.lean(x, bases)).join(',') === 'stamina,burst,steady,artisan');
+  check('種類の傾向は能力値でいちばん抜けたもの(ライフ→のんびり屋・ちから→勇敢・丈夫さ→真面目・ガッツ→ひょうきん)',
+    bases.map((x) => b.lean(x, bases)).join(',') === 'easygoing,brave,serious,jester');
 }
 
 // ===== B. 部屋の中の相棒 =====
