@@ -632,8 +632,8 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
   const level = rhythmBuddyLevelInfo(shown.mon.exp).level;
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
   return (
-    <p data-rhythm-buddy-growth className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-1 text-[11px] font-black text-lime-100">
-      <span>🎵 {rhythmBuddyMasuName(masu)}</span>
+    <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100">
+      <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}</span>
       <span className="text-lime-300">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-buddy-levelup className="rounded bg-amber-300 px-1 text-slate-950">ビートLv.UP! Lv.{level}</span>}
       {shown.familiarUp && <span className="text-amber-200">この曲の得意度+1</span>}

@@ -325,7 +325,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(1500);
   // (A はまだ演奏中で、届いた知らせを溜めている。呼んだ B の端末で見る)
   const cpuRes = view(b).members.find((m) => m.cpu).res;
-  check('呼んだ人がやめても、相棒は最後まで演奏した扱いで結果を出す', cpuRes && !cpuRes.quit && cpuRes.score === 650000);
+  check('呼んだ人がやめても、相棒の結果は部屋へ出す(育成は結果画面側で止める)', cpuRes && !cpuRes.quit && cpuRes.score === 650000);
   a.M.reportResult(view(a).room.round, { score: 500000, maxCombo: 100, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
   clock.advance(1500);
   const seenByA = view(a).members.find((m) => m.cpu).res;

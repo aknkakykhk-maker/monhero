@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5c3cecc2906daa7f
+// generated-sha256: 381ce63b99b51f0e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 19:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -324,6 +324,32 @@ const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 // デバッグ専用(2026-10-04・ユーザー指示「デバッグでストーリー全部の確認」)。公開前のものも含めて全部を同じ並びで返す。
 // 通常の画面(プロフィールの回想)は使わない。デバッグ設定の「全ストーリーを確認」だけが読む
 const eventReplayAllList = () => eventReplaySorted(() => true);
+// イベント回想の一覧(プロフィール → イベント回想)に出す「まとまり」(2026-10-07・ユーザー指示「イベント回想整理して並べてほしい」)。
+// 新しい順にずらっと並べると、同じお話の第1部〜終章が逆順に散らばり、まだ見ていない「？？？」も上に溜まっていた。
+// そこで EVENT_REPLAYS の group で分けて、まとまりの中は日付の**古い順(お話の順)**に並べる。
+//   まとまり自体の並びは下の表のとおり(いま開いているイベントを上に)。
+//   group が無い・知らない名前の項目は EVENT_REPLAY_GROUP_FALLBACK へ入れる(一覧から消えない)。
+//   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
+// ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
+const EVENT_REPLAY_GROUPS = Object.freeze([
+  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト' },
+  { id:'rhythm_event', emoji:'🏆', label:'モンヒロビートのイベント' },
+  { id:'update', emoji:'✨', label:'新しい遊びのお話' },
+  { id:'assistant', emoji:'💬', label:'助手のお話' },
+]);
+const EVENT_REPLAY_GROUP_FALLBACK = 'update';
+const eventReplayGroups = (keep = eventReplayReleased) => {
+  const known = new Set(EVENT_REPLAY_GROUPS.map(group => group.id));
+  // 絞り込みは eventReplaySorted(唯一の入口)に任せ、その結果を古い順に並べ直す(同じ日時どうしは書いた順のまま)
+  const asc = eventReplaySorted(keep)
+    .map((event, index) => ({ event, index, ms: eventReplayDateMs(event) }))
+    .sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (a.ms || 0) - (b.ms || 0) || a.index - b.index)
+    .map(row => row.event);
+  const groupOf = (event) => (known.has(event && event.group) ? event.group : EVENT_REPLAY_GROUP_FALLBACK);
+  return EVENT_REPLAY_GROUPS
+    .map(group => ({ ...group, events: asc.filter(event => groupOf(event) === group.id) }))
+    .filter(group => group.events.length > 0);
+};
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -6956,10 +6982,10 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
 const MASU_COLOR_FALLBACK_REGION = { Tiger: { 2: 0 } };
 // 染め直した絵の置き場所の名前。濃さ(@NN)は絵に影響しないので名前へ含めない
 const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
-// 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
+// 立ち絵が縦長(2:3〜5:6)のモンスター(ユグドラシル以降の新しい子も含む。2026-10-07に追加。メロディー・クロミーは本体登録後に効く)。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -30043,15 +30069,34 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation,
 }) {
+  // 魂格の段階の色で燃え上がり、光の輪が広がって、段階名とLv上限が数え上がる。
+  // 魂格Ⅴだけは5色が混ざった特別な背景にする(色は step.accent が正本)
+  const a = soulRankAnimation;
+  const reduced = prefersReducedMotion();
+  const [cap, setCap] = useState(a.fromLevelCap);
+  useEffect(()=>{
+    const start = Date.now(), rampMs = reduced ? 300 : 1800, delay = reduced ? 0 : 1900;
+    const tick = setInterval(()=>{
+      const t = Math.min(1, Math.max(0, (Date.now()-start-delay)/rampMs)), eased = 1-Math.pow(1-t,3);
+      setCap(Math.round(a.fromLevelCap + (a.toLevelCap-a.fromLevelCap)*eased));
+      if (t>=1) clearInterval(tick);
+    }, 40);
+    return ()=>clearInterval(tick);
+  }, []);
+  const roman = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
   return (
-<div data-soul-rank-animation role="status" aria-live="polite" className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50500,backgroundColor:'rgba(2,6,23,.94)',paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-      <div className="w-full max-w-xs rounded-2xl border-2 p-6 text-center shadow-2xl" style={{borderColor:soulRankAnimation.step.accent,background:soulRankAnimation.toStage===5?'linear-gradient(145deg,rgba(30,64,175,.55),rgba(113,63,18,.45),rgba(20,83,45,.45),rgba(127,29,29,.45),rgba(88,28,135,.55))':'rgba(15,23,42,.96)'}}>
-        <div className="text-[10px] font-black tracking-[.3em] text-slate-400 mb-2">SOUL RANK</div>
-        <Sparkles size={28} className="mx-auto mb-2" style={{color:soulRankAnimation.step.accent}}/>
-        <div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-4 mb-3" style={{borderColor:soulRankAnimation.step.accent,boxShadow:'0 0 36px '+soulRankAnimation.step.accent+'88'}}><DyedMonsterImage baseId={soulRankAnimation.masu.baseId} src={soulRankAnimation.base?.iconUrl} alt={soulRankAnimation.masu.name} masuColors={getMasuColors(soulRankAnimation.masu)} className="w-full h-full object-cover"/></div>
-        <div className="text-[11px] text-slate-400 font-black">{soulRankAnimation.fromStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][soulRankAnimation.fromStage]:'超越'} →</div>
-        <div className="text-3xl font-black my-1" style={{color:soulRankAnimation.step.accent}}>{soulRankAnimation.step.label}</div>
-        <div className="text-[12px] font-black text-emerald-300">Lv上限 {soulRankAnimation.fromLevelCap} → {soulRankAnimation.toLevelCap}</div>
+<div data-soul-rank-animation role="status" aria-live="polite" className={`mh-soulevo${a.toStage===5?' is-final':''}`} style={{'--accent':a.step.accent}}>
+      <div className="mh-soulevo-beams" aria-hidden="true">{Array.from({length:9},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-wave" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div className="mh-soulevo-mon mh-reincarnate-stack"><DyedMonsterImage baseId={a.masu.baseId} src={a.base?.iconUrl||a.base?.imgUrl} alt={a.masu.name} masuColors={getMasuColors(a.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={a.toStage} className="is-ceremony"/><RebirthStars count={a.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+      <div className="mh-soulevo-sparks" aria-hidden="true">{Array.from({length:16},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-flash" aria-hidden="true"></div>
+      <div className="mh-soulevo-copy">
+        <div className="mh-soulevo-kicker">SOUL RANK</div>
+        <div className="mh-soulevo-from">{a.fromStage>0?'魂格'+roman[a.fromStage]:'超越'} →</div>
+        <div className="mh-soulevo-label">{a.step.label}</div>
+        <div className="mh-soulevo-cap">Lv上限 <b>{cap}</b></div>
+        <div className="mh-soulevo-sub">{a.fromLevelCap} → {a.toLevelCap}</div>
       </div>
     </div>
   );
@@ -36218,6 +36263,13 @@ function RhythmHistoryScreen({
   onBack, onSelect, onClearSelection, onSelectDivision, onRefresh,
 }) {
   const list = Array.isArray(entries) ? entries : [];
+  // 一覧は「週間ランキング」と「イベント」に分けて出す(2026-10-07・ユーザー指示「これは週間とイベントと分けたい」)。
+  // 種類(kind)は weekly=週 / limited=イベント。はじめに開く側は、いちばん最近終わったものの種類
+  // (entries は新しい順)。選んで開いて戻っても、見ていた側のまま。
+  const [listTab, setListTab] = useState(() => ((Array.isArray(entries) && entries[0] && entries[0].kind === 'limited') ? 'limited' : 'weekly'));
+  const weeklyList = list.filter(entry => entry.kind !== 'limited');
+  const eventList = list.filter(entry => entry.kind === 'limited');
+  const shownList = listTab === 'limited' ? eventList : weeklyList;
   const view = board || { status:'idle', event:null, boards:{}, error:null };
   // 部門は**えらんだ回から**作る。取ってきた結果(view.event)を待つと、
   // 読み込み中や通信に失敗したあいだ部門のボタンが消えて、切り替えて試し直せなくなる
@@ -36271,21 +36323,35 @@ function RhythmHistoryScreen({
               ? <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
                   終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 5:00 に切り替わります。
                 </p>
-              : <div className="flex flex-col gap-2">
-                  {list.map(entry=>(
-                    <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
-                      className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
-                      {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
-                      <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
-                      <span className="min-w-0 flex-1">
-                        <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
-                        <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
-                        {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
-                      </span>
-                      <ChevronRight size={16} className="shrink-0 text-slate-500"/>
-                    </button>
-                  ))}
-                </div>}
+              : <>
+                  {/* 週は年52件ずつ増えるので、下へ送ってもタブが見えるよう上に留める */}
+                  <div data-rhythm-history-tabs className="sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1">
+                    <ScreenTabs value={listTab} onChange={setListTab} items={[
+                      { id:'weekly', label:`📊 週間ランキング（${weeklyList.length}）`, color:'#f59e0b' },
+                      { id:'limited', label:`🏆 イベント（${eventList.length}）`, color:'#c026d3' },
+                    ]}/>
+                  </div>
+                  {shownList.length===0
+                    ? <p data-rhythm-history-empty={listTab} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
+                        {listTab==='limited'?'終わったイベントはまだありません。':'終わった週はまだありません。'}<br/>
+                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 5:00 に切り替わります。'}
+                      </p>
+                    : <div className="flex flex-col gap-2">
+                        {shownList.map(entry=>(
+                          <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
+                            className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
+                            {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
+                            <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
+                            <span className="min-w-0 flex-1">
+                              <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
+                              <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
+                              {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
+                            </span>
+                            <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                          </button>
+                        ))}
+                      </div>}
+                </>}
           </>
         )}
         {selected&&(
@@ -38065,9 +38131,10 @@ const RHYTHM_MULTI = (() => {
   const doDraw = (members) => {
     const r = s.room;
     const pickOf = (list) => list.filter((m) => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map((m) => m.pick);
-    // 人の選んだ曲を優先する。相棒(CPU)の選曲は、人がだれも曲を選んでいないときだけ使う
-    const humanPicks = pickOf(members.filter((m) => !m.cpu));
-    const picks = humanPicks.length ? humanPicks : pickOf(members.filter((m) => m.cpu));
+    // 本番の曲は人の選んだ曲だけから決める。相棒(CPU)の選曲は演出(シャッフル画面の表示)だけで、抽選には入れない
+    // (2026-10-07・ユーザー指示「マスモンが曲を選んでくるのは演出として残して、実際は自分が選んだ曲に」)。
+    // 人がだれも曲を選んでいない(おまかせ)ときは、全曲から引く
+    const picks = pickOf(members.filter((m) => !m.cpu));
     const pool = picks.length ? picks : catalog;
     if (!pool.length) return;
     const songId = pool[Math.floor(Math.random() * pool.length)];
@@ -39673,6 +39740,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {(() => {
           // 自分が呼んだマスモンがこのライブに出ていたら、1体ずつ育てて見せる(全員の結果がそろってから)
           if (team.waiting) return null;
+          // 自分が途中でやめたライブでは、呼んだマスモンも育てない(やめたのにクリア扱いで経験値が入っていた。2026-10-07・ユーザー指摘)
+          const myRow = team.rows.find((row) => row.m.id === view.selfId);
+          if (!myRow || !myRow.res || myRow.res.quit) return null;
           const song = songById(room.songId);
           const grown = (view.myCpus || []).map((c) => {
             const cpuRow = team.rows.find((row) => row.m.id === c.id);
@@ -39680,7 +39750,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             return masu ? { masu, cpuRow } : null;
           }).filter(Boolean);
           if (!grown.length) return null;
-          return <div className="shrink-0 space-y-1 px-3 pt-1">{grown.map(({ masu, cpuRow }) => (
+          return <div data-rhythm-buddy-growth-list className="grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2">{grown.map(({ masu, cpuRow }) => (
             <RhythmBuddyGrowth key={masu.id} masu={masu} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
@@ -40521,8 +40591,8 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
   const level = rhythmBuddyLevelInfo(shown.mon.exp).level;
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
   return (
-    <p data-rhythm-buddy-growth className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-1 text-[11px] font-black text-lime-100">
-      <span>🎵 {rhythmBuddyMasuName(masu)}</span>
+    <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100">
+      <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}</span>
       <span className="text-lime-300">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-buddy-levelup className="rounded bg-amber-300 px-1 text-slate-950">ビートLv.UP! Lv.{level}</span>}
       {shown.familiarUp && <span className="text-amber-200">この曲の得意度+1</span>}
@@ -49457,7 +49527,7 @@ function MonsterHeroGame() {
         setSoulRankAnimation(null);
         setSoulRankSelectedId(null);
         soulRankProcessingRef.current=false;
-      }, prefersReducedMotion()?800:2400);
+      }, prefersReducedMotion()?1100:5200);
     } catch {
       soulRankProcessingRef.current=false;
       setSoulRankError('魂格進化のデータを保存できませんでした。ダイヤと勇者の証は消費していません。');
@@ -60651,11 +60721,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
         {showEventReplayList&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
-              <h3 className="text-base font-black text-white mb-1 text-center">イベント回想</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。</p>
-              <div className="space-y-2 mb-3">
-                {eventReplayList().map(event=>{
+            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+              {/* 見出しと「閉じる」は動かさず、まとまりの並びだけを窓の中でスクロールさせる(下まで行かないと閉じられないのを避ける) */}
+              <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
+              <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。<br/>まとまりごとに、お話の順に並んでいます。</p>
+              {/* まとまり(ハロウィン・ナイト / モンヒロビートのイベント / …)ごとに、お話の順(古い順)で並べる。
+                  まだ見ていない項目も、そのまとまりの中の順番どおりに「？？？」で出す(あと何本あるかが分かる) */}
+              <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-4 mb-3">
+                {eventReplayGroups().map(group=>{
+                  const seenCount=group.events.filter(isEventReplayUnlocked).length;
+                  return (
+                  <section key={group.id} data-event-replay-group={group.id}>
+                    <div className="mb-1.5 flex items-center gap-1.5 px-1">
+                      <span className="text-sm" aria-hidden="true">{group.emoji}</span>
+                      <b className="min-w-0 flex-1 text-[12px] font-black text-fuchsia-100">{group.label}</b>
+                      <small className="shrink-0 text-[10px] font-black tabular-nums text-fuchsia-300/80">{seenCount}/{group.events.length}</small>
+                    </div>
+                    <div className="space-y-2">
+                {group.events.map(event=>{
                   const eventUnlocked=isEventReplayUnlocked(event);
                   if(!eventUnlocked){
                     return (
@@ -60679,8 +60762,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </button>
                   );
                 })}
+                    </div>
+                  </section>
+                  );
+                })}
               </div>
-              <button onClick={()=>setShowEventReplayList(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+              <button onClick={()=>setShowEventReplayList(false)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
         )}
@@ -67306,6 +67393,28 @@ const createAnimationStyle = () => {
     @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
     @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
     @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
+    /* 魂格進化の演出(神殿)。段階の色(--accent)で燃え上がる */
+    .mh-soulevo{position:fixed;inset:0;z-index:50500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 44%,color-mix(in srgb,var(--accent) 45%,#020617),#020617 72%);animation:mhSoulevoIn .5s ease-out both}
+    .mh-soulevo.is-final{background:radial-gradient(circle at 50% 44%,#4c1d9588,#020617 72%),conic-gradient(from 0deg,#1d4ed855,#ca8a0455,#16a34a55,#dc262655,#9333ea55,#1d4ed855)}
+    .mh-soulevo-beams{position:absolute;inset:0;pointer-events:none}.mh-soulevo-beams i{position:absolute;bottom:-10%;left:calc(4% + var(--i)*11%);width:7%;height:85%;background:linear-gradient(to top,var(--accent),transparent);filter:blur(8px);opacity:.55;transform-origin:bottom;animation:mhSoulevoBeam 1.8s ease-in-out calc(var(--i)*.1s) infinite alternate}
+    .mh-soulevo-wave{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-wave i{position:absolute;left:-130px;top:-130px;width:260px;height:260px;border-radius:50%;border:3px solid var(--accent);box-shadow:0 0 36px var(--accent);opacity:0;animation:mhSoulevoWave 2.2s ease-out infinite}.mh-soulevo-wave i:nth-child(2){animation-delay:.7s}.mh-soulevo-wave i:nth-child(3){animation-delay:1.4s}
+    .mh-soulevo-mon{position:relative;width:180px;height:180px;margin-top:-120px;animation:mhSoulevoMon 1.1s ease-in-out infinite alternate;filter:drop-shadow(0 0 26px var(--accent))}
+    .mh-soulevo-sparks{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-sparks i{position:absolute;left:0;top:0;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);opacity:0;animation:mhSoulevoSpark 2s ease-out calc(var(--i)*.11s) infinite;--a:calc(var(--i)*22.5deg)}
+    .mh-soulevo-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhSoulevoFlash 1.3s ease-out 1.7s both}
+    .mh-soulevo-copy{position:absolute;left:0;right:0;bottom:10%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 16px;text-align:center}
+    .mh-soulevo-kicker{font-size:11px;font-weight:900;letter-spacing:.4em;color:#cbd5e1}.mh-soulevo-from{font-size:12px;font-weight:900;color:#94a3b8}
+    .mh-soulevo-label{font-size:40px;font-weight:900;color:var(--accent);text-shadow:0 0 22px var(--accent);opacity:0;animation:mhSoulevoPop .6s ease-out 1.9s both}
+    .mh-soulevo.is-final .mh-soulevo-label{background:linear-gradient(90deg,#60a5fa,#fbbf24,#4ade80,#f87171,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+    .mh-soulevo-cap{font-size:14px;font-weight:900;color:#6ee7b7;opacity:0;animation:mhSoulevoPop .5s ease-out 2.3s both}.mh-soulevo-cap b{font-size:34px;font-family:ui-monospace,monospace;color:#fff}
+    .mh-soulevo-sub{font-size:11px;font-weight:900;color:#94a3b8;opacity:0;animation:mhSoulevoPop .5s ease-out 2.6s both}
+    @keyframes mhSoulevoIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhSoulevoBeam{from{opacity:.25;transform:scaleY(.7)}to{opacity:.7;transform:scaleY(1)}}
+    @keyframes mhSoulevoWave{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+    @keyframes mhSoulevoMon{from{transform:scale(1)}to{transform:scale(1.07)}}
+    @keyframes mhSoulevoSpark{0%{opacity:0;transform:rotate(var(--a)) translateY(-20px)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-210px)}}
+    @keyframes mhSoulevoFlash{0%{opacity:0}25%{opacity:.9}100%{opacity:0}}
+    @keyframes mhSoulevoPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-soulevo *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-soulevo-label,.mh-soulevo-cap,.mh-soulevo-sub{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}
