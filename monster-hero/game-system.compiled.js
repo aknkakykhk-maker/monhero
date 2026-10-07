@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00b1975a56a2bab3
+// source-sha256: fd9bde05e393c92f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 14:41";
+const BUILD_DATE = "2026-10-07 16:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -8587,6 +8587,27 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Melody: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -9023,7 +9044,8 @@ const EXACT_DYE_MASKS = Object.freeze({
   Yggdrasil: YGGDRASIL_DYE_MASK,
   MelWhip: MEL_WHIP_DYE_MASK,
   Ghost: GHOST_DYE_MASK,
-  Spooky: SPOOKY_DYE_MASK
+  Spooky: SPOOKY_DYE_MASK,
+  Melody: MELODY_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -9376,6 +9398,15 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.51
   }, {
     gloss: 0.6
+  }],
+  Melody: [{
+    gloss: 0.33
+  }, {
+    gloss: 0.49
+  }, {}, {
+    gloss: 0.46
+  }, {
+    gloss: 0.42
   }]
 };
 const _NO_REGION_DYE = {
@@ -22518,6 +22549,19 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       dur: 2600,
       delay: 500,
       layer: 'front'
+    }]
+  },
+  Melody: {
+    body: 'breathe',
+    bodyMask: IDLE_MELODY_BODY_MASK,
+    parts: [{
+      mask: IDLE_MELODY_TAIL_MASK,
+      origin: '81.8% 79.5%',
+      anim: 'wag',
+      amp: 8,
+      dur: 1800,
+      delay: 0,
+      layer: 'back'
     }]
   }
 });
