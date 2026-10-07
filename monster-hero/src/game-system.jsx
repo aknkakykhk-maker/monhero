@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 302e1318c889357e
+// generated-sha256: cd3676762e38e250
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 14:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 14:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39845,7 +39845,8 @@ const RHYTHM_BUDDY_SORTS = Object.freeze([
   Object.freeze({ key: 'created', label: '登録した順', firstDir: 'asc' }),
 ]);
 const RHYTHM_BUDDY_MOOD_RANK = Object.freeze({ great: 5, good: 4, normal: 3, bad: 2, awful: 1 });
-const rhythmBuddyListDefaults = () => ({ sort: 'level', dir: 'desc', lineage: 'all', played: 'all', traits: [], moods: [] });
+// view … 'list'(1体1行) / 'card'(3列のカード。バトル側と同じ形)
+const rhythmBuddyListDefaults = () => ({ sort: 'level', dir: 'desc', lineage: 'all', played: 'all', traits: [], moods: [], view: 'list' });
 const rhythmBuddyNormalizeListSettings = (raw) => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const d = rhythmBuddyListDefaults();
@@ -39857,6 +39858,7 @@ const rhythmBuddyNormalizeListSettings = (raw) => {
     played: ['all', 'yes', 'no'].includes(o.played) ? o.played : 'all',
     traits: Array.isArray(o.traits) ? o.traits.filter((t) => traitIds.includes(t)) : [],
     moods: Array.isArray(o.moods) ? o.moods.filter((m) => RHYTHM_BUDDY_MOOD_RANK[m]) : [],
+    view: o.view === 'card' ? 'card' : 'list',
   };
 };
 const useRhythmBuddyListSettings = () => {
@@ -39897,7 +39899,7 @@ const rhythmBuddyListRows = (masuMons, state, dayKey, settings) => {
   return rows.sort((a, b) => (st.sort === 'name' ? a.name.localeCompare(b.name, 'ja') * sign : (val(a) - val(b)) * sign) || (a.index - b.index));
 };
 // 一覧の上の3つのボタン(並べ替え・種族・しぼりこみ)。押すと設定の画面を開く
-function RhythmBuddyListBar({ settings, onOpen }) {
+function RhythmBuddyListBar({ settings, onOpen, onChange }) {
   const sortOpt = RHYTHM_BUDDY_SORTS.find((x) => x.key === settings.sort) || RHYTHM_BUDDY_SORTS[0];
   const filterCount = (settings.played !== 'all' ? 1 : 0) + settings.traits.length + settings.moods.length;
   const lineage = settings.lineage !== 'all' && typeof lineageById === 'function' ? lineageById(settings.lineage) : null;
@@ -39914,6 +39916,10 @@ function RhythmBuddyListBar({ settings, onOpen }) {
       <button type="button" onClick={() => onOpen('filter')} className={`${btn} shrink-0 ${filterCount ? 'border-lime-400 bg-lime-950' : 'border-white/10 bg-slate-900'}`}>
         <span className="text-[11px] font-black text-white">しぼりこみ</span>
         {filterCount > 0 && <span className="text-[10px] font-black text-lime-300">{filterCount}</span>}
+      </button>
+      <button data-rhythm-buddy-view-toggle={settings.view} type="button" onClick={() => onChange({ view: settings.view === 'card' ? 'list' : 'card' })}
+        aria-label={settings.view === 'card' ? '1行の表示にする' : 'カードの表示にする'} className={`${btn} shrink-0 justify-center border-white/10 bg-slate-900`}>
+        <span aria-hidden="true" className="text-sm font-black text-white">{settings.view === 'card' ? '☰' : '▦'}</span>
       </button>
     </div>
   );
@@ -39996,7 +40002,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
 const useRhythmBuddyListControls = () => {
   const [settings, update] = useRhythmBuddyListSettings();
   const [tab, setTab] = React.useState('');
-  const bar = <RhythmBuddyListBar settings={settings} onOpen={setTab} />;
+  const bar = <RhythmBuddyListBar settings={settings} onOpen={setTab} onChange={update} />;
   const sheet = tab ? <RhythmBuddyListSheet tab={tab} settings={settings} onChange={update} onTab={setTab} onClose={() => setTab('')} /> : null;
   return { settings, bar, sheet };
 };
@@ -40005,6 +40011,33 @@ const useRhythmBuddyListControls = () => {
 function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy = false, canPay = true, calledIds = [], settings = null }) {
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
   if (list.length === 0) return <p className="py-6 text-center text-[12px] font-bold text-slate-400">{(masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません'}</p>;
+  if (settings && settings.view === 'card') {
+    // バトル側と同じ3列のカード。絵・名前・ビートLv・調子の顔。呼ぶボタンは下に付ける(「マスモンを呼ぶ」のとき)
+    return (
+      <div data-rhythm-buddy-cards className="grid grid-cols-3 gap-2.5 pb-4">
+        {list.map(({ masu, mon }) => {
+          const mood = rhythmBuddyMood(masu.id, dayKey, mon);
+          const level = mon ? rhythmBuddyLevelInfo(mon.exp).level : 0;
+          const called = calledIds.includes(masu.id);
+          return (
+            <div key={masu.id} data-rhythm-buddy-card className="flex flex-col gap-1">
+              <button type="button" onClick={() => onOpen(masu.id)} style={{ minHeight: '112px' }}
+                className="relative flex w-full select-none flex-col items-center gap-1 rounded-2xl border-2 border-white/10 bg-slate-900 p-2 active:scale-95">
+                <span className="absolute right-1.5 top-1.5" aria-label={`今日の調子 ${mood.label}`}><RhythmBuddyMoodFace moodId={mood.id} size={18} /></span>
+                <RhythmBuddyFace masu={masu} sizeClass="h-12 w-12" />
+                <b className="w-full truncate text-center text-[11px] font-black">{rhythmBuddyMasuName(masu)}</b>
+                <small className="text-[10px] font-black text-lime-200">{mon ? `ビートLv.${level}` : '未プレイ'}</small>
+              </button>
+              {onPick && (called
+                ? <span data-rhythm-buddy-called className="rounded-xl border border-lime-300/50 py-2 text-center text-[10px] font-black text-lime-200">呼んでいる</span>
+                : <button data-rhythm-buddy-call type="button" disabled={busy || !canPay} onClick={() => onPick(masu)}
+                  className="min-h-[40px] rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 text-xs font-black text-slate-950 disabled:opacity-40">呼ぶ</button>)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <ul className="space-y-1.5">
       {list.map(({ masu, mon }) => {

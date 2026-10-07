@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a7682016cefa845
+// source-sha256: 00b1975a56a2bab3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 14:33";
+const BUILD_DATE = "2026-10-07 14:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -64777,7 +64777,8 @@ const rhythmBuddyListDefaults = () => ({
   lineage: 'all',
   played: 'all',
   traits: [],
-  moods: []
+  moods: [],
+  view: 'list'
 });
 const rhythmBuddyNormalizeListSettings = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -64789,7 +64790,8 @@ const rhythmBuddyNormalizeListSettings = raw => {
     lineage: typeof o.lineage === 'string' && o.lineage ? o.lineage.slice(0, 40) : 'all',
     played: ['all', 'yes', 'no'].includes(o.played) ? o.played : 'all',
     traits: Array.isArray(o.traits) ? o.traits.filter(t => traitIds.includes(t)) : [],
-    moods: Array.isArray(o.moods) ? o.moods.filter(m => RHYTHM_BUDDY_MOOD_RANK[m]) : []
+    moods: Array.isArray(o.moods) ? o.moods.filter(m => RHYTHM_BUDDY_MOOD_RANK[m]) : [],
+    view: o.view === 'card' ? 'card' : 'list'
   };
 };
 const useRhythmBuddyListSettings = () => {
@@ -64848,7 +64850,8 @@ const rhythmBuddyListRows = (masuMons, state, dayKey, settings) => {
 };
 function RhythmBuddyListBar({
   settings,
-  onOpen
+  onOpen,
+  onChange
 }) {
   const sortOpt = RHYTHM_BUDDY_SORTS.find(x => x.key === settings.sort) || RHYTHM_BUDDY_SORTS[0];
   const filterCount = (settings.played !== 'all' ? 1 : 0) + settings.traits.length + settings.moods.length;
@@ -64880,7 +64883,18 @@ function RhythmBuddyListBar({
     className: "text-[11px] font-black text-white"
   }, "しぼりこみ"), filterCount > 0 && React.createElement("span", {
     className: "text-[10px] font-black text-lime-300"
-  }, filterCount)));
+  }, filterCount)), React.createElement("button", {
+    "data-rhythm-buddy-view-toggle": settings.view,
+    type: "button",
+    onClick: () => onChange({
+      view: settings.view === 'card' ? 'list' : 'card'
+    }),
+    "aria-label": settings.view === 'card' ? '1行の表示にする' : 'カードの表示にする',
+    className: `${btn} shrink-0 justify-center border-white/10 bg-slate-900`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-sm font-black text-white"
+  }, settings.view === 'card' ? '☰' : '▦')));
 }
 function RhythmBuddyListSheet({
   tab,
@@ -65034,7 +65048,8 @@ const useRhythmBuddyListControls = () => {
   const [tab, setTab] = React.useState('');
   const bar = React.createElement(RhythmBuddyListBar, {
     settings: settings,
-    onOpen: setTab
+    onOpen: setTab,
+    onChange: update
   });
   const sheet = tab ? React.createElement(RhythmBuddyListSheet, {
     tab: tab,
@@ -65064,6 +65079,53 @@ function RhythmBuddyList({
   if (list.length === 0) return React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
   }, (masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません');
+  if (settings && settings.view === 'card') {
+    return React.createElement("div", {
+      "data-rhythm-buddy-cards": true,
+      className: "grid grid-cols-3 gap-2.5 pb-4"
+    }, list.map(({
+      masu,
+      mon
+    }) => {
+      const mood = rhythmBuddyMood(masu.id, dayKey, mon);
+      const level = mon ? rhythmBuddyLevelInfo(mon.exp).level : 0;
+      const called = calledIds.includes(masu.id);
+      return React.createElement("div", {
+        key: masu.id,
+        "data-rhythm-buddy-card": true,
+        className: "flex flex-col gap-1"
+      }, React.createElement("button", {
+        type: "button",
+        onClick: () => onOpen(masu.id),
+        style: {
+          minHeight: '112px'
+        },
+        className: "relative flex w-full select-none flex-col items-center gap-1 rounded-2xl border-2 border-white/10 bg-slate-900 p-2 active:scale-95"
+      }, React.createElement("span", {
+        className: "absolute right-1.5 top-1.5",
+        "aria-label": `今日の調子 ${mood.label}`
+      }, React.createElement(RhythmBuddyMoodFace, {
+        moodId: mood.id,
+        size: 18
+      })), React.createElement(RhythmBuddyFace, {
+        masu: masu,
+        sizeClass: "h-12 w-12"
+      }), React.createElement("b", {
+        className: "w-full truncate text-center text-[11px] font-black"
+      }, rhythmBuddyMasuName(masu)), React.createElement("small", {
+        className: "text-[10px] font-black text-lime-200"
+      }, mon ? `ビートLv.${level}` : '未プレイ')), onPick && (called ? React.createElement("span", {
+        "data-rhythm-buddy-called": true,
+        className: "rounded-xl border border-lime-300/50 py-2 text-center text-[10px] font-black text-lime-200"
+      }, "呼んでいる") : React.createElement("button", {
+        "data-rhythm-buddy-call": true,
+        type: "button",
+        disabled: busy || !canPay,
+        onClick: () => onPick(masu),
+        className: "min-h-[40px] rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 text-xs font-black text-slate-950 disabled:opacity-40"
+      }, "呼ぶ")));
+    }));
+  }
   return React.createElement("ul", {
     className: "space-y-1.5"
   }, list.map(({
