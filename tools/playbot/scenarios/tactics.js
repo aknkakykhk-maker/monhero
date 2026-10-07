@@ -266,6 +266,17 @@ async function betweenWaves(s) {
     const list = await s.listButtons();
     const go = FORWARD.map((re) => list.find((x) => re.test(x.label))).find(Boolean);
     const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label));
+    // 一覧に無い進むボタン(窓が出てくる演出の途中で、上に薄い層が重なっているとき)は、ボタンそのものを押す
+    const direct = !go && await s.page.evaluate((sources) => {
+      const res = sources.map((src) => new RegExp(src));
+      const live = [...document.querySelectorAll('button')].filter((x) => !x.disabled && x.offsetParent);
+      for (const re of res) {
+        const b = live.find((x) => re.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
+        if (b) { b.scrollIntoView({ block: 'center' }); b.click(); return (b.innerText || '').trim().slice(0, 30); }
+      }
+      return '';
+    }, FORWARD.map((re) => re.source));
+    if (direct) { s.state.step += 1; await s.wait(900); continue; }
     if (go) await s.tap(go, 'WAVE の合間');
     else if (options.length) await s.tap(options[Math.floor(s.rand() * options.length)], 'WAVE の合間(えらぶ)');
     else await s.wait(1000);
