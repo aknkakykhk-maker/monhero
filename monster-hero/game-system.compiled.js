@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64287e8b4a53aafa
+// source-sha256: 679494c2db8e529f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 00:31";
+const BUILD_DATE = "2026-10-08 06:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -46351,7 +46351,10 @@ function RhythmRankingScreen({
     className: "space-y-2"
   }, eventBoard.entries.map((entry, index) => React.createElement("li", {
     key: `${entry.identityKey}-${index}`
-  }, eventRow(entry, index + 1, !!eventBoard.self && entry.identityKey === eventBoard.self.identityKey))))))), songTab && rhythmRanking.status === 'loading' && React.createElement("p", {
+  }, eventRow(entry, index + 1, !!eventBoard.self && entry.identityKey === eventBoard.self.identityKey))))))), songTab && song && React.createElement("p", {
+    "data-rhythm-ranking-song": true,
+    className: "mb-2 truncate text-center text-[11px] font-black text-amber-100"
+  }, rhythmSongFullName(song) || song.displayName), songTab && rhythmRanking.status === 'loading' && React.createElement("p", {
     "data-rhythm-ranking-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), songTab && rhythmRanking.status === 'error' && React.createElement("p", {

@@ -919,6 +919,9 @@ function RhythmRankingScreen({
               </>)}
             </>)}
           </>)}
+          {/* 「この曲」がどの曲かを出す(2026-10-07・ユーザー報告「トップのランキングから飛ぶと『この曲』の欄があるのに、どの曲か分からない」)。
+              曲えらびを通らずに開いても、見ている曲(最後に選んでいた曲)が分かるようにする */}
+          {songTab&&song&&<p data-rhythm-ranking-song className="mb-2 truncate text-center text-[11px] font-black text-amber-100">{rhythmSongFullName(song)||song.displayName}</p>}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
           {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
