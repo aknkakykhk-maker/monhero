@@ -54,7 +54,9 @@ for (const file of files) {
     // 演奏まわりの画面(曲えらび・演奏・リザルトなど)がキーを持たないことを見る
     // モードえらび(RHYTHM_MODE_SELECT・2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)も
     // 自分の曲(rhythmModeSelect)を鳴らす。演奏の画面ではなく、戻ったときはモンビーを開いていた扱いで鳴らし直すので壊れない
-    const RHYTHM_KEYS_WITH_BGM = ['RHYTHM_HISTORY', 'RHYTHM_MODE_SELECT'];
+    // マスモン一覧(RHYTHM_MASU_BEAT・2026-10-07・ユーザー指示「マスモン一覧(モンヒロビート)のBGM」)も自分の曲を鳴らす(いまは M/B管理と同じ曲)。
+    // 演奏の画面ではなく、モードえらびと同じく戻ったときは鳴らし直すので壊れない
+    const RHYTHM_KEYS_WITH_BGM = ['RHYTHM_HISTORY', 'RHYTHM_MODE_SELECT', 'RHYTHM_MASU_BEAT'];
     const rhythmKeys = [...map.matchAll(/\b(RHYTHM_[A-Z_]+)\s*:/g)].map(m => m[1]).filter(k => !RHYTHM_KEYS_WITH_BGM.includes(k));
     check(`${rel}: モンビーの画面はBGMのキーを持たない（止まるのが前提）`, rhythmKeys.length === 0, rhythmKeys.join(', '));
   }
