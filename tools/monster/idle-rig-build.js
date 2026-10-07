@@ -183,6 +183,11 @@ const RIGS = [
   { id:'Melody', img:'images/monsters/melody.png', body:'breathe', parts:[
     { name:'tail', poly:[[90,69],[100,69],[100,81.5],[88,81.5],[86.8,77],[87.3,74.5],[88.8,72.5],[89.4,70.5]], share:[[88,78],[91,78],[91,81],[88,81]], pivot:[89.5,79.5], anim:'wag', amp:8, dur:1800, layer:'back' },
   ]},
+  // クロミー(2026-10-07・案の段階): メロディーと同じく体ごとゆったり息をする(breathe)。右の悪魔のしっぽを、
+  // 体から出ている付け根を軸に振る。左のケープの玉と白い体は多角形に入れない
+  { id:'Kuromy', img:'images/monsters/kuromy.png', body:'breathe', parts:[
+    { name:'tail', poly:[[74,45],[86,45],[86,52.5],[78.5,52.5],[76.5,54.2],[74.6,53.4],[77,50.6],[74.6,49]], share:[[74.6,52.4],[77,52.4],[77,54.3],[74.6,54.3]], pivot:[75.6,53.4], anim:'wag', amp:7, dur:1700, layer:'back' },
+  ]},
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

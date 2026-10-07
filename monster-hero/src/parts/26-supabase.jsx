@@ -387,6 +387,28 @@ const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
   (legacyEntries || []).forEach(e => put(e, true));
   return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
 };
+// 同じ人の同じモンスターは、いちばん上の1体だけを見せる(2026-10-07 ユーザー指示
+// 「1人同モンスター1体。モッチー、ミタラシは並ぶけどモッチー、モッチーとはならない」)。
+// マーケットで同じ種族を何体も持つ人は、まだ育てていない絆Lv.1の子まで1体ずつ並び、
+// 種族のタブが同じ人で埋まっていた(ユーザー報告「ききがランキングにいっぱいいる」)。
+// ★並べ替え済みの一覧を受け取り、先に出てきた(＝その一覧の物差しでいちばん上の)1体を残す。
+//   絆Lvの一覧なら絆Lvの、総合力の一覧なら総合力のいちばん高い子が残る
+// ★「人」は束ねるときと同じくブリーダーIDで見分ける(名前で束ねると同名の別人が消える)。
+//   違うモンスター(モッチーとミタラシ・ケンシモッチー)は別に並ぶ
+// ★見せ方だけを変える。bond_levels の行は1行も消さない
+const pickTopPerBreederMonster = (sortedEntries) => {
+  const list = Array.isArray(sortedEntries) ? sortedEntries : [];
+  const bridge = breederIdBridgeFrom(list);
+  const seen = new Set();
+  return list.filter((e) => {
+    if (!e) return false;
+    const id = resolveBreederIdFor(e, bridge);
+    const key = `${id ? `id:${id}` : `name:${e.userName}`}\u0000${e.monsterId || e.monName || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 // ==================== 絆Lvの正本テーブル(bond_levels) ====================
 // 絆Lvは編成(party)のJSONの中にあるため、rankings からはDB側で「絆Lvの高い順」に
 // 並べられない。そのため新着順に RANKING_LEVEL_FETCH_LIMIT 行だけ取ってアプリ側で
