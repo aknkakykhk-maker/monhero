@@ -3,7 +3,8 @@
 //
 //   node tools/playbot/playbot.js                         全員(約15分)
 //   node tools/playbot/playbot.js --only clock,legacy     選んだ担当だけ(id でも 時計係 のような名前でも)
-//   node tools/playbot/playbot.js --list                  担当の一覧
+//   node tools/playbot/playbot.js --team battle          班の担当だけ(毎晩の班分け。roles.js の TEAMS)
+//   node tools/playbot/playbot.js --list                  担当と班の一覧
 //   node tools/playbot/playbot.js --parallel 3            同時に動かす担当の数(既定3。1なら順番に)
 //   node tools/playbot/playbot.js --steps 300             探索の手数(既定150)
 //   node tools/playbot/playbot.js --seed 12345            同じ押し方を再現する(報告に種が出る)
@@ -28,7 +29,7 @@ const path = require('path');
 const { openSession, BOT_NAME } = require('./lib/session');
 const { prepareVeteran, prepareLegacy } = require('./lib/seeds');
 const { findPrevious, compare, saveBaseline } = require('./lib/compare');
-const { ROLES } = require('./roles');
+const { ROLES, TEAMS } = require('./roles');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
@@ -36,14 +37,22 @@ const argOf = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback;
 };
+// 班に入っていない担当がいたら知らせる(毎晩だれも動かさなくなるため)
+const teamless = ROLES.filter((r) => !TEAMS.some((t) => t.roles.includes(r.id)));
+if (teamless.length) console.log(`⚠ どの班にも入っていない担当: ${teamless.map((r) => `${r.id}(${r.name})`).join(', ')} — roles.js の TEAMS へ足す`);
 if (args.includes('--list')) {
   ROLES.forEach((r) => console.log(`${r.id.padEnd(8)} ${r.name}${r.alone ? '(1人で)' : ''} … ${r.does}`));
+  console.log('\n班(--team):');
+  TEAMS.forEach((t) => console.log(`${t.id.padEnd(8)} ${t.name} … ${t.roles.join(', ')}`));
   process.exit(0);
 }
+const TEAM_ID = argOf('team', '');
+const TEAM = TEAM_ID ? TEAMS.find((t) => t.id === TEAM_ID || t.name === TEAM_ID) : null;
+if (TEAM_ID && !TEAM) { console.log(`知らない班: ${TEAM_ID}(--list で一覧)`); process.exit(1); }
 const STEPS = Math.max(1, Number(argOf('steps', 150)) || 150);
 const SEED = Number(argOf('seed', Date.now() % 1000000)) || 1;
 const PARALLEL = Math.max(1, Math.min(4, Number(argOf('parallel', 3)) || 3));
-const ONLY = (argOf('only', '') || '').split(',').map((x) => x.trim()).filter(Boolean);
+const ONLY = TEAM ? TEAM.roles.slice() : (argOf('only', '') || '').split(',').map((x) => x.trim()).filter(Boolean);
 const unknown = ONLY.filter((x) => !ROLES.some((r) => r.id === x || r.name === x));
 if (unknown.length) { console.log(`知らない担当: ${unknown.join(', ')}(--list で一覧)`); process.exit(1); }
 const want = (r) => !ONLY.length || ONLY.includes(r.id) || ONLY.includes(r.name);
@@ -201,7 +210,7 @@ const report = {
   const md = [
     `# モンヒロくんの報告 ${stamp}`,
     '',
-    `- 乱数の種: \`${SEED}\`(\`node tools/playbot/playbot.js --seed ${SEED}${ONLY.length ? ` --only ${ONLY.join(',')}` : ''}\` で同じ押し方を再現)`,
+    `- 乱数の種: \`${SEED}\`(\`node tools/playbot/playbot.js --seed ${SEED}${TEAM ? ` --team ${TEAM.id}` : ONLY.length ? ` --only ${ONLY.join(',')}` : ''}\` で同じ押し方を再現)`,
     `- かかった時間: ${result.minutes}分(同時に${PARALLEL}人) / 見た画面: ${report.screens.size} / 押した回数: ${report.steps.length}`,
     `- ランキングなどへ送った記録: ${writesAll.length}件(すべてボットの手元で受け止めた。本物へは届いていない)`,
     `- 不具合候補 ${countOf('不具合候補')}件 / 改善のヒント ${countOf('改善のヒント')}件 / 既知 ${countOf('既知')}件`,

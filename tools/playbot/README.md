@@ -7,6 +7,7 @@
 ```
 node tools/playbot/playbot.js                         全員(約15分)
 node tools/playbot/playbot.js --only clock,legacy     選んだ担当だけ(id でも「時計係」のような名前でも)
+node tools/playbot/playbot.js --team battle          班の担当だけ(毎晩は4つの班に分けて別々のセッションが動く。roles.js の TEAMS)
 node tools/playbot/playbot.js --list                  担当の一覧
 node tools/playbot/playbot.js --parallel 3            同時に動かす担当の数(既定3・最大4。1なら順番に)
 node tools/playbot/playbot.js --steps 300             探索の手数(既定150)
