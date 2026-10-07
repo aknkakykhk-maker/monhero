@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dd541f35d4c505b0
+// generated-sha256: ef99036a3a7d187e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 16:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 17:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32542,7 +32542,7 @@ const HOME_RAID_JACK_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
-  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:6,
+  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:2,
   width:'44%', maxWidth:'190px', minWidth:'120px',
 });
 const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
@@ -32609,7 +32609,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       <span data-jack-aura={allDone ? undefined : (Number(String(tier.id).slice(1)) || undefined)} data-home-raid-pumpkin={allDone ? 'true' : undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
         {/* 段階が進むほど派手になるオーラ(バトルと同じ部品)。絵の後ろに置く */}
         {/* HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
-        {!allDone && <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-30 - (Number(String(tier.id).slice(1)) || 0) * 14}% ${-14 - (Number(String(tier.id).slice(1)) || 0) * 9}% -6%` }}>
+        {!allDone && <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-20 - (Number(String(tier.id).slice(1)) || 0) * 8}% ${-10 - (Number(String(tier.id).slice(1)) || 0) * 5}% -6%` }}>
           <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
         </span>}
         {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
