@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35360f37dce48eb2
+// source-sha256: 67a70e8e6302a805
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 23:34";
+const BUILD_DATE = "2026-10-07 23:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -27999,6 +27999,24 @@ const rhythmAchievementMarkId = (playable, record) => {
   if (record.fullCombo) return 'FULL_COMBO';
   return 'CLEAR';
 };
+const RHYTHM_DETAIL_ACHIEVE_TIERS = Object.freeze({
+  FULL_COMBO: Object.freeze({
+    id: 'FULL_COMBO',
+    text: 'FULL COMBO!',
+    label: 'フルコンボ'
+  }),
+  ALL_EXCELLENT: Object.freeze({
+    id: 'ALL_EXCELLENT',
+    text: 'ALL EXCELLENT!!',
+    label: 'オールエクセレント'
+  }),
+  ALL_MARVELOUS: Object.freeze({
+    id: 'ALL_MARVELOUS',
+    text: 'ALL MARVELOUS!!',
+    label: 'オールマーベラス'
+  })
+});
+const rhythmDetailAchieveTier = record => RHYTHM_DETAIL_ACHIEVE_TIERS[rhythmAchievementMarkId(true, record)] || null;
 const rhythmSongArtHue = songId => {
   const text = String(songId || '');
   let hash = 0;
@@ -28516,7 +28534,16 @@ const RhythmSongSelect = ({
         className: "ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400"
       }), rowId && React.createElement("span", {
         className: `shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`
-      }, rowId), played ? React.createElement(React.Fragment, null, React.createElement("b", {
+      }, rowId), (() => {
+        const tier = played ? rhythmDetailAchieveTier(record) : null;
+        return tier ? React.createElement("span", _extends({}, main ? {
+          'data-rhythm-song-row-achieve': tier.id
+        } : {}, {
+          "data-rhythm-achieve-tone": tier.id,
+          title: tier.label,
+          className: "shrink-0 rounded px-1 py-px text-[8px] font-black italic leading-none [@container(max-width:350px)]:hidden"
+        }), tier.id === 'FULL_COMBO' ? 'FC' : tier.id === 'ALL_EXCELLENT' ? 'AE' : 'AM') : null;
+      })(), played ? React.createElement(React.Fragment, null, React.createElement("b", {
         className: `text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank] || 'text-slate-300'}`
       }, rank), React.createElement("span", {
         className: "truncate tabular-nums text-slate-300"
@@ -28548,17 +28575,39 @@ const RhythmSongSelect = ({
   }, "遊べる曲がありません。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-song-detail-grid": true,
     className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]"
-  }, React.createElement("div", {
-    "data-rhythm-song-detail-art": true,
-    className: "w-28 shrink-0 self-start landscape:w-[7.5rem]",
-    style: {
-      gridArea: 'art'
-    }
-  }, React.createElement(RhythmSongArt, {
-    song: song,
-    large: true,
-    onZoom: () => setArtZoom(true)
-  })), React.createElement("div", {
+  }, (() => {
+    const tier = rhythmDetailAchieveTier(best);
+    return React.createElement("div", _extends({
+      "data-rhythm-song-detail-art": true,
+      className: "relative w-28 shrink-0 self-start landscape:w-[7.5rem]",
+      style: {
+        gridArea: 'art'
+      }
+    }, tier ? {
+      'data-rhythm-detail-achieve': tier.id
+    } : {}), React.createElement(RhythmSongArt, {
+      song: song,
+      large: true,
+      onZoom: () => setArtZoom(true)
+    }), tier && React.createElement("span", {
+      key: `${song.songId}:${difficulty.id}`,
+      "aria-label": tier.label
+    }, React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-frame": ""
+    }), React.createElement("b", {
+      "data-rhythm-achieve-ribbon": ""
+    }, tier.text), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "1"
+    }, "✦"), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "2"
+    }, "✦"), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "3"
+    }, "✦")));
+  })(), React.createElement("div", {
     className: "min-w-0",
     style: {
       gridArea: 'title'
@@ -32732,7 +32781,7 @@ const RhythmTapTest = ({
         return;
       }
       if (!target) {
-        if (!input.rejudge) {
+        if (!input.rejudge || !RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)) {
           RHYTHM_PERF.emptyTap();
           RHYTHM_NOTE_SE_RUNTIME.playEmpty();
         }
@@ -33035,7 +33084,7 @@ const RhythmTapTest = ({
       subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
-    }], Number.isFinite(originStamp) ? rhythmInputAgeMs(originStamp, perfNow) : rhythmInputAgeMs(e.timeStamp, perfNow));
+    }], rhythmInputAgeMs(e.timeStamp, perfNow));
   };
   const pointerMove = e => {
     if (e.pointerType === 'touch' && !RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId)) return;
@@ -62134,7 +62183,7 @@ const rhythmMultiStampsFor = phase => {
 const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
 const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
 const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
-const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 25000;
+const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -62799,13 +62848,13 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     if (r.phase === 'ready' && r.round && s.talk.songRound !== r.round) {
       s.talk.songRound = r.round;
-      if (Math.random() < 0.6) cpuSay(cpuPickOne(), 'song', {
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'song', {
         songId: r.songId
       });
     }
-    if (r.phase === 'matching' || r.phase === 'select') {
+    if (r.phase === 'matching' || r.phase === 'select' || r.phase === 'result') {
       const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
-      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.15) {
+      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.3) {
         s.talk.idleAt = Date.now();
         cpuSay(cpuPickOne(), 'idle');
       }
@@ -62817,7 +62866,7 @@ const RHYTHM_MULTI = (() => {
         const row = team.rows.find(q => q.m.id === x.id);
         if (!row || !row.res || row.res.quit) return;
         const mvp = team.mvpId === x.id;
-        if (mvp || Math.random() < 0.7) cpuSay(x, 'result', {
+        cpuSay(x, 'result', {
           score: row.res.score,
           diffId: row.res.diffId,
           mvp
@@ -62873,7 +62922,7 @@ const RHYTHM_MULTI = (() => {
       c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
-      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.5) cpuSay(x, 'pick', {
+      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.9) cpuSay(x, 'pick', {
         songId: c.pick
       });
     }
@@ -103509,13 +103558,13 @@ const createAnimationStyle = () => {
     @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
     @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
     /* ==== レイドボス戦のモンヒロビート挑戦: 演奏が終わった直後のダメージ演出(RaidJackDamageFx)。約4.3秒・タップで飛ばせる ==== */
-    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px;
+    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px 16px calc(34px + env(safe-area-inset-bottom));
       background: radial-gradient(circle at 50% 48%, rgba(120,40,10,.55), rgba(12,4,24,0) 62%), #0c0418; color: #fff; --ja-c: 251,146,60; --ja-d: 253,186,116; animation: mhRjDmgIn .3s ease-out both, mhRjDmgOut .45s ease-in 3.85s forwards; }
     .mh-rjdmg-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 46%, #fff, rgba(var(--ja-c),.7) 40%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .7s ease-out 1s both; }
     .mh-rjdmg-score { position: relative; text-align: center; animation: mhRjRise .4s ease-out .1s both; }
     .mh-rjdmg-score small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fde68a; }
     .mh-rjdmg-score b { display: block; font-size: 40px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 rgba(0,0,0,.8), 0 0 18px rgba(253,224,71,.7); }
-    .mh-rjdmg-stage { position: relative; width: min(64vw, 270px); aspect-ratio: 1024 / 880; margin-top: 4px; }
+    .mh-rjdmg-stage { position: relative; flex: 0 1 auto; width: min(64vw, 270px, 36dvh, 36vh); aspect-ratio: 1024 / 880; margin-top: 4px; }
     .mh-rjdmg-jack { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; animation: mhRjJackIn .5s ease-out .2s both, mhRjJackHit .7s ease-out 1s both; }
     .mh-rjdmg-jack-none { animation: mhRjJackIn .5s ease-out .2s both; }
     .mh-rjdmg-slash { position: absolute; z-index: 2; left: -10%; width: 120%; height: 6px; top: 40%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 16px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-24deg) translateX(-60%); animation: mhRjSlash .5s ease-out 1s both; }
@@ -103536,6 +103585,7 @@ const createAnimationStyle = () => {
     @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
+    @media (max-height: 640px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
     @media (prefers-reduced-motion: reduce) { .mh-rjdmg, .mh-rjdmg * { animation-duration: .01s !important; animation-delay: 0s !important; } .mh-rjdmg-bar-fill { transform: scaleX(var(--to)); } .mh-rjdmg-damage, .mh-rjdmg-down { opacity: 1; } }
     /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
     .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }

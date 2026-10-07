@@ -2070,7 +2070,11 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     return true;
   };
   // ノーツに触れたとき(タップ・ホールドとスライドの始点)。judgment … 触れた瞬間のずれから出した判定(無ければいちばん良い音)
+  // 直前にノーツの音(タップ・フリック)を鳴らした時刻。成功した直後に指が少し動いたぶんの空押し音を、鳴らさないために使う
+  let lastNoteSeAt=0;
+  const recentNoteSe=ms=>lastNoteSeAt>0&&typeof performance!=='undefined'&&performance.now()-lastNoteSeAt<=ms;
   const play=(previewSettings=null,judgment=null)=>{
+    if(!previewSettings&&typeof performance!=='undefined')lastNoteSeAt=performance.now();
     if(inputGroupDepth>0)inputGroupHit=true;
     const settings=previewSettings?settingsFrom(previewSettings):readSettings();
     return voice(settings,'tap',judgment);
@@ -2116,7 +2120,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   const playClear=(judgment=null)=>{const settings=readSettings();return voice(settings,'end',judgment,settings.endVolume/100);};
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
-  const playFlick=(judgment=null)=>{const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
+  const playFlick=(judgment=null)=>{if(typeof performance!=='undefined')lastNoteSeAt=performance.now();const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
   // ===== ホールド・スライドを押さえているあいだの「シャラシャラ」(高いきらめき) =====
   // 経緯(2026-09-28・すべて同じ日):
   //   ① ユーザー「押してる間にウィーンみたいな溜めてるような音」→ のこぎり波が上がる「ウィーン」を入れた
@@ -2335,7 +2339,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -2532,7 +2536,9 @@ const RHYTHM_TOUCH_FIXES={
   //                 かつその間ゲームが本当に止まっていたと見えたときだけ。端末の記録で「止まっていないのに古い時刻」が多いと分かった端末では、自分で切る
   //   smoothSongClock … 標準では切ってある。端末の記録で、曲の時計が階段状に止まるコマが多い(2%以上)と分かった端末だけ、自分で入れる(全端末)
   //   autoPauseOnHidden … 標準で入れてある(全端末)。演奏中にアプリを離れたら、自動で一時停止する
-  inputAgeCap:true,
+  // 【2026-10-07 21時・ユーザー報告「昨日から色々直してかなりタップ抜けがひどくなった」】いったん標準では切る(10/6夕方の動きへ戻す)。
+  // 端末の記録で、押したずれの中央値が30〜50ms早い側へ出ていた。補正の効きすぎを疑って、原因が分かるまで戻す
+  inputAgeCap:false,
   smoothSongClock:false,
   autoPauseOnHidden:true,
   allPlatforms:false,
@@ -3013,7 +3019,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf-pendingInputAgeMs,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
@@ -3226,9 +3232,10 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
           action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane,baseKey,event?.timeStamp));
         });
         if(!eligible)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
-        // 押したあとの動き(指の太さが変わった・転がった)で新しく重なったサブレーンは、取れるノーツが無くても空押しの音を鳴らさない。
-        // 空押しは「押した瞬間にノーツが無かった」ときだけ(2026-10-07・成功したタップのあとに指が太くなると、音が余分に鳴っていた)
-        if(!isStart)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
+        // 指を滑らせてレーンが変わるたびの「シャッ」は鳴らす(ノーツが無いときの手ごたえ)。
+        // ただし、ノーツの音を鳴らした直後(150ms以内)に指が太くなった・転がっただけの動きでは鳴らさない
+        // (2026-10-07・成功したタップのあとに音が余分に鳴っていた。同日、滑らせても鳴らなくなったので、ここだけに絞り直した)
+        if(!isStart&&RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150))RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
         applyTouchSpanGlow();
       }finally{RHYTHM_NOTE_SE_RUNTIME.endInputGroup?.();}
     });
