@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f346966b1e7b1c2
+// generated-sha256: 419fc4f1cd570301
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 13:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 13:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38496,11 +38496,12 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10' }) {
   // 相棒(CPU)は、呼んだ人のマスモンを染めた姿で描く(種類 mb と色 mc は知らせに載っている)
   if (m.cpu) {
     const base = m.mb && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.mb] : null;
-    const src = base ? (base.faceIconUrl || base.iconUrl || base.imgUrl) : '';
+    // 染色は全身の絵に合わせて作ってあるので、顔アイコンではなく全身の絵を使う(2026-10-07 ユーザー指摘)
+    const src = masuDisplayImageUrl(base);
     return (
       <span data-rhythm-multi-cpu-avatar className={`relative block shrink-0 overflow-hidden rounded-full border-2 border-lime-300/80 bg-slate-800 ${sizeClass}`}>
         {src
-          ? <DyedMonsterImage baseId={m.mb} src={src} alt="" masuColors={Array.isArray(m.mc) ? m.mc.filter(Boolean) : []} draggable={false} className="h-full w-full object-cover" />
+          ? <DyedMonsterImage baseId={m.mb} src={src} alt="" masuColors={Array.isArray(m.mc) ? m.mc.filter(Boolean) : []} draggable={false} className="h-full w-full object-contain p-0.5" />
           : <span aria-hidden="true" className="flex h-full w-full items-center justify-center text-lg">🐾</span>}
       </span>
     );
@@ -39616,12 +39617,14 @@ const rhythmBuddyMakeBrain = (songs) => ({
 });
 
 // ---- 小さな部品 ----
+// 染色は全身の絵(imgUrl)に合わせて作ってあるので、顔アイコンではなく全身の絵を丸い枠に収める
+// (2026-10-07 ユーザー指摘「顔アイコンを使うと染色で絶対におかしくなる」)
 function RhythmBuddyFace({ masu, sizeClass = 'h-10 w-10' }) {
   const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
-  const src = base ? (base.faceIconUrl || base.iconUrl || base.imgUrl) : '';
+  const src = masuDisplayImageUrl(base);
   return (
     <span className={`relative block shrink-0 overflow-hidden rounded-full border-2 border-lime-300/70 bg-slate-800 ${sizeClass}`}>
-      {src ? <DyedMonsterImage baseId={masu.baseId} src={src} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-cover" />
+      {src ? <DyedMonsterImage baseId={masu.baseId} src={src} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain p-0.5" />
         : <span aria-hidden="true" className="flex h-full w-full items-center justify-center text-lg">🎵</span>}
     </span>
   );

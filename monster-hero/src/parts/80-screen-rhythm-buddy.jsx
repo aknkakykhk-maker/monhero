@@ -96,12 +96,14 @@ const rhythmBuddyMakeBrain = (songs) => ({
 });
 
 // ---- 小さな部品 ----
+// 染色は全身の絵(imgUrl)に合わせて作ってあるので、顔アイコンではなく全身の絵を丸い枠に収める
+// (2026-10-07 ユーザー指摘「顔アイコンを使うと染色で絶対におかしくなる」)
 function RhythmBuddyFace({ masu, sizeClass = 'h-10 w-10' }) {
   const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
-  const src = base ? (base.faceIconUrl || base.iconUrl || base.imgUrl) : '';
+  const src = masuDisplayImageUrl(base);
   return (
     <span className={`relative block shrink-0 overflow-hidden rounded-full border-2 border-lime-300/70 bg-slate-800 ${sizeClass}`}>
-      {src ? <DyedMonsterImage baseId={masu.baseId} src={src} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-cover" />
+      {src ? <DyedMonsterImage baseId={masu.baseId} src={src} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain p-0.5" />
         : <span aria-hidden="true" className="flex h-full w-full items-center justify-center text-lg">🎵</span>}
     </span>
   );
