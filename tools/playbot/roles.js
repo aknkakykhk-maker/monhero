@@ -17,6 +17,7 @@ const { raidScenario, halloweenScenario } = require('./scenarios/event');
 const { raidBeatScenario } = require('./scenarios/raidbeat');
 const { landscapeScenario } = require('./scenarios/landscape');
 const { buddyScenario } = require('./scenarios/buddy');
+const { storyTimingScenario, replayScenario } = require('./scenarios/story');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -123,6 +124,15 @@ const ROLES = [
     },
   },
   {
+    // 既読を入れない下準備(quiet: false)で始め、時計を合わせてから起動する(boot はシナリオの中)
+    id: 'story', name: 'ストーリー係', prepare: 'veteran', quiet: false,
+    does: '時計を開始の前後に合わせて、時刻で流れるストーリーが前は流れず後は流れるかを見る。イベント回想を1つずつ最後まで読む',
+    run: async (s, { phase }) => {
+      await phase('流れる時刻', () => storyTimingScenario(s));
+      await phase('回想を読む', () => replayScenario(s));
+    },
+  },
+  {
     id: 'legacy', name: '久しぶり係', prepare: 'legacy',
     does: '昔の形のセーブで開き、持ち物が消えない・移行が二重にかからない・そのまま遊べるかを見る',
     run: async (s, { phase, steps, rand }) => {
@@ -202,7 +212,7 @@ const ROLES = [
 const TEAMS = [
   { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
   { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat', 'landscape', 'buddy'] },
-  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore'] },
+  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore', 'story'] },
   { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean'] },
 ];
 

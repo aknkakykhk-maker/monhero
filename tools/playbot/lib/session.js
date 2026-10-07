@@ -206,7 +206,7 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     for (let i = 0; i < max; i++) {
       const list = await s.listButtons();
       const b = list.find((x) => x.overlay && /^スキップ$/.test(x.label))
-        || list.find((x) => x.overlay && /^(確認|閉じる|OK|受け取る|次へ|わかった！?|はい|とじる|×|今は見ない)$/.test(x.label));
+        || list.find((x) => x.overlay && /^(確認|閉じる|OK|受け取る|次へ|わかった！?|はい|とじる|×|今は見ない|あとで)$/.test(x.label));
       if (!b) break;
       if (!first) {
         first = await page.evaluate(({ x, y }) => {
