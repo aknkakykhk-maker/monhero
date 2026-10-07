@@ -575,6 +575,40 @@ const RHYTHM_MULTI = (() => {
     }
   };
   // 場面の変わり目で話す(曲が決まった・結果が出た)。1回の場面につき1度だけ
+  // 自分(呼んだ人)の名前。マスモンが名前で呼びかけるときに使う
+  const ownerName = () => { const me = selfMember(); return me ? me.name : ''; };
+  // 部屋の人の入室・退室・選曲への反応(2026-10-08・ユーザー指示「自分以外のプレイヤーにも反応する」)。
+  // はじめて見たときは黙って覚える。通信の乱れで一瞬いなくなって戻っただけなら、あいさつし直さない
+  const reactToHumans = (r) => {
+    const T = s.talk;
+    const humans = ordered().filter((m) => !m.cpu);
+    const now = Date.now();
+    if (!T.seen) { T.seen = {}; T.left = {}; T.pickSeen = {}; T.pickRound = ''; humans.forEach((m) => { T.seen[m.id] = m.name; }); return; }
+    humans.forEach((m) => {
+      if (T.seen[m.id]) { T.seen[m.id] = m.name; return; }
+      T.seen[m.id] = m.name;
+      if (T.left[m.id] && now - T.left[m.id] < 60000) return;
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'welcome', { who: m.name }, { skipGap: true });
+    });
+    Object.keys(T.seen).forEach((id) => {
+      if (humans.some((m) => m.id === id)) return;
+      const name = T.seen[id];
+      delete T.seen[id];
+      T.left[id] = now;
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'farewell', { who: name }, { skipGap: true });
+    });
+    // ほかの人が曲を選んだ(おまかせにした)とき、ときどき一言(自分の選曲には言わない)
+    if (r.phase === 'select') {
+      if (T.pickRound !== r.round) { T.pickRound = r.round; T.pickSeen = {}; }
+      humans.forEach((m) => {
+        if (m.id === s.selfId || m.pickRound !== r.round || !m.pick || T.pickSeen[m.id]) return;
+        T.pickSeen[m.id] = 1;
+        if (Math.random() >= 0.35) return;
+        if (m.pick === RHYTHM_MULTI_OMAKASE) cpuSay(cpuPickOne(), 'reactOmakase', { who: m.name }, { skipGap: true });
+        else cpuSay(cpuPickOne(), 'reactPick', { who: m.name, songId: m.pick }, { skipGap: true });
+      });
+    }
+  };
   const cpuTalkTick = () => {
     if (!s || !s.cpus.length) return;
     const r = s.room;
@@ -591,10 +625,13 @@ const RHYTHM_MULTI = (() => {
         const humans = ordered().filter((m) => !m.cpu);
         const target = humans.length ? humans[Math.floor(Math.random() * humans.length)] : null;
         const starter = cpuPickOne();
-        if (target && starter && Math.random() < 0.5) {
-          const how = Math.random() < 0.5;
-          cpuSay(starter, how ? 'qHow' : 'qFav', { who: target.name });
-          s.talk.awaiting = { cpuId: starter.id, from: target.id, kind: how ? 'how' : 'fav', until: Date.now() + RHYTHM_MULTI_CPU_AWAIT_MS };
+        if (target && starter && Math.random() < 0.6) {
+          const pickKind = Math.random();
+          if (pickKind < 0.67) {
+            const how = pickKind < 0.33;
+            cpuSay(starter, how ? 'qHow' : 'qFav', { who: target.name });
+            s.talk.awaiting = { cpuId: starter.id, from: target.id, kind: how ? 'how' : 'fav', until: Date.now() + RHYTHM_MULTI_CPU_AWAIT_MS };
+          } else cpuSay(starter, 'callOut', { who: target.name });
         } else cpuSay(starter, 'idle');
       }
     }
@@ -605,9 +642,17 @@ const RHYTHM_MULTI = (() => {
         const row = team.rows.find((q) => q.m.id === x.id);
         if (!row || !row.res || row.res.quit) return;
         const mvp = team.mvpId === x.id;
-        cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
+        cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp, who: ownerName() });
+      });
+      // 部屋の人(自分を含む)の結果への反応。目立つ結果(MVP・フルコン・高得点・伸びなかった・途中でやめた)にだけ、2人まで。
+      // 何を言うかは cpuBrain.talk の reactResult が決める(目立たない結果なら黙る)。MVPの人は先に
+      const humanRows = team.rows.filter((q) => !q.m.cpu && !q.m.gone && q.res);
+      humanRows.sort((a, b) => ((b.m.id === team.mvpId ? 2 : 0) + Math.random()) - ((a.m.id === team.mvpId ? 2 : 0) + Math.random()));
+      humanRows.slice(0, 2).forEach((q, i) => {
+        cpuSay(s.cpus[i % s.cpus.length], 'reactResult', { who: q.m.name, score: q.res.score, diffId: q.res.diffId, mvp: team.mvpId === q.m.id, fc: q.res.fc || 0, quit: !!q.res.quit }, { extraDelay: 1800 + i * 1500, skipGap: true });
       });
     }
+    reactToHumans(r);
   };
   // 人が入って5人を超えたら、呼んだマスモンは席をゆずって帰る。使った回数・券は呼んだ側へ返す(cpuBrain.refund)
   // (CPU どうしは呼んだ順に並ぶので、あとから呼んだ子から外れる)
@@ -816,7 +861,7 @@ const RHYTHM_MULTI = (() => {
       };
       oneCpuTick(s.cpus[s.cpus.length - 1]);
       sendOneCpuHb(id);
-      cpuSay(s.cpus[s.cpus.length - 1], 'join');
+      cpuSay(s.cpus[s.cpus.length - 1], 'join', { who: ownerName() });
       emit();
       return true;
     },

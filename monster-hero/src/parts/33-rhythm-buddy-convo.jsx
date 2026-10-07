@@ -379,8 +379,104 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     },
     mood: { great: ['{mate}!!今日は最高だね!!'], good: ['{mate}、いい感じ!'], normal: [], bad: ['{mate}…ちょっと不機嫌'], awful: ['{mate}…ほっといて'] },
   },
+
+  // ---- 部屋の人への反応(2026-10-08・ユーザー指示「自分以外のプレイヤーにも反応する」)。{who}さん は、性格ごとの呼び方に替わる ----
+  // 人が入ってきた
+  welcome: {
+    common: ['{who}さん、いらっしゃい!', '{who}さん、よろしくね!', '{who}さんが来た!', 'わーい、{who}さんだ!', '{who}さん、いっしょに遊ぼう!'],
+    trait: {
+      jester: ['お、{who}さん登場!盛り上がるぞ!'], brave: ['{who}さん、よく来た!手合わせしよう!'], clingy: ['{who}さん〜!来てくれてうれしい〜!'], smart: ['{who}さん、参加を確認しました。ようこそ'],
+      serious: ['{who}さん、ようこそ。よろしくお願いします'], proud: ['{who}さん、遅かったじゃない。待ってたわ'], worrier: ['{who}さん、き、来てくれたんだ…よかった…'], stubborn: ['{who}さんか。足は引っぱるなよ'], easygoing: ['{who}さん、いらっしゃ〜い'],
+    },
+    mood: { great: ['{who}さん!!待ってたよ!!'], good: ['{who}さん、よろしくお願いね!'], normal: [], bad: ['…{who}さん、どうも'], awful: ['…{who}さんか'] },
+  },
+  // 人が抜けた
+  farewell: {
+    common: ['{who}さん、またね!', '{who}さん、ばいばい!', '{who}さん、おつかれさま!', '{who}さん、また遊ぼうね!', 'あ、{who}さんが行っちゃった!'],
+    trait: {
+      jester: ['{who}さん、退場!またのご来場を!'], brave: ['{who}さん、また勝負しよう!'], clingy: ['{who}さん、行っちゃうの…?またね…'], smart: ['{who}さん、お疲れさまでした'],
+      serious: ['{who}さん、お疲れさまでした!'], proud: ['{who}さん、また来なさいよ'], worrier: ['{who}さん、気をつけてね…'], stubborn: ['{who}さんか。また来い'], easygoing: ['{who}さん、ばいば〜い'],
+    },
+    mood: { great: ['{who}さん、楽しかった!!また!!'], good: ['{who}さん、またねー!'], normal: [], bad: ['…{who}さん、じゃあね'], awful: ['…{who}さん、ばいばい'] },
+  },
+  // 人が曲を選んだ
+  reactPick: {
+    common: ['{who}さん、{song}にしたんだ!', '{who}さんは{song}か〜!', '{song}、いいね!{who}さん!', '{who}さんの{song}、たのしみ!', '{who}さん、いい選曲!'],
+    trait: {
+      jester: ['{who}さん、{song}で盛り上げる気だね!'], brave: ['{who}さん、{song}か!受けて立つ!'], clingy: ['{who}さん、{song}ぼくも好き〜!'], smart: ['{who}さんの{song}、分析しがいがあります'],
+      serious: ['{who}さん、{song}ですね。承知しました'], proud: ['{who}さん、{song}とはやるじゃない'], worrier: ['{who}さん、{song}…むずかしくない…?'], stubborn: ['{who}さん、{song}か。いい度胸だ'], easygoing: ['{who}さん、{song}いいね〜'],
+    },
+    mood: { great: ['{who}さん!{song}!最高!!'], good: ['{song}、いいね!'], normal: [], bad: ['{who}さん、{song}ね…'], awful: ['…{song}か'] },
+  },
+  // 人がおまかせにした
+  reactOmakase: {
+    common: ['{who}さんはおまかせなんだ!', '{who}さん、おまかせか〜', '{who}さんのおまかせ、たのしみ!', '何がくるかな、{who}さん!', 'おまかせもいいね、{who}さん!'],
+    trait: {
+      jester: ['{who}さん、おまかせとはお目が高い!'], brave: ['{who}さん、運まかせか!嫌いじゃない!'], clingy: ['{who}さんといっしょならなんでもいい〜'], smart: ['{who}さん、確率に任せるのも一手です'],
+      serious: ['{who}さん、おまかせですね。了解です'], proud: ['{who}さん、私が選んであげてもいいわよ'], worrier: ['{who}さん、むずかしい曲がきたらどうしよう…'], stubborn: ['{who}さん、決めきれんのか'], easygoing: ['{who}さん、おまかせでいいよね〜'],
+    },
+    mood: { great: [], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 人がMVPを取った
+  hMvp: {
+    common: ['{who}さん、MVPおめでとう!', '{who}さんがMVP!すごい!', 'やられた!{who}さんがMVPだ!', '{who}さん、かっこいい!MVP!', '{who}さんのMVP、おみごと!'],
+    trait: {
+      jester: ['{who}さんMVP!拍手喝采!ぱちぱち!'], brave: ['{who}さん、やるな!次は負けない!'], clingy: ['{who}さんすごい〜!ぼくもほめて〜!'], smart: ['{who}さんのスコア、見事な精度です'],
+      serious: ['{who}さん、MVPおめでとうございます!'], proud: ['{who}さん、やるじゃない。次は私が上よ'], worrier: ['{who}さん、すごい…わたしにはむりだ…'], stubborn: ['{who}さん、見事だ。次は負けん'], easygoing: ['{who}さん、すごいね〜MVP〜'],
+    },
+    mood: { great: ['{who}さん最高!!MVP!!'], good: ['{who}さん、さすが!'], normal: [], bad: ['…{who}さん、やるじゃん'], awful: ['…{who}さん、おめでと'] },
+  },
+  // 人が高いスコアを出した
+  hHigh: {
+    common: ['{who}さん、高得点!すごい!', '{who}さん、うまい!', '{who}さん、いい演奏だったね!', '{who}さん、さすが!', 'ナイス、{who}さん!'],
+    trait: {
+      jester: ['{who}さん、決めたね!拍手!'], brave: ['{who}さん、いい腕だ!'], clingy: ['{who}さんすごい〜!なでなでしてあげる〜'], smart: ['{who}さん、高い精度ですね'],
+      serious: ['{who}さん、お見事でした'], proud: ['{who}さん、悪くないわね'], worrier: ['{who}さん、すごい…ミスしてなかった…'], stubborn: ['{who}さん、よくやった'], easygoing: ['{who}さん、うまいね〜'],
+    },
+    mood: { great: ['{who}さん最高!!'], good: ['{who}さんいいね!'], normal: [], bad: ['…{who}さん、やるね'], awful: ['…{who}さん、まあまあ'] },
+  },
+  // 人が思ったより伸びなかった
+  hLow: {
+    common: ['{who}さん、どんまい!', '{who}さん、次があるよ!', '{who}さん、きにしないで!', '{who}さん、ひとやすみする?', '{who}さん、いっしょにがんばろう!'],
+    trait: {
+      jester: ['{who}さん、ズコーも芸のうち!'], brave: ['{who}さん、立ちあがれ!次だ!'], clingy: ['{who}さん、元気出して〜ぎゅっ'], smart: ['{who}さん、次は修正できます'],
+      serious: ['{who}さん、次に生かしましょう'], proud: ['{who}さん、あなたならできるわ'], worrier: ['{who}さん、だ、だいじょうぶ…?'], stubborn: ['{who}さん、あきらめるな。次だ'], easygoing: ['{who}さん、どんまい〜'],
+    },
+    mood: { great: ['{who}さん、次はいける!!'], good: ['{who}さん、次はいけるよ!'], normal: [], bad: ['…{who}さん、まあ、あるよ'], awful: ['…{who}さん、ドンマイ'] },
+  },
+  // 人がフルコンボをした
+  hFull: {
+    common: ['{who}さん、フルコン!すごい!', '{who}さん、ノーミス!?かっこいい!', '{who}さんのフルコン、見てたよ!', '{who}さん、パーフェクト!', '{who}さん、天才!'],
+    trait: {
+      jester: ['{who}さんフルコン!会場がわいた!'], brave: ['{who}さん、お見事!次は私も取る!'], clingy: ['{who}さんすごすぎる〜!!'], smart: ['{who}さん、驚異的な精度です'],
+      serious: ['{who}さん、フルコンおめでとうございます!'], proud: ['{who}さん、やるわね。認めてあげる'], worrier: ['{who}さん、すごい…ほんとに人間…?'], stubborn: ['{who}さん、見事だ。脱帽だ'], easygoing: ['{who}さん、フルコンすごいね〜'],
+    },
+    mood: { great: ['{who}さん!!最高!!フルコン!!'], good: ['{who}さん、すごい!'], normal: [], bad: ['…{who}さん、やるね'], awful: ['…{who}さん、すごいね'] },
+  },
+  // 人が途中でやめた
+  hQuit: {
+    common: ['{who}さん、だいじょうぶ?', '{who}さん、途中でやめたの?', '{who}さん、無理しないでね', '{who}さん、またがんばろう!', '{who}さん、どうしたの?'],
+    trait: {
+      jester: ['{who}さん、途中退場とは粋だね!'], brave: ['{who}さん、次は最後まで行こう!'], clingy: ['{who}さん、どうしたの…?心配…'], smart: ['{who}さん、体調は大丈夫ですか?'],
+      serious: ['{who}さん、お体を大切に'], proud: ['{who}さん、たまにはそんな日もあるわ'], worrier: ['{who}さん、だ、大丈夫…?なにかあった…?'], stubborn: ['{who}さん、次は最後までやれ'], easygoing: ['{who}さん、ゆっくりでいいよ〜'],
+    },
+    mood: { great: ['{who}さん、次は最後まで!!'], good: ['{who}さん、次はいけるよ!'], normal: [], bad: ['…{who}さん、どうしたの'], awful: ['…{who}さん'] },
+  },
+  // 人に名前で呼びかける(静かなとき)
+  callOut: {
+    common: ['{who}さん、楽しんでる?', '{who}さん、調子はどう?', 'ねえ、{who}さん!', '{who}さん、いっしょにがんばろうね!', '{who}さん、次の曲たのしみだね!'],
+    trait: {
+      jester: ['{who}さん、ひとネタいく?'], brave: ['{who}さん、今日は勝負だ!'], clingy: ['{who}さ〜ん、そばにいてね〜'], smart: ['{who}さん、次の選曲は決まりましたか'],
+      serious: ['{who}さん、本日もよろしくお願いします'], proud: ['{who}さん、私の演奏、期待してなさい'], worrier: ['{who}さん、ぼ、ぼく足を引っぱってない…?'], stubborn: ['{who}さん、手は抜くなよ'], easygoing: ['{who}さ〜ん、のんびりいこ〜'],
+    },
+    mood: { great: ['{who}さん!!今日は最高だね!!'], good: ['{who}さん、いい感じだね!'], normal: [], bad: ['…{who}さん'], awful: ['…{who}さん、なに'] },
+  },
 });
 
+// 返事の頭に、人の名前を呼びかける言葉を付けてよい場面(ときどき。「{who}さん、」の部分は性格ごとの呼び方になる)
+const RHYTHM_BUDDY_CONVO_CALLABLE = Object.freeze(['replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'howMe', 'lvAsk',
+  'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk', 'cute', 'sorry', 'laugh', 'tired', 'hungry', 'sad', 'happy', 'cheer', 'fullcombo', 'missTalk',
+  'hardTalk', 'easyTalk', 'bye', 'challenge', 'hey', 'songTalk', 'join', 'mvp', 'high', 'mid', 'low']);
 // 書き換えられない1つの表にする(rhythmBuddyTalkPick が、場面の名前でここも探す)
 const RHYTHM_BUDDY_CONVO_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_CONVO_BASE));
 const RHYTHM_BUDDY_CONVO = typeof rhythmBuddyTalkMerge === 'function'

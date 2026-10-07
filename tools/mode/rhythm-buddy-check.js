@@ -582,6 +582,74 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   check('呼びかけの無い発言には1体だけが返し、もう1体が話に加わる(マスモンどうし)', t.filter((x) => x.kind === 'replyNice').length === 1 && t.some((x) => x.kind === 'banter' && x.mate), JSON.stringify(t.map((x) => `${x.masuId}:${x.kind}:${x.mate || ''}`)));
   a.M.leave();
 }
+// B-13 部屋のほかの人への反応(入室・退室・選曲・結果)と、名前での呼びかけ
+{
+  const a = makeClient('A', { talk: true });
+  join(a, 'REACT', 'private', 0);
+  clock.advance(3000);
+  a.M.summon(MATE);
+  clock.advance(5000);
+  check('呼ばれたとき、呼んだ人の名前を渡して話す(名前で呼びかけられる)', a.talks.some((t) => t.kind === 'join' && t.who === 'A'), JSON.stringify(a.talks.map((t) => `${t.kind}:${t.who || ''}`)));
+  const b = makeClient('B', { brain: false });
+  const n0 = a.talks.length;
+  join(b, 'REACT', 'private', 1);
+  clock.advance(6000);
+  const welcomes = a.talks.slice(n0).filter((t) => t.kind === 'welcome');
+  check('ほかの人が入ってくると、名前を呼んであいさつする', welcomes.length === 1 && welcomes[0].who === 'B', JSON.stringify(a.talks.slice(n0).map((t) => `${t.kind}:${t.who || ''}`)));
+  a.M.confirmMembers();
+  clock.advance(2500);
+  check('選曲の段へ進む', phaseOf(a) === 'select', phaseOf(a));
+  const n1 = a.talks.length;
+  b.M.pick('songB');
+  clock.advance(4000);
+  const picks = a.talks.slice(n1).filter((t) => t.kind === 'reactPick');
+  check('ほかの人が曲を選ぶと、その人の名前と曲で反応する', picks.length === 1 && picks[0].who === 'B' && picks[0].songId === 'songB', JSON.stringify(a.talks.slice(n1).map((t) => `${t.kind}:${t.who || ''}:${t.songId || ''}`)));
+  a.M.pick('songB');
+  clock.advance(5000);
+  check('みんなが選ぶと準備の段へ', phaseOf(a) === 'ready', phaseOf(a));
+  a.M.ready(); b.M.ready();
+  clock.advance(3000);
+  check('ライブが始まる', phaseOf(a) === 'playing' && a.starts.length === 1, phaseOf(a));
+  b.M.reportResult(view(b).room.round, { score: 990000, maxCombo: 300, cleared: true, judgments: {}, fc: 1 }, false, { diffId: 'HARD' });
+  a.M.reportResult(view(a).room.round, { score: 500000, maxCombo: 100, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
+  const n2 = a.talks.length;
+  clock.advance(8000);
+  const reacts = a.talks.slice(n2).filter((t) => t.kind === 'reactResult');
+  check('人の結果に反応する(最大2人まで)', reacts.length >= 1 && reacts.length <= 2, JSON.stringify(a.talks.slice(n2).map((t) => `${t.kind}:${t.who || ''}`)));
+  const forB = reacts.find((t) => t.who === 'B');
+  check('MVPの人が先に反応される(スコア・難易度・MVPかどうか・フルコンの印つき)', !!forB && forB.score === 990000 && forB.diffId === 'HARD' && forB.mvp === true, JSON.stringify(reacts));
+  check('自分の結果にも、自分の名前で反応する(話しかける相手の名前が渡る)', a.talks.slice(n2).some((t) => t.kind === 'result' && t.who === 'A'));
+  const n3 = a.talks.length;
+  b.M.leave();
+  clock.advance(12000);
+  const byes = a.talks.slice(n3).filter((t) => t.kind === 'farewell');
+  check('ほかの人が出ていくと、その人の名前でお別れを言う', byes.length === 1 && byes[0].who === 'B', JSON.stringify(a.talks.slice(n3).map((t) => `${t.kind}:${t.who || ''}`)));
+  const n4 = a.talks.length;
+  clock.advance(6000);
+  check('同じ人に、あいさつし直さない', !a.talks.slice(n4).some((t) => t.kind === 'welcome' || t.kind === 'farewell'));
+  a.M.leave();
+}
+// B-13b 途中でやめた人にも反応する
+{
+  const a = makeClient('A', { talk: true });
+  const b = makeClient('B', { brain: false });
+  join(a, 'REACT2', 'private', 0);
+  join(b, 'REACT2', 'private', 1);
+  clock.advance(3000);
+  a.M.summon(MATE);
+  clock.advance(3000);
+  a.M.confirmMembers(); clock.advance(2500);
+  a.M.pick('songA'); b.M.pick('songA'); clock.advance(5000);
+  a.M.ready(); b.M.ready(); clock.advance(3000);
+  b.M.reportResult(view(b).room.round, null, true, { diffId: 'HARD', noPenalty: true });
+  a.M.reportResult(view(a).room.round, { score: 800000, maxCombo: 100, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
+  const n = a.talks.length;
+  clock.advance(8000);
+  const quit = a.talks.slice(n).find((t) => t.kind === 'reactResult' && t.who === 'B');
+  check('途中でやめた人には、やめたことを伝えて反応する(quit の印つき)', !!quit && quit.quit === true, JSON.stringify(a.talks.slice(n).map((t) => `${t.kind}:${t.who || ''}:${t.quit}`)));
+  a.M.leave(); b.M.leave();
+}
+
 // B-12 古い端末のおしゃべりの頭(understand が無い)でも、これまでの返事はする
 {
   const a = makeClient('A', { talk: true });

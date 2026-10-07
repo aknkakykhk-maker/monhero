@@ -92,7 +92,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
   // 直近に言ったものは避ける(マスモンごとに8つ覚える)
-  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '' }) {
+  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -101,6 +101,13 @@ const rhythmBuddyMakeBrain = (songs) => ({
       const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
+    }
+    // 部屋のほかの人(自分を含む)の結果への反応。目立つ結果(MVP・フルコン・高得点・伸びなかった・途中でやめた)だけに反応する
+    if (kind === 'reactResult') {
+      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
+      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? 'hLow' : '';
+      if (!scene) return '';
     }
     const nameOf = (id) => { const song = id ? (songs || []).find((x) => x.songId === id) : null; if (!song) return ''; const full = rhythmSongFullName(song); return full.length <= 14 ? full : String(song.displayName || full); };
     // 会話のセリフに混ぜる、自分の育ち(無いものは入れない。値の無い穴を持つ文は選ばれない)
@@ -120,7 +127,14 @@ const rhythmBuddyMakeBrain = (songs) => ({
     };
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
-    const text = rhythmBuddyTalkPick({ kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal', vars, recent, rand: Math.random });
+    // 人の呼び方は性格で変わる(「たろうっち」「たろうちゃん」「たろう様」「たろう」)
+    vars.hon = rhythmBuddyHonorific(norm.trait);
+    let text = rhythmBuddyTalkPick({ kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal', vars, recent, rand: Math.random });
+    // 返事の頭に、ときどき名前の呼びかけを付ける(「たろうっち、ナイス!」)。入りきらない・すでに名前が入っているときは付けない
+    if (text && vars.who && RHYTHM_BUDDY_CONVO_CALLABLE.indexOf(scene) >= 0 && text.indexOf(vars.who) < 0 && Math.random() < 0.3) {
+      const call = `${vars.who}${vars.hon}、`;
+      if ((call + text).length <= RHYTHM_BUDDY_TALK_MAX) text = call + text;
+    }
     if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
     return text;
   },

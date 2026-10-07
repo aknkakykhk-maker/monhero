@@ -25,9 +25,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing'];
 const MOODS = ['great', 'good', 'normal', 'bad', 'awful'];
 const HOLES = ['who', 'me', 'lv', 'mood', 'trait', 'song', 'fav', 'score', 'days', 'plays', 'mate'];
+const HON = { jester: 'っち', brave: '', clingy: 'ちゃん', smart: 'さん', serious: '様', proud: '', worrier: 'さん', stubborn: '', easygoing: 'さん' };
 
 // ===== セリフ集 =====
-check('会話の場面は29個', C.kinds.length === 29 && C.kinds.every((k) => C.convo[k]), String(C.kinds.length));
+check('会話の場面は39個', C.kinds.length === 39 && C.kinds.every((k) => C.convo[k]), String(C.kinds.length));
 const missing = [];
 C.kinds.forEach((k) => {
   const set = C.convo[k];
@@ -47,7 +48,7 @@ C.kinds.forEach((k) => {
   MOODS.forEach((m) => (set.mood[m] || []).forEach((l) => all.push([k, l])));
 });
 check('同じ場面で同じセリフを2度書いていない', new Set(all.map(([k, l]) => `${k}|${l}`)).size === all.length, `${all.length - new Set(all.map(([k, l]) => `${k}|${l}`)).size}件の重複`);
-check('会話のセリフは450以上', all.length >= 450, String(all.length));
+check('会話のセリフは600以上', all.length >= 600, String(all.length));
 const talkTotal = (() => { let n = 0; Object.keys(C.talk).forEach((k) => { const x = C.talk[k]; n += x.common.length; TRAITS.forEach((t) => { n += (x.trait[t] || []).length; }); MOODS.forEach((m) => { n += (x.mood[m] || []).length; }); }); return n; })();
 console.log(`   会話のセリフ: ${all.length} / 場面ごと: ${C.kinds.map((k) => `${k}=${all.filter(([kk]) => kk === k).length}`).join(' ')} / いままでのおしゃべり: ${talkTotal} / 合わせて ${all.length + talkTotal}`);
 const badHole = [];
@@ -61,7 +62,7 @@ const noBrace = all.filter(([, l]) => /[{}]/.test(l.replace(/\{[a-z]+\}/g, '')))
 check('「{」「}」が穴以外に残っていない', noBrace.length === 0);
 
 // ===== 選べる(どの値が無くても黙らない)=====
-const NEED = { banter: ['mate'], qHow: ['who'], qFav: ['who'], songTalk: ['song'], nameAsk: ['me'] };
+const NEED = { banter: ['mate'], qHow: ['who'], qFav: ['who'], songTalk: ['song'], nameAsk: ['me'], welcome: ['who'], farewell: ['who'], reactPick: ['who', 'song'], reactOmakase: ['who'], hMvp: ['who'], hHigh: ['who'], hLow: ['who'], hFull: ['who'], hQuit: ['who'], callOut: ['who'] };
 const vars0 = {}; // 値がまだ何も無い(性格も得意な曲も決まっていない)
 const silent = [];
 C.kinds.forEach((k) => ['', ...TRAITS].forEach((t) => MOODS.forEach((m) => {
@@ -113,6 +114,21 @@ const t0 = Date.now();
 const longText = 'あ'.repeat(5000) + 'ナイス' + 'w'.repeat(3000);
 for (let i = 0; i < 50; i++) P(longText);
 check('長い発言でも、読み取りは一瞬(50回で1秒未満)', Date.now() - t0 < 1000, `${Date.now() - t0}ms`);
+
+
+// ===== 性格ごとの呼び方 =====
+{
+  const hon = vm.runInContext('rhythmBuddyHonorific', sb);
+  check('性格ごとの呼び方が決まっている(ひょうきん=っち・甘えん坊=ちゃん・真面目=様・勇敢/プライド/頑固=呼び捨て)', TRAITS.every((t) => hon(t) === HON[t]) && hon('') === 'さん' && hon('unknown') === 'さん' && hon(null) === 'さん');
+  const callOf = (trait) => { const seen = new Set(); for (let i = 0; i < 200; i++) seen.add(C.pick({ kind: 'welcome', trait, moodId: 'normal', vars: { who: 'たろう' }, recent: [], rand: Math.random })); return [...seen]; };
+  check('「{who}さん」は、性格ごとの呼び方に替わる(ひょうきん→たろうっち / 甘えん坊→たろうちゃん / 真面目→たろう様 / 勇敢→呼び捨て)',
+    callOf('jester').some((t) => t.includes('たろうっち')) && !callOf('jester').some((t) => t.includes('たろうさん'))
+    && callOf('clingy').some((t) => t.includes('たろうちゃん')) && callOf('serious').some((t) => t.includes('たろう様'))
+    && callOf('brave').some((t) => /たろう[^さっちゃ様]/.test(t)) && !callOf('brave').some((t) => /たろうさん|たろうっち|たろうちゃん|たろう様/.test(t)) && callOf('smart').some((t) => t.includes('たろうさん')));
+  check('呼び方を渡せば(vars.hon)、それを使う', C.pick({ kind: 'welcome', trait: 'jester', moodId: 'normal', vars: { who: 'たろう', hon: 'どの' }, recent: [], rand: () => 0 }).includes('たろうどの'));
+  check('性格が決まる前は「さん」', (() => { for (let i = 0; i < 100; i++) { const t = C.pick({ kind: 'welcome', trait: '', moodId: 'normal', vars: { who: 'たろう' }, recent: [], rand: Math.random }); if (/たろう(っち|ちゃん|様)/.test(t)) return false; } return true; })());
+  check('呼びかけを付けてよい場面の名前は、どれも会話か今までのおしゃべりの場面', vm.runInContext('RHYTHM_BUDDY_CONVO_CALLABLE', sb).every((k) => k in C.convo || k in C.talk));
+}
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
