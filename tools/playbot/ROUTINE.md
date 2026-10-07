@@ -7,13 +7,14 @@
 - 班ごとに**いつも同じセッション**を使う。ユーザーはそのセッションを開いて、その班の報告を読み・見返し・決める
 - 報告と**提案**を出し、決めてほしいことを選択式で聞く。答えが来たら、**そのセッションが**マージや実装まで進める
 - このセッションがどの班かは、定期実行の文面に書いてある(`--team <班id>`)。班の表は `tools/playbot/roles.js` の `TEAMS`
+- 班のセッションのモデルは **Sonnet 5.5・エフォート高**(2026-10-07 ユーザー指示)。作り直すときも `create_session` の `model` に `claude-sonnet-5-5` を入れる
 
 | 班 | `--team` | 担当 | セッション(いま) | 記録 |
 | --- | --- | --- | --- | --- |
-| バトル班 | `battle` | バトル係・タクティクス係・AUTO係 | `session_01Tbsz7uovjVuhfH2ZLnXks2` | `docs/playbot/history/battle.md` |
-| 音ゲー班 | `rhythm` | 音ゲー係・ランキング係(記録を共有するので離さない) | `session_01B9DiwN7bMZX8GS1759wUe5` | `docs/playbot/history/rhythm.md` |
-| はじめて・見回り班 | `patrol` | 新人係・案内係・探検係 | `session_01H8xVjfSHJqCNsytEzhiZdU` | `docs/playbot/history/patrol.md` |
-| 守り班 | `guard` | 久しぶり係・時計係 | `session_01FMvsiPQhHVLrMjeG9RZs4s` | `docs/playbot/history/guard.md` |
+| バトル班 | `battle` | バトル係・タクティクス係・AUTO係 | `session_01JEr9tDMYKaEM1yA1yBv46Z` | `docs/playbot/history/battle.md` |
+| 音ゲー班 | `rhythm` | 音ゲー係・ランキング係(記録を共有するので離さない) | `session_01NS12tYT8MdGQhNjvw8dS56` | `docs/playbot/history/rhythm.md` |
+| はじめて・見回り班 | `patrol` | 新人係・案内係・探検係 | `session_01PHekXAt2C5NAZBXL1sh5gG` | `docs/playbot/history/patrol.md` |
+| 守り班 | `guard` | 久しぶり係・時計係 | `session_01X1m4SRfy1rxcJemHM8n5PU` | `docs/playbot/history/guard.md` |
 
 ## 決めごと(ユーザーの指示)
 
@@ -93,7 +94,7 @@
 
 | だれ | 役目 |
 | --- | --- |
-| **班のセッション**(上の表の4つ) | 毎晩: 手順 0〜8(遊ぶ・調べる・小さな修正 PR・報告・提案・記録)/ ユーザーの答えが来たら: 手順9(マージ・提案の実装) |
+| **班のセッション**(上の表の4つ) | 日・水の夜中: 手順 0〜8(遊ぶ・調べる・小さな修正 PR・報告・提案・記録)/ ユーザーの答えが来たら: 手順9(マージ・提案の実装) |
 | **窓口の会話**(いま: 「モンヒロくん1号」`session_01MC7KZtt5oyrsS32Hc57TXv`) | 班をまたぐこと: 班のセッションの作り直し・定期実行の付け替え・班の組み替え・全体の決めごと(`HISTORY.md`) |
 | **作り手の会話**(いま: 「モンヒロくん役割割当」`session_01911k2UUtVGudFqekCw9DB9`) | 新しい担当・遊び方を足す / ボットの大きな作り直し。足したら `roles.js` の `TEAMS` のどこかの班へ入れ、`HISTORY.md` に1〜2行書く |
 
@@ -110,7 +111,7 @@
 
 窓口(または、このリポジトリを付けた新しい会話)で「**モンヒロくん<班の名前>のセッションを作り直して**」と言う。受けた Claude は次を行う。
 
-1. `create_session`(`source_url=https://github.com/aknkakykhk-maker/monhero`、`permission_mode=auto`、タイトル「モンヒロくん<班の名前>」、prompt なし)で立て直す
+1. `create_session`(`source_url=https://github.com/aknkakykhk-maker/monhero`、`permission_mode=auto`、タイトル「モンヒロくん<班の名前>」、`model=claude-sonnet-5-5`、prompt なし)で立て直す(エフォート高はユーザーがセッションの画面で選ぶ)
 2. `list_triggers` でその班の定期実行を探して `delete_trigger` で消し、`create_trigger`(`persistent_session_id` に新しいセッション、同じ時刻。例 `CRON_TZ=Asia/Tokyo 51 2 * * 0,3`)で
    作り直す。文面は下の「定期実行の文面」の <班> を入れ替えて使う
 3. この手順書の上の表の「セッション(いま)」を書き換える(PR を作ってマージ)
@@ -118,7 +119,7 @@
 ### 定期実行の文面
 
 ```
-モンヒロくん<班の名前>の毎晩のプレイです。返答はすべて日本語で。
+モンヒロくん<班の名前>のプレイ(日・水)です。返答はすべて日本語で。
 リポジトリの tools/playbot/ROUTINE.md と CLAUDE.md を読み直し(毎回 git fetch origin main して最新にする)、--team <班id> で手順 0〜8 を行ってください。
 報告と提案はこの会話に出し、決めてほしいことは選択式で聞いてください。修正 PR はユーザーの答えが来るまでマージしない。
 ```
