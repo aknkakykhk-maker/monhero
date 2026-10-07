@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 21298feb48fb0b0a
+// generated-sha256: 8183f6ca8aa2f8b3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 12:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5527,8 +5527,18 @@ const Audio_ = (() => {
       // 直し方 smoothSongClock を入れた端末では、段の間を performance.now() でなめらかに埋める
       // (段の値へゆっくり寄せ、離れすぎたら段の値に戻す。入れていない端末では、これまでどおり段の値そのまま)。2026-10-07
       let smoothSong=0,smoothPerf=0;
+      // 端末が申告する「いま耳に届いている位置」(getOutputTimestamp)と ctx.currentTime の差。0.5秒おきに測って中央値を診断へ残す。
+      // 出力遅延の申告(outputLatency)が無い端末(Safari)で、補正が足りているかを見る手がかり。判定には使わない(2026-10-07)
+      const tsLatSamples=[];let tsLatAt=0;
+      const sampleTsLatency=()=>{
+        if(typeof ctx.getOutputTimestamp!=='function'||typeof performance==='undefined')return;
+        const p=performance.now();if(p-tsLatAt<500||tsLatSamples.length>=20)return;tsLatAt=p;
+        try{const ts=ctx.getOutputTimestamp();const d=(ctx.currentTime-Number(ts&&ts.contextTime))*1000;if(Number.isFinite(d)&&d>=0&&d<=1000&&Number(ts.contextTime)>0)tsLatSamples.push(d);}catch{}
+      };
+      const tsLatMs=()=>{if(tsLatSamples.length<3)return null;const s=tsLatSamples.slice().sort((a,b)=>a-b);return Math.round(s[s.length>>1]);};
       const songTimeSeconds=()=>{
         const raw=rawSongTimeSeconds();
+        if(playing)sampleTsLatency();
         if(!playing||!rhythmTouchFixOn('smoothSongClock')||typeof performance==='undefined'){smoothPerf=0;return raw;}
         const p=performance.now();
         if(!(smoothPerf>0)){smoothSong=raw;smoothPerf=p;return raw;}
@@ -5545,7 +5555,7 @@ const Audio_ = (() => {
         started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
         // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
-        info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
+        info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
         durationMs:buffer.duration*1000,
         ended:()=>naturallyEnded||songTimeSeconds()>=buffer.duration,
         paused:()=>!playing&&!stopped&&!naturallyEnded,
@@ -19736,7 +19746,7 @@ const preciseHit=rhythmJudgmentIsPrecise(judgment,deltaMs);
 // 「普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合う」)。
 // ★判定・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れない。貯めるだけ。
 // ★MISSは入れない(叩けていないので、そのずれは意味を持たない)。
-if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){if(!Array.isArray(run.deltas))run.deltas=[];run.deltas.push(deltaMs);}
+if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){if(!Array.isArray(run.deltas))run.deltas=[];run.deltas.push(deltaMs);}if(!calibrating&&note&&note.type==='TAP'&&judgment!=='MISS')RHYTHM_TIMING_DIAG.bias(deltaMs);
 // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
 // TAPは指を置いた時点で音が鳴っているので対象にしない。
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
@@ -19953,6 +19963,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // 遊んだ記録を送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせ・アシストモードは送らない
     if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
     // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
+    if(!debugPlay&&!tutorial&&!calibrating){try{RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());}catch{}}
     const touchDiag=!debugPlay&&!tutorial&&!calibrating?rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed}):null;
     if(touchDiag)void rhythmTouchDiagRecord(touchDiag);
     // リザルトの「押したのに反応しないことがあった」に渡す。タッチで遊ぶ端末(iPhone・Android)だけ

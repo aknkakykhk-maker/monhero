@@ -1226,10 +1226,12 @@ const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 //   outLatMs / baseLatMs / hasTs / rate / headMs … その端末の出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音の長さ
 const RHYTHM_TIMING_DIAG=(()=>{
   const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
-  let stats=zero(),meta={},lastSong=null,lastTick=0,lastStallAt=0;
+  let stats=zero(),meta={},lastSong=null,lastTick=0,lastStallAt=0,biasList=[];
   const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
   return {
-    reset(){stats=zero();meta={};lastSong=null;lastTick=0;lastStallAt=0;},
+    reset(){stats=zero();meta={};lastSong=null;lastTick=0;lastStallAt=0;biasList=[];},
+      // 単押しを取ったときのずれ(ms。正=遅い側)。端末の音の遅れが合っているかの手がかり。診断に中央値と数だけ残す(2026-10-07)
+      bias(deltaMs){const v=Number(deltaMs);if(Number.isFinite(v)&&Math.abs(v)<=200&&biasList.length<600)biasList.push(v);},
     // 直近 ms のあいだに、80ms以上コマが止まったか(取りこぼしの回収を、止まったあとだけ長くするのに使う)
     recentStall(ms){return lastStallAt>0&&typeof performance!=='undefined'&&performance.now&&performance.now()-lastStallAt<=ms;},
     age(value){const v=Number(value);if(!(v>=0)||v>5000)return;stats.ageHist[bucket(v)]++;if(v>RHYTHM_INPUT_AGE_MAX_MS)stats.ageCapped++;},
@@ -1241,7 +1243,7 @@ const RHYTHM_TIMING_DIAG=(()=>{
     meta(value){if(value&&typeof value==='object')meta={...meta,...value};},
     hidden(){stats.hidden++;},
     pen(){stats.pen++;},
-    snapshot(){return {...stats,ageHist:stats.ageHist.slice(),...meta};},
+    snapshot(){const sorted=biasList.slice().sort((a,b)=>a-b),n=sorted.length;return {...stats,ageHist:stats.ageHist.slice(),biasN:n,biasMs:n?Math.round(sorted[n>>1]*10)/10:null,...meta};},
   };
 })();
 // 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
