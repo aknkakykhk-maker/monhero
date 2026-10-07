@@ -59,7 +59,7 @@ async function rankingScenario(s, { rhythm } = {}) {
   await s.backHome();
   const note = botRows.length
     ? `${picked.song} ${picked.difficulty}: 自分の記録が${showsBot ? '見えた' : '見えない'}・ほかの人 ${rivalsShown}/${RIVAL_NAMES.length}種の名前が見えた・タブ ${pressed.length}個`
-    : `音ゲー係の記録が無いので、空のランキングを見た(${picked.song} ${picked.difficulty})・タブ ${pressed.length}個`;
+    : `直前の演奏の記録が無いので、空のランキングを見た(${picked.song} ${picked.difficulty})・タブ ${pressed.length}個`;
   return { ok: !botRows.length || (showsBot && rivalsShown > 0), note, stats: { showsBot, rivalsShown, tabs: pressed } };
 }
 
