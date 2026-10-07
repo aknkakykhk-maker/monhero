@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00b1975a56a2bab3
+// source-sha256: 691bd1269b50c0ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 14:41";
+const BUILD_DATE = "2026-10-07 17:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61381,11 +61381,12 @@ const RHYTHM_MULTI = (() => {
     sendHb();
     emit();
   };
+  const humanCount = () => ordered().filter(m => !m.cpu).length;
   const toSelect = () => setRoom({
     phase: 'select',
     round: rhythmMultiMakeId('r'),
     songId: '',
-    deadline: Date.now() + RHYTHM_MULTI_SELECT_MS,
+    deadline: humanCount() <= 1 ? 0 : Date.now() + RHYTHM_MULTI_SELECT_MS,
     participants: []
   });
   const doDraw = members => {
@@ -61445,6 +61446,22 @@ const RHYTHM_MULTI = (() => {
         return;
       }
       const allPicked = members.every(m => m.pickRound === r.round && m.pick);
+      if (humanCount() <= 1) {
+        if (r.deadline) {
+          setRoom({
+            deadline: 0
+          });
+          return;
+        }
+        if (allPicked) doDraw(members);
+        return;
+      }
+      if (!r.deadline) {
+        setRoom({
+          deadline: now + RHYTHM_MULTI_SELECT_MS
+        });
+        return;
+      }
       if (allPicked || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doDraw(members);
     } else if (r.phase === 'ready') {
       const allReady = members.every(m => m.readyRound === r.round);
@@ -64157,7 +64174,7 @@ function RhythmMultiScreen({
     "data-rhythm-multi-step": "select",
     className: shell
   }, header('楽曲シャッフル ・ 選曲', leaveRoom, {
-    timer: room.left,
+    timer: room.deadline ? room.left : null,
     advance: '締め切る'
   }), React.createElement(RhythmMultiMemberCards, {
     bubbleOf: chatBubbleOf,
@@ -64185,7 +64202,7 @@ function RhythmMultiScreen({
     hideRandom: true,
     notice: React.createElement(React.Fragment, null, React.createElement("p", {
       className: "rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
-    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。"), buddyCallButton('mt-1 min-h-[40px]')),
+    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。", !room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'), buddyCallButton('mt-1 min-h-[40px]')),
     footer: () => React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {

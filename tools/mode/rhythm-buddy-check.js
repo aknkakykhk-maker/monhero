@@ -370,6 +370,43 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   a.M.leave();
 }
 
+// B-7 人がひとりだけ(あとは呼んだマスモン)のあいだは、選曲の制限時間を進めない
+{
+  const a = makeClient('A');
+  join(a, 'FREE1', 'free');
+  clock.advance(3000);
+  a.M.summon(MATE);
+  clock.advance(18000);
+  check('ひとりとマスモンで、選曲の段へ進む', phaseOf(a) === 'select', phaseOf(a));
+  const r0 = view(a).room;
+  check('選曲の段は、制限時間なし(deadline 0)', r0.deadline === 0 && r0.left === 0, JSON.stringify({ d: r0.deadline, l: r0.left }));
+  clock.advance(120000);
+  check('2分待っても、選曲の段のまま(おまかせにならず、勝手に抽選もされない)', phaseOf(a) === 'select' && view(a).members.find((m) => !m.cpu).pick === '', phaseOf(a));
+  a.M.pick('songB');
+  clock.advance(2500);
+  check('自分が選べば、すぐ抽選されて準備の段へ進む', phaseOf(a) === 'ready' && view(a).room.songId === 'songB', `${phaseOf(a)} ${view(a).room.songId}`);
+  a.M.leave();
+}
+
+// B-8 選曲の段のあいだに人が入ってきたら、そこから制限時間が始まる
+{
+  const a = makeClient('A');
+  const b = makeClient('B', { brain: false });
+  join(a, 'FREE2', 'private', 0);
+  clock.advance(3000);
+  a.M.summon(MATE);
+  clock.advance(2500);
+  a.M.confirmMembers();
+  clock.advance(2500);
+  check('ひとり+マスモンの選曲の段は、制限時間なし', phaseOf(a) === 'select' && view(a).room.deadline === 0);
+  join(b, 'FREE2', 'private', 1);
+  clock.advance(4500);
+  check('人が入ると、制限時間が始まる(残り30秒以内)', view(a).room.deadline > 0 && view(a).room.left > 0 && view(a).room.left <= 30, JSON.stringify({ l: view(a).room.left }));
+  clock.advance(40000);
+  check('時間切れになると、ふつうに抽選へ進む(人が2人いるとき)', phaseOf(a) !== 'select', phaseOf(a));
+  a.M.leave(); b.M.leave();
+}
+
 // B-4 古い端末との行き来(相棒の項目が無い知らせ)
 {
   const c = makeClient('x');
