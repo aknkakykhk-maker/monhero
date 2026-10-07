@@ -683,7 +683,7 @@ const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared
 /* 実機の直し方を、この端末だけで入れる/切るパネル(デバッグ画面用・2026-10-07・ユーザー指示「実機で確認しないと直せないものは、直せる仕組みを作って」)。
    入れた直し方は診断の行の stats.fixes に残るので、入れる前と後を比べられる。プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */
 const RHYTHM_FIX_PANEL_ITEMS=Object.freeze([
-  ['inputAgeCap','遅れて届いた入力の補正を300msまで広げる','処理が詰まって入力が遅れて届いたとき、空判定や隣のノーツ取りが減る(診断の「80ms超」が多い端末で試す)'],
+  ['inputAgeCap','遅れて届いた入力の補正を300msまで広げる','処理が詰まって入力が遅れて届いたとき、空判定や隣のノーツ取りが減る。ゲームが本当に止まっていたと見えたときだけ効く(診断の「80ms超」が多い端末で試す)'],
   ['smoothSongClock','曲の時計を、コマの間でなめらかに進める','時計が階段状に進む端末で、曲が止まって見えるのを減らす(診断の「止まったコマ」が多い端末で試す)'],
   ['autoPauseOnHidden','アプリを離れたら自動で一時停止する','裏へ回ったあとに戻ると、大量のMISSになるのを防ぐ(診断の「離れた回数」が多い端末で試す)'],
 ]);
@@ -708,7 +708,7 @@ const RhythmFixOverridePanel=()=>{
     <div data-rhythm-fix-timing className="mt-2 rounded-xl bg-slate-900/60 p-2 text-[10px] leading-snug text-slate-300">
       <b className="text-slate-100">いまの演奏の数え（直近1曲）</b><br/>
       入力の遅れの分布（〜25 / 50 / 80 / 150 / 300 / 300超 ms）: {ages}<br/>
-      80ms超で届いた入力: {timing.ageCapped??0} ／ 時計の止まったコマ: {timing.stalls??0} / {timing.frames??0} ／ 最大の1コマの進み: {timing.maxStepMs??0}ms<br/>
+      80ms超で届いた入力: {timing.ageCapped??0}（うちコマ落ちが見えた: {timing.ageBacked??0} ／ 見えなかった: {timing.ageUnbacked??0}） ／ 時計の止まったコマ: {timing.stalls??0} / {timing.frames??0} ／ 最大の1コマの進み: {timing.maxStepMs??0}ms<br/>
       アプリを離れた回数: {timing.hidden??0} ／ ペンで押した回数: {timing.pen??0}<br/>
       出力遅延: {timing.outLatMs??'-'}ms ／ 基準遅延: {timing.baseLatMs??'-'}ms ／ getOutputTimestamp: {timing.hasTs===undefined?'-':timing.hasTs?'あり':'なし'} ／ 曲の頭の無音: {timing.headMs??'-'}ms
     </div>

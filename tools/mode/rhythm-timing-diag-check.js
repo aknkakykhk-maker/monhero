@@ -23,18 +23,20 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 const pick=re=>runtime.match(re)?.[0]||'';
 const ageBlock=pick(/const RHYTHM_INPUT_AGE_MAX_MS=80;[\s\S]*?const rhythmInputAgeMs=[\s\S]*?\n\};/);
 const timingBlock=pick(/const RHYTHM_TIMING_DIAG=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/);
-const capBlock=pick(/const RHYTHM_INPUT_AGE_CAP_WIDE_MS=300;\nconst rhythmInputAgeCapMs=[^\n]*\n/);
+const capBlock=pick(/const RHYTHM_INPUT_AGE_CAP_WIDE_MS=300;[\s\S]*?const rhythmInputAgeCapMs=[^\n]*\n/);
 const fixBlock=pick(/const RHYTHM_TOUCH_FIXES=\{[\s\S]*?const rhythmTouchFixesActive=[^\n]*\n/);
 const platformBlock=pick(/const rhythmTouchPlatform=\(\)=>\{[\s\S]*?\n\};/);
 check('必要なブロックを切り出せる',!!(ageBlock&&timingBlock&&capBlock&&fixBlock&&platformBlock));
 if(!(ageBlock&&timingBlock&&capBlock&&fixBlock&&platformBlock)){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
 
 const makeContext=(ua,store={})=>{
-  const ctx={navigator:{userAgent:ua,maxTouchPoints:5},localStorage:{getItem:k=>(k in store?store[k]:null),setItem:(k,v)=>{store[k]=String(v);}},console};
+  const clock={now:0};
+  const ctx={navigator:{userAgent:ua,maxTouchPoints:5},performance:{now:()=>clock.now},localStorage:{getItem:k=>(k in store?store[k]:null),setItem:(k,v)=>{store[k]=String(v);}},console};
+  ctx.clock=clock;
   vm.createContext(ctx);
   // ageBlock は rhythmInputAgeMs を、timingBlock は RHYTHM_TIMING_DIAG を持つ。順番は本体と同じ(定数→診断→上限→年齢)
   // ageBlock には、上限の定数・診断(RHYTHM_TIMING_DIAG)・上限の関数・rhythmInputAgeMs がこの順で入っている
-  vm.runInContext(`${ageBlock}\n${platformBlock}\n${fixBlock}\nthis.out={rhythmInputAgeMs,rhythmInputAgeResetFloor,RHYTHM_TIMING_DIAG,rhythmTouchFixOn,rhythmTouchFixSetOverride,rhythmTouchFixesActive,rhythmInputAgeCapMs,RHYTHM_TOUCH_FIXES};`,ctx);
+  vm.runInContext(`${ageBlock}\n${platformBlock}\n${fixBlock}\nthis.out={clock,rhythmInputAgeMs,rhythmInputAgeResetFloor,RHYTHM_TIMING_DIAG,rhythmTouchFixOn,rhythmTouchFixSetOverride,rhythmTouchFixesActive,rhythmInputAgeCapMs,RHYTHM_TOUCH_FIXES};`,ctx);
   return ctx.out;
 };
 const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
@@ -74,8 +76,19 @@ const PC='Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120';
   check('上書きは新しい保存キーへ書く(既存のキーは触らない)',Object.keys(store).join()==='mh_rhythm_fix_override_v1'&&JSON.parse(store.mh_rhythm_fix_override_v1).inputAgeCap===true);
   check('入れた直し方は診断の fixes に残る',o.rhythmTouchFixesActive().includes('inputAgeCap'));
   o.rhythmInputAgeResetFloor();
-  check('入れると、200ms遅れた入力は200msのまま使う(基準がそろっているとき)',o.rhythmInputAgeMs(1000,1005)===5&&o.rhythmInputAgeMs(2000,2200)===200);
-  check('入れても、基準がずれている端末(いつも大きい差)は使わない',(()=>{const p=makeContext(PC,{mh_rhythm_fix_override_v1:'{"inputAgeCap":true}'});p.rhythmInputAgeResetFloor();return p.rhythmInputAgeMs(1000,1500)===0;})());
+  o.rhythmInputAgeMs(1000,1005); // 遅れの小さい入力を一度見る(時計の基準がそろっている印)
+  // ゲームが本当に止まっていた(直前のコマが200ms前)ときだけ、広げた上限を使う
+  o.clock.now=1000;o.RHYTHM_TIMING_DIAG.frame(1);o.clock.now=1200;
+  check('入れると、コマが止まっていた間に遅れた入力(200ms)は200msのまま使う',o.rhythmInputAgeMs(1000,1200)===200);
+  // 直前のコマがつい今来ていた(止まっていない)のに「200ms遅れた」と言う入力は、これまでの上限(80ms)で止める
+  o.clock.now=2195;o.RHYTHM_TIMING_DIAG.frame(2);o.clock.now=2200;
+  check('入れても、コマが止まっていないのに古い時刻の入力は、80msで止める(時刻が古いだけの疑い)',o.rhythmInputAgeMs(2000,2200)===80);
+  // 300msを超える遅れは300msまで
+  o.clock.now=3000;o.RHYTHM_TIMING_DIAG.frame(3);o.clock.now=3500;
+  check('広げた上限は300msまで',o.rhythmInputAgeMs(3000,3500)===300);
+  const snap=o.RHYTHM_TIMING_DIAG.snapshot();
+  check('止まりが見えた/見えなかった遅れた入力を、別々に数える',snap.ageBacked===2&&snap.ageUnbacked===1,JSON.stringify([snap.ageBacked,snap.ageUnbacked]));
+  check('入れても、基準がずれている端末(いつも大きい差)は使わない',(()=>{const p=makeContext(PC,{mh_rhythm_fix_override_v1:'{"inputAgeCap":true}'});p.rhythmInputAgeResetFloor();p.clock.now=1000;p.RHYTHM_TIMING_DIAG.frame(1);p.clock.now=1500;return p.rhythmInputAgeMs(1000,1500)===0;})());
   o.rhythmTouchFixSetOverride('inputAgeCap',null);
   check('上書きをやめると、既定へ戻る',o.rhythmTouchFixOn('inputAgeCap')===false&&o.rhythmInputAgeCapMs()===80);
   const broken=makeContext(PC,{mh_rhythm_fix_override_v1:'{壊れた'});

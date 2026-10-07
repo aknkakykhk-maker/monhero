@@ -1225,13 +1225,17 @@ const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 //   hidden … 演奏中にアプリを離れた(画面が隠れた)回数。pen … ペンで直接押した回数
 //   outLatMs / baseLatMs / hasTs / rate / headMs … その端末の出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音の長さ
 const RHYTHM_TIMING_DIAG=(()=>{
-  const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
-  let stats=zero(),meta={},lastSong=null;
+  const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
+  let stats=zero(),meta={},lastSong=null,lastTick=0;
   const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
   return {
-    reset(){stats=zero();meta={};lastSong=null;},
+    reset(){stats=zero();meta={};lastSong=null;lastTick=0;},
     age(value){const v=Number(value);if(!(v>=0)||v>5000)return;stats.ageHist[bucket(v)]++;if(v>RHYTHM_INPUT_AGE_MAX_MS)stats.ageCapped++;},
-    frame(songMs){const v=Number(songMs);if(!Number.isFinite(v))return;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;},
+    // 直前のコマの時刻。「入力が遅れて届いた」と言っているとき、本当にその間コマが止まっていたか(重い処理があったか)を見るのに使う
+    stalledSince(nowPerfMs){const n=Number(nowPerfMs);return lastTick>0&&Number.isFinite(n)?Math.max(0,n-lastTick):0;},
+    ageBacked(){stats.ageBacked++;},
+    ageUnbacked(){stats.ageUnbacked++;},
+    frame(songMs){lastTick=typeof performance!=='undefined'&&performance.now?performance.now():0;const v=Number(songMs);if(!Number.isFinite(v))return;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;},
     meta(value){if(value&&typeof value==='object')meta={...meta,...value};},
     hidden(){stats.hidden++;},
     pen(){stats.pen++;},
@@ -1240,6 +1244,8 @@ const RHYTHM_TIMING_DIAG=(()=>{
 })();
 // 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
 const RHYTHM_INPUT_AGE_CAP_WIDE_MS=300;
+// 遅れて届いたと言う入力の遅れのうち、この割合以上のあいだコマが止まっていたら「本当に重かった」と見る(重い処理が入力の直後に始まった場合も拾うため、1より小さくしてある)
+const RHYTHM_INPUT_AGE_STALL_SHARE=.6;
 const rhythmInputAgeCapMs=()=>rhythmTouchFixOn('inputAgeCap')?RHYTHM_INPUT_AGE_CAP_WIDE_MS:RHYTHM_INPUT_AGE_MAX_MS;
 const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
@@ -1248,9 +1254,17 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   if(!(age>0))return 0;
   if(age<rhythmInputAgeFloorMs)rhythmInputAgeFloorMs=age;
   RHYTHM_TIMING_DIAG.age(age);
-  const cap=rhythmInputAgeCapMs();
-  if(age<=cap)return age;
-  return rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?cap:0;
+  if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
+  const aligned=rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS;
+  // 直し方 inputAgeCap を入れていない端末は、これまでどおり(上限80ms・基準がそろっていなければ0)
+  if(!rhythmTouchFixOn('inputAgeCap'))return aligned?RHYTHM_INPUT_AGE_MAX_MS:0;
+  // 直し方 inputAgeCap を入れた端末。広げた上限(300ms)を使うのは、
+  //   ①時計の基準がそろっていて、かつ ②その間ゲームが本当に止まっていた(コマが来ていなかった)と見えたときだけ。
+  // ②は「入力が遅れたと言っているのに、直前のコマはつい今来ていた」なら、イベントの時刻が古いだけの疑いが強いので、これまでの上限(80ms)で止める
+  if(!aligned){RHYTHM_TIMING_DIAG.ageUnbacked();return 0;}
+  if(RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE){RHYTHM_TIMING_DIAG.ageBacked();return Math.min(age,RHYTHM_INPUT_AGE_CAP_WIDE_MS);}
+  RHYTHM_TIMING_DIAG.ageUnbacked();
+  return RHYTHM_INPUT_AGE_MAX_MS;
 };
 // ノーツを「もう誰も取れない」として見逃しMISSにする時刻。
 //
