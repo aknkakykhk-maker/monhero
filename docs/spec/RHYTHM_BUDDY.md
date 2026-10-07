@@ -14,7 +14,10 @@
 ## 2. 回数
 
 - **マスモン全体で**1日3回は無料(朝5:00で戻る)。使い切ったら「相棒券」を1枚使う。
-- 相棒券の入手: ビートPとの交換 / ログインボーナス / ミッションの報酬。
+- 相棒券(`buddy_ticket`・所持数は `mh_owned_items`)の入手:
+  - ビートP交換所 1枚150P(`RHYTHM_EVENT_POINT_SHOP_OFFERS`)
+  - ログインボーナス7日目 2枚(`LOGIN_BONUS_REWARDS`・`gameItem` 報酬)
+  - デイリーコンプリート1枚 / ウィークリーコンプリート3枚 / マンスリーコンプリート10枚
 
 ## 3. 部屋の中でのふるまい
 
@@ -104,3 +107,8 @@
 ## 進捗
 
 - [x] 仕様の文書(これ)
+- [x] 計算(33-rhythm-buddy.jsx)・保存と画面(80-screen-rhythm-buddy.jsx)・部屋の中の動き(77-screen-rhythm-multi.jsx)
+- [x] 相棒券(アイテム・ビートP交換・ログインボーナス・ミッション)と本体へのつなぎ込み(60-app.jsx)
+- [x] 検査 tools/mode/rhythm-buddy-check.js
+- [x] ヘルプ(rhythm-buddy)・更新履歴・助手のセリフ・一度きりの案内(mh_rhythm_buddy_seen_v1)
+- [ ] ユーザーの確認 → 公開(ユーザー指示で公開前に止まる)

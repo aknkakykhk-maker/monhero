@@ -1289,6 +1289,18 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // 相棒(docs/spec/RHYTHM_BUDDY.md)。'' / 'list'(一覧を見る) / 'pick'(部屋へ呼ぶ)
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map((song) => song.songId).join(',');
+  // 「相棒を呼べるようになった」の一度きりの案内(新しい保存キー。既存のキーは触らない)
+  const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => { try { const seen = await storeGet(RHYTHM_BUDDY_SEEN_KEY, false); if (alive) setBuddyIntroSeen(seen === true); } catch (_) { /* 読めなければ出さない */ } })();
+    return () => { alive = false; };
+  }, []);
+  const closeBuddyIntro = (open) => {
+    setBuddyIntroSeen(true);
+    void storeSet(RHYTHM_BUDDY_SEEN_KEY, true).catch(() => {});
+    if (open) setBuddySheet('list');
+  };
   React.useEffect(() => { RHYTHM_MULTI.setCpuBrain(rhythmBuddyMakeBrain(songs)); }, [buddySongKey]);
   // 呼ぶ: 先に今日の無料ぶん、なければ相棒券を1枚使ってから部屋へ入れる
   const callBuddy = async (masu) => {
@@ -1676,6 +1688,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </section>
             )}
             {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
+            {ms.multi && !buddyIntroSeen && masuMons.length > 0 && (
+              <section data-rhythm-buddy-intro className="mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5">
+                <span aria-hidden="true" className="text-2xl leading-none">🐾</span>
+                <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">マスモンを「相棒」として、マルチの部屋に呼べるようになりました。部屋の中の「相棒を呼ぶ」から呼べます</p>
+                <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">相棒を見る</button>
+                <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
+              </section>
+            )}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
             <div className={`mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`} style={{ animationDelay: '.28s' }}>
               <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} mhms-glass min-w-0 text-fuchsia-100`}>

@@ -8,6 +8,10 @@
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
+// 相棒券のアイテムid(data/breeder.js の一覧と同じ。所持数は mh_owned_items)
+const RHYTHM_BUDDY_TICKET_ITEM_ID = 'buddy_ticket';
+// 「相棒を呼べるようになった」の一度きりの案内を見たか(新しい保存キー)
+const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 // マスモン全体で1日に無料で呼べる回数(朝5:00で戻る)
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」

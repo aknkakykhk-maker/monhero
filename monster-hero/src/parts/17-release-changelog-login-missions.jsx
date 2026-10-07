@@ -328,7 +328,8 @@ const LOGIN_BONUS_REWARDS = [
   [{ type:'breederXp', amount:200 },           { type:'skipTicketJo', amount:1 }],
   [{ type:'uniqueSkillResetTicket', amount:1 },{ type:'skipTicketJo', amount:1 }],
   [{ type:'diamond', amount:2000 }, { type:'rainbowPsyche', amount:10 }, { type:'skipTicketJo', amount:1 }],
-  [{ type:'bondPointReset', amount:1 }, { type:'trainingTicketLarge', amount:1 }, { type:'skipTicketJo', amount:1 }],
+  // 7日目に相棒券(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。アイテムのidをそのまま持つ報酬(gameItem)で配る
+  [{ type:'bondPointReset', amount:1 }, { type:'trainingTicketLarge', amount:1 }, { type:'skipTicketJo', amount:1 }, { type:'gameItem', itemId:'buddy_ticket', amount:2 }],
 ];
 const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーP', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットの書', uniqueSkillResetTicket:'スキルポイントリセット券', rainbowPsyche:'虹のプシュケー', rainbowTranscendFruit:'虹の超越の実', trainingTicket:'トレーニングチケット', trainingTicketLarge:'重トレーニングチケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急' };
 const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDays:0 };
@@ -890,7 +891,7 @@ const missionDailyDefinitions = (now=Date.now()) => [
   {id:'daily_wins',name:'デイリーチャレンジ',condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
   {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:300}]},
   {...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]},
-  {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1}],complete:true},
+  {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1},{type:'gameItem',itemId:'buddy_ticket',amount:1}],complete:true},
 ];
 const missionWeeklyDefinitions = (now=Date.now()) => [
   {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
@@ -904,7 +905,7 @@ const missionWeeklyDefinitions = (now=Date.now()) => [
   // 旧 weekly_daily_claims のIDをアイテム使用枠へ再利用する。
   {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使用する',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
   {...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]},
-  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5)],complete:true},
+  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5),{type:'gameItem',itemId:'buddy_ticket',amount:3}],complete:true},
 ];
 const missionMonthlyDefinitions = () => [
   {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
@@ -918,7 +919,7 @@ const missionMonthlyDefinitions = () => [
   {id:'monthly_enhances',name:'育成月間',condition:'モンスターを30回強化する',key:'enhances',target:30,rewards:[{type:'uniqueSkillResetTicket',amount:2}]},
   {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回取引する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
   {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'各種モードを合計30回プレイする',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
-  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1)],complete:true},
+  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1),{type:'gameItem',itemId:'buddy_ticket',amount:10}],complete:true},
 ];
 // 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。
 const MISSION_DEFS = {

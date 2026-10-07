@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f0cf536ac39be5b1
+// source-sha256: 25af562a61537806
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 12:23";
+const BUILD_DATE = "2026-10-07 12:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -11492,6 +11492,10 @@ const LOGIN_BONUS_REWARDS = [[{
 }, {
   type: 'skipTicketJo',
   amount: 1
+}, {
+  type: 'gameItem',
+  itemId: 'buddy_ticket',
+  amount: 2
 }]];
 const GIFT_REWARD_LABELS = {
   diamond: 'ダイヤ',
@@ -12292,6 +12296,10 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   }, {
     type: 'skipTicketHa',
     amount: 1
+  }, {
+    type: 'gameItem',
+    itemId: 'buddy_ticket',
+    amount: 1
   }],
   complete: true
 }];
@@ -12382,7 +12390,11 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   }, {
     type: 'rainbowPsyche',
     amount: 30
-  }, missionItemReward('hero_proof_shard', 5)],
+  }, missionItemReward('hero_proof_shard', 5), {
+    type: 'gameItem',
+    itemId: 'buddy_ticket',
+    amount: 3
+  }],
   complete: true
 }];
 const missionMonthlyDefinitions = () => [{
@@ -12507,7 +12519,11 @@ const missionMonthlyDefinitions = () => [{
   }, {
     type: 'rainbowTranscendFruit',
     amount: 1
-  }, missionItemReward('skip_ticket_kiwami', 1)],
+  }, missionItemReward('skip_ticket_kiwami', 1), {
+    type: 'gameItem',
+    itemId: 'buddy_ticket',
+    amount: 10
+  }],
   complete: true
 }];
 const MISSION_DEFS = {
@@ -36817,6 +36833,8 @@ const tacticsExCoverSlot = (state, units, now) => {
 };
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
+const RHYTHM_BUDDY_TICKET_ITEM_ID = 'buddy_ticket';
+const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
 const RHYTHM_BUDDY_TRAIT_LEVEL = 50;
@@ -41728,7 +41746,9 @@ function ItemInventoryScreen({
     className: usageNoteClass
   }, "神殿の", React.createElement("br", null), "魂格進化で", React.createElement("br", null), "使用") : item.usage === 'heroProofShard' ? React.createElement("div", {
     className: usageNoteClass
-  }, "マーケットで", React.createElement("br", null), HERO_PROOF_SHARD_PER_PROOF, "個→", React.createElement("br", null), "勇者の証1個") : item.usage === 'soulRankRespec' || item.usage === 'soulCrystal' ? React.createElement("div", {
+  }, "マーケットで", React.createElement("br", null), HERO_PROOF_SHARD_PER_PROOF, "個→", React.createElement("br", null), "勇者の証1個") : item.usage === 'rhythmBuddy' ? React.createElement("div", {
+    className: usageNoteClass
+  }, "モンヒロビートの", React.createElement("br", null), "マルチで", React.createElement("br", null), "相棒を呼ぶ") : item.usage === 'soulRankRespec' || item.usage === 'soulCrystal' ? React.createElement("div", {
     className: usageNoteClass
   }, "マスモン詳細の", React.createElement("br", null), "魂格特性で", React.createElement("br", null), "使用") : React.createElement("button", {
     onClick: () => onUseItem(item.id),
@@ -62661,6 +62681,24 @@ function RhythmMultiScreen({
   const [recordOpen, setRecordOpen] = React.useState(false);
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map(song => song.songId).join(',');
+  const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const seen = await storeGet(RHYTHM_BUDDY_SEEN_KEY, false);
+        if (alive) setBuddyIntroSeen(seen === true);
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const closeBuddyIntro = open => {
+    setBuddyIntroSeen(true);
+    void storeSet(RHYTHM_BUDDY_SEEN_KEY, true).catch(() => {});
+    if (open) setBuddySheet('list');
+  };
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain(rhythmBuddyMakeBrain(songs));
   }, [buddySongKey]);
@@ -63237,7 +63275,24 @@ function RhythmMultiScreen({
     }, "入室"))), message && React.createElement("p", {
       "data-rhythm-multi-message": true,
       className: "text-[12px] font-black text-rose-300"
-    }, message), React.createElement("div", {
+    }, message), ms.multi && !buddyIntroSeen && masuMons.length > 0 && React.createElement("section", {
+      "data-rhythm-buddy-intro": true,
+      className: "mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-2xl leading-none"
+    }, "🐾"), React.createElement("p", {
+      className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100"
+    }, "マスモンを「相棒」として、マルチの部屋に呼べるようになりました。部屋の中の「相棒を呼ぶ」から呼べます"), React.createElement("button", {
+      type: "button",
+      onClick: () => closeBuddyIntro(true),
+      className: "min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950"
+    }, "相棒を見る"), React.createElement("button", {
+      type: "button",
+      "aria-label": "閉じる",
+      onClick: () => closeBuddyIntro(false),
+      className: "min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black"
+    }, "✕")), React.createElement("div", {
       className: `mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`,
       style: {
         animationDelay: '.28s'
@@ -66925,6 +66980,18 @@ function MonsterHeroGame() {
   const [ownedItems, setOwnedItems] = useState({});
   const ownedItemsRef = useRef(ownedItems);
   ownedItemsRef.current = ownedItems;
+  const consumeBuddyTicket = async () => {
+    const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID);
+    if (have <= 0) return false;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [RHYTHM_BUDDY_TICKET_ITEM_ID]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    return true;
+  };
   const [trainingSelectedId, setTrainingSelectedId] = useState(null);
   const [trainingDifficulty, setTrainingDifficulty] = useState('BEGINNER');
   const [trainingSession, setTrainingSession] = useState(null);
@@ -88819,6 +88886,8 @@ function MonsterHeroGame() {
       },
       resolveIconUrl: resolveIconUrl,
       masuMons: masuMons,
+      buddyTickets: ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID),
+      onUseBuddyTicket: consumeBuddyTicket,
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),

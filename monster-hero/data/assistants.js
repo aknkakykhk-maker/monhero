@@ -1657,6 +1657,46 @@ addAssistantLinePack({
     ],
   },
 });
+// 相棒(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。モードえらびの吹き出しに、相棒の案内を1本ずつ足す
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelect',
+  label: 'モンヒロビート 相棒の案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'excited', t:'マスモンを相棒にして、マルチに呼べるようになったよ！ ひとりでもすぐライブできちゃう✨' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelectKiki',
+  assistantId: 'kiki',
+  label: 'きき・モンヒロビート 相棒の案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'happy',   t:'マスモンを相棒としてマルチに呼べまつ。一緒に遊ぶほど上手になるでつ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelectMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・モンヒロビート 相棒の案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'wink',    t:'相棒のマスモン、育てるとどんどん上手になるんだって。ももより上手くなったら…ゆるさないんだから♡' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelectDra',
+  assistantId: 'dra',
+  label: 'ドラ・モンヒロビート 相棒の案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'excited', t:'マスモンを相棒にして、マルチに呼べるんだぞ。おでも一緒に叩きたいなあ' },
+    ],
+  },
+});
 addAssistantLinePack({
   id: 'rhythmLookGuide',
   label: 'モンヒロビート見た目の設定案内',

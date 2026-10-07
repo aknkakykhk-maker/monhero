@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e7118adf9cfd5b85
+// generated-sha256: acdf8d1d0fb558c4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 12:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8185,7 +8185,8 @@ const LOGIN_BONUS_REWARDS = [
   [{ type:'breederXp', amount:200 },           { type:'skipTicketJo', amount:1 }],
   [{ type:'uniqueSkillResetTicket', amount:1 },{ type:'skipTicketJo', amount:1 }],
   [{ type:'diamond', amount:2000 }, { type:'rainbowPsyche', amount:10 }, { type:'skipTicketJo', amount:1 }],
-  [{ type:'bondPointReset', amount:1 }, { type:'trainingTicketLarge', amount:1 }, { type:'skipTicketJo', amount:1 }],
+  // 7日目に相棒券(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。アイテムのidをそのまま持つ報酬(gameItem)で配る
+  [{ type:'bondPointReset', amount:1 }, { type:'trainingTicketLarge', amount:1 }, { type:'skipTicketJo', amount:1 }, { type:'gameItem', itemId:'buddy_ticket', amount:2 }],
 ];
 const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーP', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットの書', uniqueSkillResetTicket:'スキルポイントリセット券', rainbowPsyche:'虹のプシュケー', rainbowTranscendFruit:'虹の超越の実', trainingTicket:'トレーニングチケット', trainingTicketLarge:'重トレーニングチケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急' };
 const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDays:0 };
@@ -8747,7 +8748,7 @@ const missionDailyDefinitions = (now=Date.now()) => [
   {id:'daily_wins',name:'デイリーチャレンジ',condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
   {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:300}]},
   {...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]},
-  {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1}],complete:true},
+  {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1},{type:'gameItem',itemId:'buddy_ticket',amount:1}],complete:true},
 ];
 const missionWeeklyDefinitions = (now=Date.now()) => [
   {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
@@ -8761,7 +8762,7 @@ const missionWeeklyDefinitions = (now=Date.now()) => [
   // 旧 weekly_daily_claims のIDをアイテム使用枠へ再利用する。
   {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使用する',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
   {...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]},
-  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5)],complete:true},
+  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5),{type:'gameItem',itemId:'buddy_ticket',amount:3}],complete:true},
 ];
 const missionMonthlyDefinitions = () => [
   {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
@@ -8775,7 +8776,7 @@ const missionMonthlyDefinitions = () => [
   {id:'monthly_enhances',name:'育成月間',condition:'モンスターを30回強化する',key:'enhances',target:30,rewards:[{type:'uniqueSkillResetTicket',amount:2}]},
   {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回取引する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
   {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'各種モードを合計30回プレイする',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
-  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1)],complete:true},
+  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1),{type:'gameItem',itemId:'buddy_ticket',amount:10}],complete:true},
 ];
 // 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。
 const MISSION_DEFS = {
@@ -23347,6 +23348,10 @@ const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot)
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
+// 相棒券のアイテムid(data/breeder.js の一覧と同じ。所持数は mh_owned_items)
+const RHYTHM_BUDDY_TICKET_ITEM_ID = 'buddy_ticket';
+// 「相棒を呼べるようになった」の一度きりの案内を見たか(新しい保存キー)
+const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 // マスモン全体で1日に無料で呼べる回数(朝5:00で戻る)
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
@@ -26959,6 +26964,8 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                     ? <div className={usageNoteClass}>神殿の<br/>魂格進化で<br/>使用</div>
                     : item.usage==='heroProofShard'
                     ? <div className={usageNoteClass}>マーケットで<br/>{HERO_PROOF_SHARD_PER_PROOF}個→<br/>勇者の証1個</div>
+                    : item.usage==='rhythmBuddy'
+                    ? <div className={usageNoteClass}>モンヒロビートの<br/>マルチで<br/>相棒を呼ぶ</div>
                     : item.usage==='soulRankRespec'||item.usage==='soulCrystal'
                     ? <div className={usageNoteClass}>マスモン詳細の<br/>魂格特性で<br/>使用</div>
                     : <button onClick={()=>onUseItem(item.id)} className="shrink-0 w-[84px] min-h-[44px] rounded-xl bg-teal-600 text-[12px] font-black text-white active:scale-95">使う</button>}
@@ -38592,6 +38599,18 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // 相棒(docs/spec/RHYTHM_BUDDY.md)。'' / 'list'(一覧を見る) / 'pick'(部屋へ呼ぶ)
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map((song) => song.songId).join(',');
+  // 「相棒を呼べるようになった」の一度きりの案内(新しい保存キー。既存のキーは触らない)
+  const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => { try { const seen = await storeGet(RHYTHM_BUDDY_SEEN_KEY, false); if (alive) setBuddyIntroSeen(seen === true); } catch (_) { /* 読めなければ出さない */ } })();
+    return () => { alive = false; };
+  }, []);
+  const closeBuddyIntro = (open) => {
+    setBuddyIntroSeen(true);
+    void storeSet(RHYTHM_BUDDY_SEEN_KEY, true).catch(() => {});
+    if (open) setBuddySheet('list');
+  };
   React.useEffect(() => { RHYTHM_MULTI.setCpuBrain(rhythmBuddyMakeBrain(songs)); }, [buddySongKey]);
   // 呼ぶ: 先に今日の無料ぶん、なければ相棒券を1枚使ってから部屋へ入れる
   const callBuddy = async (masu) => {
@@ -38979,6 +38998,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </section>
             )}
             {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
+            {ms.multi && !buddyIntroSeen && masuMons.length > 0 && (
+              <section data-rhythm-buddy-intro className="mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5">
+                <span aria-hidden="true" className="text-2xl leading-none">🐾</span>
+                <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">マスモンを「相棒」として、マルチの部屋に呼べるようになりました。部屋の中の「相棒を呼ぶ」から呼べます</p>
+                <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">相棒を見る</button>
+                <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
+              </section>
+            )}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
             <div className={`mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`} style={{ animationDelay: '.28s' }}>
               <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} mhms-glass min-w-0 text-fuchsia-100`}>
@@ -41892,6 +41919,17 @@ function MonsterHeroGame() {
   // setOwnedItems の反映は非同期なので、クリア報酬の付与と限界突破の消費はこのrefの値を土台にする
   const ownedItemsRef = useRef(ownedItems);
   ownedItemsRef.current = ownedItems;
+  // 相棒券を1枚使う(モンヒロビートのマルチで相棒を呼ぶとき。docs/spec/RHYTHM_BUDDY.md)。
+  // 1日の無料ぶんを使い切ったあとにだけ呼ばれる。持っていなければ false
+  const consumeBuddyTicket = async () => {
+    const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID);
+    if (have <= 0) return false;
+    const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    return true;
+  };
   const [trainingSelectedId, setTrainingSelectedId] = useState(null);
   const [trainingDifficulty, setTrainingDifficulty] = useState('BEGINNER');
   const [trainingSession, setTrainingSession] = useState(null);
@@ -57870,7 +57908,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
