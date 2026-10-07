@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5682298076321473
+// generated-sha256: 8d606c5047579c43
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 08:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 08:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20327,6 +20327,17 @@ scheduleTick();};
   // rhythmChartSwitchHold: 演奏のあいだは「時刻で入れ替わる譜面」の答えを固定する。
   // 曲の途中で切り替えの時刻をまたいでも、総ノーツ数とレベルが変わらないようにするため
   // (data/rhythm-mode.js の RHYTHM_SWITCHING_CHARTS)。
+  // プレイボット(tools/playbot)が人のように演奏するための、読み取り専用の参照(2026-10-07)。
+  // 曲の再生位置とノーツの一覧を外から読めるようにするだけで、ゲームの動きは何も変わらない
+  // (押すのはボットの側で、ふつうの指と同じ pointerdown を演奏エリアへ送る)。
+  // 26-supabase.jsx の window.__mhTestHooks と同じ置き場所を使う
+  useEffect(()=>{
+    try{if(typeof window!=='undefined')window.__mhTestHooks={...(window.__mhTestHooks||{}),
+      rhythmSongMs:()=>{const run=runRef.current;return run&&!run.finished&&!run.paused?Number(run.audio.songTimeMs())||0:null;},
+      rhythmNotes:()=>{const run=runRef.current;return run?run.notes.map(note=>({index:note.index,type:note.type,timeMs:note.timeMs,endTimeMs:note.endTimeMs,lane:note.lane,subLane:note.subLane,subLaneWidth:note.subLaneWidth,slidePoints:Array.isArray(note.slidePoints)?note.slidePoints.map(pt=>({timeMs:pt.timeMs,lane:pt.lane})):null,done:!!note.done})):null;},
+    };}catch(_){}
+    return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmNotes;}}catch(_){}};
+  },[]);
   useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   const pause=()=>{const run=runRef.current;
     /* カウントダウン中は止められない。まだ曲が鳴っていないので、止めても再開できない。
