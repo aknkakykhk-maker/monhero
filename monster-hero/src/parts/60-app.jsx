@@ -1467,7 +1467,7 @@ function MonsterHeroGame() {
   ownedItemsRef.current = ownedItems;
   // マスモン一覧(モンヒロビート)の戻り先(M/B管理 か モンヒロビートのモードえらび)
   const [masuBeatBack, setMasuBeatBack] = useState('MB_MANAGEMENT');
-  const openMasuBeat = (from) => { setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT'); setGameState('MASU_BEAT'); };
+  const openMasuBeat = (from) => { setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT'); setGameState('RHYTHM_MASU_BEAT'); };
   // セッション券を1枚使う(モンヒロビートのマルチでマスモンを呼ぶとき。docs/spec/RHYTHM_BUDDY.md)。
   // 1日の無料ぶんを使い切ったあとにだけ呼ばれる。持っていなければ false
   const consumeBuddyTicket = async () => {
@@ -3727,7 +3727,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
-    MASU_BEAT: 'management',    // マスモン一覧(モンヒロビート)はM/B管理と同じ曲を続ける(対応表に載せ忘れると無音になる)
+    RHYTHM_MASU_BEAT: 'management', // マスモン一覧(モンヒロビート)はM/B管理と同じ曲を続ける(対応表に載せ忘れると無音になる)
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
     RAID_JACK: 'home', RAID_JACK_PREP: 'home', RAID_JACK_PLACE: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
@@ -3832,7 +3832,9 @@ function MonsterHeroGame() {
   // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
   //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
   //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI'];
+  // RHYTHM_MASU_BEAT(マスモン一覧)は、モードえらびと M/B管理の両方から開く。2026-10-07、名前が RHYTHM_ で始まっていなかったため、
+  // 「ビートLv」を押すと「モンビーを離れた」と判断され、裏で進んでいた周回がバトル画面へ切り替わった(ユーザー報告)
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI','RHYTHM_MASU_BEAT'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   //
   // ★**一覧で持たず、gameStateの頭で見る。**
@@ -12884,6 +12886,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   ・公開フラグが下りている
   const rhythmAutoStartInsideRef = useRef(false);
   useEffect(() => {
+    // マスモン一覧(RHYTHM_MASU_BEAT)は、見るだけの画面。出入りしても「入った瞬間」に数えない
+    // (M/B管理から開いただけで周回が始まったり、モードえらびへ戻るたびに始まったりしないように)
+    if (gameState === 'RHYTHM_MASU_BEAT') return;
     const inside = RHYTHM_AUTO_START_SCREENS.includes(gameState);
     const wasInside = rhythmAutoStartInsideRef.current;
     rhythmAutoStartInsideRef.current = inside;
@@ -18494,7 +18499,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* マスモン一覧: ラン終了時に登録した固有インスタンス。タップで詳細・改名・強化ポイント使用 */}
         {/* マスモン一覧(モンヒロビート)。M/B管理とモンヒロビートのモードえらびから開き、開いた画面へ戻る */}
-        {gameState==='MASU_BEAT'&&(
+        {gameState==='RHYTHM_MASU_BEAT'&&(
           <MasuBeatScreen masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} tickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)}
             onBack={()=>setGameState(masuBeatBack)} backLabel={masuBeatBack==='MB_MANAGEMENT'?'M/B管理へ戻る':'モードえらびへ戻る'}/>
         )}

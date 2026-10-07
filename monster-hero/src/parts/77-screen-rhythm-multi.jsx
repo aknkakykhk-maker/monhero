@@ -1330,6 +1330,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // マスモンを呼ぶ(docs/spec/RHYTHM_BUDDY.md)。'' / 'pick'(部屋へ呼ぶ選択の画面)
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map((song) => song.songId).join(',');
+  // モードえらびに出す、今日の無料のセッション残り回数(2026-10-07・ユーザー指示「この画面で無料セッション分と券の枚数を見れるように」)
+  const buddyStoreState = useRhythmBuddyState();
+  const buddyDayKey = useRhythmBuddyDayKey();
   // 「マスモンを呼べるようになった」の一度きりの案内(新しい保存キー。既存のキーは触らない)
   const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
   React.useEffect(() => {
@@ -1749,6 +1752,13 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
                 <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </section>
+            )}
+            {/* マスモンを呼べる回数。1日の無料ぶんの残りと、セッション券の枚数(部屋の「マスモンを呼ぶ」で使う) */}
+            {ms.multi && (
+              <div data-rhythm-mode-session className="mhms-in -my-1 flex items-center justify-center gap-x-2 whitespace-nowrap px-1 text-[10px] leading-none">
+                <b className="font-black text-lime-200">🎶 マスモンのセッション</b>
+                <RhythmBuddyAllowance freeLeft={rhythmBuddyFreeLeft(buddyStoreState, buddyDayKey)} tickets={buddyTickets} compact className="text-slate-200" />
+              </div>
             )}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
             <div className={`mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`} style={{ animationDelay: '.28s' }}>

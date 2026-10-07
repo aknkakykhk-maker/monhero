@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 953d5b4c14f86ccc
+// source-sha256: c54ff3a76abc4697
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 18:03";
+const BUILD_DATE = "2026-10-07 18:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -62986,6 +62986,8 @@ function RhythmMultiScreen({
   const [recordOpen, setRecordOpen] = React.useState(false);
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map(song => song.songId).join(',');
+  const buddyStoreState = useRhythmBuddyState();
+  const buddyDayKey = useRhythmBuddyDayKey();
   const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
   React.useEffect(() => {
     let alive = true;
@@ -63611,7 +63613,17 @@ function RhythmMultiScreen({
       "aria-label": "閉じる",
       onClick: () => closeBuddyIntro(false),
       className: "min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), React.createElement("div", {
+    }, "✕")), ms.multi && React.createElement("div", {
+      "data-rhythm-mode-session": true,
+      className: "mhms-in -my-1 flex items-center justify-center gap-x-2 whitespace-nowrap px-1 text-[10px] leading-none"
+    }, React.createElement("b", {
+      className: "font-black text-lime-200"
+    }, "🎶 マスモンのセッション"), React.createElement(RhythmBuddyAllowance, {
+      freeLeft: rhythmBuddyFreeLeft(buddyStoreState, buddyDayKey),
+      tickets: buddyTickets,
+      compact: true,
+      className: "text-slate-200"
+    })), React.createElement("div", {
       className: `mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`,
       style: {
         animationDelay: '.28s'
@@ -64610,11 +64622,12 @@ function RhythmBuddyStars({
 function RhythmBuddyAllowance({
   freeLeft,
   tickets,
-  className = ''
+  className = '',
+  compact = false
 }) {
   return React.createElement("p", {
     "data-rhythm-buddy-allowance": true,
-    className: `text-[11px] font-black leading-snug ${className}`
+    className: `font-black ${compact ? 'text-[10px] leading-none' : 'text-[11px] leading-snug'} ${className}`
   }, "今日の無料 ", React.createElement("b", {
     className: freeLeft > 0 ? 'text-lime-300' : 'text-slate-400'
   }, "あと", freeLeft, "回"), React.createElement("span", {
@@ -68066,7 +68079,7 @@ function MonsterHeroGame() {
   const [masuBeatBack, setMasuBeatBack] = useState('MB_MANAGEMENT');
   const openMasuBeat = from => {
     setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT');
-    setGameState('MASU_BEAT');
+    setGameState('RHYTHM_MASU_BEAT');
   };
   const consumeBuddyTicket = async () => {
     const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID);
@@ -70585,7 +70598,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',
     MISSIONS: 'home',
     RHYTHM_HISTORY: 'home',
-    MASU_BEAT: 'management',
+    RHYTHM_MASU_BEAT: 'management',
     RHYTHM_MODE_SELECT: 'rhythmModeSelect',
     RAID_JACK: 'home',
     RAID_JACK_PREP: 'home',
@@ -70637,7 +70650,7 @@ function MonsterHeroGame() {
   const isRunStage = value => RUN_STAGE_SCREENS.includes(value);
   const [runStage, setRunStage] = useState(null);
   const runStageRef = useRef(null);
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS', 'RHYTHM_MULTI'];
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS', 'RHYTHM_MULTI', 'RHYTHM_MASU_BEAT'];
   const rhythmScreenOpen = isRhythmScreen(gameState);
   const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'];
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
@@ -81092,6 +81105,7 @@ function MonsterHeroGame() {
   resumeAutoAfterVisibleRef.current = resumeQuickRunAfterVisible;
   const rhythmAutoStartInsideRef = useRef(false);
   useEffect(() => {
+    if (gameState === 'RHYTHM_MASU_BEAT') return;
     const inside = RHYTHM_AUTO_START_SCREENS.includes(gameState);
     const wasInside = rhythmAutoStartInsideRef.current;
     rhythmAutoStartInsideRef.current = inside;
@@ -92428,7 +92442,7 @@ function MonsterHeroGame() {
         onClick: savePastureSettings,
         className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
       }, "決定（", draftHomePastureIds.length, "体）")));
-    })(), gameState === 'MASU_BEAT' && React.createElement(MasuBeatScreen, {
+    })(), gameState === 'RHYTHM_MASU_BEAT' && React.createElement(MasuBeatScreen, {
       masuMons: masuMons,
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       tickets: ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID),

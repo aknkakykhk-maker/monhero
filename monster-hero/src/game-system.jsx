@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b0790f1e777e7175
+// generated-sha256: dc406d3935c0989d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 18:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 18:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38785,6 +38785,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // マスモンを呼ぶ(docs/spec/RHYTHM_BUDDY.md)。'' / 'pick'(部屋へ呼ぶ選択の画面)
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map((song) => song.songId).join(',');
+  // モードえらびに出す、今日の無料のセッション残り回数(2026-10-07・ユーザー指示「この画面で無料セッション分と券の枚数を見れるように」)
+  const buddyStoreState = useRhythmBuddyState();
+  const buddyDayKey = useRhythmBuddyDayKey();
   // 「マスモンを呼べるようになった」の一度きりの案内(新しい保存キー。既存のキーは触らない)
   const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
   React.useEffect(() => {
@@ -39204,6 +39207,13 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
                 <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </section>
+            )}
+            {/* マスモンを呼べる回数。1日の無料ぶんの残りと、セッション券の枚数(部屋の「マスモンを呼ぶ」で使う) */}
+            {ms.multi && (
+              <div data-rhythm-mode-session className="mhms-in -my-1 flex items-center justify-center gap-x-2 whitespace-nowrap px-1 text-[10px] leading-none">
+                <b className="font-black text-lime-200">🎶 マスモンのセッション</b>
+                <RhythmBuddyAllowance freeLeft={rhythmBuddyFreeLeft(buddyStoreState, buddyDayKey)} tickets={buddyTickets} compact className="text-slate-200" />
+              </div>
             )}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
             <div className={`mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`} style={{ animationDelay: '.28s' }}>
@@ -39767,9 +39777,9 @@ function RhythmBuddyStars({ stars }) {
   return <span aria-label={`得意度${stars}`} className="shrink-0 text-[11px] leading-none tracking-tight text-amber-300">{'★'.repeat(stars)}<span className="text-slate-600">{'★'.repeat(Math.max(0, 5 - stars))}</span></span>;
 }
 // 今日の残り回数とセッション券
-function RhythmBuddyAllowance({ freeLeft, tickets, className = '' }) {
+function RhythmBuddyAllowance({ freeLeft, tickets, className = '', compact = false }) {
   return (
-    <p data-rhythm-buddy-allowance className={`text-[11px] font-black leading-snug ${className}`}>
+    <p data-rhythm-buddy-allowance className={`font-black ${compact ? 'text-[10px] leading-none' : 'text-[11px] leading-snug'} ${className}`}>
       今日の無料 <b className={freeLeft > 0 ? 'text-lime-300' : 'text-slate-400'}>あと{freeLeft}回</b>
       <span className="mx-1 text-slate-500">/</span>セッション券 <b className="text-amber-200">{tickets}枚</b>
     </p>
@@ -42501,7 +42511,7 @@ function MonsterHeroGame() {
   ownedItemsRef.current = ownedItems;
   // マスモン一覧(モンヒロビート)の戻り先(M/B管理 か モンヒロビートのモードえらび)
   const [masuBeatBack, setMasuBeatBack] = useState('MB_MANAGEMENT');
-  const openMasuBeat = (from) => { setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT'); setGameState('MASU_BEAT'); };
+  const openMasuBeat = (from) => { setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT'); setGameState('RHYTHM_MASU_BEAT'); };
   // セッション券を1枚使う(モンヒロビートのマルチでマスモンを呼ぶとき。docs/spec/RHYTHM_BUDDY.md)。
   // 1日の無料ぶんを使い切ったあとにだけ呼ばれる。持っていなければ false
   const consumeBuddyTicket = async () => {
@@ -44761,7 +44771,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
-    MASU_BEAT: 'management',    // マスモン一覧(モンヒロビート)はM/B管理と同じ曲を続ける(対応表に載せ忘れると無音になる)
+    RHYTHM_MASU_BEAT: 'management', // マスモン一覧(モンヒロビート)はM/B管理と同じ曲を続ける(対応表に載せ忘れると無音になる)
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
     RAID_JACK: 'home', RAID_JACK_PREP: 'home', RAID_JACK_PLACE: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
@@ -44866,7 +44876,9 @@ function MonsterHeroGame() {
   // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
   //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
   //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI'];
+  // RHYTHM_MASU_BEAT(マスモン一覧)は、モードえらびと M/B管理の両方から開く。2026-10-07、名前が RHYTHM_ で始まっていなかったため、
+  // 「ビートLv」を押すと「モンビーを離れた」と判断され、裏で進んでいた周回がバトル画面へ切り替わった(ユーザー報告)
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI','RHYTHM_MASU_BEAT'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   //
   // ★**一覧で持たず、gameStateの頭で見る。**
@@ -53918,6 +53930,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   ・公開フラグが下りている
   const rhythmAutoStartInsideRef = useRef(false);
   useEffect(() => {
+    // マスモン一覧(RHYTHM_MASU_BEAT)は、見るだけの画面。出入りしても「入った瞬間」に数えない
+    // (M/B管理から開いただけで周回が始まったり、モードえらびへ戻るたびに始まったりしないように)
+    if (gameState === 'RHYTHM_MASU_BEAT') return;
     const inside = RHYTHM_AUTO_START_SCREENS.includes(gameState);
     const wasInside = rhythmAutoStartInsideRef.current;
     rhythmAutoStartInsideRef.current = inside;
@@ -59528,7 +59543,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* マスモン一覧: ラン終了時に登録した固有インスタンス。タップで詳細・改名・強化ポイント使用 */}
         {/* マスモン一覧(モンヒロビート)。M/B管理とモンヒロビートのモードえらびから開き、開いた画面へ戻る */}
-        {gameState==='MASU_BEAT'&&(
+        {gameState==='RHYTHM_MASU_BEAT'&&(
           <MasuBeatScreen masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} tickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)}
             onBack={()=>setGameState(masuBeatBack)} backLabel={masuBeatBack==='MB_MANAGEMENT'?'M/B管理へ戻る':'モードえらびへ戻る'}/>
         )}

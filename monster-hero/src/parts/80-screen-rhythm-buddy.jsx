@@ -144,9 +144,9 @@ function RhythmBuddyStars({ stars }) {
   return <span aria-label={`得意度${stars}`} className="shrink-0 text-[11px] leading-none tracking-tight text-amber-300">{'★'.repeat(stars)}<span className="text-slate-600">{'★'.repeat(Math.max(0, 5 - stars))}</span></span>;
 }
 // 今日の残り回数とセッション券
-function RhythmBuddyAllowance({ freeLeft, tickets, className = '' }) {
+function RhythmBuddyAllowance({ freeLeft, tickets, className = '', compact = false }) {
   return (
-    <p data-rhythm-buddy-allowance className={`text-[11px] font-black leading-snug ${className}`}>
+    <p data-rhythm-buddy-allowance className={`font-black ${compact ? 'text-[10px] leading-none' : 'text-[11px] leading-snug'} ${className}`}>
       今日の無料 <b className={freeLeft > 0 ? 'text-lime-300' : 'text-slate-400'}>あと{freeLeft}回</b>
       <span className="mx-1 text-slate-500">/</span>セッション券 <b className="text-amber-200">{tickets}枚</b>
     </p>
