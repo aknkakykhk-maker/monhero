@@ -2139,9 +2139,9 @@ scheduleTick();};
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
         return;
       }
-      // 指を滑らせたときの取り直し(rejudge)で取れるノーツが無いのは、押し損ねではない。空押しの音は鳴らさない
-      // (2026-10-07・成功したタップのあとに指が数px動くと、空押しの音が余分に鳴っていた)
-      if(!target){if(!input.rejudge){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      // 指を滑らせて取り直した(rejudge)ときも、ノーツが無ければ空押しの音を鳴らす(レーンが変わるたびの「シャッ」)。
+      // ただし、ノーツの音の直後(150ms以内)は鳴らさない(2026-10-07・成功したタップのあとに指が数px動くと余分に鳴っていた)
+      if(!target){if(!input.rejudge||!RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)){RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();}if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
       // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;
