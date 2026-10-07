@@ -90,10 +90,14 @@ const pure = (() => {
   // 演奏の結果
   const seq = (seed) => { let x = seed; return () => { x = (x * 1103515245 + 12345) % 2147483648; return x / 2147483648; }; };
   const normal = b.moods.find((m) => m.id === 'normal');
-  const run = (lvExp, diffId, max, plays, songPlays = 0) => {
+  // 譜面は実際の曲の真ん中あたり(MASTER は Lv.26・1秒に3.3個)。chart で変えられる
+  const run = (lvExp, diffId, max, plays, songPlays = 0, chart = {}) => {
+    const lvOf = { EASY: 7, NORMAL: 9, HARD: 14, EXPERT: 19, MASTER: 26 }[diffId];
+    const chartLevel = chart.level || lvOf;
+    const notes = chart.notes || Math.round((1 + chartLevel / 10) * 100);
     const rand = seq(7); const scores = []; let fc = 0; let perfect = 0; let over = false;
     for (let i = 0; i < 400; i += 1) {
-      const r = b.play({ mon: { exp: lvExp, diffs: { [diffId]: plays }, songs: { s: songPlays } }, songId: 's', diffId, totalNotes: 500, maxScore: max, durationMs: 100000, mood: normal, rand });
+      const r = b.play({ mon: { exp: lvExp, diffs: { [diffId]: plays }, songs: { s: songPlays } }, songId: 's', diffId, totalNotes: notes, maxScore: max, durationMs: 100000, mood: normal, rand, chartLevel });
       if (r.score > max || r.score < 0) over = true;
       scores.push(r.score); if (r.fullCombo) fc += 1; if (r.score >= max) perfect += 1;
     }
@@ -108,7 +112,17 @@ const pure = (() => {
   check('スコアは0〜その難易度の満点に収まる', [lv1, lv50, lv1m, lv50m, lv50mFav].every((x) => !x.over));
   check('育つほどうまくなる(Lv.1 < Lv.50)', lv1.avg < lv50.avg, `${Math.round(lv1.avg)} < ${Math.round(lv50.avg)}`);
   check('遊んだ曲ほど得意(30回遊んだ曲 > 初めての曲)', lv50mFav.avg > lv50m.avg + 30000, `${Math.round(lv50mFav.avg)} > ${Math.round(lv50m.avg)}`);
-  check('育ちきって得意な曲なら、MASTERでSSに届き、たまに満点(上限は満点)', lv50mFav.avg >= 880000 && lv50mFav.perfect > 0, `平均${Math.round(lv50mFav.avg)} 満点${lv50mFav.perfect}/400`);
+  const lv50mFav50 = run(1e9, 'MASTER', 1000000, 40, 60);
+  check('育ちきって得意な曲なら、MASTERでSに届き、たまに満点(上限は満点)', lv50mFav.avg >= 850000 && lv50mFav50.perfect > 0, `平均${Math.round(lv50mFav.avg)} 満点${lv50mFav50.perfect}/400`);
+  const hardChart = run(1e9, 'MASTER', 1000000, 40, 0, { level: 47 });
+  const easyChart = run(1e9, 'MASTER', 1000000, 40, 0, { level: 20 });
+  check('譜面のLv.が高いほどスコアが落ちる(同じ MASTER でも Lv.20 > Lv.47)', easyChart.avg > hardChart.avg, `${Math.round(easyChart.avg)} > ${Math.round(hardChart.avg)}`);
+  const midLv = 20000; // 経験値2万(Lv.20前後)
+  const reach26 = run(midLv, 'MASTER', 1000000, 40, 0, { level: 26 });
+  const reach47 = run(midLv, 'MASTER', 1000000, 40, 0, { level: 47 });
+  check('育ちかけの相棒には、難しい譜面ほど差が大きい', (reach26.avg - reach47.avg) > (easyChart.avg - hardChart.avg), `${Math.round(reach26.avg - reach47.avg)} > ${Math.round(easyChart.avg - hardChart.avg)}`);
+  const dense = run(1e9, 'MASTER', 1000000, 40, 0, { level: 26, notes: 560 });
+  check('Lv.の割にノーツが詰まった譜面は、さらに少し落ちる', dense.avg < run(1e9, 'MASTER', 1000000, 40, 0, { level: 26 }).avg);
   check('育てはじめは満点もフルコンボも出ない', lv1.perfect === 0 && lv1m.perfect === 0 && lv1.fc === 0 && lv1m.fc === 0);
   check('うまくなるほどブレが小さい(Lv.1 の振れ幅 > Lv.50)', lv1m.width > lv50m.width, `${lv1m.width} > ${lv50m.width}`);
   const great = b.moods.find((m) => m.id === 'great');

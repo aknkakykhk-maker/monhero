@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3a1b87f20b4c54ce
+// source-sha256: 4faf7fe46902307b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 12:00";
+const BUILD_DATE = "2026-10-07 12:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37065,12 +37065,15 @@ const rhythmBuddyMood = (masuId, dayKey, mon) => {
   }
   return RHYTHM_BUDDY_MOODS[2];
 };
+const rhythmBuddyComfortLevel = (level, songPlays, trait) => 8 + 37 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
 const rhythmBuddyAccuracy = ({
   mon,
   songId,
   diffId,
   durationMs,
-  mood
+  mood,
+  chartLevel,
+  density
 }) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const {
@@ -37078,10 +37081,17 @@ const rhythmBuddyAccuracy = ({
   } = rhythmBuddyLevelInfo(m.exp);
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
-  let acc = 0.35 + 0.5 * rhythmBuddyGrowthRate(level);
-  acc += 0.05 * mastery;
-  acc -= d * 0.035 * (1 - mastery);
-  acc += rhythmBuddySongSkill(m.songs[songId], m.trait);
+  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
+  let acc = 0.55 + 0.32 * rhythmBuddyGrowthRate(level);
+  acc += 0.6 * rhythmBuddySongSkill(m.songs[songId], m.trait);
+  acc += 0.03 * mastery - d * 0.012 * (1 - mastery);
+  const over = chartLv - rhythmBuddyComfortLevel(level, m.songs[songId], m.trait);
+  acc -= over > 0 ? Math.min(0.45, over * 0.02) : -Math.min(0.02, -over * 0.002);
+  const dens = Number(density);
+  if (Number.isFinite(dens) && dens > 0) {
+    const extra = dens - (1 + chartLv / 10);
+    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'burst' ? 0.5 : 1);
+  }
   if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
   const moodAcc = mood ? mood.acc : 0;
   acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
@@ -37106,19 +37116,23 @@ const rhythmBuddyPlay = ({
   maxScore,
   durationMs,
   mood,
-  rand
+  rand,
+  chartLevel = 0
 }) => {
   const r = typeof rand === 'function' ? rand : Math.random;
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, rhythmBuddyInt(totalNotes, 100000));
   const max = Number(maxScore) > 0 ? Number(maxScore) : 1000000;
   const level = rhythmBuddyLevelInfo(m.exp).level;
+  const density = Number(durationMs) > 0 ? total / (Number(durationMs) / 1000) : 0;
   let acc = rhythmBuddyAccuracy({
     mon: m,
     songId,
     diffId,
     durationMs,
-    mood
+    mood,
+    chartLevel,
+    density
   }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
   if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
   acc = Math.max(0.1, Math.min(1, acc));
@@ -64037,7 +64051,7 @@ const rhythmBuddyMakeBrain = songs => ({
   }) {
     const song = (songs || []).find(x => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
-    const totalNotes = chart && Array.isArray(chart.notes) ? chart.notes.length : 300;
+    const totalNotes = chart ? Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300 : 300;
     const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === diffId);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -64047,9 +64061,10 @@ const rhythmBuddyMakeBrain = songs => ({
       diffId,
       totalNotes,
       maxScore: diffDef ? diffDef.maxScore : 1000000,
-      durationMs: song ? Number(song.playDurationMs) || 0 : 0,
+      durationMs: chart && Number(chart.durationMs) || (song ? Number(song.playDurationMs) || 0 : 0),
       mood,
-      rand: Math.random
+      rand: Math.random,
+      chartLevel: chart ? Number(chart.level) || 0 : 0
     });
   },
   pick(catalog, masuId) {

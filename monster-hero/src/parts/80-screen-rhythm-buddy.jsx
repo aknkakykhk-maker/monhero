@@ -76,13 +76,14 @@ const rhythmBuddyMakeBrain = (songs) => ({
   play({ songId, diffId, masuId }) {
     const song = (songs || []).find((x) => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
-    const totalNotes = chart && Array.isArray(chart.notes) ? chart.notes.length : 300;
+    const totalNotes = chart ? (Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300) : 300;
     const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     return rhythmBuddyPlay({
       mon, songId, diffId, totalNotes, maxScore: diffDef ? diffDef.maxScore : 1000000,
-      durationMs: song ? Number(song.playDurationMs) || 0 : 0, mood, rand: Math.random,
+      durationMs: (chart && Number(chart.durationMs)) || (song ? Number(song.playDurationMs) || 0 : 0), mood, rand: Math.random,
+      chartLevel: chart ? Number(chart.level) || 0 : 0,
     });
   },
   // 得意な曲(上位3曲)から選ぶ。遊べる曲の中に無ければおまかせ('')

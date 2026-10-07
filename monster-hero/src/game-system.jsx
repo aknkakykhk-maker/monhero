@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 49047fe7670b3638
+// generated-sha256: 3b0fc70164f2614f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 12:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23547,18 +23547,32 @@ const rhythmBuddyMood = (masuId, dayKey, mon) => {
 };
 
 // ---- うまさ(判定の良さ 0〜1) ----
-// Lv が土台。熟練・なじみ・調子・性格で足し引き。慣れていない難しい難易度は下がる
-const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood }) => {
+// 相棒の育ち具合から「無理なく叩ける譜面のLv.」を決め、それより上の譜面ほど落ちる(2026-10-07・ユーザー指示
+// 「曲の難易度補正」→ 譜面のLv.とノーツの密度で補正)。譜面のLv.は配信中の曲で EASY 4〜15 / MASTER 17〜47。
+// 密度(1秒あたりのノーツ数)は平均で「1 + Lv.÷10」くらいなので、それより詰まっている譜面はさらに少し落ちる
+const rhythmBuddyComfortLevel = (level, songPlays, trait) => 8 + 37 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
+const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel, density }) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const { level } = rhythmBuddyLevelInfo(m.exp);
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
+  // 譜面のLv.が分からないときは、難易度の種類からだいたいの値を使う
+  const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
   // 上の方ほど伸びが大きい(はじめはゆっくり、育ちきると人より上手)
-  let acc = 0.35 + 0.5 * rhythmBuddyGrowthRate(level);
-  acc += 0.05 * mastery;
-  acc -= d * 0.035 * (1 - mastery);
-  // 遊んだ曲ほど得意になる(2026-10-07・ユーザー指示)。回数に応じてなだらかに増え、最大 +0.10
-  acc += rhythmBuddySongSkill(m.songs[songId], m.trait);
+  let acc = 0.55 + 0.32 * rhythmBuddyGrowthRate(level);
+  // 遊んだ曲ほど得意になる(2026-10-07・ユーザー指示)。最大 +0.06(無理なく叩けるLv.も最大+5)
+  acc += 0.6 * rhythmBuddySongSkill(m.songs[songId], m.trait);
+  // 難易度の種類ごとの慣れ(譜面のLv.と役目が重なるので小さめ)
+  acc += 0.03 * mastery - d * 0.012 * (1 - mastery);
+  // 譜面のLv.: 無理なく叩けるLv.を超えたぶん1つごとに -0.02(最大 -0.45)。下回るぶんは少しだけ楽(最大 +0.02)
+  const over = chartLv - rhythmBuddyComfortLevel(level, m.songs[songId], m.trait);
+  acc -= over > 0 ? Math.min(0.45, over * 0.02) : -Math.min(0.02, -over * 0.002);
+  // 密度: Lv.の割に詰まっているぶん(1秒あたり1つ多いごとに -0.04)。一発型は半分
+  const dens = Number(density);
+  if (Number.isFinite(dens) && dens > 0) {
+    const extra = dens - (1 + chartLv / 10);
+    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'burst' ? 0.5 : 1);
+  }
   if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
   const moodAcc = mood ? mood.acc : 0;
   acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
@@ -23582,13 +23596,14 @@ const rhythmBuddyNormal = (rand) => {
   const v = rand();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 };
-const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs, mood, rand }) => {
+const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs, mood, rand, chartLevel = 0 }) => {
   const r = typeof rand === 'function' ? rand : Math.random;
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, rhythmBuddyInt(totalNotes, 100000));
   const max = Number(maxScore) > 0 ? Number(maxScore) : 1000000;
   const level = rhythmBuddyLevelInfo(m.exp).level;
-  let acc = rhythmBuddyAccuracy({ mon: m, songId, diffId, durationMs, mood }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
+  const density = Number(durationMs) > 0 ? total / (Number(durationMs) / 1000) : 0;
+  let acc = rhythmBuddyAccuracy({ mon: m, songId, diffId, durationMs, mood, chartLevel, density }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
   // 一発型は、たまに(8%)大きく当てる
   if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
   acc = Math.max(0.1, Math.min(1, acc));
@@ -39446,13 +39461,14 @@ const rhythmBuddyMakeBrain = (songs) => ({
   play({ songId, diffId, masuId }) {
     const song = (songs || []).find((x) => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
-    const totalNotes = chart && Array.isArray(chart.notes) ? chart.notes.length : 300;
+    const totalNotes = chart ? (Number(chart.totalNotes) > 0 ? Number(chart.totalNotes) : Array.isArray(chart.notes) ? chart.notes.length : 300) : 300;
     const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
     return rhythmBuddyPlay({
       mon, songId, diffId, totalNotes, maxScore: diffDef ? diffDef.maxScore : 1000000,
-      durationMs: song ? Number(song.playDurationMs) || 0 : 0, mood, rand: Math.random,
+      durationMs: (chart && Number(chart.durationMs)) || (song ? Number(song.playDurationMs) || 0 : 0), mood, rand: Math.random,
+      chartLevel: chart ? Number(chart.level) || 0 : 0,
     });
   },
   // 得意な曲(上位3曲)から選ぶ。遊べる曲の中に無ければおまかせ('')
