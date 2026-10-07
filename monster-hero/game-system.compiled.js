@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1de61b59b7687891
+// source-sha256: 8a1fe9035d5d38a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 17:20";
+const BUILD_DATE = "2026-10-07 17:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -8610,6 +8610,27 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Kuromy: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -9047,7 +9068,8 @@ const EXACT_DYE_MASKS = Object.freeze({
   MelWhip: MEL_WHIP_DYE_MASK,
   Ghost: GHOST_DYE_MASK,
   Spooky: SPOOKY_DYE_MASK,
-  Melody: MELODY_DYE_MASK
+  Melody: MELODY_DYE_MASK,
+  Kuromy: KUROMY_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -9409,6 +9431,11 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.46
   }, {
     gloss: 0.42
+  }],
+  Kuromy: [{
+    gloss: 0.56
+  }, {}, {}, {}, {
+    gloss: 0.4
   }]
 };
 const _NO_REGION_DYE = {
@@ -22562,6 +22589,19 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       anim: 'wag',
       amp: 8,
       dur: 1800,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Kuromy: {
+    body: 'breathe',
+    bodyMask: IDLE_KUROMY_BODY_MASK,
+    parts: [{
+      mask: IDLE_KUROMY_TAIL_MASK,
+      origin: '65.9% 53.4%',
+      anim: 'wag',
+      amp: 7,
+      dur: 1700,
       delay: 0,
       layer: 'back'
     }]

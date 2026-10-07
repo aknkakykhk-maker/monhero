@@ -121,4 +121,8 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
   // 立ち絵・顔アイコン・染色マスク(5部位)まで入れた。能力値・技・勇者特性・固有技・攻撃モーションは未定
   Melody: Object.freeze({ id:'Melody', name:"メロディー", emoji:"🐘", imgUrl:MELODY_IMG, iconUrl:MELODY_ICON,
     faceIconUrl:MELODY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
+  // クロミー(2026-10-07・案の段階)。ユグドラシル×？？？のレア。名前と血統はユーザー指定。
+  // 立ち絵・顔アイコン・染色マスク(5部位)まで入れた。能力値・技・勇者特性・固有技・攻撃モーションは未定
+  Kuromy: Object.freeze({ id:'Kuromy', name:"クロミー", emoji:"😈", imgUrl:KUROMY_IMG, iconUrl:KUROMY_ICON,
+    faceIconUrl:KUROMY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
 });
