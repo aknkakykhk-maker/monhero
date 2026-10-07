@@ -29,6 +29,8 @@ const OPTS = {
   xNoiseLanes: 0.12,                   // 押す位置の横のばらつき(レーン)
   thumb: !args.includes('--no-thumb'), // 判定ラインより手前(画面の下)を押す
   nudgePx: 5,                          // ホールド中に別の指で押すと、押さえている指がつられて動く(px)
+  edgeProbe: 0.35,                     // HOLD の35%は「押し始めの受付のいちばん外側」を押さえ続ける(押し始めと押さえ中の受付の食い違いを突く)
+  edgeOutLanes: 0.18,                  // 端のレーンは外へはみ出し気味に押す(レーン)。つられる向きも外側(10/7 のホールドの切れは端のレーンの外側寄りで起きた)
   dropPointer: 0.15,                   // ios: ポインタの合図が抜けるタッチの割合(10/7 の実機では千ノーツあたり18ほど)
   lateRate: 0.1, lateMs: [30, 120],    // 遅れて届くタッチの割合と遅れ
 };
@@ -97,8 +99,8 @@ async function auditBuild(playwright, root, label, port) {
       }
       const data = await s.page.evaluate(() => ({ presses: window.__feel.presses, results: window.__feel.results }));
       const a = analyzeFeel({ notesInfo: installed.notesInfo, presses: data.presses, results: data.results });
-      Object.assign(row, { ok: true, title, ...a.summary, samples: { tapMissed: a.tapMissed.slice(0, 8), drift: a.drift.slice(0, 8), stolen: a.stolen.slice(0, 8), holdBroken: a.holdBroken.slice(0, 8) } });
-      console.log(`${label} ${title} ${DIFFICULTY}: 押した ${a.summary.pressed} / 押したのに取れない ${a.summary.tapMissed}(合図が抜けた ${a.summary.tapMissedDroppedPointer}・遅れた ${a.summary.tapMissedLate}) / 判定のずれ ${a.summary.driftCount}(差の中央値 ${a.summary.errorMedianMs}ms・90%が ${a.summary.errorP90AbsMs}ms 以内) / 早取り ${a.summary.stolen} / ホールドが切れた ${a.summary.holdBroken}`);
+      Object.assign(row, { ok: true, title, ...a.summary, probes: data.presses.filter((x) => x.edgeProbe), samples: { tapMissed: a.tapMissed.slice(0, 8), drift: a.drift.slice(0, 8), stolen: a.stolen.slice(0, 8), holdBroken: a.holdBroken.slice(0, 8) } });
+      console.log(`${label} ${title} ${DIFFICULTY}: 押した ${a.summary.pressed} / 押したのに取れない ${a.summary.tapMissed}(合図が抜けた ${a.summary.tapMissedDroppedPointer}・遅れた ${a.summary.tapMissedLate}) / 判定のずれ ${a.summary.driftCount}(差の中央値 ${a.summary.errorMedianMs}ms・90%が ${a.summary.errorP90AbsMs}ms 以内) / 早取り ${a.summary.stolen} / ホールドが切れた ${a.summary.holdBroken}(受付の端で押さえて切れた ${a.summary.holdBrokenAtEdge}/${a.summary.edgeProbes})`);
     } catch (e) {
       if (!row.why) row.why = e.message.split('\n')[0];
       console.log(`${label} ${songId}: 点検できなかった — ${row.why}`);
@@ -116,14 +118,16 @@ const total = (rows) => {
   const pressed = sum('pressed');
   const med = ok.map((r) => r.errorMedianMs).filter((v) => v != null).sort((a, b) => a - b);
   return { songs: ok.length, pressed, tapMissed: sum('tapMissed'), tapMissedPer1000: pressed ? Math.round(sum('tapMissed') / pressed * 10000) / 10 : 0,
-    stolen: sum('stolen'), drift: sum('driftCount'), driftPer1000: pressed ? Math.round(sum('driftCount') / pressed * 10000) / 10 : 0, holdBroken: sum('holdBroken'),
+    stolen: sum('stolen'), drift: sum('driftCount'), driftPer1000: pressed ? Math.round(sum('driftCount') / pressed * 10000) / 10 : 0, holdBroken: sum('holdBroken'), holdBrokenAtEdge: sum('holdBrokenAtEdge'), edgeProbes: sum('edgeProbes'),
     errorMedianMs: med.length ? med[Math.floor(med.length / 2)] : null };
 };
 // 前の版より悪くなったか(音ゲー班が止めて直す目安)
 const worse = (before, now) => {
   const out = [];
   if (now.tapMissed - before.tapMissed >= 3 && now.tapMissedPer1000 >= before.tapMissedPer1000 * 1.5) out.push(`押したのに取れない ${before.tapMissed} → ${now.tapMissed}`);
-  if (now.stolen - before.stolen >= 3 && now.stolen >= before.stolen * 1.5) out.push(`早取り ${before.stolen} → ${now.stolen}`);
+  // 早取りは同じ版でも回ごとに 3〜8 ほど揺れる(10/7 に同じ版どうしで 7 と 12)。揺れで止めないよう、6以上かつ1.5倍で見る
+  if (now.stolen - before.stolen >= 6 && now.stolen >= before.stolen * 1.5) out.push(`早取り ${before.stolen} → ${now.stolen}`);
+  if (now.holdBrokenAtEdge > 0) out.push(`受付の端で押さえたホールドが切れた ${now.holdBrokenAtEdge}回(押し始めと押さえ中の受付が食い違っている)`);
   if (now.holdBroken - before.holdBroken >= 2) out.push(`ホールドが切れた ${before.holdBroken} → ${now.holdBroken}`);
   if (before.errorMedianMs != null && now.errorMedianMs != null && Math.abs(now.errorMedianMs - before.errorMedianMs) >= 10) out.push(`判定のずれの中央値 ${before.errorMedianMs} → ${now.errorMedianMs}ms`);
   if (now.drift - before.drift >= 10 && now.driftPer1000 >= before.driftPer1000 * 1.5) out.push(`判定のずれ ${before.drift} → ${now.drift}`);
@@ -150,9 +154,9 @@ const worse = (before, now) => {
   report.total = { now, before };
   report.worse = before ? worse(before, now) : [];
   fs.writeFileSync(path.join(OUT, 'feel.json'), JSON.stringify(report, null, 2));
-  const line = (t, x) => `- ${t}: ${x.songs}曲・${x.pressed}回押した / 押したのに取れない ${x.tapMissed}(千回あたり ${x.tapMissedPer1000}) / 判定のずれ ${x.drift}(千回あたり ${x.driftPer1000}・差の中央値 ${x.errorMedianMs}ms) / 早取り ${x.stolen} / ホールドが切れた ${x.holdBroken}`;
+  const line = (t, x) => `- ${t}: ${x.songs}曲・${x.pressed}回押した / 押したのに取れない ${x.tapMissed}(千回あたり ${x.tapMissedPer1000}) / 判定のずれ ${x.drift}(千回あたり ${x.driftPer1000}・差の中央値 ${x.errorMedianMs}ms) / 早取り ${x.stolen} / ホールドが切れた ${x.holdBroken}(受付の端で押さえて切れた ${x.holdBrokenAtEdge}/${x.edgeProbes})`;
   const md = [`# モンヒロくんの反応の点検 ${stamp}`, '',
-    `- 指: ${OPTS.mode}${OPTS.thumb ? '・親指で手前を押す' : ''}・ホールド中のつられ ${OPTS.nudgePx}px${OPTS.mode === 'ios' ? `・ポインタの合図が抜ける ${OPTS.dropPointer * 100}%・遅れて届く ${OPTS.lateRate * 100}%(${OPTS.lateMs.join('〜')}ms)` : ''}${CPU > 1 ? `・CPU ${CPU}倍遅い` : ''} / 種 ${SEED} / ${DIFFICULTY}`,
+    `- 指: ${OPTS.mode}${OPTS.thumb ? '・親指で手前を押す' : ''}・ホールド中のつられ ${OPTS.nudgePx}px・端は外へ ${OPTS.edgeOutLanes}レーン${OPTS.mode === 'ios' ? `・ポインタの合図が抜ける ${OPTS.dropPointer * 100}%・遅れて届く ${OPTS.lateRate * 100}%(${OPTS.lateMs.join('〜')}ms)` : ''}${CPU > 1 ? `・CPU ${CPU}倍遅い` : ''} / 種 ${SEED} / ${DIFFICULTY}`,
     ...(before ? [line(`前(${compareRef})`, before)] : []), line('今', now),
     ...(before ? ['', report.worse.length ? `## ⚠ 前の版より悪くなった\n\n${report.worse.map((w) => `- ${w}`).join('\n')}` : '## 前の版より悪くなったところは無い'] : []),
     '', '## 曲ごと', '',
@@ -162,7 +166,7 @@ const worse = (before, now) => {
     '', '## 例(1曲につき8件まで)', '',
     ...report.runs.now.filter((r) => r.ok).flatMap((r) => [
       ...r.samples.tapMissed.map((x) => `- 取れない ${r.title} ${x.timeMs}ms ${x.type}: 押したずれ ${x.botDelta}ms${x.dropPointer ? '・ポインタの合図なし' : ''}${x.lateMs ? `・${x.lateMs}ms遅れて届いた` : ''} (x${x.x}, y${x.y})`),
-      ...r.samples.holdBroken.map((x) => `- ホールドが切れた ${r.title} ${x.timeMs}〜${x.endTimeMs}ms ${x.type}: ${x.cutAtMs}ms で切れた(指を離したのは ${x.releasedAtMs ?? '-'}ms・押し始め ${x.holdJudgment}・最後 ${x.judgment})・押したずれ ${x.botDelta}ms${x.dropPointer ? '・ポインタの合図なし' : ''} (x${x.x}, y${x.y})`),
+      ...r.samples.holdBroken.map((x) => `- ホールドが切れた ${r.title} ${x.timeMs}〜${x.endTimeMs}ms ${x.type}: ${x.cutAtMs}ms で切れた(指を離したのは ${x.releasedAtMs ?? '-'}ms・押し始め ${x.holdJudgment}・最後 ${x.judgment})・押したずれ ${x.botDelta}ms${x.dropPointer ? '・ポインタの合図なし' : ''}${x.edgeProbe ? '・受付の端で押さえた' : ''} (x${x.x}, y${x.y})`),
       ...r.samples.stolen.map((x) => `- 早取り ${r.title} ${x.timeMs}ms ${x.type}: 押したずれ ${x.botDelta}ms → 判定は ${x.gameDelta}ms(ほかの押下に取られた)`),
       ...r.samples.drift.map((x) => `- ずれ ${r.title} ${x.timeMs}ms ${x.type}: 押したずれ ${x.botDelta}ms → 判定は ${x.gameDelta}ms${x.dropPointer ? '・ポインタの合図なし' : ''}${x.lateMs ? `・${x.lateMs}ms遅れて届いた` : ''}`),
     ]), ''].join('\n');

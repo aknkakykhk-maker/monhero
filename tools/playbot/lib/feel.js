@@ -33,6 +33,23 @@ function installFeelPlayer(o) {
     return { x: r.left + r.width * fx, y: r.top + r.height * yRatio };
   };
   const centerOf = (n) => (Number.isFinite(n.subLane) ? (n.subLane + (Number.isFinite(n.subLaneWidth) ? n.subLaneWidth : 2) / 2) / 2 - 0.5 : n.lane);
+  // 押し始めの受付のいちばん外側(ゲームの式そのもの)を探す。そこを押さえ続けても途中で切れないかを確かめる(edgeProbe)。
+  // 押し始めと押さえている最中の受付が食い違うと、ここで切れる(10/7 のホールドの切れはこの形だった)
+  const acceptsStart = (n, x, y) => {
+    const r = rect(), w = Number.isFinite(n.subLaneWidth) ? n.subLaneWidth : 2, s0 = Number.isFinite(n.subLane) ? n.subLane : n.lane * 2;
+    const tol = w <= 1 ? (typeof RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES !== 'undefined' ? RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES : 0.45) : (typeof RHYTHM_TAP_TOLERANCE_SUB_LANES !== 'undefined' ? RHYTHM_TAP_TOLERANCE_SUB_LANES : 0.6);
+    const within = (c) => Number.isFinite(c) && c >= s0 - tol && c <= s0 + w + tol;
+    const a = rhythmSubLaneCoordinateAtPoint(x, y, r);
+    const b = typeof rhythmSubLaneCoordinateAtLineIfBelow === 'function' ? rhythmSubLaneCoordinateAtLineIfBelow(x, y, r) : undefined;
+    return within(a) || within(b);
+  };
+  const edgeProbePoint = (n, yRatio, side) => {
+    const base = pointAt(centerOf(n), yRatio);
+    if (!acceptsStart(n, base.x, base.y)) return null;
+    let x = base.x;
+    for (let k = 0; k < 200 && acceptsStart(n, x + side, base.y); k++) x += side;
+    return { x: x - side * 1.5, y: base.y };   // いちばん外側から 1.5px 内側
+  };
   const songNow = () => (hooks.rhythmSongMs ? hooks.rhythmSongMs() : null);
 
   // ---- 指の合図。mouse はこれまでのモンヒロくんと同じ。touch / ios は本物のタッチの経路(touchstart と pointerType 'touch')を通す ----
@@ -54,7 +71,9 @@ function installFeelPlayer(o) {
   const send = (events, lateMs = 0) => { const go = () => events.forEach((e) => area.dispatchEvent(e)); if (lateMs > 0) setTimeout(go, lateMs); else go(); };
 
   // ---- 予定 ----
-  const plan = notes.map((n) => ({ n, at: n.timeMs + gauss() * o.sigma, c: centerOf(n) + gauss() * o.xNoiseLanes,
+  // 端のレーン(いちばん左・右)は、親指が外へはみ出しやすい(人は端ほど外を押す)。外向きへ edgeOutLanes ずらす
+  const edgeShift = (n) => { const c = centerOf(n); if (!(o.edgeOutLanes > 0)) return 0; if (c <= 0.25) return -o.edgeOutLanes * (0.5 + rand()); if (c >= RHYTHM_LANE_COUNT - 1.25) return o.edgeOutLanes * (0.5 + rand()); return 0; };
+  const plan = notes.map((n) => ({ n, at: n.timeMs + gauss() * o.sigma, c: centerOf(n) + edgeShift(n) + gauss() * o.xNoiseLanes,
     y: o.thumb ? 0.9 + rand() * 0.08 : lineRatio })).sort((a, b) => a.at - b.at);
   const presses = [];
   const holding = []; // { id, n, p, until, press }
@@ -77,14 +96,18 @@ function installFeelPlayer(o) {
     if (performance.now() - lastResultsAt > 400) { lastResultsAt = performance.now(); const r = hooks.rhythmNoteResults(); if (r) state.results = r; }
     while (i < plan.length && plan[i].at <= now) {
       const { n, c, y } = plan[i++];
-      const id = pid++, p = pointAt(c, y);
+      const id = pid++;
+      // 向きは画面の中心寄り。判定ラインより手前ではレーンが広がって見えるので、「判定ラインの高さに直した位置」が受付を広げるのは
+      // 中心寄りの側。押し始めがそれで通り、押さえている最中は指の高さだけで見ていた(10/7 の食い違い)のはこちらの端
+      const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && rand() < o.edgeProbe ? (centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1) : 0;
+      const p = (probeSide && edgeProbePoint(n, y, probeSide)) || pointAt(c, y);
       const dropPointer = o.mode === 'ios' && rand() < o.dropPointer;
       const lateMs = o.mode !== 'mouse' && rand() < o.lateRate ? o.lateMs[0] + rand() * (o.lateMs[1] - o.lateMs[0]) : 0;
-      const press = { index: n.index, type: n.type, pressSong: now, dropPointer, lateMs: Math.round(lateMs), x: Math.round(p.x), y: Math.round(p.y), releaseSong: null };
+      const press = { index: n.index, type: n.type, edgeProbe: !!probeSide, pressSong: now, dropPointer, lateMs: Math.round(lateMs), x: Math.round(p.x), y: Math.round(p.y), releaseSong: null };
       presses.push(press);
       send(makeEvents('down', id, p, { dropPointer }), lateMs);
       // ホールド中に別の指で押すと、押さえている指がつられて少し動く(10/7 の「ホールド近くを押すと切れる」)
-      if (o.nudgePx > 0) holding.forEach((h) => { if (rand() < 0.6) { const dx = (rand() < 0.5 ? -1 : 1) * o.nudgePx * (0.5 + rand() * 0.5); h.p = { x: h.p.x + dx, y: h.p.y + (rand() - 0.5) * 4 }; send(makeEvents('move', h.id, h.p)); } });
+      if (o.nudgePx > 0) holding.forEach((h) => { if (!h.press.edgeProbe && rand() < 0.6) { const hc = centerOf(h.n), out = hc <= 0.25 ? -1 : hc >= RHYTHM_LANE_COUNT - 1.25 ? 1 : (rand() < 0.5 ? -1 : 1); const dx = out * o.nudgePx * (0.5 + rand() * 0.5); h.p = { x: h.p.x + dx, y: h.p.y + (rand() - 0.5) * 4 }; send(makeEvents('move', h.id, h.p)); } });
       if (n.type === 'HOLD' || n.type === 'SLIDE') {
         holding.push({ id, n, p, yRatio: y, press, until: (Number(n.endTimeMs) || n.timeMs) + gauss() * o.sigma * 0.5 });
       } else if (n.type === 'FLICK') {
@@ -95,6 +118,15 @@ function installFeelPlayer(o) {
     }
     for (let k = holding.length - 1; k >= 0; k--) {
       const h = holding[k];
+      // 人の指は止めているつもりでも少し揺れる。ゲームは指が動いたときに外れを確かめるので、受付の端で押さえる指は 1px ほど揺らす
+      // (10/7 の「近くを押すとホールドが切れる」は、近くを押した拍子に押さえている指が動き、その瞬間の確かめで外れになっていた)
+      if (h.press.edgeProbe && (!h.lastWobble || now - h.lastWobble > 90)) { h.lastWobble = now; const w = { x: h.p.x + (rand() < 0.5 ? -1 : 1) * 0.8, y: h.p.y + (rand() - 0.5) * 1.2 }; send(makeEvents('move', h.id, w)); }
+      // 受付の端で押さえているホールドは、ゲームがその指を「外れている」と見たことがあるかを覚えておく(原因の切り分け用)
+      if (h.press.edgeProbe && typeof RHYTHM_GESTURE_RUNTIME !== 'undefined' && RHYTHM_GESTURE_RUNTIME._sessions) {
+        for (const ses of RHYTHM_GESTURE_RUNTIME._sessions.values()) {
+          if (ses && ses.note && ses.note.index === h.n.index) { h.press.sessionSeen = true; h.press.sessionKey = ses.key; h.press.myId = h.id; try { const box = RHYTHM_GESTURE_RUNTIME.areaRect(); const act = rhythmLaneCoordinateAtPoint(h.p.x, h.p.y, box); const tr = rhythmHoldTrackedLane(ses.note, now - (ses.offsetMs || 0)); const lim = tr.half + rhythmHoldTrackingMarginLanes(tr.half * 4); const slack = act == null ? -9 : lim - Math.abs(act - tr.center); if (h.press.minSlack == null || slack < h.press.minSlack) { h.press.minSlack = Math.round(slack * 1000) / 1000; h.press.track = { act: act == null ? null : Math.round(act * 1000) / 1000, center: tr.center, half: tr.half, lim: Math.round(lim * 1000) / 1000 }; } } catch (e) { h.press.trackErr = String(e && e.message || e); } if (ses.trackingBadSincePerf != null) h.press.trackingBad = true; if (ses.failed) h.press.sessionFailed = true; }
+        }
+      }
       if (h.n.type === 'SLIDE') { const cc = lerpLane(h.n.slidePoints, now); if (cc !== null) { const q = pointAt(cc, h.yRatio); h.p = q; send(makeEvents('move', h.id, q)); } }
       if (endFlick.has(h.n.index) && !h.flicked && now >= h.until - 40) {
         // 終わりの少し前から、上へ素早く弾いて離す
@@ -133,7 +165,7 @@ function analyzeFeel({ notesInfo, presses, results }) {
     // (rhythm-mode.js の evaluatePosition)。終わりの時刻が元より 60ms 以上前へ動いていたら、途中で切れたもの
     const cutEarly = isHold && r.judgment === 'MISS' && Number.isFinite(r.endTimeMs) && Number.isFinite(n.endTimeMs) && r.endTimeMs < n.endTimeMs - 60;
     if (cutEarly) {
-      out.holdBroken.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), endTimeMs: Math.round(n.endTimeMs || 0), cutAtMs: Math.round(r.endTimeMs + 50), releasedAtMs: Number.isFinite(p.releaseSong) ? Math.round(p.releaseSong) : null, judgment: r.judgment, holdJudgment: r.holdJudgment, botDelta: Math.round(botDelta), x: p.x, y: p.y, dropPointer: p.dropPointer, lateMs: p.lateMs });
+      out.holdBroken.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), endTimeMs: Math.round(n.endTimeMs || 0), edgeProbe: !!p.edgeProbe, cutAtMs: Math.round(r.endTimeMs + 50), releasedAtMs: Number.isFinite(p.releaseSong) ? Math.round(p.releaseSong) : null, judgment: r.judgment, holdJudgment: r.holdJudgment, botDelta: Math.round(botDelta), x: p.x, y: p.y, dropPointer: p.dropPointer, lateMs: p.lateMs });
       continue;
     }
     // 押したのに取れない(押し始め)
@@ -161,6 +193,8 @@ function analyzeFeel({ notesInfo, presses, results }) {
     errorMedianMs: median(out.errors) == null ? null : Math.round(median(out.errors) * 10) / 10,
     errorP90AbsMs: pct(out.errors.map(Math.abs), 0.9) == null ? null : Math.round(pct(out.errors.map(Math.abs), 0.9) * 10) / 10,
     holdBroken: out.holdBroken.length,
+    edgeProbes: presses.filter((x) => x.edgeProbe).length,
+    holdBrokenAtEdge: out.holdBroken.filter((x) => x.edgeProbe).length,
   };
   return out;
 }
