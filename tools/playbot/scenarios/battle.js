@@ -72,7 +72,8 @@ const readBattle = (s) => s.page.evaluate(() => {
     picked: num(/ACTION CARDS\s*(\d+)\s*\//),
     inBattle: !!document.querySelector('button[aria-label^="AUTO"]'),
     // ラン全体の終わり(WAVE ごとの「WAVE 1 リザルト」は含めない)
-    over: !document.querySelector('button[aria-label^="AUTO"]') && /GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇/.test(text),
+    // ★勝ち抜いたときの結果は「CHAMPION」。WAVE別ログの「WAVE 1」を読んで W1 と書かないよう、over を先に見る
+    over: !document.querySelector('button[aria-label^="AUTO"]') && /GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text),
   };
 });
 

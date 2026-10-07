@@ -228,13 +228,24 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     return { loadMs, homeMs: Date.now() - t0 };
   };
 
+  // HOME に着いているか。★HOME の上に窓(更新履歴など)が開いたままでも .mh-home-scene はあるので、
+  //   重なった窓が無いことまで見る(見ないと、窓の下の HOME を「着いた」と取り違える)
+  const atHome = () => page.evaluate(() => {
+    if (!document.querySelector('.mh-home-scene')) return false;
+    const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 120 && r.height > 120; };
+    return ![...document.querySelectorAll('[role="dialog"]')].some(vis);
+  }).catch(() => false);
   s.backHome = async () => {
-    for (let i = 0; i < 4; i++) {
-      if (await page.evaluate(() => !!document.querySelector('.mh-home-scene')).catch(() => false)) return true;
+    for (let i = 0; i < 6; i++) {
+      if (await atHome()) return true;
       await s.dismissOverlays(6);
+      if (await atHome()) return true;
+      // 窓の閉じるボタンは「更新履歴を閉じる」「×」のように名前がまちまち
+      const close = (await s.listButtons()).find((b) => b.overlay && /閉じる|とじる|^×$|^✕$/.test(b.label));
+      if (close) { await s.tap(close, 'HOME へ戻る(窓を閉じる)'); continue; }
       if (!(await s.tapLabel(/^(戻る|もどる|HOMEへ|ホームへ|HOME|←|トップへ戻る)$/, 900))) break;
     }
-    if (await page.evaluate(() => !!document.querySelector('.mh-home-scene')).catch(() => false)) return true;
+    if (await atHome()) return true;
     await s.boot().catch(async (e) => { await s.addIssue('進めない', `HOMEへ戻れない: ${e.message}`); });
     return true;
   };
