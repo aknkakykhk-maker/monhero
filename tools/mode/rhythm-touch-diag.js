@@ -146,10 +146,10 @@ const timingSummary=(rows,{days=null,now=Date.now()}={})=>{
     const t=s.timing&&typeof s.timing==='object'?s.timing:null;
     if(!t||s.assist)continue;
     const key=row.platform||'other';
-    if(!groups.has(key))groups.set(key,{key,plays:0,inputs:0,capped:0,over150:0,over300:0,frames:0,stalls:0,hiddenPlays:0,penPlays:0,hasTs:0,hasTsKnown:0,outLat:[],baseLat:[],head:new Map()});
+    if(!groups.has(key))groups.set(key,{key,plays:0,inputs:0,capped:0,backed:0,unbacked:0,over150:0,over300:0,frames:0,stalls:0,hiddenPlays:0,penPlays:0,hasTs:0,hasTsKnown:0,outLat:[],baseLat:[],head:new Map()});
     const g=groups.get(key);
     const hist=Array.isArray(t.ageHist)?t.ageHist.map(num):[0,0,0,0,0,0];
-    g.plays++;g.inputs+=hist.reduce((a,b)=>a+b,0);g.capped+=num(t.ageCapped);g.over150+=(hist[4]||0)+(hist[5]||0);g.over300+=hist[5]||0;
+    g.plays++;g.inputs+=hist.reduce((a,b)=>a+b,0);g.capped+=num(t.ageCapped);g.backed+=num(t.ageBacked);g.unbacked+=num(t.ageUnbacked);g.over150+=(hist[4]||0)+(hist[5]||0);g.over300+=hist[5]||0;
     g.frames+=num(t.frames);g.stalls+=num(t.stalls);
     if(num(t.hidden)>0)g.hiddenPlays++;if(num(t.pen)>0)g.penPlays++;
     if(typeof t.hasTs==='boolean'){g.hasTsKnown++;if(t.hasTs)g.hasTs++;}
@@ -159,12 +159,12 @@ const timingSummary=(rows,{days=null,now=Date.now()}={})=>{
   }
   const per=(a,b,unit)=>b>0?a/b*unit:0;
   return [...groups.values()].map(g=>({key:g.key,plays:g.plays,inputs:g.inputs,
-    cappedPer1k:per(g.capped,g.inputs,1000),over150Per1k:per(g.over150,g.inputs,1000),over300Per1k:per(g.over300,g.inputs,1000),
+    cappedPer1k:per(g.capped,g.inputs,1000),backedPer1k:per(g.backed,g.inputs,1000),unbackedPer1k:per(g.unbacked,g.inputs,1000),over150Per1k:per(g.over150,g.inputs,1000),over300Per1k:per(g.over300,g.inputs,1000),
     stallShare:per(g.stalls,g.frames,1),hiddenShare:per(g.hiddenPlays,g.plays,1),penShare:per(g.penPlays,g.plays,1),
     hasTsShare:g.hasTsKnown?g.hasTs/g.hasTsKnown:null,outLatMedian:median(g.outLat),baseLatMedian:median(g.baseLat),
     headBySong:Object.fromEntries([...g.head].map(([song,v])=>[song,median(v)]))})).sort((a,b)=>a.key.localeCompare(b.key));
 };
-// 判定と、合う直し方。数字の目安は初期値。実際の記録を見て、ユーザーと決める
+// 判定と、合う直し方。数字の目安は初期値。ageBacked / ageUnbacked は、直し方 inputAgeCap を入れた端末の記録にだけ入る。実際の記録を見て、ユーザーと決める
 const TIMING_FIX_FOR={cappedPer1k:'inputAgeCap',stallShare:'smoothSongClock',hiddenShare:'autoPauseOnHidden'};
 const timingLines=summary=>{
   const lines=[];
@@ -172,6 +172,8 @@ const timingLines=summary=>{
   for(const g of summary){
     if(g.plays<TIMING_MIN_PLAYS){lines.push({level:'wait',text:`[${g.key}] タイミングの記録がまだ足りません(${g.plays}曲。${TIMING_MIN_PLAYS}曲そろったら判定します)`});continue;}
     if(g.cappedPer1k>=10)lines.push({level:'found',metric:'cappedPer1k',text:`[${g.key}] 補正の上限(80ms)を超えて遅れて届いた入力が 1000入力に ${g.cappedPer1k.toFixed(1)} 回(150ms超 ${g.over150Per1k.toFixed(1)} / 300ms超 ${g.over300Per1k.toFixed(1)})。処理が詰まった回の空判定・隣のノーツ取りの疑い`});
+    // 直し方 inputAgeCap を入れた端末だけに出る数。「遅れて届いた」入力のうち、コマ落ちが見えたもの(本当に重かった)/見えなかったもの(イベントの時刻が古いだけの疑い)
+    if(g.unbackedPer1k>0&&g.unbackedPer1k>=g.backedPer1k)lines.push({level:'found',text:`[${g.key}] 遅れて届いたと言う入力のうち、コマ落ちが見えなかったものが 1000入力に ${g.unbackedPer1k.toFixed(1)} 回(見えたもの ${g.backedPer1k.toFixed(1)} 回)。端末側の時刻(イベントの時刻)が古いだけの疑い。この端末では、広げた上限は使わせない方がよい`});
     if(g.stallShare>=0.02)lines.push({level:'found',metric:'stallShare',text:`[${g.key}] 曲の時計が前のコマと同じ値だったコマが ${(g.stallShare*100).toFixed(1)}%。時計が階段状で、曲が止まって見える疑い`});
     if(g.hiddenShare>=0.05)lines.push({level:'found',metric:'hiddenShare',text:`[${g.key}] 演奏中にアプリを離れた曲が ${(g.hiddenShare*100).toFixed(1)}%。裏へ回ったあとに戻ると、大量のMISSになる疑い`});
     if(g.penShare>0)lines.push({level:'info',text:`[${g.key}] ペンで直接押した曲が ${(g.penShare*100).toFixed(1)}%(二重入力の疑いは、押した回数と入力の数を見て確かめる)`});

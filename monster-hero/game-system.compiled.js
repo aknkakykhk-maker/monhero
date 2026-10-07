@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7cde6e34608efc3a
+// source-sha256: 88ba91c25b5d2f80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 10:21";
+const BUILD_DATE = "2026-10-07 10:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -29617,7 +29617,7 @@ const rhythmTouchDiagOf = ({
     }
   };
 };
-const RHYTHM_FIX_PANEL_ITEMS = Object.freeze([['inputAgeCap', '遅れて届いた入力の補正を300msまで広げる', '処理が詰まって入力が遅れて届いたとき、空判定や隣のノーツ取りが減る(診断の「80ms超」が多い端末で試す)'], ['smoothSongClock', '曲の時計を、コマの間でなめらかに進める', '時計が階段状に進む端末で、曲が止まって見えるのを減らす(診断の「止まったコマ」が多い端末で試す)'], ['autoPauseOnHidden', 'アプリを離れたら自動で一時停止する', '裏へ回ったあとに戻ると、大量のMISSになるのを防ぐ(診断の「離れた回数」が多い端末で試す)']]);
+const RHYTHM_FIX_PANEL_ITEMS = Object.freeze([['inputAgeCap', '遅れて届いた入力の補正を300msまで広げる', '処理が詰まって入力が遅れて届いたとき、空判定や隣のノーツ取りが減る。ゲームが本当に止まっていたと見えたときだけ効く(診断の「80ms超」が多い端末で試す)'], ['smoothSongClock', '曲の時計を、コマの間でなめらかに進める', '時計が階段状に進む端末で、曲が止まって見えるのを減らす(診断の「止まったコマ」が多い端末で試す)'], ['autoPauseOnHidden', 'アプリを離れたら自動で一時停止する', '裏へ回ったあとに戻ると、大量のMISSになるのを防ぐ(診断の「離れた回数」が多い端末で試す)']]);
 const RhythmFixOverridePanel = () => {
   const [, setVersion] = React.useState(0);
   const override = rhythmTouchFixOverride();
@@ -29669,7 +29669,7 @@ const RhythmFixOverridePanel = () => {
     className: "mt-2 rounded-xl bg-slate-900/60 p-2 text-[10px] leading-snug text-slate-300"
   }, React.createElement("b", {
     className: "text-slate-100"
-  }, "いまの演奏の数え（直近1曲）"), React.createElement("br", null), "入力の遅れの分布（〜25 / 50 / 80 / 150 / 300 / 300超 ms）: ", ages, React.createElement("br", null), "80ms超で届いた入力: ", timing.ageCapped ?? 0, " ／ 時計の止まったコマ: ", timing.stalls ?? 0, " / ", timing.frames ?? 0, " ／ 最大の1コマの進み: ", timing.maxStepMs ?? 0, "ms", React.createElement("br", null), "アプリを離れた回数: ", timing.hidden ?? 0, " ／ ペンで押した回数: ", timing.pen ?? 0, React.createElement("br", null), "出力遅延: ", timing.outLatMs ?? '-', "ms ／ 基準遅延: ", timing.baseLatMs ?? '-', "ms ／ getOutputTimestamp: ", timing.hasTs === undefined ? '-' : timing.hasTs ? 'あり' : 'なし', " ／ 曲の頭の無音: ", timing.headMs ?? '-', "ms"));
+  }, "いまの演奏の数え（直近1曲）"), React.createElement("br", null), "入力の遅れの分布（〜25 / 50 / 80 / 150 / 300 / 300超 ms）: ", ages, React.createElement("br", null), "80ms超で届いた入力: ", timing.ageCapped ?? 0, "（うちコマ落ちが見えた: ", timing.ageBacked ?? 0, " ／ 見えなかった: ", timing.ageUnbacked ?? 0, "） ／ 時計の止まったコマ: ", timing.stalls ?? 0, " / ", timing.frames ?? 0, " ／ 最大の1コマの進み: ", timing.maxStepMs ?? 0, "ms", React.createElement("br", null), "アプリを離れた回数: ", timing.hidden ?? 0, " ／ ペンで押した回数: ", timing.pen ?? 0, React.createElement("br", null), "出力遅延: ", timing.outLatMs ?? '-', "ms ／ 基準遅延: ", timing.baseLatMs ?? '-', "ms ／ getOutputTimestamp: ", timing.hasTs === undefined ? '-' : timing.hasTs ? 'あり' : 'なし', " ／ 曲の頭の無音: ", timing.headMs ?? '-', "ms"));
 };
 const rhythmTouchDiagRecord = async diag => {
   try {
