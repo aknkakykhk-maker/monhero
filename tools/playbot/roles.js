@@ -10,6 +10,8 @@
 const { newPlayerScenario } = require('./scenarios/new-player');
 const { battleScenario } = require('./scenarios/battle');
 const { tacticsScenario } = require('./scenarios/tactics');
+const { shopScenario } = require('./scenarios/shop');
+const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
 const { rankingScenario } = require('./scenarios/ranking');
@@ -78,6 +80,23 @@ const ROLES = [
     does: 'まだ押していないボタンを優先して押していく(モンキーテスト)',
     run: async (s, { phase, steps, rand }) => {
       await phase('探索', () => exploreScenario(s, { steps, rand, report: { clickCount: new Map() } }));
+    },
+  },
+  {
+    id: 'shop', name: '買い物係', prepare: 'veteran', boot: true, storage: { mh_gold: 999999 },
+    does: 'ダイヤショップで買う・ギフトとミッションの報酬を受け取る。ダイヤと所持数が画面の表示どおりに増減するかを見る',
+    run: async (s, { phase }) => {
+      await phase('買い物と受け取り', () => shopScenario(s));
+    },
+  },
+  {
+    id: 'mean', name: '意地悪係', prepare: 'veteran', boot: true, storage: { mh_gold: 999999 },
+    does: '二度押し・途中で読み込み直す・ブラウザの戻る・バトル中に裏へ回す。二重になったり止まったりしないかを見る',
+    run: async (s, { phase }) => {
+      await phase('二度押し', () => doubleTapScenario(s));
+      await phase('買う途中で読み込み直す', () => reloadMidwayScenario(s));
+      await phase('ブラウザの戻る', () => browserBackScenario(s));
+      await phase('バトル中に裏へ回す', () => backgroundScenario(s));
     },
   },
   {
