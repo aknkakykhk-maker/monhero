@@ -2,7 +2,7 @@
 //   ・開いた画面や窓を、閉じる/戻るで本当に閉じられるか(ボタンが画面の外なら、人と同じくスクロールして探す)
 //   ・横向きのまま1曲演奏して、押した位置がずれていないか(MISS が多すぎないか)
 // を見る。2026-10-06 に、横画面のときだけイベント詳細の「閉じる」が押せない不具合があった(プレイボットが見つけた)。
-const { installPlayer, SIGMA_MS, MISS_RATE } = require('./rhythm');
+const { installPlayer, collectFingerSuspects, installArgs } = require('./rhythm');
 
 const CLOSE = /^(閉じる|とじる|×|✕|戻る|もどる|モードえらびへ戻る|ルームを出る|OK)$/;
 
@@ -108,15 +108,18 @@ async function playLandscape(s) {
   await s.dismissOverlays(4);
   const ready = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && typeof window.__mhTestHooks.rhythmNotes === 'function' && (window.__mhTestHooks.rhythmNotes() || []).length > 0, { timeout: 30000 }).then(() => true).catch(() => false);
   if (!ready) { await s.addIssue('進めない', '横画面で決定しても演奏が始まらない'); return { ok: false, note: '演奏が始まらない' }; }
-  const installed = await s.page.evaluate(installPlayer, { sigma: SIGMA_MS, missRate: MISS_RATE, seed: Math.floor(s.rand() * 1e9) });
+  const installed = await s.page.evaluate(installPlayer, installArgs(s));
   if (!installed.ok) return { ok: true, note: `演奏はしなかった(${installed.why})` };
   const t0 = Date.now();
+  const fingers = {};
   while (Date.now() - t0 < 240000) {
     await s.wait(2000);
+    await collectFingerSuspects(s, fingers);
     const playing = await s.page.evaluate(() => !!(window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs && window.__mhTestHooks.rhythmSongMs() !== null) && !!document.querySelector('[data-rhythm-play-area]'));
     if (!playing) break;
   }
   await s.wait(3000);
+  await collectFingerSuspects(s, fingers, true);
   const text = (((await s.health()) || {}).text || '').replace(/\s+/g, ' ');
   const miss = Number((text.match(/MISS\s*(\d+)/) || [])[1]);
   await s.shot('landscape-result');

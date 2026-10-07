@@ -2070,7 +2070,11 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     return true;
   };
   // ノーツに触れたとき(タップ・ホールドとスライドの始点)。judgment … 触れた瞬間のずれから出した判定(無ければいちばん良い音)
+  // 直前にノーツの音(タップ・フリック)を鳴らした時刻。成功した直後に指が少し動いたぶんの空押し音を、鳴らさないために使う
+  let lastNoteSeAt=0;
+  const recentNoteSe=ms=>lastNoteSeAt>0&&typeof performance!=='undefined'&&performance.now()-lastNoteSeAt<=ms;
   const play=(previewSettings=null,judgment=null)=>{
+    if(!previewSettings&&typeof performance!=='undefined')lastNoteSeAt=performance.now();
     if(inputGroupDepth>0)inputGroupHit=true;
     const settings=previewSettings?settingsFrom(previewSettings):readSettings();
     return voice(settings,'tap',judgment);
@@ -2116,7 +2120,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   const playClear=(judgment=null)=>{const settings=readSettings();return voice(settings,'end',judgment,settings.endVolume/100);};
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
-  const playFlick=(judgment=null)=>{const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
+  const playFlick=(judgment=null)=>{if(typeof performance!=='undefined')lastNoteSeAt=performance.now();const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
   // ===== ホールド・スライドを押さえているあいだの「シャラシャラ」(高いきらめき) =====
   // 経緯(2026-09-28・すべて同じ日):
   //   ① ユーザー「押してる間にウィーンみたいな溜めてるような音」→ のこぎり波が上がる「ウィーン」を入れた
@@ -2335,7 +2339,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -3228,9 +3232,10 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
           action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane,baseKey,event?.timeStamp));
         });
         if(!eligible)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
-        // 押したあとの動き(指の太さが変わった・転がった)で新しく重なったサブレーンは、取れるノーツが無くても空押しの音を鳴らさない。
-        // 空押しは「押した瞬間にノーツが無かった」ときだけ(2026-10-07・成功したタップのあとに指が太くなると、音が余分に鳴っていた)
-        if(!isStart)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
+        // 指を滑らせてレーンが変わるたびの「シャッ」は鳴らす(ノーツが無いときの手ごたえ)。
+        // ただし、ノーツの音を鳴らした直後(150ms以内)に指が太くなった・転がっただけの動きでは鳴らさない
+        // (2026-10-07・成功したタップのあとに音が余分に鳴っていた。同日、滑らせても鳴らなくなったので、ここだけに絞り直した)
+        if(!isStart&&RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150))RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
         applyTouchSpanGlow();
       }finally{RHYTHM_NOTE_SE_RUNTIME.endInputGroup?.();}
     });
@@ -28011,6 +28016,15 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     glowEnd();
     ctx.globalAlpha=alpha;
+    // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
+    // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
+    // 道のはじ(左右のふちに接している)のノーツは、白い線のすぐ隣なので太めにする
+    if(!failed){
+      const edgeNote=Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1);
+      const outline=(edgeNote?3:2)*sizeMul;
+      ctx.lineWidth=outline;ctx.strokeStyle=edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)';
+      roundRectPath(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
+    }
     if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
     roundRectPath(ctx,x,y,w,h,radius);
     ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();

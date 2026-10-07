@@ -174,6 +174,11 @@ const PARTS = [
         const r = await rhythmScenario(s);
         const score = Number(String((r.stats.result && r.stats.result.score) || '').replace(/,/g, ''));
         if (Number.isFinite(score) && score > 0) numbers['音ゲー係: スコア'] = score;
+        const tap = r.stats.bot && r.stats.bot.diag && r.stats.bot.diag.tap;
+        if (tap && tap.n >= 50) {
+          numbers['音ゲー係: タップのMISS率(%)'] = Math.round((tap.miss / tap.n) * 1000) / 10;
+          numbers['音ゲー係: 指が帯の中なのにタップMISS(件)'] = tap.missInBand + tap.missInBandCrowded;
+        }
         shared.rhythm = { song: r.stats.song, difficulty: r.stats.difficulty,
           rows: s.supabase.writes.filter((w) => w.table === 'rankings').map((w) => w.row) };
         await s.backHome();

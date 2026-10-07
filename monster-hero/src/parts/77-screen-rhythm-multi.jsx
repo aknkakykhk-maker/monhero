@@ -79,7 +79,7 @@ const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
 const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
 const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
 // 部屋が静かなまま、これだけ過ぎると、ときどきひとりごとを言う
-const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 25000;
+const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -547,12 +547,12 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     if (r.phase === 'ready' && r.round && s.talk.songRound !== r.round) {
       s.talk.songRound = r.round;
-      if (Math.random() < 0.6) cpuSay(cpuPickOne(), 'song', { songId: r.songId });
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'song', { songId: r.songId });
     }
     // 待ち合わせ・曲えらびで、しばらく静かなときのひとりごと(ときどき)
-    if (r.phase === 'matching' || r.phase === 'select') {
+    if (r.phase === 'matching' || r.phase === 'select' || r.phase === 'result') {
       const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
-      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.15) {
+      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.3) {
         s.talk.idleAt = Date.now();
         cpuSay(cpuPickOne(), 'idle');
       }
@@ -564,7 +564,7 @@ const RHYTHM_MULTI = (() => {
         const row = team.rows.find((q) => q.m.id === x.id);
         if (!row || !row.res || row.res.quit) return;
         const mvp = team.mvpId === x.id;
-        if (mvp || Math.random() < 0.7) cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
+        cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
       });
     }
   };
@@ -601,7 +601,7 @@ const RHYTHM_MULTI = (() => {
       c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
-      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.5) cpuSay(x, 'pick', { songId: c.pick });
+      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.9) cpuSay(x, 'pick', { songId: c.pick });
     }
     if (r.phase === 'ready' && c.readyRound !== r.round) { c.readyRound = r.round; changed = true; }
     if (changed) sendOneCpuHb(x.id);
@@ -1889,14 +1889,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </button>}
               {/* プライベートルーム: 友だちと遊ぶ。作成と、コードを入れての入室は、押すと開くシートへ(2026-10-07・「ダサいので一新して」) */}
               {ms.multi && <button data-rhythm-mode-private data-rhythm-mode-private-open type="button" onClick={() => { setMessage(''); setPrivateOpen(true); }}
-                className="mhms-card private mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-blue-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px]" style={{ animationDelay: '.2s' }}>
+                className="mhms-card private mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-blue-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.2s' }}>
                 <span aria-hidden="true" className="mhms-mark">PRIVATE</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🔑</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">プライベート</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">合言葉で友だちと遊ぶ</small></span>
               </button>}
               {/* ランキング: 全国ランキングとマスモンランキング */}
               {ms.multi && <button data-rhythm-mode-ranking type="button" onClick={openRankHub}
-                className="mhms-card rank mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-lime-200 via-emerald-300 to-teal-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px]" style={{ animationDelay: '.24s' }}>
+                className="mhms-card rank mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-lime-200 via-emerald-300 to-teal-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.24s' }}>
                 <span aria-hidden="true" className="mhms-mark">RANKING</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🏆</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">ランキング</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">全国とマスモンの順位</small></span>
