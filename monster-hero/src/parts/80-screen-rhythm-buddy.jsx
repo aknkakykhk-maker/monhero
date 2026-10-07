@@ -92,7 +92,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
   // 直近に言ったものは避ける(マスモンごとに8つ覚える)
-  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false }) {
+  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '' }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -102,15 +102,39 @@ const rhythmBuddyMakeBrain = (songs) => ({
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
     }
-    const song = songId ? (songs || []).find((x) => x.songId === songId) : null;
+    const nameOf = (id) => { const song = id ? (songs || []).find((x) => x.songId === id) : null; if (!song) return ''; const full = rhythmSongFullName(song); return full.length <= 14 ? full : String(song.displayName || full); };
+    // 会話のセリフに混ぜる、自分の育ち(無いものは入れない。値の無い穴を持つ文は選ばれない)
+    const top = rhythmBuddyTopSongs(mon, 1)[0];
+    const lastScore = norm.recent[0] ? norm.recent[0].score : 0;
+    const traitDef = norm.trait ? rhythmBuddyTraitOf(norm.trait) : null;
+    const vars = {
+      song: nameOf(songId),
+      fav: top ? nameOf(top.songId) : '',
+      me: String(me || '').slice(0, 12), who: String(who || '').slice(0, 12), mate: String(mate || '').slice(0, 12),
+      lv: String(rhythmBuddyLevelInfo(norm.exp).level),
+      mood: mood && mood.label ? mood.label : '',
+      trait: traitDef ? traitDef.label : '',
+      plays: norm.lives > 0 ? String(norm.lives) : '',
+      days: norm.streakDays > 0 ? String(norm.streakDays) : '',
+      score: lastScore > 0 ? `${Math.round(lastScore / 10000)}万点` : '',
+    };
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
-    const text = rhythmBuddyTalkPick({
-      kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal',
-      vars: { song: song ? rhythmSongFullName(song) : '' }, recent, rand: Math.random,
-    });
+    const text = rhythmBuddyTalkPick({ kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal', vars, recent, rand: Math.random });
     if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
     return text;
+  },
+  // 人の発言を読む(意図・曲名・呼ばれたマスモン)。names は呼んでいるマスモンの名前の並び。awaiting は聞き返して待っている返事の種類
+  understand({ text, names = [], awaiting = '' }) {
+    const list = [];
+    (songs || []).forEach((song) => {
+      if (!song || !song.songId) return;
+      if (song.displayName) list.push({ id: song.songId, name: String(song.displayName) });
+      const full = rhythmSongFullName(song);
+      if (full && full !== song.displayName) list.push({ id: song.songId, name: full });
+    });
+    const parsed = rhythmBuddyConvoParse({ text, names, songs: list, awaiting });
+    return { ...parsed, songId: parsed.song ? parsed.song.id : '' };
   },
   // 性格と今日の調子で選び方が変わる(たまに新しい曲にも挑戦)。{ songId, why }。遊べる曲が無ければ songId は ''
   pick(catalog, masuId) {

@@ -416,17 +416,22 @@ const rhythmBuddyTalkMerge = (base, extra) => {
 const RHYTHM_BUDDY_TALK = rhythmBuddyTalkMerge(RHYTHM_BUDDY_TALK_BASE, RHYTHM_BUDDY_TALK_EXTRA);
 
 // 場面・性格・調子からセリフを1つ選ぶ。使えるものが無ければ ''(言わない)。
-//   trait … 性格の id('' なら共通と調子だけ) / moodId … 'great'|'good'|'normal'|'bad'|'awful' / vars … { song }
+//   trait … 性格の id('' なら共通と調子だけ) / moodId … 'great'|'good'|'normal'|'bad'|'awful' / vars … { song, who, me, lv, … }
 //   recent … 直近に言ったセリフ(新しい順。同じのを繰り返さない) / rand … 0〜1 の乱数
 // 重み: 性格の束 ×3、調子の束 ×2、共通 ×1。曲名が要る文は、曲名が無い・長すぎるときは使わない
 const rhythmBuddyTalkPick = ({ kind, trait = '', moodId = 'normal', vars = {}, recent = [], rand = Math.random }) => {
-  const set = RHYTHM_BUDDY_TALK[kind];
+  // 会話の場面(33-rhythm-buddy-convo.jsx の RHYTHM_BUDDY_CONVO)も、同じ選び方で選ぶ
+  const set = RHYTHM_BUDDY_TALK[kind] || (typeof RHYTHM_BUDDY_CONVO !== 'undefined' ? RHYTHM_BUDDY_CONVO[kind] : null);
   if (!set) return '';
-  const song = typeof vars.song === 'string' ? vars.song : '';
+  // {名前} の形の穴を、vars の値で埋める。値が無い・空の穴がある文は使わない。埋めて40文字を超える文も使わない
   const make = (line) => {
-    if (line.indexOf('{song}') >= 0 && !song) return '';
-    const text = line.split('{song}').join(song);
-    return text.length > 0 && text.length <= RHYTHM_BUDDY_TALK_MAX ? text : '';
+    let ok = true;
+    const text = line.replace(/\{([A-Za-z]+)\}/g, (all, key) => {
+      const v = vars[key];
+      if (v == null || v === '') { ok = false; return ''; }
+      return String(v);
+    });
+    return ok && text.length > 0 && text.length <= RHYTHM_BUDDY_TALK_MAX ? text : '';
   };
   const bag = [];
   const add = (lines, weight) => (Array.isArray(lines) ? lines : []).forEach((line) => {

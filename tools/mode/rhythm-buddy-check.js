@@ -17,6 +17,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const MULTI = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/77-screen-rhythm-multi.jsx'), 'utf8');
 const BUDDY = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/33-rhythm-buddy.jsx'), 'utf8');
 const TALK = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/33-rhythm-buddy-talk.jsx'), 'utf8');
+const CONVO = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/33-rhythm-buddy-convo.jsx'), 'utf8');
 const cut = MULTI.indexOf('const useRhythmMultiView');
 if (cut < 0) { console.log('NG: RHYTHM_MULTI の部分を切り出せませんでした'); process.exit(1); }
 const multiSource = MULTI.slice(0, cut);
@@ -273,7 +274,7 @@ const makeClient = (name, { brain = true, talk = false } = {}) => {
     sandbox.Math = Object.assign(Object.create(Math), { random: () => { r = (r * 9301 + 49297) % 233280; return 0.14 * (r / 233280); } });
   }
   vm.createContext(sandbox);
-  vm.runInContext(`${TALK}\n${multiSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,clean:rhythmMultiCleanMessage,scale:rhythmMultiRewardScale,total:rhythmMultiTotalScale};`, sandbox);
+  vm.runInContext(`${TALK}\n${CONVO}\n${multiSource}\n;globalThis.__api={parse:rhythmBuddyConvoParse,M:RHYTHM_MULTI,team:rhythmMultiTeamResult,clean:rhythmMultiCleanMessage,scale:rhythmMultiRewardScale,total:rhythmMultiTotalScale};`, sandbox);
   const api = sandbox.__api;
   const starts = [];
   api.M.onStart((info) => starts.push(info));
@@ -288,6 +289,8 @@ const makeClient = (name, { brain = true, talk = false } = {}) => {
       refund: (masuId) => refunds.push(masuId),
       // おしゃべり: 場面を「T:場面」の文にして返す(中身の選び方は rhythm-buddy-talk-check.js が見る)
       talk: (req) => { talks.push(req); return `T:${req.kind}`; },
+      // 人の発言を読む(本物の読み取り)。曲の一覧は2曲だけの偽物
+      understand: (req) => { const parsed = api.parse({ text: req.text, names: req.names, awaiting: req.awaiting, songs: [{ id: 'songA', name: 'テスト曲A' }, { id: 'songB', name: 'ビートB' }] }); return { ...parsed, songId: parsed.song ? parsed.song.id : '' }; },
     });
   }
   return { name, ...api, starts, plays, refunds, talks };
@@ -502,20 +505,95 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(4000);
   const bumped = cs[1].M.view().chat.filter((x) => x.text === 'T:bump');
   check('人が来て席をゆずるとき、帰る前に一言話す(ほかの人にも届く)', bumped.length === 1 && bumped[0].name === 'モッチー', JSON.stringify(view(cs[1]).chat.map((x) => x.text)));
-  check('席をゆずったあと、そのマスモンは話さない', (clock.advance(30000), cs[0].talks.filter((t) => t.kind === 'idle').length === 0));
+  check('席をゆずったあと、そのマスモンは話さない', (clock.advance(30000), cs[0].talks.filter((t) => t.kind === 'idle' || t.kind === 'qHow' || t.kind === 'qFav').length === 0));
   [...cs, e].forEach((c) => c.M.leave());
   const q = makeClient('Q', { talk: true });
   join(q, 'TALK3', 'free');
   clock.advance(3000);
   q.M.summon(MATE);
   clock.advance(60000);
-  check('待ち合わせがしばらく静かだと、ひとりごとを言う', q.talks.some((t) => t.kind === 'idle'), JSON.stringify(q.talks.map((t) => t.kind)));
+  check('待ち合わせがしばらく静かだと、ひとりごとを言うか、話しかけてくる', q.talks.some((t) => t.kind === 'idle' || t.kind === 'qHow' || t.kind === 'qFav'), JSON.stringify(q.talks.map((t) => t.kind)));
   q.M.leave();
   const mute = makeClient('M', { brain: false });
   join(mute, 'TALK4', 'free');
   clock.advance(3000);
   check('おしゃべりの頭が無くても、呼べて落ちない', (mute.M.summon(MATE), clock.advance(30000), true));
   mute.M.leave();
+}
+
+// B-11 会話(発言を読んで返す・名前で呼ぶ・みんな・聞き返しと答え・マスモンどうし)
+{
+  const a = makeClient('A', { talk: true });
+  join(a, 'CONV', 'free');
+  clock.advance(3000);
+  a.M.summon(MATE);
+  a.M.summon({ ...MATE, masuId: 'masu_2', name: 'ハム' });
+  clock.advance(5000);
+  const ids = view(a).myCpus.map((c) => c.id);
+  const chatOf = (id) => view(a).chat.filter((x) => x.id === id).map((x) => x.text);
+  const kinds = () => a.talks.map((t) => t.kind);
+  const say = (text, ms = 6000) => { a.M.sendChat(text); clock.advance(ms); };
+  const lastTalks = (from) => a.talks.slice(from);
+  let n = a.talks.length;
+  say('モッチー、調子どう?');
+  const t1 = lastTalks(n);
+  check('名前を呼ばれたマスモンだけが返す(調子の質問)', t1.some((t) => t.masuId === 'masu_1' && t.kind === 'howMe') && !t1.some((t) => t.masuId === 'masu_2' && t.kind === 'howMe'), JSON.stringify(t1.map((t) => `${t.masuId}:${t.kind}`)));
+  check('返事の言葉に、話しかけた人の名前が渡る', t1.some((t) => t.who === 'A'), JSON.stringify(t1.map((t) => t.who)));
+  check('質問には、聞き返すことがある(調子を聞き返す)', t1.some((t) => t.kind === 'qHow' && t.masuId === 'masu_1'), JSON.stringify(t1.map((t) => t.kind)));
+  n = a.talks.length;
+  say('元気だよ');
+  const t2 = lastTalks(n);
+  check('聞き返しへの答え(元気)を、答えとして読んで返す(同じマスモンが、「いい」のほうで)', t2.some((t) => t.masuId === 'masu_1' && t.kind === 'howGood'), JSON.stringify(t2.map((t) => `${t.masuId}:${t.kind}`)));
+  n = a.talks.length;
+  say('みんなありがとう!');
+  const t3 = lastTalks(n);
+  check('「みんな」と呼びかけると、いるマスモン全員が返す', t3.filter((t) => t.kind === 'replyThanks').map((t) => t.masuId).sort().join() === 'masu_1,masu_2', JSON.stringify(t3.map((t) => `${t.masuId}:${t.kind}`)));
+  n = a.talks.length;
+  say('ハム、レベルいくつ?');
+  const t4 = lastTalks(n);
+  check('名前を呼んでレベルを聞くと、その子が答える', t4.some((t) => t.masuId === 'masu_2' && t.kind === 'lvAsk') && !t4.some((t) => t.masuId === 'masu_1' && t.kind === 'lvAsk'), JSON.stringify(t4.map((t) => `${t.masuId}:${t.kind}`)));
+  n = a.talks.length;
+  say('テスト曲Aが好き');
+  const t5 = lastTalks(n);
+  check('曲名を言われると、その曲の話になる(曲の情報つき)', t5.some((t) => t.kind === 'songTalk' && t.songId === 'songA'), JSON.stringify(t5.map((t) => `${t.kind}:${t.songId}`)));
+  n = a.talks.length;
+  say('マスモン入れて!');
+  check('「マスモン入れて!」には、いまも返す', lastTalks(n).some((t) => t.kind === 'replyCall'));
+  n = a.talks.length;
+  say('ええと');
+  check('当てはまらない発言には返さない', lastTalks(n).length === 0, JSON.stringify(lastTalks(n)));
+  const before = a.talks.length;
+  clock.advance(60000);
+  check('マスモンどうしの発言で、会話が止まらなくならない(返し合いの連鎖にならない)', a.talks.length - before < 12, String(a.talks.length - before));
+  a.M.leave();
+}
+// B-11b マスモンどうし(呼びかけの無い発言には1体だけが返し、もう1体が話に加わる)
+{
+  const a = makeClient('A', { talk: true });
+  join(a, 'CONV3', 'free');
+  clock.advance(3000);
+  a.M.summon(MATE);
+  a.M.summon({ ...MATE, masuId: 'masu_2', name: 'ハム' });
+  clock.advance(5000);
+  const n = a.talks.length;
+  a.M.sendChat('ナイス!');
+  clock.advance(8000);
+  const t = a.talks.slice(n);
+  check('呼びかけの無い発言には1体だけが返し、もう1体が話に加わる(マスモンどうし)', t.filter((x) => x.kind === 'replyNice').length === 1 && t.some((x) => x.kind === 'banter' && x.mate), JSON.stringify(t.map((x) => `${x.masuId}:${x.kind}:${x.mate || ''}`)));
+  a.M.leave();
+}
+// B-12 古い端末のおしゃべりの頭(understand が無い)でも、これまでの返事はする
+{
+  const a = makeClient('A', { talk: true });
+  join(a, 'CONV2', 'free');
+  clock.advance(3000);
+  a.M.setCpuBrain({ talk: (req) => `T:${req.kind}`, play: () => ({ score: 600000, maxCombo: 1, judgments: {} }), pick: () => 'songC', refund: () => {} });
+  a.M.summon(MATE);
+  clock.advance(5000);
+  a.M.sendChat('ありがとう!');
+  clock.advance(5000);
+  check('understand が無い頭でも、これまでのキーワードで返事する', view(a).chat.some((x) => x.text === 'T:replyThanks'), JSON.stringify(view(a).chat.map((x) => x.text)));
+  a.M.leave();
 }
 
 // B-4 古い端末との行き来(相棒の項目が無い知らせ)
