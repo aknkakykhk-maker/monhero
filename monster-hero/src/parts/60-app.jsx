@@ -15342,7 +15342,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : null;
   const titleModal = showChangelog ? (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
-      <div className="mh-title-dialog"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3><button onClick={closeChangelog}><X size={18}/></button></div>
+      <div className="mh-title-dialog"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3><button type="button" aria-label="閉じる" onClick={closeChangelog}><X size={18}/></button></div>
         <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
