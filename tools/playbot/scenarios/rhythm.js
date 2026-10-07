@@ -87,26 +87,37 @@ function installPlayer({ sigma, missRate, seed }) {
   return { ok: true, notes: notes.length, planned: plan.length };
 }
 
-async function rhythmScenario(s, { maxSongMs = 240000 } = {}) {
+// HOME → モンヒロビート → ソロライブ → 曲と難易度を選んだところまで。ランキング係も使う。
+// songName / difficulty を渡せばその曲・難易度を、渡さなければ乱数で選ぶ。選べなければ null
+async function openSoloLive(s, { songName = '', difficulty = '' } = {}) {
   const { page, rand } = s;
-  const stats = { song: '', difficulty: '', notes: 0, result: null, rankingShowsBot: null };
   await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.innerText || '').trim() === 'モンヒロビート')?.click());
   await s.wait(2500);
   await s.dismissOverlays(10);
   await s.inspect();
-  if (!(await s.tapLabel(/ソロライブ/, 2000))) { await s.addIssue('進めない', 'モンヒロビートの「ソロライブ」が見つからない'); return { ok: false, stats }; }
+  if (!(await s.tapLabel(/ソロライブ/, 2000))) { await s.addIssue('進めない', 'モンヒロビートの「ソロライブ」が見つからない'); return null; }
   await s.dismissOverlays(6);
   await s.inspect();
   // 曲を1つ選ぶ(一覧のカードは「Lv.」を含む)
   const songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label));
-  if (!songs.length) { await s.addIssue('進めない', '曲えらびに曲が出ていない'); return { ok: false, stats }; }
-  const song = songs[Math.floor(rand() * songs.length)];
+  if (!songs.length) { await s.addIssue('進めない', '曲えらびに曲が出ていない'); return null; }
+  const song = (songName && songs.find((b) => b.label.startsWith(songName))) || songs[Math.floor(rand() * songs.length)];
   await s.tap(song, '曲を選ぶ');
-  stats.song = song.label.replace(/\s*Lv\..*$/, '');
+  const picked = { song: song.label.replace(/\s*Lv\..*$/, ''), difficulty: '' };
   // 難易度は EASY〜HARD から(人は最初から最難関を選ばない)
   const diffs = (await s.listButtons()).filter((b) => /^(\d+ )?(EASY|NORMAL|HARD)\b/.test(b.label) || /(EASY|NORMAL|HARD)/.test(b.label) && b.h < 90);
-  if (diffs.length) { const d = diffs[Math.floor(rand() * diffs.length)]; await s.tap(d, '難易度を選ぶ'); stats.difficulty = (d.label.match(/EASY|NORMAL|HARD/) || [''])[0]; }
+  const d = (difficulty && diffs.find((b) => b.label.includes(difficulty))) || diffs[Math.floor(rand() * diffs.length)];
+  if (d) { await s.tap(d, '難易度を選ぶ'); picked.difficulty = (d.label.match(/EASY|NORMAL|HARD/) || [''])[0]; }
   await s.inspect();
+  return picked;
+}
+
+async function rhythmScenario(s, { maxSongMs = 240000 } = {}) {
+  const { page, rand } = s;
+  const stats = { song: '', difficulty: '', notes: 0, result: null };
+  const picked = await openSoloLive(s);
+  if (!picked) return { ok: false, stats };
+  Object.assign(stats, picked);
   const started = await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|はじめる)$/i, 2500);
   if (!started) { await s.addIssue('進めない', '曲えらびから演奏を始めるボタンが見つからない', { buttons: (await s.listButtons()).map((b) => b.label).slice(0, 30) }); return { ok: false, stats }; }
   await s.dismissOverlays(4);
@@ -142,17 +153,11 @@ async function rhythmScenario(s, { maxSongMs = 240000 } = {}) {
   await s.shot('rhythm-result');
   await s.inspect();
   if (Date.now() - t0 >= maxSongMs) await s.addIssue('進行停止', `演奏が${Math.round(maxSongMs / 1000)}秒たっても終わらない`);
-  // 結果のあと、曲えらびへ戻ってランキングに自分が載って見えるか(にせの Supabase が覚えている)
+  // 結果のあとは曲えらびへ戻るだけ。ランキングに自分が載って見えるかはランキング係が見る
   await s.dismissOverlays(8);
   for (let k = 0; k < 4; k++) { if (!(await s.tapLabel(/^(曲えらびへ(戻る)?|曲選択へ|もどる|戻る|OK|閉じる|次へ)$/, 1500))) break; }
-  if (await s.tapLabel(/この曲の全国ランキング/, 2500)) {
-    await s.dismissOverlays(4);
-    const txt = ((await s.health()) || {}).text || '';
-    stats.rankingShowsBot = txt.includes(s.BOT_NAME);
-    await s.inspect();
-  }
   const sent = s.supabase.writes.filter((w) => w.table === 'rankings').length;
   return { ok: true, stats, note: `${stats.song} ${stats.difficulty}・${stats.notes}ノーツ → スコア ${stats.result.score || '?'}(ランキングへ送った記録 ${sent}件・横取り済み)` };
 }
 
-module.exports = { rhythmScenario };
+module.exports = { rhythmScenario, openSoloLive };
