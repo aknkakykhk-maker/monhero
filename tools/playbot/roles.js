@@ -174,6 +174,8 @@ const PARTS = [
         const r = await rhythmScenario(s);
         const score = Number(String((r.stats.result && r.stats.result.score) || '').replace(/,/g, ''));
         if (Number.isFinite(score) && score > 0) numbers['音ゲー係: スコア'] = score;
+        const byType = (r.stats.bot && r.stats.bot.diag && r.stats.bot.diag.byType) || {};
+        Object.entries(byType).forEach(([t, e]) => { if (e.n >= 20) numbers[`音ゲー係: ${t}のMISS率(%)`] = Math.round((e.miss / e.n) * 1000) / 10; });
         const tap = r.stats.bot && r.stats.bot.diag && r.stats.bot.diag.tap;
         if (tap && tap.n >= 50) {
           numbers['音ゲー係: タップのMISS率(%)'] = Math.round((tap.miss / tap.n) * 1000) / 10;

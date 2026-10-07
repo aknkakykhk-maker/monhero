@@ -28016,6 +28016,15 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     glowEnd();
     ctx.globalAlpha=alpha;
+    // ノーツの外周に暗い縁取りを1本引く(2026-10-07・ユーザー指摘「レーンのはじにハーフノーツが来たとき、道のふちと被って見にくい」)。
+    // 道のふちの白い線に隣り合っても、ノーツの輪郭が埋もれない。位置も大きさも変えない(線を外へ描くだけ)。
+    // 道のはじ(左右のふちに接している)のノーツは、白い線のすぐ隣なので太めにする
+    if(!failed){
+      const edgeNote=Number.isFinite(note.subLane)?(note.subLane<=0||note.subLane+(Number(note.subLaneWidth)||2)>=RHYTHM_SUB_LANE_COUNT):(Number(note.lane)<=0||Number(note.lane)>=RHYTHM_LANE_COUNT-1);
+      const outline=(edgeNote?3:2)*sizeMul;
+      ctx.lineWidth=outline;ctx.strokeStyle=edgeNote?'rgba(2,6,23,.88)':'rgba(2,6,23,.62)';
+      roundRectPath(ctx,x-outline/2,y-outline/2,w+outline,h+outline,radius+outline/2);ctx.stroke();
+    }
     if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
     roundRectPath(ctx,x,y,w,h,radius);
     ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();
