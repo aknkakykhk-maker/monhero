@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 14299e9be41f7f45
+// source-sha256: 375897be375bf22f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 13:06";
+const BUILD_DATE = "2026-10-07 13:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6083,6 +6083,7 @@ const EVENT_BGM_SCENES = Object.freeze({
   rhythm_multi_friends_2026_10_03: 'rhythmMultiEvent',
   halloween_night_2026_part1: 'halloweenNightEvent',
   raid_jack_howto_2026_10_04: 'halloweenNightEvent',
+  raid_jack_rhythm_story_2026_10_06: 'halloweenNightEvent',
   raid_jack_story_1b: 'halloweenNightEvent',
   raid_jack_story_2: 'halloweenNightEvent',
   raid_jack_story_3: 'halloweenNightEvent',
@@ -6899,8 +6900,27 @@ const Audio_ = (() => {
       const rawSongTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       let smoothSong = 0,
         smoothPerf = 0;
+      const tsLatSamples = [];
+      let tsLatAt = 0;
+      const sampleTsLatency = () => {
+        if (typeof ctx.getOutputTimestamp !== 'function' || typeof performance === 'undefined') return;
+        const p = performance.now();
+        if (p - tsLatAt < 500 || tsLatSamples.length >= 20) return;
+        tsLatAt = p;
+        try {
+          const ts = ctx.getOutputTimestamp();
+          const d = (ctx.currentTime - Number(ts && ts.contextTime)) * 1000;
+          if (Number.isFinite(d) && d >= 0 && d <= 1000 && Number(ts.contextTime) > 0) tsLatSamples.push(d);
+        } catch {}
+      };
+      const tsLatMs = () => {
+        if (tsLatSamples.length < 3) return null;
+        const s = tsLatSamples.slice().sort((a, b) => a - b);
+        return Math.round(s[s.length >> 1]);
+      };
       const songTimeSeconds = () => {
         const raw = rawSongTimeSeconds();
+        if (playing) sampleTsLatency();
         if (!playing || !rhythmTouchFixOn('smoothSongClock') || typeof performance === 'undefined') {
           smoothPerf = 0;
           return raw;
@@ -6929,6 +6949,7 @@ const Audio_ = (() => {
           outLatMs: Math.round(outputLatencySeconds * 1000),
           baseLatMs: Math.round((Number(ctx.baseLatency) || 0) * 1000),
           hasTs: typeof ctx.getOutputTimestamp === 'function',
+          tsLatMs: tsLatMs(),
           rate: Math.round(Number(ctx.sampleRate) || 0),
           headMs
         }),
@@ -29633,60 +29654,6 @@ const rhythmTouchDiagOf = ({
     }
   };
 };
-const RHYTHM_FIX_PANEL_ITEMS = Object.freeze([['inputAgeCap', '遅れて届いた入力の補正を300msまで広げる', '処理が詰まって入力が遅れて届いたとき、空判定や隣のノーツ取りが減る。ゲームが本当に止まっていたと見えたときだけ効く(診断の「80ms超」が多い端末で試す)'], ['smoothSongClock', '曲の時計を、コマの間でなめらかに進める', '時計が階段状に進む端末で、曲が止まって見えるのを減らす(診断の「止まったコマ」が多い端末で試す)'], ['autoPauseOnHidden', 'アプリを離れたら自動で一時停止する', '裏へ回ったあとに戻ると、大量のMISSになるのを防ぐ(診断の「離れた回数」が多い端末で試す)']]);
-const RhythmFixOverridePanel = () => {
-  const [, setVersion] = React.useState(0);
-  const override = rhythmTouchFixOverride();
-  const timing = RHYTHM_TIMING_DIAG.snapshot();
-  const toggle = name => {
-    const on = rhythmTouchFixOn(name);
-    rhythmTouchFixSetOverride(name, !on);
-    setVersion(v => v + 1);
-  };
-  const reset = name => {
-    rhythmTouchFixSetOverride(name, null);
-    setVersion(v => v + 1);
-  };
-  const ages = Array.isArray(timing.ageHist) ? timing.ageHist.join(' / ') : '-';
-  return React.createElement("section", {
-    "data-rhythm-fix-panel": true,
-    className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
-  }, React.createElement("h3", {
-    className: "text-xs font-black text-cyan-200"
-  }, "実機の直し方（この端末だけ）"), React.createElement("p", {
-    className: "mt-1 text-[11px] leading-snug text-slate-300"
-  }, "入れた直し方はこの端末だけに効きます。診断の行（stats.fixes）に名前が残るので、入れる前と後を比べられます。よければ、全員へ入れる前にご相談ください。"), React.createElement("div", {
-    className: "mt-2 space-y-2"
-  }, RHYTHM_FIX_PANEL_ITEMS.map(([name, label, help]) => {
-    const on = rhythmTouchFixOn(name),
-      own = typeof override[name] === 'boolean';
-    return React.createElement("div", {
-      key: name,
-      "data-rhythm-fix-item": name,
-      className: "rounded-xl bg-slate-900/60 p-2"
-    }, React.createElement("div", {
-      className: "flex items-center justify-between gap-2"
-    }, React.createElement("b", {
-      className: "text-[12px] text-white"
-    }, label), React.createElement("button", {
-      type: "button",
-      "data-rhythm-fix-toggle": name,
-      onClick: () => toggle(name),
-      className: `rounded-lg px-3 py-1 text-[11px] font-black ${on ? 'bg-cyan-400 text-slate-950' : 'bg-slate-700 text-slate-200'}`
-    }, on ? '入れている' : '切っている')), React.createElement("p", {
-      className: "mt-1 text-[10px] leading-snug text-slate-400"
-    }, help), own && React.createElement("button", {
-      type: "button",
-      onClick: () => reset(name),
-      className: "mt-1 text-[10px] text-cyan-300 underline"
-    }, "この端末の設定をやめて、既定へ戻す"));
-  })), React.createElement("div", {
-    "data-rhythm-fix-timing": true,
-    className: "mt-2 rounded-xl bg-slate-900/60 p-2 text-[10px] leading-snug text-slate-300"
-  }, React.createElement("b", {
-    className: "text-slate-100"
-  }, "いまの演奏の数え（直近1曲）"), React.createElement("br", null), "入力の遅れの分布（〜25 / 50 / 80 / 150 / 300 / 300超 ms）: ", ages, React.createElement("br", null), "80ms超で届いた入力: ", timing.ageCapped ?? 0, "（うちコマ落ちが見えた: ", timing.ageBacked ?? 0, " ／ 見えなかった: ", timing.ageUnbacked ?? 0, "） ／ 時計の止まったコマ: ", timing.stalls ?? 0, " / ", timing.frames ?? 0, " ／ 最大の1コマの進み: ", timing.maxStepMs ?? 0, "ms", React.createElement("br", null), "アプリを離れた回数: ", timing.hidden ?? 0, " ／ ペンで押した回数: ", timing.pen ?? 0, React.createElement("br", null), "出力遅延: ", timing.outLatMs ?? '-', "ms ／ 基準遅延: ", timing.baseLatMs ?? '-', "ms ／ getOutputTimestamp: ", timing.hasTs === undefined ? '-' : timing.hasTs ? 'あり' : 'なし', " ／ 曲の頭の無音: ", timing.headMs ?? '-', "ms"));
-};
 const rhythmTouchDiagRecord = async diag => {
   try {
     const saved = await storeGet(RHYTHM_TOUCH_DIAG_KEY, []);
@@ -31206,6 +31173,7 @@ const RhythmTapTest = ({
       if (!Array.isArray(run.deltas)) run.deltas = [];
       run.deltas.push(deltaMs);
     }
+    if (!calibrating && note && note.type === 'TAP' && judgment !== 'MISS') RHYTHM_TIMING_DIAG.bias(deltaMs);
     const clearedGesture = judgment !== 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note) || note._rhythmOriginalType === 'FLICK');
     if (clearedGesture) {
       if (note._rhythmOriginalType === 'FLICK' || note.type === 'FLICK' || note.endFlick) RHYTHM_NOTE_SE_RUNTIME.playFlick(judgment);else RHYTHM_NOTE_SE_RUNTIME.playClear(judgment);
@@ -31558,6 +31526,11 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
+    if (!debugPlay && !tutorial && !calibrating) {
+      try {
+        RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
+      } catch {}
+    }
     const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
@@ -32267,6 +32240,11 @@ const RhythmTapTest = ({
       status: 'loading'
     });
     hudRef.current.set(rhythmHudInitial());
+    try {
+      rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY, [])));
+    } catch {
+      rhythmTouchFixAutoSet({});
+    }
     const audio = await Audio_.startRhythmTrack(song.bgmTrackId, settings.bgmVolume, {
       autoStart: false
     });
@@ -53219,13 +53197,26 @@ function MomosukeIntroOverlay({
     className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
   }, line.t)), React.createElement("p", {
     className: "mt-2 text-center text-[8px] text-slate-500"
-  }, step + 1, " / ", script.length), React.createElement("button", {
-    onClick: next,
-    className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]",
+  }, step + 1, " / ", script.length), React.createElement("div", {
+    className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
     style: {
       pointerEvents: 'auto'
     }
-  }, last ? '閉じる' : '次へ')));
+  }, !last && React.createElement("button", {
+    type: "button",
+    onClick: e => {
+      e.stopPropagation();
+      markMomosukeIntroSeen();
+    },
+    className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]"
+  }, "スキップ"), React.createElement("button", {
+    type: "button",
+    onClick: e => {
+      e.stopPropagation();
+      next();
+    },
+    className: "min-h-[50px] rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]"
+  }, last ? '閉じる' : '次へ'))));
 }
 const FRIEND_NOTICE_LINES = Object.freeze({
   mua: who => `${who}からフレンド申請が届いてるよ♪ 見にいってみよう！`,
@@ -65910,7 +65901,7 @@ const RaidJackPrepScreen = ({
       e.stopPropagation();
       onOpenDetail(mon);
     },
-    className: "absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
+    className: "mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
   }, "i"));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
@@ -83876,6 +83867,8 @@ function MonsterHeroGame() {
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "✦ 更新履歴"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: closeChangelog
   }, React.createElement(X, {
     size: 18
@@ -86611,7 +86604,7 @@ function MonsterHeroGame() {
         key: key,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
-        className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, React.createElement(AssistantBubble, {
@@ -86980,7 +86973,7 @@ function MonsterHeroGame() {
         key: m.id,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => scrollToLoopIndex(modes.length + i),
-        className: `w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, React.createElement(AssistantBubble, {
@@ -87223,7 +87216,7 @@ function MonsterHeroGame() {
         key: setting.id,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
-        className: `w-1.5 h-1.5 rounded-full ${setting.id === extremeDifficulty ? 'bg-fuchsia-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${setting.id === extremeDifficulty ? 'bg-fuchsia-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         "data-extreme-assistant": true,
         className: "shrink-0 pt-2 pb-1"
@@ -87590,7 +87583,7 @@ function MonsterHeroGame() {
         key: key,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
-        className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         className: `shrink-0 ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
         "data-difficulty-assistant": true
@@ -89503,7 +89496,7 @@ function MonsterHeroGame() {
     }, React.createElement("div", {
       "data-rhythm-debug-calibration": true,
       className: "mb-3"
-    }), React.createElement(RhythmFixOverridePanel, null), React.createElement("section", {
+    }), React.createElement("section", {
       "data-rhythm-perf-panel": true,
       className: "mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"
     }, React.createElement("div", {
@@ -91262,6 +91255,8 @@ function MonsterHeroGame() {
       if (!base) return null;
       return React.createElement("button", {
         key: entryId,
+        type: "button",
+        "aria-label": `${isMasu ? masu.name : base.name}を編成から外す`,
         onClick: () => toggleDraftMonster(entryId),
         className: "shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative"
       }, isMasu ? React.createElement(React.Fragment, null, React.createElement(DyedMonsterImage, {

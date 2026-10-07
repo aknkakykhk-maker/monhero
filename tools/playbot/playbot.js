@@ -1,18 +1,22 @@
 // 遊んでくれるロボット「モンヒロくん」(プレイボット)。実ブラウザでゲームを開き、人のように遊んで、
 // 「おかしなこと」と「遊びにくいところ」をスクリーンショット付きで記録する。
 //
-//   node tools/playbot/playbot.js                        ぜんぶ(約15分)
-//   node tools/playbot/playbot.js --only rhythm,battle   選んだシナリオだけ(new / battle / rhythm / tour / explore)
-//   node tools/playbot/playbot.js --steps 300            探索の手数(既定150)
-//   node tools/playbot/playbot.js --seed 12345           同じ押し方を再現する(報告に種が出る)
-//   node tools/playbot/playbot.js --headed               画面つきで動かす
+//   node tools/playbot/playbot.js                         全員(約15分)
+//   node tools/playbot/playbot.js --only clock,legacy     選んだ担当だけ(id でも 時計係 のような名前でも)
+//   node tools/playbot/playbot.js --list                  担当の一覧
+//   node tools/playbot/playbot.js --parallel 3            同時に動かす担当の数(既定3。1なら順番に)
+//   node tools/playbot/playbot.js --steps 300             探索の手数(既定150)
+//   node tools/playbot/playbot.js --seed 12345            同じ押し方を再現する(報告に種が出る)
+//   node tools/playbot/playbot.js --compare <report.json> 比べる相手を指定する(既定は前回の結果 → baseline.json)
+//   node tools/playbot/playbot.js --save-baseline         今回の結果を比べる基準(baseline.json)として残す
+//   node tools/playbot/playbot.js --headed                画面つきで動かす
 //
 // 結果は tools/out/playbot/<日時>/ に出る(report.md / report.json / 画像)。tools/out は git に入らない。
 // 毎日の定期実行(Routine)では、Claude がこの報告と画像を読んで、改善の提案と不具合の修正PRを作る。
 //
-// 【遊ぶ人は2人】
-//   新人      … 何も保存されていないブラウザ。名前を入れて最初の案内を通り HOME まで行く
-//   いつもの  … 最初の案内を済ませた状態から。バトル・モンヒロビート・HOME の全部の入口・探索
+// 【担当制】 担当は roles.js。担当ごとに別のブラウザを開き、決まった仕事だけをする。
+//   ふつうの担当は --parallel の数ずつ同時に動かし、alone の担当(音ゲー係・ランキング係)は
+//   そのあと1人ずつ動かす。乱数は担当ごとに分けてあるので、同時に動かしても --seed で同じ押し方になる。
 //
 // 【守ること】(CLAUDE.md ⑦) 詳しくは README.md
 //   ・毎回まっさらなブラウザ。手元・本番のセーブデータには触れない
@@ -21,12 +25,10 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { quietBootSeed, updateNoticeSeed } = require('../boot/quiet-boot-seed');
 const { openSession, BOT_NAME } = require('./lib/session');
-const { newPlayerScenario } = require('./scenarios/new-player');
-const { battleScenario } = require('./scenarios/battle');
-const { rhythmScenario } = require('./scenarios/rhythm');
-const { exploreScenario, tourScenario } = require('./scenarios/explore');
+const { prepareVeteran, prepareLegacy } = require('./lib/seeds');
+const { findPrevious, compare, saveBaseline } = require('./lib/compare');
+const { ROLES } = require('./roles');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
@@ -34,10 +36,17 @@ const argOf = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback;
 };
+if (args.includes('--list')) {
+  ROLES.forEach((r) => console.log(`${r.id.padEnd(8)} ${r.name}${r.alone ? '(1人で)' : ''} … ${r.does}`));
+  process.exit(0);
+}
 const STEPS = Math.max(1, Number(argOf('steps', 150)) || 150);
 const SEED = Number(argOf('seed', Date.now() % 1000000)) || 1;
+const PARALLEL = Math.max(1, Math.min(4, Number(argOf('parallel', 3)) || 3));
 const ONLY = (argOf('only', '') || '').split(',').map((x) => x.trim()).filter(Boolean);
-const want = (name) => !ONLY.length || ONLY.includes(name);
+const unknown = ONLY.filter((x) => !ROLES.some((r) => r.id === x || r.name === x));
+if (unknown.length) { console.log(`知らない担当: ${unknown.join(', ')}(--list で一覧)`); process.exit(1); }
+const want = (r) => !ONLY.length || ONLY.includes(r.id) || ONLY.includes(r.name);
 const PORT = 8981;
 const PAGE_URL = `http://localhost:${PORT}/monster-hero/index.html`;
 
@@ -45,18 +54,22 @@ const stamp = (() => {
   const d = new Date(Date.now() + 9 * 3600 * 1000); // JST
   return d.toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
 })();
-const OUT = path.join(ROOT, 'tools', 'out', 'playbot', stamp);
+const OUT_ROOT = path.join(ROOT, 'tools', 'out', 'playbot');
+const OUT = path.join(OUT_ROOT, stamp);
 fs.mkdirSync(OUT, { recursive: true });
 
-// ---- 再現できる乱数(mulberry32) ----
-let rngState = SEED >>> 0;
-const rand = () => {
-  rngState = (rngState + 0x6D2B79F5) >>> 0;
-  let t = rngState;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+// ---- 再現できる乱数(mulberry32)。担当ごとに別の流れにする ----
+const makeRand = (seed) => {
+  let st = seed >>> 0;
+  return () => {
+    st = (st + 0x6D2B79F5) >>> 0;
+    let t = st;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 };
+const seedOf = (id) => [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, (SEED ^ 2166136261) >>> 0);
 
 // ---- 配信(リポジトリのルート) ----
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
@@ -75,30 +88,9 @@ const serve = () => new Promise((resolve) => {
   server.listen(PORT, () => resolve(server));
 });
 
-// 「いつもの」の下準備: 最初の案内と、起動直後に重なる会話・告知を済ませた状態
-const veteranSeed = (name) => {
-  const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
-  if (localStorage.getItem('mh_breeder_name')) return; // 再読み込みのときは上書きしない
-  put('mh_breeder_name', name);
-  put('mh_breeder_icon', '🤖');
-  put('mh_intro_done', true);
-  put('mh_onboarded', true);
-  put('mh_tutorial_seen_v1', true);
-  put('mh_battle_tutorial_seen_v1', true);
-  put('mh_battle_tutorial_guide_shown_v1', true);
-  put('mh_assistant_selected_v1', 'mua');
-  put('mh_assistant_unlock_seen_v1', true);
-  put('mh_rhythm_tutorial_seen_v1', true);
-  // 新しい助手の紹介(きき・ももすけ)は、しばらく遊んでいる人ならもう見ている
-  put('mh_kiki_intro_seen_v1', true);
-  put('mh_momosuke_intro_seen_v1', true);
-  put('mh_clears_Beginner', 1);
-  put('mh_quick_clears_Beginner', 1);
-};
-
 const report = {
   headed: args.includes('--headed'), shotNo: 0, issues: [], steps: [], screens: new Map(),
-  issueKeys: new Set(), clickCount: new Map(), phases: [], metrics: {},
+  issueKeys: new Set(), phases: [],
 };
 
 (async () => {
@@ -107,93 +99,134 @@ const report = {
   catch { console.log('SKIP: playwright が入っていないので動かせません'); process.exit(0); }
   const server = await serve();
   const started = Date.now();
+  const shared = {};   // 担当どうしで受け渡すもの(音ゲー係の記録 → ランキング係)
+  const numbers = {};  // 前回と比べる数字
+  const roleResults = [];
   const writesAll = [];
 
-  const phase = async (s, name, fn) => {
+  // 担当1人ぶん。別のブラウザを開き、下準備 → (起動) → 仕事 → 閉じる
+  const runRole = async (role) => {
     const t0 = Date.now();
-    s.state.scenario = name;
-    let ok = true, note = '', stats = null;
+    const rand = makeRand(seedOf(role.id));
+    const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out: OUT, rand, persona: role.name, report });
+    s.roleId = role.id;
+    let ok = true;
+    const phase = async (name, fn) => {
+      const p0 = Date.now();
+      s.state.scenario = name;
+      let pok = true, note = '';
+      try {
+        const r = await fn();
+        if (r && typeof r === 'object') { pok = r.ok !== false; note = r.note || ''; }
+      } catch (e) { pok = false; note = e.message.split('\n')[0]; await s.addIssue('シナリオ失敗', `${name}: ${note}`); }
+      if (!pok) ok = false;
+      report.phases.push({ roleId: role.id, persona: role.name, name, ok: pok, ms: Date.now() - p0, note });
+      console.log(`${pok ? 'OK' : 'NG'}: [${role.name}] ${name}${note ? ' — ' + note : ''} (${((Date.now() - p0) / 1000).toFixed(0)}秒)`);
+    };
     try {
-      const r = await fn();
-      if (r && typeof r === 'object') { ok = r.ok !== false; note = r.note || ''; stats = r.stats || r.visited || null; }
-    } catch (e) { ok = false; note = e.message.split('\n')[0]; await s.addIssue('シナリオ失敗', `${name}: ${note}`); }
-    report.phases.push({ persona: s.persona, name, ok, ms: Date.now() - t0, note });
-    if (stats) report.metrics[name] = stats;
-    console.log(`${ok ? 'OK' : 'NG'}: [${s.persona}] ${name}${note ? ' — ' + note : ''} (${((Date.now() - t0) / 1000).toFixed(0)}秒)`);
+      if (role.prepare === 'veteran') await prepareVeteran(s);
+      if (role.prepare === 'legacy') await prepareLegacy(s);
+      if (role.boot) {
+        await phase('起動', async () => {
+          const r = await s.boot();
+          await s.inspect();
+          // 読み込みの秒数は、1人で動く担当だけで測る(同時に動いていると遅く出る)
+          if (role.measureBoot) {
+            numbers['起動: TAP TO START まで(秒)'] = +(r.loadMs / 1000).toFixed(1);
+            if (r.loadMs > 15000) await s.addIssue('読み込みが遅い', `TAP TO START が出るまで ${(r.loadMs / 1000).toFixed(1)}秒`);
+          }
+          return { ok: true, note: `読み込み ${(r.loadMs / 1000).toFixed(1)}秒 / HOME まで ${(r.homeMs / 1000).toFixed(1)}秒` };
+        });
+      }
+      await role.run(s, { phase, steps: STEPS, rand, shared, numbers });
+    } catch (e) {
+      ok = false;
+      await s.addIssue('シナリオ失敗', `${role.name}: ${e.message.split('\n')[0]}`).catch(() => {});
+    }
+    writesAll.push(...s.supabase.writes.map((w) => ({ persona: role.name, ...w })));
+    await s.close();
+    roleResults.push({ id: role.id, name: role.name, does: role.does, ok, minutes: +((Date.now() - t0) / 60000).toFixed(1) });
   };
 
-  // ===== 新人 =====
-  if (want('new')) {
-    const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out: OUT, rand, persona: '新人', report });
-    await phase(s, 'はじめて遊ぶ', () => newPlayerScenario(s));
-    // 設定を終えたら、はじめての人として最初のバトルも遊ぶ(案内のあとの導線を確かめる)
-    if (want('battle')) await phase(s, '新人のはじめてのバトル', async () => { await s.backHome(); const r = await battleScenario(s, { manualTurns: 4, autoMs: 30000, system: 'systemClassic' }); await s.backHome(); return r; });
-    if (want('explore')) await phase(s, '新人の探索', () => exploreScenario(s, { steps: Math.ceil(STEPS / 3), rand, report }));
-    writesAll.push(...s.supabase.writes.map((w) => ({ persona: s.persona, ...w })));
-    await s.close();
-  }
+  const chosen = ROLES.filter(want);
+  const together = chosen.filter((r) => !r.alone);
+  const alone = chosen.filter((r) => r.alone);
+  console.log(`担当: ${chosen.map((r) => r.name).join('・')}(同時に${PARALLEL}人ずつ${alone.length ? `、そのあと ${alone.map((r) => r.name).join('・')} を1人ずつ` : ''})`);
+  let next = 0;
+  const worker = async () => { while (next < together.length) await runRole(together[next++]); };
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, together.length) }, worker));
+  for (const r of alone) await runRole(r);
 
-  // ===== いつもの =====
-  if (['battle', 'rhythm', 'tour', 'explore'].some(want)) {
-    const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out: OUT, rand, persona: 'いつもの', report });
-    await s.page.addInitScript(veteranSeed, BOT_NAME);
-    // ★種は最初の1回だけ入れる。読み込み直すたびに入れると、既読の一覧が上書きされて、
-    //   ボットがそのあと見た会話(レイドのお話など)が「まだ見ていない」に戻り、毎回流れてしまう
-    await s.page.addInitScript({ content: `(() => { try { if (localStorage.getItem('__playbot_seeded')) return; ${quietBootSeed().content}\n${updateNoticeSeed().content}\nlocalStorage.setItem('__playbot_seeded', '1'); } catch (e) {} })();` });
-    await phase(s, '起動', async () => {
-      const r = await s.boot();
-      await s.inspect();
-      report.metrics['起動'] = r;
-      if (r.loadMs > 15000) await s.addIssue('読み込みが遅い', `TAP TO START が出るまで ${(r.loadMs / 1000).toFixed(1)}秒`);
-      return { ok: true, note: `読み込み ${(r.loadMs / 1000).toFixed(1)}秒 / HOME まで ${(r.homeMs / 1000).toFixed(1)}秒` };
-    });
-    if (want('battle')) await phase(s, 'バトル', async () => { const r = await battleScenario(s); await s.backHome(); return r; });
-    if (want('rhythm')) await phase(s, 'モンヒロビート', async () => { const r = await rhythmScenario(s); await s.backHome(); return r; });
-    if (want('tour')) await phase(s, 'HOME の入口ツアー', () => tourScenario(s, { stepsEach: 8, rand, report }));
-    if (want('explore')) await phase(s, '探索', () => exploreScenario(s, { steps: STEPS, rand, report }));
-    writesAll.push(...s.supabase.writes.map((w) => ({ persona: s.persona, ...w })));
-    await s.close();
-  }
-
-  // ===== まとめ =====
+  // ===== まとめ(報告係) =====
+  const order = (id) => ROLES.findIndex((r) => r.id === id);
+  roleResults.sort((a, b) => order(a.id) - order(b.id));
+  // 不具合には担当の id を付ける(画面の名前や比べる鍵に使う)
+  const idOfName = new Map(ROLES.map((r) => [r.name, r.id]));
+  report.issues.forEach((x) => { x.roleId = idOfName.get(x.persona) || ''; });
   const countOf = (level) => report.issues.filter((x) => x.level === level).length;
   const result = {
-    stamp, seed: SEED, steps: STEPS, only: ONLY, minutes: +((Date.now() - started) / 60000).toFixed(1),
-    phases: report.phases, metrics: report.metrics,
+    format: 'roles', stamp, seed: SEED, steps: STEPS, only: ONLY, parallel: PARALLEL,
+    minutes: +((Date.now() - started) / 60000).toFixed(1),
+    roles: roleResults, phases: report.phases, numbers,
     rankingWrites: writesAll.map((w) => ({ persona: w.persona, table: w.table, row: w.row })),
     screens: [...report.screens.entries()].map(([name, v]) => ({ name, ...v })),
     issues: report.issues, path: report.steps,
   };
+  const diff = compare(result, findPrevious({ explicit: argOf('compare', ''), outRoot: OUT_ROOT, currentDir: OUT }));
+  result.compare = diff && { from: path.relative(ROOT, diff.from), stamp: diff.stamp,
+    appeared: diff.appeared.map((x) => `${x.persona}: ${x.kind} — ${x.detail}`.slice(0, 240)),
+    gone: diff.gone.map((x) => `${x.persona}: ${x.kind} — ${x.detail}`.slice(0, 240)), numbers: diff.numbers, failedNow: diff.failedNow };
   fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(result, null, 2));
+  if (args.includes('--save-baseline')) console.log(`比べる基準を残した: ${path.relative(ROOT, saveBaseline(result))}`);
 
+  const issueLines = (list) => list.map((x, i) => [
+    `#### ${i + 1}. ${x.kind} — ${x.screen}`,
+    '',
+    `- 内容: ${x.detail.replace(/\n/g, ' ').slice(0, 300)}`,
+    ...(x.known ? [`- 既知の理由: ${x.known}`] : []),
+    `- 場面: ${x.scenario} / 画像: \`${x.image}\``,
+    `- 直前に押したもの: ${x.recentSteps.map((st) => `「${st.label}」`).join(' → ') || '(なし)'}`,
+    '',
+  ].join('\n'));
+  const compareLines = !diff ? ['- 比べる前回の結果が無い(`--save-baseline` で基準を残せる)', ''] : [
+    `- 比べた相手: \`${path.relative(ROOT, diff.from)}\`${diff.stamp ? `(${diff.stamp})` : ''}`,
+    ...(diff.failedNow.length ? [`- ❌ 前回は通ったのに今回つまずいた担当: ${diff.failedNow.join('・')}`] : []),
+    `- 新しく出たもの: ${diff.appeared.length}件`,
+    ...diff.appeared.map((x) => `  - 🆕 [${x.persona}] ${x.kind} — ${x.detail.replace(/\n/g, ' ').slice(0, 160)}`),
+    `- 前回あって今回は出なかったもの: ${diff.gone.length}件(直った・今回は通らなかった、のどちらか)`,
+    ...diff.gone.map((x) => `  - ✔ [${x.persona}] ${x.kind} — ${x.detail.replace(/\n/g, ' ').slice(0, 160)}`),
+    ...(diff.numbers.length ? ['- 数字の動き:', ...diff.numbers.map((n) => `  - ${n.name}: ${n.before} → ${n.now}`)] : ['- 数字の動き: なし']),
+    '',
+  ];
   const md = [
     `# モンヒロくんの報告 ${stamp}`,
     '',
     `- 乱数の種: \`${SEED}\`(\`node tools/playbot/playbot.js --seed ${SEED}${ONLY.length ? ` --only ${ONLY.join(',')}` : ''}\` で同じ押し方を再現)`,
-    `- かかった時間: ${result.minutes}分 / 見た画面: ${report.screens.size} / 押した回数: ${report.steps.length}`,
+    `- かかった時間: ${result.minutes}分(同時に${PARALLEL}人) / 見た画面: ${report.screens.size} / 押した回数: ${report.steps.length}`,
     `- ランキングなどへ送った記録: ${writesAll.length}件(すべてボットの手元で受け止めた。本物へは届いていない)`,
+    `- 不具合候補 ${countOf('不具合候補')}件 / 改善のヒント ${countOf('改善のヒント')}件 / 既知 ${countOf('既知')}件`,
     '',
-    '## 遊んだこと',
+    '## 前回との比較(報告係)',
     '',
-    ...report.phases.map((p) => `- ${p.ok ? '✅' : '❌'} [${p.persona}] ${p.name}${p.note ? ` — ${p.note}` : ''}(${(p.ms / 1000).toFixed(0)}秒)`),
+    ...compareLines,
+    '## 担当ごとの結果',
     '',
-    ...['不具合候補', '改善のヒント', '既知'].flatMap((level) => {
-      const list = report.issues.filter((x) => x.level === level);
+    ...roleResults.flatMap((r) => {
+      const mine = report.issues.filter((x) => x.persona === r.name && x.level !== '既知');
       return [
-        `## ${level}(${list.length}件)`,
+        `### ${r.ok ? '✅' : '❌'} ${r.name}(${r.minutes}分)— ${r.does}`,
         '',
-        ...(list.length ? [] : ['- なし', '']),
-        ...list.map((x, i) => [
-          `### ${i + 1}. ${x.kind} — ${x.screen}`,
-          '',
-          `- 内容: ${x.detail.replace(/\n/g, ' ').slice(0, 300)}`,
-          ...(x.known ? [`- 既知の理由: ${x.known}`] : []),
-          `- 遊んでいた人・場面: ${x.persona} / ${x.scenario} / 画像: \`${x.image}\``,
-          `- 直前に押したもの: ${x.recentSteps.map((st) => `「${st.label}」`).join(' → ') || '(なし)'}`,
-          '',
-        ].join('\n')),
+        ...report.phases.filter((p) => p.roleId === r.id).map((p) => `- ${p.ok ? '✅' : '❌'} ${p.name}${p.note ? ` — ${p.note}` : ''}(${(p.ms / 1000).toFixed(0)}秒)`),
+        '',
+        ...['不具合候補', '改善のヒント'].flatMap((level) => {
+          const list = mine.filter((x) => x.level === level);
+          return list.length ? [`**${level}(${list.length}件)**`, '', ...issueLines(list)] : [];
+        }),
       ];
     }),
+    `## 既知(${countOf('既知')}件)`,
+    '',
+    ...(countOf('既知') ? issueLines(report.issues.filter((x) => x.level === '既知')) : ['- なし', '']),
     '## 見た画面(画像を見て、遊びにくいところがないかを確かめる)',
     '',
     ...[...report.screens.entries()].map(([n, v]) => `- ${n}(${v.persona} / ${v.scenario} / \`${v.image}\`)`),
@@ -202,6 +235,7 @@ const report = {
   fs.writeFileSync(path.join(OUT, 'report.md'), md);
 
   console.log(`\n見た画面 ${report.screens.size} / 不具合候補 ${countOf('不具合候補')}件 / 改善のヒント ${countOf('改善のヒント')}件 / 既知 ${countOf('既知')}件`);
+  if (diff) console.log(`前回と比べて: 新しく出た ${diff.appeared.length}件 / 出なくなった ${diff.gone.length}件`);
   console.log(`報告: ${path.relative(ROOT, path.join(OUT, 'report.md'))}`);
   server.close();
   process.exit(0);

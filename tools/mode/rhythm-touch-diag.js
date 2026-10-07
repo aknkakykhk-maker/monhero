@@ -146,7 +146,7 @@ const timingSummary=(rows,{days=null,now=Date.now()}={})=>{
     const t=s.timing&&typeof s.timing==='object'?s.timing:null;
     if(!t||s.assist)continue;
     const key=row.platform||'other';
-    if(!groups.has(key))groups.set(key,{key,plays:0,inputs:0,capped:0,backed:0,unbacked:0,over150:0,over300:0,frames:0,stalls:0,hiddenPlays:0,penPlays:0,hasTs:0,hasTsKnown:0,outLat:[],baseLat:[],head:new Map()});
+    if(!groups.has(key))groups.set(key,{key,plays:0,inputs:0,capped:0,backed:0,unbacked:0,over150:0,over300:0,frames:0,stalls:0,hiddenPlays:0,penPlays:0,hasTs:0,hasTsKnown:0,outLat:[],baseLat:[],tsLat:[],bias:[],head:new Map()});
     const g=groups.get(key);
     const hist=Array.isArray(t.ageHist)?t.ageHist.map(num):[0,0,0,0,0,0];
     g.plays++;g.inputs+=hist.reduce((a,b)=>a+b,0);g.capped+=num(t.ageCapped);g.backed+=num(t.ageBacked);g.unbacked+=num(t.ageUnbacked);g.over150+=(hist[4]||0)+(hist[5]||0);g.over300+=hist[5]||0;
@@ -155,13 +155,15 @@ const timingSummary=(rows,{days=null,now=Date.now()}={})=>{
     if(typeof t.hasTs==='boolean'){g.hasTsKnown++;if(t.hasTs)g.hasTs++;}
     if(Number.isFinite(Number(t.outLatMs)))g.outLat.push(Number(t.outLatMs));
     if(Number.isFinite(Number(t.baseLatMs)))g.baseLat.push(Number(t.baseLatMs));
+    if(t.tsLatMs!==null&&t.tsLatMs!==undefined&&Number.isFinite(Number(t.tsLatMs)))g.tsLat.push(Number(t.tsLatMs));
+    if(t.biasMs!==null&&t.biasMs!==undefined&&Number.isFinite(Number(t.biasMs))&&num(t.biasN)>=30)g.bias.push(Number(t.biasMs));
     if(Number.isFinite(Number(t.headMs))&&Number(t.headMs)>=0){const song=String(row.song_id||'');if(!g.head.has(song))g.head.set(song,[]);g.head.get(song).push(Number(t.headMs));}
   }
   const per=(a,b,unit)=>b>0?a/b*unit:0;
   return [...groups.values()].map(g=>({key:g.key,plays:g.plays,inputs:g.inputs,
     cappedPer1k:per(g.capped,g.inputs,1000),backedPer1k:per(g.backed,g.inputs,1000),unbackedPer1k:per(g.unbacked,g.inputs,1000),over150Per1k:per(g.over150,g.inputs,1000),over300Per1k:per(g.over300,g.inputs,1000),
     stallShare:per(g.stalls,g.frames,1),hiddenShare:per(g.hiddenPlays,g.plays,1),penShare:per(g.penPlays,g.plays,1),
-    hasTsShare:g.hasTsKnown?g.hasTs/g.hasTsKnown:null,outLatMedian:median(g.outLat),baseLatMedian:median(g.baseLat),
+    hasTsShare:g.hasTsKnown?g.hasTs/g.hasTsKnown:null,outLatMedian:median(g.outLat),baseLatMedian:median(g.baseLat),tsLatMedian:median(g.tsLat),biasMedian:median(g.bias),biasPlays:g.bias.length,
     headBySong:Object.fromEntries([...g.head].map(([song,v])=>[song,median(v)]))})).sort((a,b)=>a.key.localeCompare(b.key));
 };
 // 判定と、合う直し方。数字の目安は初期値。ageBacked / ageUnbacked は、直し方 inputAgeCap を入れた端末の記録にだけ入る。実際の記録を見て、ユーザーと決める
@@ -272,7 +274,7 @@ const report=(rows,{json=false,days=null}={})=>{
   compared.lines.forEach(line=>console.log(`  ${line.level==='found'?'●':line.level==='wait'?'…':'・'} ${line.text}`));
   const timing=timingSummary(rows,{days}),timingVerdict=timingLines(timing),timingFixes=timingFixesFor(timingVerdict);
   console.log('\nタイミングの診断(stats.timing):');
-  for(const g of timing)console.log(`  [${g.key}] ${g.plays}曲・${g.inputs}入力  80ms超 ${g.cappedPer1k.toFixed(1)}/1000入力 / 150ms超 ${g.over150Per1k.toFixed(1)} / 止まったコマ ${(g.stallShare*100).toFixed(1)}% / 離れた曲 ${(g.hiddenShare*100).toFixed(1)}% / 出力遅延 ${g.outLatMedian===null?'-':g.outLatMedian}ms・基準遅延 ${g.baseLatMedian===null?'-':g.baseLatMedian}ms / getOutputTimestamp ${g.hasTsShare===null?'-':Math.round(g.hasTsShare*100)+'%'}`);
+  for(const g of timing)console.log(`  [${g.key}] ${g.plays}曲・${g.inputs}入力  80ms超 ${g.cappedPer1k.toFixed(1)}/1000入力 / 150ms超 ${g.over150Per1k.toFixed(1)} / 止まったコマ ${(g.stallShare*100).toFixed(1)}% / 離れた曲 ${(g.hiddenShare*100).toFixed(1)}% / 出力遅延 ${g.outLatMedian===null?'-':g.outLatMedian}ms・基準遅延 ${g.baseLatMedian===null?'-':g.baseLatMedian}ms・端末の申告 ${g.tsLatMedian===null?'-':g.tsLatMedian}ms・押したずれの中央値 ${g.biasMedian===null?'-':g.biasMedian}ms(${g.biasPlays}曲、正=遅い側) / getOutputTimestamp ${g.hasTsShare===null?'-':Math.round(g.hasTsShare*100)+'%'}`);
   timingVerdict.forEach(line=>console.log(`  ${line.level==='found'?'●':line.level==='wait'?'…':'・'} ${line.text}`));
   if(timingFixes.length)timingFixes.forEach(name=>console.log(`  → ${name}(デバッグ画面の「実機の直し方」で、この端末だけ試せます)`));
   console.log('\n用意してある直し方(入れるのはユーザーが了承してから。data/rhythm-mode.js の RHYTHM_TOUCH_FIXES を true にする):');

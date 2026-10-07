@@ -1226,20 +1226,24 @@ const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 //   outLatMs / baseLatMs / hasTs / rate / headMs … その端末の出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音の長さ
 const RHYTHM_TIMING_DIAG=(()=>{
   const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
-  let stats=zero(),meta={},lastSong=null,lastTick=0;
+  let stats=zero(),meta={},lastSong=null,lastTick=0,lastStallAt=0,biasList=[];
   const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
   return {
-    reset(){stats=zero();meta={};lastSong=null;lastTick=0;},
+    reset(){stats=zero();meta={};lastSong=null;lastTick=0;lastStallAt=0;biasList=[];},
+      // 単押しを取ったときのずれ(ms。正=遅い側)。端末の音の遅れが合っているかの手がかり。診断に中央値と数だけ残す(2026-10-07)
+      bias(deltaMs){const v=Number(deltaMs);if(Number.isFinite(v)&&Math.abs(v)<=200&&biasList.length<600)biasList.push(v);},
+    // 直近 ms のあいだに、80ms以上コマが止まったか(取りこぼしの回収を、止まったあとだけ長くするのに使う)
+    recentStall(ms){return lastStallAt>0&&typeof performance!=='undefined'&&performance.now&&performance.now()-lastStallAt<=ms;},
     age(value){const v=Number(value);if(!(v>=0)||v>5000)return;stats.ageHist[bucket(v)]++;if(v>RHYTHM_INPUT_AGE_MAX_MS)stats.ageCapped++;},
     // 直前のコマの時刻。「入力が遅れて届いた」と言っているとき、本当にその間コマが止まっていたか(重い処理があったか)を見るのに使う
     stalledSince(nowPerfMs){const n=Number(nowPerfMs);return lastTick>0&&Number.isFinite(n)?Math.max(0,n-lastTick):0;},
     ageBacked(){stats.ageBacked++;},
     ageUnbacked(){stats.ageUnbacked++;},
-    frame(songMs){lastTick=typeof performance!=='undefined'&&performance.now?performance.now():0;const v=Number(songMs);if(!Number.isFinite(v))return;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;},
+    frame(songMs){const tickNow=typeof performance!=='undefined'&&performance.now?performance.now():0;if(lastTick>0&&tickNow-lastTick>=80)lastStallAt=tickNow;lastTick=tickNow;const v=Number(songMs);if(!Number.isFinite(v))return;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;},
     meta(value){if(value&&typeof value==='object')meta={...meta,...value};},
     hidden(){stats.hidden++;},
     pen(){stats.pen++;},
-    snapshot(){return {...stats,ageHist:stats.ageHist.slice(),...meta};},
+    snapshot(){const sorted=biasList.slice().sort((a,b)=>a-b),n=sorted.length;return {...stats,ageHist:stats.ageHist.slice(),biasN:n,biasMs:n?Math.round(sorted[n>>1]*10)/10:null,...meta};},
   };
 })();
 // 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
@@ -1279,7 +1283,10 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
 // 判定は入力側の時刻で測るので、遅れて届いた入力が窓の外なら今までどおりMISSになる。
 const RHYTHM_MISS_RECLAIM_MS = RHYTHM_INPUT_MATCH_WINDOW_MS + RHYTHM_INPUT_AGE_MAX_MS;
 // 直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん(補正の上限)も長くする。入れていない端末では上と同じ値
-const rhythmMissReclaimMs=()=>RHYTHM_INPUT_MATCH_WINDOW_MS+rhythmInputAgeCapMs();
+// 取りこぼしを見逃しMISSにするまでの待ち。遅れて届く入力を待つぶん(補正の上限)を足すが、広げた上限(300ms)を足すのは、
+// 直前にゲームが本当に止まったときだけ(止まったあとの600msのあいだ)。ふだんは80msぶんのまま＝MISSの出る時刻は変わらない
+const RHYTHM_RECLAIM_WIDE_WINDOW_MS=600;
+const rhythmMissReclaimMs=()=>RHYTHM_INPUT_MATCH_WINDOW_MS+(rhythmTouchFixOn('inputAgeCap')&&RHYTHM_TIMING_DIAG.recentStall(RHYTHM_RECLAIM_WIDE_WINDOW_MS)?RHYTHM_INPUT_AGE_CAP_WIDE_MS:RHYTHM_INPUT_AGE_MAX_MS);
 
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
@@ -2520,10 +2527,39 @@ const rhythmTouchPlatform=()=>{
 const RHYTHM_TOUCH_FIXES={
   lateInputEffectDown:true,    // 判定⑤「50ms以上遅れて届いたタッチ」→ 遅れが続いたら演出を一段下げる(「重いときは演出を自動で控えめに」と同じ道)。2026-10-05に入れた(iPhoneだけ)
   wideEdge:false,              // 判定⑥「道の外で無視した指」→ 道の外の受け付けを、サブレーン1本ぶんから2本ぶんへ広げる
-  inputAgeCap:false,           // 遅れて届いた入力(stats.timing.ageCapped が多い)→ 遅れの補正の上限を80msから300msへ広げる(基準がそろっている端末だけ)
-  smoothSongClock:false,       // 曲の時計が階段状(stats.timing.stalls が多い)→ 曲の時計を、コマの間でなめらかに進める
-  autoPauseOnHidden:false,     // 演奏中にアプリを離れた(stats.timing.hidden)→ 自動で一時停止する
+  // ★次の3つは「ゲームが自分で判断して」入れ切りする(人が数字を見て調整する前提にしない。2026-10-07・ユーザー指示)。
+  //   inputAgeCap … 標準で入れてある(iPhoneだけ)。遅れの補正の上限を80msから300msへ広げるが、使うのは、時計の基準がそろっていて、
+  //                 かつその間ゲームが本当に止まっていたと見えたときだけ。端末の記録で「止まっていないのに古い時刻」が多いと分かった端末では、自分で切る
+  //   smoothSongClock … 標準では切ってある。端末の記録で、曲の時計が階段状に止まるコマが多い(2%以上)と分かった端末だけ、自分で入れる(全端末)
+  //   autoPauseOnHidden … 標準で入れてある(全端末)。演奏中にアプリを離れたら、自動で一時停止する
+  inputAgeCap:true,
+  smoothSongClock:false,
+  autoPauseOnHidden:true,
   allPlatforms:false,
+};
+// 標準でも iPhone 以外へ効かせる直し方(安全で、端末の系統に関係なく意味があるもの)
+const RHYTHM_TOUCH_FIX_ANY_PLATFORM=Object.freeze({smoothSongClock:true,autoPauseOnHidden:true});
+// ゲームが、この端末の直近の診断の記録から決めた入れ切り。演奏を始めるたびに決め直す(30-rhythm-play.jsx の beginRun)。
+// 値が無い名前は、上の表のとおり。保存はしない(記録そのものが端末に残っているので、毎回そこから決める)
+let rhythmTouchFixAuto={};
+const rhythmTouchFixAutoSet=value=>{rhythmTouchFixAuto=value&&typeof value==='object'?{...value}:{};};
+// 端末の直近の診断(mh_rhythm_touch_diag_v1)の行から、入れ切りを決める。足りない・壊れているときは何も決めない(=上の表のとおり)
+const RHYTHM_AUTO_MIN_PLAYS=3;
+const RHYTHM_AUTO_STALL_SHARE=.02;
+const rhythmTouchFixAutoFrom=rows=>{
+  const out={};
+  let plays=0,frames=0,stalls=0,backed=0,unbacked=0;
+  (Array.isArray(rows)?rows:[]).forEach(row=>{
+    const t=row&&row.stats&&typeof row.stats==='object'?row.stats.timing:null;
+    if(!t||typeof t!=='object'||row.stats.assist)return;
+    plays++;frames+=Number(t.frames)||0;stalls+=Number(t.stalls)||0;backed+=Number(t.ageBacked)||0;unbacked+=Number(t.ageUnbacked)||0;
+  });
+  if(plays<RHYTHM_AUTO_MIN_PLAYS)return out;
+  // 曲の時計が、止まったコマ(前のコマと同じ値)が多い端末だけ、時計をなめらかにする
+  if(frames>=3000&&stalls/frames>=RHYTHM_AUTO_STALL_SHARE)out.smoothSongClock=true;
+  // 「遅れて届いた」と言う入力のうち、ゲームが止まっていたと見えないものが、見えたものと同じかそれ以上に多い端末は、イベントの時刻が古いだけの疑い。広げた上限を自分で切る
+  if(backed+unbacked>=5&&unbacked>=backed)out.inputAgeCap=false;
+  return out;
 };
 // この端末だけで直し方を入れる/切る(デバッグ画面から。新しい保存キー mh_rhythm_fix_override_v1・既存のキーは触らない)。
 // 実機で試して、よければ上の RHYTHM_TOUCH_FIXES を true にして全員へ入れる。値が無い名前は、上の表のとおり。
@@ -2555,8 +2591,11 @@ const rhythmTouchFixOn=name=>{
   if(name==='allPlatforms')return false;
   const override=rhythmTouchFixOverride();
   if(typeof override[name]==='boolean')return override[name];
+  // ゲームが自分で決めた入れ切り(端末の記録から)。入れると決めたものは系統に関係なく、切ると決めたものは切る
+  if(typeof rhythmTouchFixAuto[name]==='boolean')return rhythmTouchFixAuto[name];
   if(RHYTHM_TOUCH_FIXES[name]!==true)return false;
   if(RHYTHM_TOUCH_FIXES.allPlatforms===true)return true;
+  if(RHYTHM_TOUCH_FIX_ANY_PLATFORM[name]===true)return true;
   if(rhythmTouchPlatformCache===null)rhythmTouchPlatformCache=rhythmTouchPlatform();
   return rhythmTouchPlatformCache==='ios';
 };

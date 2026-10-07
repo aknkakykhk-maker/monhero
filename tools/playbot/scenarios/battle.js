@@ -72,7 +72,8 @@ const readBattle = (s) => s.page.evaluate(() => {
     picked: num(/ACTION CARDS\s*(\d+)\s*\//),
     inBattle: !!document.querySelector('button[aria-label^="AUTO"]'),
     // ラン全体の終わり(WAVE ごとの「WAVE 1 リザルト」は含めない)
-    over: !document.querySelector('button[aria-label^="AUTO"]') && /GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇/.test(text),
+    // ★勝ち抜いたときの結果は「CHAMPION」。WAVE別ログの「WAVE 1」を読んで W1 と書かないよう、over を先に見る
+    over: !document.querySelector('button[aria-label^="AUTO"]') && /GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text),
   };
 });
 
@@ -187,7 +188,7 @@ async function watchAuto(s, ms, stats) {
     await s.wait(3000);
     s.state.step += 1;
     const st = await readBattle(s);
-    stats.samples.push({ t: Date.now() - t0, wave: st.wave, turn: st.turn, life: st.life });
+    if (st.inBattle) stats.samples.push({ t: Date.now() - t0, wave: st.wave, turn: st.turn, life: st.life });
     if (st.turn !== last.turn || st.wave !== last.wave || st.over !== last.over) lastChange = Date.now();
     if (st.over) { stats.finished = true; break; }
     if (Date.now() - lastChange > 20000) {
@@ -198,7 +199,10 @@ async function watchAuto(s, ms, stats) {
     await s.inspect();
   }
   const end = await readBattle(s);
-  stats.endWave = end.wave; stats.endTurn = end.turn;
+  // 結果画面の「WAVE別ログ」には WAVE 1 から並ぶので、着いた WAVE はバトル中に見た最大のものにする
+  const waves = stats.samples.map((x) => x.wave).filter(Number.isFinite);
+  stats.endWave = waves.length ? Math.max(...waves) : end.wave;
+  stats.endTurn = end.inBattle ? end.turn : (stats.samples.filter((x) => x.wave === stats.endWave).map((x) => x.turn).filter(Number.isFinite).pop() ?? end.turn);
   if (end.over) {
     await s.shot('battle-result');
     // 結果画面から先へ進めるか(人なら「HOMEへ」などを押す)
@@ -212,9 +216,13 @@ async function battleScenario(s, { manualTurns = 6, autoMs = 60000, system = 'sy
   const { inBattle, heroName } = await enterQuickBattle(s, { system });
   stats.entered = inBattle; stats.hero = heroName;
   if (!inBattle) { await s.addIssue('進めない', `${system === 'systemQuick' ? 'クイックモード' : 'チャレンジモード'}のバトル画面へ入れなかった`); return { ok: false, stats }; }
-  await playManualTurns(s, manualTurns, stats);
-  await watchAuto(s, autoMs, stats);
-  return { ok: true, stats, note: `${heroName || '?'}・手で${stats.manualTurns}ターン(WAVE ${stats.wavesCleared}つ突破) → AUTO で W${stats.endWave} / T${stats.endTurn}${stats.finished ? '(決着)' : ''}` };
+  if (manualTurns > 0) await playManualTurns(s, manualTurns, stats);
+  // AUTO は AUTO係の受け持ち。手で遊ぶ係(autoMs: 0)は AUTO を入れずに終える
+  if (autoMs > 0) await watchAuto(s, autoMs, stats);
+  else { const end = await readBattle(s); stats.endWave = end.wave; stats.endTurn = end.turn; }
+  const manual = manualTurns > 0 ? `手で${stats.manualTurns}ターン(WAVE ${stats.wavesCleared}つ突破)` : '';
+  const auto = autoMs > 0 ? `AUTO ${Math.round(autoMs / 1000)}秒で W${stats.endWave} / T${stats.endTurn}` : `W${stats.endWave} / T${stats.endTurn} まで`;
+  return { ok: true, stats, note: `${heroName || '?'}・${[manual, auto].filter(Boolean).join(' → ')}${stats.finished ? '(決着)' : ''}` };
 }
 
 module.exports = { battleScenario, enterQuickBattle };
