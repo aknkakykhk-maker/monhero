@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e26871dfbc2bc686
+// source-sha256: a257819e2683de1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 11:50";
+const BUILD_DATE = "2026-10-07 12:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6900,8 +6900,27 @@ const Audio_ = (() => {
       const rawSongTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       let smoothSong = 0,
         smoothPerf = 0;
+      const tsLatSamples = [];
+      let tsLatAt = 0;
+      const sampleTsLatency = () => {
+        if (typeof ctx.getOutputTimestamp !== 'function' || typeof performance === 'undefined') return;
+        const p = performance.now();
+        if (p - tsLatAt < 500 || tsLatSamples.length >= 20) return;
+        tsLatAt = p;
+        try {
+          const ts = ctx.getOutputTimestamp();
+          const d = (ctx.currentTime - Number(ts && ts.contextTime)) * 1000;
+          if (Number.isFinite(d) && d >= 0 && d <= 1000 && Number(ts.contextTime) > 0) tsLatSamples.push(d);
+        } catch {}
+      };
+      const tsLatMs = () => {
+        if (tsLatSamples.length < 3) return null;
+        const s = tsLatSamples.slice().sort((a, b) => a - b);
+        return Math.round(s[s.length >> 1]);
+      };
       const songTimeSeconds = () => {
         const raw = rawSongTimeSeconds();
+        if (playing) sampleTsLatency();
         if (!playing || !rhythmTouchFixOn('smoothSongClock') || typeof performance === 'undefined') {
           smoothPerf = 0;
           return raw;
@@ -6930,6 +6949,7 @@ const Audio_ = (() => {
           outLatMs: Math.round(outputLatencySeconds * 1000),
           baseLatMs: Math.round((Number(ctx.baseLatency) || 0) * 1000),
           hasTs: typeof ctx.getOutputTimestamp === 'function',
+          tsLatMs: tsLatMs(),
           rate: Math.round(Number(ctx.sampleRate) || 0),
           headMs
         }),
@@ -31137,6 +31157,7 @@ const RhythmTapTest = ({
       if (!Array.isArray(run.deltas)) run.deltas = [];
       run.deltas.push(deltaMs);
     }
+    if (!calibrating && note && note.type === 'TAP' && judgment !== 'MISS') RHYTHM_TIMING_DIAG.bias(deltaMs);
     const clearedGesture = judgment !== 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note) || note._rhythmOriginalType === 'FLICK');
     if (clearedGesture) {
       if (note._rhythmOriginalType === 'FLICK' || note.type === 'FLICK' || note.endFlick) RHYTHM_NOTE_SE_RUNTIME.playFlick(judgment);else RHYTHM_NOTE_SE_RUNTIME.playClear(judgment);
@@ -31489,6 +31510,11 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
+    if (!debugPlay && !tutorial && !calibrating) {
+      try {
+        RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
+      } catch {}
+    }
     const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
@@ -52694,13 +52720,26 @@ function MomosukeIntroOverlay({
     className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
   }, line.t)), React.createElement("p", {
     className: "mt-2 text-center text-[8px] text-slate-500"
-  }, step + 1, " / ", script.length), React.createElement("button", {
-    onClick: next,
-    className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]",
+  }, step + 1, " / ", script.length), React.createElement("div", {
+    className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
     style: {
       pointerEvents: 'auto'
     }
-  }, last ? '閉じる' : '次へ')));
+  }, !last && React.createElement("button", {
+    type: "button",
+    onClick: e => {
+      e.stopPropagation();
+      markMomosukeIntroSeen();
+    },
+    className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]"
+  }, "スキップ"), React.createElement("button", {
+    type: "button",
+    onClick: e => {
+      e.stopPropagation();
+      next();
+    },
+    className: "min-h-[50px] rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]"
+  }, last ? '閉じる' : '次へ'))));
 }
 const FRIEND_NOTICE_LINES = Object.freeze({
   mua: who => `${who}からフレンド申請が届いてるよ♪ 見にいってみよう！`,
@@ -64399,7 +64438,7 @@ const RaidJackPrepScreen = ({
       e.stopPropagation();
       onOpenDetail(mon);
     },
-    className: "absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
+    className: "mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
   }, "i"));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
@@ -85066,7 +85105,7 @@ function MonsterHeroGame() {
         key: key,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
-        className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, React.createElement(AssistantBubble, {
@@ -85435,7 +85474,7 @@ function MonsterHeroGame() {
         key: m.id,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => scrollToLoopIndex(modes.length + i),
-        className: `w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, React.createElement(AssistantBubble, {
@@ -85678,7 +85717,7 @@ function MonsterHeroGame() {
         key: setting.id,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
-        className: `w-1.5 h-1.5 rounded-full ${setting.id === extremeDifficulty ? 'bg-fuchsia-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${setting.id === extremeDifficulty ? 'bg-fuchsia-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         "data-extreme-assistant": true,
         className: "shrink-0 pt-2 pb-1"
@@ -86045,7 +86084,7 @@ function MonsterHeroGame() {
         key: key,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
-        className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))), React.createElement("div", {
         className: `shrink-0 ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
         "data-difficulty-assistant": true
@@ -89712,6 +89751,8 @@ function MonsterHeroGame() {
       if (!base) return null;
       return React.createElement("button", {
         key: entryId,
+        type: "button",
+        "aria-label": `${isMasu ? masu.name : base.name}を編成から外す`,
         onClick: () => toggleDraftMonster(entryId),
         className: "shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative"
       }, isMasu ? React.createElement(React.Fragment, null, React.createElement(DyedMonsterImage, {
