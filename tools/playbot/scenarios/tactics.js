@@ -248,6 +248,9 @@ const BACKWARD = /^(キャンセル|閉じる|とじる|戻る|もどる|×)$|�
 // 進むボタン。上にあるものほど先に押す(選ぶ画面で1つ選んだあと、確定 → 次の画面へ)
 const FORWARD = [/^(この供モンを選ぶ|勇者モンに選ぶ|この子で挑む|供モン\d*にする)/, /^(習得する|強化する|決定する|決定|確定)$/, /^(次へ進む|次のWAVEへ|次へ|進む|バトルへ|出撃|出発|OK|受け取る)/, /^アシストカードへ$/];
 async function betweenWaves(s) {
+  const pressed = new Map(); // 押しても画面が変わらなかった進むボタン → 回数
+  const avoid = new Set();   // 選んでも先へ進めなかった選択肢(人も別のものを選び直す)
+  let lastPick = '';
   for (let i = 0; i < 24; i++) {
     const st = await readTactics(s);
     if (st.inBattle) return 'battle';
@@ -265,7 +268,7 @@ async function betweenWaves(s) {
     if (hidden) await s.wait(400);
     const list = await s.listButtons();
     const go = FORWARD.map((re) => list.find((x) => re.test(x.label))).find(Boolean);
-    const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label));
+    const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label) && !avoid.has(b.label));
     // 一覧に無い進むボタン(窓が出てくる演出の途中で、上に薄い層が重なっているとき)は、ボタンそのものを押す
     const direct = !go && await s.page.evaluate((sources) => {
       const res = sources.map((src) => new RegExp(src));
@@ -276,9 +279,37 @@ async function betweenWaves(s) {
       }
       return '';
     }, FORWARD.map((re) => re.source));
+    if (process.env.PLAYBOT_DEBUG) {
+      const dom = await s.page.evaluate(() => [...document.querySelectorAll('button')].filter((x) => x.offsetParent).map((x) => `${x.disabled ? '[x]' : ''}${(x.innerText || x.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 24)}`).join(' | '));
+      console.log(`    [合間] ${await s.screenName()} 一覧=${list.map((x) => x.label.slice(0, 20)).join(' | ')} 直接=${direct}\n      DOM=${dom.slice(0, 600)}`);
+    }
     if (direct) { s.state.step += 1; await s.wait(900); continue; }
-    if (go) await s.tap(go, 'WAVE の合間');
-    else if (options.length) await s.tap(options[Math.floor(s.rand() * options.length)], 'WAVE の合間(えらぶ)');
+    if (go) {
+      const n = (pressed.get(go.label) || 0) + 1;
+      pressed.set(go.label, n);
+      if (n >= 4) {
+        // 押しても進まない。人と同じく窓を閉じて、ほかの選択肢を選び直す
+        if (lastPick) avoid.add(lastPick);
+        pressed.delete(go.label);
+        const back = list.find((x) => /^(戻る|もどる|閉じる|とじる|×)$/.test(x.label));
+        if (back) await s.tap(back, 'WAVE の合間(選び直す)');
+        continue;
+      }
+      if (n >= 2) {
+        // 押しても画面が変わらない。ボタンそのものを押してみる
+        await s.page.evaluate((label) => { const b = [...document.querySelectorAll('button')].find((x) => !x.disabled && x.offsetParent && (x.innerText || '').replace(/\s+/g, ' ').trim().startsWith(label.slice(0, 8))); if (b) b.click(); }, go.label);
+        await s.wait(900);
+      } else {
+        await s.tap(go, 'WAVE の合間');
+        // 「習得する」「強化する」のあとは NEW CARD! の演出(約1.9秒)が出て、その間も窓が残る。
+        // 人と同じく演出が終わるのを待つ(★演出中に押し直すと、ゲームは2回分の確定を受け付けてしまう。HISTORY.md 2026-10-07)
+        if (/^(習得する|強化する)$/.test(go.label)) { await s.wait(2600); pressed.delete(go.label); }
+      }
+    } else if (options.length) {
+      const pick = options[Math.floor(s.rand() * options.length)];
+      lastPick = pick.label;
+      await s.tap(pick, 'WAVE の合間(えらぶ)');
+    }
     else await s.wait(1000);
   }
   await s.addIssue('進めない', 'タクティクスの WAVE の合間から24手押してもバトルへ戻れない');
