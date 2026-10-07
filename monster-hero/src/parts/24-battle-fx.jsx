@@ -1166,6 +1166,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Ghost: { body:'hover', bodyMask:IDLE_GHOST_BODY_MASK, parts:[{ mask:IDLE_GHOST_TAIL_MASK, origin:'63.8% 86%', anim:'wag', amp:6, dur:1700, delay:0, layer:'back' }] },
   Spooky: { body:'hover', bodyMask:IDLE_SPOOKY_BODY_MASK, parts:[{ mask:IDLE_SPOOKY_TAIL_MASK, origin:'58% 86%', anim:'wag', amp:5, dur:1900, delay:0, layer:'back' }, { mask:IDLE_SPOOKY_HAT_TIP_MASK, origin:'66% 12%', anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' }] },
   Melody: { body:'breathe', bodyMask:IDLE_MELODY_BODY_MASK, parts:[{ mask:IDLE_MELODY_TAIL_MASK, origin:'81.8% 79.5%', anim:'wag', amp:8, dur:1800, delay:0, layer:'back' }] },
+  Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({

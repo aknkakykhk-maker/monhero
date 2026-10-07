@@ -4684,6 +4684,28 @@ const createAnimationStyle = () => {
     @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
     @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
     @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
+    /* 魂格進化の演出(神殿)。段階の色(--accent)で燃え上がる */
+    .mh-soulevo{position:fixed;inset:0;z-index:50500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 44%,color-mix(in srgb,var(--accent) 45%,#020617),#020617 72%);animation:mhSoulevoIn .5s ease-out both}
+    .mh-soulevo.is-final{background:radial-gradient(circle at 50% 44%,#4c1d9588,#020617 72%),conic-gradient(from 0deg,#1d4ed855,#ca8a0455,#16a34a55,#dc262655,#9333ea55,#1d4ed855)}
+    .mh-soulevo-beams{position:absolute;inset:0;pointer-events:none}.mh-soulevo-beams i{position:absolute;bottom:-10%;left:calc(4% + var(--i)*11%);width:7%;height:85%;background:linear-gradient(to top,var(--accent),transparent);filter:blur(8px);opacity:.55;transform-origin:bottom;animation:mhSoulevoBeam 1.8s ease-in-out calc(var(--i)*.1s) infinite alternate}
+    .mh-soulevo-wave{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-wave i{position:absolute;left:-130px;top:-130px;width:260px;height:260px;border-radius:50%;border:3px solid var(--accent);box-shadow:0 0 36px var(--accent);opacity:0;animation:mhSoulevoWave 2.2s ease-out infinite}.mh-soulevo-wave i:nth-child(2){animation-delay:.7s}.mh-soulevo-wave i:nth-child(3){animation-delay:1.4s}
+    .mh-soulevo-mon{position:relative;width:180px;height:180px;margin-top:-120px;animation:mhSoulevoMon 1.1s ease-in-out infinite alternate;filter:drop-shadow(0 0 26px var(--accent))}
+    .mh-soulevo-sparks{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-sparks i{position:absolute;left:0;top:0;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);opacity:0;animation:mhSoulevoSpark 2s ease-out calc(var(--i)*.11s) infinite;--a:calc(var(--i)*22.5deg)}
+    .mh-soulevo-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhSoulevoFlash 1.3s ease-out 1.7s both}
+    .mh-soulevo-copy{position:absolute;left:0;right:0;bottom:10%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 16px;text-align:center}
+    .mh-soulevo-kicker{font-size:11px;font-weight:900;letter-spacing:.4em;color:#cbd5e1}.mh-soulevo-from{font-size:12px;font-weight:900;color:#94a3b8}
+    .mh-soulevo-label{font-size:40px;font-weight:900;color:var(--accent);text-shadow:0 0 22px var(--accent);opacity:0;animation:mhSoulevoPop .6s ease-out 1.9s both}
+    .mh-soulevo.is-final .mh-soulevo-label{background:linear-gradient(90deg,#60a5fa,#fbbf24,#4ade80,#f87171,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+    .mh-soulevo-cap{font-size:14px;font-weight:900;color:#6ee7b7;opacity:0;animation:mhSoulevoPop .5s ease-out 2.3s both}.mh-soulevo-cap b{font-size:34px;font-family:ui-monospace,monospace;color:#fff}
+    .mh-soulevo-sub{font-size:11px;font-weight:900;color:#94a3b8;opacity:0;animation:mhSoulevoPop .5s ease-out 2.6s both}
+    @keyframes mhSoulevoIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhSoulevoBeam{from{opacity:.25;transform:scaleY(.7)}to{opacity:.7;transform:scaleY(1)}}
+    @keyframes mhSoulevoWave{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+    @keyframes mhSoulevoMon{from{transform:scale(1)}to{transform:scale(1.07)}}
+    @keyframes mhSoulevoSpark{0%{opacity:0;transform:rotate(var(--a)) translateY(-20px)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-210px)}}
+    @keyframes mhSoulevoFlash{0%{opacity:0}25%{opacity:.9}100%{opacity:0}}
+    @keyframes mhSoulevoPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-soulevo *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-soulevo-label,.mh-soulevo-cap,.mh-soulevo-sub{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}

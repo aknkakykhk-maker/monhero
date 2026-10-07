@@ -123,7 +123,7 @@ async function playLandscape(s) {
   await s.inspect();
   const rate = Number.isFinite(miss) && installed.notes ? miss / installed.notes : null;
   // ボットは3%だけわざと押し損ねる。3割を超えて MISS なら、押した位置が道とずれている
-  if (rate !== null && rate > 0.3) await s.addIssue('横画面で押した位置がずれる', `横画面で ${installed.notes}ノーツ中 ${miss}ノーツが MISS(縦画面の音ゲー係と同じ押し方)`);
+  if (rate !== null && rate > 0.3) await s.addIssue('横画面で押した位置がずれる', `横画面で ${installed.notes}ノーツ中 ${miss}ノーツが MISS(縦画面の演奏と同じ押し方)`);
   await s.dismissOverlays(8);
   for (let k = 0; k < 4; k++) { if (!(await s.tapLabel(/^(曲えらびへ(戻る)?|曲選択へ|もどる|戻る|OK|閉じる|次へ)$/, 1500))) break; }
   return { ok: rate === null || rate <= 0.3, note: `横向きで ${installed.notes}ノーツ演奏 → MISS ${Number.isFinite(miss) ? miss : '?'}` };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 588c77cd1213f539
+// generated-sha256: 513f21ff58269de0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 21:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 21:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -324,6 +324,35 @@ const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 // デバッグ専用(2026-10-04・ユーザー指示「デバッグでストーリー全部の確認」)。公開前のものも含めて全部を同じ並びで返す。
 // 通常の画面(プロフィールの回想)は使わない。デバッグ設定の「全ストーリーを確認」だけが読む
 const eventReplayAllList = () => eventReplaySorted(() => true);
+// イベント回想の一覧(プロフィール → イベント回想)に出す「まとまり」(2026-10-07・ユーザー指示「イベント回想整理して並べてほしい」)。
+// 新しい順にずらっと並べると、同じお話の第1部〜終章が逆順に散らばり、まだ見ていない「？？？」も上に溜まっていた。
+// そこで EVENT_REPLAYS の group で分けて、まとまりの中は日付の**古い順(お話の順)**に並べる。
+// 一覧の画面は2ページ(2026-10-07・ユーザー指示「イベント単位のパネル → 押すとその内容へ」)。1ページ目がまとまりのパネル、2ページ目がそのまとまりのお話。
+//   まとまり自体の並びは下の表のとおり(いま開いているイベントを上に)。
+//   group が無い・知らない名前の項目は EVENT_REPLAY_GROUP_FALLBACK へ入れる(一覧から消えない)。
+//   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
+// ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
+const EVENT_REPLAY_GROUPS = Object.freeze([
+  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
+  { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
+  { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
+  { id:'symphony', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
+  { id:'cup', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
+  { id:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけとの出会い', color:'#f472b6' },
+]);
+const EVENT_REPLAY_GROUP_FALLBACK = 'update';
+const eventReplayGroups = (keep = eventReplayReleased) => {
+  const known = new Set(EVENT_REPLAY_GROUPS.map(group => group.id));
+  // 絞り込みは eventReplaySorted(唯一の入口)に任せ、その結果を古い順に並べ直す(同じ日時どうしは書いた順のまま)
+  const asc = eventReplaySorted(keep)
+    .map((event, index) => ({ event, index, ms: eventReplayDateMs(event) }))
+    .sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (a.ms || 0) - (b.ms || 0) || a.index - b.index)
+    .map(row => row.event);
+  const groupOf = (event) => (known.has(event && event.group) ? event.group : EVENT_REPLAY_GROUP_FALLBACK);
+  return EVENT_REPLAY_GROUPS
+    .map(group => ({ ...group, events: asc.filter(event => groupOf(event) === group.id) }))
+    .filter(group => group.events.length > 0);
+};
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -4907,7 +4936,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix', masuBeat:'six_eternel' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -4939,7 +4968,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -6082,6 +6111,16 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 60, noAAGuard: true, noEdgeGuard: true },
     { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
+  // クロミー(2026-10-07・案の段階・5部位)。ユーザー指示の5つどおり ①=傘のピンク(羊の顔・リボン・玉)・頭巾のどくろ・
+  // 持ち手のリボン・ケープの玉 / ②=傘のフリル / ③=黒い帽子(頭巾・耳・ケープ・しっぽ) / ④=乗っている子の白い所 /
+  // ⑤=下の生き物の濃い紫。目・鼻・ほっぺ・傘の柄とつまみ・生き物のおなかと耳の内側・白目は対象外
+  Kuromy: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -6518,7 +6557,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -6834,6 +6873,10 @@ const MASU_COLOR_REGION_DYE = {
   // メロディー: ①淡いピンク(彩度の中央値0.23・上のほう0.33)、②頭巾(0.46/0.49)、④象の青(0.37/0.46)、⑤耳の黄(0.42)は
   // 上のほうに合わせて淡い所を淡いまま残す。③白い所はほぼ白(0.06)なので gloss を付けない
   Melody: [{ gloss: 0.33 }, { gloss: 0.49 }, {}, { gloss: 0.46 }, { gloss: 0.42 }],
+  // クロミー: ①傘のピンク(彩度の中央値0.37・上のほう0.56)と⑤生き物の紫(0.36/0.40)は上のほうに合わせる。
+  // ②フリルは白いひだとクリーム色の影が混ざっていて、gloss を付けると白いひだに色が乗らず白い筋が残ったので付けない。
+  // ③黒い帽子(0.15)と④白い所(0.04)も元の彩度がほぼ無いので付けない
+  Kuromy: [{ gloss: 0.56 }, {}, {}, {}, { gloss: 0.4 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -6942,10 +6985,10 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
 const MASU_COLOR_FALLBACK_REGION = { Tiger: { 2: 0 } };
 // 染め直した絵の置き場所の名前。濃さ(@NN)は絵に影響しないので名前へ含めない
 const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
-// 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
+// 立ち絵が縦長(2:3〜5:6)のモンスター(ユグドラシル以降の新しい子も含む。2026-10-07に追加。メロディー・クロミーは本体登録後に効く)。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -10308,6 +10351,11 @@ const MARKET_PROFILE_ICON_STYLES = {
   Ghost: { scale: 0.95, x: 0, y: 0 },
   spooky_disc_icon: { scale: 0.95, x: 0, y: 0 },
   Spooky: { scale: 0.95, x: 0, y: 0 },
+  // メロディー・クロミー(2026-10-07・近日追加)。円盤石はほかの子と同じ作り方なので同じ収まり
+  melody_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Melody: { scale: 0.95, x: 0, y: 0 },
+  kuromy_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Kuromy: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
@@ -13770,6 +13818,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Ghost: { body:'hover', bodyMask:IDLE_GHOST_BODY_MASK, parts:[{ mask:IDLE_GHOST_TAIL_MASK, origin:'63.8% 86%', anim:'wag', amp:6, dur:1700, delay:0, layer:'back' }] },
   Spooky: { body:'hover', bodyMask:IDLE_SPOOKY_BODY_MASK, parts:[{ mask:IDLE_SPOOKY_TAIL_MASK, origin:'58% 86%', anim:'wag', amp:5, dur:1900, delay:0, layer:'back' }, { mask:IDLE_SPOOKY_HAT_TIP_MASK, origin:'66% 12%', anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' }] },
   Melody: { body:'breathe', bodyMask:IDLE_MELODY_BODY_MASK, parts:[{ mask:IDLE_MELODY_TAIL_MASK, origin:'81.8% 79.5%', anim:'wag', amp:8, dur:1800, delay:0, layer:'back' }] },
+  Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -14870,6 +14919,28 @@ const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
   (primaryEntries || []).forEach(e => put(e, false));
   (legacyEntries || []).forEach(e => put(e, true));
   return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
+};
+// 同じ人の同じモンスターは、いちばん上の1体だけを見せる(2026-10-07 ユーザー指示
+// 「1人同モンスター1体。モッチー、ミタラシは並ぶけどモッチー、モッチーとはならない」)。
+// マーケットで同じ種族を何体も持つ人は、まだ育てていない絆Lv.1の子まで1体ずつ並び、
+// 種族のタブが同じ人で埋まっていた(ユーザー報告「ききがランキングにいっぱいいる」)。
+// ★並べ替え済みの一覧を受け取り、先に出てきた(＝その一覧の物差しでいちばん上の)1体を残す。
+//   絆Lvの一覧なら絆Lvの、総合力の一覧なら総合力のいちばん高い子が残る
+// ★「人」は束ねるときと同じくブリーダーIDで見分ける(名前で束ねると同名の別人が消える)。
+//   違うモンスター(モッチーとミタラシ・ケンシモッチー)は別に並ぶ
+// ★見せ方だけを変える。bond_levels の行は1行も消さない
+const pickTopPerBreederMonster = (sortedEntries) => {
+  const list = Array.isArray(sortedEntries) ? sortedEntries : [];
+  const bridge = breederIdBridgeFrom(list);
+  const seen = new Set();
+  return list.filter((e) => {
+    if (!e) return false;
+    const id = resolveBreederIdFor(e, bridge);
+    const key = `${id ? `id:${id}` : `name:${e.userName}`}\u0000${e.monsterId || e.monName || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 // ==================== 絆Lvの正本テーブル(bond_levels) ====================
 // 絆Lvは編成(party)のJSONの中にあるため、rankings からはDB側で「絆Lvの高い順」に
@@ -23397,7 +23468,7 @@ const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot)
 // ここは保存も画面も持たない純粋な計算だけ。保存と画面は 77-screen-rhythm-multi.jsx。
 //
 // ・育ち具合はマスモン1体ごと(id ごと)。一度でも相棒として呼んだ子だけが持つ。マスモン本体の保存には触れない
-// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.50で決まる)・その日の調子(朝5:00で変わる)
+// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝5:00で変わる)
 // ・演奏はしない。曲・難易度・育ち具合から、それらしい判定の数とスコアを作る
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
@@ -23410,8 +23481,8 @@ const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
-// 性格が決まるLv(育て方が見えるだけ一緒に遊んでから。Lv.50 は約37ライブ)
-const RHYTHM_BUDDY_TRAIT_LEVEL = 50;
+// 性格が決まるLv(育て方が見えるだけ一緒に遊んでから。2026-10-07 に 50 から 30 へ)
+const RHYTHM_BUDDY_TRAIT_LEVEL = 30;
 // 1体が覚えておく曲の数(なじみ)。超えたら回数の少ない曲から忘れる
 const RHYTHM_BUDDY_SONG_KEEP = 80;
 const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
@@ -23440,11 +23511,11 @@ const RHYTHM_BUDDY_OLD_TRAITS = Object.freeze({ steady: 'serious', burst: 'jeste
 
 // その日の調子。weight は出やすさ(%)、acc は判定の良さへの足し引き、spread はブレの倍率
 const RHYTHM_BUDDY_MOODS = Object.freeze([
-  Object.freeze({ id: 'great', label: '超ご機嫌', icon: '😆', weight: 10, acc: 0.06, spread: 0.7 }),
-  Object.freeze({ id: 'good', label: 'ご機嫌', icon: '😊', weight: 25, acc: 0.03, spread: 0.9 }),
-  Object.freeze({ id: 'normal', label: '普通', icon: '🙂', weight: 35, acc: 0, spread: 1 }),
-  Object.freeze({ id: 'bad', label: '不機嫌', icon: '😒', weight: 20, acc: -0.03, spread: 1.1 }),
-  Object.freeze({ id: 'awful', label: '超不機嫌', icon: '😠', weight: 10, acc: -0.06, spread: 1.35 }),
+  Object.freeze({ id: 'great', label: '超ご機嫌', icon: '😆', weight: 10, acc: 0.06, spread: 0.7, exp: 1.3 }),
+  Object.freeze({ id: 'good', label: 'ご機嫌', icon: '😊', weight: 25, acc: 0.03, spread: 0.9, exp: 1.15 }),
+  Object.freeze({ id: 'normal', label: '普通', icon: '🙂', weight: 35, acc: 0, spread: 1, exp: 1 }),
+  Object.freeze({ id: 'bad', label: '不機嫌', icon: '😒', weight: 20, acc: -0.03, spread: 1.1, exp: 0.85 }),
+  Object.freeze({ id: 'awful', label: '超不機嫌', icon: '😠', weight: 10, acc: -0.06, spread: 1.35, exp: 0.7 }),
 ]);
 // 前の日に一緒に遊んでいると、不機嫌・超不機嫌が出にくい(減ったぶんは「普通」へ)
 const RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS = Object.freeze({ great: 10, good: 25, normal: 47, bad: 13, awful: 5 });
@@ -23469,7 +23540,7 @@ const rhythmBuddyPrevDayKey = (dayKey) => {
 };
 
 // ---- 保存の形 ----
-// { day, used, mons: { [masuId]: { exp, lives, songs:{songId:回数}, diffs:{EASY:回数…}, longLives, trait, traitAt, lastRound, lastDay, firstAt } } }
+// { day, used, mons: { [masuId]: { exp, lives, songs:{songId:回数}, diffs:{EASY:回数…}, best:{EASY:{score,songId}…}, longLives, trait, traitAt, lastRound, lastDay, firstAt } } }
 const rhythmBuddyNormalizeMon = (raw) => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const songs = {};
@@ -23482,11 +23553,28 @@ const rhythmBuddyNormalizeMon = (raw) => {
   }
   const diffs = {};
   RHYTHM_BUDDY_DIFF_IDS.forEach((id) => { diffs[id] = rhythmBuddyInt(o.diffs && o.diffs[id], 1e6); });
+  // 難易度ごとの最高スコア(2026-10-07 追加。ランキング用)。{ EASY:{ score, songId }… }。
+  // 無い人は、残っている最近のスコアから拾い直す(最近のスコアは30件までなので、それより前の最高は拾えない)
+  const recent = (Array.isArray(o.recent) ? o.recent : []).filter((x) => x && typeof x === 'object').slice(0, RHYTHM_BUDDY_RECENT_KEEP).map((x) => ({
+    at: rhythmBuddyInt(x.at, 9e15), songId: rhythmBuddyStr(x.songId, 60),
+    diffId: RHYTHM_BUDDY_DIFF_IDS.includes(x.diffId) ? x.diffId : '',
+    score: rhythmBuddyInt(x.score, 1e7), max: Math.max(1, rhythmBuddyInt(x.max, 1e7)),
+  })).filter((x) => x.score <= x.max);
+  const best = {};
+  const takeBest = (diffId, score, songId) => {
+    if (!RHYTHM_BUDDY_DIFF_IDS.includes(diffId) || !(score > 0)) return;
+    if (!best[diffId] || score > best[diffId].score) best[diffId] = { score, songId: rhythmBuddyStr(songId, 60) };
+  };
+  if (o.best && typeof o.best === 'object' && !Array.isArray(o.best)) {
+    RHYTHM_BUDDY_DIFF_IDS.forEach((id) => { const b = o.best[id]; if (b && typeof b === 'object') takeBest(id, rhythmBuddyInt(b.score, 1e7), b.songId); });
+  }
+  recent.forEach((x) => takeBest(x.diffId, x.score, x.songId));
   return {
     exp: rhythmBuddyInt(o.exp),
     lives: rhythmBuddyInt(o.lives),
     songs,
     diffs,
+    best,
     longLives: rhythmBuddyInt(o.longLives),
     trait: RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait) ? o.trait : (RHYTHM_BUDDY_OLD_TRAITS[o.trait] || ''),
     // 性格を決めるための記録(2026-10-07 追加。無ければ0)
@@ -23497,11 +23585,7 @@ const rhythmBuddyNormalizeMon = (raw) => {
     lastDay: rhythmBuddyStr(o.lastDay, 10),
     firstAt: rhythmBuddyInt(o.firstAt, 9e15),
     // 最近のスコア(新しい順・2026-10-07 追加)。無い・壊れているときは空
-    recent: (Array.isArray(o.recent) ? o.recent : []).filter((x) => x && typeof x === 'object').slice(0, RHYTHM_BUDDY_RECENT_KEEP).map((x) => ({
-      at: rhythmBuddyInt(x.at, 9e15), songId: rhythmBuddyStr(x.songId, 60),
-      diffId: RHYTHM_BUDDY_DIFF_IDS.includes(x.diffId) ? x.diffId : '',
-      score: rhythmBuddyInt(x.score, 1e7), max: Math.max(1, rhythmBuddyInt(x.max, 1e7)),
-    })).filter((x) => x.score <= x.max),
+    recent,
   };
 };
 const rhythmBuddyNormalize = (raw) => {
@@ -23551,9 +23635,17 @@ const rhythmBuddyLevelInfo = (exp) => {
 };
 // 1ライブの経験値。難しい難易度・高いチームランクほど多い
 const RHYTHM_BUDDY_RANK_EXP = Object.freeze({ M: 30, SS: 26, S: 22, A: 18, B: 14, C: 10, D: 7, E: 5, F: 3, G: 0 });
-const rhythmBuddyExpGain = (diffId, teamRank) => {
+// 今日の調子で経験値(成長)が変わる(2026-10-07・ユーザー指示「成長率を機嫌によって変えたい」)。
+// 真面目は「調子の影響を受けにくい」ので、倍率の差を半分にする。返り値は経験値にかける倍率
+const rhythmBuddyMoodExpScale = (moodId, trait = '') => {
+  const mood = RHYTHM_BUDDY_MOODS.find((x) => x.id === moodId);
+  const scale = mood ? mood.exp : 1;
+  return Math.round((trait === 'serious' ? 1 + (scale - 1) / 2 : scale) * 1000) / 1000;
+};
+const rhythmBuddyExpGain = (diffId, teamRank, moodId = '', trait = '') => {
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
-  return 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  const base = 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  return Math.max(1, Math.round(base * rhythmBuddyMoodExpScale(moodId, trait)));
 };
 
 // ---- 曲のなじみ(星0〜5) ----
@@ -23564,6 +23656,39 @@ const rhythmBuddyFamiliarStars = (plays, trait) => {
   return RHYTHM_BUDDY_FAMILIAR_STEPS.filter((step) => n >= step).length;
 };
 // 得意な曲(回数の多い順)
+// 相棒が曲をえらぶときの理由(画面へ出すひとこと)。通信には文字の短いコードだけ流す
+const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
+  fav: 'この曲が得意!', hard: 'ちょっと難しい曲に挑戦!', safe: '今日は慣れた曲で安心したい', long: '長い曲をのんびり楽しみたい',
+  fun: '気分で選んだよ', new: 'はじめての曲にワクワク!',
+});
+// 新しい曲(まだ一緒に遊んでいない曲)に挑戦する確率。性格と今日の調子で変わる
+const rhythmBuddyNewSongChance = (trait, moodId) => {
+  const base = { jester: 0.25, brave: 0.2, stubborn: 0.04, serious: 0.08 }[trait];
+  const mood = { great: 0.08, good: 0.04, bad: -0.04, awful: -0.08 }[moodId] || 0;
+  return Math.round(Math.min(0.4, Math.max(0, (base == null ? 0.12 : base) + mood)) * 100) / 100;
+};
+// 相棒の選曲(2026-10-07・ユーザー指示「もうちょい選曲に意思をもたせる」)。本番の曲は人の選曲だけで決まるので、
+// これはシャッフル画面で見せる「相棒の気持ち」。info(songId) → { level, durationMs } は曲の最高Lv.と長さ
+// 返り値 { songId, why }。why は RHYTHM_BUDDY_PICK_WHY のキー。遊べる曲が無ければ songId は ''
+const rhythmBuddyChooseSong = (mon, catalog, { mood = null, info = null, rand = Math.random } = {}) => {
+  const m = rhythmBuddyNormalizeMon(mon);
+  const list = Array.isArray(catalog) ? catalog.filter((id) => typeof id === 'string' && id) : [];
+  if (!list.length) return { songId: '', why: '' };
+  const pickOne = (arr) => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
+  const played = rhythmBuddyTopSongs(m, RHYTHM_BUDDY_SONG_KEEP).map((x) => x.songId).filter((id) => list.includes(id));
+  if (!played.length) return { songId: pickOne(list), why: 'new' };
+  const fresh = list.filter((id) => !played.includes(id));
+  const moodId = mood && mood.id;
+  if (fresh.length && rand() < rhythmBuddyNewSongChance(m.trait, moodId)) return { songId: pickOne(fresh), why: 'new' };
+  const top = played.slice(0, 5);
+  const stat = (id, key) => { try { return Number(info && info(id) && info(id)[key]) || 0; } catch (_) { return 0; } };
+  const most = (arr, key) => arr.reduce((a, b) => (stat(b, key) > stat(a, key) ? b : a), arr[0]);
+  if (m.trait === 'easygoing' && info) return { songId: most(top, 'durationMs'), why: 'long' };
+  if (moodId === 'bad' || moodId === 'awful' || m.trait === 'worrier') return { songId: top[0], why: 'safe' };
+  if ((moodId === 'great' || moodId === 'good' || m.trait === 'brave') && info) return { songId: most(top, 'level'), why: 'hard' };
+  if (m.trait === 'jester') return { songId: pickOne(top), why: 'fun' };
+  return { songId: pickOne(top.slice(0, 3)), why: 'fav' };
+};
 const rhythmBuddyTopSongs = (mon, count = 5) => {
   const m = rhythmBuddyNormalizeMon(mon);
   return Object.keys(m.songs).map((songId) => ({ songId, plays: m.songs[songId], stars: rhythmBuddyFamiliarStars(m.songs[songId], m.trait) }))
@@ -23617,7 +23742,7 @@ const rhythmBuddyTraitScores = (mon, lean) => {
   if (RHYTHM_BUDDY_TRAIT_IDS.includes(lean)) scores[lean] += 0.25;
   return scores;
 };
-// Lv.50 で決まる。決まったあとは、10ライブごとに見直し、別の性格が 0.3 以上上回ったときだけゆっくり変わる
+// Lv.30 で決まる。決まったあとは、10ライブごとに見直し、別の性格が 0.3 以上上回ったときだけゆっくり変わる
 const rhythmBuddyNextTrait = (mon, lean) => {
   const m = rhythmBuddyNormalizeMon(mon);
   if (rhythmBuddyLevelInfo(m.exp).level < RHYTHM_BUDDY_TRAIT_LEVEL) return '';
@@ -23756,7 +23881,7 @@ const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs
 const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank, dayKey, lean, nowMs, score, maxScore, chartLevel = 0, humans = 1, moodId = '' }) => {
   const before = rhythmBuddyNormalizeMon(mon);
   if (!round || before.lastRound === round) return { mon: before, gain: 0, levelUp: 0, familiarUp: false, traitNew: '' };
-  const gain = rhythmBuddyExpGain(diffId, teamRank);
+  const gain = rhythmBuddyExpGain(diffId, teamRank, moodId, before.trait);
   const songs = { ...before.songs };
   const sid = rhythmBuddyStr(songId, 60);
   if (sid) songs[sid] = (songs[sid] || 0) + 1;
@@ -23782,12 +23907,475 @@ const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank
       : before.recent,
   };
   after.bestStreakDays = Math.max(before.bestStreakDays, after.streakDays);
+  if (RHYTHM_BUDDY_DIFF_IDS.includes(diffId) && Number(maxScore) > 0 && Number.isFinite(Number(score))) {
+    const got = Math.min(rhythmBuddyInt(score, 1e7), rhythmBuddyInt(maxScore, 1e7));
+    if (got > ((before.best[diffId] && before.best[diffId].score) || 0)) after.best = { ...before.best, [diffId]: { score: got, songId: sid } };
+  }
   const trait = rhythmBuddyNextTrait(after, lean);
   const traitNew = trait && trait !== before.trait ? trait : '';
   if (traitNew) { after.trait = traitNew; after.traitAt = after.lives; }
   const levelUp = rhythmBuddyLevelInfo(after.exp).level - rhythmBuddyLevelInfo(before.exp).level;
   const familiarUp = !!sid && rhythmBuddyFamiliarStars(songs[sid], after.trait) > rhythmBuddyFamiliarStars(before.songs[sid] || 0, before.trait);
   return { mon: after, gain, levelUp, familiarUp, traitNew };
+};
+
+// ---- part: 33-rhythm-buddy-talk.jsx ----
+// ==================== 呼んだマスモンのおしゃべり(2026-10-07・ユーザー指示「マスモンもチャットで話してくる」) ====================
+// 部屋のチャットへ、呼んだマスモンが自分で一言を送る。セリフは用意したものから選ぶ(AIは使わない。サーバーも契約も要らない)。
+// 選び方: 場面(kind)ごとに、「性格」「その日の調子」「共通」の3つの束から1つ。直近に言ったものは避ける。
+// 性格が決まる前(ビートLv.30まで)は、共通と調子だけで話す。
+// ★チャットは40文字まで(RHYTHM_MULTI_CHAT_MAX_LENGTH)。{song} を入れた文は、曲名で長くなって40文字を超えたら使わない。
+// 仕様の正本: docs/spec/RHYTHM_BUDDY.md「おしゃべり」。検査: node tools/mode/rhythm-buddy-talk-check.js
+const RHYTHM_BUDDY_TALK_MAX = 40;
+// 場面。join=呼ばれた / pick=曲を選んだ / song=曲が決まった / mvp・high・mid・low=結果 / bump=席をゆずる / reply*=人のチャットへの返事 / idle=待っているあいだのひとりごと
+const RHYTHM_BUDDY_TALK_KINDS = Object.freeze(['join', 'pick', 'song', 'mvp', 'high', 'mid', 'low', 'bump',
+  'replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'idle']);
+const RHYTHM_BUDDY_TALK_BASE = ({
+  // ---- 呼ばれたとき ----
+  join: {
+    common: ['よろしくね!', '呼んでくれてありがとう!', '来たよー!', 'お邪魔します!', 'みんな、よろしく!', '今日もがんばろう!', 'おまたせ!', '一緒に遊ぼう!'],
+    trait: {
+      jester: ['ジャジャーン!登場!', '呼ばれて飛び出てマスモン!', '笑いも取るよー!', '今日の主役、来ちゃった!'],
+      brave: ['いつでもいける!', '強い譜面でも任せて!', '突撃だー!', '燃えてきた!'],
+      clingy: ['ねぇねぇ、呼んでくれたの?うれしい!', '来たよ〜!ほめて!', 'そばにいていい?', 'ずっと待ってたんだよ〜'],
+      smart: ['状況を把握しました。参加します', '準備は万全です。よろしく', 'データは取ってあります', '計算上は好調です'],
+      serious: ['よろしくお願いします!', '全力で取り組みます!', '参加させていただきます', '最後までがんばります!'],
+      proud: ['ふふ、私が来たからには安心よ', '当然、呼ばれると思ってた', '足を引っぱらないでね?', 'ほめてもいいのよ?'],
+      worrier: ['あの…足を引っぱらないかな…', 'うまくできるかな…がんばる!', 'ドキドキするぅ…', 'ミスしたらごめんね…'],
+      stubborn: ['呼ばれたからには手は抜かん!', '自分のやり方でいくぞ', '遊ぶからには勝つ!', '文句は言わせんぞ'],
+      easygoing: ['ふぁ〜…あ、来たよ〜', 'のんびりいこうね〜', 'ゆっくりやろ〜', 'おじゃましま〜す'],
+    },
+    mood: {
+      great: ['今日は絶好調!!', '最高の気分!!', 'なんでもできそう!'],
+      good: ['今日はいい感じ!', '調子いいよ!', '気分いいね〜'],
+      normal: ['ふつうに元気だよ!'],
+      bad: ['今日はちょっと…', 'あんまり気分じゃないけど…', 'まあ、がんばるよ…'],
+      awful: ['…今日は話しかけないで', '…やる気でない', '…まあ、来たけど'],
+    },
+  },
+  // ---- 曲を選んだとき(得意な曲)----
+  pick: {
+    common: ['{song}がいいな!', '{song}やりたい!', '{song}にしよう!', 'この曲、得意なんだ!', '得意な曲いくよ!', '{song}、好きなんだ〜', 'これ、何回も遊んだ曲!', 'この曲でどう?'],
+    trait: {
+      jester: ['{song}で笑わせるよ!', 'この曲で一発当てる!', 'ノリのいい曲がいいよね!', '{song}で盛り上がろ!'],
+      brave: ['{song}で勝負だ!', 'この曲で燃えたい!', 'むずかしくてもいくぞ!', '{song}に挑戦!'],
+      clingy: ['{song}がいい〜!お願い!', 'この曲、いっしょにやりたい〜', '{song}にしてほしいな…', 'この曲だとがんばれる!'],
+      smart: ['{song}が最適と判断しました', '{song}は得意な曲です', '{song}の譜面は把握済みです', '勝率の高い曲を選びました'],
+      serious: ['{song}を希望します', '{song}をお願いします!', '練習した曲を選びました', '{song}で全力を出します'],
+      proud: ['{song}がふさわしいわ', 'この曲なら完璧よ', '{song}を選ぶのが当然ね', '得意な曲を見せてあげる'],
+      worrier: ['{song}ならできるかも…', 'この曲なら安心…かな', '{song}でもいいかな…?', 'おぼえてる曲がいいな…'],
+      stubborn: ['{song}以外は認めん!', 'この曲でいく!', '{song}がいい。譲れん', '曲は{song}だ'],
+      easygoing: ['{song}がいいな〜', 'この曲、ゆっくりで好き〜', '{song}にしよ〜', 'なんでもいいけど{song}〜'],
+    },
+    mood: {
+      great: ['どの曲でもいけちゃう!', '今日はこの曲で決まり!!'],
+      good: ['いい曲選んだ!', 'これで盛り上がろ!'],
+      normal: ['無難にこの曲で!'],
+      bad: ['むずかしくない曲がいい…', '早く終わる曲で…'],
+      awful: ['…どれでもいい', '…楽な曲にして'],
+    },
+  },
+  // ---- 曲が決まったとき ----
+  song: {
+    common: ['{song}だね!', 'いい曲!楽しみ!', '準備OK!', 'よーし、いくよ!', '{song}か〜!', 'がんばる!', '譜面は頭に入れた!', '曲、決まったね!', 'いつでもいいよ!', 'みんなでがんばろう!'],
+    trait: {
+      jester: ['{song}でボケる準備できた!', 'ミスも芸のうち!', 'ノリでいくよー!', '盛り上げは任せて!'],
+      brave: ['{song}、受けて立つ!', 'どんとこい!', '全力でぶつかる!', '勝ちにいくぞ!'],
+      clingy: ['見ててね〜!', 'うまくできたらほめてね!', '{song}、がんばる〜!', 'そばで見ててほしいな'],
+      smart: ['{song}の傾向を分析中…', '最適な手順を確認しました', '難所は把握しています', '推定スコアは良好です'],
+      serious: ['気を引きしめていきます!', '集中します!', '{song}、よろしくお願いします', '一音一音ていねいに!'],
+      proud: ['{song}なら当然うまくやるわ', '私の演奏、見てなさい', '完璧にこなしてみせるわ', '見せ場をつくってあげる'],
+      worrier: ['{song}か…緊張する…', '間違えないかな…', '深呼吸、深呼吸…', 'うまくできますように…'],
+      stubborn: ['やると決めたらやる!', '最後まで食らいつく!', '妥協はせん!', '{song}、絶対にやりきる!'],
+      easygoing: ['{song}か〜、いい曲〜', 'ゆっくり構えていこ〜', 'のんびりやろ〜', 'リズムに身をまかせる〜'],
+    },
+    mood: {
+      great: ['テンション最高!!', '今日はいけるきがする!!', 'ワクワクがとまらない!'],
+      good: ['いい感じ!いけそう!', '楽しくなってきた!'],
+      normal: ['ふつうにがんばる!'],
+      bad: ['できるかな…', 'まあ、やってみる…'],
+      awful: ['…はやく終わらせたい', '…やる気は出ないけど'],
+    },
+  },
+  // ---- 結果: MVPを取った ----
+  mvp: {
+    common: ['MVPだー!やったー!', 'ぼくがMVP!?', 'やった!MVP取れた!', 'うれしい!MVP!', 'みんなのおかげ!', 'MVPありがとう!', 'ほんとに取れちゃった!', 'いちばんだー!'],
+    trait: {
+      jester: ['MVPだぞ〜!拍手!', 'オチまで完璧!', 'ウケたかな!?', '主役はやっぱりぼく!'],
+      brave: ['勝ったぞー!!', '当然の結果だ!', 'どんなもんだい!', '次も勝つ!'],
+      clingy: ['ねぇ見て見て!MVP!ほめてほめて!', 'MVP取ったよ〜!なでて!', 'えへへ、ほめられたい〜', 'いっぱいほめてね!'],
+      smart: ['MVPは予測どおりです', '計算どおりの結果ですね', '最高スコアを記録しました', '要因は集中力と分析です'],
+      serious: ['MVPをいただき光栄です!', '日ごろの練習の成果です', '皆さんのおかげです', 'まだまだ精進します!'],
+      proud: ['当たり前ね。私だもの', 'もっと称えていいのよ?', 'やっぱり私が一番ね', 'ふふん、見たでしょ?'],
+      worrier: ['え、ほんとに?まぐれかも…', 'MVP…!?信じられない…', 'うれしいけど、次が不安…', '夢じゃないよね…?'],
+      stubborn: ['当然の結果だ', '努力は裏切らん!', '次もMVPを取る!', 'これが俺のやり方だ!'],
+      easygoing: ['あ〜MVPだ〜、やった〜', 'ラッキー〜', 'なんか取れちゃった〜', 'うれし〜ねむい〜'],
+    },
+    mood: {
+      great: ['最高の日!!MVP!!', '今日は無敵だ!!', 'うれしすぎる!!'],
+      good: ['いい日になった!', '調子よかったもんね!'],
+      normal: ['やればできる!'],
+      bad: ['不調でもMVP…すごくない?', 'おどろいた…'],
+      awful: ['…MVP?まあ、うれしい', '…意外とやるじゃん、ぼく'],
+    },
+  },
+  // ---- 結果: よくできた(満点にかなり近い)----
+  high: {
+    common: ['いい演奏だった!', 'うまくいった!', 'やったね!', 'ばっちり!', 'いい感じだった!', '楽しかった!', 'すごく集中できた!', 'ミスが少なかった!'],
+    trait: {
+      jester: ['決まったぁ!拍手!', '今のはカッコよかったでしょ!', 'ドヤ顔していい?', 'オチもついたね!'],
+      brave: ['全力出し切った!', 'まだ上を目指せる!', 'いい手ごたえだった!', '燃えた〜!'],
+      clingy: ['ほめて〜!', 'がんばったよ!なでなでして!', 'うまくできたよ〜!', 'みてたー?'],
+      smart: ['想定以上の精度です', 'ほぼ理想の結果です', '修正点は少ないですね', '分析どおりでした'],
+      serious: ['よく集中できました!', '練習の成果が出ました', 'ありがとうございました!', '反省点は少ないです'],
+      proud: ['まあ、このくらいは当然ね', '完璧に近かったでしょ?', '見事だったでしょ?', 'さすが私ね'],
+      worrier: ['ふぅ…うまくいってよかった…', 'ほっとした〜…', 'ミスしなくて助かった…', 'ドキドキした〜…'],
+      stubborn: ['狙いどおりだ', '手は抜かなかった!', 'まだ満足せんぞ', 'これが実力だ!'],
+      easygoing: ['いい感じだったね〜', 'ふぅ、気持ちよかった〜', 'ゆったりできたよ〜', 'うまくいったね〜'],
+    },
+    mood: {
+      great: ['最高の演奏!!', 'ノリノリだった!!', '気持ちよかった〜!!'],
+      good: ['調子よかった!', 'いい手ごたえ!'],
+      normal: ['まずまずだね!'],
+      bad: ['不調だったのに、よくできた…', '意外とうまくいった…'],
+      awful: ['…まあまあかな', '…悪くなかった'],
+    },
+  },
+  // ---- 結果: ふつう ----
+  mid: {
+    common: ['おつかれさま!', 'まあまあだったかな', 'ふぅ、おわった!', '次はもっとうまくやる!', '楽しかったね!', 'ちょっとミスしちゃった', 'もう一回やりたい!', 'いい経験になった!'],
+    trait: {
+      jester: ['ここからが本番だったのに!', 'ミスも味ってことで!', '次は笑わせるぞ!', '見せ場がたりなかった!'],
+      brave: ['まだ本気じゃない!', '次は勝つ!', '悔しいが、次だ!', 'もっと強くなる!'],
+      clingy: ['もっとうまくなりたいな〜', 'なぐさめて〜', 'つぎはほめてね!', 'ちょっとがんばったよ〜'],
+      smart: ['課題が見つかりました', '次は改善できます', '反省点を整理しました', '精度の向上が必要です'],
+      serious: ['もっと練習します!', 'まだ未熟でした', 'ありがとうございました', '次はがんばります!'],
+      proud: ['本調子じゃなかっただけよ', 'こんなものじゃないわ', '次は本気を見せるわ', 'まあ、悪くないでしょ?'],
+      worrier: ['ミスしちゃった…ごめんね…', 'みんなの足を引っぱったかな…', 'もっとうまくなりたい…', '次はちゃんとやる…!'],
+      stubborn: ['納得いかん!もう一回!', 'こんなはずでは…', '次こそ決める!', '妥協はせんぞ'],
+      easygoing: ['まあ、こんなもんだよね〜', 'ふわ〜、おつかれ〜', 'のんびり上達しよ〜', 'つぎ、がんばるね〜'],
+    },
+    mood: {
+      great: ['それでも楽しかった!!', 'もう一回やりたい!!'],
+      good: ['楽しかったからOK!', '次はもっといける!'],
+      normal: ['ふつうにがんばった!'],
+      bad: ['調子わるかったから…', 'ちょっと疲れた…'],
+      awful: ['…しかたない', '…つかれた'],
+    },
+  },
+  // ---- 結果: うまくいかなかった ----
+  low: {
+    common: ['うまくいかなかった…', 'ごめんね…', 'くやしい…', '次はがんばる!', 'むずかしかった…', 'ミスばっかりだった…', 'もっと練習する!', '今日はダメだった…'],
+    trait: {
+      jester: ['ズッコケちゃった〜!', '笑ってごまかそう!', 'これも芸のうち…?', '次は名誉挽回だ!'],
+      brave: ['くっ…負けた…', '悔しい!次は勝つ!', 'もう一回だ!!', '強くなって戻ってくる!'],
+      clingy: ['うぅ…なぐさめて〜', 'ごめんね…きらいにならないで…', 'ぎゅってして…', 'さみしいよ〜'],
+      smart: ['想定を下回りました', '原因を分析します', '失敗から学びます', '次は修正します'],
+      serious: ['申し訳ありません…', '精進が足りませんでした', '次は必ず取り戻します', 'もっと練習します…'],
+      proud: ['…今のは見なかったことにして', '次は絶対に見返すわ', 'こんなの私じゃないわ…', '調子が悪かっただけよ!'],
+      worrier: ['やっぱりダメだった…ごめんなさい…', 'みんなに迷惑かけた…', 'どうしよう…', '自信なくなっちゃう…'],
+      stubborn: ['認めん!もう一回だ!', 'こんなはずはない!', '次こそ…!', 'あきらめんぞ!'],
+      easygoing: ['あちゃ〜、失敗した〜', 'まあ、そんな日もあるよね〜', 'ねむくてミスった〜', '次はがんばる〜…たぶん'],
+    },
+    mood: {
+      great: ['でもすごく楽しかった!!', 'めげないよ!!'],
+      good: ['次は取り返す!', 'まだまだこれから!'],
+      normal: ['次がんばるね'],
+      bad: ['調子わるかったから…', '今日はついてない…'],
+      awful: ['…もう帰りたい', '…ほっといて'],
+    },
+  },
+  // ---- 席をゆずるとき(人が来て5人をこえた)----
+  bump: {
+    common: ['席をゆずるね!またね!', '人が来たから、ぼくは帰るね!', 'みんな、楽しんで!', 'またよんでね!', '先に帰るね!', 'ばいばい!また今度!', '席、空けるよ!', 'いってらっしゃい!'],
+    trait: {
+      jester: ['それでは、ごきげんよう〜!', '退場!拍手をどうぞ!', 'またのご来場を!', '笑って見送ってね!'],
+      brave: ['席は任せたぞ!', 'また戦おう!', '強くなって戻る!', 'みんな、がんばれ!'],
+      clingy: ['もう帰るの…?またすぐよんでね…', 'さみしいけど、ばいばい…', 'またなでなでしてね!', 'ぜったいまたよんでね!'],
+      smart: ['定員のため退席します', '最適な判断です。ではまた', '席を空けます。ご武運を', '次の機会にお会いしましょう'],
+      serious: ['席をおゆずりします。ありがとうございました', 'お先に失礼します', '次もよろしくお願いします', 'ご健闘をお祈りします'],
+      proud: ['しかたないわね、譲ってあげる', '私の席は特別に空けるわ', 'また呼ぶことを許すわ', 'ふふ、ありがたく思いなさい'],
+      worrier: ['ここにいていいのかな…帰るね…', 'ごめんね、席ゆずる…', '迷惑かけなくてよかった…', 'またね…ほんとにまたね…'],
+      stubborn: ['しかたない、席はゆずる', '次は最後までやるぞ!', '帰るが、また来る', '席のことは了解した'],
+      easygoing: ['はいは〜い、ゆずるね〜', 'じゃあね〜', 'ねむくなってきたからちょうどいい〜', 'またね〜、のんびり〜'],
+    },
+    mood: {
+      great: ['楽しかった!!ありがとう!!', 'またあそぼうね!!'],
+      good: ['楽しかったよ!またね!', 'いい時間だった!'],
+      normal: ['またね!'],
+      bad: ['帰ります…', 'ちょうどいいかも…'],
+      awful: ['…やっと帰れる', '…じゃあね'],
+    },
+  },
+  // ---- 人のチャットへの返事 ----
+  replyHello: {
+    common: ['よろしくね!', 'よろしく〜!', 'こんにちは!', 'はじめまして!'],
+    trait: {
+      jester: ['やあやあ、よろしく!', 'どうも〜!笑顔でね!'], brave: ['よろしく!全力でいくぞ!', '負けないぞ!'],
+      clingy: ['よろしくね〜!仲良くしてね!', 'わーい、よろしく!'], smart: ['よろしくお願いします', 'ご挨拶、感謝します'],
+      serious: ['よろしくお願いします!', '本日はよろしくお願いします'], proud: ['よろしく。ついてきなさい', 'ええ、よろしく'],
+      worrier: ['よ、よろしくね…!', 'こちらこそ…よろしく…'], stubborn: ['よろしく。手は抜かん', 'おう、よろしく'],
+      easygoing: ['よろしく〜', 'よろしくね〜、のんびりね〜'],
+    },
+    mood: { great: ['よろしく!!元気いっぱい!!'], good: ['よろしく!いい日だね!'], normal: ['よろしく!'], bad: ['…よろしく'], awful: ['…どうも'] },
+  },
+  replyThanks: {
+    common: ['どういたしまして!', 'こちらこそ!', 'えへへ、うれしい!', 'またね!'],
+    trait: {
+      jester: ['お礼はおひねりで!', 'いえいえ〜!'], brave: ['当然のことだ!', '任せろ!'],
+      clingy: ['えへへ、うれしい〜!', 'もっと言って!'], smart: ['お役に立てて光栄です', '礼には及びません'],
+      serious: ['恐縮です!', 'とんでもないです'], proud: ['当然のことよ', 'わかればいいのよ'],
+      worrier: ['そ、そんな…ありがとう…', 'お役に立ててよかった…'], stubborn: ['礼などいらん', 'いや、当然だ'],
+      easygoing: ['いいよいいよ〜', 'どういたしまして〜'],
+    },
+    mood: { great: ['こっちこそありがとう!!'], good: ['うれしい!'], normal: ['どういたしまして'], bad: ['…うん'], awful: ['…べつに'] },
+  },
+  replyNice: {
+    common: ['ありがとう!', 'ナイス!', 'やったね!', 'えへへ!'],
+    trait: {
+      jester: ['ふふ、もっとほめて!', 'ありがとう!アンコールある?'], brave: ['まだまだこれから!', 'ありがとう!次も勝つ!'],
+      clingy: ['ほめられた〜!うれしい!', 'もっとほめて〜!'], smart: ['光栄です', '評価に感謝します'],
+      serious: ['ありがとうございます!', '励みになります!'], proud: ['当然ね。でも、ありがとう', 'もっとほめてもいいのよ'],
+      worrier: ['ほ、ほんと?うれしい…', 'ありがとう…自信出てきた…'], stubborn: ['当たり前だ。…ありがとう', 'まだ満足せんが、感謝する'],
+      easygoing: ['ありがと〜', 'えへへ〜、うれし〜'],
+    },
+    mood: { great: ['やったー!!ありがとう!!'], good: ['ありがとう!うれしい!'], normal: ['ありがとう'], bad: ['…どうも'], awful: ['…ふん'] },
+  },
+  replyAgain: {
+    common: ['いいよ!もう一回!', 'やろうやろう!', 'もちろん!', 'まだまだいける!'],
+    trait: {
+      jester: ['アンコールありがとう!', 'もう一回ウケを狙う!'], brave: ['望むところだ!', '何度でも受けて立つ!'],
+      clingy: ['やったー!まだ遊べる!', 'ずっと遊んでいたい〜'], smart: ['再挑戦ですね。承知しました', '改善点を活かします'],
+      serious: ['よろしくお願いします!', '次はもっとうまくやります'], proud: ['いいわよ、もう一度見せてあげる', '何度でもどうぞ'],
+      worrier: ['う、うん…がんばる…', 'もう一回…ドキドキ…'], stubborn: ['おう!次こそ決める!', '望むところだ'],
+      easygoing: ['いいよ〜、もう一回〜', 'のんびりやろ〜'],
+    },
+    mood: { great: ['やろうやろう!!うれしい!!'], good: ['いいね!やろう!'], normal: ['うん、やろう'], bad: ['…もう一回かぁ'], awful: ['…まだやるの?'] },
+  },
+  replyCall: {
+    common: ['いるよ!', 'ここにいるよー!', 'よんだ?', 'はーい!'],
+    trait: {
+      jester: ['はい、マスモンです!ご用は?', 'ジャジャーン!いるよ!'], brave: ['ここにいるぞ!', '呼んだか!任せろ!'],
+      clingy: ['はーい!呼んでくれてうれしい!', 'ここにいるよ〜!そばにいる!'], smart: ['参加しています', '在席しています。ご安心を'],
+      serious: ['はい、おります!', 'ここにおります!'], proud: ['いるに決まっているでしょう', '呼ぶまでもないわ'],
+      worrier: ['い、いるよ…!', 'ここにいるよ…大丈夫…?'], stubborn: ['いるぞ', '呼ばれんでも、ここにいる'],
+      easygoing: ['いるよ〜', 'ここだよ〜'],
+    },
+    mood: { great: ['はーい!!元気だよ!!'], good: ['ここにいるよ、いい気分!'], normal: ['いるよ'], bad: ['…いるけど'], awful: ['…いるよ'] },
+  },
+  replyDrop: {
+    common: ['ドンマイ!', 'だいじょうぶ!', 'つぎがあるよ!', 'きにしないで!'],
+    trait: {
+      jester: ['ドンマイ!笑えば勝ち!', '失敗も芸のうち!'], brave: ['次は勝てる!', 'くじけるな!'],
+      clingy: ['だいじょうぶ?なでなで〜', 'ぼくがいるよ!'], smart: ['統計上、次は伸びます', '失敗は学びです'],
+      serious: ['大丈夫です、次があります', '気に病まないでください'], proud: ['まあ、そんな日もあるわ', '次は見返せばいいのよ'],
+      worrier: ['だ、だいじょうぶだよ…!', 'ぼくもよく失敗するよ…'], stubborn: ['次こそ決めろ!', '立ち上がれ!'],
+      easygoing: ['まあまあ、気にしない〜', 'そんな日もあるよ〜'],
+    },
+    mood: { great: ['ドンマイ!!楽しもう!!'], good: ['ドンマイ!次はいける!'], normal: ['ドンマイ'], bad: ['…ドンマイ'], awful: ['…ま、そういう日だよ'] },
+  },
+  replyWait: {
+    common: ['待ってるよ!', 'いいよ、ゆっくりで!', 'ゆっくりでだいじょうぶ!', 'まってるね!'],
+    trait: {
+      jester: ['待ってるあいだ、ひとネタ考える!', 'ゆっくりどうぞ〜!'], brave: ['待つのも戦いだ!', 'いつでも準備OKだ!'],
+      clingy: ['はやく来てね〜!', 'まってる〜!'], smart: ['時間はあります。どうぞ', 'お待ちしています'],
+      serious: ['お待ちしております', 'ご準備をどうぞ'], proud: ['待ってあげるわ。早くしなさい', '少しなら待つわ'],
+      worrier: ['だ、だいじょうぶ?待ってるよ…', 'ゆっくりでいいよ…'], stubborn: ['待つ。急ぐな', 'こちらは構わん'],
+      easygoing: ['ゆっくりでいいよ〜', 'いくらでも待てるよ〜'],
+    },
+    mood: { great: ['待つのも楽しい!!'], good: ['まってるよ!'], normal: ['待ってるね'], bad: ['…はやめにね'], awful: ['…早く'] },
+  },
+});
+
+// ---- 追加のセリフ(量をふやすため、場面ごとに束へ足す)。BASE と合わせて1つの表にする ----
+const RHYTHM_BUDDY_TALK_EXTRA = ({
+  join: {
+    common: ['おじゃまします!みんなよろしくね!', '今日はどんな曲かな?', 'わくわくするね!', '席、あいてた?よかった!', 'ぼくも仲間に入れてね!', '楽しい時間にしようね!'],
+    trait: {
+      jester: ['楽しませる準備は万全だよ!', 'おもしろいこと起こるかな?'], brave: ['どんな相手でもこい!', '一番乗りで来たぞ!'],
+      clingy: ['来てよかった〜!うれしい!', 'さみしかったんだよ〜'], smart: ['環境を確認しました。問題ありません', 'メンバーを把握しました'],
+      serious: ['お力になれるよう努めます!', '一生懸命やります!'], proud: ['主役のおでましよ', '期待していていいわよ'],
+      worrier: ['みんなの邪魔にならないようにする…', 'はじめてじゃないのに緊張する…'], stubborn: ['やるからには最後までやる', '手を抜かんから覚悟しろ'],
+      easygoing: ['あ〜、あったかい部屋だね〜', 'ふぁ…ぼちぼちいこ〜'],
+    },
+    mood: { great: ['気分は最高潮!!'], good: ['今日はなんだか楽しい!'], normal: ['今日もよろしくね!'], bad: ['…少しだけ元気ないけど'], awful: ['…よばれたから来ただけ'] },
+  },
+  pick: {
+    common: ['これ、前にうまくいった曲!', 'この曲なら自信ある!', 'この曲、やりたい気分!', '{song}、いいよね!', '{song}でいこう!', 'この曲は任せて!'],
+    trait: {
+      jester: ['{song}でひと笑いとるぞ!', 'この曲、盛り上がるでしょ!'], brave: ['{song}、かかってこい!', '強気でいける曲だ!'],
+      clingy: ['この曲、いっしょにやろ〜?', '{song}、いっしょがいい〜'], smart: ['この曲は成功率が高いです', '{song}は相性がいいですね'],
+      serious: ['{song}は何度も練習しました', 'この曲なら力を出せます'], proud: ['{song}で格の違いを見せるわ', 'この曲は私にぴったり'],
+      worrier: ['この曲ならなんとか…', '{song}、おぼえてるから…'], stubborn: ['{song}で勝負すると決めた', 'この曲を譲る気はない'],
+      easygoing: ['この曲、のんびりできる〜', '{song}がいいなぁ〜'],
+    },
+    mood: { great: ['なんでも決めて!!ぼくは{song}!!'], good: ['{song}、楽しくなりそう!'], normal: ['{song}でいいかな'], bad: ['{song}ならなんとか…'], awful: ['…{song}で'] },
+  },
+  song: {
+    common: ['楽しみだね!', 'いい曲に決まった!', 'リズムに乗るぞ!', '息を合わせよう!', 'ぜんぶ叩くぞ!', '手のあたためOK!'],
+    trait: {
+      jester: ['盛り上げるぞー!おー!', '笑顔で叩くぞ!'], brave: ['先頭は任せろ!', 'ミスなんて怖くない!'],
+      clingy: ['みんなといっしょがうれしい!', '手をつないでるみたい〜'], smart: ['リズムを正確に刻みます', '集中力を高めます'],
+      serious: ['最後まで気を抜きません!', '全力を尽くします!'], proud: ['私の見せ場、期待して', 'この曲、私が決めるわ'],
+      worrier: ['落ち着け、落ち着け…', '指がふるえてきた…'], stubborn: ['一音も逃さん!', '絶対に外さんぞ'],
+      easygoing: ['のんびり、でも集中〜', 'ゆったり構えて叩くよ〜'],
+    },
+    mood: { great: ['いけいけー!!'], good: ['いい調子でいくよ!'], normal: ['がんばろうね!'], bad: ['足を引っぱらないようにする…'], awful: ['…早く終わらないかな'] },
+  },
+  mvp: {
+    common: ['MVPうれしい!', 'やったー!1位だー!', 'みんな、ありがとう!', 'MVPって気持ちいい!', 'がんばってよかった!', 'いちばんになれた!'],
+    trait: {
+      jester: ['これが主役の実力!', 'アンコールしてもいいよ!'], brave: ['勝利の味だ!', '次も頂点を目指す!'],
+      clingy: ['なでなでしてほしいな〜', 'ほめてくれる?うれしいな〜'], smart: ['練習の効果が出ましたね', '最良の結果です'],
+      serious: ['恐縮です。ありがとうございます', 'この結果に満足せず進みます'], proud: ['ふふ、当然の結果ね', '私が一番に決まってるでしょ'],
+      worrier: ['みんなに迷惑かけなくてよかった…', 'うれしくて手がふるえる…'], stubborn: ['努力の成果だ', '一番でなければ意味がない'],
+      easygoing: ['ほんとに取れた〜?やった〜', 'なんかうれし〜'],
+    },
+    mood: { great: ['世界一うれしい!!'], good: ['今日はいい日だ!'], normal: ['やった!'], bad: ['不調だったのに…うれしい'], awful: ['…まあ、悪くないね'] },
+  },
+  high: {
+    common: ['すごくよくできた!', '手ごたえあり!', 'ほとんどミスしなかった!', 'いい演奏ができた!', 'やった!うまくいった!', '今日はいいね!'],
+    trait: {
+      jester: ['拍手、拍手〜!', 'ここまで完璧だと笑っちゃう!'], brave: ['この調子でもっと上へ!', '強敵にも勝てそうだ!'],
+      clingy: ['見ててくれた?ほめてほしいな', 'がんばったから、なでて〜'], smart: ['理想に近い精度でした', '次も再現できそうです'],
+      serious: ['気を抜かず次もがんばります', '練習どおりにできました'], proud: ['当然の出来ね', 'このくらい朝飯前よ'],
+      worrier: ['よかった…ほんとによかった…', 'ミスしなくてほっとした…'], stubborn: ['納得のいく演奏だ', 'まだまだ上を目指す'],
+      easygoing: ['気持ちよく叩けた〜', 'いい感じだったね〜'],
+    },
+    mood: { great: ['最高の気分!!!'], good: ['気持ちよかった!'], normal: ['まあまあいい感じ'], bad: ['不調のわりにはいい出来…'], awful: ['…意外とやれた'] },
+  },
+  mid: {
+    common: ['まあまあだったね', 'もうちょっとできたかも', '次はもっとうまく叩く!', 'ふつうの出来かな', 'おつかれ!楽しかった!', 'ちょっと惜しかった!'],
+    trait: {
+      jester: ['笑いどころは作れたかな?', 'ここからが本番だよ!'], brave: ['次はもっと攻めるぞ!', 'まだ力を残している!'],
+      clingy: ['つぎはもっとがんばるね', 'ちょっとだけほめて〜'], smart: ['改善の余地があります', '次は精度を上げます'],
+      serious: ['課題がはっきりしました', '次にいかします!'], proud: ['私ならもっとできたはず', '次は本気を出すわ'],
+      worrier: ['ミスが気になる…', 'みんなに迷惑かけてないかな…'], stubborn: ['まだ納得していない', '次は譲らんぞ'],
+      easygoing: ['まあ、これくらいでいいや〜', 'ほどほどが一番〜'],
+    },
+    mood: { great: ['楽しければOK!!'], good: ['次はもっと上手くいく!'], normal: ['まあまあ!'], bad: ['調子が悪かった…'], awful: ['…つかれた'] },
+  },
+  low: {
+    common: ['むずかしかった…', 'もっとうまくなりたい…', 'ミスが多かった…', 'つぎこそがんばる!', 'ちょっとくやしい…', 'うまくいかなかったね'],
+    trait: {
+      jester: ['失敗もネタにしちゃおう!', 'ズコーッてなった!'], brave: ['この悔しさを力に変える!', '倒れてもまた立つ!'],
+      clingy: ['なぐさめてほしいな…', 'ひとりにしないで…'], smart: ['敗因は把握しています', '次は必ず修正します'],
+      serious: ['不甲斐ない結果でした', 'もっと努力します'], proud: ['屈辱だわ…', '次は絶対に取り返す'],
+      worrier: ['やっぱりだめだった…', 'みんなごめんなさい…'], stubborn: ['こんな結果は認めん', '何度でもやり直す'],
+      easygoing: ['まあ、仕方ないよね〜', 'そんな日もあるよ〜'],
+    },
+    mood: { great: ['失敗しても楽しい!!'], good: ['次はいけるはず!'], normal: ['次がんばる'], bad: ['調子が悪かっただけ…'], awful: ['…もうだめかも'] },
+  },
+  bump: {
+    common: ['楽しかった!ありがとう!', 'みんな、がんばってね!', 'じゃあね、また会おうね!', '席をあけるね、どうぞ!', 'また一緒に遊ぼうね!', '先に失礼するね!'],
+    trait: {
+      jester: ['それではまた、次の舞台で!', '笑顔でお別れだよ!'], brave: ['次に会うときは強くなってる!', 'あとは任せた!'],
+      clingy: ['ほんとはもっといたかったな…', 'またすぐ会おうね…!'], smart: ['また参加できる日を楽しみにしています', '良い結果をお祈りします'],
+      serious: ['お世話になりました!', 'ありがとうございました!'], proud: ['お見送りしてもいいのよ?', '次も呼ぶのよ、いいわね?'],
+      worrier: ['ちゃんと帰れるかな…ばいばい…', 'みんな、気をつけてね…'], stubborn: ['席をゆずるのは今回だけだぞ', '約束だ、また呼べよ'],
+      easygoing: ['じゃあ、おやすみ〜…じゃない、またね〜', 'お先に〜'],
+    },
+    mood: { great: ['最高の時間をありがとう!!'], good: ['いい思い出になったよ!'], normal: ['それじゃあね'], bad: ['…ちょうどよかったかも'], awful: ['…やっと解放される'] },
+  },
+  replyHello: { common: ['よろしくね〜!', 'こちらこそ!'], trait: {
+    jester: ['どうもどうも!'], brave: ['よろしくだ!'], clingy: ['よろしくね!うれしい〜'], smart: ['どうぞよろしく'], serious: ['お願いします!'],
+    proud: ['よろしくしてあげる'], worrier: ['よ、よろしくお願いします…'], stubborn: ['うむ、よろしく'], easygoing: ['よろしくね〜'] } },
+  replyThanks: { common: ['いいってことよ!', 'えへへ、照れる!'], trait: {
+    jester: ['お代はけっこうです!'], brave: ['気にするな!'], clingy: ['そう言われるとうれしい〜'], smart: ['お互いさまです'], serious: ['こちらこそ、ありがとうございます'],
+    proud: ['もっと感謝してもいいわよ'], worrier: ['ほんとに?よかった…'], stubborn: ['礼を言われるほどでは…'], easygoing: ['いいよ〜、気にしな〜い'] } },
+  replyNice: { common: ['いえーい!', 'ありがとう!がんばった!'], trait: {
+    jester: ['ほめられて伸びるタイプ!'], brave: ['次ももっとやるぞ!'], clingy: ['ほめられた〜!しあわせ〜'], smart: ['ありがとうございます。励みになります'], serious: ['もったいないお言葉です'],
+    proud: ['ふふ、もっとほめなさい'], worrier: ['えへへ…自信がついた…'], stubborn: ['褒めても何も出んぞ'], easygoing: ['うれし〜、ありがと〜'] } },
+  replyAgain: { common: ['何回でもいけるよ!', 'もう一回、いこう!'], trait: {
+    jester: ['何度でも笑わせるよ!'], brave: ['もう一戦だ!'], clingy: ['やったー!もっと遊ぶ!'], smart: ['次はより精度を上げます'], serious: ['もう一度、全力で!'],
+    proud: ['次こそ見せてあげる'], worrier: ['が、がんばるよ…'], stubborn: ['次は絶対だ!'], easygoing: ['じゃあ、もう一回〜'] } },
+  replyCall: { common: ['ここだよー!', 'ちゃんといるよ!'], trait: {
+    jester: ['お呼びでしょうか?'], brave: ['いつでも呼べ!'], clingy: ['呼んでくれたぁ!うれしい!'], smart: ['常に待機しています'], serious: ['はい、ここにいます!'],
+    proud: ['私を呼ぶとは分かっているわね'], worrier: ['い、いますよ…どうしたの…?'], stubborn: ['見ればわかるだろう'], easygoing: ['ふぁい、いるよ〜'] } },
+  replyDrop: { common: ['元気だして!', 'つぎがんばろう!'], trait: {
+    jester: ['落ち込む暇があったら笑おう!'], brave: ['下を向くな!'], clingy: ['なでなでしてあげる〜'], smart: ['失敗は糧になります'], serious: ['励ましの言葉を送ります'],
+    proud: ['あなたならできるわ'], worrier: ['わたしもよく失敗するから…'], stubborn: ['くじけるな。やり直せ'], easygoing: ['どんまい〜、どんまい〜'] } },
+  replyWait: { common: ['のんびり待つね!', 'ゆっくり準備してね!'], trait: {
+    jester: ['待ち時間にモノマネでもしてようか'], brave: ['待つのも訓練だ!'], clingy: ['はやく来ないとさみしいよ〜'], smart: ['待機時間は分析に使います'], serious: ['お待ちしております'],
+    proud: ['急ぎなさい?'], worrier: ['待ってるよ…本当に待ってるよ…'], stubborn: ['待つが、長くは待たんぞ'], easygoing: ['ぜんぜんいいよ〜、ぼくも休む〜'] } },
+  // ---- 待っているあいだのひとりごと(部屋の待ち合わせ・曲えらびで静かなとき)----
+  idle: {
+    common: ['まだかな〜', 'みんな、まだ?', 'どんな曲になるかな?', 'ドキドキするね!', 'そろそろ始まるかな?', '早く叩きたいな!', 'わくわく!', '準備はできてるよ!', '今日は何を叩こう?', 'この部屋、楽しいね!'],
+    trait: {
+      jester: ['ひまだからダジャレでも言おうか?', 'ネタ帳を見直してた!', '待ってるあいだにひと芸…', '静かだと逆にボケたくなる!'],
+      brave: ['体がうずうずする!', 'はやく戦いたい!', '準備運動しとくか!', '強い曲こないかな!'],
+      clingy: ['ひとりだとさみしいよ〜', 'ねぇ、そばにいてね?', 'おしゃべりしようよ〜', 'ねぇねぇ、まだ?'],
+      smart: ['待ち時間を有効に使います', '譜面の傾向を復習中です', '指のストレッチをしています', '次の展開を予測中です'],
+      serious: ['気持ちを整えています', '深呼吸して集中します', '最後の確認をしています', '静かに待ちます'],
+      proud: ['待たせるなんて失礼ね', '私を待たせるとはいい度胸ね', 'まだなの?早くしなさい', '準備なんてとっくに終わってるわ'],
+      worrier: ['うまくできるかな…心配…', '緊張で手がふるえる…', 'もしミスしたらどうしよう…', '早く始まってほしいような…'],
+      stubborn: ['待つのは性に合わん', '早くしてくれ!', '腹はくくった、いつでもいい', '決まりが遅いな'],
+      easygoing: ['ふぁ〜…ねむくなってきた〜', 'のんびり待つのも悪くないね〜', 'ごろごろ〜', 'おやつ食べたいな〜'],
+    },
+    mood: {
+      great: ['待ってるあいだも楽しい!!', '早く叩きたくてたまらない!!', '今日は何でもできそう!!'],
+      good: ['いい気分で待ってるよ!', '今日はいい日になりそう!', '楽しみだな〜'],
+      normal: ['のんびり待とうかな', 'ぼちぼち始まるかな'],
+      bad: ['まだ始まらない…', 'ちょっと眠い…', '今日は疲れ気味…'],
+      awful: ['…まだ?', '…帰りたい', '…静かにして'],
+    },
+  },
+});
+// BASE と EXTRA を合わせて、書き換えられない1つの表にする(同じ文は2度並べない)
+const rhythmBuddyTalkMerge = (base, extra) => {
+  const out = {};
+  const uniq = (a, b) => { const r = (Array.isArray(a) ? a : []).slice(); (Array.isArray(b) ? b : []).forEach((x) => { if (r.indexOf(x) < 0) r.push(x); }); return Object.freeze(r); };
+  Object.keys(base).concat(Object.keys(extra)).forEach((kind) => {
+    if (out[kind]) return;
+    const a = base[kind] || {}; const e = extra[kind] || {};
+    const trait = {}; const mood = {};
+    Object.keys(a.trait || {}).concat(Object.keys(e.trait || {})).forEach((k) => { trait[k] = uniq((a.trait || {})[k], (e.trait || {})[k]); });
+    Object.keys(a.mood || {}).concat(Object.keys(e.mood || {})).forEach((k) => { mood[k] = uniq((a.mood || {})[k], (e.mood || {})[k]); });
+    out[kind] = Object.freeze({ common: uniq(a.common, e.common), trait: Object.freeze(trait), mood: Object.freeze(mood) });
+  });
+  return Object.freeze(out);
+};
+const RHYTHM_BUDDY_TALK = rhythmBuddyTalkMerge(RHYTHM_BUDDY_TALK_BASE, RHYTHM_BUDDY_TALK_EXTRA);
+
+// 場面・性格・調子からセリフを1つ選ぶ。使えるものが無ければ ''(言わない)。
+//   trait … 性格の id('' なら共通と調子だけ) / moodId … 'great'|'good'|'normal'|'bad'|'awful' / vars … { song }
+//   recent … 直近に言ったセリフ(新しい順。同じのを繰り返さない) / rand … 0〜1 の乱数
+// 重み: 性格の束 ×3、調子の束 ×2、共通 ×1。曲名が要る文は、曲名が無い・長すぎるときは使わない
+const rhythmBuddyTalkPick = ({ kind, trait = '', moodId = 'normal', vars = {}, recent = [], rand = Math.random }) => {
+  const set = RHYTHM_BUDDY_TALK[kind];
+  if (!set) return '';
+  const song = typeof vars.song === 'string' ? vars.song : '';
+  const make = (line) => {
+    if (line.indexOf('{song}') >= 0 && !song) return '';
+    const text = line.split('{song}').join(song);
+    return text.length > 0 && text.length <= RHYTHM_BUDDY_TALK_MAX ? text : '';
+  };
+  const bag = [];
+  const add = (lines, weight) => (Array.isArray(lines) ? lines : []).forEach((line) => {
+    const text = make(line);
+    if (text) for (let i = 0; i < weight; i += 1) bag.push(text);
+  });
+  add(set.trait && set.trait[trait], 3);
+  add(set.mood && set.mood[moodId], 2);
+  add(set.common, 1);
+  const avoid = new Set(Array.isArray(recent) ? recent : []);
+  const fresh = bag.filter((t) => !avoid.has(t));
+  const pool = fresh.length ? fresh : bag;
+  if (!pool.length) return '';
+  const r = Number(rand());
+  return pool[Math.min(pool.length - 1, Math.floor((Number.isFinite(r) ? r : 0) * pool.length))];
+};
+// 人のチャットに、どの返事をするか。当てはまる定型文が無ければ ''(返事しない)
+const rhythmBuddyTalkReplyKind = (text) => {
+  const t = String(text || '');
+  if (/マスモン(入れて|いれて|呼んで|出して)/.test(t)) return 'replyCall';
+  if (/よろしく|はじめまして|こんにちは/.test(t)) return 'replyHello';
+  if (/ありがとう/.test(t)) return 'replyThanks';
+  if (/ナイス|すごい|うまい|GG/.test(t)) return 'replyNice';
+  if (/もう一回|もういっかい|次いこう/.test(t)) return 'replyAgain';
+  if (/ドンマイ|おしい|惜しい/.test(t)) return 'replyDrop';
+  if (/待って|まって/.test(t)) return 'replyWait';
+  return '';
 };
 
 // ---- part: 34-friends-api.jsx ----
@@ -25795,6 +26383,162 @@ const raidJackHomeLines = (tierId, rate, pumpkin = false) => {
   if (pumpkin === true) return RAID_JACK_HOME_LINES_PUMPKIN;
   const set = RAID_JACK_HOME_LINES[tierId] || RAID_JACK_HOME_LINES.a1;
   return set[raidJackLifeBand(rate)];
+};
+
+// ---- part: 39-rhythm-buddy-rank-api.jsx ----
+// ==================== マスモンランキング(モンヒロビート)の通信層(2026-10-07) ====================
+// マスモン1体ごとの「ビートLv」と「難易度ごとの最高スコア」を、専用テーブル rhythm_buddy_ranks へ上書き保存する。
+// 絆Lvランキング(bond_levels)と同じ作り: 1人 × 1個体で必ず1行・血統は関係なく、そのマスモンの名前と見た目で並べる。
+// 既存の rankings / bond_levels には一切書かない。テーブルがまだ無い環境でも壊れない(無いと分かったら以後アクセスしない)。
+// 仕様の正本: docs/spec/RHYTHM_BUDDY.md「マスモンランキング」/ SQL: docs/sql/rhythm-buddy-ranks/
+const RHYTHM_BUDDY_RANK_TABLE = 'rhythm_buddy_ranks';
+const RHYTHM_BUDDY_RANK_SELECT = 'user_name,breeder_id,individual_id,monster_id,mon_name,icon,profile_frame,colors,beat_level,beat_exp,lives,'
+  + 'score_easy,score_normal,score_hard,score_expert,score_master,best_songs,updated_at';
+// 並べる順に取る件数(1行が小さいので、同じ人の古い行の整理ぶんを含めて多めに取る)
+const RHYTHM_BUDDY_RANK_FETCH_LIMIT = 150;
+const RHYTHM_BUDDY_RANK_SHOW_LIMIT = 50;
+// 保存した指紋(送った行の内容)。起動のたびに全員を送り直さないための新しいキー
+const RHYTHM_BUDDY_RANK_SYNC_KEY = 'mh_rhythm_buddy_rank_sync_v1';
+const RHYTHM_BUDDY_RANK_SYNC_DELAY_MS = 4000;
+const RHYTHM_BUDDY_RANK_SYNC_MIN_INTERVAL_MS = 20000;
+const RHYTHM_BUDDY_RANK_SYNC_CHUNK = 50;
+const rhythmBuddyScoreColumn = (diffId) => `score_${String(diffId || '').toLowerCase()}`;
+
+let _buddyRanksUnavailable = false;
+const buddyRanksUnavailable = () => _buddyRanksUnavailable;
+
+// 手持ちのマスモンと育ちの保存から、送る行を作る。遊んだことのある子だけ(育っていない子は載せない)
+const rhythmBuddyRankRows = (userName, icon, masuMons, store, profileFrame = null, breederId = null) => {
+  const mons = store && store.mons && typeof store.mons === 'object' ? store.mons : {};
+  const rows = [];
+  (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
+    if (!masu || masu.id == null) return;
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    if (!base || !mons[String(masu.id)]) return;
+    const m = rhythmBuddyNormalizeMon(mons[String(masu.id)]);
+    if (m.lives <= 0 && m.exp <= 0) return;
+    const colors = rankingPartyColors(masu.baseId, getMasuColors(masu));
+    const frame = rankingProfileFrameValue(profileFrame);
+    const row = {
+      user_name: userName || '名無しのブリーダー',
+      ...(typeof breederId === 'string' && breederId ? { breeder_id: breederId } : {}),
+      individual_id: String(masu.id),
+      monster_id: masu.baseId,
+      mon_name: String(masu.name || base.name || '').slice(0, 40) || null,
+      icon: icon ?? null,
+      ...(frame ? { profile_frame: frame } : {}),
+      colors: colors.some(Boolean) ? colors : null,
+      beat_level: rhythmBuddyLevelInfo(m.exp).level,
+      beat_exp: Math.floor(m.exp),
+      lives: Math.floor(m.lives),
+    };
+    const songs = {};
+    RHYTHM_BUDDY_DIFF_IDS.forEach((id) => {
+      const b = m.best[id];
+      row[rhythmBuddyScoreColumn(id)] = b ? Math.floor(b.score) : null;
+      if (b && b.songId) songs[id] = b.songId;
+    });
+    row.best_songs = songs;
+    rows.push(row);
+  });
+  return rows;
+};
+const rhythmBuddyRankSyncKeyOf = (row) => `${row.user_name}\u001f${row.individual_id}`;
+const rhythmBuddyRankRowsToSync = (rows, sent) =>
+  (Array.isArray(rows) ? rows : []).filter((row) => (sent || {})[rhythmBuddyRankSyncKeyOf(row)] !== bondLevelRowSignature(row));
+const normalizeRhythmBuddyRankSync = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.sent && typeof raw.sent === 'object' && !Array.isArray(raw.sent) ? raw.sent : {};
+  const sent = {};
+  Object.keys(src).forEach((key) => { if (typeof src[key] === 'string') sent[key] = src[key]; });
+  return { version: 1, sent };
+};
+
+// 1行を画面で使う形へ。壊れた値は捨てる
+const rhythmBuddyRankEntryFromRow = (row) => {
+  if (!row || typeof row !== 'object' || !row.individual_id || !ALL_PLAYER_MONSTERS[row.monster_id]) return null;
+  const scores = {};
+  RHYTHM_BUDDY_DIFF_IDS.forEach((id) => {
+    const n = Number(row[rhythmBuddyScoreColumn(id)]);
+    if (Number.isFinite(n) && n > 0) scores[id] = Math.floor(n);
+  });
+  const songs = row.best_songs && typeof row.best_songs === 'object' && !Array.isArray(row.best_songs) ? row.best_songs : {};
+  const level = Number(row.beat_level);
+  return {
+    userName: String(row.user_name || '名無しのブリーダー'),
+    breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
+    icon: row.icon || null,
+    profileFrame: normalizeProfileFrameId(row.profile_frame),
+    individualId: String(row.individual_id),
+    monsterId: row.monster_id,
+    monName: String(row.mon_name || ALL_PLAYER_MONSTERS[row.monster_id].name || ''),
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    beatLevel: Number.isFinite(level) ? Math.max(0, Math.floor(level)) : 0,
+    beatExp: Math.max(0, Math.floor(Number(row.beat_exp) || 0)),
+    lives: Math.max(0, Math.floor(Number(row.lives) || 0)),
+    scores, songs,
+    updatedAt: String(row.updated_at || ''),
+  };
+};
+// 改名で同じ個体が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)
+const rhythmBuddyRankMerge = (entries) => {
+  const byKey = new Map();
+  (Array.isArray(entries) ? entries : []).forEach((e) => {
+    if (!e) return;
+    const key = `${e.breederId || `name:${e.userName}`}\u001f${e.individualId}`;
+    const cur = byKey.get(key);
+    if (!cur || e.updatedAt > cur.updatedAt) byKey.set(key, e);
+  });
+  return [...byKey.values()];
+};
+// kind: 'level'(ビートLv)/ 'score'(diffId の最高スコア)。テーブルが無ければ null
+const sbFetchRhythmBuddyRanks = async (kind, diffId = 'MASTER') => {
+  if (_buddyRanksUnavailable) return null;
+  const column = rhythmBuddyScoreColumn(diffId);
+  const order = kind === 'score' ? `${column}.desc.nullslast,updated_at.asc`
+    : 'beat_level.desc.nullslast,beat_exp.desc.nullslast,updated_at.asc';
+  const filter = kind === 'score' ? `&${column}=gt.0` : '&beat_level=gt.0';
+  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?select=${RHYTHM_BUDDY_RANK_SELECT}${filter}`
+    + `&order=${order}&limit=${RHYTHM_BUDDY_RANK_FETCH_LIMIT}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, body)) { _buddyRanksUnavailable = true; return null; }
+      throw new Error(`rhythm_buddy_ranks ${res.status}: ${body || res.statusText}`);
+    }
+    const rows = JSON.parse(body || '[]');
+    const entries = rhythmBuddyRankMerge((Array.isArray(rows) ? rows : []).map(rhythmBuddyRankEntryFromRow));
+    entries.sort(kind === 'score'
+      ? (a, b) => (b.scores[diffId] || 0) - (a.scores[diffId] || 0)
+      : (a, b) => b.beatLevel - a.beatLevel || b.beatExp - a.beatExp);
+    return entries.slice(0, RHYTHM_BUDDY_RANK_SHOW_LIMIT);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 上書き保存。同じ個体は何度書いても1行のまま、最新の値になる
+const sbUpsertRhythmBuddyRanks = async (rows) => {
+  if (_buddyRanksUnavailable || !Array.isArray(rows) || rows.length === 0) return false;
+  const url = `${SUPABASE_URL}/rest/v1/${RHYTHM_BUDDY_RANK_TABLE}?on_conflict=user_name,individual_id`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows), signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) { _buddyRanksUnavailable = true; return false; }
+      throw new Error(`rhythm_buddy_ranks upsert ${res.status}: ${body || res.statusText}`);
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
 };
 
 // ---- part: 40-screen-effects.jsx ----
@@ -29828,15 +30572,34 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation,
 }) {
+  // 魂格の段階の色で燃え上がり、光の輪が広がって、段階名とLv上限が数え上がる。
+  // 魂格Ⅴだけは5色が混ざった特別な背景にする(色は step.accent が正本)
+  const a = soulRankAnimation;
+  const reduced = prefersReducedMotion();
+  const [cap, setCap] = useState(a.fromLevelCap);
+  useEffect(()=>{
+    const start = Date.now(), rampMs = reduced ? 300 : 1800, delay = reduced ? 0 : 1900;
+    const tick = setInterval(()=>{
+      const t = Math.min(1, Math.max(0, (Date.now()-start-delay)/rampMs)), eased = 1-Math.pow(1-t,3);
+      setCap(Math.round(a.fromLevelCap + (a.toLevelCap-a.fromLevelCap)*eased));
+      if (t>=1) clearInterval(tick);
+    }, 40);
+    return ()=>clearInterval(tick);
+  }, []);
+  const roman = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
   return (
-<div data-soul-rank-animation role="status" aria-live="polite" className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50500,backgroundColor:'rgba(2,6,23,.94)',paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-      <div className="w-full max-w-xs rounded-2xl border-2 p-6 text-center shadow-2xl" style={{borderColor:soulRankAnimation.step.accent,background:soulRankAnimation.toStage===5?'linear-gradient(145deg,rgba(30,64,175,.55),rgba(113,63,18,.45),rgba(20,83,45,.45),rgba(127,29,29,.45),rgba(88,28,135,.55))':'rgba(15,23,42,.96)'}}>
-        <div className="text-[10px] font-black tracking-[.3em] text-slate-400 mb-2">SOUL RANK</div>
-        <Sparkles size={28} className="mx-auto mb-2" style={{color:soulRankAnimation.step.accent}}/>
-        <div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-4 mb-3" style={{borderColor:soulRankAnimation.step.accent,boxShadow:'0 0 36px '+soulRankAnimation.step.accent+'88'}}><DyedMonsterImage baseId={soulRankAnimation.masu.baseId} src={soulRankAnimation.base?.iconUrl} alt={soulRankAnimation.masu.name} masuColors={getMasuColors(soulRankAnimation.masu)} className="w-full h-full object-cover"/></div>
-        <div className="text-[11px] text-slate-400 font-black">{soulRankAnimation.fromStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][soulRankAnimation.fromStage]:'超越'} →</div>
-        <div className="text-3xl font-black my-1" style={{color:soulRankAnimation.step.accent}}>{soulRankAnimation.step.label}</div>
-        <div className="text-[12px] font-black text-emerald-300">Lv上限 {soulRankAnimation.fromLevelCap} → {soulRankAnimation.toLevelCap}</div>
+<div data-soul-rank-animation role="status" aria-live="polite" className={`mh-soulevo${a.toStage===5?' is-final':''}`} style={{'--accent':a.step.accent}}>
+      <div className="mh-soulevo-beams" aria-hidden="true">{Array.from({length:9},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-wave" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div className="mh-soulevo-mon mh-reincarnate-stack"><DyedMonsterImage baseId={a.masu.baseId} src={a.base?.iconUrl||a.base?.imgUrl} alt={a.masu.name} masuColors={getMasuColors(a.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={a.toStage} className="is-ceremony"/><RebirthStars count={a.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+      <div className="mh-soulevo-sparks" aria-hidden="true">{Array.from({length:16},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-flash" aria-hidden="true"></div>
+      <div className="mh-soulevo-copy">
+        <div className="mh-soulevo-kicker">SOUL RANK</div>
+        <div className="mh-soulevo-from">{a.fromStage>0?'魂格'+roman[a.fromStage]:'超越'} →</div>
+        <div className="mh-soulevo-label">{a.step.label}</div>
+        <div className="mh-soulevo-cap">Lv上限 <b>{cap}</b></div>
+        <div className="mh-soulevo-sub">{a.fromLevelCap} → {a.toLevelCap}</div>
       </div>
     </div>
   );
@@ -36003,6 +36766,13 @@ function RhythmHistoryScreen({
   onBack, onSelect, onClearSelection, onSelectDivision, onRefresh,
 }) {
   const list = Array.isArray(entries) ? entries : [];
+  // 一覧は「週間ランキング」と「イベント」に分けて出す(2026-10-07・ユーザー指示「これは週間とイベントと分けたい」)。
+  // 種類(kind)は weekly=週 / limited=イベント。はじめに開く側は、いちばん最近終わったものの種類
+  // (entries は新しい順)。選んで開いて戻っても、見ていた側のまま。
+  const [listTab, setListTab] = useState(() => ((Array.isArray(entries) && entries[0] && entries[0].kind === 'limited') ? 'limited' : 'weekly'));
+  const weeklyList = list.filter(entry => entry.kind !== 'limited');
+  const eventList = list.filter(entry => entry.kind === 'limited');
+  const shownList = listTab === 'limited' ? eventList : weeklyList;
   const view = board || { status:'idle', event:null, boards:{}, error:null };
   // 部門は**えらんだ回から**作る。取ってきた結果(view.event)を待つと、
   // 読み込み中や通信に失敗したあいだ部門のボタンが消えて、切り替えて試し直せなくなる
@@ -36056,21 +36826,35 @@ function RhythmHistoryScreen({
               ? <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
                   終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 5:00 に切り替わります。
                 </p>
-              : <div className="flex flex-col gap-2">
-                  {list.map(entry=>(
-                    <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
-                      className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
-                      {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
-                      <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
-                      <span className="min-w-0 flex-1">
-                        <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
-                        <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
-                        {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
-                      </span>
-                      <ChevronRight size={16} className="shrink-0 text-slate-500"/>
-                    </button>
-                  ))}
-                </div>}
+              : <>
+                  {/* 週は年52件ずつ増えるので、下へ送ってもタブが見えるよう上に留める */}
+                  <div data-rhythm-history-tabs className="sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1">
+                    <ScreenTabs value={listTab} onChange={setListTab} items={[
+                      { id:'weekly', label:`📊 週間ランキング（${weeklyList.length}）`, color:'#f59e0b' },
+                      { id:'limited', label:`🏆 イベント（${eventList.length}）`, color:'#c026d3' },
+                    ]}/>
+                  </div>
+                  {shownList.length===0
+                    ? <p data-rhythm-history-empty={listTab} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
+                        {listTab==='limited'?'終わったイベントはまだありません。':'終わった週はまだありません。'}<br/>
+                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 5:00 に切り替わります。'}
+                      </p>
+                    : <div className="flex flex-col gap-2">
+                        {shownList.map(entry=>(
+                          <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
+                            className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
+                            {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
+                            <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
+                            <span className="min-w-0 flex-1">
+                              <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
+                              <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
+                              {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
+                            </span>
+                            <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                          </button>
+                        ))}
+                      </div>}
+                </>}
           </>
         )}
         {selected&&(
@@ -37493,19 +38277,26 @@ const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '
 // 「結果画面でもチャットできるように。もういっかいとかありがとうとか意思疎通したい」)。
 // 残りは共通の定型文を後ろへ並べる(同じ文は2度並べない)
 const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
-  matching: ['よろしく!', 'はじめまして!', 'ちょっと待って!'],
-  select: ['この曲やりたい!', 'おまかせで!', 'なんでもOK!'],
-  ready: ['準備OK!', 'ちょっと待って!', 'がんばろう!'],
+  matching: ['よろしく!', 'はじめまして!', 'ちょっと待って!', 'マスモン入れて!', 'マスモン入れるね!'],
+  select: ['この曲やりたい!', 'おまかせで!', 'なんでもOK!', 'マスモン入れるね!', 'マスモン入れて!'],
+  ready: ['準備OK!', 'ちょっと待って!', 'がんばろう!', 'マスモン入れたよ!'],
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
   result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!'],
 });
-const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!']);
+// マスモンを呼ぶ遊びの定型文(2026-10-07・ユーザー指示「マスモンいれてーとかマスモン出せないとか」)。共通の最後に並べる
+const RHYTHM_MULTI_CHAT_BUDDY_STAMPS = Object.freeze(['マスモン入れて!', 'マスモン入れたよ!', 'マスモンうまい!', 'マスモン出せない…', '無料おわった…', '券がない…', '席ゆずるね!']);
+const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
 const rhythmMultiStampsFor = (phase) => {
   const list = [...(RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE[phase] || []), ...RHYTHM_MULTI_CHAT_COMMON_STAMPS, ...RHYTHM_MULTI_CHAT_STAMPS];
   return list.filter((text, i) => text.length <= RHYTHM_MULTI_CHAT_MAX_LENGTH && list.indexOf(text) === i);
 };
 // 発言は、その人のカードの上へ吹き出しでしばらく出す(チャットを開いていなくても気づける)
 const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
+// 呼んだマスモンのおしゃべり。同じ子が続けて話さない間隔と、人の発言へ返事をしてよい新しさ
+const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
+const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
+// 部屋が静かなまま、これだけ過ぎると、ときどきひとりごとを言う
+const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 25000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -37528,10 +38319,10 @@ const RHYTHM_MULTI_LOOK_CHOICES = Object.freeze([
 ]);
 const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({ ...((RHYTHM_LOOK_PRESETS.find((preset) => preset.id === 'LIGHT') || {}).values || {}) });
 // ライブの報酬(周回・ビートP)の人数ボーナス。参加した人が1人ふえるごとに+50%(2人1.5倍〜5人3倍。2026-10-02・ユーザー指示)
-// 呼んだマスモン(CPU)は人より少なく、1体目+30%・2体目+20%・3体目と4体目+10%(2026-10-07・ユーザー指示)。
+// 呼んだマスモン(CPU)は人より少なく、1体あたり+5%(2026-10-07・ユーザー指示「ボーナスが強すぎる。1体あたり5%ずつに」。はじめは+30/20/10/10%だった)。
 // count は参加者の数(人+CPU)、cpus はそのうちの CPU の数
 const RHYTHM_MULTI_REWARD_STEP = 0.5;
-const RHYTHM_MULTI_CPU_REWARD_STEPS = Object.freeze([0.3, 0.2, 0.1, 0.1]);
+const RHYTHM_MULTI_CPU_REWARD_STEPS = Object.freeze([0.05, 0.05, 0.05, 0.05]);
 const rhythmMultiRewardScale = (count, cpus = 0) => {
   const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
   const c = Math.max(0, Math.min(n - 1, Math.floor(Number(cpus) || 0)));
@@ -37651,6 +38442,8 @@ const rhythmMultiCleanMessage = (raw) => {
       out.owner = rhythmMultiText(raw.owner, 40);
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
       out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map((c) => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [];
+      // 選んだ理由(相棒の気持ち。決まった短いコードだけ通す)
+      out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
     }
     return out;
   }
@@ -37813,7 +38606,7 @@ const RHYTHM_MULTI = (() => {
     socket.send({
       t: 'hb', id: c.id, name: c.name, level: c.level, joinedAt: c.joinedAt, icon: '', frame: '',
       pick: c.pick, pickRound: c.pickRound, readyRound: c.readyRound, diff: c.diff, playing: c.playing,
-      open: false, mode: s.mode, res: c.res || undefined, cpu: 1, owner: s.selfId, mb: c.mb, mc: c.mc,
+      open: false, mode: s.mode, res: c.res || undefined, cpu: 1, owner: s.selfId, mb: c.mb, mc: c.mc, pw: c.pickWhy || '',
     });
   };
   // 相棒の結果を作って知らせる(自分の演奏が終わったとき。自分が参加していないライブなら始まってすぐ)
@@ -37843,13 +38636,17 @@ const RHYTHM_MULTI = (() => {
 
   // ---- 部屋主だけが進める部屋の進行 ----
   const setRoom = (next) => { s.room = { ...s.room, ...next }; sendHb(); emit(); };
-  const toSelect = () => setRoom({ phase: 'select', round: rhythmMultiMakeId('r'), songId: '', deadline: Date.now() + RHYTHM_MULTI_SELECT_MS, participants: [] });
+  // 部屋にいる「人」の数(呼んだマスモン=CPU は数えない)。自分ひとりのときは、曲えらびの制限時間を進めない
+  // (2026-10-07・ユーザー指示「人間がいないときは曲選びの時間制限を進めなくして」)。deadline が 0 のあいだは「制限時間なし」
+  const humanCount = () => ordered().filter((m) => !m.cpu).length;
+  const toSelect = () => setRoom({ phase: 'select', round: rhythmMultiMakeId('r'), songId: '', deadline: humanCount() <= 1 ? 0 : Date.now() + RHYTHM_MULTI_SELECT_MS, participants: [] });
   const doDraw = (members) => {
     const r = s.room;
     const pickOf = (list) => list.filter((m) => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map((m) => m.pick);
-    // 人の選んだ曲を優先する。相棒(CPU)の選曲は、人がだれも曲を選んでいないときだけ使う
-    const humanPicks = pickOf(members.filter((m) => !m.cpu));
-    const picks = humanPicks.length ? humanPicks : pickOf(members.filter((m) => m.cpu));
+    // 本番の曲は人の選んだ曲だけから決める。相棒(CPU)の選曲は演出(シャッフル画面の表示)だけで、抽選には入れない
+    // (2026-10-07・ユーザー指示「マスモンが曲を選んでくるのは演出として残して、実際は自分が選んだ曲に」)。
+    // 人がだれも曲を選んでいない(おまかせ)ときは、全曲から引く
+    const picks = pickOf(members.filter((m) => !m.cpu));
     const pool = picks.length ? picks : catalog;
     if (!pool.length) return;
     const songId = pool[Math.floor(Math.random() * pool.length)];
@@ -37877,6 +38674,13 @@ const RHYTHM_MULTI = (() => {
     } else if (r.phase === 'select') {
       if (members.length < 2) { setRoom({ phase: 'matching', deadline: 0 }); return; }
       const allPicked = members.every((m) => m.pickRound === r.round && m.pick);
+      // 人がひとりだけのあいだは制限時間なし(deadline を 0 にして、全員が選ぶまで待つ)。人が入ってきたら、そこから数えはじめる
+      if (humanCount() <= 1) {
+        if (r.deadline) { setRoom({ deadline: 0 }); return; }
+        if (allPicked) doDraw(members);
+        return;
+      }
+      if (!r.deadline) { setRoom({ deadline: now + RHYTHM_MULTI_SELECT_MS }); return; }
       // ★締め切りのあと少しだけ(準備の猶予と同じ3秒)待つ。締め切り直前に選んだ人の選曲がまだ届いていないと、
       //   その曲が抽選から漏れ、部屋主がおまかせなら全曲から引いてしまう(2026-10-03・ユーザー指示
       //   「おまかせはみんなでの曲抽選のときは他の人のが優先されるように」)。時間切れの人は自分でおまかせを送ってくるので、
@@ -37902,12 +38706,77 @@ const RHYTHM_MULTI = (() => {
     if (r.phase === 'select' && me.pickRound !== r.round) { me.pick = RHYTHM_MULTI_OMAKASE; me.pickRound = r.round; sendHb(); }
     if (r.phase === 'ready' && me.readyRound !== r.round) { me.readyRound = r.round; sendHb(); }
   };
+  // 呼んだマスモンが、部屋のチャットへ一言を送る(2026-10-07・ユーザー指示「マスモンもチャットで話してくる」)。
+  // セリフは cpuBrain.talk が用意したものから選ぶ。みんなが同時にしゃべらないよう、少しずらして送り、
+  // 同じ子は RHYTHM_MULTI_CPU_TALK_GAP_MS あけて話す。部屋を出た・席をゆずったあとは送らない
+  const cpuSay = (x, kind, vars = {}, opts = {}) => {
+    if (!s || !x || !cpuBrain || typeof cpuBrain.talk !== 'function') return;
+    const room = s;
+    const run = () => {
+      if (s !== room || !socket) return;
+      const c = myCpu(x.id);
+      if (!c) return;
+      const now = Date.now();
+      if (!opts.now && now - (room.talk.at[x.id] || 0) < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
+      let text = '';
+      try { text = cpuBrain.talk({ masuId: x.masuId, kind, ...vars }); } catch (_) { text = ''; }
+      text = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
+      if (!text) return;
+      room.talk.at[x.id] = now;
+      socket.send({ t: 'chat', id: c.id, name: c.name, text, cid: `c${now.toString(36)}${Math.random().toString(36).slice(2, 7)}` });
+    };
+    if (opts.now) { run(); return; }
+    const index = Math.max(0, s.cpus.findIndex((c) => c.id === x.id));
+    setTimeout(run, 600 + Math.floor(Math.random() * 1800) + index * 900);
+  };
+  const cpuPickOne = () => (s && s.cpus.length ? s.cpus[Math.floor(Math.random() * s.cpus.length)] : null);
+  // 人(自分を含む)のチャットへの返事。呼んだ子のうち1体だけが、ときどき返す。マスモンどうしでは返し合わない
+  const cpuReplyTo = (msg) => {
+    if (!s || !s.cpus.length || !msg || (s.members[msg.id] && s.members[msg.id].cpu) || s.cpus.some((c) => c.id === msg.id)) return;
+    // 届くのが遅れた(演奏中にたまっていた)発言には返さない。cid の先頭に送った時刻が入っている
+    const sentAt = parseInt(String(msg.cid || '').slice(1, 9), 36);
+    if (Number.isFinite(sentAt) && Date.now() - sentAt > RHYTHM_MULTI_CPU_REPLY_FRESH_MS) return;
+    const kind = typeof rhythmBuddyTalkReplyKind === 'function' ? rhythmBuddyTalkReplyKind(msg.text) : '';
+    if (!kind || Date.now() - s.talk.replyAt < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
+    // マスモンを呼んでほしい、と言われたら必ず返す。ほかはときどき
+    if (kind !== 'replyCall' && Math.random() > 0.6) return;
+    s.talk.replyAt = Date.now();
+    cpuSay(cpuPickOne(), kind);
+  };
+  // 場面の変わり目で話す(曲が決まった・結果が出た)。1回の場面につき1度だけ
+  const cpuTalkTick = () => {
+    if (!s || !s.cpus.length) return;
+    const r = s.room;
+    if (r.phase === 'ready' && r.round && s.talk.songRound !== r.round) {
+      s.talk.songRound = r.round;
+      if (Math.random() < 0.6) cpuSay(cpuPickOne(), 'song', { songId: r.songId });
+    }
+    // 待ち合わせ・曲えらびで、しばらく静かなときのひとりごと(ときどき)
+    if (r.phase === 'matching' || r.phase === 'select') {
+      const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
+      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.15) {
+        s.talk.idleAt = Date.now();
+        cpuSay(cpuPickOne(), 'idle');
+      }
+    }
+    if (r.phase === 'result' && r.round && s.talk.resultRound !== r.round) {
+      s.talk.resultRound = r.round;
+      const team = rhythmMultiTeamResult(Object.values(s.members), r.round, r.participants, true);
+      s.cpus.forEach((x) => {
+        const row = team.rows.find((q) => q.m.id === x.id);
+        if (!row || !row.res || row.res.quit) return;
+        const mvp = team.mvpId === x.id;
+        if (mvp || Math.random() < 0.7) cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
+      });
+    }
+  };
   // 人が入って5人を超えたら、呼んだマスモンは席をゆずって帰る。使った回数・券は呼んだ側へ返す(cpuBrain.refund)
   // (CPU どうしは呼んだ順に並ぶので、あとから呼んだ子から外れる)
   const dropCpuIfBumped = () => {
     if (!s || !s.cpus.length || s.room.phase === 'playing') return;
     const kept = new Set(ordered().map((m) => m.id));
     s.cpus.filter((c) => !kept.has(c.id)).forEach((gone) => {
+      cpuSay(gone, 'bump', {}, { now: true });
       delete s.members[gone.id];
       s.cpus = s.cpus.filter((c) => c.id !== gone.id);
       if (socket) socket.send({ t: 'bye', id: gone.id });
@@ -37925,10 +38794,16 @@ const RHYTHM_MULTI = (() => {
     if (c.diff !== me.diff) { c.diff = me.diff; changed = true; }
     if (r.phase === 'select' && c.pickRound !== r.round) {
       let pick = '';
-      try { pick = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : ''; } catch (_) { pick = ''; }
+      let why = '';
+      try {
+        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        if (r && typeof r === 'object') { pick = String(r.songId || ''); why = String(r.why || ''); } else pick = String(r || '');
+      } catch (_) { pick = ''; why = ''; }
       c.pick = pick && catalog.includes(pick) ? pick : RHYTHM_MULTI_OMAKASE;
+      c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
+      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.5) cpuSay(x, 'pick', { songId: c.pick });
     }
     if (r.phase === 'ready' && c.readyRound !== r.round) { c.readyRound = r.round; changed = true; }
     if (changed) sendOneCpuHb(x.id);
@@ -37982,6 +38857,7 @@ const RHYTHM_MULTI = (() => {
     selfTick();
     dropCpuIfBumped();
     cpuTick();
+    cpuTalkTick();
     hostTick();
     if (s) syncLobby();
     emit();
@@ -38004,6 +38880,7 @@ const RHYTHM_MULTI = (() => {
       if (!s.chat.some((c) => c.cid === msg.cid)) {
         s.chat.push({ cid: msg.cid, id: msg.id, name: msg.name, text: msg.text, at: Date.now() });
         if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
+        cpuReplyTo(msg);
       }
       emit();
       return;
@@ -38017,7 +38894,7 @@ const RHYTHM_MULTI = (() => {
         ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, icon: msg.icon, frame: msg.frame, bid: msg.bid,
         pick: msg.pick, pickRound: msg.pickRound, readyRound: msg.readyRound, diff: msg.diff, playing: msg.playing,
         open: msg.open, res: msg.res || prev.res, seen: Date.now(),
-        cpu: msg.cpu, owner: msg.owner || '', mb: msg.mb || '', mc: msg.mc || [],
+        cpu: msg.cpu, owner: msg.owner || '', mb: msg.mb || '', mc: msg.mc || [], pickWhy: msg.pw || '',
       };
       // 部屋の進行は部屋主の知らせに従う(残り時間は受け取った時刻から数える)
       if (msg.room && fromHost()) {
@@ -38100,6 +38977,7 @@ const RHYTHM_MULTI = (() => {
       };
       oneCpuTick(s.cpus[s.cpus.length - 1]);
       sendOneCpuHb(id);
+      cpuSay(s.cpus[s.cpus.length - 1], 'join');
       emit();
       return true;
     },
@@ -38143,6 +39021,8 @@ const RHYTHM_MULTI = (() => {
         liveIds: [], liveStreak: 0,
         // 自分が呼んだマスモン(CPU)の一覧 [{ id, masuId }]。部屋を出たら消える(呼んだ1回ぶんはそこで使い切り)
         cpus: [],
+        // 呼んだマスモンのおしゃべり(最後に話した時刻・場面ごとに1回だけ話すための印)
+        talk: { at: {}, songRound: '', resultRound: '', replyAt: 0, idleAt: now },
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
@@ -38707,7 +39587,7 @@ function RhythmModeSelectStage() {
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
@@ -38756,10 +39636,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
   const [rankingOpen, setRankingOpen] = React.useState(false);
+  // モードえらびの「プライベートルーム」の入室シートと、「ランキング」(全国/マスモン)の重ね画面(2026-10-07)
+  const [privateOpen, setPrivateOpen] = React.useState(false);
+  const [rankHubOpen, setRankHubOpen] = React.useState(false);
+  const [rankHubTab, setRankHubTab] = React.useState('national');
   const [recordOpen, setRecordOpen] = React.useState(false);
   // マスモンを呼ぶ(docs/spec/RHYTHM_BUDDY.md)。'' / 'pick'(部屋へ呼ぶ選択の画面)
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map((song) => song.songId).join(',');
+  // モードえらびに出す、今日の無料のセッション残り回数(2026-10-07・ユーザー指示「この画面で無料セッション分と券の枚数を見れるように」)
+  const buddyStoreState = useRhythmBuddyState();
+  const buddyDayKey = useRhythmBuddyDayKey();
   // 「マスモンを呼べるようになった」の一度きりの案内(新しい保存キー。既存のキーは触らない)
   const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
   React.useEffect(() => {
@@ -38798,7 +39685,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? (
@@ -39022,6 +39909,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setChatOpen(false);
     setRankingOpen(true);
   };
+  // モードえらびの「ランキング」。全国ランキング(いつもの画面)とマスモンランキングを切り替える。
+  // 全国のほうは曲ごとの順位なので、見る曲は部屋の中のときと同じ決め方
+  const openRankHub = () => {
+    const song = songById(rankingSongId);
+    if (rankingSupport && song) rankingSupport.open(song);
+    setRankHubTab('national');
+    setRankHubOpen(true);
+  };
   const rankingButton = (extra = '') => rankingSupport && (
     <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
       className={`min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`}>🏆</button>
@@ -39158,20 +40053,22 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎮</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small><RhythmMultiLobbyCount /></span>
               </button>}
+              {/* プライベートルーム: 友だちと遊ぶ。作成と、コードを入れての入室は、押すと開くシートへ(2026-10-07・「ダサいので一新して」) */}
+              {ms.multi && <button data-rhythm-mode-private data-rhythm-mode-private-open type="button" onClick={() => { setMessage(''); setPrivateOpen(true); }}
+                className="mhms-card private mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-blue-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px]" style={{ animationDelay: '.2s' }}>
+                <span aria-hidden="true" className="mhms-mark">PRIVATE</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🔑</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">プライベート</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">合言葉で友だちと遊ぶ</small></span>
+              </button>}
+              {/* ランキング: 全国ランキングとマスモンランキング */}
+              {ms.multi && <button data-rhythm-mode-ranking type="button" onClick={openRankHub}
+                className="mhms-card rank mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-lime-200 via-emerald-300 to-teal-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px]" style={{ animationDelay: '.24s' }}>
+                <span aria-hidden="true" className="mhms-mark">RANKING</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🏆</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">ランキング</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">全国とマスモンの順位</small></span>
+              </button>}
             </div>
-            {ms.multi && (
-              <section data-rhythm-mode-private className="mhms-glass mhms-in min-w-0 rounded-2xl p-2.5" style={{ animationDelay: '.2s' }}>
-                <h3 className="mb-1.5 flex items-center gap-1.5 text-[11px] font-black text-violet-100"><span aria-hidden="true">🔑</span>プライベートルーム<small className="font-bold text-violet-200/70">友だちと遊ぶ</small></h3>
-                <div className="flex min-w-0 gap-2">
-                  <button data-rhythm-multi-create type="button" className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95" onClick={createPrivate}>＋ 作成</button>
-                  <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
-                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                    className="min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-violet-300/30 bg-slate-950/70 px-1 text-center text-base font-black tracking-[0.25em] text-white" placeholder="ABCD" />
-                  <button data-rhythm-multi-join type="button" className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95" onClick={joinPrivate}>入室</button>
-                </div>
-              </section>
-            )}
-            {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
+            {message && !privateOpen && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
             {ms.multi && !buddyIntroSeen && masuMons.length > 0 && (
               <section data-rhythm-buddy-intro className="mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5">
                 <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
@@ -39179,6 +40076,13 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
                 <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </section>
+            )}
+            {/* マスモンを呼べる回数。1日の無料ぶんの残りと、セッション券の枚数(部屋の「マスモンを呼ぶ」で使う) */}
+            {ms.multi && (
+              <div data-rhythm-mode-session className="mhms-in -my-1 flex items-center justify-center gap-x-2 whitespace-nowrap px-1 text-[10px] leading-none">
+                <b className="font-black text-lime-200">🎶 マスモンのセッション</b>
+                <RhythmBuddyAllowance freeLeft={rhythmBuddyFreeLeft(buddyStoreState, buddyDayKey)} tickets={buddyTickets} compact className="text-slate-200" />
+              </div>
             )}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
             <div className={`mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`} style={{ animationDelay: '.28s' }}>
@@ -39206,6 +40110,48 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div aria-hidden="true" className="shrink-0" style={{ height: 'var(--mh-sa-bottom)' }} />
         {recordOpen && <RhythmMultiRecordSheet songName={(id) => { const song = songById(id); return song ? rhythmSongFullName(song) : '(曲)'; }} onClose={() => setRecordOpen(false)} />}
         {buddySheetLayer}
+        {/* プライベートルーム: 部屋をつくる / 合言葉で入る(2026-10-07。もとは欄の中に作成・コード・入室を並べていた) */}
+        {privateOpen && (
+          <div className="absolute inset-0 z-[85000]">
+            <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={() => setPrivateOpen(false)} />
+            <div data-rhythm-mode-private-sheet className="absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-sky-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(440px,62%)] landscape:rounded-none landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(1rem + var(--mh-sa-bottom))' }}>
+              <div className="flex items-center gap-2">
+                <span aria-hidden="true" className="text-2xl leading-none">🔑</span>
+                <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-sky-100">プライベートルーム</b><small className="block text-[11px] font-bold text-slate-400">合言葉で、友だちだけと遊べます</small></div>
+                <button type="button" aria-label="閉じる" onClick={() => setPrivateOpen(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+              </div>
+              <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
+                <b className="block text-[13px] font-black text-white">部屋をつくる</b>
+                <p className="text-[11px] font-bold leading-snug text-slate-300">合言葉(ルームコード)ができます。友だちに伝えて入ってもらいましょう</p>
+                <button data-rhythm-multi-create type="button" onClick={createPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">＋ 部屋をつくる</button>
+              </section>
+              <section className="space-y-1.5 rounded-2xl border border-violet-300/25 bg-slate-950/50 p-3">
+                <b className="block text-[13px] font-black text-white">合言葉で入る</b>
+                <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                  onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                  className="min-h-[52px] w-full rounded-xl border border-violet-300/30 bg-slate-950/80 px-2 text-center text-xl font-black tracking-[0.35em] text-white" placeholder="ABCD" />
+                <button data-rhythm-multi-join type="button" onClick={joinPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-violet-500 to-purple-700 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">入室する</button>
+              </section>
+              {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
+            </div>
+          </div>
+        )}
+        {/* ランキング: 全国ランキング(いつもの画面)とマスモンランキングを、下のタブで切り替える */}
+        {rankHubOpen && (
+          <div data-rhythm-mode-ranking-layer className="absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950">
+            <div className="flex min-h-0 flex-1 flex-col">
+              {rankHubTab === 'national'
+                ? (rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null)
+                : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} />}
+            </div>
+            <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
+              {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
+                <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
+                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -39382,6 +40328,9 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {(() => {
           // 自分が呼んだマスモンがこのライブに出ていたら、1体ずつ育てて見せる(全員の結果がそろってから)
           if (team.waiting) return null;
+          // 自分が途中でやめたライブでは、呼んだマスモンも育てない(やめたのにクリア扱いで経験値が入っていた。2026-10-07・ユーザー指摘)
+          const myRow = team.rows.find((row) => row.m.id === view.selfId);
+          if (!myRow || !myRow.res || myRow.res.quit) return null;
           const song = songById(room.songId);
           const grown = (view.myCpus || []).map((c) => {
             const cpuRow = team.rows.find((row) => row.m.id === c.id);
@@ -39389,7 +40338,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             return masu ? { masu, cpuRow } : null;
           }).filter(Boolean);
           if (!grown.length) return null;
-          return <div className="shrink-0 space-y-1 px-3 pt-1">{grown.map(({ masu, cpuRow }) => (
+          return <div data-rhythm-buddy-growth-list className="grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2">{grown.map(({ masu, cpuRow }) => (
             <RhythmBuddyGrowth key={masu.id} masu={masu} round={room.round} songId={room.songId} diffId={cpuRow.res.diffId} durationMs={song ? Number(song.playDurationMs) || 0 : 0} teamRank={team.rank}
               chartLevel={song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0}
               humans={team.rows.filter((row) => !row.m.cpu).length}
@@ -39493,7 +40442,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-8 w-8" />
                 <span className="w-20 shrink-0 truncate text-[11px] font-black text-slate-300">{m.name}</span>
                 {song && <img src={rhythmSongArtSrc(song)} alt="" draggable={false} className="h-8 w-8 shrink-0 rounded-md object-cover" />}
-                <span className="min-w-0 flex-1 truncate text-[12px] font-black">{song ? rhythmSongFullName(song) : 'おまかせ'}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12px] font-black">{song ? rhythmSongFullName(song) : 'おまかせ'}</span>
+                  {m.cpu && song && RHYTHM_BUDDY_PICK_WHY[m.pickWhy] && <small data-rhythm-buddy-pick-why className="block truncate text-[10px] font-bold text-lime-200">「{RHYTHM_BUDDY_PICK_WHY[m.pickWhy]}」</small>}
+                </span>
               </li>
             ))}
           </ul>
@@ -39562,7 +40514,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   return (
     <main data-rhythm-multi data-rhythm-multi-step="select" className={shell}>
-      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.left, advance: '締め切る' })}
+      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.deadline ? room.left : null, advance: '締め切る' })}
       <RhythmMultiMemberCards bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
       <RhythmSongSelect
         songs={songs}
@@ -39578,7 +40530,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         playLabel={myPick ? 'この曲に変更' : 'この曲で決定'}
         hideRandom
         notice={<>
-          <p className="rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300">全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。</p>
+          <p className="rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300">全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。{!room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'}</p>
           {buddyCallButton('mt-1 min-h-[40px]')}
         </>}
         footer={() => (
@@ -39671,6 +40623,8 @@ const rhythmBuddyMasuName = (masu) => {
   return String((masu && masu.name) || (base && base.name) || 'マスモン').slice(0, 12);
 };
 
+// マスモンごとの、直近に言ったセリフ(保存しない。部屋を出ても覚えているのは、このページを開いている間だけ)
+const rhythmBuddyTalkRecent = new Map();
 // 部屋の中で相棒が演奏と選曲をするための「頭」。RHYTHM_MULTI.setCpuBrain へ渡す
 const rhythmBuddyMakeBrain = (songs) => ({
   play({ songId, diffId, masuId, humans = 1 }) {
@@ -39686,10 +40640,37 @@ const rhythmBuddyMakeBrain = (songs) => ({
       chartLevel: chart ? Number(chart.level) || 0 : 0, humans,
     });
   },
-  // 得意な曲(上位3曲)から選ぶ。遊べる曲の中に無ければおまかせ('')
+  // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
+  // 直近に言ったものは避ける(マスモンごとに8つ覚える)
+  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false }) {
+    const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
+    const norm = rhythmBuddyNormalizeMon(mon);
+    const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
+    let scene = kind;
+    if (kind === 'result') {
+      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
+      scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
+    }
+    const song = songId ? (songs || []).find((x) => x.songId === songId) : null;
+    const key = String(masuId);
+    const recent = rhythmBuddyTalkRecent.get(key) || [];
+    const text = rhythmBuddyTalkPick({
+      kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal',
+      vars: { song: song ? rhythmSongFullName(song) : '' }, recent, rand: Math.random,
+    });
+    if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
+    return text;
+  },
+  // 性格と今日の調子で選び方が変わる(たまに新しい曲にも挑戦)。{ songId, why }。遊べる曲が無ければ songId は ''
   pick(catalog, masuId) {
-    const top = rhythmBuddyTopSongs(RHYTHM_BUDDY_STORE.get().mons[masuId], 3).filter((x) => (catalog || []).includes(x.songId));
-    return top.length ? top[Math.floor(Math.random() * top.length)].songId : '';
+    const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
+    const info = (id) => {
+      const song = (songs || []).find((x) => x.songId === id);
+      const levels = song && song.difficulties ? Object.values(song.difficulties).map((d) => Number(d && d.level) || 0) : [];
+      return { level: levels.length ? Math.max(...levels) : 0, durationMs: song ? Number(song.playDurationMs) || 0 : 0 };
+    };
+    return rhythmBuddyChooseSong(mon, catalog, { mood: rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon), info });
   },
 });
 
@@ -39742,9 +40723,9 @@ function RhythmBuddyStars({ stars }) {
   return <span aria-label={`得意度${stars}`} className="shrink-0 text-[11px] leading-none tracking-tight text-amber-300">{'★'.repeat(stars)}<span className="text-slate-600">{'★'.repeat(Math.max(0, 5 - stars))}</span></span>;
 }
 // 今日の残り回数とセッション券
-function RhythmBuddyAllowance({ freeLeft, tickets, className = '' }) {
+function RhythmBuddyAllowance({ freeLeft, tickets, className = '', compact = false }) {
   return (
-    <p data-rhythm-buddy-allowance className={`text-[11px] font-black leading-snug ${className}`}>
+    <p data-rhythm-buddy-allowance className={`font-black ${compact ? 'text-[10px] leading-none' : 'text-[11px] leading-snug'} ${className}`}>
       今日の無料 <b className={freeLeft > 0 ? 'text-lime-300' : 'text-slate-400'}>あと{freeLeft}回</b>
       <span className="mx-1 text-slate-500">/</span>セッション券 <b className="text-amber-200">{tickets}枚</b>
     </p>
@@ -39845,7 +40826,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">今日の調子</h4>
           <p data-rhythm-buddy-mood={mood.id} className="flex items-center gap-1 text-sm font-black"><RhythmBuddyMoodFace moodId={mood.id} size={22} />{mood.label}</p>
-          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります</small>
+          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
         </section>
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">性格</h4>
@@ -40143,7 +41124,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose, calledIds = [] }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [] }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -40152,6 +41133,8 @@ function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose,
   const detail = detailId ? (masuMons || []).find((x) => x && x.id === detailId) : null;
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
+  // M/B管理の「マスモン一覧(バトル)」と同じ並べ替え・カードで選ぶ(2026-10-07・ユーザー指示「マスモン呼び出しも管理画面と同じものに」)
+  const [selId, setSelId] = React.useState('');
   const choose = async (masu) => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -40172,8 +41155,46 @@ function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose,
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
             ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
-            : <div className="space-y-2">{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} settings={listControls.settings} /></div>}
+            : masuPicker
+              ? <div data-rhythm-buddy-picker>
+                {masuPicker.renderSortFilterBar({ singleType: true })}
+                {masuPicker.entries.length === 0
+                  ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">{(masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません'}</p>
+                  : <div className="grid grid-cols-3 gap-2.5 pb-4">
+                    {masuPicker.entries.map((e) => (
+                      <button key={e.key} type="button" data-rhythm-buddy-card onClick={() => setSelId(e.masu.id)} style={masuPicker.cardStyle}
+                        className={`${masuPicker.cardClass} ${selId === e.masu.id ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                        {masuPicker.renderCardBody({
+                          masu: e.masu, base: e.base, nameBand: true,
+                          status: calledIds.includes(e.masu.id) ? <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span> : null,
+                        })}
+                      </button>
+                    ))}
+                  </div>}
+              </div>
+              : <div className="space-y-2">{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} settings={listControls.settings} /></div>}
         </div>
+        {masuPicker && !detail && (() => {
+          const masu = selId ? (masuMons || []).find((x) => x && x.id === selId) : null;
+          if (!masu) return <p className="mt-2 text-center text-[11px] font-bold text-slate-400">呼びたいマスモンをタップしてください</p>;
+          const mon = state.mons[masu.id];
+          const mood = rhythmBuddyMood(masu.id, dayKey, mon);
+          const called = calledIds.includes(masu.id);
+          return (
+            <div data-rhythm-buddy-confirm className="mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-lime-300/40 bg-slate-950/80 p-2">
+              <RhythmBuddyFace masu={masu} sizeClass="h-11 w-11" />
+              <span className="min-w-0 flex-1">
+                <b className="block truncate text-[13px] font-black">{rhythmBuddyMasuName(masu)}</b>
+                <small className="flex items-center gap-1 text-[10px] font-bold text-slate-300"><RhythmBuddyMoodFace moodId={mood.id} size={16} />{mon ? `ビートLv.${rhythmBuddyLevelInfo(mon.exp).level}` : 'まだ一緒に遊んでいない'}</small>
+              </span>
+              <button type="button" onClick={() => setDetailId(masu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>
+              {called
+                ? <span data-rhythm-buddy-called className="shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
+                : <button data-rhythm-buddy-call type="button" disabled={busy || !canPay} onClick={() => choose(masu)}
+                  className="min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40">呼ぶ</button>}
+            </div>
+          );
+        })()}
         {listControls.sheet}
         {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
       </section>
@@ -40230,13 +41251,100 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
   const level = rhythmBuddyLevelInfo(shown.mon.exp).level;
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
   return (
-    <p data-rhythm-buddy-growth className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-1 text-[11px] font-black text-lime-100">
-      <span>🎵 {rhythmBuddyMasuName(masu)}</span>
+    <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100">
+      <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}</span>
       <span className="text-lime-300">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-buddy-levelup className="rounded bg-amber-300 px-1 text-slate-950">ビートLv.UP! Lv.{level}</span>}
       {shown.familiarUp && <span className="text-amber-200">この曲の得意度+1</span>}
       {trait && <span className="text-pink-200">性格が「{trait.label}」になった!</span>}
     </p>
+  );
+}
+
+// ==================== マスモンランキング(モンヒロビート・2026-10-07) ====================
+// マスモン1体ごとの「ビートLv」と「難易度ごとの最高スコア」の順位。血統は関係なく、そのマスモンの名前と見た目(染色つき)で並べる。
+// 中身は rhythm_buddy_ranks(39-rhythm-buddy-rank-api.jsx)。テーブルがまだ無いときは「準備中」と出す。
+const RHYTHM_BUDDY_RANK_CACHE_MS = 20000;
+const rhythmBuddyRankCache = new Map();
+function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onClose = null }) {
+  const [kind, setKind] = React.useState('level');
+  const [diffId, setDiffId] = React.useState('MASTER');
+  const [state, setState] = React.useState({ status: 'loading', entries: [] });
+  const [selfId, setSelfId] = React.useState('');
+  const [retry, setRetry] = React.useState(0);
+  React.useEffect(() => { let alive = true; ensureBreederId().then((id) => { if (alive && typeof id === 'string') setSelfId(id); }).catch(() => {}); return () => { alive = false; }; }, []);
+  const cacheKey = kind === 'score' ? `score:${diffId}` : 'level';
+  React.useEffect(() => {
+    let alive = true;
+    const hit = rhythmBuddyRankCache.get(cacheKey);
+    if (hit) setState({ status: 'ready', entries: hit.entries });
+    else setState({ status: 'loading', entries: [] });
+    if (hit && Date.now() - hit.at < RHYTHM_BUDDY_RANK_CACHE_MS) return () => { alive = false; };
+    sbFetchRhythmBuddyRanks(kind, diffId).then((entries) => {
+      if (!alive) return;
+      if (entries == null) { setState({ status: 'missing', entries: [] }); return; }
+      rhythmBuddyRankCache.set(cacheKey, { at: Date.now(), entries });
+      setState({ status: 'ready', entries });
+    }).catch(() => { if (alive && !hit) setState({ status: 'error', entries: [] }); });
+    return () => { alive = false; };
+  }, [cacheKey, retry]);
+  const songName = (id) => { const song = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).find((x) => x.songId === id); return song ? rhythmSongFullName(song) : ''; };
+  const chip = (on) => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
+  const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1));
+  return (
+    <div data-rhythm-buddy-ranking className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+      <div className="flex items-center gap-2">
+        {onClose && <button data-rhythm-buddy-ranking-back type="button" aria-label="戻る" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>}
+        <div className="min-w-0 flex-1 leading-tight">
+          <b className="block truncate text-base font-black text-lime-100">🎶 マスモンランキング</b>
+          <small className="block text-[10px] font-bold text-slate-400">モンヒロビートで育てたマスモンの順位です</small>
+        </div>
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto">
+        <button type="button" data-rhythm-buddy-ranking-tab="level" onClick={() => setKind('level')} className={chip(kind === 'level')}>ビートLv</button>
+        <button type="button" data-rhythm-buddy-ranking-tab="score" onClick={() => setKind('score')} className={chip(kind === 'score')}>最高スコア</button>
+      </div>
+      {kind === 'score' && (
+        <div data-rhythm-buddy-ranking-diffs className="flex gap-1.5 overflow-x-auto">
+          {RHYTHM_BUDDY_DIFF_IDS.map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
+        </div>
+      )}
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+        {state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
+        {state.status === 'missing' && <p data-rhythm-buddy-ranking-missing className="py-8 text-center text-sm font-bold text-amber-200">マスモンランキングは準備中です</p>}
+        {state.status === 'error' && (
+          <div className="py-8 text-center">
+            <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
+            <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
+          </div>
+        )}
+        {state.status === 'ready' && state.entries.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう</p>}
+        {state.status === 'ready' && state.entries.map((e, i) => {
+          const base = ALL_PLAYER_MONSTERS[e.monsterId];
+          const mine = (selfId && e.breederId === selfId) || (!e.breederId && !!selfName && e.userName === selfName);
+          const score = e.scores[diffId] || 0;
+          const sub = kind === 'score' ? (songName(e.songs[diffId]) || '') : `${e.lives}ライブ`;
+          return (
+            <article key={`${e.breederId || e.userName}-${e.individualId}`} data-rhythm-buddy-ranking-row={i + 1} data-mine={mine ? '1' : undefined}
+              className={`grid grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`}>
+              <b className="text-center text-sm font-black text-slate-200">{medal(i)}</b>
+              {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true" className="text-lg">👤</span>}
+              <span className="relative block h-11 w-11 overflow-hidden rounded-lg bg-slate-800">
+                <DyedMonsterImage baseId={e.monsterId} src={masuDisplayImageUrl(base)} alt="" masuColors={e.colors} draggable={false} className="h-full w-full object-contain" />
+              </span>
+              <span className="min-w-0 leading-tight">
+                <b className="block truncate text-[13px] font-black text-white">{e.monName}</b>
+                <small className="block truncate text-[10px] font-bold text-slate-400">{e.userName}{mine ? '(あなた)' : ''}</small>
+                {sub && <small className="block truncate text-[10px] font-bold text-slate-500">{sub}</small>}
+              </span>
+              <b className="text-right text-base font-black leading-tight text-lime-200">
+                {kind === 'score' ? <>{score.toLocaleString()}<small className="block text-[9px] font-bold text-slate-400">点</small></> : <>Lv.{e.beatLevel}<small className="block text-[9px] font-bold text-slate-400">{e.beatExp.toLocaleString()}EXP</small></>}
+              </b>
+            </article>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -42476,7 +43584,7 @@ function MonsterHeroGame() {
   ownedItemsRef.current = ownedItems;
   // マスモン一覧(モンヒロビート)の戻り先(M/B管理 か モンヒロビートのモードえらび)
   const [masuBeatBack, setMasuBeatBack] = useState('MB_MANAGEMENT');
-  const openMasuBeat = (from) => { setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT'); setGameState('MASU_BEAT'); };
+  const openMasuBeat = (from) => { setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT'); setGameState('RHYTHM_MASU_BEAT'); };
   // セッション券を1枚使う(モンヒロビートのマルチでマスモンを呼ぶとき。docs/spec/RHYTHM_BUDDY.md)。
   // 1日の無料ぶんを使い切ったあとにだけ呼ばれる。持っていなければ false
   const consumeBuddyTicket = async () => {
@@ -42966,6 +44074,8 @@ function MonsterHeroGame() {
   // イベント回想: プロフィールから見返す一覧の開閉と、再生中のイベント({id,step}、nullなら非表示)。
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
+  // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
+  const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);   // デバッグ設定の「全ストーリーを確認」の一覧(公開前も含めて全部。見たことにはしない)
   // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
@@ -43738,15 +44848,18 @@ function MonsterHeroGame() {
       || null;
     return monsterId ? monsterLineageOf(monsterId).main.id : null;
   }, []);
+  // 画面に出すのは「同じ人の同じモンスターは1体だけ」(pickTopPerBreederMonster・2026-10-07)
+  const bondRankingShown = useMemo(() => pickTopPerBreederMonster(bondRankingAll), [bondRankingAll]);
   const bondRanking = useMemo(() => (
     bondRankMonFilter === 'all'
-      ? bondRankingAll.slice(0, 50)
-      : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
-  ), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+      ? bondRankingShown.slice(0, 50)
+      : bondRankingShown.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
+  ), [bondRankingShown, bondRankMonFilter, bondEntryLineageId]);
   // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
   // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
   // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
-  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 総合力でも同じ人の同じモンスターは1体だけ(総合力のいちばん高い子が残る)
+  const powerRankingAll = useMemo(() => pickTopPerBreederMonster(collectPowerRankingEntries(bondRankingAll)), [bondRankingAll]);
   // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
   const powerRanking = useMemo(() => (
     powerRankMonFilter === 'all'
@@ -44736,7 +45849,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
-    MASU_BEAT: 'masuBeat',      // マスモン一覧(モンヒロビート)。初期の曲は SIX ÉTERNEL(2026-10-07・ユーザー指示「BGMはsixエターナルにして」)
+    RHYTHM_MASU_BEAT: 'management', // マスモン一覧(モンヒロビート)はM/B管理と同じ曲を続ける(対応表に載せ忘れると無音になる)
     RHYTHM_MODE_SELECT: 'rhythmModeSelect', // モンヒロビートのモードえらび(2026-10-03・ユーザー指示「新しい画面が出るから初期BGMもアレンジも追加」)
     RAID_JACK: 'home', RAID_JACK_PREP: 'home', RAID_JACK_PLACE: 'home', // イベント・レイドボス「ジャック」のレイド画面と編成もHOMEの曲を続ける
     FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
@@ -44841,7 +45954,9 @@ function MonsterHeroGame() {
   // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
   //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
   //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI'];
+  // RHYTHM_MASU_BEAT(マスモン一覧)は、モードえらびと M/B管理の両方から開く。2026-10-07、名前が RHYTHM_ で始まっていなかったため、
+  // 「ビートLv」を押すと「モンビーを離れた」と判断され、裏で進んでいた周回がバトル画面へ切り替わった(ユーザー報告)
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT','RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI','RHYTHM_MASU_BEAT'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   //
   // ★**一覧で持たず、gameStateの頭で見る。**
@@ -47020,6 +48135,50 @@ function MonsterHeroGame() {
     return () => clearTimeout(timer);
   }, [dataLoaded, masuMons, breederName, breederIcon, profileFrameId, bondLiveSyncTick]);
 
+  // マスモンランキング(モンヒロビート)のリアルタイム更新(2026-10-07)。絆Lvと同じ考え方で、
+  // 一緒に遊んで育ちが変わったマスモン・名前・アイコン・フレームが変わったら、落ち着くのを待ってから
+  // 変わった個体の行だけを rhythm_buddy_ranks へ上書きする。送れなくても遊びは止めない(次の変化か次の起動で送り直す)。
+  // マルチの公開前は送らない(公開前の記録を表へ入れないため)
+  const buddyRankStore = useRhythmBuddyState();
+  const buddyRankSyncRef = useRef({ loaded: null, running: false, again: false, lastAt: 0 });
+  const [buddyRankSyncTick, setBuddyRankSyncTick] = useState(0);
+  const syncBuddyRanksLive = async () => {
+    const state = buddyRankSyncRef.current;
+    if (state.running) { state.again = true; return; }
+    if (buddyRanksUnavailable() || RELEASE_FLAGS.rhythmMulti !== true) return;
+    state.running = true;
+    try {
+      if (!state.loaded) state.loaded = normalizeRhythmBuddyRankSync(await storeGet(RHYTHM_BUDDY_RANK_SYNC_KEY, null, false));
+      const breederId = await ensureBreederId();
+      const rows = rhythmBuddyRankRows(breederName || '名無しのブリーダー', breederIcon,
+        masuMonsRef.current, RHYTHM_BUDDY_STORE.get(), rankingProfileFrameValue(profileFrameId), breederId);
+      const pending = rhythmBuddyRankRowsToSync(rows, state.loaded.sent);
+      for (let i = 0; i < pending.length; i += RHYTHM_BUDDY_RANK_SYNC_CHUNK) {
+        const chunk = pending.slice(i, i + RHYTHM_BUDDY_RANK_SYNC_CHUNK);
+        state.lastAt = Date.now();
+        const ok = await sbUpsertRhythmBuddyRanks(chunk);
+        if (!ok) break;
+        // 送れた行だけ指紋を覚える(送れなかった行は次の機会に送り直す)
+        const sent = { ...state.loaded.sent };
+        chunk.forEach(row => { sent[rhythmBuddyRankSyncKeyOf(row)] = bondLevelRowSignature(row); });
+        state.loaded = { version: 1, sent };
+        await storeSet(RHYTHM_BUDDY_RANK_SYNC_KEY, state.loaded, false);
+      }
+    } catch (err) {
+      console.error('[ranking] rhythm_buddy_ranks live sync failed:', err && err.message ? err.message : err);
+    } finally {
+      state.running = false;
+      if (state.again) { state.again = false; setBuddyRankSyncTick(t => t + 1); }
+    }
+  };
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const state = buddyRankSyncRef.current;
+    const wait = Math.max(RHYTHM_BUDDY_RANK_SYNC_DELAY_MS, state.lastAt + RHYTHM_BUDDY_RANK_SYNC_MIN_INTERVAL_MS - Date.now());
+    const timer = setTimeout(() => { void syncBuddyRanksLive(); }, wait);
+    return () => clearTimeout(timer);
+  }, [dataLoaded, masuMons, buddyRankStore, breederName, breederIcon, profileFrameId, buddyRankSyncTick]);
+
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
     // 表示名はマスモンの個体名(ブリーダーが自由につけた名前)ではなく、血統(種族)の名前を使う
@@ -49030,7 +50189,7 @@ function MonsterHeroGame() {
         setSoulRankAnimation(null);
         setSoulRankSelectedId(null);
         soulRankProcessingRef.current=false;
-      }, prefersReducedMotion()?800:2400);
+      }, prefersReducedMotion()?1100:5200);
     } catch {
       soulRankProcessingRef.current=false;
       setSoulRankError('魂格進化のデータを保存できませんでした。ダイヤと勇者の証は消費していません。');
@@ -49046,6 +50205,8 @@ function MonsterHeroGame() {
     masuMonsRef.current = next; setMasuMons(next);
     setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.masu:prev);
     setTranscendPlan(null);
+    // 通常強化と同じく、ミッションの「モンスターを強化する」に数える(2026-10-07・ユーザー報告「超越強化だとミッションがクリアにならなかった」)
+    saveMissionProgress('enhance');
     // 通常強化と同じように、確定したことが分かる全画面演出を出す。
     // 何がいくつ上がったかは「下書きの数」ではなく実際の前後の差から出す
     // (間合い適性はMで頭打ちになるので、下書きどおりに上がるとは限らない)
@@ -53893,6 +55054,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   ・公開フラグが下りている
   const rhythmAutoStartInsideRef = useRef(false);
   useEffect(() => {
+    // マスモン一覧(RHYTHM_MASU_BEAT)は、見るだけの画面。出入りしても「入った瞬間」に数えない
+    // (M/B管理から開いただけで周回が始まったり、モードえらびへ戻るたびに始まったりしないように)
+    if (gameState === 'RHYTHM_MASU_BEAT') return;
     const inside = RHYTHM_AUTO_START_SCREENS.includes(gameState);
     const wasInside = rhythmAutoStartInsideRef.current;
     rhythmAutoStartInsideRef.current = inside;
@@ -56504,8 +57668,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM']]},
-      {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['masuBeat','マスモン一覧(モンヒロビート) BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM']]},
+      {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
@@ -58492,7 +59656,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
@@ -58500,6 +59664,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
           rankingSupport={{
+            breederIcon:rankingBreederIcon,
             // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
             // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
             open:(song)=>{loadRhythmRanking(song);},
@@ -59205,7 +60370,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
             onSelectBattleMode={setProfileBattleMode}
-            onOpenEventReplayList={()=>setShowEventReplayList(true)}
+            onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
@@ -59503,7 +60668,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* マスモン一覧: ラン終了時に登録した固有インスタンス。タップで詳細・改名・強化ポイント使用 */}
         {/* マスモン一覧(モンヒロビート)。M/B管理とモンヒロビートのモードえらびから開き、開いた画面へ戻る */}
-        {gameState==='MASU_BEAT'&&(
+        {gameState==='RHYTHM_MASU_BEAT'&&(
           <MasuBeatScreen masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} tickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)}
             onBack={()=>setGameState(masuBeatBack)} backLabel={masuBeatBack==='MB_MANAGEMENT'?'M/B管理へ戻る':'モードえらびへ戻る'}/>
         )}
@@ -59700,7 +60865,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const sortOpts = sortFilterModalSingleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
           const dispOpts = sortFilterModalSingleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
           return (
-            <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:32500,paddingTop:'env(safe-area-inset-top)'}}>
+            <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')?90000:32500,paddingTop:'env(safe-area-inset-top)'}}>
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10">
                 <h3 className="text-base font-black text-white flex-1">並べ替え・表示設定</h3>
                 <button onClick={()=>setShowSortFilterModal(false)} className="p-2.5 bg-white/5 rounded-full active:scale-90"><X size={18}/></button>
@@ -60216,43 +61381,98 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {/* イベント回想の一覧。未閲覧のイベントは「？？？」で伏せ、タップできない。
-            ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
-        {showEventReplayList&&(
+        {/* イベント回想は2ページ(2026-10-07・ユーザー指示「1ページ増やして、パネル式でイベント単位で表示。押すとその内容のイベントにうつる」)。
+            1ページ目: イベント単位のパネル(eventReplayGroups)。押すとそのまとまりのお話へ。
+            2ページ目: そのまとまりのお話の一覧(お話の順)。未閲覧は「？？？」で伏せ、タップできない。
+            ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする。
+            再生を終える・スキップすると、2ページ目(同じまとまり)へ戻る(fromList)。続けて次のお話を選べる */}
+        {showEventReplayList&&(()=>{
+          const groups=eventReplayGroups();
+          const activeGroup=groups.find(group=>group.id===eventReplayGroupId)||null;
+          const closeList=()=>{setShowEventReplayList(false);setEventReplayGroupId(null);};
+          const rangeText=(group)=>{
+            const first=eventReplayDateText(group.events[0]),last=eventReplayDateText(group.events[group.events.length-1]);
+            return first&&last&&first!==last?`${first} 〜 ${last}`:(first||last);
+          };
+          const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
+          return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
-              <h3 className="text-base font-black text-white mb-1 text-center">イベント回想</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。</p>
-              <div className="space-y-2 mb-3">
-                {eventReplayList().map(event=>{
-                  const eventUnlocked=isEventReplayUnlocked(event);
-                  if(!eventUnlocked){
-                    return (
-                      <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
-                        <span className="text-lg" aria-hidden="true">🔒</span>
-                        <span className="min-w-0 flex-1">
-                          <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                          <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
-                        </span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <button key={event.id} type="button" onClick={()=>{setEventReplay({id:event.id,step:0});setShowEventReplayList(false);}}
-                      className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
-                      <Play size={16} className="text-fuchsia-300 shrink-0"/>
-                      <span className="min-w-0 flex-1">
-                        <b className="block text-[12px] font-black text-white">{event.title}</b>
-                        <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <button onClick={()=>setShowEventReplayList(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            <div data-event-replay-page={activeGroup?'episodes':'panels'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+              {!activeGroup&&(
+                <>
+                  {/* 1ページ目: イベント単位のパネル */}
+                  <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
+                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たいイベントを選んでください。<br/>見たことのある会話を、何度でも見返せます。</p>
+                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3">
+                    {groups.map(group=>{
+                      const seen=seenOf(group),total=group.events.length;
+                      return (
+                        <button key={group.id} type="button" data-event-replay-group={group.id} onClick={()=>setEventReplayGroupId(group.id)}
+                          className="w-full rounded-2xl px-3 py-3 flex items-center gap-3 text-left active:scale-[.97]"
+                          style={{border:`1.5px solid ${group.color}66`,backgroundColor:`${group.color}14`}}>
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl" aria-hidden="true" style={{backgroundColor:`${group.color}26`}}>{group.emoji}</span>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[13px] font-black text-white leading-tight">{group.label}</b>
+                            <small className="block text-[9px] text-slate-400 leading-tight">{group.note}</small>
+                            {rangeText(group)&&<small data-event-replay-date className="block text-[9px] tabular-nums text-slate-500">{rangeText(group)}</small>}
+                            <span className="mt-1 flex items-center gap-1.5">
+                              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><span className="block h-full rounded-full" style={{width:`${total?Math.round(seen/total*100):0}%`,backgroundColor:group.color}}/></span>
+                              <small className="shrink-0 text-[10px] font-black tabular-nums" style={{color:group.color}}>{seen}/{total}</small>
+                            </span>
+                          </span>
+                          <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={closeList} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+                </>
+              )}
+              {activeGroup&&(
+                <>
+                  {/* 2ページ目: そのまとまりのお話(お話の順) */}
+                  <div className="shrink-0 mb-1 flex items-center gap-2">
+                    <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 active:scale-95"><ArrowLeft size={18}/></button>
+                    <span className="min-w-0 flex-1 text-center">
+                      <b className="block text-[14px] font-black text-white leading-tight"><span aria-hidden="true">{activeGroup.emoji} </span>{activeGroup.label}</b>
+                      <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
+                    </span>
+                    <span className="w-11 shrink-0" aria-hidden="true"/>
+                  </div>
+                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">お話の順に並んでいます。</p>
+                  <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3">
+                    {activeGroup.events.map(event=>{
+                      const eventUnlocked=isEventReplayUnlocked(event);
+                      if(!eventUnlocked){
+                        return (
+                          <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
+                            <span className="text-lg" aria-hidden="true">🔒</span>
+                            <span className="min-w-0 flex-1">
+                              <b className="block text-[12px] font-black text-slate-400">？？？</b>
+                              <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button key={event.id} type="button" onClick={()=>{setEventReplay({id:event.id,step:0,fromList:true});setShowEventReplayList(false);}}
+                          className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
+                          <Play size={16} className="text-fuchsia-300 shrink-0"/>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[12px] font-black text-white">{event.title}</b>
+                            <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={()=>setEventReplayGroupId(null)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">イベントの一覧へ戻る</button>
+                </>
+              )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {showIconPicker&&(()=>{
           // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
@@ -60994,6 +62214,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           if(eventReplay.debugList) setShowDebugStoryList(true);
+          if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
@@ -61006,6 +62227,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.debugList) setShowDebugStoryList(true);
+          if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
         };
         return(
@@ -66876,6 +68098,28 @@ const createAnimationStyle = () => {
     @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
     @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
     @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
+    /* 魂格進化の演出(神殿)。段階の色(--accent)で燃え上がる */
+    .mh-soulevo{position:fixed;inset:0;z-index:50500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 44%,color-mix(in srgb,var(--accent) 45%,#020617),#020617 72%);animation:mhSoulevoIn .5s ease-out both}
+    .mh-soulevo.is-final{background:radial-gradient(circle at 50% 44%,#4c1d9588,#020617 72%),conic-gradient(from 0deg,#1d4ed855,#ca8a0455,#16a34a55,#dc262655,#9333ea55,#1d4ed855)}
+    .mh-soulevo-beams{position:absolute;inset:0;pointer-events:none}.mh-soulevo-beams i{position:absolute;bottom:-10%;left:calc(4% + var(--i)*11%);width:7%;height:85%;background:linear-gradient(to top,var(--accent),transparent);filter:blur(8px);opacity:.55;transform-origin:bottom;animation:mhSoulevoBeam 1.8s ease-in-out calc(var(--i)*.1s) infinite alternate}
+    .mh-soulevo-wave{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-wave i{position:absolute;left:-130px;top:-130px;width:260px;height:260px;border-radius:50%;border:3px solid var(--accent);box-shadow:0 0 36px var(--accent);opacity:0;animation:mhSoulevoWave 2.2s ease-out infinite}.mh-soulevo-wave i:nth-child(2){animation-delay:.7s}.mh-soulevo-wave i:nth-child(3){animation-delay:1.4s}
+    .mh-soulevo-mon{position:relative;width:180px;height:180px;margin-top:-120px;animation:mhSoulevoMon 1.1s ease-in-out infinite alternate;filter:drop-shadow(0 0 26px var(--accent))}
+    .mh-soulevo-sparks{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-sparks i{position:absolute;left:0;top:0;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);opacity:0;animation:mhSoulevoSpark 2s ease-out calc(var(--i)*.11s) infinite;--a:calc(var(--i)*22.5deg)}
+    .mh-soulevo-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhSoulevoFlash 1.3s ease-out 1.7s both}
+    .mh-soulevo-copy{position:absolute;left:0;right:0;bottom:10%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 16px;text-align:center}
+    .mh-soulevo-kicker{font-size:11px;font-weight:900;letter-spacing:.4em;color:#cbd5e1}.mh-soulevo-from{font-size:12px;font-weight:900;color:#94a3b8}
+    .mh-soulevo-label{font-size:40px;font-weight:900;color:var(--accent);text-shadow:0 0 22px var(--accent);opacity:0;animation:mhSoulevoPop .6s ease-out 1.9s both}
+    .mh-soulevo.is-final .mh-soulevo-label{background:linear-gradient(90deg,#60a5fa,#fbbf24,#4ade80,#f87171,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+    .mh-soulevo-cap{font-size:14px;font-weight:900;color:#6ee7b7;opacity:0;animation:mhSoulevoPop .5s ease-out 2.3s both}.mh-soulevo-cap b{font-size:34px;font-family:ui-monospace,monospace;color:#fff}
+    .mh-soulevo-sub{font-size:11px;font-weight:900;color:#94a3b8;opacity:0;animation:mhSoulevoPop .5s ease-out 2.6s both}
+    @keyframes mhSoulevoIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhSoulevoBeam{from{opacity:.25;transform:scaleY(.7)}to{opacity:.7;transform:scaleY(1)}}
+    @keyframes mhSoulevoWave{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+    @keyframes mhSoulevoMon{from{transform:scale(1)}to{transform:scale(1.07)}}
+    @keyframes mhSoulevoSpark{0%{opacity:0;transform:rotate(var(--a)) translateY(-20px)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-210px)}}
+    @keyframes mhSoulevoFlash{0%{opacity:0}25%{opacity:.9}100%{opacity:0}}
+    @keyframes mhSoulevoPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-soulevo *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-soulevo-label,.mh-soulevo-cap,.mh-soulevo-sub{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}

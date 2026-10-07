@@ -179,7 +179,7 @@ const makeMasu = (stage, level, over = {}) => api.normalizeMasuProgression({
     && app.includes("gameState==='MASU_SOUL_RANK'")
     && app.includes("paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'"));
   check('成功演出は短時間だけ・reduced motionで短縮',
-    app.includes('data-soul-rank-animation') && app.includes('prefersReducedMotion()?800:2400'));
+    app.includes('data-soul-rank-animation') && app.includes('prefersReducedMotion()?1100:5200'));
   // STEP2検査は進化・勇者の証の回帰条件だけを固定する。
   // STEP3以降が追加されても、STEP2で成立した仕様そのものは引き続き検査する。
 
