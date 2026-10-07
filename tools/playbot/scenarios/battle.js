@@ -212,9 +212,13 @@ async function battleScenario(s, { manualTurns = 6, autoMs = 60000, system = 'sy
   const { inBattle, heroName } = await enterQuickBattle(s, { system });
   stats.entered = inBattle; stats.hero = heroName;
   if (!inBattle) { await s.addIssue('進めない', `${system === 'systemQuick' ? 'クイックモード' : 'チャレンジモード'}のバトル画面へ入れなかった`); return { ok: false, stats }; }
-  await playManualTurns(s, manualTurns, stats);
-  await watchAuto(s, autoMs, stats);
-  return { ok: true, stats, note: `${heroName || '?'}・手で${stats.manualTurns}ターン(WAVE ${stats.wavesCleared}つ突破) → AUTO で W${stats.endWave} / T${stats.endTurn}${stats.finished ? '(決着)' : ''}` };
+  if (manualTurns > 0) await playManualTurns(s, manualTurns, stats);
+  // AUTO は AUTO係の受け持ち。手で遊ぶ係(autoMs: 0)は AUTO を入れずに終える
+  if (autoMs > 0) await watchAuto(s, autoMs, stats);
+  else { const end = await readBattle(s); stats.endWave = end.wave; stats.endTurn = end.turn; }
+  const manual = manualTurns > 0 ? `手で${stats.manualTurns}ターン(WAVE ${stats.wavesCleared}つ突破)` : '';
+  const auto = autoMs > 0 ? `AUTO ${Math.round(autoMs / 1000)}秒で W${stats.endWave} / T${stats.endTurn}` : `W${stats.endWave} / T${stats.endTurn} まで`;
+  return { ok: true, stats, note: `${heroName || '?'}・${[manual, auto].filter(Boolean).join(' → ')}${stats.finished ? '(決着)' : ''}` };
 }
 
 module.exports = { battleScenario, enterQuickBattle };
