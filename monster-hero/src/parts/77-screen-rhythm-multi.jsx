@@ -1327,10 +1327,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
   const [rankingOpen, setRankingOpen] = React.useState(false);
+  // モードえらびの「プライベートルーム」の入室シートと、「ランキング」(全国/マスモン)の重ね画面(2026-10-07)
+  const [privateOpen, setPrivateOpen] = React.useState(false);
+  const [rankHubOpen, setRankHubOpen] = React.useState(false);
+  const [rankHubTab, setRankHubTab] = React.useState('national');
   const [recordOpen, setRecordOpen] = React.useState(false);
   // マスモンを呼ぶ(docs/spec/RHYTHM_BUDDY.md)。'' / 'pick'(部屋へ呼ぶ選択の画面)
   const [buddySheet, setBuddySheet] = React.useState('');
   const buddySongKey = songs.map((song) => song.songId).join(',');
+  // モードえらびに出す、今日の無料のセッション残り回数(2026-10-07・ユーザー指示「この画面で無料セッション分と券の枚数を見れるように」)
+  const buddyStoreState = useRhythmBuddyState();
+  const buddyDayKey = useRhythmBuddyDayKey();
   // 「マスモンを呼べるようになった」の一度きりの案内(新しい保存キー。既存のキーは触らない)
   const [buddyIntroSeen, setBuddyIntroSeen] = React.useState(true);
   React.useEffect(() => {
@@ -1593,6 +1600,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     setChatOpen(false);
     setRankingOpen(true);
   };
+  // モードえらびの「ランキング」。全国ランキング(いつもの画面)とマスモンランキングを切り替える。
+  // 全国のほうは曲ごとの順位なので、見る曲は部屋の中のときと同じ決め方
+  const openRankHub = () => {
+    const song = songById(rankingSongId);
+    if (rankingSupport && song) rankingSupport.open(song);
+    setRankHubTab('national');
+    setRankHubOpen(true);
+  };
   const rankingButton = (extra = '') => rankingSupport && (
     <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
       className={`min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`}>🏆</button>
@@ -1729,20 +1744,22 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎮</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small><RhythmMultiLobbyCount /></span>
               </button>}
+              {/* プライベートルーム: 友だちと遊ぶ。作成と、コードを入れての入室は、押すと開くシートへ(2026-10-07・「ダサいので一新して」) */}
+              {ms.multi && <button data-rhythm-mode-private data-rhythm-mode-private-open type="button" onClick={() => { setMessage(''); setPrivateOpen(true); }}
+                className="mhms-card private mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-blue-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px]" style={{ animationDelay: '.2s' }}>
+                <span aria-hidden="true" className="mhms-mark">PRIVATE</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🔑</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">プライベート</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">合言葉で友だちと遊ぶ</small></span>
+              </button>}
+              {/* ランキング: 全国ランキングとマスモンランキング */}
+              {ms.multi && <button data-rhythm-mode-ranking type="button" onClick={openRankHub}
+                className="mhms-card rank mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-lime-200 via-emerald-300 to-teal-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px]" style={{ animationDelay: '.24s' }}>
+                <span aria-hidden="true" className="mhms-mark">RANKING</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🏆</span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">ランキング</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">全国とマスモンの順位</small></span>
+              </button>}
             </div>
-            {ms.multi && (
-              <section data-rhythm-mode-private className="mhms-glass mhms-in min-w-0 rounded-2xl p-2.5" style={{ animationDelay: '.2s' }}>
-                <h3 className="mb-1.5 flex items-center gap-1.5 text-[11px] font-black text-violet-100"><span aria-hidden="true">🔑</span>プライベートルーム<small className="font-bold text-violet-200/70">友だちと遊ぶ</small></h3>
-                <div className="flex min-w-0 gap-2">
-                  <button data-rhythm-multi-create type="button" className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95" onClick={createPrivate}>＋ 作成</button>
-                  <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
-                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                    className="min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-violet-300/30 bg-slate-950/70 px-1 text-center text-base font-black tracking-[0.25em] text-white" placeholder="ABCD" />
-                  <button data-rhythm-multi-join type="button" className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-violet-500 to-indigo-700 px-3 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-95" onClick={joinPrivate}>入室</button>
-                </div>
-              </section>
-            )}
-            {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
+            {message && !privateOpen && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
             {ms.multi && !buddyIntroSeen && masuMons.length > 0 && (
               <section data-rhythm-buddy-intro className="mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5">
                 <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
@@ -1750,6 +1767,13 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
                 <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </section>
+            )}
+            {/* マスモンを呼べる回数。1日の無料ぶんの残りと、セッション券の枚数(部屋の「マスモンを呼ぶ」で使う) */}
+            {ms.multi && (
+              <div data-rhythm-mode-session className="mhms-in -my-1 flex items-center justify-center gap-x-2 whitespace-nowrap px-1 text-[10px] leading-none">
+                <b className="font-black text-lime-200">🎶 マスモンのセッション</b>
+                <RhythmBuddyAllowance freeLeft={rhythmBuddyFreeLeft(buddyStoreState, buddyDayKey)} tickets={buddyTickets} compact className="text-slate-200" />
+              </div>
             )}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
             <div className={`mhms-in grid gap-2 ${ms.multi ? 'grid-cols-5 gap-1.5' : 'grid-cols-3'}`} style={{ animationDelay: '.28s' }}>
@@ -1777,6 +1801,48 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div aria-hidden="true" className="shrink-0" style={{ height: 'var(--mh-sa-bottom)' }} />
         {recordOpen && <RhythmMultiRecordSheet songName={(id) => { const song = songById(id); return song ? rhythmSongFullName(song) : '(曲)'; }} onClose={() => setRecordOpen(false)} />}
         {buddySheetLayer}
+        {/* プライベートルーム: 部屋をつくる / 合言葉で入る(2026-10-07。もとは欄の中に作成・コード・入室を並べていた) */}
+        {privateOpen && (
+          <div className="absolute inset-0 z-[85000]">
+            <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={() => setPrivateOpen(false)} />
+            <div data-rhythm-mode-private-sheet className="absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-sky-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(440px,62%)] landscape:rounded-none landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(1rem + var(--mh-sa-bottom))' }}>
+              <div className="flex items-center gap-2">
+                <span aria-hidden="true" className="text-2xl leading-none">🔑</span>
+                <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-sky-100">プライベートルーム</b><small className="block text-[11px] font-bold text-slate-400">合言葉で、友だちだけと遊べます</small></div>
+                <button type="button" aria-label="閉じる" onClick={() => setPrivateOpen(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+              </div>
+              <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
+                <b className="block text-[13px] font-black text-white">部屋をつくる</b>
+                <p className="text-[11px] font-bold leading-snug text-slate-300">合言葉(ルームコード)ができます。友だちに伝えて入ってもらいましょう</p>
+                <button data-rhythm-multi-create type="button" onClick={createPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">＋ 部屋をつくる</button>
+              </section>
+              <section className="space-y-1.5 rounded-2xl border border-violet-300/25 bg-slate-950/50 p-3">
+                <b className="block text-[13px] font-black text-white">合言葉で入る</b>
+                <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                  onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                  className="min-h-[52px] w-full rounded-xl border border-violet-300/30 bg-slate-950/80 px-2 text-center text-xl font-black tracking-[0.35em] text-white" placeholder="ABCD" />
+                <button data-rhythm-multi-join type="button" onClick={joinPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-violet-500 to-purple-700 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">入室する</button>
+              </section>
+              {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
+            </div>
+          </div>
+        )}
+        {/* ランキング: 全国ランキング(いつもの画面)とマスモンランキングを、下のタブで切り替える */}
+        {rankHubOpen && (
+          <div data-rhythm-mode-ranking-layer className="absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950">
+            <div className="flex min-h-0 flex-1 flex-col">
+              {rankHubTab === 'national'
+                ? (rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null)
+                : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} />}
+            </div>
+            <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
+              {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
+                <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
+                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     );
   }

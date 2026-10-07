@@ -79,7 +79,7 @@ const pure = (() => {
     mon = r.mon;
     if (mon.trait) traitAtLevel = b.level(mon.exp).level;
   }
-  check('性格は Lv.50 で決まる', traitAtLevel === 50, `Lv.${traitAtLevel}`);
+  check('性格は Lv.30 で決まる', traitAtLevel === 30, `Lv.${traitAtLevel}`);
   check('EXPERT・MASTER をよく遊ぶとひょうきん(種類の傾向より育て方が勝つ)', mon && mon.trait === 'jester', mon && mon.trait);
 
   // 9つの性格: 育て方ごとに決まる

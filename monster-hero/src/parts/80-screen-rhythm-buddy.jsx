@@ -144,9 +144,9 @@ function RhythmBuddyStars({ stars }) {
   return <span aria-label={`得意度${stars}`} className="shrink-0 text-[11px] leading-none tracking-tight text-amber-300">{'★'.repeat(stars)}<span className="text-slate-600">{'★'.repeat(Math.max(0, 5 - stars))}</span></span>;
 }
 // 今日の残り回数とセッション券
-function RhythmBuddyAllowance({ freeLeft, tickets, className = '' }) {
+function RhythmBuddyAllowance({ freeLeft, tickets, className = '', compact = false }) {
   return (
-    <p data-rhythm-buddy-allowance className={`text-[11px] font-black leading-snug ${className}`}>
+    <p data-rhythm-buddy-allowance className={`font-black ${compact ? 'text-[10px] leading-none' : 'text-[11px] leading-snug'} ${className}`}>
       今日の無料 <b className={freeLeft > 0 ? 'text-lime-300' : 'text-slate-400'}>あと{freeLeft}回</b>
       <span className="mx-1 text-slate-500">/</span>セッション券 <b className="text-amber-200">{tickets}枚</b>
     </p>
@@ -639,5 +639,92 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
       {shown.familiarUp && <span className="text-amber-200">この曲の得意度+1</span>}
       {trait && <span className="text-pink-200">性格が「{trait.label}」になった!</span>}
     </p>
+  );
+}
+
+// ==================== マスモンランキング(モンヒロビート・2026-10-07) ====================
+// マスモン1体ごとの「ビートLv」と「難易度ごとの最高スコア」の順位。血統は関係なく、そのマスモンの名前と見た目(染色つき)で並べる。
+// 中身は rhythm_buddy_ranks(39-rhythm-buddy-rank-api.jsx)。テーブルがまだ無いときは「準備中」と出す。
+const RHYTHM_BUDDY_RANK_CACHE_MS = 20000;
+const rhythmBuddyRankCache = new Map();
+function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onClose = null }) {
+  const [kind, setKind] = React.useState('level');
+  const [diffId, setDiffId] = React.useState('MASTER');
+  const [state, setState] = React.useState({ status: 'loading', entries: [] });
+  const [selfId, setSelfId] = React.useState('');
+  const [retry, setRetry] = React.useState(0);
+  React.useEffect(() => { let alive = true; ensureBreederId().then((id) => { if (alive && typeof id === 'string') setSelfId(id); }).catch(() => {}); return () => { alive = false; }; }, []);
+  const cacheKey = kind === 'score' ? `score:${diffId}` : 'level';
+  React.useEffect(() => {
+    let alive = true;
+    const hit = rhythmBuddyRankCache.get(cacheKey);
+    if (hit) setState({ status: 'ready', entries: hit.entries });
+    else setState({ status: 'loading', entries: [] });
+    if (hit && Date.now() - hit.at < RHYTHM_BUDDY_RANK_CACHE_MS) return () => { alive = false; };
+    sbFetchRhythmBuddyRanks(kind, diffId).then((entries) => {
+      if (!alive) return;
+      if (entries == null) { setState({ status: 'missing', entries: [] }); return; }
+      rhythmBuddyRankCache.set(cacheKey, { at: Date.now(), entries });
+      setState({ status: 'ready', entries });
+    }).catch(() => { if (alive && !hit) setState({ status: 'error', entries: [] }); });
+    return () => { alive = false; };
+  }, [cacheKey, retry]);
+  const songName = (id) => { const song = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).find((x) => x.songId === id); return song ? rhythmSongFullName(song) : ''; };
+  const chip = (on) => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
+  const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1));
+  return (
+    <div data-rhythm-buddy-ranking className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+      <div className="flex items-center gap-2">
+        {onClose && <button data-rhythm-buddy-ranking-back type="button" aria-label="戻る" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>}
+        <div className="min-w-0 flex-1 leading-tight">
+          <b className="block truncate text-base font-black text-lime-100">🎶 マスモンランキング</b>
+          <small className="block text-[10px] font-bold text-slate-400">モンヒロビートで育てたマスモンの順位です</small>
+        </div>
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto">
+        <button type="button" data-rhythm-buddy-ranking-tab="level" onClick={() => setKind('level')} className={chip(kind === 'level')}>ビートLv</button>
+        <button type="button" data-rhythm-buddy-ranking-tab="score" onClick={() => setKind('score')} className={chip(kind === 'score')}>最高スコア</button>
+      </div>
+      {kind === 'score' && (
+        <div data-rhythm-buddy-ranking-diffs className="flex gap-1.5 overflow-x-auto">
+          {RHYTHM_BUDDY_DIFF_IDS.map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
+        </div>
+      )}
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+        {state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
+        {state.status === 'missing' && <p data-rhythm-buddy-ranking-missing className="py-8 text-center text-sm font-bold text-amber-200">マスモンランキングは準備中です</p>}
+        {state.status === 'error' && (
+          <div className="py-8 text-center">
+            <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
+            <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
+          </div>
+        )}
+        {state.status === 'ready' && state.entries.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう</p>}
+        {state.status === 'ready' && state.entries.map((e, i) => {
+          const base = ALL_PLAYER_MONSTERS[e.monsterId];
+          const mine = (selfId && e.breederId === selfId) || (!e.breederId && !!selfName && e.userName === selfName);
+          const score = e.scores[diffId] || 0;
+          const sub = kind === 'score' ? (songName(e.songs[diffId]) || '') : `${e.lives}ライブ`;
+          return (
+            <article key={`${e.breederId || e.userName}-${e.individualId}`} data-rhythm-buddy-ranking-row={i + 1} data-mine={mine ? '1' : undefined}
+              className={`grid grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`}>
+              <b className="text-center text-sm font-black text-slate-200">{medal(i)}</b>
+              {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true" className="text-lg">👤</span>}
+              <span className="relative block h-11 w-11 overflow-hidden rounded-lg bg-slate-800">
+                <DyedMonsterImage baseId={e.monsterId} src={masuDisplayImageUrl(base)} alt="" masuColors={e.colors} draggable={false} className="h-full w-full object-contain" />
+              </span>
+              <span className="min-w-0 leading-tight">
+                <b className="block truncate text-[13px] font-black text-white">{e.monName}</b>
+                <small className="block truncate text-[10px] font-bold text-slate-400">{e.userName}{mine ? '(あなた)' : ''}</small>
+                {sub && <small className="block truncate text-[10px] font-bold text-slate-500">{sub}</small>}
+              </span>
+              <b className="text-right text-base font-black leading-tight text-lime-200">
+                {kind === 'score' ? <>{score.toLocaleString()}<small className="block text-[9px] font-bold text-slate-400">点</small></> : <>Lv.{e.beatLevel}<small className="block text-[9px] font-bold text-slate-400">{e.beatExp.toLocaleString()}EXP</small></>}
+              </b>
+            </article>
+          );
+        })}
+      </div>
+    </div>
   );
 }

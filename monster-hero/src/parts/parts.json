@@ -130,6 +130,10 @@
       "pure": true
     },
     {
+      "file": "39-rhythm-buddy-rank-api.jsx",
+      "role": "マスモンランキング(モンヒロビート)の通信層(Supabase の rhythm_buddy_ranks)。マスモン1体のビートLvと難易度ごとの最高スコアを、1人1個体1行で上書き保存・取得する。既存のランキングには書かない"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
