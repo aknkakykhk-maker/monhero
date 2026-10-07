@@ -15,14 +15,16 @@
 //   ・押し始めは取れたのに、押さえているあいだにHOLDが切れた
 //   ・指が押し始めの受付範囲(ノーツの帯)の中にあって、時刻もほぼ合っているのにMISSになった
 
+const { touchInputSource } = require('../lib/touch-input');
+
 const SIGMA_MS = 28;
 const MISS_RATE = 0.03;
 
 // 演奏係へ渡すもの。指の持ち主を決めたいとき(PLAYBOT_FINGER)は環境変数で
-const installArgs = (s) => ({ sigma: SIGMA_MS, missRate: MISS_RATE, seed: Math.floor(s.rand() * 1e9), persona: process.env.PLAYBOT_FINGER || '' });
+const installArgs = (s) => ({ sigma: SIGMA_MS, missRate: MISS_RATE, seed: Math.floor(s.rand() * 1e9), persona: process.env.PLAYBOT_FINGER || '', input: process.env.PLAYBOT_INPUT || 'ios', touchSrc: touchInputSource });
 
 // ページの中で動く演奏係。requestAnimationFrame で再生位置を見ながら、予定の時刻に指を下ろす
-function installPlayer({ sigma, missRate, seed, human = true, persona = '' }) {
+function installPlayer({ sigma, missRate, seed, human = true, persona = '', input = 'ios', dropRate = 0.04, lateRate = 0.04, lateMs = [30, 120], touchSrc = '' }) {
   let st = seed >>> 0;
   const rand = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const gauss = () => { const u = Math.max(1e-9, rand()), v = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -90,10 +92,25 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '' }) {
     ? (n.subLane + (Number.isFinite(n.subLaneWidth) ? n.subLaneWidth : 2) / 2) / 2 - 0.5
     : n.lane);
   let pid = 100;
-  const fire = (type, id, p) => area.dispatchEvent(new PointerEvent(type, {
-    bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false,
-    clientX: p.x, clientY: p.y, buttons: type === 'pointerup' ? 0 : 1,
-  }));
+  // 指の合図は共有の部品(lib/touch-input.js。反応の点検 feel.js と同じ作り方)で送る。既定は本物のタッチの経路(touchstart と pointerType 'touch')。
+  // 'ios' は、ときどきポインタの合図が抜け(dropRate)・遅れて届く(lateRate)iPhone のくせも入れる。MISS が増えて読みにくくならないよう、feel.js より少なめにしてある。
+  // 'mouse' はこれまでのマウスの合図(PLAYBOT_INPUT=mouse)。起こした数は stats.input に数える(報告に出す)
+  const ti = touchSrc ? (0, eval)('(' + touchSrc + ')')(area, input === 'mouse' ? 'mouse' : 'touch') : null;
+  const lateOf = new Map();
+  const inputStats = { mode: ti ? input : 'mouse', downs: 0, dropped: 0, late: 0 };
+  const fire = (type, id, p) => {
+    if (!ti) { area.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false, clientX: p.x, clientY: p.y, buttons: type === 'pointerup' ? 0 : 1 })); return; }
+    const t = type === 'pointerdown' ? 'down' : type === 'pointermove' ? 'move' : 'up';
+    let drop = false, late = lateOf.get(id) || 0;
+    if (t === 'down') {
+      drop = input === 'ios' && rand() < dropRate;
+      late = input === 'ios' && rand() < lateRate ? lateMs[0] + rand() * (lateMs[1] - lateMs[0]) : 0;   // 遅れた指は、そのあとの動き・離すのも同じだけ遅れて届く(順番が入れ替わらない)
+      lateOf.set(id, late);
+      inputStats.downs += 1; if (drop) inputStats.dropped += 1; if (late > 0) inputStats.late += 1;
+    }
+    ti.send(ti.makeEvents(t, id, p, { dropPointer: drop }), late);
+    if (t === 'up') lateOf.delete(id);
+  };
   // 予定表: { at: 押す時刻(ms), kind, note }
   const real = new Map();
   const plan = [];
@@ -117,7 +134,7 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '' }) {
   let i = 0, taps = 0;
   const suspects = [];
   const diag = { tap: { n: 0, miss: 0, crowdedN: 0, missCrowded: 0, missInBand: 0, missInBandCrowded: 0, secondN: 0, secondMiss: 0 }, fingerLeft: 0, edgeHolds: 0, overlaps: 0, holds: 0, driftEvents: 0, bigDrifts: 0, bandHolds: 0 };
-  const stats = { planned: plan.length, skipped, taps: 0, done: false, human, who, suspects, diag, habit: habit.map((h) => ({ depth: +h.depth.toFixed(2), lat: +h.lat.toFixed(2), inward: +h.inward.toFixed(2) })) };
+  const stats = { planned: plan.length, skipped, taps: 0, done: false, human, who, input: inputStats, suspects, diag, habit: habit.map((h) => ({ depth: +h.depth.toFixed(2), lat: +h.lat.toFixed(2), inward: +h.inward.toFixed(2) })) };
   const lerpLane = (pts, t) => {
     if (!pts || pts.length < 2) return null;
     if (t <= pts[0].timeMs) return pts[0].lane;
@@ -379,7 +396,7 @@ async function openSoloLive(s, { songName = '', difficulty = '', harder = false 
   return picked;
 }
 
-async function rhythmScenario(s, { maxSongMs = 240000 } = {}) {
+async function rhythmScenario(s, { maxSongMs = 330000 } = {}) {
   const { page, rand } = s;
   const stats = { song: '', difficulty: '', notes: 0, result: null };
   // 試すとき: PLAYBOT_SONG=曲名の先頭 PLAYBOT_DIFFICULTY=EXPERT のように決められる(指の見張りが見つけられるかの確認用)
@@ -428,7 +445,7 @@ async function rhythmScenario(s, { maxSongMs = 240000 } = {}) {
   await s.dismissOverlays(8);
   for (let k = 0; k < 4; k++) { if (!(await s.tapLabel(/^(曲えらびへ(戻る)?|曲選択へ|もどる|戻る|OK|閉じる|次へ)$/, 1500))) break; }
   const sent = s.supabase.writes.filter((w) => w.table === 'rankings').length;
-  return { ok: true, stats, note: `${stats.song} ${stats.difficulty}・${stats.notes}ノーツ → スコア ${stats.result.score || '?'}(ランキングへ送った記録 ${sent}件・横取り済み)・指のくせ ${stats.bot && stats.bot.who}・左手${stats.bot && stats.bot.habit ? stats.bot.habit[0].depth : '?'}/右手${stats.bot && stats.bot.habit ? stats.bot.habit[1].depth : '?'}(下へ押す深さ)・MISS ${stats.result.miss || '?'}・押さえた${stats.bot && stats.bot.diag ? stats.bot.diag.holds : '?'}回(端のレーン${stats.bot && stats.bot.diag ? stats.bot.diag.edgeHolds : '?'}回)のうち指が帯の外へ出た${stats.bot && stats.bot.diag ? stats.bot.diag.bandHolds : '?'}回(指が本当に外れて切れた${stats.bot && stats.bot.diag ? stats.bot.diag.fingerLeft : '?'}回・同時押し${stats.bot && stats.bot.diag ? stats.bot.diag.overlaps : '?'}回・つられた${stats.bot && stats.bot.diag ? stats.bot.diag.driftEvents : '?'}回・24px以上${stats.bot && stats.bot.diag ? stats.bot.diag.bigDrifts : '?'}回)${process.env.PLAYBOT_DEBUG && stats.bot && stats.bot.diag ? ' ' + JSON.stringify({ b: stats.bot.diag.bandList || [] }) : ''}${stats.bot && stats.bot.diag && stats.bot.diag.byType ? '・種類別MISS ' + Object.entries(stats.bot.diag.byType).map(([t, e]) => `${t} ${e.miss}/${e.n}`).join(' ') : ''}・タップ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.n : '?'}個のMISS ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.miss : '?'}(密集 ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missCrowded + '/' + stats.bot.diag.tap.crowdedN : '?'}・指が帯の中なのに ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missInBand + stats.bot.diag.tap.missInBandCrowded : '?'})・指の不具合候補 ${stats.bot && stats.bot.suspects ? stats.bot.suspects.length : '?'}件` };
+  return { ok: true, stats, note: `${stats.song} ${stats.difficulty}・${stats.notes}ノーツ → スコア ${stats.result.score || '?'}(ランキングへ送った記録 ${sent}件・横取り済み)・指のくせ ${stats.bot && stats.bot.who}・左手${stats.bot && stats.bot.habit ? stats.bot.habit[0].depth : '?'}/右手${stats.bot && stats.bot.habit ? stats.bot.habit[1].depth : '?'}(下へ押す深さ)・MISS ${stats.result.miss || '?'}・押さえた${stats.bot && stats.bot.diag ? stats.bot.diag.holds : '?'}回(端のレーン${stats.bot && stats.bot.diag ? stats.bot.diag.edgeHolds : '?'}回)のうち指が帯の外へ出た${stats.bot && stats.bot.diag ? stats.bot.diag.bandHolds : '?'}回(指が本当に外れて切れた${stats.bot && stats.bot.diag ? stats.bot.diag.fingerLeft : '?'}回・同時押し${stats.bot && stats.bot.diag ? stats.bot.diag.overlaps : '?'}回・つられた${stats.bot && stats.bot.diag ? stats.bot.diag.driftEvents : '?'}回・24px以上${stats.bot && stats.bot.diag ? stats.bot.diag.bigDrifts : '?'}回)${process.env.PLAYBOT_DEBUG && stats.bot && stats.bot.diag ? ' ' + JSON.stringify({ b: stats.bot.diag.bandList || [] }) : ''}${stats.bot && stats.bot.diag && stats.bot.diag.byType ? '・種類別MISS ' + Object.entries(stats.bot.diag.byType).map(([t, e]) => `${t} ${e.miss}/${e.n}`).join(' ') : ''}・指の合図 ${stats.bot && stats.bot.input ? `${stats.bot.input.mode}(押した${stats.bot.input.downs}回・ポインタ抜け${stats.bot.input.dropped}・遅れて届いた${stats.bot.input.late})` : '?'}・タップ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.n : '?'}個のMISS ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.miss : '?'}(密集 ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missCrowded + '/' + stats.bot.diag.tap.crowdedN : '?'}・指が帯の中なのに ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missInBand + stats.bot.diag.tap.missInBandCrowded : '?'})・指の不具合候補 ${stats.bot && stats.bot.suspects ? stats.bot.suspects.length : '?'}件` };
 }
 
 module.exports = { rhythmScenario, openSoloLive, installPlayer, installArgs, collectFingerSuspects, SIGMA_MS, MISS_RATE };
