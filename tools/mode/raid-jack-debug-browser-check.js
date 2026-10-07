@@ -78,6 +78,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // サーバーへは出さない。raid_jack_hits への送信は記録して成功を返し、取得は空の配列を返す
     const posts = [];
     let tableMissing = false;
+    // 通信を差し替えたので、差し替えた表だけ、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['raid_jack_']; });
+    await page.evaluate(() => { window.__mhSupabaseStubbed = ['raid_jack_']; }).catch(() => {});
     await page.route('**/rest/v1/raid_jack_**', async (route) => {
       const req = route.request();
       if (tableMissing) { await route.fulfill({ status: 404, contentType: 'application/json', body: '{"code":"PGRST205","message":"Could not find the table"}' }); return; }

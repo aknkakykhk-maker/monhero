@@ -41,6 +41,9 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     {user_name:'アキラ',level:18,score:80, icon:null,hero:'ゴーレム',party:[]},
     {user_name:'レン',  level:15,score:70, icon:null,hero:'ライガー',party:[]},
   ];
+  // 通信を差し替えたので、差し替えた表だけ、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+  await page.addInitScript(() => { window.__mhSupabaseStubbed = ['rankings']; });
+  await page.evaluate(() => { window.__mhSupabaseStubbed = ['rankings']; }).catch(() => {});
   await page.route('**/rest/v1/rankings**',async route=>{
     if(route.request().method()!=='GET'){await route.fulfill({status:201,body:''});return;}
     // このファイルは先頭で URL という名前を使っているので、グローバルの URL が隠れている

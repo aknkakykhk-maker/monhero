@@ -39,6 +39,9 @@ const seed = () => {
 
   // 全行を作っておき、要求された order/limit/offset のとおりに切り出して返す
   const requests = [];
+  // 通信を差し替えたので、差し替えた表だけ、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+  await page.addInitScript(() => { window.__mhSupabaseStubbed = ['rankings']; });
+  await page.evaluate(() => { window.__mhSupabaseStubbed = ['rankings']; }).catch(() => {});
   await page.route('**/rest/v1/rankings**', async (route) => {
     const url = new URL(route.request().url());
     if (route.request().method() !== 'GET') { await route.fulfill({ status: 201, body: '' }); return; }
