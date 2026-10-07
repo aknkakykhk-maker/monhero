@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b0790f1e777e7175
+// generated-sha256: 74ee704f507bcb28
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 18:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 18:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14885,6 +14885,28 @@ const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
   (primaryEntries || []).forEach(e => put(e, false));
   (legacyEntries || []).forEach(e => put(e, true));
   return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
+};
+// 同じ人の同じモンスターは、いちばん上の1体だけを見せる(2026-10-07 ユーザー指示
+// 「1人同モンスター1体。モッチー、ミタラシは並ぶけどモッチー、モッチーとはならない」)。
+// マーケットで同じ種族を何体も持つ人は、まだ育てていない絆Lv.1の子まで1体ずつ並び、
+// 種族のタブが同じ人で埋まっていた(ユーザー報告「ききがランキングにいっぱいいる」)。
+// ★並べ替え済みの一覧を受け取り、先に出てきた(＝その一覧の物差しでいちばん上の)1体を残す。
+//   絆Lvの一覧なら絆Lvの、総合力の一覧なら総合力のいちばん高い子が残る
+// ★「人」は束ねるときと同じくブリーダーIDで見分ける(名前で束ねると同名の別人が消える)。
+//   違うモンスター(モッチーとミタラシ・ケンシモッチー)は別に並ぶ
+// ★見せ方だけを変える。bond_levels の行は1行も消さない
+const pickTopPerBreederMonster = (sortedEntries) => {
+  const list = Array.isArray(sortedEntries) ? sortedEntries : [];
+  const bridge = breederIdBridgeFrom(list);
+  const seen = new Set();
+  return list.filter((e) => {
+    if (!e) return false;
+    const id = resolveBreederIdFor(e, bridge);
+    const key = `${id ? `id:${id}` : `name:${e.userName}`}\u0000${e.monsterId || e.monName || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 // ==================== 絆Lvの正本テーブル(bond_levels) ====================
 // 絆Lvは編成(party)のJSONの中にあるため、rankings からはDB側で「絆Lvの高い順」に
@@ -43763,15 +43785,18 @@ function MonsterHeroGame() {
       || null;
     return monsterId ? monsterLineageOf(monsterId).main.id : null;
   }, []);
+  // 画面に出すのは「同じ人の同じモンスターは1体だけ」(pickTopPerBreederMonster・2026-10-07)
+  const bondRankingShown = useMemo(() => pickTopPerBreederMonster(bondRankingAll), [bondRankingAll]);
   const bondRanking = useMemo(() => (
     bondRankMonFilter === 'all'
-      ? bondRankingAll.slice(0, 50)
-      : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
-  ), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+      ? bondRankingShown.slice(0, 50)
+      : bondRankingShown.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
+  ), [bondRankingShown, bondRankMonFilter, bondEntryLineageId]);
   // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
   // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
   // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
-  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 総合力でも同じ人の同じモンスターは1体だけ(総合力のいちばん高い子が残る)
+  const powerRankingAll = useMemo(() => pickTopPerBreederMonster(collectPowerRankingEntries(bondRankingAll)), [bondRankingAll]);
   // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
   const powerRanking = useMemo(() => (
     powerRankMonFilter === 'all'
