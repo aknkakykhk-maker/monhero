@@ -8024,7 +8024,7 @@ function MonsterHeroGame() {
         setSoulRankAnimation(null);
         setSoulRankSelectedId(null);
         soulRankProcessingRef.current=false;
-      }, prefersReducedMotion()?800:2400);
+      }, prefersReducedMotion()?1100:5200);
     } catch {
       soulRankProcessingRef.current=false;
       setSoulRankError('魂格進化のデータを保存できませんでした。ダイヤと勇者の証は消費していません。');

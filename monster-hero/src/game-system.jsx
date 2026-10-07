@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 74ee704f507bcb28
+// generated-sha256: 94ce53619564ddf9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 18:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29865,15 +29865,34 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation,
 }) {
+  // 魂格の段階の色で燃え上がり、光の輪が広がって、段階名とLv上限が数え上がる。
+  // 魂格Ⅴだけは5色が混ざった特別な背景にする(色は step.accent が正本)
+  const a = soulRankAnimation;
+  const reduced = prefersReducedMotion();
+  const [cap, setCap] = useState(a.fromLevelCap);
+  useEffect(()=>{
+    const start = Date.now(), rampMs = reduced ? 300 : 1800, delay = reduced ? 0 : 1900;
+    const tick = setInterval(()=>{
+      const t = Math.min(1, Math.max(0, (Date.now()-start-delay)/rampMs)), eased = 1-Math.pow(1-t,3);
+      setCap(Math.round(a.fromLevelCap + (a.toLevelCap-a.fromLevelCap)*eased));
+      if (t>=1) clearInterval(tick);
+    }, 40);
+    return ()=>clearInterval(tick);
+  }, []);
+  const roman = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
   return (
-<div data-soul-rank-animation role="status" aria-live="polite" className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50500,backgroundColor:'rgba(2,6,23,.94)',paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-      <div className="w-full max-w-xs rounded-2xl border-2 p-6 text-center shadow-2xl" style={{borderColor:soulRankAnimation.step.accent,background:soulRankAnimation.toStage===5?'linear-gradient(145deg,rgba(30,64,175,.55),rgba(113,63,18,.45),rgba(20,83,45,.45),rgba(127,29,29,.45),rgba(88,28,135,.55))':'rgba(15,23,42,.96)'}}>
-        <div className="text-[10px] font-black tracking-[.3em] text-slate-400 mb-2">SOUL RANK</div>
-        <Sparkles size={28} className="mx-auto mb-2" style={{color:soulRankAnimation.step.accent}}/>
-        <div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-4 mb-3" style={{borderColor:soulRankAnimation.step.accent,boxShadow:'0 0 36px '+soulRankAnimation.step.accent+'88'}}><DyedMonsterImage baseId={soulRankAnimation.masu.baseId} src={soulRankAnimation.base?.iconUrl} alt={soulRankAnimation.masu.name} masuColors={getMasuColors(soulRankAnimation.masu)} className="w-full h-full object-cover"/></div>
-        <div className="text-[11px] text-slate-400 font-black">{soulRankAnimation.fromStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][soulRankAnimation.fromStage]:'超越'} →</div>
-        <div className="text-3xl font-black my-1" style={{color:soulRankAnimation.step.accent}}>{soulRankAnimation.step.label}</div>
-        <div className="text-[12px] font-black text-emerald-300">Lv上限 {soulRankAnimation.fromLevelCap} → {soulRankAnimation.toLevelCap}</div>
+<div data-soul-rank-animation role="status" aria-live="polite" className={`mh-soulevo${a.toStage===5?' is-final':''}`} style={{'--accent':a.step.accent}}>
+      <div className="mh-soulevo-beams" aria-hidden="true">{Array.from({length:9},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-wave" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div className="mh-soulevo-mon mh-reincarnate-stack"><DyedMonsterImage baseId={a.masu.baseId} src={a.base?.iconUrl||a.base?.imgUrl} alt={a.masu.name} masuColors={getMasuColors(a.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={a.toStage} className="is-ceremony"/><RebirthStars count={a.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+      <div className="mh-soulevo-sparks" aria-hidden="true">{Array.from({length:16},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-flash" aria-hidden="true"></div>
+      <div className="mh-soulevo-copy">
+        <div className="mh-soulevo-kicker">SOUL RANK</div>
+        <div className="mh-soulevo-from">{a.fromStage>0?'魂格'+roman[a.fromStage]:'超越'} →</div>
+        <div className="mh-soulevo-label">{a.step.label}</div>
+        <div className="mh-soulevo-cap">Lv上限 <b>{cap}</b></div>
+        <div className="mh-soulevo-sub">{a.fromLevelCap} → {a.toLevelCap}</div>
       </div>
     </div>
   );
@@ -49080,7 +49099,7 @@ function MonsterHeroGame() {
         setSoulRankAnimation(null);
         setSoulRankSelectedId(null);
         soulRankProcessingRef.current=false;
-      }, prefersReducedMotion()?800:2400);
+      }, prefersReducedMotion()?1100:5200);
     } catch {
       soulRankProcessingRef.current=false;
       setSoulRankError('魂格進化のデータを保存できませんでした。ダイヤと勇者の証は消費していません。');
@@ -66925,6 +66944,28 @@ const createAnimationStyle = () => {
     @keyframes mhOfferingFlash{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
     @keyframes mhOfferingPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
     @media(prefers-reduced-motion:reduce){.mh-offering-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-offering-up,.mh-offering-badge,.mh-offering-points{opacity:1}}
+    /* 魂格進化の演出(神殿)。段階の色(--accent)で燃え上がる */
+    .mh-soulevo{position:fixed;inset:0;z-index:50500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 44%,color-mix(in srgb,var(--accent) 45%,#020617),#020617 72%);animation:mhSoulevoIn .5s ease-out both}
+    .mh-soulevo.is-final{background:radial-gradient(circle at 50% 44%,#4c1d9588,#020617 72%),conic-gradient(from 0deg,#1d4ed855,#ca8a0455,#16a34a55,#dc262655,#9333ea55,#1d4ed855)}
+    .mh-soulevo-beams{position:absolute;inset:0;pointer-events:none}.mh-soulevo-beams i{position:absolute;bottom:-10%;left:calc(4% + var(--i)*11%);width:7%;height:85%;background:linear-gradient(to top,var(--accent),transparent);filter:blur(8px);opacity:.55;transform-origin:bottom;animation:mhSoulevoBeam 1.8s ease-in-out calc(var(--i)*.1s) infinite alternate}
+    .mh-soulevo-wave{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-wave i{position:absolute;left:-130px;top:-130px;width:260px;height:260px;border-radius:50%;border:3px solid var(--accent);box-shadow:0 0 36px var(--accent);opacity:0;animation:mhSoulevoWave 2.2s ease-out infinite}.mh-soulevo-wave i:nth-child(2){animation-delay:.7s}.mh-soulevo-wave i:nth-child(3){animation-delay:1.4s}
+    .mh-soulevo-mon{position:relative;width:180px;height:180px;margin-top:-120px;animation:mhSoulevoMon 1.1s ease-in-out infinite alternate;filter:drop-shadow(0 0 26px var(--accent))}
+    .mh-soulevo-sparks{position:absolute;left:50%;top:42%;width:0;height:0}.mh-soulevo-sparks i{position:absolute;left:0;top:0;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);opacity:0;animation:mhSoulevoSpark 2s ease-out calc(var(--i)*.11s) infinite;--a:calc(var(--i)*22.5deg)}
+    .mh-soulevo-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:mhSoulevoFlash 1.3s ease-out 1.7s both}
+    .mh-soulevo-copy{position:absolute;left:0;right:0;bottom:10%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 16px;text-align:center}
+    .mh-soulevo-kicker{font-size:11px;font-weight:900;letter-spacing:.4em;color:#cbd5e1}.mh-soulevo-from{font-size:12px;font-weight:900;color:#94a3b8}
+    .mh-soulevo-label{font-size:40px;font-weight:900;color:var(--accent);text-shadow:0 0 22px var(--accent);opacity:0;animation:mhSoulevoPop .6s ease-out 1.9s both}
+    .mh-soulevo.is-final .mh-soulevo-label{background:linear-gradient(90deg,#60a5fa,#fbbf24,#4ade80,#f87171,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+    .mh-soulevo-cap{font-size:14px;font-weight:900;color:#6ee7b7;opacity:0;animation:mhSoulevoPop .5s ease-out 2.3s both}.mh-soulevo-cap b{font-size:34px;font-family:ui-monospace,monospace;color:#fff}
+    .mh-soulevo-sub{font-size:11px;font-weight:900;color:#94a3b8;opacity:0;animation:mhSoulevoPop .5s ease-out 2.6s both}
+    @keyframes mhSoulevoIn{from{opacity:0}to{opacity:1}}
+    @keyframes mhSoulevoBeam{from{opacity:.25;transform:scaleY(.7)}to{opacity:.7;transform:scaleY(1)}}
+    @keyframes mhSoulevoWave{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+    @keyframes mhSoulevoMon{from{transform:scale(1)}to{transform:scale(1.07)}}
+    @keyframes mhSoulevoSpark{0%{opacity:0;transform:rotate(var(--a)) translateY(-20px)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-210px)}}
+    @keyframes mhSoulevoFlash{0%{opacity:0}25%{opacity:.9}100%{opacity:0}}
+    @keyframes mhSoulevoPop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){.mh-soulevo *{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}.mh-soulevo-label,.mh-soulevo-cap,.mh-soulevo-sub{opacity:1}}
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
     .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}

@@ -269,15 +269,34 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation,
 }) {
+  // 魂格の段階の色で燃え上がり、光の輪が広がって、段階名とLv上限が数え上がる。
+  // 魂格Ⅴだけは5色が混ざった特別な背景にする(色は step.accent が正本)
+  const a = soulRankAnimation;
+  const reduced = prefersReducedMotion();
+  const [cap, setCap] = useState(a.fromLevelCap);
+  useEffect(()=>{
+    const start = Date.now(), rampMs = reduced ? 300 : 1800, delay = reduced ? 0 : 1900;
+    const tick = setInterval(()=>{
+      const t = Math.min(1, Math.max(0, (Date.now()-start-delay)/rampMs)), eased = 1-Math.pow(1-t,3);
+      setCap(Math.round(a.fromLevelCap + (a.toLevelCap-a.fromLevelCap)*eased));
+      if (t>=1) clearInterval(tick);
+    }, 40);
+    return ()=>clearInterval(tick);
+  }, []);
+  const roman = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
   return (
-<div data-soul-rank-animation role="status" aria-live="polite" className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50500,backgroundColor:'rgba(2,6,23,.94)',paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-      <div className="w-full max-w-xs rounded-2xl border-2 p-6 text-center shadow-2xl" style={{borderColor:soulRankAnimation.step.accent,background:soulRankAnimation.toStage===5?'linear-gradient(145deg,rgba(30,64,175,.55),rgba(113,63,18,.45),rgba(20,83,45,.45),rgba(127,29,29,.45),rgba(88,28,135,.55))':'rgba(15,23,42,.96)'}}>
-        <div className="text-[10px] font-black tracking-[.3em] text-slate-400 mb-2">SOUL RANK</div>
-        <Sparkles size={28} className="mx-auto mb-2" style={{color:soulRankAnimation.step.accent}}/>
-        <div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-4 mb-3" style={{borderColor:soulRankAnimation.step.accent,boxShadow:'0 0 36px '+soulRankAnimation.step.accent+'88'}}><DyedMonsterImage baseId={soulRankAnimation.masu.baseId} src={soulRankAnimation.base?.iconUrl} alt={soulRankAnimation.masu.name} masuColors={getMasuColors(soulRankAnimation.masu)} className="w-full h-full object-cover"/></div>
-        <div className="text-[11px] text-slate-400 font-black">{soulRankAnimation.fromStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][soulRankAnimation.fromStage]:'超越'} →</div>
-        <div className="text-3xl font-black my-1" style={{color:soulRankAnimation.step.accent}}>{soulRankAnimation.step.label}</div>
-        <div className="text-[12px] font-black text-emerald-300">Lv上限 {soulRankAnimation.fromLevelCap} → {soulRankAnimation.toLevelCap}</div>
+<div data-soul-rank-animation role="status" aria-live="polite" className={`mh-soulevo${a.toStage===5?' is-final':''}`} style={{'--accent':a.step.accent}}>
+      <div className="mh-soulevo-beams" aria-hidden="true">{Array.from({length:9},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-wave" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div className="mh-soulevo-mon mh-reincarnate-stack"><DyedMonsterImage baseId={a.masu.baseId} src={a.base?.iconUrl||a.base?.imgUrl} alt={a.masu.name} masuColors={getMasuColors(a.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={a.toStage} className="is-ceremony"/><RebirthStars count={a.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+      <div className="mh-soulevo-sparks" aria-hidden="true">{Array.from({length:16},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div>
+      <div className="mh-soulevo-flash" aria-hidden="true"></div>
+      <div className="mh-soulevo-copy">
+        <div className="mh-soulevo-kicker">SOUL RANK</div>
+        <div className="mh-soulevo-from">{a.fromStage>0?'魂格'+roman[a.fromStage]:'超越'} →</div>
+        <div className="mh-soulevo-label">{a.step.label}</div>
+        <div className="mh-soulevo-cap">Lv上限 <b>{cap}</b></div>
+        <div className="mh-soulevo-sub">{a.fromLevelCap} → {a.toLevelCap}</div>
       </div>
     </div>
   );
