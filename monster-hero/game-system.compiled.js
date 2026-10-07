@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa6709825046b30e
+// source-sha256: fc008d32a9d3dff9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 20:46";
+const BUILD_DATE = "2026-10-07 21:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -62102,6 +62102,11 @@ const RHYTHM_MULTI_ALIVE_MS = 7000;
 const RHYTHM_MULTI_START_COUNTDOWN_SEC = 3;
 const RHYTHM_MULTI_SHUFFLE_MS = 2400;
 const RHYTHM_MULTI_SELECT_MS = 30000;
+const RHYTHM_MULTI_SELECT_SEC_OPTIONS = Object.freeze([30, 60, 90, 0]);
+const RHYTHM_MULTI_SELECT_SEC_DEFAULT = 30;
+const RHYTHM_MULTI_SELECT_SEC_KEY = 'mh_rhythm_multi_select_sec_v1';
+const rhythmMultiNormalizeSelectSec = v => typeof v === 'number' && RHYTHM_MULTI_SELECT_SEC_OPTIONS.includes(v) ? v : RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+const rhythmMultiSelectSecLabel = sec => sec > 0 ? `${sec}秒` : 'なし';
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
@@ -62255,6 +62260,7 @@ const rhythmMultiCleanRoom = raw => {
     songId: rhythmMultiText(raw.sg, 60),
     left: rhythmMultiInt(raw.lf, 600),
     hasDeadline: raw.dl === 1,
+    selectSec: rhythmMultiNormalizeSelectSec(raw.ss),
     participants: Array.isArray(raw.pt) ? raw.pt.slice(0, RHYTHM_MULTI_ROOM_MAX).map(id => rhythmMultiText(id, 40)).filter(Boolean) : []
   };
 };
@@ -62457,6 +62463,22 @@ const RHYTHM_MULTI = (() => {
   let catalog = [];
   let durations = {};
   let cpuBrain = null;
+  let selectSecPref = RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+  let selectSecLoaded = false;
+  const loadSelectSecPref = () => {
+    if (selectSecLoaded) return;
+    selectSecLoaded = true;
+    Promise.resolve().then(() => storeGet(RHYTHM_MULTI_SELECT_SEC_KEY, null)).then(saved => {
+      selectSecPref = rhythmMultiNormalizeSelectSec(saved);
+      if (s && !s.selectSecTouched && s.room.phase === 'matching') {
+        s.room = {
+          ...s.room,
+          selectSec: selectSecPref
+        };
+        emit();
+      }
+    }).catch(() => {});
+  };
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     window.addEventListener('pagehide', () => {
       if (s && socket) {
@@ -62493,6 +62515,7 @@ const RHYTHM_MULTI = (() => {
       sg: r.songId,
       lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0,
       dl: r.deadline ? 1 : 0,
+      ss: rhythmMultiNormalizeSelectSec(r.selectSec),
       pt: r.participants
     };
   };
@@ -62612,11 +62635,12 @@ const RHYTHM_MULTI = (() => {
     emit();
   };
   const humanCount = () => ordered().filter(m => !m.cpu).length;
+  const selectLimitMs = () => s && s.room.selectSec > 0 ? s.room.selectSec * 1000 : 0;
   const toSelect = () => setRoom({
     phase: 'select',
     round: rhythmMultiMakeId('r'),
     songId: '',
-    deadline: humanCount() <= 1 ? 0 : Date.now() + RHYTHM_MULTI_SELECT_MS,
+    deadline: humanCount() <= 1 || !selectLimitMs() ? 0 : Date.now() + selectLimitMs(),
     participants: []
   });
   const doDraw = members => {
@@ -62675,7 +62699,7 @@ const RHYTHM_MULTI = (() => {
         return;
       }
       const allPicked = members.every(m => m.pickRound === r.round && m.pick);
-      if (humanCount() <= 1) {
+      if (humanCount() <= 1 || !selectLimitMs()) {
         if (r.deadline) {
           setRoom({
             deadline: 0
@@ -62687,7 +62711,7 @@ const RHYTHM_MULTI = (() => {
       }
       if (!r.deadline) {
         setRoom({
-          deadline: now + RHYTHM_MULTI_SELECT_MS
+          deadline: now + selectLimitMs()
         });
         return;
       }
@@ -63016,6 +63040,7 @@ const RHYTHM_MULTI = (() => {
           round: r.round,
           songId: r.songId,
           participants: r.participants,
+          selectSec: r.selectSec,
           deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0
         };
       }
@@ -63203,6 +63228,7 @@ const RHYTHM_MULTI = (() => {
       };
     },
     join(code, profile, mode) {
+      loadSelectSecPref();
       this.leave();
       const now = Date.now();
       const id = rhythmMultiMakeId();
@@ -63221,7 +63247,8 @@ const RHYTHM_MULTI = (() => {
           round: '',
           songId: '',
           deadline: 0,
-          participants: []
+          participants: [],
+          selectSec: selectSecPref
         },
         memberSig: '',
         lastMemberChange: now,
@@ -63388,6 +63415,22 @@ const RHYTHM_MULTI = (() => {
       s.resultSeen = round;
       if (isHostNow() && (s.room.phase === 'result' || s.room.phase === 'playing') && s.room.round === round) toSelect();
       emit();
+    },
+    setSelectSeconds(sec) {
+      if (!s || !isHostNow() || s.status !== 'open') return false;
+      const next = rhythmMultiNormalizeSelectSec(sec);
+      selectSecPref = next;
+      s.selectSecTouched = true;
+      try {
+        void Promise.resolve(storeSet(RHYTHM_MULTI_SELECT_SEC_KEY, next)).catch(() => {});
+      } catch (_) {}
+      if (s.room.phase === 'select') setRoom({
+        selectSec: next,
+        deadline: next > 0 && humanCount() > 1 ? Date.now() + next * 1000 : 0
+      });else setRoom({
+        selectSec: next
+      });
+      return true;
     },
     hostAdvance() {
       if (!s || !isHostNow() || s.status !== 'open') return false;
@@ -64479,6 +64522,36 @@ function RhythmMultiScreen({
   const card = 'rounded-2xl border border-white/15 bg-slate-900/85 p-3';
   const btn = 'min-h-[48px] rounded-xl px-3 font-black disabled:opacity-40';
   const shell = 'relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white';
+  const cycleSelectSec = () => {
+    const list = RHYTHM_MULTI_SELECT_SEC_OPTIONS;
+    const now = room ? rhythmMultiNormalizeSelectSec(room.selectSec) : RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+    RHYTHM_MULTI.setSelectSeconds(list[(list.indexOf(now) + 1) % list.length]);
+  };
+  const selectTimeButton = (extra = '', narrow = false) => React.createElement("button", _extends({}, narrow ? {
+    'data-rhythm-multi-select-time-narrow': true
+  } : {
+    'data-rhythm-multi-select-time': true
+  }, {
+    type: "button",
+    "aria-label": `選曲の制限時間 ${rhythmMultiSelectSecLabel(room.selectSec)}。押すと切り替え`,
+    onClick: cycleSelectSec,
+    className: `min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`
+  }), "選曲", React.createElement("br", null), rhythmMultiSelectSecLabel(room.selectSec));
+  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+    "data-rhythm-buddy-open": true,
+    "data-rhythm-buddy-header": true,
+    type: "button",
+    "aria-label": "マスモンを呼ぶ",
+    onClick: () => setBuddySheet('pick'),
+    className: `relative flex min-h-[44px] min-w-[52px] shrink-0 flex-col items-center justify-center rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-1.5 leading-none text-slate-950 ${extra}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base"
+  }, "🎵"), React.createElement("span", {
+    className: "text-[10px] font-black"
+  }, "マスモン"), view.myCpus && view.myCpus.length > 0 && React.createElement("b", {
+    className: "absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200"
+  }, view.myCpus.length)) : null;
   const header = (step, onBackClick, opts = {}) => React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
@@ -64499,7 +64572,7 @@ function RhythmMultiScreen({
   }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement("small", {
     "data-rhythm-multi-quick-run": true,
     className: `max-w-[38%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
-  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.advance && isHost && React.createElement("button", {
+  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.buddy && buddyHeaderButton(opts.narrowRow ? 'max-[480px]:hidden' : ''), opts.advance && isHost && React.createElement("button", {
     "data-rhythm-multi-advance": true,
     type: "button",
     onClick: () => {
@@ -64507,7 +64580,7 @@ function RhythmMultiScreen({
       RHYTHM_MULTI.hostAdvance();
     },
     className: "min-h-[40px] shrink-0 rounded-xl bg-fuchsia-700 px-2 text-[11px] font-black"
-  }, opts.advance), opts.timer != null && React.createElement("b", {
+  }, opts.advance), opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden'), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
   }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && rankingButton(), view && chatButton());
@@ -65020,7 +65093,9 @@ function RhythmMultiScreen({
       "data-rhythm-multi": true,
       "data-rhythm-multi-step": "matching",
       className: shell
-    }, header('マッチング', leaveRoom), view && view.full ? React.createElement("div", {
+    }, header('マッチング', leaveRoom, {
+      buddy: true
+    }), view && view.full ? React.createElement("div", {
       className: "min-h-0 flex-1 overflow-y-auto p-3"
     }, React.createElement("section", {
       "data-rhythm-multi-full": true,
@@ -65074,7 +65149,24 @@ function RhythmMultiScreen({
       type: "button",
       className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black",
       onClick: shareCode
-    }, copied ? 'コピーした!' : '友だちに送る'))), React.createElement("div", {
+    }, copied ? 'コピーした!' : '友だちに送る')), view && room && React.createElement("div", {
+      "data-rhythm-multi-select-time-row": true,
+      className: "mt-1.5 flex flex-wrap items-center gap-1.5"
+    }, React.createElement("small", {
+      className: "shrink-0 text-[10px] font-black text-slate-400"
+    }, "選曲の制限時間"), isHost ? RHYTHM_MULTI_SELECT_SEC_OPTIONS.map(sec => React.createElement("button", {
+      key: sec,
+      type: "button",
+      "data-rhythm-multi-select-sec": sec,
+      "aria-pressed": rhythmMultiNormalizeSelectSec(room.selectSec) === sec,
+      onClick: () => RHYTHM_MULTI.setSelectSeconds(sec),
+      className: `min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+    }, rhythmMultiSelectSecLabel(sec))) : React.createElement("b", {
+      "data-rhythm-multi-select-sec-view": true,
+      className: "text-[11px] font-black text-amber-200"
+    }, rhythmMultiSelectSecLabel(rhythmMultiNormalizeSelectSec(room.selectSec)), React.createElement("small", {
+      className: "ml-1 text-[9px] font-bold text-slate-400"
+    }, "(ホストが決めます)")))), React.createElement("div", {
       className: "mt-2 space-y-2 landscape:mt-0"
     }, view && isHost && view.mode !== 'private' && React.createElement("button", {
       "data-rhythm-multi-confirm": true,
@@ -65631,8 +65723,19 @@ function RhythmMultiScreen({
     className: shell
   }, header('楽曲シャッフル ・ 選曲', leaveRoom, {
     timer: room.deadline ? room.left : null,
-    advance: '締め切る'
-  }), React.createElement(RhythmMultiMemberCards, {
+    advance: '締め切る',
+    buddy: true,
+    selectTime: true,
+    narrowRow: true
+  }), (view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 || isHost) && React.createElement("div", {
+    "data-rhythm-multi-select-tools": true,
+    className: "flex shrink-0 items-center gap-2 border-b border-white/10 bg-slate-950/90 px-2 py-1 min-[481px]:hidden"
+  }, view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 && React.createElement("button", {
+    "data-rhythm-buddy-narrow": true,
+    type: "button",
+    onClick: () => setBuddySheet('pick'),
+    className: "relative min-h-[40px] min-w-0 flex-1 rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-[12px] font-black text-slate-950"
+  }, "🎵 マスモンを呼ぶ", view.myCpus && view.myCpus.length > 0 ? `(${view.myCpus.length}体)` : ''), isHost && selectTimeButton('', true)), React.createElement(RhythmMultiMemberCards, {
     bubbleOf: chatBubbleOf,
     members: members,
     hostId: view.hostId,
