@@ -15,6 +15,7 @@ const { growScenario } = require('./scenarios/grow');
 const { multiScenario } = require('./scenarios/multi');
 const { raidScenario, halloweenScenario } = require('./scenarios/event');
 const { raidBeatScenario } = require('./scenarios/raidbeat');
+const { landscapeScenario } = require('./scenarios/landscape');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -169,6 +170,13 @@ const ROLES = [
     },
   },
   {
+    id: 'landscape', name: '横画面係', prepare: 'veteran', boot: true, alone: true,
+    does: 'モンヒロビートを横画面にして、遊びかた・記録・オプション・曲えらび・全国ランキング(イベント詳細)・部屋を開き、閉じる/戻るで本当に閉じられるかを見る。横向きのまま1曲演奏する。1人で動かす',
+    run: async (s, { phase }) => {
+      await phase('横画面で開いて閉じる・演奏する', () => landscapeScenario(s));
+    },
+  },
+  {
     id: 'ranking', name: 'ランキング係', prepare: 'veteran', boot: true, alone: true,
     does: '音ゲー係の記録と、名前の長い大勢のライバルを並べてランキングを開く',
     run: async (s, { phase, shared }) => {
@@ -183,7 +191,7 @@ const ROLES = [
 // ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
 const TEAMS = [
   { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
-  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat'] },
+  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat', 'landscape'] },
   { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore'] },
   { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean'] },
 ];

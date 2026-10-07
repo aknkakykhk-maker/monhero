@@ -19,12 +19,30 @@ function installPlayer({ sigma, missRate, seed }) {
   const notes = hooks.rhythmNotes ? hooks.rhythmNotes() : null;
   if (!area || !notes) return { ok: false, why: !area ? '演奏エリアが無い' : '演奏の参照が無い(30-rhythm-play.jsx)' };
   // 判定ラインの高さで、レーン座標 c(0 = いちばん左のレーンの真ん中)を画面の点へ
+  // 演奏エリアの中の割合の位置(fx, fy)が、画面のどこに出ているかを測る。
+  // ★横画面(絵を90度回す)のときは、エリアの横方向が画面の縦方向になる。エリアの角に目印を置いて実際の位置を測り、
+  //   その向きに合わせて押す(縦画面のときは今までどおり)
+  const probe = (fx, fy) => {
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;left:${fx * 100}%;top:${fy * 100}%;width:1px;height:1px;pointer-events:none;`;
+    area.appendChild(d);
+    const r = d.getBoundingClientRect();
+    d.remove();
+    return { x: r.left, y: r.top };
+  };
+  const P00 = probe(0, 0), P10 = probe(1, 0), P01 = probe(0, 1);
+  const rotated = Math.abs(P10.y - P00.y) > Math.abs(P10.x - P00.x);
+  // エリアの「上」が画面のどちら向きか(はじく向き。縦画面なら真上)
+  const upLen = Math.hypot(P01.x - P00.x, P01.y - P00.y) || 1;
+  const up = { x: (P00.x - P01.x) / upLen, y: (P00.y - P01.y) / upLen };
   const pointOf = (c) => {
-    const rect = (typeof RHYTHM_GESTURE_RUNTIME !== 'undefined' && RHYTHM_GESTURE_RUNTIME.areaRect(area)) || area.getBoundingClientRect();
     const ratio = (typeof RHYTHM_JUDGMENT_LINE_Y !== 'undefined' ? RHYTHM_JUDGMENT_LINE_Y.ratio : 0.88);
     const left = rhythmProjectBoundary(0, ratio), right = rhythmProjectBoundary(RHYTHM_LANE_COUNT, ratio);
     const laneWidth = (right - left) / RHYTHM_LANE_COUNT;
-    return { x: rect.left + rect.width * (left + (c + 0.5) * laneWidth), y: rect.top + rect.height * ratio };
+    const fx = left + (c + 0.5) * laneWidth;
+    if (rotated) return { x: P00.x + fx * (P10.x - P00.x) + ratio * (P01.x - P00.x), y: P00.y + fx * (P10.y - P00.y) + ratio * (P01.y - P00.y) };
+    const rect = (typeof RHYTHM_GESTURE_RUNTIME !== 'undefined' && RHYTHM_GESTURE_RUNTIME.areaRect(area)) || area.getBoundingClientRect();
+    return { x: rect.left + rect.width * fx, y: rect.top + rect.height * ratio };
   };
   // サブレーンを持つノーツは、その帯の真ん中を押す
   const centerOf = (n) => (Number.isFinite(n.subLane)
@@ -65,8 +83,9 @@ function installPlayer({ sigma, missRate, seed }) {
       if (n.type === 'HOLD' || n.type === 'SLIDE') {
         active.push({ id, n, until: (Number(n.endTimeMs) || n.timeMs) + gauss() * sigma * 0.5 });
       } else if (n.type === 'FLICK') {
-        // はじく: 少し上へ素早く動かしてから離す
-        setTimeout(() => { fire('pointermove', id, { x: p.x, y: p.y - 30 }); fire('pointermove', id, { x: p.x, y: p.y - 70 }); fire('pointerup', id, { x: p.x, y: p.y - 70 }); }, 25);
+        // はじく: 少し上(エリアの上。横画面では回った向き)へ素早く動かしてから離す
+        const at = (d) => ({ x: p.x + up.x * d, y: p.y + up.y * d });
+        setTimeout(() => { fire('pointermove', id, at(30)); fire('pointermove', id, at(70)); fire('pointerup', id, at(70)); }, 25);
       } else {
         setTimeout(() => fire('pointerup', id, p), 45 + rand() * 30);
       }
