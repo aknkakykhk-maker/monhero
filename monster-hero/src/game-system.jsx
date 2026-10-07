@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 139d3ef81da298be
+// generated-sha256: e7118adf9cfd5b85
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23342,7 +23342,7 @@ const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot)
 // ここは保存も画面も持たない純粋な計算だけ。保存と画面は 77-screen-rhythm-multi.jsx。
 //
 // ・育ち具合はマスモン1体ごと(id ごと)。一度でも相棒として呼んだ子だけが持つ。マスモン本体の保存には触れない
-// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.10で決まる)・その日の調子(朝5:00で変わる)
+// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.50で決まる)・その日の調子(朝5:00で変わる)
 // ・演奏はしない。曲・難易度・育ち具合から、それらしい判定の数とスコアを作る
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
@@ -23351,8 +23351,8 @@ const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
-// 性格が決まるLv
-const RHYTHM_BUDDY_TRAIT_LEVEL = 10;
+// 性格が決まるLv(育て方が見えるだけ一緒に遊んでから。Lv.50 は約37ライブ)
+const RHYTHM_BUDDY_TRAIT_LEVEL = 50;
 // 1体が覚えておく曲の数(なじみ)。超えたら回数の少ない曲から忘れる
 const RHYTHM_BUDDY_SONG_KEEP = 80;
 const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
@@ -23449,10 +23449,10 @@ const rhythmBuddyUseFree = (state, dayKey) => {
 };
 
 // ---- レベル ----
-// Lv n → n+1 に要る経験値。Lv.50 までおよそ1万8千、Lv.100 までおよそ6万5千。
-// 1ライブ平均50前後なので、1日15ライブなら Lv.50 まで1か月弱、Lv.100 まで3か月ほど
-// (2026-10-07・ユーザー指示「うまくなるデメリットがないからもっと早くうまくなってほしい」)
-const rhythmBuddyNeedExp = (level) => 60 + 12 * Math.max(1, level);
+// Lv n → n+1 に要る経験値。Lv.50 までおよそ1,800、Lv.100 までおよそ6,500。
+// 1ライブ平均50前後なので、Lv.50 まで約37ライブ、Lv.100 まで約130ライブ(1日15ライブなら9日ほど)
+// (2026-10-07・ユーザー指示「うまくなるデメリットがないからもっと早く」→「必要経験値を1/10」)
+const rhythmBuddyNeedExp = (level) => Math.round(6 + 1.2 * Math.max(1, level));
 const rhythmBuddyLevelInfo = (exp) => {
   let rest = rhythmBuddyInt(exp);
   let level = 1;
@@ -23518,7 +23518,7 @@ const rhythmBuddyTraitScores = (mon, lean) => {
   if (RHYTHM_BUDDY_TRAIT_IDS.includes(lean)) scores[lean] += 0.25;
   return scores;
 };
-// Lv.10 で決まる。決まったあとは、10ライブごとに見直し、別の性格が 0.3 以上上回ったときだけゆっくり変わる
+// Lv.50 で決まる。決まったあとは、10ライブごとに見直し、別の性格が 0.3 以上上回ったときだけゆっくり変わる
 const rhythmBuddyNextTrait = (mon, lean) => {
   const m = rhythmBuddyNormalizeMon(mon);
   if (rhythmBuddyLevelInfo(m.exp).level < RHYTHM_BUDDY_TRAIT_LEVEL) return '';
