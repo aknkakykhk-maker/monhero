@@ -2532,7 +2532,9 @@ const RHYTHM_TOUCH_FIXES={
   //                 かつその間ゲームが本当に止まっていたと見えたときだけ。端末の記録で「止まっていないのに古い時刻」が多いと分かった端末では、自分で切る
   //   smoothSongClock … 標準では切ってある。端末の記録で、曲の時計が階段状に止まるコマが多い(2%以上)と分かった端末だけ、自分で入れる(全端末)
   //   autoPauseOnHidden … 標準で入れてある(全端末)。演奏中にアプリを離れたら、自動で一時停止する
-  inputAgeCap:true,
+  // 【2026-10-07 21時・ユーザー報告「昨日から色々直してかなりタップ抜けがひどくなった」】いったん標準では切る(10/6夕方の動きへ戻す)。
+  // 端末の記録で、押したずれの中央値が30〜50ms早い側へ出ていた。補正の効きすぎを疑って、原因が分かるまで戻す
+  inputAgeCap:false,
   smoothSongClock:false,
   autoPauseOnHidden:true,
   allPlatforms:false,
@@ -3013,7 +3015,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf-pendingInputAgeMs,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
