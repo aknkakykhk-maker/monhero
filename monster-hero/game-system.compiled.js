@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f7afc39041ef97c
+// source-sha256: fc91a9c9e9a1e70f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 13:40";
+const BUILD_DATE = "2026-10-07 14:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -62517,7 +62517,7 @@ function RhythmMultiAvatar({
 }) {
   if (m.cpu) {
     const base = m.mb && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m.mb] : null;
-    const src = base ? base.faceIconUrl || base.iconUrl || base.imgUrl : '';
+    const src = masuDisplayImageUrl(base);
     return React.createElement("span", {
       "data-rhythm-multi-cpu-avatar": true,
       className: `relative block shrink-0 overflow-hidden rounded-full border-2 border-lime-300/80 bg-slate-800 ${sizeClass}`
@@ -62527,7 +62527,7 @@ function RhythmMultiAvatar({
       alt: "",
       masuColors: Array.isArray(m.mc) ? m.mc.filter(Boolean) : [],
       draggable: false,
-      className: "h-full w-full object-cover"
+      className: "h-full w-full object-contain p-0.5"
     }) : React.createElement("span", {
       "aria-hidden": "true",
       className: "flex h-full w-full items-center justify-center text-lg"
@@ -64311,7 +64311,7 @@ function RhythmBuddyFace({
   sizeClass = 'h-10 w-10'
 }) {
   const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
-  const src = base ? base.faceIconUrl || base.iconUrl || base.imgUrl : '';
+  const src = masuDisplayImageUrl(base);
   return React.createElement("span", {
     className: `relative block shrink-0 overflow-hidden rounded-full border-2 border-lime-300/70 bg-slate-800 ${sizeClass}`
   }, src ? React.createElement(DyedMonsterImage, {
@@ -64320,11 +64320,122 @@ function RhythmBuddyFace({
     alt: "",
     masuColors: getMasuColors(masu),
     draggable: false,
-    className: "h-full w-full object-cover"
+    className: "h-full w-full object-contain p-0.5"
   }) : React.createElement("span", {
     "aria-hidden": "true",
     className: "flex h-full w-full items-center justify-center text-lg"
   }, "🎵"));
+}
+const RHYTHM_BUDDY_MOOD_FACE_COLORS = Object.freeze({
+  great: ['#fbcfe8', '#ec4899'],
+  good: ['#fca5a5', '#dc2626'],
+  normal: ['#fde68a', '#f59e0b'],
+  bad: ['#bae6fd', '#3b82f6'],
+  awful: ['#ddd6fe', '#7c3aed']
+});
+function RhythmBuddyMoodFace({
+  moodId,
+  size = 24
+}) {
+  const [light, dark] = RHYTHM_BUDDY_MOOD_FACE_COLORS[moodId] || RHYTHM_BUDDY_MOOD_FACE_COLORS.normal;
+  const gid = `mh-mood-${moodId}`;
+  const ink = '#1f2937';
+  const sad = moodId === 'bad' || moodId === 'awful';
+  return React.createElement("svg", {
+    "data-rhythm-buddy-mood-face": moodId,
+    width: size,
+    height: size,
+    viewBox: "0 0 40 40",
+    "aria-hidden": "true",
+    className: "inline-block shrink-0 align-middle"
+  }, React.createElement("defs", null, React.createElement("radialGradient", {
+    id: gid,
+    cx: "35%",
+    cy: "30%",
+    r: "75%"
+  }, React.createElement("stop", {
+    offset: "0%",
+    stopColor: light
+  }), React.createElement("stop", {
+    offset: "100%",
+    stopColor: dark
+  }))), React.createElement("circle", {
+    cx: "20",
+    cy: "20",
+    r: "18.5",
+    fill: `url(#${gid})`
+  }), React.createElement("ellipse", {
+    cx: "14",
+    cy: "11",
+    rx: "6",
+    ry: "3.2",
+    fill: "#ffffff",
+    opacity: "0.35"
+  }), sad ? React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M10 15 L16 13",
+    stroke: ink,
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  }), React.createElement("path", {
+    d: "M30 15 L24 13",
+    stroke: ink,
+    strokeWidth: "2.2",
+    strokeLinecap: "round"
+  })) : React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "13",
+    y: "11",
+    width: "2.6",
+    height: "7",
+    rx: "1.3",
+    fill: ink
+  }), React.createElement("rect", {
+    x: "24.4",
+    y: "11",
+    width: "2.6",
+    height: "7",
+    rx: "1.3",
+    fill: ink
+  })), moodId === 'great' && React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M11 22 Q20 36 29 22 Z",
+    fill: ink
+  }), React.createElement("rect", {
+    x: "16",
+    y: "22.5",
+    width: "8",
+    height: "2.6",
+    rx: "1",
+    fill: "#ffffff"
+  }), React.createElement("rect", {
+    x: "18.8",
+    y: "27",
+    width: "2.4",
+    height: "4",
+    rx: "1.2",
+    fill: "#f97316"
+  })), moodId === 'good' && React.createElement("path", {
+    d: "M11 23 Q20 32 29 23",
+    fill: "none",
+    stroke: ink,
+    strokeWidth: "2.6",
+    strokeLinecap: "round"
+  }), moodId === 'normal' && React.createElement("path", {
+    d: "M13 26 L27 26",
+    stroke: ink,
+    strokeWidth: "2.6",
+    strokeLinecap: "round"
+  }), moodId === 'bad' && React.createElement("path", {
+    d: "M13 29 Q20 22 27 29",
+    fill: "none",
+    stroke: ink,
+    strokeWidth: "2.6",
+    strokeLinecap: "round"
+  }), moodId === 'awful' && React.createElement("ellipse", {
+    cx: "20",
+    cy: "28",
+    rx: "5",
+    ry: "4",
+    fill: ink
+  }));
 }
 function RhythmBuddyStars({
   stars
@@ -64532,8 +64643,11 @@ function RhythmBuddyDetail({
     className: "text-[10px] font-black text-slate-400"
   }, "今日の調子"), React.createElement("p", {
     "data-rhythm-buddy-mood": mood.id,
-    className: "text-sm font-black"
-  }, mood.icon, " ", mood.label), React.createElement("small", {
+    className: "flex items-center gap-1 text-sm font-black"
+  }, React.createElement(RhythmBuddyMoodFace, {
+    moodId: mood.id,
+    size: 22
+  }), mood.label), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
   }, "朝5:00に変わります")), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
@@ -64673,8 +64787,11 @@ function RhythmBuddyList({
       "aria-label": `今日の調子 ${mood.label}`,
       className: "shrink-0 text-center"
     }, React.createElement("span", {
-      className: "block text-lg leading-none"
-    }, mood.icon), React.createElement("small", {
+      className: "flex justify-center"
+    }, React.createElement(RhythmBuddyMoodFace, {
+      moodId: mood.id,
+      size: 24
+    })), React.createElement("small", {
       className: "block text-[8px] font-black text-slate-400"
     }, mood.label))), onPick && (calledIds.includes(masu.id) ? React.createElement("span", {
       "data-rhythm-buddy-called": true,

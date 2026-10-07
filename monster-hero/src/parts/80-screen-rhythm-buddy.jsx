@@ -96,14 +96,48 @@ const rhythmBuddyMakeBrain = (songs) => ({
 });
 
 // ---- 小さな部品 ----
+// 染色は全身の絵(imgUrl)に合わせて作ってあるので、顔アイコンではなく全身の絵を丸い枠に収める
+// (2026-10-07 ユーザー指摘「顔アイコンを使うと染色で絶対におかしくなる」)
 function RhythmBuddyFace({ masu, sizeClass = 'h-10 w-10' }) {
   const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
-  const src = base ? (base.faceIconUrl || base.iconUrl || base.imgUrl) : '';
+  const src = masuDisplayImageUrl(base);
   return (
     <span className={`relative block shrink-0 overflow-hidden rounded-full border-2 border-lime-300/70 bg-slate-800 ${sizeClass}`}>
-      {src ? <DyedMonsterImage baseId={masu.baseId} src={src} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-cover" />
+      {src ? <DyedMonsterImage baseId={masu.baseId} src={src} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain p-0.5" />
         : <span aria-hidden="true" className="flex h-full w-full items-center justify-center text-lg">🎵</span>}
     </span>
+  );
+}
+// その日の調子の顔(2026-10-07 ユーザー指示「機嫌の画像はこれを参考に」)。
+// 参考にもらった画像は他社の素材なので使わず、「色付きの丸い玉にシンプルな顔」の雰囲気だけを借りてここで描く。
+//   超ご機嫌=ピンク・大きく口を開けて笑う / ご機嫌=赤・にっこり / 普通=黄・口がまっすぐ / 不機嫌=青・への字 / 超不機嫌=紫・口を開けて落ちこむ
+const RHYTHM_BUDDY_MOOD_FACE_COLORS = Object.freeze({
+  great: ['#fbcfe8', '#ec4899'], good: ['#fca5a5', '#dc2626'], normal: ['#fde68a', '#f59e0b'], bad: ['#bae6fd', '#3b82f6'], awful: ['#ddd6fe', '#7c3aed'],
+});
+function RhythmBuddyMoodFace({ moodId, size = 24 }) {
+  const [light, dark] = RHYTHM_BUDDY_MOOD_FACE_COLORS[moodId] || RHYTHM_BUDDY_MOOD_FACE_COLORS.normal;
+  const gid = `mh-mood-${moodId}`;
+  const ink = '#1f2937';
+  const sad = moodId === 'bad' || moodId === 'awful';
+  return (
+    <svg data-rhythm-buddy-mood-face={moodId} width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" className="inline-block shrink-0 align-middle">
+      <defs>
+        <radialGradient id={gid} cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stopColor={light} />
+          <stop offset="100%" stopColor={dark} />
+        </radialGradient>
+      </defs>
+      <circle cx="20" cy="20" r="18.5" fill={`url(#${gid})`} />
+      <ellipse cx="14" cy="11" rx="6" ry="3.2" fill="#ffffff" opacity="0.35" />
+      {sad
+        ? <><path d="M10 15 L16 13" stroke={ink} strokeWidth="2.2" strokeLinecap="round" /><path d="M30 15 L24 13" stroke={ink} strokeWidth="2.2" strokeLinecap="round" /></>
+        : <><rect x="13" y="11" width="2.6" height="7" rx="1.3" fill={ink} /><rect x="24.4" y="11" width="2.6" height="7" rx="1.3" fill={ink} /></>}
+      {moodId === 'great' && <><path d="M11 22 Q20 36 29 22 Z" fill={ink} /><rect x="16" y="22.5" width="8" height="2.6" rx="1" fill="#ffffff" /><rect x="18.8" y="27" width="2.4" height="4" rx="1.2" fill="#f97316" /></>}
+      {moodId === 'good' && <path d="M11 23 Q20 32 29 23" fill="none" stroke={ink} strokeWidth="2.6" strokeLinecap="round" />}
+      {moodId === 'normal' && <path d="M13 26 L27 26" stroke={ink} strokeWidth="2.6" strokeLinecap="round" />}
+      {moodId === 'bad' && <path d="M13 29 Q20 22 27 29" fill="none" stroke={ink} strokeWidth="2.6" strokeLinecap="round" />}
+      {moodId === 'awful' && <ellipse cx="20" cy="28" rx="5" ry="4" fill={ink} />}
+    </svg>
   );
 }
 function RhythmBuddyStars({ stars }) {
@@ -212,7 +246,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
       <div className="grid grid-cols-2 gap-2">
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">今日の調子</h4>
-          <p data-rhythm-buddy-mood={mood.id} className="text-sm font-black">{mood.icon} {mood.label}</p>
+          <p data-rhythm-buddy-mood={mood.id} className="flex items-center gap-1 text-sm font-black"><RhythmBuddyMoodFace moodId={mood.id} size={22} />{mood.label}</p>
           <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります</small>
         </section>
         <section className="rounded-xl bg-slate-950/60 p-2">
@@ -299,7 +333,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
                 </small>
                 <small className="block truncate text-[9px] font-bold text-cyan-200/80">譜面Lv.{rhythmBuddyComfortLevelOf(mon)}まで</small>
               </span>
-              <span aria-label={`今日の調子 ${mood.label}`} className="shrink-0 text-center"><span className="block text-lg leading-none">{mood.icon}</span><small className="block text-[8px] font-black text-slate-400">{mood.label}</small></span>
+              <span aria-label={`今日の調子 ${mood.label}`} className="shrink-0 text-center"><span className="flex justify-center"><RhythmBuddyMoodFace moodId={mood.id} size={24} /></span><small className="block text-[8px] font-black text-slate-400">{mood.label}</small></span>
             </button>
             {onPick && (calledIds.includes(masu.id)
               ? <span data-rhythm-buddy-called className="min-h-[44px] shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
