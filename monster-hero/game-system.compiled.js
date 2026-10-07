@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3875db5b195bd35d
+// source-sha256: e2f1e00394f3909d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 11:47";
+const BUILD_DATE = "2026-10-07 11:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36954,7 +36954,7 @@ const rhythmBuddyUseFree = (state, dayKey) => {
     used: used + 1
   };
 };
-const rhythmBuddyNeedExp = level => 40 + 20 * Math.max(1, level);
+const rhythmBuddyNeedExp = level => 120 + 60 * Math.max(1, level);
 const rhythmBuddyLevelInfo = exp => {
   let rest = rhythmBuddyInt(exp);
   let level = 1;
@@ -37079,14 +37079,14 @@ const rhythmBuddyAccuracy = ({
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
   const stars = rhythmBuddyFamiliarStars(m.songs[songId], m.trait);
-  let acc = 0.35 + 0.42 * ((level - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1));
+  let acc = 0.35 + 0.57 * Math.pow((level - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
   acc += 0.05 * mastery;
   acc -= d * 0.035 * (1 - mastery);
   acc += stars * 0.012 * (m.trait === 'artisan' ? 1.4 : 1);
   if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
   const moodAcc = mood ? mood.acc : 0;
   acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
-  return Math.max(0.1, Math.min(0.9, acc));
+  return Math.max(0.1, Math.min(0.97, acc));
 };
 const rhythmBuddySpread = (trait, mood) => {
   const base = trait === 'steady' ? 0.02 : trait === 'burst' ? 0.055 : 0.035;
@@ -37119,7 +37119,7 @@ const rhythmBuddyPlay = ({
     mood
   }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood);
   if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
-  acc = Math.max(0.1, Math.min(0.96, acc));
+  acc = Math.max(0.1, Math.min(0.985, acc));
   const miss = 1 - acc;
   const share = {
     MISS: miss * 0.45,
@@ -37138,7 +37138,7 @@ const rhythmBuddyPlay = ({
   ['MISS', 'BAD', 'GOOD', 'GREAT'].forEach(id => {
     counts[id] = Math.round(total * share[id]);
   });
-  if (counts.MISS + counts.BAD === 0 && r() < 0.98) counts.MISS = 1;
+  if (counts.MISS + counts.BAD === 0 && r() >= Math.max(0, (acc - 0.93) * 6)) counts.MISS = 1;
   const rest = Math.max(0, total - counts.MISS - counts.BAD - counts.GOOD - counts.GREAT);
   counts.MARVELOUS = Math.round(rest * acc);
   counts.EXCELLENT = rest - counts.MARVELOUS;
@@ -60860,7 +60860,7 @@ const rhythmMultiTeamResult = (members, round, participants, closed = false) => 
   let mvpId = null;
   let best = 0;
   rows.forEach(r => {
-    if (r.res && !r.res.quit && !r.m.cpu && r.res.score > best) {
+    if (r.res && !r.res.quit && r.res.score > best) {
       best = r.res.score;
       mvpId = r.m.id;
     }
@@ -88802,6 +88802,7 @@ function MonsterHeroGame() {
         frame: profileFrameId
       },
       resolveIconUrl: resolveIconUrl,
+      masuMons: masuMons,
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),

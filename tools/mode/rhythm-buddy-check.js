@@ -55,7 +55,7 @@ const pure = (() => {
 
   check('Lv は1から始まり、50で止まる', b.level(0).level === 1 && b.level(1e9).level === b.max && b.max === 50);
   let expTo50 = 0; for (let l = 1; l < 50; l += 1) expTo50 += b.need(l);
-  check('Lv.50までの経験値は2万〜3万(毎日遊んで1か月ほど)', expTo50 >= 20000 && expTo50 <= 30000, String(expTo50));
+  check('Lv.50までの経験値は6万〜10万(育ちきるまで時間がかかる)', expTo50 >= 60000 && expTo50 <= 100000, String(expTo50));
 
   const r1 = b.apply(null, { round: 'r1', songId: 'songA', diffId: 'HARD', durationMs: 120000, teamRank: 'A', dayKey: d1, lean: 'steady', nowMs: 1 });
   const r1b = b.apply(r1.mon, { round: 'r1', songId: 'songA', diffId: 'HARD', durationMs: 120000, teamRank: 'A', dayKey: d1, lean: 'steady', nowMs: 2 });
@@ -104,7 +104,9 @@ const pure = (() => {
   const lv50m = avg(1e9, 'MASTER', 1000000, 40);
   check('スコアは0〜その難易度の満点に収まる', !lv1.bad && !lv50.bad && !lv50m.bad);
   check('育つほどうまくなる(Lv.1 < Lv.50)', lv1.avg < lv50.avg, `${Math.round(lv1.avg)} < ${Math.round(lv50.avg)}`);
-  check('どれだけ育ててもMASTERの満点には遠く、フルコンボはまれ', lv50m.avg < 900000 && lv50m.fc <= 15, `平均${Math.round(lv50m.avg)} FC${lv50m.fc}/300`);
+  check('育ちきるとMASTERでSSに届く(人より上手になれる)。満点は出ない', lv50m.avg >= 860000 && lv50m.avg < 1000000, `平均${Math.round(lv50m.avg)} FC${lv50m.fc}/300`);
+  const lv1m = avg(0, 'MASTER', 1000000, 0);
+  check('育てはじめはフルコンボしない', lv1m.fc === 0 && lv1.fc === 0);
   const great = b.moods.find((m) => m.id === 'great');
   const awful = b.moods.find((m) => m.id === 'awful');
   const byMood = (mood) => { const rand = seq(3); let s = 0; for (let i = 0; i < 300; i += 1) s += b.play({ mon: { exp: 5000 }, songId: 's', diffId: 'HARD', totalNotes: 500, maxScore: 800000, mood, rand }).score; return s / 300; };
@@ -217,7 +219,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   check('相棒の演奏は1ライブにつき1回だけ作る', a.plays.length === 1);
   check('全員の結果がそろうと結果の段へ進む', phaseOf(a) === 'result');
   const t = a.team(view(a).members, view(a).room.round, view(a).room.participants, true);
-  check('相棒はMVPを取らない(スコアが上でも)', t.mvpId === view(a).selfId);
+  check('相棒もMVPを取れる(スコアがいちばん上なら)', t.mvpId === view(a).cpuId);
   a.M.leave();
 }
 

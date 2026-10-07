@@ -160,8 +160,7 @@ const rhythmMultiTeamResult = (members, round, participants, closed = false) => 
   const average = scores.length ? Math.floor(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
   let mvpId = null;
   let best = 0;
-  // 相棒(CPU)はMVPの対象外(docs/spec/RHYTHM_BUDDY.md)
-  rows.forEach((r) => { if (r.res && !r.res.quit && !r.m.cpu && r.res.score > best) { best = r.res.score; mvpId = r.m.id; } });
+  rows.forEach((r) => { if (r.res && !r.res.quit && r.res.score > best) { best = r.res.score; mvpId = r.m.id; } });
   return { rows, waiting, average, mvpId, rank: scores.length ? rhythmRankForScore(average) : null };
 };
 

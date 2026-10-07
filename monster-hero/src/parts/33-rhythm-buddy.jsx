@@ -109,8 +109,9 @@ const rhythmBuddyUseFree = (state, dayKey) => {
 };
 
 // ---- レベル ----
-// Lv n → n+1 に要る経験値。Lv.50 までおよそ2万6千(1ライブ平均50前後なので、毎日遊んで1か月ほど)
-const rhythmBuddyNeedExp = (level) => 40 + 20 * Math.max(1, level);
+// Lv n → n+1 に要る経験値。Lv.50 までおよそ8万(1ライブ平均50前後なので、毎日遊んで3か月ほど)。
+// 育ちきればプレイヤーより上手になれるが、そこまでは時間がかかる(2026-10-07・ユーザー指示)
+const rhythmBuddyNeedExp = (level) => 120 + 60 * Math.max(1, level);
 const rhythmBuddyLevelInfo = (exp) => {
   let rest = rhythmBuddyInt(exp);
   let level = 1;
@@ -214,14 +215,15 @@ const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood }) => {
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
   const stars = rhythmBuddyFamiliarStars(m.songs[songId], m.trait);
-  let acc = 0.35 + 0.42 * ((level - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1));
+  // 上の方ほど伸びが大きい(はじめはゆっくり、育ちきると人より上手)
+  let acc = 0.35 + 0.57 * Math.pow((level - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
   acc += 0.05 * mastery;
   acc -= d * 0.035 * (1 - mastery);
   acc += stars * 0.012 * (m.trait === 'artisan' ? 1.4 : 1);
   if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
   const moodAcc = mood ? mood.acc : 0;
   acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
-  return Math.max(0.1, Math.min(0.9, acc));
+  return Math.max(0.1, Math.min(0.97, acc));
 };
 // ブレ(標準偏差)
 const rhythmBuddySpread = (trait, mood) => {
@@ -244,13 +246,13 @@ const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs
   let acc = rhythmBuddyAccuracy({ mon: m, songId, diffId, durationMs, mood }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood);
   // 一発型は、たまに(8%)大きく当てる
   if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
-  acc = Math.max(0.1, Math.min(0.96, acc));
+  acc = Math.max(0.1, Math.min(0.985, acc));
   const miss = 1 - acc;
   const share = { MISS: miss * 0.45, BAD: miss * 0.15, GOOD: miss * 0.2, GREAT: miss * 0.2 };
   const counts = { MARVELOUS: 0, EXCELLENT: 0, GREAT: 0, GOOD: 0, BAD: 0, MISS: 0 };
   ['MISS', 'BAD', 'GOOD', 'GREAT'].forEach((id) => { counts[id] = Math.round(total * share[id]); });
-  // どれだけ育っても、満点・フルコンボはまれ(98%は最低1つは切れる)
-  if (counts.MISS + counts.BAD === 0 && r() < 0.98) counts.MISS = 1;
+  // フルコンボは、よほどうまいときだけ(判定の良さ 0.93 を超えたぶんだけ出やすくなる)
+  if (counts.MISS + counts.BAD === 0 && r() >= Math.max(0, (acc - 0.93) * 6)) counts.MISS = 1;
   const rest = Math.max(0, total - counts.MISS - counts.BAD - counts.GOOD - counts.GREAT);
   counts.MARVELOUS = Math.round(rest * acc);
   counts.EXCELLENT = rest - counts.MARVELOUS;
