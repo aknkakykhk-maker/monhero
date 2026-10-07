@@ -88,6 +88,11 @@ const MARKET_PROFILE_ICON_STYLES = {
   Ghost: { scale: 0.95, x: 0, y: 0 },
   spooky_disc_icon: { scale: 0.95, x: 0, y: 0 },
   Spooky: { scale: 0.95, x: 0, y: 0 },
+  // メロディー・クロミー(2026-10-07・近日追加)。円盤石はほかの子と同じ作り方なので同じ収まり
+  melody_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Melody: { scale: 0.95, x: 0, y: 0 },
+  kuromy_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Kuromy: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。

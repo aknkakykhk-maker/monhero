@@ -43,6 +43,9 @@ const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=16a7bd3b4eed
 const GHOST_DISC_ICON = "images/disc-icons/ghost-disc.PNG?v=2745f9d5900d";
 const SPOOKY_DISC_ICON = "images/disc-icons/spooky-disc.PNG?v=804ca5b41a07";
 const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
+// メロディー・クロミー(2026-10-07・実装予告)。作り方はほかの円盤石と同じ(make-disc-icon.js)。?v= は build.js が打ち直す
+const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=634ff5eb63a4";
+const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=8b1aa76636ad";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
@@ -375,6 +378,16 @@ const BREEDER_MARKET_ITEMS = [
   { id:'spooky_icon', name:"スプーキーのアイコン", type:'icon', icon:SPOOKY_FACE_ICON, cost:1 },
   { id:'spooky_disc_icon', name:"スプーキーの円盤石アイコン", type:'icon', icon:SPOOKY_DISC_ICON, cost:1 },
   { id:'Spooky', name:"スプーキーの円盤石", type:'disc', icon:SPOOKY_DISC_ICON, cost:150000, available:false },
+  // メロディーとクロミー(ユグドラシル×？？？のレア2体)。
+  // 2026-10-07 ユーザー指示「ゴーストのときと同じを一式」で、6件とも available:false(「近日追加」)で並べた。
+  // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はゴースト・スプーキーと同じ(円盤石150,000ダイヤ・アイコンは各1)。
+  // 正式実装のときに available:false を外す
+  { id:'melody_icon', name:"メロディーのアイコン", type:'icon', icon:MELODY_FACE_ICON, cost:1, available:false },
+  { id:'melody_disc_icon', name:"メロディーの円盤石アイコン", type:'icon', icon:MELODY_DISC_ICON, cost:1, available:false },
+  { id:'Melody', name:"メロディーの円盤石", type:'disc', icon:MELODY_DISC_ICON, cost:150000, available:false },
+  { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1, available:false },
+  { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1, available:false },
+  { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
