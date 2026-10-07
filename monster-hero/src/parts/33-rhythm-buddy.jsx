@@ -46,11 +46,11 @@ const RHYTHM_BUDDY_OLD_TRAITS = Object.freeze({ steady: 'serious', burst: 'jeste
 
 // その日の調子。weight は出やすさ(%)、acc は判定の良さへの足し引き、spread はブレの倍率
 const RHYTHM_BUDDY_MOODS = Object.freeze([
-  Object.freeze({ id: 'great', label: '超ご機嫌', icon: '😆', weight: 10, acc: 0.06, spread: 0.7 }),
-  Object.freeze({ id: 'good', label: 'ご機嫌', icon: '😊', weight: 25, acc: 0.03, spread: 0.9 }),
-  Object.freeze({ id: 'normal', label: '普通', icon: '🙂', weight: 35, acc: 0, spread: 1 }),
-  Object.freeze({ id: 'bad', label: '不機嫌', icon: '😒', weight: 20, acc: -0.03, spread: 1.1 }),
-  Object.freeze({ id: 'awful', label: '超不機嫌', icon: '😠', weight: 10, acc: -0.06, spread: 1.35 }),
+  Object.freeze({ id: 'great', label: '超ご機嫌', icon: '😆', weight: 10, acc: 0.06, spread: 0.7, exp: 1.3 }),
+  Object.freeze({ id: 'good', label: 'ご機嫌', icon: '😊', weight: 25, acc: 0.03, spread: 0.9, exp: 1.15 }),
+  Object.freeze({ id: 'normal', label: '普通', icon: '🙂', weight: 35, acc: 0, spread: 1, exp: 1 }),
+  Object.freeze({ id: 'bad', label: '不機嫌', icon: '😒', weight: 20, acc: -0.03, spread: 1.1, exp: 0.85 }),
+  Object.freeze({ id: 'awful', label: '超不機嫌', icon: '😠', weight: 10, acc: -0.06, spread: 1.35, exp: 0.7 }),
 ]);
 // 前の日に一緒に遊んでいると、不機嫌・超不機嫌が出にくい(減ったぶんは「普通」へ)
 const RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS = Object.freeze({ great: 10, good: 25, normal: 47, bad: 13, awful: 5 });
@@ -170,9 +170,17 @@ const rhythmBuddyLevelInfo = (exp) => {
 };
 // 1ライブの経験値。難しい難易度・高いチームランクほど多い
 const RHYTHM_BUDDY_RANK_EXP = Object.freeze({ M: 30, SS: 26, S: 22, A: 18, B: 14, C: 10, D: 7, E: 5, F: 3, G: 0 });
-const rhythmBuddyExpGain = (diffId, teamRank) => {
+// 今日の調子で経験値(成長)が変わる(2026-10-07・ユーザー指示「成長率を機嫌によって変えたい」)。
+// 真面目は「調子の影響を受けにくい」ので、倍率の差を半分にする。返り値は経験値にかける倍率
+const rhythmBuddyMoodExpScale = (moodId, trait = '') => {
+  const mood = RHYTHM_BUDDY_MOODS.find((x) => x.id === moodId);
+  const scale = mood ? mood.exp : 1;
+  return Math.round((trait === 'serious' ? 1 + (scale - 1) / 2 : scale) * 1000) / 1000;
+};
+const rhythmBuddyExpGain = (diffId, teamRank, moodId = '', trait = '') => {
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
-  return 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  const base = 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  return Math.max(1, Math.round(base * rhythmBuddyMoodExpScale(moodId, trait)));
 };
 
 // ---- 曲のなじみ(星0〜5) ----
@@ -183,6 +191,39 @@ const rhythmBuddyFamiliarStars = (plays, trait) => {
   return RHYTHM_BUDDY_FAMILIAR_STEPS.filter((step) => n >= step).length;
 };
 // 得意な曲(回数の多い順)
+// 相棒が曲をえらぶときの理由(画面へ出すひとこと)。通信には文字の短いコードだけ流す
+const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
+  fav: 'この曲が得意!', hard: 'ちょっと難しい曲に挑戦!', safe: '今日は慣れた曲で安心したい', long: '長い曲をのんびり楽しみたい',
+  fun: '気分で選んだよ', new: 'はじめての曲にワクワク!',
+});
+// 新しい曲(まだ一緒に遊んでいない曲)に挑戦する確率。性格と今日の調子で変わる
+const rhythmBuddyNewSongChance = (trait, moodId) => {
+  const base = { jester: 0.25, brave: 0.2, stubborn: 0.04, serious: 0.08 }[trait];
+  const mood = { great: 0.08, good: 0.04, bad: -0.04, awful: -0.08 }[moodId] || 0;
+  return Math.round(Math.min(0.4, Math.max(0, (base == null ? 0.12 : base) + mood)) * 100) / 100;
+};
+// 相棒の選曲(2026-10-07・ユーザー指示「もうちょい選曲に意思をもたせる」)。本番の曲は人の選曲だけで決まるので、
+// これはシャッフル画面で見せる「相棒の気持ち」。info(songId) → { level, durationMs } は曲の最高Lv.と長さ
+// 返り値 { songId, why }。why は RHYTHM_BUDDY_PICK_WHY のキー。遊べる曲が無ければ songId は ''
+const rhythmBuddyChooseSong = (mon, catalog, { mood = null, info = null, rand = Math.random } = {}) => {
+  const m = rhythmBuddyNormalizeMon(mon);
+  const list = Array.isArray(catalog) ? catalog.filter((id) => typeof id === 'string' && id) : [];
+  if (!list.length) return { songId: '', why: '' };
+  const pickOne = (arr) => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
+  const played = rhythmBuddyTopSongs(m, RHYTHM_BUDDY_SONG_KEEP).map((x) => x.songId).filter((id) => list.includes(id));
+  if (!played.length) return { songId: pickOne(list), why: 'new' };
+  const fresh = list.filter((id) => !played.includes(id));
+  const moodId = mood && mood.id;
+  if (fresh.length && rand() < rhythmBuddyNewSongChance(m.trait, moodId)) return { songId: pickOne(fresh), why: 'new' };
+  const top = played.slice(0, 5);
+  const stat = (id, key) => { try { return Number(info && info(id) && info(id)[key]) || 0; } catch (_) { return 0; } };
+  const most = (arr, key) => arr.reduce((a, b) => (stat(b, key) > stat(a, key) ? b : a), arr[0]);
+  if (m.trait === 'easygoing' && info) return { songId: most(top, 'durationMs'), why: 'long' };
+  if (moodId === 'bad' || moodId === 'awful' || m.trait === 'worrier') return { songId: top[0], why: 'safe' };
+  if ((moodId === 'great' || moodId === 'good' || m.trait === 'brave') && info) return { songId: most(top, 'level'), why: 'hard' };
+  if (m.trait === 'jester') return { songId: pickOne(top), why: 'fun' };
+  return { songId: pickOne(top.slice(0, 3)), why: 'fav' };
+};
 const rhythmBuddyTopSongs = (mon, count = 5) => {
   const m = rhythmBuddyNormalizeMon(mon);
   return Object.keys(m.songs).map((songId) => ({ songId, plays: m.songs[songId], stars: rhythmBuddyFamiliarStars(m.songs[songId], m.trait) }))
@@ -375,7 +416,7 @@ const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs
 const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank, dayKey, lean, nowMs, score, maxScore, chartLevel = 0, humans = 1, moodId = '' }) => {
   const before = rhythmBuddyNormalizeMon(mon);
   if (!round || before.lastRound === round) return { mon: before, gain: 0, levelUp: 0, familiarUp: false, traitNew: '' };
-  const gain = rhythmBuddyExpGain(diffId, teamRank);
+  const gain = rhythmBuddyExpGain(diffId, teamRank, moodId, before.trait);
   const songs = { ...before.songs };
   const sid = rhythmBuddyStr(songId, 60);
   if (sid) songs[sid] = (songs[sid] || 0) + 1;

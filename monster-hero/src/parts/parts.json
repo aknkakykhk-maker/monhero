@@ -108,6 +108,11 @@
       "pure": true
     },
     {
+      "file": "33-rhythm-buddy-talk.jsx",
+      "role": "呼んだマスモンのおしゃべり(部屋のチャットへ一言)。場面×性格×調子のセリフ集と、選び方・人のチャットへの返事の振り分け。AIは使わず用意したセリフから選ぶ",
+      "pure": true
+    },
+    {
       "file": "34-friends-api.jsx",
       "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
     },

@@ -618,5 +618,14 @@ check('更新履歴に超越の追加が載っている',
   // 新しい育成システムは「新しい遊び」なので告知は残す。種別は content(旧 feature は廃止・2026-09-05)
   && changelog.includes("assistantNotice: { id:'update_notice_transcendence_v1', type:'content' }"));
 
+// 超越強化の確定も、通常強化と同じくミッション「モンスターを強化する」に数える(2026-10-07・ユーザー報告)
+{
+  const at = source.indexOf('const commitTranscendPlan = async');
+  const body = at >= 0 ? source.slice(at, source.indexOf('const commitTranscendExchange', at)) : '';
+  check('超越ポイントの配分を確定すると、ミッションの「強化」に数える', /saveMissionProgress\('enhance'\)/.test(body));
+  const ex = source.slice(source.indexOf('const commitTranscendExchange'), source.indexOf('const commitTranscendExchange') + 1800);
+  check('プシュケーを超越Pへ替えるだけの交換は、強化に数えない', !/saveMissionProgress\('enhance'\)/.test(ex));
+}
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

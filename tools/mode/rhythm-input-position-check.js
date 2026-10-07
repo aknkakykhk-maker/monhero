@@ -29,8 +29,9 @@ check('道の外に降りた指を覚えている(outsideStartInputs)',/outsideS
 check('道の外から滑ってきた指は、道へ1サブレーン以上入ってから押した指にする',/RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES=1;/.test(play)&&/subLaneCoordinate>=RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES&&subLaneCoordinate<=RHYTHM_SUB_LANE_COUNT-RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES/.test(play));
 check('道の外の指は、離れたら・ポーズしたら忘れる',/outsideStartInputs\?\.delete\(inputKey\)/.test(play)&&/run\.outsideStartInputs\?\.clear\(\)/.test(play));
 check('疑似TAPに、本物の指が触れた時刻を持たせる',/downEvent\.__mhOriginStamp=Number\(originStamp\)/.test(runtime)&&/dispatchTapProbe\(area,action\.touch,lane,baseKey,event\?\.timeStamp\)/.test(runtime));
-check('ポインタ入力は、疑似TAPの元の時刻から遅れを引く',/e\.nativeEvent\?\.__mhOriginStamp/.test(play));
-check('押さえ始めの時計へ、押した瞬間の遅れを渡す',/setInputAge\?\.\(ageMs\)[\s\S]{0,200}rhythmMatchInputBatch[\s\S]{0,120}setInputAge\?\.\(0\)/.test(play)&&/startPerfMs:perf-pendingInputAgeMs/.test(runtime));
+// 2026-10-07 21時: 疑似TAPを本物の指の時刻まで巻き戻すのと、押さえ始めの時計の巻き戻しは、いったん戻した(タップ抜けの報告。原因を調べるまで)
+check('ポインタ入力の遅れは、いまはそのイベントの時刻から数える(疑似TAPの元の時刻へは巻き戻さない)',/captureTarget:e\.currentTarget,pointerId:e\.pointerId\}\],rhythmInputAgeMs\(e\.timeStamp,perfNow\)\)/.test(play));
+check('押さえ始めの時計へ遅れは渡すが、いまは巻き戻さない',/setInputAge\?\.\(ageMs\)[\s\S]{0,200}rhythmMatchInputBatch[\s\S]{0,120}setInputAge\?\.\(0\)/.test(play)&&/startPerfMs:perf\/\*/.test(runtime)&&!/startPerfMs:perf-pendingInputAgeMs/.test(runtime));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

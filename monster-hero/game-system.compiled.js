@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9381052366fbcba0
+// source-sha256: e66ba37d90ef4cfb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 19:32";
+const BUILD_DATE = "2026-10-07 22:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -27999,6 +27999,24 @@ const rhythmAchievementMarkId = (playable, record) => {
   if (record.fullCombo) return 'FULL_COMBO';
   return 'CLEAR';
 };
+const RHYTHM_DETAIL_ACHIEVE_TIERS = Object.freeze({
+  FULL_COMBO: Object.freeze({
+    id: 'FULL_COMBO',
+    text: 'FULL COMBO!',
+    label: 'フルコンボ'
+  }),
+  ALL_EXCELLENT: Object.freeze({
+    id: 'ALL_EXCELLENT',
+    text: 'ALL EXCELLENT!!',
+    label: 'オールエクセレント'
+  }),
+  ALL_MARVELOUS: Object.freeze({
+    id: 'ALL_MARVELOUS',
+    text: 'ALL MARVELOUS!!',
+    label: 'オールマーベラス'
+  })
+});
+const rhythmDetailAchieveTier = record => RHYTHM_DETAIL_ACHIEVE_TIERS[rhythmAchievementMarkId(true, record)] || null;
 const rhythmSongArtHue = songId => {
   const text = String(songId || '');
   let hash = 0;
@@ -28516,7 +28534,16 @@ const RhythmSongSelect = ({
         className: "ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400"
       }), rowId && React.createElement("span", {
         className: `shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`
-      }, rowId), played ? React.createElement(React.Fragment, null, React.createElement("b", {
+      }, rowId), (() => {
+        const tier = played ? rhythmDetailAchieveTier(record) : null;
+        return tier ? React.createElement("span", _extends({}, main ? {
+          'data-rhythm-song-row-achieve': tier.id
+        } : {}, {
+          "data-rhythm-achieve-tone": tier.id,
+          title: tier.label,
+          className: "shrink-0 rounded px-1 py-px text-[8px] font-black italic leading-none [@container(max-width:350px)]:hidden"
+        }), tier.id === 'FULL_COMBO' ? 'FC' : tier.id === 'ALL_EXCELLENT' ? 'AE' : 'AM') : null;
+      })(), played ? React.createElement(React.Fragment, null, React.createElement("b", {
         className: `text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank] || 'text-slate-300'}`
       }, rank), React.createElement("span", {
         className: "truncate tabular-nums text-slate-300"
@@ -28548,17 +28575,39 @@ const RhythmSongSelect = ({
   }, "遊べる曲がありません。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-song-detail-grid": true,
     className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]"
-  }, React.createElement("div", {
-    "data-rhythm-song-detail-art": true,
-    className: "w-28 shrink-0 self-start landscape:w-[7.5rem]",
-    style: {
-      gridArea: 'art'
-    }
-  }, React.createElement(RhythmSongArt, {
-    song: song,
-    large: true,
-    onZoom: () => setArtZoom(true)
-  })), React.createElement("div", {
+  }, (() => {
+    const tier = rhythmDetailAchieveTier(best);
+    return React.createElement("div", _extends({
+      "data-rhythm-song-detail-art": true,
+      className: "relative w-28 shrink-0 self-start landscape:w-[7.5rem]",
+      style: {
+        gridArea: 'art'
+      }
+    }, tier ? {
+      'data-rhythm-detail-achieve': tier.id
+    } : {}), React.createElement(RhythmSongArt, {
+      song: song,
+      large: true,
+      onZoom: () => setArtZoom(true)
+    }), tier && React.createElement("span", {
+      key: `${song.songId}:${difficulty.id}`,
+      "aria-label": tier.label
+    }, React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-frame": ""
+    }), React.createElement("b", {
+      "data-rhythm-achieve-ribbon": ""
+    }, tier.text), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "1"
+    }, "✦"), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "2"
+    }, "✦"), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "3"
+    }, "✦")));
+  })(), React.createElement("div", {
     className: "min-w-0",
     style: {
       gridArea: 'title'
@@ -33035,7 +33084,7 @@ const RhythmTapTest = ({
       subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
-    }], Number.isFinite(originStamp) ? rhythmInputAgeMs(originStamp, perfNow) : rhythmInputAgeMs(e.timeStamp, perfNow));
+    }], rhythmInputAgeMs(e.timeStamp, perfNow));
   };
   const pointerMove = e => {
     if (e.pointerType === 'touch' && !RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId)) return;
@@ -37106,35 +37155,40 @@ const RHYTHM_BUDDY_MOODS = Object.freeze([Object.freeze({
   icon: '😆',
   weight: 10,
   acc: 0.06,
-  spread: 0.7
+  spread: 0.7,
+  exp: 1.3
 }), Object.freeze({
   id: 'good',
   label: 'ご機嫌',
   icon: '😊',
   weight: 25,
   acc: 0.03,
-  spread: 0.9
+  spread: 0.9,
+  exp: 1.15
 }), Object.freeze({
   id: 'normal',
   label: '普通',
   icon: '🙂',
   weight: 35,
   acc: 0,
-  spread: 1
+  spread: 1,
+  exp: 1
 }), Object.freeze({
   id: 'bad',
   label: '不機嫌',
   icon: '😒',
   weight: 20,
   acc: -0.03,
-  spread: 1.1
+  spread: 1.1,
+  exp: 0.85
 }), Object.freeze({
   id: 'awful',
   label: '超不機嫌',
   icon: '😠',
   weight: 10,
   acc: -0.06,
-  spread: 1.35
+  spread: 1.35,
+  exp: 0.7
 })]);
 const RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS = Object.freeze({
   great: 10,
@@ -37291,14 +37345,96 @@ const RHYTHM_BUDDY_RANK_EXP = Object.freeze({
   F: 3,
   G: 0
 });
-const rhythmBuddyExpGain = (diffId, teamRank) => {
+const rhythmBuddyMoodExpScale = (moodId, trait = '') => {
+  const mood = RHYTHM_BUDDY_MOODS.find(x => x.id === moodId);
+  const scale = mood ? mood.exp : 1;
+  return Math.round((trait === 'serious' ? 1 + (scale - 1) / 2 : scale) * 1000) / 1000;
+};
+const rhythmBuddyExpGain = (diffId, teamRank, moodId = '', trait = '') => {
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
-  return 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  const base = 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  return Math.max(1, Math.round(base * rhythmBuddyMoodExpScale(moodId, trait)));
 };
 const RHYTHM_BUDDY_FAMILIAR_STEPS = Object.freeze([1, 3, 6, 10, 15]);
 const rhythmBuddyFamiliarStars = (plays, trait) => {
   const n = rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1);
   return RHYTHM_BUDDY_FAMILIAR_STEPS.filter(step => n >= step).length;
+};
+const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
+  fav: 'この曲が得意!',
+  hard: 'ちょっと難しい曲に挑戦!',
+  safe: '今日は慣れた曲で安心したい',
+  long: '長い曲をのんびり楽しみたい',
+  fun: '気分で選んだよ',
+  new: 'はじめての曲にワクワク!'
+});
+const rhythmBuddyNewSongChance = (trait, moodId) => {
+  const base = {
+    jester: 0.25,
+    brave: 0.2,
+    stubborn: 0.04,
+    serious: 0.08
+  }[trait];
+  const mood = {
+    great: 0.08,
+    good: 0.04,
+    bad: -0.04,
+    awful: -0.08
+  }[moodId] || 0;
+  return Math.round(Math.min(0.4, Math.max(0, (base == null ? 0.12 : base) + mood)) * 100) / 100;
+};
+const rhythmBuddyChooseSong = (mon, catalog, {
+  mood = null,
+  info = null,
+  rand = Math.random
+} = {}) => {
+  const m = rhythmBuddyNormalizeMon(mon);
+  const list = Array.isArray(catalog) ? catalog.filter(id => typeof id === 'string' && id) : [];
+  if (!list.length) return {
+    songId: '',
+    why: ''
+  };
+  const pickOne = arr => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
+  const played = rhythmBuddyTopSongs(m, RHYTHM_BUDDY_SONG_KEEP).map(x => x.songId).filter(id => list.includes(id));
+  if (!played.length) return {
+    songId: pickOne(list),
+    why: 'new'
+  };
+  const fresh = list.filter(id => !played.includes(id));
+  const moodId = mood && mood.id;
+  if (fresh.length && rand() < rhythmBuddyNewSongChance(m.trait, moodId)) return {
+    songId: pickOne(fresh),
+    why: 'new'
+  };
+  const top = played.slice(0, 5);
+  const stat = (id, key) => {
+    try {
+      return Number(info && info(id) && info(id)[key]) || 0;
+    } catch (_) {
+      return 0;
+    }
+  };
+  const most = (arr, key) => arr.reduce((a, b) => stat(b, key) > stat(a, key) ? b : a, arr[0]);
+  if (m.trait === 'easygoing' && info) return {
+    songId: most(top, 'durationMs'),
+    why: 'long'
+  };
+  if (moodId === 'bad' || moodId === 'awful' || m.trait === 'worrier') return {
+    songId: top[0],
+    why: 'safe'
+  };
+  if ((moodId === 'great' || moodId === 'good' || m.trait === 'brave') && info) return {
+    songId: most(top, 'level'),
+    why: 'hard'
+  };
+  if (m.trait === 'jester') return {
+    songId: pickOne(top),
+    why: 'fun'
+  };
+  return {
+    songId: pickOne(top.slice(0, 3)),
+    why: 'fav'
+  };
 };
 const rhythmBuddyTopSongs = (mon, count = 5) => {
   const m = rhythmBuddyNormalizeMon(mon);
@@ -37542,7 +37678,7 @@ const rhythmBuddyApplyLive = (mon, {
     familiarUp: false,
     traitNew: ''
   };
-  const gain = rhythmBuddyExpGain(diffId, teamRank);
+  const gain = rhythmBuddyExpGain(diffId, teamRank, moodId, before.trait);
   const songs = {
     ...before.songs
   };
@@ -37606,6 +37742,686 @@ const rhythmBuddyApplyLive = (mon, {
     familiarUp,
     traitNew
   };
+};
+const RHYTHM_BUDDY_TALK_MAX = 40;
+const RHYTHM_BUDDY_TALK_KINDS = Object.freeze(['join', 'pick', 'song', 'mvp', 'high', 'mid', 'low', 'bump', 'replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'idle']);
+const RHYTHM_BUDDY_TALK_BASE = {
+  join: {
+    common: ['よろしくね!', '呼んでくれてありがとう!', '来たよー!', 'お邪魔します!', 'みんな、よろしく!', '今日もがんばろう!', 'おまたせ!', '一緒に遊ぼう!'],
+    trait: {
+      jester: ['ジャジャーン!登場!', '呼ばれて飛び出てマスモン!', '笑いも取るよー!', '今日の主役、来ちゃった!'],
+      brave: ['いつでもいける!', '強い譜面でも任せて!', '突撃だー!', '燃えてきた!'],
+      clingy: ['ねぇねぇ、呼んでくれたの?うれしい!', '来たよ〜!ほめて!', 'そばにいていい?', 'ずっと待ってたんだよ〜'],
+      smart: ['状況を把握しました。参加します', '準備は万全です。よろしく', 'データは取ってあります', '計算上は好調です'],
+      serious: ['よろしくお願いします!', '全力で取り組みます!', '参加させていただきます', '最後までがんばります!'],
+      proud: ['ふふ、私が来たからには安心よ', '当然、呼ばれると思ってた', '足を引っぱらないでね?', 'ほめてもいいのよ?'],
+      worrier: ['あの…足を引っぱらないかな…', 'うまくできるかな…がんばる!', 'ドキドキするぅ…', 'ミスしたらごめんね…'],
+      stubborn: ['呼ばれたからには手は抜かん!', '自分のやり方でいくぞ', '遊ぶからには勝つ!', '文句は言わせんぞ'],
+      easygoing: ['ふぁ〜…あ、来たよ〜', 'のんびりいこうね〜', 'ゆっくりやろ〜', 'おじゃましま〜す']
+    },
+    mood: {
+      great: ['今日は絶好調!!', '最高の気分!!', 'なんでもできそう!'],
+      good: ['今日はいい感じ!', '調子いいよ!', '気分いいね〜'],
+      normal: ['ふつうに元気だよ!'],
+      bad: ['今日はちょっと…', 'あんまり気分じゃないけど…', 'まあ、がんばるよ…'],
+      awful: ['…今日は話しかけないで', '…やる気でない', '…まあ、来たけど']
+    }
+  },
+  pick: {
+    common: ['{song}がいいな!', '{song}やりたい!', '{song}にしよう!', 'この曲、得意なんだ!', '得意な曲いくよ!', '{song}、好きなんだ〜', 'これ、何回も遊んだ曲!', 'この曲でどう?'],
+    trait: {
+      jester: ['{song}で笑わせるよ!', 'この曲で一発当てる!', 'ノリのいい曲がいいよね!', '{song}で盛り上がろ!'],
+      brave: ['{song}で勝負だ!', 'この曲で燃えたい!', 'むずかしくてもいくぞ!', '{song}に挑戦!'],
+      clingy: ['{song}がいい〜!お願い!', 'この曲、いっしょにやりたい〜', '{song}にしてほしいな…', 'この曲だとがんばれる!'],
+      smart: ['{song}が最適と判断しました', '{song}は得意な曲です', '{song}の譜面は把握済みです', '勝率の高い曲を選びました'],
+      serious: ['{song}を希望します', '{song}をお願いします!', '練習した曲を選びました', '{song}で全力を出します'],
+      proud: ['{song}がふさわしいわ', 'この曲なら完璧よ', '{song}を選ぶのが当然ね', '得意な曲を見せてあげる'],
+      worrier: ['{song}ならできるかも…', 'この曲なら安心…かな', '{song}でもいいかな…?', 'おぼえてる曲がいいな…'],
+      stubborn: ['{song}以外は認めん!', 'この曲でいく!', '{song}がいい。譲れん', '曲は{song}だ'],
+      easygoing: ['{song}がいいな〜', 'この曲、ゆっくりで好き〜', '{song}にしよ〜', 'なんでもいいけど{song}〜']
+    },
+    mood: {
+      great: ['どの曲でもいけちゃう!', '今日はこの曲で決まり!!'],
+      good: ['いい曲選んだ!', 'これで盛り上がろ!'],
+      normal: ['無難にこの曲で!'],
+      bad: ['むずかしくない曲がいい…', '早く終わる曲で…'],
+      awful: ['…どれでもいい', '…楽な曲にして']
+    }
+  },
+  song: {
+    common: ['{song}だね!', 'いい曲!楽しみ!', '準備OK!', 'よーし、いくよ!', '{song}か〜!', 'がんばる!', '譜面は頭に入れた!', '曲、決まったね!', 'いつでもいいよ!', 'みんなでがんばろう!'],
+    trait: {
+      jester: ['{song}でボケる準備できた!', 'ミスも芸のうち!', 'ノリでいくよー!', '盛り上げは任せて!'],
+      brave: ['{song}、受けて立つ!', 'どんとこい!', '全力でぶつかる!', '勝ちにいくぞ!'],
+      clingy: ['見ててね〜!', 'うまくできたらほめてね!', '{song}、がんばる〜!', 'そばで見ててほしいな'],
+      smart: ['{song}の傾向を分析中…', '最適な手順を確認しました', '難所は把握しています', '推定スコアは良好です'],
+      serious: ['気を引きしめていきます!', '集中します!', '{song}、よろしくお願いします', '一音一音ていねいに!'],
+      proud: ['{song}なら当然うまくやるわ', '私の演奏、見てなさい', '完璧にこなしてみせるわ', '見せ場をつくってあげる'],
+      worrier: ['{song}か…緊張する…', '間違えないかな…', '深呼吸、深呼吸…', 'うまくできますように…'],
+      stubborn: ['やると決めたらやる!', '最後まで食らいつく!', '妥協はせん!', '{song}、絶対にやりきる!'],
+      easygoing: ['{song}か〜、いい曲〜', 'ゆっくり構えていこ〜', 'のんびりやろ〜', 'リズムに身をまかせる〜']
+    },
+    mood: {
+      great: ['テンション最高!!', '今日はいけるきがする!!', 'ワクワクがとまらない!'],
+      good: ['いい感じ!いけそう!', '楽しくなってきた!'],
+      normal: ['ふつうにがんばる!'],
+      bad: ['できるかな…', 'まあ、やってみる…'],
+      awful: ['…はやく終わらせたい', '…やる気は出ないけど']
+    }
+  },
+  mvp: {
+    common: ['MVPだー!やったー!', 'ぼくがMVP!?', 'やった!MVP取れた!', 'うれしい!MVP!', 'みんなのおかげ!', 'MVPありがとう!', 'ほんとに取れちゃった!', 'いちばんだー!'],
+    trait: {
+      jester: ['MVPだぞ〜!拍手!', 'オチまで完璧!', 'ウケたかな!?', '主役はやっぱりぼく!'],
+      brave: ['勝ったぞー!!', '当然の結果だ!', 'どんなもんだい!', '次も勝つ!'],
+      clingy: ['ねぇ見て見て!MVP!ほめてほめて!', 'MVP取ったよ〜!なでて!', 'えへへ、ほめられたい〜', 'いっぱいほめてね!'],
+      smart: ['MVPは予測どおりです', '計算どおりの結果ですね', '最高スコアを記録しました', '要因は集中力と分析です'],
+      serious: ['MVPをいただき光栄です!', '日ごろの練習の成果です', '皆さんのおかげです', 'まだまだ精進します!'],
+      proud: ['当たり前ね。私だもの', 'もっと称えていいのよ?', 'やっぱり私が一番ね', 'ふふん、見たでしょ?'],
+      worrier: ['え、ほんとに?まぐれかも…', 'MVP…!?信じられない…', 'うれしいけど、次が不安…', '夢じゃないよね…?'],
+      stubborn: ['当然の結果だ', '努力は裏切らん!', '次もMVPを取る!', 'これが俺のやり方だ!'],
+      easygoing: ['あ〜MVPだ〜、やった〜', 'ラッキー〜', 'なんか取れちゃった〜', 'うれし〜ねむい〜']
+    },
+    mood: {
+      great: ['最高の日!!MVP!!', '今日は無敵だ!!', 'うれしすぎる!!'],
+      good: ['いい日になった!', '調子よかったもんね!'],
+      normal: ['やればできる!'],
+      bad: ['不調でもMVP…すごくない?', 'おどろいた…'],
+      awful: ['…MVP?まあ、うれしい', '…意外とやるじゃん、ぼく']
+    }
+  },
+  high: {
+    common: ['いい演奏だった!', 'うまくいった!', 'やったね!', 'ばっちり!', 'いい感じだった!', '楽しかった!', 'すごく集中できた!', 'ミスが少なかった!'],
+    trait: {
+      jester: ['決まったぁ!拍手!', '今のはカッコよかったでしょ!', 'ドヤ顔していい?', 'オチもついたね!'],
+      brave: ['全力出し切った!', 'まだ上を目指せる!', 'いい手ごたえだった!', '燃えた〜!'],
+      clingy: ['ほめて〜!', 'がんばったよ!なでなでして!', 'うまくできたよ〜!', 'みてたー?'],
+      smart: ['想定以上の精度です', 'ほぼ理想の結果です', '修正点は少ないですね', '分析どおりでした'],
+      serious: ['よく集中できました!', '練習の成果が出ました', 'ありがとうございました!', '反省点は少ないです'],
+      proud: ['まあ、このくらいは当然ね', '完璧に近かったでしょ?', '見事だったでしょ?', 'さすが私ね'],
+      worrier: ['ふぅ…うまくいってよかった…', 'ほっとした〜…', 'ミスしなくて助かった…', 'ドキドキした〜…'],
+      stubborn: ['狙いどおりだ', '手は抜かなかった!', 'まだ満足せんぞ', 'これが実力だ!'],
+      easygoing: ['いい感じだったね〜', 'ふぅ、気持ちよかった〜', 'ゆったりできたよ〜', 'うまくいったね〜']
+    },
+    mood: {
+      great: ['最高の演奏!!', 'ノリノリだった!!', '気持ちよかった〜!!'],
+      good: ['調子よかった!', 'いい手ごたえ!'],
+      normal: ['まずまずだね!'],
+      bad: ['不調だったのに、よくできた…', '意外とうまくいった…'],
+      awful: ['…まあまあかな', '…悪くなかった']
+    }
+  },
+  mid: {
+    common: ['おつかれさま!', 'まあまあだったかな', 'ふぅ、おわった!', '次はもっとうまくやる!', '楽しかったね!', 'ちょっとミスしちゃった', 'もう一回やりたい!', 'いい経験になった!'],
+    trait: {
+      jester: ['ここからが本番だったのに!', 'ミスも味ってことで!', '次は笑わせるぞ!', '見せ場がたりなかった!'],
+      brave: ['まだ本気じゃない!', '次は勝つ!', '悔しいが、次だ!', 'もっと強くなる!'],
+      clingy: ['もっとうまくなりたいな〜', 'なぐさめて〜', 'つぎはほめてね!', 'ちょっとがんばったよ〜'],
+      smart: ['課題が見つかりました', '次は改善できます', '反省点を整理しました', '精度の向上が必要です'],
+      serious: ['もっと練習します!', 'まだ未熟でした', 'ありがとうございました', '次はがんばります!'],
+      proud: ['本調子じゃなかっただけよ', 'こんなものじゃないわ', '次は本気を見せるわ', 'まあ、悪くないでしょ?'],
+      worrier: ['ミスしちゃった…ごめんね…', 'みんなの足を引っぱったかな…', 'もっとうまくなりたい…', '次はちゃんとやる…!'],
+      stubborn: ['納得いかん!もう一回!', 'こんなはずでは…', '次こそ決める!', '妥協はせんぞ'],
+      easygoing: ['まあ、こんなもんだよね〜', 'ふわ〜、おつかれ〜', 'のんびり上達しよ〜', 'つぎ、がんばるね〜']
+    },
+    mood: {
+      great: ['それでも楽しかった!!', 'もう一回やりたい!!'],
+      good: ['楽しかったからOK!', '次はもっといける!'],
+      normal: ['ふつうにがんばった!'],
+      bad: ['調子わるかったから…', 'ちょっと疲れた…'],
+      awful: ['…しかたない', '…つかれた']
+    }
+  },
+  low: {
+    common: ['うまくいかなかった…', 'ごめんね…', 'くやしい…', '次はがんばる!', 'むずかしかった…', 'ミスばっかりだった…', 'もっと練習する!', '今日はダメだった…'],
+    trait: {
+      jester: ['ズッコケちゃった〜!', '笑ってごまかそう!', 'これも芸のうち…?', '次は名誉挽回だ!'],
+      brave: ['くっ…負けた…', '悔しい!次は勝つ!', 'もう一回だ!!', '強くなって戻ってくる!'],
+      clingy: ['うぅ…なぐさめて〜', 'ごめんね…きらいにならないで…', 'ぎゅってして…', 'さみしいよ〜'],
+      smart: ['想定を下回りました', '原因を分析します', '失敗から学びます', '次は修正します'],
+      serious: ['申し訳ありません…', '精進が足りませんでした', '次は必ず取り戻します', 'もっと練習します…'],
+      proud: ['…今のは見なかったことにして', '次は絶対に見返すわ', 'こんなの私じゃないわ…', '調子が悪かっただけよ!'],
+      worrier: ['やっぱりダメだった…ごめんなさい…', 'みんなに迷惑かけた…', 'どうしよう…', '自信なくなっちゃう…'],
+      stubborn: ['認めん!もう一回だ!', 'こんなはずはない!', '次こそ…!', 'あきらめんぞ!'],
+      easygoing: ['あちゃ〜、失敗した〜', 'まあ、そんな日もあるよね〜', 'ねむくてミスった〜', '次はがんばる〜…たぶん']
+    },
+    mood: {
+      great: ['でもすごく楽しかった!!', 'めげないよ!!'],
+      good: ['次は取り返す!', 'まだまだこれから!'],
+      normal: ['次がんばるね'],
+      bad: ['調子わるかったから…', '今日はついてない…'],
+      awful: ['…もう帰りたい', '…ほっといて']
+    }
+  },
+  bump: {
+    common: ['席をゆずるね!またね!', '人が来たから、ぼくは帰るね!', 'みんな、楽しんで!', 'またよんでね!', '先に帰るね!', 'ばいばい!また今度!', '席、空けるよ!', 'いってらっしゃい!'],
+    trait: {
+      jester: ['それでは、ごきげんよう〜!', '退場!拍手をどうぞ!', 'またのご来場を!', '笑って見送ってね!'],
+      brave: ['席は任せたぞ!', 'また戦おう!', '強くなって戻る!', 'みんな、がんばれ!'],
+      clingy: ['もう帰るの…?またすぐよんでね…', 'さみしいけど、ばいばい…', 'またなでなでしてね!', 'ぜったいまたよんでね!'],
+      smart: ['定員のため退席します', '最適な判断です。ではまた', '席を空けます。ご武運を', '次の機会にお会いしましょう'],
+      serious: ['席をおゆずりします。ありがとうございました', 'お先に失礼します', '次もよろしくお願いします', 'ご健闘をお祈りします'],
+      proud: ['しかたないわね、譲ってあげる', '私の席は特別に空けるわ', 'また呼ぶことを許すわ', 'ふふ、ありがたく思いなさい'],
+      worrier: ['ここにいていいのかな…帰るね…', 'ごめんね、席ゆずる…', '迷惑かけなくてよかった…', 'またね…ほんとにまたね…'],
+      stubborn: ['しかたない、席はゆずる', '次は最後までやるぞ!', '帰るが、また来る', '席のことは了解した'],
+      easygoing: ['はいは〜い、ゆずるね〜', 'じゃあね〜', 'ねむくなってきたからちょうどいい〜', 'またね〜、のんびり〜']
+    },
+    mood: {
+      great: ['楽しかった!!ありがとう!!', 'またあそぼうね!!'],
+      good: ['楽しかったよ!またね!', 'いい時間だった!'],
+      normal: ['またね!'],
+      bad: ['帰ります…', 'ちょうどいいかも…'],
+      awful: ['…やっと帰れる', '…じゃあね']
+    }
+  },
+  replyHello: {
+    common: ['よろしくね!', 'よろしく〜!', 'こんにちは!', 'はじめまして!'],
+    trait: {
+      jester: ['やあやあ、よろしく!', 'どうも〜!笑顔でね!'],
+      brave: ['よろしく!全力でいくぞ!', '負けないぞ!'],
+      clingy: ['よろしくね〜!仲良くしてね!', 'わーい、よろしく!'],
+      smart: ['よろしくお願いします', 'ご挨拶、感謝します'],
+      serious: ['よろしくお願いします!', '本日はよろしくお願いします'],
+      proud: ['よろしく。ついてきなさい', 'ええ、よろしく'],
+      worrier: ['よ、よろしくね…!', 'こちらこそ…よろしく…'],
+      stubborn: ['よろしく。手は抜かん', 'おう、よろしく'],
+      easygoing: ['よろしく〜', 'よろしくね〜、のんびりね〜']
+    },
+    mood: {
+      great: ['よろしく!!元気いっぱい!!'],
+      good: ['よろしく!いい日だね!'],
+      normal: ['よろしく!'],
+      bad: ['…よろしく'],
+      awful: ['…どうも']
+    }
+  },
+  replyThanks: {
+    common: ['どういたしまして!', 'こちらこそ!', 'えへへ、うれしい!', 'またね!'],
+    trait: {
+      jester: ['お礼はおひねりで!', 'いえいえ〜!'],
+      brave: ['当然のことだ!', '任せろ!'],
+      clingy: ['えへへ、うれしい〜!', 'もっと言って!'],
+      smart: ['お役に立てて光栄です', '礼には及びません'],
+      serious: ['恐縮です!', 'とんでもないです'],
+      proud: ['当然のことよ', 'わかればいいのよ'],
+      worrier: ['そ、そんな…ありがとう…', 'お役に立ててよかった…'],
+      stubborn: ['礼などいらん', 'いや、当然だ'],
+      easygoing: ['いいよいいよ〜', 'どういたしまして〜']
+    },
+    mood: {
+      great: ['こっちこそありがとう!!'],
+      good: ['うれしい!'],
+      normal: ['どういたしまして'],
+      bad: ['…うん'],
+      awful: ['…べつに']
+    }
+  },
+  replyNice: {
+    common: ['ありがとう!', 'ナイス!', 'やったね!', 'えへへ!'],
+    trait: {
+      jester: ['ふふ、もっとほめて!', 'ありがとう!アンコールある?'],
+      brave: ['まだまだこれから!', 'ありがとう!次も勝つ!'],
+      clingy: ['ほめられた〜!うれしい!', 'もっとほめて〜!'],
+      smart: ['光栄です', '評価に感謝します'],
+      serious: ['ありがとうございます!', '励みになります!'],
+      proud: ['当然ね。でも、ありがとう', 'もっとほめてもいいのよ'],
+      worrier: ['ほ、ほんと?うれしい…', 'ありがとう…自信出てきた…'],
+      stubborn: ['当たり前だ。…ありがとう', 'まだ満足せんが、感謝する'],
+      easygoing: ['ありがと〜', 'えへへ〜、うれし〜']
+    },
+    mood: {
+      great: ['やったー!!ありがとう!!'],
+      good: ['ありがとう!うれしい!'],
+      normal: ['ありがとう'],
+      bad: ['…どうも'],
+      awful: ['…ふん']
+    }
+  },
+  replyAgain: {
+    common: ['いいよ!もう一回!', 'やろうやろう!', 'もちろん!', 'まだまだいける!'],
+    trait: {
+      jester: ['アンコールありがとう!', 'もう一回ウケを狙う!'],
+      brave: ['望むところだ!', '何度でも受けて立つ!'],
+      clingy: ['やったー!まだ遊べる!', 'ずっと遊んでいたい〜'],
+      smart: ['再挑戦ですね。承知しました', '改善点を活かします'],
+      serious: ['よろしくお願いします!', '次はもっとうまくやります'],
+      proud: ['いいわよ、もう一度見せてあげる', '何度でもどうぞ'],
+      worrier: ['う、うん…がんばる…', 'もう一回…ドキドキ…'],
+      stubborn: ['おう!次こそ決める!', '望むところだ'],
+      easygoing: ['いいよ〜、もう一回〜', 'のんびりやろ〜']
+    },
+    mood: {
+      great: ['やろうやろう!!うれしい!!'],
+      good: ['いいね!やろう!'],
+      normal: ['うん、やろう'],
+      bad: ['…もう一回かぁ'],
+      awful: ['…まだやるの?']
+    }
+  },
+  replyCall: {
+    common: ['いるよ!', 'ここにいるよー!', 'よんだ?', 'はーい!'],
+    trait: {
+      jester: ['はい、マスモンです!ご用は?', 'ジャジャーン!いるよ!'],
+      brave: ['ここにいるぞ!', '呼んだか!任せろ!'],
+      clingy: ['はーい!呼んでくれてうれしい!', 'ここにいるよ〜!そばにいる!'],
+      smart: ['参加しています', '在席しています。ご安心を'],
+      serious: ['はい、おります!', 'ここにおります!'],
+      proud: ['いるに決まっているでしょう', '呼ぶまでもないわ'],
+      worrier: ['い、いるよ…!', 'ここにいるよ…大丈夫…?'],
+      stubborn: ['いるぞ', '呼ばれんでも、ここにいる'],
+      easygoing: ['いるよ〜', 'ここだよ〜']
+    },
+    mood: {
+      great: ['はーい!!元気だよ!!'],
+      good: ['ここにいるよ、いい気分!'],
+      normal: ['いるよ'],
+      bad: ['…いるけど'],
+      awful: ['…いるよ']
+    }
+  },
+  replyDrop: {
+    common: ['ドンマイ!', 'だいじょうぶ!', 'つぎがあるよ!', 'きにしないで!'],
+    trait: {
+      jester: ['ドンマイ!笑えば勝ち!', '失敗も芸のうち!'],
+      brave: ['次は勝てる!', 'くじけるな!'],
+      clingy: ['だいじょうぶ?なでなで〜', 'ぼくがいるよ!'],
+      smart: ['統計上、次は伸びます', '失敗は学びです'],
+      serious: ['大丈夫です、次があります', '気に病まないでください'],
+      proud: ['まあ、そんな日もあるわ', '次は見返せばいいのよ'],
+      worrier: ['だ、だいじょうぶだよ…!', 'ぼくもよく失敗するよ…'],
+      stubborn: ['次こそ決めろ!', '立ち上がれ!'],
+      easygoing: ['まあまあ、気にしない〜', 'そんな日もあるよ〜']
+    },
+    mood: {
+      great: ['ドンマイ!!楽しもう!!'],
+      good: ['ドンマイ!次はいける!'],
+      normal: ['ドンマイ'],
+      bad: ['…ドンマイ'],
+      awful: ['…ま、そういう日だよ']
+    }
+  },
+  replyWait: {
+    common: ['待ってるよ!', 'いいよ、ゆっくりで!', 'ゆっくりでだいじょうぶ!', 'まってるね!'],
+    trait: {
+      jester: ['待ってるあいだ、ひとネタ考える!', 'ゆっくりどうぞ〜!'],
+      brave: ['待つのも戦いだ!', 'いつでも準備OKだ!'],
+      clingy: ['はやく来てね〜!', 'まってる〜!'],
+      smart: ['時間はあります。どうぞ', 'お待ちしています'],
+      serious: ['お待ちしております', 'ご準備をどうぞ'],
+      proud: ['待ってあげるわ。早くしなさい', '少しなら待つわ'],
+      worrier: ['だ、だいじょうぶ?待ってるよ…', 'ゆっくりでいいよ…'],
+      stubborn: ['待つ。急ぐな', 'こちらは構わん'],
+      easygoing: ['ゆっくりでいいよ〜', 'いくらでも待てるよ〜']
+    },
+    mood: {
+      great: ['待つのも楽しい!!'],
+      good: ['まってるよ!'],
+      normal: ['待ってるね'],
+      bad: ['…はやめにね'],
+      awful: ['…早く']
+    }
+  }
+};
+const RHYTHM_BUDDY_TALK_EXTRA = {
+  join: {
+    common: ['おじゃまします!みんなよろしくね!', '今日はどんな曲かな?', 'わくわくするね!', '席、あいてた?よかった!', 'ぼくも仲間に入れてね!', '楽しい時間にしようね!'],
+    trait: {
+      jester: ['楽しませる準備は万全だよ!', 'おもしろいこと起こるかな?'],
+      brave: ['どんな相手でもこい!', '一番乗りで来たぞ!'],
+      clingy: ['来てよかった〜!うれしい!', 'さみしかったんだよ〜'],
+      smart: ['環境を確認しました。問題ありません', 'メンバーを把握しました'],
+      serious: ['お力になれるよう努めます!', '一生懸命やります!'],
+      proud: ['主役のおでましよ', '期待していていいわよ'],
+      worrier: ['みんなの邪魔にならないようにする…', 'はじめてじゃないのに緊張する…'],
+      stubborn: ['やるからには最後までやる', '手を抜かんから覚悟しろ'],
+      easygoing: ['あ〜、あったかい部屋だね〜', 'ふぁ…ぼちぼちいこ〜']
+    },
+    mood: {
+      great: ['気分は最高潮!!'],
+      good: ['今日はなんだか楽しい!'],
+      normal: ['今日もよろしくね!'],
+      bad: ['…少しだけ元気ないけど'],
+      awful: ['…よばれたから来ただけ']
+    }
+  },
+  pick: {
+    common: ['これ、前にうまくいった曲!', 'この曲なら自信ある!', 'この曲、やりたい気分!', '{song}、いいよね!', '{song}でいこう!', 'この曲は任せて!'],
+    trait: {
+      jester: ['{song}でひと笑いとるぞ!', 'この曲、盛り上がるでしょ!'],
+      brave: ['{song}、かかってこい!', '強気でいける曲だ!'],
+      clingy: ['この曲、いっしょにやろ〜?', '{song}、いっしょがいい〜'],
+      smart: ['この曲は成功率が高いです', '{song}は相性がいいですね'],
+      serious: ['{song}は何度も練習しました', 'この曲なら力を出せます'],
+      proud: ['{song}で格の違いを見せるわ', 'この曲は私にぴったり'],
+      worrier: ['この曲ならなんとか…', '{song}、おぼえてるから…'],
+      stubborn: ['{song}で勝負すると決めた', 'この曲を譲る気はない'],
+      easygoing: ['この曲、のんびりできる〜', '{song}がいいなぁ〜']
+    },
+    mood: {
+      great: ['なんでも決めて!!ぼくは{song}!!'],
+      good: ['{song}、楽しくなりそう!'],
+      normal: ['{song}でいいかな'],
+      bad: ['{song}ならなんとか…'],
+      awful: ['…{song}で']
+    }
+  },
+  song: {
+    common: ['楽しみだね!', 'いい曲に決まった!', 'リズムに乗るぞ!', '息を合わせよう!', 'ぜんぶ叩くぞ!', '手のあたためOK!'],
+    trait: {
+      jester: ['盛り上げるぞー!おー!', '笑顔で叩くぞ!'],
+      brave: ['先頭は任せろ!', 'ミスなんて怖くない!'],
+      clingy: ['みんなといっしょがうれしい!', '手をつないでるみたい〜'],
+      smart: ['リズムを正確に刻みます', '集中力を高めます'],
+      serious: ['最後まで気を抜きません!', '全力を尽くします!'],
+      proud: ['私の見せ場、期待して', 'この曲、私が決めるわ'],
+      worrier: ['落ち着け、落ち着け…', '指がふるえてきた…'],
+      stubborn: ['一音も逃さん!', '絶対に外さんぞ'],
+      easygoing: ['のんびり、でも集中〜', 'ゆったり構えて叩くよ〜']
+    },
+    mood: {
+      great: ['いけいけー!!'],
+      good: ['いい調子でいくよ!'],
+      normal: ['がんばろうね!'],
+      bad: ['足を引っぱらないようにする…'],
+      awful: ['…早く終わらないかな']
+    }
+  },
+  mvp: {
+    common: ['MVPうれしい!', 'やったー!1位だー!', 'みんな、ありがとう!', 'MVPって気持ちいい!', 'がんばってよかった!', 'いちばんになれた!'],
+    trait: {
+      jester: ['これが主役の実力!', 'アンコールしてもいいよ!'],
+      brave: ['勝利の味だ!', '次も頂点を目指す!'],
+      clingy: ['なでなでしてほしいな〜', 'ほめてくれる?うれしいな〜'],
+      smart: ['練習の効果が出ましたね', '最良の結果です'],
+      serious: ['恐縮です。ありがとうございます', 'この結果に満足せず進みます'],
+      proud: ['ふふ、当然の結果ね', '私が一番に決まってるでしょ'],
+      worrier: ['みんなに迷惑かけなくてよかった…', 'うれしくて手がふるえる…'],
+      stubborn: ['努力の成果だ', '一番でなければ意味がない'],
+      easygoing: ['ほんとに取れた〜?やった〜', 'なんかうれし〜']
+    },
+    mood: {
+      great: ['世界一うれしい!!'],
+      good: ['今日はいい日だ!'],
+      normal: ['やった!'],
+      bad: ['不調だったのに…うれしい'],
+      awful: ['…まあ、悪くないね']
+    }
+  },
+  high: {
+    common: ['すごくよくできた!', '手ごたえあり!', 'ほとんどミスしなかった!', 'いい演奏ができた!', 'やった!うまくいった!', '今日はいいね!'],
+    trait: {
+      jester: ['拍手、拍手〜!', 'ここまで完璧だと笑っちゃう!'],
+      brave: ['この調子でもっと上へ!', '強敵にも勝てそうだ!'],
+      clingy: ['見ててくれた?ほめてほしいな', 'がんばったから、なでて〜'],
+      smart: ['理想に近い精度でした', '次も再現できそうです'],
+      serious: ['気を抜かず次もがんばります', '練習どおりにできました'],
+      proud: ['当然の出来ね', 'このくらい朝飯前よ'],
+      worrier: ['よかった…ほんとによかった…', 'ミスしなくてほっとした…'],
+      stubborn: ['納得のいく演奏だ', 'まだまだ上を目指す'],
+      easygoing: ['気持ちよく叩けた〜', 'いい感じだったね〜']
+    },
+    mood: {
+      great: ['最高の気分!!!'],
+      good: ['気持ちよかった!'],
+      normal: ['まあまあいい感じ'],
+      bad: ['不調のわりにはいい出来…'],
+      awful: ['…意外とやれた']
+    }
+  },
+  mid: {
+    common: ['まあまあだったね', 'もうちょっとできたかも', '次はもっとうまく叩く!', 'ふつうの出来かな', 'おつかれ!楽しかった!', 'ちょっと惜しかった!'],
+    trait: {
+      jester: ['笑いどころは作れたかな?', 'ここからが本番だよ!'],
+      brave: ['次はもっと攻めるぞ!', 'まだ力を残している!'],
+      clingy: ['つぎはもっとがんばるね', 'ちょっとだけほめて〜'],
+      smart: ['改善の余地があります', '次は精度を上げます'],
+      serious: ['課題がはっきりしました', '次にいかします!'],
+      proud: ['私ならもっとできたはず', '次は本気を出すわ'],
+      worrier: ['ミスが気になる…', 'みんなに迷惑かけてないかな…'],
+      stubborn: ['まだ納得していない', '次は譲らんぞ'],
+      easygoing: ['まあ、これくらいでいいや〜', 'ほどほどが一番〜']
+    },
+    mood: {
+      great: ['楽しければOK!!'],
+      good: ['次はもっと上手くいく!'],
+      normal: ['まあまあ!'],
+      bad: ['調子が悪かった…'],
+      awful: ['…つかれた']
+    }
+  },
+  low: {
+    common: ['むずかしかった…', 'もっとうまくなりたい…', 'ミスが多かった…', 'つぎこそがんばる!', 'ちょっとくやしい…', 'うまくいかなかったね'],
+    trait: {
+      jester: ['失敗もネタにしちゃおう!', 'ズコーッてなった!'],
+      brave: ['この悔しさを力に変える!', '倒れてもまた立つ!'],
+      clingy: ['なぐさめてほしいな…', 'ひとりにしないで…'],
+      smart: ['敗因は把握しています', '次は必ず修正します'],
+      serious: ['不甲斐ない結果でした', 'もっと努力します'],
+      proud: ['屈辱だわ…', '次は絶対に取り返す'],
+      worrier: ['やっぱりだめだった…', 'みんなごめんなさい…'],
+      stubborn: ['こんな結果は認めん', '何度でもやり直す'],
+      easygoing: ['まあ、仕方ないよね〜', 'そんな日もあるよ〜']
+    },
+    mood: {
+      great: ['失敗しても楽しい!!'],
+      good: ['次はいけるはず!'],
+      normal: ['次がんばる'],
+      bad: ['調子が悪かっただけ…'],
+      awful: ['…もうだめかも']
+    }
+  },
+  bump: {
+    common: ['楽しかった!ありがとう!', 'みんな、がんばってね!', 'じゃあね、また会おうね!', '席をあけるね、どうぞ!', 'また一緒に遊ぼうね!', '先に失礼するね!'],
+    trait: {
+      jester: ['それではまた、次の舞台で!', '笑顔でお別れだよ!'],
+      brave: ['次に会うときは強くなってる!', 'あとは任せた!'],
+      clingy: ['ほんとはもっといたかったな…', 'またすぐ会おうね…!'],
+      smart: ['また参加できる日を楽しみにしています', '良い結果をお祈りします'],
+      serious: ['お世話になりました!', 'ありがとうございました!'],
+      proud: ['お見送りしてもいいのよ?', '次も呼ぶのよ、いいわね?'],
+      worrier: ['ちゃんと帰れるかな…ばいばい…', 'みんな、気をつけてね…'],
+      stubborn: ['席をゆずるのは今回だけだぞ', '約束だ、また呼べよ'],
+      easygoing: ['じゃあ、おやすみ〜…じゃない、またね〜', 'お先に〜']
+    },
+    mood: {
+      great: ['最高の時間をありがとう!!'],
+      good: ['いい思い出になったよ!'],
+      normal: ['それじゃあね'],
+      bad: ['…ちょうどよかったかも'],
+      awful: ['…やっと解放される']
+    }
+  },
+  replyHello: {
+    common: ['よろしくね〜!', 'こちらこそ!'],
+    trait: {
+      jester: ['どうもどうも!'],
+      brave: ['よろしくだ!'],
+      clingy: ['よろしくね!うれしい〜'],
+      smart: ['どうぞよろしく'],
+      serious: ['お願いします!'],
+      proud: ['よろしくしてあげる'],
+      worrier: ['よ、よろしくお願いします…'],
+      stubborn: ['うむ、よろしく'],
+      easygoing: ['よろしくね〜']
+    }
+  },
+  replyThanks: {
+    common: ['いいってことよ!', 'えへへ、照れる!'],
+    trait: {
+      jester: ['お代はけっこうです!'],
+      brave: ['気にするな!'],
+      clingy: ['そう言われるとうれしい〜'],
+      smart: ['お互いさまです'],
+      serious: ['こちらこそ、ありがとうございます'],
+      proud: ['もっと感謝してもいいわよ'],
+      worrier: ['ほんとに?よかった…'],
+      stubborn: ['礼を言われるほどでは…'],
+      easygoing: ['いいよ〜、気にしな〜い']
+    }
+  },
+  replyNice: {
+    common: ['いえーい!', 'ありがとう!がんばった!'],
+    trait: {
+      jester: ['ほめられて伸びるタイプ!'],
+      brave: ['次ももっとやるぞ!'],
+      clingy: ['ほめられた〜!しあわせ〜'],
+      smart: ['ありがとうございます。励みになります'],
+      serious: ['もったいないお言葉です'],
+      proud: ['ふふ、もっとほめなさい'],
+      worrier: ['えへへ…自信がついた…'],
+      stubborn: ['褒めても何も出んぞ'],
+      easygoing: ['うれし〜、ありがと〜']
+    }
+  },
+  replyAgain: {
+    common: ['何回でもいけるよ!', 'もう一回、いこう!'],
+    trait: {
+      jester: ['何度でも笑わせるよ!'],
+      brave: ['もう一戦だ!'],
+      clingy: ['やったー!もっと遊ぶ!'],
+      smart: ['次はより精度を上げます'],
+      serious: ['もう一度、全力で!'],
+      proud: ['次こそ見せてあげる'],
+      worrier: ['が、がんばるよ…'],
+      stubborn: ['次は絶対だ!'],
+      easygoing: ['じゃあ、もう一回〜']
+    }
+  },
+  replyCall: {
+    common: ['ここだよー!', 'ちゃんといるよ!'],
+    trait: {
+      jester: ['お呼びでしょうか?'],
+      brave: ['いつでも呼べ!'],
+      clingy: ['呼んでくれたぁ!うれしい!'],
+      smart: ['常に待機しています'],
+      serious: ['はい、ここにいます!'],
+      proud: ['私を呼ぶとは分かっているわね'],
+      worrier: ['い、いますよ…どうしたの…?'],
+      stubborn: ['見ればわかるだろう'],
+      easygoing: ['ふぁい、いるよ〜']
+    }
+  },
+  replyDrop: {
+    common: ['元気だして!', 'つぎがんばろう!'],
+    trait: {
+      jester: ['落ち込む暇があったら笑おう!'],
+      brave: ['下を向くな!'],
+      clingy: ['なでなでしてあげる〜'],
+      smart: ['失敗は糧になります'],
+      serious: ['励ましの言葉を送ります'],
+      proud: ['あなたならできるわ'],
+      worrier: ['わたしもよく失敗するから…'],
+      stubborn: ['くじけるな。やり直せ'],
+      easygoing: ['どんまい〜、どんまい〜']
+    }
+  },
+  replyWait: {
+    common: ['のんびり待つね!', 'ゆっくり準備してね!'],
+    trait: {
+      jester: ['待ち時間にモノマネでもしてようか'],
+      brave: ['待つのも訓練だ!'],
+      clingy: ['はやく来ないとさみしいよ〜'],
+      smart: ['待機時間は分析に使います'],
+      serious: ['お待ちしております'],
+      proud: ['急ぎなさい?'],
+      worrier: ['待ってるよ…本当に待ってるよ…'],
+      stubborn: ['待つが、長くは待たんぞ'],
+      easygoing: ['ぜんぜんいいよ〜、ぼくも休む〜']
+    }
+  },
+  idle: {
+    common: ['まだかな〜', 'みんな、まだ?', 'どんな曲になるかな?', 'ドキドキするね!', 'そろそろ始まるかな?', '早く叩きたいな!', 'わくわく!', '準備はできてるよ!', '今日は何を叩こう?', 'この部屋、楽しいね!'],
+    trait: {
+      jester: ['ひまだからダジャレでも言おうか?', 'ネタ帳を見直してた!', '待ってるあいだにひと芸…', '静かだと逆にボケたくなる!'],
+      brave: ['体がうずうずする!', 'はやく戦いたい!', '準備運動しとくか!', '強い曲こないかな!'],
+      clingy: ['ひとりだとさみしいよ〜', 'ねぇ、そばにいてね?', 'おしゃべりしようよ〜', 'ねぇねぇ、まだ?'],
+      smart: ['待ち時間を有効に使います', '譜面の傾向を復習中です', '指のストレッチをしています', '次の展開を予測中です'],
+      serious: ['気持ちを整えています', '深呼吸して集中します', '最後の確認をしています', '静かに待ちます'],
+      proud: ['待たせるなんて失礼ね', '私を待たせるとはいい度胸ね', 'まだなの?早くしなさい', '準備なんてとっくに終わってるわ'],
+      worrier: ['うまくできるかな…心配…', '緊張で手がふるえる…', 'もしミスしたらどうしよう…', '早く始まってほしいような…'],
+      stubborn: ['待つのは性に合わん', '早くしてくれ!', '腹はくくった、いつでもいい', '決まりが遅いな'],
+      easygoing: ['ふぁ〜…ねむくなってきた〜', 'のんびり待つのも悪くないね〜', 'ごろごろ〜', 'おやつ食べたいな〜']
+    },
+    mood: {
+      great: ['待ってるあいだも楽しい!!', '早く叩きたくてたまらない!!', '今日は何でもできそう!!'],
+      good: ['いい気分で待ってるよ!', '今日はいい日になりそう!', '楽しみだな〜'],
+      normal: ['のんびり待とうかな', 'ぼちぼち始まるかな'],
+      bad: ['まだ始まらない…', 'ちょっと眠い…', '今日は疲れ気味…'],
+      awful: ['…まだ?', '…帰りたい', '…静かにして']
+    }
+  }
+};
+const rhythmBuddyTalkMerge = (base, extra) => {
+  const out = {};
+  const uniq = (a, b) => {
+    const r = (Array.isArray(a) ? a : []).slice();
+    (Array.isArray(b) ? b : []).forEach(x => {
+      if (r.indexOf(x) < 0) r.push(x);
+    });
+    return Object.freeze(r);
+  };
+  Object.keys(base).concat(Object.keys(extra)).forEach(kind => {
+    if (out[kind]) return;
+    const a = base[kind] || {};
+    const e = extra[kind] || {};
+    const trait = {};
+    const mood = {};
+    Object.keys(a.trait || {}).concat(Object.keys(e.trait || {})).forEach(k => {
+      trait[k] = uniq((a.trait || {})[k], (e.trait || {})[k]);
+    });
+    Object.keys(a.mood || {}).concat(Object.keys(e.mood || {})).forEach(k => {
+      mood[k] = uniq((a.mood || {})[k], (e.mood || {})[k]);
+    });
+    out[kind] = Object.freeze({
+      common: uniq(a.common, e.common),
+      trait: Object.freeze(trait),
+      mood: Object.freeze(mood)
+    });
+  });
+  return Object.freeze(out);
+};
+const RHYTHM_BUDDY_TALK = rhythmBuddyTalkMerge(RHYTHM_BUDDY_TALK_BASE, RHYTHM_BUDDY_TALK_EXTRA);
+const rhythmBuddyTalkPick = ({
+  kind,
+  trait = '',
+  moodId = 'normal',
+  vars = {},
+  recent = [],
+  rand = Math.random
+}) => {
+  const set = RHYTHM_BUDDY_TALK[kind];
+  if (!set) return '';
+  const song = typeof vars.song === 'string' ? vars.song : '';
+  const make = line => {
+    if (line.indexOf('{song}') >= 0 && !song) return '';
+    const text = line.split('{song}').join(song);
+    return text.length > 0 && text.length <= RHYTHM_BUDDY_TALK_MAX ? text : '';
+  };
+  const bag = [];
+  const add = (lines, weight) => (Array.isArray(lines) ? lines : []).forEach(line => {
+    const text = make(line);
+    if (text) for (let i = 0; i < weight; i += 1) bag.push(text);
+  });
+  add(set.trait && set.trait[trait], 3);
+  add(set.mood && set.mood[moodId], 2);
+  add(set.common, 1);
+  const avoid = new Set(Array.isArray(recent) ? recent : []);
+  const fresh = bag.filter(t => !avoid.has(t));
+  const pool = fresh.length ? fresh : bag;
+  if (!pool.length) return '';
+  const r = Number(rand());
+  return pool[Math.min(pool.length - 1, Math.floor((Number.isFinite(r) ? r : 0) * pool.length))];
+};
+const rhythmBuddyTalkReplyKind = text => {
+  const t = String(text || '');
+  if (/マスモン(入れて|いれて|呼んで|出して)/.test(t)) return 'replyCall';
+  if (/よろしく|はじめまして|こんにちは/.test(t)) return 'replyHello';
+  if (/ありがとう/.test(t)) return 'replyThanks';
+  if (/ナイス|すごい|うまい|GG/.test(t)) return 'replyNice';
+  if (/もう一回|もういっかい|次いこう/.test(t)) return 'replyAgain';
+  if (/ドンマイ|おしい|惜しい/.test(t)) return 'replyDrop';
+  if (/待って|まって/.test(t)) return 'replyWait';
+  return '';
 };
 const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const FRIEND_CODE_LENGTH = 8;
@@ -61335,6 +62151,11 @@ const RHYTHM_MULTI_ALIVE_MS = 7000;
 const RHYTHM_MULTI_START_COUNTDOWN_SEC = 3;
 const RHYTHM_MULTI_SHUFFLE_MS = 2400;
 const RHYTHM_MULTI_SELECT_MS = 30000;
+const RHYTHM_MULTI_SELECT_SEC_OPTIONS = Object.freeze([30, 60, 90, 0]);
+const RHYTHM_MULTI_SELECT_SEC_DEFAULT = 30;
+const RHYTHM_MULTI_SELECT_SEC_KEY = 'mh_rhythm_multi_select_sec_v1';
+const rhythmMultiNormalizeSelectSec = v => typeof v === 'number' && RHYTHM_MULTI_SELECT_SEC_OPTIONS.includes(v) ? v : RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+const rhythmMultiSelectSecLabel = sec => sec > 0 ? `${sec}秒` : 'なし';
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
@@ -61359,6 +62180,9 @@ const rhythmMultiStampsFor = phase => {
   return list.filter((text, i) => text.length <= RHYTHM_MULTI_CHAT_MAX_LENGTH && list.indexOf(text) === i);
 };
 const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
+const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
+const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
+const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -61485,6 +62309,7 @@ const rhythmMultiCleanRoom = raw => {
     songId: rhythmMultiText(raw.sg, 60),
     left: rhythmMultiInt(raw.lf, 600),
     hasDeadline: raw.dl === 1,
+    selectSec: rhythmMultiNormalizeSelectSec(raw.ss),
     participants: Array.isArray(raw.pt) ? raw.pt.slice(0, RHYTHM_MULTI_ROOM_MAX).map(id => rhythmMultiText(id, 40)).filter(Boolean) : []
   };
 };
@@ -61517,6 +62342,7 @@ const rhythmMultiCleanMessage = raw => {
       out.owner = rhythmMultiText(raw.owner, 40);
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
       out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(c => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [];
+      out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
     }
     return out;
   }
@@ -61686,6 +62512,22 @@ const RHYTHM_MULTI = (() => {
   let catalog = [];
   let durations = {};
   let cpuBrain = null;
+  let selectSecPref = RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+  let selectSecLoaded = false;
+  const loadSelectSecPref = () => {
+    if (selectSecLoaded) return;
+    selectSecLoaded = true;
+    Promise.resolve().then(() => storeGet(RHYTHM_MULTI_SELECT_SEC_KEY, null)).then(saved => {
+      selectSecPref = rhythmMultiNormalizeSelectSec(saved);
+      if (s && !s.selectSecTouched && s.room.phase === 'matching') {
+        s.room = {
+          ...s.room,
+          selectSec: selectSecPref
+        };
+        emit();
+      }
+    }).catch(() => {});
+  };
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     window.addEventListener('pagehide', () => {
       if (s && socket) {
@@ -61722,6 +62564,7 @@ const RHYTHM_MULTI = (() => {
       sg: r.songId,
       lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0,
       dl: r.deadline ? 1 : 0,
+      ss: rhythmMultiNormalizeSelectSec(r.selectSec),
       pt: r.participants
     };
   };
@@ -61776,7 +62619,8 @@ const RHYTHM_MULTI = (() => {
       cpu: 1,
       owner: s.selfId,
       mb: c.mb,
-      mc: c.mc
+      mc: c.mc,
+      pw: c.pickWhy || ''
     });
   };
   const reportCpuResult = round => {
@@ -61840,11 +62684,12 @@ const RHYTHM_MULTI = (() => {
     emit();
   };
   const humanCount = () => ordered().filter(m => !m.cpu).length;
+  const selectLimitMs = () => s && s.room.selectSec > 0 ? s.room.selectSec * 1000 : 0;
   const toSelect = () => setRoom({
     phase: 'select',
     round: rhythmMultiMakeId('r'),
     songId: '',
-    deadline: humanCount() <= 1 ? 0 : Date.now() + RHYTHM_MULTI_SELECT_MS,
+    deadline: humanCount() <= 1 || !selectLimitMs() ? 0 : Date.now() + selectLimitMs(),
     participants: []
   });
   const doDraw = members => {
@@ -61903,7 +62748,7 @@ const RHYTHM_MULTI = (() => {
         return;
       }
       const allPicked = members.every(m => m.pickRound === r.round && m.pick);
-      if (humanCount() <= 1) {
+      if (humanCount() <= 1 || !selectLimitMs()) {
         if (r.deadline) {
           setRoom({
             deadline: 0
@@ -61915,7 +62760,7 @@ const RHYTHM_MULTI = (() => {
       }
       if (!r.deadline) {
         setRoom({
-          deadline: now + RHYTHM_MULTI_SELECT_MS
+          deadline: now + selectLimitMs()
         });
         return;
       }
@@ -61949,10 +62794,92 @@ const RHYTHM_MULTI = (() => {
       sendHb();
     }
   };
+  const cpuSay = (x, kind, vars = {}, opts = {}) => {
+    if (!s || !x || !cpuBrain || typeof cpuBrain.talk !== 'function') return;
+    const room = s;
+    const run = () => {
+      if (s !== room || !socket) return;
+      const c = myCpu(x.id);
+      if (!c) return;
+      const now = Date.now();
+      if (!opts.now && now - (room.talk.at[x.id] || 0) < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
+      let text = '';
+      try {
+        text = cpuBrain.talk({
+          masuId: x.masuId,
+          kind,
+          ...vars
+        });
+      } catch (_) {
+        text = '';
+      }
+      text = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
+      if (!text) return;
+      room.talk.at[x.id] = now;
+      socket.send({
+        t: 'chat',
+        id: c.id,
+        name: c.name,
+        text,
+        cid: `c${now.toString(36)}${Math.random().toString(36).slice(2, 7)}`
+      });
+    };
+    if (opts.now) {
+      run();
+      return;
+    }
+    const index = Math.max(0, s.cpus.findIndex(c => c.id === x.id));
+    setTimeout(run, 600 + Math.floor(Math.random() * 1800) + index * 900);
+  };
+  const cpuPickOne = () => s && s.cpus.length ? s.cpus[Math.floor(Math.random() * s.cpus.length)] : null;
+  const cpuReplyTo = msg => {
+    if (!s || !s.cpus.length || !msg || s.members[msg.id] && s.members[msg.id].cpu || s.cpus.some(c => c.id === msg.id)) return;
+    const sentAt = parseInt(String(msg.cid || '').slice(1, 9), 36);
+    if (Number.isFinite(sentAt) && Date.now() - sentAt > RHYTHM_MULTI_CPU_REPLY_FRESH_MS) return;
+    const kind = typeof rhythmBuddyTalkReplyKind === 'function' ? rhythmBuddyTalkReplyKind(msg.text) : '';
+    if (!kind || Date.now() - s.talk.replyAt < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
+    if (kind !== 'replyCall' && Math.random() > 0.6) return;
+    s.talk.replyAt = Date.now();
+    cpuSay(cpuPickOne(), kind);
+  };
+  const cpuTalkTick = () => {
+    if (!s || !s.cpus.length) return;
+    const r = s.room;
+    if (r.phase === 'ready' && r.round && s.talk.songRound !== r.round) {
+      s.talk.songRound = r.round;
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'song', {
+        songId: r.songId
+      });
+    }
+    if (r.phase === 'matching' || r.phase === 'select' || r.phase === 'result') {
+      const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
+      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.3) {
+        s.talk.idleAt = Date.now();
+        cpuSay(cpuPickOne(), 'idle');
+      }
+    }
+    if (r.phase === 'result' && r.round && s.talk.resultRound !== r.round) {
+      s.talk.resultRound = r.round;
+      const team = rhythmMultiTeamResult(Object.values(s.members), r.round, r.participants, true);
+      s.cpus.forEach(x => {
+        const row = team.rows.find(q => q.m.id === x.id);
+        if (!row || !row.res || row.res.quit) return;
+        const mvp = team.mvpId === x.id;
+        cpuSay(x, 'result', {
+          score: row.res.score,
+          diffId: row.res.diffId,
+          mvp
+        });
+      });
+    }
+  };
   const dropCpuIfBumped = () => {
     if (!s || !s.cpus.length || s.room.phase === 'playing') return;
     const kept = new Set(ordered().map(m => m.id));
     s.cpus.filter(c => !kept.has(c.id)).forEach(gone => {
+      cpuSay(gone, 'bump', {}, {
+        now: true
+      });
       delete s.members[gone.id];
       s.cpus = s.cpus.filter(c => c.id !== gone.id);
       if (socket) socket.send({
@@ -61979,14 +62906,24 @@ const RHYTHM_MULTI = (() => {
     }
     if (r.phase === 'select' && c.pickRound !== r.round) {
       let pick = '';
+      let why = '';
       try {
-        pick = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        if (r && typeof r === 'object') {
+          pick = String(r.songId || '');
+          why = String(r.why || '');
+        } else pick = String(r || '');
       } catch (_) {
         pick = '';
+        why = '';
       }
       c.pick = pick && catalog.includes(pick) ? pick : RHYTHM_MULTI_OMAKASE;
+      c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
+      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.9) cpuSay(x, 'pick', {
+        songId: c.pick
+      });
     }
     if (r.phase === 'ready' && c.readyRound !== r.round) {
       c.readyRound = r.round;
@@ -62063,6 +63000,7 @@ const RHYTHM_MULTI = (() => {
     selfTick();
     dropCpuIfBumped();
     cpuTick();
+    cpuTalkTick();
     hostTick();
     if (s) syncLobby();
     emit();
@@ -62092,6 +63030,7 @@ const RHYTHM_MULTI = (() => {
           at: Date.now()
         });
         if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
+        cpuReplyTo(msg);
       }
       emit();
       return;
@@ -62140,7 +63079,8 @@ const RHYTHM_MULTI = (() => {
         cpu: msg.cpu,
         owner: msg.owner || '',
         mb: msg.mb || '',
-        mc: msg.mc || []
+        mc: msg.mc || [],
+        pickWhy: msg.pw || ''
       };
       if (msg.room && fromHost()) {
         const r = msg.room;
@@ -62149,6 +63089,7 @@ const RHYTHM_MULTI = (() => {
           round: r.round,
           songId: r.songId,
           participants: r.participants,
+          selectSec: r.selectSec,
           deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0
         };
       }
@@ -62291,6 +63232,7 @@ const RHYTHM_MULTI = (() => {
       };
       oneCpuTick(s.cpus[s.cpus.length - 1]);
       sendOneCpuHb(id);
+      cpuSay(s.cpus[s.cpus.length - 1], 'join');
       emit();
       return true;
     },
@@ -62335,6 +63277,7 @@ const RHYTHM_MULTI = (() => {
       };
     },
     join(code, profile, mode) {
+      loadSelectSecPref();
       this.leave();
       const now = Date.now();
       const id = rhythmMultiMakeId();
@@ -62353,7 +63296,8 @@ const RHYTHM_MULTI = (() => {
           round: '',
           songId: '',
           deadline: 0,
-          participants: []
+          participants: [],
+          selectSec: selectSecPref
         },
         memberSig: '',
         lastMemberChange: now,
@@ -62364,7 +63308,14 @@ const RHYTHM_MULTI = (() => {
         playUntil: 0,
         liveIds: [],
         liveStreak: 0,
-        cpus: []
+        cpus: [],
+        talk: {
+          at: {},
+          songRound: '',
+          resultRound: '',
+          replyAt: 0,
+          idleAt: now
+        }
       };
       s.members[id] = {
         id,
@@ -62513,6 +63464,22 @@ const RHYTHM_MULTI = (() => {
       s.resultSeen = round;
       if (isHostNow() && (s.room.phase === 'result' || s.room.phase === 'playing') && s.room.round === round) toSelect();
       emit();
+    },
+    setSelectSeconds(sec) {
+      if (!s || !isHostNow() || s.status !== 'open') return false;
+      const next = rhythmMultiNormalizeSelectSec(sec);
+      selectSecPref = next;
+      s.selectSecTouched = true;
+      try {
+        void Promise.resolve(storeSet(RHYTHM_MULTI_SELECT_SEC_KEY, next)).catch(() => {});
+      } catch (_) {}
+      if (s.room.phase === 'select') setRoom({
+        selectSec: next,
+        deadline: next > 0 && humanCount() > 1 ? Date.now() + next * 1000 : 0
+      });else setRoom({
+        selectSec: next
+      });
+      return true;
     },
     hostAdvance() {
       if (!s || !isHostNow() || s.status !== 'open') return false;
@@ -63604,6 +64571,36 @@ function RhythmMultiScreen({
   const card = 'rounded-2xl border border-white/15 bg-slate-900/85 p-3';
   const btn = 'min-h-[48px] rounded-xl px-3 font-black disabled:opacity-40';
   const shell = 'relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white';
+  const cycleSelectSec = () => {
+    const list = RHYTHM_MULTI_SELECT_SEC_OPTIONS;
+    const now = room ? rhythmMultiNormalizeSelectSec(room.selectSec) : RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+    RHYTHM_MULTI.setSelectSeconds(list[(list.indexOf(now) + 1) % list.length]);
+  };
+  const selectTimeButton = (extra = '', narrow = false) => React.createElement("button", _extends({}, narrow ? {
+    'data-rhythm-multi-select-time-narrow': true
+  } : {
+    'data-rhythm-multi-select-time': true
+  }, {
+    type: "button",
+    "aria-label": `選曲の制限時間 ${rhythmMultiSelectSecLabel(room.selectSec)}。押すと切り替え`,
+    onClick: cycleSelectSec,
+    className: `min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`
+  }), "選曲", React.createElement("br", null), rhythmMultiSelectSecLabel(room.selectSec));
+  const buddyHeaderButton = (extra = '') => view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? React.createElement("button", {
+    "data-rhythm-buddy-open": true,
+    "data-rhythm-buddy-header": true,
+    type: "button",
+    "aria-label": "マスモンを呼ぶ",
+    onClick: () => setBuddySheet('pick'),
+    className: `relative flex min-h-[44px] min-w-[52px] shrink-0 flex-col items-center justify-center rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-1.5 leading-none text-slate-950 ${extra}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base"
+  }, "🎵"), React.createElement("span", {
+    className: "text-[10px] font-black"
+  }, "マスモン"), view.myCpus && view.myCpus.length > 0 && React.createElement("b", {
+    className: "absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200"
+  }, view.myCpus.length)) : null;
   const header = (step, onBackClick, opts = {}) => React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
@@ -63624,7 +64621,7 @@ function RhythmMultiScreen({
   }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement("small", {
     "data-rhythm-multi-quick-run": true,
     className: `max-w-[38%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
-  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.advance && isHost && React.createElement("button", {
+  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.buddy && buddyHeaderButton(opts.narrowRow ? 'max-[480px]:hidden' : ''), opts.advance && isHost && React.createElement("button", {
     "data-rhythm-multi-advance": true,
     type: "button",
     onClick: () => {
@@ -63632,7 +64629,7 @@ function RhythmMultiScreen({
       RHYTHM_MULTI.hostAdvance();
     },
     className: "min-h-[40px] shrink-0 rounded-xl bg-fuchsia-700 px-2 text-[11px] font-black"
-  }, opts.advance), opts.timer != null && React.createElement("b", {
+  }, opts.advance), opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden'), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
   }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && rankingButton(), view && chatButton());
@@ -64145,7 +65142,9 @@ function RhythmMultiScreen({
       "data-rhythm-multi": true,
       "data-rhythm-multi-step": "matching",
       className: shell
-    }, header('マッチング', leaveRoom), view && view.full ? React.createElement("div", {
+    }, header('マッチング', leaveRoom, {
+      buddy: true
+    }), view && view.full ? React.createElement("div", {
       className: "min-h-0 flex-1 overflow-y-auto p-3"
     }, React.createElement("section", {
       "data-rhythm-multi-full": true,
@@ -64199,7 +65198,24 @@ function RhythmMultiScreen({
       type: "button",
       className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black",
       onClick: shareCode
-    }, copied ? 'コピーした!' : '友だちに送る'))), React.createElement("div", {
+    }, copied ? 'コピーした!' : '友だちに送る')), view && room && React.createElement("div", {
+      "data-rhythm-multi-select-time-row": true,
+      className: "mt-1.5 flex flex-wrap items-center gap-1.5"
+    }, React.createElement("small", {
+      className: "shrink-0 text-[10px] font-black text-slate-400"
+    }, "選曲の制限時間"), isHost ? RHYTHM_MULTI_SELECT_SEC_OPTIONS.map(sec => React.createElement("button", {
+      key: sec,
+      type: "button",
+      "data-rhythm-multi-select-sec": sec,
+      "aria-pressed": rhythmMultiNormalizeSelectSec(room.selectSec) === sec,
+      onClick: () => RHYTHM_MULTI.setSelectSeconds(sec),
+      className: `min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+    }, rhythmMultiSelectSecLabel(sec))) : React.createElement("b", {
+      "data-rhythm-multi-select-sec-view": true,
+      className: "text-[11px] font-black text-amber-200"
+    }, rhythmMultiSelectSecLabel(rhythmMultiNormalizeSelectSec(room.selectSec)), React.createElement("small", {
+      className: "ml-1 text-[9px] font-bold text-slate-400"
+    }, "(ホストが決めます)")))), React.createElement("div", {
       className: "mt-2 space-y-2 landscape:mt-0"
     }, view && isHost && view.mode !== 'private' && React.createElement("button", {
       "data-rhythm-multi-confirm": true,
@@ -64637,8 +65653,13 @@ function RhythmMultiScreen({
       draggable: false,
       className: "h-8 w-8 shrink-0 rounded-md object-cover"
     }), React.createElement("span", {
-      className: "min-w-0 flex-1 truncate text-[12px] font-black"
-    }, song ? rhythmSongFullName(song) : 'おまかせ'))))));
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "block truncate text-[12px] font-black"
+    }, song ? rhythmSongFullName(song) : 'おまかせ'), m.cpu && song && RHYTHM_BUDDY_PICK_WHY[m.pickWhy] && React.createElement("small", {
+      "data-rhythm-buddy-pick-why": true,
+      className: "block truncate text-[10px] font-bold text-lime-200"
+    }, "「", RHYTHM_BUDDY_PICK_WHY[m.pickWhy], "」")))))));
   }
   if (phase === 'ready') {
     const iAmReady = !!me && me.readyRound === room.round;
@@ -64751,8 +65772,19 @@ function RhythmMultiScreen({
     className: shell
   }, header('楽曲シャッフル ・ 選曲', leaveRoom, {
     timer: room.deadline ? room.left : null,
-    advance: '締め切る'
-  }), React.createElement(RhythmMultiMemberCards, {
+    advance: '締め切る',
+    buddy: true,
+    selectTime: true,
+    narrowRow: true
+  }), (view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 || isHost) && React.createElement("div", {
+    "data-rhythm-multi-select-tools": true,
+    className: "flex shrink-0 items-center gap-2 border-b border-white/10 bg-slate-950/90 px-2 py-1 min-[481px]:hidden"
+  }, view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 && React.createElement("button", {
+    "data-rhythm-buddy-narrow": true,
+    type: "button",
+    onClick: () => setBuddySheet('pick'),
+    className: "relative min-h-[40px] min-w-0 flex-1 rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-[12px] font-black text-slate-950"
+  }, "🎵 マスモンを呼ぶ", view.myCpus && view.myCpus.length > 0 ? `(${view.myCpus.length}体)` : ''), isHost && selectTimeButton('', true)), React.createElement(RhythmMultiMemberCards, {
     bubbleOf: chatBubbleOf,
     members: members,
     hostId: view.hostId,
@@ -64872,6 +65904,7 @@ const rhythmBuddyMasuName = masu => {
   const base = masu && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
   return String(masu && masu.name || base && base.name || 'マスモン').slice(0, 12);
 };
+const rhythmBuddyTalkRecent = new Map();
 const rhythmBuddyMakeBrain = songs => ({
   play({
     songId,
@@ -64898,9 +65931,53 @@ const rhythmBuddyMakeBrain = songs => ({
       humans
     });
   },
+  talk({
+    masuId,
+    kind,
+    songId = '',
+    score = 0,
+    diffId = '',
+    mvp = false
+  }) {
+    const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
+    const norm = rhythmBuddyNormalizeMon(mon);
+    const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
+    let scene = kind;
+    if (kind === 'result') {
+      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === diffId);
+      const ratio = Number(score) / (diffDef && diffDef.maxScore || 1000000);
+      scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
+    }
+    const song = songId ? (songs || []).find(x => x.songId === songId) : null;
+    const key = String(masuId);
+    const recent = rhythmBuddyTalkRecent.get(key) || [];
+    const text = rhythmBuddyTalkPick({
+      kind: scene,
+      trait: norm.trait,
+      moodId: mood && mood.id ? mood.id : 'normal',
+      vars: {
+        song: song ? rhythmSongFullName(song) : ''
+      },
+      recent,
+      rand: Math.random
+    });
+    if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
+    return text;
+  },
   pick(catalog, masuId) {
-    const top = rhythmBuddyTopSongs(RHYTHM_BUDDY_STORE.get().mons[masuId], 3).filter(x => (catalog || []).includes(x.songId));
-    return top.length ? top[Math.floor(Math.random() * top.length)].songId : '';
+    const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
+    const info = id => {
+      const song = (songs || []).find(x => x.songId === id);
+      const levels = song && song.difficulties ? Object.values(song.difficulties).map(d => Number(d && d.level) || 0) : [];
+      return {
+        level: levels.length ? Math.max(...levels) : 0,
+        durationMs: song ? Number(song.playDurationMs) || 0 : 0
+      };
+    };
+    return rhythmBuddyChooseSong(mon, catalog, {
+      mood: rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon),
+      info
+    });
   }
 });
 function RhythmBuddyFace({
@@ -65247,7 +66324,7 @@ function RhythmBuddyDetail({
     size: 22
   }), mood.label), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "朝5:00に変わります")), React.createElement("section", {
+  }, "朝5:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "text-[10px] font-black text-slate-400"
@@ -76057,6 +77134,7 @@ function MonsterHeroGame() {
     setMasuMons(next);
     setMasuMonDetail(prev => prev && String(prev.id) === String(masu.id) ? applied.masu : prev);
     setTranscendPlan(null);
+    saveMissionProgress('enhance');
     const before = normalizeMasuProgression(masu);
     const lines = [];
     normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
@@ -102472,13 +103550,13 @@ const createAnimationStyle = () => {
     @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
     @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
     /* ==== レイドボス戦のモンヒロビート挑戦: 演奏が終わった直後のダメージ演出(RaidJackDamageFx)。約4.3秒・タップで飛ばせる ==== */
-    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px;
+    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px 16px calc(34px + env(safe-area-inset-bottom));
       background: radial-gradient(circle at 50% 48%, rgba(120,40,10,.55), rgba(12,4,24,0) 62%), #0c0418; color: #fff; --ja-c: 251,146,60; --ja-d: 253,186,116; animation: mhRjDmgIn .3s ease-out both, mhRjDmgOut .45s ease-in 3.85s forwards; }
     .mh-rjdmg-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 46%, #fff, rgba(var(--ja-c),.7) 40%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .7s ease-out 1s both; }
     .mh-rjdmg-score { position: relative; text-align: center; animation: mhRjRise .4s ease-out .1s both; }
     .mh-rjdmg-score small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fde68a; }
     .mh-rjdmg-score b { display: block; font-size: 40px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 rgba(0,0,0,.8), 0 0 18px rgba(253,224,71,.7); }
-    .mh-rjdmg-stage { position: relative; width: min(64vw, 270px); aspect-ratio: 1024 / 880; margin-top: 4px; }
+    .mh-rjdmg-stage { position: relative; flex: 0 1 auto; width: min(64vw, 270px, 36dvh, 36vh); aspect-ratio: 1024 / 880; margin-top: 4px; }
     .mh-rjdmg-jack { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; animation: mhRjJackIn .5s ease-out .2s both, mhRjJackHit .7s ease-out 1s both; }
     .mh-rjdmg-jack-none { animation: mhRjJackIn .5s ease-out .2s both; }
     .mh-rjdmg-slash { position: absolute; z-index: 2; left: -10%; width: 120%; height: 6px; top: 40%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 16px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-24deg) translateX(-60%); animation: mhRjSlash .5s ease-out 1s both; }
@@ -102499,6 +103577,7 @@ const createAnimationStyle = () => {
     @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
+    @media (max-height: 640px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
     @media (prefers-reduced-motion: reduce) { .mh-rjdmg, .mh-rjdmg * { animation-duration: .01s !important; animation-delay: 0s !important; } .mh-rjdmg-bar-fill { transform: scaleX(var(--to)); } .mh-rjdmg-damage, .mh-rjdmg-down { opacity: 1; } }
     /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
     .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }

@@ -8088,6 +8088,8 @@ function MonsterHeroGame() {
     masuMonsRef.current = next; setMasuMons(next);
     setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.masu:prev);
     setTranscendPlan(null);
+    // 通常強化と同じく、ミッションの「モンスターを強化する」に数える(2026-10-07・ユーザー報告「超越強化だとミッションがクリアにならなかった」)
+    saveMissionProgress('enhance');
     // 通常強化と同じように、確定したことが分かる全画面演出を出す。
     // 何がいくつ上がったかは「下書きの数」ではなく実際の前後の差から出す
     // (間合い適性はMで頭打ちになるので、下書きどおりに上がるとは限らない)
