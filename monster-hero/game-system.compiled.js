@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 643c0cc4212d55ea
+// source-sha256: 9cdb910fabb411c8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 18:57";
+const BUILD_DATE = "2026-10-07 19:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -412,19 +412,39 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 const EVENT_REPLAY_GROUPS = Object.freeze([{
   id: 'halloween',
   emoji: '🎃',
-  label: 'ハロウィン・ナイト'
-}, {
-  id: 'rhythm_event',
-  emoji: '🏆',
-  label: 'モンヒロビートのイベント'
+  label: 'ハロウィン・ナイト',
+  note: 'レイドバトルとジャックのお話',
+  color: '#fb923c'
 }, {
   id: 'update',
   emoji: '✨',
-  label: '新しい遊びのお話'
+  label: '新しい遊びのお話',
+  note: '新しい遊びができたときの案内',
+  color: '#e879f9'
+}, {
+  id: 'beat_point',
+  emoji: '🎵',
+  label: 'ビートP',
+  note: 'ビートPと交換所のお話',
+  color: '#34d399'
+}, {
+  id: 'symphony',
+  emoji: '🎼',
+  label: '異世界交響祭',
+  note: 'モンヒロビートの大会',
+  color: '#38bdf8'
+}, {
+  id: 'cup',
+  emoji: '🏆',
+  label: '週末ゲリラ杯',
+  note: 'モンヒロビートの大会',
+  color: '#fbbf24'
 }, {
   id: 'assistant',
   emoji: '💬',
-  label: '助手のお話'
+  label: '助手のお話',
+  note: 'きき・ももすけとの出会い',
+  color: '#f472b6'
 }]);
 const EVENT_REPLAY_GROUP_FALLBACK = 'update';
 const eventReplayGroups = (keep = eventReplayReleased) => {
@@ -68627,6 +68647,7 @@ function MonsterHeroGame() {
   const [momosukeIntroSeenFlag, setMomosukeIntroSeenFlag] = useState(false);
   const [newPlayerCampaignEligible, setNewPlayerCampaignEligible] = useState(false);
   const [showEventReplayList, setShowEventReplayList] = useState(false);
+  const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);
   setAssistantCostumeStoryNow(eventReplay ? ((eventReplay.debug ? eventReplayAllList() : eventReplayList()).find(ev => ev.id === eventReplay.id) || {}).costumes || null : null);
@@ -92023,7 +92044,10 @@ function MonsterHeroGame() {
       },
       onOpenAssistantPicker: () => setShowAssistantPicker(true),
       onSelectBattleMode: setProfileBattleMode,
-      onOpenEventReplayList: () => setShowEventReplayList(true),
+      onOpenEventReplayList: () => {
+        setEventReplayGroupId(null);
+        setShowEventReplayList(true);
+      },
       onOpenSpeciesRecords: mode => openSpeciesChallengeRecords('PROFILE', {
         mode: mode || BATTLE_MODE_SPECIES_CHALLENGE
       }),
@@ -93794,40 +93818,117 @@ function MonsterHeroGame() {
       "data-debug-story-close": true,
       onClick: () => setShowDebugStoryList(false),
       className: "w-full bg-slate-800 text-slate-300 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showEventReplayList && React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center justify-center p-5",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 90000
-      }
-    }, React.createElement("div", {
-      className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col"
-    }, React.createElement("h3", {
-      className: "shrink-0 text-base font-black text-white mb-1 text-center"
-    }, "イベント回想"), React.createElement("p", {
-      className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "見たことのある会話イベントを、何度でも見返せます。", React.createElement("br", null), "まとまりごとに、お話の順に並んでいます。"), React.createElement("div", {
-      "data-event-replay-groups": true,
-      className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-4 mb-3"
-    }, eventReplayGroups().map(group => {
-      const seenCount = group.events.filter(isEventReplayUnlocked).length;
-      return React.createElement("section", {
-        key: group.id,
-        "data-event-replay-group": group.id
+    }, "閉じる"))), showEventReplayList && (() => {
+      const groups = eventReplayGroups();
+      const activeGroup = groups.find(group => group.id === eventReplayGroupId) || null;
+      const closeList = () => {
+        setShowEventReplayList(false);
+        setEventReplayGroupId(null);
+      };
+      const rangeText = group => {
+        const first = eventReplayDateText(group.events[0]),
+          last = eventReplayDateText(group.events[group.events.length - 1]);
+        return first && last && first !== last ? `${first} 〜 ${last}` : first || last;
+      };
+      const seenOf = group => group.events.filter(isEventReplayUnlocked).length;
+      return React.createElement("div", {
+        className: "fixed inset-0 flex flex-col items-center justify-center p-5",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.92)',
+          zIndex: 90000
+        }
       }, React.createElement("div", {
-        className: "mb-1.5 flex items-center gap-1.5 px-1"
+        "data-event-replay-page": activeGroup ? 'episodes' : 'panels',
+        className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col"
+      }, !activeGroup && React.createElement(React.Fragment, null, React.createElement("h3", {
+        className: "shrink-0 text-base font-black text-white mb-1 text-center"
+      }, "イベント回想"), React.createElement("p", {
+        className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight"
+      }, "見たいイベントを選んでください。", React.createElement("br", null), "見たことのある会話を、何度でも見返せます。"), React.createElement("div", {
+        "data-event-replay-groups": true,
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3"
+      }, groups.map(group => {
+        const seen = seenOf(group),
+          total = group.events.length;
+        return React.createElement("button", {
+          key: group.id,
+          type: "button",
+          "data-event-replay-group": group.id,
+          onClick: () => setEventReplayGroupId(group.id),
+          className: "w-full rounded-2xl px-3 py-3 flex items-center gap-3 text-left active:scale-[.97]",
+          style: {
+            border: `1.5px solid ${group.color}66`,
+            backgroundColor: `${group.color}14`
+          }
+        }, React.createElement("span", {
+          className: "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl",
+          "aria-hidden": "true",
+          style: {
+            backgroundColor: `${group.color}26`
+          }
+        }, group.emoji), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("b", {
+          className: "block text-[13px] font-black text-white leading-tight"
+        }, group.label), React.createElement("small", {
+          className: "block text-[9px] text-slate-400 leading-tight"
+        }, group.note), rangeText(group) && React.createElement("small", {
+          "data-event-replay-date": true,
+          className: "block text-[9px] tabular-nums text-slate-500"
+        }, rangeText(group)), React.createElement("span", {
+          className: "mt-1 flex items-center gap-1.5"
+        }, React.createElement("span", {
+          className: "h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"
+        }, React.createElement("span", {
+          className: "block h-full rounded-full",
+          style: {
+            width: `${total ? Math.round(seen / total * 100) : 0}%`,
+            backgroundColor: group.color
+          }
+        })), React.createElement("small", {
+          className: "shrink-0 text-[10px] font-black tabular-nums",
+          style: {
+            color: group.color
+          }
+        }, seen, "/", total))), React.createElement(ChevronRight, {
+          size: 16,
+          className: "shrink-0 text-slate-500"
+        }));
+      })), React.createElement("button", {
+        onClick: closeList,
+        className: "shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+      }, "閉じる")), activeGroup && React.createElement(React.Fragment, null, React.createElement("div", {
+        className: "shrink-0 mb-1 flex items-center gap-2"
+      }, React.createElement("button", {
+        type: "button",
+        "data-event-replay-back": true,
+        "aria-label": "イベントの一覧へ戻る",
+        onClick: () => setEventReplayGroupId(null),
+        className: "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 active:scale-95"
+      }, React.createElement(ArrowLeft, {
+        size: 18
+      })), React.createElement("span", {
+        className: "min-w-0 flex-1 text-center"
+      }, React.createElement("b", {
+        className: "block text-[14px] font-black text-white leading-tight"
       }, React.createElement("span", {
-        className: "text-sm",
         "aria-hidden": "true"
-      }, group.emoji), React.createElement("b", {
-        className: "min-w-0 flex-1 text-[12px] font-black text-fuchsia-100"
-      }, group.label), React.createElement("small", {
-        className: "shrink-0 text-[10px] font-black tabular-nums text-fuchsia-300/80"
-      }, seenCount, "/", group.events.length)), React.createElement("div", {
-        className: "space-y-2"
-      }, group.events.map(event => {
+      }, activeGroup.emoji, " "), activeGroup.label), React.createElement("small", {
+        className: "block text-[10px] font-black tabular-nums",
+        style: {
+          color: activeGroup.color
+        }
+      }, "見たお話 ", seenOf(activeGroup), "/", activeGroup.events.length)), React.createElement("span", {
+        className: "w-11 shrink-0",
+        "aria-hidden": "true"
+      })), React.createElement("p", {
+        className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight"
+      }, "お話の順に並んでいます。"), React.createElement("div", {
+        "data-event-replay-episodes": true,
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3"
+      }, activeGroup.events.map(event => {
         const eventUnlocked = isEventReplayUnlocked(event);
         if (!eventUnlocked) {
           return React.createElement("div", {
@@ -93853,7 +93954,8 @@ function MonsterHeroGame() {
           onClick: () => {
             setEventReplay({
               id: event.id,
-              step: 0
+              step: 0,
+              fromList: true
             });
             setShowEventReplayList(false);
           },
@@ -93871,11 +93973,11 @@ function MonsterHeroGame() {
           "data-event-replay-date": true,
           className: "tabular-nums"
         }, eventReplayDateText(event), "・"), "タップして見返す")));
-      })));
-    })), React.createElement("button", {
-      onClick: () => setShowEventReplayList(false),
-      className: "shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showIconPicker && (() => {
+      })), React.createElement("button", {
+        onClick: () => setEventReplayGroupId(null),
+        className: "shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+      }, "イベントの一覧へ戻る"))));
+    })(), showIconPicker && (() => {
       const closeIcon = () => {
         setShowIconPicker(false);
         setIconQuery('');
@@ -95113,12 +95215,14 @@ function MonsterHeroGame() {
         if (event && event.id === RAID_JACK_HOWTO_AFTER_STORY_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_STORY_START_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         if (event && event.id === RAID_JACK_STORY_START_ID && eventReplay.live && !eventReplay.debug && RELEASE_FLAGS.raidJack === true && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         if (eventReplay.debugList) setShowDebugStoryList(true);
+        if (eventReplay.fromList) setShowEventReplayList(true);
         setEventReplay(null);
       };
       const skip = () => {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         if (eventReplay.debugList) setShowDebugStoryList(true);
+        if (eventReplay.fromList) setShowEventReplayList(true);
         setEventReplay(null);
       };
       return React.createElement("div", {

@@ -1957,6 +1957,8 @@ function MonsterHeroGame() {
   // イベント回想: プロフィールから見返す一覧の開閉と、再生中のイベント({id,step}、nullなら非表示)。
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
+  // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
+  const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);   // デバッグ設定の「全ストーリーを確認」の一覧(公開前も含めて全部。見たことにはしない)
   // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
@@ -18199,7 +18201,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
             onSelectBattleMode={setProfileBattleMode}
-            onOpenEventReplayList={()=>setShowEventReplayList(true)}
+            onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
@@ -19210,60 +19212,98 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {/* イベント回想の一覧。未閲覧のイベントは「？？？」で伏せ、タップできない。
-            ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
-        {showEventReplayList&&(
+        {/* イベント回想は2ページ(2026-10-07・ユーザー指示「1ページ増やして、パネル式でイベント単位で表示。押すとその内容のイベントにうつる」)。
+            1ページ目: イベント単位のパネル(eventReplayGroups)。押すとそのまとまりのお話へ。
+            2ページ目: そのまとまりのお話の一覧(お話の順)。未閲覧は「？？？」で伏せ、タップできない。
+            ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする。
+            再生を終える・スキップすると、2ページ目(同じまとまり)へ戻る(fromList)。続けて次のお話を選べる */}
+        {showEventReplayList&&(()=>{
+          const groups=eventReplayGroups();
+          const activeGroup=groups.find(group=>group.id===eventReplayGroupId)||null;
+          const closeList=()=>{setShowEventReplayList(false);setEventReplayGroupId(null);};
+          const rangeText=(group)=>{
+            const first=eventReplayDateText(group.events[0]),last=eventReplayDateText(group.events[group.events.length-1]);
+            return first&&last&&first!==last?`${first} 〜 ${last}`:(first||last);
+          };
+          const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
+          return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
-              {/* 見出しと「閉じる」は動かさず、まとまりの並びだけを窓の中でスクロールさせる(下まで行かないと閉じられないのを避ける) */}
-              <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
-              <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。<br/>まとまりごとに、お話の順に並んでいます。</p>
-              {/* まとまり(ハロウィン・ナイト / モンヒロビートのイベント / …)ごとに、お話の順(古い順)で並べる。
-                  まだ見ていない項目も、そのまとまりの中の順番どおりに「？？？」で出す(あと何本あるかが分かる) */}
-              <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-4 mb-3">
-                {eventReplayGroups().map(group=>{
-                  const seenCount=group.events.filter(isEventReplayUnlocked).length;
-                  return (
-                  <section key={group.id} data-event-replay-group={group.id}>
-                    <div className="mb-1.5 flex items-center gap-1.5 px-1">
-                      <span className="text-sm" aria-hidden="true">{group.emoji}</span>
-                      <b className="min-w-0 flex-1 text-[12px] font-black text-fuchsia-100">{group.label}</b>
-                      <small className="shrink-0 text-[10px] font-black tabular-nums text-fuchsia-300/80">{seenCount}/{group.events.length}</small>
-                    </div>
-                    <div className="space-y-2">
-                {group.events.map(event=>{
-                  const eventUnlocked=isEventReplayUnlocked(event);
-                  if(!eventUnlocked){
-                    return (
-                      <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
-                        <span className="text-lg" aria-hidden="true">🔒</span>
-                        <span className="min-w-0 flex-1">
-                          <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                          <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
-                        </span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <button key={event.id} type="button" onClick={()=>{setEventReplay({id:event.id,step:0});setShowEventReplayList(false);}}
-                      className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
-                      <Play size={16} className="text-fuchsia-300 shrink-0"/>
-                      <span className="min-w-0 flex-1">
-                        <b className="block text-[12px] font-black text-white">{event.title}</b>
-                        <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
-                      </span>
-                    </button>
-                  );
-                })}
-                    </div>
-                  </section>
-                  );
-                })}
-              </div>
-              <button onClick={()=>setShowEventReplayList(false)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            <div data-event-replay-page={activeGroup?'episodes':'panels'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+              {!activeGroup&&(
+                <>
+                  {/* 1ページ目: イベント単位のパネル */}
+                  <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
+                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たいイベントを選んでください。<br/>見たことのある会話を、何度でも見返せます。</p>
+                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3">
+                    {groups.map(group=>{
+                      const seen=seenOf(group),total=group.events.length;
+                      return (
+                        <button key={group.id} type="button" data-event-replay-group={group.id} onClick={()=>setEventReplayGroupId(group.id)}
+                          className="w-full rounded-2xl px-3 py-3 flex items-center gap-3 text-left active:scale-[.97]"
+                          style={{border:`1.5px solid ${group.color}66`,backgroundColor:`${group.color}14`}}>
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl" aria-hidden="true" style={{backgroundColor:`${group.color}26`}}>{group.emoji}</span>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[13px] font-black text-white leading-tight">{group.label}</b>
+                            <small className="block text-[9px] text-slate-400 leading-tight">{group.note}</small>
+                            {rangeText(group)&&<small data-event-replay-date className="block text-[9px] tabular-nums text-slate-500">{rangeText(group)}</small>}
+                            <span className="mt-1 flex items-center gap-1.5">
+                              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><span className="block h-full rounded-full" style={{width:`${total?Math.round(seen/total*100):0}%`,backgroundColor:group.color}}/></span>
+                              <small className="shrink-0 text-[10px] font-black tabular-nums" style={{color:group.color}}>{seen}/{total}</small>
+                            </span>
+                          </span>
+                          <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={closeList} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+                </>
+              )}
+              {activeGroup&&(
+                <>
+                  {/* 2ページ目: そのまとまりのお話(お話の順) */}
+                  <div className="shrink-0 mb-1 flex items-center gap-2">
+                    <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 active:scale-95"><ArrowLeft size={18}/></button>
+                    <span className="min-w-0 flex-1 text-center">
+                      <b className="block text-[14px] font-black text-white leading-tight"><span aria-hidden="true">{activeGroup.emoji} </span>{activeGroup.label}</b>
+                      <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
+                    </span>
+                    <span className="w-11 shrink-0" aria-hidden="true"/>
+                  </div>
+                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">お話の順に並んでいます。</p>
+                  <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3">
+                    {activeGroup.events.map(event=>{
+                      const eventUnlocked=isEventReplayUnlocked(event);
+                      if(!eventUnlocked){
+                        return (
+                          <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
+                            <span className="text-lg" aria-hidden="true">🔒</span>
+                            <span className="min-w-0 flex-1">
+                              <b className="block text-[12px] font-black text-slate-400">？？？</b>
+                              <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button key={event.id} type="button" onClick={()=>{setEventReplay({id:event.id,step:0,fromList:true});setShowEventReplayList(false);}}
+                          className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
+                          <Play size={16} className="text-fuchsia-300 shrink-0"/>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[12px] font-black text-white">{event.title}</b>
+                            <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={()=>setEventReplayGroupId(null)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">イベントの一覧へ戻る</button>
+                </>
+              )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {showIconPicker&&(()=>{
           // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
@@ -20005,6 +20045,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           if(eventReplay.debugList) setShowDebugStoryList(true);
+          if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
@@ -20017,6 +20058,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.debugList) setShowDebugStoryList(true);
+          if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
         };
         return(
