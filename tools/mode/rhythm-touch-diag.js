@@ -129,6 +129,65 @@ const diagnose=summary=>{
   return lines;
 };
 
+// ── タイミングの診断(2026-10-07・stats.timing) ──
+// 実機でしか分からないこと(入力が届くまでの遅れ・曲の時計の階段・アプリを離れた回数・端末の音の遅れ・mp3の頭の無音)を、
+// 端末の系統ごとに集める。直し方は data/rhythm-mode.js の RHYTHM_TOUCH_FIXES(inputAgeCap / smoothSongClock / autoPauseOnHidden)。
+// 入れるのはユーザーが了承してから。週の定期実行は報告するだけで、勝手に true にしない
+const TIMING_MIN_PLAYS=10;
+const median=list=>{const v=list.filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[Math.floor(v.length/2)]:null;};
+const timingSummary=(rows,{days=null,now=Date.now()}={})=>{
+  const since=days?now-days*86400000:-Infinity;
+  const groups=new Map();
+  for(const row of rows){
+    if(isReportRow(row))continue;
+    const at=Date.parse(row.created_at||'');
+    if(Number.isFinite(at)&&at<since)continue;
+    const s=row.stats&&typeof row.stats==='object'?row.stats:{};
+    const t=s.timing&&typeof s.timing==='object'?s.timing:null;
+    if(!t||s.assist)continue;
+    const key=row.platform||'other';
+    if(!groups.has(key))groups.set(key,{key,plays:0,inputs:0,capped:0,over150:0,over300:0,frames:0,stalls:0,hiddenPlays:0,penPlays:0,hasTs:0,hasTsKnown:0,outLat:[],baseLat:[],head:new Map()});
+    const g=groups.get(key);
+    const hist=Array.isArray(t.ageHist)?t.ageHist.map(num):[0,0,0,0,0,0];
+    g.plays++;g.inputs+=hist.reduce((a,b)=>a+b,0);g.capped+=num(t.ageCapped);g.over150+=(hist[4]||0)+(hist[5]||0);g.over300+=hist[5]||0;
+    g.frames+=num(t.frames);g.stalls+=num(t.stalls);
+    if(num(t.hidden)>0)g.hiddenPlays++;if(num(t.pen)>0)g.penPlays++;
+    if(typeof t.hasTs==='boolean'){g.hasTsKnown++;if(t.hasTs)g.hasTs++;}
+    if(Number.isFinite(Number(t.outLatMs)))g.outLat.push(Number(t.outLatMs));
+    if(Number.isFinite(Number(t.baseLatMs)))g.baseLat.push(Number(t.baseLatMs));
+    if(Number.isFinite(Number(t.headMs))&&Number(t.headMs)>=0){const song=String(row.song_id||'');if(!g.head.has(song))g.head.set(song,[]);g.head.get(song).push(Number(t.headMs));}
+  }
+  const per=(a,b,unit)=>b>0?a/b*unit:0;
+  return [...groups.values()].map(g=>({key:g.key,plays:g.plays,inputs:g.inputs,
+    cappedPer1k:per(g.capped,g.inputs,1000),over150Per1k:per(g.over150,g.inputs,1000),over300Per1k:per(g.over300,g.inputs,1000),
+    stallShare:per(g.stalls,g.frames,1),hiddenShare:per(g.hiddenPlays,g.plays,1),penShare:per(g.penPlays,g.plays,1),
+    hasTsShare:g.hasTsKnown?g.hasTs/g.hasTsKnown:null,outLatMedian:median(g.outLat),baseLatMedian:median(g.baseLat),
+    headBySong:Object.fromEntries([...g.head].map(([song,v])=>[song,median(v)]))})).sort((a,b)=>a.key.localeCompare(b.key));
+};
+// 判定と、合う直し方。数字の目安は初期値。実際の記録を見て、ユーザーと決める
+const TIMING_FIX_FOR={cappedPer1k:'inputAgeCap',stallShare:'smoothSongClock',hiddenShare:'autoPauseOnHidden'};
+const timingLines=summary=>{
+  const lines=[];
+  const ios=summary.find(g=>g.key==='ios'),android=summary.find(g=>g.key==='android');
+  for(const g of summary){
+    if(g.plays<TIMING_MIN_PLAYS){lines.push({level:'wait',text:`[${g.key}] タイミングの記録がまだ足りません(${g.plays}曲。${TIMING_MIN_PLAYS}曲そろったら判定します)`});continue;}
+    if(g.cappedPer1k>=10)lines.push({level:'found',metric:'cappedPer1k',text:`[${g.key}] 補正の上限(80ms)を超えて遅れて届いた入力が 1000入力に ${g.cappedPer1k.toFixed(1)} 回(150ms超 ${g.over150Per1k.toFixed(1)} / 300ms超 ${g.over300Per1k.toFixed(1)})。処理が詰まった回の空判定・隣のノーツ取りの疑い`});
+    if(g.stallShare>=0.02)lines.push({level:'found',metric:'stallShare',text:`[${g.key}] 曲の時計が前のコマと同じ値だったコマが ${(g.stallShare*100).toFixed(1)}%。時計が階段状で、曲が止まって見える疑い`});
+    if(g.hiddenShare>=0.05)lines.push({level:'found',metric:'hiddenShare',text:`[${g.key}] 演奏中にアプリを離れた曲が ${(g.hiddenShare*100).toFixed(1)}%。裏へ回ったあとに戻ると、大量のMISSになる疑い`});
+    if(g.penShare>0)lines.push({level:'info',text:`[${g.key}] ペンで直接押した曲が ${(g.penShare*100).toFixed(1)}%(二重入力の疑いは、押した回数と入力の数を見て確かめる)`});
+  }
+  if(ios&&ios.outLatMedian!==null&&android&&android.outLatMedian!==null&&(ios.outLatMedian+ios.baseLatMedian)<android.outLatMedian*.5)
+    lines.push({level:'found',text:`iPhone の出力遅延(中央値 ${ios.outLatMedian}ms・基準遅延 ${ios.baseLatMedian}ms)が、Android(${android.outLatMedian}ms)よりずっと小さい。Safari は出力遅延を申告しない疑い(耳で合わせる人は、遅れて判定される)`});
+  if(ios&&android){
+    const diffs=[];
+    for(const song of Object.keys(ios.headBySong))if(song in android.headBySong&&Number.isFinite(ios.headBySong[song])&&Number.isFinite(android.headBySong[song])){const d=ios.headBySong[song]-android.headBySong[song];if(Math.abs(d)>=8)diffs.push(`${song} ${d>0?'+':''}${d}ms`);}
+    if(diffs.length)lines.push({level:'found',text:`曲の頭の無音が iPhone と Android で違う曲があります(mp3 の先頭の遅れの扱いの差。${diffs.slice(0,6).join(' / ')})。曲ごとの音の位置が、端末でその分ずれる疑い`});
+  }
+  if(!lines.some(l=>l.level==='found'))lines.push({level:'none',text:'タイミングの診断に、はっきりした疑いはありません'});
+  return lines;
+};
+const timingFixesFor=lines=>[...new Set(lines.filter(l=>l.level==='found'&&TIMING_FIX_FOR[l.metric]).map(l=>TIMING_FIX_FOR[l.metric]))];
+
 // ── 報告のあった曲と無い曲を比べる(2026-10-01) ──
 // 同じ iPhone の記録のなかで、「押したのに反応しないことがあった」と報告された曲だけ多い数字が、指の消えている段階を指す
 const MIN_REPORTED=5;
@@ -195,7 +254,7 @@ const report=(rows,{json=false,days=null}={})=>{
   const compared=compareReported(rows,{days});
   const fixes=fixesFor(verdict,compared);
   const fixCompare=Object.values(FIX_FOR).map(item=>item.fix).filter((name,i,list)=>list.indexOf(name)===i).map(name=>compareFix(rows,name,{days}));
-  if(json){console.log(JSON.stringify({summary,verdict,compared,fixes,fixCompare},null,1));return {summary,verdict,compared,fixes,fixCompare};}
+  if(json){const timing=timingSummary(rows,{days}),timingVerdict=timingLines(timing);console.log(JSON.stringify({summary,verdict,compared,fixes,fixCompare,timing,timingVerdict},null,1));return {summary,verdict,compared,fixes,fixCompare,timing,timingVerdict};}
   console.log(`タッチの診断: ${rows.length}行${days?`(直近${days}日)`:''}`);
   for(const g of summary){
     console.log(`\n[${g.key}] ${g.plays}曲・${g.devices}端末・${g.taps}タッチ・${g.notes}ノーツ`);
@@ -209,6 +268,11 @@ const report=(rows,{json=false,days=null}={})=>{
   for(const g of compared.summary.filter(g=>g.key.startsWith('ios:')))
     console.log(`  [${g.key}] ${g.plays}曲  ポインタだけ ${g.pointerOnlyPer1k.toFixed(2)} / 遅れて見えた ${g.lateStartPer1k.toFixed(2)} / 50ms以上遅れた ${g.lateDeliveryPer1k.toFixed(2)} / 取り消し ${g.cancelsPer1k.toFixed(2)} / 道の外 ${g.ignoredPer1k.toFixed(2)} / 入力の無いMISS ${g.noInputMissPer1k.toFixed(2)}`);
   compared.lines.forEach(line=>console.log(`  ${line.level==='found'?'●':line.level==='wait'?'…':'・'} ${line.text}`));
+  const timing=timingSummary(rows,{days}),timingVerdict=timingLines(timing),timingFixes=timingFixesFor(timingVerdict);
+  console.log('\nタイミングの診断(stats.timing):');
+  for(const g of timing)console.log(`  [${g.key}] ${g.plays}曲・${g.inputs}入力  80ms超 ${g.cappedPer1k.toFixed(1)}/1000入力 / 150ms超 ${g.over150Per1k.toFixed(1)} / 止まったコマ ${(g.stallShare*100).toFixed(1)}% / 離れた曲 ${(g.hiddenShare*100).toFixed(1)}% / 出力遅延 ${g.outLatMedian===null?'-':g.outLatMedian}ms・基準遅延 ${g.baseLatMedian===null?'-':g.baseLatMedian}ms / getOutputTimestamp ${g.hasTsShare===null?'-':Math.round(g.hasTsShare*100)+'%'}`);
+  timingVerdict.forEach(line=>console.log(`  ${line.level==='found'?'●':line.level==='wait'?'…':'・'} ${line.text}`));
+  if(timingFixes.length)timingFixes.forEach(name=>console.log(`  → ${name}(デバッグ画面の「実機の直し方」で、この端末だけ試せます)`));
   console.log('\n用意してある直し方(入れるのはユーザーが了承してから。data/rhythm-mode.js の RHYTHM_TOUCH_FIXES を true にする):');
   if(fixes.length)fixes.forEach(item=>console.log(`  → ${item.fix}: ${item.text}`));
   else console.log('  いまの判定に合う直し方はありません');
@@ -220,7 +284,7 @@ const report=(rows,{json=false,days=null}={})=>{
   return {summary,verdict,compared,fixes,fixCompare};
 };
 
-module.exports={aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,compareFix,fixesFor,FIX_FOR,MIN_REPORTED};
+module.exports={timingSummary,timingLines,timingFixesFor,TIMING_MIN_PLAYS,aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,compareFix,fixesFor,FIX_FOR,MIN_REPORTED};
 
 if(require.main===module){
   let rows=readRows();

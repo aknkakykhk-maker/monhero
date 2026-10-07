@@ -350,6 +350,10 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 `node mode/rhythm-mid-tracking-check.js` は、HOLD/SLIDEの途中追従判定(暫定値)を確認する。猶予(暫定120ms)を超えて経路・帯から外れたままの場合だけMISSを確定すること、猶予内に戻ればカウントをリセットすること、HOLDにも横ズレ判定(帯の半分幅+0.15レーン)が効くこと、途中失敗時は指を離す前にその場でMISS確定させることを、擬似DOM上でbind/record/releaseを直接動かして検証する。
 
 `node mode/rhythm-glow-road-width-check.js` は、押したサブレーンの光(指の位置で光る台形)が、横向きの「道の幅」(ふつう・細い)に合わせて切り直されることを確認する(2026-10-07・横向きでだけ光が押した位置からずれていた)。
+
+`node mode/rhythm-timing-diag-check.js` は、実機でしか分からないことの診断(`stats.timing`)と、直し方の切り替え(`inputAgeCap` / `smoothSongClock` / `autoPauseOnHidden`・既定はすべて切ってある・この端末だけで入れる上書き `mh_rhythm_fix_override_v1`)が崩れていないかを確認する(2026-10-07)。報告ツール `rhythm-touch-diag.js --report` の「タイミングの診断」も見張る。
+
+`node mode/rhythm-input-position-check.js` は、押した位置・時刻まわり(判定ラインより下の受付・道の外から滑ってきた指・押さえ始めの時計・疑似タップの時刻)の取り決めが消えていないかを文字で確認する(2026-10-07)。
 `node mode/rhythm-audio-independence-check.js` は、音ゲーのBGM専用gainがメインのbgmGainを経由せずdestinationへ直結していること、曲ごとの音量差はsafeTrackGainで正規化すること、タップ音がもともとメインのSE音量と無関係であること、そして全体ミュート(タイトルの「音がオフです」)だけは`window.__mhAudioEnabled`経由で両方に共通で効くことを確認する。
 `node mode/rhythm-failed-hold-trail-check.js` は、MISSになったHOLD／SLIDEを譜面上の終端まで薄いグレーで流し続け、TAP／FLICKは従来どおり消えること、判定・コンボ・スコアへ影響していないことを確認する。
 `node mode/rhythm-screen-layout-check.js` は、音ゲーのデバッグ／オプション／プレイの各画面が「固定ヘッダー＋スクロール1つ（＋固定フッター）」で閉じ、座標校正などのデバッグUIが `document.body` 直下の固定レイヤーとしてプレイ画面へ重ならないことを確認する。あわせて実ブラウザで座標校正スクリプトを動かし、トグルがデバッグ画面とポーズメニューの中へ入ること、プレイ中に画面へ浮かないこと、ON/OFFが画面をまたいで保持されることを実測する。
