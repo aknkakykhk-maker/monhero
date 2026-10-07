@@ -703,8 +703,9 @@ check('STEP2の更新履歴は開発メモとして残し、未完成機能を�
   return entry.includes('dev:true');
 })());
 
-// --- ビートP STEP3（交換所・固定12商品・数量交換・原子的保存） ---
-check('ビートP交換所は対象確定済みの固定12商品だけ',(()=>{
+// --- ビートP STEP3（交換所・固定13商品・数量交換・原子的保存） ---
+// ★2026-10-07 セッション券(マルチにマスモンを呼ぶ券・150P)を足した(ユーザー指示・docs/spec/RHYTHM_BUDDY.md)
+check('ビートP交換所は対象確定済みの固定13商品だけ',(()=>{
   const got=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).map(o=>[o.id,o.itemId||'',o.grantAmount,o.cost]);
   const want=[
     // ★2026-09-17に値上げ(ユーザー指示)。高額の3つ(証片・虹の超越の実・勇者の証)は据え置き、
@@ -712,12 +713,13 @@ check('ビートP交換所は対象確定済みの固定12商品だけ',(()=>{
     ['diamond_300','',300,5],['training_ticket_x3','training_ticket',3,5],['training_ticket_l','training_ticket_l',1,15],
     ['rainbow_psyche','rainbow_psyche',1,5],['skip_ticket_jo','skip_ticket_jo',1,50],['skip_ticket_ha','skip_ticket_ha',1,80],
     ['skip_ticket_kyu','skip_ticket_kyu',1,115],['skip_ticket_kiwami','skip_ticket_kiwami',1,250],['skip_ticket_haou','skip_ticket_haou',1,500],
+    ['session_ticket','session_ticket',1,150],
     ['hero_proof_shard','hero_proof_shard',1,500],['transcend_fruit_rainbow','transcend_fruit_rainbow',1,5000],['hero_proof','hero_proof',1,10000],
   ];
   return JSON.stringify(got)===JSON.stringify(want);
 })());
 check('対象未決定のアイコンを推測でビートP商品へ入れない',
-  (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).length===12
+  (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).length===13
   &&!(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).some(o=>o.kind==='icon'||/アイコン/.test(o.name||'')));
 check('ビートPの数量交換計算はダイヤと複数個アイテムを正しく扱う',(()=>{
   const diamond=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='diamond_300');
