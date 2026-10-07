@@ -84,8 +84,14 @@ check('一覧の各行に日付を出す', (source.match(/data-event-replay-date
   vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + endMark.length)}\nglobalThis.__f=eventReplayGroups().map(g=>g.id+':'+g.events.map(e=>e.id).join('+'));`, c4);
   check('まとまりの名前が不明・無い項目は、既定のまとまりへ入る', c4.__f.join() === `${fb}:x+y`, c4.__f.join());
 }
-check('一覧の画面はまとまりごとに描き、見出しの下に「見た数/全部」を出す', has('eventReplayGroups().map(group=>') && has('data-event-replay-group={group.id}') && has('seenCount}/{group.events.length}'));
-check('一覧の窓は、見出しと「閉じる」を固定して中身だけスクロールする', has('data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll') && has('className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる'));
+check('一覧は2ページ: 1ページ目はイベント単位のパネル(押すとそのまとまりのお話へ)、2ページ目はお話の一覧',
+  has('eventReplayGroups()') && has('data-event-replay-group={group.id}') && has('setEventReplayGroupId(group.id)') && has('data-event-replay-episodes') && has('data-event-replay-back'));
+check('パネルに「見た数/全部」を出す', has('{seen}/{total}') && has('見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}'));
+check('開くたびに1ページ目(パネル)から始める', has('onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}'));
+check('一覧から始めた再生は、終わる・スキップすると同じまとまりのお話の一覧へ戻る',
+  has('setEventReplay({id:event.id,step:0,fromList:true})') && (source.match(/if\(eventReplay\.fromList\) setShowEventReplayList\(true\);/g) || []).length === 2);
+check('お話の一覧の窓は、見出しと下のボタンを固定して中身だけスクロールする',
+  has('data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll') && has('data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll'));
 // ハロウィン・ナイトとジャックの会話は、全部に曲が付く(2026-10-04・「レイドの遊び方のときにBGMがない」。設定表への1行の書き忘れだった)
 {
   const bgm = fs.readFileSync(path.join(root, 'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'), 'utf8');
@@ -127,7 +133,7 @@ check('本編を待たずに見られるイベントを作れる',
 check('プロフィールに「イベント回想」の入口がある',
   /<b className="[^"]*">イベント回想<\/b>/.test(source)
     && has('onClick={onOpenEventReplayList}')
-    && has('onOpenEventReplayList={()=>setShowEventReplayList(true)}'));
+    && has('onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}'));
 
 // --- 一覧(ロック表示) ---
 check('未閲覧は「？？？」でロック表示になる(タップできない)', (() => {
