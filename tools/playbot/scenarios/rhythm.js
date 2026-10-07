@@ -170,7 +170,19 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '' }) {
       renderer.drawNote = (note, geo, opts) => { if (note && Number.isFinite(note.index) && !real.has(note.index)) real.set(note.index, note); return draw(note, geo, opts); };
     }
   } catch { /* 控えられなければ、見張りは働かない(演奏はできる) */ }
-  stats.watching = 0; setInterval(() => { stats.watching = real.size; }, 1000);
+  stats.watching = 0;
+  // ノーツの種類ごとの数とMISS(ボットが押したかどうかによらず、ゲームが付けた最終の判定で数える)。どの種類で取りこぼしているかを見るため
+  setInterval(() => {
+    stats.watching = real.size;
+    const by = {};
+    real.forEach((g) => {
+      if (!g._rhythmFinalJudgment) return;
+      const t = g._rhythmOriginalType || g.type;
+      const e = by[t] || (by[t] = { n: 0, miss: 0 });
+      e.n += 1; if (g._rhythmFinalJudgment === 'MISS') e.miss += 1;
+    });
+    diag.byType = by;
+  }, 1000);
   const tick = () => {
     const now = hooks.rhythmSongMs ? hooks.rhythmSongMs() : null;
     if (now === null) { if (!document.querySelector('[data-rhythm-play-area]')) { stats.done = true; return; } requestAnimationFrame(tick); return; }
@@ -202,7 +214,9 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '' }) {
         active.push({ id, n, hab, drift: null, rec, until: (Number(n.endTimeMs) || n.timeMs) + gauss() * sigma * 0.5 });
       } else if (n.type === 'FLICK') {
         // はじく: 少し上(エリアの上。横画面では回った向き)へ素早く動かしてから離す
-        const at = (d) => ({ x: p.x + up.x * d, y: p.y + up.y * d });
+        // 向きが決まっているフリックは横へ、無ければ上へ
+        const fg = real.get(n.index), fdir = fg && fg.flickDir === 'left' ? -1 : fg && fg.flickDir === 'right' ? 1 : 0;
+        const at = (d) => (fdir ? { x: p.x + latU.x * fdir * d, y: p.y + latU.y * fdir * d } : { x: p.x + up.x * d, y: p.y + up.y * d });
         setTimeout(() => { fire('pointermove', id, at(30)); fire('pointermove', id, at(70)); fire('pointerup', id, at(70)); }, 25);
       } else {
         setTimeout(() => fire('pointerup', id, p), 45 + rand() * 30);
@@ -414,7 +428,7 @@ async function rhythmScenario(s, { maxSongMs = 240000 } = {}) {
   await s.dismissOverlays(8);
   for (let k = 0; k < 4; k++) { if (!(await s.tapLabel(/^(曲えらびへ(戻る)?|曲選択へ|もどる|戻る|OK|閉じる|次へ)$/, 1500))) break; }
   const sent = s.supabase.writes.filter((w) => w.table === 'rankings').length;
-  return { ok: true, stats, note: `${stats.song} ${stats.difficulty}・${stats.notes}ノーツ → スコア ${stats.result.score || '?'}(ランキングへ送った記録 ${sent}件・横取り済み)・指のくせ ${stats.bot && stats.bot.who}・左手${stats.bot && stats.bot.habit ? stats.bot.habit[0].depth : '?'}/右手${stats.bot && stats.bot.habit ? stats.bot.habit[1].depth : '?'}(下へ押す深さ)・MISS ${stats.result.miss || '?'}・押さえた${stats.bot && stats.bot.diag ? stats.bot.diag.holds : '?'}回(端のレーン${stats.bot && stats.bot.diag ? stats.bot.diag.edgeHolds : '?'}回)のうち指が帯の外へ出た${stats.bot && stats.bot.diag ? stats.bot.diag.bandHolds : '?'}回(指が本当に外れて切れた${stats.bot && stats.bot.diag ? stats.bot.diag.fingerLeft : '?'}回・同時押し${stats.bot && stats.bot.diag ? stats.bot.diag.overlaps : '?'}回・つられた${stats.bot && stats.bot.diag ? stats.bot.diag.driftEvents : '?'}回・24px以上${stats.bot && stats.bot.diag ? stats.bot.diag.bigDrifts : '?'}回)${process.env.PLAYBOT_DEBUG && stats.bot && stats.bot.diag ? ' ' + JSON.stringify({ b: stats.bot.diag.bandList || [] }) : ''}・タップ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.n : '?'}個のMISS ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.miss : '?'}(密集 ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missCrowded + '/' + stats.bot.diag.tap.crowdedN : '?'}・指が帯の中なのに ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missInBand + stats.bot.diag.tap.missInBandCrowded : '?'})・指の不具合候補 ${stats.bot && stats.bot.suspects ? stats.bot.suspects.length : '?'}件` };
+  return { ok: true, stats, note: `${stats.song} ${stats.difficulty}・${stats.notes}ノーツ → スコア ${stats.result.score || '?'}(ランキングへ送った記録 ${sent}件・横取り済み)・指のくせ ${stats.bot && stats.bot.who}・左手${stats.bot && stats.bot.habit ? stats.bot.habit[0].depth : '?'}/右手${stats.bot && stats.bot.habit ? stats.bot.habit[1].depth : '?'}(下へ押す深さ)・MISS ${stats.result.miss || '?'}・押さえた${stats.bot && stats.bot.diag ? stats.bot.diag.holds : '?'}回(端のレーン${stats.bot && stats.bot.diag ? stats.bot.diag.edgeHolds : '?'}回)のうち指が帯の外へ出た${stats.bot && stats.bot.diag ? stats.bot.diag.bandHolds : '?'}回(指が本当に外れて切れた${stats.bot && stats.bot.diag ? stats.bot.diag.fingerLeft : '?'}回・同時押し${stats.bot && stats.bot.diag ? stats.bot.diag.overlaps : '?'}回・つられた${stats.bot && stats.bot.diag ? stats.bot.diag.driftEvents : '?'}回・24px以上${stats.bot && stats.bot.diag ? stats.bot.diag.bigDrifts : '?'}回)${process.env.PLAYBOT_DEBUG && stats.bot && stats.bot.diag ? ' ' + JSON.stringify({ b: stats.bot.diag.bandList || [] }) : ''}${stats.bot && stats.bot.diag && stats.bot.diag.byType ? '・種類別MISS ' + Object.entries(stats.bot.diag.byType).map(([t, e]) => `${t} ${e.miss}/${e.n}`).join(' ') : ''}・タップ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.n : '?'}個のMISS ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.miss : '?'}(密集 ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missCrowded + '/' + stats.bot.diag.tap.crowdedN : '?'}・指が帯の中なのに ${stats.bot && stats.bot.diag ? stats.bot.diag.tap.missInBand + stats.bot.diag.tap.missInBandCrowded : '?'})・指の不具合候補 ${stats.bot && stats.bot.suspects ? stats.bot.suspects.length : '?'}件` };
 }
 
 module.exports = { rhythmScenario, openSoloLive, installPlayer, installArgs, collectFingerSuspects, SIGMA_MS, MISS_RATE };
