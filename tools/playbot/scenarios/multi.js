@@ -10,13 +10,33 @@ const freeLeft = (s) => s.page.evaluate(() => { const m = document.body.innerTex
 // 部屋では「CPUモッチー Lv.1」、曲えらびでは「CPU モッチー」の形で出る
 const cpuCount = (s) => s.page.evaluate(() => new Set((document.body.innerText.replace(/\s+/g, ' ').match(/CPU ?(?!として)[^\s]+/g) || []).map((x) => x.replace(/^CPU ?/, ''))).size);
 
+// プライベートルームを作る。2026-10-07 にモードえらびが2×2のタイルへ組み替わり、「＋ 作成」は「プライベート」の中の「＋ 部屋をつくる」になった。
+// 古い画面(モードえらびに直接「＋ 作成」がある)でも動くよう、まず直接探し、無ければ「プライベート」を開いてから探す
+// 「マスモンを呼ぶ」の「呼ぶ」ボタンを探す。1行の表示なら各行に「呼ぶ」がある。3列のカード表示(2026-10-07〜の既定)は、
+// カード(絆と総合力が書いてある)を押すと選ばれて、下に「呼ぶ」が出る
+async function pickCallButton(s) {
+  const find = async () => (await s.listButtons()).find((b) => /^呼ぶ$/.test(b.label));
+  let call = await find();
+  if (call) return call;
+  const card = (await s.listButtons()).find((b) => /絆\s*\d+/.test(b.label) && /総合力/.test(b.label));
+  if (!card) return null;
+  await s.tap(card, 'マスモンのカードを選ぶ');
+  await s.wait(400);
+  return find();
+}
+async function createPrivateRoom(s) {
+  if (await s.tapLabel(/^＋ 作成$/, 800)) return true;
+  if (!(await s.tapLabel(/プライベート/, 1500))) return false;
+  await s.dismissOverlays(3);
+  return s.tapLabel(/^[＋+] ?(部屋をつくる|部屋を作る|作成)$|^作成$/, 2500);
+}
 async function multiScenario(s, { maxSongMs = 330000 } = {}) {
   const stats = { called: 0, freeBefore: null, freeAfter: null, song: '', notes: 0, score: null };
   await s.backHome();
   await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.innerText || '').trim() === 'モンヒロビート')?.click());
   await s.wait(2500);
   await s.dismissOverlays(10);
-  if (!(await s.tapLabel(/^＋ 作成$/, 2500))) { await s.addIssue('進めない', 'プライベートルームの「作成」が無い'); return { ok: false, note: '部屋を作れない' }; }
+  if (!(await createPrivateRoom(s))) { await s.addIssue('進めない', 'プライベートルームの「作成」が無い'); return { ok: false, note: '部屋を作れない' }; }
   await s.dismissOverlays(4);
   await s.inspect();
 
@@ -24,7 +44,7 @@ async function multiScenario(s, { maxSongMs = 330000 } = {}) {
   if (!(await s.tapLabel(/^🎵 マスモンを呼ぶ/, 1200))) { await s.addIssue('進めない', '部屋に「マスモンを呼ぶ」が無い'); return { ok: false, note: '呼べない' }; }
   await s.inspect();
   stats.freeBefore = await freeLeft(s);
-  const call = (await s.listButtons()).find((b) => /^呼ぶ$/.test(b.label));
+  const call = await pickCallButton(s);
   if (!call) { await s.addIssue('進めない', '「マスモンを呼ぶ」に呼べるマスモンがいない'); return { ok: false, note: '呼べるマスモンがいない' }; }
   await s.page.mouse.click(call.x, call.y); await s.wait(120);
   await s.tap(call, 'マスモンを呼ぶ(二度押し)');

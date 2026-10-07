@@ -10,6 +10,14 @@ const CLOSE = /^(閉じる|とじる|×|✕|戻る|もどる|モードえらび�
 const textNow = async (s) => (((await s.health()) || {}).text || '').slice(0, 600);
 
 // 開いた窓・画面を閉じる。見えていなければスクロールして探す。閉じられたら true
+// プライベートルームを作る。2026-10-07 にモードえらびが2×2のタイルへ組み替わり、「＋ 作成」は「プライベート」の中の「＋ 部屋をつくる」になった。
+// 古い画面(モードえらびに直接「＋ 作成」がある)でも動くよう、まず直接探し、無ければ「プライベート」を開いてから探す
+async function createPrivateRoom(s) {
+  if (await s.tapLabel(/^＋ 作成$/, 800)) return true;
+  if (!(await s.tapLabel(/プライベート/, 1500))) return false;
+  await s.dismissOverlays(3);
+  return s.tapLabel(/^[＋+] ?(部屋をつくる|部屋を作る|作成)$|^作成$/, 2500);
+}
 async function closeIt(s, what) {
   const before = await textNow(s);
   let b = (await s.listButtons()).find((x) => CLOSE.test(x.label) && x.overlay) || (await s.listButtons()).find((x) => CLOSE.test(x.label));
@@ -80,7 +88,7 @@ async function landscapeScenario(s) {
   }
   // 部屋づくり → 部屋を出る
   await openRhythmLandscape(s);
-  if (await s.tapLabel(/^＋ 作成$/, 2500)) {
+  if (await createPrivateRoom(s)) {
     await s.inspect();
     seen.push('マルチの部屋');
     if (!(await closeIt(s, 'マルチの部屋'))) failed.push('マルチの部屋');

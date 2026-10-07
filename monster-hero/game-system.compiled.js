@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 306a5657c8933255
+// source-sha256: 64287e8b4a53aafa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 23:59";
+const BUILD_DATE = "2026-10-08 00:31";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -64209,6 +64209,7 @@ function RhythmModeSelectStage() {
     }
   }, n.ch)));
 }
+const RHYTHM_BUDDY_LEAVE_GUARD_MS = 500;
 function RhythmMultiScreen({
   profile,
   songs,
@@ -64563,6 +64564,23 @@ function RhythmMultiScreen({
     setChatOpen(false);
     setRankingOpen(false);
     setSearching(null);
+  };
+  const buddySheetClosedAtRef = React.useRef(0);
+  const buddySheetWasOpenRef = React.useRef(false);
+  React.useEffect(() => {
+    if (buddySheet) {
+      buddySheetWasOpenRef.current = true;
+      return;
+    }
+    if (buddySheetWasOpenRef.current) {
+      buddySheetWasOpenRef.current = false;
+      buddySheetClosedAtRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    }
+  }, [buddySheet]);
+  const leaveRoomAfterTap = () => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (buddySheetClosedAtRef.current > 0 && now - buddySheetClosedAtRef.current < RHYTHM_BUDDY_LEAVE_GUARD_MS) return;
+    leaveRoom();
   };
   const inRoom = !!view;
   React.useEffect(() => {
@@ -65297,7 +65315,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-leave": true,
       type: "button",
       className: `${btn} w-full bg-slate-700`,
-      onClick: leaveRoom
+      onClick: leaveRoomAfterTap
     }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
     }, message)))), chatSheet, rankingLayer, buddySheetLayer);
@@ -65616,7 +65634,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-leave": true,
       type: "button",
       className: `${btn} bg-slate-700 landscape:w-48`,
-      onClick: leaveRoom
+      onClick: leaveRoomAfterTap
     }, "ルームを出る")), chatSheet, rankingLayer, countdownLayer);
   }
   if (shuffleRound) {
@@ -103565,13 +103583,13 @@ const createAnimationStyle = () => {
     @keyframes mhRjRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
     @keyframes mhRjStingerOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
     /* ==== レイドボス戦のモンヒロビート挑戦: 演奏が終わった直後のダメージ演出(RaidJackDamageFx)。約4.3秒・タップで飛ばせる ==== */
-    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px 16px calc(34px + env(safe-area-inset-bottom));
+    .mh-rjdmg { position: fixed; inset: 0; z-index: 82000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-content: safe center; gap: 6px; padding: calc(16px + env(safe-area-inset-top)) 16px calc(34px + env(safe-area-inset-bottom));
       background: radial-gradient(circle at 50% 48%, rgba(120,40,10,.55), rgba(12,4,24,0) 62%), #0c0418; color: #fff; --ja-c: 251,146,60; --ja-d: 253,186,116; animation: mhRjDmgIn .3s ease-out both, mhRjDmgOut .45s ease-in 3.85s forwards; }
     .mh-rjdmg-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 46%, #fff, rgba(var(--ja-c),.7) 40%, rgba(var(--ja-c),0) 75%); opacity: 0; animation: mhRjFlash .7s ease-out 1s both; }
     .mh-rjdmg-score { position: relative; text-align: center; animation: mhRjRise .4s ease-out .1s both; }
     .mh-rjdmg-score small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fde68a; }
     .mh-rjdmg-score b { display: block; font-size: 40px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 rgba(0,0,0,.8), 0 0 18px rgba(253,224,71,.7); }
-    .mh-rjdmg-stage { position: relative; flex: 0 1 auto; width: min(64vw, 270px, 36dvh, 36vh); aspect-ratio: 1024 / 880; margin-top: 4px; }
+    .mh-rjdmg-stage { position: relative; flex: 0 1 auto; width: min(64vw, 270px, 30dvh, 30vh); aspect-ratio: 1024 / 880; margin-top: 4px; }
     .mh-rjdmg-jack { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; animation: mhRjJackIn .5s ease-out .2s both, mhRjJackHit .7s ease-out 1s both; }
     .mh-rjdmg-jack-none { animation: mhRjJackIn .5s ease-out .2s both; }
     .mh-rjdmg-slash { position: absolute; z-index: 2; left: -10%; width: 120%; height: 6px; top: 40%; background: linear-gradient(90deg, transparent, #fff 40%, rgba(var(--ja-d),1) 60%, transparent); box-shadow: 0 0 16px rgba(var(--ja-c),.95); opacity: 0; transform: rotate(-24deg) translateX(-60%); animation: mhRjSlash .5s ease-out 1s both; }
@@ -103592,7 +103610,7 @@ const createAnimationStyle = () => {
     @keyframes mhRjJackIn { 0% { opacity: 0; transform: translateY(14px) scale(.9); } 100% { opacity: 1; transform: none; } }
     @keyframes mhRjJackHit { 0% { transform: none; filter: brightness(1); } 12% { transform: translate(-14px, 2px) rotate(-4deg); filter: brightness(2.6); } 30% { transform: translate(12px, -2px) rotate(3deg); filter: brightness(1.6); } 55% { transform: translate(-6px, 0); filter: brightness(1.2); } 100% { transform: none; filter: brightness(1); } }
     @keyframes mhRjBarDrop { 0% { transform: scaleX(var(--from)); } 100% { transform: scaleX(var(--to)); } }
-    @media (max-height: 640px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
+    @media (max-height: 760px) { .mh-rjdmg { gap: 3px; } .mh-rjdmg-score b { font-size: 30px; } .mh-rjdmg-damage b { font-size: 40px !important; } .mh-rjdmg-down { font-size: 48px; } }
     @media (prefers-reduced-motion: reduce) { .mh-rjdmg, .mh-rjdmg * { animation-duration: .01s !important; animation-delay: 0s !important; } .mh-rjdmg-bar-fill { transform: scaleX(var(--to)); } .mh-rjdmg-damage, .mh-rjdmg-down { opacity: 1; } }
     /* 結果の中身は、文字の叩きつけのあとに順に浮かんでくる(--d が出る時刻) */
     .mh-rjresult-in { opacity: 0; animation: mhRjRise .5s ease-out var(--d, 900ms) both; }
