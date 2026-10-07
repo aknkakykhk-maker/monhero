@@ -15,6 +15,7 @@ const { openSession } = require('./lib/session');
 const { prepareVeteran } = require('./lib/seeds');
 const { openSoloLive } = require('./scenarios/rhythm');
 const { installFeelPlayer, analyzeFeel } = require('./lib/feel');
+const { touchInputSource } = require('./lib/touch-input');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
@@ -90,7 +91,7 @@ async function auditBuild(playwright, root, label, port) {
       await s.dismissOverlays(4);
       const ready = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && typeof window.__mhTestHooks.rhythmNotes === 'function' && (window.__mhTestHooks.rhythmNotes() || []).length > 0, { timeout: 30000 }).then(() => true).catch(() => false);
       if (!ready) { row.why = '演奏画面が開かない'; throw new Error(row.why); }
-      const installed = await s.page.evaluate(installFeelPlayer, { ...OPTS, seed: SEED * 31 + k });
+      const installed = await s.page.evaluate(installFeelPlayer, { ...OPTS, touchSrc: touchInputSource, seed: SEED * 31 + k });
       if (!installed.ok) { row.why = installed.why; throw new Error(row.why); }
       const t0 = Date.now();
       while (Date.now() - t0 < 300000) {

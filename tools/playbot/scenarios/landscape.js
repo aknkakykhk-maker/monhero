@@ -112,7 +112,7 @@ async function playLandscape(s) {
   if (!installed.ok) return { ok: true, note: `演奏はしなかった(${installed.why})` };
   const t0 = Date.now();
   const fingers = {};
-  while (Date.now() - t0 < 240000) {
+  while (Date.now() - t0 < 330000) {
     await s.wait(2000);
     await collectFingerSuspects(s, fingers);
     const playing = await s.page.evaluate(() => !!(window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs && window.__mhTestHooks.rhythmSongMs() !== null) && !!document.querySelector('[data-rhythm-play-area]'));

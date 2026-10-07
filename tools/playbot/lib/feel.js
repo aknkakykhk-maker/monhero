@@ -10,7 +10,7 @@
 // iPhone のくせも起こせる(mode 'ios'): ポインタの合図が抜けるタッチ(dropPointer)/ 遅れて届くタッチ(lateRate・lateMs)。
 // 親指で遊ぶ人のように、判定ラインより手前(画面の下)を押し(thumb)、ホールド中に別の指で押すと押さえている指がつられて動く(nudge)。
 //
-// installFeelPlayer はページの中で動く(page.evaluate へ渡す)。analyzeFeel は Node 側で数える。
+// installFeelPlayer はページの中で動く(page.evaluate へ渡す。合図の部品 touchSrc は呼ぶ側が渡す)。analyzeFeel は Node 側で数える。
 
 // ---- ページの中 ----
 function installFeelPlayer(o) {
@@ -52,23 +52,8 @@ function installFeelPlayer(o) {
   };
   const songNow = () => (hooks.rhythmSongMs ? hooks.rhythmSongMs() : null);
 
-  // ---- 指の合図。mouse はこれまでのモンヒロくんと同じ。touch / ios は本物のタッチの経路(touchstart と pointerType 'touch')を通す ----
-  const live = new Map(); // 画面に触れている指 id → 位置
-  const mkTouch = (id, p) => new Touch({ identifier: id, target: area, clientX: p.x, clientY: p.y, pageX: p.x, pageY: p.y, screenX: p.x, screenY: p.y, radiusX: 11, radiusY: 11, force: 1 });
-  const makeEvents = (type, id, p, { dropPointer = false } = {}) => {
-    const out = [];
-    if (o.mode === 'mouse') {
-      out.push(new PointerEvent({ down: 'pointerdown', move: 'pointermove', up: 'pointerup' }[type], { bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false, clientX: p.x, clientY: p.y, buttons: type === 'up' ? 0 : 1 }));
-      return out;
-    }
-    if (type === 'up') live.delete(id); else live.set(id, p);
-    const touches = [...live.entries()].map(([k, q]) => mkTouch(k, q));
-    if (!dropPointer) out.push(new PointerEvent({ down: 'pointerdown', move: 'pointermove', up: 'pointerup' }[type], { bubbles: true, cancelable: true, pointerId: id, pointerType: 'touch', isPrimary: false, clientX: p.x, clientY: p.y, width: 22, height: 22, pressure: type === 'up' ? 0 : 0.5, buttons: type === 'up' ? 0 : 1 }));
-    out.push(new TouchEvent({ down: 'touchstart', move: 'touchmove', up: 'touchend' }[type], { bubbles: true, cancelable: true, touches, targetTouches: touches, changedTouches: [mkTouch(id, p)] }));
-    return out;
-  };
-  // 合図は作った時刻(timeStamp)のまま、lateMs あとに届ける(＝遅れて届くタッチ。ゲームは timeStamp から遅れを引く)
-  const send = (events, lateMs = 0) => { const go = () => events.forEach((e) => area.dispatchEvent(e)); if (lateMs > 0) setTimeout(go, lateMs); else go(); };
+  // ---- 指の合図(共有の部品 lib/touch-input.js。毎晩の演奏 scenarios/rhythm.js と同じ作り方)----
+  const { makeEvents, send } = (0, eval)('(' + o.touchSrc + ')')(area, o.mode);
 
   // ---- 予定 ----
   // 端のレーン(いちばん左・右)は、親指が外へはみ出しやすい(人は端ほど外を押す)。外向きへ edgeOutLanes ずらす
