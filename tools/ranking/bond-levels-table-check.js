@@ -44,6 +44,9 @@ const seed = () => {
 
 async function openBondRanking(page, { bondTableExists }) {
   const calls = [];
+  // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+  await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+  await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
   await page.route('**/rest/v1/**', async (route) => {
     const url = new URL(route.request().url());
     calls.push({ path: url.pathname, method: route.request().method() });

@@ -43,6 +43,9 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     if (/supabase\.co/.test(url)) return supabase.handle(route);
     return route.abort();
   });
+  // ゲームは自動操作のブラウザだと Supabase への書き込みを自分で止める(26-supabase.jsx)。
+  // ここではにせの Supabase が受け止めるので、止めを外して書き込みを「にせ」へ届かせる
+  await context.addInitScript(() => { window.__mhSupabaseStubbed = true; });
 
   const state = { step: 0, scenario: '', errorsRead: 0 };
   const errorLog = [];

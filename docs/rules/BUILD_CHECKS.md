@@ -77,3 +77,17 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
   本体でいちばん似ている行が並ぶので、「書き方が変わっただけ」か「本当に消えた」かがすぐ分かる
 - 直すときは、**本体が意図して変わったことを確かめてから**検査を合わせる(コメントに「いつ・なぜ変わったか」を1行書く)。
   意図が読み取れないときは、本物の不具合として扱う
+
+### 自動操作のブラウザは、本物の Supabase へ書き込まない(2026-10-07)
+
+作業環境から Supabase へ届くようになった 2026-10-06 から、実ブラウザの検査が名前「検査」「テスト」などで起動するたびに、
+本物の総合力ランキング(`bond_levels`)とブリーダーの表(`breeder_profiles`)へ行が増えた(2日で約300行。ユーザー報告
+「ランキングひどいことになってる」)。検査は毎回まっさらなブラウザで開くので、**そのたびに新しいブリーダーIDができる**。
+
+- ゲーム側(`26-supabase.jsx` の `sbAutomationWriteBlocked`)が、`navigator.webdriver` が true のときは
+  Supabase への書き込み(GET/HEAD 以外。読み取りの rpc は除く)を送らずに「保存できた」と返す
+- **送信そのものを確かめる検査**は、`page.route` で差し替えたうえで印を入れる。差し替えた先へは今までどおり届く
+  - 全部の表を差し替えたとき: `window.__mhSupabaseStubbed = true`
+  - 一部の表だけのとき: `window.__mhSupabaseStubbed = ['rankings', 'bond_levels']`(並べた表だけを通す)
+  - 入れ方は `await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });`(開いたあとなら `page.evaluate` も)
+- **差し替えずに印だけ入れない**(本物へ届いてしまう)。モンヒロくんは `lib/session.js` がにせの Supabase で受け止めたうえで入れている
