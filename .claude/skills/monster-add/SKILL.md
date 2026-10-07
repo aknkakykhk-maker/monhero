@@ -86,8 +86,15 @@ node tools/monster/monster-stats-table.js --hp 420 --guts 140 --atk 200 --def 40
 
 ### ④ 聞かずに進めてよいもの
 
-絵の加工・顔と円盤石のアイコン・図鑑の文面・染色の部位分け・待機アニメのリグ・
-更新履歴とヘルプ。**止まるのは③だけ。**
+絵の加工・円盤石のアイコン・図鑑の文面・染色の部位分け・待機アニメのリグ・
+更新履歴とヘルプ。**止まるのは③と、顔アイコンの選択だけ。**
+
+> **顔アイコンは、こちらで1つに決めない。毎回いくつか案を出して選んでもらう**
+> (2026-10-07・ユーザー指示「顔アイコンは毎回いくつかパターン出してこっちに選ばせて。毎回イメージと位置が違う」)。
+> `FACE_BOXES` の範囲を変えて**3〜4案**(顔を中央・耳や帽子まで入れる・顔を大きく・引きの構図 など)を作り、
+> 丸枠に切り抜いて A〜D の字を付けた1枚にして送り、`AskUserQuestion` で選んでもらう。
+> 比較用に既存の子の顔アイコンを1〜2枚並べてもよい。選ばれた案の範囲を `FACE_BOXES` に書く。
+> 作り直し(位置の調整を頼まれたとき)も同じで、1案だけ直して出さない
 
 ## 1. 必要なデータの全体像
 
@@ -140,7 +147,7 @@ node tools/image/import-monster-art.js <元画像> <モンスターid> --size 10
 # ② 外側の透明な余白を落とす(他の子と同じ大きさで並ぶように)
 node tools/image/trim-art-margin.js monster-hero/images/monsters/<id>.png
 
-# ③ 顔アイコン(faceIconUrl)。--preview で out/ に下見してから本番
+# ③ 顔アイコン(faceIconUrl)。範囲を変えて3〜4案作り、選んでもらってから本番(§0④の注記)
 node tools/image/make-face-icons.js --preview
 node tools/image/make-face-icons.js
 
