@@ -40,6 +40,9 @@ const MISSING_COLUMN_INSERT = { code: 'PGRST204', message: "Could not find the '
 
 async function openScoreRanking(page, { columnsExist }) {
   const calls = [];
+  // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+  await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+  await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
   await page.route('**/rest/v1/**', async (route) => {
     const req = route.request();
     const url = new URL(req.url());

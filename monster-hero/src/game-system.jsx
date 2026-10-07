@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39744fa699caff19
+// generated-sha256: 50a1b8a0e8c026d5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 17:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4213,7 +4213,10 @@ const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 //   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
 //     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
 // favorites … お気に入りに入れた曲のid(2026-09-26)。新しい項目なので、持っていない既存ユーザーは空で補われる
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all', favorites:Object.freeze([]) });
+// noticeOpenShort … 縦が低い画面(高さ700px以下)での助手のひとことの開け閉め(2026-10-07)。低い画面ではひとことを出すと
+//   曲の一覧が1行も見えなくなるので、はじめは畳んでおく。新しい項目なので、持っていない既存ユーザーは false で補われる
+//   (ふつうの画面の noticeOpen とは別に持つ。片方を変えても、もう片方は変わらない)
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, genre:'all', favorites:Object.freeze([]) });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
@@ -4222,6 +4225,7 @@ const normalizeRhythmSelectView = value => {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
+    noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
     genre,
     favorites: Array.isArray(source.favorites)
       ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX)
@@ -14501,6 +14505,49 @@ const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
 // ログには秘密値そのものを出さず、公開設定を読み込めたことだけを記録する。
 const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' };
 
+// ===== 自動操作のブラウザからは、本物の Supabase へ書き込まない(2026-10-07) =====
+// 実ブラウザの検査やモンヒロくん(tools/playbot)は、名前「検査」などで起動してマスモンを持つ。
+// ゲームは起動時と変化のたびに breeder_profiles / bond_levels へ自動で送るので、作業環境から
+// Supabase へ届くようになった 2026-10-06 から、検査を回すたびに本物の総合力ランキングへ
+// 「検査」「テスト」の行が増えていった(ユーザー報告「ランキングひどいことになってる」)。
+// 自動操作のブラウザは navigator.webdriver が true になる(ふつうに遊ぶ人のブラウザでは必ず false)。
+// そのときは書き込み(GET/HEAD 以外)を送らずに「保存できた」と返す。読み込みとランキングの集計(rpc)は通す。
+// ★送信そのものを確かめる検査は、page.route で Supabase を差し替えたうえで
+//   window.__mhSupabaseStubbed = true を入れる(差し替え先へは今までどおり届く)。
+//   一部の表だけ差し替える検査は ['rankings', 'bond_levels'] のように表の名前(の頭)を並べ、
+//   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
+const sbAutomationWriteBlocked = (url, method) => {
+  try {
+    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
+    const stubbed = typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
+    if (stubbed === true) return false;
+    const m = String(method || 'GET').toUpperCase();
+    if (m === 'GET' || m === 'HEAD') return false;
+    const u = String(url || '');
+    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (Array.isArray(stubbed)) {
+      const path = u.slice(SUPABASE_URL.length).split('?')[0];
+      if (stubbed.some((t) => typeof t === 'string' && t && path.startsWith('/rest/v1/' + t))) return false;
+    }
+    return true;
+  } catch { return false; }
+};
+try {
+  if (typeof window !== 'undefined' && typeof window.fetch === 'function' && !window.__mhSupabaseWriteGuard) {
+    const realFetch = window.fetch.bind(window);
+    window.__mhSupabaseWriteGuard = true;
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const method = (init && init.method) || (input && typeof input === 'object' && input.method) || 'GET';
+      if (sbAutomationWriteBlocked(url, method)) {
+        try { console.info('[supabase] 自動操作のブラウザなので本物へは書き込まない:', String(method).toUpperCase(), String(url).split('?')[0].replace(SUPABASE_URL, '')); } catch {}
+        return Promise.resolve(new Response('[]', { status: 201, headers: { 'Content-Type': 'application/json' } }));
+      }
+      return realFetch(input, init);
+    };
+  }
+} catch {}
+
 // 画面表示名とDB識別子を分離し、ランキング通信では必ず既存の難易度keyへ正規化する。
 // プロのランキングはチャレンジと混ざらないよう、難易度キーの先頭へ Pro を付けて別枠にする。
 // 既存のチャレンジの記録(difficulty='Hard' など)はそのままで、行の書き換えも変換も行わない。
@@ -17782,6 +17829,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
+  // 縦が低い画面(高さ700px以下)では、助手のひとことを出すと曲の一覧が1行も見えなくなる
+  // (2026-10-07 プレイボットの小さい画面係が見つけた。幅320×高さ568で一覧の高さ16px)。
+  // 低い画面だけ、ひとことの開け閉めを別の項目(noticeOpenShort・はじめは畳む)で持つ。💬で開けば読める
+  const shortPortrait=()=>typeof window!=='undefined'&&window.innerHeight<=700&&window.innerHeight>window.innerWidth;
+  const [isShortScreen,setIsShortScreen]=React.useState(shortPortrait);
+  useEffect(()=>{
+    const onResize=()=>setIsShortScreen(shortPortrait());
+    window.addEventListener('resize',onResize);
+    return ()=>window.removeEventListener('resize',onResize);
+  },[]);
+  const noticeOpen=isShortScreen?state.noticeOpenShort:state.noticeOpen;
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -17999,7 +18057,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。
           畳んだかどうかは覚えるので、毎回たたみ直さなくてよい。
           横画面では右の欄(aside)の下へ移す。出す中身は同じで、置く場所だけがCSSで入れ替わる。 */}
-      {notice&&state.noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{notice}</div>}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{notice}</div>}
       {/* ジャンル・並び替え・助手の開け閉め。ジャンルは常に並べず、押すと下から選ぶところが出る
           (2026-09-26・ユーザー指示「ジャンルは常時出すより押して選べるタイプにしたい」)。
           ALL以外で絞っているあいだは色を付けて、一覧が絞られていることが分かるようにする */}
@@ -18018,11 +18076,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           </span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
-        {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={state.noticeOpen}
-          onClick={()=>setView({...state,noticeOpen:!state.noticeOpen})}
-          title={state.noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
-          className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${state.noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
-          <span aria-hidden="true">💬</span><span aria-hidden="true">{state.noticeOpen?'▲':'▼'}</span>
+        {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
+          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen})}
+          title={noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
+          className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+          <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>
         </button>}
         {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
         {toolbarExtra}
@@ -18120,7 +18178,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               横: ジャケット(左・2段ぶち抜き) | 自己ベスト / アシスト・ミラー・ランキング(小さな絵のボタン) → 曲名 → 難易度 → ランダム・決定
             横は高さが390pxしかないので、曲名を1行・ボタンを低めにして、スクロールせずに「決定」まで届くようにする */}
         <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]">
-          <div className="w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}}><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
+          <div data-rhythm-song-detail-art className="w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}}><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
           {/* 曲名は縦で2行分・横で1行分の高さを固定する。曲名の長さで下の段が上下に動かないように */}
           <div className="min-w-0" style={{gridArea:'title'}}>
             {/* 曲名の横に「♡ お気に入り」(2026-09-26。ジャンルの「お気に入り」にまとまる) */}
@@ -18204,7 +18262,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         </div>
         </>}
       {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
-      {notice&&state.noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-2 hidden landscape:block">{notice}</div>}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-2 hidden landscape:block">{notice}</div>}
     </aside>
 
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
@@ -32514,7 +32572,7 @@ const HOME_RAID_JACK_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
-  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:6,
+  position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:2,
   width:'44%', maxWidth:'190px', minWidth:'120px',
 });
 const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
@@ -32581,7 +32639,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       <span data-jack-aura={allDone ? undefined : (Number(String(tier.id).slice(1)) || undefined)} data-home-raid-pumpkin={allDone ? 'true' : undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
         {/* 段階が進むほど派手になるオーラ(バトルと同じ部品)。絵の後ろに置く */}
         {/* HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
-        {!allDone && <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-30 - (Number(String(tier.id).slice(1)) || 0) * 14}% ${-14 - (Number(String(tier.id).slice(1)) || 0) * 9}% -6%` }}>
+        {!allDone && <span aria-hidden="true" style={{ position:'absolute', pointerEvents:'none', inset:`${-20 - (Number(String(tier.id).slice(1)) || 0) * 8}% ${-10 - (Number(String(tier.id).slice(1)) || 0) * 5}% -6%` }}>
           <JackAuraLayer tier={Number(String(tier.id).slice(1)) || 0} />
         </span>}
         {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}

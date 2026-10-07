@@ -82,6 +82,9 @@ check('演出量MINIMAL・軽量モードでは、念のためCSSでも隠す', 
     const page = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
+    // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
     await page.addInitScript(seed, SONG);
     const clickText = (p) => page.evaluate((s) => { const rx = new RegExp(s); const x = [...document.querySelectorAll('button')].find((b) => rx.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!x) return false; x.click(); return true; }, p);

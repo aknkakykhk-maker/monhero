@@ -6,6 +6,49 @@ const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
 // ログには秘密値そのものを出さず、公開設定を読み込めたことだけを記録する。
 const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' };
 
+// ===== 自動操作のブラウザからは、本物の Supabase へ書き込まない(2026-10-07) =====
+// 実ブラウザの検査やモンヒロくん(tools/playbot)は、名前「検査」などで起動してマスモンを持つ。
+// ゲームは起動時と変化のたびに breeder_profiles / bond_levels へ自動で送るので、作業環境から
+// Supabase へ届くようになった 2026-10-06 から、検査を回すたびに本物の総合力ランキングへ
+// 「検査」「テスト」の行が増えていった(ユーザー報告「ランキングひどいことになってる」)。
+// 自動操作のブラウザは navigator.webdriver が true になる(ふつうに遊ぶ人のブラウザでは必ず false)。
+// そのときは書き込み(GET/HEAD 以外)を送らずに「保存できた」と返す。読み込みとランキングの集計(rpc)は通す。
+// ★送信そのものを確かめる検査は、page.route で Supabase を差し替えたうえで
+//   window.__mhSupabaseStubbed = true を入れる(差し替え先へは今までどおり届く)。
+//   一部の表だけ差し替える検査は ['rankings', 'bond_levels'] のように表の名前(の頭)を並べ、
+//   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
+const sbAutomationWriteBlocked = (url, method) => {
+  try {
+    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
+    const stubbed = typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
+    if (stubbed === true) return false;
+    const m = String(method || 'GET').toUpperCase();
+    if (m === 'GET' || m === 'HEAD') return false;
+    const u = String(url || '');
+    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (Array.isArray(stubbed)) {
+      const path = u.slice(SUPABASE_URL.length).split('?')[0];
+      if (stubbed.some((t) => typeof t === 'string' && t && path.startsWith('/rest/v1/' + t))) return false;
+    }
+    return true;
+  } catch { return false; }
+};
+try {
+  if (typeof window !== 'undefined' && typeof window.fetch === 'function' && !window.__mhSupabaseWriteGuard) {
+    const realFetch = window.fetch.bind(window);
+    window.__mhSupabaseWriteGuard = true;
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const method = (init && init.method) || (input && typeof input === 'object' && input.method) || 'GET';
+      if (sbAutomationWriteBlocked(url, method)) {
+        try { console.info('[supabase] 自動操作のブラウザなので本物へは書き込まない:', String(method).toUpperCase(), String(url).split('?')[0].replace(SUPABASE_URL, '')); } catch {}
+        return Promise.resolve(new Response('[]', { status: 201, headers: { 'Content-Type': 'application/json' } }));
+      }
+      return realFetch(input, init);
+    };
+  }
+} catch {}
+
 // 画面表示名とDB識別子を分離し、ランキング通信では必ず既存の難易度keyへ正規化する。
 // プロのランキングはチャレンジと混ざらないよう、難易度キーの先頭へ Pro を付けて別枠にする。
 // 既存のチャレンジの記録(difficulty='Hard' など)はそのままで、行の書き換えも変換も行わない。

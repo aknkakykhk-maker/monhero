@@ -47,6 +47,9 @@ const serve = () => new Promise(resolve => {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const errors = [];
     page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
+    // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '[]' }));
     const monsterIds = ['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Mia', 'Pandora', 'Monol', 'Oboro', 'Plant', 'Zan', 'Eiki', 'KenshiMocchi', 'Mitarashi', 'Ark'];
     const marketIcons = ['mia_icon', 'pandora_icon', 'plant_icon', 'zan_icon', 'eiki_icon', 'kenshi_mocchi_icon', 'mitarashi_icon', 'ark_icon', 'iblis_icon', 'snegurochka_icon'];

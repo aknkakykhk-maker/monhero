@@ -117,6 +117,8 @@ async function openSoloLive(s, { songName = '', difficulty = '' } = {}) {
   if (!(await s.tapLabel(/ソロライブ/, 2000))) { await s.addIssue('進めない', 'モンヒロビートの「ソロライブ」が見つからない'); return null; }
   await s.dismissOverlays(6);
   await s.inspect();
+  // 一度きりの案内(6レーンになった など)は、人と同じく「×」で閉じてから曲を探す
+  for (let k = 0; k < 3 && (await s.tapLabel(/^この案内を閉じる$/, 500)); k++);
   // 曲を1つ選ぶ(一覧のカードは「Lv.」を含む)。★小さい画面では一覧が下に隠れているので、見えるところまで送る
   let songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label));
   if (!songs.length) {
