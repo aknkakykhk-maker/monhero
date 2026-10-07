@@ -1,8 +1,14 @@
-// モンヒロくんの担当表。担当ごとに別のブラウザを1つ開き、決まった仕事だけをする。
-// 報告は担当ごとにまとまる。担当を足すときは、この表へ1件足し、仕事の中身は scenarios/ に置く。
+// モンヒロくんの担当表。
 //
-//   id       … --only で選ぶときの名前(日本語の name でも選べる)
-//   alone    … true の担当は、ほかの担当が全部終わってから1人で動かす。
+// 【担当と部分】(2026-10-07 ユーザー指示「担当名が細かい。やることは同じで人数を減らしたい」で 22人→12人)
+//   担当(ROLES・下の GROUPS)は、いくつかの「部分」(PARTS)を順に受け持つ。部分はもとの担当1人ぶんの仕事で、
+//   部分ごとに別のブラウザを開き直す(下準備・時計・画面の大きさが部分ごとに違うため)。
+//   1つの部分がつまずいても、同じ担当の次の部分は続ける。報告は担当ごとにまとまり、中に部分ごとの行が並ぶ。
+//   仕事を足すときは PARTS へ1件足し(中身は scenarios/)、GROUPS のどこかの担当の parts へ入れる。
+//
+// 部分(PARTS)の項目:
+//   id       … --only で部分だけ選ぶときの名前(もとの担当id。名前の「〜係」でも選べる)
+//   alone    … true の部分を持つ担当は、ほかの担当が全部終わってから1人で動かす。
 //              モンヒロビートは同時に動かすとコマが止まって押すのが遅れる
 //              (tools/mode/rhythm-robot-play.js 2026-09-29: 3本並べて 125譜面中8譜面で 67〜264ms 遅れた)
 //   prepare  … 遊ぶ前のブラウザの中身。'veteran'(いつもの人)/ 'legacy'(昔のセーブ)/ null(まっさら)
@@ -28,7 +34,7 @@ const { rankingScenario } = require('./scenarios/ranking');
 const { legacyReturnScenario, legacyRebootScenario, legacyPlayScenario } = require('./scenarios/legacy');
 const { loginBonusScenario, eventPeriodScenario } = require('./scenarios/clock');
 
-const ROLES = [
+const PARTS = [
   {
     id: 'new', name: '新人係', prepare: null,
     does: 'はじめての設定から、最初のバトルと少しの探索まで',
@@ -60,7 +66,7 @@ const ROLES = [
     run: async (s, { phase, numbers }) => {
       await phase('タクティクスを手で戦う', async () => {
         const r = await tacticsScenario(s);
-        if (r.stats.entered) numbers['タクティクス係: 着いたWAVE'] = r.stats.waveReached;
+        if (r.stats.entered) numbers['バトル係: タクティクスで着いたWAVE'] = r.stats.waveReached;
         await s.backHome();
         return r;
       });
@@ -72,7 +78,7 @@ const ROLES = [
     run: async (s, { phase, numbers }) => {
       await phase('AUTO で放置', async () => {
         const r = await battleScenario(s, { manualTurns: 0, autoMs: 180000 });
-        if (Number.isFinite(r.stats.endWave)) numbers['AUTO係: 3分で着いたWAVE'] = r.stats.endWave;
+        if (Number.isFinite(r.stats.endWave)) numbers['バトル係: AUTOで3分で着いたWAVE'] = r.stats.endWave;
         await s.backHome();
         return r;
       });
@@ -227,22 +233,59 @@ const ROLES = [
   },
   {
     id: 'ranking', name: 'ランキング係', prepare: 'veteran', boot: true, alone: true,
-    does: '音ゲー係の記録と、名前の長い大勢のライバルを並べてランキングを開く',
+    does: '直前の演奏の記録と、名前の長い大勢のライバルを並べてランキングを開く',
     run: async (s, { phase, shared }) => {
       await phase('ランキングを見る', () => rankingScenario(s, { rhythm: shared.rhythm }));
     },
   },
 ];
 
+// 担当(12人)。parts の順に1つずつ動かす。ランキングは音ゲーの記録を使う(shared.rhythm)ので、rhythm の後ろに置く
+const GROUPS = [
+  { id: 'battle', name: 'バトル係', parts: ['battle', 'auto', 'tactics'],
+    does: 'クイックモードを手で遊び、AUTO で3分放っておき、タクティクスバトルを手で6分遊ぶ(狙われた子が危なければ守りを選ぶ)' },
+  { id: 'event', name: 'イベント係', parts: ['event'],
+    does: '開催中のレイド(ジャック)にバトルで1回挑み、残り回数とダメージの記録を見る。ハロウィン・ナイトの札も押す' },
+  { id: 'rhythm', name: '音ゲー係', parts: ['rhythm', 'ranking', 'landscape'],
+    does: 'モンヒロビートを最後まで演奏し、その記録でランキングを開き、横画面でも開いて閉じる・1曲演奏する' },
+  { id: 'multi', name: 'マルチ係', parts: ['multi', 'buddy'],
+    does: 'プライベートルームでマスモンを呼んで一緒に演奏し、朝5:00をまたいで呼べる回数と券の減り方を見る' },
+  { id: 'raidbeat', name: 'レイド音ゲー係', parts: ['raidbeat'],
+    does: 'レイドに「モンヒロビートで挑戦」し、挑戦回数とダメージの記録が1回分だけか見る' },
+  { id: 'new', name: '新人係', parts: ['new'],
+    does: 'はじめての設定から、最初のバトルと少しの探索まで' },
+  { id: 'walk', name: '見回り係', parts: ['tour', 'explore'],
+    does: 'HOME の入口を1つずつ開いて少し遊び、まだ押していないボタンを優先して押していく' },
+  { id: 'story', name: 'ストーリー係', parts: ['story'],
+    does: '時刻で流れるストーリーが開始の前は流れず後は流れるか。イベント回想を最後まで読む' },
+  { id: 'look', name: '見た目係', parts: ['look', 'small'],
+    does: '主な11画面を撮って前回と比べ、幅320px・遅い端末でも入口を回って1曲演奏する' },
+  { id: 'time', name: '時間と保存係', parts: ['legacy', 'clock'],
+    does: '昔のセーブで開いて持ち物が消えない・二重にならないかを見て、時計を動かしてログインボーナスとイベントの期間を見る' },
+  { id: 'count', name: '数字係', parts: ['grow', 'shop'],
+    does: 'マスモンの強化とダイヤショップ・ギフト・ミッションで、数が表示どおりに増減するかを見る' },
+  { id: 'mean', name: '意地悪係', parts: ['mean', 'net'],
+    does: '二度押し・読み込み直し・戻る・裏へ回す、通信が切れる・遅いときに、二重になったり止まったりしないかを見る' },
+];
+const partOf = (id) => {
+  const p = PARTS.find((x) => x.id === id);
+  if (!p) throw new Error(`roles.js: 担当の部分 ${id} が PARTS に無い`);
+  return { ...p, label: p.name.replace(/係$/, '') };
+};
+const ROLES = GROUPS.map((g) => {
+  const parts = g.parts.map(partOf);
+  return { ...g, parts, alone: parts.some((p) => p.alone) };
+});
+// PARTS の入れ忘れ(どの担当にも入っていない部分)は playbot.js が起動時に知らせる
+
 // 毎晩の班分け(2026-10-07 ユーザー指示「担当別にセッションを分けて報告」)。班ごとに別のセッションが
 // `--team <id>` で受け持ちの担当だけを動かし、深く調べて報告する(ROUTINE.md「班分け」)。
-// ★ランキング係は音ゲー係の記録を使う(shared.rhythm)ので、同じ班から離さない。
 // ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
 const TEAMS = [
-  { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
-  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat', 'landscape', 'buddy'] },
-  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore', 'story', 'look', 'small'] },
-  { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean', 'net'] },
+  { id: 'battle', name: 'バトル班', roles: ['battle', 'event'] },
+  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'multi', 'raidbeat'] },
+  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'walk', 'story', 'look'] },
+  { id: 'guard', name: '守り班', roles: ['time', 'count', 'mean'] },
 ];
 
-module.exports = { ROLES, TEAMS };
+module.exports = { ROLES, TEAMS, PARTS };
