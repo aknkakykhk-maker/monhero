@@ -160,4 +160,4 @@ async function rhythmScenario(s, { maxSongMs = 240000 } = {}) {
   return { ok: true, stats, note: `${stats.song} ${stats.difficulty}・${stats.notes}ノーツ → スコア ${stats.result.score || '?'}(ランキングへ送った記録 ${sent}件・横取り済み)` };
 }
 
-module.exports = { rhythmScenario, openSoloLive };
+module.exports = { rhythmScenario, openSoloLive, installPlayer, SIGMA_MS, MISS_RATE };

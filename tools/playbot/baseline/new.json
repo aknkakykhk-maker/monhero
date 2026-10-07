@@ -1,0 +1,16 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1433",
+ "seed": 222620,
+ "roles": [
+  {
+   "id": "new",
+   "name": "新人係",
+   "ok": true
+  }
+ ],
+ "numbers": {
+  "新人係: はじめての設定の手数": 33
+ },
+ "issues": []
+}

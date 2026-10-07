@@ -11,10 +11,10 @@
 
 | 班 | `--team` | 担当 | セッション(いま) | 記録 |
 | --- | --- | --- | --- | --- |
-| バトル班 | `battle` | バトル係・タクティクス係・AUTO係 | `session_01JEr9tDMYKaEM1yA1yBv46Z` | `docs/playbot/history/battle.md` |
-| 音ゲー班 | `rhythm` | 音ゲー係・ランキング係(記録を共有するので離さない) | `session_01NS12tYT8MdGQhNjvw8dS56` | `docs/playbot/history/rhythm.md` |
+| バトル班 | `battle` | バトル係・タクティクス係・AUTO係・イベント係 | `session_01JEr9tDMYKaEM1yA1yBv46Z` | `docs/playbot/history/battle.md` |
+| 音ゲー班 | `rhythm` | 音ゲー係・ランキング係(記録を共有するので離さない)・マルチ係 | `session_01NS12tYT8MdGQhNjvw8dS56` | `docs/playbot/history/rhythm.md` |
 | はじめて・見回り班 | `patrol` | 新人係・案内係・探検係 | `session_01PHekXAt2C5NAZBXL1sh5gG` | `docs/playbot/history/patrol.md` |
-| 守り班 | `guard` | 久しぶり係・時計係 | `session_01X1m4SRfy1rxcJemHM8n5PU` | `docs/playbot/history/guard.md` |
+| 守り班 | `guard` | 久しぶり係・時計係・育成係・買い物係・意地悪係 | `session_01X1m4SRfy1rxcJemHM8n5PU` | `docs/playbot/history/guard.md` |
 
 ## 決めごと(ユーザーの指示)
 
@@ -61,7 +61,9 @@
 5. **報告する**(このセッションの返答として出す。日本語。ユーザーが朝に読む)
    - 前回との比較(新しく出たもの・出なくなったもの・数字の動き)
    - 担当ごとの結果を1行ずつ(新人係の手数、バトル係・AUTO係・タクティクス係の到達WAVE(タクティクス係は「危ないときに守った回数」も)、
-     音ゲー係のスコア、ランキング係・案内係・探検係・久しぶり係・時計係で見たこと)
+     音ゲー係のスコア、ランキング係・案内係・探検係・久しぶり係・時計係で見たこと、
+     育成係・買い物係・意地悪係は「数が合ったか・二重にならなかったか」、マルチ係は呼んだマスモンと演奏の結果、
+     イベント係はレイドの残り回数とダメージの記録)
    - 見つけた不具合と、作った PR(リンク)
    - ボットそのものを直したところ
 6. **提案する(毎回必ず)**: 遊んで気づいた「もっとよくなるところ」を**1〜5個**出す。不具合が無い日も出す

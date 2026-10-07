@@ -1,0 +1,16 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1433",
+ "seed": 222620,
+ "roles": [
+  {
+   "id": "rhythm",
+   "name": "音ゲー係",
+   "ok": true
+  }
+ ],
+ "numbers": {
+  "音ゲー係: スコア": 534392
+ },
+ "issues": []
+}

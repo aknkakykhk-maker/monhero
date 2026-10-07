@@ -1,0 +1,21 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1433",
+ "seed": 222620,
+ "roles": [
+  {
+   "id": "event",
+   "name": "イベント係",
+   "ok": true
+  }
+ ],
+ "numbers": {},
+ "issues": [
+  {
+   "roleId": "event",
+   "kind": "反応なし",
+   "level": "改善のヒント",
+   "detail": "タクティクスで実行が押せない(手札 guard buff range_atk buff guard)"
+  }
+ ]
+}

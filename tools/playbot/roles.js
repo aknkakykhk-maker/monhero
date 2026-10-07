@@ -10,6 +10,11 @@
 const { newPlayerScenario } = require('./scenarios/new-player');
 const { battleScenario } = require('./scenarios/battle');
 const { tacticsScenario } = require('./scenarios/tactics');
+const { shopScenario } = require('./scenarios/shop');
+const { growScenario } = require('./scenarios/grow');
+const { multiScenario } = require('./scenarios/multi');
+const { raidScenario, halloweenScenario } = require('./scenarios/event');
+const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
 const { rankingScenario } = require('./scenarios/ranking');
@@ -81,6 +86,40 @@ const ROLES = [
     },
   },
   {
+    id: 'grow', name: '育成係', prepare: 'veteran', boot: true,
+    // マスモンは昔のキーから起動時の一度きりの移行で作られる(久しぶり係と同じ道)。ブリーダーXPは強化の上限のため
+    storage: { mh_bond_xp: { Mocchi: 3000, Suezo: 800 }, mh_breeder_xp: 50000 },
+    does: 'マスモンの強化ポイントを振って確定する(完了は二度押し)。確定前は保存が変わらず、確定後は振った分だけ入るかを見る。編成・図鑑・放牧も開く',
+    run: async (s, { phase }) => {
+      await phase('マスモンを強化する', () => growScenario(s));
+    },
+  },
+  {
+    id: 'shop', name: '買い物係', prepare: 'veteran', boot: true, storage: { mh_gold: 999999 },
+    does: 'ダイヤショップで買う・ギフトとミッションの報酬を受け取る。ダイヤと所持数が画面の表示どおりに増減するかを見る',
+    run: async (s, { phase }) => {
+      await phase('買い物と受け取り', () => shopScenario(s));
+    },
+  },
+  {
+    id: 'mean', name: '意地悪係', prepare: 'veteran', boot: true, storage: { mh_gold: 999999 },
+    does: '二度押し・途中で読み込み直す・ブラウザの戻る・バトル中に裏へ回す。二重になったり止まったりしないかを見る',
+    run: async (s, { phase }) => {
+      await phase('二度押し', () => doubleTapScenario(s));
+      await phase('買う途中で読み込み直す', () => reloadMidwayScenario(s));
+      await phase('ブラウザの戻る', () => browserBackScenario(s));
+      await phase('バトル中に裏へ回す', () => backgroundScenario(s));
+    },
+  },
+  {
+    id: 'event', name: 'イベント係', prepare: 'veteran', boot: true,
+    does: '開催中のレイド(ジャック)にバトルで1回挑戦し、残り回数が1回分だけ減るか・ダメージの記録が送られるかを見る。ハロウィン・ナイトの札も押す',
+    run: async (s, { phase }) => {
+      await phase('レイドに挑戦', () => raidScenario(s));
+      await phase('ハロウィン・ナイトの札', () => halloweenScenario(s));
+    },
+  },
+  {
     id: 'legacy', name: '久しぶり係', prepare: 'legacy',
     does: '昔の形のセーブで開き、持ち物が消えない・移行が二重にかからない・そのまま遊べるかを見る',
     run: async (s, { phase, steps, rand }) => {
@@ -114,6 +153,14 @@ const ROLES = [
     },
   },
   {
+    id: 'multi', name: 'マルチ係', prepare: 'veteran', boot: true, alone: true,
+    storage: { mh_bond_xp: { Mocchi: 3000, Suezo: 800 }, mh_breeder_xp: 50000 },
+    does: 'モンヒロビートのプライベートルームを作り、マスモンを呼んで(二度押し)一緒に最後まで演奏する。1人で動かす',
+    run: async (s, { phase }) => {
+      await phase('マルチでマスモンと演奏', () => multiScenario(s));
+    },
+  },
+  {
     id: 'ranking', name: 'ランキング係', prepare: 'veteran', boot: true, alone: true,
     does: '音ゲー係の記録と、名前の長い大勢のライバルを並べてランキングを開く',
     run: async (s, { phase, shared }) => {
@@ -127,10 +174,10 @@ const ROLES = [
 // ★ランキング係は音ゲー係の記録を使う(shared.rhythm)ので、同じ班から離さない。
 // ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
 const TEAMS = [
-  { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto'] },
-  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking'] },
+  { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
+  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi'] },
   { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore'] },
-  { id: 'guard', name: '守り班', roles: ['legacy', 'clock'] },
+  { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean'] },
 ];
 
 module.exports = { ROLES, TEAMS };

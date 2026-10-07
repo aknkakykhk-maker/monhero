@@ -1,0 +1,14 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1433",
+ "seed": 222620,
+ "roles": [
+  {
+   "id": "explore",
+   "name": "探検係",
+   "ok": true
+  }
+ ],
+ "numbers": {},
+ "issues": []
+}

@@ -1,0 +1,16 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1433",
+ "seed": 222620,
+ "roles": [
+  {
+   "id": "auto",
+   "name": "AUTO係",
+   "ok": true
+  }
+ ],
+ "numbers": {
+  "AUTO係: 3分で着いたWAVE": 10
+ },
+ "issues": []
+}

@@ -1,0 +1,29 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1433",
+ "seed": 222620,
+ "roles": [
+  {
+   "id": "battle",
+   "name": "バトル係",
+   "ok": true
+  }
+ ],
+ "numbers": {
+  "バトル係: 手で突破したWAVE": 1
+ },
+ "issues": [
+  {
+   "roleId": "battle",
+   "kind": "小さいボタン",
+   "level": "既知",
+   "detail": "「1ページ目」「2ページ目」「3ページ目」「4ページ目」など9個が32px未満"
+  },
+  {
+   "roleId": "battle",
+   "kind": "進めない",
+   "level": "不具合候補",
+   "detail": "WAVE の合間から20手押してもバトルへ戻れない"
+  }
+ ]
+}

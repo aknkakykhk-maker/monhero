@@ -1,0 +1,23 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1433",
+ "seed": 222620,
+ "roles": [
+  {
+   "id": "tactics",
+   "name": "タクティクス係",
+   "ok": true
+  }
+ ],
+ "numbers": {
+  "タクティクス係: 着いたWAVE": 6
+ },
+ "issues": [
+  {
+   "roleId": "tactics",
+   "kind": "小さいボタン",
+   "level": "既知",
+   "detail": "「1ページ目」「2ページ目」「3ページ目」など3個が32px未満"
+  }
+ ]
+}
