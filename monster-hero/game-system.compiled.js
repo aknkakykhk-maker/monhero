@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2cd6b1da5b7196c0
+// source-sha256: 3044c103c2b59c16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 18:42";
+const BUILD_DATE = "2026-10-07 19:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -61592,8 +61592,7 @@ const RHYTHM_MULTI = (() => {
   const doDraw = members => {
     const r = s.room;
     const pickOf = list => list.filter(m => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map(m => m.pick);
-    const humanPicks = pickOf(members.filter(m => !m.cpu));
-    const picks = humanPicks.length ? humanPicks : pickOf(members.filter(m => m.cpu));
+    const picks = pickOf(members.filter(m => !m.cpu));
     const pool = picks.length ? picks : catalog;
     if (!pool.length) return;
     const songId = pool[Math.floor(Math.random() * pool.length)];
@@ -64031,6 +64030,8 @@ function RhythmMultiScreen({
       className: "min-w-0 flex-1 portrait:flex-wrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
     }), rankingButton(), chatLatestButton()), (() => {
       if (team.waiting) return null;
+      const myRow = team.rows.find(row => row.m.id === view.selfId);
+      if (!myRow || !myRow.res || myRow.res.quit) return null;
       const song = songById(room.songId);
       const grown = (view.myCpus || []).map(c => {
         const cpuRow = team.rows.find(row => row.m.id === c.id);
@@ -64042,7 +64043,8 @@ function RhythmMultiScreen({
       }).filter(Boolean);
       if (!grown.length) return null;
       return React.createElement("div", {
-        className: "shrink-0 space-y-1 px-3 pt-1"
+        "data-rhythm-buddy-growth-list": true,
+        className: "grid shrink-0 grid-cols-1 gap-1 px-3 pt-1 landscape:grid-cols-2 [[data-mh-view-rotation=true]_&]:grid-cols-2"
       }, grown.map(({
         masu,
         cpuRow
@@ -65577,8 +65579,10 @@ function RhythmBuddyGrowth({
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
   return React.createElement("p", {
     "data-rhythm-buddy-growth": true,
-    className: "flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-1 text-[11px] font-black text-lime-100"
-  }, React.createElement("span", null, "🎵 ", rhythmBuddyMasuName(masu)), React.createElement("span", {
+    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100"
+  }, React.createElement("span", {
+    className: "max-w-full truncate"
+  }, "🎵 ", rhythmBuddyMasuName(masu)), React.createElement("span", {
     className: "text-lime-300"
   }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
     "data-rhythm-buddy-levelup": true,
