@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d056df87aa7bfe85
+// source-sha256: 200510b2f161c79f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 14:18";
+const BUILD_DATE = "2026-10-07 14:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -64737,6 +64737,317 @@ function RhythmBuddyDetail({
     className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black"
   }, "一覧へもどる"));
 }
+const RHYTHM_BUDDY_LIST_KEY = 'mh_masu_beat_list_v1';
+const RHYTHM_BUDDY_SORTS = Object.freeze([Object.freeze({
+  key: 'level',
+  label: 'ビートLv',
+  firstDir: 'desc'
+}), Object.freeze({
+  key: 'lives',
+  label: '遊んだ回数',
+  firstDir: 'desc'
+}), Object.freeze({
+  key: 'mood',
+  label: '今日の調子',
+  firstDir: 'desc'
+}), Object.freeze({
+  key: 'recent',
+  label: '最近遊んだ順',
+  firstDir: 'desc'
+}), Object.freeze({
+  key: 'name',
+  label: '名前',
+  firstDir: 'asc'
+}), Object.freeze({
+  key: 'created',
+  label: '登録した順',
+  firstDir: 'asc'
+})]);
+const RHYTHM_BUDDY_MOOD_RANK = Object.freeze({
+  great: 5,
+  good: 4,
+  normal: 3,
+  bad: 2,
+  awful: 1
+});
+const rhythmBuddyListDefaults = () => ({
+  sort: 'level',
+  dir: 'desc',
+  lineage: 'all',
+  played: 'all',
+  traits: [],
+  moods: []
+});
+const rhythmBuddyNormalizeListSettings = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const d = rhythmBuddyListDefaults();
+  const traitIds = [...RHYTHM_BUDDY_TRAIT_IDS, 'none'];
+  return {
+    sort: RHYTHM_BUDDY_SORTS.some(x => x.key === o.sort) ? o.sort : d.sort,
+    dir: o.dir === 'asc' || o.dir === 'desc' ? o.dir : d.dir,
+    lineage: typeof o.lineage === 'string' && o.lineage ? o.lineage.slice(0, 40) : 'all',
+    played: ['all', 'yes', 'no'].includes(o.played) ? o.played : 'all',
+    traits: Array.isArray(o.traits) ? o.traits.filter(t => traitIds.includes(t)) : [],
+    moods: Array.isArray(o.moods) ? o.moods.filter(m => RHYTHM_BUDDY_MOOD_RANK[m]) : []
+  };
+};
+const useRhythmBuddyListSettings = () => {
+  const [settings, setSettings] = React.useState(rhythmBuddyListDefaults);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const v = await storeGet(RHYTHM_BUDDY_LIST_KEY, null);
+        if (alive) setSettings(rhythmBuddyNormalizeListSettings(v));
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const update = patch => setSettings(prev => {
+    const next = rhythmBuddyNormalizeListSettings({
+      ...prev,
+      ...patch
+    });
+    void storeSet(RHYTHM_BUDDY_LIST_KEY, next).catch(() => {});
+    return next;
+  });
+  return [settings, update];
+};
+const rhythmBuddyLineageId = baseId => {
+  try {
+    return typeof monsterLineageOf === 'function' ? monsterLineageOf(baseId).main.id : '';
+  } catch (_) {
+    return '';
+  }
+};
+const rhythmBuddyListRows = (masuMons, state, dayKey, settings) => {
+  const st = settings || rhythmBuddyListDefaults();
+  const rows = (Array.isArray(masuMons) ? masuMons : []).filter(x => x && x.id && x.baseId).map((masu, index) => {
+    const mon = state.mons[masu.id] || null;
+    const m = rhythmBuddyNormalizeMon(mon);
+    return {
+      masu,
+      mon,
+      index,
+      played: !!mon && m.lives > 0,
+      exp: mon ? m.exp : -1,
+      lives: m.lives,
+      mood: rhythmBuddyMood(masu.id, dayKey, mon),
+      trait: mon ? m.trait : '',
+      recent: m.recent.length ? m.recent[0].at : 0,
+      name: rhythmBuddyMasuName(masu),
+      created: Number(masu.createdAt) || index
+    };
+  }).filter(r => (st.lineage === 'all' || rhythmBuddyLineageId(r.masu.baseId) === st.lineage) && (st.played === 'all' || st.played === 'yes' === r.played) && (!st.traits.length || st.traits.includes(r.trait || 'none')) && (!st.moods.length || st.moods.includes(r.mood.id)));
+  const val = r => st.sort === 'level' ? r.exp : st.sort === 'lives' ? r.lives : st.sort === 'mood' ? RHYTHM_BUDDY_MOOD_RANK[r.mood.id] || 0 : st.sort === 'recent' ? r.recent : st.sort === 'created' ? r.created : 0;
+  const sign = st.dir === 'asc' ? 1 : -1;
+  return rows.sort((a, b) => (st.sort === 'name' ? a.name.localeCompare(b.name, 'ja') * sign : (val(a) - val(b)) * sign) || a.index - b.index);
+};
+function RhythmBuddyListBar({
+  settings,
+  onOpen
+}) {
+  const sortOpt = RHYTHM_BUDDY_SORTS.find(x => x.key === settings.sort) || RHYTHM_BUDDY_SORTS[0];
+  const filterCount = (settings.played !== 'all' ? 1 : 0) + settings.traits.length + settings.moods.length;
+  const lineage = settings.lineage !== 'all' && typeof lineageById === 'function' ? lineageById(settings.lineage) : null;
+  const btn = 'min-h-[44px] flex items-center gap-1.5 rounded-xl border px-3 py-2 active:scale-95';
+  return React.createElement("div", {
+    "data-rhythm-buddy-list-bar": true,
+    className: "flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => onOpen('sort'),
+    className: `${btn} min-w-0 flex-1 justify-between border-white/10 bg-slate-900`
+  }, React.createElement("span", {
+    className: "truncate text-[11px] font-black text-white"
+  }, "並べ替え: ", sortOpt.label, settings.dir === 'asc' ? '▲' : '▼'), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-slate-400"
+  }, "›")), React.createElement("button", {
+    type: "button",
+    onClick: () => onOpen('lineage'),
+    className: `${btn} shrink-0 ${lineage ? 'border-indigo-400 bg-indigo-900' : 'border-white/10 bg-slate-900'}`
+  }, React.createElement("span", {
+    className: "truncate text-[11px] font-black text-white"
+  }, lineage ? `${lineage.name}種` : '種族')), React.createElement("button", {
+    type: "button",
+    onClick: () => onOpen('filter'),
+    className: `${btn} shrink-0 ${filterCount ? 'border-lime-400 bg-lime-950' : 'border-white/10 bg-slate-900'}`
+  }, React.createElement("span", {
+    className: "text-[11px] font-black text-white"
+  }, "しぼりこみ"), filterCount > 0 && React.createElement("span", {
+    className: "text-[10px] font-black text-lime-300"
+  }, filterCount)));
+}
+function RhythmBuddyListSheet({
+  tab,
+  settings,
+  onChange,
+  onTab,
+  onClose
+}) {
+  const chip = on => `min-h-[48px] rounded-2xl text-sm font-black flex items-center justify-center gap-1 active:scale-95 ${on ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`;
+  const toggle = (list, id) => list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+  const lineages = typeof dexMainLineages === 'function' ? dexMainLineages() : [];
+  return React.createElement("div", {
+    "data-rhythm-buddy-list-sheet": true,
+    className: "fixed inset-0 z-[87000] flex flex-col",
+    style: {
+      backgroundColor: 'rgba(2,6,23,0.98)',
+      paddingTop: 'env(safe-area-inset-top)'
+    }
+  }, React.createElement("div", {
+    className: "flex shrink-0 items-center gap-2 border-b border-white/10 p-4"
+  }, React.createElement("h3", {
+    className: "flex-1 text-base font-black text-white"
+  }, "並べ替え・しぼりこみ"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    onClick: onClose,
+    className: "min-h-[44px] min-w-[44px] rounded-full bg-white/5 text-lg font-black"
+  }, "✕")), React.createElement("div", {
+    className: "flex shrink-0 gap-2 px-4 pt-3"
+  }, [{
+    key: 'sort',
+    label: '並べ替え'
+  }, {
+    key: 'lineage',
+    label: '種族'
+  }, {
+    key: 'filter',
+    label: 'しぼりこみ'
+  }].map(t => React.createElement("button", {
+    key: t.key,
+    type: "button",
+    onClick: () => onTab(t.key),
+    className: `min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 ${tab === t.key ? 'bg-lime-500 text-slate-950' : 'border border-slate-800 bg-slate-900 text-slate-400'}`
+  }, t.label))), React.createElement("div", {
+    className: "mh-scroll min-h-0 flex-1 overflow-y-auto p-4",
+    style: {
+      paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
+    }
+  }, tab === 'sort' && React.createElement("div", {
+    className: "grid grid-cols-2 gap-2.5"
+  }, RHYTHM_BUDDY_SORTS.map(opt => {
+    const active = settings.sort === opt.key;
+    return React.createElement("button", {
+      key: opt.key,
+      type: "button",
+      onClick: () => onChange(active ? {
+        dir: settings.dir === 'asc' ? 'desc' : 'asc'
+      } : {
+        sort: opt.key,
+        dir: opt.firstDir
+      }),
+      className: chip(active)
+    }, opt.label, active && React.createElement("span", null, settings.dir === 'asc' ? '▲' : '▼'));
+  })), tab === 'lineage' && React.createElement("div", null, React.createElement("p", {
+    className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
+  }, "選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2.5"
+  }, [{
+    id: 'all',
+    label: 'すべて'
+  }, ...lineages.map(l => ({
+    id: l.id,
+    label: `${l.name}種`
+  }))].map(opt => React.createElement("button", {
+    key: opt.id,
+    type: "button",
+    onClick: () => onChange({
+      lineage: opt.id
+    }),
+    className: chip(settings.lineage === opt.id)
+  }, opt.label)))), tab === 'filter' && React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("section", null, React.createElement("h4", {
+    className: "mb-1.5 text-[11px] font-black text-slate-300"
+  }, "一緒に遊んだか"), React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, [{
+    id: 'all',
+    label: 'すべて'
+  }, {
+    id: 'yes',
+    label: '遊んだ子'
+  }, {
+    id: 'no',
+    label: 'まだの子'
+  }].map(opt => React.createElement("button", {
+    key: opt.id,
+    type: "button",
+    onClick: () => onChange({
+      played: opt.id
+    }),
+    className: chip(settings.played === opt.id)
+  }, opt.label)))), React.createElement("section", null, React.createElement("h4", {
+    className: "mb-1.5 text-[11px] font-black text-slate-300"
+  }, "性格", React.createElement("small", {
+    className: "ml-1 font-bold text-slate-500"
+  }, "(何も選ばなければすべて)")), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, [...RHYTHM_BUDDY_TRAITS.map(t => ({
+    id: t.id,
+    label: t.label
+  })), {
+    id: 'none',
+    label: 'まだ見えない'
+  }].map(opt => React.createElement("button", {
+    key: opt.id,
+    type: "button",
+    onClick: () => onChange({
+      traits: toggle(settings.traits, opt.id)
+    }),
+    className: chip(settings.traits.includes(opt.id))
+  }, opt.label)))), React.createElement("section", null, React.createElement("h4", {
+    className: "mb-1.5 text-[11px] font-black text-slate-300"
+  }, "今日の調子", React.createElement("small", {
+    className: "ml-1 font-bold text-slate-500"
+  }, "(何も選ばなければすべて)")), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, RHYTHM_BUDDY_MOODS.map(mood => React.createElement("button", {
+    key: mood.id,
+    type: "button",
+    onClick: () => onChange({
+      moods: toggle(settings.moods, mood.id)
+    }),
+    className: chip(settings.moods.includes(mood.id))
+  }, React.createElement(RhythmBuddyMoodFace, {
+    moodId: mood.id,
+    size: 20
+  }), mood.label)))), React.createElement("button", {
+    type: "button",
+    onClick: () => onChange({
+      lineage: 'all',
+      played: 'all',
+      traits: [],
+      moods: []
+    }),
+    className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black"
+  }, "しぼりこみをすべて外す"))));
+}
+const useRhythmBuddyListControls = () => {
+  const [settings, update] = useRhythmBuddyListSettings();
+  const [tab, setTab] = React.useState('');
+  const bar = React.createElement(RhythmBuddyListBar, {
+    settings: settings,
+    onOpen: setTab
+  });
+  const sheet = tab ? React.createElement(RhythmBuddyListSheet, {
+    tab: tab,
+    settings: settings,
+    onChange: update,
+    onTab: setTab,
+    onClose: () => setTab('')
+  }) : null;
+  return {
+    settings,
+    bar,
+    sheet
+  };
+};
 function RhythmBuddyList({
   masuMons,
   state,
@@ -64745,19 +65056,13 @@ function RhythmBuddyList({
   onPick = null,
   busy = false,
   canPay = true,
-  calledIds = []
+  calledIds = [],
+  settings = null
 }) {
-  const list = (Array.isArray(masuMons) ? masuMons : []).filter(x => x && x.id && x.baseId).map(masu => {
-    const mon = state.mons[masu.id];
-    return {
-      masu,
-      mon,
-      exp: mon ? mon.exp : -1
-    };
-  }).sort((a, b) => b.exp - a.exp);
+  const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
   if (list.length === 0) return React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
-  }, "マスモンがまだいません");
+  }, (masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません');
   return React.createElement("ul", {
     className: "space-y-1.5"
   }, list.map(({
@@ -64823,6 +65128,7 @@ function RhythmBuddySheet({
   const freeLeft = rhythmBuddyFreeLeft(state, dayKey);
   const detail = detailId ? (masuMons || []).find(x => x && x.id === detailId) : null;
   const canPay = freeLeft > 0 || tickets > 0;
+  const listControls = useRhythmBuddyListControls();
   const choose = async masu => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -64868,7 +65174,9 @@ function RhythmBuddySheet({
     dayKey: dayKey,
     songName: songName,
     onBack: () => setDetailId('')
-  }) : React.createElement(RhythmBuddyList, {
+  }) : React.createElement("div", {
+    className: "space-y-2"
+  }, listControls.bar, React.createElement(RhythmBuddyList, {
     masuMons: masuMons,
     state: state,
     dayKey: dayKey,
@@ -64876,8 +65184,9 @@ function RhythmBuddySheet({
     onPick: choose,
     busy: busy,
     canPay: canPay,
-    calledIds: calledIds
-  })), !canPay && React.createElement("p", {
+    calledIds: calledIds,
+    settings: listControls.settings
+  }))), listControls.sheet, !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
   }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")));
@@ -64898,6 +65207,7 @@ function MasuBeatScreen({
     const song = (songs || []).find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '(曲)';
   };
+  const listControls = useRhythmBuddyListControls();
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-masu-beat": true,
@@ -64923,12 +65233,13 @@ function MasuBeatScreen({
     dayKey: dayKey,
     songName: songName,
     onBack: () => setDetailId('')
-  }) : React.createElement(RhythmBuddyList, {
+  }) : React.createElement(React.Fragment, null, listControls.bar, React.createElement(RhythmBuddyList, {
     masuMons: masuMons,
     state: state,
     dayKey: dayKey,
-    onOpen: setDetailId
-  })));
+    onOpen: setDetailId,
+    settings: listControls.settings
+  }))), listControls.sheet);
 }
 function RhythmBuddyGrowth({
   masu,
