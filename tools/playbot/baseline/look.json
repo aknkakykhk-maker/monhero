@@ -4,8 +4,8 @@
  "seed": 474709,
  "roles": [
   {
-   "id": "buddy",
-   "name": "相棒係",
+   "id": "look",
+   "name": "見た目係",
    "ok": true
   }
  ],

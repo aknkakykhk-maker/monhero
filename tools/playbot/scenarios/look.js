@@ -10,8 +10,9 @@ const path = require('path');
 
 const LOOK_DIR = path.join(__dirname, '..', 'baseline', 'look');
 const W = 97, H = 211;
-// 画素の明るさが 40 より大きく変わった点が、全体の 18% を超えたら「大きく変わった」
-const PIXEL_DIFF = 40, THRESHOLD = 0.18;
+// 画素の明るさが 40 より大きく変わった点が、全体の 25% を超えたら「大きく変わった」。
+// ★何も変えていなくても、M/B管理は約10%・モンヒロビートは約15%揺れる(助手のセリフや背景が毎回ちがう。2026-10-07 に測った)
+const PIXEL_DIFF = 40, THRESHOLD = 0.25;
 
 // 画面の名前 → HOME から押していくボタン(名前の正規表現)
 const SCREENS = [
