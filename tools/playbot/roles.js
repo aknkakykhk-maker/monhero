@@ -169,4 +169,15 @@ const ROLES = [
   },
 ];
 
-module.exports = { ROLES };
+// 毎晩の班分け(2026-10-07 ユーザー指示「担当別にセッションを分けて報告」)。班ごとに別のセッションが
+// `--team <id>` で受け持ちの担当だけを動かし、深く調べて報告する(ROUTINE.md「班分け」)。
+// ★ランキング係は音ゲー係の記録を使う(shared.rhythm)ので、同じ班から離さない。
+// ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
+const TEAMS = [
+  { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto'] },
+  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking'] },
+  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore'] },
+  { id: 'guard', name: '守り班', roles: ['legacy', 'clock'] },
+];
+
+module.exports = { ROLES, TEAMS };
