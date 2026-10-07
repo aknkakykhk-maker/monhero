@@ -79,7 +79,7 @@ const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
 const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
 const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
 // 部屋が静かなまま、これだけ過ぎると、ときどきひとりごとを言う
-const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 25000;
+const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -547,12 +547,12 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     if (r.phase === 'ready' && r.round && s.talk.songRound !== r.round) {
       s.talk.songRound = r.round;
-      if (Math.random() < 0.6) cpuSay(cpuPickOne(), 'song', { songId: r.songId });
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'song', { songId: r.songId });
     }
     // 待ち合わせ・曲えらびで、しばらく静かなときのひとりごと(ときどき)
-    if (r.phase === 'matching' || r.phase === 'select') {
+    if (r.phase === 'matching' || r.phase === 'select' || r.phase === 'result') {
       const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
-      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.15) {
+      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.3) {
         s.talk.idleAt = Date.now();
         cpuSay(cpuPickOne(), 'idle');
       }
@@ -564,7 +564,7 @@ const RHYTHM_MULTI = (() => {
         const row = team.rows.find((q) => q.m.id === x.id);
         if (!row || !row.res || row.res.quit) return;
         const mvp = team.mvpId === x.id;
-        if (mvp || Math.random() < 0.7) cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
+        cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
       });
     }
   };
@@ -601,7 +601,7 @@ const RHYTHM_MULTI = (() => {
       c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
-      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.5) cpuSay(x, 'pick', { songId: c.pick });
+      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.9) cpuSay(x, 'pick', { songId: c.pick });
     }
     if (r.phase === 'ready' && c.readyRound !== r.round) { c.readyRound = r.round; changed = true; }
     if (changed) sendOneCpuHb(x.id);

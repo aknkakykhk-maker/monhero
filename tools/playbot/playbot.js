@@ -72,6 +72,9 @@ const picked = ROLES.map((r) => {
   return parts.length ? { ...r, parts, alone: parts.some((p) => p.alone) } : null;
 }).filter(Boolean);
 const PORT = 8981;
+// ゲームを配信する場所。ふだんはこのリポジトリ。古い版(git worktree で別の場所に出したもの)で動かして見張りが本当に見つけられるか確かめるときだけ
+// PLAYBOT_SERVE_ROOT=<その場所> で差し替える(ツールとボットはこのリポジトリのものを使う)
+const SERVE_ROOT = process.env.PLAYBOT_SERVE_ROOT ? path.resolve(process.env.PLAYBOT_SERVE_ROOT) : ROOT;
 const PAGE_URL = `http://localhost:${PORT}/monster-hero/index.html`;
 
 const stamp = (() => {
@@ -102,8 +105,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applica
 const serve = () => new Promise((resolve) => {
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
-    const file = path.join(ROOT, rel);
-    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    const file = path.join(SERVE_ROOT, rel);
+    if (!file.startsWith(SERVE_ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       res.writeHead(404); res.end('not found'); return;
     }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' });
