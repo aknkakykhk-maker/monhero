@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 37b4868c142c65fc
+// generated-sha256: 87bdb13b60315d1d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 22:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 22:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38303,7 +38303,7 @@ const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
 const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
 const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
 // 部屋が静かなまま、これだけ過ぎると、ときどきひとりごとを言う
-const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 25000;
+const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -38771,12 +38771,12 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     if (r.phase === 'ready' && r.round && s.talk.songRound !== r.round) {
       s.talk.songRound = r.round;
-      if (Math.random() < 0.6) cpuSay(cpuPickOne(), 'song', { songId: r.songId });
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'song', { songId: r.songId });
     }
     // 待ち合わせ・曲えらびで、しばらく静かなときのひとりごと(ときどき)
-    if (r.phase === 'matching' || r.phase === 'select') {
+    if (r.phase === 'matching' || r.phase === 'select' || r.phase === 'result') {
       const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
-      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.15) {
+      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.3) {
         s.talk.idleAt = Date.now();
         cpuSay(cpuPickOne(), 'idle');
       }
@@ -38788,7 +38788,7 @@ const RHYTHM_MULTI = (() => {
         const row = team.rows.find((q) => q.m.id === x.id);
         if (!row || !row.res || row.res.quit) return;
         const mvp = team.mvpId === x.id;
-        if (mvp || Math.random() < 0.7) cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
+        cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
       });
     }
   };
@@ -38825,7 +38825,7 @@ const RHYTHM_MULTI = (() => {
       c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
-      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.5) cpuSay(x, 'pick', { songId: c.pick });
+      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.9) cpuSay(x, 'pick', { songId: c.pick });
     }
     if (r.phase === 'ready' && c.readyRound !== r.round) { c.readyRound = r.round; changed = true; }
     if (changed) sendOneCpuHb(x.id);

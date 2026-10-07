@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6220cba713e5185b
+// source-sha256: ecc2fbe41e80bc50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 22:13";
+const BUILD_DATE = "2026-10-07 22:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -62133,7 +62133,7 @@ const rhythmMultiStampsFor = phase => {
 const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
 const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
 const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
-const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 25000;
+const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -62798,13 +62798,13 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     if (r.phase === 'ready' && r.round && s.talk.songRound !== r.round) {
       s.talk.songRound = r.round;
-      if (Math.random() < 0.6) cpuSay(cpuPickOne(), 'song', {
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'song', {
         songId: r.songId
       });
     }
-    if (r.phase === 'matching' || r.phase === 'select') {
+    if (r.phase === 'matching' || r.phase === 'select' || r.phase === 'result') {
       const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
-      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.15) {
+      if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.3) {
         s.talk.idleAt = Date.now();
         cpuSay(cpuPickOne(), 'idle');
       }
@@ -62816,7 +62816,7 @@ const RHYTHM_MULTI = (() => {
         const row = team.rows.find(q => q.m.id === x.id);
         if (!row || !row.res || row.res.quit) return;
         const mvp = team.mvpId === x.id;
-        if (mvp || Math.random() < 0.7) cpuSay(x, 'result', {
+        cpuSay(x, 'result', {
           score: row.res.score,
           diffId: row.res.diffId,
           mvp
@@ -62872,7 +62872,7 @@ const RHYTHM_MULTI = (() => {
       c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
-      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.5) cpuSay(x, 'pick', {
+      if (c.pick !== RHYTHM_MULTI_OMAKASE && Math.random() < 0.9) cpuSay(x, 'pick', {
         songId: c.pick
       });
     }
