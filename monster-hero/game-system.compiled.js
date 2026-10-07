@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e7fba5ebd47b981
+// source-sha256: 8f7afc39041ef97c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 13:33";
+const BUILD_DATE = "2026-10-07 13:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36821,23 +36821,58 @@ const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT',
 const RHYTHM_BUDDY_RECENT_KEEP = 30;
 const RHYTHM_BUDDY_LONG_SONG_MS = 150000;
 const RHYTHM_BUDDY_TRAITS = Object.freeze([Object.freeze({
-  id: 'steady',
-  label: '安定型',
-  note: 'ブレが小さく、調子の影響を受けにくい'
+  id: 'jester',
+  label: 'ひょうきん',
+  note: '当たり外れが大きい。たまに大きく当てるが、たまに大きく外す',
+  how: 'EXPERT・MASTERをよく遊ぶ'
 }), Object.freeze({
-  id: 'burst',
-  label: '一発型',
-  note: 'ブレが大きく、たまに大きく当てる'
+  id: 'brave',
+  label: '勇敢',
+  note: '難しい譜面に強い(叩けるLv.を超えても落ちにくい)',
+  how: '自分より難しい譜面によく挑む'
 }), Object.freeze({
-  id: 'stamina',
-  label: '粘り型',
-  note: '長い曲ほど強い'
+  id: 'clingy',
+  label: '甘えん坊',
+  note: '毎日呼ぶとご機嫌になりやすい。何日もあくと、すねて不機嫌になりやすい',
+  how: '毎日続けて呼ぶ'
 }), Object.freeze({
-  id: 'artisan',
-  label: '職人型',
-  note: 'なじみが早くたまり、得意な曲に強い'
+  id: 'smart',
+  label: 'インテリ',
+  note: '曲の得意が早くたまる',
+  how: 'いろいろな曲を遊ぶ'
+}), Object.freeze({
+  id: 'serious',
+  label: '真面目',
+  note: 'ブレが小さく、調子の影響を受けにくい',
+  how: 'EASY〜HARDをよく遊ぶ'
+}), Object.freeze({
+  id: 'proud',
+  label: 'プライドが高い',
+  note: '部屋に人が多いほど張り切って上手になる',
+  how: '人の多い部屋でよく遊ぶ'
+}), Object.freeze({
+  id: 'worrier',
+  label: '心配性',
+  note: '大きなミスが少なく、コンボが切れにくい。最高判定はやや少ない',
+  how: '調子の悪い日にもよく遊ぶ'
+}), Object.freeze({
+  id: 'stubborn',
+  label: '頑固',
+  note: 'よく遊ぶ難易度ではとても強いが、慣れていない難易度ではかなり落ちる',
+  how: '同じ難易度ばかり遊ぶ'
+}), Object.freeze({
+  id: 'easygoing',
+  label: 'のんびり屋',
+  note: '長い曲に強いが、ノーツが詰まった譜面は苦手',
+  how: '長い曲をよく遊ぶ'
 })]);
 const RHYTHM_BUDDY_TRAIT_IDS = Object.freeze(RHYTHM_BUDDY_TRAITS.map(t => t.id));
+const RHYTHM_BUDDY_OLD_TRAITS = Object.freeze({
+  steady: 'serious',
+  burst: 'jester',
+  stamina: 'easygoing',
+  artisan: 'smart'
+});
 const RHYTHM_BUDDY_MOODS = Object.freeze([Object.freeze({
   id: 'great',
   label: '超ご機嫌',
@@ -36881,6 +36916,20 @@ const RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS = Object.freeze({
   bad: 13,
   awful: 5
 });
+const RHYTHM_BUDDY_MOOD_CLINGY_KEPT_WEIGHTS = Object.freeze({
+  great: 22,
+  good: 35,
+  normal: 33,
+  bad: 7,
+  awful: 3
+});
+const RHYTHM_BUDDY_MOOD_CLINGY_SULK_WEIGHTS = Object.freeze({
+  great: 5,
+  good: 15,
+  normal: 30,
+  bad: 30,
+  awful: 20
+});
 const rhythmBuddyInt = (v, max = 1e9) => {
   const n = Math.floor(Number(v));
   return Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0;
@@ -36914,7 +36963,12 @@ const rhythmBuddyNormalizeMon = raw => {
     songs,
     diffs,
     longLives: rhythmBuddyInt(o.longLives),
-    trait: RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait) ? o.trait : '',
+    trait: RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait) ? o.trait : RHYTHM_BUDDY_OLD_TRAITS[o.trait] || '',
+    hardLives: rhythmBuddyInt(o.hardLives),
+    crowdLives: rhythmBuddyInt(o.crowdLives),
+    badMoodLives: rhythmBuddyInt(o.badMoodLives),
+    streakDays: rhythmBuddyInt(o.streakDays, 9999),
+    bestStreakDays: rhythmBuddyInt(o.bestStreakDays, 9999),
     traitAt: rhythmBuddyInt(o.traitAt),
     lastRound: rhythmBuddyStr(o.lastRound, 40),
     lastDay: rhythmBuddyStr(o.lastDay, 10),
@@ -36999,7 +37053,7 @@ const rhythmBuddyExpGain = (diffId, teamRank) => {
 };
 const RHYTHM_BUDDY_FAMILIAR_STEPS = Object.freeze([1, 3, 6, 10, 15]);
 const rhythmBuddyFamiliarStars = (plays, trait) => {
-  const n = rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1);
+  const n = rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1);
   return RHYTHM_BUDDY_FAMILIAR_STEPS.filter(step => n >= step).length;
 };
 const rhythmBuddyTopSongs = (mon, count = 5) => {
@@ -37013,9 +37067,9 @@ const rhythmBuddyTopSongs = (mon, count = 5) => {
 const rhythmBuddyMastery = plays => 1 - Math.exp(-rhythmBuddyInt(plays) / 15);
 const rhythmBuddySpeciesLean = (base, allBases) => {
   const list = Array.isArray(allBases) ? allBases.filter(b => b && typeof b === 'object') : [];
-  if (!base || !list.length) return 'steady';
-  const keys = [['baseDef', 'steady'], ['baseAtk', 'burst'], ['baseHp', 'stamina'], ['baseGuts', 'artisan']];
-  let best = 'steady';
+  if (!base || !list.length) return 'serious';
+  const keys = [['baseDef', 'serious'], ['baseAtk', 'brave'], ['baseHp', 'easygoing'], ['baseGuts', 'jester']];
+  let best = 'serious';
   let bestZ = -Infinity;
   keys.forEach(([k, trait]) => {
     const vals = list.map(b => Number(b[k]) || 0);
@@ -37032,16 +37086,21 @@ const rhythmBuddySpeciesLean = (base, allBases) => {
 const rhythmBuddyTraitScores = (mon, lean) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, m.lives);
-  const low = (m.diffs.EASY + m.diffs.NORMAL + m.diffs.HARD) / total;
-  const high = (m.diffs.EXPERT + m.diffs.MASTER) / total;
-  const long = m.longLives / total;
-  const top = Object.values(m.songs).reduce((a, b) => Math.max(a, b), 0);
-  const repeat = Math.min(1, top / total * 3);
+  const share = n => Math.min(1, n / total);
+  const low = share(m.diffs.EASY + m.diffs.NORMAL + m.diffs.HARD);
+  const high = share(m.diffs.EXPERT + m.diffs.MASTER);
+  const topDiff = share(Math.max(...RHYTHM_BUDDY_DIFF_IDS.map(id => m.diffs[id])));
+  const variety = Math.min(1, Object.keys(m.songs).length / total * 1.5);
   const scores = {
-    steady: low * 0.8,
-    burst: high * 1.1,
-    stamina: long * 1.4,
-    artisan: repeat * 0.9
+    jester: high * 0.9,
+    brave: share(m.hardLives) * 1.2,
+    clingy: Math.min(1, m.bestStreakDays / 10) * 0.9,
+    smart: variety * 0.8,
+    serious: low * 0.8,
+    proud: share(m.crowdLives) * 1.1,
+    worrier: share(m.badMoodLives) * 2,
+    stubborn: Math.max(0, (topDiff - 0.6) / 0.4) * 0.9,
+    easygoing: share(m.longLives) * 1.4
   };
   if (RHYTHM_BUDDY_TRAIT_IDS.includes(lean)) scores[lean] += 0.25;
   return scores;
@@ -37068,7 +37127,11 @@ const rhythmBuddyHash = text => {
 const rhythmBuddyMood = (masuId, dayKey, mon) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const kept = !!m.lastDay && m.lastDay === rhythmBuddyPrevDayKey(dayKey);
-  const weights = RHYTHM_BUDDY_MOODS.map(mood => kept ? RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS[mood.id] : mood.weight);
+  const lastT = Date.parse(`${m.lastDay}T00:00:00Z`);
+  const nowT = Date.parse(`${dayKey}T00:00:00Z`);
+  const gapDays = Number.isFinite(lastT) && Number.isFinite(nowT) ? Math.round((nowT - lastT) / 86400000) : 0;
+  const table = m.trait === 'clingy' && kept ? RHYTHM_BUDDY_MOOD_CLINGY_KEPT_WEIGHTS : m.trait === 'clingy' && gapDays >= 3 ? RHYTHM_BUDDY_MOOD_CLINGY_SULK_WEIGHTS : kept ? RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS : null;
+  const weights = RHYTHM_BUDDY_MOODS.map(mood => table ? table[mood.id] : mood.weight);
   const sum = weights.reduce((a, b) => a + b, 0);
   let r = rhythmBuddyHash(`${masuId}|${dayKey}`) * sum;
   for (let i = 0; i < RHYTHM_BUDDY_MOODS.length; i += 1) {
@@ -37089,7 +37152,8 @@ const rhythmBuddyAccuracy = ({
   durationMs,
   mood,
   chartLevel,
-  density
+  density,
+  humans = 1
 }) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const {
@@ -37100,23 +37164,25 @@ const rhythmBuddyAccuracy = ({
   const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
   let acc = 0.68 + 0.27 * rhythmBuddyGrowthRate(level);
   acc += 0.6 * rhythmBuddySongSkill(m.songs[songId], m.trait);
-  acc += 0.03 * mastery - d * 0.012 * (1 - mastery);
+  const masteryRate = m.trait === 'stubborn' ? 2 : 1;
+  acc += (0.03 * mastery - d * 0.012 * (1 - mastery)) * masteryRate;
   const over = chartLv - rhythmBuddyComfortLevel(level, m.songs[songId], m.trait);
-  acc -= over > 0 ? Math.min(0.35, over * 0.015) : -Math.min(0.02, -over * 0.002);
+  acc -= over > 0 ? Math.min(0.35, over * 0.015) * (m.trait === 'brave' ? 0.7 : 1) : -Math.min(0.02, -over * 0.002);
   const dens = Number(density);
   if (Number.isFinite(dens) && dens > 0) {
     const extra = dens - (1 + chartLv / 10);
-    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'burst' ? 0.5 : 1);
+    if (extra > 0) acc -= extra * 0.04 * (m.trait === 'easygoing' ? 1.5 : 1);
   }
-  if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
+  if (m.trait === 'easygoing') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
+  if (m.trait === 'proud') acc += Math.max(-0.01, Math.min(0.04, 0.012 * (Math.floor(Number(humans) || 1) - 1) - (Number(humans) <= 1 ? 0.01 : 0)));
   const moodAcc = mood ? mood.acc : 0;
-  acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
+  acc += m.trait === 'serious' ? moodAcc * 0.5 : moodAcc;
   return Math.max(0.1, Math.min(1, acc));
 };
 const rhythmBuddyGrowthRate = level => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 0.7);
-const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1) / 12));
+const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1) / 12));
 const rhythmBuddySpread = (trait, mood, level = 1) => {
-  const base = trait === 'steady' ? 0.02 : trait === 'burst' ? 0.055 : 0.035;
+  const base = trait === 'serious' ? 0.02 : trait === 'jester' ? 0.055 : 0.035;
   return base * (1.6 - 1.1 * rhythmBuddyGrowthRate(level)) * (mood ? mood.spread : 1);
 };
 const rhythmBuddyNormal = rand => {
@@ -37133,7 +37199,8 @@ const rhythmBuddyPlay = ({
   durationMs,
   mood,
   rand,
-  chartLevel = 0
+  chartLevel = 0,
+  humans = 1
 }) => {
   const r = typeof rand === 'function' ? rand : Math.random;
   const m = rhythmBuddyNormalizeMon(mon);
@@ -37148,12 +37215,21 @@ const rhythmBuddyPlay = ({
     durationMs,
     mood,
     chartLevel,
-    density
+    density,
+    humans
   }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
-  if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
+  if (m.trait === 'jester') {
+    const roll = r();
+    if (roll < 0.08) acc += 0.06;else if (roll < 0.16) acc -= 0.06;
+  }
   acc = Math.max(0.1, Math.min(1, acc));
   const miss = 1 - acc;
-  const share = {
+  const share = m.trait === 'worrier' ? {
+    MISS: miss * 0.25,
+    BAD: miss * 0.1,
+    GOOD: miss * 0.35,
+    GREAT: miss * 0.3
+  } : {
     MISS: miss * 0.45,
     BAD: miss * 0.15,
     GOOD: miss * 0.2,
@@ -37171,7 +37247,7 @@ const rhythmBuddyPlay = ({
     counts[id] = Math.round(total * share[id]);
   });
   const rest = Math.max(0, total - counts.MISS - counts.BAD - counts.GOOD - counts.GREAT);
-  counts.MARVELOUS = Math.round(rest * acc);
+  counts.MARVELOUS = Math.round(rest * acc * (m.trait === 'worrier' ? 0.92 : 1));
   counts.EXCELLENT = rest - counts.MARVELOUS;
   const breaks = counts.MISS + counts.BAD;
   const maxCombo = breaks === 0 ? total : Math.min(total - breaks, Math.round((total - breaks) / (breaks + 1) * (1.6 + r() * 1.4)));
@@ -37209,7 +37285,10 @@ const rhythmBuddyApplyLive = (mon, {
   lean,
   nowMs,
   score,
-  maxScore
+  maxScore,
+  chartLevel = 0,
+  humans = 1,
+  moodId = ''
 }) => {
   const before = rhythmBuddyNormalizeMon(mon);
   if (!round || before.lastRound === round) return {
@@ -37242,6 +37321,10 @@ const rhythmBuddyApplyLive = (mon, {
     songs,
     diffs,
     longLives: before.longLives + (Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 1 : 0),
+    hardLives: before.hardLives + (Number(chartLevel) > rhythmBuddyComfortLevel(rhythmBuddyLevelInfo(before.exp).level, before.songs[sid] || 0, before.trait) ? 1 : 0),
+    crowdLives: before.crowdLives + (Number(humans) >= 3 ? 1 : 0),
+    badMoodLives: before.badMoodLives + (moodId === 'bad' || moodId === 'awful' ? 1 : 0),
+    streakDays: before.lastDay === dayKey ? Math.max(1, before.streakDays) : before.lastDay && before.lastDay === rhythmBuddyPrevDayKey(dayKey) ? before.streakDays + 1 : 1,
     lastRound: rhythmBuddyStr(round, 40),
     lastDay: rhythmBuddyStr(dayKey, 10),
     firstAt: before.firstAt || rhythmBuddyInt(nowMs, 9e15),
@@ -37253,6 +37336,7 @@ const rhythmBuddyApplyLive = (mon, {
       max: rhythmBuddyInt(maxScore, 1e7)
     }, ...before.recent].slice(0, RHYTHM_BUDDY_RECENT_KEEP) : before.recent
   };
+  after.bestStreakDays = Math.max(before.bestStreakDays, after.streakDays);
   const trait = rhythmBuddyNextTrait(after, lean);
   const traitNew = trait && trait !== before.trait ? trait : '';
   if (traitNew) {
@@ -61240,12 +61324,14 @@ const RHYTHM_MULTI = (() => {
     const c = myCpu(x.id);
     if (!c || !round || !c.playing || c.res && c.res.startId === round) return;
     let result = null;
+    const humans = Math.max(1, ordered().filter(m => !m.cpu).length);
     try {
       result = cpuBrain && cpuBrain.play ? cpuBrain.play({
         songId: s.room.songId,
         diffId: c.diff,
         masuId: x.masuId,
-        round
+        round,
+        humans
       }) : null;
     } catch (_) {
       result = null;
@@ -63747,6 +63833,8 @@ function RhythmMultiScreen({
         diffId: cpuRow.res.diffId,
         durationMs: song ? Number(song.playDurationMs) || 0 : 0,
         teamRank: team.rank,
+        chartLevel: song && song.difficulties && song.difficulties[cpuRow.res.diffId] ? Number(song.difficulties[cpuRow.res.diffId].level) || 0 : 0,
+        humans: team.rows.filter(row => !row.m.cpu).length,
         score: cpuRow.res.score,
         maxScore: ((typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === cpuRow.res.diffId) || {}).maxScore || 0
       })));
@@ -64191,7 +64279,8 @@ const rhythmBuddyMakeBrain = songs => ({
   play({
     songId,
     diffId,
-    masuId
+    masuId,
+    humans = 1
   }) {
     const song = (songs || []).find(x => x.songId === songId);
     const chart = song && song.difficulties ? song.difficulties[diffId] : null;
@@ -64208,7 +64297,8 @@ const rhythmBuddyMakeBrain = songs => ({
       durationMs: chart && Number(chart.durationMs) || (song ? Number(song.playDurationMs) || 0 : 0),
       mood,
       rand: Math.random,
-      chartLevel: chart ? Number(chart.level) || 0 : 0
+      chartLevel: chart ? Number(chart.level) || 0 : 0,
+      humans
     });
   },
   pick(catalog, masuId) {
@@ -64399,6 +64489,7 @@ function RhythmBuddyDetail({
   const lean = rhythmBuddyTraitOf(rhythmBuddyLeanOf(masu.baseId));
   const comfort = rhythmBuddyComfortLevelOf(m);
   const [allSongs, setAllSongs] = React.useState(false);
+  const [traitsOpen, setTraitsOpen] = React.useState(false);
   const songs = rhythmBuddyTopSongs(m, allSongs ? RHYTHM_BUDDY_SONG_KEEP : 5);
   const songCount = Object.keys(m.songs).length;
   return React.createElement("div", {
@@ -64457,7 +64548,24 @@ function RhythmBuddyDetail({
     className: "text-sm font-black text-slate-400"
   }, "まだ見えない"), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "ビートLv.", RHYTHM_BUDDY_TRAIT_LEVEL, "で決まります。", lean ? `${lean.label}になりやすい種類です` : '')))), React.createElement("section", {
+  }, "ビートLv.", RHYTHM_BUDDY_TRAIT_LEVEL, "で決まります。", lean ? `${lean.label}になりやすい種類です` : '')))), React.createElement("button", {
+    "data-rhythm-buddy-traits-toggle": true,
+    type: "button",
+    onClick: () => setTraitsOpen(v => !v),
+    className: "min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
+  }, traitsOpen ? '性格の一覧をとじる' : '性格の一覧を見る(9つ)'), traitsOpen && React.createElement("ul", {
+    "data-rhythm-buddy-traits": true,
+    className: "space-y-1 rounded-xl bg-slate-950/60 p-2"
+  }, RHYTHM_BUDDY_TRAITS.map(t => React.createElement("li", {
+    key: t.id,
+    className: `rounded-lg px-2 py-1 ${trait && trait.id === t.id ? 'bg-amber-900/40 ring-1 ring-amber-300/60' : ''}`
+  }, React.createElement("b", {
+    className: "text-[12px] font-black text-amber-200"
+  }, t.label), React.createElement("small", {
+    className: "block text-[10px] font-bold leading-snug text-slate-300"
+  }, t.note), React.createElement("small", {
+    className: "block text-[9px] font-bold leading-snug text-slate-500"
+  }, "なりやすい育て方: ", t.how)))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "mb-1 text-[10px] font-black text-slate-400"
@@ -64710,7 +64818,9 @@ function RhythmBuddyGrowth({
   durationMs,
   teamRank,
   score = 0,
-  maxScore = 0
+  maxScore = 0,
+  chartLevel = 0,
+  humans = 1
 }) {
   const [shown, setShown] = React.useState(null);
   React.useEffect(() => {
@@ -64719,6 +64829,7 @@ function RhythmBuddyGrowth({
     let outcome = null;
     const dayKey = rhythmBuddyDayKey(Date.now());
     RHYTHM_BUDDY_STORE.update(st => {
+      const moodId = rhythmBuddyMood(masu.id, dayKey, st.mons[masu.id]).id;
       const r = rhythmBuddyApplyLive(st.mons[masu.id], {
         round,
         songId,
@@ -64729,7 +64840,10 @@ function RhythmBuddyGrowth({
         lean: rhythmBuddyLeanOf(masu.baseId),
         nowMs: Date.now(),
         score,
-        maxScore
+        maxScore,
+        chartLevel,
+        humans,
+        moodId
       });
       if (!r.gain) return null;
       outcome = r;
