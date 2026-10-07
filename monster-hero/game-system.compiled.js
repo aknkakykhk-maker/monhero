@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35700166965ce881
+// source-sha256: 5b83fe5cbe08ec3f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 18:31";
+const BUILD_DATE = "2026-10-07 18:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24153,6 +24153,19 @@ const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
   (primaryEntries || []).forEach(e => put(e, false));
   (legacyEntries || []).forEach(e => put(e, true));
   return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
+};
+const pickTopPerBreederMonster = sortedEntries => {
+  const list = Array.isArray(sortedEntries) ? sortedEntries : [];
+  const bridge = breederIdBridgeFrom(list);
+  const seen = new Set();
+  return list.filter(e => {
+    if (!e) return false;
+    const id = resolveBreederIdFor(e, bridge);
+    const key = `${id ? `id:${id}` : `name:${e.userName}`}\u0000${e.monsterId || e.monName || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 const BOND_LEVELS_TABLE = 'bond_levels';
 const BOND_LEVELS_SELECT = 'user_name,individual_id,monster_id,mon_name,bond_level,icon,detail,colors';
@@ -69441,8 +69454,9 @@ function MonsterHeroGame() {
     const monsterId = entry?.monsterId || Object.keys(ALL_PLAYER_MONSTERS).find(id => ALL_PLAYER_MONSTERS[id]?.name === entry?.monName) || null;
     return monsterId ? monsterLineageOf(monsterId).main.id : null;
   }, []);
-  const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
-  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  const bondRankingShown = useMemo(() => pickTopPerBreederMonster(bondRankingAll), [bondRankingAll]);
+  const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingShown.slice(0, 50) : bondRankingShown.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50), [bondRankingShown, bondRankMonFilter, bondEntryLineageId]);
+  const powerRankingAll = useMemo(() => pickTopPerBreederMonster(collectPowerRankingEntries(bondRankingAll)), [bondRankingAll]);
   const powerRanking = useMemo(() => powerRankMonFilter === 'all' ? powerRankingAll.slice(0, 50) : powerRankingAll.filter(x => bondEntryLineageId(x) === powerRankMonFilter).slice(0, 50), [powerRankingAll, powerRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = {
     loading: false,
