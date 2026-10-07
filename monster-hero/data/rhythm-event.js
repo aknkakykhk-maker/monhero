@@ -325,8 +325,8 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'skip_ticket_kyu', name:'スキップチケット・急', emoji:'⏩', kind:'item', itemId:'skip_ticket_kyu', grantAmount:1, unit:'枚', cost:115 }),
   Object.freeze({ id:'skip_ticket_kiwami', name:'スキップチケット・極', emoji:'⏩', kind:'item', itemId:'skip_ticket_kiwami', grantAmount:1, unit:'枚', cost:250 }),
   Object.freeze({ id:'skip_ticket_haou', name:'スキップチケット・覇', emoji:'⏩', kind:'item', itemId:'skip_ticket_haou', grantAmount:1, unit:'枚', cost:500 }),
-  // 相棒券(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。1回呼べば何曲も一緒に遊べるので、イベント中の1〜2曲ぶん
-  Object.freeze({ id:'buddy_ticket', name:'相棒券', emoji:'🐾', kind:'item', itemId:'buddy_ticket', grantAmount:1, unit:'枚', cost:150 }),
+  // セッション券(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。1回呼べば何曲も一緒に遊べるので、イベント中の1〜2曲ぶん
+  Object.freeze({ id:'session_ticket', name:'セッション券', emoji:'🎶', kind:'item', itemId:'session_ticket', grantAmount:1, unit:'枚', cost:150 }),
   Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:500 }),
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:5000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:10000 }),

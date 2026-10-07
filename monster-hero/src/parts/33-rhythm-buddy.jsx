@@ -8,9 +8,9 @@
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
-// 相棒券のアイテムid(data/breeder.js の一覧と同じ。所持数は mh_owned_items)
-const RHYTHM_BUDDY_TICKET_ITEM_ID = 'buddy_ticket';
-// 「相棒を呼べるようになった」の一度きりの案内を見たか(新しい保存キー)
+// セッション券のアイテムid(data/breeder.js の一覧と同じ。所持数は mh_owned_items)
+const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
+// 「マスモンを呼べるようになった」の一度きりの案内を見たか(新しい保存キー)
 const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 // マスモン全体で1日に無料で呼べる回数(朝5:00で戻る)
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
@@ -21,6 +21,8 @@ const RHYTHM_BUDDY_TRAIT_LEVEL = 50;
 // 1体が覚えておく曲の数(なじみ)。超えたら回数の少ない曲から忘れる
 const RHYTHM_BUDDY_SONG_KEEP = 80;
 const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
+// 相棒が取ったスコアを覚えておく回数(伸びのグラフ)
+const RHYTHM_BUDDY_RECENT_KEEP = 30;
 // 長い曲(粘り型が育つ・強い)のしきい
 const RHYTHM_BUDDY_LONG_SONG_MS = 150000;
 
@@ -85,6 +87,12 @@ const rhythmBuddyNormalizeMon = (raw) => {
     lastRound: rhythmBuddyStr(o.lastRound, 40),
     lastDay: rhythmBuddyStr(o.lastDay, 10),
     firstAt: rhythmBuddyInt(o.firstAt, 9e15),
+    // 最近のスコア(新しい順・2026-10-07 追加)。無い・壊れているときは空
+    recent: (Array.isArray(o.recent) ? o.recent : []).filter((x) => x && typeof x === 'object').slice(0, RHYTHM_BUDDY_RECENT_KEEP).map((x) => ({
+      at: rhythmBuddyInt(x.at, 9e15), songId: rhythmBuddyStr(x.songId, 60),
+      diffId: RHYTHM_BUDDY_DIFF_IDS.includes(x.diffId) ? x.diffId : '',
+      score: rhythmBuddyInt(x.score, 1e7), max: Math.max(1, rhythmBuddyInt(x.max, 1e7)),
+    })).filter((x) => x.score <= x.max),
   };
 };
 const rhythmBuddyNormalize = (raw) => {
@@ -105,12 +113,19 @@ const rhythmBuddyFreeLeft = (state, dayKey) => {
   const used = st.day === dayKey ? st.used : 0;
   return Math.max(0, RHYTHM_BUDDY_FREE_PER_DAY - used);
 };
-// 無料ぶんを1回使う。残っていなければ null(呼ぶ側が相棒券を使う)
+// 無料ぶんを1回使う。残っていなければ null(呼ぶ側がセッション券を使う)
 const rhythmBuddyUseFree = (state, dayKey) => {
   const st = rhythmBuddyNormalize(state);
   if (rhythmBuddyFreeLeft(st, dayKey) <= 0) return null;
   const used = st.day === dayKey ? st.used : 0;
   return { ...st, day: dayKey, used: used + 1 };
+};
+
+// 使った無料ぶんを1回返す(人が来て、呼んだマスモンが席をゆずったとき)。同じ日のときだけ
+const rhythmBuddyRefundFree = (state, dayKey) => {
+  const st = rhythmBuddyNormalize(state);
+  if (st.day !== dayKey || st.used <= 0) return null;
+  return { ...st, used: st.used - 1 };
 };
 
 // ---- レベル ----
@@ -217,6 +232,11 @@ const rhythmBuddyMood = (masuId, dayKey, mon) => {
 // 相棒の育ち具合から「無理なく叩ける譜面のLv.」を決め、それより上の譜面ほど落ちる(2026-10-07・ユーザー指示
 // 「曲の難易度補正」→ 譜面のLv.とノーツの密度で補正)。譜面のLv.は配信中の曲で EASY 4〜15 / MASTER 17〜47。
 // 密度(1秒あたりのノーツ数)は平均で「1 + Lv.÷10」くらいなので、それより詰まっている譜面はさらに少し落ちる
+// 画面に出す「無理なく叩ける譜面のLv.」(曲の得意を入れない値。得意な曲は最大+5)
+const rhythmBuddyComfortLevelOf = (mon) => {
+  const m = rhythmBuddyNormalizeMon(mon);
+  return Math.floor(rhythmBuddyComfortLevel(rhythmBuddyLevelInfo(m.exp).level, 0, m.trait));
+};
 const rhythmBuddyComfortLevel = (level, songPlays, trait) => 14 + 40 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
 const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel, density }) => {
   const m = rhythmBuddyNormalizeMon(mon);
@@ -297,7 +317,7 @@ const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs
 
 // ---- 1ライブぶん育てる ----
 // 同じ回(round)は2度数えない。戻り値の gain/levelUp/familiarUp/traitNew は結果画面に出す
-const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank, dayKey, lean, nowMs }) => {
+const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank, dayKey, lean, nowMs, score, maxScore }) => {
   const before = rhythmBuddyNormalizeMon(mon);
   if (!round || before.lastRound === round) return { mon: before, gain: 0, levelUp: 0, familiarUp: false, traitNew: '' };
   const gain = rhythmBuddyExpGain(diffId, teamRank);
@@ -316,6 +336,9 @@ const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank
     longLives: before.longLives + (Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 1 : 0),
     lastRound: rhythmBuddyStr(round, 40), lastDay: rhythmBuddyStr(dayKey, 10),
     firstAt: before.firstAt || rhythmBuddyInt(nowMs, 9e15),
+    recent: Number.isFinite(Number(score)) && Number(maxScore) > 0
+      ? [{ at: rhythmBuddyInt(nowMs, 9e15), songId: sid, diffId: RHYTHM_BUDDY_DIFF_IDS.includes(diffId) ? diffId : '', score: Math.min(rhythmBuddyInt(score, 1e7), rhythmBuddyInt(maxScore, 1e7)), max: rhythmBuddyInt(maxScore, 1e7) }, ...before.recent].slice(0, RHYTHM_BUDDY_RECENT_KEEP)
+      : before.recent,
   };
   const trait = rhythmBuddyNextTrait(after, lean);
   const traitNew = trait && trait !== before.trait ? trait : '';

@@ -32,7 +32,7 @@ const pure = (() => {
   vm.createContext(sb);
   vm.runInContext(`${BUDDY}\n;globalThis.__b={norm:rhythmBuddyNormalize,normMon:rhythmBuddyNormalizeMon,freeLeft:rhythmBuddyFreeLeft,useFree:rhythmBuddyUseFree,
     level:rhythmBuddyLevelInfo,apply:rhythmBuddyApplyLive,stars:rhythmBuddyFamiliarStars,mood:rhythmBuddyMood,moods:RHYTHM_BUDDY_MOODS,
-    play:rhythmBuddyPlay,lean:rhythmBuddySpeciesLean,day:rhythmBuddyDayKey,key:RHYTHM_BUDDY_KEY,free:RHYTHM_BUDDY_FREE_PER_DAY,max:RHYTHM_BUDDY_LEVEL_MAX,need:rhythmBuddyNeedExp};`, sb);
+    play:rhythmBuddyPlay,lean:rhythmBuddySpeciesLean,comfort:rhythmBuddyComfortLevelOf,day:rhythmBuddyDayKey,key:RHYTHM_BUDDY_KEY,free:RHYTHM_BUDDY_FREE_PER_DAY,max:RHYTHM_BUDDY_LEVEL_MAX,need:rhythmBuddyNeedExp};`, sb);
   return sb.__b;
 })();
 {
@@ -62,6 +62,12 @@ const pure = (() => {
   const r1b = b.apply(r1.mon, { round: 'r1', songId: 'songA', diffId: 'HARD', durationMs: 120000, teamRank: 'A', dayKey: d1, lean: 'steady', nowMs: 2 });
   check('1ライブで経験値・回数・なじみ・難易度の熟練が増える', r1.gain > 0 && r1.mon.lives === 1 && r1.mon.songs.songA === 1 && r1.mon.diffs.HARD === 1);
   check('同じ回(round)は2度数えない', r1b.gain === 0 && r1b.mon.lives === 1);
+  const rs = b.apply(null, { round: 'rs', songId: 'songA', diffId: 'MASTER', teamRank: 'S', dayKey: d1, nowMs: 5, score: 812345, maxScore: 1000000 });
+  check('スコアの伸びのために、その回のスコアと満点を覚える', rs.mon.recent.length === 1 && rs.mon.recent[0].score === 812345 && rs.mon.recent[0].max === 1000000 && rs.mon.recent[0].diffId === 'MASTER');
+  let many = null; for (let i = 0; i < 40; i += 1) many = b.apply(many, { round: `m${i}`, songId: 'songA', diffId: 'EASY', teamRank: 'C', dayKey: d1, nowMs: i, score: i, maxScore: 600000 }).mon;
+  check('覚えるのは最近30回まで(新しい順)', many.recent.length === 30 && many.recent[0].score === 39);
+  check('壊れたスコアの記録は捨てる', b.normMon({ recent: [null, { score: 9, max: 5 }, { score: 'x', max: 10 }, 7] }).recent.length === 1);
+  check('叩ける譜面Lv.の目安は、育つほど上がる(Lv.1 で14前後・Lv.100 で50台)', b.comfort(null) >= 12 && b.comfort(null) <= 16 && b.comfort({ exp: 1e9 }) >= 50, `${b.comfort(null)} → ${b.comfort({ exp: 1e9 })}`);
   check('難しい難易度・高いチームランクほど経験値が多い',
     b.apply(null, { round: 'x', diffId: 'MASTER', teamRank: 'S' }).gain > b.apply(null, { round: 'x', diffId: 'EASY', teamRank: 'C' }).gain);
   check('なじみは0〜5の星。職人型は早くたまる', b.stars(0, '') === 0 && b.stars(1, '') === 1 && b.stars(99, '') === 5 && b.stars(4, 'artisan') > b.stars(4, ''));
@@ -197,13 +203,15 @@ const makeClient = (name, { brain = true } = {}) => {
   api.M.onStart((info) => starts.push(info));
   api.M.setCatalog(['songA', 'songB', 'songC'], { songA: 60000, songB: 90000, songC: 120000 });
   const plays = [];
+  const refunds = [];
   if (brain) {
     api.M.setCpuBrain({
       play: (req) => { plays.push(req); return { score: 650000, maxCombo: 300, judgments: { MARVELOUS: 300, EXCELLENT: 50, GREAT: 20, GOOD: 5, BAD: 2, MISS: 3 }, fast: 30, slow: 47 }; },
       pick: () => 'songC',
+      refund: (masuId) => refunds.push(masuId),
     });
   }
-  return { name, ...api, starts, plays };
+  return { name, ...api, starts, plays, refunds };
 };
 const view = (c) => c.M.view();
 const phaseOf = (c) => (view(c) ? view(c).room.phase : '-');
@@ -217,7 +225,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(3000);
   check('部屋に入ったら相棒を呼べる', a.M.canSummon() === true);
   check('相棒を呼べる', a.M.summon(MATE) === true);
-  check('1部屋に1体まで(2体目は呼べない)', a.M.canSummon() === false && a.M.summon(MATE) === false);
+  check('1人1体まで(自分の2体目は呼べない)', a.M.canSummon() === false && a.M.summon(MATE) === false);
   clock.advance(2500);
   const v = view(a);
   const cpu = v.members.find((m) => m.cpu);
@@ -256,11 +264,13 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(2500);
   const seen = view(b).members.find((m) => m.cpu);
   check('ほかの人にも相棒が見え、CPUのしるし・種類・染色の色が届く', seen && seen.name === 'モッチー' && seen.mb === 'mocchi' && seen.mc.join('|') === 'red|custom:120:50:80', seen && JSON.stringify({ mb: seen.mb, mc: seen.mc }));
-  check('ほかの人の端末では相棒を呼べない(1部屋1体)', b.M.canSummon() === false);
   check('相棒は部屋主にならない', view(b).hostId === view(a).selfId && view(b).members.length === 3);
+  check('ほかの人も自分のマスモンを1体呼べる(1人1体)', b.M.canSummon() === true && b.M.summon({ ...MATE, masuId: 'masu_b', name: 'スエゾー' }) === true);
+  clock.advance(2500);
+  check('2体そろって並ぶ。人が先、呼んだマスモンはうしろ', view(a).members.length === 4 && view(a).members.map((m) => (m.cpu ? 'c' : 'h')).join('') === 'hhcc', view(a).members.map((m) => (m.cpu ? 'c' : 'h')).join(''));
   a.M.leave();
   clock.advance(1000);
-  check('呼んだ人が抜けると、相棒もすぐいなくなる', view(b).members.length === 1 && !view(b).members.some((m) => m.cpu), String(view(b).members.length));
+  check('呼んだ人が抜けると、その人のマスモンもすぐいなくなる(ほかの人のマスモンは残る)', view(b).members.length === 2 && view(b).members.filter((m) => m.cpu).length === 1 && view(b).members.find((m) => m.cpu).name === 'スエゾー', view(b).members.map((m) => m.name).join(','));
   b.M.leave();
 }
 
@@ -290,6 +300,23 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   const seenByA = view(a).members.find((m) => m.cpu).res;
   check('ほかの人にも、演奏が終わったあとで相棒の結果が届く', seenByA && seenByA.score === 650000 && phaseOf(a) === 'result');
   a.M.leave(); b.M.leave();
+}
+
+// B-5 人が来たら、呼んだマスモンが席をゆずる(5人まで。人が優先)
+{
+  const cs = ['A', 'B', 'C', 'D'].map((n) => makeClient(n));
+  cs.forEach((c, i) => join(c, 'FULL', 'private', i));
+  clock.advance(3000);
+  check('4人の部屋で、1人がマスモンを呼べる', cs[0].M.summon(MATE) === true);
+  clock.advance(2500);
+  check('5人で満員になり、ほかの人はもう呼べない', view(cs[1]).members.length === 5 && cs[1].M.canSummon() === false);
+  const e = makeClient('E');
+  join(e, 'FULL', 'private', 9);
+  clock.advance(4000);
+  check('人が入ってくると、呼んだマスモンが席をゆずって帰る', view(e).full === false && view(cs[1]).members.length === 5 && !view(cs[1]).members.some((m) => m.cpu), view(cs[1]).members.map((m) => m.name).join(','));
+  check('席をゆずったぶん、呼んだ人に回数・券が返る(1回だけ)', cs[0].refunds.length === 1 && cs[0].refunds[0] === 'masu_1', JSON.stringify(cs[0].refunds));
+  check('席をゆずったあとは、また呼べる(空きがあれば)', cs[0].M.myBuddy() === null);
+  [...cs, e].forEach((c) => c.M.leave());
 }
 
 // B-4 古い端末との行き来(相棒の項目が無い知らせ)

@@ -156,8 +156,8 @@
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
 | `mh_rhythm_multi_penalty_v1` | object / `null` | みんなで対戦(マルチ)で、公開ルームのライブを途中でやめたときの入室待ち `{ until: 時刻(ms) }`。3分を超える値・壊れた値は0扱い(`rhythmMultiPenaltyLeftMs`)。2026-10-02 追加 |
 | `mh_rhythm_multi_record_v1` | object / `null` | みんなで対戦の記録(2026-10-03 追加)。`{ lives, mvp, bestAvg, bestStreak, lastRound, recent:[{at, round, songId, avg, score, n, streak, mvp, quit, names}] }`。最近は30回ぶん。読むときは `rhythmMultiNormalizeRecord` を通し(無い・壊れた値は0から)、同じ回(`round`)は2度数えない(`rhythmMultiAddRecord`) |
-| `mh_rhythm_buddy_v1` | object / `null` | 相棒(2026-10-07 追加・docs/spec/RHYTHM_BUDDY.md)。`{ day, used, mons:{ [マスモンid]: { exp, lives, songs:{曲id:回数}, diffs:{EASY…MASTER:回数}, longLives, trait, traitAt, lastRound, lastDay, firstAt } } }`。`day`/`used` は1日の無料回数(朝5:00区切り)。マスモン本体(`mh_masu_mons`)には書かない。読むときは `rhythmBuddyNormalize` を通し(無い・壊れた値は既定値)、同じ回(`lastRound`)は2度育てない(`rhythmBuddyApplyLive`) |
-| `mh_rhythm_buddy_seen_v1` | boolean | 「相棒を呼べるようになった」の一度きりの案内を見たか(2026-10-07 追加) |
+| `mh_rhythm_buddy_v1` | object / `null` | マルチに呼んだマスモンのビートLvなど(2026-10-07 追加・docs/spec/RHYTHM_BUDDY.md)。`{ day, used, mons:{ [マスモンid]: { exp, lives, songs:{曲id:回数}, diffs:{EASY…MASTER:回数}, longLives, trait, traitAt, lastRound, lastDay, firstAt } } }`。`day`/`used` は1日の無料回数(朝5:00区切り)。マスモン本体(`mh_masu_mons`)には書かない。読むときは `rhythmBuddyNormalize` を通し(無い・壊れた値は既定値)、同じ回(`lastRound`)は2度育てない(`rhythmBuddyApplyLive`) |
+| `mh_rhythm_buddy_seen_v1` | boolean | 「マスモンを呼べるようになった」の一度きりの案内を見たか(2026-10-07 追加) |
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_chart_notes_v1` | object / `{}` | 譜面メモ(デバッグ限定・2026-09-26)。`曲id|難易度` → 区間ごとの 👍/👎 とひとことメモ。譜面の作り直しを見分ける `fingerprint` 付き(`normalizeRhythmChartNotes`) |
 | `mh_rhythm_play_log_device_v1` | string / 無し | 遊んだ記録(2026-09-28)の端末ごとのでたらめなID(英小文字と数字20文字)。記録の送信(`rhythmPlayLogSend`)だけが使い、無い・形が違うときは作り直す。名前・ブリーダーIDとは結び付かない(`docs/spec/RHYTHM_PLAY_LOG.md`) |

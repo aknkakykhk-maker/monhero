@@ -1657,43 +1657,43 @@ addAssistantLinePack({
     ],
   },
 });
-// 相棒(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。モードえらびの吹き出しに、相棒の案内を1本ずつ足す
+// マスモンを呼ぶ(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。モードえらびの吹き出しに、案内を1本ずつ足す
 addAssistantLinePack({
   id: 'rhythmBuddyModeSelect',
-  label: 'モンヒロビート 相棒の案内',
+  label: 'モンヒロビート マスモンを呼ぶ案内',
   lines: {
     rhythmModeSelect: [
-      { e:'excited', t:'マスモンを相棒にして、マルチに呼べるようになったよ！ ひとりでもすぐライブできちゃう✨' },
+      { e:'excited', t:'マルチにマスモンを呼べるようになったよ！ ひとりでもすぐライブできちゃう✨ 一緒に遊ぶほどビートLvが上がるんだって！' },
     ],
   },
 });
 addAssistantLinePack({
   id: 'rhythmBuddyModeSelectKiki',
   assistantId: 'kiki',
-  label: 'きき・モンヒロビート 相棒の案内',
+  label: 'きき・モンヒロビート マスモンを呼ぶ案内',
   lines: {
     rhythmModeSelect: [
-      { e:'happy',   t:'マスモンを相棒としてマルチに呼べまつ。一緒に遊ぶほど上手になるでつ。' },
+      { e:'happy',   t:'マルチにマスモンを呼べまつ。一緒に遊ぶほどビートLvが上がって、上手になるでつ。' },
     ],
   },
 });
 addAssistantLinePack({
   id: 'rhythmBuddyModeSelectMomosuke',
   assistantId: 'momosuke',
-  label: 'ももすけ・モンヒロビート 相棒の案内',
+  label: 'ももすけ・モンヒロビート マスモンを呼ぶ案内',
   lines: {
     rhythmModeSelect: [
-      { e:'wink',    t:'相棒のマスモン、育てるとどんどん上手になるんだって。ももより上手くなったら…ゆるさないんだから♡' },
+      { e:'wink',    t:'マルチに呼んだマスモン、育てるとどんどん上手になるんだって。ももより上手くなったら…ゆるさないんだから♡' },
     ],
   },
 });
 addAssistantLinePack({
   id: 'rhythmBuddyModeSelectDra',
   assistantId: 'dra',
-  label: 'ドラ・モンヒロビート 相棒の案内',
+  label: 'ドラ・モンヒロビート マスモンを呼ぶ案内',
   lines: {
     rhythmModeSelect: [
-      { e:'excited', t:'マスモンを相棒にして、マルチに呼べるんだぞ。おでも一緒に叩きたいなあ' },
+      { e:'excited', t:'マルチにマスモンを呼べるんだぞ。おでも一緒に叩きたいなあ' },
     ],
   },
 });
