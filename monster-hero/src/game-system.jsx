@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c0ccf617caf00cdc
+// generated-sha256: 94a77074b133301c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 19:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 19:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23648,6 +23648,39 @@ const rhythmBuddyFamiliarStars = (plays, trait) => {
   return RHYTHM_BUDDY_FAMILIAR_STEPS.filter((step) => n >= step).length;
 };
 // 得意な曲(回数の多い順)
+// 相棒が曲をえらぶときの理由(画面へ出すひとこと)。通信には文字の短いコードだけ流す
+const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
+  fav: 'この曲が得意!', hard: 'ちょっと難しい曲に挑戦!', safe: '今日は慣れた曲で安心したい', long: '長い曲をのんびり楽しみたい',
+  fun: '気分で選んだよ', new: 'はじめての曲にワクワク!',
+});
+// 新しい曲(まだ一緒に遊んでいない曲)に挑戦する確率。性格と今日の調子で変わる
+const rhythmBuddyNewSongChance = (trait, moodId) => {
+  const base = { jester: 0.25, brave: 0.2, stubborn: 0.04, serious: 0.08 }[trait];
+  const mood = { great: 0.08, good: 0.04, bad: -0.04, awful: -0.08 }[moodId] || 0;
+  return Math.round(Math.min(0.4, Math.max(0, (base == null ? 0.12 : base) + mood)) * 100) / 100;
+};
+// 相棒の選曲(2026-10-07・ユーザー指示「もうちょい選曲に意思をもたせる」)。本番の曲は人の選曲だけで決まるので、
+// これはシャッフル画面で見せる「相棒の気持ち」。info(songId) → { level, durationMs } は曲の最高Lv.と長さ
+// 返り値 { songId, why }。why は RHYTHM_BUDDY_PICK_WHY のキー。遊べる曲が無ければ songId は ''
+const rhythmBuddyChooseSong = (mon, catalog, { mood = null, info = null, rand = Math.random } = {}) => {
+  const m = rhythmBuddyNormalizeMon(mon);
+  const list = Array.isArray(catalog) ? catalog.filter((id) => typeof id === 'string' && id) : [];
+  if (!list.length) return { songId: '', why: '' };
+  const pickOne = (arr) => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
+  const played = rhythmBuddyTopSongs(m, RHYTHM_BUDDY_SONG_KEEP).map((x) => x.songId).filter((id) => list.includes(id));
+  if (!played.length) return { songId: pickOne(list), why: 'new' };
+  const fresh = list.filter((id) => !played.includes(id));
+  const moodId = mood && mood.id;
+  if (fresh.length && rand() < rhythmBuddyNewSongChance(m.trait, moodId)) return { songId: pickOne(fresh), why: 'new' };
+  const top = played.slice(0, 5);
+  const stat = (id, key) => { try { return Number(info && info(id) && info(id)[key]) || 0; } catch (_) { return 0; } };
+  const most = (arr, key) => arr.reduce((a, b) => (stat(b, key) > stat(a, key) ? b : a), arr[0]);
+  if (m.trait === 'easygoing' && info) return { songId: most(top, 'durationMs'), why: 'long' };
+  if (moodId === 'bad' || moodId === 'awful' || m.trait === 'worrier') return { songId: top[0], why: 'safe' };
+  if ((moodId === 'great' || moodId === 'good' || m.trait === 'brave') && info) return { songId: most(top, 'level'), why: 'hard' };
+  if (m.trait === 'jester') return { songId: pickOne(top), why: 'fun' };
+  return { songId: pickOne(top.slice(0, 3)), why: 'fav' };
+};
 const rhythmBuddyTopSongs = (mon, count = 5) => {
   const m = rhythmBuddyNormalizeMon(mon);
   return Object.keys(m.songs).map((songId) => ({ songId, plays: m.songs[songId], stars: rhythmBuddyFamiliarStars(m.songs[songId], m.trait) }))
@@ -37937,6 +37970,8 @@ const rhythmMultiCleanMessage = (raw) => {
       out.owner = rhythmMultiText(raw.owner, 40);
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
       out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map((c) => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [];
+      // 選んだ理由(相棒の気持ち。決まった短いコードだけ通す)
+      out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
     }
     return out;
   }
@@ -38099,7 +38134,7 @@ const RHYTHM_MULTI = (() => {
     socket.send({
       t: 'hb', id: c.id, name: c.name, level: c.level, joinedAt: c.joinedAt, icon: '', frame: '',
       pick: c.pick, pickRound: c.pickRound, readyRound: c.readyRound, diff: c.diff, playing: c.playing,
-      open: false, mode: s.mode, res: c.res || undefined, cpu: 1, owner: s.selfId, mb: c.mb, mc: c.mc,
+      open: false, mode: s.mode, res: c.res || undefined, cpu: 1, owner: s.selfId, mb: c.mb, mc: c.mc, pw: c.pickWhy || '',
     });
   };
   // 相棒の結果を作って知らせる(自分の演奏が終わったとき。自分が参加していないライブなら始まってすぐ)
@@ -38222,8 +38257,13 @@ const RHYTHM_MULTI = (() => {
     if (c.diff !== me.diff) { c.diff = me.diff; changed = true; }
     if (r.phase === 'select' && c.pickRound !== r.round) {
       let pick = '';
-      try { pick = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : ''; } catch (_) { pick = ''; }
+      let why = '';
+      try {
+        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        if (r && typeof r === 'object') { pick = String(r.songId || ''); why = String(r.why || ''); } else pick = String(r || '');
+      } catch (_) { pick = ''; why = ''; }
       c.pick = pick && catalog.includes(pick) ? pick : RHYTHM_MULTI_OMAKASE;
+      c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
     }
@@ -38314,7 +38354,7 @@ const RHYTHM_MULTI = (() => {
         ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, icon: msg.icon, frame: msg.frame, bid: msg.bid,
         pick: msg.pick, pickRound: msg.pickRound, readyRound: msg.readyRound, diff: msg.diff, playing: msg.playing,
         open: msg.open, res: msg.res || prev.res, seen: Date.now(),
-        cpu: msg.cpu, owner: msg.owner || '', mb: msg.mb || '', mc: msg.mc || [],
+        cpu: msg.cpu, owner: msg.owner || '', mb: msg.mb || '', mc: msg.mc || [], pickWhy: msg.pw || '',
       };
       // 部屋の進行は部屋主の知らせに従う(残り時間は受け取った時刻から数える)
       if (msg.room && fromHost()) {
@@ -39859,7 +39899,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-8 w-8" />
                 <span className="w-20 shrink-0 truncate text-[11px] font-black text-slate-300">{m.name}</span>
                 {song && <img src={rhythmSongArtSrc(song)} alt="" draggable={false} className="h-8 w-8 shrink-0 rounded-md object-cover" />}
-                <span className="min-w-0 flex-1 truncate text-[12px] font-black">{song ? rhythmSongFullName(song) : 'おまかせ'}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12px] font-black">{song ? rhythmSongFullName(song) : 'おまかせ'}</span>
+                  {m.cpu && song && RHYTHM_BUDDY_PICK_WHY[m.pickWhy] && <small data-rhythm-buddy-pick-why className="block truncate text-[10px] font-bold text-lime-200">「{RHYTHM_BUDDY_PICK_WHY[m.pickWhy]}」</small>}
+                </span>
               </li>
             ))}
           </ul>
@@ -40052,10 +40095,15 @@ const rhythmBuddyMakeBrain = (songs) => ({
       chartLevel: chart ? Number(chart.level) || 0 : 0, humans,
     });
   },
-  // 得意な曲(上位3曲)から選ぶ。遊べる曲の中に無ければおまかせ('')
+  // 性格と今日の調子で選び方が変わる(たまに新しい曲にも挑戦)。{ songId, why }。遊べる曲が無ければ songId は ''
   pick(catalog, masuId) {
-    const top = rhythmBuddyTopSongs(RHYTHM_BUDDY_STORE.get().mons[masuId], 3).filter((x) => (catalog || []).includes(x.songId));
-    return top.length ? top[Math.floor(Math.random() * top.length)].songId : '';
+    const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
+    const info = (id) => {
+      const song = (songs || []).find((x) => x.songId === id);
+      const levels = song && song.difficulties ? Object.values(song.difficulties).map((d) => Number(d && d.level) || 0) : [];
+      return { level: levels.length ? Math.max(...levels) : 0, durationMs: song ? Number(song.playDurationMs) || 0 : 0 };
+    };
+    return rhythmBuddyChooseSong(mon, catalog, { mood: rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon), info });
   },
 });
 
