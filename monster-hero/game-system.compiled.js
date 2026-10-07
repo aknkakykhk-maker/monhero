@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a49cd3f1fdd9f26
+// source-sha256: 49156053fe4008b1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 21:52";
+const BUILD_DATE = "2026-10-07 22:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -32595,6 +32595,20 @@ const RhythmTapTest = ({
           const run = runRef.current;
           return run && !run.finished && !run.paused ? Number(run.audio.songTimeMs()) || 0 : null;
         },
+        rhythmNoteResults: () => {
+          const run = runRef.current;
+          return run ? run.notes.map(note => ({
+            index: note.index,
+            done: !!note.done,
+            judgment: note._rhythmFinalJudgment ?? null,
+            deltaMs: Number.isFinite(note._rhythmDeltaMs) ? note._rhythmDeltaMs : null,
+            holdJudgment: note.holdJudgment ?? null,
+            holdDeltaMs: Number.isFinite(note.holdDeltaMs) ? note.holdDeltaMs : null,
+            endTimeMs: Number.isFinite(note.endTimeMs) ? note.endTimeMs : null,
+            releaseTargetMs: Number.isFinite(note._rhythmReleaseTargetMs) ? note._rhythmReleaseTargetMs : null,
+            endFlick: note.endFlick === true
+          })) : null;
+        },
         rhythmNotes: () => {
           const run = runRef.current;
           return run ? run.notes.map(note => ({
@@ -32619,6 +32633,7 @@ const RhythmTapTest = ({
         if (window.__mhTestHooks) {
           delete window.__mhTestHooks.rhythmSongMs;
           delete window.__mhTestHooks.rhythmNotes;
+          delete window.__mhTestHooks.rhythmNoteResults;
         }
       } catch (_) {}
     };
