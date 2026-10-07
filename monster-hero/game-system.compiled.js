@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 200510b2f161c79f
+// source-sha256: 8a7682016cefa845
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 14:27";
+const BUILD_DATE = "2026-10-07 14:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6035,7 +6035,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   symphonyEvent: 'melo_mou_hitotsu_no_sekai_e',
   rhythmMultiEvent: 'melo_haruka',
   halloweenNightEvent: 'melo_crazy_party_night_full',
-  rhythmModeSelect: 'pandora_boss_remix'
+  rhythmModeSelect: 'pandora_boss_remix',
+  masuBeat: 'six_eternel'
 });
 const BGM_BATTLE_MODE_TABS = Object.freeze([{
   id: 'challenge',
@@ -70366,6 +70367,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',
     MISSIONS: 'home',
     RHYTHM_HISTORY: 'home',
+    MASU_BEAT: 'masuBeat',
     RHYTHM_MODE_SELECT: 'rhythmModeSelect',
     RAID_JACK: 'home',
     RAID_JACK_PREP: 'home',
@@ -84817,7 +84819,7 @@ function MonsterHeroGame() {
     }, {
       id: 'other',
       label: 'その他',
-      items: [['rhythmModeSelect', 'モンヒロビート モードえらび BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM']]
+      items: [['rhythmModeSelect', 'モンヒロビート モードえらび BGM'], ['masuBeat', 'マスモン一覧(モンヒロビート) BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM']]
     }];
     const battleModes = BGM_BATTLE_MODE_TABS;
     const selected = categories.find(category => category.id === bgmArrangementCategory) || categories[0];
