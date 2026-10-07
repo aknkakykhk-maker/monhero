@@ -441,7 +441,23 @@ const Audio_ = (() => {
       // 引かないと、音に合わせて叩く人が必ずその分だけ遅れて判定される(MARVELOUSは±55ms)。
       // 見た目も判定も同じこの値から出ているので、ここ1か所でそろう。
       // 鳴らしはじめの遅延ぶんは Math.max(0,…) が 0 に留める(音が出る前にノーツが動き出さない)
-      const songTimeSeconds=()=>Math.min(buffer.duration,Math.max(0,offsetSeconds+(playing?ctx.currentTime-startedAt-outputLatencySeconds:0)));
+      // 曲の頭の無音の長さ(ms)。mp3 の先頭の遅れがブラウザで違わないかを、診断で比べるために1回だけ測る
+      const headMs=(()=>{try{const d=buffer.getChannelData(0);const n=Math.min(d.length,Math.floor(buffer.sampleRate*1.5));for(let i=0;i<n;i++){if(Math.abs(d[i])>.01)return Math.round(i/buffer.sampleRate*1000);}return -1;}catch{return null;}})();
+      const rawSongTimeSeconds=()=>Math.min(buffer.duration,Math.max(0,offsetSeconds+(playing?ctx.currentTime-startedAt-outputLatencySeconds:0)));
+      // 曲の時計の元になる ctx.currentTime は、128サンプルごとの階段状に進む(約3〜20msの段)。同じ値が続くコマは、曲が止まって見える。
+      // 直し方 smoothSongClock を入れた端末では、段の間を performance.now() でなめらかに埋める
+      // (段の値へゆっくり寄せ、離れすぎたら段の値に戻す。入れていない端末では、これまでどおり段の値そのまま)。2026-10-07
+      let smoothSong=0,smoothPerf=0;
+      const songTimeSeconds=()=>{
+        const raw=rawSongTimeSeconds();
+        if(!playing||!rhythmTouchFixOn('smoothSongClock')||typeof performance==='undefined'){smoothPerf=0;return raw;}
+        const p=performance.now();
+        if(!(smoothPerf>0)){smoothSong=raw;smoothPerf=p;return raw;}
+        let next=smoothSong+(p-smoothPerf)/1000;
+        if(Math.abs(raw-next)>.05)next=raw;else next+=(raw-next)*.15;
+        smoothSong=Math.min(buffer.duration,Math.max(smoothSong,next));smoothPerf=p;
+        return smoothSong;
+      };
       if(autoStart)startSource(0);
       return {
         // autoStart:false で用意したぶんを、頭から鳴らし始める。
@@ -449,6 +465,8 @@ const Audio_ = (() => {
         start:()=>{if(playing||stopped||naturallyEnded)return playing;return startSource(0);},
         started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
+        // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
+        info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
         durationMs:buffer.duration*1000,
         ended:()=>naturallyEnded||songTimeSeconds()>=buffer.duration,
         paused:()=>!playing&&!stopped&&!naturallyEnded,

@@ -1217,14 +1217,40 @@ const RHYTHM_INPUT_AGE_MAX_MS=80;
 const RHYTHM_INPUT_AGE_BASE_ALIGNED_MS=25;
 let rhythmInputAgeFloorMs=Infinity;
 const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
+// ===== 実機でしか分からないことを、診断で数える(2026-10-07・ユーザー指示「実機で確認しないと直せないものは、直せる仕組みを作って」) =====
+// タッチの診断の行(stats.timing)へ入れる。判定・スコア・保存には関わらない。数えるのは数だけ。
+//   ageHist  … 入力が届くまでの遅れ(イベントが起きてから処理されるまで)の分布。25ms / 50 / 80 / 150 / 300 の区切りで6つ
+//   ageCapped … 補正の上限(80ms)を超えて遅れて届いた入力の数
+//   frames / stalls / maxStepMs … 曲の時計を1コマごとに読んだ数 / 前のコマと同じ値だった数(=止まって見える) / いちばん大きかった1コマの進み
+//   hidden … 演奏中にアプリを離れた(画面が隠れた)回数。pen … ペンで直接押した回数
+//   outLatMs / baseLatMs / hasTs / rate / headMs … その端末の出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音の長さ
+const RHYTHM_TIMING_DIAG=(()=>{
+  const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
+  let stats=zero(),meta={},lastSong=null;
+  const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
+  return {
+    reset(){stats=zero();meta={};lastSong=null;},
+    age(value){const v=Number(value);if(!(v>=0)||v>5000)return;stats.ageHist[bucket(v)]++;if(v>RHYTHM_INPUT_AGE_MAX_MS)stats.ageCapped++;},
+    frame(songMs){const v=Number(songMs);if(!Number.isFinite(v))return;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;},
+    meta(value){if(value&&typeof value==='object')meta={...meta,...value};},
+    hidden(){stats.hidden++;},
+    pen(){stats.pen++;},
+    snapshot(){return {...stats,ageHist:stats.ageHist.slice(),...meta};},
+  };
+})();
+// 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
+const RHYTHM_INPUT_AGE_CAP_WIDE_MS=300;
+const rhythmInputAgeCapMs=()=>rhythmTouchFixOn('inputAgeCap')?RHYTHM_INPUT_AGE_CAP_WIDE_MS:RHYTHM_INPUT_AGE_MAX_MS;
 const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
   if(!Number.isFinite(stamp)||!Number.isFinite(now))return 0;
   const age=now-stamp;
   if(!(age>0))return 0;
   if(age<rhythmInputAgeFloorMs)rhythmInputAgeFloorMs=age;
-  if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
-  return rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?RHYTHM_INPUT_AGE_MAX_MS:0;
+  RHYTHM_TIMING_DIAG.age(age);
+  const cap=rhythmInputAgeCapMs();
+  if(age<=cap)return age;
+  return rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?cap:0;
 };
 // ノーツを「もう誰も取れない」として見逃しMISSにする時刻。
 //
@@ -1238,6 +1264,8 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
 // 受け付ける広さそのもの(RHYTHM_INPUT_MATCH_WINDOW_MS)は広げていない。
 // 判定は入力側の時刻で測るので、遅れて届いた入力が窓の外なら今までどおりMISSになる。
 const RHYTHM_MISS_RECLAIM_MS = RHYTHM_INPUT_MATCH_WINDOW_MS + RHYTHM_INPUT_AGE_MAX_MS;
+// 直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん(補正の上限)も長くする。入れていない端末では上と同じ値
+const rhythmMissReclaimMs=()=>RHYTHM_INPUT_MATCH_WINDOW_MS+rhythmInputAgeCapMs();
 
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
@@ -2478,13 +2506,42 @@ const rhythmTouchPlatform=()=>{
 const RHYTHM_TOUCH_FIXES={
   lateInputEffectDown:true,    // 判定⑤「50ms以上遅れて届いたタッチ」→ 遅れが続いたら演出を一段下げる(「重いときは演出を自動で控えめに」と同じ道)。2026-10-05に入れた(iPhoneだけ)
   wideEdge:false,              // 判定⑥「道の外で無視した指」→ 道の外の受け付けを、サブレーン1本ぶんから2本ぶんへ広げる
+  inputAgeCap:false,           // 遅れて届いた入力(stats.timing.ageCapped が多い)→ 遅れの補正の上限を80msから300msへ広げる(基準がそろっている端末だけ)
+  smoothSongClock:false,       // 曲の時計が階段状(stats.timing.stalls が多い)→ 曲の時計を、コマの間でなめらかに進める
+  autoPauseOnHidden:false,     // 演奏中にアプリを離れた(stats.timing.hidden)→ 自動で一時停止する
   allPlatforms:false,
+};
+// この端末だけで直し方を入れる/切る(デバッグ画面から。新しい保存キー mh_rhythm_fix_override_v1・既存のキーは触らない)。
+// 実機で試して、よければ上の RHYTHM_TOUCH_FIXES を true にして全員へ入れる。値が無い名前は、上の表のとおり。
+const RHYTHM_TOUCH_FIX_OVERRIDE_KEY='mh_rhythm_fix_override_v1';
+let rhythmTouchFixOverrideCache=null;
+const rhythmTouchFixOverride=()=>{
+  if(rhythmTouchFixOverrideCache)return rhythmTouchFixOverrideCache;
+  const value={};
+  try{
+    const raw=typeof localStorage!=='undefined'?localStorage.getItem(RHYTHM_TOUCH_FIX_OVERRIDE_KEY):null;
+    const parsed=raw?JSON.parse(raw):null;
+    if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))for(const name of Object.keys(RHYTHM_TOUCH_FIXES))if(name!=='allPlatforms'&&typeof parsed[name]==='boolean')value[name]=parsed[name];
+  }catch{}
+  rhythmTouchFixOverrideCache=value;
+  return value;
+};
+const rhythmTouchFixSetOverride=(name,enabled)=>{
+  if(!(name in RHYTHM_TOUCH_FIXES)||name==='allPlatforms')return false;
+  const next={...rhythmTouchFixOverride()};
+  if(enabled===null||enabled===undefined)delete next[name];else next[name]=!!enabled;
+  rhythmTouchFixOverrideCache=next;
+  try{if(typeof localStorage!=='undefined')localStorage.setItem(RHYTHM_TOUCH_FIX_OVERRIDE_KEY,JSON.stringify(next));}catch{}
+  return true;
 };
 const RHYTHM_TOUCH_FIX_LATE_BURST=3;       // 3秒の枠のなかで、これだけ遅れて届いたら演出を一段下げる
 const RHYTHM_TOUCH_FIX_WIDE_EDGE_SUB_LANES=2;
 let rhythmTouchPlatformCache=null;
 const rhythmTouchFixOn=name=>{
-  if(name==='allPlatforms'||RHYTHM_TOUCH_FIXES[name]!==true)return false;
+  if(name==='allPlatforms')return false;
+  const override=rhythmTouchFixOverride();
+  if(typeof override[name]==='boolean')return override[name];
+  if(RHYTHM_TOUCH_FIXES[name]!==true)return false;
   if(RHYTHM_TOUCH_FIXES.allPlatforms===true)return true;
   if(rhythmTouchPlatformCache===null)rhythmTouchPlatformCache=rhythmTouchPlatform();
   return rhythmTouchPlatformCache==='ios';
