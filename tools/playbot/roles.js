@@ -13,6 +13,7 @@ const { tacticsScenario } = require('./scenarios/tactics');
 const { shopScenario } = require('./scenarios/shop');
 const { growScenario } = require('./scenarios/grow');
 const { multiScenario } = require('./scenarios/multi');
+const { raidScenario, halloweenScenario } = require('./scenarios/event');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -108,6 +109,14 @@ const ROLES = [
       await phase('買う途中で読み込み直す', () => reloadMidwayScenario(s));
       await phase('ブラウザの戻る', () => browserBackScenario(s));
       await phase('バトル中に裏へ回す', () => backgroundScenario(s));
+    },
+  },
+  {
+    id: 'event', name: 'イベント係', prepare: 'veteran', boot: true,
+    does: '開催中のレイド(ジャック)にバトルで1回挑戦し、残り回数が1回分だけ減るか・ダメージの記録が送られるかを見る。ハロウィン・ナイトの札も押す',
+    run: async (s, { phase }) => {
+      await phase('レイドに挑戦', () => raidScenario(s));
+      await phase('ハロウィン・ナイトの札', () => halloweenScenario(s));
     },
   },
   {
