@@ -1460,6 +1460,27 @@ function MonsterHeroGame() {
   // setOwnedItems の反映は非同期なので、クリア報酬の付与と限界突破の消費はこのrefの値を土台にする
   const ownedItemsRef = useRef(ownedItems);
   ownedItemsRef.current = ownedItems;
+  // マスモン一覧(モンヒロビート)の戻り先(M/B管理 か モンヒロビートのモードえらび)
+  const [masuBeatBack, setMasuBeatBack] = useState('MB_MANAGEMENT');
+  const openMasuBeat = (from) => { setMasuBeatBack(from === 'RHYTHM_MODE_SELECT' ? 'RHYTHM_MODE_SELECT' : 'MB_MANAGEMENT'); setGameState('MASU_BEAT'); };
+  // セッション券を1枚使う(モンヒロビートのマルチでマスモンを呼ぶとき。docs/spec/RHYTHM_BUDDY.md)。
+  // 1日の無料ぶんを使い切ったあとにだけ呼ばれる。持っていなければ false
+  const consumeBuddyTicket = async () => {
+    const have = ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID);
+    if (have <= 0) return false;
+    const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    return true;
+  };
+  // 使ったセッション券を1枚返す(人が来て、呼んだマスモンが席をゆずったとき)
+  const refundBuddyTicket = async () => {
+    const nextItems = { ...ownedItemsRef.current, [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+  };
   const [trainingSelectedId, setTrainingSelectedId] = useState(null);
   const [trainingDifficulty, setTrainingDifficulty] = useState('BEGINNER');
   const [trainingSession, setTrainingSession] = useState(null);
@@ -4282,6 +4303,9 @@ function MonsterHeroGame() {
   // 6レーンの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   // (新しいキーは作らない)。みんなで対戦の公開フラグが立っているときだけ並べる
   const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
+  // マルチにマスモンを呼べるようになった・ビートLvの知らせ(2026-10-07・ユーザー指示「ストーリー作ってからの公開」)。
+  // みんなで対戦の知らせと同じく、HOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる(新しいキーは作らない)
+  const RHYTHM_MASU_CALL_STORY_ID = 'rhythm_masu_call_2026_10_07';
   // レイドの遊び方(2026-10-04・ユーザー指示「最初のストーリーを終了後にレイドの遊び方説明をいれて」)。
   // ハロウィン・ナイト第1部を見終えたら続けて1度だけ流す。公開フラグ(raidJack)が立つまでは流さない
   const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
@@ -4292,7 +4316,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -4406,6 +4430,8 @@ function MonsterHeroGame() {
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
       // みんなで対戦・フレンドの知らせ。いちばん新しいお知らせなので、ビートP・6レーンより先に流す
       const multiFriendsStoryReady = RELEASE_FLAGS.rhythmMulti === true && notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID);
+      // マスモンを呼ぶ・ビートLvの知らせ。みんなで対戦の知らせを見たあとに流す(呼ぶ場所がマルチの部屋なので)
+      const masuCallStoryReady = RELEASE_FLAGS.rhythmMulti === true && !notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID) && notPlayedYet(RHYTHM_MASU_CALL_STORY_ID);
       // ビートPアップキャンペーンの知らせ。期間中かどうかは見回りのたびに数え直す(CLAUDE.md ⑥-4)。
       // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
@@ -4442,6 +4468,7 @@ function MonsterHeroGame() {
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
+        else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
         else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
         else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
@@ -4458,6 +4485,7 @@ function MonsterHeroGame() {
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
+      else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -5851,7 +5879,7 @@ function MonsterHeroGame() {
       if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID,
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID,
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -5870,6 +5898,12 @@ function MonsterHeroGame() {
       if (RELEASE_FLAGS.rhythmMulti === true && wasOnboarded
         && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MULTI_FRIENDS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
+      }
+      // マスモンを呼ぶ・ビートLvの知らせ。みんなで対戦の知らせを見たあとに流す
+      if (RELEASE_FLAGS.rhythmMulti === true && wasOnboarded
+        && normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MULTI_FRIENDS_STORY_ID)
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MASU_CALL_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
       }
       // 6レーンの知らせ。ほかの会話が並んでいればそちらを先にする
       if (RELEASE_FLAGS.rhythmMode === true && wasOnboarded
@@ -6943,6 +6977,7 @@ function MonsterHeroGame() {
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
+    rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
@@ -15873,7 +15908,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
               {managementTab==='monster'?<>
                 {managementLink(<List size={18}/>,'ベースモン一覧','解放したベースモンを並べて確かめる',()=>setGameState('OWNED_MONSTERS'))}
-                {managementLink(<Star size={18}/>,'マスモン一覧','育てたマスモンの絆・状態を見る',()=>setGameState('MASU_MONS'))}
+                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','育てたマスモンの絆・状態を見る',()=>setGameState('MASU_MONS'))}
+                {/* モンヒロビートのマルチに呼んだマスモンの育ち具合(ビートLv)。バトルの育ちとは別(docs/spec/RHYTHM_BUDDY.md) */}
+                {RELEASE_FLAGS.rhythmMulti===true&&managementLink(<Activity size={18}/>,'マスモン一覧(モンヒロビート)','マルチに呼んだマスモンのビートLv・調子・得意な曲を見る',()=>openMasuBeat('MB_MANAGEMENT'),{'data-mb-masu-beat':true})}
                 {managementLink(<BookOpen size={18}/>,'モンスター図鑑','出会ったモンスターと血統をふり返る',()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');})}
                 {managementLink(<Users size={18}/>,'モンスター編成','バトルへ連れていくモンスターを決める',()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds,unlockedTeachingIds));setRosterTab('monster');setGameState('ROSTER');})}
                 {managementLink(<Flag size={18}/>,'放牧設定','HOMEに出しておくマスモンを選ぶ',openPastureSettings)}
@@ -17438,7 +17475,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
@@ -18448,6 +18485,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {/* マスモン一覧: ラン終了時に登録した固有インスタンス。タップで詳細・改名・強化ポイント使用 */}
+        {/* マスモン一覧(モンヒロビート)。M/B管理とモンヒロビートのモードえらびから開き、開いた画面へ戻る */}
+        {gameState==='MASU_BEAT'&&(
+          <MasuBeatScreen masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} tickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)}
+            onBack={()=>setGameState(masuBeatBack)} backLabel={masuBeatBack==='MB_MANAGEMENT'?'M/B管理へ戻る':'モードえらびへ戻る'}/>
+        )}
         {gameState==='MASU_MONS'&&(
           <MasuMonsScreen
             masuMons={masuMons}

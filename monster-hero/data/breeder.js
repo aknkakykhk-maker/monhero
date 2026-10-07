@@ -403,6 +403,10 @@ const BREEDER_MARKET_ITEMS = [
   // breakthroughItemCost が正本で、ここには説明だけを書く。
   { id:'rainbow_psyche', name:"虹のプシュケー", type:'item', emoji:"🌈", cost:0, shop:false, usage:'breakthrough',
     desc:"マスモンの限界突破に使う。必要数は1回目が5個で、限界突破1回ごとに1個ずつ増える(2回目6個、3回目7個…)。チャレンジモード・クイックモードをクリアすると、選んだ難易度に応じてもらえる。" },
+  // セッション券(docs/spec/RHYTHM_BUDDY.md・2026-10-07)。モンヒロビートのマルチで、マスモンをCPUとして呼ぶ。
+  // 1日3回の無料ぶんを使い切ったあとに1枚使う。マーケットでは売らない(ビートP交換所・ログインボーナス・ミッションで手に入る)
+  { id:'session_ticket', name:"セッション券", type:'item', emoji:"🎶", cost:0, shop:false, usage:'rhythmBuddy',
+    desc:"モンヒロビートのマルチで、マスモンを部屋に呼ぶときに使う。1日3回までは無料で、そのあとは1枚で1回呼べる。呼んだ部屋にいるあいだは何曲でも一緒に遊ぶ。" },
   // 助手みゅあの表情アイコン(8種)。アイコンタブの最後に並ぶ
   ...MYUA_MARKET_ICONS,
   // 助手ききの表情アイコン(8種)。みゅあと同じ並びで続ける

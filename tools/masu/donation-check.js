@@ -77,5 +77,5 @@ check('寄付の戻り先は神殿', /resetDonationFlow\(\);setGameState\('TEMPL
 // 2026-09-18: 画面の頭を共通部品(ScreenHead)へ寄せたので、h2 は部品の中に1つだけになり、
 // 画面の名前は title で渡す形になった。
 check('一覧タイトルが統一されている',
-  source.includes('<ScreenHead title="ベースモン一覧"') && source.includes('<ScreenHead title="マスモン一覧"'));
+  source.includes('<ScreenHead title="ベースモン一覧"') && source.includes('<ScreenHead title="マスモン一覧(バトル)"'));
 process.exit(failed ? 1 : 0);

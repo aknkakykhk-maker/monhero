@@ -103,6 +103,11 @@
       "pure": true
     },
     {
+      "file": "33-rhythm-buddy.jsx",
+      "role": "相棒(モンヒロビートのマルチに呼ぶ自分のマスモン)の計算。保存の正規化・1日の回数・Lv・曲のなじみ・難易度の熟練・性格・その日の調子・演奏結果の生成",
+      "pure": true
+    },
+    {
       "file": "34-friends-api.jsx",
       "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
     },
@@ -243,6 +248,10 @@
     {
       "file": "77-screen-rhythm-multi.jsx",
       "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
+    },
+    {
+      "file": "80-screen-rhythm-buddy.jsx",
+      "role": "相棒(モンヒロビートのマルチに呼ぶ自分のマスモン)の保存の窓口・呼ぶ画面・一覧と詳しい画面・結果画面での育ち"
     },
     {
       "file": "78-screen-raid-jack-debug.jsx",
