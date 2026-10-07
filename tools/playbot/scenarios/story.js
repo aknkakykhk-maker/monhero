@@ -57,25 +57,35 @@ async function replayScenario(s, { max = 6 } = {}) {
     await s.wait(400);
     await s.tapLabel(/^イベント回想/, 1200);
   }
-  // 回想の一覧は窓の中で下へ続く。見えるところまで送ってから集める
-  await s.page.evaluate(() => { const el = [...document.querySelectorAll('button')].find((x) => /タップして見返/.test(x.innerText || '')); if (el) el.scrollIntoView({ block: 'start' }); });
-  await s.wait(400);
-  const items = await s.page.evaluate(() => [...document.querySelectorAll('button')].filter((x) => x.offsetParent && /タップして見返/.test(x.innerText || ''))
-    .map((x) => ({ label: (x.getAttribute('aria-label') || x.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 40) })));
-  if (process.env.PLAYBOT_DEBUG) console.log(`    [回想] 見えるボタン: ${(await s.listButtons()).map((b) => b.label.slice(0, 20)).join(' | ')}`);
-  if (!items.length) { await s.addIssue('たどり着けない', 'イベント回想に見返せるストーリーが1つも無い'); return { ok: false, note: '回想が無い' }; }
-  const picks = items.slice(0, max);
+  // 回想は2ページ(2026-10-07)。1ページ目はイベント単位のパネル、押すとそのまとまりのお話の一覧(2ページ目)へ。
+  // 全パネルを順に開いて、見返せるお話を集める(まとまりごとに1本ずつ → 足りなければ続きから)
+  const openPanel = async (id) => {
+    await s.page.evaluate(() => { document.querySelector('[data-event-replay-back]')?.click(); });
+    await s.wait(250);
+    const ok = await s.page.evaluate((gid) => { const b = document.querySelector(`[data-event-replay-group="${gid}"]`); if (b) { b.click(); return true; } return false; }, id);
+    await s.wait(350);
+    return ok;
+  };
+  const episodeLabels = () => s.page.evaluate(() => [...document.querySelectorAll('[data-event-replay-episodes] button')]
+    .filter((x) => /タップして見返/.test(x.innerText || '')).map((x) => (x.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 40)));
+  const panelIds = await s.page.evaluate(() => [...document.querySelectorAll('[data-event-replay-group]')].map((x) => x.getAttribute('data-event-replay-group')));
+  if (process.env.PLAYBOT_DEBUG) console.log(`    [回想] パネル: ${panelIds.join(' | ')}`);
+  const all = [];
+  for (const id of panelIds) {
+    if (!(await openPanel(id))) continue;
+    for (const label of await episodeLabels()) all.push({ panel: id, label });
+  }
+  if (!all.length) { await s.addIssue('たどり着けない', 'イベント回想に見返せるストーリーが1つも無い'); return { ok: false, note: '回想が無い' }; }
+  // まとまりごとに1本ずつ先に取り、残りを順に足す
+  const firsts = panelIds.map((id) => all.find((x) => x.panel === id)).filter(Boolean);
+  const picks = [...firsts, ...all.filter((x) => !firsts.includes(x))].slice(0, max);
   const done = [], stuck = [];
   for (const item of picks) {
     const title = item.label.replace(/\s*\d{4}\/\d{2}\/\d{2}.*$/, '');
-    // 1本読み終えると一覧が閉じる。開き直して、見えるところまで送ってから探す
-    let fresh = (await s.listButtons()).find((b) => b.label === item.label);
-    if (!fresh) {
-      await s.tapLabel(/^イベント回想/, 1000);
-      await s.page.evaluate((label) => { const el = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, ' ').trim().startsWith(label.slice(0, 12))); if (el) el.scrollIntoView({ block: 'center' }); }, item.label);
-      await s.wait(400);
-      fresh = (await s.listButtons()).find((b) => b.label === item.label);
-    }
+    // 1本読み終えると、同じまとまりのお話の一覧へ戻る。ほかのまとまりのお話は、パネルから開き直す
+    if (!(await s.page.evaluate(() => !!document.querySelector('[data-event-replay-page]')))) await s.tapLabel(/^イベント回想/, 1000);
+    await openPanel(item.panel);
+    const fresh = (await s.listButtons()).find((b) => b.label === item.label);
     if (!fresh) { stuck.push(`${title}(一覧で見つからない)`); continue; }
     await s.tap(fresh, `回想: ${title}`);
     await s.wait(900);

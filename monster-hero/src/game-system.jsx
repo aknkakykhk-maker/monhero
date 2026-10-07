@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 25533394973b9bb8
+// generated-sha256: c0ccf617caf00cdc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 19:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 19:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -327,15 +327,18 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 // イベント回想の一覧(プロフィール → イベント回想)に出す「まとまり」(2026-10-07・ユーザー指示「イベント回想整理して並べてほしい」)。
 // 新しい順にずらっと並べると、同じお話の第1部〜終章が逆順に散らばり、まだ見ていない「？？？」も上に溜まっていた。
 // そこで EVENT_REPLAYS の group で分けて、まとまりの中は日付の**古い順(お話の順)**に並べる。
+// 一覧の画面は2ページ(2026-10-07・ユーザー指示「イベント単位のパネル → 押すとその内容へ」)。1ページ目がまとまりのパネル、2ページ目がそのまとまりのお話。
 //   まとまり自体の並びは下の表のとおり(いま開いているイベントを上に)。
 //   group が無い・知らない名前の項目は EVENT_REPLAY_GROUP_FALLBACK へ入れる(一覧から消えない)。
 //   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
-  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト' },
-  { id:'rhythm_event', emoji:'🏆', label:'モンヒロビートのイベント' },
-  { id:'update', emoji:'✨', label:'新しい遊びのお話' },
-  { id:'assistant', emoji:'💬', label:'助手のお話' },
+  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
+  { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
+  { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
+  { id:'symphony', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
+  { id:'cup', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
+  { id:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけとの出会い', color:'#f472b6' },
 ]);
 const EVENT_REPLAY_GROUP_FALLBACK = 'update';
 const eventReplayGroups = (keep = eventReplayReleased) => {
@@ -39001,7 +39004,7 @@ function RhythmModeSelectStage() {
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
@@ -39099,7 +39102,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? (
@@ -40506,7 +40509,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose, calledIds = [] }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [] }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -40515,6 +40518,8 @@ function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose,
   const detail = detailId ? (masuMons || []).find((x) => x && x.id === detailId) : null;
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
+  // M/B管理の「マスモン一覧(バトル)」と同じ並べ替え・カードで選ぶ(2026-10-07・ユーザー指示「マスモン呼び出しも管理画面と同じものに」)
+  const [selId, setSelId] = React.useState('');
   const choose = async (masu) => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -40535,8 +40540,46 @@ function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose,
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
             ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
-            : <div className="space-y-2">{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} settings={listControls.settings} /></div>}
+            : masuPicker
+              ? <div data-rhythm-buddy-picker>
+                {masuPicker.renderSortFilterBar({ singleType: true })}
+                {masuPicker.entries.length === 0
+                  ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">{(masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません'}</p>
+                  : <div className="grid grid-cols-3 gap-2.5 pb-4">
+                    {masuPicker.entries.map((e) => (
+                      <button key={e.key} type="button" data-rhythm-buddy-card onClick={() => setSelId(e.masu.id)} style={masuPicker.cardStyle}
+                        className={`${masuPicker.cardClass} ${selId === e.masu.id ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
+                        {masuPicker.renderCardBody({
+                          masu: e.masu, base: e.base, nameBand: true,
+                          status: calledIds.includes(e.masu.id) ? <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span> : null,
+                        })}
+                      </button>
+                    ))}
+                  </div>}
+              </div>
+              : <div className="space-y-2">{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} settings={listControls.settings} /></div>}
         </div>
+        {masuPicker && !detail && (() => {
+          const masu = selId ? (masuMons || []).find((x) => x && x.id === selId) : null;
+          if (!masu) return <p className="mt-2 text-center text-[11px] font-bold text-slate-400">呼びたいマスモンをタップしてください</p>;
+          const mon = state.mons[masu.id];
+          const mood = rhythmBuddyMood(masu.id, dayKey, mon);
+          const called = calledIds.includes(masu.id);
+          return (
+            <div data-rhythm-buddy-confirm className="mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-lime-300/40 bg-slate-950/80 p-2">
+              <RhythmBuddyFace masu={masu} sizeClass="h-11 w-11" />
+              <span className="min-w-0 flex-1">
+                <b className="block truncate text-[13px] font-black">{rhythmBuddyMasuName(masu)}</b>
+                <small className="flex items-center gap-1 text-[10px] font-bold text-slate-300"><RhythmBuddyMoodFace moodId={mood.id} size={16} />{mon ? `ビートLv.${rhythmBuddyLevelInfo(mon.exp).level}` : 'まだ一緒に遊んでいない'}</small>
+              </span>
+              <button type="button" onClick={() => setDetailId(masu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>
+              {called
+                ? <span data-rhythm-buddy-called className="shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
+                : <button data-rhythm-buddy-call type="button" disabled={busy || !canPay} onClick={() => choose(masu)}
+                  className="min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40">呼ぶ</button>}
+            </div>
+          );
+        })()}
         {listControls.sheet}
         {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
       </section>
@@ -43416,6 +43459,8 @@ function MonsterHeroGame() {
   // イベント回想: プロフィールから見返す一覧の開閉と、再生中のイベント({id,step}、nullなら非表示)。
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
+  // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
+  const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
   const [showDebugStoryList, setShowDebugStoryList] = useState(false);   // デバッグ設定の「全ストーリーを確認」の一覧(公開前も含めて全部。見たことにはしない)
   // イベントの会話が指定した服(ハロウィン・ナイトの衣装)を、会話のあいだだけ助手に着せる。閉じたら元へ戻る
@@ -58994,7 +59039,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
-        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
+        {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
@@ -59708,7 +59753,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
             onSelectBattleMode={setProfileBattleMode}
-            onOpenEventReplayList={()=>setShowEventReplayList(true)}
+            onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
@@ -60203,7 +60248,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const sortOpts = sortFilterModalSingleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
           const dispOpts = sortFilterModalSingleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
           return (
-            <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:32500,paddingTop:'env(safe-area-inset-top)'}}>
+            <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')?90000:32500,paddingTop:'env(safe-area-inset-top)'}}>
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10">
                 <h3 className="text-base font-black text-white flex-1">並べ替え・表示設定</h3>
                 <button onClick={()=>setShowSortFilterModal(false)} className="p-2.5 bg-white/5 rounded-full active:scale-90"><X size={18}/></button>
@@ -60719,60 +60764,98 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {/* イベント回想の一覧。未閲覧のイベントは「？？？」で伏せ、タップできない。
-            ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
-        {showEventReplayList&&(
+        {/* イベント回想は2ページ(2026-10-07・ユーザー指示「1ページ増やして、パネル式でイベント単位で表示。押すとその内容のイベントにうつる」)。
+            1ページ目: イベント単位のパネル(eventReplayGroups)。押すとそのまとまりのお話へ。
+            2ページ目: そのまとまりのお話の一覧(お話の順)。未閲覧は「？？？」で伏せ、タップできない。
+            ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする。
+            再生を終える・スキップすると、2ページ目(同じまとまり)へ戻る(fromList)。続けて次のお話を選べる */}
+        {showEventReplayList&&(()=>{
+          const groups=eventReplayGroups();
+          const activeGroup=groups.find(group=>group.id===eventReplayGroupId)||null;
+          const closeList=()=>{setShowEventReplayList(false);setEventReplayGroupId(null);};
+          const rangeText=(group)=>{
+            const first=eventReplayDateText(group.events[0]),last=eventReplayDateText(group.events[group.events.length-1]);
+            return first&&last&&first!==last?`${first} 〜 ${last}`:(first||last);
+          };
+          const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
+          return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
-              {/* 見出しと「閉じる」は動かさず、まとまりの並びだけを窓の中でスクロールさせる(下まで行かないと閉じられないのを避ける) */}
-              <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
-              <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。<br/>まとまりごとに、お話の順に並んでいます。</p>
-              {/* まとまり(ハロウィン・ナイト / モンヒロビートのイベント / …)ごとに、お話の順(古い順)で並べる。
-                  まだ見ていない項目も、そのまとまりの中の順番どおりに「？？？」で出す(あと何本あるかが分かる) */}
-              <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-4 mb-3">
-                {eventReplayGroups().map(group=>{
-                  const seenCount=group.events.filter(isEventReplayUnlocked).length;
-                  return (
-                  <section key={group.id} data-event-replay-group={group.id}>
-                    <div className="mb-1.5 flex items-center gap-1.5 px-1">
-                      <span className="text-sm" aria-hidden="true">{group.emoji}</span>
-                      <b className="min-w-0 flex-1 text-[12px] font-black text-fuchsia-100">{group.label}</b>
-                      <small className="shrink-0 text-[10px] font-black tabular-nums text-fuchsia-300/80">{seenCount}/{group.events.length}</small>
-                    </div>
-                    <div className="space-y-2">
-                {group.events.map(event=>{
-                  const eventUnlocked=isEventReplayUnlocked(event);
-                  if(!eventUnlocked){
-                    return (
-                      <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
-                        <span className="text-lg" aria-hidden="true">🔒</span>
-                        <span className="min-w-0 flex-1">
-                          <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                          <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
-                        </span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <button key={event.id} type="button" onClick={()=>{setEventReplay({id:event.id,step:0});setShowEventReplayList(false);}}
-                      className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
-                      <Play size={16} className="text-fuchsia-300 shrink-0"/>
-                      <span className="min-w-0 flex-1">
-                        <b className="block text-[12px] font-black text-white">{event.title}</b>
-                        <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
-                      </span>
-                    </button>
-                  );
-                })}
-                    </div>
-                  </section>
-                  );
-                })}
-              </div>
-              <button onClick={()=>setShowEventReplayList(false)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            <div data-event-replay-page={activeGroup?'episodes':'panels'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+              {!activeGroup&&(
+                <>
+                  {/* 1ページ目: イベント単位のパネル */}
+                  <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
+                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たいイベントを選んでください。<br/>見たことのある会話を、何度でも見返せます。</p>
+                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3">
+                    {groups.map(group=>{
+                      const seen=seenOf(group),total=group.events.length;
+                      return (
+                        <button key={group.id} type="button" data-event-replay-group={group.id} onClick={()=>setEventReplayGroupId(group.id)}
+                          className="w-full rounded-2xl px-3 py-3 flex items-center gap-3 text-left active:scale-[.97]"
+                          style={{border:`1.5px solid ${group.color}66`,backgroundColor:`${group.color}14`}}>
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl" aria-hidden="true" style={{backgroundColor:`${group.color}26`}}>{group.emoji}</span>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[13px] font-black text-white leading-tight">{group.label}</b>
+                            <small className="block text-[9px] text-slate-400 leading-tight">{group.note}</small>
+                            {rangeText(group)&&<small data-event-replay-date className="block text-[9px] tabular-nums text-slate-500">{rangeText(group)}</small>}
+                            <span className="mt-1 flex items-center gap-1.5">
+                              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><span className="block h-full rounded-full" style={{width:`${total?Math.round(seen/total*100):0}%`,backgroundColor:group.color}}/></span>
+                              <small className="shrink-0 text-[10px] font-black tabular-nums" style={{color:group.color}}>{seen}/{total}</small>
+                            </span>
+                          </span>
+                          <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={closeList} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+                </>
+              )}
+              {activeGroup&&(
+                <>
+                  {/* 2ページ目: そのまとまりのお話(お話の順) */}
+                  <div className="shrink-0 mb-1 flex items-center gap-2">
+                    <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 active:scale-95"><ArrowLeft size={18}/></button>
+                    <span className="min-w-0 flex-1 text-center">
+                      <b className="block text-[14px] font-black text-white leading-tight"><span aria-hidden="true">{activeGroup.emoji} </span>{activeGroup.label}</b>
+                      <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
+                    </span>
+                    <span className="w-11 shrink-0" aria-hidden="true"/>
+                  </div>
+                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">お話の順に並んでいます。</p>
+                  <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3">
+                    {activeGroup.events.map(event=>{
+                      const eventUnlocked=isEventReplayUnlocked(event);
+                      if(!eventUnlocked){
+                        return (
+                          <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
+                            <span className="text-lg" aria-hidden="true">🔒</span>
+                            <span className="min-w-0 flex-1">
+                              <b className="block text-[12px] font-black text-slate-400">？？？</b>
+                              <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button key={event.id} type="button" onClick={()=>{setEventReplay({id:event.id,step:0,fromList:true});setShowEventReplayList(false);}}
+                          className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
+                          <Play size={16} className="text-fuchsia-300 shrink-0"/>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[12px] font-black text-white">{event.title}</b>
+                            <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={()=>setEventReplayGroupId(null)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">イベントの一覧へ戻る</button>
+                </>
+              )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {showIconPicker&&(()=>{
           // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
@@ -61514,6 +61597,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id===RAID_JACK_STORY_START_ID&&eventReplay.live&&!eventReplay.debug&&RELEASE_FLAGS.raidJack===true
             &&!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RAID_JACK_HOWTO_STORY_ID)) setRhythmEventStoryPending(prev=>prev||RAID_JACK_HOWTO_STORY_ID);
           if(eventReplay.debugList) setShowDebugStoryList(true);
+          if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
@@ -61526,6 +61610,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           if(eventReplay.debugList) setShowDebugStoryList(true);
+          if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
         };
         return(

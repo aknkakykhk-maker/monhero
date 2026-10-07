@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 19:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 19:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -320,15 +320,18 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 // イベント回想の一覧(プロフィール → イベント回想)に出す「まとまり」(2026-10-07・ユーザー指示「イベント回想整理して並べてほしい」)。
 // 新しい順にずらっと並べると、同じお話の第1部〜終章が逆順に散らばり、まだ見ていない「？？？」も上に溜まっていた。
 // そこで EVENT_REPLAYS の group で分けて、まとまりの中は日付の**古い順(お話の順)**に並べる。
+// 一覧の画面は2ページ(2026-10-07・ユーザー指示「イベント単位のパネル → 押すとその内容へ」)。1ページ目がまとまりのパネル、2ページ目がそのまとまりのお話。
 //   まとまり自体の並びは下の表のとおり(いま開いているイベントを上に)。
 //   group が無い・知らない名前の項目は EVENT_REPLAY_GROUP_FALLBACK へ入れる(一覧から消えない)。
 //   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
-  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト' },
-  { id:'rhythm_event', emoji:'🏆', label:'モンヒロビートのイベント' },
-  { id:'update', emoji:'✨', label:'新しい遊びのお話' },
-  { id:'assistant', emoji:'💬', label:'助手のお話' },
+  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
+  { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
+  { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
+  { id:'symphony', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
+  { id:'cup', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
+  { id:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけとの出会い', color:'#f472b6' },
 ]);
 const EVENT_REPLAY_GROUP_FALLBACK = 'update';
 const eventReplayGroups = (keep = eventReplayReleased) => {
