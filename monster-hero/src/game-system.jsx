@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 513f21ff58269de0
+// generated-sha256: 37b4868c142c65fc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 21:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 22:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20700,7 +20700,7 @@ scheduleTick();};
       if(touchSweepRef.current===sweep)touchSweepRef.current=null;
     };
   },[view.status]);
-  const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=inputAreaRect(area),p=inputPoint(e.clientX,e.clientY),lane=rhythmLaneAtPoint(p.x,p.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(p.x,p.y,rect);if(lane===null||subLaneCoordinate===null)return;const run=runRef.current;if(run){run.activePointerFeedback=run.activePointerFeedback||new Map();run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());}/* 疑似TAPは、本物の指が触れた時刻から数える(生成した時刻だと遅れの補正が効かない) */const originStamp=Number(e.nativeEvent?.__mhOriginStamp);if(e.pointerType==='pen'&&!Number.isFinite(originStamp))RHYTHM_TIMING_DIAG.pen();const perfNow=typeof performance!=='undefined'?performance.now():NaN;inputStarts([{lane,subLaneCoordinate,inputKey:rhythmInputKey('pointer',e.pointerId),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(p.x,p.y,rect),captureTarget:e.currentTarget,pointerId:e.pointerId}],Number.isFinite(originStamp)?rhythmInputAgeMs(originStamp,perfNow):rhythmInputAgeMs(e.timeStamp,perfNow));};
+  const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=inputAreaRect(area),p=inputPoint(e.clientX,e.clientY),lane=rhythmLaneAtPoint(p.x,p.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(p.x,p.y,rect);if(lane===null||subLaneCoordinate===null)return;const run=runRef.current;if(run){run.activePointerFeedback=run.activePointerFeedback||new Map();run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());}/* 疑似TAPは、本物の指が触れた時刻から数える(生成した時刻だと遅れの補正が効かない) */const originStamp=Number(e.nativeEvent?.__mhOriginStamp);if(e.pointerType==='pen'&&!Number.isFinite(originStamp))RHYTHM_TIMING_DIAG.pen();const perfNow=typeof performance!=='undefined'?performance.now():NaN;/* 【2026-10-07 21時・ユーザー報告「タップ抜けがひどくなった」】疑似TAPを本物の指の時刻まで巻き戻すのは、いったんやめる(10/6夕方の動きへ戻す。原因を調べてから入れ直す) */inputStarts([{lane,subLaneCoordinate,inputKey:rhythmInputKey('pointer',e.pointerId),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(p.x,p.y,rect),captureTarget:e.currentTarget,pointerId:e.pointerId}],rhythmInputAgeMs(e.timeStamp,perfNow));};
   const pointerMove=e=>{if(e.pointerType==='touch'&&!RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId))return;const run=runRef.current;if(!run?.activePointerFeedback?.has(e.pointerId))return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const mp=inputPoint(e.clientX,e.clientY),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(mp.x,mp.y,inputAreaRect(area));if(subLaneCoordinate===null)return;run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());inputMoves(rhythmInputKey('pointer',e.pointerId),subLaneCoordinate);};
   const pointerEnd=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(run?.activePointerFeedback){run.activePointerFeedback.delete(e.pointerId);setPressedLanes(pressedLanesNow());}else setPressedLanes(pressedLanesNow());inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};
   useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;if(e.type==='touchcancel')RHYTHM_PERF.touchCancel(e.changedTouches?.length||0);else if(e.type==='touchstart')RHYTHM_PERF.touchStart(e.touches?.length||0);current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){
@@ -38257,6 +38257,13 @@ const RHYTHM_MULTI_START_COUNTDOWN_SEC = 3;
 const RHYTHM_MULTI_SHUFFLE_MS = 2400;
 // 各段の制限時間(本家と同じく、時間切れになったら自動で次へ進む)
 const RHYTHM_MULTI_SELECT_MS = 30000;
+// 選曲の制限時間は部屋主が決められる(2026-10-07・ユーザー指示「30秒、60秒、時間設定なしなど」)。0 は「制限時間なし」。
+// 古い端末の知らせには入っていないので、無いときは30秒と読む。決めた値は端末に残し、次の部屋のはじめの値にする
+const RHYTHM_MULTI_SELECT_SEC_OPTIONS = Object.freeze([30, 60, 90, 0]);
+const RHYTHM_MULTI_SELECT_SEC_DEFAULT = 30;
+const RHYTHM_MULTI_SELECT_SEC_KEY = 'mh_rhythm_multi_select_sec_v1';
+const rhythmMultiNormalizeSelectSec = (v) => (typeof v === 'number' && RHYTHM_MULTI_SELECT_SEC_OPTIONS.includes(v) ? v : RHYTHM_MULTI_SELECT_SEC_DEFAULT);
+const rhythmMultiSelectSecLabel = (sec) => (sec > 0 ? `${sec}秒` : 'なし');
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
@@ -38411,6 +38418,7 @@ const rhythmMultiCleanRoom = (raw) => {
     left: rhythmMultiInt(raw.lf, 600),
     // 残り0秒と「制限時間なし」を分ける(0秒を「なし」と読むと、時間切れの扱いが動かなくなる)
     hasDeadline: raw.dl === 1,
+    selectSec: rhythmMultiNormalizeSelectSec(raw.ss),
     participants: Array.isArray(raw.pt) ? raw.pt.slice(0, RHYTHM_MULTI_ROOM_MAX).map((id) => rhythmMultiText(id, 40)).filter(Boolean) : [],
   };
 };
@@ -38564,6 +38572,18 @@ const RHYTHM_MULTI = (() => {
   let durations = {}; // 曲の長さ(ミリ秒)。ライブが終わらない人を待ち続けないための上限に使う
   // 相棒(CPU)の演奏と選曲を作る関数(画面から渡してもらう)。play({ songId, diffId }) → 演奏の結果 / pick(catalog) → 曲の id
   let cpuBrain = null;
+  // 部屋主として使う選曲の制限時間(端末に残した前回の値。無ければ30秒)
+  let selectSecPref = RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+  let selectSecLoaded = false;
+  const loadSelectSecPref = () => {
+    if (selectSecLoaded) return;
+    selectSecLoaded = true;
+    Promise.resolve().then(() => storeGet(RHYTHM_MULTI_SELECT_SEC_KEY, null)).then((saved) => {
+      selectSecPref = rhythmMultiNormalizeSelectSec(saved);
+      // 部屋を作った直後に読み終えたとき、まだ自分で変えていなければ前回の値にそろえる
+      if (s && !s.selectSecTouched && s.room.phase === 'matching') { s.room = { ...s.room, selectSec: selectSecPref }; emit(); }
+    }).catch(() => {});
+  };
   // アプリを閉じる・別のページへ移るときに「抜けます」を送る(ほかの人がすぐ気づけるように)。
   // 送れない閉じ方(強制終了など)のときは、上の上限時間で抜けた扱いになる
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
@@ -38582,7 +38602,7 @@ const RHYTHM_MULTI = (() => {
   const isHostNow = () => { const o = ordered(); return !!s && o.length > 0 && o[0].id === s.selfId; };
   const roomPayload = () => {
     const r = s.room;
-    return { ph: r.phase, rd: r.round, sg: r.songId, lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0, dl: r.deadline ? 1 : 0, pt: r.participants };
+    return { ph: r.phase, rd: r.round, sg: r.songId, lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0, dl: r.deadline ? 1 : 0, ss: rhythmMultiNormalizeSelectSec(r.selectSec), pt: r.participants };
   };
   // 演奏中は送らない(2026-10-03・ユーザー指示「演奏中の通信は止める」)。force はライブ開始の知らせだけ
   const sendHb = (force = false) => {
@@ -38639,7 +38659,9 @@ const RHYTHM_MULTI = (() => {
   // 部屋にいる「人」の数(呼んだマスモン=CPU は数えない)。自分ひとりのときは、曲えらびの制限時間を進めない
   // (2026-10-07・ユーザー指示「人間がいないときは曲選びの時間制限を進めなくして」)。deadline が 0 のあいだは「制限時間なし」
   const humanCount = () => ordered().filter((m) => !m.cpu).length;
-  const toSelect = () => setRoom({ phase: 'select', round: rhythmMultiMakeId('r'), songId: '', deadline: humanCount() <= 1 ? 0 : Date.now() + RHYTHM_MULTI_SELECT_MS, participants: [] });
+  // 選曲の制限時間(ミリ秒)。0 は制限なし(部屋主が「なし」にした)
+  const selectLimitMs = () => (s && s.room.selectSec > 0 ? s.room.selectSec * 1000 : 0);
+  const toSelect = () => setRoom({ phase: 'select', round: rhythmMultiMakeId('r'), songId: '', deadline: humanCount() <= 1 || !selectLimitMs() ? 0 : Date.now() + selectLimitMs(), participants: [] });
   const doDraw = (members) => {
     const r = s.room;
     const pickOf = (list) => list.filter((m) => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map((m) => m.pick);
@@ -38675,12 +38697,12 @@ const RHYTHM_MULTI = (() => {
       if (members.length < 2) { setRoom({ phase: 'matching', deadline: 0 }); return; }
       const allPicked = members.every((m) => m.pickRound === r.round && m.pick);
       // 人がひとりだけのあいだは制限時間なし(deadline を 0 にして、全員が選ぶまで待つ)。人が入ってきたら、そこから数えはじめる
-      if (humanCount() <= 1) {
+      if (humanCount() <= 1 || !selectLimitMs()) {
         if (r.deadline) { setRoom({ deadline: 0 }); return; }
         if (allPicked) doDraw(members);
         return;
       }
-      if (!r.deadline) { setRoom({ deadline: now + RHYTHM_MULTI_SELECT_MS }); return; }
+      if (!r.deadline) { setRoom({ deadline: now + selectLimitMs() }); return; }
       // ★締め切りのあと少しだけ(準備の猶予と同じ3秒)待つ。締め切り直前に選んだ人の選曲がまだ届いていないと、
       //   その曲が抽選から漏れ、部屋主がおまかせなら全曲から引いてしまう(2026-10-03・ユーザー指示
       //   「おまかせはみんなでの曲抽選のときは他の人のが優先されるように」)。時間切れの人は自分でおまかせを送ってくるので、
@@ -38899,7 +38921,7 @@ const RHYTHM_MULTI = (() => {
       // 部屋の進行は部屋主の知らせに従う(残り時間は受け取った時刻から数える)
       if (msg.room && fromHost()) {
         const r = msg.room;
-        s.room = { phase: r.phase, round: r.round, songId: r.songId, participants: r.participants, deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0 };
+        s.room = { phase: r.phase, round: r.round, songId: r.songId, participants: r.participants, selectSec: r.selectSec, deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0 };
       }
     } else if (msg.t === 'res') {
       if (myCpu(msg.id)) { emit(); return; }
@@ -39008,13 +39030,14 @@ const RHYTHM_MULTI = (() => {
       };
     },
     join(code, profile, mode) {
+      loadSelectSecPref();
       this.leave();
       const now = Date.now();
       const id = rhythmMultiMakeId();
       const roomMode = RHYTHM_MULTI_MODES.includes(mode) ? mode : 'private';
       s = {
         code, mode: roomMode, status: 'connecting', selfId: id, members: {}, chat: [], lastChatAt: 0, createdAt: now,
-        room: { phase: 'matching', round: '', songId: '', deadline: 0, participants: [] },
+        room: { phase: 'matching', round: '', songId: '', deadline: 0, participants: [], selectSec: selectSecPref },
         memberSig: '', lastMemberChange: now, startedRound: '', shuffleShown: '', resultSeen: '', queue: [], playUntil: 0,
         // 続けて遊んだライブの数(連続ボーナス)。前のライブの参加者が全員またいれば1つ増やす。
         // メンバーが増えただけなら続く(2026-10-03・ユーザー指示「メンバーが増える側のときはボーナス継続がいい」)。だれかが抜けたら1に戻る
@@ -39123,6 +39146,18 @@ const RHYTHM_MULTI = (() => {
       s.resultSeen = round;
       if (isHostNow() && (s.room.phase === 'result' || s.room.phase === 'playing') && s.room.round === round) toSelect();
       emit();
+    },
+    // 部屋主が選曲の制限時間を決める(30秒・60秒・90秒・なし)。ほかの人には部屋主の知らせで伝わる。
+    // 選曲の最中に変えたら、いまの残り時間もその場から数え直す(なし にしたら、すぐ制限なしになる)
+    setSelectSeconds(sec) {
+      if (!s || !isHostNow() || s.status !== 'open') return false;
+      const next = rhythmMultiNormalizeSelectSec(sec);
+      selectSecPref = next;
+      s.selectSecTouched = true;
+      try { void Promise.resolve(storeSet(RHYTHM_MULTI_SELECT_SEC_KEY, next)).catch(() => {}); } catch (_) { /* 残せなくても部屋は続ける */ }
+      if (s.room.phase === 'select') setRoom({ selectSec: next, deadline: next > 0 && humanCount() > 1 ? Date.now() + next * 1000 : 0 });
+      else setRoom({ selectSec: next });
+      return true;
     },
     // ホストの「待たずに進む」。マッチング → 選曲 → シャッフル → ライブ開始 を、時間を待たずに1段進める
     hostAdvance() {
@@ -39869,6 +39904,26 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const card = 'rounded-2xl border border-white/15 bg-slate-900/85 p-3';
   const btn = 'min-h-[48px] rounded-xl px-3 font-black disabled:opacity-40';
   const shell = 'relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white';
+  // 選曲の制限時間を、次の候補へ切り替える(部屋主だけ)
+  const cycleSelectSec = () => {
+    const list = RHYTHM_MULTI_SELECT_SEC_OPTIONS;
+    const now = room ? rhythmMultiNormalizeSelectSec(room.selectSec) : RHYTHM_MULTI_SELECT_SEC_DEFAULT;
+    RHYTHM_MULTI.setSelectSeconds(list[(list.indexOf(now) + 1) % list.length]);
+  };
+  // 見出しの右に置く「マスモンを呼ぶ」。選曲中は縦も横も、画面の上にいつも見えるようにする(2026-10-07・ユーザー指示
+  // 「横画面だとマスモンも呼ぶがわかりづらい」。曲の一覧の注意書きの中にあったので、横画面では隠れていた)。呼んでいる数も出す
+  const selectTimeButton = (extra = '', narrow = false) => (
+    <button {...(narrow ? { 'data-rhythm-multi-select-time-narrow': true } : { 'data-rhythm-multi-select-time': true })} type="button" aria-label={`選曲の制限時間 ${rhythmMultiSelectSecLabel(room.selectSec)}。押すと切り替え`} onClick={cycleSelectSec}
+      className={`min-h-[40px] shrink-0 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 text-[11px] font-black leading-tight text-amber-100 ${extra}`}>選曲<br />{rhythmMultiSelectSecLabel(room.selectSec)}</button>
+  );
+  const buddyHeaderButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? (
+    <button data-rhythm-buddy-open data-rhythm-buddy-header type="button" aria-label="マスモンを呼ぶ" onClick={() => setBuddySheet('pick')}
+      className={`relative flex min-h-[44px] min-w-[52px] shrink-0 flex-col items-center justify-center rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-1.5 leading-none text-slate-950 ${extra}`}>
+      <span aria-hidden="true" className="text-base">🎵</span>
+      <span className="text-[10px] font-black">マスモン</span>
+      {view.myCpus && view.myCpus.length > 0 && <b className="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200">{view.myCpus.length}</b>}
+    </button>
+  ) : null);
   // 本家の左上の題字(MULTI LIVE)と、その下の小さな段の名前。右に残り時間とチャット
   const header = (step, onBackClick, opts = {}) => (
     <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
@@ -39882,8 +39937,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
       </small>}
       {/* ホストだけの「待たずに進む」(2026-10-03・ユーザー指示「時間を待たずに先に進めるボタンもほしい」) */}
+      {opts.buddy && buddyHeaderButton(opts.narrowRow ? 'max-[480px]:hidden' : '')}
       {opts.advance && isHost && <button data-rhythm-multi-advance type="button" onClick={() => { if (opts.gesture && onUserGesture) onUserGesture(); RHYTHM_MULTI.hostAdvance(); }}
         className="min-h-[40px] shrink-0 rounded-xl bg-fuchsia-700 px-2 text-[11px] font-black">{opts.advance}</button>}
+      {/* 部屋主だけの、選曲の制限時間の切り替え(押すたびに 30秒 → 60秒 → 90秒 → なし)。横画面でも見えるようヘッダーに置く */}
+      {opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden')}
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
       {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
       <RhythmOrientationButton/>
@@ -40170,7 +40228,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const publicRoom = !!view && view.mode !== 'private';
     return (
       <main data-rhythm-multi data-rhythm-multi-step="matching" className={shell}>
-        {header('マッチング', leaveRoom)}
+        {header('マッチング', leaveRoom, { buddy: true })}
         {view && view.full
           ? <div className="min-h-0 flex-1 overflow-y-auto p-3"><section data-rhythm-multi-full className={card}>
             <p className="text-sm font-black text-rose-300">このルームは満員です(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
@@ -40193,6 +40251,15 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                     {view.status !== 'open' && <small className="block text-[9px] font-black text-amber-300">{view.status === 'connecting' ? 'ルームへつないでいます…' : 'つなぎ直しています…'}</small>}
                   </div>
                   <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : '友だちに送る'}</button>
+                </div>}
+                {/* 選曲の制限時間。部屋主が決める(ほかの人には、決まった時間だけ見せる)。2026-10-07・ユーザー指示 */}
+                {view && room && <div data-rhythm-multi-select-time-row className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <small className="shrink-0 text-[10px] font-black text-slate-400">選曲の制限時間</small>
+                  {isHost
+                    ? RHYTHM_MULTI_SELECT_SEC_OPTIONS.map((sec) => (
+                      <button key={sec} type="button" data-rhythm-multi-select-sec={sec} aria-pressed={rhythmMultiNormalizeSelectSec(room.selectSec) === sec} onClick={() => RHYTHM_MULTI.setSelectSeconds(sec)}
+                        className={`min-h-[36px] min-w-[52px] rounded-lg border px-2 text-[11px] font-black ${rhythmMultiNormalizeSelectSec(room.selectSec) === sec ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>{rhythmMultiSelectSecLabel(sec)}</button>))
+                    : <b data-rhythm-multi-select-sec-view className="text-[11px] font-black text-amber-200">{rhythmMultiSelectSecLabel(rhythmMultiNormalizeSelectSec(room.selectSec))}<small className="ml-1 text-[9px] font-bold text-slate-400">(ホストが決めます)</small></b>}
                 </div>}
               </section>
               <div className="mt-2 space-y-2 landscape:mt-0">
@@ -40514,7 +40581,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   return (
     <main data-rhythm-multi data-rhythm-multi-step="select" className={shell}>
-      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.deadline ? room.left : null, advance: '締め切る' })}
+      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.deadline ? room.left : null, advance: '締め切る', buddy: true, selectTime: true, narrowRow: true })}
+      {/* 狭い縦画面では、ヘッダーに入りきらないので、見出しの下に1行で並べる(広い画面はヘッダーに出す) */}
+      {((view && RHYTHM_MULTI.canSummon() && masuMons.length > 0) || isHost) && (
+        <div data-rhythm-multi-select-tools className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-slate-950/90 px-2 py-1 min-[481px]:hidden">
+          {view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 && <button data-rhythm-buddy-narrow type="button" onClick={() => setBuddySheet('pick')}
+            className="relative min-h-[40px] min-w-0 flex-1 rounded-xl border border-lime-300/70 bg-gradient-to-b from-lime-400 to-emerald-600 px-2 text-[12px] font-black text-slate-950">
+            🎵 マスモンを呼ぶ{view.myCpus && view.myCpus.length > 0 ? `(${view.myCpus.length}体)` : ''}
+          </button>}
+          {isHost && selectTimeButton('', true)}
+        </div>
+      )}
       <RhythmMultiMemberCards bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
       <RhythmSongSelect
         songs={songs}

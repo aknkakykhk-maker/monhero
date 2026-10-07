@@ -159,6 +159,7 @@
 | `mh_rhythm_buddy_v1` | object / `null` | マルチに呼んだマスモンのビートLvなど(2026-10-07 追加・docs/spec/RHYTHM_BUDDY.md)。`{ day, used, mons:{ [マスモンid]: { exp, lives, songs:{曲id:回数}, diffs:{EASY…MASTER:回数}, best:{EASY…MASTER:{score,songId}}(2026-10-07 追加。無い人は最近のスコアから拾い直す), longLives, trait, traitAt, lastRound, lastDay, firstAt } } }`。`day`/`used` は1日の無料回数(朝5:00区切り)。マスモン本体(`mh_masu_mons`)には書かない。読むときは `rhythmBuddyNormalize` を通し(無い・壊れた値は既定値)、同じ回(`lastRound`)は2度育てない(`rhythmBuddyApplyLive`) |
 | `mh_rhythm_buddy_seen_v1` | boolean | 「マスモンを呼べるようになった」の一度きりの案内を見たか(2026-10-07 追加) |
 | `mh_rhythm_buddy_rank_sync_v1` | object / `null` | マスモンランキング(`rhythm_buddy_ranks`)へ送った行の指紋(2026-10-07 追加)。`{ version, sent:{ "<名前>\u001f<個体ID>": "<指紋>" } }`。壊れていたら空から(全員を1回送り直すだけで、記録は壊れない)。`normalizeRhythmBuddyRankSync` を通して読む |
+| `mh_rhythm_multi_select_sec_v1` | number / `null` | マルチでホストが決めた選曲の制限時間(秒。2026-10-07 追加)。`30` / `60` / `90` / `0`(なし)のどれか。次に部屋をつくるときのはじめの値。読むときは `rhythmMultiNormalizeSelectSec` を通す(無い・壊れているときは30) |
 | `mh_masu_beat_list_v1` | object / `null` | マスモン一覧(モンヒロビート)の並べ替え・しぼりこみ(2026-10-07 追加)。`{ sort, dir, lineage, played, traits[], moods[], view }`(`view` は `'list'` か `'card'`。2026-10-07 追加)。読むときは `rhythmBuddyNormalizeListSettings` を通す(知らない値は既定値) |
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_chart_notes_v1` | object / `{}` | 譜面メモ(デバッグ限定・2026-09-26)。`曲id|難易度` → 区間ごとの 👍/👎 とひとことメモ。譜面の作り直しを見分ける `fingerprint` 付き(`normalizeRhythmChartNotes`) |
