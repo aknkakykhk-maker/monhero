@@ -1,0 +1,27 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1543",
+ "seed": 391910,
+ "roles": [
+  {
+   "id": "buddy",
+   "name": "相棒係",
+   "ok": false
+  }
+ ],
+ "numbers": {},
+ "issues": [
+  {
+   "roleId": "buddy",
+   "kind": "進行停止",
+   "level": "不具合候補",
+   "detail": "マルチの演奏が240秒たっても終わらない"
+  },
+  {
+   "roleId": "buddy",
+   "kind": "相棒の数が合わない",
+   "level": "不具合候補",
+   "detail": "一緒に1曲遊んだのに、呼んだマスモンの経験値と遊んだ回数がどれも増えていない"
+  }
+ ]
+}

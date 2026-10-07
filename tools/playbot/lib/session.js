@@ -52,6 +52,8 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     if (m.type() !== 'error') return;
     const text = m.text();
     if (IGNORE_CONSOLE.test(text)) return;
+    // 担当がわざと起こしたこと(通信不良係の 503 など)で出るエラーは数えない
+    if (state.ignoreConsole && state.ignoreConsole.test(text)) return;
     errorLog.push({ step: state.step, kind: 'console', text });
   });
 

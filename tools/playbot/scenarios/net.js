@@ -9,14 +9,15 @@ const { rhythmScenario, openSoloLive } = require('./rhythm');
 const pendingOf = (s) => s.page.evaluate(() => { try { const v = JSON.parse(localStorage.getItem('mh_rhythm_rank_pending_v1') || '[]'); return Array.isArray(v) ? v.length : 0; } catch { return -1; } });
 
 async function offlinePlayScenario(s, shared) {
+  // わざとつながらなくしているので、それで出るコンソールのエラーは数えない(画面が止まる・真っ白は見張り続ける)
+  s.state.ignoreConsole = /503|playbot: down|Service Unavailable|fetch failed|saving locally|publish failed/;
   s.supabase.net.mode = 'down';
   const r = await rhythmScenario(s);
   const pending = await pendingOf(s);
-  const resultText = '';
   shared.netSong = { song: r.stats && r.stats.song, difficulty: r.stats && r.stats.difficulty };
   if (r.ok && pending < 1) await s.addIssue('記録が消える', `つながらないまま演奏を終えたのに、送れなかった記録が端末に取っておかれていない(控え ${pending}件)`);
   await s.backHome();
-  return { ok: r.ok && pending >= 1, note: `つながらないまま ${shared.netSong.song} ${shared.netSong.difficulty} を演奏 → 端末の控え ${pending}件(断られた通信 ${s.supabase.net.refused}回)${resultText}` };
+  return { ok: r.ok && pending >= 1, note: `つながらないまま ${shared.netSong.song} ${shared.netSong.difficulty} を演奏 → 端末の控え ${pending}件(断られた通信 ${s.supabase.net.refused}回)` };
 }
 
 async function resendScenario(s, shared) {

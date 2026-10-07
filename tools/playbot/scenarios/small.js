@@ -17,7 +17,7 @@ async function smallPlayScenario(s) {
   const rate = Number.isFinite(miss) && notes ? miss / notes : null;
   if (rate !== null && rate > 0.3) await s.addIssue('遅い端末で演奏しにくい', `幅320px・CPU 4倍遅いで ${notes}ノーツ中 ${miss}ノーツが MISS(ボットの押すのも遅れるので目安)`);
   await s.backHome();
-  return { ok: r.ok, note: `${r.note}${rate !== null ? `・MISS ${Math.round(rate * 100)}%` : ''}` };
+  return { ok: r.ok, note: `${r.note || '演奏できなかった'}${rate !== null ? `・MISS ${Math.round(rate * 100)}%` : ''}` };
 }
 
 module.exports = { smallTourScenario, smallPlayScenario };

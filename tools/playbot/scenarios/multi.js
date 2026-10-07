@@ -10,7 +10,7 @@ const freeLeft = (s) => s.page.evaluate(() => { const m = document.body.innerTex
 // 部屋では「CPUモッチー Lv.1」、曲えらびでは「CPU モッチー」の形で出る
 const cpuCount = (s) => s.page.evaluate(() => new Set((document.body.innerText.replace(/\s+/g, ' ').match(/CPU ?(?!として)[^\s]+/g) || []).map((x) => x.replace(/^CPU ?/, ''))).size);
 
-async function multiScenario(s, { maxSongMs = 240000 } = {}) {
+async function multiScenario(s, { maxSongMs = 330000 } = {}) {
   const stats = { called: 0, freeBefore: null, freeAfter: null, song: '', notes: 0, score: null };
   await s.backHome();
   await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.innerText || '').trim() === 'モンヒロビート')?.click());
@@ -53,7 +53,8 @@ async function multiScenario(s, { maxSongMs = 240000 } = {}) {
 
 
 // 部屋の中: メンバー確定 → 選曲 → 準備完了 → 最後まで演奏して結果を読む。stats へ song / notes / score を入れる
-async function playInRoom(s, stats, { maxSongMs = 240000 } = {}) {
+// ★部屋では CPU の「おまかせ」も入れてシャッフルで1曲に決まるので、長い曲になることがある。上限は長めにとる
+async function playInRoom(s, stats, { maxSongMs = 330000 } = {}) {
   // メンバー確定 → 選曲
   // ★5人そろうと、メンバー確定を押さなくても曲えらびへ進む。曲えらびが出ていなければ押す
   const inSelect = (await s.listButtons()).some((b) => /^この曲で決定$/.test(b.label));

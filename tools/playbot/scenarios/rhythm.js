@@ -117,12 +117,31 @@ async function openSoloLive(s, { songName = '', difficulty = '' } = {}) {
   if (!(await s.tapLabel(/ソロライブ/, 2000))) { await s.addIssue('進めない', 'モンヒロビートの「ソロライブ」が見つからない'); return null; }
   await s.dismissOverlays(6);
   await s.inspect();
-  // 曲を1つ選ぶ(一覧のカードは「Lv.」を含む)
-  const songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label));
-  if (!songs.length) { await s.addIssue('進めない', '曲えらびに曲が出ていない'); return null; }
-  const song = (songName && songs.find((b) => b.label.startsWith(songName))) || songs[Math.floor(rand() * songs.length)];
-  await s.tap(song, '曲を選ぶ');
-  const picked = { song: song.label.replace(/\s*Lv\..*$/, ''), difficulty: '' };
+  // 曲を1つ選ぶ(一覧のカードは「Lv.」を含む)。★小さい画面では一覧が下に隠れているので、見えるところまで送る
+  let songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label));
+  if (!songs.length) {
+    await s.page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /Lv\.\s*\d+/.test(x.innerText || '') && !/大きく見る/.test(x.getAttribute('aria-label') || '')); if (b) b.scrollIntoView({ block: 'center' }); });
+    await s.wait(400);
+    songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label));
+  }
+  let picked;
+  if (!songs.length) {
+    // 曲の一覧が見えない。決定が押せるなら、選ばれている曲のまま進める(人もそうするしかない)
+    const vp = s.page.viewportSize();
+    const canGo = (await s.listButtons()).some((b) => /^(▶\s*)?決定$/.test(b.label));
+    await s.addIssue(canGo ? '曲の一覧が見えない' : '進めない', canGo
+      ? `画面 ${vp.width}×${vp.height} の曲えらびで、曲の一覧が1行も見えない(上の吹き出しと下の曲の詳細で埋まる)。選ばれている曲か「ランダム」しか選べない`
+      : '曲えらびに曲が出ていない');
+    if (!canGo) return null;
+    picked = { song: '(選ばれていた曲)', difficulty: '' };
+  } else {
+    const song = (songName && songs.find((b) => b.label.startsWith(songName))) || songs[Math.floor(rand() * songs.length)];
+    await s.tap(song, '曲を選ぶ');
+    picked = { song: song.label.replace(/\s*Lv\..*$/, ''), difficulty: '' };
+  }
+  // 小さい画面では難易度と「決定」が下に隠れていることがある。見えるところまで送る
+  await s.page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(▶\s*)?決定$/.test((x.innerText || '').trim())); if (b) b.scrollIntoView({ block: 'end' }); });
+  await s.wait(300);
   // 難易度は EASY〜HARD から(人は最初から最難関を選ばない)
   const diffs = (await s.listButtons()).filter((b) => /^(\d+ )?(EASY|NORMAL|HARD)\b/.test(b.label) || /(EASY|NORMAL|HARD)/.test(b.label) && b.h < 90);
   const d = (difficulty && diffs.find((b) => b.label.includes(difficulty))) || diffs[Math.floor(rand() * diffs.length)];
