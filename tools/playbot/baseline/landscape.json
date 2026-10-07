@@ -4,8 +4,8 @@
  "seed": 391910,
  "roles": [
   {
-   "id": "ranking",
-   "name": "ランキング係",
+   "id": "landscape",
+   "name": "横画面係",
    "ok": true
   }
  ],

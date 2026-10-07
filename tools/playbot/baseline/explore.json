@@ -1,7 +1,7 @@
 {
  "format": "roles",
- "stamp": "20261007-1433",
- "seed": 222620,
+ "stamp": "20261007-1543",
+ "seed": 391910,
  "roles": [
   {
    "id": "explore",
@@ -10,5 +10,12 @@
   }
  ],
  "numbers": {},
- "issues": []
+ "issues": [
+  {
+   "roleId": "explore",
+   "kind": "反応なし",
+   "level": "改善のヒント",
+   "detail": "「閉じる」を押しても画面が変わらない"
+  }
+ ]
 }

@@ -59,7 +59,11 @@ function createFakeSupabase() {
   const writes = [];        // 送られた記録(報告用)
   let nextId = 1;
 
+  // 通信の具合(通信不良係が切り替える)。'ok' ふつう / 'down' つながらない(503) / 'slow' 遅い(slowMs 待ってから返す)
+  const net = { mode: 'ok', slowMs: 10000, refused: 0 };
   const handle = async (route) => {
+    if (net.mode === 'down') { net.refused += 1; return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'playbot: down' }) }); }
+    if (net.mode === 'slow') await new Promise((r) => setTimeout(r, net.slowMs));
     const req = route.request();
     const url = new URL(req.url());
     const method = req.method();
@@ -96,7 +100,7 @@ function createFakeSupabase() {
     return json(200, []);
   };
 
-  return { handle, writes, tables };
+  return { handle, writes, tables, net };
 }
 
 module.exports = { createFakeSupabase };

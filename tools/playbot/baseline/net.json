@@ -1,11 +1,11 @@
 {
  "format": "roles",
- "stamp": "20261007-1543",
- "seed": 391910,
+ "stamp": "20261007-1634",
+ "seed": 474709,
  "roles": [
   {
-   "id": "shop",
-   "name": "買い物係",
+   "id": "net",
+   "name": "通信不良係",
    "ok": true
   }
  ],

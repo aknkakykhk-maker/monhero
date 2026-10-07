@@ -117,7 +117,7 @@ const report = {
   const runRole = async (role) => {
     const t0 = Date.now();
     const rand = makeRand(seedOf(role.id));
-    const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out: OUT, rand, persona: role.name, report });
+    const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out: OUT, rand, persona: role.name, report, ...(role.viewport ? { viewport: role.viewport } : {}), ...(role.cpuSlowdown ? { cpuSlowdown: role.cpuSlowdown } : {}) });
     s.roleId = role.id;
     let ok = true;
     const phase = async (name, fn) => {
@@ -133,7 +133,7 @@ const report = {
       console.log(`${pok ? 'OK' : 'NG'}: [${role.name}] ${name}${note ? ' — ' + note : ''} (${((Date.now() - p0) / 1000).toFixed(0)}秒)`);
     };
     try {
-      if (role.prepare === 'veteran') await prepareVeteran(s);
+      if (role.prepare === 'veteran') await prepareVeteran(s, { quiet: role.quiet !== false });
       if (role.prepare === 'legacy') await prepareLegacy(s);
       // 担当ごとの下準備(買い物係のダイヤなど)。ボットのブラウザへ最初の1回だけ入れる
       if (role.storage) await s.page.addInitScript((pairs) => { if (localStorage.getItem('__playbot_role_seeded')) return; for (const [k, v] of Object.entries(pairs)) localStorage.setItem(k, JSON.stringify(v)); localStorage.setItem('__playbot_role_seeded', '1'); }, role.storage);
@@ -149,7 +149,7 @@ const report = {
           return { ok: true, note: `読み込み ${(r.loadMs / 1000).toFixed(1)}秒 / HOME まで ${(r.homeMs / 1000).toFixed(1)}秒` };
         });
       }
-      await role.run(s, { phase, steps: STEPS, rand, shared, numbers });
+      await role.run(s, { phase, steps: STEPS, rand, shared, numbers, out: OUT });
     } catch (e) {
       ok = false;
       await s.addIssue('シナリオ失敗', `${role.name}: ${e.message.split('\n')[0]}`).catch(() => {});
