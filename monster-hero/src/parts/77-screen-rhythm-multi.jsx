@@ -80,6 +80,9 @@ const RHYTHM_MULTI_CPU_TALK_GAP_MS = 2500;
 const RHYTHM_MULTI_CPU_REPLY_FRESH_MS = 8000;
 // 部屋が静かなまま、これだけ過ぎると、ときどきひとりごとを言う
 const RHYTHM_MULTI_CPU_IDLE_QUIET_MS = 15000;
+// 聞き返して返事を待つ時間と、マスモンどうしが話す間隔(2026-10-08・会話らしくする)
+const RHYTHM_MULTI_CPU_AWAIT_MS = 60000;
+const RHYTHM_MULTI_CPU_BANTER_GAP_MS = 15000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -515,9 +518,9 @@ const RHYTHM_MULTI = (() => {
       const c = myCpu(x.id);
       if (!c) return;
       const now = Date.now();
-      if (!opts.now && now - (room.talk.at[x.id] || 0) < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
+      if (!opts.now && !opts.skipGap && now - (room.talk.at[x.id] || 0) < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
       let text = '';
-      try { text = cpuBrain.talk({ masuId: x.masuId, kind, ...vars }); } catch (_) { text = ''; }
+      try { text = cpuBrain.talk({ masuId: x.masuId, kind, me: c.name, ...vars }); } catch (_) { text = ''; }
       text = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
       if (!text) return;
       room.talk.at[x.id] = now;
@@ -525,23 +528,87 @@ const RHYTHM_MULTI = (() => {
     };
     if (opts.now) { run(); return; }
     const index = Math.max(0, s.cpus.findIndex((c) => c.id === x.id));
-    setTimeout(run, 600 + Math.floor(Math.random() * 1800) + index * 900);
+    setTimeout(run, 600 + Math.floor(Math.random() * 1800) + index * 900 + (opts.extraDelay || 0));
   };
   const cpuPickOne = () => (s && s.cpus.length ? s.cpus[Math.floor(Math.random() * s.cpus.length)] : null);
-  // 人(自分を含む)のチャットへの返事。呼んだ子のうち1体だけが、ときどき返す。マスモンどうしでは返し合わない
+  // 人(自分を含む)のチャットへの返事(2026-10-08・会話らしくする)。発言の意図を cpuBrain.understand で読んで、返す。
+  //   名前を呼ばれた子が返す(「みんな」なら3体まで)/ 呼ばれていなければ1体だけ、ときどき返す
+  //   質問には聞き返すことがある(「調子どう?」→「{名前}さんは?」)。次の発言を、その答えとして読む(60秒のあいだ)
+  //   2体以上いるときは、ときどき別の子が話に加わる。マスモンの発言には返さない(返し合いにならない)
+  const cpuNameOf = (x) => (x && s.members[x.id] ? s.members[x.id].name : '');
   const cpuReplyTo = (msg) => {
     if (!s || !s.cpus.length || !msg || (s.members[msg.id] && s.members[msg.id].cpu) || s.cpus.some((c) => c.id === msg.id)) return;
     // 届くのが遅れた(演奏中にたまっていた)発言には返さない。cid の先頭に送った時刻が入っている
     const sentAt = parseInt(String(msg.cid || '').slice(1, 9), 36);
     if (Number.isFinite(sentAt) && Date.now() - sentAt > RHYTHM_MULTI_CPU_REPLY_FRESH_MS) return;
-    const kind = typeof rhythmBuddyTalkReplyKind === 'function' ? rhythmBuddyTalkReplyKind(msg.text) : '';
-    if (!kind || Date.now() - s.talk.replyAt < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
-    // マスモンを呼んでほしい、と言われたら必ず返す。ほかはときどき
-    if (kind !== 'replyCall' && Math.random() > 0.6) return;
-    s.talk.replyAt = Date.now();
-    cpuSay(cpuPickOne(), kind);
+    const now = Date.now();
+    const aw = s.talk.awaiting && s.talk.awaiting.from === msg.id && now < s.talk.awaiting.until ? s.talk.awaiting : null;
+    let parsed = null;
+    try { parsed = cpuBrain && typeof cpuBrain.understand === 'function' ? cpuBrain.understand({ text: msg.text, names: s.cpus.map(cpuNameOf), awaiting: aw ? aw.kind : '' }) : null; } catch (_) { parsed = null; }
+    if (!parsed) {
+      const k = typeof rhythmBuddyTalkReplyKind === 'function' ? rhythmBuddyTalkReplyKind(msg.text) : '';
+      parsed = k ? { kind: k, mentioned: [], all: false, ask: '', awaits: '', answered: false, isQuestion: false, songId: '' } : null;
+    }
+    if (!parsed || !parsed.kind || now - s.talk.replyAt < RHYTHM_MULTI_CPU_TALK_GAP_MS) return;
+    // 呼ばれた・質問された・聞き返しの答えには必ず返す。ふつうの発言にはときどき
+    const direct = parsed.mentioned.length > 0 || parsed.all || parsed.isQuestion || parsed.answered || parsed.kind === 'replyCall';
+    if (!direct && Math.random() > 0.6) return;
+    let responders;
+    if (parsed.answered && aw) responders = s.cpus.filter((c) => c.id === aw.cpuId);
+    else if (parsed.mentioned.length) responders = parsed.mentioned.map((i) => s.cpus[i]).filter(Boolean);
+    else if (parsed.all) responders = s.cpus.slice(0, 3);
+    else { const one = cpuPickOne(); responders = one ? [one] : []; }
+    if (!responders.length) return;
+    s.talk.replyAt = now;
+    const mateOf = (x) => cpuNameOf(s.cpus.find((c) => c.id !== x.id));
+    // 呼ばれた・聞かれたときの返事は、直前に話していたとしても返す(返事をしない子になってしまうため)
+    responders.forEach((x, i) => cpuSay(x, parsed.kind, { who: msg.name, mate: mateOf(x), songId: parsed.songId || '' }, { extraDelay: i * 1300, skipGap: direct }));
+    if (aw && parsed.answered) s.talk.awaiting = null;
+    const first = responders[0];
+    if (parsed.ask && parsed.awaits && Math.random() < 0.6) {
+      cpuSay(first, parsed.ask, { who: msg.name }, { extraDelay: 2600, skipGap: true });
+      s.talk.awaiting = { cpuId: first.id, from: msg.id, kind: parsed.awaits, until: now + RHYTHM_MULTI_CPU_AWAIT_MS };
+    } else if (responders.length === 1 && s.cpus.length > 1 && now - s.talk.banterAt > RHYTHM_MULTI_CPU_BANTER_GAP_MS && Math.random() < 0.3) {
+      const other = s.cpus.find((c) => c.id !== first.id);
+      s.talk.banterAt = now;
+      cpuSay(other, 'banter', { mate: cpuNameOf(first) }, { extraDelay: 3400, skipGap: true });
+    }
   };
   // 場面の変わり目で話す(曲が決まった・結果が出た)。1回の場面につき1度だけ
+  // 自分(呼んだ人)の名前。マスモンが名前で呼びかけるときに使う
+  const ownerName = () => { const me = selfMember(); return me ? me.name : ''; };
+  // 部屋の人の入室・退室・選曲への反応(2026-10-08・ユーザー指示「自分以外のプレイヤーにも反応する」)。
+  // はじめて見たときは黙って覚える。通信の乱れで一瞬いなくなって戻っただけなら、あいさつし直さない
+  const reactToHumans = (r) => {
+    const T = s.talk;
+    const humans = ordered().filter((m) => !m.cpu);
+    const now = Date.now();
+    if (!T.seen) { T.seen = {}; T.left = {}; T.pickSeen = {}; T.pickRound = ''; humans.forEach((m) => { T.seen[m.id] = m.name; }); return; }
+    humans.forEach((m) => {
+      if (T.seen[m.id]) { T.seen[m.id] = m.name; return; }
+      T.seen[m.id] = m.name;
+      if (T.left[m.id] && now - T.left[m.id] < 60000) return;
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'welcome', { who: m.name }, { skipGap: true });
+    });
+    Object.keys(T.seen).forEach((id) => {
+      if (humans.some((m) => m.id === id)) return;
+      const name = T.seen[id];
+      delete T.seen[id];
+      T.left[id] = now;
+      if (Math.random() < 0.9) cpuSay(cpuPickOne(), 'farewell', { who: name }, { skipGap: true });
+    });
+    // ほかの人が曲を選んだ(おまかせにした)とき、ときどき一言(自分の選曲には言わない)
+    if (r.phase === 'select') {
+      if (T.pickRound !== r.round) { T.pickRound = r.round; T.pickSeen = {}; }
+      humans.forEach((m) => {
+        if (m.id === s.selfId || m.pickRound !== r.round || !m.pick || T.pickSeen[m.id]) return;
+        T.pickSeen[m.id] = 1;
+        if (Math.random() >= 0.35) return;
+        if (m.pick === RHYTHM_MULTI_OMAKASE) cpuSay(cpuPickOne(), 'reactOmakase', { who: m.name }, { skipGap: true });
+        else cpuSay(cpuPickOne(), 'reactPick', { who: m.name, songId: m.pick }, { skipGap: true });
+      });
+    }
+  };
   const cpuTalkTick = () => {
     if (!s || !s.cpus.length) return;
     const r = s.room;
@@ -554,7 +621,18 @@ const RHYTHM_MULTI = (() => {
       const lastChat = s.chat.length ? s.chat[s.chat.length - 1].at || 0 : 0;
       if (Date.now() - Math.max(lastChat, s.talk.idleAt) > RHYTHM_MULTI_CPU_IDLE_QUIET_MS && Math.random() < 0.3) {
         s.talk.idleAt = Date.now();
-        cpuSay(cpuPickOne(), 'idle');
+        // 人がいれば、話しかけて会話をはじめる(調子・好きな曲)。聞いた相手の次の発言を、その答えとして読む
+        const humans = ordered().filter((m) => !m.cpu);
+        const target = humans.length ? humans[Math.floor(Math.random() * humans.length)] : null;
+        const starter = cpuPickOne();
+        if (target && starter && Math.random() < 0.6) {
+          const pickKind = Math.random();
+          if (pickKind < 0.67) {
+            const how = pickKind < 0.33;
+            cpuSay(starter, how ? 'qHow' : 'qFav', { who: target.name });
+            s.talk.awaiting = { cpuId: starter.id, from: target.id, kind: how ? 'how' : 'fav', until: Date.now() + RHYTHM_MULTI_CPU_AWAIT_MS };
+          } else cpuSay(starter, 'callOut', { who: target.name });
+        } else cpuSay(starter, 'idle');
       }
     }
     if (r.phase === 'result' && r.round && s.talk.resultRound !== r.round) {
@@ -564,9 +642,17 @@ const RHYTHM_MULTI = (() => {
         const row = team.rows.find((q) => q.m.id === x.id);
         if (!row || !row.res || row.res.quit) return;
         const mvp = team.mvpId === x.id;
-        cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp });
+        cpuSay(x, 'result', { score: row.res.score, diffId: row.res.diffId, mvp, who: ownerName() });
+      });
+      // 部屋の人(自分を含む)の結果への反応。目立つ結果(MVP・フルコン・高得点・伸びなかった・途中でやめた)にだけ、2人まで。
+      // 何を言うかは cpuBrain.talk の reactResult が決める(目立たない結果なら黙る)。MVPの人は先に
+      const humanRows = team.rows.filter((q) => !q.m.cpu && !q.m.gone && q.res);
+      humanRows.sort((a, b) => ((b.m.id === team.mvpId ? 2 : 0) + Math.random()) - ((a.m.id === team.mvpId ? 2 : 0) + Math.random()));
+      humanRows.slice(0, 2).forEach((q, i) => {
+        cpuSay(s.cpus[i % s.cpus.length], 'reactResult', { who: q.m.name, score: q.res.score, diffId: q.res.diffId, mvp: team.mvpId === q.m.id, fc: q.res.fc || 0, quit: !!q.res.quit }, { extraDelay: 1800 + i * 1500, skipGap: true });
       });
     }
+    reactToHumans(r);
   };
   // 人が入って5人を超えたら、呼んだマスモンは席をゆずって帰る。使った回数・券は呼んだ側へ返す(cpuBrain.refund)
   // (CPU どうしは呼んだ順に並ぶので、あとから呼んだ子から外れる)
@@ -775,7 +861,7 @@ const RHYTHM_MULTI = (() => {
       };
       oneCpuTick(s.cpus[s.cpus.length - 1]);
       sendOneCpuHb(id);
-      cpuSay(s.cpus[s.cpus.length - 1], 'join');
+      cpuSay(s.cpus[s.cpus.length - 1], 'join', { who: ownerName() });
       emit();
       return true;
     },
@@ -821,7 +907,7 @@ const RHYTHM_MULTI = (() => {
         // 自分が呼んだマスモン(CPU)の一覧 [{ id, masuId }]。部屋を出たら消える(呼んだ1回ぶんはそこで使い切り)
         cpus: [],
         // 呼んだマスモンのおしゃべり(最後に話した時刻・場面ごとに1回だけ話すための印)
-        talk: { at: {}, songRound: '', resultRound: '', replyAt: 0, idleAt: now },
+        talk: { at: {}, songRound: '', resultRound: '', replyAt: 0, idleAt: now, awaiting: null, banterAt: 0 },
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),

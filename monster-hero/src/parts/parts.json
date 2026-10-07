@@ -113,6 +113,11 @@
       "pure": true
     },
     {
+      "file": "33-rhythm-buddy-convo.jsx",
+      "role": "呼んだマスモンの会話。人の発言の意図の読み取り(約30種類・曲名・名前・みんな)と、返事・聞き返し・マスモンどうしの話のセリフ集。自分の育ち({lv}{mood}{trait}{fav}…)を混ぜる。AIは使わない",
+      "pure": true
+    },
+    {
       "file": "34-friends-api.jsx",
       "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
     },
