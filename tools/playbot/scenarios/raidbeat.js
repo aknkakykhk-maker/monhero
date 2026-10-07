@@ -4,7 +4,7 @@
 //   ・結果画面に出たダメージと、送った記録のダメージが同じか
 // レイドが開催されていない時期は、入口が無いので何もしない(不具合にしない)。
 // 押し方は音ゲー係と同じ(scenarios/rhythm.js の installPlayer)。同時に動かすと押すのが遅れるので、1人で動かす。
-const { installPlayer, SIGMA_MS, MISS_RATE } = require('./rhythm');
+const { installPlayer, collectFingerSuspects, installArgs } = require('./rhythm');
 
 const raidState = (s) => s.page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_raid_jack_v1') || 'null'); } catch { return null; } });
 // 今日の挑戦回数。ベースモンの挑戦(a)とマスモンの挑戦(b)で別に数える。モンヒロビートの挑戦はベースモン側(a)に入るので、合計で見る
@@ -40,11 +40,13 @@ async function raidBeatScenario(s, { maxSongMs = 240000 } = {}) {
   const ready = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && typeof window.__mhTestHooks.rhythmNotes === 'function' && (window.__mhTestHooks.rhythmNotes() || []).length > 0, { timeout: 30000 }).then(() => true).catch(() => false);
   if (!ready) { await s.addIssue('進めない', 'レイドの曲えらびで「決定」しても演奏が始まらない'); return { ok: false, note: '演奏が始まらない' }; }
   const writes0 = s.supabase.writes.length;
-  const installed = await s.page.evaluate(installPlayer, { sigma: SIGMA_MS, missRate: MISS_RATE, seed: Math.floor(s.rand() * 1e9) });
+  const installed = await s.page.evaluate(installPlayer, installArgs(s));
   if (!installed.ok) { await s.addIssue('進めない', `レイドで演奏できない: ${installed.why}`); return { ok: false, note: '演奏できない' }; }
   const t0 = Date.now();
+  const fingers = {};
   while (Date.now() - t0 < maxSongMs) {
     await s.wait(2000);
+    await collectFingerSuspects(s, fingers);
     s.state.step += 1;
     const playing = await s.page.evaluate(() => !!(window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs && window.__mhTestHooks.rhythmSongMs() !== null) && !!document.querySelector('[data-rhythm-play-area]'));
     if (!playing) break;
@@ -52,6 +54,7 @@ async function raidBeatScenario(s, { maxSongMs = 240000 } = {}) {
   if (Date.now() - t0 >= maxSongMs) await s.addIssue('進行停止', `レイドの演奏が${Math.round(maxSongMs / 1000)}秒たっても終わらない`);
   // 演奏の結果 →「レイドの結果を見る」でダメージが出る。演出が終わるまで待ってから文字を読む
   await s.wait(4000);
+  await collectFingerSuspects(s, fingers, true);
   await s.shot('raidbeat-score');
   await s.inspect();
   if (!(await s.tapLabel(/^レイドの結果を見る$/, 1500))) await s.addIssue('進めない', 'レイドで演奏したあと、結果に「レイドの結果を見る」が無い');

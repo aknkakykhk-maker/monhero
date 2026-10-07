@@ -3,7 +3,7 @@
 //   ・呼んだマスモンがメンバーに入り、メンバー確定 → 選曲 → 演奏 → 結果まで進める
 // 部屋づくりの通信は、にせの Supabase(lib/fake-supabase.js)が受け止める。本物の部屋は作らない(CLAUDE.md ⑦)。
 // 押し方は音ゲー係と同じ(scenarios/rhythm.js の installPlayer)。同時に動かすと押すのが遅れるので、1人で動かす。
-const { installPlayer, SIGMA_MS, MISS_RATE } = require('./rhythm');
+const { installPlayer, collectFingerSuspects, installArgs } = require('./rhythm');
 
 const freeLeft = (s) => s.page.evaluate(() => { const m = document.body.innerText.match(/今日の無料\s*あと\s*(\d+)\s*回/); return m ? Number(m[1]) : null; });
 // メンバー欄の「CPUモッチー Lv.1」だけを数える(★ボタンの説明「マスモンがCPUとして…」を数えない)
@@ -87,13 +87,15 @@ async function playInRoom(s, stats, { maxSongMs = 330000 } = {}) {
   const ready = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && typeof window.__mhTestHooks.rhythmNotes === 'function' && (window.__mhTestHooks.rhythmNotes() || []).length > 0, { timeout: 60000 }).then(() => true).catch(() => false);
   if (!ready) { await s.addIssue('進めない', 'マルチでメンバー確定と選曲をしたのに、60秒たっても演奏が始まらない'); return { ok: false, note: '演奏が始まらない' }; }
   await s.inspect();
-  const installed = await s.page.evaluate(installPlayer, { sigma: SIGMA_MS, missRate: MISS_RATE, seed: Math.floor(s.rand() * 1e9) });
+  const installed = await s.page.evaluate(installPlayer, installArgs(s));
   if (!installed.ok) { await s.addIssue('進めない', `マルチで演奏できない: ${installed.why}`); return { ok: false, note: '演奏できない' }; }
   stats.notes = installed.notes;
   const t0 = Date.now();
+  const fingers = {};
   let shot = false;
   while (Date.now() - t0 < maxSongMs) {
     await s.wait(2000);
+    await collectFingerSuspects(s, fingers);
     s.state.step += 1;
     if (!shot && Date.now() - t0 > 20000) { await s.shot('multi-playing'); shot = true; }
     const playing = await s.page.evaluate(() => !!(window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs && window.__mhTestHooks.rhythmSongMs() !== null) && !!document.querySelector('[data-rhythm-play-area]'));
@@ -101,6 +103,7 @@ async function playInRoom(s, stats, { maxSongMs = 330000 } = {}) {
   }
   if (Date.now() - t0 >= maxSongMs) await s.addIssue('進行停止', `マルチの演奏が${Math.round(maxSongMs / 1000)}秒たっても終わらない`);
   await s.wait(4000);
+  await collectFingerSuspects(s, fingers, true);
   const text = ((await s.health()) || {}).text || '';
   const m = text.replace(/\s+/g, ' ').match(/SCORE\s*([\d,]+)/i);
   stats.score = m ? m[1] : null;

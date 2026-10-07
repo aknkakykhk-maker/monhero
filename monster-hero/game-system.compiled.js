@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21c8fc1baa3d9bf6
+// source-sha256: 71c149491fe75c6e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 23:37";
+const BUILD_DATE = "2026-10-07 23:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -27999,6 +27999,24 @@ const rhythmAchievementMarkId = (playable, record) => {
   if (record.fullCombo) return 'FULL_COMBO';
   return 'CLEAR';
 };
+const RHYTHM_DETAIL_ACHIEVE_TIERS = Object.freeze({
+  FULL_COMBO: Object.freeze({
+    id: 'FULL_COMBO',
+    text: 'FULL COMBO!',
+    label: 'フルコンボ'
+  }),
+  ALL_EXCELLENT: Object.freeze({
+    id: 'ALL_EXCELLENT',
+    text: 'ALL EXCELLENT!!',
+    label: 'オールエクセレント'
+  }),
+  ALL_MARVELOUS: Object.freeze({
+    id: 'ALL_MARVELOUS',
+    text: 'ALL MARVELOUS!!',
+    label: 'オールマーベラス'
+  })
+});
+const rhythmDetailAchieveTier = record => RHYTHM_DETAIL_ACHIEVE_TIERS[rhythmAchievementMarkId(true, record)] || null;
 const rhythmSongArtHue = songId => {
   const text = String(songId || '');
   let hash = 0;
@@ -28516,7 +28534,16 @@ const RhythmSongSelect = ({
         className: "ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400"
       }), rowId && React.createElement("span", {
         className: `shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`
-      }, rowId), played ? React.createElement(React.Fragment, null, React.createElement("b", {
+      }, rowId), (() => {
+        const tier = played ? rhythmDetailAchieveTier(record) : null;
+        return tier ? React.createElement("span", _extends({}, main ? {
+          'data-rhythm-song-row-achieve': tier.id
+        } : {}, {
+          "data-rhythm-achieve-tone": tier.id,
+          title: tier.label,
+          className: "shrink-0 rounded px-1 py-px text-[8px] font-black italic leading-none [@container(max-width:350px)]:hidden"
+        }), tier.id === 'FULL_COMBO' ? 'FC' : tier.id === 'ALL_EXCELLENT' ? 'AE' : 'AM') : null;
+      })(), played ? React.createElement(React.Fragment, null, React.createElement("b", {
         className: `text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank] || 'text-slate-300'}`
       }, rank), React.createElement("span", {
         className: "truncate tabular-nums text-slate-300"
@@ -28548,17 +28575,39 @@ const RhythmSongSelect = ({
   }, "遊べる曲がありません。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-song-detail-grid": true,
     className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]"
-  }, React.createElement("div", {
-    "data-rhythm-song-detail-art": true,
-    className: "w-28 shrink-0 self-start landscape:w-[7.5rem]",
-    style: {
-      gridArea: 'art'
-    }
-  }, React.createElement(RhythmSongArt, {
-    song: song,
-    large: true,
-    onZoom: () => setArtZoom(true)
-  })), React.createElement("div", {
+  }, (() => {
+    const tier = rhythmDetailAchieveTier(best);
+    return React.createElement("div", _extends({
+      "data-rhythm-song-detail-art": true,
+      className: "relative w-28 shrink-0 self-start landscape:w-[7.5rem]",
+      style: {
+        gridArea: 'art'
+      }
+    }, tier ? {
+      'data-rhythm-detail-achieve': tier.id
+    } : {}), React.createElement(RhythmSongArt, {
+      song: song,
+      large: true,
+      onZoom: () => setArtZoom(true)
+    }), tier && React.createElement("span", {
+      key: `${song.songId}:${difficulty.id}`,
+      "aria-label": tier.label
+    }, React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-frame": ""
+    }), React.createElement("b", {
+      "data-rhythm-achieve-ribbon": ""
+    }, tier.text), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "1"
+    }, "✦"), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "2"
+    }, "✦"), React.createElement("i", {
+      "aria-hidden": "true",
+      "data-rhythm-achieve-star": "3"
+    }, "✦")));
+  })(), React.createElement("div", {
     className: "min-w-0",
     style: {
       gridArea: 'title'
@@ -32732,7 +32781,7 @@ const RhythmTapTest = ({
         return;
       }
       if (!target) {
-        if (!input.rejudge) {
+        if (!input.rejudge || !RHYTHM_NOTE_SE_RUNTIME.recentNoteSe?.(150)) {
           RHYTHM_PERF.emptyTap();
           RHYTHM_NOTE_SE_RUNTIME.playEmpty();
         }
