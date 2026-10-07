@@ -29,15 +29,17 @@ check('負の値・数でない値は補正しない',latencyMs({outputLatency:-
 check(`端末の申告ミスに備えて上限(${maxMs}ms)で止める`,latencyMs({outputLatency:1.5})===maxMs);
 
 console.log('\n--- 演奏側の配線 ---');
+// 2026-10-07(7586c70): 曲の時刻は rawSongTimeSeconds(もとの式)と songTimeSeconds(コマの間をなめらかにする直し方 smoothSongClock)に分かれた。
+// 式そのものは変わっていないので、どちらの名前でも見る
 check('曲の時刻から出力遅延を差し引いている',
-  /const songTimeSeconds=\(\)=>[^\n]*ctx\.currentTime-startedAt-outputLatencySeconds/.test(audio));
+  /const (?:raw)?[sS]ongTimeSeconds=\(\)=>[^\n]*ctx\.currentTime-startedAt-outputLatencySeconds/.test(audio));
 check('曲を鳴らしはじめるときに1回だけ測って固定する',
   /outputLatencySeconds=rhythmAudioOutputLatencyMs\(ctx\)\/1000;/.test(audio)
   &&(audio.match(/rhythmAudioOutputLatencyMs\(/g)||[]).length===1);
 check('songTimeSeconds の中で測り直していない(曲の時刻が飛ばない)',
-  !/const songTimeSeconds=\(\)=>[^\n]*rhythmAudioOutputLatencyMs/.test(audio));
+  !/const (?:raw)?[sS]ongTimeSeconds=\(\)=>[^\n]*rhythmAudioOutputLatencyMs/.test(audio));
 check('鳴りはじめる前は 0 に留める(音より先にノーツが動き出さない)',
-  /const songTimeSeconds=\(\)=>Math\.min\(buffer\.duration,Math\.max\(0,/.test(audio));
+  /const (?:raw)?[sS]ongTimeSeconds=\(\)=>Math\.min\(buffer\.duration,Math\.max\(0,/.test(audio));
 
 console.log('');
 if(failed){console.log(`${failed}件のNGがあります`);process.exit(1);}
