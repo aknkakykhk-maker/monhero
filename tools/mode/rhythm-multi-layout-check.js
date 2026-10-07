@@ -123,6 +123,11 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         .map((q) => { const el = document.querySelector(q); const r = el && el.getBoundingClientRect(); return { q, ok: !!r && r.width > 40 && r.height > 40 && r.right <= innerWidth + 1 && r.left >= -1 }; })
         .filter((x) => !x.ok).map((x) => x.q));
       check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: ソロ・フリー・プライベート・ランキングの4つのタイルが画面に収まる`, tiles.length === 0, tiles.join(' / '));
+      // 4つのタイルは、絵と文字の並び方(向き・そろえ)が同じ。プライベートとランキングだけ横画面の指定が抜けて、
+      // 文字が絵と重なって左上に寄った(2026-10-07・ユーザー報告「プライベートとランキングの文字位置がおかしい」)
+      const flows = await A.evaluate(() => ['[data-rhythm-mode-solo]', '[data-rhythm-multi-free]', '[data-rhythm-mode-private-open]', '[data-rhythm-mode-ranking]']
+        .map((q) => { const el = document.querySelector(q); const c = el && getComputedStyle(el); return c ? `${c.flexDirection}/${c.alignItems}` : 'なし'; }));
+      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 4つのタイルの絵と文字の並び方がそろっている`, new Set(flows).size === 1 && !flows.includes('なし'), flows.join(' | '));
       await A.locator('[data-rhythm-mode-private-open]').click();
       await A.waitForSelector('[data-rhythm-mode-private-sheet]', { timeout: 5000 });
       const box = await A.evaluate(() => {
