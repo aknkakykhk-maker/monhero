@@ -9,6 +9,7 @@
 //   boot     … true なら、仕事の前に起動して HOME まで行く(読み込みの秒数も測る)
 const { newPlayerScenario } = require('./scenarios/new-player');
 const { battleScenario } = require('./scenarios/battle');
+const { tacticsScenario } = require('./scenarios/tactics');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
 const { rankingScenario } = require('./scenarios/ranking');
@@ -36,6 +37,18 @@ const ROLES = [
       await phase('手で戦う', async () => {
         const r = await battleScenario(s, { manualTurns: 10, autoMs: 0 });
         numbers['バトル係: 手で突破したWAVE'] = r.stats.wavesCleared;
+        await s.backHome();
+        return r;
+      });
+    },
+  },
+  {
+    id: 'tactics', name: 'タクティクス係', prepare: 'veteran', boot: true,
+    does: 'タクティクスバトルを手で6分遊ぶ。敵の予告で狙われた子が危なければ守りのカードを選ぶ',
+    run: async (s, { phase, numbers }) => {
+      await phase('タクティクスを手で戦う', async () => {
+        const r = await tacticsScenario(s);
+        if (r.stats.entered) numbers['タクティクス係: 着いたWAVE'] = r.stats.waveReached;
         await s.backHome();
         return r;
       });
