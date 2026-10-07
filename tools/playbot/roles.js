@@ -12,6 +12,7 @@ const { battleScenario } = require('./scenarios/battle');
 const { tacticsScenario } = require('./scenarios/tactics');
 const { shopScenario } = require('./scenarios/shop');
 const { growScenario } = require('./scenarios/grow');
+const { multiScenario } = require('./scenarios/multi');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -140,6 +141,14 @@ const ROLES = [
         await s.backHome();
         return r;
       });
+    },
+  },
+  {
+    id: 'multi', name: 'マルチ係', prepare: 'veteran', boot: true, alone: true,
+    storage: { mh_bond_xp: { Mocchi: 3000, Suezo: 800 }, mh_breeder_xp: 50000 },
+    does: 'モンヒロビートのプライベートルームを作り、マスモンを呼んで(二度押し)一緒に最後まで演奏する。1人で動かす',
+    run: async (s, { phase }) => {
+      await phase('マルチでマスモンと演奏', () => multiScenario(s));
     },
   },
   {
