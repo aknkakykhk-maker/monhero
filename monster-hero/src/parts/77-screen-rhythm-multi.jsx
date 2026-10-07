@@ -88,10 +88,10 @@ const RHYTHM_MULTI_LOOK_CHOICES = Object.freeze([
 ]);
 const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({ ...((RHYTHM_LOOK_PRESETS.find((preset) => preset.id === 'LIGHT') || {}).values || {}) });
 // ライブの報酬(周回・ビートP)の人数ボーナス。参加した人が1人ふえるごとに+50%(2人1.5倍〜5人3倍。2026-10-02・ユーザー指示)
-// 呼んだマスモン(CPU)は人より少なく、1体目+30%・2体目+20%・3体目と4体目+10%(2026-10-07・ユーザー指示)。
+// 呼んだマスモン(CPU)は人より少なく、1体あたり+5%(2026-10-07・ユーザー指示「ボーナスが強すぎる。1体あたり5%ずつに」。はじめは+30/20/10/10%だった)。
 // count は参加者の数(人+CPU)、cpus はそのうちの CPU の数
 const RHYTHM_MULTI_REWARD_STEP = 0.5;
-const RHYTHM_MULTI_CPU_REWARD_STEPS = Object.freeze([0.3, 0.2, 0.1, 0.1]);
+const RHYTHM_MULTI_CPU_REWARD_STEPS = Object.freeze([0.05, 0.05, 0.05, 0.05]);
 const rhythmMultiRewardScale = (count, cpus = 0) => {
   const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
   const c = Math.max(0, Math.min(n - 1, Math.floor(Number(cpus) || 0)));
