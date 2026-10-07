@@ -94,7 +94,7 @@ const makeClient = (name) => {
     RHYTHM_LOOK_PRESETS: [{ id: 'LIGHT', values: { effectAmount: 'MINIMAL' } }],
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${storeSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,scale:rhythmMultiRewardScale,clean:rhythmMultiCleanMessage,streakBonus:rhythmMultiStreakBonus,total:rhythmMultiTotalScale,normRec:rhythmMultiNormalizeRecord,addRec:rhythmMultiAddRecord,stamps:rhythmMultiStampsFor,chatMax:RHYTHM_MULTI_CHAT_MAX_LENGTH,code:rhythmMultiNormalizeCode,K:{SELECT:RHYTHM_MULTI_SELECT_MS,READY:RHYTHM_MULTI_READY_MS,GRACE:RHYTHM_MULTI_PLAY_GRACE_MS,SHUFFLE:RHYTHM_MULTI_SHUFFLE_MS,PUBLIC:RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS,PENALTY:RHYTHM_MULTI_PENALTY_KEY,MAX:RHYTHM_MULTI_ROOM_MAX}};`, sandbox, { filename: '77-screen-rhythm-multi.jsx' });
+  vm.runInContext(`${storeSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,scale:rhythmMultiRewardScale,clean:rhythmMultiCleanMessage,streakBonus:rhythmMultiStreakBonus,total:rhythmMultiTotalScale,normRec:rhythmMultiNormalizeRecord,addRec:rhythmMultiAddRecord,stamps:rhythmMultiStampsFor,chatMax:RHYTHM_MULTI_CHAT_MAX_LENGTH,code:rhythmMultiNormalizeCode,normSel:rhythmMultiNormalizeSelectSec,selOptions:RHYTHM_MULTI_SELECT_SEC_OPTIONS,selKey:RHYTHM_MULTI_SELECT_SEC_KEY,K:{SELECT:RHYTHM_MULTI_SELECT_MS,READY:RHYTHM_MULTI_READY_MS,GRACE:RHYTHM_MULTI_PLAY_GRACE_MS,SHUFFLE:RHYTHM_MULTI_SHUFFLE_MS,PUBLIC:RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS,PENALTY:RHYTHM_MULTI_PENALTY_KEY,MAX:RHYTHM_MULTI_ROOM_MAX}};`, sandbox, { filename: '77-screen-rhythm-multi.jsx' });
   const api = sandbox.__api;
   const starts = [];
   api.M.onStart((info) => starts.push(info));
@@ -118,7 +118,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 // ===== ① 人数ボーナス =====
 {
   const c = makeClient('x');
-  check('人数ボーナスは1人ごとに+50%(1人1倍〜5人3倍)', [1, 2, 3, 4, 5].map(c.scale).join(',') === '1,1.5,2,2.5,3');
+  check('人数ボーナスは1人ごとに+50%(1人1倍〜5人3倍)', [1, 2, 3, 4, 5].map((n) => c.scale(n)).join(',') === '1,1.5,2,2.5,3');
   check('人数ボーナスは壊れた値・範囲外でも1〜3倍に収まる', c.scale(0) === 1 && c.scale(99) === 3 && c.scale('x') === 1 && c.scale(-3) === 1);
   check('部屋コードは使える文字の4文字だけを通す', c.code('ab2c') === 'AB2C' && c.code('ABC') === '' && c.code('IO01') === '' && c.code(null) === '');
 }
@@ -435,6 +435,78 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   const line = view(a).chat[0];
   check('届いた発言に受け取った時刻が付く(吹き出しと未読の数に使う)', !!line && Number.isFinite(line.at) && line.at > 0);
   leaveAll([h, a]);
+}
+
+
+// ===== ⑬ 選曲の制限時間は部屋主が決める(30秒・60秒・90秒・なし)=====
+{
+  const c = makeClient('x');
+  check('選べるのは 30・60・90秒と「なし(0)」。知らない値・壊れた値は30秒', c.selOptions.join(',') === '30,60,90,0' && [30, 60, 90, 0].every((v) => c.normSel(v) === v) && [null, undefined, 'x', 45, -1, 600, NaN, {}].every((v) => c.normSel(v) === 30));
+  check('古い端末の知らせ(制限時間の項目が無い)は30秒と読む', c.clean({ t: 'hb', id: 'p', name: 'x', room: { ph: 'select', rd: 'r', lf: 10, dl: 1 } }).room.selectSec === 30);
+  check('制限時間の保存キーは新しいキー', c.selKey === 'mh_rhythm_multi_select_sec_v1');
+  const goSelect = (cs, h) => { h.M.confirmMembers(); clock.advance(2500); };
+  // 60秒
+  {
+    const [h, a, b] = ['h', 'a', 'b'].map(makeClient);
+    joinRoom([h, a, b], 'SEL1');
+    check('はじめは30秒(全員に同じ値で見える)', [h, a, b].every((c) => view(c).room.selectSec === 30));
+    check('部屋主以外は変えられない', a.M.setSelectSeconds(60) === false && view(h).room.selectSec === 30);
+    check('部屋主が60秒にすると、全員に伝わる', h.M.setSelectSeconds(60) === true && (clock.advance(3000), [h, a, b].every((c) => view(c).room.selectSec === 60)), [h, a, b].map((c) => view(c).room.selectSec).join(','));
+    check('決めた値は端末に残る(次の部屋のはじめの値)', h.saved[h.selKey] === 60, JSON.stringify(h.saved[h.selKey]));
+    goSelect([h, a, b], h);
+    check('選曲の制限時間が60秒になる', all([h, a, b], 'select') && [a, b].every((c) => Math.abs(view(c).room.left - 60) <= 3), [a, b].map((c) => view(c).room.left).join('/'));
+    // 選曲の最中に90秒へ → その場から数え直す
+    clock.advance(20000);
+    h.M.setSelectSeconds(90);
+    clock.advance(3000);
+    check('選曲の最中に変えると、その場から数え直す(90秒)', [a, b].every((c) => Math.abs(view(c).room.left - 87) <= 4), [a, b].map((c) => view(c).room.left).join('/'));
+    // 制限なし
+    h.M.setSelectSeconds(0);
+    clock.advance(3000);
+    check('「なし」にすると、制限時間が消える(deadline 0・残り表示なし)', [h, a, b].every((c) => view(c).room.deadline === 0 && view(c).room.selectSec === 0), JSON.stringify(view(a).room));
+    clock.advance(200000);
+    check('「なし」のあいだは、いくら待っても選曲のまま', all([h, a, b], 'select'), phases([h, a, b]));
+    h.M.pick('songB'); a.M.pick('songB');
+    clock.advance(3000);
+    check('「なし」でも、全員が選べば抽選へ進む', all([h, a, b], 'select'), phases([h, a, b]));
+    b.M.pick('songB');
+    clock.advance(3000);
+    check('全員が選ぶと準備の段へ(「なし」のとき)', all([h, a, b], 'ready'), phases([h, a, b]));
+    leaveAll([h, a, b]);
+  }
+  // なし の部屋は、次の選曲も「なし」
+  {
+    const [h, a] = ['h', 'a'].map(makeClient);
+    joinRoom([h, a], 'SEL2');
+    h.M.setSelectSeconds(0);
+    clock.advance(3000);
+    goSelect([h, a], h);
+    check('「なし」の部屋は、選曲に入っても制限時間が始まらない', all([h, a], 'select') && view(a).room.deadline === 0 && view(a).room.left === 0, JSON.stringify(view(a).room));
+    h.M.hostAdvance();
+    clock.advance(3000);
+    check('「なし」でも、ホストの「締め切る」で先に進める', phaseOf(h) !== 'select', phases([h, a]));
+    leaveAll([h, a]);
+  }
+  // 30秒のままなら今までどおり時間切れで進む
+  {
+    const [h, a] = ['h', 'a'].map(makeClient);
+    joinRoom([h, a], 'SEL3');
+    goSelect([h, a], h);
+    clock.advance(40000);
+    check('30秒のまま放っておくと、時間切れで次へ進む(今までどおり)', phaseOf(h) !== 'select', phases([h, a]));
+    leaveAll([h, a]);
+  }
+  // ホストが変わっても部屋の設定は残る
+  {
+    const [h, a, b] = ['h', 'a', 'b'].map(makeClient);
+    joinRoom([h, a, b], 'SEL4');
+    h.M.setSelectSeconds(60);
+    clock.advance(3000);
+    h.M.leave();
+    clock.advance(10000);
+    check('部屋主が抜けても、部屋の制限時間は変わらない', [a, b].every((c) => view(c).room.selectSec === 60) && (view(a).hostId === view(a).selfId || view(b).hostId === view(b).selfId), [a, b].map((c) => view(c).room.selectSec).join(','));
+    leaveAll([a, b]);
+  }
 }
 
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

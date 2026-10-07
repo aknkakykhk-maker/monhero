@@ -2532,7 +2532,9 @@ const RHYTHM_TOUCH_FIXES={
   //                 かつその間ゲームが本当に止まっていたと見えたときだけ。端末の記録で「止まっていないのに古い時刻」が多いと分かった端末では、自分で切る
   //   smoothSongClock … 標準では切ってある。端末の記録で、曲の時計が階段状に止まるコマが多い(2%以上)と分かった端末だけ、自分で入れる(全端末)
   //   autoPauseOnHidden … 標準で入れてある(全端末)。演奏中にアプリを離れたら、自動で一時停止する
-  inputAgeCap:true,
+  // 【2026-10-07 21時・ユーザー報告「昨日から色々直してかなりタップ抜けがひどくなった」】いったん標準では切る(10/6夕方の動きへ戻す)。
+  // 端末の記録で、押したずれの中央値が30〜50ms早い側へ出ていた。補正の効きすぎを疑って、原因が分かるまで戻す
+  inputAgeCap:false,
   smoothSongClock:false,
   autoPauseOnHidden:true,
   allPlatforms:false,
@@ -2815,13 +2817,23 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // 【2026-10-06・ユーザー報告「ハルカのホールドで、実際に押している所とゲームが押したと見ている所が半レーンほど左にずれる」】
       // 追従だけが「判定ラインの高さに直した位置」で測っていたので、判定ラインより奥を押さえた指が中央寄りへずれて見え、
       // 押し始めは通ったのに押している最中に外れ扱いになった。いまは指のその場の高さで測る(タップと同じ rhythmLaneCoordinateAtPoint)。
+      // 【2026-10-07・ユーザー報告「ホールド近くのノーツを押すときにホールドが切れる」】
+      // 押し始めは「判定ラインより下を押した指は、判定ラインの高さに直した位置でも見る(どちらかが帯の中なら受け付ける)」
+      // になったのに、押さえている最中は指のその場の高さだけで見ていた。判定ラインより下では外側のレーンが中央寄りに測れるので、
+      // 端のレーンを画面の手前で押さえると「押し始めは通るのに、押さえている最中は外れ」になる帯(画面の一番下で9〜16px)ができ、
+      // 隣のノーツを押してホールドの指がつられて動くと、そこで切れていた。押し始めと同じく、どちらかが帯の中なら外れとしない
+      // (厳しくなることはない。判定ラインより奥を押さえたときは、これまでどおり指のその場の高さだけで見る)
       const areaBox=areaRect();
       const actual=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
+      const atLineSub=areaBox?rhythmSubLaneCoordinateAtLineIfBelow(pos.clientX,pos.clientY,areaBox):undefined;
+      const atLine=Number.isFinite(atLineSub)?atLineSub/2-.5:null;
       const tracked=rhythmHoldTrackedLane(session.note,chartNow);
       // 帯が細くなっていくときは、少し前の太さまで許す。指は目で見て動くので帯の変化に遅れる(細くなる途中で外れ扱いになるのを防ぐ)。
       const before=rhythmHoldTrackedLane(session.note,Math.max(Number(session.note?.timeMs)||0,chartNow-RHYTHM_HOLD_NARROWING_LOOKBACK_MS));
       const half=Math.max(tracked.half,before.half);
-      bad=actual===null||Math.abs(actual-tracked.center)>half+rhythmHoldTrackingMarginLanes(tracked.half*4);
+      const limit=half+rhythmHoldTrackingMarginLanes(tracked.half*4);
+      const off=value=>value===null||Math.abs(value-tracked.center)>limit;
+      bad=off(actual)&&off(atLine);
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
@@ -3003,7 +3015,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf-pendingInputAgeMs,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf/* 【2026-10-07 21時】押した瞬間の遅れぶん巻き戻すのは、いったんやめる(タップ抜けの報告。原因を調べるまで10/6夕方の動きへ戻す) */,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false,endFlickUncertain:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{

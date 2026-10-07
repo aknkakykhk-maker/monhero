@@ -143,7 +143,8 @@ const advance=ms=>{
   check('HOLD: 細くなって十分たち、まだ外れたままならMISS',play(560+700)==='MISS','holdJudgment='+play(560+700));
 }
 
-// --- 押さえ始めの時計は、押した瞬間の遅れぶん巻き戻して数える(2026-10-07・点検) ---
+// --- 押さえ始めの時計(2026-10-07・点検で「押した瞬間の遅れぶん巻き戻す」を入れたが、同日21時に戻した) ---
+// ユーザー報告「昨日から色々直してかなりタップ抜けがひどくなった」。補正の効きすぎを疑い、原因が分かるまで巻き戻さない
 {
   const note0=()=>({type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:4,subLaneWidth:2,activePointerId:'p1',holdJudgment:'MARVELOUS',holdDeltaMs:0,done:false});
   now=500;runtime.record('touch:1',clientXFor(2),clientY);
@@ -152,7 +153,7 @@ const advance=ms=>{
   runtime.record('touch:1',clientXFor(2),clientY);
   runtime.setInputAge(0);runtime.bind('touch:1',note0(),'HOLD',1000,0);
   const noAge=runtime._sessions.get('touch:1')?.startPerfMs;runtime.clear();
-  check('押さえ始めの時計: 遅れ60msのとき、数え始めを60ms巻き戻す',withAge===now-60,'startPerfMs='+withAge);
+  check('押さえ始めの時計: 遅れがあっても、いまは巻き戻さない(10/6夕方の動き)',withAge===now,'startPerfMs='+withAge);
   check('押さえ始めの時計: 遅れが無いときはこれまでどおり',noAge===now,'startPerfMs='+noAge);
 }
 
@@ -313,6 +314,16 @@ const makeSlideNote=()=>({type:'SLIDE',timeMs:1000,endTimeMs:3000,lane:0,endLane
 
 // --- 猶予が0.1msでも短縮されていないか、定数の値を直接確認 ---
 function RHYTHM_HOLD_TRACKING_MARGIN_LANES_VALUE(text){return Number(text.match(/RHYTHM_HOLD_TRACKING_MARGIN_LANES=([\d.]+);/)?.[1]);}
+
+// --- HOLDを押さえている途中も、押し始めと同じ範囲で見るか(2026-10-07) ---
+// 押し始めは「判定ラインより下の指は判定ラインの高さに直した位置でも見る」。押さえている最中が指のその場の高さだけだと、
+// 端のレーンを画面の手前で押さえたとき「押し始めは通るのに途中で外れ」になる(ユーザー報告「ホールド近くのノーツを押すときにホールドが切れる」)
+{
+  const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','monster-hero','data','rhythm-mode.js'),'utf8');
+  const holdBranch=src.slice(src.indexOf('// 終わりの100msは外れを見ない'),src.indexOf('if(!bad){session.trackingBadSincePerf=null;return;}'));
+  check('HOLDの追従が、判定ラインより下では判定ラインの高さに直した位置でも見る(押し始めと同じ)',
+    /rhythmSubLaneCoordinateAtLineIfBelow\(pos\.clientX,pos\.clientY,areaBox\)/.test(holdBranch)&&/bad=off\(actual\)&&off\(atLine\)/.test(holdBranch));
+}
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

@@ -85,6 +85,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       });
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
+    // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route(/supabase\.co/, (route) => route.abort());
     const boot = async () => {
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });

@@ -114,7 +114,15 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // 決まっていない項目(能力値・技・勇者特性・攻撃モーション)は書かない。画面で「未設定」と赤く出るので、
 // 何が足りないかがそのまま一覧になる。正式に実装したら ALL_PLAYER_MONSTERS へ移し、ここからは消す。
 //   draftLineage … 血統の案。本体の MONSTER_LINEAGE_MAP へ足すのは正式実装のとき(lineage-dex-check.js の決まり)
-// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05 に正式実装したので ALL_PLAYER_MONSTERS へ移した(ここは空)。
+// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
 //   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
+  // メロディー(2026-10-07・案の段階)。ユグドラシル×？？？のレア。名前と血統はユーザー指定。
+  // 立ち絵・顔アイコン・染色マスク(5部位)まで入れた。能力値・技・勇者特性・固有技・攻撃モーションは未定
+  Melody: Object.freeze({ id:'Melody', name:"メロディー", emoji:"🐘", imgUrl:MELODY_IMG, iconUrl:MELODY_ICON,
+    faceIconUrl:MELODY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
+  // クロミー(2026-10-07・案の段階)。ユグドラシル×？？？のレア。名前と血統はユーザー指定。
+  // 立ち絵・顔アイコン・染色マスク(5部位)まで入れた。能力値・技・勇者特性・固有技・攻撃モーションは未定
+  Kuromy: Object.freeze({ id:'Kuromy', name:"クロミー", emoji:"😈", imgUrl:KUROMY_IMG, iconUrl:KUROMY_ICON,
+    faceIconUrl:KUROMY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
 });

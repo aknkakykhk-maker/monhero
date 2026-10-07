@@ -46,8 +46,9 @@ const PC='Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120';
 // 1. 既定ではこれまでどおり
 {
   const o=makeContext(IPHONE);
-  check('標準: inputAgeCap と autoPauseOnHidden は入れてあり、smoothSongClock は自動(標準では切)',o.RHYTHM_TOUCH_FIXES.inputAgeCap===true&&o.RHYTHM_TOUCH_FIXES.autoPauseOnHidden===true&&o.RHYTHM_TOUCH_FIXES.smoothSongClock===false);
-  check('iPhone: inputAgeCap が入っている',o.rhythmTouchFixOn('inputAgeCap')===true);
+  // 2026-10-07 21時: inputAgeCap は標準で切った(ユーザー報告「タップ抜けがひどくなった」。補正の効きすぎを疑い、原因が分かるまで10/6夕方の動きへ戻す)
+  check('標準: autoPauseOnHidden は入れてあり、inputAgeCap と smoothSongClock は標準では切',o.RHYTHM_TOUCH_FIXES.inputAgeCap===false&&o.RHYTHM_TOUCH_FIXES.autoPauseOnHidden===true&&o.RHYTHM_TOUCH_FIXES.smoothSongClock===false);
+  check('iPhone: inputAgeCap は標準では入らない(いったん戻した)',o.rhythmTouchFixOn('inputAgeCap')===false);
   check('パソコン・Android: inputAgeCap は入らない(iPhoneの記録から決めた直し方)',makeContext(PC).rhythmTouchFixOn('inputAgeCap')===false);
   check('全端末: autoPauseOnHidden が入っている',makeContext(PC).rhythmTouchFixOn('autoPauseOnHidden')===true);
   check('標準: smoothSongClock は、記録から決めるまで切',o.rhythmTouchFixOn('smoothSongClock')===false);
@@ -86,7 +87,7 @@ const PC='Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120';
   const q=makeContext(IPHONE);q.rhythmTouchFixAutoSet({inputAgeCap:false});
   check('自動で切ると決めた直し方は、iPhoneでも切れる',q.rhythmTouchFixOn('inputAgeCap')===false&&!q.rhythmTouchFixesActive().includes('inputAgeCap'));
   q.rhythmTouchFixAutoSet({});
-  check('自動の決めを空にすると、標準へ戻る',q.rhythmTouchFixOn('inputAgeCap')===true);
+  check('自動の決めを空にすると、標準(いまは切)へ戻る',q.rhythmTouchFixOn('inputAgeCap')===false);
 }
 // 3. この端末だけの上書き
 {

@@ -118,14 +118,23 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
       if (rotated) await A.screenshot({ path: `/tmp/claude-0/shots/X-mode-rot-${w}x${h}.png` }).catch(() => {});
       const out = await overflowing(A, '[data-rhythm-mode-select]');
       check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: ボタンや入力欄が画面の外へはみ出さない`, out.length === 0, out.join(' / '));
+      // プライベートルームは押すと開くシート。作成・コード・入室がシートに収まる(2026-10-07・2×2のタイルへ組み替えた)
+      const tiles = await A.evaluate(() => ['[data-rhythm-mode-solo]', '[data-rhythm-multi-free]', '[data-rhythm-mode-private-open]', '[data-rhythm-mode-ranking]']
+        .map((q) => { const el = document.querySelector(q); const r = el && el.getBoundingClientRect(); return { q, ok: !!r && r.width > 40 && r.height > 40 && r.right <= innerWidth + 1 && r.left >= -1 }; })
+        .filter((x) => !x.ok).map((x) => x.q));
+      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: ソロ・フリー・プライベート・ランキングの4つのタイルが画面に収まる`, tiles.length === 0, tiles.join(' / '));
+      await A.locator('[data-rhythm-mode-private-open]').click();
+      await A.waitForSelector('[data-rhythm-mode-private-sheet]', { timeout: 5000 });
       const box = await A.evaluate(() => {
-        const sec = document.querySelector('[data-rhythm-mode-private]');
-        if (!sec) return { ok: false, why: 'プライベートルームの欄が無い' };
+        const sec = document.querySelector('[data-rhythm-mode-private-sheet]');
+        if (!sec) return { ok: false, why: 'プライベートルームのシートが無い' };
         const s = sec.getBoundingClientRect();
         const bad = [...sec.querySelectorAll('button,input')].filter((el) => { const r = el.getBoundingClientRect(); return r.right > s.right + 1 || r.left < s.left - 1; }).map((el) => el.innerText || 'コード');
-        return { ok: bad.length === 0, why: bad.join(' / ') };
+        return { ok: bad.length === 0 && s.right <= innerWidth + 1, why: bad.join(' / ') };
       });
-      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 「作成」・コード・「入室」がプライベートルームの欄に収まる`, box.ok, box.why);
+      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 「部屋をつくる」・コード・「入室」がプライベートルームのシートに収まる`, box.ok, box.why);
+      await A.locator('[data-rhythm-mode-private-sheet] button[aria-label="閉じる"]').first().click({ force: true }).catch(() => {});
+      await A.waitForTimeout(150);
       const line = await A.evaluate(() => {
         const p = document.querySelector('[data-rhythm-mode-assistant-line]');
         const panel = document.querySelector('[data-rhythm-mode-assistant]');
@@ -197,9 +206,11 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     // ===== ② 2人でライブを終えて、結果画面へ =====
     await A.setViewportSize({ width: 844, height: 390 });
     const B = await open('い');
+    await A.locator('[data-rhythm-mode-private-open]').click();
     await A.locator('[data-rhythm-multi-create]').click();
     await A.waitForSelector('[data-rhythm-multi-room-code]', { timeout: 15000 });
     const code = (await A.locator('[data-rhythm-multi-room-code]').innerText()).trim();
+    await B.locator('[data-rhythm-mode-private-open]').click();
     await B.locator('[data-rhythm-multi-code-input]').fill(code);
     await B.locator('[data-rhythm-multi-join]').click();
     await A.waitForFunction(() => typeof RHYTHM_MULTI !== "undefined" && RHYTHM_MULTI.view() && RHYTHM_MULTI.view().members.length === 2, null, { timeout: 20000 });

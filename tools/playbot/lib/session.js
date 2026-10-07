@@ -11,7 +11,7 @@ const BOT_NAME = 'モンヒロくん';
 const AVOID = /削除|初期化|リセット|引き継ぎ|データ移行|ログアウト|デバッグ|DEBUG|Debug|検証用|外部|公式サイト|X\(|Twitter|共有|シェア|コピー|ダウンロード|書き出し|読み込む|復元|あきらめる|ギブアップ|リタイア|フルスクリーン|全画面/;
 
 // 見つけたものの分け方。「不具合候補」はまず直す対象、「改善のヒント」は遊びやすさの話
-const HINT_KINDS = new Set(['反応なし', '小さいボタン', '読み込みが遅い', 'たどり着けない', '長い会話']);
+const HINT_KINDS = new Set(['反応なし', '小さいボタン', '読み込みが遅い', 'たどり着けない', '長い会話', '守りが足りない', '戻るでゲームの外へ出る', '下書きが黙って消える', '遅い端末で演奏しにくい', '見た目が大きく変わった']);
 // 調べた結果、意図どおりだと分かっている挙動。消さずに「既知」として報告の下のほうへ回す
 // (同じものを毎回調べ直さないため)。足すときは、どこにそう書いてあるかを note に残す
 const KNOWN = [
@@ -24,14 +24,16 @@ const KNOWN = [
 // 通信が止まっていることで出るだけのエラー(本物の不具合ではない)
 const IGNORE_CONSOLE = /ERR_FAILED|ERR_BLOCKED|net::|Failed to load resource|AudioContext|play\(\) failed|NotAllowedError|autoplay|The play\(\) request/i;
 
-async function openSession({ playwright, pageUrl, port, out, rand, persona, report }) {
+// viewport … 画面の大きさ(小さい画面係が幅320pxにする)。cpuSlowdown … CPU を何倍遅くするか(1 = そのまま)
+async function openSession({ playwright, pageUrl, port, out, rand, persona, report, viewport = { width: 390, height: 844 }, cpuSlowdown = 1 }) {
   const browser = await playwright.chromium.launch({
     executablePath: '/opt/pw-browsers/chromium',
     headless: !report.headed,
     args: ['--autoplay-policy=no-user-gesture-required'],
   });
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, locale: 'ja-JP', timezoneId: 'Asia/Tokyo' });
+  const context = await browser.newContext({ viewport, hasTouch: true, locale: 'ja-JP', timezoneId: 'Asia/Tokyo' });
   const page = await context.newPage();
+  if (cpuSlowdown > 1) { const cdp = await context.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpuSlowdown }); }
   const supabase = createFakeSupabase();
 
   // ---- 通信: 手元以外は止める。Supabase だけは「にせの Supabase」が受け止める ----
@@ -41,14 +43,20 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     if (/supabase\.co/.test(url)) return supabase.handle(route);
     return route.abort();
   });
+  // ゲームは自動操作のブラウザだと Supabase への書き込みを自分で止める(26-supabase.jsx)。
+  // ここではにせの Supabase が受け止めるので、止めを外して書き込みを「にせ」へ届かせる
+  await context.addInitScript(() => { window.__mhSupabaseStubbed = true; });
 
   const state = { step: 0, scenario: '', errorsRead: 0 };
   const errorLog = [];
-  page.on('pageerror', (e) => errorLog.push({ step: state.step, kind: 'pageerror', text: String((e && e.message) || e) }));
+  // ゲームの外のページ(ブラウザの戻るで出た about:blank など)で出たエラーは数えない
+  page.on('pageerror', (e) => !page.url().startsWith(`http://localhost:${port}/`) ? null : errorLog.push({ step: state.step, kind: 'pageerror', text: String((e && e.message) || e) }));
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     const text = m.text();
     if (IGNORE_CONSOLE.test(text)) return;
+    // 担当がわざと起こしたこと(通信不良係の 503 など)で出るエラーは数えない
+    if (state.ignoreConsole && state.ignoreConsole.test(text)) return;
     errorLog.push({ step: state.step, kind: 'console', text });
   });
 
@@ -205,7 +213,7 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     for (let i = 0; i < max; i++) {
       const list = await s.listButtons();
       const b = list.find((x) => x.overlay && /^スキップ$/.test(x.label))
-        || list.find((x) => x.overlay && /^(確認|閉じる|OK|受け取る|次へ|わかった！?|はい|とじる|×|今は見ない)$/.test(x.label));
+        || list.find((x) => x.overlay && /^(確認|閉じる|OK|受け取る|次へ|わかった！?|はい|とじる|×|今は見ない|あとで)$/.test(x.label));
       if (!b) break;
       if (!first) {
         first = await page.evaluate(({ x, y }) => {

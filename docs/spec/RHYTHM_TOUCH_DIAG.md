@@ -21,7 +21,8 @@
   ↓   ポインタだけ届いてタッチが来なかった指 → その場でポインタの経路で入力にする(取り戻し)
   ↓ 1曲ごとに数をまとめ、端末に直近20曲(mh_rhythm_touch_diag_v1)・サーバーへ1行(rhythm_touch_diagnostics)
 サーバーに記録がたまる
-  ↓ 週1回の定期実行: node tools/mode/rhythm-touch-diag.js --fetch --report --days 14
+  ↓ 日曜・水曜の音ゲー班(2026-10-07 に毎週月曜の定期実行からまとめた。tools/playbot/ROUTINE.md「音ゲー班だけの手順」):
+    node tools/mode/rhythm-touch-diag.js --fetch --report --days 14 / node tools/mode/rhythm-device-regression.js
 iPhone と Android を比べて、指がどの段階で消えているかを判定する
 ```
 

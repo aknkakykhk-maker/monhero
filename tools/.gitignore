@@ -1,3 +1,5 @@
 node_modules/
+# 作業場所の写しで node_modules をリンクにしたとき、そのリンクも入れない(2026-10-07。入ると GitHub Pages の組み立てが止まる)
+node_modules
 out/
 .tailwind-build/

@@ -2,8 +2,10 @@
 // 「おかしなこと」と「遊びにくいところ」をスクリーンショット付きで記録する。
 //
 //   node tools/playbot/playbot.js                         全員(約15分)
-//   node tools/playbot/playbot.js --only clock,legacy     選んだ担当だけ(id でも 時計係 のような名前でも)
-//   node tools/playbot/playbot.js --list                  担当の一覧
+//   node tools/playbot/playbot.js --only time,count       選んだ担当だけ(id でも 数字係 のような名前でも)
+//   node tools/playbot/playbot.js --only clock            担当の中の部分だけ(もとの担当id・「時計係」でも)
+//   node tools/playbot/playbot.js --team battle          班の担当だけ(毎晩の班分け。roles.js の TEAMS)
+//   node tools/playbot/playbot.js --list                  担当と班の一覧
 //   node tools/playbot/playbot.js --parallel 3            同時に動かす担当の数(既定3。1なら順番に)
 //   node tools/playbot/playbot.js --steps 300             探索の手数(既定150)
 //   node tools/playbot/playbot.js --seed 12345            同じ押し方を再現する(報告に種が出る)
@@ -14,9 +16,9 @@
 // 結果は tools/out/playbot/<日時>/ に出る(report.md / report.json / 画像)。tools/out は git に入らない。
 // 毎日の定期実行(Routine)では、Claude がこの報告と画像を読んで、改善の提案と不具合の修正PRを作る。
 //
-// 【担当制】 担当は roles.js。担当ごとに別のブラウザを開き、決まった仕事だけをする。
-//   ふつうの担当は --parallel の数ずつ同時に動かし、alone の担当(音ゲー係・ランキング係)は
-//   そのあと1人ずつ動かす。乱数は担当ごとに分けてあるので、同時に動かしても --seed で同じ押し方になる。
+// 【担当制】 担当は roles.js。担当は「部分」を順に受け持ち、部分ごとに別のブラウザを開き直す。
+//   ふつうの担当は --parallel の数ずつ同時に動かし、alone の部分を持つ担当(音ゲー係など)は
+//   そのあと1人ずつ動かす。乱数は部分ごとに分けてあるので、同時に動かしても --seed で同じ押し方になる。
 //
 // 【守ること】(CLAUDE.md ⑦) 詳しくは README.md
 //   ・毎回まっさらなブラウザ。手元・本番のセーブデータには触れない
@@ -28,7 +30,7 @@ const path = require('path');
 const { openSession, BOT_NAME } = require('./lib/session');
 const { prepareVeteran, prepareLegacy } = require('./lib/seeds');
 const { findPrevious, compare, saveBaseline } = require('./lib/compare');
-const { ROLES } = require('./roles');
+const { ROLES, TEAMS, PARTS } = require('./roles');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
@@ -36,17 +38,39 @@ const argOf = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback;
 };
+// 班に入っていない担当がいたら知らせる(毎晩だれも動かさなくなるため)
+const teamless = ROLES.filter((r) => !TEAMS.some((t) => t.roles.includes(r.id)));
+if (teamless.length) console.log(`⚠ どの班にも入っていない担当: ${teamless.map((r) => `${r.id}(${r.name})`).join(', ')} — roles.js の TEAMS へ足す`);
+const partless = PARTS.filter((p) => !ROLES.some((r) => r.parts.some((q) => q.id === p.id)));
+if (partless.length) console.log(`⚠ どの担当にも入っていない部分: ${partless.map((p) => p.id).join(', ')} — roles.js の GROUPS へ足す`);
 if (args.includes('--list')) {
-  ROLES.forEach((r) => console.log(`${r.id.padEnd(8)} ${r.name}${r.alone ? '(1人で)' : ''} … ${r.does}`));
+  ROLES.forEach((r) => {
+    console.log(`${r.id.padEnd(8)} ${r.name}${r.alone ? '(1人で)' : ''} … ${r.does}`);
+    r.parts.forEach((p) => console.log(`         ・${p.label}(--only ${p.id}) … ${p.does}`));
+  });
+  console.log('\n班(--team):');
+  TEAMS.forEach((t) => console.log(`${t.id.padEnd(8)} ${t.name} … ${t.roles.join(', ')}`));
   process.exit(0);
 }
+const TEAM_ID = argOf('team', '');
+const TEAM = TEAM_ID ? TEAMS.find((t) => t.id === TEAM_ID || t.name === TEAM_ID) : null;
+if (TEAM_ID && !TEAM) { console.log(`知らない班: ${TEAM_ID}(--list で一覧)`); process.exit(1); }
 const STEPS = Math.max(1, Number(argOf('steps', 150)) || 150);
 const SEED = Number(argOf('seed', Date.now() % 1000000)) || 1;
 const PARALLEL = Math.max(1, Math.min(4, Number(argOf('parallel', 3)) || 3));
-const ONLY = (argOf('only', '') || '').split(',').map((x) => x.trim()).filter(Boolean);
-const unknown = ONLY.filter((x) => !ROLES.some((r) => r.id === x || r.name === x));
+const ONLY = TEAM ? TEAM.roles.slice() : (argOf('only', '') || '').split(',').map((x) => x.trim()).filter(Boolean);
+// --only は担当(id・名前)でも、担当の中の部分(もとの担当id・「〜係」の名前)でも選べる
+const isRole = (r, x) => r.id === x || r.name === x;
+// 担当と同じ id の部分(battle・rhythm など)は、担当のほうが選ばれる。部分だけなら「バトル係」ではなく部分の名前「バトル」で
+const isPart = (p, x) => p.id === x || p.name === x || p.label === x;
+const unknown = ONLY.filter((x) => !ROLES.some((r) => isRole(r, x) || r.parts.some((p) => isPart(p, x))));
 if (unknown.length) { console.log(`知らない担当: ${unknown.join(', ')}(--list で一覧)`); process.exit(1); }
-const want = (r) => !ONLY.length || ONLY.includes(r.id) || ONLY.includes(r.name);
+// 動かす担当と、その中で動かす部分
+const picked = ROLES.map((r) => {
+  if (!ONLY.length || ONLY.some((x) => isRole(r, x))) return r;
+  const parts = r.parts.filter((p) => ONLY.some((x) => isPart(p, x)));
+  return parts.length ? { ...r, parts, alone: parts.some((p) => p.alone) } : null;
+}).filter(Boolean);
 const PORT = 8981;
 const PAGE_URL = `http://localhost:${PORT}/monster-hero/index.html`;
 
@@ -104,51 +128,64 @@ const report = {
   const roleResults = [];
   const writesAll = [];
 
-  // 担当1人ぶん。別のブラウザを開き、下準備 → (起動) → 仕事 → 閉じる
-  const runRole = async (role) => {
+  // 部分1つぶん。別のブラウザを開き、下準備 → (起動) → 仕事 → 閉じる。報告の上では担当(role)の名前で出す
+  const runPart = async (role, part) => {
     const t0 = Date.now();
-    const rand = makeRand(seedOf(role.id));
-    const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out: OUT, rand, persona: role.name, report });
+    const rand = makeRand(seedOf(part.id));
+    const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out: OUT, rand, persona: role.name, report, ...(part.viewport ? { viewport: part.viewport } : {}), ...(part.cpuSlowdown ? { cpuSlowdown: part.cpuSlowdown } : {}) });
     s.roleId = role.id;
+    s.partId = part.id;
     let ok = true;
     const phase = async (name, fn) => {
       const p0 = Date.now();
-      s.state.scenario = name;
+      s.state.scenario = `${part.label}: ${name}`;
       let pok = true, note = '';
       try {
         const r = await fn();
         if (r && typeof r === 'object') { pok = r.ok !== false; note = r.note || ''; }
-      } catch (e) { pok = false; note = e.message.split('\n')[0]; await s.addIssue('シナリオ失敗', `${name}: ${note}`); }
+      } catch (e) { pok = false; note = e.message.split('\n')[0]; await s.addIssue('シナリオ失敗', `${part.label}: ${name}: ${note}`); }
       if (!pok) ok = false;
-      report.phases.push({ roleId: role.id, persona: role.name, name, ok: pok, ms: Date.now() - p0, note });
-      console.log(`${pok ? 'OK' : 'NG'}: [${role.name}] ${name}${note ? ' — ' + note : ''} (${((Date.now() - p0) / 1000).toFixed(0)}秒)`);
+      report.phases.push({ roleId: role.id, partId: part.id, persona: role.name, name, ok: pok, ms: Date.now() - p0, note });
+      console.log(`${pok ? 'OK' : 'NG'}: [${role.name}/${part.label}] ${name}${note ? ' — ' + note : ''} (${((Date.now() - p0) / 1000).toFixed(0)}秒)`);
     };
     try {
-      if (role.prepare === 'veteran') await prepareVeteran(s);
-      if (role.prepare === 'legacy') await prepareLegacy(s);
-      if (role.boot) {
+      if (part.prepare === 'veteran') await prepareVeteran(s, { quiet: part.quiet !== false });
+      if (part.prepare === 'legacy') await prepareLegacy(s);
+      // 部分ごとの下準備(買い物のダイヤなど)。ボットのブラウザへ最初の1回だけ入れる
+      if (part.storage) await s.page.addInitScript((pairs) => { if (localStorage.getItem('__playbot_role_seeded')) return; for (const [k, v] of Object.entries(pairs)) localStorage.setItem(k, JSON.stringify(v)); localStorage.setItem('__playbot_role_seeded', '1'); }, part.storage);
+      if (part.boot) {
         await phase('起動', async () => {
           const r = await s.boot();
           await s.inspect();
-          // 読み込みの秒数は、1人で動く担当だけで測る(同時に動いていると遅く出る)
-          if (role.measureBoot) {
+          // 読み込みの秒数は、1人で動く部分だけで測る(同時に動いていると遅く出る)
+          if (part.measureBoot) {
             numbers['起動: TAP TO START まで(秒)'] = +(r.loadMs / 1000).toFixed(1);
             if (r.loadMs > 15000) await s.addIssue('読み込みが遅い', `TAP TO START が出るまで ${(r.loadMs / 1000).toFixed(1)}秒`);
           }
           return { ok: true, note: `読み込み ${(r.loadMs / 1000).toFixed(1)}秒 / HOME まで ${(r.homeMs / 1000).toFixed(1)}秒` };
         });
       }
-      await role.run(s, { phase, steps: STEPS, rand, shared, numbers });
+      await part.run(s, { phase, steps: STEPS, rand, shared, numbers, out: OUT });
     } catch (e) {
       ok = false;
-      await s.addIssue('シナリオ失敗', `${role.name}: ${e.message.split('\n')[0]}`).catch(() => {});
+      await s.addIssue('シナリオ失敗', `${role.name}/${part.label}: ${e.message.split('\n')[0]}`).catch(() => {});
     }
-    writesAll.push(...s.supabase.writes.map((w) => ({ persona: role.name, ...w })));
-    await s.close();
-    roleResults.push({ id: role.id, name: role.name, does: role.does, ok, minutes: +((Date.now() - t0) / 60000).toFixed(1) });
+    writesAll.push(...s.supabase.writes.map((w) => ({ persona: role.name, part: part.label, ...w })));
+    await s.close().catch(() => {});
+    return { id: part.id, label: part.label, ok, minutes: +((Date.now() - t0) / 60000).toFixed(1) };
+  };
+  // 担当1人ぶん。部分を順に動かす。1つつまずいても次の部分へ進む
+  const runRole = async (role) => {
+    const t0 = Date.now();
+    const parts = [];
+    for (const part of role.parts) {
+      try { parts.push(await runPart(role, part)); }
+      catch (e) { parts.push({ id: part.id, label: part.label, ok: false, minutes: 0 }); console.log(`NG: [${role.name}/${part.label}] ブラウザを開けなかった — ${e.message.split('\n')[0]}`); }
+    }
+    roleResults.push({ id: role.id, name: role.name, does: role.does, ok: parts.every((p) => p.ok), minutes: +((Date.now() - t0) / 60000).toFixed(1), parts });
   };
 
-  const chosen = ROLES.filter(want);
+  const chosen = picked;
   const together = chosen.filter((r) => !r.alone);
   const alone = chosen.filter((r) => r.alone);
   console.log(`担当: ${chosen.map((r) => r.name).join('・')}(同時に${PARALLEL}人ずつ${alone.length ? `、そのあと ${alone.map((r) => r.name).join('・')} を1人ずつ` : ''})`);
@@ -201,7 +238,7 @@ const report = {
   const md = [
     `# モンヒロくんの報告 ${stamp}`,
     '',
-    `- 乱数の種: \`${SEED}\`(\`node tools/playbot/playbot.js --seed ${SEED}${ONLY.length ? ` --only ${ONLY.join(',')}` : ''}\` で同じ押し方を再現)`,
+    `- 乱数の種: \`${SEED}\`(\`node tools/playbot/playbot.js --seed ${SEED}${TEAM ? ` --team ${TEAM.id}` : ONLY.length ? ` --only ${ONLY.join(',')}` : ''}\` で同じ押し方を再現)`,
     `- かかった時間: ${result.minutes}分(同時に${PARALLEL}人) / 見た画面: ${report.screens.size} / 押した回数: ${report.steps.length}`,
     `- ランキングなどへ送った記録: ${writesAll.length}件(すべてボットの手元で受け止めた。本物へは届いていない)`,
     `- 不具合候補 ${countOf('不具合候補')}件 / 改善のヒント ${countOf('改善のヒント')}件 / 既知 ${countOf('既知')}件`,
@@ -216,7 +253,10 @@ const report = {
       return [
         `### ${r.ok ? '✅' : '❌'} ${r.name}(${r.minutes}分)— ${r.does}`,
         '',
-        ...report.phases.filter((p) => p.roleId === r.id).map((p) => `- ${p.ok ? '✅' : '❌'} ${p.name}${p.note ? ` — ${p.note}` : ''}(${(p.ms / 1000).toFixed(0)}秒)`),
+        ...r.parts.flatMap((part) => [
+          `- ${part.ok ? '✅' : '❌'} **${part.label}**(${part.minutes}分)`,
+          ...report.phases.filter((p) => p.roleId === r.id && p.partId === part.id).map((p) => `  - ${p.ok ? '✅' : '❌'} ${p.name}${p.note ? ` — ${p.note}` : ''}(${(p.ms / 1000).toFixed(0)}秒)`),
+        ]),
         '',
         ...['不具合候補', '改善のヒント'].flatMap((level) => {
           const list = mine.filter((x) => x.level === level);

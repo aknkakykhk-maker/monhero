@@ -54,6 +54,9 @@ const check = (name, ok, detail = '') => {
       const errors = [];
       const page = await context.newPage();
       page.on('pageerror', (e) => errors.push(String(e)));
+      // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+      await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
       await page.route('**/rest/v1/**', (route) => {
         const method = route.request().method();
         return route.fulfill({ status: method === 'POST' ? 201 : 200, contentType: 'application/json', body: '[]' });

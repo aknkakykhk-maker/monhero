@@ -1609,7 +1609,8 @@ addAssistantLinePack({
       { e:'excited', t:'{name}、今日はどうする？ ひとりでじっくり？ みんなでわいわい？«٩(*´ ꒳ `*)۶»ﾜｸﾜｸ' },
       { e:'happy',   t:'ソロライブなら、いつもの曲えらびに行けるよ〜' },
       { e:'wink',    t:'フリーマッチは、だれとでも最大5人で協力ライブできるの！' },
-      { e:'normal',  t:'友だちと遊ぶなら「ルーム作成」して、コードを教えてあげてね👍' },
+      { e:'normal',  t:'友だちと遊ぶなら「プライベート」から部屋をつくって、合言葉を教えてあげてね👍' },
+      { e:'happy',   t:'「ランキング」では、全国の順位と、育てたマスモンの順位が見られるよ♪' },
       { e:'happy',   t:'マスモン設定もここからだよ。いっしょに演奏する子、えらんであげて〜' },
       { e:'excited', t:'てかてか、みんなで遊ぶと周回のごほうびも増えるんだって！ まじおいしい✨' },
     ],
@@ -1624,7 +1625,8 @@ addAssistantLinePack({
       { e:'happy',   t:'{name}、今日はどちらで遊びまつか？' },
       { e:'normal',  t:'ソロライブは、いつもの曲えらびへ進みまつ。' },
       { e:'normal',  t:'フリーマッチでは、だれとでも最大5人で協力ライブができまつ。' },
-      { e:'wink',    t:'お友だちと遊ぶときは「ルーム作成」でコードを伝えてほしいでつ。' },
+      { e:'wink',    t:'お友だちと遊ぶときは「プライベート」で部屋をつくって、合言葉を伝えてほしいでつ。' },
+      { e:'happy',   t:'「ランキング」で、全国の順位とマスモンの順位が見られまつ。' },
       { e:'normal',  t:'マスモン設定もここからでつ。演奏にいっしょに出る子をえらべまつ。' },
     ],
   },
@@ -1638,7 +1640,8 @@ addAssistantLinePack({
       { e:'wink',    t:'{name}、今日はどっち？ ひとりで練習？ それとも、ももとみんなで？♡' },
       { e:'happy',   t:'ソロライブなら、いつもの曲えらびだよ♪' },
       { e:'excited', t:'フリーマッチは最大5人！ MVPはももがもらうけどね♡' },
-      { e:'normal',  t:'友だちとなら「ルーム作成」して、コードを送ってあげて〜' },
+      { e:'normal',  t:'友だちとなら「プライベート」で部屋をつくって、合言葉を送ってあげて〜' },
+      { e:'happy',   t:'「ランキング」からは、全国の順位と育てたマスモンの順位を見られるよ〜' },
       { e:'wink',    t:'マスモン設定もここ。かわいい子、連れてってよね♡' },
     ],
   },
@@ -1652,8 +1655,49 @@ addAssistantLinePack({
       { e:'happy',   t:'{name}、今日はどうする？ おではみんなで叩きたいな' },
       { e:'normal',  t:'ソロライブなら、いつもの曲えらびに行けるぞ' },
       { e:'excited', t:'フリーマッチは、だれとでも最大5人で協力ライブだ' },
-      { e:'normal',  t:'友だちと遊ぶなら「ルーム作成」して、コードを教えてやってくれ' },
+      { e:'normal',  t:'友だちと遊ぶなら「プライベート」で部屋をつくって、合言葉を教えてやってくれ' },
+      { e:'normal',  t:'「ランキング」に、全国とマスモンの順位が出る。見ておくといい' },
       { e:'wink',    t:'マスモン設定もここからだ。いっしょに演奏する子をえらんでくれよ' },
+    ],
+  },
+});
+// マスモンを呼ぶ(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。モードえらびの吹き出しに、案内を1本ずつ足す
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelect',
+  label: 'モンヒロビート マスモンを呼ぶ案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'excited', t:'マルチにマスモンを呼べるようになったよ！ ひとりでもすぐライブできちゃう✨ 一緒に遊ぶほどビートLvが上がるんだって！' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelectKiki',
+  assistantId: 'kiki',
+  label: 'きき・モンヒロビート マスモンを呼ぶ案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'happy',   t:'マルチにマスモンを呼べまつ。一緒に遊ぶほどビートLvが上がって、上手になるでつ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelectMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・モンヒロビート マスモンを呼ぶ案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'wink',    t:'マルチに呼んだマスモン、育てるとどんどん上手になるんだって。ももより上手くなったら…ゆるさないんだから♡' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmBuddyModeSelectDra',
+  assistantId: 'dra',
+  label: 'ドラ・モンヒロビート マスモンを呼ぶ案内',
+  lines: {
+    rhythmModeSelect: [
+      { e:'excited', t:'マルチにマスモンを呼べるんだぞ。おでも一緒に叩きたいなあ' },
     ],
   },
 });
@@ -6264,6 +6308,67 @@ const ASSISTANT_RHYTHM_MULTI_FRIENDS = [
 ];
 const ASSISTANT_RHYTHM_MULTI_FRIENDS_CALLS = { mua: 'ドラケン／もも', kiki: 'ももさん', momosuke: 'みゅあねぇ', dra: 'みゅあ' };
 
+// ---------- マスモンを呼ぶ・ビートLv(2026-10-07) ----------
+// ユーザー指示「ストーリー作ってからの公開。説明はストーリー上でさせてok」。
+// 伝えること(docs/spec/RHYTHM_BUDDY.md):
+//   ① マルチの部屋の「マスモンを呼ぶ」で、マスモンがCPUとして一緒に演奏する(フリーマッチでもプライベートでも・空きがあるだけ何体でも)
+//   ② チームの平均・MVP・人数ボーナスにも入る。人が来たら席をゆずる(使ったぶんは戻る)
+//   ③ 1日に何回かは無料、そのあとはセッション券(ビートP交換所・ログインボーナス・ミッション)
+//   ④ バトルとは別の「ビートLv」で育つ。遊んだ曲が得意になる・難易度の慣れ・難しい譜面ほどたいへん
+//   ⑤ 毎日の調子と、育て方で決まる性格
+//   ⑥ M/B管理の「マスモン一覧(モンヒロビート)」とモードえらびの「ビートLv」で育ち具合を見る
+// ★数字(回数・値段・Lv)は書かない。調整のたびに会話が嘘になる(数字はヘルプと更新履歴)。
+// ★みゅあは docs/spec/ASSISTANT_MUA_VOICE.md の口調。ドラは標準語のくだけた口調(関西弁にしない)。
+const ASSISTANT_RHYTHM_MASU_CALL = [
+  // 導入: ドラがフリーマッチでひとり待っている
+  { who:'dra',      e:'troubled', t:'……来ないな。フリーマッチ、おでひとりだ' },
+  { who:'momosuke', e:'normal',   t:'ドラ、また待ってるの？ 夜中はなかなか集まらないよね〜' },
+  { who:'dra',      e:'troubled', t:'みんなで叩きたいのに、待ってるうちに眠くなってくる' },
+  { who:'mua',      e:'excited',  t:'ドラケン！ それ、もう待たなくていいかもｗ ニュース持ってきた〜✨' },
+  { who:'kiki',     e:'happy',    t:'マルチの部屋に、自分のマスモンを呼べるようになったんでつ。' },
+  { who:'dra',      e:'surprise', t:'マスモンを？ ルームにか？' },
+  // ① 呼び方
+  { who:'kiki',     e:'normal',   t:'マッチングか曲えらびの画面で「マスモンを呼ぶ」を押して、連れていく子を1体えらびまつ。' },
+  { who:'mua',      e:'happy',    t:'そしたらその子がCPUとしてメンバーに入って、いっしょに演奏してくれるの！' },
+  { who:'momosuke', e:'wink',     t:'フリーマッチでもプライベートでも呼べるよ♪ 部屋があいてれば、何体でも呼べちゃう♡' },
+  { who:'dra',      e:'surprise', t:'何体でも！？ じゃあ、おでとマスモンたちで5人そろうじゃないか' },
+  { who:'kiki',     e:'normal',   t:'はい。マスモンと2人からでも、ライブを始められまつ。呼んだ部屋にいるあいだは、何曲でもいっしょでつよ。' },
+  // ② 結果
+  { who:'momosuke', e:'normal',   t:'呼んだ子のスコアも、チームの平均に入るの。いっしょに遊ぶ人数にも数えるから、ごほうびも増えるよ' },
+  { who:'mua',      e:'surprise', t:'しかもね、いちばんスコアが高かったら、マスモンがMVP取っちゃうこともあるんだって(๑°ロ°๑)‼️' },
+  { who:'dra',      e:'angry',    t:'なに！？ おでのマスモンに、おでが負けるのか' },
+  { who:'momosuke', e:'wink',     t:'ももは負けないもん♡ たぶん' },
+  { who:'kiki',     e:'normal',   t:'5人そろっているところに人が入ってきたら、呼んだマスモンが席をゆずって帰りまつ。そのときは、使った回数や券が戻りまつ。' },
+  { who:'mua',      e:'normal',   t:'人が優先ってことね、やさしい子たち〜' },
+  // ③ 回数とセッション券
+  { who:'dra',      e:'normal',   t:'何回でも呼べるのか？' },
+  { who:'kiki',     e:'normal',   t:'1日に何回かは無料でつ。それを使い切ったら「セッション券」を1枚使いまつ。' },
+  { who:'momosuke', e:'happy',    t:'セッション券は、ビートP交換所とか、ログインボーナス、ミッションのコンプリートでもらえるよ♪' },
+  // ④ ビートLv
+  { who:'mua',      e:'excited',  t:'でねでね、ここからがいちばんたのしいとこ！ 呼んだマスモン、育つの！' },
+  { who:'kiki',     e:'happy',    t:'バトルの絆とは別に「ビートLv」がありまつ。いっしょにライブをするほど上がって、上手になりまつ。' },
+  { who:'dra',      e:'surprise', t:'バトルで強い子が、音ゲーも上手とはかぎらないってことか' },
+  { who:'momosuke', e:'happy',    t:'そうそう。それと、いっしょに遊んだ曲ほど得意になるの。お気に入りの曲、たくさん叩かせてあげて♡' },
+  { who:'kiki',     e:'normal',   t:'難易度ごとの慣れもありまつ。よく遊ぶ難易度ほど上手で、レベルの高い譜面ほどむずかしくなりまつ。' },
+  { who:'mua',      e:'wink',     t:'育てたら、あたしたちより上手くなっちゃうかもね(ΦωΦ)ﾌﾌﾌ…' },
+  // ⑤ 調子と性格
+  { who:'momosuke', e:'normal',   t:'あとね、マスモンにも毎日の調子があるの。ご機嫌な日もあれば、ちょっと不機嫌な日も' },
+  { who:'dra',      e:'troubled', t:'不機嫌な日もあるのか。おでと同じだな' },
+  { who:'kiki',     e:'normal',   t:'前の日にいっしょに遊んでいると、不機嫌になりにくいでつ。それから、育て方で性格も決まりまつ。' },
+  { who:'mua',      e:'happy',    t:'真面目とか、甘えん坊とか、頑固とか！ どの子がどうなるか、育ててのおたのしみ〜' },
+  // ⑥ 育ち具合を見る
+  { who:'dra',      e:'normal',   t:'どれくらい育ったかは、どこで見るんだ？' },
+  { who:'kiki',     e:'normal',   t:'HOMEの「M/B管理」に「マスモン一覧(モンヒロビート)」ができまつ。モードえらびの「ビートLv」からも開けまつ。' },
+  { who:'momosuke', e:'excited',  t:'スコアの伸びがグラフで見られるの！ 得意な曲も、ぜーんぶ見られるよ♪' },
+  { who:'mua',      e:'normal',   t:'今までの「マスモン一覧」は「マスモン一覧(バトル)」って名前になったから、迷わないでね👍' },
+  // 締め
+  { who:'dra',      e:'happy',    t:'よし。今日からおでのマスモンと、毎日いっしょに叩くぞ' },
+  { who:'kiki',     e:'happy',    t:'{name}も、いっしょに遊ぶ子をえらんであげてくださいね。' },
+  { who:'momosuke', e:'wink',     t:'{name}、育ったら、ももの部屋にも連れてきてよね♡' },
+  { who:'mua',      e:'excited',  t:'{name}、マスモンといっしょにライブしよ！ 待ってるよ〜(っ`･ω･´)っﾌﾚｰｯ!ﾌﾚｰｯ!' },
+];
+const ASSISTANT_RHYTHM_MASU_CALL_CALLS = { mua: 'ドラケン／もも', kiki: 'ももさん', momosuke: 'みゅあねぇ', dra: 'みゅあ' };
+
 // ---------- タクティクスバトル登場(2026-09-21) ----------
 // β公開に合わせて1度だけ流す導入。「今までのバトルと何が違うか」を4つだけ伝える。
 //   ① ステータスを1体ずつ持つ(クラシックはパーティ全員の合計)
@@ -6697,51 +6802,53 @@ const EVENT_REPLAYS = [
   //   物語の順(第1部 08:00 → 第1.5部 08:01 → 遊び方 08:02 → 第2部 08:03 … 第6部 08:07)に、同じ時刻を使い回さず1分ずつ振る。回想の一覧は新しい順で、
   //   同じ時刻だと書いた順に並ぶので、遊び方が第1.5部と同じ 08:01 だと一覧で「遊び方」が第1.5部より前(古い側)に出てしまっていた(2026-10-05に確認)。
   // 見たかどうかは unlockedKey(60-app.jsx の EVENT_REPLAY_UNLOCK_FLAGS)で引く
-  { id: 'raid_jack_story_1b', date: '2026-10-04 08:01', title: 'ハロウィン・ナイト 第1.5部 ～ふくれあがる影～', script: RAID_JACK_STORY_1B, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory1bSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_2', date: '2026-10-04 08:03', title: 'ハロウィン・ナイト 第2部 ～吠えるカボチャ～', script: RAID_JACK_STORY_2, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_3', date: '2026-10-04 08:04', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: RAID_JACK_STORY_3, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_4', date: '2026-10-04 08:05', title: 'ハロウィン・ナイト 第4部 ～ドラの気持ち～', script: RAID_JACK_STORY_4, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_5', date: '2026-10-04 08:06', title: 'ハロウィン・ナイト 第5部 ～すれ違い～', script: RAID_JACK_STORY_5, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_story_6', date: '2026-10-04 08:07', title: 'ハロウィン・ナイト 第6部 ～ただ、遊びたかっただけ～', script: RAID_JACK_STORY_6, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory6Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_ending_cleared', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王まで倒せた)～', script: RAID_JACK_ENDING_CLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingClearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
-  { id: 'raid_jack_ending_notcleared', date: '2026-11-01 04:01', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王には届かなかった)～', script: RAID_JACK_ENDING_NOTCLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingNotclearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack' },
+  { id: 'raid_jack_story_1b', date: '2026-10-04 08:01', title: 'ハロウィン・ナイト 第1.5部 ～ふくれあがる影～', script: RAID_JACK_STORY_1B, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory1bSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
+  { id: 'raid_jack_story_2', date: '2026-10-04 08:03', title: 'ハロウィン・ナイト 第2部 ～吠えるカボチャ～', script: RAID_JACK_STORY_2, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory2Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
+  { id: 'raid_jack_story_3', date: '2026-10-04 08:04', title: 'ハロウィン・ナイト 第3部 ～ぱんぷきんのひみつ～', script: RAID_JACK_STORY_3, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory3Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
+  { id: 'raid_jack_story_4', date: '2026-10-04 08:05', title: 'ハロウィン・ナイト 第4部 ～ドラの気持ち～', script: RAID_JACK_STORY_4, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory4Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
+  { id: 'raid_jack_story_5', date: '2026-10-04 08:06', title: 'ハロウィン・ナイト 第5部 ～すれ違い～', script: RAID_JACK_STORY_5, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory5Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
+  { id: 'raid_jack_story_6', date: '2026-10-04 08:07', title: 'ハロウィン・ナイト 第6部 ～ただ、遊びたかっただけ～', script: RAID_JACK_STORY_6, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackStory6Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
+  { id: 'raid_jack_ending_cleared', date: '2026-11-01 04:00', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王まで倒せた)～', script: RAID_JACK_ENDING_CLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingClearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
+  { id: 'raid_jack_ending_notcleared', date: '2026-11-01 04:01', title: 'ハロウィン・ナイト 終章 ～夜明けのパーティー(大王には届かなかった)～', script: RAID_JACK_ENDING_NOTCLEARED, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'raidJackEndingNotclearedSeen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, releaseFlag: 'raidJack', group: 'halloween' },
   // タクティクスバトルの導入(2026-09-21)。**公開するまでは回想にも出さない**
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
   // 本編で1度だけ流す導線は、β版を出すときに告知とセットで足す
-  { id: 'tactics_intro', date: '2026-09-21 20:15', title: 'タクティクスバトル ～誰を連れていくか～', script: ASSISTANT_TACTICS_INTRO, unlockedKey: 'tacticsIntroSeen', releaseFlag: 'tacticsBattle', alwaysUnlocked: true },
-  { id: 'kiki_intro', date: '2026-08-16 18:41', title: 'きき加入 ～ふたりの助手～', script: ASSISTANT_KIKI_INTRO, calls: ASSISTANT_KIKI_INTRO_CALLS, unlockedKey: 'kikiIntroSeen' },
+  { id: 'tactics_intro', date: '2026-09-21 20:15', title: 'タクティクスバトル ～誰を連れていくか～', script: ASSISTANT_TACTICS_INTRO, unlockedKey: 'tacticsIntroSeen', releaseFlag: 'tacticsBattle', alwaysUnlocked: true, group: 'update' },
+  { id: 'kiki_intro', date: '2026-08-16 18:41', title: 'きき加入 ～ふたりの助手～', script: ASSISTANT_KIKI_INTRO, calls: ASSISTANT_KIKI_INTRO_CALLS, unlockedKey: 'kikiIntroSeen', group: 'assistant' },
   // ももすけ登場は、本編を待たずに回想からも見られる(2026-09-05・ユーザー指示)。
   // 新しく始めた人は最初の助手選択でももすけを選べるので、そもそも本編では流れない。
   // その人たちも、あとから「どういう経緯で来たのか」を見られるようにするため。
-  { id: 'momosuke_intro', date: '2026-09-05 12:36', title: 'ももすけ登場 ～モンヒロビート～', script: ASSISTANT_MOMOSUKE_INTRO, calls: ASSISTANT_MOMOSUKE_INTRO_CALLS, unlockedKey: 'momosukeIntroSeen', alwaysUnlocked: true },
+  { id: 'momosuke_intro', date: '2026-09-05 12:36', title: 'ももすけ登場 ～モンヒロビート～', script: ASSISTANT_MOMOSUKE_INTRO, calls: ASSISTANT_MOMOSUKE_INTRO_CALLS, unlockedKey: 'momosukeIntroSeen', alwaysUnlocked: true, group: 'assistant' },
   // イベント開催の会話(2026-09-11)。開催中に1度だけ本編で流れ、そのあとは回想からいつでも見られる。
   // 期間が終わっても回想には残る(そのときどういう会話だったかを見返せるように)
-  { id: 'monbeat_cup_2026_09', date: '2026-09-11 15:00', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen' },
+  { id: 'monbeat_cup_2026_09', date: '2026-09-11 15:00', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen', group: 'cup' },
   // 閉幕の会話(2026-09-13)。**イベントが終わった時刻に自動で流れる**。
   // 参加賞へ勇者の証10個を足したことを、ここで知らせる
-  { id: 'monbeat_cup_2026_09_thanks', date: '2026-09-14 05:00', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen' },
+  { id: 'monbeat_cup_2026_09_thanks', date: '2026-09-14 05:00', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen', group: 'cup' },
   // 第2回イベントの開催会話(2026-09-17)。最後まで見ると助手ドラが解放される
   // (ASSISTANT_UNLOCK_STORIES)。期間が終わっても回想からいつでも見返せる
-  { id: 'symphony_2026_09_17', date: '2026-09-17 12:00', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen' },
+  { id: 'symphony_2026_09_17', date: '2026-09-17 12:00', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen', group: 'symphony' },
   // 第2回の閉幕の会話(2026-09-20)。**イベントが終わった時刻に自動で流れる**。
   // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
-  { id: 'symphony_2026_09_17_thanks', date: '2026-09-21 04:00', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen' },
+  { id: 'symphony_2026_09_17_thanks', date: '2026-09-21 04:00', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen', group: 'symphony' },
   // ビートPがいつでも貯まるようになった知らせ(2026-09-24)。HOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'beat_point_always_2026_09_24', date: '2026-09-24 23:02', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen' },
+  { id: 'beat_point_always_2026_09_24', date: '2026-09-24 23:02', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen', group: 'beat_point' },
   // モンヒロビートが6レーンになった知らせ(2026-09-26)。HOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'rhythm_six_lane_2026_09_26', date: '2026-09-26 13:48', title: '6レーンのモンヒロビート ～ドラの指～', script: ASSISTANT_RHYTHM_SIX_LANE, calls: ASSISTANT_RHYTHM_SIX_LANE_CALLS, unlockedKey: 'rhythmSixLaneSeen' },
+  { id: 'rhythm_six_lane_2026_09_26', date: '2026-09-26 13:48', title: '6レーンのモンヒロビート ～ドラの指～', script: ASSISTANT_RHYTHM_SIX_LANE, calls: ASSISTANT_RHYTHM_SIX_LANE_CALLS, unlockedKey: 'rhythmSixLaneSeen', group: 'update' },
   // ビートPアップキャンペーンと新しい仲間の先行公開(2026-09-28)。キャンペーン中にHOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'beat_point_up_2026_09_28', date: '2026-09-28 18:00', title: 'ビートPアップキャンペーン ～森と甘い香りの新しい仲間～', script: ASSISTANT_BEAT_POINT_UP, calls: ASSISTANT_BEAT_POINT_UP_CALLS, unlockedKey: 'beatPointUpSeen' },
+  { id: 'beat_point_up_2026_09_28', date: '2026-09-28 18:00', title: 'ビートPアップキャンペーン ～森と甘い香りの新しい仲間～', script: ASSISTANT_BEAT_POINT_UP, calls: ASSISTANT_BEAT_POINT_UP_CALLS, unlockedKey: 'beatPointUpSeen', group: 'beat_point' },
   // みんなで対戦・フレンド・ももすけのアシストカード・EXスキルの知らせ(2026-10-03)。HOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'rhythm_multi_friends_2026_10_03', date: '2026-10-03 03:31', title: 'みんなで対戦 ～フレンドといっしょに～', script: ASSISTANT_RHYTHM_MULTI_FRIENDS, calls: ASSISTANT_RHYTHM_MULTI_FRIENDS_CALLS, unlockedKey: 'rhythmMultiFriendsSeen' },
+  { id: 'rhythm_multi_friends_2026_10_03', date: '2026-10-03 03:31', title: 'みんなで対戦 ～フレンドといっしょに～', script: ASSISTANT_RHYTHM_MULTI_FRIENDS, calls: ASSISTANT_RHYTHM_MULTI_FRIENDS_CALLS, unlockedKey: 'rhythmMultiFriendsSeen', group: 'update' },
+  // マルチにマスモンを呼べるようになった・ビートLvの知らせ(2026-10-07)。HOMEで1度だけ流れ、そのあとは回想から見返せる。公開するまでは回想にも出さない(releaseFlag)
+  { id: 'rhythm_masu_call_2026_10_07', date: '2026-10-07 13:05', title: 'マスモンとセッション ～ひとりじゃないライブ～', script: ASSISTANT_RHYTHM_MASU_CALL, calls: ASSISTANT_RHYTHM_MASU_CALL_CALLS, unlockedKey: 'rhythmMasuCallSeen', releaseFlag: 'rhythmMulti', group: 'update' },
   // ハロウィン・ナイト(2026-10-04〜11-01)の第1部。開幕の時刻にHOMEで1度流れ、そのあとは回想から見返せる(第2部以降はジャックのストーリー=レイドの進み具合で開く)
   // (出る時刻は data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES。id はそこと同じ)
-  { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'halloween_night_2026_part1', date: '2026-10-04 08:00', title: 'ハロウィン・ナイト 第1部 ～ようこそ、夜祭へ～', script: ASSISTANT_HALLOWEEN_NIGHT_1, calls: ASSISTANT_HALLOWEEN_NIGHT_1_CALLS, unlockedKey: 'halloweenNightPart1Seen', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
   // レイドの遊び方(2026-10-04)。第1部を見終えたあとにHOMEで1度だけ続けて流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
   // モンヒロビート挑戦のサブストーリー(2026-10-06)。公開と同時にHOMEで1度だけ流れ、そのあとは回想から見返せる。**公開するまでは回想にも出さない**(releaseFlag)
-  { id: 'raid_jack_rhythm_story_2026_10_06', date: '2026-10-06 18:37', title: 'ドラのビート ～音でジャックへ～', script: ASSISTANT_RAID_JACK_RHYTHM_STORY, calls: ASSISTANT_RAID_JACK_RHYTHM_STORY_CALLS, unlockedKey: 'raidJackRhythmStorySeen', releaseFlag: 'raidJackRhythm', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
-  { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES },
+  { id: 'raid_jack_rhythm_story_2026_10_06', date: '2026-10-06 18:37', title: 'ドラのビート ～音でジャックへ～', script: ASSISTANT_RAID_JACK_RHYTHM_STORY, calls: ASSISTANT_RAID_JACK_RHYTHM_STORY_CALLS, unlockedKey: 'raidJackRhythmStorySeen', releaseFlag: 'raidJackRhythm', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
+  { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

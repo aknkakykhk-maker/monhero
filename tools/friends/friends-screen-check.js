@@ -67,6 +67,9 @@ const serve = (flagOn) => new Promise(resolve => {
       const errors = [];
       page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
       // Supabase への通信: フレンドの表だけ偽サーバーが答え、ほかは空で返す(記録・ランキングは空でよい)
+      // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+      await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
       await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
         const request = route.request();
         const url = request.url();
@@ -320,6 +323,9 @@ const serve = (flagOn) => new Promise(resolve => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const errors = [];
       page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
+      // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+      await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
       await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
         const request = route.request(); const url = request.url();
         if (/\/rest\/v1\/(friend_codes|friend_links|friend_invites|friend_profiles)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
@@ -407,6 +413,9 @@ const serve = (flagOn) => new Promise(resolve => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const errors = [];
       page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
+      // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+      await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
       await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
         const request = route.request(); const url = request.url();
         if (/\/rest\/v1\/(friend_codes|friend_links|friend_profiles|friend_invites)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
@@ -497,6 +506,9 @@ const serve = (flagOn) => new Promise(resolve => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const errors = [];
       page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
+      // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+      await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
       await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
         const request = route.request(); const url = request.url();
         if (/\/rest\/v1\/(friend_codes|friend_links|friend_profiles|friend_invites)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
