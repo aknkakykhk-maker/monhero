@@ -15,18 +15,19 @@ const W = 97, H = 211;
 const PIXEL_DIFF = 40, THRESHOLD = 0.25;
 
 // 画面の名前 → HOME から押していくボタン(名前の正規表現)
+// [画面の名前, ファイル名(英数字), HOME から押していくボタン(名前の正規表現)]
 const SCREENS = [
-  ['HOME', []],
-  ['マーケット', [/^マーケット$/]],
-  ['ダイヤショップ', [/^マーケット$/, /^ダイヤショップ$/]],
-  ['M-B管理', [/^M\/B管理$/]],
-  ['モンヒロビート', [/^モンヒロビート$/]],
-  ['曲えらび', [/^モンヒロビート$/, /ソロライブ/]],
-  ['モンヒロバトル', [/^モンヒロバトル$/]],
-  ['ミッション', [/^ミッション/]],
-  ['ギフト', [/^ギフト/]],
-  ['プロフィール', [/^プロフィールを開く$/]],
-  ['設定', [/^設定$/]],
+  ['HOME', 'home', []],
+  ['マーケット', 'market', [/^マーケット$/]],
+  ['ダイヤショップ', 'diamond-shop', [/^マーケット$/, /^ダイヤショップ$/]],
+  ['M/B管理', 'mb', [/^M\/B管理$/]],
+  ['モンヒロビート', 'rhythm', [/^モンヒロビート$/]],
+  ['曲えらび', 'song-select', [/^モンヒロビート$/, /ソロライブ/]],
+  ['モンヒロバトル', 'battle', [/^モンヒロバトル$/]],
+  ['ミッション', 'mission', [/^ミッション/]],
+  ['ギフト', 'gift', [/^ギフト/]],
+  ['プロフィール', 'profile', [/^プロフィールを開く$/]],
+  ['設定', 'settings', [/^設定$/]],
 ];
 
 let sharp = null;
@@ -38,7 +39,7 @@ async function lookScenario(s, { out }) {
   const save = process.argv.includes('--save-baseline');
   if (save) fs.mkdirSync(LOOK_DIR, { recursive: true });
   const shot = [], changed = [], missing = [];
-  for (const [name, steps] of SCREENS) {
+  for (const [name, file, steps] of SCREENS) {
     await s.backHome();
     await s.dismissOverlays(10);
     let reached = true;
@@ -52,11 +53,11 @@ async function lookScenario(s, { out }) {
     await s.wait(1200);
     await s.inspect();
     const buf = await s.page.screenshot();
-    fs.writeFileSync(path.join(out, `look-${name}.png`), buf);
+    fs.writeFileSync(path.join(out, `look-${file}.png`), buf);
     shot.push(name);
     if (!sharp) continue;
     const now = await small(buf);
-    const basePath = path.join(LOOK_DIR, `${name}.png`);
+    const basePath = path.join(LOOK_DIR, `${file}.png`);
     if (fs.existsSync(basePath)) {
       const base = await sharp(basePath).grayscale().raw().toBuffer();
       let diff = 0;
@@ -69,7 +70,7 @@ async function lookScenario(s, { out }) {
         const prev = await sharp(basePath).resize(vp.width, vp.height, { fit: 'fill' }).png().toBuffer();
         const side = await sharp({ create: { width: vp.width * 2 + 8, height: vp.height, channels: 3, background: '#ff00aa' } })
           .composite([{ input: prev, left: 0, top: 0 }, { input: buf, left: vp.width + 8, top: 0 }]).png().toBuffer();
-        const sideName = `look-${name}-前回と今回.png`;
+        const sideName = `look-${file}-before-after.png`;
         fs.writeFileSync(path.join(out, sideName), side);
         changed.push(`${name}(${Math.round(rate * 100)}%)`);
         await s.addIssue('見た目が大きく変わった', `「${name}」の見た目が前回から ${Math.round(rate * 100)}% 変わった。わざと変えたのか、崩れたのかを \`${sideName}\`(左が前回・右が今回)で確かめる`);
