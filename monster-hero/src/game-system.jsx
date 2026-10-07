@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0d4444bd7e71ca41
+// generated-sha256: c3ad790285c8303e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 14:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 14:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -295,6 +295,10 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   // ★値で書くと、あとの部品の const を読み込み時に触って「初期化の前に使っている」で画面が真っ白になる(2026-10-04に実際に起きた)
   get raidJack() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidJack === true; },
   get raidJackRhythm() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidJackRhythm === true; },
+  // マスモンを呼ぶ・ビートLvの知らせ(rhythm_masu_call_2026_10_07)。2026-10-07 にここへ足し忘れ、
+  // 「公開前」扱いになって HOME で流れず回想にも出なかった(ユーザー報告「ストーリー流れなかった」)。
+  // 見張り: tools/boot/event-replay-release-flag-check.js
+  get rhythmMulti() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmMulti === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
