@@ -90,23 +90,27 @@ const pure = (() => {
   // 演奏の結果
   const seq = (seed) => { let x = seed; return () => { x = (x * 1103515245 + 12345) % 2147483648; return x / 2147483648; }; };
   const normal = b.moods.find((m) => m.id === 'normal');
-  const avg = (lvExp, diffId, max, plays) => {
-    const rand = seq(7); let sum = 0; let fc = 0;
-    for (let i = 0; i < 300; i += 1) {
-      const r = b.play({ mon: { exp: lvExp, diffs: { [diffId]: plays } }, songId: 's', diffId, totalNotes: 500, maxScore: max, durationMs: 100000, mood: normal, rand });
-      if (r.score > max || r.score < 0) return { bad: true };
-      sum += r.score; if (r.fullCombo) fc += 1;
+  const run = (lvExp, diffId, max, plays, songPlays = 0) => {
+    const rand = seq(7); const scores = []; let fc = 0; let perfect = 0; let over = false;
+    for (let i = 0; i < 400; i += 1) {
+      const r = b.play({ mon: { exp: lvExp, diffs: { [diffId]: plays }, songs: { s: songPlays } }, songId: 's', diffId, totalNotes: 500, maxScore: max, durationMs: 100000, mood: normal, rand });
+      if (r.score > max || r.score < 0) over = true;
+      scores.push(r.score); if (r.fullCombo) fc += 1; if (r.score >= max) perfect += 1;
     }
-    return { avg: sum / 300, fc };
+    scores.sort((x, y) => x - y);
+    return { over, fc, perfect, avg: scores.reduce((x, y) => x + y, 0) / scores.length, width: scores[379] - scores[20] };
   };
-  const lv1 = avg(0, 'EASY', 600000, 0);
-  const lv50 = avg(1e9, 'EASY', 600000, 40);
-  const lv50m = avg(1e9, 'MASTER', 1000000, 40);
-  check('スコアは0〜その難易度の満点に収まる', !lv1.bad && !lv50.bad && !lv50m.bad);
+  const lv1 = run(0, 'EASY', 600000, 0);
+  const lv50 = run(1e9, 'EASY', 600000, 40);
+  const lv1m = run(0, 'MASTER', 1000000, 0);
+  const lv50m = run(1e9, 'MASTER', 1000000, 40);
+  const lv50mFav = run(1e9, 'MASTER', 1000000, 40, 30);
+  check('スコアは0〜その難易度の満点に収まる', [lv1, lv50, lv1m, lv50m, lv50mFav].every((x) => !x.over));
   check('育つほどうまくなる(Lv.1 < Lv.50)', lv1.avg < lv50.avg, `${Math.round(lv1.avg)} < ${Math.round(lv50.avg)}`);
-  check('育ちきるとMASTERでSSに届く(人より上手になれる)。満点は出ない', lv50m.avg >= 860000 && lv50m.avg < 1000000, `平均${Math.round(lv50m.avg)} FC${lv50m.fc}/300`);
-  const lv1m = avg(0, 'MASTER', 1000000, 0);
-  check('育てはじめはフルコンボしない', lv1m.fc === 0 && lv1.fc === 0);
+  check('遊んだ曲ほど得意(30回遊んだ曲 > 初めての曲)', lv50mFav.avg > lv50m.avg + 30000, `${Math.round(lv50mFav.avg)} > ${Math.round(lv50m.avg)}`);
+  check('育ちきって得意な曲なら、MASTERでSSに届き、たまに満点(上限は満点)', lv50mFav.avg >= 880000 && lv50mFav.perfect > 0, `平均${Math.round(lv50mFav.avg)} 満点${lv50mFav.perfect}/400`);
+  check('育てはじめは満点もフルコンボも出ない', lv1.perfect === 0 && lv1m.perfect === 0 && lv1.fc === 0 && lv1m.fc === 0);
+  check('うまくなるほどブレが小さい(Lv.1 の振れ幅 > Lv.50)', lv1m.width > lv50m.width, `${lv1m.width} > ${lv50m.width}`);
   const great = b.moods.find((m) => m.id === 'great');
   const awful = b.moods.find((m) => m.id === 'awful');
   const byMood = (mood) => { const rand = seq(3); let s = 0; for (let i = 0; i < 300; i += 1) s += b.play({ mon: { exp: 5000 }, songId: 's', diffId: 'HARD', totalNotes: 500, maxScore: 800000, mood, rand }).score; return s / 300; };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2f1e00394f3909d
+// source-sha256: 3a1b87f20b4c54ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 11:57";
+const BUILD_DATE = "2026-10-07 12:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37078,19 +37078,20 @@ const rhythmBuddyAccuracy = ({
   } = rhythmBuddyLevelInfo(m.exp);
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
-  const stars = rhythmBuddyFamiliarStars(m.songs[songId], m.trait);
-  let acc = 0.35 + 0.57 * Math.pow((level - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
+  let acc = 0.35 + 0.5 * rhythmBuddyGrowthRate(level);
   acc += 0.05 * mastery;
   acc -= d * 0.035 * (1 - mastery);
-  acc += stars * 0.012 * (m.trait === 'artisan' ? 1.4 : 1);
+  acc += rhythmBuddySongSkill(m.songs[songId], m.trait);
   if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
   const moodAcc = mood ? mood.acc : 0;
   acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
-  return Math.max(0.1, Math.min(0.97, acc));
+  return Math.max(0.1, Math.min(1, acc));
 };
-const rhythmBuddySpread = (trait, mood) => {
+const rhythmBuddyGrowthRate = level => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
+const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1) / 12));
+const rhythmBuddySpread = (trait, mood, level = 1) => {
   const base = trait === 'steady' ? 0.02 : trait === 'burst' ? 0.055 : 0.035;
-  return base * (mood ? mood.spread : 1);
+  return base * (1.6 - 1.1 * rhythmBuddyGrowthRate(level)) * (mood ? mood.spread : 1);
 };
 const rhythmBuddyNormal = rand => {
   const u = Math.max(1e-9, rand());
@@ -37111,15 +37112,16 @@ const rhythmBuddyPlay = ({
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, rhythmBuddyInt(totalNotes, 100000));
   const max = Number(maxScore) > 0 ? Number(maxScore) : 1000000;
+  const level = rhythmBuddyLevelInfo(m.exp).level;
   let acc = rhythmBuddyAccuracy({
     mon: m,
     songId,
     diffId,
     durationMs,
     mood
-  }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood);
+  }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
   if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
-  acc = Math.max(0.1, Math.min(0.985, acc));
+  acc = Math.max(0.1, Math.min(1, acc));
   const miss = 1 - acc;
   const share = {
     MISS: miss * 0.45,
@@ -37138,7 +37140,6 @@ const rhythmBuddyPlay = ({
   ['MISS', 'BAD', 'GOOD', 'GREAT'].forEach(id => {
     counts[id] = Math.round(total * share[id]);
   });
-  if (counts.MISS + counts.BAD === 0 && r() >= Math.max(0, (acc - 0.93) * 6)) counts.MISS = 1;
   const rest = Math.max(0, total - counts.MISS - counts.BAD - counts.GOOD - counts.GREAT);
   counts.MARVELOUS = Math.round(rest * acc);
   counts.EXCELLENT = rest - counts.MARVELOUS;

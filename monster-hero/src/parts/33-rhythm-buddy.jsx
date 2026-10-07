@@ -214,21 +214,26 @@ const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood }) => {
   const { level } = rhythmBuddyLevelInfo(m.exp);
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
-  const stars = rhythmBuddyFamiliarStars(m.songs[songId], m.trait);
   // 上の方ほど伸びが大きい(はじめはゆっくり、育ちきると人より上手)
-  let acc = 0.35 + 0.57 * Math.pow((level - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
+  let acc = 0.35 + 0.5 * rhythmBuddyGrowthRate(level);
   acc += 0.05 * mastery;
   acc -= d * 0.035 * (1 - mastery);
-  acc += stars * 0.012 * (m.trait === 'artisan' ? 1.4 : 1);
+  // 遊んだ曲ほど得意になる(2026-10-07・ユーザー指示)。回数に応じてなだらかに増え、最大 +0.10
+  acc += rhythmBuddySongSkill(m.songs[songId], m.trait);
   if (m.trait === 'stamina') acc += Number(durationMs) >= RHYTHM_BUDDY_LONG_SONG_MS ? 0.025 : -0.01;
   const moodAcc = mood ? mood.acc : 0;
   acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
-  return Math.max(0.1, Math.min(0.97, acc));
+  // 上限は満点(判定の良さ1)。満点まで届くかは、うまさとブレしだい
+  return Math.max(0.1, Math.min(1, acc));
 };
-// ブレ(標準偏差)
-const rhythmBuddySpread = (trait, mood) => {
+// Lv の伸び(0〜1)。上の方ほど伸びが大きい
+const rhythmBuddyGrowthRate = (level) => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
+// その曲の得意(0〜0.10)。遊んだ回数でなだらかに増える。職人型は1.5倍の速さ
+const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1) / 12));
+// ブレ(標準偏差)。うまくなるほど小さくなる(育てはじめは日によって大きく外す)。性格と調子でも変わる
+const rhythmBuddySpread = (trait, mood, level = 1) => {
   const base = trait === 'steady' ? 0.02 : trait === 'burst' ? 0.055 : 0.035;
-  return base * (mood ? mood.spread : 1);
+  return base * (1.6 - 1.1 * rhythmBuddyGrowthRate(level)) * (mood ? mood.spread : 1);
 };
 
 // ---- 演奏の結果を作る ----
@@ -243,16 +248,15 @@ const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs
   const m = rhythmBuddyNormalizeMon(mon);
   const total = Math.max(1, rhythmBuddyInt(totalNotes, 100000));
   const max = Number(maxScore) > 0 ? Number(maxScore) : 1000000;
-  let acc = rhythmBuddyAccuracy({ mon: m, songId, diffId, durationMs, mood }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood);
+  const level = rhythmBuddyLevelInfo(m.exp).level;
+  let acc = rhythmBuddyAccuracy({ mon: m, songId, diffId, durationMs, mood }) + rhythmBuddyNormal(r) * rhythmBuddySpread(m.trait, mood, level);
   // 一発型は、たまに(8%)大きく当てる
   if (m.trait === 'burst' && r() < 0.08) acc += 0.06;
-  acc = Math.max(0.1, Math.min(0.985, acc));
+  acc = Math.max(0.1, Math.min(1, acc));
   const miss = 1 - acc;
   const share = { MISS: miss * 0.45, BAD: miss * 0.15, GOOD: miss * 0.2, GREAT: miss * 0.2 };
   const counts = { MARVELOUS: 0, EXCELLENT: 0, GREAT: 0, GOOD: 0, BAD: 0, MISS: 0 };
   ['MISS', 'BAD', 'GOOD', 'GREAT'].forEach((id) => { counts[id] = Math.round(total * share[id]); });
-  // フルコンボは、よほどうまいときだけ(判定の良さ 0.93 を超えたぶんだけ出やすくなる)
-  if (counts.MISS + counts.BAD === 0 && r() >= Math.max(0, (acc - 0.93) * 6)) counts.MISS = 1;
   const rest = Math.max(0, total - counts.MISS - counts.BAD - counts.GOOD - counts.GREAT);
   counts.MARVELOUS = Math.round(rest * acc);
   counts.EXCELLENT = rest - counts.MARVELOUS;
