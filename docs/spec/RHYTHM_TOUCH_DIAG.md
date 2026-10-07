@@ -128,6 +128,7 @@ iPhoneの記録が20曲そろってから判定する。
 | `frames` / `stalls` / `maxStepMs` | 曲の時計を1コマごとに読んだ数 / 前のコマと同じ値だった数 / いちばん大きかった1コマの進み |
 | `hidden` / `pen` | 演奏中にアプリを離れた回数 / ペンで直接押した回数 |
 | `outLatMs` / `baseLatMs` / `hasTs` / `rate` / `headMs` | 端末の出力遅延・基準遅延・`getOutputTimestamp` の有無・サンプルレート・曲の頭の無音の長さ（mp3の先頭の遅れがブラウザで違わないかを比べる） |
+| `tsLatMs` / `biasN` / `biasMs` | `tsLatMs` は端末が申告する「いま耳に届いている位置」(`getOutputTimestamp`)と `ctx.currentTime` の差(0.5秒おきに測った中央値・ms。測れない端末は null)。`biasMs` は単押しを取ったときのずれの中央値(正=遅い側)、`biasN` はその数。**どちらも判定には使わない**(診断だけ)。Safari の出力遅延の補正が足りているかは、`biasMs` が `outLatMs` と `tsLatMs` のどちらに近いかで見る。タップのずれから自動で補正すると、見た目を見て叩く人でずれが積み上がり続けるので、そうはしない(2026-10-07) |
 
 ### 直し方（`RHYTHM_TOUCH_FIXES`）と、ゲームが自分で決める入れ切り
 

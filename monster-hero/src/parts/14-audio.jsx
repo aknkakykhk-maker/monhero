@@ -448,8 +448,18 @@ const Audio_ = (() => {
       // 直し方 smoothSongClock を入れた端末では、段の間を performance.now() でなめらかに埋める
       // (段の値へゆっくり寄せ、離れすぎたら段の値に戻す。入れていない端末では、これまでどおり段の値そのまま)。2026-10-07
       let smoothSong=0,smoothPerf=0;
+      // 端末が申告する「いま耳に届いている位置」(getOutputTimestamp)と ctx.currentTime の差。0.5秒おきに測って中央値を診断へ残す。
+      // 出力遅延の申告(outputLatency)が無い端末(Safari)で、補正が足りているかを見る手がかり。判定には使わない(2026-10-07)
+      const tsLatSamples=[];let tsLatAt=0;
+      const sampleTsLatency=()=>{
+        if(typeof ctx.getOutputTimestamp!=='function'||typeof performance==='undefined')return;
+        const p=performance.now();if(p-tsLatAt<500||tsLatSamples.length>=20)return;tsLatAt=p;
+        try{const ts=ctx.getOutputTimestamp();const d=(ctx.currentTime-Number(ts&&ts.contextTime))*1000;if(Number.isFinite(d)&&d>=0&&d<=1000&&Number(ts.contextTime)>0)tsLatSamples.push(d);}catch{}
+      };
+      const tsLatMs=()=>{if(tsLatSamples.length<3)return null;const s=tsLatSamples.slice().sort((a,b)=>a-b);return Math.round(s[s.length>>1]);};
       const songTimeSeconds=()=>{
         const raw=rawSongTimeSeconds();
+        if(playing)sampleTsLatency();
         if(!playing||!rhythmTouchFixOn('smoothSongClock')||typeof performance==='undefined'){smoothPerf=0;return raw;}
         const p=performance.now();
         if(!(smoothPerf>0)){smoothSong=raw;smoothPerf=p;return raw;}
@@ -466,7 +476,7 @@ const Audio_ = (() => {
         started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
         // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
-        info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
+        info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
         durationMs:buffer.duration*1000,
         ended:()=>naturallyEnded||songTimeSeconds()>=buffer.duration,
         paused:()=>!playing&&!stopped&&!naturallyEnded,

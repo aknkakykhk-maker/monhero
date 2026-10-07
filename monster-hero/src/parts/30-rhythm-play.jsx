@@ -1476,7 +1476,7 @@ const preciseHit=rhythmJudgmentIsPrecise(judgment,deltaMs);
 // 「普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合う」)。
 // ★判定・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れない。貯めるだけ。
 // ★MISSは入れない(叩けていないので、そのずれは意味を持たない)。
-if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){if(!Array.isArray(run.deltas))run.deltas=[];run.deltas.push(deltaMs);}
+if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){if(!Array.isArray(run.deltas))run.deltas=[];run.deltas.push(deltaMs);}if(!calibrating&&note&&note.type==='TAP'&&judgment!=='MISS')RHYTHM_TIMING_DIAG.bias(deltaMs);
 // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
 // TAPは指を置いた時点で音が鳴っているので対象にしない。
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
@@ -1693,6 +1693,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // 遊んだ記録を送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせ・アシストモードは送らない
     if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
     // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
+    if(!debugPlay&&!tutorial&&!calibrating){try{RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());}catch{}}
     const touchDiag=!debugPlay&&!tutorial&&!calibrating?rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed}):null;
     if(touchDiag)void rhythmTouchDiagRecord(touchDiag);
     // リザルトの「押したのに反応しないことがあった」に渡す。タッチで遊ぶ端末(iPhone・Android)だけ

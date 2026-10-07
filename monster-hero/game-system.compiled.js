@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f25cd540fbfb5f8d
+// source-sha256: a257819e2683de1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 12:06";
+const BUILD_DATE = "2026-10-07 12:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6900,8 +6900,27 @@ const Audio_ = (() => {
       const rawSongTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       let smoothSong = 0,
         smoothPerf = 0;
+      const tsLatSamples = [];
+      let tsLatAt = 0;
+      const sampleTsLatency = () => {
+        if (typeof ctx.getOutputTimestamp !== 'function' || typeof performance === 'undefined') return;
+        const p = performance.now();
+        if (p - tsLatAt < 500 || tsLatSamples.length >= 20) return;
+        tsLatAt = p;
+        try {
+          const ts = ctx.getOutputTimestamp();
+          const d = (ctx.currentTime - Number(ts && ts.contextTime)) * 1000;
+          if (Number.isFinite(d) && d >= 0 && d <= 1000 && Number(ts.contextTime) > 0) tsLatSamples.push(d);
+        } catch {}
+      };
+      const tsLatMs = () => {
+        if (tsLatSamples.length < 3) return null;
+        const s = tsLatSamples.slice().sort((a, b) => a - b);
+        return Math.round(s[s.length >> 1]);
+      };
       const songTimeSeconds = () => {
         const raw = rawSongTimeSeconds();
+        if (playing) sampleTsLatency();
         if (!playing || !rhythmTouchFixOn('smoothSongClock') || typeof performance === 'undefined') {
           smoothPerf = 0;
           return raw;
@@ -6930,6 +6949,7 @@ const Audio_ = (() => {
           outLatMs: Math.round(outputLatencySeconds * 1000),
           baseLatMs: Math.round((Number(ctx.baseLatency) || 0) * 1000),
           hasTs: typeof ctx.getOutputTimestamp === 'function',
+          tsLatMs: tsLatMs(),
           rate: Math.round(Number(ctx.sampleRate) || 0),
           headMs
         }),
@@ -31137,6 +31157,7 @@ const RhythmTapTest = ({
       if (!Array.isArray(run.deltas)) run.deltas = [];
       run.deltas.push(deltaMs);
     }
+    if (!calibrating && note && note.type === 'TAP' && judgment !== 'MISS') RHYTHM_TIMING_DIAG.bias(deltaMs);
     const clearedGesture = judgment !== 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note) || note._rhythmOriginalType === 'FLICK');
     if (clearedGesture) {
       if (note._rhythmOriginalType === 'FLICK' || note.type === 'FLICK' || note.endFlick) RHYTHM_NOTE_SE_RUNTIME.playFlick(judgment);else RHYTHM_NOTE_SE_RUNTIME.playClear(judgment);
@@ -31489,6 +31510,11 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
+    if (!debugPlay && !tutorial && !calibrating) {
+      try {
+        RHYTHM_TIMING_DIAG.meta(run.audio?.info?.());
+      } catch {}
+    }
     const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
