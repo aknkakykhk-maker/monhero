@@ -2729,15 +2729,18 @@ function MonsterHeroGame() {
       || null;
     return monsterId ? monsterLineageOf(monsterId).main.id : null;
   }, []);
+  // 画面に出すのは「同じ人の同じモンスターは1体だけ」(pickTopPerBreederMonster・2026-10-07)
+  const bondRankingShown = useMemo(() => pickTopPerBreederMonster(bondRankingAll), [bondRankingAll]);
   const bondRanking = useMemo(() => (
     bondRankMonFilter === 'all'
-      ? bondRankingAll.slice(0, 50)
-      : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
-  ), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+      ? bondRankingShown.slice(0, 50)
+      : bondRankingShown.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
+  ), [bondRankingShown, bondRankMonFilter, bondEntryLineageId]);
   // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
   // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
   // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
-  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 総合力でも同じ人の同じモンスターは1体だけ(総合力のいちばん高い子が残る)
+  const powerRankingAll = useMemo(() => pickTopPerBreederMonster(collectPowerRankingEntries(bondRankingAll)), [bondRankingAll]);
   // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
   const powerRanking = useMemo(() => (
     powerRankMonFilter === 'all'
