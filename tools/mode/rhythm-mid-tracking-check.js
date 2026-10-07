@@ -314,5 +314,15 @@ const makeSlideNote=()=>({type:'SLIDE',timeMs:1000,endTimeMs:3000,lane:0,endLane
 // --- 猶予が0.1msでも短縮されていないか、定数の値を直接確認 ---
 function RHYTHM_HOLD_TRACKING_MARGIN_LANES_VALUE(text){return Number(text.match(/RHYTHM_HOLD_TRACKING_MARGIN_LANES=([\d.]+);/)?.[1]);}
 
+// --- HOLDを押さえている途中も、押し始めと同じ範囲で見るか(2026-10-07) ---
+// 押し始めは「判定ラインより下の指は判定ラインの高さに直した位置でも見る」。押さえている最中が指のその場の高さだけだと、
+// 端のレーンを画面の手前で押さえたとき「押し始めは通るのに途中で外れ」になる(ユーザー報告「ホールド近くのノーツを押すときにホールドが切れる」)
+{
+  const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','monster-hero','data','rhythm-mode.js'),'utf8');
+  const holdBranch=src.slice(src.indexOf('// 終わりの100msは外れを見ない'),src.indexOf('if(!bad){session.trackingBadSincePerf=null;return;}'));
+  check('HOLDの追従が、判定ラインより下では判定ラインの高さに直した位置でも見る(押し始めと同じ)',
+    /rhythmSubLaneCoordinateAtLineIfBelow\(pos\.clientX,pos\.clientY,areaBox\)/.test(holdBranch)&&/bad=off\(actual\)&&off\(atLine\)/.test(holdBranch));
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
