@@ -95,6 +95,9 @@ async function run() {
   const fatal = [];
   page.on('pageerror', e => fatal.push(e.message));
   await page.addInitScript(seed);
+  // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+  await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+  await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
   await page.route('**/rest/v1/**', async (route) => {
     if (route.request().method() !== 'GET') { await route.fulfill({ status: 201, body: '' }); return; }
     const url = new URL(route.request().url());

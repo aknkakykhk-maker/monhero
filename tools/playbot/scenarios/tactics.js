@@ -329,8 +329,37 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
     return { ok: false, stats, note: `入れなかった(${entered})` };
   }
   stats.entered = true;
+  const t0 = Date.now();
+  await fightTactics(s, stats, { maxMs });
+  const end = await readTactics(s);
+  if (end.over) { stats.finished = true; await s.shot('tactics-result'); await s.dismissOverlays(10); await s.inspect(); }
+  // 狙われて危ないのに守りを選べなかったことが続くなら、手札の配り方か、ボットの読み違いのどちらか
+  if (stats.aimedDanger >= 4 && stats.dangerNoGuard / stats.aimedDanger > 0.75) {
+    await s.addIssue('守りが足りない', `狙われて危ないターン ${stats.aimedDanger}回のうち ${stats.dangerNoGuard}回は、使える守りのカードが手札に無かった`);
+  }
+  const mins = ((Date.now() - t0) / 60000).toFixed(1);
+  return { ok: true, stats, note: `${stats.mode}・${stats.turns}ターン(${mins}分)で WAVE ${stats.waveReached} まで${stats.finished ? '(決着)' : ''}・倒れた ${stats.downs}回・危ないときに守った ${stats.guardsWhenAimed}/${stats.aimedDanger}回・EX ${stats.exUsed}回・捨てた ${stats.discards}枚` };
+}
+
+// タクティクスの盤面で、手で戦い続ける(タクティクス係とイベント係のレイドで使う)。
+// waves: false のときは、バトルの外へ出たら(レイドの20ターンが終わったら)そこで止める
+async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = false } = {}) {
   // 登場の演出が終わるまで待つ(終わる前は手札を押しても入らない)
   await s.wait(2500);
+  // 長い戦い(レイドの20ターン)は、人と同じく「バトル速度」をいちばん速くしてから戦う
+  if (speedUp) {
+    for (let k = 0; k < 4; k++) {
+      const b = (await s.listButtons()).find((x) => /^バトル速度、現在(\d+)倍/.test(x.label));
+      if (!b) break;
+      const now = Number(b.label.match(/現在(\d+)倍/)[1]);
+      if (k > 0 && now === 1) { await s.tap(b, 'バトル速度(戻りすぎたので1つ進める)'); continue; }
+      if (now >= 3) break;
+      await s.tap(b, 'バトル速度を上げる');
+      await s.wait(300);
+      const next = (await s.listButtons()).find((x) => /^バトル速度、現在(\d+)倍/.test(x.label));
+      if (next && Number(next.label.match(/現在(\d+)倍/)[1]) <= now) break;
+    }
+  }
   const t0 = Date.now();
   let lastDowned = 0;
   while (Date.now() - t0 < maxMs) {
@@ -338,6 +367,7 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
     await s.dismissOverlays(4);
     let st = await readTactics(s);
     if (!st.inBattle) {
+      if (!waves) break;
       const where = await betweenWaves(s);
       if (where !== 'battle') { stats.finished = where === 'over'; break; }
       st = await readTactics(s);
@@ -375,14 +405,6 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
     await s.inspect();
     if (!moved) { await s.addIssue('進行停止', `タクティクスで実行してから60秒たってもターンが進まない (W${before.wave}/T${before.turn})`); break; }
   }
-  const end = await readTactics(s);
-  if (end.over) { stats.finished = true; await s.shot('tactics-result'); await s.dismissOverlays(10); await s.inspect(); }
-  // 狙われて危ないのに守りを選べなかったことが続くなら、手札の配り方か、ボットの読み違いのどちらか
-  if (stats.aimedDanger >= 4 && stats.dangerNoGuard / stats.aimedDanger > 0.75) {
-    await s.addIssue('守りが足りない', `狙われて危ないターン ${stats.aimedDanger}回のうち ${stats.dangerNoGuard}回は、使える守りのカードが手札に無かった`);
-  }
-  const mins = ((Date.now() - t0) / 60000).toFixed(1);
-  return { ok: true, stats, note: `${stats.mode}・${stats.turns}ターン(${mins}分)で WAVE ${stats.waveReached} まで${stats.finished ? '(決着)' : ''}・倒れた ${stats.downs}回・危ないときに守った ${stats.guardsWhenAimed}/${stats.aimedDanger}回・EX ${stats.exUsed}回・捨てた ${stats.discards}枚` };
 }
 
-module.exports = { tacticsScenario };
+module.exports = { tacticsScenario, fightTactics, readTactics };

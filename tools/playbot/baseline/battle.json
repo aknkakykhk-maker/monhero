@@ -1,0 +1,23 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1543",
+ "seed": 391910,
+ "roles": [
+  {
+   "id": "battle",
+   "name": "バトル係",
+   "ok": true
+  }
+ ],
+ "numbers": {
+  "バトル係: 手で突破したWAVE": 5
+ },
+ "issues": [
+  {
+   "roleId": "battle",
+   "kind": "小さいボタン",
+   "level": "既知",
+   "detail": "「1ページ目」「2ページ目」「3ページ目」「4ページ目」など9個が32px未満"
+  }
+ ]
+}

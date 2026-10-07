@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 691bd1269b50c0ae
+// source-sha256: 2501d357abf753f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 17:56";
+const BUILD_DATE = "2026-10-07 18:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5285,6 +5285,7 @@ const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({
   sort: 'added',
   desc: false,
   noticeOpen: true,
+  noticeOpenShort: false,
   genre: 'all',
   favorites: Object.freeze([])
 });
@@ -5295,6 +5296,7 @@ const normalizeRhythmSelectView = value => {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
+    noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
     genre,
     favorites: Array.isArray(source.favorites) ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX) : []
   };
@@ -8587,6 +8589,48 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Melody: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
+  Kuromy: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -9023,7 +9067,9 @@ const EXACT_DYE_MASKS = Object.freeze({
   Yggdrasil: YGGDRASIL_DYE_MASK,
   MelWhip: MEL_WHIP_DYE_MASK,
   Ghost: GHOST_DYE_MASK,
-  Spooky: SPOOKY_DYE_MASK
+  Spooky: SPOOKY_DYE_MASK,
+  Melody: MELODY_DYE_MASK,
+  Kuromy: KUROMY_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -9376,6 +9422,20 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.51
   }, {
     gloss: 0.6
+  }],
+  Melody: [{
+    gloss: 0.33
+  }, {
+    gloss: 0.49
+  }, {}, {
+    gloss: 0.46
+  }, {
+    gloss: 0.42
+  }],
+  Kuromy: [{
+    gloss: 0.56
+  }, {}, {}, {}, {
+    gloss: 0.4
   }]
 };
 const _NO_REGION_DYE = {
@@ -22519,6 +22579,32 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       delay: 500,
       layer: 'front'
     }]
+  },
+  Melody: {
+    body: 'breathe',
+    bodyMask: IDLE_MELODY_BODY_MASK,
+    parts: [{
+      mask: IDLE_MELODY_TAIL_MASK,
+      origin: '81.8% 79.5%',
+      anim: 'wag',
+      amp: 8,
+      dur: 1800,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Kuromy: {
+    body: 'breathe',
+    bodyMask: IDLE_KUROMY_BODY_MASK,
+    parts: [{
+      mask: IDLE_KUROMY_TAIL_MASK,
+      origin: '65.9% 53.4%',
+      anim: 'wag',
+      amp: 7,
+      dur: 1700,
+      delay: 0,
+      layer: 'back'
+    }]
   }
 });
 const MONSTER_IDLE_MASK_STYLE = url => ({
@@ -23813,6 +23899,46 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
+const sbAutomationWriteBlocked = (url, method) => {
+  try {
+    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
+    const stubbed = typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
+    if (stubbed === true) return false;
+    const m = String(method || 'GET').toUpperCase();
+    if (m === 'GET' || m === 'HEAD') return false;
+    const u = String(url || '');
+    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (Array.isArray(stubbed)) {
+      const path = u.slice(SUPABASE_URL.length).split('?')[0];
+      if (stubbed.some(t => typeof t === 'string' && t && path.startsWith('/rest/v1/' + t))) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+try {
+  if (typeof window !== 'undefined' && typeof window.fetch === 'function' && !window.__mhSupabaseWriteGuard) {
+    const realFetch = window.fetch.bind(window);
+    window.__mhSupabaseWriteGuard = true;
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input && input.url || '';
+      const method = init && init.method || input && typeof input === 'object' && input.method || 'GET';
+      if (sbAutomationWriteBlocked(url, method)) {
+        try {
+          console.info('[supabase] 自動操作のブラウザなので本物へは書き込まない:', String(method).toUpperCase(), String(url).split('?')[0].replace(SUPABASE_URL, ''));
+        } catch {}
+        return Promise.resolve(new Response('[]', {
+          status: 201,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }));
+      }
+      return realFetch(input, init);
+    };
+  }
+} catch {}
 const PRO_RANKING_PREFIX = 'Pro';
 const EXTREME_RANKING_PREFIX = 'Extreme';
 const TACTICS_RANKING_PREFIX = 'Tactics';
@@ -27955,6 +28081,14 @@ const RhythmSongSelect = ({
     if (typeof onView === 'function') onView(next);
   };
   const state = normalizeRhythmSelectView(view);
+  const shortPortrait = () => typeof window !== 'undefined' && window.innerHeight <= 700 && window.innerHeight > window.innerWidth;
+  const [isShortScreen, setIsShortScreen] = React.useState(shortPortrait);
+  useEffect(() => {
+    const onResize = () => setIsShortScreen(shortPortrait());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const noticeOpen = isShortScreen ? state.noticeOpenShort : state.noticeOpen;
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
@@ -28149,7 +28283,7 @@ const RhythmSongSelect = ({
     className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
   }, React.createElement("div", {
     className: "flex min-h-0 min-w-0 flex-1 flex-col landscape:flex-row landscape:border-r landscape:border-white/10"
-  }, notice && state.noticeOpen && React.createElement("div", {
+  }, notice && noticeOpen && React.createElement("div", {
     "data-rhythm-song-notice": true,
     className: "shrink-0 px-2 pt-2 landscape:hidden"
   }, notice), React.createElement("div", {
@@ -28192,18 +28326,21 @@ const RhythmSongSelect = ({
   }, "▾")), notice && React.createElement("button", {
     type: "button",
     "data-rhythm-song-notice-toggle": true,
-    "aria-pressed": state.noticeOpen,
-    onClick: () => setView({
+    "aria-pressed": noticeOpen,
+    onClick: () => setView(isShortScreen ? {
       ...state,
-      noticeOpen: !state.noticeOpen
+      noticeOpenShort: !noticeOpen
+    } : {
+      ...state,
+      noticeOpen: !noticeOpen
     }),
-    title: state.noticeOpen ? '助手のひとことを畳む' : '助手のひとことを出す',
-    className: `flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${state.noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+    title: noticeOpen ? '助手のひとことを畳む' : '助手のひとことを出す',
+    className: `flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, "💬"), React.createElement("span", {
     "aria-hidden": "true"
-  }, state.noticeOpen ? '▲' : '▼')), toolbarExtra), React.createElement("div", {
+  }, noticeOpen ? '▲' : '▼')), toolbarExtra), React.createElement("div", {
     ref: listRef,
     onScroll: handleListScroll,
     "data-rhythm-song-list": true,
@@ -28327,6 +28464,7 @@ const RhythmSongSelect = ({
     "data-rhythm-song-detail-grid": true,
     className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]"
   }, React.createElement("div", {
+    "data-rhythm-song-detail-art": true,
     className: "w-28 shrink-0 self-start landscape:w-[7.5rem]",
     style: {
       gridArea: 'art'
@@ -28475,7 +28613,7 @@ const RhythmSongSelect = ({
     style: {
       gridArea: 'foot'
     }
-  }, typeof footer === 'function' ? footer(song, difficulty) : footer))), notice && state.noticeOpen && React.createElement("div", {
+  }, typeof footer === 'function' ? footer(song, difficulty) : footer))), notice && noticeOpen && React.createElement("div", {
     "data-rhythm-song-notice-landscape": true,
     className: "mt-2 hidden landscape:block"
   }, notice)), artZoom && song && (() => {
@@ -52626,7 +52764,7 @@ const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   left: '50%',
   top: '44%',
   transform: 'translate(-50%,-50%)',
-  zIndex: 6,
+  zIndex: 2,
   width: '44%',
   maxWidth: '190px',
   minWidth: '120px'
@@ -52787,7 +52925,7 @@ const HomeRaidJack = ({
     style: {
       position: 'absolute',
       pointerEvents: 'none',
-      inset: `${-30 - (Number(String(tier.id).slice(1)) || 0) * 14}% ${-14 - (Number(String(tier.id).slice(1)) || 0) * 9}% -6%`
+      inset: `${-20 - (Number(String(tier.id).slice(1)) || 0) * 8}% ${-10 - (Number(String(tier.id).slice(1)) || 0) * 5}% -6%`
     }
   }, React.createElement(JackAuraLayer, {
     tier: Number(String(tier.id).slice(1)) || 0

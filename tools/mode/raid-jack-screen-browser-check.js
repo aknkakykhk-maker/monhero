@@ -84,6 +84,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.addInitScript(eventStorySeed());
     const posts = [];
     let bossDown = false;   // true にすると、大王(段階5)まで倒された状態の合計を返す
+    // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+    await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route('**/rest/v1/**', async (route) => {
       const req = route.request(); const url = req.url();
       if (/raid_jack_/.test(url)) {

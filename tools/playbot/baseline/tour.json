@@ -1,0 +1,14 @@
+{
+ "format": "roles",
+ "stamp": "20261007-1543",
+ "seed": 391910,
+ "roles": [
+  {
+   "id": "tour",
+   "name": "案内係",
+   "ok": true
+  }
+ ],
+ "numbers": {},
+ "issues": []
+}

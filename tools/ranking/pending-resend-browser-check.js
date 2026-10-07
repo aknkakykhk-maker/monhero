@@ -67,6 +67,9 @@ const localRows = (extra = {}) => ([
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('pageerror', (e) => errors.push(String(e)));
       // Supabaseへは出られないので、送信先の応答をここで作る
+      // 通信を差し替えたので、差し替えた表だけ、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = ['rankings', 'bond_levels']; });
+      await page.evaluate(() => { window.__mhSupabaseStubbed = ['rankings', 'bond_levels']; }).catch(() => {});
       await page.route('**/rest/v1/rankings**', async (route) => {
         const req = route.request();
         if (req.method() === 'POST') {
