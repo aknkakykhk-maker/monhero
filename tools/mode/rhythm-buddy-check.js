@@ -32,13 +32,44 @@ const pure = (() => {
   const sb = { Math, Date, Object, Number, String, Array, JSON, console };
   vm.createContext(sb);
   vm.runInContext(`${BUDDY}\n;globalThis.__b={norm:rhythmBuddyNormalize,normMon:rhythmBuddyNormalizeMon,freeLeft:rhythmBuddyFreeLeft,useFree:rhythmBuddyUseFree,
-    level:rhythmBuddyLevelInfo,apply:rhythmBuddyApplyLive,stars:rhythmBuddyFamiliarStars,mood:rhythmBuddyMood,moods:RHYTHM_BUDDY_MOODS,
+    choose:rhythmBuddyChooseSong,whyText:RHYTHM_BUDDY_PICK_WHY,newChance:rhythmBuddyNewSongChance,topSongs:rhythmBuddyTopSongs,level:rhythmBuddyLevelInfo,apply:rhythmBuddyApplyLive,stars:rhythmBuddyFamiliarStars,mood:rhythmBuddyMood,moods:RHYTHM_BUDDY_MOODS,
     play:rhythmBuddyPlay,lean:rhythmBuddySpeciesLean,comfort:rhythmBuddyComfortLevelOf,day:rhythmBuddyDayKey,key:RHYTHM_BUDDY_KEY,free:RHYTHM_BUDDY_FREE_PER_DAY,max:RHYTHM_BUDDY_LEVEL_MAX,need:rhythmBuddyNeedExp};`, sb);
   return sb.__b;
 })();
 {
   const b = pure;
   check('保存キーは新しいキー(mh_rhythm_buddy_v1)', b.key === 'mh_rhythm_buddy_v1');
+  // ---- 選曲(2026-10-07・「もうちょい選曲に意思をもたせる」) ----
+  {
+    const cat = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    const infoOf = (id) => ({ level: { a: 5, b: 9, c: 7, d: 3, e: 8, f: 6, g: 4 }[id], durationMs: { a: 90000, b: 120000, c: 200000, d: 100000, e: 110000, f: 95000, g: 80000 }[id] });
+    const mk = (trait) => ({ exp: 5000, songs: { a: 30, b: 20, c: 10, d: 5, e: 2 }, trait });
+    const seq = (...v) => { let i = 0; return () => v[Math.min(i++, v.length - 1)]; };
+    const mood = (id) => ({ id });
+    const none = b.choose(mk(''), [], {});
+    check('遊べる曲が無ければ選ばない', none.songId === '' && none.why === '');
+    const first = b.choose(undefined, cat, { rand: () => 0 });
+    check('まだ一緒に遊んだ曲が無い子は、遊べる曲から「はじめて」で選ぶ', first.songId === 'a' && first.why === 'new');
+    const fresh = b.choose(mk(''), cat, { mood: mood('normal'), info: infoOf, rand: seq(0, 0) });
+    check('たまに新しい曲(まだ遊んでいない曲)に挑戦する', fresh.why === 'new' && ['f', 'g'].includes(fresh.songId), JSON.stringify(fresh));
+    const fav = b.choose(mk(''), cat, { mood: mood('normal'), info: infoOf, rand: seq(0.99, 0.5) });
+    check('ふだんは得意な上位3曲から選ぶ', fav.why === 'fav' && ['a', 'b', 'c'].includes(fav.songId), JSON.stringify(fav));
+    const bad = b.choose(mk(''), cat, { mood: mood('bad'), info: infoOf, rand: seq(0.99, 0.5) });
+    check('不機嫌な日は、いちばん慣れた曲で安心する', bad.why === 'safe' && bad.songId === 'a', JSON.stringify(bad));
+    const great = b.choose(mk(''), cat, { mood: mood('great'), info: infoOf, rand: seq(0.99, 0.5) });
+    check('ご機嫌な日は、慣れた曲の中でいちばん難しい曲に挑戦する', great.why === 'hard' && great.songId === 'b', JSON.stringify(great));
+    const brave = b.choose(mk('brave'), cat, { mood: mood('normal'), info: infoOf, rand: seq(0.99, 0.5) });
+    check('勇敢な子は調子が普通でも難しい曲に挑む', brave.why === 'hard' && brave.songId === 'b', JSON.stringify(brave));
+    const easy = b.choose(mk('easygoing'), cat, { mood: mood('normal'), info: infoOf, rand: seq(0.99, 0.5) });
+    check('のんびり屋は、慣れた曲の中でいちばん長い曲をえらぶ', easy.why === 'long' && easy.songId === 'c', JSON.stringify(easy));
+    const worry = b.choose(mk('worrier'), cat, { mood: mood('great'), info: infoOf, rand: seq(0.99, 0.5) });
+    check('心配性の子は、調子が良くても慣れた曲をえらぶ', worry.why === 'safe' && worry.songId === 'a', JSON.stringify(worry));
+    const jest = b.choose(mk('jester'), cat, { mood: mood('normal'), info: infoOf, rand: seq(0.99, 0.99) });
+    check('ひょうきんな子は、上位5曲から気分で選ぶ', jest.why === 'fun' && jest.songId === 'e', JSON.stringify(jest));
+    check('選んだ曲は、いつも遊べる曲の中から選ぶ', [mk(''), mk('brave'), mk('easygoing')].every((mon) => { const r = b.choose(mon, ['c', 'd'], { mood: mood('great'), info: infoOf, rand: Math.random }); return ['c', 'd'].includes(r.songId); }));
+    check('新しい曲に挑戦する確率は、調子で上下して0〜40%に収まる', b.newChance('', 'great') === 0.2 && b.newChance('', 'awful') === 0.04 && b.newChance('jester', 'great') === 0.33 && b.newChance('stubborn', 'awful') === 0);
+    check('選んだ理由のコードは、すべてひとことの文を持つ', ['fav', 'hard', 'safe', 'long', 'fun', 'new'].every((k) => typeof b.whyText[k] === 'string' && b.whyText[k].length > 0));
+  }
   const broken = [null, undefined, 'x', 3, [], { mons: 'x' }, { day: 5, used: -3, mons: { a: { exp: 'zz', songs: [1], diffs: null, trait: 'evil' } } }];
   check('壊れた保存でも既定値で読める', broken.every((raw) => { const s = b.norm(raw); return s && typeof s.mons === 'object' && Number.isFinite(s.used) && s.used >= 0; }));
   const bad = b.norm(broken[6]).mons.a;
@@ -485,6 +516,8 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   const plain = c.clean({ t: 'hb', id: 'p1', name: 'ふつうの人' });
   check('相棒の項目が無い知らせは、ふつうの人として読む', plain && plain.cpu === false && plain.mb === undefined);
   const evil = c.clean({ t: 'hb', id: 'c1', cpu: 1, mb: '../x<script>', mc: ['<b>', 'a'.repeat(99), 1, null] });
+  const why = c.clean({ t: 'hb', id: 'c2', cpu: 1, pw: 'hard<b>' });
+  check('選んだ理由のコードは小文字の英字だけ通る(相棒の知らせのみ)', why.pw === 'hardb' && c.clean({ t: 'hb', id: 'p2', pw: 'hard' }).pw === undefined);
   check('相棒の種類と色は、決まった文字だけを通す', evil && evil.mb === 'xscript' && evil.mc.every((x) => /^[A-Za-z0-9_#:-]*$/.test(x) && x.length <= 24));
 }
 

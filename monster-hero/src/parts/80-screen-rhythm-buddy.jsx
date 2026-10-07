@@ -112,10 +112,15 @@ const rhythmBuddyMakeBrain = (songs) => ({
     if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
     return text;
   },
-  // 得意な曲(上位3曲)から選ぶ。遊べる曲の中に無ければおまかせ('')
+  // 性格と今日の調子で選び方が変わる(たまに新しい曲にも挑戦)。{ songId, why }。遊べる曲が無ければ songId は ''
   pick(catalog, masuId) {
-    const top = rhythmBuddyTopSongs(RHYTHM_BUDDY_STORE.get().mons[masuId], 3).filter((x) => (catalog || []).includes(x.songId));
-    return top.length ? top[Math.floor(Math.random() * top.length)].songId : '';
+    const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
+    const info = (id) => {
+      const song = (songs || []).find((x) => x.songId === id);
+      const levels = song && song.difficulties ? Object.values(song.difficulties).map((d) => Number(d && d.level) || 0) : [];
+      return { level: levels.length ? Math.max(...levels) : 0, durationMs: song ? Number(song.playDurationMs) || 0 : 0 };
+    };
+    return rhythmBuddyChooseSong(mon, catalog, { mood: rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon), info });
   },
 });
 
