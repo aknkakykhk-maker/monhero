@@ -23,8 +23,10 @@ const veteranSeed = (name) => {
   put('mh_quick_clears_Beginner', 1);
 };
 
-async function prepareVeteran(s) {
+// quiet: false にすると、起動直後の会話・ストーリー・告知を既読にしない(ストーリー係が「流れるか」を見るため)
+async function prepareVeteran(s, { quiet = true } = {}) {
   await s.page.addInitScript(veteranSeed, s.BOT_NAME);
+  if (!quiet) return;
   // ★種は最初の1回だけ入れる。読み込み直すたびに入れると、既読の一覧が上書きされて、
   //   ボットがそのあと見た会話(レイドのお話など)が「まだ見ていない」に戻り、毎回流れてしまう
   await s.page.addInitScript({ content: `(() => { try { if (localStorage.getItem('__playbot_seeded')) return; ${quietBootSeed().content}\n${updateNoticeSeed().content}\nlocalStorage.setItem('__playbot_seeded', '1'); } catch (e) {} })();` });

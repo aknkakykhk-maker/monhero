@@ -72,7 +72,9 @@ check('待機アニメの枠があり、図鑑・バトルと同じ withMonsterI
   for (const id of draftIds) {
     const atk = (ally.match(new RegExp(`^  ${id}:\\s*\\[([^\\]]*)\\]`, 'm')) || [, ''])[1].split(',').filter(Boolean);
     const uni = (ally.match(new RegExp(`${id}: Object\\.freeze\\(\\{[\\s\\S]*?draftUniqueNames:Object\\.freeze\\(\\[([^\\]]*)\\]`)) || [, ''])[1].split(',').filter(Boolean);
-    check(`${id}: 通常技と固有技の名前が9つずつある`, atk.length === 9 && uni.length === 9, `通常${atk.length} / 固有${uni.length}`);
+    // 技名はユーザーが決めるもの(skill monster-add §0③)。まだ決まっていない案の子は書かずに置き、画面が「未設定」と赤く出す。
+    // 書いたなら9つずつそろっていること(2026-10-07・メロディーは名前と血統だけ先に決まった)
+    check(`${id}: 通常技と固有技の名前は、書いたなら9つずつある`, (atk.length === 0 || atk.length === 9) && (uni.length === 0 || uni.length === 9), `通常${atk.length || '未設定'} / 固有${uni.length || '未設定'}`);
   }
   check('案の段階の子の技は、名前だけの一覧で出す(威力の計算に通さない)', part.includes('draftNamePills(HERO_ATK_NAMES[mon.id]') && part.includes('draftNamePills(mon.draftUniqueNames'));
   // 案の段階の子がいないとき(正式実装して空になったとき)は見るものが無いので通す

@@ -7,9 +7,10 @@ const { installPlayer, SIGMA_MS, MISS_RATE } = require('./rhythm');
 
 const freeLeft = (s) => s.page.evaluate(() => { const m = document.body.innerText.match(/今日の無料\s*あと\s*(\d+)\s*回/); return m ? Number(m[1]) : null; });
 // メンバー欄の「CPUモッチー Lv.1」だけを数える(★ボタンの説明「マスモンがCPUとして…」を数えない)
-const cpuCount = (s) => s.page.evaluate(() => (document.body.innerText.replace(/\s+/g, ' ').match(/CPU\S+ Lv\.\d+/g) || []).length);
+// 部屋では「CPUモッチー Lv.1」、曲えらびでは「CPU モッチー」の形で出る
+const cpuCount = (s) => s.page.evaluate(() => new Set((document.body.innerText.replace(/\s+/g, ' ').match(/CPU ?(?!として)[^\s]+/g) || []).map((x) => x.replace(/^CPU ?/, ''))).size);
 
-async function multiScenario(s, { maxSongMs = 240000 } = {}) {
+async function multiScenario(s, { maxSongMs = 330000 } = {}) {
   const stats = { called: 0, freeBefore: null, freeAfter: null, song: '', notes: 0, score: null };
   await s.backHome();
   await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.innerText || '').trim() === 'モンヒロビート')?.click());
@@ -38,8 +39,26 @@ async function multiScenario(s, { maxSongMs = 240000 } = {}) {
   if (stats.called < 1) { await s.addIssue('進めない', '「呼ぶ」を押してもメンバーに CPU が入らない'); return { ok: false, note: 'CPU が入らない' }; }
   await s.inspect();
 
+  // メンバー確定 → 選曲 → 準備完了 → 演奏(相棒係も使う)
+  const played = await playInRoom(s, stats, { maxSongMs });
+  if (!played.ok) return played;
+  // 結果から部屋へ戻り、部屋を出る
+  await s.dismissOverlays(8);
+  for (let k = 0; k < 4; k++) { if (!(await s.tapLabel(/^(ルームへ戻る|ルームに戻る|部屋へ戻る|次へ|OK|閉じる)$/, 1500))) break; }
+  await s.tapLabel(/^ルームを出る$/, 1500);
+  await s.dismissOverlays(4);
+  await s.backHome();
+  return { ok: true, stats, note: `部屋を作り、マスモン ${stats.called}体を呼んだ(今日の無料 ${stats.freeBefore}→${stats.freeAfter}回・二度押し)・${stats.song || '?'} を ${stats.notes}ノーツ演奏 → スコア ${stats.score || '?'}` };
+}
+
+
+// 部屋の中: メンバー確定 → 選曲 → 準備完了 → 最後まで演奏して結果を読む。stats へ song / notes / score を入れる
+// ★部屋では CPU の「おまかせ」も入れてシャッフルで1曲に決まるので、長い曲になることがある。上限は長めにとる
+async function playInRoom(s, stats, { maxSongMs = 330000 } = {}) {
   // メンバー確定 → 選曲
-  if (!(await s.tapLabel(/^メンバー確定$/, 2000))) { await s.addIssue('進めない', '「メンバー確定」が押せない'); return { ok: false, note: 'メンバー確定できない' }; }
+  // ★5人そろうと、メンバー確定を押さなくても曲えらびへ進む。曲えらびが出ていなければ押す
+  const inSelect = (await s.listButtons()).some((b) => /^この曲で決定$/.test(b.label));
+  if (!inSelect && !(await s.tapLabel(/^メンバー確定$/, 2000))) { await s.addIssue('進めない', '「メンバー確定」が押せない'); return { ok: false, note: 'メンバー確定できない' }; }
   await s.dismissOverlays(4);
   const songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label) && !/大きく見る|お気に入り/.test(b.label));
   if (songs.length) {
@@ -87,13 +106,7 @@ async function multiScenario(s, { maxSongMs = 240000 } = {}) {
   stats.score = m ? m[1] : null;
   await s.shot('multi-result');
   await s.inspect();
-  // 結果から部屋へ戻り、部屋を出る
-  await s.dismissOverlays(8);
-  for (let k = 0; k < 4; k++) { if (!(await s.tapLabel(/^(ルームへ戻る|ルームに戻る|部屋へ戻る|次へ|OK|閉じる)$/, 1500))) break; }
-  await s.tapLabel(/^ルームを出る$/, 1500);
-  await s.dismissOverlays(4);
-  await s.backHome();
-  return { ok: true, stats, note: `部屋を作り、マスモン ${stats.called}体を呼んだ(今日の無料 ${stats.freeBefore}→${stats.freeAfter}回・二度押し)・${stats.song || '?'} を ${stats.notes}ノーツ演奏 → スコア ${stats.score || '?'}` };
+  return { ok: true };
 }
 
-module.exports = { multiScenario };
+module.exports = { multiScenario, playInRoom, freeLeft, cpuCount };

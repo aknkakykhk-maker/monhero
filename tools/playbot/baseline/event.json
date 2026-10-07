@@ -1,7 +1,7 @@
 {
  "format": "roles",
- "stamp": "20261007-1433",
- "seed": 222620,
+ "stamp": "20261007-1543",
+ "seed": 391910,
  "roles": [
   {
    "id": "event",
@@ -15,7 +15,7 @@
    "roleId": "event",
    "kind": "反応なし",
    "level": "改善のヒント",
-   "detail": "タクティクスで実行が押せない(手札 guard buff range_atk buff guard)"
+   "detail": "タクティクスで実行が押せない(手札 atk atk buff guard range_atk)"
   }
  ]
 }

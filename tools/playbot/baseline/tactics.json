@@ -1,7 +1,7 @@
 {
  "format": "roles",
- "stamp": "20261007-1433",
- "seed": 222620,
+ "stamp": "20261007-1543",
+ "seed": 391910,
  "roles": [
   {
    "id": "tactics",
@@ -10,7 +10,7 @@
   }
  ],
  "numbers": {
-  "タクティクス係: 着いたWAVE": 6
+  "タクティクス係: 着いたWAVE": 3
  },
  "issues": [
   {
@@ -18,6 +18,12 @@
    "kind": "小さいボタン",
    "level": "既知",
    "detail": "「1ページ目」「2ページ目」「3ページ目」など3個が32px未満"
+  },
+  {
+   "roleId": "tactics",
+   "kind": "反応なし",
+   "level": "改善のヒント",
+   "detail": "タクティクスで実行が押せない(手札 atk atk buff buff range_atk)"
   }
  ]
 }

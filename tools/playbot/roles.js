@@ -14,6 +14,13 @@ const { shopScenario } = require('./scenarios/shop');
 const { growScenario } = require('./scenarios/grow');
 const { multiScenario } = require('./scenarios/multi');
 const { raidScenario, halloweenScenario } = require('./scenarios/event');
+const { raidBeatScenario } = require('./scenarios/raidbeat');
+const { landscapeScenario } = require('./scenarios/landscape');
+const { buddyScenario } = require('./scenarios/buddy');
+const { storyTimingScenario, replayScenario } = require('./scenarios/story');
+const { offlinePlayScenario, resendScenario, slowScenario } = require('./scenarios/net');
+const { smallTourScenario, smallPlayScenario } = require('./scenarios/small');
+const { lookScenario } = require('./scenarios/look');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -120,6 +127,22 @@ const ROLES = [
     },
   },
   {
+    // 既読を入れない下準備(quiet: false)で始め、時計を合わせてから起動する(boot はシナリオの中)
+    id: 'story', name: 'ストーリー係', prepare: 'veteran', quiet: false,
+    does: '時計を開始の前後に合わせて、時刻で流れるストーリーが前は流れず後は流れるかを見る。イベント回想を1つずつ最後まで読む',
+    run: async (s, { phase }) => {
+      await phase('流れる時刻', () => storyTimingScenario(s));
+      await phase('回想を読む', () => replayScenario(s));
+    },
+  },
+  {
+    id: 'look', name: '見た目係', prepare: 'veteran', boot: true,
+    does: '主な11画面を毎回同じ手順で開いて撮り、前回(baseline/look)と比べて大きく変わった画面だけを、前回と今回を並べた画像つきで知らせる',
+    run: async (s, { phase, out }) => {
+      await phase('主な画面を撮って比べる', () => lookScenario(s, { out }));
+    },
+  },
+  {
     id: 'legacy', name: '久しぶり係', prepare: 'legacy',
     does: '昔の形のセーブで開き、持ち物が消えない・移行が二重にかからない・そのまま遊べるかを見る',
     run: async (s, { phase, steps, rand }) => {
@@ -161,6 +184,48 @@ const ROLES = [
     },
   },
   {
+    id: 'raidbeat', name: 'レイド音ゲー係', prepare: 'veteran', boot: true, alone: true,
+    does: 'レイドに「モンヒロビートで挑戦」し、最後まで演奏する。決定を二度押ししても挑戦回数が1回分だけ増えるか・ダメージの記録が1件送られ、結果画面と同じかを見る。1人で動かす',
+    run: async (s, { phase }) => {
+      await phase('レイドにモンヒロビートで挑戦', () => raidBeatScenario(s));
+    },
+  },
+  {
+    id: 'landscape', name: '横画面係', prepare: 'veteran', boot: true, alone: true,
+    does: 'モンヒロビートを横画面にして、遊びかた・記録・オプション・曲えらび・全国ランキング(イベント詳細)・部屋を開き、閉じる/戻るで本当に閉じられるかを見る。横向きのまま1曲演奏する。1人で動かす',
+    run: async (s, { phase }) => {
+      await phase('横画面で開いて閉じる・演奏する', () => landscapeScenario(s));
+    },
+  },
+  {
+    // 時計を差し替えてから起動するので、boot はシナリオの中で行う(時計係と同じ)
+    id: 'buddy', name: '相棒係', prepare: 'veteran', alone: true,
+    storage: { mh_bond_xp: { Mocchi: 3000, Suezo: 800, Golem: 900, Tiger: 700 }, mh_breeder_xp: 50000, mh_owned_items: { session_ticket: 2 } },
+    does: '朝5:00の少し前に、マルチの部屋でマスモンを4体呼ぶ(3体目まで無料・4体目で券が1枚だけ減るか)。1曲遊んで経験値が増えるか。5:10に開き直して無料が3回に戻るか。1人で動かす',
+    run: async (s, { phase }) => {
+      await phase('相棒の回数・券・朝5:00', () => buddyScenario(s));
+    },
+  },
+  {
+    id: 'net', name: '通信不良係', prepare: 'veteran', boot: true, alone: true,
+    does: '通信を「つながらない」にして1曲演奏し、記録が端末に取っておかれるか。戻して「いま送る」で送り直されるか。通信が10秒遅いときにランキングが止まらないか。1人で動かす',
+    run: async (s, { phase }) => {
+      const shared = {};
+      await phase('つながらないまま演奏', () => offlinePlayScenario(s, shared));
+      await phase('戻して送り直す', () => resendScenario(s, shared));
+      await phase('遅い通信', () => slowScenario(s, shared));
+    },
+  },
+  {
+    id: 'small', name: '小さい画面係', prepare: 'veteran', boot: true, alone: true,
+    viewport: { width: 320, height: 568 }, cpuSlowdown: 4,
+    does: '幅320px・CPU 4倍遅いで起動の秒数を測り、HOME の入口を全部回り、1曲演奏する。1人で動かす(CPU を遅くするので、ほかと並べない)',
+    run: async (s, { phase, rand, numbers }) => {
+      await phase('小さい画面で入口を回る', () => smallTourScenario(s, { rand }));
+      await phase('遅い端末で演奏', () => smallPlayScenario(s));
+    },
+  },
+  {
     id: 'ranking', name: 'ランキング係', prepare: 'veteran', boot: true, alone: true,
     does: '音ゲー係の記録と、名前の長い大勢のライバルを並べてランキングを開く',
     run: async (s, { phase, shared }) => {
@@ -175,9 +240,9 @@ const ROLES = [
 // ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
 const TEAMS = [
   { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
-  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi'] },
-  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore'] },
-  { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean'] },
+  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat', 'landscape', 'buddy'] },
+  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore', 'story', 'look', 'small'] },
+  { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean', 'net'] },
 ];
 
 module.exports = { ROLES, TEAMS };
