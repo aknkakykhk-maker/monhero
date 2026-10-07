@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dace449c88d12859
+// generated-sha256: c9a923d12c9477e2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 08:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 09:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28870,9 +28870,14 @@ function RhythmRankingScreen({
           style={{paddingTop:'calc(1rem + var(--mh-sa-top))',paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
           {/* ★高さは --mh-vh から引いて決める。%(max-h-full)に頼ると、端末によっては
               画面より高い箱になり「とじる」が下へはみ出す(2026-09-11・ユーザー指摘「下にずれてる？」)。
-              --mh-vh はiPhoneのアドレスバーを除いた実際の高さを入れてあるもの */}
+              --mh-vh はiPhoneのアドレスバーを除いた実際の高さを入れてあるもの
+              ★横画面ボタンで絵だけ90度回しているときは、器の高さが「端末の横幅」になる
+              (RHYTHM_VIEW_ROTATION.frameStyle)。--mh-vh(端末の縦)のままだと器より背の高い箱になり、
+              上下が切れて「閉じる」に届かず、開き直すしかなくなっていた(2026-10-06・プレイボットが発見) */}
           <div className="w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4"
-            style={{maxHeight:'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'}}>
+            style={{maxHeight:RHYTHM_VIEW_ROTATION.active()&&typeof window!=='undefined'
+              ?`calc(${window.innerWidth||0}px - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))`
+              :'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'}}>
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">{eventWeekly?'WEEKLY':'EVENT'}</p>
             {/* 告知画像。開いたときだけ読むので、ここへ置いても起動は重くならない */}
             <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>

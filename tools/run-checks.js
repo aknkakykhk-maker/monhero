@@ -147,6 +147,10 @@ const FORCE_CHECKS = [
     checks: ['mode/tactics-modes-check.js'], why: 'タクティクスの記録・ランキング・極限タブ' },
   // 譜面(data/rhythm-mode.js)を触ったら、終点フリックの置き場所は必ず見る。
   // 語の当たりだけでは本数の上限で落ちることがあり、曲を足した回だけ静かに見逃す(2026-09-18)
+  // 横画面ボタン(絵だけ90度回す)のあいだは器の高さが端末の横幅になる。--mh-vh のままだと
+  // ダイアログが器より高くなり「閉じる」に届かない(2026-10-06・プレイボットが発見)
+  { re: /^monster-hero\/src\/parts\/(28-rhythm-shared|30-rhythm-play|58-screen-rhythm)\.jsx$/,
+    checks: ['mode/rhythm-rotated-dialog-height-check.js'], why: '横画面でもダイアログが器に収まるか' },
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-end-flick-swing-check.js'], why: '譜面の終点フリックの置き場所' },
   // バトルの演出は「出す→待つ→消す」。ランを片付けると**消すほうへ到達しない**ので、
   // 片付けで捨て忘れると次のランの画面に残る(2026-09-20・誰もいない間合いに技名が出た)
