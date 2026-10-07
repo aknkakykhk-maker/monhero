@@ -680,40 +680,6 @@ const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared
       outside:perfTouch?.outside||0,ignored:perfTouch?.ignored||0,gestures:perfTouch?.gestures||0,assist:!!assist,mirror:!!mirror,cleared:!!cleared,
       playId:rhythmTouchDiagPlayId(),fixes:rhythmTouchFixesActive(),timing:RHYTHM_TIMING_DIAG.snapshot()}};
 };
-/* 実機の直し方を、この端末だけで入れる/切るパネル(デバッグ画面用・2026-10-07・ユーザー指示「実機で確認しないと直せないものは、直せる仕組みを作って」)。
-   入れた直し方は診断の行の stats.fixes に残るので、入れる前と後を比べられる。プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */
-const RHYTHM_FIX_PANEL_ITEMS=Object.freeze([
-  ['inputAgeCap','遅れて届いた入力の補正を300msまで広げる','処理が詰まって入力が遅れて届いたとき、空判定や隣のノーツ取りが減る。ゲームが本当に止まっていたと見えたときだけ効く(診断の「80ms超」が多い端末で試す)'],
-  ['smoothSongClock','曲の時計を、コマの間でなめらかに進める','時計が階段状に進む端末で、曲が止まって見えるのを減らす(診断の「止まったコマ」が多い端末で試す)'],
-  ['autoPauseOnHidden','アプリを離れたら自動で一時停止する','裏へ回ったあとに戻ると、大量のMISSになるのを防ぐ(診断の「離れた回数」が多い端末で試す)'],
-]);
-const RhythmFixOverridePanel=()=>{
-  const [,setVersion]=React.useState(0);
-  const override=rhythmTouchFixOverride();
-  const timing=RHYTHM_TIMING_DIAG.snapshot();
-  const toggle=name=>{const on=rhythmTouchFixOn(name);rhythmTouchFixSetOverride(name,!on);setVersion(v=>v+1);};
-  const reset=name=>{rhythmTouchFixSetOverride(name,null);setVersion(v=>v+1);};
-  const ages=Array.isArray(timing.ageHist)?timing.ageHist.join(' / '):'-';
-  return <section data-rhythm-fix-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3">
-    <h3 className="text-xs font-black text-cyan-200">実機の直し方（この端末だけ）</h3>
-    <p className="mt-1 text-[11px] leading-snug text-slate-300">入れた直し方はこの端末だけに効きます。診断の行（stats.fixes）に名前が残るので、入れる前と後を比べられます。よければ、全員へ入れる前にご相談ください。</p>
-    <div className="mt-2 space-y-2">
-      {RHYTHM_FIX_PANEL_ITEMS.map(([name,label,help])=>{const on=rhythmTouchFixOn(name),own=typeof override[name]==='boolean';
-        return <div key={name} data-rhythm-fix-item={name} className="rounded-xl bg-slate-900/60 p-2">
-          <div className="flex items-center justify-between gap-2"><b className="text-[12px] text-white">{label}</b><button type="button" data-rhythm-fix-toggle={name} onClick={()=>toggle(name)} className={`rounded-lg px-3 py-1 text-[11px] font-black ${on?'bg-cyan-400 text-slate-950':'bg-slate-700 text-slate-200'}`}>{on?'入れている':'切っている'}</button></div>
-          <p className="mt-1 text-[10px] leading-snug text-slate-400">{help}</p>
-          {own&&<button type="button" onClick={()=>reset(name)} className="mt-1 text-[10px] text-cyan-300 underline">この端末の設定をやめて、既定へ戻す</button>}
-        </div>;})}
-    </div>
-    <div data-rhythm-fix-timing className="mt-2 rounded-xl bg-slate-900/60 p-2 text-[10px] leading-snug text-slate-300">
-      <b className="text-slate-100">いまの演奏の数え（直近1曲）</b><br/>
-      入力の遅れの分布（〜25 / 50 / 80 / 150 / 300 / 300超 ms）: {ages}<br/>
-      80ms超で届いた入力: {timing.ageCapped??0}（うちコマ落ちが見えた: {timing.ageBacked??0} ／ 見えなかった: {timing.ageUnbacked??0}） ／ 時計の止まったコマ: {timing.stalls??0} / {timing.frames??0} ／ 最大の1コマの進み: {timing.maxStepMs??0}ms<br/>
-      アプリを離れた回数: {timing.hidden??0} ／ ペンで押した回数: {timing.pen??0}<br/>
-      出力遅延: {timing.outLatMs??'-'}ms ／ 基準遅延: {timing.baseLatMs??'-'}ms ／ getOutputTimestamp: {timing.hasTs===undefined?'-':timing.hasTs?'あり':'なし'} ／ 曲の頭の無音: {timing.headMs??'-'}ms
-    </div>
-  </section>;
-};
 const rhythmTouchDiagRecord=async(diag)=>{
   try{
     const saved=await storeGet(RHYTHM_TOUCH_DIAG_KEY,[]);
@@ -2087,7 +2053,7 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());/* 直し方の入れ切りは、ゲームが端末の直近の診断の記録から自分で決める(人が調整する前提にしない) */try{rhythmTouchFixAutoSet(rhythmTouchFixAutoFrom(await storeGet(RHYTHM_TOUCH_DIAG_KEY,[])));}catch{rhythmTouchFixAutoSet({});}const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);RHYTHM_TIMING_DIAG.reset();RHYTHM_TIMING_DIAG.meta(audio.info?.());RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
