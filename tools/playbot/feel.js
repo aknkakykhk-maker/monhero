@@ -29,14 +29,17 @@ const OPTS = {
   sigma: 22,                           // 押す時刻のばらつき(ms)
   xNoiseLanes: 0.12,                   // 押す位置の横のばらつき(レーン)
   thumb: !args.includes('--no-thumb'), // 判定ラインより手前(画面の下)を押す
-  nudgePx: 5,                          // ホールド中に別の指で押すと、押さえている指がつられて動く(px)
+  near: args.includes('--near'),        // ホールド中に近くを押すしらべ(つられを強め、すべてのホールドで指の位置と受付の余裕を記録する)
+  nudgePx: args.includes('--near') ? 12 : 5,                          // ホールド中に別の指で押すと、押さえている指がつられて動く(px)
   edgeProbe: 0.35,                     // HOLD の35%は「押し始めの受付のいちばん外側」を押さえ続ける(押し始めと押さえ中の受付の食い違いを突く)
   edgeOutLanes: 0.18,                  // 端のレーンは外へはみ出し気味に押す(レーン)。つられる向きも外側(10/7 のホールドの切れは端のレーンの外側寄りで起きた)
   dropPointer: 0.15,                   // ios: ポインタの合図が抜けるタッチの割合(10/7 の実機では千ノーツあたり18ほど)
   lateRate: 0.1, lateMs: [30, 120],    // 遅れて届くタッチの割合と遅れ
 };
 const stamp = (() => { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-'); })();
-const OUT = path.join(ROOT, 'tools', 'out', 'playbot', `feel-${stamp}`);
+const TAG = argOf('tag', '');
+const PORT_BASE = Number(argOf('port', 8982)) || 8982;
+const OUT = path.join(ROOT, 'tools', 'out', 'playbot', `feel-${stamp}${TAG ? '-' + TAG : ''}`);
 fs.mkdirSync(OUT, { recursive: true });
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
@@ -146,10 +149,10 @@ const worse = (before, now) => {
     if (add.status !== 0) { console.log(`前の版を出せない: ${add.stderr.trim()}`); process.exit(1); }
     const hook = ensureFeelHook(wt);
     console.log(`前の版(${compareRef})の判定を読む参照: ${hook}`);
-    try { report.runs.before = await auditBuild(playwright, wt, `前(${compareRef})`, 8983); }
+    try { report.runs.before = await auditBuild(playwright, wt, `前(${compareRef})`, PORT_BASE + 1); }
     finally { spawnSync('git', ['worktree', 'remove', '--force', wt], { cwd: ROOT }); }
   }
-  report.runs.now = await auditBuild(playwright, ROOT, '今', 8982);
+  report.runs.now = await auditBuild(playwright, ROOT, '今', PORT_BASE);
   const now = total(report.runs.now);
   const before = report.runs.before ? total(report.runs.before) : null;
   report.total = { now, before };
@@ -164,6 +167,8 @@ const worse = (before, now) => {
     ...[...(report.runs.before || []), ...report.runs.now].map((r) => r.ok
       ? `- ${r.label} ${r.title} ${r.difficulty}: 押した ${r.pressed} / 取れない ${r.tapMissed}(合図が抜けた ${r.tapMissedDroppedPointer}・遅れた ${r.tapMissedLate}) / ずれ ${r.driftCount}(中央値 ${r.errorMedianMs}ms・90%が ${r.errorP90AbsMs}ms 以内) / 早取り ${r.stolen} / ホールドが切れた ${r.holdBroken}`
       : `- ${r.label} ${r.songId}: 点検できなかった — ${r.why}`),
+    '', '## ホールド中に近くを押したとき(ホールドの数 / 近くを押した回数[同じ帯・隣・離れた] / 近くを押したホールド / 切れた / うち近くを押して切れた / 切れたうち指がずっと受付範囲の中だった)', '',
+    ...report.runs.now.filter((r) => r.ok).map((r) => `- ${r.title} ${r.difficulty}: ホールド ${r.holds} / 近く ${r.nearPresses}回[${r.nearSame}・${r.nearAdjacent}・${r.nearFar}] / 近くを押したホールド ${r.holdsWithNear} / 切れた ${r.holdBroken} / 近くを押して切れた ${r.holdBrokenWithNear} / ずっと範囲内だったのに切れた ${r.holdBrokenAccepted}(うち近く ${r.holdBrokenAcceptedWithNear}) / ホールド中に押したタップの取れない ${r.tapMissedDuringHold}`),
     '', '## 例(1曲につき8件まで)', '',
     ...report.runs.now.filter((r) => r.ok).flatMap((r) => [
       ...r.samples.tapMissed.map((x) => `- 取れない ${r.title} ${x.timeMs}ms ${x.type}: 押したずれ ${x.botDelta}ms${x.dropPointer ? '・ポインタの合図なし' : ''}${x.lateMs ? `・${x.lateMs}ms遅れて届いた` : ''} (x${x.x}, y${x.y})`),
