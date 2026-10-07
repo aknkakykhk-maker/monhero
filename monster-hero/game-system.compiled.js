@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8d09aa8b6c52886
+// source-sha256: 899abb4e61309a59
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 19:55";
+const BUILD_DATE = "2026-10-07 19:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37300,6 +37300,82 @@ const rhythmBuddyFamiliarStars = (plays, trait) => {
   const n = rhythmBuddyInt(plays) * (trait === 'smart' ? 1.5 : 1);
   return RHYTHM_BUDDY_FAMILIAR_STEPS.filter(step => n >= step).length;
 };
+const RHYTHM_BUDDY_PICK_WHY = Object.freeze({
+  fav: 'この曲が得意!',
+  hard: 'ちょっと難しい曲に挑戦!',
+  safe: '今日は慣れた曲で安心したい',
+  long: '長い曲をのんびり楽しみたい',
+  fun: '気分で選んだよ',
+  new: 'はじめての曲にワクワク!'
+});
+const rhythmBuddyNewSongChance = (trait, moodId) => {
+  const base = {
+    jester: 0.25,
+    brave: 0.2,
+    stubborn: 0.04,
+    serious: 0.08
+  }[trait];
+  const mood = {
+    great: 0.08,
+    good: 0.04,
+    bad: -0.04,
+    awful: -0.08
+  }[moodId] || 0;
+  return Math.round(Math.min(0.4, Math.max(0, (base == null ? 0.12 : base) + mood)) * 100) / 100;
+};
+const rhythmBuddyChooseSong = (mon, catalog, {
+  mood = null,
+  info = null,
+  rand = Math.random
+} = {}) => {
+  const m = rhythmBuddyNormalizeMon(mon);
+  const list = Array.isArray(catalog) ? catalog.filter(id => typeof id === 'string' && id) : [];
+  if (!list.length) return {
+    songId: '',
+    why: ''
+  };
+  const pickOne = arr => arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))];
+  const played = rhythmBuddyTopSongs(m, RHYTHM_BUDDY_SONG_KEEP).map(x => x.songId).filter(id => list.includes(id));
+  if (!played.length) return {
+    songId: pickOne(list),
+    why: 'new'
+  };
+  const fresh = list.filter(id => !played.includes(id));
+  const moodId = mood && mood.id;
+  if (fresh.length && rand() < rhythmBuddyNewSongChance(m.trait, moodId)) return {
+    songId: pickOne(fresh),
+    why: 'new'
+  };
+  const top = played.slice(0, 5);
+  const stat = (id, key) => {
+    try {
+      return Number(info && info(id) && info(id)[key]) || 0;
+    } catch (_) {
+      return 0;
+    }
+  };
+  const most = (arr, key) => arr.reduce((a, b) => stat(b, key) > stat(a, key) ? b : a, arr[0]);
+  if (m.trait === 'easygoing' && info) return {
+    songId: most(top, 'durationMs'),
+    why: 'long'
+  };
+  if (moodId === 'bad' || moodId === 'awful' || m.trait === 'worrier') return {
+    songId: top[0],
+    why: 'safe'
+  };
+  if ((moodId === 'great' || moodId === 'good' || m.trait === 'brave') && info) return {
+    songId: most(top, 'level'),
+    why: 'hard'
+  };
+  if (m.trait === 'jester') return {
+    songId: pickOne(top),
+    why: 'fun'
+  };
+  return {
+    songId: pickOne(top.slice(0, 3)),
+    why: 'fav'
+  };
+};
 const rhythmBuddyTopSongs = (mon, count = 5) => {
   const m = rhythmBuddyNormalizeMon(mon);
   return Object.keys(m.songs).map(songId => ({
@@ -61346,13 +61422,14 @@ const RHYTHM_MULTI_CHAT_KEEP = 50;
 const RHYTHM_MULTI_CHAT_INTERVAL_MS = 800;
 const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう一回!', 'ありがとう!']);
 const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
-  matching: ['よろしく!', 'はじめまして!', 'ちょっと待って!'],
-  select: ['この曲やりたい!', 'おまかせで!', 'なんでもOK!'],
-  ready: ['準備OK!', 'ちょっと待って!', 'がんばろう!'],
+  matching: ['よろしく!', 'はじめまして!', 'ちょっと待って!', 'マスモン入れて!', 'マスモン入れるね!'],
+  select: ['この曲やりたい!', 'おまかせで!', 'なんでもOK!', 'マスモン入れるね!', 'マスモン入れて!'],
+  ready: ['準備OK!', 'ちょっと待って!', 'がんばろう!', 'マスモン入れたよ!'],
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
   result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!']
 });
-const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!']);
+const RHYTHM_MULTI_CHAT_BUDDY_STAMPS = Object.freeze(['マスモン入れて!', 'マスモン入れたよ!', 'マスモンうまい!', 'マスモン出せない…', '無料おわった…', '券がない…', '席ゆずるね!']);
+const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
 const rhythmMultiStampsFor = phase => {
   const list = [...(RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE[phase] || []), ...RHYTHM_MULTI_CHAT_COMMON_STAMPS, ...RHYTHM_MULTI_CHAT_STAMPS];
   return list.filter((text, i) => text.length <= RHYTHM_MULTI_CHAT_MAX_LENGTH && list.indexOf(text) === i);
@@ -61516,6 +61593,7 @@ const rhythmMultiCleanMessage = raw => {
       out.owner = rhythmMultiText(raw.owner, 40);
       out.mb = rhythmMultiText(raw.mb, 40).replace(/[^A-Za-z0-9_-]/g, '');
       out.mc = Array.isArray(raw.mc) ? raw.mc.slice(0, 8).map(c => rhythmMultiText(c, 24).replace(/[^A-Za-z0-9_#:-]/g, '')) : [];
+      out.pw = rhythmMultiText(raw.pw, 12).replace(/[^a-z]/g, '');
     }
     return out;
   }
@@ -61775,7 +61853,8 @@ const RHYTHM_MULTI = (() => {
       cpu: 1,
       owner: s.selfId,
       mb: c.mb,
-      mc: c.mc
+      mc: c.mc,
+      pw: c.pickWhy || ''
     });
   };
   const reportCpuResult = round => {
@@ -61978,12 +62057,19 @@ const RHYTHM_MULTI = (() => {
     }
     if (r.phase === 'select' && c.pickRound !== r.round) {
       let pick = '';
+      let why = '';
       try {
-        pick = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        const r = cpuBrain && cpuBrain.pick ? cpuBrain.pick(catalog, x.masuId) : '';
+        if (r && typeof r === 'object') {
+          pick = String(r.songId || '');
+          why = String(r.why || '');
+        } else pick = String(r || '');
       } catch (_) {
         pick = '';
+        why = '';
       }
       c.pick = pick && catalog.includes(pick) ? pick : RHYTHM_MULTI_OMAKASE;
+      c.pickWhy = c.pick === RHYTHM_MULTI_OMAKASE ? '' : why;
       c.pickRound = r.round;
       changed = true;
     }
@@ -62139,7 +62225,8 @@ const RHYTHM_MULTI = (() => {
         cpu: msg.cpu,
         owner: msg.owner || '',
         mb: msg.mb || '',
-        mc: msg.mc || []
+        mc: msg.mc || [],
+        pickWhy: msg.pw || ''
       };
       if (msg.room && fromHost()) {
         const r = msg.room;
@@ -64636,8 +64723,13 @@ function RhythmMultiScreen({
       draggable: false,
       className: "h-8 w-8 shrink-0 rounded-md object-cover"
     }), React.createElement("span", {
-      className: "min-w-0 flex-1 truncate text-[12px] font-black"
-    }, song ? rhythmSongFullName(song) : 'おまかせ'))))));
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "block truncate text-[12px] font-black"
+    }, song ? rhythmSongFullName(song) : 'おまかせ'), m.cpu && song && RHYTHM_BUDDY_PICK_WHY[m.pickWhy] && React.createElement("small", {
+      "data-rhythm-buddy-pick-why": true,
+      className: "block truncate text-[10px] font-bold text-lime-200"
+    }, "「", RHYTHM_BUDDY_PICK_WHY[m.pickWhy], "」")))))));
   }
   if (phase === 'ready') {
     const iAmReady = !!me && me.readyRound === room.round;
@@ -64898,8 +64990,19 @@ const rhythmBuddyMakeBrain = songs => ({
     });
   },
   pick(catalog, masuId) {
-    const top = rhythmBuddyTopSongs(RHYTHM_BUDDY_STORE.get().mons[masuId], 3).filter(x => (catalog || []).includes(x.songId));
-    return top.length ? top[Math.floor(Math.random() * top.length)].songId : '';
+    const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
+    const info = id => {
+      const song = (songs || []).find(x => x.songId === id);
+      const levels = song && song.difficulties ? Object.values(song.difficulties).map(d => Number(d && d.level) || 0) : [];
+      return {
+        level: levels.length ? Math.max(...levels) : 0,
+        durationMs: song ? Number(song.playDurationMs) || 0 : 0
+      };
+    };
+    return rhythmBuddyChooseSong(mon, catalog, {
+      mood: rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon),
+      info
+    });
   }
 });
 function RhythmBuddyFace({
