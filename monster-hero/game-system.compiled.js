@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 306a5657c8933255
+// source-sha256: be88e6f5f25f7267
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 23:59";
+const BUILD_DATE = "2026-10-08 00:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -64209,6 +64209,7 @@ function RhythmModeSelectStage() {
     }
   }, n.ch)));
 }
+const RHYTHM_BUDDY_LEAVE_GUARD_MS = 500;
 function RhythmMultiScreen({
   profile,
   songs,
@@ -64563,6 +64564,23 @@ function RhythmMultiScreen({
     setChatOpen(false);
     setRankingOpen(false);
     setSearching(null);
+  };
+  const buddySheetClosedAtRef = React.useRef(0);
+  const buddySheetWasOpenRef = React.useRef(false);
+  React.useEffect(() => {
+    if (buddySheet) {
+      buddySheetWasOpenRef.current = true;
+      return;
+    }
+    if (buddySheetWasOpenRef.current) {
+      buddySheetWasOpenRef.current = false;
+      buddySheetClosedAtRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    }
+  }, [buddySheet]);
+  const leaveRoomAfterTap = () => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (buddySheetClosedAtRef.current > 0 && now - buddySheetClosedAtRef.current < RHYTHM_BUDDY_LEAVE_GUARD_MS) return;
+    leaveRoom();
   };
   const inRoom = !!view;
   React.useEffect(() => {
@@ -65297,7 +65315,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-leave": true,
       type: "button",
       className: `${btn} w-full bg-slate-700`,
-      onClick: leaveRoom
+      onClick: leaveRoomAfterTap
     }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
     }, message)))), chatSheet, rankingLayer, buddySheetLayer);
@@ -65616,7 +65634,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-leave": true,
       type: "button",
       className: `${btn} bg-slate-700 landscape:w-48`,
-      onClick: leaveRoom
+      onClick: leaveRoomAfterTap
     }, "ルームを出る")), chatSheet, rankingLayer, countdownLayer);
   }
   if (shuffleRound) {

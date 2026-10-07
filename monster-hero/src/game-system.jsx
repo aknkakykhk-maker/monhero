@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 55c4981c66c1d84c
+// generated-sha256: 9a6ed08997a643ce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 23:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-08 00:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39647,6 +39647,9 @@ function RhythmModeSelectStage() {
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
+// 「マスモンを呼ぶ」を閉じてから「ルームを出る」を受け付けるまでの時間(ms)。二度押しの間隔(ふつう 100〜300ms)より長く、
+// わざと出る人が待たされたと感じない長さ
+const RHYTHM_BUDDY_LEAVE_GUARD_MS = 500;
 function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
@@ -39908,6 +39911,20 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     return () => { alive = false; };
   }, [searching]);
   const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); setChatOpen(false); setRankingOpen(false); setSearching(null); };
+  // 「マスモンを呼ぶ」を閉じた直後の「ルームを出る」は受け付けない(2026-10-07・モンヒロくんの反応の点検で見つけた)。
+  // 呼ぶ画面の「呼ぶ」(右下)のちょうど真下に「ルームを出る」(横いっぱい)があり、「呼ぶ」を二度押しすると
+  // 2回目が「ルームを出る」に当たって、呼んだマスモンごと部屋から出てしまっていた。閉じてから少しのあいだだけ無視する
+  const buddySheetClosedAtRef = React.useRef(0);
+  const buddySheetWasOpenRef = React.useRef(false);
+  React.useEffect(() => {
+    if (buddySheet) { buddySheetWasOpenRef.current = true; return; }
+    if (buddySheetWasOpenRef.current) { buddySheetWasOpenRef.current = false; buddySheetClosedAtRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now(); }
+  }, [buddySheet]);
+  const leaveRoomAfterTap = () => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (buddySheetClosedAtRef.current > 0 && now - buddySheetClosedAtRef.current < RHYTHM_BUDDY_LEAVE_GUARD_MS) return;
+    leaveRoom();
+  };
   // モードえらび(modeSelect あり)で部屋に入れたら、対戦の画面(RHYTHM_MULTI)へ移る。
   // 対戦の画面で部屋が無くなったら(出た・満員で抜けた)、モードえらびへ戻る
   const inRoom = !!view;
@@ -40329,7 +40346,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               )}
                 {buddyBumped && <p data-rhythm-buddy-bumped className="text-[11px] font-black leading-snug text-amber-200">人が入ってきたので、呼んだマスモンは席をゆずって帰りました(使った回数・券は戻りました)</p>}
                 {buddyCallButton()}
-                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoom}>{view ? 'ルームを出る' : 'やめる'}</button>
+                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>{view ? 'ルームを出る' : 'やめる'}</button>
                 {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}
               </div>
             </div>
@@ -40504,7 +40521,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <RhythmMultiStampBar phase={phase} onSend={(text) => RHYTHM_MULTI.sendChat(text)} wrap big limit={6} className="shrink-0 px-2 pt-1" />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           <p className="min-w-0 flex-1 text-sm font-black text-amber-200">{phase === 'playing' ? 'いまライブ中です。次の曲から参加できます' : 'ホストが次へ進むのを待っています'}{drawnSong ? <small className="block truncate text-[11px] font-bold text-slate-300">{rhythmSongFullName(drawnSong)}</small> : null}</p>
-          <button data-rhythm-multi-leave type="button" className={`${btn} bg-slate-700 landscape:w-48`} onClick={leaveRoom}>ルームを出る</button>
+          <button data-rhythm-multi-leave type="button" className={`${btn} bg-slate-700 landscape:w-48`} onClick={leaveRoomAfterTap}>ルームを出る</button>
         </div>
         {chatSheet}{rankingLayer}
         {countdownLayer}

@@ -19,12 +19,32 @@ const readBuddy = (s) => s.page.evaluate(() => {
     xp: Object.fromEntries(Object.entries(mons).map(([id, m]) => [id, (Number(m && m.exp) || 0) + (Number(m && m.lives) || 0)])) };
 });
 
+// プライベートルームを作る。2026-10-07 にモードえらびが2×2のタイルへ組み替わり、「＋ 作成」は「プライベート」の中の「＋ 部屋をつくる」になった。
+// 古い画面(モードえらびに直接「＋ 作成」がある)でも動くよう、まず直接探し、無ければ「プライベート」を開いてから探す
+// 「マスモンを呼ぶ」の「呼ぶ」ボタンを探す。1行の表示なら各行に「呼ぶ」がある。3列のカード表示(2026-10-07〜の既定)は、
+// カード(絆と総合力が書いてある)を押すと選ばれて、下に「呼ぶ」が出る
+async function pickCallButton(s) {
+  const find = async () => (await s.listButtons()).find((b) => /^呼ぶ$/.test(b.label));
+  let call = await find();
+  if (call) return call;
+  const card = (await s.listButtons()).find((b) => /絆\s*\d+/.test(b.label) && /総合力/.test(b.label));
+  if (!card) return null;
+  await s.tap(card, 'マスモンのカードを選ぶ');
+  await s.wait(400);
+  return find();
+}
+async function createPrivateRoom(s) {
+  if (await s.tapLabel(/^＋ 作成$/, 800)) return true;
+  if (!(await s.tapLabel(/プライベート/, 1500))) return false;
+  await s.dismissOverlays(3);
+  return s.tapLabel(/^[＋+] ?(部屋をつくる|部屋を作る|作成)$|^作成$/, 2500);
+}
 async function openRoom(s) {
   await s.backHome();
   await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.innerText || '').trim() === 'モンヒロビート')?.click());
   await s.wait(2500);
   await s.dismissOverlays(10);
-  if (!(await s.tapLabel(/^＋ 作成$/, 2500))) return false;
+  if (!(await createPrivateRoom(s))) return false;
   await s.dismissOverlays(4);
   return true;
 }
@@ -43,7 +63,7 @@ async function buddyScenario(s) {
   for (let k = 0; k < 4; k++) {
     if (!(await s.tapLabel(/^🎵 マスモンを呼ぶ/, 1200))) break;
     const left = await freeLeft(s);
-    const call = (await s.listButtons()).find((b) => /^呼ぶ$/.test(b.label));
+    const call = await pickCallButton(s);
     if (!call) { log.push(`${k + 1}体目: 呼べる子がいない`); await s.tapLabel(/^(閉じる|✕)$/, 800); break; }
     const before = await readBuddy(s);
     await s.tap(call, `${k + 1}体目を呼ぶ`);
