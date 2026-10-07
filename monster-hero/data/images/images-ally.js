@@ -211,7 +211,7 @@ const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f67
 const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
 const GHOST_FACE_ICON = "images/monster-icons/face/ghost.png?v=fdbc8d32d2cd";
 const SPOOKY_FACE_ICON = "images/monster-icons/face/spooky.png?v=2c047a771ffe";
-const MELODY_FACE_ICON = "images/monster-icons/face/melody.png?v=7cff84b6aa0c";
+const MELODY_FACE_ICON = "images/monster-icons/face/melody.png?v=e11358ae2683";
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
 // 血統のid(MONSTER_LINEAGES)との対応は、このファイルの下の MONSTER_LINEAGE_ICONS。ゲームにまだ無い血統のぶんも先に入れてある(使うのは血統を足すとき)。
