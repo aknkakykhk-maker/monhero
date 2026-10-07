@@ -57,6 +57,35 @@ check('各イベントが日付(YYYY-MM-DD HH:MM)を持つ(足すときの書き
   check('一覧に出す日付は YYYY/MM/DD・壊れた日付は出さない', /^\d{4}\/\d{2}\/\d{2}$/.test(c2.__o.text) && c2.__o.bad === '', c2.__o.text);
 }
 check('一覧の各行に日付を出す', (source.match(/data-event-replay-date/g) || []).length >= 2);
+// まとまりごとの並び(2026-10-07・ユーザー指示「イベント回想整理して並べてほしい」)
+{
+  const core = fs.readFileSync(path.join(root, 'monster-hero/src/parts/10-core.jsx'), 'utf8');
+  const from = core.indexOf('const eventReplayDateMs'), mid = core.indexOf('const EVENT_REPLAY_GROUPS = ');
+  const endMark = ".filter(group => group.events.length > 0);\n};", to = core.indexOf(endMark, mid);
+  const c3 = { EVENT_REPLAYS: list };
+  vm.createContext(c3);
+  vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + endMark.length)}\nglobalThis.__g={groups:eventReplayGroups(),ids:EVENT_REPLAY_GROUPS.map(g=>g.id),fb:EVENT_REPLAY_GROUP_FALLBACK};`, c3);
+  const { groups, ids, fb } = c3.__g;
+  check('各イベントが、既知のまとまり(group)を持つ(足すときの書き忘れよけ)',
+    list.every(ev => ids.includes(ev.group)), list.filter(ev => !ids.includes(ev.group)).map(ev => ev.id).join(', '));
+  check('まとまりの並びは、いま開いているイベント(ハロウィン・ナイト)が先頭', groups[0] && groups[0].id === 'halloween', groups.map(g => g.id).join(' > '));
+  check('すべてのイベントが、どれか1つのまとまりにちょうど1回ずつ入る(一覧から消えない・重ならない)',
+    groups.flatMap(g => g.events.map(ev => ev.id)).sort().join() === list.map(ev => ev.id).sort().join());
+  const msOf = (ev) => Date.parse(ev.date.replace(' ', 'T') + ':00+09:00');
+  check('まとまりの中は、日付の古い順(お話の順)に並ぶ', groups.every(g => g.events.every((ev, i) => i === 0 || msOf(g.events[i - 1]) <= msOf(ev))));
+  const hw = (groups.find(g => g.id === 'halloween') || { events: [] }).events.map(ev => ev.id);
+  const part = (id) => hw.indexOf(id);
+  check('ハロウィン・ナイトは第1部から終章までお話の順に並ぶ',
+    part('halloween_night_2026_part1') === 0 && part('raid_jack_story_2') < part('raid_jack_story_3') && part('raid_jack_story_5') < part('raid_jack_story_6')
+      && part('raid_jack_story_6') < part('raid_jack_ending_cleared'), hw.join(' > '));
+  // 知らない・書き忘れの group は FALLBACK へ入り、一覧から消えない
+  const c4 = { EVENT_REPLAYS: [{ id: 'x', date: '2026-01-01 00:00', group: 'nazo' }, { id: 'y', date: '2026-01-02 00:00' }] };
+  vm.createContext(c4);
+  vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + endMark.length)}\nglobalThis.__f=eventReplayGroups().map(g=>g.id+':'+g.events.map(e=>e.id).join('+'));`, c4);
+  check('まとまりの名前が不明・無い項目は、既定のまとまりへ入る', c4.__f.join() === `${fb}:x+y`, c4.__f.join());
+}
+check('一覧の画面はまとまりごとに描き、見出しの下に「見た数/全部」を出す', has('eventReplayGroups().map(group=>') && has('data-event-replay-group={group.id}') && has('seenCount}/{group.events.length}'));
+check('一覧の窓は、見出しと「閉じる」を固定して中身だけスクロールする', has('data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll') && has('className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる'));
 // ハロウィン・ナイトとジャックの会話は、全部に曲が付く(2026-10-04・「レイドの遊び方のときにBGMがない」。設定表への1行の書き忘れだった)
 {
   const bgm = fs.readFileSync(path.join(root, 'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'), 'utf8');

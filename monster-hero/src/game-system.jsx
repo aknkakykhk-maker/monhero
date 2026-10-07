@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3b3150c3d06cf76a
+// generated-sha256: dae4990e1e5910dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -324,6 +324,32 @@ const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 // デバッグ専用(2026-10-04・ユーザー指示「デバッグでストーリー全部の確認」)。公開前のものも含めて全部を同じ並びで返す。
 // 通常の画面(プロフィールの回想)は使わない。デバッグ設定の「全ストーリーを確認」だけが読む
 const eventReplayAllList = () => eventReplaySorted(() => true);
+// イベント回想の一覧(プロフィール → イベント回想)に出す「まとまり」(2026-10-07・ユーザー指示「イベント回想整理して並べてほしい」)。
+// 新しい順にずらっと並べると、同じお話の第1部〜終章が逆順に散らばり、まだ見ていない「？？？」も上に溜まっていた。
+// そこで EVENT_REPLAYS の group で分けて、まとまりの中は日付の**古い順(お話の順)**に並べる。
+//   まとまり自体の並びは下の表のとおり(いま開いているイベントを上に)。
+//   group が無い・知らない名前の項目は EVENT_REPLAY_GROUP_FALLBACK へ入れる(一覧から消えない)。
+//   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
+// ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
+const EVENT_REPLAY_GROUPS = Object.freeze([
+  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト' },
+  { id:'rhythm_event', emoji:'🏆', label:'モンヒロビートのイベント' },
+  { id:'update', emoji:'✨', label:'新しい遊びのお話' },
+  { id:'assistant', emoji:'💬', label:'助手のお話' },
+]);
+const EVENT_REPLAY_GROUP_FALLBACK = 'update';
+const eventReplayGroups = (keep = eventReplayReleased) => {
+  const known = new Set(EVENT_REPLAY_GROUPS.map(group => group.id));
+  // 絞り込みは eventReplaySorted(唯一の入口)に任せ、その結果を古い順に並べ直す(同じ日時どうしは書いた順のまま)
+  const asc = eventReplaySorted(keep)
+    .map((event, index) => ({ event, index, ms: eventReplayDateMs(event) }))
+    .sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (a.ms || 0) - (b.ms || 0) || a.index - b.index)
+    .map(row => row.event);
+  const groupOf = (event) => (known.has(event && event.group) ? event.group : EVENT_REPLAY_GROUP_FALLBACK);
+  return EVENT_REPLAY_GROUPS
+    .map(group => ({ ...group, events: asc.filter(event => groupOf(event) === group.id) }))
+    .filter(group => group.events.length > 0);
+};
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -6956,10 +6982,10 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
 const MASU_COLOR_FALLBACK_REGION = { Tiger: { 2: 0 } };
 // 染め直した絵の置き場所の名前。濃さ(@NN)は絵に影響しないので名前へ含めない
 const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
-// 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
+// 立ち絵が縦長(2:3〜5:6)のモンスター(ユグドラシル以降の新しい子も含む。2026-10-07に追加。メロディー・クロミーは本体登録後に効く)。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -36064,6 +36090,13 @@ function RhythmHistoryScreen({
   onBack, onSelect, onClearSelection, onSelectDivision, onRefresh,
 }) {
   const list = Array.isArray(entries) ? entries : [];
+  // 一覧は「週間ランキング」と「イベント」に分けて出す(2026-10-07・ユーザー指示「これは週間とイベントと分けたい」)。
+  // 種類(kind)は weekly=週 / limited=イベント。はじめに開く側は、いちばん最近終わったものの種類
+  // (entries は新しい順)。選んで開いて戻っても、見ていた側のまま。
+  const [listTab, setListTab] = useState(() => ((Array.isArray(entries) && entries[0] && entries[0].kind === 'limited') ? 'limited' : 'weekly'));
+  const weeklyList = list.filter(entry => entry.kind !== 'limited');
+  const eventList = list.filter(entry => entry.kind === 'limited');
+  const shownList = listTab === 'limited' ? eventList : weeklyList;
   const view = board || { status:'idle', event:null, boards:{}, error:null };
   // 部門は**えらんだ回から**作る。取ってきた結果(view.event)を待つと、
   // 読み込み中や通信に失敗したあいだ部門のボタンが消えて、切り替えて試し直せなくなる
@@ -36117,21 +36150,35 @@ function RhythmHistoryScreen({
               ? <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
                   終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 5:00 に切り替わります。
                 </p>
-              : <div className="flex flex-col gap-2">
-                  {list.map(entry=>(
-                    <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
-                      className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
-                      {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
-                      <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
-                      <span className="min-w-0 flex-1">
-                        <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
-                        <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
-                        {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
-                      </span>
-                      <ChevronRight size={16} className="shrink-0 text-slate-500"/>
-                    </button>
-                  ))}
-                </div>}
+              : <>
+                  {/* 週は年52件ずつ増えるので、下へ送ってもタブが見えるよう上に留める */}
+                  <div data-rhythm-history-tabs className="sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1">
+                    <ScreenTabs value={listTab} onChange={setListTab} items={[
+                      { id:'weekly', label:`📊 週間ランキング（${weeklyList.length}）`, color:'#f59e0b' },
+                      { id:'limited', label:`🏆 イベント（${eventList.length}）`, color:'#c026d3' },
+                    ]}/>
+                  </div>
+                  {shownList.length===0
+                    ? <p data-rhythm-history-empty={listTab} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
+                        {listTab==='limited'?'終わったイベントはまだありません。':'終わった週はまだありません。'}<br/>
+                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 5:00 に切り替わります。'}
+                      </p>
+                    : <div className="flex flex-col gap-2">
+                        {shownList.map(entry=>(
+                          <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
+                            className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
+                            {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
+                            <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
+                            <span className="min-w-0 flex-1">
+                              <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
+                              <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
+                              {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
+                            </span>
+                            <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                          </button>
+                        ))}
+                      </div>}
+                </>}
           </>
         )}
         {selected&&(
@@ -60298,11 +60345,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
         {showEventReplayList&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
-              <h3 className="text-base font-black text-white mb-1 text-center">イベント回想</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。</p>
-              <div className="space-y-2 mb-3">
-                {eventReplayList().map(event=>{
+            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+              {/* 見出しと「閉じる」は動かさず、まとまりの並びだけを窓の中でスクロールさせる(下まで行かないと閉じられないのを避ける) */}
+              <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
+              <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。<br/>まとまりごとに、お話の順に並んでいます。</p>
+              {/* まとまり(ハロウィン・ナイト / モンヒロビートのイベント / …)ごとに、お話の順(古い順)で並べる。
+                  まだ見ていない項目も、そのまとまりの中の順番どおりに「？？？」で出す(あと何本あるかが分かる) */}
+              <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-4 mb-3">
+                {eventReplayGroups().map(group=>{
+                  const seenCount=group.events.filter(isEventReplayUnlocked).length;
+                  return (
+                  <section key={group.id} data-event-replay-group={group.id}>
+                    <div className="mb-1.5 flex items-center gap-1.5 px-1">
+                      <span className="text-sm" aria-hidden="true">{group.emoji}</span>
+                      <b className="min-w-0 flex-1 text-[12px] font-black text-fuchsia-100">{group.label}</b>
+                      <small className="shrink-0 text-[10px] font-black tabular-nums text-fuchsia-300/80">{seenCount}/{group.events.length}</small>
+                    </div>
+                    <div className="space-y-2">
+                {group.events.map(event=>{
                   const eventUnlocked=isEventReplayUnlocked(event);
                   if(!eventUnlocked){
                     return (
@@ -60326,8 +60386,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </button>
                   );
                 })}
+                    </div>
+                  </section>
+                  );
+                })}
               </div>
-              <button onClick={()=>setShowEventReplayList(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+              <button onClick={()=>setShowEventReplayList(false)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
         )}
