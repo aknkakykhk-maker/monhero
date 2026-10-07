@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 87bdb13b60315d1d
+// generated-sha256: efb6e5797eb718cb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 22:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17736,6 +17736,15 @@ const rhythmAchievementMarkId=(playable,record)=>{
   return 'CLEAR';
 };
 
+// 曲えらびの詳細に出す称号(フルコンボ以上を取っているときだけ)。いちばん上の1つを返す。取っていなければ null。
+// クリアしていない記録は出さない(rhythmAchievementMarkId と同じ決めごと)
+const RHYTHM_DETAIL_ACHIEVE_TIERS=Object.freeze({
+  FULL_COMBO:Object.freeze({id:'FULL_COMBO',text:'FULL COMBO!',label:'フルコンボ'}),
+  ALL_EXCELLENT:Object.freeze({id:'ALL_EXCELLENT',text:'ALL EXCELLENT!!',label:'オールエクセレント'}),
+  ALL_MARVELOUS:Object.freeze({id:'ALL_MARVELOUS',text:'ALL MARVELOUS!!',label:'オールマーベラス'}),
+});
+const rhythmDetailAchieveTier=record=>RHYTHM_DETAIL_ACHIEVE_TIERS[rhythmAchievementMarkId(true,record)]||null;
+
 // 曲の絵(ジャケット)の下地の色。曲idから決めるので、同じ曲はいつも同じ色になる。
 // 絵(artwork)を持たない曲はこの色のタイルに曲名の頭文字が出る。絵を持つ曲でも、
 // 絵が届くまでの数フレームと、data/rhythm-mode.js が読めなかったときの受け皿になる。
@@ -18201,6 +18210,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                       {/* 行が狭いとき(横持ちで絵を回したiPhoneなど)は、難易度の名前から先に外してスコアを切らさない
                           (2026-09-26・ユーザー報告「スコアの文字が切れてる」)。さらに狭ければ達成の印も外す */}
                       {rowId&&<span className={`shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`}>{rowId}</span>}
+                      {(()=>{const tier=played?rhythmDetailAchieveTier(record):null;
+                        return tier?<span {...(main?{'data-rhythm-song-row-achieve':tier.id}:{})} data-rhythm-achieve-tone={tier.id} title={tier.label}
+                          className="shrink-0 rounded px-1 py-px text-[8px] font-black italic leading-none [@container(max-width:350px)]:hidden">{tier.id==='FULL_COMBO'?'FC':tier.id==='ALL_EXCELLENT'?'AE':'AM'}</span>:null;})()}
                       {played
                         ?<><b className={`text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank]||'text-slate-300'}`}>{rank}</b>
                           <span className="truncate tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
@@ -18234,7 +18246,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               横: ジャケット(左・2段ぶち抜き) | 自己ベスト / アシスト・ミラー・ランキング(小さな絵のボタン) → 曲名 → 難易度 → ランダム・決定
             横は高さが390pxしかないので、曲名を1行・ボタンを低めにして、スクロールせずに「決定」まで届くようにする */}
         <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]">
-          <div data-rhythm-song-detail-art className="w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}}><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
+          {/* 選んでいる難易度でフルコンボ以上を取っているときは、ジャケットへ光の枠と帯を重ねる(2026-10-07・ユーザー指示「フルコンボとかオールエクセレントとか表示して / 派手めに」)。
+              選び直すたびに key が変わって、帯がもう一度ポンと出る */}
+          {(()=>{const tier=rhythmDetailAchieveTier(best);
+            return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
+              <RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/>
+              {tier&&<span key={`${song.songId}:${difficulty.id}`} aria-label={tier.label}>
+                <i aria-hidden="true" data-rhythm-achieve-frame=""/>
+                <b data-rhythm-achieve-ribbon="">{tier.text}</b>
+                <i aria-hidden="true" data-rhythm-achieve-star="1">✦</i><i aria-hidden="true" data-rhythm-achieve-star="2">✦</i><i aria-hidden="true" data-rhythm-achieve-star="3">✦</i>
+              </span>}
+            </div>;})()}
           {/* 曲名は縦で2行分・横で1行分の高さを固定する。曲名の長さで下の段が上下に動かないように */}
           <div className="min-w-0" style={{gridArea:'title'}}>
             {/* 曲名の横に「♡ お気に入り」(2026-09-26。ジャンルの「お気に入り」にまとまる) */}
