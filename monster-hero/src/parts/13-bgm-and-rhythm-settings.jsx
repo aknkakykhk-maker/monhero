@@ -160,7 +160,10 @@ const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 //   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
 //     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
 // favorites … お気に入りに入れた曲のid(2026-09-26)。新しい項目なので、持っていない既存ユーザーは空で補われる
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all', favorites:Object.freeze([]) });
+// noticeOpenShort … 縦が低い画面(高さ700px以下)での助手のひとことの開け閉め(2026-10-07)。低い画面ではひとことを出すと
+//   曲の一覧が1行も見えなくなるので、はじめは畳んでおく。新しい項目なので、持っていない既存ユーザーは false で補われる
+//   (ふつうの画面の noticeOpen とは別に持つ。片方を変えても、もう片方は変わらない)
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, genre:'all', favorites:Object.freeze([]) });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
@@ -169,6 +172,7 @@ const normalizeRhythmSelectView = value => {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
+    noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
     genre,
     favorites: Array.isArray(source.favorites)
       ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX)
