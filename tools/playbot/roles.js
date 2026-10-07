@@ -18,6 +18,9 @@ const { raidBeatScenario } = require('./scenarios/raidbeat');
 const { landscapeScenario } = require('./scenarios/landscape');
 const { buddyScenario } = require('./scenarios/buddy');
 const { storyTimingScenario, replayScenario } = require('./scenarios/story');
+const { offlinePlayScenario, resendScenario, slowScenario } = require('./scenarios/net');
+const { smallTourScenario, smallPlayScenario } = require('./scenarios/small');
+const { lookScenario } = require('./scenarios/look');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -133,6 +136,13 @@ const ROLES = [
     },
   },
   {
+    id: 'look', name: '見た目係', prepare: 'veteran', boot: true,
+    does: '主な11画面を毎回同じ手順で開いて撮り、前回(baseline/look)と比べて大きく変わった画面だけを、前回と今回を並べた画像つきで知らせる',
+    run: async (s, { phase, out }) => {
+      await phase('主な画面を撮って比べる', () => lookScenario(s, { out }));
+    },
+  },
+  {
     id: 'legacy', name: '久しぶり係', prepare: 'legacy',
     does: '昔の形のセーブで開き、持ち物が消えない・移行が二重にかからない・そのまま遊べるかを見る',
     run: async (s, { phase, steps, rand }) => {
@@ -197,6 +207,25 @@ const ROLES = [
     },
   },
   {
+    id: 'net', name: '通信不良係', prepare: 'veteran', boot: true, alone: true,
+    does: '通信を「つながらない」にして1曲演奏し、記録が端末に取っておかれるか。戻して「いま送る」で送り直されるか。通信が10秒遅いときにランキングが止まらないか。1人で動かす',
+    run: async (s, { phase }) => {
+      const shared = {};
+      await phase('つながらないまま演奏', () => offlinePlayScenario(s, shared));
+      await phase('戻して送り直す', () => resendScenario(s, shared));
+      await phase('遅い通信', () => slowScenario(s, shared));
+    },
+  },
+  {
+    id: 'small', name: '小さい画面係', prepare: 'veteran', boot: true, alone: true,
+    viewport: { width: 320, height: 568 }, cpuSlowdown: 4,
+    does: '幅320px・CPU 4倍遅いで起動の秒数を測り、HOME の入口を全部回り、1曲演奏する。1人で動かす(CPU を遅くするので、ほかと並べない)',
+    run: async (s, { phase, rand, numbers }) => {
+      await phase('小さい画面で入口を回る', () => smallTourScenario(s, { rand }));
+      await phase('遅い端末で演奏', () => smallPlayScenario(s));
+    },
+  },
+  {
     id: 'ranking', name: 'ランキング係', prepare: 'veteran', boot: true, alone: true,
     does: '音ゲー係の記録と、名前の長い大勢のライバルを並べてランキングを開く',
     run: async (s, { phase, shared }) => {
@@ -212,8 +241,8 @@ const ROLES = [
 const TEAMS = [
   { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
   { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat', 'landscape', 'buddy'] },
-  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore', 'story'] },
-  { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean'] },
+  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore', 'story', 'look', 'small'] },
+  { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean', 'net'] },
 ];
 
 module.exports = { ROLES, TEAMS };
