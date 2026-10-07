@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 899abb4e61309a59
+// source-sha256: 85fcd6d146782a67
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 19:56";
+const BUILD_DATE = "2026-10-07 19:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37106,35 +37106,40 @@ const RHYTHM_BUDDY_MOODS = Object.freeze([Object.freeze({
   icon: '😆',
   weight: 10,
   acc: 0.06,
-  spread: 0.7
+  spread: 0.7,
+  exp: 1.3
 }), Object.freeze({
   id: 'good',
   label: 'ご機嫌',
   icon: '😊',
   weight: 25,
   acc: 0.03,
-  spread: 0.9
+  spread: 0.9,
+  exp: 1.15
 }), Object.freeze({
   id: 'normal',
   label: '普通',
   icon: '🙂',
   weight: 35,
   acc: 0,
-  spread: 1
+  spread: 1,
+  exp: 1
 }), Object.freeze({
   id: 'bad',
   label: '不機嫌',
   icon: '😒',
   weight: 20,
   acc: -0.03,
-  spread: 1.1
+  spread: 1.1,
+  exp: 0.85
 }), Object.freeze({
   id: 'awful',
   label: '超不機嫌',
   icon: '😠',
   weight: 10,
   acc: -0.06,
-  spread: 1.35
+  spread: 1.35,
+  exp: 0.7
 })]);
 const RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS = Object.freeze({
   great: 10,
@@ -37291,9 +37296,15 @@ const RHYTHM_BUDDY_RANK_EXP = Object.freeze({
   F: 3,
   G: 0
 });
-const rhythmBuddyExpGain = (diffId, teamRank) => {
+const rhythmBuddyMoodExpScale = (moodId, trait = '') => {
+  const mood = RHYTHM_BUDDY_MOODS.find(x => x.id === moodId);
+  const scale = mood ? mood.exp : 1;
+  return Math.round((trait === 'serious' ? 1 + (scale - 1) / 2 : scale) * 1000) / 1000;
+};
+const rhythmBuddyExpGain = (diffId, teamRank, moodId = '', trait = '') => {
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
-  return 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  const base = 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  return Math.max(1, Math.round(base * rhythmBuddyMoodExpScale(moodId, trait)));
 };
 const RHYTHM_BUDDY_FAMILIAR_STEPS = Object.freeze([1, 3, 6, 10, 15]);
 const rhythmBuddyFamiliarStars = (plays, trait) => {
@@ -37618,7 +37629,7 @@ const rhythmBuddyApplyLive = (mon, {
     familiarUp: false,
     traitNew: ''
   };
-  const gain = rhythmBuddyExpGain(diffId, teamRank);
+  const gain = rhythmBuddyExpGain(diffId, teamRank, moodId, before.trait);
   const songs = {
     ...before.songs
   };
@@ -65349,7 +65360,7 @@ function RhythmBuddyDetail({
     size: 22
   }), mood.label), React.createElement("small", {
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "朝5:00に変わります")), React.createElement("section", {
+  }, "朝5:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "text-[10px] font-black text-slate-400"

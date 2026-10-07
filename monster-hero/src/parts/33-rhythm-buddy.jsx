@@ -46,11 +46,11 @@ const RHYTHM_BUDDY_OLD_TRAITS = Object.freeze({ steady: 'serious', burst: 'jeste
 
 // その日の調子。weight は出やすさ(%)、acc は判定の良さへの足し引き、spread はブレの倍率
 const RHYTHM_BUDDY_MOODS = Object.freeze([
-  Object.freeze({ id: 'great', label: '超ご機嫌', icon: '😆', weight: 10, acc: 0.06, spread: 0.7 }),
-  Object.freeze({ id: 'good', label: 'ご機嫌', icon: '😊', weight: 25, acc: 0.03, spread: 0.9 }),
-  Object.freeze({ id: 'normal', label: '普通', icon: '🙂', weight: 35, acc: 0, spread: 1 }),
-  Object.freeze({ id: 'bad', label: '不機嫌', icon: '😒', weight: 20, acc: -0.03, spread: 1.1 }),
-  Object.freeze({ id: 'awful', label: '超不機嫌', icon: '😠', weight: 10, acc: -0.06, spread: 1.35 }),
+  Object.freeze({ id: 'great', label: '超ご機嫌', icon: '😆', weight: 10, acc: 0.06, spread: 0.7, exp: 1.3 }),
+  Object.freeze({ id: 'good', label: 'ご機嫌', icon: '😊', weight: 25, acc: 0.03, spread: 0.9, exp: 1.15 }),
+  Object.freeze({ id: 'normal', label: '普通', icon: '🙂', weight: 35, acc: 0, spread: 1, exp: 1 }),
+  Object.freeze({ id: 'bad', label: '不機嫌', icon: '😒', weight: 20, acc: -0.03, spread: 1.1, exp: 0.85 }),
+  Object.freeze({ id: 'awful', label: '超不機嫌', icon: '😠', weight: 10, acc: -0.06, spread: 1.35, exp: 0.7 }),
 ]);
 // 前の日に一緒に遊んでいると、不機嫌・超不機嫌が出にくい(減ったぶんは「普通」へ)
 const RHYTHM_BUDDY_MOOD_KEPT_WEIGHTS = Object.freeze({ great: 10, good: 25, normal: 47, bad: 13, awful: 5 });
@@ -170,9 +170,17 @@ const rhythmBuddyLevelInfo = (exp) => {
 };
 // 1ライブの経験値。難しい難易度・高いチームランクほど多い
 const RHYTHM_BUDDY_RANK_EXP = Object.freeze({ M: 30, SS: 26, S: 22, A: 18, B: 14, C: 10, D: 7, E: 5, F: 3, G: 0 });
-const rhythmBuddyExpGain = (diffId, teamRank) => {
+// 今日の調子で経験値(成長)が変わる(2026-10-07・ユーザー指示「成長率を機嫌によって変えたい」)。
+// 真面目は「調子の影響を受けにくい」ので、倍率の差を半分にする。返り値は経験値にかける倍率
+const rhythmBuddyMoodExpScale = (moodId, trait = '') => {
+  const mood = RHYTHM_BUDDY_MOODS.find((x) => x.id === moodId);
+  const scale = mood ? mood.exp : 1;
+  return Math.round((trait === 'serious' ? 1 + (scale - 1) / 2 : scale) * 1000) / 1000;
+};
+const rhythmBuddyExpGain = (diffId, teamRank, moodId = '', trait = '') => {
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
-  return 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  const base = 20 + d * 6 + (RHYTHM_BUDDY_RANK_EXP[teamRank] || 0);
+  return Math.max(1, Math.round(base * rhythmBuddyMoodExpScale(moodId, trait)));
 };
 
 // ---- 曲のなじみ(星0〜5) ----
@@ -408,7 +416,7 @@ const rhythmBuddyPlay = ({ mon, songId, diffId, totalNotes, maxScore, durationMs
 const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank, dayKey, lean, nowMs, score, maxScore, chartLevel = 0, humans = 1, moodId = '' }) => {
   const before = rhythmBuddyNormalizeMon(mon);
   if (!round || before.lastRound === round) return { mon: before, gain: 0, levelUp: 0, familiarUp: false, traitNew: '' };
-  const gain = rhythmBuddyExpGain(diffId, teamRank);
+  const gain = rhythmBuddyExpGain(diffId, teamRank, moodId, before.trait);
   const songs = { ...before.songs };
   const sid = rhythmBuddyStr(songId, 60);
   if (sid) songs[sid] = (songs[sid] || 0) + 1;
