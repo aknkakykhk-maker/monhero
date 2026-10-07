@@ -4303,6 +4303,9 @@ function MonsterHeroGame() {
   // 6レーンの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   // (新しいキーは作らない)。みんなで対戦の公開フラグが立っているときだけ並べる
   const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
+  // マルチにマスモンを呼べるようになった・ビートLvの知らせ(2026-10-07・ユーザー指示「ストーリー作ってからの公開」)。
+  // みんなで対戦の知らせと同じく、HOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる(新しいキーは作らない)
+  const RHYTHM_MASU_CALL_STORY_ID = 'rhythm_masu_call_2026_10_07';
   // レイドの遊び方(2026-10-04・ユーザー指示「最初のストーリーを終了後にレイドの遊び方説明をいれて」)。
   // ハロウィン・ナイト第1部を見終えたら続けて1度だけ流す。公開フラグ(raidJack)が立つまでは流さない
   const RAID_JACK_HOWTO_STORY_ID = 'raid_jack_howto_2026_10_04';
@@ -4313,7 +4316,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -4427,6 +4430,8 @@ function MonsterHeroGame() {
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
       // みんなで対戦・フレンドの知らせ。いちばん新しいお知らせなので、ビートP・6レーンより先に流す
       const multiFriendsStoryReady = RELEASE_FLAGS.rhythmMulti === true && notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID);
+      // マスモンを呼ぶ・ビートLvの知らせ。みんなで対戦の知らせを見たあとに流す(呼ぶ場所がマルチの部屋なので)
+      const masuCallStoryReady = RELEASE_FLAGS.rhythmMulti === true && !notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID) && notPlayedYet(RHYTHM_MASU_CALL_STORY_ID);
       // ビートPアップキャンペーンの知らせ。期間中かどうかは見回りのたびに数え直す(CLAUDE.md ⑥-4)。
       // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
@@ -4463,6 +4468,7 @@ function MonsterHeroGame() {
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
         else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
+        else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
         else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
         else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
@@ -4479,6 +4485,7 @@ function MonsterHeroGame() {
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
+      else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -5872,7 +5879,7 @@ function MonsterHeroGame() {
       if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID,
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID,
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -5891,6 +5898,12 @@ function MonsterHeroGame() {
       if (RELEASE_FLAGS.rhythmMulti === true && wasOnboarded
         && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MULTI_FRIENDS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
+      }
+      // マスモンを呼ぶ・ビートLvの知らせ。みんなで対戦の知らせを見たあとに流す
+      if (RELEASE_FLAGS.rhythmMulti === true && wasOnboarded
+        && normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MULTI_FRIENDS_STORY_ID)
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MASU_CALL_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);
       }
       // 6レーンの知らせ。ほかの会話が並んでいればそちらを先にする
       if (RELEASE_FLAGS.rhythmMode === true && wasOnboarded
@@ -6964,6 +6977,7 @@ function MonsterHeroGame() {
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
+    rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
