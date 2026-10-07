@@ -44,9 +44,10 @@ async function rankingScenario(s, { rhythm } = {}) {
   if (botRows.length && !showsBot) await s.addIssue('ランキングに出ない', `送った記録(${picked.song} ${picked.difficulty})が、この曲の全国ランキングに見えない`);
   if (botRows.length && !rivalsShown) await s.addIssue('ランキングに出ない', 'ほかのプレイヤーの記録を並べたのに、1人も見えない');
   await s.shot('ranking-crowded');
-  // ランキングの中のタブ(難易度・週間・イベントなど)を1つずつ押す。閉じるものは押さない
-  const tabs = (await s.listButtons()).filter((b) => b.overlay && b.label.length <= 10
-    && !/^(閉じる|とじる|×|戻る|もどる|キャンセル|OK)$|話しかける|説明/.test(b.label));
+  // ランキングの上に並ぶタブ(この曲・総合・週間・イベント)を1つずつ押す。
+  // ★タブは窓ではなく画面の上部にある。戻る・更新・閉じるものは押さない
+  const tabs = (await s.listButtons()).filter((b) => b.y < 160 && b.label.length <= 10
+    && !/^(閉じる|とじる|×|戻る|もどる|キャンセル|OK|更新|←)$|話しかける|説明|^\(無名|^BUTTON$/.test(b.label));
   const pressed = [];
   for (const b of tabs.slice(0, 8)) {
     s.state.step += 1;

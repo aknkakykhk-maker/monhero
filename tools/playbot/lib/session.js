@@ -230,10 +230,14 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
 
   // HOME に着いているか。★HOME の上に窓(更新履歴など)が開いたままでも .mh-home-scene はあるので、
   //   重なった窓が無いことまで見る(見ないと、窓の下の HOME を「着いた」と取り違える)
+  //   更新履歴の窓は role="dialog" を持たないので、HOME の「モンヒロバトル」が上に何も重ならず押せるかで見る
   const atHome = () => page.evaluate(() => {
     if (!document.querySelector('.mh-home-scene')) return false;
-    const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 120 && r.height > 120; };
-    return ![...document.querySelectorAll('[role="dialog"]')].some(vis);
+    const b = document.querySelector('button[aria-label="モンヒロバトル"]');
+    if (!b) return false;
+    const r = b.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return !!top && (top === b || b.contains(top));
   }).catch(() => false);
   s.backHome = async () => {
     for (let i = 0; i < 6; i++) {

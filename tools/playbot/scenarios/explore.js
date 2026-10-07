@@ -9,7 +9,10 @@ async function step(s, ctx) {
   s.state.step += 1;
   await s.fillEmptyInputs();
   const before = await s.screenName();
-  const list = await s.listButtons();
+  let list = await s.listButtons();
+  // 読み込み中(NOW LOADING)は押せるものが無いのが当たり前。人と同じく少し待ってから見直す
+  // (同時に動いているとCPUを分け合うので、ひとりのときより長く出る)
+  for (let i = 0; i < 4 && !list.length; i++) { await s.wait(2000); list = await s.listButtons(); }
   if (!list.length) {
     await s.addIssue('行き止まり', '押せるボタンが1つも無い');
     await s.backHome();

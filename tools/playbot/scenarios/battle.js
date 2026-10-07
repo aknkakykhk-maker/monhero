@@ -188,7 +188,7 @@ async function watchAuto(s, ms, stats) {
     await s.wait(3000);
     s.state.step += 1;
     const st = await readBattle(s);
-    stats.samples.push({ t: Date.now() - t0, wave: st.wave, turn: st.turn, life: st.life });
+    if (st.inBattle) stats.samples.push({ t: Date.now() - t0, wave: st.wave, turn: st.turn, life: st.life });
     if (st.turn !== last.turn || st.wave !== last.wave || st.over !== last.over) lastChange = Date.now();
     if (st.over) { stats.finished = true; break; }
     if (Date.now() - lastChange > 20000) {
@@ -199,7 +199,10 @@ async function watchAuto(s, ms, stats) {
     await s.inspect();
   }
   const end = await readBattle(s);
-  stats.endWave = end.wave; stats.endTurn = end.turn;
+  // 結果画面の「WAVE別ログ」には WAVE 1 から並ぶので、着いた WAVE はバトル中に見た最大のものにする
+  const waves = stats.samples.map((x) => x.wave).filter(Number.isFinite);
+  stats.endWave = waves.length ? Math.max(...waves) : end.wave;
+  stats.endTurn = end.inBattle ? end.turn : (stats.samples.filter((x) => x.wave === stats.endWave).map((x) => x.turn).filter(Number.isFinite).pop() ?? end.turn);
   if (end.over) {
     await s.shot('battle-result');
     // 結果画面から先へ進めるか(人なら「HOMEへ」などを押す)
