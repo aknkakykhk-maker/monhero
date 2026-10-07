@@ -174,10 +174,10 @@ const ROLES = [
 // ★ランキング係は音ゲー係の記録を使う(shared.rhythm)ので、同じ班から離さない。
 // ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
 const TEAMS = [
-  { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto'] },
-  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking'] },
+  { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
+  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi'] },
   { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore'] },
-  { id: 'guard', name: '守り班', roles: ['legacy', 'clock'] },
+  { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean'] },
 ];
 
 module.exports = { ROLES, TEAMS };
