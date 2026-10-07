@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef99036a3a7d187e
+// generated-sha256: d75fde5cdd646293
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 17:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 17:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4213,7 +4213,10 @@ const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 //   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
 //     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
 // favorites … お気に入りに入れた曲のid(2026-09-26)。新しい項目なので、持っていない既存ユーザーは空で補われる
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all', favorites:Object.freeze([]) });
+// noticeOpenShort … 縦が低い画面(高さ700px以下)での助手のひとことの開け閉め(2026-10-07)。低い画面ではひとことを出すと
+//   曲の一覧が1行も見えなくなるので、はじめは畳んでおく。新しい項目なので、持っていない既存ユーザーは false で補われる
+//   (ふつうの画面の noticeOpen とは別に持つ。片方を変えても、もう片方は変わらない)
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, genre:'all', favorites:Object.freeze([]) });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
@@ -4222,6 +4225,7 @@ const normalizeRhythmSelectView = value => {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
+    noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
     genre,
     favorites: Array.isArray(source.favorites)
       ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX)
@@ -17810,6 +17814,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
+  // 縦が低い画面(高さ700px以下)では、助手のひとことを出すと曲の一覧が1行も見えなくなる
+  // (2026-10-07 プレイボットの小さい画面係が見つけた。幅320×高さ568で一覧の高さ16px)。
+  // 低い画面だけ、ひとことの開け閉めを別の項目(noticeOpenShort・はじめは畳む)で持つ。💬で開けば読める
+  const shortPortrait=()=>typeof window!=='undefined'&&window.innerHeight<=700&&window.innerHeight>window.innerWidth;
+  const [isShortScreen,setIsShortScreen]=React.useState(shortPortrait);
+  useEffect(()=>{
+    const onResize=()=>setIsShortScreen(shortPortrait());
+    window.addEventListener('resize',onResize);
+    return ()=>window.removeEventListener('resize',onResize);
+  },[]);
+  const noticeOpen=isShortScreen?state.noticeOpenShort:state.noticeOpen;
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -18027,7 +18042,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。
           畳んだかどうかは覚えるので、毎回たたみ直さなくてよい。
           横画面では右の欄(aside)の下へ移す。出す中身は同じで、置く場所だけがCSSで入れ替わる。 */}
-      {notice&&state.noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{notice}</div>}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{notice}</div>}
       {/* ジャンル・並び替え・助手の開け閉め。ジャンルは常に並べず、押すと下から選ぶところが出る
           (2026-09-26・ユーザー指示「ジャンルは常時出すより押して選べるタイプにしたい」)。
           ALL以外で絞っているあいだは色を付けて、一覧が絞られていることが分かるようにする */}
@@ -18046,11 +18061,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           </span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
-        {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={state.noticeOpen}
-          onClick={()=>setView({...state,noticeOpen:!state.noticeOpen})}
-          title={state.noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
-          className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${state.noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
-          <span aria-hidden="true">💬</span><span aria-hidden="true">{state.noticeOpen?'▲':'▼'}</span>
+        {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
+          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen})}
+          title={noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
+          className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+          <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>
         </button>}
         {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
         {toolbarExtra}
@@ -18148,7 +18163,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               横: ジャケット(左・2段ぶち抜き) | 自己ベスト / アシスト・ミラー・ランキング(小さな絵のボタン) → 曲名 → 難易度 → ランダム・決定
             横は高さが390pxしかないので、曲名を1行・ボタンを低めにして、スクロールせずに「決定」まで届くようにする */}
         <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]">
-          <div className="w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}}><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
+          <div data-rhythm-song-detail-art className="w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}}><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
           {/* 曲名は縦で2行分・横で1行分の高さを固定する。曲名の長さで下の段が上下に動かないように */}
           <div className="min-w-0" style={{gridArea:'title'}}>
             {/* 曲名の横に「♡ お気に入り」(2026-09-26。ジャンルの「お気に入り」にまとまる) */}
@@ -18232,7 +18247,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         </div>
         </>}
       {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
-      {notice&&state.noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-2 hidden landscape:block">{notice}</div>}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-2 hidden landscape:block">{notice}</div>}
     </aside>
 
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
