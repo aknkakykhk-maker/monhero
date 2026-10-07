@@ -11,6 +11,7 @@ async function step(s, ctx) {
   const before = await s.screenName();
   let list = await s.listButtons();
   // 「ゲームを更新」などで読み込み直している間(NOW LOADING)は押せるものが無い。人と同じく少し待つ
+  // (担当を同時に動かしているとCPUを分け合うので、ひとりのときより長く出る)
   for (let w = 0; !list.length && w < 6; w++) { await s.wait(2000); list = await s.listButtons(); }
   if (!list.length) {
     await s.addIssue('行き止まり', '押せるボタンが1つも無い');

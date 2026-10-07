@@ -147,7 +147,7 @@ const verdictOf=rows=>diagnose(aggregate(rows)).filter(line=>line.level==='found
 {
   const mode=read('monster-hero/data/rhythm-mode.js');
   const fixes=(mode.match(/const RHYTHM_TOUCH_FIXES=\{[\s\S]*?\n\};/)||[''])[0];
-  ok('直し方: 公開で入れてあるのは lateInputEffectDown だけ(wideEdge・allPlatforms は切ってある)',/lateInputEffectDown:true/.test(fixes)&&/wideEdge:false/.test(fixes)&&/allPlatforms:false/.test(fixes)&&(fixes.match(/:true/g)||[]).length===1,fixes.replace(/\s+/g,' ').slice(0,200));
+  ok('直し方: 公開で入れてあるのは lateInputEffectDown・inputAgeCap(iPhoneだけ。コマ落ちが見えたときだけ効く)・autoPauseOnHidden だけ(wideEdge・smoothSongClock・allPlatforms は切ってある。smoothSongClock は端末の記録からゲームが自分で入れる)',/lateInputEffectDown:true/.test(fixes)&&/wideEdge:false/.test(fixes)&&/allPlatforms:false/.test(fixes)&&/inputAgeCap:true/.test(fixes)&&/smoothSongClock:false/.test(fixes)&&/autoPauseOnHidden:true/.test(fixes)&&(fixes.match(/:true/g)||[]).length===3,fixes.replace(/\s+/g,' ').slice(0,200));
   ok('直し方: 効くのは iPhone だけ',/return rhythmTouchPlatformCache==='ios';/.test(mode));
   ok('直し方: 道の外の受け付けは、切り替えを通して決める',/const margin=laneWidth\/2\*rhythmInputEdgeMarginSubLanes\(\);/.test(mode));
   ok('直し方: タッチの遅れで演出を下げるのは「重いときは演出を自動で控えめに」の中だけ(設定を切った人には効かない)',

@@ -36,11 +36,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   {
     const fixCtx = (ua) => { const c = { navigator: { userAgent: ua, maxTouchPoints: 5 }, console }; vm.runInNewContext(`${src.slice(start, end)}\nthis.F=RHYTHM_TOUCH_FIXES;this.on=rhythmTouchFixOn;this.active=rhythmTouchFixesActive;`, c); return c; };
     const pc = fixCtx('Mozilla/5.0 (X11; Linux x86_64)'), ip = fixCtx('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
-    check('部品: 入れてあるのは lateInputEffectDown だけ(iPhoneのみ・wideEdge は切ってある)', ip.on('lateInputEffectDown') && !ip.on('wideEdge') && !pc.on('lateInputEffectDown') && ip.active().join() === 'lateInputEffectDown');
+    check('部品: 入れてあるのは lateInputEffectDown・inputAgeCap(iPhoneのみ)と autoPauseOnHidden(全端末)で、wideEdge・smoothSongClock は切ってある', ip.on('lateInputEffectDown') && ip.on('inputAgeCap') && !ip.on('wideEdge') && !ip.on('smoothSongClock') && !pc.on('lateInputEffectDown') && !pc.on('inputAgeCap') && pc.on('autoPauseOnHidden') && ip.active().join() === 'lateInputEffectDown,inputAgeCap,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.wideEdge = true; ip.F.wideEdge = true;
-    check('部品: 入れた直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'lateInputEffectDown,wideEdge');
+    check('部品: iPhone専用の直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'lateInputEffectDown,wideEdge,inputAgeCap,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.allPlatforms = true;
-    check('部品: 検査用の allPlatforms で、パソコンでも試せる(名前としては返さない)', pc.on('wideEdge') && !pc.on('allPlatforms') && pc.active().join() === 'lateInputEffectDown,wideEdge');
+    check('部品: 検査用の allPlatforms で、パソコンでも試せる(名前としては返さない)', pc.on('wideEdge') && !pc.on('allPlatforms') && pc.active().join() === 'lateInputEffectDown,wideEdge,inputAgeCap,autoPauseOnHidden');
   }
   B.reset();
   B.pointerDown(1, 100, 300, 1000, 1000); B.touchStart(11, 100, 300, 1000, 1001, 1);
@@ -238,7 +238,7 @@ const seed = () => {
       const hit = list.find((x) => x.stats && x.stats.playId === d.stats.playId);
       return { playId: d.stats.playId, fixes: d.stats.fixes, reported: !!(hit && hit.reported), others: list.filter((x) => x !== hit).every((x) => !x.reported), sent, origFetch: typeof origFetch };
     });
-    check('⑩ 1曲ごとに、結ぶための番号(12文字)と、効いていた直し方(いまは空)が入る', /^[0-9a-z]{12}$/.test(rep.playId) && Array.isArray(rep.fixes) && rep.fixes.length === 0, JSON.stringify(rep));
+    check('⑩ 1曲ごとに、結ぶための番号(12文字)と、効いていた直し方(iPhone以外では、全端末に効く autoPauseOnHidden だけ)が入る', /^[0-9a-z]{12}$/.test(rep.playId) && Array.isArray(rep.fixes) && rep.fixes.length === 1 && rep.fixes[0] === 'autoPauseOnHidden', JSON.stringify(rep));
     check('⑩ 報告すると、端末の記録のその曲にだけ印が付く', rep.reported && rep.others, JSON.stringify(rep));
     check('⑩ 手元のサーバーで開いたゲームからは送らない', rep.sent === false, JSON.stringify(rep));
     await page.close();
