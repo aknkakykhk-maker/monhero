@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e2fc631e16af41c
+// source-sha256: 9ac9ab7cf6c9ac6f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 19:04";
+const BUILD_DATE = "2026-10-07 19:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -63040,6 +63040,7 @@ function RhythmMultiScreen({
   onRoomEntered = null,
   rankingSupport = null,
   masuMons = [],
+  masuPicker = null,
   buddyTickets = 0,
   onUseBuddyTicket = null,
   onRefundBuddyTicket = null,
@@ -63164,6 +63165,7 @@ function RhythmMultiScreen({
   };
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
+    masuPicker: masuPicker,
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
@@ -65450,6 +65452,7 @@ function RhythmBuddyList({
 }
 function RhythmBuddySheet({
   masuMons = [],
+  masuPicker = null,
   songName,
   tickets = 0,
   pick,
@@ -65464,6 +65467,7 @@ function RhythmBuddySheet({
   const detail = detailId ? (masuMons || []).find(x => x && x.id === detailId) : null;
   const canPay = freeLeft > 0 || tickets > 0;
   const listControls = useRhythmBuddyListControls();
+  const [selId, setSelId] = React.useState('');
   const choose = async masu => {
     if (busy || !canPay) return;
     setBusy(true);
@@ -65509,7 +65513,29 @@ function RhythmBuddySheet({
     dayKey: dayKey,
     songName: songName,
     onBack: () => setDetailId('')
-  }) : React.createElement("div", {
+  }) : masuPicker ? React.createElement("div", {
+    "data-rhythm-buddy-picker": true
+  }, masuPicker.renderSortFilterBar({
+    singleType: true
+  }), masuPicker.entries.length === 0 ? React.createElement("p", {
+    className: "py-6 text-center text-[12px] font-bold text-slate-400"
+  }, (masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません') : React.createElement("div", {
+    className: "grid grid-cols-3 gap-2.5 pb-4"
+  }, masuPicker.entries.map(e => React.createElement("button", {
+    key: e.key,
+    type: "button",
+    "data-rhythm-buddy-card": true,
+    onClick: () => setSelId(e.masu.id),
+    style: masuPicker.cardStyle,
+    className: `${masuPicker.cardClass} ${selId === e.masu.id ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
+  }, masuPicker.renderCardBody({
+    masu: e.masu,
+    base: e.base,
+    nameBand: true,
+    status: calledIds.includes(e.masu.id) ? React.createElement("span", {
+      className: "rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
+    }, "呼んでいる") : null
+  }))))) : React.createElement("div", {
     className: "space-y-2"
   }, listControls.bar, React.createElement(RhythmBuddyList, {
     masuMons: masuMons,
@@ -65521,7 +65547,44 @@ function RhythmBuddySheet({
     canPay: canPay,
     calledIds: calledIds,
     settings: listControls.settings
-  }))), listControls.sheet, !canPay && React.createElement("p", {
+  }))), masuPicker && !detail && (() => {
+    const masu = selId ? (masuMons || []).find(x => x && x.id === selId) : null;
+    if (!masu) return React.createElement("p", {
+      className: "mt-2 text-center text-[11px] font-bold text-slate-400"
+    }, "呼びたいマスモンをタップしてください");
+    const mon = state.mons[masu.id];
+    const mood = rhythmBuddyMood(masu.id, dayKey, mon);
+    const called = calledIds.includes(masu.id);
+    return React.createElement("div", {
+      "data-rhythm-buddy-confirm": true,
+      className: "mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-lime-300/40 bg-slate-950/80 p-2"
+    }, React.createElement(RhythmBuddyFace, {
+      masu: masu,
+      sizeClass: "h-11 w-11"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[13px] font-black"
+    }, rhythmBuddyMasuName(masu)), React.createElement("small", {
+      className: "flex items-center gap-1 text-[10px] font-bold text-slate-300"
+    }, React.createElement(RhythmBuddyMoodFace, {
+      moodId: mood.id,
+      size: 16
+    }), mon ? `ビートLv.${rhythmBuddyLevelInfo(mon.exp).level}` : 'まだ一緒に遊んでいない')), React.createElement("button", {
+      type: "button",
+      onClick: () => setDetailId(masu.id),
+      className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black"
+    }, "くわしく"), called ? React.createElement("span", {
+      "data-rhythm-buddy-called": true,
+      className: "shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200"
+    }, "呼んでいる") : React.createElement("button", {
+      "data-rhythm-buddy-call": true,
+      type: "button",
+      disabled: busy || !canPay,
+      onClick: () => choose(masu),
+      className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
+    }, "呼ぶ"));
+  })(), listControls.sheet, !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
   }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")));
@@ -90118,6 +90181,13 @@ function MonsterHeroGame() {
       },
       resolveIconUrl: resolveIconUrl,
       masuMons: masuMons,
+      masuPicker: {
+        entries: unifiedMonsterEntriesSingleType.filter(e => e.type === 'masu'),
+        renderSortFilterBar: renderMonsterSortFilterBar,
+        renderCardBody: renderMonsterCardBody,
+        cardClass: MONSTER_CARD_CLASS,
+        cardStyle: MONSTER_CARD_STYLE
+      },
       buddyTickets: ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID),
       onUseBuddyTicket: consumeBuddyTicket,
       onRefundBuddyTicket: refundBuddyTicket,
@@ -92888,7 +92958,7 @@ function MonsterHeroGame() {
           position: 'fixed',
           inset: 0,
           backgroundColor: 'rgba(2,6,23,0.98)',
-          zIndex: 32500,
+          zIndex: gameState === 'RHYTHM_MULTI' || gameState === 'RHYTHM_MODE_SELECT' ? 90000 : 32500,
           paddingTop: 'env(safe-area-inset-top)'
         }
       }, React.createElement("div", {
