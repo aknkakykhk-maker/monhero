@@ -118,7 +118,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 // ===== ① 人数ボーナス =====
 {
   const c = makeClient('x');
-  check('人数ボーナスは1人ごとに+50%(1人1倍〜5人3倍)', [1, 2, 3, 4, 5].map(c.scale).join(',') === '1,1.5,2,2.5,3');
+  check('人数ボーナスは1人ごとに+50%(1人1倍〜5人3倍)', [1, 2, 3, 4, 5].map((n) => c.scale(n)).join(',') === '1,1.5,2,2.5,3');
   check('人数ボーナスは壊れた値・範囲外でも1〜3倍に収まる', c.scale(0) === 1 && c.scale(99) === 3 && c.scale('x') === 1 && c.scale(-3) === 1);
   check('部屋コードは使える文字の4文字だけを通す', c.code('ab2c') === 'AB2C' && c.code('ABC') === '' && c.code('IO01') === '' && c.code(null) === '');
 }

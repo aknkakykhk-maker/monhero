@@ -17395,7 +17395,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // レイドバトルのモンヒロビート挑戦: ジャックへのダメージの処理を始めたうえで、ふつうの演奏と同じく
           // 周回の報酬・自己ベスト・クリア回数・実績・全国ランキングにも入れる(2026-10-07・ユーザー指示「両方つなげる」)。
           // 下の共通の処理へそのまま進む(アシストモードは、共通の処理が記録も送信もしない)
@@ -17404,7 +17404,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)。
           // 同じメンバーで続けると、さらに1曲ごとに+10%(上限+100%・2026-10-03)
-          const multiScale=rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak):1;
+          const multiScale=rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
@@ -17521,7 +17521,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             showArt:rhythmSettings.modeSelectArt!==false, showComment:rhythmSettings.modeSelectComment!==false,
             onToggleAssistant:async(key)=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:rhythmSettings[key]===false});setRhythmSettings(saved);},
           }:null}
-          onStartPlay={(song,difficulty,startId,count,streak)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak});setGameState('RHYTHM_PLAY');}}/>}
+          onStartPlay={(song,difficulty,startId,count,streak,cpus)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count,multiStreak:streak,multiCpus:cpus||0});setGameState('RHYTHM_PLAY');}}/>}
 
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 

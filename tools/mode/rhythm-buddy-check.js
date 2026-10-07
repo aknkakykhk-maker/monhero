@@ -197,7 +197,7 @@ const makeClient = (name, { brain = true } = {}) => {
     RHYTHM_LOOK_PRESETS: [{ id: 'LIGHT', values: {} }],
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${multiSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,clean:rhythmMultiCleanMessage};`, sandbox);
+  vm.runInContext(`${multiSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,clean:rhythmMultiCleanMessage,scale:rhythmMultiRewardScale,total:rhythmMultiTotalScale};`, sandbox);
   const api = sandbox.__api;
   const starts = [];
   api.M.onStart((info) => starts.push(info));
@@ -225,11 +225,11 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(3000);
   check('部屋に入ったら相棒を呼べる', a.M.canSummon() === true);
   check('相棒を呼べる', a.M.summon(MATE) === true);
-  check('1人1体まで(自分の2体目は呼べない)', a.M.canSummon() === false && a.M.summon(MATE) === false);
+  check('同じマスモンは2体呼べない(別の子なら呼べる)', a.M.summon(MATE) === false && a.M.canSummon() === true);
   clock.advance(2500);
   const v = view(a);
   const cpu = v.members.find((m) => m.cpu);
-  check('相棒はメンバーに並び、自分が部屋主のまま', v.members.length === 2 && cpu && v.hostId === v.selfId && v.cpuId === cpu.id && v.cpuMasuId === 'masu_1');
+  check('相棒はメンバーに並び、自分が部屋主のまま', v.members.length === 2 && cpu && v.hostId === v.selfId && v.myCpus.length === 1 && v.myCpus[0].id === cpu.id && v.myCpus[0].masuId === 'masu_1');
   clock.advance(16000);
   check('相棒と2人なら、フリーマッチは待ち時間のあと選曲へ進む', phaseOf(a) === 'select', phaseOf(a));
   clock.advance(1500);
@@ -241,7 +241,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   a.M.ready();
   clock.advance(1500);
   check('相棒もすぐ準備完了になり、ライブが始まる', phaseOf(a) === 'playing');
-  check('報酬の人数に相棒も入る(2人 = 1.5倍)', a.starts.length === 1 && a.starts[0].count === 2, JSON.stringify(a.starts[0]));
+  check('報酬の人数に呼んだマスモンも入る(人1+マスモン1 = 1.3倍)', a.starts.length === 1 && a.starts[0].count === 2 && a.starts[0].cpus === 1 && a.scale(a.starts[0].count, a.starts[0].cpus) === 1.3, JSON.stringify(a.starts[0]));
   a.M.reportResult(view(a).room.round, { score: 600000, maxCombo: 200, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
   clock.advance(1500);
   const cpuRes = view(a).members.find((m) => m.cpu).res;
@@ -249,7 +249,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   check('相棒の演奏は1ライブにつき1回だけ作る', a.plays.length === 1);
   check('全員の結果がそろうと結果の段へ進む', phaseOf(a) === 'result');
   const t = a.team(view(a).members, view(a).room.round, view(a).room.participants, true);
-  check('相棒もMVPを取れる(スコアがいちばん上なら)', t.mvpId === view(a).cpuId);
+  check('相棒もMVPを取れる(スコアがいちばん上なら)', t.mvpId === view(a).myCpus[0].id);
   a.M.leave();
 }
 
@@ -315,8 +315,28 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(4000);
   check('人が入ってくると、呼んだマスモンが席をゆずって帰る', view(e).full === false && view(cs[1]).members.length === 5 && !view(cs[1]).members.some((m) => m.cpu), view(cs[1]).members.map((m) => m.name).join(','));
   check('席をゆずったぶん、呼んだ人に回数・券が返る(1回だけ)', cs[0].refunds.length === 1 && cs[0].refunds[0] === 'masu_1', JSON.stringify(cs[0].refunds));
-  check('席をゆずったあとは、また呼べる(空きがあれば)', cs[0].M.myBuddy() === null);
+  check('席をゆずったあとは、呼んでいる子がいなくなる', cs[0].M.myBuddies().length === 0);
   [...cs, e].forEach((c) => c.M.leave());
+}
+
+// B-6 ひとりで何体も呼べる(空きがあるだけ)。報酬は人+50%、マスモンは+30%/+20%/+10%/+10%
+{
+  const a = makeClient('A');
+  join(a, 'SOLO4', 'free');
+  clock.advance(3000);
+  const ok = ['m1', 'm2', 'm3', 'm4'].map((id) => a.M.summon({ ...MATE, masuId: id, name: id }));
+  check('ひとりで4体まで呼べる(5人で満員)', ok.every(Boolean) && view(a).members.length === 5 && a.M.canSummon() === false && a.M.summon({ ...MATE, masuId: 'm5' }) === false);
+  check('人数ボーナス: 人1+マスモン1〜4 は 1.3 / 1.5 / 1.6 / 1.7 倍', [1, 2, 3, 4].map((c) => a.scale(1 + c, c)).join(',') === '1.3,1.5,1.6,1.7', [1, 2, 3, 4].map((c) => a.scale(1 + c, c)).join(','));
+  check('人数ボーナス: 人2+マスモン3 は 2.1 倍、人だけの5人は今までどおり3倍', a.scale(5, 3) === 2.1 && a.scale(5, 0) === 3 && a.scale(5) === 3);
+  check('連続ボーナスも掛け合わせる', a.total(5, 11, 4) === 3.4, String(a.total(5, 11, 4)));
+  clock.advance(16000);
+  check('ひとりとマスモンだけでも選曲へ進む', phaseOf(a) === 'select');
+  a.M.pick('songA'); clock.advance(5000); a.M.ready(); clock.advance(1500);
+  check('4体ともライブに入り、報酬はマスモン4体ぶんで数える', a.starts.length === 1 && a.starts[0].count === 5 && a.starts[0].cpus === 4, JSON.stringify(a.starts[0]));
+  a.M.reportResult(view(a).room.round, { score: 600000, maxCombo: 200, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
+  clock.advance(1500);
+  check('自分の演奏が終わると、呼んだ4体それぞれの結果が出る', a.plays.length === 4 && view(a).members.filter((m) => m.cpu && m.res).length === 4 && phaseOf(a) === 'result');
+  a.M.leave();
 }
 
 // B-4 古い端末との行き来(相棒の項目が無い知らせ)

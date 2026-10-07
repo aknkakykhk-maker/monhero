@@ -260,7 +260,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
 }
 
 // マスモンの一覧(1行ずつ)。onPick を渡すと「呼ぶ」ボタンが付く
-function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy = false, canPay = true }) {
+function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy = false, canPay = true, calledIds = [] }) {
   // 育てた子(経験値の多い順)を上へ。まだ一緒に遊んでいない子はそのあと
   const list = (Array.isArray(masuMons) ? masuMons : []).filter((x) => x && x.id && x.baseId).map((masu) => {
     const mon = state.mons[masu.id];
@@ -286,8 +286,9 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
               </span>
               <span aria-label={`今日の調子 ${mood.label}`} className="shrink-0 text-center"><span className="block text-lg leading-none">{mood.icon}</span><small className="block text-[8px] font-black text-slate-400">{mood.label}</small></span>
             </button>
-            {onPick && (
-              <button data-rhythm-buddy-call type="button" disabled={busy || !canPay} onClick={() => onPick(masu)}
+            {onPick && (calledIds.includes(masu.id)
+              ? <span data-rhythm-buddy-called className="min-h-[44px] shrink-0 rounded-xl border border-lime-300/50 px-2 py-3 text-[10px] font-black text-lime-200">呼んでいる</span>
+              : <button data-rhythm-buddy-call type="button" disabled={busy || !canPay} onClick={() => onPick(masu)}
                 className="min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-3 text-xs font-black text-slate-950 disabled:opacity-40">呼ぶ</button>
             )}
           </li>
@@ -298,7 +299,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose }) {
+function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose, calledIds = [] }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -321,12 +322,12 @@ function RhythmBuddySheet({ masuMons = [], songName, tickets = 0, pick, onClose 
         </header>
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="mb-1 text-slate-200" />
         <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400">
-          マスモンを1体えらんで、CPUとしてこの部屋に呼べます。部屋にいるあいだは何曲でも一緒に遊びます。1日{RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。
+          マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日{RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。
         </p>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
             ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
-            : <RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} />}
+            : <RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} onPick={choose} busy={busy} canPay={canPay} calledIds={calledIds} />}
         </div>
         {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
       </section>
