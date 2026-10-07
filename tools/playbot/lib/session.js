@@ -16,7 +16,9 @@ const HINT_KINDS = new Set(['反応なし', '小さいボタン', '読み込み�
 // (同じものを毎回調べ直さないため)。足すときは、どこにそう書いてあるかを note に残す
 const KNOWN = [
   { kind: '反応なし', screen: /^rhythm/, detail: /「ポーズ」/,
-    note: 'カウントダウン中は止めない作り(30-rhythm-play.jsx の pause)。押せない見た目にするかは別の話' },
+    note: 'カウントダウン中は止めない作り(30-rhythm-play.jsx の pause)。2026-10-07 からその間はボタンを薄く見せている' },
+  { kind: '小さいボタン', screen: /./, detail: /^「1ページ目」/,
+    note: 'ページ送りの点。すぐ下に助手の吹き出しがあり、下へは広げられない。押せる範囲は 22×18px(index.html の mh-hit-expand-dot)。左右の矢印とスワイプでも送れる' },
 ];
 
 // 通信が止まっていることで出るだけのエラー(本物の不具合ではない)
@@ -117,7 +119,15 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
         const st = getComputedStyle(e);
         if (st.position === 'fixed' && (Number(st.zIndex) || 0) >= 50) { overlay = true; break; }
       }
-      out.push({ label, x: cx, y: cy, w: r.width, h: r.height, tag: el.tagName, overlay });
+      // 押せる大きさは、見た目の箱に ::before で広げた分(index.html の mh-hit-expand)を足したもの
+      let hw = r.width, hh = r.height;
+      const bf = getComputedStyle(el, '::before');
+      if (bf.content && bf.content !== 'none' && bf.position === 'absolute') {
+        const px = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+        hw += Math.max(0, -px(bf.left)) + Math.max(0, -px(bf.right));
+        hh += Math.max(0, -px(bf.top)) + Math.max(0, -px(bf.bottom));
+      }
+      out.push({ label, x: cx, y: cy, w: hw, h: hh, tag: el.tagName, overlay });
     });
     return out;
   }, AVOID.source).catch(() => []);
