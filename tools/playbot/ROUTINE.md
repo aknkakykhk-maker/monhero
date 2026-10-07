@@ -16,9 +16,10 @@
 
 1. 準備
    ```
-   git fetch origin main && git checkout -B claude/playbot-daily origin/main
+   git fetch origin main && git checkout -B claude/playbot-$(TZ=Asia/Tokyo date +%Y%m%d) origin/main
    (cd tools && npm install --no-audit --no-fund)
    ```
+   ブランチは日ごとに分ける(前の日のPRがまだマージされていなくても、ぶつからないように)。
 2. 遊ぶ(15分ほど)
    ```
    node tools/playbot/playbot.js 2>&1 | tail -40
