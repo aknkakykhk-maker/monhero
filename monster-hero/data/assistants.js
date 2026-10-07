@@ -6822,22 +6822,22 @@ const EVENT_REPLAYS = [
   { id: 'momosuke_intro', date: '2026-09-05 12:36', title: 'ももすけ登場 ～モンヒロビート～', script: ASSISTANT_MOMOSUKE_INTRO, calls: ASSISTANT_MOMOSUKE_INTRO_CALLS, unlockedKey: 'momosukeIntroSeen', alwaysUnlocked: true, group: 'assistant' },
   // イベント開催の会話(2026-09-11)。開催中に1度だけ本編で流れ、そのあとは回想からいつでも見られる。
   // 期間が終わっても回想には残る(そのときどういう会話だったかを見返せるように)
-  { id: 'monbeat_cup_2026_09', date: '2026-09-11 15:00', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen', group: 'rhythm_event' },
+  { id: 'monbeat_cup_2026_09', date: '2026-09-11 15:00', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen', group: 'cup' },
   // 閉幕の会話(2026-09-13)。**イベントが終わった時刻に自動で流れる**。
   // 参加賞へ勇者の証10個を足したことを、ここで知らせる
-  { id: 'monbeat_cup_2026_09_thanks', date: '2026-09-14 05:00', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen', group: 'rhythm_event' },
+  { id: 'monbeat_cup_2026_09_thanks', date: '2026-09-14 05:00', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen', group: 'cup' },
   // 第2回イベントの開催会話(2026-09-17)。最後まで見ると助手ドラが解放される
   // (ASSISTANT_UNLOCK_STORIES)。期間が終わっても回想からいつでも見返せる
-  { id: 'symphony_2026_09_17', date: '2026-09-17 12:00', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen', group: 'rhythm_event' },
+  { id: 'symphony_2026_09_17', date: '2026-09-17 12:00', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen', group: 'symphony' },
   // 第2回の閉幕の会話(2026-09-20)。**イベントが終わった時刻に自動で流れる**。
   // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
-  { id: 'symphony_2026_09_17_thanks', date: '2026-09-21 04:00', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen', group: 'rhythm_event' },
+  { id: 'symphony_2026_09_17_thanks', date: '2026-09-21 04:00', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen', group: 'symphony' },
   // ビートPがいつでも貯まるようになった知らせ(2026-09-24)。HOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'beat_point_always_2026_09_24', date: '2026-09-24 23:02', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen', group: 'update' },
+  { id: 'beat_point_always_2026_09_24', date: '2026-09-24 23:02', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen', group: 'beat_point' },
   // モンヒロビートが6レーンになった知らせ(2026-09-26)。HOMEで1度だけ流れ、そのあとは回想から見返せる
   { id: 'rhythm_six_lane_2026_09_26', date: '2026-09-26 13:48', title: '6レーンのモンヒロビート ～ドラの指～', script: ASSISTANT_RHYTHM_SIX_LANE, calls: ASSISTANT_RHYTHM_SIX_LANE_CALLS, unlockedKey: 'rhythmSixLaneSeen', group: 'update' },
   // ビートPアップキャンペーンと新しい仲間の先行公開(2026-09-28)。キャンペーン中にHOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'beat_point_up_2026_09_28', date: '2026-09-28 18:00', title: 'ビートPアップキャンペーン ～森と甘い香りの新しい仲間～', script: ASSISTANT_BEAT_POINT_UP, calls: ASSISTANT_BEAT_POINT_UP_CALLS, unlockedKey: 'beatPointUpSeen', group: 'update' },
+  { id: 'beat_point_up_2026_09_28', date: '2026-09-28 18:00', title: 'ビートPアップキャンペーン ～森と甘い香りの新しい仲間～', script: ASSISTANT_BEAT_POINT_UP, calls: ASSISTANT_BEAT_POINT_UP_CALLS, unlockedKey: 'beatPointUpSeen', group: 'beat_point' },
   // みんなで対戦・フレンド・ももすけのアシストカード・EXスキルの知らせ(2026-10-03)。HOMEで1度だけ流れ、そのあとは回想から見返せる
   { id: 'rhythm_multi_friends_2026_10_03', date: '2026-10-03 03:31', title: 'みんなで対戦 ～フレンドといっしょに～', script: ASSISTANT_RHYTHM_MULTI_FRIENDS, calls: ASSISTANT_RHYTHM_MULTI_FRIENDS_CALLS, unlockedKey: 'rhythmMultiFriendsSeen', group: 'update' },
   // マルチにマスモンを呼べるようになった・ビートLvの知らせ(2026-10-07)。HOMEで1度だけ流れ、そのあとは回想から見返せる。公開するまでは回想にも出さない(releaseFlag)

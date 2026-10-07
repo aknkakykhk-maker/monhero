@@ -2815,13 +2815,23 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // 【2026-10-06・ユーザー報告「ハルカのホールドで、実際に押している所とゲームが押したと見ている所が半レーンほど左にずれる」】
       // 追従だけが「判定ラインの高さに直した位置」で測っていたので、判定ラインより奥を押さえた指が中央寄りへずれて見え、
       // 押し始めは通ったのに押している最中に外れ扱いになった。いまは指のその場の高さで測る(タップと同じ rhythmLaneCoordinateAtPoint)。
+      // 【2026-10-07・ユーザー報告「ホールド近くのノーツを押すときにホールドが切れる」】
+      // 押し始めは「判定ラインより下を押した指は、判定ラインの高さに直した位置でも見る(どちらかが帯の中なら受け付ける)」
+      // になったのに、押さえている最中は指のその場の高さだけで見ていた。判定ラインより下では外側のレーンが中央寄りに測れるので、
+      // 端のレーンを画面の手前で押さえると「押し始めは通るのに、押さえている最中は外れ」になる帯(画面の一番下で9〜16px)ができ、
+      // 隣のノーツを押してホールドの指がつられて動くと、そこで切れていた。押し始めと同じく、どちらかが帯の中なら外れとしない
+      // (厳しくなることはない。判定ラインより奥を押さえたときは、これまでどおり指のその場の高さだけで見る)
       const areaBox=areaRect();
       const actual=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
+      const atLineSub=areaBox?rhythmSubLaneCoordinateAtLineIfBelow(pos.clientX,pos.clientY,areaBox):undefined;
+      const atLine=Number.isFinite(atLineSub)?atLineSub/2-.5:null;
       const tracked=rhythmHoldTrackedLane(session.note,chartNow);
       // 帯が細くなっていくときは、少し前の太さまで許す。指は目で見て動くので帯の変化に遅れる(細くなる途中で外れ扱いになるのを防ぐ)。
       const before=rhythmHoldTrackedLane(session.note,Math.max(Number(session.note?.timeMs)||0,chartNow-RHYTHM_HOLD_NARROWING_LOOKBACK_MS));
       const half=Math.max(tracked.half,before.half);
-      bad=actual===null||Math.abs(actual-tracked.center)>half+rhythmHoldTrackingMarginLanes(tracked.half*4);
+      const limit=half+rhythmHoldTrackingMarginLanes(tracked.half*4);
+      const off=value=>value===null||Math.abs(value-tracked.center)>limit;
+      bad=off(actual)&&off(atLine);
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
