@@ -6016,6 +6016,50 @@ function MonsterHeroGame() {
     return () => clearTimeout(timer);
   }, [dataLoaded, masuMons, breederName, breederIcon, profileFrameId, bondLiveSyncTick]);
 
+  // マスモンランキング(モンヒロビート)のリアルタイム更新(2026-10-07)。絆Lvと同じ考え方で、
+  // 一緒に遊んで育ちが変わったマスモン・名前・アイコン・フレームが変わったら、落ち着くのを待ってから
+  // 変わった個体の行だけを rhythm_buddy_ranks へ上書きする。送れなくても遊びは止めない(次の変化か次の起動で送り直す)。
+  // マルチの公開前は送らない(公開前の記録を表へ入れないため)
+  const buddyRankStore = useRhythmBuddyState();
+  const buddyRankSyncRef = useRef({ loaded: null, running: false, again: false, lastAt: 0 });
+  const [buddyRankSyncTick, setBuddyRankSyncTick] = useState(0);
+  const syncBuddyRanksLive = async () => {
+    const state = buddyRankSyncRef.current;
+    if (state.running) { state.again = true; return; }
+    if (buddyRanksUnavailable() || RELEASE_FLAGS.rhythmMulti !== true) return;
+    state.running = true;
+    try {
+      if (!state.loaded) state.loaded = normalizeRhythmBuddyRankSync(await storeGet(RHYTHM_BUDDY_RANK_SYNC_KEY, null, false));
+      const breederId = await ensureBreederId();
+      const rows = rhythmBuddyRankRows(breederName || '名無しのブリーダー', breederIcon,
+        masuMonsRef.current, RHYTHM_BUDDY_STORE.get(), rankingProfileFrameValue(profileFrameId), breederId);
+      const pending = rhythmBuddyRankRowsToSync(rows, state.loaded.sent);
+      for (let i = 0; i < pending.length; i += RHYTHM_BUDDY_RANK_SYNC_CHUNK) {
+        const chunk = pending.slice(i, i + RHYTHM_BUDDY_RANK_SYNC_CHUNK);
+        state.lastAt = Date.now();
+        const ok = await sbUpsertRhythmBuddyRanks(chunk);
+        if (!ok) break;
+        // 送れた行だけ指紋を覚える(送れなかった行は次の機会に送り直す)
+        const sent = { ...state.loaded.sent };
+        chunk.forEach(row => { sent[rhythmBuddyRankSyncKeyOf(row)] = bondLevelRowSignature(row); });
+        state.loaded = { version: 1, sent };
+        await storeSet(RHYTHM_BUDDY_RANK_SYNC_KEY, state.loaded, false);
+      }
+    } catch (err) {
+      console.error('[ranking] rhythm_buddy_ranks live sync failed:', err && err.message ? err.message : err);
+    } finally {
+      state.running = false;
+      if (state.again) { state.again = false; setBuddyRankSyncTick(t => t + 1); }
+    }
+  };
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const state = buddyRankSyncRef.current;
+    const wait = Math.max(RHYTHM_BUDDY_RANK_SYNC_DELAY_MS, state.lastAt + RHYTHM_BUDDY_RANK_SYNC_MIN_INTERVAL_MS - Date.now());
+    const timer = setTimeout(() => { void syncBuddyRanksLive(); }, wait);
+    return () => clearTimeout(timer);
+  }, [dataLoaded, masuMons, buddyRankStore, breederName, breederIcon, profileFrameId, buddyRankSyncTick]);
+
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
     // 表示名はマスモンの個体名(ブリーダーが自由につけた名前)ではなく、血統(種族)の名前を使う
@@ -17499,6 +17543,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
           rankingSupport={{
+            breederIcon:rankingBreederIcon,
             // 部屋の中から全国ランキングを見る(2026-10-04・ユーザー指示「マルチ中にもランキングボタンいれて」)。
             // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
             open:(song)=>{loadRhythmRanking(song);},
