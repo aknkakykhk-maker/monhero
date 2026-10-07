@@ -16,6 +16,7 @@ const { multiScenario } = require('./scenarios/multi');
 const { raidScenario, halloweenScenario } = require('./scenarios/event');
 const { raidBeatScenario } = require('./scenarios/raidbeat');
 const { landscapeScenario } = require('./scenarios/landscape');
+const { buddyScenario } = require('./scenarios/buddy');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -177,6 +178,15 @@ const ROLES = [
     },
   },
   {
+    // 時計を差し替えてから起動するので、boot はシナリオの中で行う(時計係と同じ)
+    id: 'buddy', name: '相棒係', prepare: 'veteran', alone: true,
+    storage: { mh_bond_xp: { Mocchi: 3000, Suezo: 800, Golem: 900, Tiger: 700 }, mh_breeder_xp: 50000, mh_owned_items: { session_ticket: 2 } },
+    does: '朝5:00の少し前に、マルチの部屋でマスモンを4体呼ぶ(3体目まで無料・4体目で券が1枚だけ減るか)。1曲遊んで経験値が増えるか。5:10に開き直して無料が3回に戻るか。1人で動かす',
+    run: async (s, { phase }) => {
+      await phase('相棒の回数・券・朝5:00', () => buddyScenario(s));
+    },
+  },
+  {
     id: 'ranking', name: 'ランキング係', prepare: 'veteran', boot: true, alone: true,
     does: '音ゲー係の記録と、名前の長い大勢のライバルを並べてランキングを開く',
     run: async (s, { phase, shared }) => {
@@ -191,7 +201,7 @@ const ROLES = [
 // ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
 const TEAMS = [
   { id: 'battle', name: 'バトル班', roles: ['battle', 'tactics', 'auto', 'event'] },
-  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat', 'landscape'] },
+  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'ranking', 'multi', 'raidbeat', 'landscape', 'buddy'] },
   { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'tour', 'explore'] },
   { id: 'guard', name: '守り班', roles: ['legacy', 'clock', 'grow', 'shop', 'mean'] },
 ];
