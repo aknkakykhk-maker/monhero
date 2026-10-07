@@ -79,7 +79,7 @@ const pure = (() => {
     mon = r.mon;
     if (mon.trait) traitAtLevel = b.level(mon.exp).level;
   }
-  check('性格は Lv.50 で決まる', traitAtLevel === 50, `Lv.${traitAtLevel}`);
+  check('性格は Lv.30 で決まる', traitAtLevel === 30, `Lv.${traitAtLevel}`);
   check('EXPERT・MASTER をよく遊ぶとひょうきん(種類の傾向より育て方が勝つ)', mon && mon.trait === 'jester', mon && mon.trait);
 
   // 9つの性格: 育て方ごとに決まる
@@ -272,7 +272,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   a.M.ready();
   clock.advance(1500);
   check('相棒もすぐ準備完了になり、ライブが始まる', phaseOf(a) === 'playing');
-  check('報酬の人数に呼んだマスモンも入る(人1+マスモン1 = 1.3倍)', a.starts.length === 1 && a.starts[0].count === 2 && a.starts[0].cpus === 1 && a.scale(a.starts[0].count, a.starts[0].cpus) === 1.3, JSON.stringify(a.starts[0]));
+  check('報酬の人数に呼んだマスモンも入る(人1+マスモン1 = 1.05倍)', a.starts.length === 1 && a.starts[0].count === 2 && a.starts[0].cpus === 1 && a.scale(a.starts[0].count, a.starts[0].cpus) === 1.05, JSON.stringify(a.starts[0]));
   a.M.reportResult(view(a).room.round, { score: 600000, maxCombo: 200, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
   clock.advance(1500);
   const cpuRes = view(a).members.find((m) => m.cpu).res;
@@ -325,7 +325,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(1500);
   // (A はまだ演奏中で、届いた知らせを溜めている。呼んだ B の端末で見る)
   const cpuRes = view(b).members.find((m) => m.cpu).res;
-  check('呼んだ人がやめても、相棒は最後まで演奏した扱いで結果を出す', cpuRes && !cpuRes.quit && cpuRes.score === 650000);
+  check('呼んだ人がやめても、相棒の結果は部屋へ出す(育成は結果画面側で止める)', cpuRes && !cpuRes.quit && cpuRes.score === 650000);
   a.M.reportResult(view(a).room.round, { score: 500000, maxCombo: 100, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
   clock.advance(1500);
   const seenByA = view(a).members.find((m) => m.cpu).res;
@@ -357,9 +357,9 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   clock.advance(3000);
   const ok = ['m1', 'm2', 'm3', 'm4'].map((id) => a.M.summon({ ...MATE, masuId: id, name: id }));
   check('ひとりで4体まで呼べる(5人で満員)', ok.every(Boolean) && view(a).members.length === 5 && a.M.canSummon() === false && a.M.summon({ ...MATE, masuId: 'm5' }) === false);
-  check('人数ボーナス: 人1+マスモン1〜4 は 1.3 / 1.5 / 1.6 / 1.7 倍', [1, 2, 3, 4].map((c) => a.scale(1 + c, c)).join(',') === '1.3,1.5,1.6,1.7', [1, 2, 3, 4].map((c) => a.scale(1 + c, c)).join(','));
-  check('人数ボーナス: 人2+マスモン3 は 2.1 倍、人だけの5人は今までどおり3倍', a.scale(5, 3) === 2.1 && a.scale(5, 0) === 3 && a.scale(5) === 3);
-  check('連続ボーナスも掛け合わせる', a.total(5, 11, 4) === 3.4, String(a.total(5, 11, 4)));
+  check('人数ボーナス: 人1+マスモン1〜4 は 1.05 / 1.1 / 1.15 / 1.2 倍', [1, 2, 3, 4].map((c) => a.scale(1 + c, c)).join(',') === '1.05,1.1,1.15,1.2', [1, 2, 3, 4].map((c) => a.scale(1 + c, c)).join(','));
+  check('人数ボーナス: 人2+マスモン3 は 1.65 倍、人だけの5人は今までどおり3倍', a.scale(5, 3) === 1.65 && a.scale(5, 0) === 3 && a.scale(5) === 3);
+  check('連続ボーナスも掛け合わせる', a.total(5, 11, 4) === 2.4, String(a.total(5, 11, 4)));
   clock.advance(16000);
   check('ひとりとマスモンだけでも選曲へ進む', phaseOf(a) === 'select');
   a.M.pick('songA'); clock.advance(5000); a.M.ready(); clock.advance(1500);

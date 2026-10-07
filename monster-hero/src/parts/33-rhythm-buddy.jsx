@@ -3,7 +3,7 @@
 // ここは保存も画面も持たない純粋な計算だけ。保存と画面は 77-screen-rhythm-multi.jsx。
 //
 // ・育ち具合はマスモン1体ごと(id ごと)。一度でも相棒として呼んだ子だけが持つ。マスモン本体の保存には触れない
-// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.50で決まる)・その日の調子(朝5:00で変わる)
+// ・Lv(経験値)・曲のなじみ・難易度の熟練・性格(Lv.30で決まる)・その日の調子(朝5:00で変わる)
 // ・演奏はしない。曲・難易度・育ち具合から、それらしい判定の数とスコアを作る
 
 // 新しい保存キー(既存のキーは触らない)。中身は rhythmBuddyNormalize を必ず通す
@@ -16,8 +16,8 @@ const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 // 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
-// 性格が決まるLv(育て方が見えるだけ一緒に遊んでから。Lv.50 は約37ライブ)
-const RHYTHM_BUDDY_TRAIT_LEVEL = 50;
+// 性格が決まるLv(育て方が見えるだけ一緒に遊んでから。2026-10-07 に 50 から 30 へ)
+const RHYTHM_BUDDY_TRAIT_LEVEL = 30;
 // 1体が覚えておく曲の数(なじみ)。超えたら回数の少ない曲から忘れる
 const RHYTHM_BUDDY_SONG_KEEP = 80;
 const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
@@ -75,7 +75,7 @@ const rhythmBuddyPrevDayKey = (dayKey) => {
 };
 
 // ---- 保存の形 ----
-// { day, used, mons: { [masuId]: { exp, lives, songs:{songId:回数}, diffs:{EASY:回数…}, longLives, trait, traitAt, lastRound, lastDay, firstAt } } }
+// { day, used, mons: { [masuId]: { exp, lives, songs:{songId:回数}, diffs:{EASY:回数…}, best:{EASY:{score,songId}…}, longLives, trait, traitAt, lastRound, lastDay, firstAt } } }
 const rhythmBuddyNormalizeMon = (raw) => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const songs = {};
@@ -88,11 +88,28 @@ const rhythmBuddyNormalizeMon = (raw) => {
   }
   const diffs = {};
   RHYTHM_BUDDY_DIFF_IDS.forEach((id) => { diffs[id] = rhythmBuddyInt(o.diffs && o.diffs[id], 1e6); });
+  // 難易度ごとの最高スコア(2026-10-07 追加。ランキング用)。{ EASY:{ score, songId }… }。
+  // 無い人は、残っている最近のスコアから拾い直す(最近のスコアは30件までなので、それより前の最高は拾えない)
+  const recent = (Array.isArray(o.recent) ? o.recent : []).filter((x) => x && typeof x === 'object').slice(0, RHYTHM_BUDDY_RECENT_KEEP).map((x) => ({
+    at: rhythmBuddyInt(x.at, 9e15), songId: rhythmBuddyStr(x.songId, 60),
+    diffId: RHYTHM_BUDDY_DIFF_IDS.includes(x.diffId) ? x.diffId : '',
+    score: rhythmBuddyInt(x.score, 1e7), max: Math.max(1, rhythmBuddyInt(x.max, 1e7)),
+  })).filter((x) => x.score <= x.max);
+  const best = {};
+  const takeBest = (diffId, score, songId) => {
+    if (!RHYTHM_BUDDY_DIFF_IDS.includes(diffId) || !(score > 0)) return;
+    if (!best[diffId] || score > best[diffId].score) best[diffId] = { score, songId: rhythmBuddyStr(songId, 60) };
+  };
+  if (o.best && typeof o.best === 'object' && !Array.isArray(o.best)) {
+    RHYTHM_BUDDY_DIFF_IDS.forEach((id) => { const b = o.best[id]; if (b && typeof b === 'object') takeBest(id, rhythmBuddyInt(b.score, 1e7), b.songId); });
+  }
+  recent.forEach((x) => takeBest(x.diffId, x.score, x.songId));
   return {
     exp: rhythmBuddyInt(o.exp),
     lives: rhythmBuddyInt(o.lives),
     songs,
     diffs,
+    best,
     longLives: rhythmBuddyInt(o.longLives),
     trait: RHYTHM_BUDDY_TRAIT_IDS.includes(o.trait) ? o.trait : (RHYTHM_BUDDY_OLD_TRAITS[o.trait] || ''),
     // 性格を決めるための記録(2026-10-07 追加。無ければ0)
@@ -103,11 +120,7 @@ const rhythmBuddyNormalizeMon = (raw) => {
     lastDay: rhythmBuddyStr(o.lastDay, 10),
     firstAt: rhythmBuddyInt(o.firstAt, 9e15),
     // 最近のスコア(新しい順・2026-10-07 追加)。無い・壊れているときは空
-    recent: (Array.isArray(o.recent) ? o.recent : []).filter((x) => x && typeof x === 'object').slice(0, RHYTHM_BUDDY_RECENT_KEEP).map((x) => ({
-      at: rhythmBuddyInt(x.at, 9e15), songId: rhythmBuddyStr(x.songId, 60),
-      diffId: RHYTHM_BUDDY_DIFF_IDS.includes(x.diffId) ? x.diffId : '',
-      score: rhythmBuddyInt(x.score, 1e7), max: Math.max(1, rhythmBuddyInt(x.max, 1e7)),
-    })).filter((x) => x.score <= x.max),
+    recent,
   };
 };
 const rhythmBuddyNormalize = (raw) => {
@@ -223,7 +236,7 @@ const rhythmBuddyTraitScores = (mon, lean) => {
   if (RHYTHM_BUDDY_TRAIT_IDS.includes(lean)) scores[lean] += 0.25;
   return scores;
 };
-// Lv.50 で決まる。決まったあとは、10ライブごとに見直し、別の性格が 0.3 以上上回ったときだけゆっくり変わる
+// Lv.30 で決まる。決まったあとは、10ライブごとに見直し、別の性格が 0.3 以上上回ったときだけゆっくり変わる
 const rhythmBuddyNextTrait = (mon, lean) => {
   const m = rhythmBuddyNormalizeMon(mon);
   if (rhythmBuddyLevelInfo(m.exp).level < RHYTHM_BUDDY_TRAIT_LEVEL) return '';
@@ -388,6 +401,10 @@ const rhythmBuddyApplyLive = (mon, { round, songId, diffId, durationMs, teamRank
       : before.recent,
   };
   after.bestStreakDays = Math.max(before.bestStreakDays, after.streakDays);
+  if (RHYTHM_BUDDY_DIFF_IDS.includes(diffId) && Number(maxScore) > 0 && Number.isFinite(Number(score))) {
+    const got = Math.min(rhythmBuddyInt(score, 1e7), rhythmBuddyInt(maxScore, 1e7));
+    if (got > ((before.best[diffId] && before.best[diffId].score) || 0)) after.best = { ...before.best, [diffId]: { score: got, songId: sid } };
+  }
   const trait = rhythmBuddyNextTrait(after, lean);
   const traitNew = trait && trait !== before.trait ? trait : '';
   if (traitNew) { after.trait = traitNew; after.traitAt = after.lives; }
