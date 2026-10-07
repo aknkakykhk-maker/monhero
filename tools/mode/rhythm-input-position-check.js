@@ -26,6 +26,7 @@ check('照合の「いま帯の内側にいる指」も、もう一方の座標�
 check('押し始めの3つの入口(タッチ・ポインタ・取り戻し)が、判定ラインより下の位置を渡す',
   (play.match(/subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow\(/g)||[]).length>=4);
 check('道の外に降りた指を覚えている(outsideStartInputs)',/outsideStartInputs\?\.has\(inputKey\)/.test(play)&&/outsideStartInputs=current\.outsideStartInputs\|\|new Set\(\)/.test(play));
+check('道の外から滑ってきた指は、道へ1サブレーン以上入ってから押した指にする',/RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES=1;/.test(play)&&/subLaneCoordinate>=RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES&&subLaneCoordinate<=RHYTHM_SUB_LANE_COUNT-RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES/.test(play));
 check('道の外の指は、離れたら・ポーズしたら忘れる',/outsideStartInputs\?\.delete\(inputKey\)/.test(play)&&/run\.outsideStartInputs\?\.clear\(\)/.test(play));
 check('疑似TAPに、本物の指が触れた時刻を持たせる',/downEvent\.__mhOriginStamp=Number\(originStamp\)/.test(runtime)&&/dispatchTapProbe\(area,action\.touch,lane,baseKey,event\?\.timeStamp\)/.test(runtime));
 check('ポインタ入力は、疑似TAPの元の時刻から遅れを引く',/e\.nativeEvent\?\.__mhOriginStamp/.test(play));

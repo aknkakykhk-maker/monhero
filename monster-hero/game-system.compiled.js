@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f17616ae87ad3ce3
+// source-sha256: 7cde6e34608efc3a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 10:18";
+const BUILD_DATE = "2026-10-07 10:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -29571,6 +29571,7 @@ const RHYTHM_RECORD_FX_COUNT_DELAY_MS = 600;
 const RHYTHM_RECORD_FX_COUNT_MS = 1500;
 const RHYTHM_RECORD_FX_TOTAL_MS = 3300;
 const RHYTHM_RECORD_FX_SPARKLES = 18;
+const RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES = 1;
 const rhythmTouchDiagPlayId = () => {
   let id = '';
   for (let i = 0; i < 12; i++) id += '0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 36)];
@@ -32864,7 +32865,7 @@ const RhythmTapTest = ({
           subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(tp.x, tp.y, rect);
         if (subLaneCoordinate !== null) liveSubLanes.push(subLaneCoordinate);
         if (current.activeTouchInputs.has(inputKey)) {
-          if (current.outsideStartInputs?.has(inputKey) && movedTouchInputs?.has(inputKey) && lane !== null && subLaneCoordinate !== null) {
+          if (current.outsideStartInputs?.has(inputKey) && movedTouchInputs?.has(inputKey) && lane !== null && subLaneCoordinate !== null && subLaneCoordinate >= RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES && subLaneCoordinate <= RHYTHM_SUB_LANE_COUNT - RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES) {
             current.outsideStartInputs.delete(inputKey);
             starts.push({
               lane,
