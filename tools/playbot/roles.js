@@ -11,6 +11,7 @@ const { newPlayerScenario } = require('./scenarios/new-player');
 const { battleScenario } = require('./scenarios/battle');
 const { tacticsScenario } = require('./scenarios/tactics');
 const { shopScenario } = require('./scenarios/shop');
+const { growScenario } = require('./scenarios/grow');
 const { doubleTapScenario, reloadMidwayScenario, browserBackScenario, backgroundScenario } = require('./scenarios/mean');
 const { rhythmScenario } = require('./scenarios/rhythm');
 const { exploreScenario, tourScenario } = require('./scenarios/explore');
@@ -80,6 +81,15 @@ const ROLES = [
     does: 'まだ押していないボタンを優先して押していく(モンキーテスト)',
     run: async (s, { phase, steps, rand }) => {
       await phase('探索', () => exploreScenario(s, { steps, rand, report: { clickCount: new Map() } }));
+    },
+  },
+  {
+    id: 'grow', name: '育成係', prepare: 'veteran', boot: true,
+    // マスモンは昔のキーから起動時の一度きりの移行で作られる(久しぶり係と同じ道)。ブリーダーXPは強化の上限のため
+    storage: { mh_bond_xp: { Mocchi: 3000, Suezo: 800 }, mh_breeder_xp: 50000 },
+    does: 'マスモンの強化ポイントを振って確定する(完了は二度押し)。確定前は保存が変わらず、確定後は振った分だけ入るかを見る。編成・図鑑・放牧も開く',
+    run: async (s, { phase }) => {
+      await phase('マスモンを強化する', () => growScenario(s));
     },
   },
   {
