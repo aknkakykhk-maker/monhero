@@ -101,6 +101,14 @@ const pure = (() => {
   check('叩ける譜面Lv.の目安は、育つほど上がる(Lv.1 で14前後・Lv.100 で50台)', b.comfort(null) >= 12 && b.comfort(null) <= 16 && b.comfort({ exp: 1e9 }) >= 50, `${b.comfort(null)} → ${b.comfort({ exp: 1e9 })}`);
   check('難しい難易度・高いチームランクほど経験値が多い',
     b.apply(null, { round: 'x', diffId: 'MASTER', teamRank: 'S' }).gain > b.apply(null, { round: 'x', diffId: 'EASY', teamRank: 'C' }).gain);
+  {
+    const gainOf = (moodId, trait = '') => b.apply({ trait }, { round: `m-${moodId}-${trait}`, diffId: 'HARD', teamRank: 'A', moodId }).gain;
+    const normal = gainOf('normal');
+    check('調子が良いほど経験値が多く、悪いほど少ない', gainOf('great') > gainOf('good') && gainOf('good') > normal && normal > gainOf('bad') && gainOf('bad') > gainOf('awful'), [gainOf('great'), gainOf('good'), normal, gainOf('bad'), gainOf('awful')].join('/'));
+    check('倍率は 超ご機嫌1.3・ご機嫌1.15・普通1・不機嫌0.85・超不機嫌0.7', gainOf('great') === Math.round(normal * 1.3) && gainOf('awful') === Math.round(normal * 0.7) && b.apply(null, { round: 'z', diffId: 'HARD', teamRank: 'A' }).gain === normal);
+    check('真面目は調子の影響が半分(超ご機嫌1.15・超不機嫌0.85)', gainOf('great', 'serious') === Math.round(normal * 1.15) && gainOf('awful', 'serious') === Math.round(normal * 0.85));
+    check('壊れた調子は普通と同じ', b.apply(null, { round: 'y', diffId: 'HARD', teamRank: 'A', moodId: 'xxx' }).gain === normal);
+  }
   check('得意度は0〜5の星。インテリは早くたまる', b.stars(0, '') === 0 && b.stars(1, '') === 1 && b.stars(99, '') === 5 && b.stars(4, 'smart') > b.stars(4, ''));
 
   // 性格は Lv.10 まで見えない
