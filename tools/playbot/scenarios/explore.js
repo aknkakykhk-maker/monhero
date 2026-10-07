@@ -9,7 +9,9 @@ async function step(s, ctx) {
   s.state.step += 1;
   await s.fillEmptyInputs();
   const before = await s.screenName();
-  const list = await s.listButtons();
+  let list = await s.listButtons();
+  // 「ゲームを更新」などで読み込み直している間(NOW LOADING)は押せるものが無い。人と同じく少し待つ
+  for (let w = 0; !list.length && w < 6; w++) { await s.wait(2000); list = await s.listButtons(); }
   if (!list.length) {
     await s.addIssue('行き止まり', '押せるボタンが1つも無い');
     await s.backHome();
@@ -55,7 +57,7 @@ async function tourScenario(s, { stepsEach, rand, report }) {
   for (const label of [...new Set(entries)]) {
     await s.backHome();
     // 残り時間や件数のように中の文字が変わるボタンもあるので、頭の数文字で探す
-    const head = label.slice(0, 8);
+    const head = label.replace(/[\s\d,()（）件個]+$/, '').slice(0, 8) || label.slice(0, 8);
     const b = (await s.listButtons()).find((x) => x.label === label) || (await s.listButtons()).find((x) => x.label.startsWith(head));
     if (!b) { await s.addIssue('たどり着けない', `HOME の「${label}」が2回目には見当たらない`); continue; }
     s.state.step += 1;
