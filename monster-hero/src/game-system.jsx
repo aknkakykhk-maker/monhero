@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 947a8a5fb16fab84
+// generated-sha256: 0d6ea853b144671a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-07 13:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-07 13:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41240,6 +41240,11 @@ function MonsterHeroGame() {
   // 次の通常周回を同じ出撃条件で組み直すための一時情報。育成途中のmon objectは入れず、
   // rosterと同じ安定IDだけを正式なラン開始時に記録する（AUTO∞からの利用は5B以降）。
   const repeatRunTemplateRef = useRef(null);
+  // アシストカードの「習得する」「強化する」を確定してから、次のバトルを組み終えるまで true。
+  // ★確定のあと NEW CARD! の演出(約1.9秒)のあいだも窓が残るので、その間に押し直されると
+  //   次のバトルの準備が2回予約され、ラン最初の WAVE なら挑戦回数・ミッションも2回数えていた
+  //   (2026-10-07 プレイボットが見つけた。トレーニングの handleTraining は effect で防いでいる)
+  const teachingCommitRef = useRef(false);
   const [selectedCards, setSelectedCards] = useState([]);
   // ★手札を使わずに捨てる(タクティクス専用・2026-10-05 ユーザー指示)。行動回数(cardLimit)を1枚ぶん使い、
   //   捨てた枚数×(各自の最大ガッツの5%)を、立っている味方ぜんぶのガッツへ回復する。
@@ -54973,6 +54978,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const confirmPickTeaching = (explicitTeaching=null) => {
     const teaching=explicitTeaching||selectedTeachingCard;
     if (!teaching) return;
+    if (teachingCommitRef.current) return;
+    teachingCommitRef.current=true;
     // ラン開始時の最初のアシストカード(既存の !enemy 判定)だけを、AUTO∞の周回条件として覚える。
     // 手動で選んでもAUTOが選んでも「実際に確定したカード」が正本。
     // WAVE途中で取ったカードでは書き換えない。あとから∞をONにしても使えるよう、
@@ -55009,7 +55016,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(teachingBaseMs!==null) setEffect({type:'teachingResult',label:alreadyOwned?'POWER UP!':'NEW CARD!',icon:teaching.icon,id:teaching.id,
       name:BREEDER_EVO_NAMES[teaching.id]?.[teachingToLevel]||teaching.name,fromLevel:alreadyOwned?alreadyOwned.evoLevel:-1,toLevel:teachingToLevel,maxLevel:2,
       desc:getFullEvolutionDetails(teaching)[teachingToLevel]?.desc||'',ms:teachingFxMs});
-    setTimeout(()=>{setEffect(null); setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},teachingFxMs);
+    setTimeout(()=>{teachingCommitRef.current=false; setEffect(null); setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},teachingFxMs);
   };
 
   // トレーニング(旧「能力覚醒」)を確定する。picksは選んだ順のオプションid配列で、

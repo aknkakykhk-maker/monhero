@@ -302,7 +302,7 @@ async function betweenWaves(s) {
       } else {
         await s.tap(go, 'WAVE の合間');
         // 「習得する」「強化する」のあとは NEW CARD! の演出(約1.9秒)が出て、その間も窓が残る。
-        // 人と同じく演出が終わるのを待つ(★演出中に押し直すと、ゲームは2回分の確定を受け付けてしまう。HISTORY.md 2026-10-07)
+        // 人と同じく演出が終わるのを待つ(演出中の押し直しは、2026-10-07 からゲームが受け付けない。HISTORY.md)
         if (/^(習得する|強化する)$/.test(go.label)) { await s.wait(2600); pressed.delete(go.label); }
       }
     } else if (options.length) {
