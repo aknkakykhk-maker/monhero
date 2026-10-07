@@ -409,8 +409,8 @@ function RhythmBuddyListBar({ settings, onOpen, onChange }) {
   const lineage = settings.lineage !== 'all' && typeof lineageById === 'function' ? lineageById(settings.lineage) : null;
   const btn = 'min-h-[44px] flex items-center gap-1.5 rounded-xl border px-3 py-2 active:scale-95';
   return (
-    <div data-rhythm-buddy-list-bar className="flex gap-2">
-      <button type="button" onClick={() => onOpen('sort')} className={`${btn} min-w-0 flex-1 justify-between border-white/10 bg-slate-900`}>
+    <div data-rhythm-buddy-list-bar className="flex flex-wrap gap-2">
+      <button type="button" onClick={() => onOpen('sort')} className={`${btn} min-w-[9rem] flex-1 justify-between border-white/10 bg-slate-900 landscape:basis-full`}>
         <span className="truncate text-[11px] font-black text-white">並べ替え: {sortOpt.label}{settings.dir === 'asc' ? '▲' : '▼'}</span>
         <span aria-hidden="true" className="shrink-0 text-slate-400">›</span>
       </button>
@@ -593,7 +593,9 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   return (
     <div className="absolute inset-0 z-[86000] flex items-end justify-center landscape:items-center">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/75" onClick={onClose} />
-      <section data-rhythm-buddy-sheet className="relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:rounded-3xl" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
+      <section data-rhythm-buddy-sheet className="relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:h-[92%] landscape:max-h-[92%] landscape:max-w-3xl landscape:flex-row landscape:gap-3 landscape:rounded-3xl" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
+        {/* 横画面は、左に説明(題・残り回数・ことわり)、右にマスモンの一覧を並べる(高さが足りず、一覧が1段しか見えなかった。2026-10-07) */}
+        <div className="shrink-0 landscape:w-[34%] landscape:overflow-y-auto">
         <header className="mb-2 flex items-center gap-2">
           <h3 className="min-w-0 flex-1 text-base font-black text-lime-200">🎵 マスモンを呼ぶ</h3>
           <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
@@ -602,6 +604,8 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400">
           マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日{RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。
         </p>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
             ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
@@ -647,6 +651,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         })()}
         {listControls.sheet}
         {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+        </div>
       </section>
     </div>
   );
@@ -663,17 +668,21 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
   const listControls = useRhythmBuddyListControls();
   return (
     <div data-mh-screen data-masu-beat className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
-      <div className={`mx-auto w-full max-w-md space-y-2 ${SCREEN_LIST_CLASS}`}>
-        <section className="rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
-          <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
-            モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。
-          </p>
-        </section>
+      {/* 横画面は、根の直下の子を「左の列(見出し・説明・並べ替え)」と「右の列(スクロールする一覧)」へ振り分ける
+          (index.html の [data-mh-screen]:has(> .mh-scroll))。一覧だけを右の列へ入れ、広く使う。
+          以前は説明も並べ替えも一覧と同じ入れ物に入れて max-w-md にしたため、左の列が空いて右が狭く、文字や札が切れた */}
+      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
+      <section className="mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
+        <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
+        <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
+          モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。
+        </p>
+      </section>
+      {!detail && <div className="mb-2 shrink-0">{listControls.bar}</div>}
+      <div className={`w-full ${SCREEN_LIST_CLASS}`}>
         {detail
           ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
-          : <>{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} settings={listControls.settings} /></>}
+          : <RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} settings={listControls.settings} />}
       </div>
       {listControls.sheet}
     </div>

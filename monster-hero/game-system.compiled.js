@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fc008d32a9d3dff9
+// source-sha256: 35360f37dce48eb2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 21:42";
+const BUILD_DATE = "2026-10-07 23:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -41200,7 +41200,8 @@ const ScreenHead = ({
   backLabel = '戻る',
   right = null,
   disabled = false,
-  compact = false
+  compact = false,
+  wrapTitle = false
 }) => React.createElement("header", {
   className: `mh-screen-head ${compact ? 'mb-1 pb-1' : 'mb-3 pb-2'} flex shrink-0 items-center gap-1.5 border-b border-white/10`
 }, onBack && React.createElement("button", {
@@ -41214,7 +41215,7 @@ const ScreenHead = ({
 })), React.createElement("div", {
   className: "min-w-0 flex-1"
 }, React.createElement("h2", {
-  className: `flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`,
+  className: `flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`,
   style: accentStyle || undefined
 }, icon, title), note && React.createElement("p", {
   className: "mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
@@ -66481,11 +66482,11 @@ function RhythmBuddyListBar({
   const btn = 'min-h-[44px] flex items-center gap-1.5 rounded-xl border px-3 py-2 active:scale-95';
   return React.createElement("div", {
     "data-rhythm-buddy-list-bar": true,
-    className: "flex gap-2"
+    className: "flex flex-wrap gap-2"
   }, React.createElement("button", {
     type: "button",
     onClick: () => onOpen('sort'),
-    className: `${btn} min-w-0 flex-1 justify-between border-white/10 bg-slate-900`
+    className: `${btn} min-w-[9rem] flex-1 justify-between border-white/10 bg-slate-900 landscape:basis-full`
   }, React.createElement("span", {
     className: "truncate text-[11px] font-black text-white"
   }, "並べ替え: ", sortOpt.label, settings.dir === 'asc' ? '▲' : '▼'), React.createElement("span", {
@@ -66834,10 +66835,12 @@ function RhythmBuddySheet({
     onClick: onClose
   }), React.createElement("section", {
     "data-rhythm-buddy-sheet": true,
-    className: "relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:rounded-3xl",
+    className: "relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:h-[92%] landscape:max-h-[92%] landscape:max-w-3xl landscape:flex-row landscape:gap-3 landscape:rounded-3xl",
     style: {
       paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))'
     }
+  }, React.createElement("div", {
+    className: "shrink-0 landscape:w-[34%] landscape:overflow-y-auto"
   }, React.createElement("header", {
     className: "mb-2 flex items-center gap-2"
   }, React.createElement("h3", {
@@ -66853,7 +66856,9 @@ function RhythmBuddySheet({
     className: "mb-1 text-slate-200"
   }), React.createElement("p", {
     className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日", RHYTHM_BUDDY_FREE_PER_DAY, "回までは無料、そのあとはセッション券を1枚使います。"), React.createElement("div", {
+  }, "マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日", RHYTHM_BUDDY_FREE_PER_DAY, "回までは無料、そのあとはセッション券を1枚使います。")), React.createElement("div", {
+    className: "flex min-h-0 flex-1 flex-col"
+  }, React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
   }, detail ? React.createElement(RhythmBuddyDetail, {
     masu: detail,
@@ -66935,7 +66940,7 @@ function RhythmBuddySheet({
   })(), listControls.sheet, !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
-  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")));
+  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます"))));
 }
 function MasuBeatScreen({
   masuMons = [],
@@ -66961,31 +66966,34 @@ function MasuBeatScreen({
   }, React.createElement(ScreenHead, {
     title: "マスモン一覧(モンヒロビート)",
     accent: "text-lime-300",
+    wrapTitle: true,
     onBack: detail ? () => setDetailId('') : onBack,
     backLabel: detail ? '一覧へ戻る' : backLabel
-  }), React.createElement("div", {
-    className: `mx-auto w-full max-w-md space-y-2 ${SCREEN_LIST_CLASS}`
-  }, React.createElement("section", {
-    className: "rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5"
+  }), React.createElement("section", {
+    className: "mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5"
   }, React.createElement(RhythmBuddyAllowance, {
     freeLeft: freeLeft,
     tickets: tickets,
     className: "text-slate-200"
   }), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。")), detail ? React.createElement(RhythmBuddyDetail, {
+  }, "モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。")), !detail && React.createElement("div", {
+    className: "mb-2 shrink-0"
+  }, listControls.bar), React.createElement("div", {
+    className: `w-full ${SCREEN_LIST_CLASS}`
+  }, detail ? React.createElement(RhythmBuddyDetail, {
     masu: detail,
     mon: state.mons[detail.id],
     dayKey: dayKey,
     songName: songName,
     onBack: () => setDetailId('')
-  }) : React.createElement(React.Fragment, null, listControls.bar, React.createElement(RhythmBuddyList, {
+  }) : React.createElement(RhythmBuddyList, {
     masuMons: masuMons,
     state: state,
     dayKey: dayKey,
     onOpen: setDetailId,
     settings: listControls.settings
-  }))), listControls.sheet);
+  })), listControls.sheet);
 }
 function RhythmBuddyGrowth({
   masu,

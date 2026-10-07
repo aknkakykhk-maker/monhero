@@ -63,9 +63,10 @@ const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-whit
 //   right    … 右端へ置くもの(件数・所持数など。省略可)
 //   accentStyle … 名前の色を style で渡すとき(モードごとの色など、クラスで書けない色)
 //   compact  … 中身が詰まっている画面(バトルの入口など)用。下の余白を詰める
+//   wrapTitle… 名前が長い画面用。1行に収まらないときは切らずに折り返す(横画面の左の列は幅が狭い)
 // ★戻るは 44×44px(p-3 + 20px)を確保し、押した手応え(active:scale-90)を必ず付ける。
 //   「反応する戻る」と「反応しない戻る」が混ざっていると、押せていないように見える。
-const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = null, note = '', onBack = null, backLabel = '戻る', right = null, disabled = false, compact = false }) => (
+const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = null, note = '', onBack = null, backLabel = '戻る', right = null, disabled = false, compact = false, wrapTitle = false }) => (
   <header className={`mh-screen-head ${compact ? 'mb-1 pb-1' : 'mb-3 pb-2'} flex shrink-0 items-center gap-1.5 border-b border-white/10`}>
     {onBack && (
       <button type="button" aria-label={backLabel} onClick={onBack} disabled={disabled}
@@ -74,7 +75,7 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
       </button>
     )}
     <div className="min-w-0 flex-1">
-      <h2 className={`flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
+      <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
       {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{note}</p>}
     </div>
     {right && <div className="shrink-0">{right}</div>}
