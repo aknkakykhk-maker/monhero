@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b83fe5cbe08ec3f
+// source-sha256: e86d693230a0f63e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 18:33";
+const BUILD_DATE = "2026-10-07 18:52";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -409,6 +409,37 @@ const eventReplaySorted = keep => (typeof EVENT_REPLAYS !== 'undefined' && EVENT
 })).sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index).map(row => row.event);
 const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 const eventReplayAllList = () => eventReplaySorted(() => true);
+const EVENT_REPLAY_GROUPS = Object.freeze([{
+  id: 'halloween',
+  emoji: '🎃',
+  label: 'ハロウィン・ナイト'
+}, {
+  id: 'rhythm_event',
+  emoji: '🏆',
+  label: 'モンヒロビートのイベント'
+}, {
+  id: 'update',
+  emoji: '✨',
+  label: '新しい遊びのお話'
+}, {
+  id: 'assistant',
+  emoji: '💬',
+  label: '助手のお話'
+}]);
+const EVENT_REPLAY_GROUP_FALLBACK = 'update';
+const eventReplayGroups = (keep = eventReplayReleased) => {
+  const known = new Set(EVENT_REPLAY_GROUPS.map(group => group.id));
+  const asc = eventReplaySorted(keep).map((event, index) => ({
+    event,
+    index,
+    ms: eventReplayDateMs(event)
+  })).sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (a.ms || 0) - (b.ms || 0) || a.index - b.index).map(row => row.event);
+  const groupOf = event => known.has(event && event.group) ? event.group : EVENT_REPLAY_GROUP_FALLBACK;
+  return EVENT_REPLAY_GROUPS.map(group => ({
+    ...group,
+    events: asc.filter(event => groupOf(event) === group.id)
+  })).filter(group => group.events.length > 0);
+};
 const SPECIES_CHALLENGE_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const SPECIES_CHALLENGE_UNLOCK_TEXT = 'チャレンジ Master以上クリアで解放';
 const isSpeciesChallengeUnlocked = clearCounts => SPECIES_CHALLENGE_UNLOCK_DIFFICULTIES.some(key => (Number(clearCounts?.[key]) || 0) > 0);
@@ -59087,6 +59118,10 @@ function RhythmHistoryScreen({
   onRefresh
 }) {
   const list = Array.isArray(entries) ? entries : [];
+  const [listTab, setListTab] = useState(() => Array.isArray(entries) && entries[0] && entries[0].kind === 'limited' ? 'limited' : 'weekly');
+  const weeklyList = list.filter(entry => entry.kind !== 'limited');
+  const eventList = list.filter(entry => entry.kind === 'limited');
+  const shownList = listTab === 'limited' ? eventList : weeklyList;
   const view = board || {
     status: 'idle',
     event: null,
@@ -59159,9 +59194,27 @@ function RhythmHistoryScreen({
     compact: true
   })), list.length === 0 ? React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
-  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 5:00 に切り替わります。") : React.createElement("div", {
+  }, "終わった週やイベントがまだありません。", React.createElement("br", null), "週間ランキングは毎週 月曜 5:00 に切り替わります。") : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-rhythm-history-tabs": true,
+    className: "sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1"
+  }, React.createElement(ScreenTabs, {
+    value: listTab,
+    onChange: setListTab,
+    items: [{
+      id: 'weekly',
+      label: `📊 週間ランキング（${weeklyList.length}）`,
+      color: '#f59e0b'
+    }, {
+      id: 'limited',
+      label: `🏆 イベント（${eventList.length}）`,
+      color: '#c026d3'
+    }]
+  })), shownList.length === 0 ? React.createElement("p", {
+    "data-rhythm-history-empty": listTab,
+    className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
+  }, listTab === 'limited' ? '終わったイベントはまだありません。' : '終わった週はまだありません。', React.createElement("br", null), listTab === 'limited' ? 'イベントが終わると、ここに順位が残ります。' : '週間ランキングは毎週 月曜 5:00 に切り替わります。') : React.createElement("div", {
     className: "flex flex-col gap-2"
-  }, list.map(entry => React.createElement("button", {
+  }, shownList.map(entry => React.createElement("button", {
     key: entry.id,
     type: "button",
     "data-rhythm-history-entry": entry.id,
@@ -59181,7 +59234,7 @@ function RhythmHistoryScreen({
   }, "対象曲 ", entry.event?.songIds?.length || 0, "曲")), React.createElement(ChevronRight, {
     size: 16,
     className: "shrink-0 text-slate-500"
-  }))))), selected && React.createElement(React.Fragment, null, React.createElement("div", {
+  })))))), selected && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3"
   }, React.createElement("div", {
     className: "flex items-center gap-2"
@@ -93722,60 +93775,78 @@ function MonsterHeroGame() {
         zIndex: 90000
       }
     }, React.createElement("div", {
-      className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll"
+      className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col"
     }, React.createElement("h3", {
-      className: "text-base font-black text-white mb-1 text-center"
+      className: "shrink-0 text-base font-black text-white mb-1 text-center"
     }, "イベント回想"), React.createElement("p", {
-      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "見たことのある会話イベントを、何度でも見返せます。"), React.createElement("div", {
-      className: "space-y-2 mb-3"
-    }, eventReplayList().map(event => {
-      const eventUnlocked = isEventReplayUnlocked(event);
-      if (!eventUnlocked) {
-        return React.createElement("div", {
+      className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight"
+    }, "見たことのある会話イベントを、何度でも見返せます。", React.createElement("br", null), "まとまりごとに、お話の順に並んでいます。"), React.createElement("div", {
+      "data-event-replay-groups": true,
+      className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-4 mb-3"
+    }, eventReplayGroups().map(group => {
+      const seenCount = group.events.filter(isEventReplayUnlocked).length;
+      return React.createElement("section", {
+        key: group.id,
+        "data-event-replay-group": group.id
+      }, React.createElement("div", {
+        className: "mb-1.5 flex items-center gap-1.5 px-1"
+      }, React.createElement("span", {
+        className: "text-sm",
+        "aria-hidden": "true"
+      }, group.emoji), React.createElement("b", {
+        className: "min-w-0 flex-1 text-[12px] font-black text-fuchsia-100"
+      }, group.label), React.createElement("small", {
+        className: "shrink-0 text-[10px] font-black tabular-nums text-fuchsia-300/80"
+      }, seenCount, "/", group.events.length)), React.createElement("div", {
+        className: "space-y-2"
+      }, group.events.map(event => {
+        const eventUnlocked = isEventReplayUnlocked(event);
+        if (!eventUnlocked) {
+          return React.createElement("div", {
+            key: event.id,
+            className: "w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60"
+          }, React.createElement("span", {
+            className: "text-lg",
+            "aria-hidden": "true"
+          }, "🔒"), React.createElement("span", {
+            className: "min-w-0 flex-1"
+          }, React.createElement("b", {
+            className: "block text-[12px] font-black text-slate-400"
+          }, "？？？"), React.createElement("small", {
+            className: "block text-[9px] text-slate-600"
+          }, eventReplayDateText(event) && React.createElement("span", {
+            "data-event-replay-date": true,
+            className: "tabular-nums"
+          }, eventReplayDateText(event), "・"), "まだ見ていません")));
+        }
+        return React.createElement("button", {
           key: event.id,
-          className: "w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60"
-        }, React.createElement("span", {
-          className: "text-lg",
-          "aria-hidden": "true"
-        }, "🔒"), React.createElement("span", {
+          type: "button",
+          onClick: () => {
+            setEventReplay({
+              id: event.id,
+              step: 0
+            });
+            setShowEventReplayList(false);
+          },
+          className: "w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30"
+        }, React.createElement(Play, {
+          size: 16,
+          className: "text-fuchsia-300 shrink-0"
+        }), React.createElement("span", {
           className: "min-w-0 flex-1"
         }, React.createElement("b", {
-          className: "block text-[12px] font-black text-slate-400"
-        }, "？？？"), React.createElement("small", {
-          className: "block text-[9px] text-slate-600"
+          className: "block text-[12px] font-black text-white"
+        }, event.title), React.createElement("small", {
+          className: "block text-[9px] text-fuchsia-300/70"
         }, eventReplayDateText(event) && React.createElement("span", {
           "data-event-replay-date": true,
           className: "tabular-nums"
-        }, eventReplayDateText(event), "・"), "まだ見ていません")));
-      }
-      return React.createElement("button", {
-        key: event.id,
-        type: "button",
-        onClick: () => {
-          setEventReplay({
-            id: event.id,
-            step: 0
-          });
-          setShowEventReplayList(false);
-        },
-        className: "w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30"
-      }, React.createElement(Play, {
-        size: 16,
-        className: "text-fuchsia-300 shrink-0"
-      }), React.createElement("span", {
-        className: "min-w-0 flex-1"
-      }, React.createElement("b", {
-        className: "block text-[12px] font-black text-white"
-      }, event.title), React.createElement("small", {
-        className: "block text-[9px] text-fuchsia-300/70"
-      }, eventReplayDateText(event) && React.createElement("span", {
-        "data-event-replay-date": true,
-        className: "tabular-nums"
-      }, eventReplayDateText(event), "・"), "タップして見返す")));
+        }, eventReplayDateText(event), "・"), "タップして見返す")));
+      })));
     })), React.createElement("button", {
       onClick: () => setShowEventReplayList(false),
-      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+      className: "shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showIconPicker && (() => {
       const closeIcon = () => {
         setShowIconPicker(false);

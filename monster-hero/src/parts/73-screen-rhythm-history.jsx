@@ -20,6 +20,13 @@ function RhythmHistoryScreen({
   onBack, onSelect, onClearSelection, onSelectDivision, onRefresh,
 }) {
   const list = Array.isArray(entries) ? entries : [];
+  // 一覧は「週間ランキング」と「イベント」に分けて出す(2026-10-07・ユーザー指示「これは週間とイベントと分けたい」)。
+  // 種類(kind)は weekly=週 / limited=イベント。はじめに開く側は、いちばん最近終わったものの種類
+  // (entries は新しい順)。選んで開いて戻っても、見ていた側のまま。
+  const [listTab, setListTab] = useState(() => ((Array.isArray(entries) && entries[0] && entries[0].kind === 'limited') ? 'limited' : 'weekly'));
+  const weeklyList = list.filter(entry => entry.kind !== 'limited');
+  const eventList = list.filter(entry => entry.kind === 'limited');
+  const shownList = listTab === 'limited' ? eventList : weeklyList;
   const view = board || { status:'idle', event:null, boards:{}, error:null };
   // 部門は**えらんだ回から**作る。取ってきた結果(view.event)を待つと、
   // 読み込み中や通信に失敗したあいだ部門のボタンが消えて、切り替えて試し直せなくなる
@@ -73,21 +80,35 @@ function RhythmHistoryScreen({
               ? <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
                   終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 5:00 に切り替わります。
                 </p>
-              : <div className="flex flex-col gap-2">
-                  {list.map(entry=>(
-                    <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
-                      className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
-                      {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
-                      <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
-                      <span className="min-w-0 flex-1">
-                        <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
-                        <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
-                        {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
-                      </span>
-                      <ChevronRight size={16} className="shrink-0 text-slate-500"/>
-                    </button>
-                  ))}
-                </div>}
+              : <>
+                  {/* 週は年52件ずつ増えるので、下へ送ってもタブが見えるよう上に留める */}
+                  <div data-rhythm-history-tabs className="sticky top-0 z-10 -mx-3 bg-slate-950 px-3 pt-1">
+                    <ScreenTabs value={listTab} onChange={setListTab} items={[
+                      { id:'weekly', label:`📊 週間ランキング（${weeklyList.length}）`, color:'#f59e0b' },
+                      { id:'limited', label:`🏆 イベント（${eventList.length}）`, color:'#c026d3' },
+                    ]}/>
+                  </div>
+                  {shownList.length===0
+                    ? <p data-rhythm-history-empty={listTab} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
+                        {listTab==='limited'?'終わったイベントはまだありません。':'終わった週はまだありません。'}<br/>
+                        {listTab==='limited'?'イベントが終わると、ここに順位が残ります。':'週間ランキングは毎週 月曜 5:00 に切り替わります。'}
+                      </p>
+                    : <div className="flex flex-col gap-2">
+                        {shownList.map(entry=>(
+                          <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
+                            className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
+                            {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
+                            <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
+                            <span className="min-w-0 flex-1">
+                              <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
+                              <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
+                              {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
+                            </span>
+                            <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                          </button>
+                        ))}
+                      </div>}
+                </>}
           </>
         )}
         {selected&&(

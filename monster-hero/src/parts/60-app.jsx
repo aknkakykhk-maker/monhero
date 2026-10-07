@@ -19214,11 +19214,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
         {showEventReplayList&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
-              <h3 className="text-base font-black text-white mb-1 text-center">イベント回想</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。</p>
-              <div className="space-y-2 mb-3">
-                {eventReplayList().map(event=>{
+            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+              {/* 見出しと「閉じる」は動かさず、まとまりの並びだけを窓の中でスクロールさせる(下まで行かないと閉じられないのを避ける) */}
+              <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
+              <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。<br/>まとまりごとに、お話の順に並んでいます。</p>
+              {/* まとまり(ハロウィン・ナイト / モンヒロビートのイベント / …)ごとに、お話の順(古い順)で並べる。
+                  まだ見ていない項目も、そのまとまりの中の順番どおりに「？？？」で出す(あと何本あるかが分かる) */}
+              <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-4 mb-3">
+                {eventReplayGroups().map(group=>{
+                  const seenCount=group.events.filter(isEventReplayUnlocked).length;
+                  return (
+                  <section key={group.id} data-event-replay-group={group.id}>
+                    <div className="mb-1.5 flex items-center gap-1.5 px-1">
+                      <span className="text-sm" aria-hidden="true">{group.emoji}</span>
+                      <b className="min-w-0 flex-1 text-[12px] font-black text-fuchsia-100">{group.label}</b>
+                      <small className="shrink-0 text-[10px] font-black tabular-nums text-fuchsia-300/80">{seenCount}/{group.events.length}</small>
+                    </div>
+                    <div className="space-y-2">
+                {group.events.map(event=>{
                   const eventUnlocked=isEventReplayUnlocked(event);
                   if(!eventUnlocked){
                     return (
@@ -19242,8 +19255,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </button>
                   );
                 })}
+                    </div>
+                  </section>
+                  );
+                })}
               </div>
-              <button onClick={()=>setShowEventReplayList(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+              <button onClick={()=>setShowEventReplayList(false)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
         )}
