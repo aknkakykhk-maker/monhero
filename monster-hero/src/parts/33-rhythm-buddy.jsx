@@ -10,7 +10,8 @@
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 // マスモン全体で1日に無料で呼べる回数(朝5:00で戻る)
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
-const RHYTHM_BUDDY_LEVEL_MAX = 50;
+// 2026-10-07・ユーザー指示「レベルは100まで引き上げてもいい」
+const RHYTHM_BUDDY_LEVEL_MAX = 100;
 // 性格が決まるLv
 const RHYTHM_BUDDY_TRAIT_LEVEL = 10;
 // 1体が覚えておく曲の数(なじみ)。超えたら回数の少ない曲から忘れる
@@ -109,9 +110,10 @@ const rhythmBuddyUseFree = (state, dayKey) => {
 };
 
 // ---- レベル ----
-// Lv n → n+1 に要る経験値。Lv.50 までおよそ8万(1ライブ平均50前後なので、毎日遊んで3か月ほど)。
-// 育ちきればプレイヤーより上手になれるが、そこまでは時間がかかる(2026-10-07・ユーザー指示)
-const rhythmBuddyNeedExp = (level) => 120 + 60 * Math.max(1, level);
+// Lv n → n+1 に要る経験値。Lv.50 までおよそ1万8千、Lv.100 までおよそ6万5千。
+// 1ライブ平均50前後なので、1日15ライブなら Lv.50 まで1か月弱、Lv.100 まで3か月ほど
+// (2026-10-07・ユーザー指示「うまくなるデメリットがないからもっと早くうまくなってほしい」)
+const rhythmBuddyNeedExp = (level) => 60 + 12 * Math.max(1, level);
 const rhythmBuddyLevelInfo = (exp) => {
   let rest = rhythmBuddyInt(exp);
   let level = 1;
@@ -211,7 +213,7 @@ const rhythmBuddyMood = (masuId, dayKey, mon) => {
 // 相棒の育ち具合から「無理なく叩ける譜面のLv.」を決め、それより上の譜面ほど落ちる(2026-10-07・ユーザー指示
 // 「曲の難易度補正」→ 譜面のLv.とノーツの密度で補正)。譜面のLv.は配信中の曲で EASY 4〜15 / MASTER 17〜47。
 // 密度(1秒あたりのノーツ数)は平均で「1 + Lv.÷10」くらいなので、それより詰まっている譜面はさらに少し落ちる
-const rhythmBuddyComfortLevel = (level, songPlays, trait) => 8 + 37 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
+const rhythmBuddyComfortLevel = (level, songPlays, trait) => 14 + 40 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
 const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel, density }) => {
   const m = rhythmBuddyNormalizeMon(mon);
   const { level } = rhythmBuddyLevelInfo(m.exp);
@@ -219,15 +221,15 @@ const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
   // 譜面のLv.が分からないときは、難易度の種類からだいたいの値を使う
   const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
-  // 上の方ほど伸びが大きい(はじめはゆっくり、育ちきると人より上手)
-  let acc = 0.55 + 0.32 * rhythmBuddyGrowthRate(level);
+  // はじめのうちほど大きく伸び、育ちきると人より上手
+  let acc = 0.68 + 0.27 * rhythmBuddyGrowthRate(level);
   // 遊んだ曲ほど得意になる(2026-10-07・ユーザー指示)。最大 +0.06(無理なく叩けるLv.も最大+5)
   acc += 0.6 * rhythmBuddySongSkill(m.songs[songId], m.trait);
   // 難易度の種類ごとの慣れ(譜面のLv.と役目が重なるので小さめ)
   acc += 0.03 * mastery - d * 0.012 * (1 - mastery);
-  // 譜面のLv.: 無理なく叩けるLv.を超えたぶん1つごとに -0.02(最大 -0.45)。下回るぶんは少しだけ楽(最大 +0.02)
+  // 譜面のLv.: 無理なく叩けるLv.を超えたぶん1つごとに -0.015(最大 -0.35)。下回るぶんは少しだけ楽(最大 +0.02)
   const over = chartLv - rhythmBuddyComfortLevel(level, m.songs[songId], m.trait);
-  acc -= over > 0 ? Math.min(0.45, over * 0.02) : -Math.min(0.02, -over * 0.002);
+  acc -= over > 0 ? Math.min(0.35, over * 0.015) : -Math.min(0.02, -over * 0.002);
   // 密度: Lv.の割に詰まっているぶん(1秒あたり1つ多いごとに -0.04)。一発型は半分
   const dens = Number(density);
   if (Number.isFinite(dens) && dens > 0) {
@@ -240,8 +242,8 @@ const rhythmBuddyAccuracy = ({ mon, songId, diffId, durationMs, mood, chartLevel
   // 上限は満点(判定の良さ1)。満点まで届くかは、うまさとブレしだい
   return Math.max(0.1, Math.min(1, acc));
 };
-// Lv の伸び(0〜1)。上の方ほど伸びが大きい
-const rhythmBuddyGrowthRate = (level) => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
+// Lv の伸び(0〜1)。はじめのうちほど大きく伸びる
+const rhythmBuddyGrowthRate = (level) => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 0.7);
 // その曲の得意(0〜0.10)。遊んだ回数でなだらかに増える。職人型は1.5倍の速さ
 const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1) / 12));
 // ブレ(標準偏差)。うまくなるほど小さくなる(育てはじめは日によって大きく外す)。性格と調子でも変わる

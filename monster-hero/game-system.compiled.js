@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4faf7fe46902307b
+// source-sha256: 8bbaab9a5b577e28
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-07 12:05";
+const BUILD_DATE = "2026-10-07 12:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36818,7 +36818,7 @@ const tacticsExCoverSlot = (state, units, now) => {
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
-const RHYTHM_BUDDY_LEVEL_MAX = 50;
+const RHYTHM_BUDDY_LEVEL_MAX = 100;
 const RHYTHM_BUDDY_TRAIT_LEVEL = 10;
 const RHYTHM_BUDDY_SONG_KEEP = 80;
 const RHYTHM_BUDDY_DIFF_IDS = Object.freeze(['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']);
@@ -36954,7 +36954,7 @@ const rhythmBuddyUseFree = (state, dayKey) => {
     used: used + 1
   };
 };
-const rhythmBuddyNeedExp = level => 120 + 60 * Math.max(1, level);
+const rhythmBuddyNeedExp = level => 60 + 12 * Math.max(1, level);
 const rhythmBuddyLevelInfo = exp => {
   let rest = rhythmBuddyInt(exp);
   let level = 1;
@@ -37065,7 +37065,7 @@ const rhythmBuddyMood = (masuId, dayKey, mon) => {
   }
   return RHYTHM_BUDDY_MOODS[2];
 };
-const rhythmBuddyComfortLevel = (level, songPlays, trait) => 8 + 37 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
+const rhythmBuddyComfortLevel = (level, songPlays, trait) => 14 + 40 * rhythmBuddyGrowthRate(level) + 50 * rhythmBuddySongSkill(songPlays, trait);
 const rhythmBuddyAccuracy = ({
   mon,
   songId,
@@ -37082,11 +37082,11 @@ const rhythmBuddyAccuracy = ({
   const d = Math.max(0, RHYTHM_BUDDY_DIFF_IDS.indexOf(diffId));
   const mastery = rhythmBuddyMastery(m.diffs[RHYTHM_BUDDY_DIFF_IDS[d]]);
   const chartLv = Number(chartLevel) > 0 ? Number(chartLevel) : [7, 9, 14, 19, 26][d];
-  let acc = 0.55 + 0.32 * rhythmBuddyGrowthRate(level);
+  let acc = 0.68 + 0.27 * rhythmBuddyGrowthRate(level);
   acc += 0.6 * rhythmBuddySongSkill(m.songs[songId], m.trait);
   acc += 0.03 * mastery - d * 0.012 * (1 - mastery);
   const over = chartLv - rhythmBuddyComfortLevel(level, m.songs[songId], m.trait);
-  acc -= over > 0 ? Math.min(0.45, over * 0.02) : -Math.min(0.02, -over * 0.002);
+  acc -= over > 0 ? Math.min(0.35, over * 0.015) : -Math.min(0.02, -over * 0.002);
   const dens = Number(density);
   if (Number.isFinite(dens) && dens > 0) {
     const extra = dens - (1 + chartLv / 10);
@@ -37097,7 +37097,7 @@ const rhythmBuddyAccuracy = ({
   acc += m.trait === 'steady' ? moodAcc * 0.5 : moodAcc;
   return Math.max(0.1, Math.min(1, acc));
 };
-const rhythmBuddyGrowthRate = level => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 1.3);
+const rhythmBuddyGrowthRate = level => Math.pow((Math.max(1, level) - 1) / (RHYTHM_BUDDY_LEVEL_MAX - 1), 0.7);
 const rhythmBuddySongSkill = (plays, trait) => 0.1 * (1 - Math.exp(-rhythmBuddyInt(plays) * (trait === 'artisan' ? 1.5 : 1) / 12));
 const rhythmBuddySpread = (trait, mood, level = 1) => {
   const base = trait === 'steady' ? 0.02 : trait === 'burst' ? 0.055 : 0.035;

@@ -53,9 +53,10 @@ const pure = (() => {
   const jst = (h, m) => Date.UTC(2026, 9, 7, h - 9, m);
   check('日付の区切りは朝5:00(JST)', b.day(jst(4, 59)) === '2026-10-06' && b.day(jst(5, 0)) === '2026-10-07');
 
-  check('Lv は1から始まり、50で止まる', b.level(0).level === 1 && b.level(1e9).level === b.max && b.max === 50);
+  check('Lv は1から始まり、100で止まる', b.level(0).level === 1 && b.level(1e9).level === b.max && b.max === 100);
   let expTo50 = 0; for (let l = 1; l < 50; l += 1) expTo50 += b.need(l);
-  check('Lv.50までの経験値は6万〜10万(育ちきるまで時間がかかる)', expTo50 >= 60000 && expTo50 <= 100000, String(expTo50));
+  let expTo100 = expTo50; for (let l = 50; l < 100; l += 1) expTo100 += b.need(l);
+  check('Lv.50までは1万〜2万5千(1か月ほど)、Lv.100までは5万〜8万(3か月ほど)', expTo50 >= 10000 && expTo50 <= 25000 && expTo100 >= 50000 && expTo100 <= 80000, `${expTo50} / ${expTo100}`);
 
   const r1 = b.apply(null, { round: 'r1', songId: 'songA', diffId: 'HARD', durationMs: 120000, teamRank: 'A', dayKey: d1, lean: 'steady', nowMs: 1 });
   const r1b = b.apply(r1.mon, { round: 'r1', songId: 'songA', diffId: 'HARD', durationMs: 120000, teamRank: 'A', dayKey: d1, lean: 'steady', nowMs: 2 });
@@ -111,13 +112,16 @@ const pure = (() => {
   const lv50mFav = run(1e9, 'MASTER', 1000000, 40, 30);
   check('スコアは0〜その難易度の満点に収まる', [lv1, lv50, lv1m, lv50m, lv50mFav].every((x) => !x.over));
   check('育つほどうまくなる(Lv.1 < Lv.50)', lv1.avg < lv50.avg, `${Math.round(lv1.avg)} < ${Math.round(lv50.avg)}`);
-  check('遊んだ曲ほど得意(30回遊んだ曲 > 初めての曲)', lv50mFav.avg > lv50m.avg + 30000, `${Math.round(lv50mFav.avg)} > ${Math.round(lv50m.avg)}`);
+  // 育ちきると満点に近づいて差が小さくなるので、Lv.50(経験値1万8千)で比べる
+  const midFav = run(18300, 'MASTER', 1000000, 40, 30);
+  const midNew = run(18300, 'MASTER', 1000000, 40, 0);
+  check('遊んだ曲ほど得意(30回遊んだ曲 > 初めての曲)', midFav.avg > midNew.avg + 30000, `${Math.round(midFav.avg)} > ${Math.round(midNew.avg)}`);
   const lv50mFav50 = run(1e9, 'MASTER', 1000000, 40, 60);
   check('育ちきって得意な曲なら、MASTERでSに届き、たまに満点(上限は満点)', lv50mFav.avg >= 850000 && lv50mFav50.perfect > 0, `平均${Math.round(lv50mFav.avg)} 満点${lv50mFav50.perfect}/400`);
   const hardChart = run(1e9, 'MASTER', 1000000, 40, 0, { level: 47 });
   const easyChart = run(1e9, 'MASTER', 1000000, 40, 0, { level: 20 });
   check('譜面のLv.が高いほどスコアが落ちる(同じ MASTER でも Lv.20 > Lv.47)', easyChart.avg > hardChart.avg, `${Math.round(easyChart.avg)} > ${Math.round(hardChart.avg)}`);
-  const midLv = 20000; // 経験値2万(Lv.20前後)
+  const midLv = 2500; // 経験値2500(Lv.15前後)
   const reach26 = run(midLv, 'MASTER', 1000000, 40, 0, { level: 26 });
   const reach47 = run(midLv, 'MASTER', 1000000, 40, 0, { level: 47 });
   check('育ちかけの相棒には、難しい譜面ほど差が大きい', (reach26.avg - reach47.avg) > (easyChart.avg - hardChart.avg), `${Math.round(reach26.avg - reach47.avg)} > ${Math.round(easyChart.avg - hardChart.avg)}`);
