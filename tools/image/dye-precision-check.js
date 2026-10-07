@@ -42,6 +42,8 @@ const APPROVED_MASKS = {
   // ゴースト・スプーキー(2026-10-05・案の段階)。本体より先にマスクだけ入っている
   Ghost: 'images/monsters/ghost-dye-mask.PNG',
   Spooky: 'images/monsters/spooky-dye-mask.PNG',
+  // メロディー(2026-10-07・案の段階・5部位)。本体より先にマスクだけ入っている
+  Melody: 'images/monsters/melody-dye-mask.PNG',
 };
 // これ未満しか染まらない画素を「染まっていない」とみなす
 const COVER_MIN = 0.5;
