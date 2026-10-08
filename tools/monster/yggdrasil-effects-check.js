@@ -59,7 +59,8 @@ check('軽減は30%(半減なら15%)', Math.abs(t.lifeTreeGuardMult(1) - 0.7) < 
 // 2026-10-08 メロディー・クロミーも同じ効果を持つようになり、分岐は isLifeTreeGuardCard を見る形になった
 const branch = slice(app, "else if(isLifeTreeGuardCard(card)){", "else if(card.monId==='Pandora'){");
 check('固有技の分岐がある(ガッツ20%・このターンの即時倍率・次ターンの予約)', branch.length > 0
-  && /gainGutsByRate\(slotIdx,0\.2\*effMul\)/.test(branch)
+  // 2026-10-08 から数字はモンスターごとの表(LIFE_TREE_GUARD_EFFECTS)。ユグドラシル・メルホイップはガッツ20%のまま
+  && /gainGutsByRate\(slotIdx,guardFx\.guts\*effMul\)/.test(branch) && /Yggdrasil: Object\.freeze\(\{ name:'大樹の加護', taken:0\.3, guts:0\.2/.test(bond)
   && /immediateTakenMultBySlot\[slotIdx\]=guardMult;/.test(branch) && /immediateTakenMult=guardMult;/.test(branch));
 check('次ターンの予約はほかの軽減を消さず掛け算で重ねる',
   /tacticsSlotRate\(p\.bySlot,slotIdx,'takenDamageMult',1\.0\)\*guardMult/.test(branch)

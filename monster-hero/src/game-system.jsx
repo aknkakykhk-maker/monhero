@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c8e47dd66968ab5d
+// generated-sha256: 5a3def6fefe6c25d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-08 17:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-08 17:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11669,13 +11669,24 @@ const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Numbe
   && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
 // 固有技「大樹の加護」: 使ったターンから2ターン、被ダメージ30%軽減。
 //   使ったターンのぶんは予告(71-screen-battle)と実際(handleEnemyTurn)の両方がこの値を掛ける
-// ★メロディー・クロミー(2026-10-08)も固有技の効果は同じで、名前だけ違う(勇者特性は生命の源ではない)。
-//   だから「持っている子」は生命の源とは別の一覧で持つ
+// ★メロディー・クロミー(2026-10-08)も「使ったターンから2ターン被ダメ軽減＋ガッツ回復」の形を持ち、数字と足すものだけ違う
+//   (同じ日のユーザー指示「固有技効果も専用にして少し変えたい」)。勇者特性は生命の源ではないので、生命の源とは別の表で持つ。
+//   taken … 被ダメの軽減率 / guts・hp … 最大ガッツ・ライフの何割を回復するか / cookie … 使った子がメロディーならクッキーをさらに足す数 /
+//   atkStack … 使った子の与ダメを、使うたびにこの割合ずつ上げる(バトル中ずっと・重なる)
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
-const LIFE_TREE_GUARD_NAMES = Object.freeze({ Yggdrasil:'大樹の加護', MelWhip:'大樹の加護', Melody:'ピンク音符の加護', Kuromy:'メロディ・ボゥの旋律' });
-const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_NAMES, card.monId);
+const LIFE_TREE_GUARD_EFFECTS = Object.freeze({
+  Yggdrasil: Object.freeze({ name:'大樹の加護', taken:0.3, guts:0.2, hp:0, cookie:0, atkStack:0 }),
+  MelWhip:   Object.freeze({ name:'大樹の加護', taken:0.3, guts:0.2, hp:0, cookie:0, atkStack:0 }),
+  Melody:    Object.freeze({ name:'ピンク音符の加護', taken:0.25, guts:0.2, hp:0.15, cookie:1, atkStack:0 }),
+  Kuromy:    Object.freeze({ name:'メロディ・ボゥの旋律', taken:0.15, guts:0.2, hp:0, cookie:0, atkStack:0.05 }),
+});
+const LIFE_TREE_GUARD_NAMES = Object.freeze(Object.fromEntries(Object.entries(LIFE_TREE_GUARD_EFFECTS).map(([id, e]) => [id, e.name])));
+const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_EFFECTS, card.monId);
 const lifeTreeGuardNameOf = (monId) => LIFE_TREE_GUARD_NAMES[monId] || '大樹の加護';
-const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+const lifeTreeGuardEffectOf = (monId) => LIFE_TREE_GUARD_EFFECTS[monId] || LIFE_TREE_GUARD_EFFECTS.Yggdrasil;
+const lifeTreeGuardMult = (effMul = 1, monId = 'Yggdrasil') => 1 - lifeTreeGuardEffectOf(monId).taken * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+// メロディ・ボゥの旋律(クロミー)で積んだ「与ダメ+5%」の数から、その子の与ダメ倍率を出す
+const bowAtkMultOf = (n) => 1 + LIFE_TREE_GUARD_EFFECTS.Kuromy.atkStack * Math.max(0, Math.floor(Number(n) || 0));
 // ==== 勇者特性「トリックスタート」(ゴースト・スプーキー。2026-10-05 ユーザーと決めた値) ====
 // WAVEの1ターン目と、そこから3ターンごと(1・4・7・10…ターン目)に抽選する。
 // 「ちから+20%」「丈夫さ+20%」「毎ターン、最大ライフの5%回復」を**それぞれ50%**で当て、当たったぶんを積む。
@@ -12572,21 +12583,12 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
 // ユグドラシル種は、参考の技画像(docs/spec/YGGDRASIL_SKILLS.md)の技ごとに別の動きを持つ。
 // 技の名前 → 型。見た目は 24-battle-fx.jsx の SKILL_FX_SPECS、動きは 70-bootstrap.jsx の .skfx--◯◯。
 // 通常技(ちから)は体ごとぶつかる・飛びかかる動き、固有技(かしこさ)はその場から魔法を放つ動き。
-// メロディー・クロミー(2026-10-08)は、ユグドラシルの通常技を名前だけ置き換えた同じ並びなので、同じ段階の型を名前で引く。
-//   固有技の9段階はユグドラシルと同じ名前(スターボム〜コスモフルーツ)なので、足さなくても引ける
-const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+// メロディー・クロミーは 2026-10-08 に専用の動きを持った(24-battle-fx.jsx の SKM_MELODY / SKM_KUROMY。段階の順)ので、ここには入れない
+const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip']);
 const SKILL_ATTACK_THEMES = Object.freeze({
   '頭突き':'ygHeadbutt', '空中脳天撃':'ygAirDive', 'グリーンライト':'ygGreenLight', 'ぴろぴろ舌':'ygTongue',
   '大玉転がし':'ygRoll', '月面水爆':'ygMoonDrop', 'キャンディボム':'ygCandy', '苺大噴':'ygStrawberry',
   'ケーキ入刀':'ygCakeCut', 'シャドウレギオン':'ygShadow',
-  // メロディー(ぞうさん・ピアノの傘・メロディタクト)
-  'ぞうさん頭突き':'ygHeadbutt', 'ピアノパラソル脳天撃':'ygAirDive', 'メロディタクトライト':'ygGreenLight', 'ぞうさんぴろぴろ鼻':'ygTongue',
-  'マリーランド大玉転がし':'ygRoll', 'ムーンサルトメロディー':'ygMoonDrop', 'メロディキャンディボム':'ygCandy', 'メロディ苺クッキー':'ygStrawberry',
-  'ドリームパワー':'ygShadow',
-  // クロミー(バク・黒音符・らっきょう)
-  'バク頭突き':'ygHeadbutt', 'バク空中落下プレス':'ygAirDive', 'ブラックノートライト':'ygGreenLight', 'バクパタパタ耳':'ygTongue',
-  '巨大雪だるま転がし':'ygRoll', "KUROMI'S5アタック":'ygMoonDrop', 'ナイトメアらっきょうボム':'ygCandy', 'バコ・ベリースプラッシュ':'ygStrawberry',
-  'ダークパワー':'ygShadow',
   'スターボム':'ygStarBomb', 'ワンダーブレイズ':'ygWonderBlaze', 'メニーウィング':'ygManyWing', 'ライスシャワー':'ygRiceShower',
   'メテオストーム':'ygMeteor', 'パピヨンバースト':'ygPapillon', 'ヘビーレイン':'ygHeavyRain', 'エターナルアーク':'ygEternalArc',
   'オーロラハック':'ygAurora', 'コスモフルーツ':'ygCosmo',
@@ -13355,22 +13357,74 @@ const SKM_SPOOKY = Object.freeze({
     : i === 7 ? sp
     : { ...sp, c:sp.c === 'gold' ? 'gold' : 'fire' })),
 });
+// メロディー(2026-10-08 ユーザー指示「2体とも専用アクションを力入れて作って」): ぞうさんに乗ってピアノちゃんの傘をさす子。
+//   ぞうさんの体当たり・鼻、傘(parasol)、メロディタクトの光と音符、お菓子(クッキー・キャンディ・パウンドケーキ)、虹(マリーランド)で見せる。
+//   並びは HERO_ATK_NAMES.Melody / unique.names と同じ段階の順
+const SKM_MELODY = Object.freeze({
+  normal:[
+    skm('bash', { c:'pink', burst:'heart', over:'fist' }),                                                  // ぞうさん頭突き
+    skm('parasol', { c:'pink', over:'boom', burst:'note' }),                                               // ピアノパラソル脳天撃
+    skm('cast', { c:'pink', line:'ray', fx:skmFx('shot', 'note', 4, { h:[330, 200] }), burst:'note' }),   // メロディタクトライト
+    skm('lick', { c:'sky', line:'tongue', fx:skmFx('rise', 'water', 8), burst:'water' }),                  // ぞうさんぴろぴろ鼻
+    skm('roll', { c:'pink', fx:skmFx('fall', 'petal', 10), burst:'dust' }),                                // マリーランド大玉転がし
+    skm('flip', { c:'sky', fx:skmFx('fall', 'note', 8, { h:[330, 50, 200] }), burst:'note' }),             // ムーンサルトメロディー
+    skm('toss', { c:'psy', fx:skmFx('lob', 'candy', 5, { h:[330, 50, 190, 280] }), over:'boom', burst:'candy' }), // メロディキャンディボム
+    skm('toss', { c:'red', fx:skmFx('lob', 'cookie', 4), over:'bloom', burst:'berry' }),                   // メロディ苺クッキー
+    skm('parasol', { c:'pink', fx:skmFx('orbit', 'heart', 8), over:'rainbow', burst:'heart' })],          // ドリームパワー
+  unique:[
+    skm('cast', { c:'pink', fx:skmFx('shot', 'heart', 6, { step:40 }), over:'bloom', burst:'heart' }),    // メロメロハート
+    skm('spin', { c:'sky', fx:skmFx('orbit', 'note', 8, { h:[330, 200, 50] }), over:'aurora', burst:'note' }), // ピアノワルツ
+    skm('float', { c:'pink', fx:skmFx('orbit', 'ribbon', 8), over:'bloom', burst:'ribbon' }),             // リボンウィング
+    skm('cast', { c:'gold', fx:skmFx('fall', 'cake', 3, { s:1.6 }), over:'boom', burst:'cookie', form:'rubble' }), // パウンドメテオ
+    skm('gather', { c:'pink', fx:skmFx('orbit', 'heart', 10), over:'bloom', burst:'petal' }),             // ピンクバースト
+    skm('parasol', { c:'psy', fx:skmFx('fall', 'candy', 22, { h:[330, 50, 190, 280, 120] }), over:'wave', burst:'candy', form:'psy' }), // キャンディレイン
+    skm('float', { c:'sky', line:'arc', over:'rainbow', burst:'star', form:'light' }),                     // マリーランドアーチ
+    skm('cast', { c:'pink', line:'ray', fx:skmFx('orbit', 'note', 10, { h:[330, 280, 200, 50] }), over:'aurora', burst:'note', form:'psy' }), // メロディタクト
+    skm('gather', { c:'gold', fx:skmFx('orbit', 'cookie', 12), over:'rainbow', burst:'candy', form:'bloom' })], // スウィートパレード
+});
+// クロミー: バクに乗った、ドクロの頭巾の子。バクの突進(gallop)・耳、黒音符、ドクロ、らっきょう、恨み帳、悪夢の渦(nightmare)で見せる
+const SKM_KUROMY = Object.freeze({
+  normal:[
+    skm('gallop', { c:'cosmic', burst:'star', over:'fist' }),                                              // バク頭突き
+    skm('jump', { c:'cosmic', over:'boom', burst:'dust' }),                                                // バク空中落下プレス
+    skm('cast', { c:'dark', line:'ray', fx:skmFx('shot', 'bnote', 4), burst:'bnote' }),                    // ブラックノートライト
+    skm('jab', { c:'cosmic', over:'fist', burst:'star' }),                                                 // バクパタパタ耳
+    skm('roll', { c:'ice', fx:skmFx('fall', 'snow', 12), over:'ice', burst:'snow' }),                      // 巨大雪だるま転がし
+    skm('gallop', { c:'dark', fx:skmFx('shot', 'skull', 5, { step:40 }), over:'xslash', burst:'skull' }), // KUROMI'S5アタック
+    skm('toss', { c:'gas', fx:skmFx('lob', 'rakkyo', 4), over:'boom', burst:'rakkyo' }),                   // ナイトメアらっきょうボム
+    skm('cast', { c:'red', fx:skmFx('rise', 'berry', 9), burst:'berry' }),                                 // バコ・ベリースプラッシュ
+    skm('cast', { c:'dark', fx:skmFx('orbit', 'skull', 6), over:'nightmare', burst:'bnote' })],          // ダークパワー
+  unique:[
+    skm('toss', { c:'pink', fx:skmFx('lob', 'skull', 3, { s:1.4 }), over:'boom', burst:'skull', form:'void' }), // ドクロボム
+    skm('gallop', { c:'dark', fx:skmFx('shot', 'skull', 5, { step:35 }), over:'cross', burst:'skull' }),  // クロミーズ5突撃
+    skm('float', { c:'cosmic', fx:skmFx('orbit', 'bnote', 8), over:'bite', burst:'bnote' }),              // 夢くいウィング
+    skm('cast', { c:'dark', fx:skmFx('fall', 'book', 3, { s:1.5 }), over:'boom', burst:'bnote', form:'rubble' }), // 恨み帳メテオ
+    skm('gather', { c:'dark', fx:skmFx('orbit', 'bnote', 10), over:'eclipse', burst:'bnote' }),           // 黒音符バースト
+    skm('cast', { c:'gas', fx:skmFx('fall', 'rakkyo', 22), over:'wave', burst:'rakkyo', form:'thorn' }),  // らっきょう大雨
+    skm('gather', { c:'psy', line:'arc', over:'nightmare', burst:'skull' }),                               // ナイトメアアーク
+    skm('float', { c:'dark', line:'ray', over:'aurora', burst:'bnote', form:'psy' }),                      // ダークオーロラ
+    skm('gather', { c:'dark', fx:skmFx('orbit', 'skull', 10), over:'nightmare', burst:'bnote' })],        // 悪夢フィナーレ
+});
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
-const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY });
+const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
   slash:[.46,720], lick:[.42,640], kick:[.44,620], spin:[.54,780], jump:[.58,760], float:[.58,820], dash:[.26,620], shake:[.5,720],
   hop:[.5,720], warp:[.5,760], jab:[.4,620],
   // 2026-10-02 パンドラ: gather 魔力集束(光と闇をまとって溜める) / split 分裂(光と闇の2体に分かれて手を取り合う)
-  gather:[.55,900], split:[.6,1100] });
+  gather:[.55,900], split:[.6,1100],
+  // 2026-10-08 メロディー: parasol 傘を回して舞い上がり降りて叩く / クロミー: gallop バクに乗って3回跳ねて突っ込む
+  parasol:[.56,860], gallop:[.6,820] });
 // その場から撃つ動き。当たる時刻は飛ぶものが届く時刻で決まる
 const SKM_PROJECTILE_BODIES = Object.freeze(['cast', 'toss', 'shake', 'hop']);
 // 敵に重ねる絵が、当たってから消えるまでの長さ(ms)。尺がこれより短いと途中で切れる
 const SKM_OVER_TAIL = Object.freeze({ thunder:220, xslash:300, claw:220, pillar:300, tornado:320, ice:440, bite:180, boom:460, wave:560,
   bloom:360, gas:480, cross:360, sword:180, eye:260, fist:160, slash:220, aurora:320, shadow:200,
   // 2026-10-02 パンドラ: eclipse 相反爆発(黒い核と白い閃光) / twinThunder 反発雷撃(紫と金の雷が交差)
-  eclipse:460, twinThunder:420 });
+  eclipse:460, twinThunder:420,
+  // 2026-10-08 メロディー: rainbow 虹のアーチ / クロミー: nightmare 黒い渦とドクロ
+  rainbow:400, nightmare:400 });
 const SKM_MAX_MS = 1200;
 const skmArrival = (fx) => {
   if (!fx || !fx.items.length) return null;
@@ -35207,7 +35261,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, fateWheelView, enemyConfuseTurns, luckBanners,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -35474,7 +35528,7 @@ function BattleScreen({
       const halved = counter.take(card, owner);
       if (!isLifeTreeGuardCard(card)) return;
       if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
-      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
     });
     return mult;
   };
@@ -36278,6 +36332,11 @@ function BattleScreen({
               const who=key==='party'?'':(slots[Number(key)]?.name||'');
               chip(`sweet${key}`,<Sparkles size={9}/>,`${who}${trait.label}`,`${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId,count)}`,
                 trait.kind==='cookie'?'text-pink-300 border-pink-400/50':'text-fuchsia-300 border-fuchsia-400/50',{short:`${trait.icon}${count}/${SWEET_STACK_MAX}`,pulse:count>=SWEET_STACK_MAX});
+            });
+            // メロディ・ボゥの旋律(クロミーの固有技)で積んだ与ダメ。使った子の枠ごと。ランが終わるまで残る
+            Object.entries(bowStackView||{}).forEach(([key,n])=>{
+              const c=Math.max(0,Math.floor(Number(n)||0));
+              if(c>0) chip(`bow${key}`,<Sword size={9}/>,`${slots[Number(key)]?.name||''}旋律`,`与ダメ+${c*5}%`,'text-fuchsia-300 border-fuchsia-400/50',{short:`+${c*5}%`});
             });
             // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
             {
@@ -44449,7 +44508,18 @@ function MonsterHeroGame() {
   //   決めごと(貯まり方・段階)は 22-enemy-and-bond-entries.jsx の SWEET_STACK_TRAITS
   const sweetStackRef = useRef({ bySlot: {} });
   const [sweetStackView, setSweetStackView] = useState({});
-  const resetSweetStack = () => { sweetStackRef.current = { bySlot: {} }; setSweetStackView({}); };
+  const resetSweetStack = () => { sweetStackRef.current = { bySlot: {} }; setSweetStackView({}); bowStackRef.current = {}; setBowStackView({}); };
+  // ★メロディ・ボゥの旋律(クロミーの固有技)で積んだ「与ダメ+5%」の数。使った子の枠ごと(どのモードも枠の番号)。
+  //   バトル(ラン)が終わるまで残り、使うたびに重なる。片付けはスタックと同じ resetSweetStack
+  const bowStackRef = useRef({});
+  const [bowStackView, setBowStackView] = useState({});
+  const bowAtkMultAt = (slotIdx) => (Number.isInteger(slotIdx) ? bowAtkMultOf(bowStackRef.current[String(slotIdx)]) : 1);
+  const addBowStackAt = (slotIdx) => {
+    if (!Number.isInteger(slotIdx)) return 0;
+    const next = { ...bowStackRef.current, [String(slotIdx)]: Math.max(0, Math.floor(Number(bowStackRef.current[String(slotIdx)]) || 0)) + 1 };
+    bowStackRef.current = next; setBowStackView(next);
+    return next[String(slotIdx)];
+  };
   // その枠の特性の持ち主(既存5モードは勇者モン、タクティクスはその枠の子)
   const sweetOwnerAt = (slotIdx) => (isTacticsMode(runMode)
     ? (Number.isInteger(slotIdx) ? (tacticsUnitsRef.current[slotIdx]?.id || null) : null) : (mainHero?.id || null));
@@ -54406,7 +54476,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     // ★クッキー10個(メロディー)の与ダメアップは味方全体、黒音符(クロミー)は本人の攻撃だけ
-    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「ちから+20%」を、攻撃した子のちからへ掛ける
     //   (既存5モードはパーティ共通のちから。積んでいなければ1倍)
@@ -55971,11 +56041,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             addPopup('次ターン被ダメ50%減!','hero','text-pink-400 text-lg font-bold');
           }
           else if(isLifeTreeGuardCard(card)){
-            // 大樹の加護(メロディーは「ピンク音符の加護」、クロミーは「メロディ・ボゥの旋律」。中身は同じ): 使ったターンから2ターン被ダメージ30%軽減＋最大ガッツの20%回復。
+            // 大樹の加護(ユグドラシル・メルホイップ)・ピンク音符の加護(メロディー)・メロディ・ボゥの旋律(クロミー):
+            //   使ったターンから2ターン被ダメージ軽減＋最大ガッツ回復。数字と足すものは LIFE_TREE_GUARD_EFFECTS(技の出自で決まる)。
             //   このターンぶんは handleEnemyTurn へ倍率で渡し、次ターンぶんは予約する。
             //   ほかの軽減(メロソ・贖罪)を消さないよう、次ターンの倍率は掛け合わせる
-            const gRec=gainGutsByRate(slotIdx,0.2*effMul);
-            const guardMult=lifeTreeGuardMult(effMul);
+            const guardFx=lifeTreeGuardEffectOf(card.monId);
+            const gRec=gainGutsByRate(slotIdx,guardFx.guts*effMul);
+            const guardMult=lifeTreeGuardMult(effMul,card.monId);
+            // ピンク音符の加護: ライフも回復する(タクティクスは使った子、既存5モードはパーティ)
+            if(guardFx.hp>0){
+              if(isTacticsMode(runMode)){ const healed=tacticsRateHealAt(slotIdx,guardFx.hp*effMul,0); if(healed) hpBeforeEnemyAttack=healed.total; }
+              else { const heal=Math.floor(liveEffectiveMaxHp()*guardFx.hp*effMul); if(heal>0){ hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+heal); setHp(hpBeforeEnemyAttack); addPopup(`💚 ライフ +${heal}`,'life','text-emerald-300 text-base font-bold'); } }
+            }
+            // ピンク音符の加護: 使った子がクッキーを持つ子(メロディー本人)なら、カード1枚ぶんに加えてさらに足す
+            if(guardFx.cookie>0&&sweetStackTraitOf(sweetOwnerAt(slotIdx))?.kind==='cookie'&&activeMon?.id===sweetOwnerAt(slotIdx)){
+              const after=addSweetStack(sweetStackAt(slotIdx),guardFx.cookie);
+              if(after!==sweetStackAt(slotIdx)){ writeSweetStackAt(slotIdx,after); addPopup(`🍪 クッキー ${after}/${SWEET_STACK_MAX}`,'hero','text-pink-200 text-base font-bold drop-shadow-md',undefined,slotIdx); }
+            }
+            // メロディ・ボゥの旋律: 使った子の与ダメを、使うたびに+5%ずつ(バトル中ずっと・重なる)
+            if(guardFx.atkStack>0){ const n=addBowStackAt(slotIdx); addPopup(`🎻 与ダメ +${Math.round(guardFx.atkStack*n*100)}%`,'hero','text-fuchsia-200 text-base font-bold drop-shadow-md',undefined,slotIdx); }
             if(isTacticsMode(runMode)){
               immediateTakenMultBySlot[slotIdx]=guardMult;
               writeNextTurnBuffs(p=>({...p, bySlot:withTacticsSlotBuff(p.bySlot,slotIdx,'takenDamageMult',tacticsSlotRate(p.bySlot,slotIdx,'takenDamageMult',1.0)*guardMult)}));
@@ -55983,7 +56067,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               immediateTakenMult=guardMult;
               writeNextTurnBuffs(p=>{ const cur=Number(p.takenDamageMult); return {...p, takenDamageMult:(Number.isFinite(cur)&&cur>0?cur:1)*guardMult}; });
             }
-            addPopup(`${lifeTreeGuardNameOf(card.monId)}！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION*effMul*100)}%減`,'hero','text-emerald-300 text-lg font-bold');
+            addPopup(`${lifeTreeGuardNameOf(card.monId)}！ 2ターン被ダメ${Math.round(guardFx.taken*effMul*100)}%減`,'hero','text-emerald-300 text-lg font-bold');
             if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');
           }
           // 運命の輪(スプーキー): 当たったときだけ出目を効かせる(外したら何も起きない。ダメージ倍率はもう掛けてある)
@@ -63228,7 +63312,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
@@ -66655,6 +66739,82 @@ const createAnimationStyle = () => {
     .skfx-p--sword { width:6px; height:30px; margin:-15px 0 0 -3px; border-radius:40% 40% 2px 2px / 20% 20% 2px 2px;
       background:linear-gradient(90deg,#94a3b8,#fff 50%,#cbd5e1); box-shadow:0 0 6px var(--c2); rotate:var(--atk-rot); }
     .skfx-p--sword::after { content:''; position:absolute; left:-4px; bottom:6px; width:14px; height:3px; background:#b45309; border-radius:2px; }
+    /* ==== メロディー・クロミーの専用部品(2026-10-08 ユーザー指示「2体とも専用アクションを力入れて作って」) ====
+       形: クッキー・リボン・パウンドケーキ(メロディー) / 黒音符・ドクロ・らっきょう・恨み帳(クロミー)。
+       本体の動き: parasol 傘を回して舞い上がり、ふわっと降りて傘で叩く(メロディー) / gallop バクに乗って3回跳ねて突っ込む(クロミー)。
+       敵に重ねる絵: rainbow 虹のアーチ(メロディー) / nightmare 黒い渦とドクロの悪夢(クロミー) */
+    .skfx-p--cookie { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+      background:radial-gradient(circle at 30% 35%,#5b3415 0 9%,rgba(0,0,0,0) 10%),radial-gradient(circle at 65% 40%,#5b3415 0 8%,rgba(0,0,0,0) 9%),
+        radial-gradient(circle at 45% 70%,#5b3415 0 8%,rgba(0,0,0,0) 9%),radial-gradient(circle at 40% 35%,#fde68a,#f59e0b 70%,#b45309);
+      box-shadow:0 0 8px rgba(251,191,36,.8); }
+    .skfx-p--ribbon { width:22px; height:12px; margin:-6px 0 0 -11px; background:none; border-radius:0; box-shadow:none; }
+    .skfx-p--ribbon::before, .skfx-p--ribbon::after { content:''; position:absolute; top:0; width:10px; height:12px; background:linear-gradient(135deg,#fbcfe8,#ec4899);
+      box-shadow:0 0 6px #f472b6; }
+    .skfx-p--ribbon::before { left:0; clip-path:polygon(0 0,100% 40%,100% 60%,0 100%); }
+    .skfx-p--ribbon::after { right:0; clip-path:polygon(100% 0,0 40%,0 60%,100% 100%); }
+    .skfx-p--cake { width:22px; height:15px; margin:-7px 0 0 -11px; border-radius:4px 4px 3px 3px;
+      background:linear-gradient(to bottom,#7c3f12 0 22%,#fbbf24 22% 40%,#fde68a 40% 100%); box-shadow:0 0 10px rgba(251,191,36,.9); }
+    .skfx-p--cake::before { content:''; position:absolute; left:4px; top:-4px; width:14px; height:5px; border-radius:50%; background:#fff7ed; box-shadow:0 0 4px #fff; }
+    .skfx-p--bnote { width:14px; height:22px; margin:-11px 0 0 -7px; background:none; border-radius:0; box-shadow:none; filter:drop-shadow(0 0 5px #a855f7); }
+    .skfx-p--bnote::before { content:''; position:absolute; left:0; bottom:0; width:11px; height:8px; border-radius:50%; background:#1e1b2e; transform:rotate(-20deg); box-shadow:inset 0 0 0 1px #c084fc; }
+    .skfx-p--bnote::after { content:''; position:absolute; left:9px; top:0; width:3px; height:18px; background:#1e1b2e; box-shadow:2px 0 0 #c084fc, 3px -1px 0 1px #1e1b2e; }
+    .skfx-p--skull { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50% 50% 40% 40% / 55% 55% 45% 45%;
+      background:radial-gradient(circle at 32% 45%,#1e1b2e 0 13%,rgba(0,0,0,0) 14%),radial-gradient(circle at 68% 45%,#1e1b2e 0 13%,rgba(0,0,0,0) 14%),
+        radial-gradient(circle at 50% 66%,#1e1b2e 0 6%,rgba(0,0,0,0) 7%),#f9a8d4;
+      box-shadow:0 0 8px #ec4899; }
+    .skfx-p--rakkyo { width:13px; height:17px; margin:-8px 0 0 -6px; border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;
+      background:radial-gradient(circle at 40% 60%,#fff 0 15%,#ecfccb 45%,#d9f99d 80%); box-shadow:0 0 6px #bef264; }
+    .skfx-p--rakkyo::before { content:''; position:absolute; left:5px; top:-5px; width:3px; height:7px; border-radius:2px; background:#a3e635; }
+    .skfx-p--book { width:18px; height:22px; margin:-11px 0 0 -9px; border-radius:2px 4px 4px 2px;
+      background:linear-gradient(90deg,#3b0764 0 18%,#581c87 18% 100%); box-shadow:0 0 10px #a855f7; }
+    .skfx-p--book::before { content:''; position:absolute; left:6px; top:6px; width:8px; height:8px; border-radius:50%;
+      background:radial-gradient(circle at 35% 45%,#1e1b2e 0 18%,rgba(0,0,0,0) 20%),radial-gradient(circle at 65% 45%,#1e1b2e 0 18%,rgba(0,0,0,0) 20%),#f9a8d4; }
+    .skfx-body--parasol .thm-atk__monster { animation-name:skfxParasol; transform-origin:50% 60%; }
+    @keyframes skfxParasol {
+      0% { transform:translate3d(0,0,0) rotate(0deg) scale(1); filter:none; }
+      16% { transform:translate3d(0,8px,0) rotate(-6deg) scale(1.08,.9); }
+      34% { transform:translate3d(calc(var(--atk-dx) * .35),calc(var(--atk-dy) * .35 - 90px),0) rotate(14deg) scale(1.02); filter:drop-shadow(0 0 12px var(--c2)); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .8),calc(var(--atk-dy) * .8 - 70px),0) rotate(-12deg) scale(1.04); filter:drop-shadow(0 0 16px var(--c2)); }
+      56% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) rotate(8deg) scale(1.22,.82); filter:drop-shadow(0 0 22px var(--c2)); }
+      70% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 40px),0) rotate(-8deg) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) rotate(0deg) scale(1); }
+    }
+    .skfx-body--gallop .thm-atk__monster { animation-name:skfxGallop; transform-origin:50% 100%; }
+    @keyframes skfxGallop {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      12% { transform:translate3d(calc(var(--atk-dx) * .18),calc(var(--atk-dy) * .18 - 26px),0) scale(.96,1.06); }
+      22% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3),0) scale(1.08,.92); }
+      32% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 30px),0) scale(.96,1.06); }
+      42% { transform:translate3d(calc(var(--atk-dx) * .66),calc(var(--atk-dy) * .66),0) scale(1.1,.9); filter:drop-shadow(0 0 10px var(--c2)); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .85),calc(var(--atk-dy) * .85 - 46px),0) scale(1) rotate(-10deg); filter:drop-shadow(0 0 16px var(--c2)); }
+      60% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.24,.8) rotate(6deg); filter:drop-shadow(0 0 20px var(--c2)); }
+      76% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 24px),0) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-over--rainbow i { left:-80px; top:-90px; width:160px; height:160px; border-radius:50%; mix-blend-mode:screen;
+      background:radial-gradient(circle at 50% 100%,rgba(0,0,0,0) 0 44%,#f87171 45% 50%,#fbbf24 50% 55%,#a3e635 55% 60%,#38bdf8 60% 65%,#c084fc 65% 70%,rgba(0,0,0,0) 71%);
+      clip-path:inset(0 0 50% 0); filter:drop-shadow(0 0 10px #fff); animation:skfxRainbow 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 160ms); }
+    .skfx-over--rainbow i:nth-child(2) { transform:scale(.7); animation-delay:calc(var(--hit-at) - 80ms); top:-70px; }
+    .skfx-over--rainbow i:nth-child(3) { display:none; }
+    @keyframes skfxRainbow {
+      0% { opacity:0; scale:.2; }
+      40% { opacity:1; scale:1.05; }
+      75% { opacity:.9; scale:1; }
+      100% { opacity:0; scale:1.15; }
+    }
+    .skfx-over--nightmare i { left:-60px; top:-60px; width:120px; height:120px; border-radius:50%;
+      background:conic-gradient(from 0deg,rgba(30,10,46,0),#3b0764,#1e1b2e,#a21caf,rgba(30,10,46,0),#4c1d95,#1e1b2e);
+      filter:blur(1px) drop-shadow(0 0 14px #a855f7); animation:skfxNightmare 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 140ms); }
+    .skfx-over--nightmare i:nth-child(2) { left:-34px; top:-34px; width:68px; height:68px; animation-direction:reverse; animation-delay:calc(var(--hit-at) - 80ms);
+      background:radial-gradient(circle at 34% 44%,#1e1b2e 0 12%,rgba(0,0,0,0) 13%),radial-gradient(circle at 66% 44%,#1e1b2e 0 12%,rgba(0,0,0,0) 13%),
+        radial-gradient(circle at 50% 70%,#1e1b2e 0 6%,rgba(0,0,0,0) 7%),radial-gradient(circle,#f9a8d4 0 46%,rgba(0,0,0,0) 48%); filter:drop-shadow(0 0 10px #ec4899); }
+    .skfx-over--nightmare i:nth-child(3) { display:none; }
+    @keyframes skfxNightmare {
+      0% { opacity:0; transform:rotate(0deg) scale(.2); }
+      40% { opacity:1; transform:rotate(220deg) scale(1.05); }
+      75% { opacity:.9; transform:rotate(330deg) scale(1); }
+      100% { opacity:0; transform:rotate(420deg) scale(.4); }
+    }
     /* 敵に重ねる大きな絵(追加)。色は --c1/--c2 */
     .skfx-over--thunder i:first-child { left:-16px; top:-170px; width:32px; height:180px; background:linear-gradient(to bottom,var(--c3),var(--c1) 30%,#fff 60%,var(--c1));
       clip-path:polygon(45% 0,75% 0,55% 30%,85% 30%,35% 64%,58% 64%,20% 100%,38% 66%,12% 66%,44% 32%,22% 32%);
@@ -66850,6 +67010,8 @@ const createAnimationStyle = () => {
     .skfx-body--jab .uex-ghost { animation-name:skfxJab; }
     .skfx-body--gather .uex-ghost { animation-name:skfxGather; }
     .skfx-body--split .uex-ghost { animation-name:skfxSplitBody; }
+    .skfx-body--parasol .uex-ghost { animation-name:skfxParasol; }
+    .skfx-body--gallop .uex-ghost { animation-name:skfxGallop; }
     .thm-atk--stomp .uex-ghost { animation-name:thmStomp; }
     .thm-atk--beam .uex-ghost { animation-name:thmBeamBody; }
     .thm-atk--rocks .uex-ghost { animation-name:thmRocksBody; }

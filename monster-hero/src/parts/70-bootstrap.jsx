@@ -1833,6 +1833,82 @@ const createAnimationStyle = () => {
     .skfx-p--sword { width:6px; height:30px; margin:-15px 0 0 -3px; border-radius:40% 40% 2px 2px / 20% 20% 2px 2px;
       background:linear-gradient(90deg,#94a3b8,#fff 50%,#cbd5e1); box-shadow:0 0 6px var(--c2); rotate:var(--atk-rot); }
     .skfx-p--sword::after { content:''; position:absolute; left:-4px; bottom:6px; width:14px; height:3px; background:#b45309; border-radius:2px; }
+    /* ==== メロディー・クロミーの専用部品(2026-10-08 ユーザー指示「2体とも専用アクションを力入れて作って」) ====
+       形: クッキー・リボン・パウンドケーキ(メロディー) / 黒音符・ドクロ・らっきょう・恨み帳(クロミー)。
+       本体の動き: parasol 傘を回して舞い上がり、ふわっと降りて傘で叩く(メロディー) / gallop バクに乗って3回跳ねて突っ込む(クロミー)。
+       敵に重ねる絵: rainbow 虹のアーチ(メロディー) / nightmare 黒い渦とドクロの悪夢(クロミー) */
+    .skfx-p--cookie { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+      background:radial-gradient(circle at 30% 35%,#5b3415 0 9%,rgba(0,0,0,0) 10%),radial-gradient(circle at 65% 40%,#5b3415 0 8%,rgba(0,0,0,0) 9%),
+        radial-gradient(circle at 45% 70%,#5b3415 0 8%,rgba(0,0,0,0) 9%),radial-gradient(circle at 40% 35%,#fde68a,#f59e0b 70%,#b45309);
+      box-shadow:0 0 8px rgba(251,191,36,.8); }
+    .skfx-p--ribbon { width:22px; height:12px; margin:-6px 0 0 -11px; background:none; border-radius:0; box-shadow:none; }
+    .skfx-p--ribbon::before, .skfx-p--ribbon::after { content:''; position:absolute; top:0; width:10px; height:12px; background:linear-gradient(135deg,#fbcfe8,#ec4899);
+      box-shadow:0 0 6px #f472b6; }
+    .skfx-p--ribbon::before { left:0; clip-path:polygon(0 0,100% 40%,100% 60%,0 100%); }
+    .skfx-p--ribbon::after { right:0; clip-path:polygon(100% 0,0 40%,0 60%,100% 100%); }
+    .skfx-p--cake { width:22px; height:15px; margin:-7px 0 0 -11px; border-radius:4px 4px 3px 3px;
+      background:linear-gradient(to bottom,#7c3f12 0 22%,#fbbf24 22% 40%,#fde68a 40% 100%); box-shadow:0 0 10px rgba(251,191,36,.9); }
+    .skfx-p--cake::before { content:''; position:absolute; left:4px; top:-4px; width:14px; height:5px; border-radius:50%; background:#fff7ed; box-shadow:0 0 4px #fff; }
+    .skfx-p--bnote { width:14px; height:22px; margin:-11px 0 0 -7px; background:none; border-radius:0; box-shadow:none; filter:drop-shadow(0 0 5px #a855f7); }
+    .skfx-p--bnote::before { content:''; position:absolute; left:0; bottom:0; width:11px; height:8px; border-radius:50%; background:#1e1b2e; transform:rotate(-20deg); box-shadow:inset 0 0 0 1px #c084fc; }
+    .skfx-p--bnote::after { content:''; position:absolute; left:9px; top:0; width:3px; height:18px; background:#1e1b2e; box-shadow:2px 0 0 #c084fc, 3px -1px 0 1px #1e1b2e; }
+    .skfx-p--skull { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50% 50% 40% 40% / 55% 55% 45% 45%;
+      background:radial-gradient(circle at 32% 45%,#1e1b2e 0 13%,rgba(0,0,0,0) 14%),radial-gradient(circle at 68% 45%,#1e1b2e 0 13%,rgba(0,0,0,0) 14%),
+        radial-gradient(circle at 50% 66%,#1e1b2e 0 6%,rgba(0,0,0,0) 7%),#f9a8d4;
+      box-shadow:0 0 8px #ec4899; }
+    .skfx-p--rakkyo { width:13px; height:17px; margin:-8px 0 0 -6px; border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;
+      background:radial-gradient(circle at 40% 60%,#fff 0 15%,#ecfccb 45%,#d9f99d 80%); box-shadow:0 0 6px #bef264; }
+    .skfx-p--rakkyo::before { content:''; position:absolute; left:5px; top:-5px; width:3px; height:7px; border-radius:2px; background:#a3e635; }
+    .skfx-p--book { width:18px; height:22px; margin:-11px 0 0 -9px; border-radius:2px 4px 4px 2px;
+      background:linear-gradient(90deg,#3b0764 0 18%,#581c87 18% 100%); box-shadow:0 0 10px #a855f7; }
+    .skfx-p--book::before { content:''; position:absolute; left:6px; top:6px; width:8px; height:8px; border-radius:50%;
+      background:radial-gradient(circle at 35% 45%,#1e1b2e 0 18%,rgba(0,0,0,0) 20%),radial-gradient(circle at 65% 45%,#1e1b2e 0 18%,rgba(0,0,0,0) 20%),#f9a8d4; }
+    .skfx-body--parasol .thm-atk__monster { animation-name:skfxParasol; transform-origin:50% 60%; }
+    @keyframes skfxParasol {
+      0% { transform:translate3d(0,0,0) rotate(0deg) scale(1); filter:none; }
+      16% { transform:translate3d(0,8px,0) rotate(-6deg) scale(1.08,.9); }
+      34% { transform:translate3d(calc(var(--atk-dx) * .35),calc(var(--atk-dy) * .35 - 90px),0) rotate(14deg) scale(1.02); filter:drop-shadow(0 0 12px var(--c2)); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .8),calc(var(--atk-dy) * .8 - 70px),0) rotate(-12deg) scale(1.04); filter:drop-shadow(0 0 16px var(--c2)); }
+      56% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) rotate(8deg) scale(1.22,.82); filter:drop-shadow(0 0 22px var(--c2)); }
+      70% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 40px),0) rotate(-8deg) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) rotate(0deg) scale(1); }
+    }
+    .skfx-body--gallop .thm-atk__monster { animation-name:skfxGallop; transform-origin:50% 100%; }
+    @keyframes skfxGallop {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      12% { transform:translate3d(calc(var(--atk-dx) * .18),calc(var(--atk-dy) * .18 - 26px),0) scale(.96,1.06); }
+      22% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3),0) scale(1.08,.92); }
+      32% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 30px),0) scale(.96,1.06); }
+      42% { transform:translate3d(calc(var(--atk-dx) * .66),calc(var(--atk-dy) * .66),0) scale(1.1,.9); filter:drop-shadow(0 0 10px var(--c2)); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .85),calc(var(--atk-dy) * .85 - 46px),0) scale(1) rotate(-10deg); filter:drop-shadow(0 0 16px var(--c2)); }
+      60% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.24,.8) rotate(6deg); filter:drop-shadow(0 0 20px var(--c2)); }
+      76% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 24px),0) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-over--rainbow i { left:-80px; top:-90px; width:160px; height:160px; border-radius:50%; mix-blend-mode:screen;
+      background:radial-gradient(circle at 50% 100%,rgba(0,0,0,0) 0 44%,#f87171 45% 50%,#fbbf24 50% 55%,#a3e635 55% 60%,#38bdf8 60% 65%,#c084fc 65% 70%,rgba(0,0,0,0) 71%);
+      clip-path:inset(0 0 50% 0); filter:drop-shadow(0 0 10px #fff); animation:skfxRainbow 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 160ms); }
+    .skfx-over--rainbow i:nth-child(2) { transform:scale(.7); animation-delay:calc(var(--hit-at) - 80ms); top:-70px; }
+    .skfx-over--rainbow i:nth-child(3) { display:none; }
+    @keyframes skfxRainbow {
+      0% { opacity:0; scale:.2; }
+      40% { opacity:1; scale:1.05; }
+      75% { opacity:.9; scale:1; }
+      100% { opacity:0; scale:1.15; }
+    }
+    .skfx-over--nightmare i { left:-60px; top:-60px; width:120px; height:120px; border-radius:50%;
+      background:conic-gradient(from 0deg,rgba(30,10,46,0),#3b0764,#1e1b2e,#a21caf,rgba(30,10,46,0),#4c1d95,#1e1b2e);
+      filter:blur(1px) drop-shadow(0 0 14px #a855f7); animation:skfxNightmare 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 140ms); }
+    .skfx-over--nightmare i:nth-child(2) { left:-34px; top:-34px; width:68px; height:68px; animation-direction:reverse; animation-delay:calc(var(--hit-at) - 80ms);
+      background:radial-gradient(circle at 34% 44%,#1e1b2e 0 12%,rgba(0,0,0,0) 13%),radial-gradient(circle at 66% 44%,#1e1b2e 0 12%,rgba(0,0,0,0) 13%),
+        radial-gradient(circle at 50% 70%,#1e1b2e 0 6%,rgba(0,0,0,0) 7%),radial-gradient(circle,#f9a8d4 0 46%,rgba(0,0,0,0) 48%); filter:drop-shadow(0 0 10px #ec4899); }
+    .skfx-over--nightmare i:nth-child(3) { display:none; }
+    @keyframes skfxNightmare {
+      0% { opacity:0; transform:rotate(0deg) scale(.2); }
+      40% { opacity:1; transform:rotate(220deg) scale(1.05); }
+      75% { opacity:.9; transform:rotate(330deg) scale(1); }
+      100% { opacity:0; transform:rotate(420deg) scale(.4); }
+    }
     /* 敵に重ねる大きな絵(追加)。色は --c1/--c2 */
     .skfx-over--thunder i:first-child { left:-16px; top:-170px; width:32px; height:180px; background:linear-gradient(to bottom,var(--c3),var(--c1) 30%,#fff 60%,var(--c1));
       clip-path:polygon(45% 0,75% 0,55% 30%,85% 30%,35% 64%,58% 64%,20% 100%,38% 66%,12% 66%,44% 32%,22% 32%);
@@ -2028,6 +2104,8 @@ const createAnimationStyle = () => {
     .skfx-body--jab .uex-ghost { animation-name:skfxJab; }
     .skfx-body--gather .uex-ghost { animation-name:skfxGather; }
     .skfx-body--split .uex-ghost { animation-name:skfxSplitBody; }
+    .skfx-body--parasol .uex-ghost { animation-name:skfxParasol; }
+    .skfx-body--gallop .uex-ghost { animation-name:skfxGallop; }
     .thm-atk--stomp .uex-ghost { animation-name:thmStomp; }
     .thm-atk--beam .uex-ghost { animation-name:thmBeamBody; }
     .thm-atk--rocks .uex-ghost { animation-name:thmRocksBody; }

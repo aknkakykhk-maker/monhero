@@ -336,13 +336,24 @@ const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Numbe
   && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
 // 固有技「大樹の加護」: 使ったターンから2ターン、被ダメージ30%軽減。
 //   使ったターンのぶんは予告(71-screen-battle)と実際(handleEnemyTurn)の両方がこの値を掛ける
-// ★メロディー・クロミー(2026-10-08)も固有技の効果は同じで、名前だけ違う(勇者特性は生命の源ではない)。
-//   だから「持っている子」は生命の源とは別の一覧で持つ
+// ★メロディー・クロミー(2026-10-08)も「使ったターンから2ターン被ダメ軽減＋ガッツ回復」の形を持ち、数字と足すものだけ違う
+//   (同じ日のユーザー指示「固有技効果も専用にして少し変えたい」)。勇者特性は生命の源ではないので、生命の源とは別の表で持つ。
+//   taken … 被ダメの軽減率 / guts・hp … 最大ガッツ・ライフの何割を回復するか / cookie … 使った子がメロディーならクッキーをさらに足す数 /
+//   atkStack … 使った子の与ダメを、使うたびにこの割合ずつ上げる(バトル中ずっと・重なる)
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
-const LIFE_TREE_GUARD_NAMES = Object.freeze({ Yggdrasil:'大樹の加護', MelWhip:'大樹の加護', Melody:'ピンク音符の加護', Kuromy:'メロディ・ボゥの旋律' });
-const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_NAMES, card.monId);
+const LIFE_TREE_GUARD_EFFECTS = Object.freeze({
+  Yggdrasil: Object.freeze({ name:'大樹の加護', taken:0.3, guts:0.2, hp:0, cookie:0, atkStack:0 }),
+  MelWhip:   Object.freeze({ name:'大樹の加護', taken:0.3, guts:0.2, hp:0, cookie:0, atkStack:0 }),
+  Melody:    Object.freeze({ name:'ピンク音符の加護', taken:0.25, guts:0.2, hp:0.15, cookie:1, atkStack:0 }),
+  Kuromy:    Object.freeze({ name:'メロディ・ボゥの旋律', taken:0.15, guts:0.2, hp:0, cookie:0, atkStack:0.05 }),
+});
+const LIFE_TREE_GUARD_NAMES = Object.freeze(Object.fromEntries(Object.entries(LIFE_TREE_GUARD_EFFECTS).map(([id, e]) => [id, e.name])));
+const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_EFFECTS, card.monId);
 const lifeTreeGuardNameOf = (monId) => LIFE_TREE_GUARD_NAMES[monId] || '大樹の加護';
-const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+const lifeTreeGuardEffectOf = (monId) => LIFE_TREE_GUARD_EFFECTS[monId] || LIFE_TREE_GUARD_EFFECTS.Yggdrasil;
+const lifeTreeGuardMult = (effMul = 1, monId = 'Yggdrasil') => 1 - lifeTreeGuardEffectOf(monId).taken * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+// メロディ・ボゥの旋律(クロミー)で積んだ「与ダメ+5%」の数から、その子の与ダメ倍率を出す
+const bowAtkMultOf = (n) => 1 + LIFE_TREE_GUARD_EFFECTS.Kuromy.atkStack * Math.max(0, Math.floor(Number(n) || 0));
 // ==== 勇者特性「トリックスタート」(ゴースト・スプーキー。2026-10-05 ユーザーと決めた値) ====
 // WAVEの1ターン目と、そこから3ターンごと(1・4・7・10…ターン目)に抽選する。
 // 「ちから+20%」「丈夫さ+20%」「毎ターン、最大ライフの5%回復」を**それぞれ50%**で当て、当たったぶんを積む。
