@@ -67,8 +67,10 @@ async function enterTactics(s, { mode }) {
       const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
       const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
       const mons = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
-      const wantAt = (window.__pbWant || []).findIndex((name) => mons.some((x) => x.textContent.includes(name)));
-      if (wantAt >= 0) { const name = window.__pbWant.splice(wantAt, 1)[0]; mons.find((x) => x.textContent.includes(name)).click(); return 'mon'; }
+      // 勇者えらびは顔アイコンの並びで、タイルの文字は名前だけ(「前回」が付くことがある)。一覧のカードは名前を含む
+      const wantBtnOf = (name) => live.find((x) => x.textContent.trim().replace(/^前回/, '') === name) || mons.find((x) => x.textContent.includes(name));
+      const wantAt = (window.__pbWant || []).findIndex((name) => !!wantBtnOf(name));
+      if (wantAt >= 0) { const name = window.__pbWant.splice(wantAt, 1)[0]; wantBtnOf(name).click(); return 'mon'; }
       if (mons.length) { const m = mons[window.__pbPick % mons.length]; window.__pbPick += 1; m.click(); return 'mon'; }
       const changes = live.filter((x) => x.textContent.trim() === '変更');
       if (changes.length && window.__pbChange < changes.length) { changes[window.__pbChange].click(); window.__pbChange += 1; return 'change'; }
