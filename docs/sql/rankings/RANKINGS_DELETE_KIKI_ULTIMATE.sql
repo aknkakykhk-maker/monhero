@@ -73,6 +73,9 @@ create table if not exists public.rankings_manual_delete_backup (
   row_data jsonb not null,
   primary key (ranking_id, deleted_at)
 );
+-- 控えは公開用の鍵から読めない・書けないようにする(ポリシーは付けない。管理画面からは見える)。
+-- 2026-10-08 に本番へ流した(Supabase の注意「RLS が無効」で見つかった)
+alter table public.rankings_manual_delete_backup enable row level security;
 
 insert into public.rankings_manual_delete_backup (reason, ranking_id, row_data)
 select 'delete kiki ExtremeULTIMATE highest score (user request)', id::text, to_jsonb(t)
