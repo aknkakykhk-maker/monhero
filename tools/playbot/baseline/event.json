@@ -1,7 +1,7 @@
 {
  "format": "roles",
- "stamp": "20261007-1739",
- "seed": 390629,
+ "stamp": "20261009-0834",
+ "seed": 463558,
  "roles": [
   {
    "id": "event",
@@ -10,12 +10,5 @@
   }
  ],
  "numbers": {},
- "issues": [
-  {
-   "roleId": "event",
-   "kind": "反応なし",
-   "level": "改善のヒント",
-   "detail": "タクティクスで実行が押せない(手札 unique× guard guard atk range_atk)"
-  }
- ]
+ "issues": []
 }
