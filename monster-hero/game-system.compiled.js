@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 056c10bea2beaa34
+// source-sha256: fb0c23f8e77c0bb3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 15:18";
+const BUILD_DATE = "2026-10-08 16:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16601,7 +16601,14 @@ const hasLifeSourceTrait = id => LIFE_SOURCE_MONSTER_IDS.includes(id);
 const lifeSourceDamageMult = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= 1 && Number(turn) <= LIFE_SOURCE_GUARD_TURNS ? LIFE_SOURCE_GUARD_MULT : 1;
 const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= LIFE_SOURCE_GUTS_FROM_TURN && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
-const isLifeTreeGuardCard = card => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
+const LIFE_TREE_GUARD_NAMES = Object.freeze({
+  Yggdrasil: '大樹の加護',
+  MelWhip: '大樹の加護',
+  Melody: 'ピンク音符の加護',
+  Kuromy: 'メロディ・ボゥの旋律'
+});
+const isLifeTreeGuardCard = card => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_NAMES, card.monId);
+const lifeTreeGuardNameOf = monId => LIFE_TREE_GUARD_NAMES[monId] || '大樹の加護';
 const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
 const TRICK_START_MONSTER_IDS = Object.freeze(['Ghost', 'Spooky']);
 const TRICK_START_EVERY = 3;
@@ -16646,6 +16653,89 @@ const trickStartGainText = gained => {
   if (gained?.def) parts.push(`丈夫さ+${Math.round(TRICK_START_DEF_RATE * 100)}%`);
   if (gained?.regen) parts.push(`毎ターン回復+${Math.round(TRICK_START_REGEN_RATE * 100)}%`);
   return parts.join('・');
+};
+const SWEET_STACK_MAX = 10;
+const SWEET_STACK_TRAITS = Object.freeze({
+  Melody: Object.freeze({
+    kind: 'cookie',
+    icon: '🍪',
+    label: 'クッキー',
+    trait: 'メロディの手作りクッキー'
+  }),
+  Kuromy: Object.freeze({
+    kind: 'note',
+    icon: '🎵',
+    label: '黒音符',
+    trait: 'クロミノート'
+  })
+});
+const COOKIE_HP_REGEN_FROM = 2,
+  COOKIE_HP_REGEN = 0.05;
+const COOKIE_GUTS_REGEN_FROM = 4,
+  COOKIE_GUTS_REGEN = 0.05;
+const COOKIE_TAKEN_FROM = 7,
+  COOKIE_TAKEN_CUT = 0.15;
+const COOKIE_DMG_FROM = 10,
+  COOKIE_DMG_UP = 0.15;
+const BLACK_NOTE_DMG_PER = 0.03;
+const BLACK_NOTE_CRIT_FROM = 5,
+  BLACK_NOTE_CRIT_ADD = 0.1;
+const BLACK_NOTE_COMBO_FROM = 10,
+  BLACK_NOTE_COMBO_RATE = 0.15;
+const sweetStackTraitOf = id => id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null;
+const sweetStackCountOf = n => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
+  const trait = sweetStackTraitOf(ownerId);
+  if (!trait || !card || ownerId !== actorId) return 0;
+  if (trait.kind === 'cookie') return 1;
+  if (trait.kind === 'note') return hit ? card.type === 'unique' ? 2 : 1 : 0;
+  return 0;
+};
+const addSweetStack = (n, gain) => sweetStackCountOf(sweetStackCountOf(n) + Math.max(0, Math.floor(Number(gain) || 0)));
+const cookieEffectOf = n => {
+  const c = sweetStackCountOf(n);
+  return {
+    hpRegen: c >= COOKIE_HP_REGEN_FROM ? COOKIE_HP_REGEN : 0,
+    gutsRegen: c >= COOKIE_GUTS_REGEN_FROM ? COOKIE_GUTS_REGEN : 0,
+    takenMult: c >= COOKIE_TAKEN_FROM ? 1 - COOKIE_TAKEN_CUT : 1,
+    dmgMult: c >= COOKIE_DMG_FROM ? 1 + COOKIE_DMG_UP : 1
+  };
+};
+const blackNoteEffectOf = n => {
+  const c = sweetStackCountOf(n);
+  return {
+    dmgMult: 1 + BLACK_NOTE_DMG_PER * c,
+    critAdd: c >= BLACK_NOTE_CRIT_FROM ? BLACK_NOTE_CRIT_ADD : 0,
+    combo: c >= BLACK_NOTE_COMBO_FROM ? {
+      count: 1,
+      rate: BLACK_NOTE_COMBO_RATE,
+      label: '黒音符の連撃'
+    } : null
+  };
+};
+const withBlackNoteCombo = (exCombos, combo) => {
+  if (!combo) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
+};
+const sweetStackEffectText = (id, n) => {
+  const trait = sweetStackTraitOf(id);
+  if (!trait) return '';
+  const pct = v => Math.round(v * 100);
+  if (trait.kind === 'cookie') {
+    const e = cookieEffectOf(n),
+      parts = [];
+    if (e.hpRegen > 0) parts.push(`毎ターン ライフ回復+${pct(e.hpRegen)}%`);
+    if (e.gutsRegen > 0) parts.push(`ガッツ回復+${pct(e.gutsRegen)}%`);
+    if (e.takenMult < 1) parts.push(`被ダメージ-${pct(1 - e.takenMult)}%`);
+    if (e.dmgMult > 1) parts.push(`与ダメージ+${pct(e.dmgMult - 1)}%`);
+    return parts.length ? `味方全体: ${parts.join('・')}` : `${COOKIE_HP_REGEN_FROM}個から効きはじめる`;
+  }
+  const e = blackNoteEffectOf(n),
+    parts = [];
+  if (e.dmgMult > 1) parts.push(`与ダメージ+${pct(e.dmgMult - 1)}%`);
+  if (e.critAdd > 0) parts.push(`会心率+${pct(e.critAdd)}%`);
+  if (e.combo) parts.push(`${pct(e.combo.rate)}%の連撃`);
+  return parts.length ? `クロミーの攻撃: ${parts.join('・')}` : '攻撃を当てると貯まる';
 };
 const FATE_COIN_MONSTER_ID = 'Ghost';
 const FATE_WHEEL_MONSTER_ID = 'Spooky';
@@ -17569,7 +17659,7 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
   Plant: 'vine',
   Mitarashi: 'fire'
 });
-const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
 const SKILL_ATTACK_THEMES = Object.freeze({
   '頭突き': 'ygHeadbutt',
   '空中脳天撃': 'ygAirDive',
@@ -17581,6 +17671,24 @@ const SKILL_ATTACK_THEMES = Object.freeze({
   '苺大噴': 'ygStrawberry',
   'ケーキ入刀': 'ygCakeCut',
   'シャドウレギオン': 'ygShadow',
+  'ぞうさん頭突き': 'ygHeadbutt',
+  'ピアノパラソル脳天撃': 'ygAirDive',
+  'メロディタクトライト': 'ygGreenLight',
+  'ぞうさんぴろぴろ鼻': 'ygTongue',
+  'マリーランド大玉転がし': 'ygRoll',
+  'ムーンサルトメロディー': 'ygMoonDrop',
+  'メロディキャンディボム': 'ygCandy',
+  'メロディ苺クッキー': 'ygStrawberry',
+  'ドリームパワー': 'ygShadow',
+  'バク頭突き': 'ygHeadbutt',
+  'バク空中落下プレス': 'ygAirDive',
+  'ブラックノートライト': 'ygGreenLight',
+  'バクパタパタ耳': 'ygTongue',
+  '巨大雪だるま転がし': 'ygRoll',
+  "KUROMI'S5アタック": 'ygMoonDrop',
+  'ナイトメアらっきょうボム': 'ygCandy',
+  'バコ・ベリースプラッシュ': 'ygStrawberry',
+  'ダークパワー': 'ygShadow',
   'スターボム': 'ygStarBomb',
   'ワンダーブレイズ': 'ygWonderBlaze',
   'メニーウィング': 'ygManyWing',
@@ -21141,6 +21249,16 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
     c1: '#fed7aa',
     c2: '#9333ea',
     motif: 'rise'
+  },
+  cookieBox: {
+    c1: '#fce7f3',
+    c2: '#ec4899',
+    motif: 'rise'
+  },
+  nightmareKey: {
+    c1: '#f5d0fe',
+    c2: '#3b0764',
+    motif: 'blade'
   },
   default: {
     c1: '#f5d0fe',
@@ -35689,12 +35807,57 @@ const TACTICS_EX_SKILLS = Object.freeze({
     partyHealRate: 0.3,
     partyStatRate: 0.1,
     effect: 'trickConfuse'
+  }),
+  Melody: Object.freeze({
+    id: 'melody_melody_box',
+    name: 'おねがい♪メロディボックス',
+    useNote: 'クッキーを全部配る・全員回復＋3ターン与ダメ↑被ダメ↓',
+    desc: 'クッキーを全部使って、味方全員へ振る舞う（1個から使える）。\n・使った瞬間に、味方全員のライフが上限の「個数×5%」、ガッツが「個数×4%」回復\n・3ターンのあいだ、味方全員の与ダメージ+「個数×2%」・被ダメージ−「個数×2%」\n・10個で使うと、効果が5ターンに伸びる\n・使うとクッキーは0個に戻る',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    stackSpend: Object.freeze({
+      full: 10,
+      heal: 0.05,
+      guts: 0.04,
+      dmg: 0.02,
+      taken: 0.02,
+      fullTurns: 5
+    }),
+    conditions: Object.freeze(['hasStack']),
+    effect: 'cookieBox'
+  }),
+  Kuromy: Object.freeze({
+    id: 'kuromy_melody_key',
+    name: '悪夢全開！メロディ・キー',
+    useNote: '黒音符を全部使う・3ターン クロミーの与ダメ・会心率・敵の被ダメ↑',
+    desc: '黒音符を全部使って、悪夢魔法を全開にする（1個から使える）。\n・3ターンのあいだ、クロミーの与ダメージ+「個数×4%」・会心率+「個数×3%」\n・3ターンのあいだ、敵の被ダメージ+「個数×2%」\n・10個で使うと、さらにクロミーの攻撃へ与ダメージ30%の連撃が2回付く\n・使うと黒音符は0個に戻る',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    stackSpend: Object.freeze({
+      full: 10,
+      dmg: 0.04,
+      crit: 0.03,
+      enemyTaken: 0.02,
+      fullCombo: Object.freeze({
+        count: 2,
+        rate: 0.3
+      })
+    }),
+    conditions: Object.freeze(['hasStack']),
+    effect: 'nightmareKey'
   })
 });
 const TACTICS_EX_CONDITIONS = Object.freeze({
-  notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
+  notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null,
+  hasStack: ctx => ctx && Number(ctx.stacks) > 0 ? null : `${ctx && ctx.stackLabel || 'スタック'}が1つも無いと使えない`
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -35839,6 +36002,24 @@ const normalizeTacticsExDef = raw => {
         } : null
       };
     })() : null,
+    stackSpend: raw.stackSpend && typeof raw.stackSpend === 'object' && tacticsSafeInt(raw.stackSpend.full, 0) > 0 ? (() => {
+      const n = v => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
+      const c = raw.stackSpend.fullCombo;
+      return {
+        full: Math.min(99, tacticsSafeInt(raw.stackSpend.full, 0)),
+        heal: Math.min(0.2, n(raw.stackSpend.heal)),
+        guts: Math.min(0.2, n(raw.stackSpend.guts)),
+        dmg: n(raw.stackSpend.dmg),
+        taken: Math.min(0.09, n(raw.stackSpend.taken)),
+        crit: n(raw.stackSpend.crit),
+        enemyTaken: n(raw.stackSpend.enemyTaken),
+        fullTurns: Math.min(9, tacticsSafeInt(raw.stackSpend.fullTurns, 0)),
+        fullCombo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? {
+          count: tacticsSafeInt(c.count, 0),
+          rate: Number(c.rate)
+        } : null
+      };
+    })() : null,
     lifeCostRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.lifeCostRate)) ? Number(raw.lifeCostRate) : 0)),
     dmgRate: Math.max(0, Number.isFinite(Number(raw.dmgRate)) ? Number(raw.dmgRate) : 0),
     selfTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.selfTakenRate)) ? Number(raw.selfTakenRate) : 0)),
@@ -35961,7 +36142,9 @@ const checkTacticsExUse = ({
   now,
   busy = false,
   hp = null,
-  maxHp = null
+  maxHp = null,
+  stacks = null,
+  stackLabel = null
 } = {}) => {
   if (!def) return {
     ok: false,
@@ -36000,7 +36183,9 @@ const checkTacticsExUse = ({
   const active = isTacticsExEffectActive(safe, slot, monId, now);
   for (const key of def.conditions || []) {
     const why = TACTICS_EX_CONDITIONS[key] ? TACTICS_EX_CONDITIONS[key]({
-      active
+      active,
+      stacks,
+      stackLabel
     }) : null;
     if (why) return {
       ok: false,
@@ -36011,6 +36196,11 @@ const checkTacticsExUse = ({
     ok: true,
     reason: null
   };
+};
+const tacticsExSpentOf = snapshot => Math.min(99, Math.max(0, tacticsSafeInt(snapshot && snapshot.spent, 0)));
+const tacticsExStackSpendTurns = (def, snapshot) => {
+  const cfg = def && def.stackSpend;
+  return cfg && cfg.fullTurns > 0 && tacticsExSpentOf(snapshot) >= cfg.full ? cfg.fullTurns : def.turns;
 };
 const applyTacticsExUse = (state, {
   def,
@@ -36051,7 +36241,7 @@ const applyTacticsExUse = (state, {
         turn: stamp.turn,
         on: def.duration === 'style' ? style !== def.defaultStyle : true,
         style,
-        turns: def.duration === 'turns' ? def.turns : 0,
+        turns: def.duration === 'turns' ? tacticsExStackSpendTurns(def, snapshot) : 0,
         statRate: def.statRate || 0,
         regenRate: def.regenRate || 0,
         rates: def.rates ? {
@@ -36117,6 +36307,10 @@ const applyTacticsExUse = (state, {
           ...def.counter
         } : null,
         counter: def.counter ? def.counter.start : 0,
+        stackSpendCfg: def.stackSpend ? {
+          ...def.stackSpend
+        } : null,
+        spent: def.stackSpend ? tacticsExSpentOf(snapshot) : 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -36241,6 +36435,10 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const t = tacticsExThunderOf(state, units, slot, now);
     return t && t.combo ? t.combo : null;
   }
+  if (kind === 'nightmareKey') {
+    const k = tacticsExNightmareOf(state, units, slot, now);
+    return k && k.combo ? k.combo : null;
+  }
   if (kind !== 'comboBurst' && kind !== 'multiBuff' && kind !== 'avoidCharge') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0),
@@ -36323,6 +36521,17 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
       critRate: c.critRate,
       critAdd: c.critAdd,
       critDmg: c.critDmg,
+      distMult: 0
+    } : null;
+  }
+  if (kind === 'nightmareKey') {
+    const k = tacticsExNightmareOf(state, units, slot, now);
+    return k ? {
+      dmg: k.dmgMult,
+      taken: 1,
+      critRate: 1,
+      critAdd: k.critAdd,
+      critDmg: 1,
       distMult: 0
     } : null;
   }
@@ -36887,6 +37096,65 @@ const addTacticsExCounter = (state, units, now, slot, n) => {
 const tacticsExCounterMult = (state, units, slot, now) => {
   const c = tacticsExCounterOf(state, units, slot, now);
   return c && c.counter > 0 && c.mult > 0 ? c.mult * c.counter : 1;
+};
+const tacticsExCookieBoxOf = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const slot = Number(key),
+      unit = Array.isArray(units) ? units[slot] : null,
+      e = effects[key];
+    if (!unit || !e || !e.stackSpendCfg || tacticsExActiveEffect(state, slot, unit.id, now) !== 'cookieBox') return acc;
+    const spent = tacticsSafeInt(e.spent, 0),
+      cfg = e.stackSpendCfg;
+    return {
+      dmgMult: acc.dmgMult * (1 + (Number(cfg.dmg) || 0) * spent),
+      takenMult: acc.takenMult * (1 - Math.min(0.9, (Number(cfg.taken) || 0) * spent))
+    };
+  }, {
+    dmgMult: 1,
+    takenMult: 1
+  });
+};
+const tacticsExNightmareOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'nightmareKey') return null;
+  const e = normalizeTacticsExState(state).effects[slot],
+    cfg = e.stackSpendCfg;
+  if (!cfg) return null;
+  const spent = tacticsSafeInt(e.spent, 0);
+  return {
+    spent,
+    dmgMult: 1 + (Number(cfg.dmg) || 0) * spent,
+    critAdd: (Number(cfg.crit) || 0) * spent,
+    enemyTaken: (Number(cfg.enemyTaken) || 0) * spent,
+    combo: spent >= cfg.full && cfg.fullCombo ? {
+      count: cfg.fullCombo.count,
+      rate: cfg.fullCombo.rate,
+      label: '悪夢全開'
+    } : null,
+    turnsLeft: Math.max(0, tacticsSafeInt(e.turn, 0) + tacticsSafeInt(e.turns, 0) - tacticsSafeInt(now && now.turn, 0))
+  };
+};
+const tacticsExNightmareEnemyOf = (state, units, now) => (Array.isArray(units) ? units : []).reduce((acc, unit, slot) => {
+  const k = unit ? tacticsExNightmareOf(state, units, slot, now) : null;
+  return k && k.enemyTaken > acc.enemyTaken ? {
+    enemyTaken: k.enemyTaken,
+    turnsLeft: k.turnsLeft
+  } : acc;
+}, {
+  enemyTaken: 0,
+  turnsLeft: 0
+});
+const tacticsExStackSpendNote = (def, spent) => {
+  const cfg = def && def.stackSpend;
+  if (!cfg) return '';
+  const pct = v => Math.round(v * 100);
+  const full = spent >= cfg.full;
+  if (def.effect === 'cookieBox') {
+    const turns = full && cfg.fullTurns > 0 ? cfg.fullTurns : def.turns;
+    return `クッキー${spent}個を配った・全員ライフ+${pct(cfg.heal * spent)}% ガッツ+${pct(cfg.guts * spent)}%・${turns}ターン与ダメ+${pct(cfg.dmg * spent)}% 被ダメ−${pct(cfg.taken * spent)}%`;
+  }
+  return `黒音符${spent}個で全開・${def.turns}ターン与ダメ+${pct(cfg.dmg * spent)}% 会心率+${pct(cfg.crit * spent)}% 敵の被ダメ+${pct(cfg.enemyTaken * spent)}%` + (full && cfg.fullCombo ? `・連撃${pct(cfg.fullCombo.rate)}%×${cfg.fullCombo.count}` : '');
 };
 const tacticsExPsychoLockOf = (state, now) => {
   const effects = normalizeTacticsExState(state).effects;
@@ -57732,6 +58000,7 @@ function BattleScreen({
   dismissTacticsExIntro,
   tacticsPandoraForms,
   trickStartView,
+  sweetStackView,
   fateWheelView,
   enemyConfuseTurns,
   luckBanners,
@@ -59264,6 +59533,19 @@ function BattleScreen({
         size: 9
       }), `${who}トリック`, parts.join(' '), 'text-violet-300 border-violet-400/50', {
         short: parts.join(' ')
+      });
+    });
+    Object.entries(sweetStackView || {}).forEach(([key, n]) => {
+      const ownerId = key === 'party' ? mainHero?.id : slots[Number(key)]?.id;
+      const trait = sweetStackTraitOf(ownerId),
+        count = sweetStackCountOf(n);
+      if (!trait || count <= 0) return;
+      const who = key === 'party' ? '' : slots[Number(key)]?.name || '';
+      chip(`sweet${key}`, React.createElement(Sparkles, {
+        size: 9
+      }), `${who}${trait.label}`, `${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId, count)}`, trait.kind === 'cookie' ? 'text-pink-300 border-pink-400/50' : 'text-fuchsia-300 border-fuchsia-400/50', {
+        short: `${trait.icon}${count}/${SWEET_STACK_MAX}`,
+        pulse: count >= SWEET_STACK_MAX
       });
     });
     {
@@ -71409,6 +71691,7 @@ function MonsterHeroGame() {
     tacticsJoinDistCatchUpRef.current = 1;
     commitTacticsExState(createTacticsExState());
     setTacticsHeroStyle(null);
+    resetSweetStack();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -71505,6 +71788,53 @@ function MonsterHeroGame() {
   const trickStartStacksAt = slotIdx => {
     const key = trickStartKeyOf(slotIdx);
     return key ? trickStartRef.current.bySlot[key] || null : null;
+  };
+  const sweetStackRef = useRef({
+    bySlot: {}
+  });
+  const [sweetStackView, setSweetStackView] = useState({});
+  const resetSweetStack = () => {
+    sweetStackRef.current = {
+      bySlot: {}
+    };
+    setSweetStackView({});
+  };
+  const sweetOwnerAt = slotIdx => isTacticsMode(runMode) ? Number.isInteger(slotIdx) ? tacticsUnitsRef.current[slotIdx]?.id || null : null : mainHero?.id || null;
+  const sweetStackAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    return key ? sweetStackCountOf(sweetStackRef.current.bySlot[key]) : 0;
+  };
+  const writeSweetStackAt = (slotIdx, n) => {
+    const key = trickStartKeyOf(slotIdx);
+    if (!key) return;
+    const next = {
+      ...sweetStackRef.current.bySlot,
+      [key]: sweetStackCountOf(n)
+    };
+    sweetStackRef.current = {
+      bySlot: next
+    };
+    setSweetStackView(next);
+  };
+  const gainSweetStack = (slotIdx, actorId, card, hit = false) => {
+    const owner = sweetOwnerAt(slotIdx);
+    const gain = sweetStackGainOf(owner, actorId, card, hit);
+    if (gain <= 0) return;
+    const before = sweetStackAt(slotIdx),
+      after = addSweetStack(before, gain);
+    if (after === before) return;
+    writeSweetStackAt(slotIdx, after);
+    const trait = sweetStackTraitOf(owner);
+    addPopup(`${trait.icon} ${trait.label} ${after}/${SWEET_STACK_MAX}`, 'hero', 'text-pink-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+  };
+  const cookieEffectNow = () => {
+    if (!isTacticsMode(runMode)) return cookieEffectOf(sweetStackTraitOf(mainHero?.id)?.kind === 'cookie' ? sweetStackRef.current.bySlot.party : 0);
+    const units = tacticsUnitsRef.current;
+    return cookieEffectOf(tacticsAliveSlots(units).filter(i => sweetStackTraitOf(units[i]?.id)?.kind === 'cookie').reduce((most, i) => Math.max(most, sweetStackCountOf(sweetStackRef.current.bySlot[String(i)])), 0));
+  };
+  const blackNoteEffectAt = (slotIdx, actorId) => {
+    const owner = sweetOwnerAt(slotIdx);
+    return blackNoteEffectOf(sweetStackTraitOf(owner)?.kind === 'note' && actorId === owner ? sweetStackAt(slotIdx) : 0);
   };
   const fateWheelRef = useRef({
     atkDown: 0,
@@ -81783,6 +82113,11 @@ function MonsterHeroGame() {
     if (aquaNow && aquaNow.active && aquaNow.route === 'prison' && aquaNow.stacks > 0) add('aquaPrison', '🌊', '水牢', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵の与ダメージ-${Math.round((1 - aquaNow.enemyDmgMult) * 100)}%(水牢1つごとに-10%)`);
     if (aquaNow && aquaNow.active && aquaNow.route === 'freeze' && aquaNow.stacks > 0) add('aquaFreeze', '🧊', '氷結', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-cyan-200 border-cyan-400/60', `敵の被ダメージ+${aquaNow.stacks * 10}%(氷結1つごとに+10%)`);
     if (aquaNow && aquaNow.active && aquaNow.finale) add('aquaFinale', '🌊', 'アクアフィナーレ', '被ダメ大幅アップ', 'text-sky-100 border-sky-300/70', '敵の被ダメージが大きく上がっている');
+    const nightmare = isTacticsMode(runMode) ? tacticsExNightmareEnemyOf(tacticsExState, tacticsUnits, {
+      wave,
+      turn: turnCount
+    }) : null;
+    if (nightmare && nightmare.enemyTaken > 0) add('nightmare', '🗝️', '悪夢全開', `残り${nightmare.turnsLeft}T`, 'text-fuchsia-200 border-fuchsia-400/60', `敵の受けるダメージが${Math.round(nightmare.enemyTaken * 100)}%上がる`, `${nightmare.turnsLeft}T`);
     if (psycho && psycho.active) add('psycho', '🎯', 'サイコロックオン', `残り${psycho.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵は間合いを動けず、与ダメージ-${Math.round((1 - psycho.enemyDmgMult) * 100)}%・被ダメージ+${Math.round(psycho.enemyTakenBonus * 100)}%`, psycho.turnsLeft > 0 ? `${psycho.turnsLeft}T` : '');
     if (fateWheelView?.atkDown > 0) add('fateAtkDown', '🎡', '運命の輪(敵の与ダメ)', `残り${fateWheelView.atkDown}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の与えるダメージが30%下がる', `${fateWheelView.atkDown}T`);
     if (fateWheelView?.takenUp > 0) add('fateTakenUp', '🎡', '運命の輪(敵の被ダメ)', `残り${fateWheelView.takenUp}T`, 'text-fuchsia-200 border-fuchsia-400/60', '敵の受けるダメージが30%上がる', `${fateWheelView.takenUp}T`);
@@ -81832,7 +82167,7 @@ function MonsterHeroGame() {
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * tacticsExPsychoLockNow().enemyDmgMult * soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount, fateWheelView]);
   const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1))) : 0, [turnBuffs, runMode]);
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult)) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -82033,11 +82368,16 @@ function MonsterHeroGame() {
     };
     const p = tacticsExPsychoLockOf(tacticsExStateRef.current, live.now);
     const aq = tacticsExAquaOf(tacticsExStateRef.current, tacticsUnitsRef.current, live.now);
-    return aq.active ? {
+    const withAqua = aq.active ? {
       ...p,
       enemyDmgMult: p.enemyDmgMult * aq.enemyDmgMult,
       enemyTakenBonus: p.enemyTakenBonus + aq.enemyTakenBonus
     } : p;
+    const nm = tacticsExNightmareEnemyOf(tacticsExStateRef.current, tacticsUnitsRef.current, live.now);
+    return nm.enemyTaken > 0 ? {
+      ...withAqua,
+      enemyTakenBonus: withAqua.enemyTakenBonus + nm.enemyTaken
+    } : withAqua;
   };
   const clearTacticsAllyDebuffs = () => {
     ['gutsCostMult', 'pandoraLockTurns'].forEach(key => {
@@ -82159,10 +82499,11 @@ function MonsterHeroGame() {
       units = tacticsUnitsRef.current;
     const volt = tacticsExVoltageOf(st, units, live.now);
     const pres = tacticsExPresentOf(st, units, live.now);
+    const box = tacticsExCookieBoxOf(st, units, live.now);
     return {
-      dmg: (volt ? volt.dmgMult : 1) * pres.dmg,
+      dmg: (volt ? volt.dmgMult : 1) * pres.dmg * box.dmgMult,
       critRate: pres.critRate,
-      taken: pres.taken,
+      taken: pres.taken * box.takenMult,
       heal: volt ? volt.healMult : 1,
       gutsAdd: volt ? volt.gutsAdd : 0,
       hpAdd: volt ? volt.hpAdd : 0,
@@ -82617,7 +82958,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -82651,7 +82992,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx),
+      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -83390,6 +83731,30 @@ function MonsterHeroGame() {
         didRegen = true;
       }
     }
+    {
+      const cookie = cookieEffectNow();
+      let cookieHp = 0,
+        cookieGuts = 0;
+      if (cookie.hpRegen > 0 || cookie.gutsRegen > 0) {
+        if (isTacticsMode(runMode)) {
+          const healed = tacticsRateHeal(cookie.hpRegen, cookie.gutsRegen, false);
+          if (healed) {
+            cookieHp = healed.hp || 0;
+            cookieGuts = healed.guts || 0;
+            currentHp = healed.total;
+          }
+        } else {
+          cookieHp = Math.floor(liveEffectiveMaxHp() * cookie.hpRegen);
+          if (cookieHp > 0) setHp(p => Math.min(liveEffectiveMaxHp(), p + cookieHp));
+          cookieGuts = Math.floor(liveEffectiveMaxGuts() * cookie.gutsRegen);
+          if (cookieGuts > 0) gainGuts(cookieGuts);
+        }
+      }
+      if (cookieHp > 0 || cookieGuts > 0) {
+        if (!isTacticsMode(runMode)) addPopup(`🍪 手作りクッキー${cookieHp > 0 ? ` ライフ +${cookieHp}` : ''}${cookieGuts > 0 ? ` ガッツ +${cookieGuts}` : ''}`, 'life', 'text-pink-200 font-black text-lg italic drop-shadow-md');
+        didRegen = true;
+      }
+    }
     if (didRegen) {
       await battleWait(500);
     }
@@ -83526,7 +83891,9 @@ function MonsterHeroGame() {
       now: tacticsExNow,
       busy: isBusy || autoBattle,
       hp: lifeUnit ? lifeUnit.hp : null,
-      maxHp: lifeUnit ? lifeUnit.maxHp : null
+      maxHp: lifeUnit ? lifeUnit.maxHp : null,
+      stacks: sweetStackAt(slotIdx),
+      stackLabel: sweetStackTraitOf(mon.id)?.label || null
     });
     return {
       slot: slotIdx,
@@ -83798,12 +84165,15 @@ function MonsterHeroGame() {
       now: tacticsExNow,
       busy: false,
       hp: lifeNow ? lifeNow.hp : null,
-      maxHp: lifeNow ? lifeNow.maxHp : null
+      maxHp: lifeNow ? lifeNow.maxHp : null,
+      stacks: sweetStackAt(slotIdx),
+      stackLabel: sweetStackTraitOf(mon.id)?.label || null
     });
     if (!check.ok) return false;
     if (def.duration === 'style' && checkTacticsExChoice(def, state, slotIdx, mon.id, choice)) return false;
     if (checkTacticsExTarget(def, tacticsUnitsRef.current, choice)) return false;
     const usedUnit = normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+    const spentStacks = def.stackSpend ? sweetStackAt(slotIdx) : 0;
     const next = applyTacticsExUse(state, {
       def,
       slot: slotIdx,
@@ -83813,6 +84183,7 @@ function MonsterHeroGame() {
       snapshot: usedUnit ? {
         atk: usedUnit.atk,
         def: usedUnit.def,
+        spent: spentStacks,
         ...(def.effect === 'timeStop' ? {
           copied: tacticsExCopyableBuffs(state, tacticsUnitsRef.current, tacticsExNow, slotIdx)
         } : {})
@@ -83903,6 +84274,12 @@ function MonsterHeroGame() {
       addPopup(roll.jackpot ? '🎁 大当たり！ 全部入り' : `🎁 ${roll.kinds.map(k => tacticsExPresentKindText(k, pc, def.turns)).join('＋')}`, 'hero', 'text-amber-300 font-black text-2xl drop-shadow-md', undefined, slotIdx);
     }
     if (def.partyHealRate > 0) tacticsRateHeal(def.partyHealRate, def.partyHealRate, false);
+    if (def.stackSpend) {
+      writeSweetStackAt(slotIdx, 0);
+      if (def.effect === 'cookieBox' && spentStacks > 0) tacticsRateHeal(def.stackSpend.heal * spentStacks, def.stackSpend.guts * spentStacks, false);
+      presentNote = tacticsExStackSpendNote(def, spentStacks);
+      pushBattleLog(`${sweetStackTraitOf(mon.id)?.icon || ''} ${presentNote}`, 'ally');
+    }
     if (def.effect === 'pandoraBox') [PANDORA_DEVIL_IMG, PANDORA_ANGEL_IMG].forEach(u => {
       try {
         const im = new Image();
@@ -84087,6 +84464,7 @@ function MonsterHeroGame() {
       }
       const cardCost = getCardGuts(card, slotIdx);
       if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
+      if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
@@ -84343,12 +84721,12 @@ function MonsterHeroGame() {
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
-          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0)) * tacticsExMultiBuffNow(slotIdx).critRate),
+          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx),
+          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
@@ -84406,6 +84784,7 @@ function MonsterHeroGame() {
             }
           }
         }
+        if (finalD > 0) gainSweetStack(slotIdx, activeMon?.id, card, true);
         if (finalD > 0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled && tacticsExConfusesOnHit(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
@@ -84471,7 +84850,7 @@ function MonsterHeroGame() {
               setNextTurnBuff('gutsCostMult', 1.15);
             }
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
-          } else if (card.monId === 'Yggdrasil' || card.monId === 'MelWhip') {
+          } else if (isLifeTreeGuardCard(card)) {
             const gRec = gainGutsByRate(slotIdx, 0.2 * effMul);
             const guardMult = lifeTreeGuardMult(effMul);
             if (isTacticsMode(runMode)) {
@@ -84490,7 +84869,7 @@ function MonsterHeroGame() {
                 };
               });
             }
-            addPopup(`大樹の加護！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION * effMul * 100)}%減`, 'hero', 'text-emerald-300 text-lg font-bold');
+            addPopup(`${lifeTreeGuardNameOf(card.monId)}！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION * effMul * 100)}%減`, 'hero', 'text-emerald-300 text-lg font-bold');
             if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === FATE_WHEEL_MONSTER_ID) {
             if (fateWheelPick && finalD > 0) {
@@ -98492,6 +98871,7 @@ function MonsterHeroGame() {
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
+      sweetStackView: sweetStackView,
       fateWheelView: fateWheelView,
       enemyConfuseTurns: enemyConfuseTurns,
       luckBanners: luckBanners,
