@@ -614,22 +614,74 @@ const SKM_SPOOKY = Object.freeze({
     : i === 7 ? sp
     : { ...sp, c:sp.c === 'gold' ? 'gold' : 'fire' })),
 });
+// メロディー(2026-10-08 ユーザー指示「2体とも専用アクションを力入れて作って」): ぞうさんに乗ってピアノちゃんの傘をさす子。
+//   ぞうさんの体当たり・鼻、傘(parasol)、メロディタクトの光と音符、お菓子(クッキー・キャンディ・パウンドケーキ)、虹(マリーランド)で見せる。
+//   並びは HERO_ATK_NAMES.Melody / unique.names と同じ段階の順
+const SKM_MELODY = Object.freeze({
+  normal:[
+    skm('bash', { c:'pink', burst:'heart', over:'fist' }),                                                  // ぞうさん頭突き
+    skm('parasol', { c:'pink', over:'boom', burst:'note' }),                                               // ピアノパラソル脳天撃
+    skm('cast', { c:'pink', line:'ray', fx:skmFx('shot', 'note', 4, { h:[330, 200] }), burst:'note' }),   // メロディタクトライト
+    skm('lick', { c:'sky', line:'tongue', fx:skmFx('rise', 'water', 8), burst:'water' }),                  // ぞうさんぴろぴろ鼻
+    skm('roll', { c:'pink', fx:skmFx('fall', 'petal', 10), burst:'dust' }),                                // マリーランド大玉転がし
+    skm('flip', { c:'sky', fx:skmFx('fall', 'note', 8, { h:[330, 50, 200] }), burst:'note' }),             // ムーンサルトメロディー
+    skm('toss', { c:'psy', fx:skmFx('lob', 'candy', 5, { h:[330, 50, 190, 280] }), over:'boom', burst:'candy' }), // メロディキャンディボム
+    skm('toss', { c:'red', fx:skmFx('lob', 'cookie', 4), over:'bloom', burst:'berry' }),                   // メロディ苺クッキー
+    skm('parasol', { c:'pink', fx:skmFx('orbit', 'heart', 8), over:'rainbow', burst:'heart' })],          // ドリームパワー
+  unique:[
+    skm('cast', { c:'pink', fx:skmFx('shot', 'heart', 6, { step:40 }), over:'bloom', burst:'heart' }),    // メロメロハート
+    skm('spin', { c:'sky', fx:skmFx('orbit', 'note', 8, { h:[330, 200, 50] }), over:'aurora', burst:'note' }), // ピアノワルツ
+    skm('float', { c:'pink', fx:skmFx('orbit', 'ribbon', 8), over:'bloom', burst:'ribbon' }),             // リボンウィング
+    skm('cast', { c:'gold', fx:skmFx('fall', 'cake', 3, { s:1.6 }), over:'boom', burst:'cookie', form:'rubble' }), // パウンドメテオ
+    skm('gather', { c:'pink', fx:skmFx('orbit', 'heart', 10), over:'bloom', burst:'petal' }),             // ピンクバースト
+    skm('parasol', { c:'psy', fx:skmFx('fall', 'candy', 22, { h:[330, 50, 190, 280, 120] }), over:'wave', burst:'candy', form:'psy' }), // キャンディレイン
+    skm('float', { c:'sky', line:'arc', over:'rainbow', burst:'star', form:'light' }),                     // マリーランドアーチ
+    skm('cast', { c:'pink', line:'ray', fx:skmFx('orbit', 'note', 10, { h:[330, 280, 200, 50] }), over:'aurora', burst:'note', form:'psy' }), // メロディタクト
+    skm('gather', { c:'gold', fx:skmFx('orbit', 'cookie', 12), over:'rainbow', burst:'candy', form:'bloom' })], // スウィートパレード
+});
+// クロミー: バクに乗った、ドクロの頭巾の子。バクの突進(gallop)・耳、黒音符、ドクロ、らっきょう、恨み帳、悪夢の渦(nightmare)で見せる
+const SKM_KUROMY = Object.freeze({
+  normal:[
+    skm('gallop', { c:'cosmic', burst:'star', over:'fist' }),                                              // バク頭突き
+    skm('jump', { c:'cosmic', over:'boom', burst:'dust' }),                                                // バク空中落下プレス
+    skm('cast', { c:'dark', line:'ray', fx:skmFx('shot', 'bnote', 4), burst:'bnote' }),                    // ブラックノートライト
+    skm('jab', { c:'cosmic', over:'fist', burst:'star' }),                                                 // バクパタパタ耳
+    skm('roll', { c:'ice', fx:skmFx('fall', 'snow', 12), over:'ice', burst:'snow' }),                      // 巨大雪だるま転がし
+    skm('gallop', { c:'dark', fx:skmFx('shot', 'skull', 5, { step:40 }), over:'xslash', burst:'skull' }), // KUROMI'S5アタック
+    skm('toss', { c:'gas', fx:skmFx('lob', 'rakkyo', 4), over:'boom', burst:'rakkyo' }),                   // ナイトメアらっきょうボム
+    skm('cast', { c:'red', fx:skmFx('rise', 'berry', 9), burst:'berry' }),                                 // バコ・ベリースプラッシュ
+    skm('cast', { c:'dark', fx:skmFx('orbit', 'skull', 6), over:'nightmare', burst:'bnote' })],          // ダークパワー
+  unique:[
+    skm('toss', { c:'pink', fx:skmFx('lob', 'skull', 3, { s:1.4 }), over:'boom', burst:'skull', form:'void' }), // ドクロボム
+    skm('gallop', { c:'dark', fx:skmFx('shot', 'skull', 5, { step:35 }), over:'cross', burst:'skull' }),  // クロミーズ5突撃
+    skm('float', { c:'cosmic', fx:skmFx('orbit', 'bnote', 8), over:'bite', burst:'bnote' }),              // 夢くいウィング
+    skm('cast', { c:'dark', fx:skmFx('fall', 'book', 3, { s:1.5 }), over:'boom', burst:'bnote', form:'rubble' }), // 恨み帳メテオ
+    skm('gather', { c:'dark', fx:skmFx('orbit', 'bnote', 10), over:'eclipse', burst:'bnote' }),           // 黒音符バースト
+    skm('cast', { c:'gas', fx:skmFx('fall', 'rakkyo', 22), over:'wave', burst:'rakkyo', form:'thorn' }),  // らっきょう大雨
+    skm('gather', { c:'psy', line:'arc', over:'nightmare', burst:'skull' }),                               // ナイトメアアーク
+    skm('float', { c:'dark', line:'ray', over:'aurora', burst:'bnote', form:'psy' }),                      // ダークオーロラ
+    skm('gather', { c:'dark', fx:skmFx('orbit', 'skull', 10), over:'nightmare', burst:'bnote' })],        // 悪夢フィナーレ
+});
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
-const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY });
+const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
   slash:[.46,720], lick:[.42,640], kick:[.44,620], spin:[.54,780], jump:[.58,760], float:[.58,820], dash:[.26,620], shake:[.5,720],
   hop:[.5,720], warp:[.5,760], jab:[.4,620],
   // 2026-10-02 パンドラ: gather 魔力集束(光と闇をまとって溜める) / split 分裂(光と闇の2体に分かれて手を取り合う)
-  gather:[.55,900], split:[.6,1100] });
+  gather:[.55,900], split:[.6,1100],
+  // 2026-10-08 メロディー: parasol 傘を回して舞い上がり降りて叩く / クロミー: gallop バクに乗って3回跳ねて突っ込む
+  parasol:[.56,860], gallop:[.6,820] });
 // その場から撃つ動き。当たる時刻は飛ぶものが届く時刻で決まる
 const SKM_PROJECTILE_BODIES = Object.freeze(['cast', 'toss', 'shake', 'hop']);
 // 敵に重ねる絵が、当たってから消えるまでの長さ(ms)。尺がこれより短いと途中で切れる
 const SKM_OVER_TAIL = Object.freeze({ thunder:220, xslash:300, claw:220, pillar:300, tornado:320, ice:440, bite:180, boom:460, wave:560,
   bloom:360, gas:480, cross:360, sword:180, eye:260, fist:160, slash:220, aurora:320, shadow:200,
   // 2026-10-02 パンドラ: eclipse 相反爆発(黒い核と白い閃光) / twinThunder 反発雷撃(紫と金の雷が交差)
-  eclipse:460, twinThunder:420 });
+  eclipse:460, twinThunder:420,
+  // 2026-10-08 メロディー: rainbow 虹のアーチ / クロミー: nightmare 黒い渦とドクロ
+  rainbow:400, nightmare:400 });
 const SKM_MAX_MS = 1200;
 const skmArrival = (fx) => {
   if (!fx || !fx.items.length) return null;

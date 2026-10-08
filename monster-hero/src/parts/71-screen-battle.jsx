@@ -689,7 +689,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, fateWheelView, enemyConfuseTurns, luckBanners,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -956,7 +956,7 @@ function BattleScreen({
       const halved = counter.take(card, owner);
       if (!isLifeTreeGuardCard(card)) return;
       if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
-      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
     });
     return mult;
   };
@@ -1760,6 +1760,11 @@ function BattleScreen({
               const who=key==='party'?'':(slots[Number(key)]?.name||'');
               chip(`sweet${key}`,<Sparkles size={9}/>,`${who}${trait.label}`,`${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId,count)}`,
                 trait.kind==='cookie'?'text-pink-300 border-pink-400/50':'text-fuchsia-300 border-fuchsia-400/50',{short:`${trait.icon}${count}/${SWEET_STACK_MAX}`,pulse:count>=SWEET_STACK_MAX});
+            });
+            // メロディ・ボゥの旋律(クロミーの固有技)で積んだ与ダメ。使った子の枠ごと。ランが終わるまで残る
+            Object.entries(bowStackView||{}).forEach(([key,n])=>{
+              const c=Math.max(0,Math.floor(Number(n)||0));
+              if(c>0) chip(`bow${key}`,<Sword size={9}/>,`${slots[Number(key)]?.name||''}旋律`,`与ダメ+${c*5}%`,'text-fuchsia-300 border-fuchsia-400/50',{short:`+${c*5}%`});
             });
             // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
             {

@@ -1033,7 +1033,18 @@ function MonsterHeroGame() {
   //   決めごと(貯まり方・段階)は 22-enemy-and-bond-entries.jsx の SWEET_STACK_TRAITS
   const sweetStackRef = useRef({ bySlot: {} });
   const [sweetStackView, setSweetStackView] = useState({});
-  const resetSweetStack = () => { sweetStackRef.current = { bySlot: {} }; setSweetStackView({}); };
+  const resetSweetStack = () => { sweetStackRef.current = { bySlot: {} }; setSweetStackView({}); bowStackRef.current = {}; setBowStackView({}); };
+  // ★メロディ・ボゥの旋律(クロミーの固有技)で積んだ「与ダメ+5%」の数。使った子の枠ごと(どのモードも枠の番号)。
+  //   バトル(ラン)が終わるまで残り、使うたびに重なる。片付けはスタックと同じ resetSweetStack
+  const bowStackRef = useRef({});
+  const [bowStackView, setBowStackView] = useState({});
+  const bowAtkMultAt = (slotIdx) => (Number.isInteger(slotIdx) ? bowAtkMultOf(bowStackRef.current[String(slotIdx)]) : 1);
+  const addBowStackAt = (slotIdx) => {
+    if (!Number.isInteger(slotIdx)) return 0;
+    const next = { ...bowStackRef.current, [String(slotIdx)]: Math.max(0, Math.floor(Number(bowStackRef.current[String(slotIdx)]) || 0)) + 1 };
+    bowStackRef.current = next; setBowStackView(next);
+    return next[String(slotIdx)];
+  };
   // その枠の特性の持ち主(既存5モードは勇者モン、タクティクスはその枠の子)
   const sweetOwnerAt = (slotIdx) => (isTacticsMode(runMode)
     ? (Number.isInteger(slotIdx) ? (tacticsUnitsRef.current[slotIdx]?.id || null) : null) : (mainHero?.id || null));
@@ -10990,7 +11001,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     // ★クッキー10個(メロディー)の与ダメアップは味方全体、黒音符(クロミー)は本人の攻撃だけ
-    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「ちから+20%」を、攻撃した子のちからへ掛ける
     //   (既存5モードはパーティ共通のちから。積んでいなければ1倍)
@@ -12555,11 +12566,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             addPopup('次ターン被ダメ50%減!','hero','text-pink-400 text-lg font-bold');
           }
           else if(isLifeTreeGuardCard(card)){
-            // 大樹の加護(メロディーは「ピンク音符の加護」、クロミーは「メロディ・ボゥの旋律」。中身は同じ): 使ったターンから2ターン被ダメージ30%軽減＋最大ガッツの20%回復。
+            // 大樹の加護(ユグドラシル・メルホイップ)・ピンク音符の加護(メロディー)・メロディ・ボゥの旋律(クロミー):
+            //   使ったターンから2ターン被ダメージ軽減＋最大ガッツ回復。数字と足すものは LIFE_TREE_GUARD_EFFECTS(技の出自で決まる)。
             //   このターンぶんは handleEnemyTurn へ倍率で渡し、次ターンぶんは予約する。
             //   ほかの軽減(メロソ・贖罪)を消さないよう、次ターンの倍率は掛け合わせる
-            const gRec=gainGutsByRate(slotIdx,0.2*effMul);
-            const guardMult=lifeTreeGuardMult(effMul);
+            const guardFx=lifeTreeGuardEffectOf(card.monId);
+            const gRec=gainGutsByRate(slotIdx,guardFx.guts*effMul);
+            const guardMult=lifeTreeGuardMult(effMul,card.monId);
+            // ピンク音符の加護: ライフも回復する(タクティクスは使った子、既存5モードはパーティ)
+            if(guardFx.hp>0){
+              if(isTacticsMode(runMode)){ const healed=tacticsRateHealAt(slotIdx,guardFx.hp*effMul,0); if(healed) hpBeforeEnemyAttack=healed.total; }
+              else { const heal=Math.floor(liveEffectiveMaxHp()*guardFx.hp*effMul); if(heal>0){ hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+heal); setHp(hpBeforeEnemyAttack); addPopup(`💚 ライフ +${heal}`,'life','text-emerald-300 text-base font-bold'); } }
+            }
+            // ピンク音符の加護: 使った子がクッキーを持つ子(メロディー本人)なら、カード1枚ぶんに加えてさらに足す
+            if(guardFx.cookie>0&&sweetStackTraitOf(sweetOwnerAt(slotIdx))?.kind==='cookie'&&activeMon?.id===sweetOwnerAt(slotIdx)){
+              const after=addSweetStack(sweetStackAt(slotIdx),guardFx.cookie);
+              if(after!==sweetStackAt(slotIdx)){ writeSweetStackAt(slotIdx,after); addPopup(`🍪 クッキー ${after}/${SWEET_STACK_MAX}`,'hero','text-pink-200 text-base font-bold drop-shadow-md',undefined,slotIdx); }
+            }
+            // メロディ・ボゥの旋律: 使った子の与ダメを、使うたびに+5%ずつ(バトル中ずっと・重なる)
+            if(guardFx.atkStack>0){ const n=addBowStackAt(slotIdx); addPopup(`🎻 与ダメ +${Math.round(guardFx.atkStack*n*100)}%`,'hero','text-fuchsia-200 text-base font-bold drop-shadow-md',undefined,slotIdx); }
             if(isTacticsMode(runMode)){
               immediateTakenMultBySlot[slotIdx]=guardMult;
               writeNextTurnBuffs(p=>({...p, bySlot:withTacticsSlotBuff(p.bySlot,slotIdx,'takenDamageMult',tacticsSlotRate(p.bySlot,slotIdx,'takenDamageMult',1.0)*guardMult)}));
@@ -12567,7 +12592,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               immediateTakenMult=guardMult;
               writeNextTurnBuffs(p=>{ const cur=Number(p.takenDamageMult); return {...p, takenDamageMult:(Number.isFinite(cur)&&cur>0?cur:1)*guardMult}; });
             }
-            addPopup(`${lifeTreeGuardNameOf(card.monId)}！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION*effMul*100)}%減`,'hero','text-emerald-300 text-lg font-bold');
+            addPopup(`${lifeTreeGuardNameOf(card.monId)}！ 2ターン被ダメ${Math.round(guardFx.taken*effMul*100)}%減`,'hero','text-emerald-300 text-lg font-bold');
             if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');
           }
           // 運命の輪(スプーキー): 当たったときだけ出目を効かせる(外したら何も起きない。ダメージ倍率はもう掛けてある)
@@ -19812,7 +19837,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}

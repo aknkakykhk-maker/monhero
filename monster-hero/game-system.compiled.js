@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 58049e1434e5635c
+// source-sha256: ad04ac0a44504adb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 17:35";
+const BUILD_DATE = "2026-10-08 18:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16601,15 +16601,46 @@ const hasLifeSourceTrait = id => LIFE_SOURCE_MONSTER_IDS.includes(id);
 const lifeSourceDamageMult = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= 1 && Number(turn) <= LIFE_SOURCE_GUARD_TURNS ? LIFE_SOURCE_GUARD_MULT : 1;
 const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= LIFE_SOURCE_GUTS_FROM_TURN && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
-const LIFE_TREE_GUARD_NAMES = Object.freeze({
-  Yggdrasil: '大樹の加護',
-  MelWhip: '大樹の加護',
-  Melody: 'ピンク音符の加護',
-  Kuromy: 'メロディ・ボゥの旋律'
+const LIFE_TREE_GUARD_EFFECTS = Object.freeze({
+  Yggdrasil: Object.freeze({
+    name: '大樹の加護',
+    taken: 0.3,
+    guts: 0.2,
+    hp: 0,
+    cookie: 0,
+    atkStack: 0
+  }),
+  MelWhip: Object.freeze({
+    name: '大樹の加護',
+    taken: 0.3,
+    guts: 0.2,
+    hp: 0,
+    cookie: 0,
+    atkStack: 0
+  }),
+  Melody: Object.freeze({
+    name: 'ピンク音符の加護',
+    taken: 0.25,
+    guts: 0.2,
+    hp: 0.15,
+    cookie: 1,
+    atkStack: 0
+  }),
+  Kuromy: Object.freeze({
+    name: 'メロディ・ボゥの旋律',
+    taken: 0.15,
+    guts: 0.2,
+    hp: 0,
+    cookie: 0,
+    atkStack: 0.05
+  })
 });
-const isLifeTreeGuardCard = card => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_NAMES, card.monId);
+const LIFE_TREE_GUARD_NAMES = Object.freeze(Object.fromEntries(Object.entries(LIFE_TREE_GUARD_EFFECTS).map(([id, e]) => [id, e.name])));
+const isLifeTreeGuardCard = card => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_EFFECTS, card.monId);
 const lifeTreeGuardNameOf = monId => LIFE_TREE_GUARD_NAMES[monId] || '大樹の加護';
-const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+const lifeTreeGuardEffectOf = monId => LIFE_TREE_GUARD_EFFECTS[monId] || LIFE_TREE_GUARD_EFFECTS.Yggdrasil;
+const lifeTreeGuardMult = (effMul = 1, monId = 'Yggdrasil') => 1 - lifeTreeGuardEffectOf(monId).taken * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
+const bowAtkMultOf = n => 1 + LIFE_TREE_GUARD_EFFECTS.Kuromy.atkStack * Math.max(0, Math.floor(Number(n) || 0));
 const TRICK_START_MONSTER_IDS = Object.freeze(['Ghost', 'Spooky']);
 const TRICK_START_EVERY = 3;
 const TRICK_START_CHANCE = 0.5;
@@ -16691,6 +16722,8 @@ const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
   if (trait.kind === 'note') return hit ? card.type === 'unique' ? 2 : 1 : 0;
   return 0;
 };
+const collabOfMonster = monId => monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId] ? ALL_PLAYER_MONSTERS[monId].collab || null : null;
+const isSanrioCollabSkill = card => !!card && collabOfMonster(card.originMonId || card.monId) === 'sanrio';
 const addSweetStack = (n, gain) => sweetStackCountOf(sweetStackCountOf(n) + Math.max(0, Math.floor(Number(gain) || 0)));
 const cookieEffectOf = n => {
   const c = sweetStackCountOf(n);
@@ -17659,7 +17692,7 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
   Plant: 'vine',
   Mitarashi: 'fire'
 });
-const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
+const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip']);
 const SKILL_ATTACK_THEMES = Object.freeze({
   '頭突き': 'ygHeadbutt',
   '空中脳天撃': 'ygAirDive',
@@ -17671,24 +17704,6 @@ const SKILL_ATTACK_THEMES = Object.freeze({
   '苺大噴': 'ygStrawberry',
   'ケーキ入刀': 'ygCakeCut',
   'シャドウレギオン': 'ygShadow',
-  'ぞうさん頭突き': 'ygHeadbutt',
-  'ピアノパラソル脳天撃': 'ygAirDive',
-  'メロディタクトライト': 'ygGreenLight',
-  'ぞうさんぴろぴろ鼻': 'ygTongue',
-  'マリーランド大玉転がし': 'ygRoll',
-  'ムーンサルトメロディー': 'ygMoonDrop',
-  'メロディキャンディボム': 'ygCandy',
-  'メロディ苺クッキー': 'ygStrawberry',
-  'ドリームパワー': 'ygShadow',
-  'バク頭突き': 'ygHeadbutt',
-  'バク空中落下プレス': 'ygAirDive',
-  'ブラックノートライト': 'ygGreenLight',
-  'バクパタパタ耳': 'ygTongue',
-  '巨大雪だるま転がし': 'ygRoll',
-  "KUROMI'S5アタック": 'ygMoonDrop',
-  'ナイトメアらっきょうボム': 'ygCandy',
-  'バコ・ベリースプラッシュ': 'ygStrawberry',
-  'ダークパワー': 'ygShadow',
   'スターボム': 'ygStarBomb',
   'ワンダーブレイズ': 'ygWonderBlaze',
   'メニーウィング': 'ygManyWing',
@@ -20357,11 +20372,227 @@ const SKM_SPOOKY = Object.freeze({
     c: sp.c === 'gold' ? 'gold' : 'fire'
   })
 });
+const SKM_MELODY = Object.freeze({
+  normal: [skm('bash', {
+    c: 'pink',
+    burst: 'heart',
+    over: 'fist'
+  }), skm('parasol', {
+    c: 'pink',
+    over: 'boom',
+    burst: 'note'
+  }), skm('cast', {
+    c: 'pink',
+    line: 'ray',
+    fx: skmFx('shot', 'note', 4, {
+      h: [330, 200]
+    }),
+    burst: 'note'
+  }), skm('lick', {
+    c: 'sky',
+    line: 'tongue',
+    fx: skmFx('rise', 'water', 8),
+    burst: 'water'
+  }), skm('roll', {
+    c: 'pink',
+    fx: skmFx('fall', 'petal', 10),
+    burst: 'dust'
+  }), skm('flip', {
+    c: 'sky',
+    fx: skmFx('fall', 'note', 8, {
+      h: [330, 50, 200]
+    }),
+    burst: 'note'
+  }), skm('toss', {
+    c: 'psy',
+    fx: skmFx('lob', 'candy', 5, {
+      h: [330, 50, 190, 280]
+    }),
+    over: 'boom',
+    burst: 'candy'
+  }), skm('toss', {
+    c: 'red',
+    fx: skmFx('lob', 'cookie', 4),
+    over: 'bloom',
+    burst: 'berry'
+  }), skm('parasol', {
+    c: 'pink',
+    fx: skmFx('orbit', 'heart', 8),
+    over: 'rainbow',
+    burst: 'heart'
+  })],
+  unique: [skm('cast', {
+    c: 'pink',
+    fx: skmFx('shot', 'heart', 6, {
+      step: 40
+    }),
+    over: 'bloom',
+    burst: 'heart'
+  }), skm('spin', {
+    c: 'sky',
+    fx: skmFx('orbit', 'note', 8, {
+      h: [330, 200, 50]
+    }),
+    over: 'aurora',
+    burst: 'note'
+  }), skm('float', {
+    c: 'pink',
+    fx: skmFx('orbit', 'ribbon', 8),
+    over: 'bloom',
+    burst: 'ribbon'
+  }), skm('cast', {
+    c: 'gold',
+    fx: skmFx('fall', 'cake', 3, {
+      s: 1.6
+    }),
+    over: 'boom',
+    burst: 'cookie',
+    form: 'rubble'
+  }), skm('gather', {
+    c: 'pink',
+    fx: skmFx('orbit', 'heart', 10),
+    over: 'bloom',
+    burst: 'petal'
+  }), skm('parasol', {
+    c: 'psy',
+    fx: skmFx('fall', 'candy', 22, {
+      h: [330, 50, 190, 280, 120]
+    }),
+    over: 'wave',
+    burst: 'candy',
+    form: 'psy'
+  }), skm('float', {
+    c: 'sky',
+    line: 'arc',
+    over: 'rainbow',
+    burst: 'star',
+    form: 'light'
+  }), skm('cast', {
+    c: 'pink',
+    line: 'ray',
+    fx: skmFx('orbit', 'note', 10, {
+      h: [330, 280, 200, 50]
+    }),
+    over: 'aurora',
+    burst: 'note',
+    form: 'psy'
+  }), skm('gather', {
+    c: 'gold',
+    fx: skmFx('orbit', 'cookie', 12),
+    over: 'rainbow',
+    burst: 'candy',
+    form: 'bloom'
+  })]
+});
+const SKM_KUROMY = Object.freeze({
+  normal: [skm('gallop', {
+    c: 'cosmic',
+    burst: 'star',
+    over: 'fist'
+  }), skm('jump', {
+    c: 'cosmic',
+    over: 'boom',
+    burst: 'dust'
+  }), skm('cast', {
+    c: 'dark',
+    line: 'ray',
+    fx: skmFx('shot', 'bnote', 4),
+    burst: 'bnote'
+  }), skm('jab', {
+    c: 'cosmic',
+    over: 'fist',
+    burst: 'star'
+  }), skm('roll', {
+    c: 'ice',
+    fx: skmFx('fall', 'snow', 12),
+    over: 'ice',
+    burst: 'snow'
+  }), skm('gallop', {
+    c: 'dark',
+    fx: skmFx('shot', 'skull', 5, {
+      step: 40
+    }),
+    over: 'xslash',
+    burst: 'skull'
+  }), skm('toss', {
+    c: 'gas',
+    fx: skmFx('lob', 'rakkyo', 4),
+    over: 'boom',
+    burst: 'rakkyo'
+  }), skm('cast', {
+    c: 'red',
+    fx: skmFx('rise', 'berry', 9),
+    burst: 'berry'
+  }), skm('cast', {
+    c: 'dark',
+    fx: skmFx('orbit', 'skull', 6),
+    over: 'nightmare',
+    burst: 'bnote'
+  })],
+  unique: [skm('toss', {
+    c: 'pink',
+    fx: skmFx('lob', 'skull', 3, {
+      s: 1.4
+    }),
+    over: 'boom',
+    burst: 'skull',
+    form: 'void'
+  }), skm('gallop', {
+    c: 'dark',
+    fx: skmFx('shot', 'skull', 5, {
+      step: 35
+    }),
+    over: 'cross',
+    burst: 'skull'
+  }), skm('float', {
+    c: 'cosmic',
+    fx: skmFx('orbit', 'bnote', 8),
+    over: 'bite',
+    burst: 'bnote'
+  }), skm('cast', {
+    c: 'dark',
+    fx: skmFx('fall', 'book', 3, {
+      s: 1.5
+    }),
+    over: 'boom',
+    burst: 'bnote',
+    form: 'rubble'
+  }), skm('gather', {
+    c: 'dark',
+    fx: skmFx('orbit', 'bnote', 10),
+    over: 'eclipse',
+    burst: 'bnote'
+  }), skm('cast', {
+    c: 'gas',
+    fx: skmFx('fall', 'rakkyo', 22),
+    over: 'wave',
+    burst: 'rakkyo',
+    form: 'thorn'
+  }), skm('gather', {
+    c: 'psy',
+    line: 'arc',
+    over: 'nightmare',
+    burst: 'skull'
+  }), skm('float', {
+    c: 'dark',
+    line: 'ray',
+    over: 'aurora',
+    burst: 'bnote',
+    form: 'psy'
+  }), skm('gather', {
+    c: 'dark',
+    fx: skmFx('orbit', 'skull', 10),
+    over: 'nightmare',
+    burst: 'bnote'
+  })]
+});
 const SKILL_MOTION_SETS = Object.freeze({
   ...SKILL_MOTION_SETS_MAIN,
   Yaobikuni: skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'),
   Ghost: SKM_GHOST,
-  Spooky: SKM_SPOOKY
+  Spooky: SKM_SPOOKY,
+  Melody: SKM_MELODY,
+  Kuromy: SKM_KUROMY
 });
 const SKM_BODY_TIMING = Object.freeze({
   bash: [.48, 560],
@@ -20382,7 +20613,9 @@ const SKM_BODY_TIMING = Object.freeze({
   warp: [.5, 760],
   jab: [.4, 620],
   gather: [.55, 900],
-  split: [.6, 1100]
+  split: [.6, 1100],
+  parasol: [.56, 860],
+  gallop: [.6, 820]
 });
 const SKM_PROJECTILE_BODIES = Object.freeze(['cast', 'toss', 'shake', 'hop']);
 const SKM_OVER_TAIL = Object.freeze({
@@ -20405,7 +20638,9 @@ const SKM_OVER_TAIL = Object.freeze({
   aurora: 320,
   shadow: 200,
   eclipse: 460,
-  twinThunder: 420
+  twinThunder: 420,
+  rainbow: 400,
+  nightmare: 400
 });
 const SKM_MAX_MS = 1200;
 const skmArrival = fx => {
@@ -58004,6 +58239,7 @@ function BattleScreen({
   tacticsPandoraForms,
   trickStartView,
   sweetStackView,
+  bowStackView,
   fateWheelView,
   enemyConfuseTurns,
   luckBanners,
@@ -58260,7 +58496,7 @@ function BattleScreen({
       const halved = counter.take(card, owner);
       if (!isLifeTreeGuardCard(card)) return;
       if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
-      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
     });
     return mult;
   };
@@ -59549,6 +59785,14 @@ function BattleScreen({
       }), `${who}${trait.label}`, `${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId, count)}`, trait.kind === 'cookie' ? 'text-pink-300 border-pink-400/50' : 'text-fuchsia-300 border-fuchsia-400/50', {
         short: `${trait.icon}${count}/${SWEET_STACK_MAX}`,
         pulse: count >= SWEET_STACK_MAX
+      });
+    });
+    Object.entries(bowStackView || {}).forEach(([key, n]) => {
+      const c = Math.max(0, Math.floor(Number(n) || 0));
+      if (c > 0) chip(`bow${key}`, React.createElement(Sword, {
+        size: 9
+      }), `${slots[Number(key)]?.name || ''}旋律`, `与ダメ+${c * 5}%`, 'text-fuchsia-300 border-fuchsia-400/50', {
+        short: `+${c * 5}%`
       });
     });
     {
@@ -71833,6 +72077,21 @@ function MonsterHeroGame() {
       bySlot: {}
     };
     setSweetStackView({});
+    bowStackRef.current = {};
+    setBowStackView({});
+  };
+  const bowStackRef = useRef({});
+  const [bowStackView, setBowStackView] = useState({});
+  const bowAtkMultAt = slotIdx => Number.isInteger(slotIdx) ? bowAtkMultOf(bowStackRef.current[String(slotIdx)]) : 1;
+  const addBowStackAt = slotIdx => {
+    if (!Number.isInteger(slotIdx)) return 0;
+    const next = {
+      ...bowStackRef.current,
+      [String(slotIdx)]: Math.max(0, Math.floor(Number(bowStackRef.current[String(slotIdx)]) || 0)) + 1
+    };
+    bowStackRef.current = next;
+    setBowStackView(next);
+    return next[String(slotIdx)];
   };
   const sweetOwnerAt = slotIdx => isTacticsMode(runMode) ? Number.isInteger(slotIdx) ? tacticsUnitsRef.current[slotIdx]?.id || null : null : mainHero?.id || null;
   const sweetStackAt = slotIdx => {
@@ -82993,7 +83252,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -84886,8 +85145,33 @@ function MonsterHeroGame() {
             }
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
           } else if (isLifeTreeGuardCard(card)) {
-            const gRec = gainGutsByRate(slotIdx, 0.2 * effMul);
-            const guardMult = lifeTreeGuardMult(effMul);
+            const guardFx = lifeTreeGuardEffectOf(card.monId);
+            const gRec = gainGutsByRate(slotIdx, guardFx.guts * effMul);
+            const guardMult = lifeTreeGuardMult(effMul, card.monId);
+            if (guardFx.hp > 0) {
+              if (isTacticsMode(runMode)) {
+                const healed = tacticsRateHealAt(slotIdx, guardFx.hp * effMul, 0);
+                if (healed) hpBeforeEnemyAttack = healed.total;
+              } else {
+                const heal = Math.floor(liveEffectiveMaxHp() * guardFx.hp * effMul);
+                if (heal > 0) {
+                  hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + heal);
+                  setHp(hpBeforeEnemyAttack);
+                  addPopup(`💚 ライフ +${heal}`, 'life', 'text-emerald-300 text-base font-bold');
+                }
+              }
+            }
+            if (guardFx.cookie > 0 && sweetStackTraitOf(sweetOwnerAt(slotIdx))?.kind === 'cookie' && activeMon?.id === sweetOwnerAt(slotIdx)) {
+              const after = addSweetStack(sweetStackAt(slotIdx), guardFx.cookie);
+              if (after !== sweetStackAt(slotIdx)) {
+                writeSweetStackAt(slotIdx, after);
+                addPopup(`🍪 クッキー ${after}/${SWEET_STACK_MAX}`, 'hero', 'text-pink-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+              }
+            }
+            if (guardFx.atkStack > 0) {
+              const n = addBowStackAt(slotIdx);
+              addPopup(`🎻 与ダメ +${Math.round(guardFx.atkStack * n * 100)}%`, 'hero', 'text-fuchsia-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+            }
             if (isTacticsMode(runMode)) {
               immediateTakenMultBySlot[slotIdx] = guardMult;
               writeNextTurnBuffs(p => ({
@@ -84904,7 +85188,7 @@ function MonsterHeroGame() {
                 };
               });
             }
-            addPopup(`${lifeTreeGuardNameOf(card.monId)}！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION * effMul * 100)}%減`, 'hero', 'text-emerald-300 text-lg font-bold');
+            addPopup(`${lifeTreeGuardNameOf(card.monId)}！ 2ターン被ダメ${Math.round(guardFx.taken * effMul * 100)}%減`, 'hero', 'text-emerald-300 text-lg font-bold');
             if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === FATE_WHEEL_MONSTER_ID) {
             if (fateWheelPick && finalD > 0) {
@@ -98842,6 +99126,7 @@ function MonsterHeroGame() {
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
       sweetStackView: sweetStackView,
+      bowStackView: bowStackView,
       fateWheelView: fateWheelView,
       enemyConfuseTurns: enemyConfuseTurns,
       luckBanners: luckBanners,
@@ -103821,6 +104106,82 @@ const createAnimationStyle = () => {
     .skfx-p--sword { width:6px; height:30px; margin:-15px 0 0 -3px; border-radius:40% 40% 2px 2px / 20% 20% 2px 2px;
       background:linear-gradient(90deg,#94a3b8,#fff 50%,#cbd5e1); box-shadow:0 0 6px var(--c2); rotate:var(--atk-rot); }
     .skfx-p--sword::after { content:''; position:absolute; left:-4px; bottom:6px; width:14px; height:3px; background:#b45309; border-radius:2px; }
+    /* ==== メロディー・クロミーの専用部品(2026-10-08 ユーザー指示「2体とも専用アクションを力入れて作って」) ====
+       形: クッキー・リボン・パウンドケーキ(メロディー) / 黒音符・ドクロ・らっきょう・恨み帳(クロミー)。
+       本体の動き: parasol 傘を回して舞い上がり、ふわっと降りて傘で叩く(メロディー) / gallop バクに乗って3回跳ねて突っ込む(クロミー)。
+       敵に重ねる絵: rainbow 虹のアーチ(メロディー) / nightmare 黒い渦とドクロの悪夢(クロミー) */
+    .skfx-p--cookie { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+      background:radial-gradient(circle at 30% 35%,#5b3415 0 9%,rgba(0,0,0,0) 10%),radial-gradient(circle at 65% 40%,#5b3415 0 8%,rgba(0,0,0,0) 9%),
+        radial-gradient(circle at 45% 70%,#5b3415 0 8%,rgba(0,0,0,0) 9%),radial-gradient(circle at 40% 35%,#fde68a,#f59e0b 70%,#b45309);
+      box-shadow:0 0 8px rgba(251,191,36,.8); }
+    .skfx-p--ribbon { width:22px; height:12px; margin:-6px 0 0 -11px; background:none; border-radius:0; box-shadow:none; }
+    .skfx-p--ribbon::before, .skfx-p--ribbon::after { content:''; position:absolute; top:0; width:10px; height:12px; background:linear-gradient(135deg,#fbcfe8,#ec4899);
+      box-shadow:0 0 6px #f472b6; }
+    .skfx-p--ribbon::before { left:0; clip-path:polygon(0 0,100% 40%,100% 60%,0 100%); }
+    .skfx-p--ribbon::after { right:0; clip-path:polygon(100% 0,0 40%,0 60%,100% 100%); }
+    .skfx-p--cake { width:22px; height:15px; margin:-7px 0 0 -11px; border-radius:4px 4px 3px 3px;
+      background:linear-gradient(to bottom,#7c3f12 0 22%,#fbbf24 22% 40%,#fde68a 40% 100%); box-shadow:0 0 10px rgba(251,191,36,.9); }
+    .skfx-p--cake::before { content:''; position:absolute; left:4px; top:-4px; width:14px; height:5px; border-radius:50%; background:#fff7ed; box-shadow:0 0 4px #fff; }
+    .skfx-p--bnote { width:14px; height:22px; margin:-11px 0 0 -7px; background:none; border-radius:0; box-shadow:none; filter:drop-shadow(0 0 5px #a855f7); }
+    .skfx-p--bnote::before { content:''; position:absolute; left:0; bottom:0; width:11px; height:8px; border-radius:50%; background:#1e1b2e; transform:rotate(-20deg); box-shadow:inset 0 0 0 1px #c084fc; }
+    .skfx-p--bnote::after { content:''; position:absolute; left:9px; top:0; width:3px; height:18px; background:#1e1b2e; box-shadow:2px 0 0 #c084fc, 3px -1px 0 1px #1e1b2e; }
+    .skfx-p--skull { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50% 50% 40% 40% / 55% 55% 45% 45%;
+      background:radial-gradient(circle at 32% 45%,#1e1b2e 0 13%,rgba(0,0,0,0) 14%),radial-gradient(circle at 68% 45%,#1e1b2e 0 13%,rgba(0,0,0,0) 14%),
+        radial-gradient(circle at 50% 66%,#1e1b2e 0 6%,rgba(0,0,0,0) 7%),#f9a8d4;
+      box-shadow:0 0 8px #ec4899; }
+    .skfx-p--rakkyo { width:13px; height:17px; margin:-8px 0 0 -6px; border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;
+      background:radial-gradient(circle at 40% 60%,#fff 0 15%,#ecfccb 45%,#d9f99d 80%); box-shadow:0 0 6px #bef264; }
+    .skfx-p--rakkyo::before { content:''; position:absolute; left:5px; top:-5px; width:3px; height:7px; border-radius:2px; background:#a3e635; }
+    .skfx-p--book { width:18px; height:22px; margin:-11px 0 0 -9px; border-radius:2px 4px 4px 2px;
+      background:linear-gradient(90deg,#3b0764 0 18%,#581c87 18% 100%); box-shadow:0 0 10px #a855f7; }
+    .skfx-p--book::before { content:''; position:absolute; left:6px; top:6px; width:8px; height:8px; border-radius:50%;
+      background:radial-gradient(circle at 35% 45%,#1e1b2e 0 18%,rgba(0,0,0,0) 20%),radial-gradient(circle at 65% 45%,#1e1b2e 0 18%,rgba(0,0,0,0) 20%),#f9a8d4; }
+    .skfx-body--parasol .thm-atk__monster { animation-name:skfxParasol; transform-origin:50% 60%; }
+    @keyframes skfxParasol {
+      0% { transform:translate3d(0,0,0) rotate(0deg) scale(1); filter:none; }
+      16% { transform:translate3d(0,8px,0) rotate(-6deg) scale(1.08,.9); }
+      34% { transform:translate3d(calc(var(--atk-dx) * .35),calc(var(--atk-dy) * .35 - 90px),0) rotate(14deg) scale(1.02); filter:drop-shadow(0 0 12px var(--c2)); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .8),calc(var(--atk-dy) * .8 - 70px),0) rotate(-12deg) scale(1.04); filter:drop-shadow(0 0 16px var(--c2)); }
+      56% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) rotate(8deg) scale(1.22,.82); filter:drop-shadow(0 0 22px var(--c2)); }
+      70% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 40px),0) rotate(-8deg) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) rotate(0deg) scale(1); }
+    }
+    .skfx-body--gallop .thm-atk__monster { animation-name:skfxGallop; transform-origin:50% 100%; }
+    @keyframes skfxGallop {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      12% { transform:translate3d(calc(var(--atk-dx) * .18),calc(var(--atk-dy) * .18 - 26px),0) scale(.96,1.06); }
+      22% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3),0) scale(1.08,.92); }
+      32% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 30px),0) scale(.96,1.06); }
+      42% { transform:translate3d(calc(var(--atk-dx) * .66),calc(var(--atk-dy) * .66),0) scale(1.1,.9); filter:drop-shadow(0 0 10px var(--c2)); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .85),calc(var(--atk-dy) * .85 - 46px),0) scale(1) rotate(-10deg); filter:drop-shadow(0 0 16px var(--c2)); }
+      60% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.24,.8) rotate(6deg); filter:drop-shadow(0 0 20px var(--c2)); }
+      76% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 24px),0) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-over--rainbow i { left:-80px; top:-90px; width:160px; height:160px; border-radius:50%; mix-blend-mode:screen;
+      background:radial-gradient(circle at 50% 100%,rgba(0,0,0,0) 0 44%,#f87171 45% 50%,#fbbf24 50% 55%,#a3e635 55% 60%,#38bdf8 60% 65%,#c084fc 65% 70%,rgba(0,0,0,0) 71%);
+      clip-path:inset(0 0 50% 0); filter:drop-shadow(0 0 10px #fff); animation:skfxRainbow 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 160ms); }
+    .skfx-over--rainbow i:nth-child(2) { transform:scale(.7); animation-delay:calc(var(--hit-at) - 80ms); top:-70px; }
+    .skfx-over--rainbow i:nth-child(3) { display:none; }
+    @keyframes skfxRainbow {
+      0% { opacity:0; scale:.2; }
+      40% { opacity:1; scale:1.05; }
+      75% { opacity:.9; scale:1; }
+      100% { opacity:0; scale:1.15; }
+    }
+    .skfx-over--nightmare i { left:-60px; top:-60px; width:120px; height:120px; border-radius:50%;
+      background:conic-gradient(from 0deg,rgba(30,10,46,0),#3b0764,#1e1b2e,#a21caf,rgba(30,10,46,0),#4c1d95,#1e1b2e);
+      filter:blur(1px) drop-shadow(0 0 14px #a855f7); animation:skfxNightmare 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 140ms); }
+    .skfx-over--nightmare i:nth-child(2) { left:-34px; top:-34px; width:68px; height:68px; animation-direction:reverse; animation-delay:calc(var(--hit-at) - 80ms);
+      background:radial-gradient(circle at 34% 44%,#1e1b2e 0 12%,rgba(0,0,0,0) 13%),radial-gradient(circle at 66% 44%,#1e1b2e 0 12%,rgba(0,0,0,0) 13%),
+        radial-gradient(circle at 50% 70%,#1e1b2e 0 6%,rgba(0,0,0,0) 7%),radial-gradient(circle,#f9a8d4 0 46%,rgba(0,0,0,0) 48%); filter:drop-shadow(0 0 10px #ec4899); }
+    .skfx-over--nightmare i:nth-child(3) { display:none; }
+    @keyframes skfxNightmare {
+      0% { opacity:0; transform:rotate(0deg) scale(.2); }
+      40% { opacity:1; transform:rotate(220deg) scale(1.05); }
+      75% { opacity:.9; transform:rotate(330deg) scale(1); }
+      100% { opacity:0; transform:rotate(420deg) scale(.4); }
+    }
     /* 敵に重ねる大きな絵(追加)。色は --c1/--c2 */
     .skfx-over--thunder i:first-child { left:-16px; top:-170px; width:32px; height:180px; background:linear-gradient(to bottom,var(--c3),var(--c1) 30%,#fff 60%,var(--c1));
       clip-path:polygon(45% 0,75% 0,55% 30%,85% 30%,35% 64%,58% 64%,20% 100%,38% 66%,12% 66%,44% 32%,22% 32%);
@@ -104016,6 +104377,8 @@ const createAnimationStyle = () => {
     .skfx-body--jab .uex-ghost { animation-name:skfxJab; }
     .skfx-body--gather .uex-ghost { animation-name:skfxGather; }
     .skfx-body--split .uex-ghost { animation-name:skfxSplitBody; }
+    .skfx-body--parasol .uex-ghost { animation-name:skfxParasol; }
+    .skfx-body--gallop .uex-ghost { animation-name:skfxGallop; }
     .thm-atk--stomp .uex-ghost { animation-name:thmStomp; }
     .thm-atk--beam .uex-ghost { animation-name:thmBeamBody; }
     .thm-atk--rocks .uex-ghost { animation-name:thmRocksBody; }

@@ -8,7 +8,7 @@
 //   ① 本体の登録(能力値・技名・固有技・血統・図鑑・案の段階から外れたか・マーケット)
 //   ② 勇者特性のスタック(クッキー・黒音符)の決めごと(貯まり方・上限・段階)
 //   ③ 本体の分岐(貯める・与ダメ・会心・連撃・被ダメ・毎ターン回復・ランの片付け・札)
-//   ④ 固有技の効果(大樹の加護と同じ中身・名前違い)
+//   ④ 固有技の効果(大樹の加護と同じ形で、数字と足すものが2体専用)
 //   ⑤ タクティクスEX(おねがい♪メロディボックス・悪夢全開！メロディ・キー)
 //   ⑥ ふたりを「よその作品との共同企画」と呼ぶ言葉を使っていない(ユーザー指示。禁止語は文字コードで持つ)
 const fs = require('fs');
@@ -44,20 +44,32 @@ check('能力値がユーザーと決めた値(メロディー 760/135/105/160�
 check('供モン加算と間合い適性', JSON.stringify(M.Melody?.plusStats) === '{"hp":360,"atk":15,"def":60,"guts":25}'
   && JSON.stringify(M.Kuromy?.plusStats) === '{"hp":320,"atk":45,"def":30,"guts":15}'
   && M.Melody?.distAptitude.join('') === 'CBAD' && M.Kuromy?.distAptitude.join('') === 'CABD');
-check('固有技はユグドラシル種と同じ ×3.2・消費64・同じ9段階', ['Melody', 'Kuromy'].every(id => M[id]?.unique?.baseMult === 3.2
-  && M[id]?.unique?.baseGuts === 64 && JSON.stringify(M[id]?.unique?.names) === JSON.stringify(M.Yggdrasil.unique.names) && M[id]?.unique?.monId === id));
+// 2026-10-08 ユーザーと決め直した: 9段階の名前は元ネタの要素を入れた短い名前、倍率と消費はユグドラシル種と同じ
+check('固有技は ×3.2・消費64・2体専用の9段階の名前', ['Melody', 'Kuromy'].every(id => M[id]?.unique?.baseMult === 3.2 && M[id]?.unique?.baseGuts === 64 && M[id]?.unique?.monId === id)
+  && JSON.stringify(M.Melody?.unique?.names) === JSON.stringify(['メロメロハート','ピアノワルツ','リボンウィング','パウンドメテオ','ピンクバースト','キャンディレイン','マリーランドアーチ','メロディタクト','スウィートパレード'])
+  && JSON.stringify(M.Kuromy?.unique?.names) === JSON.stringify(['ドクロボム','クロミーズ5突撃','夢くいウィング','恨み帳メテオ','黒音符バースト','らっきょう大雨','ナイトメアアーク','ダークオーロラ','悪夢フィナーレ'])
+  && [...M.Melody.unique.names, ...M.Kuromy.unique.names].every(n => n.length <= 9));
 check('通常技は9段階ずつ、ユーザーの資料の名前', N.Melody?.length === 9 && N.Kuromy?.length === 9
   && N.Melody[0] === 'ぞうさん頭突き' && N.Melody[8] === 'ドリームパワー' && N.Kuromy[0] === 'バク頭突き' && N.Kuromy[5] === "KUROMI'S5アタック");
 check('勇者特性の名前', M.Melody?.trait === 'メロディの手作りクッキー' && M.Kuromy?.trait === 'クロミノート');
 check('血統はユグドラシル×？？？(レア)と図鑑の文',
   /Melody:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages) && /Kuromy:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages)
   && /Melody: 'マイメロディとぞうさんの力を宿した/.test(lineages) && /Kuromy: 'クロミとバクの力を宿した/.test(lineages));
-// ★2026-10-08 ユーザー指示「新モンスター実装は早く取り下げて」で、販売と交換を止めた(本体は残し、交換済みの人はそのまま使える)
-check('取り下げ中: マーケットの6件はすべて近日追加(available:false)',
-  ['melody_icon', 'melody_disc_icon', 'Melody', 'kuromy_icon', 'kuromy_disc_icon', 'Kuromy'].every(id => new RegExp(`id:'${id}',[^\\n]*available:false`).test(breeder)));
-check('取り下げ中: ビートP交換所に円盤石を並べていない', !/rhythmEventDiscOffer\('(Melody|Kuromy)'/.test(event));
-check('技の動きはユグドラシルの型を名前で引く', /SKILL_ATTACK_THEME_MONSTERS = Object\.freeze\(\['Yggdrasil', 'MelWhip', 'Melody', 'Kuromy'\]\)/.test(rpg)
-  && [...N.Melody, ...N.Kuromy].every(n => rpg.includes(`'${n}':'yg`) || rpg.includes(`"${n}":'yg`)));
+// ★2026-10-08 いったん取り下げたあと、ユーザー指示「公開して」で再公開した(アイコン2種は販売、ダイヤの円盤石は近日追加のまま)
+check('アイコン2種ずつは販売中、ダイヤの円盤石は近日追加のまま',
+  /id:'melody_icon',[^\n]*cost:1 \}/.test(breeder) && /id:'kuromy_disc_icon',[^\n]*cost:1 \}/.test(breeder)
+  && /id:'Melody',[^\n]*available:false/.test(breeder) && /id:'Kuromy',[^\n]*available:false/.test(breeder));
+check('ビートP交換所で円盤石を先行公開', /rhythmEventDiscOffer\('Melody', 'メロディー'\)/.test(event) && /rhythmEventDiscOffer\('Kuromy', 'クロミー'\)/.test(event));
+check('内部の印(collab:sanrio)が2体にだけ付いている', M.Melody?.collab === 'sanrio' && M.Kuromy?.collab === 'sanrio'
+  && Object.values(M).filter(m => m.collab).length === 2);
+// 2026-10-08 ユーザー指示「2体とも専用アクションを力入れて作って」: ユグドラシルの型は使わず、段階の順に専用の動きを持つ
+const fxSrc = read('monster-hero/src/parts/24-battle-fx.jsx');
+const css = read('monster-hero/src/parts/70-bootstrap.jsx');
+check('技の動きは2体専用(ユグドラシルの型を名前で引く一覧には入れない)', /SKILL_ATTACK_THEME_MONSTERS = Object\.freeze\(\['Yggdrasil', 'MelWhip'\]\)/.test(rpg)
+  && /Melody:SKM_MELODY, Kuromy:SKM_KUROMY/.test(fxSrc));
+check('専用の部品(形・本体の動き・重ねる絵)のCSSがある', ['cookie', 'ribbon', 'cake', 'bnote', 'skull', 'rakkyo', 'book'].every(k => css.includes(`.skfx-p--${k} {`))
+  && ['parasol', 'gallop'].every(k => css.includes(`.skfx-body--${k} .thm-atk__monster`) && css.includes(`.skfx-body--${k} .uex-ghost`))
+  && ['rainbow', 'nightmare'].every(k => css.includes(`.skfx-over--${k} i {`)));
 
 // ---------- ② スタックの決めごと ----------
 const stackSrc = slice(bond, '// ==== 勇者特性「メロディの手作りクッキー」', '// ==== 固有技「運命のコイン」');
@@ -84,6 +96,13 @@ check('黒音符の段階(1個ごと与ダメ+3% / 5個 会心率+10% / 10個 �
   && near(n10.dmgMult, 1.3) && n10.combo && n10.combo.count === 1 && near(n10.combo.rate, 0.15));
 check('黒音符の連撃は、EXや運命の連撃のうしろへ並べる', s.withBlackNoteCombo(null, null) === null
   && s.withBlackNoteCombo({ count: 4, rate: 0.3 }, n10.combo).length === 2 && s.withBlackNoteCombo(null, n10.combo).length === 1);
+// 内部の印の判定(本体のデータを読むので ALL_PLAYER_MONSTERS を渡す)
+vm.runInContext('globalThis.ALL_PLAYER_MONSTERS = __M;', Object.assign(sb, { __M: M }));
+vm.runInContext('globalThis.s2={isSanrioCollabSkill};', sb);
+check('内部の印の判定は技の出自で見る(固有技は monId、通常技を受け継げるようになったら originMonId)',
+  sb.s2.isSanrioCollabSkill({ type: 'unique', monId: 'Melody' }) && sb.s2.isSanrioCollabSkill({ type: 'atk', originMonId: 'Kuromy' })
+  && !sb.s2.isSanrioCollabSkill({ type: 'unique', monId: 'Yggdrasil' }) && !sb.s2.isSanrioCollabSkill(null));
+check('受け継いだ固有技で場の本人に貯まる仕組みは作らない(ユーザー判断)', !app.includes('gainSweetStackFromInherited'));
 check('札に出す文', s.sweetStackEffectText('Melody', 10).includes('与ダメージ+15%') && s.sweetStackEffectText('Kuromy', 5).includes('会心率+10%'));
 
 // ---------- ③ 本体の分岐 ----------
@@ -102,13 +121,18 @@ check('バトル画面の札に貯まった数が出る', screen.includes("Objec
 const guardSrc = slice(bond, '// 固有技「大樹の加護」', '// ==== 勇者特性「トリックスタート」');
 const gb = {};
 vm.createContext(gb);
-vm.runInContext(`${guardSrc}\nglobalThis.g={isLifeTreeGuardCard,lifeTreeGuardNameOf};`, gb);
-check('固有技の効果は大樹の加護と同じ中身で、名前だけ違う',
+vm.runInContext(`${guardSrc}\nglobalThis.g={isLifeTreeGuardCard,lifeTreeGuardNameOf,lifeTreeGuardMult,lifeTreeGuardEffectOf,bowAtkMultOf};`, gb);
+check('固有技の効果は2体専用の数字(メロディー: 被ダメ−25%・ライフ15%・ガッツ20%・クッキー+1 / クロミー: 被ダメ−15%・ガッツ20%・与ダメ+5%を積む)',
   gb.g.isLifeTreeGuardCard({ type: 'unique', monId: 'Melody' }) && gb.g.isLifeTreeGuardCard({ type: 'unique', monId: 'Kuromy' })
   && gb.g.isLifeTreeGuardCard({ type: 'unique', monId: 'Yggdrasil' }) && !gb.g.isLifeTreeGuardCard({ type: 'atk', monId: 'Melody' })
   && !gb.g.isLifeTreeGuardCard({ type: 'unique', monId: 'Ghost' })
-  && gb.g.lifeTreeGuardNameOf('Melody') === 'ピンク音符の加護' && gb.g.lifeTreeGuardNameOf('Kuromy') === 'メロディ・ボゥの旋律');
-check('本体の分岐は isLifeTreeGuardCard を見る', app.includes('else if(isLifeTreeGuardCard(card)){') && app.includes('${lifeTreeGuardNameOf(card.monId)}！'));
+  && gb.g.lifeTreeGuardNameOf('Melody') === 'ピンク音符の加護' && gb.g.lifeTreeGuardNameOf('Kuromy') === 'メロディ・ボゥの旋律'
+  && near(gb.g.lifeTreeGuardMult(1, 'Melody'), 0.75) && near(gb.g.lifeTreeGuardMult(1, 'Kuromy'), 0.85) && near(gb.g.lifeTreeGuardMult(1, 'Yggdrasil'), 0.7)
+  && near(gb.g.lifeTreeGuardMult(0.5, 'Melody'), 0.875)
+  && gb.g.lifeTreeGuardEffectOf('Melody').hp === 0.15 && gb.g.lifeTreeGuardEffectOf('Melody').cookie === 1 && gb.g.lifeTreeGuardEffectOf('Kuromy').atkStack === 0.05
+  && near(gb.g.bowAtkMultOf(3), 1.15) && gb.g.bowAtkMultOf(0) === 1);
+check('本体の分岐は isLifeTreeGuardCard と技の出自の数字を見る', app.includes('else if(isLifeTreeGuardCard(card)){') && app.includes('${lifeTreeGuardNameOf(card.monId)}！')
+  && app.includes('const guardFx=lifeTreeGuardEffectOf(card.monId);') && app.includes('*bowAtkMultAt(slotIdx)*') && app.includes('bowStackRef.current = {}; setBowStackView({});'));
 
 // ---------- ⑤ タクティクスEX ----------
 const gs = (from, to) => slice(game, from, to);
@@ -154,7 +178,7 @@ check('メロディボックスは全体バフへ、メロディ・キーの敵�
   && app.includes('const nm=tacticsExNightmareEnemyOf(tacticsExStateRef.current,tacticsUnitsRef.current,live.now);'));
 
 // ---------- ⑥ 言葉 ----------
-const texts = [allies, lineages, breeder, read('monster-hero/data/help.js'), slice(read('monster-hero/data/changelog.js'), 'const CHANGELOG = [', "id:'update_notice_melody_kuromy_release_v1'"),
+const texts = [allies, lineages, breeder, read('monster-hero/data/help.js'), slice(read('monster-hero/data/changelog.js'), 'const CHANGELOG = [', "id:'update_notice_melody_kuromy_v2'"),
   read('docs/spec/MELODY_KUROMY_SKILLS.md'), stackSrc,
   read('tools/image/make-melody-kuromy-release-notice.js')];
 // 禁止語そのものをソースへ書かないよう、文字コードで持つ
