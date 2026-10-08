@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 811a817f85825484
+// source-sha256: a761ca17f5a30a2d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 12:27";
+const BUILD_DATE = "2026-10-08 13:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -65779,6 +65779,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
+.mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -65908,6 +65909,37 @@ function RhythmModeSelectStage({
       animationDelay: n.delay
     }
   }, n.ch)));
+}
+function BattleScreenHead({
+  eyebrow,
+  title,
+  accent = 'text-white',
+  accentStyle = null,
+  note = '',
+  onBack = null,
+  disabled = false,
+  right = null
+}) {
+  return React.createElement("header", {
+    className: "relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm"
+  }, onBack && React.createElement("button", {
+    type: "button",
+    "aria-label": "戻る",
+    onClick: onBack,
+    disabled: disabled,
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30"
+  }, "←"), React.createElement("div", {
+    className: "min-w-0 flex-1 leading-none"
+  }, React.createElement("small", {
+    className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+  }, eyebrow), React.createElement("b", {
+    className: `block truncate text-lg font-black leading-tight tracking-wider ${accentStyle ? '' : accent}`,
+    style: accentStyle || undefined
+  }, title), note && React.createElement("small", {
+    className: "block truncate text-[9px] font-black text-slate-300/90"
+  }, note)), right && React.createElement("div", {
+    className: "shrink-0"
+  }, right));
 }
 function useModeSelectStageCss() {
   React.useEffect(() => {
@@ -91183,7 +91215,7 @@ function MonsterHeroGame() {
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(180deg,#152044,#0d142b)',
+            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
             boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
           }
         }, React.createElement("div", {
@@ -91343,15 +91375,15 @@ function MonsterHeroGame() {
       });
       const tileLook = {
         [BATTLE_SYSTEM_CLASSIC]: {
-          grad: 'from-indigo-200 via-indigo-400 to-violet-500',
+          grad: 'from-orange-200 via-orange-400 to-rose-500',
           mark: 'CLASSIC BATTLE'
         },
         [BATTLE_SYSTEM_TACTICS]: {
-          grad: 'from-amber-200 via-orange-400 to-red-500',
+          grad: 'from-sky-200 via-blue-400 to-violet-600',
           mark: 'TACTICS BATTLE'
         },
         [BATTLE_SYSTEM_QUICK]: {
-          grad: 'from-yellow-100 via-yellow-300 to-amber-400',
+          grad: 'from-lime-200 via-emerald-300 to-teal-500',
           mark: 'QUICK MODE'
         }
       };
@@ -91450,7 +91482,32 @@ function MonsterHeroGame() {
           "aria-label": `${sys.label}の詳しいルール`,
           className: "absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-slate-950/55 text-[17px] font-black text-white backdrop-blur-sm active:scale-90 disabled:opacity-40"
         }, "？"));
-      })))));
+      })), React.createElement("div", {
+        "data-battle-system-shortcuts": true,
+        className: "flex gap-2 pt-1"
+      }, React.createElement("button", {
+        "data-battle-system-ranking": true,
+        type: "button",
+        disabled: !!battleTutorial,
+        onClick: () => openModeScoreRanking(BATTLE_MODE_CHALLENGE, difficulty, 'BATTLE_SYSTEM_SELECT'),
+        className: "mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-emerald-100 active:scale-95 disabled:opacity-40"
+      }, React.createElement("span", {
+        "aria-hidden": "true",
+        className: "text-lg"
+      }, "🏆"), React.createElement("b", {
+        className: "text-[11px] font-black"
+      }, "ランキング")), React.createElement("button", {
+        "data-battle-system-help": true,
+        type: "button",
+        disabled: !!battleTutorial,
+        onClick: () => openHelp(),
+        className: "mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-amber-100 active:scale-95 disabled:opacity-40"
+      }, React.createElement("span", {
+        "aria-hidden": "true",
+        className: "text-lg"
+      }, "📖"), React.createElement("b", {
+        className: "text-[11px] font-black"
+      }, "ヘルプ"))))));
     })(), gameState === 'BATTLE_MODE_SELECT' && (() => {
       const modes = battleSystemModes(battleSystem, {
         debugBattle
@@ -91492,15 +91549,19 @@ function MonsterHeroGame() {
       };
       return React.createElement("div", {
         "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        className: "mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white",
         style: {
           paddingTop: '.35rem',
           paddingBottom: '.35rem'
         }
-      }, React.createElement(ScreenHead, {
-        compact: true,
-        title: "バトル",
-        accent: "text-indigo-400",
+      }, React.createElement(RhythmModeSelectStage, {
+        notes: false
+      }), React.createElement(BattleScreenHead, {
+        eyebrow: "MONHERO BATTLE ・ SELECT MODE",
+        title: (BATTLE_SYSTEMS.find(sy => sy.id === battleSystem) || BATTLE_SYSTEMS[0]).label,
+        accentStyle: {
+          color: (BATTLE_SYSTEMS.find(sy => sy.id === battleSystem) || BATTLE_SYSTEMS[0]).color
+        },
         disabled: !!battleTutorial,
         onBack: () => {
           if (modeSelectTab !== 'mode') {
@@ -91576,7 +91637,7 @@ function MonsterHeroGame() {
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? m.color : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(180deg,#152044,#0d142b)',
+            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
             boxShadow: active ? `0 0 30px ${m.color}55` : 'none'
           }
         }, React.createElement("div", {
@@ -91722,14 +91783,16 @@ function MonsterHeroGame() {
       };
       return React.createElement("div", {
         "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        className: "mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white",
         "data-extreme-difficulties": true,
         style: {
           paddingTop: '.35rem',
           paddingBottom: '.35rem'
         }
-      }, React.createElement(ScreenHead, {
-        compact: true,
+      }, React.createElement(RhythmModeSelectStage, {
+        notes: false
+      }), React.createElement(BattleScreenHead, {
+        eyebrow: "EXTREME CHALLENGE ・ SELECT LEVEL",
         title: "極限チャレンジ",
         accent: "text-fuchsia-300",
         onBack: () => setGameState('BATTLE_MODE_SELECT'),
@@ -91975,13 +92038,15 @@ function MonsterHeroGame() {
       const speciesCleared = difficultyId => isSpeciesChallengeCleared(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       return React.createElement("div", {
         "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        className: "mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white",
         style: {
           paddingTop: '.35rem',
           paddingBottom: '.35rem'
         }
-      }, React.createElement(ScreenHead, {
-        compact: true,
+      }, React.createElement(RhythmModeSelectStage, {
+        notes: false
+      }), React.createElement(BattleScreenHead, {
+        eyebrow: "MONHERO BATTLE ・ SELECT LEVEL",
         title: mode.label,
         accentStyle: {
           color: mode.color
@@ -92099,7 +92164,7 @@ function MonsterHeroGame() {
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[384px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'} ${quickUnlocked ? '' : 'grayscale'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(180deg,#152044,#0d142b)',
+            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
             boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
           }
         }, React.createElement("div", {
@@ -92308,13 +92373,15 @@ function MonsterHeroGame() {
       const species = isSpeciesChallengeMode(scoreRankingMode);
       return React.createElement("div", {
         "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        className: "mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white",
         style: {
           paddingTop: '.35rem',
           paddingBottom: '.35rem'
         }
-      }, React.createElement(ScreenHead, {
-        compact: true,
+      }, React.createElement(RhythmModeSelectStage, {
+        notes: false
+      }), React.createElement(BattleScreenHead, {
+        eyebrow: "MONHERO BATTLE ・ RANKING",
         title: mode.label,
         accentStyle: {
           color: mode.color
