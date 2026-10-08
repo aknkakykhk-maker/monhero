@@ -82,16 +82,17 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
   await context.addInitScript(FAKE_WS);
   const errors = [];
-  const open = async (name) => {
+  const open = async (name, withMasu = false) => {
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
-    await page.addInitScript((nm) => {
+    await page.addInitScript(([nm, masu]) => {
       const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
       put('mh_breeder_name', nm); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true);
       put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
       put('mh_assistant_selected_v1', 'momosuke'); put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
+      if (masu) put('mh_masu_mons', [{ id: 'm1', baseId: 'Mocchi', name: 'もちまる', bondXp: 5000, createdAt: 1 }]);
       put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
-    }, name);
+    }, [name, withMasu]);
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.body && document.body.innerText.includes('TAP TO START'), null, { timeout: 60000 });
     await page.getByText('TAP TO START').click();
@@ -207,6 +208,92 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     });
     check('モードえらび: ももすけの立ち絵は、表情ごとの切り出し位置で広げて出す', !!art && /momosuke_/.test(art.src) && /translate\(-\d/.test(art.style) && /width: 150%/.test(art.style),
       art ? `${art.src.split('/').pop()} ${art.style.slice(0, 60)}` : '絵が無い');
+
+    // ===== ①-2 選曲の画面の「マスモンを呼ぶ」(マスモンを持っている部屋主で) =====
+    //   モードえらびの検査には影響させないよう、マスモンを持たせた別のページ(う・え)で、もう1つ部屋をつくる
+    {
+      const C = await open('う', true);
+      const D = await open('え');
+      await C.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
+      await D.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
+      await C.locator('[data-rhythm-mode-private-open]').click();
+      await C.locator('[data-rhythm-multi-create]').click();
+      await C.waitForSelector('[data-rhythm-multi-room-code]', { timeout: 15000 });
+      const code2 = (await C.locator('[data-rhythm-multi-room-code]').innerText()).trim();
+      await D.locator('[data-rhythm-mode-private-open]').click();
+      await D.locator('[data-rhythm-multi-code-input]').fill(code2);
+      await D.locator('[data-rhythm-multi-join]').click();
+      await C.waitForFunction(() => typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view() && RHYTHM_MULTI.view().members.length === 2, null, { timeout: 20000 });
+      await C.locator('[data-rhythm-multi-confirm]').click();
+      await C.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'select', null, { timeout: 15000 });
+    // 選曲の画面の「マスモンを呼ぶ」(2026-10-08・ユーザー報告「横向きだと縦にも横にもスペースを取りすぎ・縦画面だと曲選択すら見えない」)。
+    //   ヘッダーの小さな札だけにして、大きな緑の帯は置かない(ヘッダーの高さ・曲の一覧の高さを食わない)
+    for (const [w, h, rotated, label] of [[390, 844, false, '縦画面'], [375, 667, false, '小さい縦画面'], [390, 844, true, '回転(横)'], [844, 390, false, '横画面']]) {
+      await C.setViewportSize({ width: w, height: h });
+      await C.evaluate((on) => RHYTHM_VIEW_ROTATION.set(on ? 90 : 0), !!rotated);
+      await C.waitForTimeout(rotated ? 1000 : 600);
+      if (process.env.MH_SHOT_DIR) await C.screenshot({ path: path.join(process.env.MH_SHOT_DIR, `select-${label}.png`) });
+      const m = await C.evaluate(() => {
+        const vis = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+        const head = document.querySelector('[data-rhythm-multi] header');
+        const buddy = [...document.querySelectorAll('[data-rhythm-buddy-open]')];
+        const list = document.querySelector('[data-rhythm-song-list]');
+        const time = [...document.querySelectorAll('[data-rhythm-multi-select-time],[data-rhythm-multi-select-time-narrow]')].filter(vis);
+        const rect = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom }; };
+        const hb = head ? [...head.querySelectorAll('button')].filter(vis).map(rect) : [];
+        const box = head ? rect(head) : null;
+        return {
+          buddyCount: buddy.filter(vis).length, buddyInHeader: buddy.filter(vis).every((b) => !!head && head.contains(b)), narrowRow: !!document.querySelector('[data-rhythm-buddy-narrow],[data-rhythm-multi-select-tools]'),
+          headerOver: box ? hb.filter((r) => r.r > box.r + 1 || r.l < box.l - 1 || r.b > box.b + 1 || r.t < box.t - 1).length : -1, headerDbg: box ? JSON.stringify([box, ...hb.map((r) => [Math.round(r.l), Math.round(r.r), Math.round(r.t), Math.round(r.b)])]) : '',
+          listH: list ? Math.round(list.getBoundingClientRect().height) : -1, timeShown: time.length,
+        };
+      });
+      check(`選曲(${label}): 「マスモンを呼ぶ」はヘッダーの小さな札ひとつだけ(大きな帯・専用の行は無い)`, m.buddyCount === 1 && m.buddyInHeader && !m.narrowRow, JSON.stringify(m));
+      check(`選曲(${label}): ヘッダーの札が切れたり、はみ出したりしない`, m.headerOver === 0, m.headerOver === 0 ? '' : m.headerDbg);
+      // 低い縦画面では注意書き(右に制限時間の札がある)がはじめ畳まれている。💬▲で開けば見える
+      let timeShown = m.timeShown;
+      if (timeShown === 0 && !rotated && w < 481) {
+        await C.evaluate(() => document.querySelector('[data-rhythm-song-notice-toggle]')?.click());
+        await C.waitForTimeout(300);
+        timeShown = await C.evaluate(() => [...document.querySelectorAll('[data-rhythm-multi-select-time-narrow]')].filter((el) => el.getClientRects().length > 0).length);
+      }
+      check(`選曲(${label}): 部屋主の「選曲の制限時間」の札が、どこかに見える(畳まれた注意書きは💬▲で開ける)`, timeShown >= 1, JSON.stringify(m));
+      if (!rotated && h >= 667 && w < 481) check(`選曲(${label}): 曲の一覧が見える高さ(80px以上)`, m.listH >= 80, `${m.listH}px`);
+    }
+    await C.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
+    await C.setViewportSize({ width: 844, height: 390 });
+      // チャット欄(2026-10-08・ユーザー報告「定型文でチャットログが見づらい・定型文のゾーンが動かせず、下の自由入力が出せない」)。
+      //   マスモンを呼んだ状態(「マスモンに聞く」の札も並ぶ)で、入力欄が画面に収まり、発言の一覧が読める高さを保つ
+      await C.evaluate(() => RHYTHM_MULTI.summon({ masuId: 'm1', name: 'もちまる', level: 5, baseId: 'Mocchi', colors: [] }));
+      await C.waitForFunction(() => RHYTHM_MULTI.view() && (RHYTHM_MULTI.view().myCpus || []).length === 1, null, { timeout: 8000 }).catch(() => {});
+      for (const text of ['よろしく!', 'もちまる、調子どう?', 'ナイス!']) { await C.evaluate((t) => RHYTHM_MULTI.sendChat(t), text); await C.waitForTimeout(1300); }
+      for (const [w, h, rotated, label] of [[390, 844, false, '縦画面'], [375, 667, false, '小さい縦画面'], [390, 844, true, '回転(横)'], [844, 390, false, '横画面'], [667, 375, false, '小さい横画面']]) {
+        await C.setViewportSize({ width: w, height: h });
+        await C.evaluate((on) => RHYTHM_VIEW_ROTATION.set(on ? 90 : 0), !!rotated);
+        await C.waitForTimeout(rotated ? 1000 : 600);
+        if (!(await C.evaluate(() => !!document.querySelector('[data-rhythm-multi-chat]')))) await C.evaluate(() => document.querySelector('[data-rhythm-multi-chat-open]')?.click());
+        await C.waitForSelector('[data-rhythm-multi-chat-input]', { timeout: 5000 });
+        await C.waitForTimeout(300);
+        if (process.env.MH_SHOT_DIR) await C.screenshot({ path: path.join(process.env.MH_SHOT_DIR, `chat-${label}.png`) });
+        const c = await C.evaluate(() => {
+          const r = (el) => el.getBoundingClientRect();
+          const input = document.querySelector('[data-rhythm-multi-chat-input]');
+          const list = document.querySelector('[data-rhythm-multi-chat-list]');
+          const quick = document.querySelector('[data-rhythm-multi-chat-quick]');
+          const ib = r(input);
+          return { inView: ib.width > 0 && ib.left >= -1 && ib.right <= window.innerWidth + 1 && ib.top >= -1 && ib.bottom <= window.innerHeight + 1, listH: list ? list.offsetHeight : -1, quickH: quick ? quick.offsetHeight : -1, ask: !!document.querySelector('[data-rhythm-buddy-ask]') };
+        });
+        const need = w > h || rotated ? 150 : 130;
+        check(`チャット欄(${label}): 自由入力の欄が画面に収まる`, c.inView, JSON.stringify(c));
+        check(`チャット欄(${label}): 発言の一覧が読める高さ(${need}px以上)`, c.listH >= need, `${c.listH}px`);
+        check(`チャット欄(${label}): 定型文と「マスモンに聞く」の札が、高さを取りすぎない(${w > h || rotated ? '1行で横にすべらせる' : '中だけ上下にすべらせる'})`, c.quickH <= (w > h || rotated ? 50 : 140), `${c.quickH}px`);
+        await C.evaluate(() => document.querySelector('[data-rhythm-multi-chat-close]')?.click());
+        await C.waitForTimeout(300);
+      }
+      await C.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
+      await C.close();
+      await D.close();
+    }
 
     // ===== ② 2人でライブを終えて、結果画面へ =====
     await A.setViewportSize({ width: 844, height: 390 });
