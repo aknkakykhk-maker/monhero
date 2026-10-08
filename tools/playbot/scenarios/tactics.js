@@ -100,7 +100,7 @@ const readTactics = (s) => s.page.evaluate(() => {
   }));
   const action = document.querySelector('[data-battle-action]');
   return {
-    wave: num(/WAVE\s*(\d+)\s*\/\s*\d+/), waveMax: num(/WAVE\s*\d+\s*\/\s*(\d+)/), turn: num(/TURN\s*(\d+)\s*\/\s*\d+/),
+    wave: num(/WAVE\s*(\d+)\s*\/\s*\d+/), waveMax: num(/WAVE\s*\d+\s*\/\s*(\d+)/), turn: num(/TURN\s*(\d+)\s*\/\s*\d+/), turnMax: num(/TURN\s*\d+\s*\/\s*(\d+)/),
     picked: num(/ACTION CARDS\s*(\d+)\s*\//i), limit: num(/ACTION CARDS\s*\d+\s*\/\s*(\d+)/i),
     party, aimed: aimedEl ? Number(aimedEl.getAttribute('data-slot-index')) : null, aimedDamage,
     intent: ((document.querySelector('[data-enemy-intent]') || {}).innerText || '').replace(/\s+/g, ' ').slice(0, 60),
@@ -127,13 +127,16 @@ async function tapEl(s, selector, why) {
 }
 
 // 手札を名前で探して押す。★選んだり引き直したりすると並びが変わるので、番号は押す直前に取り直す
-async function tapCard(s, card, why) {
-  const i = await s.page.evaluate((label) => {
+// skip: このターンにすでに選んだ同じ名前のカードの枚数。選んだカードも「使える」のままなので、
+// 先頭から押すと選んだ1枚目をもう一度押して外してしまう(2026-10-09 バク頭突き2枚で止まった)。その枚数ぶん飛ばして押す
+async function tapCard(s, card, why, skip = 0) {
+  const i = await s.page.evaluate(([label, skipN]) => {
     // 同じ名前のカードが2枚あることがある(ハイガードなど)。使えるほうを押す
     const same = [...document.querySelectorAll('[data-hand-card]')].filter((x) => (x.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 30) === label);
-    const el = same.find((x) => x.getAttribute('data-card-usable') === 'true') || same[0];
+    const usable = same.filter((x) => x.getAttribute('data-card-usable') === 'true');
+    const el = usable[skipN] || usable[usable.length - 1] || same[0];
     return el ? el.getAttribute('data-hand-card') : null;
-  }, card.label);
+  }, [card.label, skip]);
   if (i === null) return false;
   return tapEl(s, `[data-hand-card="${i}"]`, why);
 }
@@ -221,7 +224,7 @@ async function pickCards(s, st, stats) {
     const pickedBefore = now.picked || 0;
     let placed = false;
     for (let k = 0; k < 3 && !placed; k++) {
-      await tapCard(s, card, `カードを選ぶ(${card.type})`);
+      await tapCard(s, card, `カードを選ぶ(${card.type})`, tapped.get(card.label) || 0);
       await s.wait(600);
       const sel = await readTactics(s);
       if ((sel.picked || 0) > pickedBefore && !sel.needsPlace) { placed = true; break; }
@@ -383,6 +386,8 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       st = await readTactics(s);
     }
     if (st.exPanel) await closeExPanel(s);
+    // ★ターンに上限がある戦い(レイドは20ターン)は、上限を超えたら終わり。結果の画面で手札を押し続けて「実行が押せない」と言わない
+    if (Number.isFinite(st.turnMax) && st.turnMax > 0 && Number.isFinite(st.turn) && st.turn > st.turnMax) break;
     // ターンの始め(WAVE の始まりの演出・敵の番の直後)は、実行ボタンが出て手札が押せるようになるまで待つ
     for (let k = 0; k < 16 && !(st.inBattle && st.hand.length && st.hand.some((c) => c.usable) && st.actionPresent); k++) {
       await s.wait(500);
@@ -398,6 +403,14 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     // ドラッグ直後のクリックは捨てられることがあるので、少し置いてから実行する
     await s.wait(700);
     const before = await readTactics(s);
+    // ★EXを使ったターン(併用できないEX)はカードを選べず、実行ボタンの代わりに「ターンを進める」が出る(71-screen-battle.jsx の data-tactics-ex-pass)。
+    //   これを知らないと「実行が押せない」で止まり、レイドなら戦い切れずに与ダメージの記録が送られない(2026-10-09 クロミーで見つけた)
+    if (!before.actionEnabled && await s.page.evaluate(() => { const b = document.querySelector('[data-tactics-ex-pass]'); return !!b && !b.disabled; })) {
+      await tapEl(s, '[data-tactics-ex-pass]', 'ターンを進める');
+      stats.turns += 1;
+      for (let k = 0; k < 120; k++) { await s.wait(500); const now = await readTactics(s); if (!now.inBattle || now.turn !== before.turn || now.wave !== before.wave) break; }
+      continue;
+    }
     if (!before.actionEnabled) {
       // 手札がどれも使えない(ガッツ切れ)ときは、捨てる操作の代わりに AUTO の1手に頼らず、そのまま待つ
       await s.wait(1500);
