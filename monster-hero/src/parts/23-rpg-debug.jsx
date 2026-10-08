@@ -446,11 +446,21 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
 // ユグドラシル種は、参考の技画像(docs/spec/YGGDRASIL_SKILLS.md)の技ごとに別の動きを持つ。
 // 技の名前 → 型。見た目は 24-battle-fx.jsx の SKILL_FX_SPECS、動きは 70-bootstrap.jsx の .skfx--◯◯。
 // 通常技(ちから)は体ごとぶつかる・飛びかかる動き、固有技(かしこさ)はその場から魔法を放つ動き。
-const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip']);
+// メロディー・クロミー(2026-10-08)は、ユグドラシルの通常技を名前だけ置き換えた同じ並びなので、同じ段階の型を名前で引く。
+//   固有技の9段階はユグドラシルと同じ名前(スターボム〜コスモフルーツ)なので、足さなくても引ける
+const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip', 'Melody', 'Kuromy']);
 const SKILL_ATTACK_THEMES = Object.freeze({
   '頭突き':'ygHeadbutt', '空中脳天撃':'ygAirDive', 'グリーンライト':'ygGreenLight', 'ぴろぴろ舌':'ygTongue',
   '大玉転がし':'ygRoll', '月面水爆':'ygMoonDrop', 'キャンディボム':'ygCandy', '苺大噴':'ygStrawberry',
   'ケーキ入刀':'ygCakeCut', 'シャドウレギオン':'ygShadow',
+  // メロディー(ぞうさん・ピアノの傘・メロディタクト)
+  'ぞうさん頭突き':'ygHeadbutt', 'ピアノパラソル脳天撃':'ygAirDive', 'メロディタクトライト':'ygGreenLight', 'ぞうさんぴろぴろ鼻':'ygTongue',
+  'マリーランド大玉転がし':'ygRoll', 'ムーンサルトメロディー':'ygMoonDrop', 'メロディキャンディボム':'ygCandy', 'メロディ苺クッキー':'ygStrawberry',
+  'ドリームパワー':'ygShadow',
+  // クロミー(バク・黒音符・らっきょう)
+  'バク頭突き':'ygHeadbutt', 'バク空中落下プレス':'ygAirDive', 'ブラックノートライト':'ygGreenLight', 'バクパタパタ耳':'ygTongue',
+  '巨大雪だるま転がし':'ygRoll', "KUROMI'S5アタック":'ygMoonDrop', 'ナイトメアらっきょうボム':'ygCandy', 'バコ・ベリースプラッシュ':'ygStrawberry',
+  'ダークパワー':'ygShadow',
   'スターボム':'ygStarBomb', 'ワンダーブレイズ':'ygWonderBlaze', 'メニーウィング':'ygManyWing', 'ライスシャワー':'ygRiceShower',
   'メテオストーム':'ygMeteor', 'パピヨンバースト':'ygPapillon', 'ヘビーレイン':'ygHeavyRain', 'エターナルアーク':'ygEternalArc',
   'オーロラハック':'ygAurora', 'コスモフルーツ':'ygCosmo',

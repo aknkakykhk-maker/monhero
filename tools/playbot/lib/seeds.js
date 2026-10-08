@@ -24,8 +24,18 @@ const veteranSeed = (name) => {
 };
 
 // quiet: false にすると、起動直後の会話・ストーリー・告知を既読にしない(ストーリー係が「流れるか」を見るため)
+// --hero <id,id>(PLAYBOT_HERO_IDS)で指定した子を、初期の8体に足して解放しておく(新しいモンスターを編成して遊ぶ確認用。2026-10-08)
+const heroIdsFromEnv = () => String(process.env.PLAYBOT_HERO_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
+const unlockSeed = (ids) => {
+  try {
+    const cur = JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null');
+    const base = Array.isArray(cur) ? cur : ['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol', 'Oboro'];
+    localStorage.setItem('mh_unlocked_monsters', JSON.stringify([...new Set([...base, ...ids])]));
+  } catch (e) { /* 種が入らなくても遊べる */ }
+};
 async function prepareVeteran(s, { quiet = true } = {}) {
   await s.page.addInitScript(veteranSeed, s.BOT_NAME);
+  if (heroIdsFromEnv().length) await s.page.addInitScript(unlockSeed, heroIdsFromEnv());
   if (!quiet) return;
   // ★種は最初の1回だけ入れる。読み込み直すたびに入れると、既読の一覧が上書きされて、
   //   ボットがそのあと見た会話(レイドのお話など)が「まだ見ていない」に戻り、毎回流れてしまう
@@ -59,4 +69,4 @@ async function prepareLegacy(s) {
   await s.page.addInitScript(legacySeed, s.BOT_NAME);
 }
 
-module.exports = { prepareVeteran, prepareLegacy };
+module.exports = { prepareVeteran, prepareLegacy, heroIdsFromEnv };

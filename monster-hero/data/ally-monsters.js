@@ -30,6 +30,10 @@ const HERO_ATK_NAMES = {
   // 技ごとの元の値(技種・消費ガッツ・ダメージなど)は docs/spec/YGGDRASIL_SKILLS.md
   Yggdrasil: ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","苺大噴","シャドウレギオン"],
   MelWhip:   ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","ケーキ入刀","シャドウレギオン"],
+  // メロディー・クロミー(2026-10-08 正式実装)。ユグドラシルと同じ並び(段階)で、名前だけユーザーが決めたものへ置き換えた。
+  // 技の動きは名前で引く(23-rpg-debug.jsx の SKILL_ATTACK_THEMES)ので、ユグドラシルの同じ段階の動きが出る
+  Melody: ["ぞうさん頭突き","ピアノパラソル脳天撃","メロディタクトライト","ぞうさんぴろぴろ鼻","マリーランド大玉転がし","ムーンサルトメロディー","メロディキャンディボム","メロディ苺クッキー","ドリームパワー"],
+  Kuromy: ["バク頭突き","バク空中落下プレス","ブラックノートライト","バクパタパタ耳","巨大雪だるま転がし","KUROMI'S5アタック","ナイトメアらっきょうボム","バコ・ベリースプラッシュ","ダークパワー"],
   // ゴースト(2026-10-05・案の段階)。並びと決めた経緯は docs/spec/GHOST_SKILLS.md
   Ghost:  ["ピコピコハンマー","ソウルビーム","ハトのおとしもの","びっくり","体当たり","カード","すてきステッキ","大パンチ","コンビネーション"],
   // スプーキー: ゴーストと同じ並びで、カード→カード・クラブ、コンビネーション→グリンネーション(オリジナル技)
@@ -93,6 +97,12 @@ const ALL_PLAYER_MONSTERS = {
   // 技は技の名前ごとに別の動き(23-rpg-debug.jsx の SKILL_ATTACK_THEMES)なので atkMotion は 'default'
   Yggdrasil: { id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_ICON, faceIconUrl:YGGDRASIL_FACE_ICON, atkMotion:'default', trait:"生命の源", traitDesc:"勇者モン選択時：1〜5ターン目は被ダメージ30%軽減。6ターン目以降、3ターン毎にガッツ30%回復(ターン数はWAVE毎にリセット)", baseHp:800, baseGuts:115, baseAtk:100, baseDef:180, plusStats:{hp:380,atk:10,def:80,guts:5}, distAptitude:['B','D','E','A'], unique:{name:"スターボム",icon:YGGDRASIL_ICON,monId:"Yggdrasil",baseMult:3.2,baseGuts:64,evoLevel:0,names:["スターボム","ワンダーブレイズ","メニーウィング","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"],effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)"}},
   MelWhip:   { id:'MelWhip', name:"メルホイップ", emoji:"🍰", imgUrl:MEL_WHIP_IMG, iconUrl:MEL_WHIP_ICON, faceIconUrl:MEL_WHIP_FACE_ICON, atkMotion:'default', trait:"生命の源", traitDesc:"勇者モン選択時：1〜5ターン目は被ダメージ30%軽減。6ターン目以降、3ターン毎にガッツ30%回復(ターン数はWAVE毎にリセット)", baseHp:780, baseGuts:120, baseAtk:130, baseDef:150, plusStats:{hp:350,atk:30,def:50,guts:10}, distAptitude:['E','C','A','B'], unique:{name:"スターボム",icon:MEL_WHIP_ICON,monId:"MelWhip",baseMult:3.2,baseGuts:64,evoLevel:0,names:["スターボム","ワンダーブレイズ","ライスシャワー","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"],effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)"}},
+  // メロディー・クロミー(2026-10-08 正式実装)。どちらもユグドラシル×？？？のレア。数値はユーザーと決めた値(docs/spec/MELODY_KUROMY_SKILLS.md)。
+  // メロディーはライフ・丈夫さ型の支援役、クロミーはユグドラシル種でいちばん攻撃寄り。
+  // 固有技はユグドラシル種と同じ×3.2・消費64・9段階の名前で、効果も同じ(名前だけ「ピンク音符の加護」「メロディ・ボゥの旋律」)。
+  // 勇者特性はスタックを貯める形(クッキー / 黒音符)。決めごとは 22-enemy-and-bond-entries.jsx の SWEET_STACK_TRAITS
+  Melody:    { id:'Melody', name:"メロディー", emoji:"🐘", imgUrl:MELODY_IMG, iconUrl:MELODY_ICON, faceIconUrl:MELODY_FACE_ICON, atkMotion:'default', trait:"メロディの手作りクッキー", traitDesc:"勇者モン選択時：メロディーがカードを使うたびにクッキー+1(最大10・ランのあいだ持ち越す)。2個から味方の毎ターンのライフ回復+5%、4個からガッツ回復+5%、7個から被ダメージ15%軽減、10個で与ダメージ+15%", baseHp:760, baseGuts:135, baseAtk:105, baseDef:160, plusStats:{hp:360,atk:15,def:60,guts:25}, distAptitude:['C','B','A','D'], unique:{name:"スターボム",icon:MELODY_ICON,monId:"Melody",baseMult:3.2,baseGuts:64,evoLevel:0,names:["スターボム","ワンダーブレイズ","メニーウィング","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"],effectDesc:"ピンク音符の加護：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)"}},
+  Kuromy:    { id:'Kuromy', name:"クロミー", emoji:"😈", imgUrl:KUROMY_IMG, iconUrl:KUROMY_ICON, faceIconUrl:KUROMY_FACE_ICON, atkMotion:'default', trait:"クロミノート", traitDesc:"勇者モン選択時：クロミーの攻撃が当たるたびに黒音符+1(固有技は+2・最大10・ランのあいだ持ち越す)。1個ごとにクロミーの与ダメージ+3%、5個から会心率+10%、10個でクロミーの攻撃に15%の連撃", baseHp:680, baseGuts:125, baseAtk:175, baseDef:110, plusStats:{hp:320,atk:45,def:30,guts:15}, distAptitude:['C','A','B','D'], unique:{name:"スターボム",icon:KUROMY_ICON,monId:"Kuromy",baseMult:3.2,baseGuts:64,evoLevel:0,names:["スターボム","ワンダーブレイズ","メニーウィング","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"],effectDesc:"メロディ・ボゥの旋律：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)"}},
   // ゴースト種(2026-10-05 正式実装)。数値・特性・固有技・EXはユーザーと決めた値(docs/spec/GHOST_SKILLS.md)。
   // 新しい血統ゴースト。ゴーストは純血、スプーキーはゴースト×？？？のレア。2体とも打たれ弱い魔法寄りで、ガッツ多め。
   // 勇者特性「トリックスタート」は2体で同じ。固有技の効果だけ違う(ゴースト=運命のコイン / スプーキー=運命の輪)。
@@ -114,15 +124,8 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // 決まっていない項目(能力値・技・勇者特性・攻撃モーション)は書かない。画面で「未設定」と赤く出るので、
 // 何が足りないかがそのまま一覧になる。正式に実装したら ALL_PLAYER_MONSTERS へ移し、ここからは消す。
 //   draftLineage … 血統の案。本体の MONSTER_LINEAGE_MAP へ足すのは正式実装のとき(lineage-dex-check.js の決まり)
-// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
+// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05、メロディーとクロミーは 2026-10-08 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
 //   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
-  // メロディー(2026-10-07・案の段階)。ユグドラシル×？？？のレア。名前と血統はユーザー指定。
-  // 立ち絵・顔アイコン・染色マスク(5部位)まで入れた。能力値・技・勇者特性・固有技・攻撃モーションは未定
-  Melody: Object.freeze({ id:'Melody', name:"メロディー", emoji:"🐘", imgUrl:MELODY_IMG, iconUrl:MELODY_ICON,
-    faceIconUrl:MELODY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
-  // クロミー(2026-10-07・案の段階)。ユグドラシル×？？？のレア。名前と血統はユーザー指定。
-  // 立ち絵・顔アイコン・染色マスク(5部位)まで入れた。能力値・技・勇者特性・固有技・攻撃モーションは未定
-  Kuromy: Object.freeze({ id:'Kuromy', name:"クロミー", emoji:"😈", imgUrl:KUROMY_IMG, iconUrl:KUROMY_ICON,
-    faceIconUrl:KUROMY_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
+  // (2026-10-08 にメロディー・クロミーを正式実装したので、いまは案の段階の子はいない)
 });

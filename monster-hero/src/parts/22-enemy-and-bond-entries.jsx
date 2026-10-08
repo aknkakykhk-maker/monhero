@@ -336,8 +336,12 @@ const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Numbe
   && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
 // 固有技「大樹の加護」: 使ったターンから2ターン、被ダメージ30%軽減。
 //   使ったターンのぶんは予告(71-screen-battle)と実際(handleEnemyTurn)の両方がこの値を掛ける
+// ★メロディー・クロミー(2026-10-08)も固有技の効果は同じで、名前だけ違う(勇者特性は生命の源ではない)。
+//   だから「持っている子」は生命の源とは別の一覧で持つ
 const LIFE_TREE_GUARD_REDUCTION = 0.3;
-const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
+const LIFE_TREE_GUARD_NAMES = Object.freeze({ Yggdrasil:'大樹の加護', MelWhip:'大樹の加護', Melody:'ピンク音符の加護', Kuromy:'メロディ・ボゥの旋律' });
+const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && Object.prototype.hasOwnProperty.call(LIFE_TREE_GUARD_NAMES, card.monId);
+const lifeTreeGuardNameOf = (monId) => LIFE_TREE_GUARD_NAMES[monId] || '大樹の加護';
 const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
 // ==== 勇者特性「トリックスタート」(ゴースト・スプーキー。2026-10-05 ユーザーと決めた値) ====
 // WAVEの1ターン目と、そこから3ターンごと(1・4・7・10…ターン目)に抽選する。
@@ -380,6 +384,79 @@ const trickStartGainText = (gained) => {
   if (gained?.def) parts.push(`丈夫さ+${Math.round(TRICK_START_DEF_RATE * 100)}%`);
   if (gained?.regen) parts.push(`毎ターン回復+${Math.round(TRICK_START_REGEN_RATE * 100)}%`);
   return parts.join('・');
+};
+// ==== 勇者特性「メロディの手作りクッキー」(メロディー)・「クロミノート」(クロミー)。2026-10-08 ユーザーと決めた値 ====
+// 正本: docs/spec/MELODY_KUROMY_SKILLS.md。どちらも「本人の行動でスタックが貯まり、多いほど段階的に効く」形。
+//   クッキー … メロディーがカードを1枚使うたびに+1。多いほど**味方全体**を支える(毎ターン回復・被ダメ軽減・与ダメ)
+//   黒音符   … クロミーの攻撃が当たるたびに+1(固有技は+2)。多いほど**クロミー自身**の攻撃が強くなる
+// 上限は10。**ランのあいだ持ち越す**(WAVEが変わっても消えない)。タクティクスのEXで全部使うと0へ戻る。
+// 既存5モードは勇者モンが持っているとき(パーティに1つ・キー 'party')、タクティクスは持っている子それぞれ(枠ごと)。
+// 持ち方は 60-app の sweetStackRef(bySlot: { '<枠>' | 'party': 数 })。保存はしない(ランの途中を保存していないため)
+const SWEET_STACK_MAX = 10;
+const SWEET_STACK_TRAITS = Object.freeze({
+  Melody: Object.freeze({ kind:'cookie', icon:'🍪', label:'クッキー', trait:'メロディの手作りクッキー' }),
+  Kuromy: Object.freeze({ kind:'note', icon:'🎵', label:'黒音符', trait:'クロミノート' }),
+});
+// クッキーの段階(この数以上で効く)。回復は毎ターンの自動回復の率へ足す(ライフ10%・ガッツ5%が基本)
+const COOKIE_HP_REGEN_FROM = 2, COOKIE_HP_REGEN = 0.05;
+const COOKIE_GUTS_REGEN_FROM = 4, COOKIE_GUTS_REGEN = 0.05;
+const COOKIE_TAKEN_FROM = 7, COOKIE_TAKEN_CUT = 0.15;
+const COOKIE_DMG_FROM = 10, COOKIE_DMG_UP = 0.15;
+// 黒音符: 1個ごとに与ダメージ+3%。5個から会心率+10%(足し算)。10個で15%の連撃が1本
+const BLACK_NOTE_DMG_PER = 0.03;
+const BLACK_NOTE_CRIT_FROM = 5, BLACK_NOTE_CRIT_ADD = 0.1;
+const BLACK_NOTE_COMBO_FROM = 10, BLACK_NOTE_COMBO_RATE = 0.15;
+const sweetStackTraitOf = (id) => (id && Object.prototype.hasOwnProperty.call(SWEET_STACK_TRAITS, id) ? SWEET_STACK_TRAITS[id] : null);
+const sweetStackCountOf = (n) => Math.min(SWEET_STACK_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+// その行動で増える数。ownerId=特性を持つ子(既存5モードは勇者モン・タクティクスはその枠の子)、actorId=カードを使った子。
+// ★いまは**本人の行動だけ**で貯まる(ownerId と actorId が同じとき)。
+//   技継承が入ったら「メロディー・クロミー由来の技を使ったら、ほかの子でも貯まる」をここへ足す
+//   (card.monId などで技の出自を見る。入口はこの1か所なので、呼び出し側は変えなくてよい)
+//   hit … 攻撃が当たったか(黒音符は当たったときだけ)
+const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
+  const trait = sweetStackTraitOf(ownerId);
+  if (!trait || !card || ownerId !== actorId) return 0;
+  if (trait.kind === 'cookie') return 1;
+  if (trait.kind === 'note') return hit ? (card.type === 'unique' ? 2 : 1) : 0;
+  return 0;
+};
+// 増やしたあとの数(上限で止める)
+const addSweetStack = (n, gain) => sweetStackCountOf(sweetStackCountOf(n) + Math.max(0, Math.floor(Number(gain) || 0)));
+// クッキーの効き目(味方全体)。数に応じて { hpRegen, gutsRegen, takenMult, dmgMult }
+const cookieEffectOf = (n) => {
+  const c = sweetStackCountOf(n);
+  return { hpRegen: c >= COOKIE_HP_REGEN_FROM ? COOKIE_HP_REGEN : 0, gutsRegen: c >= COOKIE_GUTS_REGEN_FROM ? COOKIE_GUTS_REGEN : 0,
+    takenMult: c >= COOKIE_TAKEN_FROM ? 1 - COOKIE_TAKEN_CUT : 1, dmgMult: c >= COOKIE_DMG_FROM ? 1 + COOKIE_DMG_UP : 1 };
+};
+// 黒音符の効き目(クロミー自身の攻撃)。{ dmgMult, critAdd, combo }
+const blackNoteEffectOf = (n) => {
+  const c = sweetStackCountOf(n);
+  return { dmgMult: 1 + BLACK_NOTE_DMG_PER * c, critAdd: c >= BLACK_NOTE_CRIT_FROM ? BLACK_NOTE_CRIT_ADD : 0,
+    combo: c >= BLACK_NOTE_COMBO_FROM ? { count: 1, rate: BLACK_NOTE_COMBO_RATE, label: '黒音符の連撃' } : null };
+};
+// buildAttackHits へ渡す exCombos へ、黒音符の連撃を足す(withFateCombo と同じ形)
+const withBlackNoteCombo = (exCombos, combo) => {
+  if (!combo) return exCombos;
+  return [...(Array.isArray(exCombos) ? exCombos : [exCombos]).filter(Boolean), combo];
+};
+// いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
+const sweetStackEffectText = (id, n) => {
+  const trait = sweetStackTraitOf(id);
+  if (!trait) return '';
+  const pct = (v) => Math.round(v * 100);
+  if (trait.kind === 'cookie') {
+    const e = cookieEffectOf(n), parts = [];
+    if (e.hpRegen > 0) parts.push(`毎ターン ライフ回復+${pct(e.hpRegen)}%`);
+    if (e.gutsRegen > 0) parts.push(`ガッツ回復+${pct(e.gutsRegen)}%`);
+    if (e.takenMult < 1) parts.push(`被ダメージ-${pct(1 - e.takenMult)}%`);
+    if (e.dmgMult > 1) parts.push(`与ダメージ+${pct(e.dmgMult - 1)}%`);
+    return parts.length ? `味方全体: ${parts.join('・')}` : `${COOKIE_HP_REGEN_FROM}個から効きはじめる`;
+  }
+  const e = blackNoteEffectOf(n), parts = [];
+  if (e.dmgMult > 1) parts.push(`与ダメージ+${pct(e.dmgMult - 1)}%`);
+  if (e.critAdd > 0) parts.push(`会心率+${pct(e.critAdd)}%`);
+  if (e.combo) parts.push(`${pct(e.combo.rate)}%の連撃`);
+  return parts.length ? `クロミーの攻撃: ${parts.join('・')}` : '攻撃を当てると貯まる';
 };
 // ==== 固有技「運命のコイン」(ゴースト)・「運命の輪」(スプーキー)。2026-10-05 ユーザーと決めた値 ====
 // 正本: docs/spec/GHOST_SKILLS.md。効き目は技の出自(card.monId)で決める(合体で引き継いだ固有技でも同じ)。

@@ -49,7 +49,13 @@ async function enterTactics(s, { mode }) {
   }
   await s.inspect();
   // 勇者モン・供モン・距離・アシストカード。勇者モンは毎回ちがう子から選ぶ
-  await page.evaluate((n) => { window.__pbPick = n; window.__pbChange = 1; }, Math.floor(rand() * 6));
+  // --hero で指定があれば、その子たちを勇者モン・供モンの順に先に選ぶ(名前は本体のデータから引く)
+  const wantIds = String(process.env.PLAYBOT_HERO_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
+  await page.evaluate(([n, ids]) => {
+    window.__pbPick = n; window.__pbChange = 1;
+    // eslint-disable-next-line no-undef
+    window.__pbWant = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ids.map((id) => ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name).filter(Boolean) : [];
+  }, [Math.floor(rand() * 6), wantIds]);
   for (let i = 0; i < 40; i += 1) {
     if (await page.evaluate(() => /WAVE 1\/\d+/.test(document.body.innerText) && !!document.querySelector('[data-battle-action]'))) break;
     await s.dismissOverlays(4);
@@ -61,6 +67,10 @@ async function enterTactics(s, { mode }) {
       const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
       const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
       const mons = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
+      // 勇者えらびは顔アイコンの並びで、タイルの文字は名前だけ(「前回」が付くことがある)。一覧のカードは名前を含む
+      const wantBtnOf = (name) => live.find((x) => x.textContent.trim().replace(/^前回/, '') === name) || mons.find((x) => x.textContent.includes(name));
+      const wantAt = (window.__pbWant || []).findIndex((name) => !!wantBtnOf(name));
+      if (wantAt >= 0) { const name = window.__pbWant.splice(wantAt, 1)[0]; wantBtnOf(name).click(); return 'mon'; }
       if (mons.length) { const m = mons[window.__pbPick % mons.length]; window.__pbPick += 1; m.click(); return 'mon'; }
       const changes = live.filter((x) => x.textContent.trim() === '変更');
       if (changes.length && window.__pbChange < changes.length) { changes[window.__pbChange].click(); window.__pbChange += 1; return 'change'; }
