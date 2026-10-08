@@ -102,7 +102,9 @@ function installFeelPlayer(o) {
       const p = (probeSide && edgeProbePoint(n, y, probeSide)) || pointAt(c, y);
       const dropPointer = o.mode === 'ios' && rand() < o.dropPointer;
       const lateMs = o.mode !== 'mouse' && rand() < o.lateRate ? o.lateMs[0] + rand() * (o.lateMs[1] - o.lateMs[0]) : 0;
-      const press = { index: n.index, type: n.type, edgeProbe: !!probeSide, pressSong: now, dropPointer, lateMs: Math.round(lateMs), x: Math.round(p.x), y: Math.round(p.y), releaseSong: null };
+      // 押した位置を、ゲームの見方のレーン座標(指の高さで測った位置・判定ラインの高さに直した位置)と、狙った帯の中心で覚える(早取り・隣に取られるの切り分け用)
+      let fx = null, fl = null; try { const bx = rect(); fx = rhythmLaneCoordinateAtPoint(p.x, p.y, bx); const sb = typeof rhythmSubLaneCoordinateAtLineIfBelow === 'function' ? rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, bx) : undefined; fl = Number.isFinite(sb) ? sb / 2 - 0.5 : null; } catch { /* 測れなくても点検は続ける */ }
+      const press = { fx: fx == null ? null : Math.round(fx * 100) / 100, fl: fl == null ? null : Math.round(fl * 100) / 100, center: Math.round(centerOf(n) * 100) / 100, bandW: Number.isFinite(n.subLaneWidth) ? n.subLaneWidth : 2, index: n.index, type: n.type, edgeProbe: !!probeSide, pressSong: now, dropPointer, lateMs: Math.round(lateMs), x: Math.round(p.x), y: Math.round(p.y), releaseSong: null };
       presses.push(press);
       send(makeEvents('down', id, p, { dropPointer }), lateMs);
       // ホールド中に別の指で押すと、押さえている指がつられて少し動く(10/7 の「ホールド近くを押すと切れる」)
@@ -198,7 +200,14 @@ function analyzeFeel({ notesInfo, presses, results }) {
       const err = headDelta - botDelta;
       out.errors.push(err);
       // ほかの押下に早取り(遅取り)された: 押したずれと判定のずれが60ms以上離れ、遅れて届いた分では説明がつかない
-      if (Math.abs(err) >= 60 && !(p.lateMs > 0 && err > 0 && err <= p.lateMs)) out.stolen.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta) });
+      if (Math.abs(err) >= 60 && !(p.lateMs > 0 && err > 0 && err <= p.lateMs)) {
+        // どの押下が、この判定に使われたか: ゲームの判定のずれから逆算した押した時刻に、いちばん近い別の押下
+        const judgedAt = n.timeMs + headDelta; let other = null, od = 1e9;
+        for (const q of presses) { if (q === p) continue; const dd = Math.abs(q.pressSong - judgedAt); if (dd < od) { od = dd; other = q; } }
+        const on = other ? info.get(other.index) : null;
+        out.stolen.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta), lateMs: p.lateMs, dropPointer: p.dropPointer,
+          mine: { center: p.center, fx: p.fx, fl: p.fl, w: p.bandW }, usedPress: other && od < 25 ? { index: other.index, type: on && on.type, timeMs: on && Math.round(on.timeMs), center: other.center, fx: other.fx, fl: other.fl, w: other.bandW, lateMs: other.lateMs } : null });
+      }
       else if (Math.abs(err) > DRIFT_MS) out.drift.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta), dropPointer: p.dropPointer, lateMs: p.lateMs });
     }
   }
