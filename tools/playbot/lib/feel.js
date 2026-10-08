@@ -72,7 +72,15 @@ function installFeelPlayer(o) {
   const flickTo = (p, dir, d) => (dir ? { x: p.x + dir * d, y: p.y } : { x: p.x, y: p.y - d });
 
   // ---- 指の合図(共有の部品 lib/touch-input.js。毎晩の演奏 scenarios/rhythm.js と同じ作り方)----
-  const { makeEvents, send } = (0, eval)('(' + o.touchSrc + ')')(area, o.mode);
+  const shared = (0, eval)('(' + o.touchSrc + ')')(area, o.mode);
+  const makeEvents = shared.makeEvents;
+  // o.stall: 遅れて届くタッチを、本当にブラウザの処理が詰まった形で再現する。合図を作ったあと、その間(lateMs)ページの処理を止めてから届ける。
+  // 実機(iPhone)の「遅れて届いた」は、処理が詰まって曲の時計・コマも止まっていた(ゲームの補正の上限を広げる直し方 inputAgeCap は、止まっていたと見えたときだけ効く)。
+  // setTimeout で遅らせるだけだと、ページは動き続けるので、その形にならない
+  const send = (events, lateMs = 0) => {
+    if (o.stall && lateMs > 0) { const t = performance.now(); while (performance.now() - t < lateMs) { /* 処理が詰まった間、何もしない */ } shared.send(events, 0); return; }
+    shared.send(events, lateMs);
+  };
 
   // ---- 予定 ----
   // 端のレーン(いちばん左・右)は、親指が外へはみ出しやすい(人は端ほど外を押す)。外向きへ edgeOutLanes ずらす
