@@ -98,6 +98,7 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
   const ti = touchSrc ? (0, eval)('(' + touchSrc + ')')(area, input === 'mouse' ? 'mouse' : 'touch') : null;
   const lateOf = new Map();
   const inputStats = { mode: ti ? input : 'mouse', downs: 0, dropped: 0, late: 0 };
+  const dropOf = new Map();
   const fire = (type, id, p) => {
     if (!ti) { area.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false, clientX: p.x, clientY: p.y, buttons: type === 'pointerup' ? 0 : 1 })); return; }
     const t = type === 'pointerdown' ? 'down' : type === 'pointermove' ? 'move' : 'up';
@@ -105,7 +106,7 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
     if (t === 'down') {
       drop = input === 'ios' && rand() < dropRate;
       late = input === 'ios' && rand() < lateRate ? (() => { const u = rand(); return u < 0.27 ? 50 + rand() * 30 : u < 0.65 ? 80 + rand() * 70 : u < 0.78 ? 150 + rand() * 150 : 300 + rand() * 700; })() : 0;   // 遅れた指は、そのあとの動き・離すのも同じだけ遅れて届く(順番が入れ替わらない)
-      lateOf.set(id, late);
+      lateOf.set(id, late); dropOf.set(id, drop);
       inputStats.downs += 1; if (drop) inputStats.dropped += 1; if (late > 0) inputStats.late += 1;
     }
     ti.send(ti.makeEvents(t, id, p, { dropPointer: drop }), late);
@@ -133,6 +134,8 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
   const pending = []; // 押した結果を見張る { n, plan, p, hab, startTaken }
   let i = 0, taps = 0;
   const suspects = [];
+  const lateTimes = [];
+  const nearLate = (r) => r.lateMs > 0 || r.dropped || lateTimes.some((t) => Math.abs(r.at - t) <= 1000);
   const diag = { tap: { n: 0, miss: 0, crowdedN: 0, missCrowded: 0, missInBand: 0, missInBandCrowded: 0, secondN: 0, secondMiss: 0 }, fingerLeft: 0, edgeHolds: 0, overlaps: 0, holds: 0, driftEvents: 0, bigDrifts: 0, bandHolds: 0 };
   const stats = { planned: plan.length, skipped, taps: 0, done: false, human, who, input: inputStats, suspects, diag, habit: habit.map((h) => ({ depth: +h.depth.toFixed(2), lat: +h.lat.toFixed(2), inward: +h.inward.toFixed(2) })) };
   const lerpLane = (pts, t) => {
@@ -226,7 +229,11 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
       if (n.type === 'HOLD') { diag.holds += 1; if (c <= 0.5 || c >= RHYTHM_LANE_COUNT - 1.5) diag.edgeHolds += 1; }
       // 前後170ms以内に、2レーン以内で別のノーツが近くにあるときは、押す順番が入れ替わって取りこぼすのは人でも起きる(報告しない)
       const crowded = notes.some((m) => m !== n && Math.abs(m.timeMs - n.timeMs) < 170 && Math.abs(centerOf(m) - c) < 2.2);
-      const rec = { n, second: !!pl.second, delta: pl.at - n.timeMs, p, hab, c, crowded, startTaken: false, held: n.type === 'HOLD' };
+      // 遅れて届いた・ポインタが抜けたタッチ(iPhone のくせの再現)は、わざと起こしたもの。その押下と、その前後1秒の押下は、指の見張りの不具合候補に数えない
+      // (遅れて届く合図は、ほかの指の合図より後から届くので、ゲームが別の入力として拾い直し、前後のノーツの当たり方まで変わる。2026-10-09 に3つの部で「指が帯の上なのにMISS」として出た)
+      const lateMs = lateOf.get(id) || 0, dropped = !!dropOf.get(id);
+      if (lateMs > 0 || dropped) lateTimes.push(now);
+      const rec = { n, second: !!pl.second, delta: pl.at - n.timeMs, p, hab, c, crowded, startTaken: false, held: n.type === 'HOLD', at: now, lateMs, dropped };
       if (n.type === 'HOLD' || n.type === 'SLIDE') {
         active.push({ id, n, hab, drift: null, rec, until: (Number(n.endTimeMs) || n.timeMs) + gauss() * sigma * 0.5 });
       } else if (n.type === 'FLICK') {
@@ -272,6 +279,7 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
       if (r.held && !r.startTaken && g.holdJudgment && g.holdJudgment !== 'MISS') r.startTaken = true;
       const info = () => bandInfo(n, r.p);
       const hab = { belowPx: Math.round(r.hab.below), latPx: Math.round(r.hab.lat) };
+      if (r.held && r.startTaken && g.holdJudgment === 'MISS' && !r.cut && nearLate(r)) { r.cut = true; diag.lateRelated = (diag.lateRelated || 0) + 1; }
       if (r.held && r.startTaken && g.holdJudgment === 'MISS' && !r.cut) {
         // 押し始めは取れたのに、押さえている間に切れた。ただし指が本当に帯から外れていたなら(ボットがつられすぎた)、ゲームの不具合ではない。
         // 切れた時点の指が、押し始めの受付と同じ範囲(指の高さの位置・判定ラインの高さに直した位置のどちらか)に入っているときだけ報告する
@@ -297,7 +305,8 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
             if (Math.abs(r.delta) < 70 && b0.actual !== null && Math.abs(b0.actual - b0.center) <= b0.half) { if (r.crowded) T.missInBandCrowded += 1; else T.missInBand += 1; }
           }
         }
-        if (g._rhythmFinalJudgment === 'MISS' && !r.cut && !r.startTaken && !r.crowded && Math.abs(r.delta) < 70) {
+        if (g._rhythmFinalJudgment === 'MISS' && !r.cut && !r.startTaken && !r.crowded && nearLate(r)) diag.lateRelated = (diag.lateRelated || 0) + 1;
+        else if (g._rhythmFinalJudgment === 'MISS' && !r.cut && !r.startTaken && !r.crowded && Math.abs(r.delta) < 70) {
           const b = info();
           // 指のその場の高さで見て帯の中、と言い切れるときだけ報告する(判定ラインの高さに直した位置だけで入っているときは、受付の細かい決まりしだいなので数えない)
           if (b.actual !== null && Math.abs(b.actual - b.center) <= b.half) suspect('指が帯の上なのにMISS', n, r.p, { delta: Math.round(r.delta), ...hab, band: { actual: b.actual, atLine: b.atLine, center: b.center, half: b.half } });
