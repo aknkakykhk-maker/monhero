@@ -299,7 +299,7 @@ check('カードの名前はクラシック側とそろえる',
     && api.TACTICS_SPECIES_MODE.cardLabel === api.SPECIES_CHALLENGE_MODE.label
     && api.TACTICS_PRO_MODE.cardLabel === api.BATTLE_MODES.find(m => m.id === api.BATTLE_MODE_PRO).label,
   TACTICS_CARDS.map(m => m.cardLabel || 'なし').join(' / '));
-check('カードの見出しは短い名前のほうを出す', has('{m.emoji} {m.cardLabel||m.label}'));
+check('カードの見出しは短い名前のほうを出す', has('{m.emoji}</span>{m.cardLabel||m.label}</h3>'));
 // ★合算か1体ずつかが分かれるのはライフだけではない(ちから・丈夫さ・ガッツも同じ)。
 //   2026-09-21 ユーザー指摘「ステータスがそもそも合算か単体じゃない？」
 for (const mode of TACTICS_CARDS) {
