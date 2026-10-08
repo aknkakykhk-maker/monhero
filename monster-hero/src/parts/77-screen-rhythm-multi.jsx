@@ -1492,6 +1492,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
+.mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -1540,6 +1541,21 @@ function RhythmModeSelectStage({ notes = true }) {
       {RHYTHM_MODE_SELECT_SPARKS.map((sp, i) => <span key={`s${i}`} className="mhms-spark" style={{ left: sp.left, top: sp.top, animationDelay: sp.delay }} />)}
       {notes && RHYTHM_MODE_SELECT_NOTES.map((n, i) => <span key={`n${i}`} className="mhms-note" style={{ left: n.left, fontSize: `${n.size}px`, animationDelay: n.delay }}>{n.ch}</span>)}
     </div>
+  );
+}
+// モンヒロバトルの「モード→難易度→ランキング」の画面の見出し。ScreenHead と同じ引数で、英字の小見出し(eyebrow)と
+// 題名を舞台の上へ載せる作りにしたもの(モンヒロビートのモードえらびの見出しと同じ並び)
+function BattleScreenHead({ eyebrow, title, accent = 'text-white', accentStyle = null, note = '', onBack = null, disabled = false, right = null }) {
+  return (
+    <header className="relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
+      {onBack && <button type="button" aria-label="戻る" onClick={onBack} disabled={disabled} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>}
+      <div className="min-w-0 flex-1 leading-none">
+        <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">{eyebrow}</small>
+        <b className={`block truncate text-lg font-black leading-tight tracking-wider ${accentStyle ? '' : accent}`} style={accentStyle || undefined}>{title}</b>
+        {note && <small className="block truncate text-[9px] font-black text-slate-300/90">{note}</small>}
+      </div>
+      {right && <div className="shrink-0">{right}</div>}
+    </header>
   );
 }
 // 舞台のCSSは <head> へ1回だけ入れる。モンヒロビートとモンヒロバトルの入口が同じ札・舞台を使うので、入れる処理も1つにしてある
