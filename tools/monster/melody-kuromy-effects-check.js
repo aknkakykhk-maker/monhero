@@ -52,10 +52,10 @@ check('勇者特性の名前', M.Melody?.trait === 'メロディの手作りク�
 check('血統はユグドラシル×？？？(レア)と図鑑の文',
   /Melody:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages) && /Kuromy:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages)
   && /Melody: 'マイメロディとぞうさんの力を宿した/.test(lineages) && /Kuromy: 'クロミとバクの力を宿した/.test(lineages));
-check('アイコン2種ずつは販売開始、ダイヤの円盤石は近日追加のまま',
-  /id:'melody_icon',[^\n]*cost:1 \}/.test(breeder) && /id:'kuromy_disc_icon',[^\n]*cost:1 \}/.test(breeder)
-  && /id:'Melody',[^\n]*available:false/.test(breeder) && /id:'Kuromy',[^\n]*available:false/.test(breeder));
-check('ビートP交換所で円盤石を先行公開', /rhythmEventDiscOffer\('Melody', 'メロディー'\)/.test(event) && /rhythmEventDiscOffer\('Kuromy', 'クロミー'\)/.test(event));
+// ★2026-10-08 ユーザー指示「新モンスター実装は早く取り下げて」で、販売と交換を止めた(本体は残し、交換済みの人はそのまま使える)
+check('取り下げ中: マーケットの6件はすべて近日追加(available:false)',
+  ['melody_icon', 'melody_disc_icon', 'Melody', 'kuromy_icon', 'kuromy_disc_icon', 'Kuromy'].every(id => new RegExp(`id:'${id}',[^\\n]*available:false`).test(breeder)));
+check('取り下げ中: ビートP交換所に円盤石を並べていない', !/rhythmEventDiscOffer\('(Melody|Kuromy)'/.test(event));
 check('技の動きはユグドラシルの型を名前で引く', /SKILL_ATTACK_THEME_MONSTERS = Object\.freeze\(\['Yggdrasil', 'MelWhip', 'Melody', 'Kuromy'\]\)/.test(rpg)
   && [...N.Melody, ...N.Kuromy].every(n => rpg.includes(`'${n}':'yg`) || rpg.includes(`"${n}":'yg`)));
 
