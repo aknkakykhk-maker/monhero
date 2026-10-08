@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1445798b1528d702
+// source-sha256: fb0c23f8e77c0bb3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 15:40";
+const BUILD_DATE = "2026-10-08 16:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -66062,6 +66062,9 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
 .mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
+.mhbs-cardbody{position:relative}
+.mhbs-mark.light{color:rgba(255,255,255,.18);font-size:22px;top:auto;bottom:-3px;right:6px}
+.mhbs-mark{position:absolute;top:2px;right:10px;font-size:30px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.1);white-space:nowrap;pointer-events:none}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -91594,13 +91597,16 @@ function MonsterHeroGame() {
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
+            background: `linear-gradient(160deg,color-mix(in srgb,${setting.text} 28%,#1d0d45),#150b38 55%,#0a1030)`,
             boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
           }
-        }, React.createElement("div", {
+        }, React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mhbs-mark"
+        }, String(key).toUpperCase()), React.createElement("div", {
           className: `text-center text-[7px] tracking-[.2em] font-black ${key === 'EXTREME' ? 'text-fuchsia-300' : 'text-slate-400'}`
         }, key === 'EXTREME' ? '―― 極限難易度 ――' : 'BATTLE DIFFICULTY'), React.createElement("h3", {
-          className: "text-center text-lg font-black leading-tight",
+          className: "text-center text-lg font-black italic leading-tight",
           style: {
             color: setting.text
           }
@@ -91661,7 +91667,7 @@ function MonsterHeroGame() {
             setHeroPickTab('roster');
             advanceRunStage('PICK_HERO');
           },
-          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
+          className: `mhms-card min-h-[44px] font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
           style: {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
@@ -92013,22 +92019,31 @@ function MonsterHeroGame() {
         return React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           "data-battle-mode": m.id,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `mhbs-cardbody snap-center shrink-0 w-[82%] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? m.color : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
-            boxShadow: active ? `0 0 30px ${m.color}55` : 'none'
+            background: `linear-gradient(160deg,color-mix(in srgb,${m.color} 30%,#1d0d45),#150b38 55%,#0a1030)`,
+            boxShadow: active ? `0 0 30px ${m.color}55` : 'none',
+            clipPath: 'polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))'
           }
         }, React.createElement("div", {
-          className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
-        }, "BATTLE MODE"), React.createElement("h3", {
-          className: `text-center font-black leading-tight ${(m.cardLabel || m.label).length >= 10 ? 'text-[15px]' : 'text-lg'}`,
+          className: "relative -mx-3 -mt-2.5 mb-1 px-3 pt-2.5 pb-1 overflow-hidden",
           style: {
-            color: m.color
+            background: `linear-gradient(135deg,color-mix(in srgb,${m.color} 45%,white),${m.color} 60%,color-mix(in srgb,${m.color} 65%,black))`
+          }
+        }, React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mhbs-mark light"
+        }, String(m.id).replace(/([A-Z])/g, ' $1').toUpperCase()), React.createElement("div", {
+          className: "text-center text-[7px] tracking-[.2em] text-slate-900/70 font-black"
+        }, "BATTLE MODE"), React.createElement("h3", {
+          className: `text-center font-black italic leading-tight ${(m.cardLabel || m.label).length >= 10 ? 'text-[15px]' : 'text-lg'}`,
+          style: {
+            color: '#0f172a'
           }
         }, m.emoji, " ", m.cardLabel || m.label), React.createElement("p", {
-          className: "text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]"
-        }, m.tagline), modeSoon ? React.createElement("div", {
+          className: "text-center text-[9px] font-bold text-slate-900/80 leading-snug mt-0.5 min-h-[26px]"
+        }, m.tagline)), modeSoon ? React.createElement("div", {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
@@ -92077,7 +92092,7 @@ function MonsterHeroGame() {
             }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
-          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`,
+          className: `mhms-card min-h-[44px] font-black text-sm disabled:opacity-30${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`,
           style: {
             backgroundColor: m.color,
             color: '#0f172a'
@@ -92540,25 +92555,34 @@ function MonsterHeroGame() {
           key: key,
           "aria-disabled": !quickUnlocked,
           "data-difficulty-card": key,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[384px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'} ${quickUnlocked ? '' : 'grayscale'}`,
+          className: `mhbs-cardbody snap-center shrink-0 w-[82%] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[384px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'} ${quickUnlocked ? '' : 'grayscale'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
             background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
-            boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
+            boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none',
+            clipPath: 'polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))'
           }
         }, React.createElement("div", {
-          className: `text-center text-[7px] tracking-[.2em] font-black ${key === 'EXTREME' ? 'text-fuchsia-300' : 'text-slate-400'}`
-        }, key === 'EXTREME' ? '―― 極限難易度 ――' : 'BATTLE DIFFICULTY'), React.createElement("h3", {
-          className: "text-center text-lg font-black leading-tight",
+          className: "relative -mx-3 -mt-2 mb-1 px-3 pt-2 pb-1 overflow-hidden",
           style: {
-            color: setting.text
+            background: `linear-gradient(135deg,color-mix(in srgb,${setting.bg} 60%,white),${setting.bg} 60%,color-mix(in srgb,${setting.bg} 65%,black))`
+          }
+        }, React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mhbs-mark light"
+        }, String(key).toUpperCase()), React.createElement("div", {
+          className: `text-center text-[7px] tracking-[.2em] font-black ${key === 'EXTREME' ? 'text-fuchsia-100' : 'text-slate-900/70'}`
+        }, key === 'EXTREME' ? '―― 極限難易度 ――' : 'BATTLE DIFFICULTY'), React.createElement("h3", {
+          className: "text-center text-lg font-black italic leading-tight",
+          style: {
+            color: setting.darkText ? '#0f172a' : '#ffffff'
           }
         }, setting.label, species && speciesCleared(key) && React.createElement("span", {
           role: "img",
           "aria-label": "クリア済み",
           "data-species-cleared-mark": key,
           className: "ml-1 align-middle text-[11px]"
-        }, "✅")), React.createElement("div", {
+        }, "✅"))), React.createElement("div", {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
