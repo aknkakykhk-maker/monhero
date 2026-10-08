@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a761ca17f5a30a2d
+// source-sha256: 857e4f76f0be9dd2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 13:06";
+const BUILD_DATE = "2026-10-08 14:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -65780,6 +65780,8 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
 .mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
+.mhbs-cardbody{position:relative}
+.mhbs-mark{position:absolute;top:2px;right:10px;font-size:30px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.1);white-space:nowrap;pointer-events:none}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -65956,7 +65958,8 @@ function ModeSelectAssistToggles({
   showComment,
   onToggle,
   cls,
-  withLabel
+  withLabel,
+  artOnly = false
 }) {
   return onToggle ? React.createElement("div", {
     "data-rhythm-mode-assistant-toggles": true,
@@ -65965,7 +65968,7 @@ function ModeSelectAssistToggles({
     className: `flex items-center gap-1.5 ${cls}`
   }, withLabel && React.createElement("small", {
     className: "mr-auto text-[10px] font-black text-slate-400"
-  }, "助手 ", assistant ? assistant.name : ''), [['modeSelectArt', showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
+  }, "助手 ", assistant ? assistant.name : ''), [['modeSelectArt', showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].filter(([key]) => !artOnly || key === 'modeSelectArt').map(([key, on, label, attr]) => React.createElement("button", {
     key: key,
     type: "button",
     [attr]: '',
@@ -65974,11 +65977,27 @@ function ModeSelectAssistToggles({
     className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
   }, label, " ", on ? 'ON' : 'OFF'))) : null;
 }
+function useTallPortraitScreen() {
+  const query = '(orientation: portrait) and (min-height: 800px)';
+  const [tall, setTall] = React.useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(query).matches);
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia(query);
+    const on = () => setTall(mq.matches);
+    on();
+    if (mq.addEventListener) mq.addEventListener('change', on);else mq.addListener(on);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', on);else mq.removeListener(on);
+    };
+  }, []);
+  return tall;
+}
 function ModeSelectAssistantPanel({
   assistant,
   showArt,
   showComment,
-  onToggle
+  onToggle,
+  artOnly = false
 }) {
   if (!assistant || !(showArt || showComment)) return null;
   return React.createElement("div", {
@@ -65996,7 +66015,8 @@ function ModeSelectAssistantPanel({
     showComment: showComment,
     onToggle: onToggle,
     cls: "absolute bottom-1.5 right-1.5 z-20",
-    withLabel: false
+    withLabel: false,
+    artOnly: artOnly
   }), React.createElement("div", {
     className: "mhms-float pointer-events-none absolute inset-0"
   }, RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
@@ -77324,6 +77344,21 @@ function MonsterHeroGame() {
     setBattleSelectAssist(next);
     void storeSet(BATTLE_SELECT_ASSIST_KEY, next).catch(() => {});
   };
+  const battleStandTall = useTallPortraitScreen();
+  const battleStandArt = useMemo(() => activeAssistant ? {
+    id: activeAssistant.id,
+    name: activeAssistant.name,
+    accent: activeAssistant.accent,
+    image: assistantFullImage(activeAssistant, 'happy'),
+    text: ''
+  } : null, [activeAssistant && activeAssistant.id]);
+  const battleStandPanel = battleStandTall && battleStandArt && battleSelectAssist.modeSelectArt ? React.createElement(ModeSelectAssistantPanel, {
+    assistant: battleStandArt,
+    showArt: true,
+    showComment: false,
+    onToggle: toggleBattleSelectAssist,
+    artOnly: true
+  }) : null;
   const battleSystemSelectOpen = gameState === 'BATTLE_SYSTEM_SELECT';
   const battleSelectAssistant = useMemo(() => {
     if (!battleSystemSelectOpen || !activeAssistant) return null;
@@ -91215,13 +91250,16 @@ function MonsterHeroGame() {
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
+            background: `linear-gradient(160deg,color-mix(in srgb,${setting.text} 28%,#1d0d45),#150b38 55%,#0a1030)`,
             boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
           }
-        }, React.createElement("div", {
+        }, React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mhbs-mark"
+        }, String(key).toUpperCase()), React.createElement("div", {
           className: `text-center text-[7px] tracking-[.2em] font-black ${key === 'EXTREME' ? 'text-fuchsia-300' : 'text-slate-400'}`
         }, key === 'EXTREME' ? '―― 極限難易度 ――' : 'BATTLE DIFFICULTY'), React.createElement("h3", {
-          className: "text-center text-lg font-black leading-tight",
+          className: "text-center text-lg font-black italic leading-tight",
           style: {
             color: setting.text
           }
@@ -91282,7 +91320,7 @@ function MonsterHeroGame() {
             setHeroPickTab('roster');
             advanceRunStage('PICK_HERO');
           },
-          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
+          className: `mhms-card min-h-[44px] font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
           style: {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
@@ -91634,16 +91672,19 @@ function MonsterHeroGame() {
         return React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           "data-battle-mode": m.id,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `mhbs-cardbody snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? m.color : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
+            background: `linear-gradient(160deg,color-mix(in srgb,${m.color} 30%,#1d0d45),#150b38 55%,#0a1030)`,
             boxShadow: active ? `0 0 30px ${m.color}55` : 'none'
           }
-        }, React.createElement("div", {
+        }, React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mhbs-mark"
+        }, String(m.id).replace(/([A-Z])/g, ' $1').toUpperCase()), React.createElement("div", {
           className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
         }, "BATTLE MODE"), React.createElement("h3", {
-          className: `text-center font-black leading-tight ${(m.cardLabel || m.label).length >= 10 ? 'text-[15px]' : 'text-lg'}`,
+          className: `text-center font-black italic leading-tight ${(m.cardLabel || m.label).length >= 10 ? 'text-[15px]' : 'text-lg'}`,
           style: {
             color: m.color
           }
@@ -91698,7 +91739,7 @@ function MonsterHeroGame() {
             }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
-          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`,
+          className: `mhms-card min-h-[44px] font-black text-sm disabled:opacity-30${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`,
           style: {
             backgroundColor: m.color,
             color: '#0f172a'
@@ -91744,7 +91785,7 @@ function MonsterHeroGame() {
         "aria-label": `${i + 1}ページ目`,
         onClick: () => scrollToLoopIndex(modes.length + i),
         className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-      }))), React.createElement("div", {
+      }))), battleStandPanel, React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, React.createElement(AssistantBubble, {
         key: current.id,
@@ -91989,7 +92030,7 @@ function MonsterHeroGame() {
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
         className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${setting.id === extremeDifficulty ? 'bg-fuchsia-300 scale-125' : 'bg-slate-700'}`
-      }))), React.createElement("div", {
+      }))), battleStandPanel, React.createElement("div", {
         "data-extreme-assistant": true,
         className: "shrink-0 pt-2 pb-1"
       }, React.createElement(AssistantBubble, {
@@ -92161,7 +92202,7 @@ function MonsterHeroGame() {
           key: key,
           "aria-disabled": !quickUnlocked,
           "data-difficulty-card": key,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[384px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'} ${quickUnlocked ? '' : 'grayscale'}`,
+          className: `mhbs-cardbody snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[384px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'} ${quickUnlocked ? '' : 'grayscale'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
             background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
@@ -92358,7 +92399,7 @@ function MonsterHeroGame() {
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
         className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-      }))), React.createElement("div", {
+      }))), !quick && battleStandPanel, React.createElement("div", {
         className: `shrink-0 ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
         "data-difficulty-assistant": true
       }, React.createElement(AssistantBubble, {
