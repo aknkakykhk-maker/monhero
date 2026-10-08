@@ -51,6 +51,18 @@ function installFeelPlayer(o) {
     return { x: x - side * 1.5, y: base.y };   // いちばん外側から 1.5px 内側
   };
   const songNow = () => (hooks.rhythmSongMs ? hooks.rhythmSongMs() : null);
+  // フリックの向き(flickDir)は、ゲームの中のノーツ本体にしか無い(rhythmNotes は写し)。絵を描くときに渡される本体を番号で控える(読むだけ。scenarios/rhythm.js と同じ)
+  const real = new Map();
+  try {
+    const renderer = typeof RHYTHM_CANVAS_RENDERER !== 'undefined' ? RHYTHM_CANVAS_RENDERER : null;
+    if (renderer && typeof renderer.drawNote === 'function') {
+      const draw = renderer.drawNote.bind(renderer);
+      renderer.drawNote = (note, geo, opts) => { if (note && Number.isFinite(note.index) && !real.has(note.index)) real.set(note.index, note); return draw(note, geo, opts); };
+    }
+  } catch { /* 控えられなければ、向きのあるフリックは上へはじく */ }
+  // はじく向き(画面の横か上)。向きが決まっているものは横へ、無ければ上へ。dir は -1(左)・1(右)・0(上)
+  const flickDirOf = (index) => { const g = real.get(index); return g && g.flickDir === 'left' ? -1 : g && g.flickDir === 'right' ? 1 : 0; };
+  const flickTo = (p, dir, d) => (dir ? { x: p.x + dir * d, y: p.y } : { x: p.x, y: p.y - d });
 
   // ---- 指の合図(共有の部品 lib/touch-input.js。毎晩の演奏 scenarios/rhythm.js と同じ作り方)----
   const { makeEvents, send } = (0, eval)('(' + o.touchSrc + ')')(area, o.mode);
@@ -84,19 +96,41 @@ function installFeelPlayer(o) {
       const id = pid++;
       // 向きは画面の中心寄り。判定ラインより手前ではレーンが広がって見えるので、「判定ラインの高さに直した位置」が受付を広げるのは
       // 中心寄りの側。押し始めがそれで通り、押さえている最中は指の高さだけで見ていた(10/7 の食い違い)のはこちらの端
-      const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && rand() < o.edgeProbe ? (centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1) : 0;
+      // 途中で帯が動く・細くなるホールド(holdPoints)は、人は帯を目で追って指を動かす。受付の端で動かさずに押さえると、帯のほうが先に離れて切れるのは当たり前(ボットの勘違い)なので、端の確かめには使わず、指は帯の中心を追う
+      const gn = real.get(n.index), varying = !!(gn && Array.isArray(gn.holdPoints) && gn.holdPoints.some((q) => q.subLane !== gn.holdPoints[0].subLane || q.subLaneWidth !== gn.holdPoints[0].subLaneWidth));
+      const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && !varying && rand() < o.edgeProbe ? (centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1) : 0;
       const p = (probeSide && edgeProbePoint(n, y, probeSide)) || pointAt(c, y);
       const dropPointer = o.mode === 'ios' && rand() < o.dropPointer;
       const lateMs = o.mode !== 'mouse' && rand() < o.lateRate ? o.lateMs[0] + rand() * (o.lateMs[1] - o.lateMs[0]) : 0;
-      const press = { index: n.index, type: n.type, edgeProbe: !!probeSide, pressSong: now, dropPointer, lateMs: Math.round(lateMs), x: Math.round(p.x), y: Math.round(p.y), releaseSong: null };
+      // 押した位置を、ゲームの見方のレーン座標(指の高さで測った位置・判定ラインの高さに直した位置)と、狙った帯の中心で覚える(早取り・隣に取られるの切り分け用)
+      let fx = null, fl = null; try { const bx = rect(); fx = rhythmLaneCoordinateAtPoint(p.x, p.y, bx); const sb = typeof rhythmSubLaneCoordinateAtLineIfBelow === 'function' ? rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, bx) : undefined; fl = Number.isFinite(sb) ? sb / 2 - 0.5 : null; } catch { /* 測れなくても点検は続ける */ }
+      const press = { fx: fx == null ? null : Math.round(fx * 100) / 100, fl: fl == null ? null : Math.round(fl * 100) / 100, center: Math.round(centerOf(n) * 100) / 100, bandW: Number.isFinite(n.subLaneWidth) ? n.subLaneWidth : 2, index: n.index, type: n.type, edgeProbe: !!probeSide, pressSong: now, dropPointer, lateMs: Math.round(lateMs), x: Math.round(p.x), y: Math.round(p.y), releaseSong: null };
       presses.push(press);
       send(makeEvents('down', id, p, { dropPointer }), lateMs);
       // ホールド中に別の指で押すと、押さえている指がつられて少し動く(10/7 の「ホールド近くを押すと切れる」)
-      if (o.nudgePx > 0) holding.forEach((h) => { if (!h.press.edgeProbe && rand() < 0.6) { const hc = centerOf(h.n), out = hc <= 0.25 ? -1 : hc >= RHYTHM_LANE_COUNT - 1.25 ? 1 : (rand() < 0.5 ? -1 : 1); const dx = out * o.nudgePx * (0.5 + rand() * 0.5); h.p = { x: h.p.x + dx, y: h.p.y + (rand() - 0.5) * 4 }; send(makeEvents('move', h.id, h.p)); } });
+      // ホールド中に押したノーツの数を、押さえている側にも押した側にも覚える(近くを押して切れたかを別に数えるため)
+      if (holding.length) press.duringHold = true;
+      holding.forEach((h) => {
+        const dl = centerOf(n) - centerOf(h.n), half = Number.isFinite(h.n.subLaneWidth) ? h.n.subLaneWidth / 4 : 0.5;
+        const kind = Math.abs(dl) <= half + 0.5 ? 'same' : Math.abs(dl) <= 1.5 ? 'adjacent' : 'far';   // 同じ帯の上 / 隣のレーン / 離れている
+        h.press.nearPresses = (h.press.nearPresses || 0) + 1; h.press['near_' + kind] = (h.press['near_' + kind] || 0) + 1;
+      });
+      if (o.near) {
+        // 近くを押したときの「つられ」を強める: 全部のホールド(受付の端のもの以外)が、押した拍子に押したほうへ(60%)かその逆へ、数px〜20px動き、少ししてほぼ戻る
+        holding.forEach((h) => {
+          if (h.press.edgeProbe) return;
+          const dir = (centerOf(n) - centerOf(h.n) >= 0 ? 1 : -1) * (rand() < 0.6 ? 1 : -1);
+          const base = h.base || (h.base = { x: h.p.x, y: h.p.y });
+          const dx = dir * o.nudgePx * (0.4 + rand() * 1.2);
+          h.p = { x: base.x + dx, y: base.y + (rand() - 0.5) * 4 }; send(makeEvents('move', h.id, h.p));
+          h.press.nudges = (h.press.nudges || 0) + 1;
+          setTimeout(() => { if (holding.includes(h)) { h.p = { x: base.x + dx * 0.2, y: base.y }; send(makeEvents('move', h.id, h.p)); } }, 150 + rand() * 250);
+        });
+      } else if (o.nudgePx > 0) holding.forEach((h) => { if (!h.press.edgeProbe && rand() < 0.6) { const hc = centerOf(h.n), out = hc <= 0.25 ? -1 : hc >= RHYTHM_LANE_COUNT - 1.25 ? 1 : (rand() < 0.5 ? -1 : 1); const dx = out * o.nudgePx * (0.5 + rand() * 0.5); h.p = { x: h.p.x + dx, y: h.p.y + (rand() - 0.5) * 4 }; send(makeEvents('move', h.id, h.p)); } });
       if (n.type === 'HOLD' || n.type === 'SLIDE') {
-        holding.push({ id, n, p, yRatio: y, press, until: (Number(n.endTimeMs) || n.timeMs) + gauss() * o.sigma * 0.5 });
+        holding.push({ id, n, p, yRatio: y, press, varying, off: c - centerOf(n), until: (Number(n.endTimeMs) || n.timeMs) + gauss() * o.sigma * 0.5 });
       } else if (n.type === 'FLICK') {
-        setTimeout(() => { const q1 = { x: p.x, y: p.y - 30 }, q2 = { x: p.x, y: p.y - 70 }; send(makeEvents('move', id, q1)); send(makeEvents('move', id, q2)); send(makeEvents('up', id, q2)); }, 25 + lateMs);
+        setTimeout(() => { const fd = flickDirOf(n.index), q1 = flickTo(p, fd, 30), q2 = flickTo(p, fd, 70); send(makeEvents('move', id, q1)); send(makeEvents('move', id, q2)); send(makeEvents('up', id, q2)); }, 25 + lateMs);
       } else {
         setTimeout(() => send(makeEvents('up', id, p)), 45 + rand() * 30 + lateMs);
       }
@@ -107,16 +141,18 @@ function installFeelPlayer(o) {
       // (10/7 の「近くを押すとホールドが切れる」は、近くを押した拍子に押さえている指が動き、その瞬間の確かめで外れになっていた)
       if (h.press.edgeProbe && (!h.lastWobble || now - h.lastWobble > 90)) { h.lastWobble = now; const w = { x: h.p.x + (rand() < 0.5 ? -1 : 1) * 0.8, y: h.p.y + (rand() - 0.5) * 1.2 }; send(makeEvents('move', h.id, w)); }
       // 受付の端で押さえているホールドは、ゲームがその指を「外れている」と見たことがあるかを覚えておく(原因の切り分け用)
-      if (h.press.edgeProbe && typeof RHYTHM_GESTURE_RUNTIME !== 'undefined' && RHYTHM_GESTURE_RUNTIME._sessions) {
+      if ((h.press.edgeProbe || o.near) && typeof RHYTHM_GESTURE_RUNTIME !== 'undefined' && RHYTHM_GESTURE_RUNTIME._sessions) {
         for (const ses of RHYTHM_GESTURE_RUNTIME._sessions.values()) {
-          if (ses && ses.note && ses.note.index === h.n.index) { h.press.sessionSeen = true; h.press.sessionKey = ses.key; h.press.myId = h.id; try { const box = RHYTHM_GESTURE_RUNTIME.areaRect(); const act = rhythmLaneCoordinateAtPoint(h.p.x, h.p.y, box); const tr = rhythmHoldTrackedLane(ses.note, now - (ses.offsetMs || 0)); const lim = tr.half + rhythmHoldTrackingMarginLanes(tr.half * 4); const slack = act == null ? -9 : lim - Math.abs(act - tr.center); if (h.press.minSlack == null || slack < h.press.minSlack) { h.press.minSlack = Math.round(slack * 1000) / 1000; h.press.track = { act: act == null ? null : Math.round(act * 1000) / 1000, center: tr.center, half: tr.half, lim: Math.round(lim * 1000) / 1000 }; } } catch (e) { h.press.trackErr = String(e && e.message || e); } if (ses.trackingBadSincePerf != null) h.press.trackingBad = true; if (ses.failed) h.press.sessionFailed = true; }
+          if (ses && ses.note && ses.note.index === h.n.index) { h.press.sessionSeen = true; h.press.sessionKey = ses.key; h.press.myId = h.id; try { const box = RHYTHM_GESTURE_RUNTIME.areaRect(); const act = rhythmLaneCoordinateAtPoint(h.p.x, h.p.y, box); const tr = rhythmHoldTrackedLane(ses.note, now - (ses.offsetMs || 0)); const lim = tr.half + rhythmHoldTrackingMarginLanes(tr.half * 4); const slack = act == null ? -9 : lim - Math.abs(act - tr.center); const sub = typeof rhythmSubLaneCoordinateAtLineIfBelow === 'function' ? rhythmSubLaneCoordinateAtLineIfBelow(h.p.x, h.p.y, box) : undefined; const atLine = Number.isFinite(sub) ? sub / 2 - 0.5 : null; const slackLine = atLine == null ? -9 : lim - Math.abs(atLine - tr.center); const best = Math.max(slack, slackLine); if (h.press.minSlackBest == null || best < h.press.minSlackBest) h.press.minSlackBest = Math.round(best * 1000) / 1000; if (h.press.minSlack == null || slack < h.press.minSlack) { h.press.minSlack = Math.round(slack * 1000) / 1000; h.press.track = { act: act == null ? null : Math.round(act * 1000) / 1000, center: tr.center, half: tr.half, lim: Math.round(lim * 1000) / 1000 }; } } catch (e) { h.press.trackErr = String(e && e.message || e); } if (ses.trackingBadSincePerf != null) h.press.trackingBad = true; if (ses.failed) h.press.sessionFailed = true; }
         }
       }
+      // 帯が動くホールドは、帯の中心を追って指を動かす(押し始めの位置の、帯の中心からのずれはそのまま)
+      if (h.varying && typeof rhythmHoldTrackedLane === 'function') { const g = real.get(h.n.index); if (g) { const tr = rhythmHoldTrackedLane(g, now); const q = pointAt(tr.center + h.off, h.yRatio); if (Math.abs(q.x - h.p.x) >= 0.5) { h.p = q; h.base = null; send(makeEvents('move', h.id, q)); } } }
       if (h.n.type === 'SLIDE') { const cc = lerpLane(h.n.slidePoints, now); if (cc !== null) { const q = pointAt(cc, h.yRatio); h.p = q; send(makeEvents('move', h.id, q)); } }
       if (endFlick.has(h.n.index) && !h.flicked && now >= h.until - 40) {
         // 終わりの少し前から、上へ素早く弾いて離す
         h.flicked = true; h.press.releaseSong = now;
-        const q1 = { x: h.p.x, y: h.p.y - 30 }, q2 = { x: h.p.x, y: h.p.y - 70 };
+        const fd = flickDirOf(h.n.index), q1 = flickTo(h.p, fd, 30), q2 = flickTo(h.p, fd, 70);
         send(makeEvents('move', h.id, q1)); setTimeout(() => { send(makeEvents('move', h.id, q2)); send(makeEvents('up', h.id, q2)); }, 30);
         holding.splice(k, 1); continue;
       }
@@ -135,6 +171,7 @@ const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y)
 const pct = (a, q) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * q))]; };
 
 function analyzeFeel({ notesInfo, presses, results }) {
+  const infoType = (x) => ((notesInfo || []).find((n) => n.index === x.index) || {}).type;
   const byIndex = new Map((results || []).map((r) => [r.index, r]));
   const info = new Map((notesInfo || []).map((n) => [n.index, n]));
   const out = { notes: notesInfo.length, pressed: presses.length, judged: 0, tapMissed: [], drift: [], stolen: [], holdBroken: [], errors: [] };
@@ -150,12 +187,12 @@ function analyzeFeel({ notesInfo, presses, results }) {
     // (rhythm-mode.js の evaluatePosition)。終わりの時刻が元より 60ms 以上前へ動いていたら、途中で切れたもの
     const cutEarly = isHold && r.judgment === 'MISS' && Number.isFinite(r.endTimeMs) && Number.isFinite(n.endTimeMs) && r.endTimeMs < n.endTimeMs - 60;
     if (cutEarly) {
-      out.holdBroken.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), endTimeMs: Math.round(n.endTimeMs || 0), edgeProbe: !!p.edgeProbe, cutAtMs: Math.round(r.endTimeMs + 50), releasedAtMs: Number.isFinite(p.releaseSong) ? Math.round(p.releaseSong) : null, judgment: r.judgment, holdJudgment: r.holdJudgment, botDelta: Math.round(botDelta), x: p.x, y: p.y, dropPointer: p.dropPointer, lateMs: p.lateMs });
+      out.holdBroken.push({ nearPresses: p.nearPresses || 0, nearSame: p.near_same || 0, nearAdjacent: p.near_adjacent || 0, nearFar: p.near_far || 0, acceptedAlways: p.minSlackBest != null && p.minSlackBest >= 0, minSlackBest: p.minSlackBest, nudges: p.nudges || 0, x: p.x, y: p.y, index: p.index, type: n.type, timeMs: Math.round(n.timeMs), endTimeMs: Math.round(n.endTimeMs || 0), edgeProbe: !!p.edgeProbe, cutAtMs: Math.round(r.endTimeMs + 50), releasedAtMs: Number.isFinite(p.releaseSong) ? Math.round(p.releaseSong) : null, judgment: r.judgment, holdJudgment: r.holdJudgment, botDelta: Math.round(botDelta), x: p.x, y: p.y, dropPointer: p.dropPointer, lateMs: p.lateMs });
       continue;
     }
     // 押したのに取れない(押し始め)
     if (Math.abs(botDelta) <= HIT_WINDOW_MS && (!headJudgment || headJudgment === 'MISS')) {
-      out.tapMissed.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), dropPointer: p.dropPointer, lateMs: p.lateMs, x: p.x, y: p.y });
+      out.tapMissed.push({ duringHold: !!p.duringHold, index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), dropPointer: p.dropPointer, lateMs: p.lateMs, x: p.x, y: p.y });
       continue;
     }
     // 判定のずれ(取れたものだけ)
@@ -163,7 +200,14 @@ function analyzeFeel({ notesInfo, presses, results }) {
       const err = headDelta - botDelta;
       out.errors.push(err);
       // ほかの押下に早取り(遅取り)された: 押したずれと判定のずれが60ms以上離れ、遅れて届いた分では説明がつかない
-      if (Math.abs(err) >= 60 && !(p.lateMs > 0 && err > 0 && err <= p.lateMs)) out.stolen.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta) });
+      if (Math.abs(err) >= 60 && !(p.lateMs > 0 && err > 0 && err <= p.lateMs)) {
+        // どの押下が、この判定に使われたか: ゲームの判定のずれから逆算した押した時刻に、いちばん近い別の押下
+        const judgedAt = n.timeMs + headDelta; let other = null, od = 1e9;
+        for (const q of presses) { if (q === p) continue; const dd = Math.abs(q.pressSong - judgedAt); if (dd < od) { od = dd; other = q; } }
+        const on = other ? info.get(other.index) : null;
+        out.stolen.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta), lateMs: p.lateMs, dropPointer: p.dropPointer,
+          mine: { center: p.center, fx: p.fx, fl: p.fl, w: p.bandW }, usedPress: other && od < 25 ? { index: other.index, type: on && on.type, timeMs: on && Math.round(on.timeMs), center: other.center, fx: other.fx, fl: other.fl, w: other.bandW, lateMs: other.lateMs } : null });
+      }
       else if (Math.abs(err) > DRIFT_MS) out.drift.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta), dropPointer: p.dropPointer, lateMs: p.lateMs });
     }
   }
@@ -180,6 +224,16 @@ function analyzeFeel({ notesInfo, presses, results }) {
     holdBroken: out.holdBroken.length,
     edgeProbes: presses.filter((x) => x.edgeProbe).length,
     holdBrokenAtEdge: out.holdBroken.filter((x) => x.edgeProbe).length,
+    // ホールド中に近くを押した数と、そのとき切れた数。切れたうち「指はずっとゲームの受付範囲の中(いまの規則で)だった」ものは、ボットのせいではないので別に数える
+    holds: presses.filter((x) => (infoType(x) === 'HOLD')).length,
+    pressedDuringHold: presses.filter((x) => x.duringHold).length,
+    nearPresses: presses.reduce((a, x) => a + (x.nearPresses || 0), 0),
+    nearSame: presses.reduce((a, x) => a + (x.near_same || 0), 0), nearAdjacent: presses.reduce((a, x) => a + (x.near_adjacent || 0), 0), nearFar: presses.reduce((a, x) => a + (x.near_far || 0), 0),
+    holdsWithNear: presses.filter((x) => x.nearPresses > 0).length,
+    holdBrokenWithNear: out.holdBroken.filter((x) => x.nearPresses > 0).length,
+    holdBrokenAccepted: out.holdBroken.filter((x) => x.acceptedAlways).length,
+    holdBrokenAcceptedWithNear: out.holdBroken.filter((x) => x.acceptedAlways && x.nearPresses > 0).length,
+    tapMissedDuringHold: out.tapMissed.filter((x) => x.duringHold).length,
   };
   return out;
 }

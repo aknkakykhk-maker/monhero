@@ -29,14 +29,19 @@ const OPTS = {
   sigma: 22,                           // 押す時刻のばらつき(ms)
   xNoiseLanes: 0.12,                   // 押す位置の横のばらつき(レーン)
   thumb: !args.includes('--no-thumb'), // 判定ラインより手前(画面の下)を押す
-  nudgePx: 5,                          // ホールド中に別の指で押すと、押さえている指がつられて動く(px)
+  near: args.includes('--near'),        // ホールド中に近くを押すしらべ(つられを強め、すべてのホールドで指の位置と受付の余裕を記録する)
+  nudgePx: args.includes('--near') ? 12 : 5,                          // ホールド中に別の指で押すと、押さえている指がつられて動く(px)
   edgeProbe: 0.35,                     // HOLD の35%は「押し始めの受付のいちばん外側」を押さえ続ける(押し始めと押さえ中の受付の食い違いを突く)
   edgeOutLanes: 0.18,                  // 端のレーンは外へはみ出し気味に押す(レーン)。つられる向きも外側(10/7 のホールドの切れは端のレーンの外側寄りで起きた)
   dropPointer: 0.15,                   // ios: ポインタの合図が抜けるタッチの割合(10/7 の実機では千ノーツあたり18ほど)
   lateRate: 0.1, lateMs: [30, 120],    // 遅れて届くタッチの割合と遅れ
 };
 const stamp = (() => { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-'); })();
-const OUT = path.join(ROOT, 'tools', 'out', 'playbot', `feel-${stamp}`);
+const TAG = argOf('tag', '');
+const RESUME_DIRS = argOf('resume', '').split(',').map((x) => x.trim()).filter(Boolean);   // 前の途中経過(partial-*.json)があるフォルダ。終わっている曲は回さずに引き継ぐ
+const ORDER_NEAR = args.includes('--order-near');   // ホールドの近くにノーツが多い曲から先に回す
+const PORT_BASE = Number(argOf('port', 8982)) || 8982;
+const OUT = path.join(ROOT, 'tools', 'out', 'playbot', `feel-${stamp}${TAG ? '-' + TAG : ''}`);
 fs.mkdirSync(OUT, { recursive: true });
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
@@ -75,17 +80,55 @@ async function auditBuild(playwright, root, label, port) {
   const server = await serve(root, port);
   const pageUrl = `http://localhost:${port}/monster-hero/index.html`;
   const results = [];
-  for (const [k, songId] of SONG_IDS.entries()) {
+  // 前の途中経過があれば引き継ぐ(終わっている曲は回し直さない。使用量の節約)
+  const done = new Set();
+  for (const dir of RESUME_DIRS) {
+    let names = []; try { names = fs.readdirSync(dir).filter((f) => /^partial-.*\.json$/.test(f)); } catch { /* 無ければ引き継がない */ }
+    for (const f of names) { try { for (const r of JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))) if (r.ok && !done.has(r.songId)) { results.push(r); done.add(r.songId); } } catch { /* 読めない途中経過は無いものとする */ } }
+  }
+  let queue = SONG_IDS.filter((id) => !done.has(id));
+  const originalIndex = (id) => SONG_IDS.indexOf(id);
+  // ブラウザは1つを使い回す(曲ごとに開き直さない)。曲が終わったら起動し直して(ページを読み込み直して)次の曲へ。失敗したら開き直す
+  let s = null, ordered = false;
+  const open = async (k) => {
     const report = { headed: args.includes('--headed'), shotNo: 0, issues: [], steps: [], screens: new Map(), issueKeys: new Set(), phases: [] };
     const rand = makeRand(SEED + k);
-    const s = await openSession({ playwright, pageUrl, port, out: OUT, rand, persona: `反応の点検(${label})`, report, ...(CPU > 1 ? { cpuSlowdown: CPU } : {}) });
+    const sess = await openSession({ playwright, pageUrl, port, out: OUT, rand, persona: `反応の点検(${label})`, report, ...(CPU > 1 ? { cpuSlowdown: CPU } : {}) });
+    await prepareVeteran(sess, { quiet: true });
+    return sess;
+  };
+  // 進み具合(1曲ごとに書き出す。feel-progress.js がまとめて読む)
+  const startedAt = Date.now(), songMs = [];
+  const progress = (note = '') => {
+    const finished = results.length, all = SONG_IDS.length;
+    const avg = songMs.length ? songMs.reduce((a, b) => a + b, 0) / songMs.length : 0;
+    const remainMin = avg ? Math.round(((all - finished) * avg) / 60000) : null;
+    const eta = remainMin == null ? null : new Date(Date.now() + remainMin * 60000 + 9 * 3600 * 1000).toISOString().slice(11, 16);
+    const line = `${TAG || label} ${finished}/${all}曲目${remainMin == null ? '' : `・この組の残り約${remainMin}分・終わる見込み ${eta}(日本時間)`}${note}`;
+    try { fs.writeFileSync(path.join(OUT, 'progress.json'), JSON.stringify({ tag: TAG || label, finished, all, remainMin, eta, line, updatedAt: new Date().toISOString() })); } catch { /* 書けなくても調査は続ける */ }
+    console.log(`[進み具合] ${line}`);
+  };
+  progress();
+  while (queue.length) {
+    let songId = queue.shift();
+    let k = originalIndex(songId);
+    const t1 = Date.now();
     const row = { label, songId, difficulty: DIFFICULTY, ok: false, why: '' };
     try {
-      await prepareVeteran(s, { quiet: true });
+      if (!s) s = await open(k);
       await s.boot();
-      const title = await s.page.evaluate((id) => { try { return (RHYTHM_SONGS.find((x) => x.songId === id) || {}).displayName || ''; } catch { return ''; } }, songId);
+      // 最初の1曲だけ、ホールドの近くにノーツが多い曲から先に回すよう並べ替える(songId・k も差し替える)
+      if (ORDER_NEAR && !ordered) {
+        ordered = true;
+        const ids = [songId, ...queue];
+        const score = await s.page.evaluate(({ list, d }) => { try { return Object.fromEntries(list.map((id) => { const song = RHYTHM_SONGS.find((x) => x.songId === id); const notes = (song && song.difficulties[d] && song.difficulties[d].notes) || []; const holds = notes.filter((n) => n.type === 'HOLD'); let near = 0; notes.forEach((n) => { if (holds.some((h) => h !== n && n.timeMs > h.timeMs - 100 && n.timeMs < (h.endTimeMs || h.timeMs) + 100)) near += 1; }); return [id, near]; })); } catch { return {}; } }, { list: ids, d: DIFFICULTY });
+        const sorted = [...ids].sort((x, y) => (score[y] || 0) - (score[x] || 0));
+        console.log(`曲の順番(ホールドの近くのノーツが多い順): ${sorted.map((x) => `${x}:${score[x] || 0}`).join(' ')}`);
+        songId = sorted[0]; queue = sorted.slice(1); k = originalIndex(songId); row.songId = songId;
+      }
+      const title = await s.page.evaluate((id) => { try { return (() => { const x = RHYTHM_SONGS.find((y) => y.songId === id); return x ? (typeof rhythmSongFullName === 'function' ? rhythmSongFullName(x) : x.displayName) : ''; })(); } catch { return ''; } }, songId);
       if (!title) { row.why = `曲 ${songId} がこの版に無い`; throw new Error(row.why); }
-      const picked = await openSoloLive(s, { songName: title, difficulty: DIFFICULTY });
+      const picked = await openSoloLive(s, { songName: title, difficulty: DIFFICULTY, strict: true });
       if (!picked) { row.why = '曲えらびまで行けない'; throw new Error(row.why); }
       await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|はじめる)$/i, 2500);
       await s.dismissOverlays(4);
@@ -93,6 +136,9 @@ async function auditBuild(playwright, root, label, port) {
       if (!ready) { row.why = '演奏画面が開かない'; throw new Error(row.why); }
       const installed = await s.page.evaluate(installFeelPlayer, { ...OPTS, touchSrc: touchInputSource, seed: SEED * 31 + k });
       if (!installed.ok) { row.why = installed.why; throw new Error(row.why); }
+      // 遊んでいる譜面が、頼んだ曲・難易度のものか確かめる(ノーツ数が違えば、別の曲を選んでしまっている)
+      const expectedNotes = await s.page.evaluate(({ id, d }) => { try { return RHYTHM_SONGS.find((x) => x.songId === id).difficulties[d].notes.length; } catch { return null; } }, { id: songId, d: DIFFICULTY });
+      if (expectedNotes != null && expectedNotes !== installed.notes) { row.why = `別の曲を遊んでいる(ノーツ数 ${installed.notes}、${songId} の ${DIFFICULTY} は ${expectedNotes})`; throw new Error(row.why); }
       const t0 = Date.now();
       while (Date.now() - t0 < 300000) {
         await s.wait(1500);
@@ -106,9 +152,15 @@ async function auditBuild(playwright, root, label, port) {
       if (!row.why) row.why = e.message.split('\n')[0];
       console.log(`${label} ${songId}: 点検できなかった — ${row.why}`);
     }
-    await s.close().catch(() => {});
+    // 失敗したときだけブラウザを開き直す(成功したら次の曲でも使い回す)
+    if (!row.ok && s) { await s.close().catch(() => {}); s = null; }
     results.push(row);
+    songMs.push(Date.now() - t1);
+    // 1曲ごとに途中経過を書いておく(長い調査の途中で止まっても、そこまでの数が残る)
+    try { fs.writeFileSync(path.join(OUT, `partial-${label.replace(/[^\w]/g, '_')}.json`), JSON.stringify(results, null, 1)); } catch { /* 書けなくても調査は続ける */ }
+    progress();
   }
+  if (s) await s.close().catch(() => {});
   server.close();
   return results;
 }
@@ -146,10 +198,10 @@ const worse = (before, now) => {
     if (add.status !== 0) { console.log(`前の版を出せない: ${add.stderr.trim()}`); process.exit(1); }
     const hook = ensureFeelHook(wt);
     console.log(`前の版(${compareRef})の判定を読む参照: ${hook}`);
-    try { report.runs.before = await auditBuild(playwright, wt, `前(${compareRef})`, 8983); }
+    try { report.runs.before = await auditBuild(playwright, wt, `前(${compareRef})`, PORT_BASE + 1); }
     finally { spawnSync('git', ['worktree', 'remove', '--force', wt], { cwd: ROOT }); }
   }
-  report.runs.now = await auditBuild(playwright, ROOT, '今', 8982);
+  report.runs.now = await auditBuild(playwright, ROOT, '今', PORT_BASE);
   const now = total(report.runs.now);
   const before = report.runs.before ? total(report.runs.before) : null;
   report.total = { now, before };
@@ -164,6 +216,8 @@ const worse = (before, now) => {
     ...[...(report.runs.before || []), ...report.runs.now].map((r) => r.ok
       ? `- ${r.label} ${r.title} ${r.difficulty}: 押した ${r.pressed} / 取れない ${r.tapMissed}(合図が抜けた ${r.tapMissedDroppedPointer}・遅れた ${r.tapMissedLate}) / ずれ ${r.driftCount}(中央値 ${r.errorMedianMs}ms・90%が ${r.errorP90AbsMs}ms 以内) / 早取り ${r.stolen} / ホールドが切れた ${r.holdBroken}`
       : `- ${r.label} ${r.songId}: 点検できなかった — ${r.why}`),
+    '', '## ホールド中に近くを押したとき(ホールドの数 / 近くを押した回数[同じ帯・隣・離れた] / 近くを押したホールド / 切れた / うち近くを押して切れた / 切れたうち指がずっと受付範囲の中だった)', '',
+    ...report.runs.now.filter((r) => r.ok).map((r) => `- ${r.title} ${r.difficulty}: ホールド ${r.holds} / 近く ${r.nearPresses}回[${r.nearSame}・${r.nearAdjacent}・${r.nearFar}] / 近くを押したホールド ${r.holdsWithNear} / 切れた ${r.holdBroken} / 近くを押して切れた ${r.holdBrokenWithNear} / ずっと範囲内だったのに切れた ${r.holdBrokenAccepted}(うち近く ${r.holdBrokenAcceptedWithNear}) / ホールド中に押したタップの取れない ${r.tapMissedDuringHold}`),
     '', '## 例(1曲につき8件まで)', '',
     ...report.runs.now.filter((r) => r.ok).flatMap((r) => [
       ...r.samples.tapMissed.map((x) => `- 取れない ${r.title} ${x.timeMs}ms ${x.type}: 押したずれ ${x.botDelta}ms${x.dropPointer ? '・ポインタの合図なし' : ''}${x.lateMs ? `・${x.lateMs}ms遅れて届いた` : ''} (x${x.x}, y${x.y})`),
