@@ -1709,7 +1709,7 @@ function BattleScreen({
             const chips=[];
             // ★`icon` という名前は使わない。カードの絵は cardIconNode() を通す決まりがあり、
             //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
-            const chip=(key,mark,label,value,tone,opts)=>{const o=opts||{};chips.push({key,mark,label,value,tone,short:o.short!=null?o.short:value,pulse:!!o.pulse});};
+            const chip=(key,mark,label,value,tone,opts)=>{const o=opts||{};chips.push({key,mark,label,value,tone,short:o.short!=null?o.short:value,pulse:!!o.pulse,glow:o.glow||''});};
             const atkPct=Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100);
             if(atkPct>0) chip('atk',<Sword size={9}/>,'攻撃力',`+${atkPct}%`,'text-red-500 border-red-500/50');
             const dmgCutPct=Math.floor(getPermaBuff('dmgCutPct')*100);
@@ -1759,7 +1759,9 @@ function BattleScreen({
               if(!trait||count<=0) return;
               const who=key==='party'?'':(slots[Number(key)]?.name||'');
               chip(`sweet${key}`,<Sparkles size={9}/>,`${who}${trait.label}`,`${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId,count)}`,
-                trait.kind==='cookie'?'text-pink-300 border-pink-400/50':'text-fuchsia-300 border-fuchsia-400/50',{short:`${trait.icon}${count}/${SWEET_STACK_MAX}`,pulse:count>=SWEET_STACK_MAX});
+                trait.kind==='cookie'?'text-pink-300 border-pink-400/50':'text-fuchsia-300 border-fuchsia-400/50',{short:`${trait.icon}${count}/${SWEET_STACK_MAX}`,pulse:count>=SWEET_STACK_MAX,
+                // ★クッキーが満タン(EXの使いどき)は、点滅だけだと目立たない。ピンクの光の縁取りも付ける(2026-10-09 ユーザー指示「クッキーが満タンで光る」)
+                glow:trait.kind==='cookie'&&count>=SWEET_STACK_MAX?'mh-cookie-full':''});
             });
             // メロディ・ボゥの旋律(クロミーの固有技)で積んだ与ダメ。使った子の枠ごと。ランが終わるまで残る
             Object.entries(bowStackView||{}).forEach(([key,n])=>{
@@ -1805,11 +1807,11 @@ function BattleScreen({
                 <div className={`flex items-start gap-1 ${focusedCard&&tacticsNewLayout?'invisible':'visible'}`}>
                   {buffDetail?(
                     <div data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:'75px'}}>
-                      {chips.map(c=>(<div key={c.key} className={`text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse?' animate-pulse':''}`}>{c.mark} {c.label}{c.value?` ${c.value}`:''}</div>))}
+                      {chips.map(c=>(<div key={c.key} className={`text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse?' animate-pulse':''}${c.glow?` ${c.glow}`:''}`}>{c.mark} {c.label}{c.value?` ${c.value}`:''}</div>))}
                     </div>
                   ):(
                     <div data-battle-buff-icons className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-                      {chips.map(c=>(<div key={c.key} aria-label={`${c.label}${c.value?` ${c.value}`:''}`} title={`${c.label}${c.value?` ${c.value}`:''}`} className={`shrink-0 text-[10px] font-black bg-black/60 px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 leading-none ${c.tone}${c.pulse?' animate-pulse':''}`}>{c.mark}{c.short?<span>{c.short}</span>:null}</div>))}
+                      {chips.map(c=>(<div key={c.key} aria-label={`${c.label}${c.value?` ${c.value}`:''}`} title={`${c.label}${c.value?` ${c.value}`:''}`} className={`shrink-0 text-[10px] font-black bg-black/60 px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 leading-none ${c.tone}${c.pulse?' animate-pulse':''}${c.glow?` ${c.glow}`:''}`}>{c.mark}{c.short?<span>{c.short}</span>:null}</div>))}
                     </div>
                   )}
                   <button type="button" data-battle-buff-toggle={buffDetail?'close':'open'} onClick={()=>setBuffDetail(v=>!v)}
@@ -2518,6 +2520,13 @@ function BattleScreen({
                 return(<button data-battle-action onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint?'':' uppercase'}${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':(actionHint?'bg-slate-800 text-slate-300 border-white/20':'bg-slate-700 text-slate-500 opacity-50')}`}><Play fill="currentColor" size={12}/> {actionHint||'Action'}</button>);})()}
             </div>
           </div>
+          {/* EXスキルを使ったせいで、このターンは手札がどれも使えないときの理由(2026-10-09 ユーザー指示「EX後のターンに理由を出す」)。
+              札ごとの「EX使用」の印だけでは、なぜ手札が全部暗いのかが一目で分からなかった。手札の帯の上端に重ねて1行だけ出す */}
+          {tacticsExTurnUsed&&passTacticsTurn&&selectedCards.length===0&&!autoBattle&&tacticsCardBlock&&hand.length>0&&(()=>{
+            const blocks=hand.map((c,i)=>tacticsCardBlock(c,i));
+            if(!blocks.every(b=>b&&!b.ok)||!blocks.some(b=>b.kind==='ex')) return null;
+            return <div data-tactics-ex-turn-note className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-fuchsia-300/60 bg-slate-950/95 px-3 py-1 text-[10px] font-black text-fuchsia-100 shadow-lg">EXスキルを使ったので、このターンはカードを使えません →「ターンを進める」</div>;
+          })()}
           {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}
           <div className={`flex-1 flex gap-1 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget?'':battleTutorialSpotClass('cards')}`}>
             {hand.map((c,i)=>{
