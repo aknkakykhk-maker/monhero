@@ -51,6 +51,13 @@ function installFeelPlayer(o) {
     return { x: x - side * 1.5, y: base.y };   // いちばん外側から 1.5px 内側
   };
   const songNow = () => (hooks.rhythmSongMs ? hooks.rhythmSongMs() : null);
+  // ゲームが入力ごとに差し引いた「入力が起きてから処理されるまでの遅れ」(setInputAge に渡される値)を、曲の時刻つきで控える(読むだけ)。
+  // 早取りの切り分け用: 遅れて届いたタッチ以外で大きな値が渡されていれば、時刻の補正が過剰ということ
+  const ageLog = [];
+  try {
+    const rt = RHYTHM_GESTURE_RUNTIME, orig = rt.setInputAge;
+    if (typeof orig === 'function') rt.setInputAge = function (a) { if (ageLog.length < 40000) ageLog.push({ t: Math.round(songNow() || 0), age: Math.round((Number(a) || 0) * 10) / 10 }); return orig.apply(this, arguments); };
+  } catch { /* 控えられなければ、遅れの値は出ない */ }
   // フリックの向き(flickDir)は、ゲームの中のノーツ本体にしか無い(rhythmNotes は写し)。絵を描くときに渡される本体を番号で控える(読むだけ。scenarios/rhythm.js と同じ)
   const real = new Map();
   try {
@@ -75,7 +82,7 @@ function installFeelPlayer(o) {
   const presses = [];
   const holding = []; // { id, n, p, until, press }
   let i = 0, pid = 500;
-  const state = { done: false, results: null, presses, planned: plan.length };
+  const state = { done: false, results: null, presses, planned: plan.length, ageLog };
   window.__feel = state;
   const lerpLane = (pts, t) => {
     if (!pts || pts.length < 2) return null;
@@ -101,7 +108,9 @@ function installFeelPlayer(o) {
       const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && !varying && rand() < o.edgeProbe ? (centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1) : 0;
       const p = (probeSide && edgeProbePoint(n, y, probeSide)) || pointAt(c, y);
       const dropPointer = o.mode === 'ios' && rand() < o.dropPointer;
-      const lateMs = o.mode !== 'mouse' && rand() < o.lateRate ? o.lateMs[0] + rand() * (o.lateMs[1] - o.lateMs[0]) : 0;
+      // 遅れの大きさ: 'real' は実機(iPhone)の記録の割合どおり(50ms以上遅れたもののうち 80ms超が73%・150ms超が35%・300ms超が22%。最大は 1秒まで)。ほかは lateMs の範囲で一様
+      const drawLate = () => { if (o.lateDist !== 'real') return o.lateMs[0] + rand() * (o.lateMs[1] - o.lateMs[0]); const u = rand(); return u < 0.27 ? 50 + rand() * 30 : u < 0.65 ? 80 + rand() * 70 : u < 0.78 ? 150 + rand() * 150 : 300 + rand() * 700; };
+      const lateMs = o.mode !== 'mouse' && rand() < o.lateRate ? drawLate() : 0;
       // 押した位置を、ゲームの見方のレーン座標(指の高さで測った位置・判定ラインの高さに直した位置)と、狙った帯の中心で覚える(早取り・隣に取られるの切り分け用)
       let fx = null, fl = null; try { const bx = rect(); fx = rhythmLaneCoordinateAtPoint(p.x, p.y, bx); const sb = typeof rhythmSubLaneCoordinateAtLineIfBelow === 'function' ? rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, bx) : undefined; fl = Number.isFinite(sb) ? sb / 2 - 0.5 : null; } catch { /* 測れなくても点検は続ける */ }
       const press = { fx: fx == null ? null : Math.round(fx * 100) / 100, fl: fl == null ? null : Math.round(fl * 100) / 100, center: Math.round(centerOf(n) * 100) / 100, bandW: Number.isFinite(n.subLaneWidth) ? n.subLaneWidth : 2, index: n.index, type: n.type, edgeProbe: !!probeSide, pressSong: now, dropPointer, lateMs: Math.round(lateMs), x: Math.round(p.x), y: Math.round(p.y), releaseSong: null };
@@ -206,7 +215,7 @@ function analyzeFeel({ notesInfo, presses, results }) {
         for (const q of presses) { if (q === p) continue; const dd = Math.abs(q.pressSong - judgedAt); if (dd < od) { od = dd; other = q; } }
         const on = other ? info.get(other.index) : null;
         out.stolen.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta), lateMs: p.lateMs, dropPointer: p.dropPointer,
-          mine: { center: p.center, fx: p.fx, fl: p.fl, w: p.bandW }, usedPress: other && od < 25 ? { index: other.index, type: on && on.type, timeMs: on && Math.round(on.timeMs), center: other.center, fx: other.fx, fl: other.fl, w: other.bandW, lateMs: other.lateMs } : null });
+          mine: { center: p.center, fx: p.fx, fl: p.fl, w: p.bandW, gameAge: p.gameAge ?? null }, usedPress: other && od < 25 ? { index: other.index, type: on && on.type, timeMs: on && Math.round(on.timeMs), center: other.center, fx: other.fx, fl: other.fl, w: other.bandW, lateMs: other.lateMs } : null });
       }
       else if (Math.abs(err) > DRIFT_MS) out.drift.push({ index: p.index, type: n.type, timeMs: Math.round(n.timeMs), botDelta: Math.round(botDelta), gameDelta: Math.round(headDelta), dropPointer: p.dropPointer, lateMs: p.lateMs });
     }

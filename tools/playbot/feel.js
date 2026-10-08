@@ -33,8 +33,9 @@ const OPTS = {
   nudgePx: args.includes('--near') ? 12 : 5,                          // ホールド中に別の指で押すと、押さえている指がつられて動く(px)
   edgeProbe: 0.35,                     // HOLD の35%は「押し始めの受付のいちばん外側」を押さえ続ける(押し始めと押さえ中の受付の食い違いを突く)
   edgeOutLanes: 0.18,                  // 端のレーンは外へはみ出し気味に押す(レーン)。つられる向きも外側(10/7 のホールドの切れは端のレーンの外側寄りで起きた)
-  dropPointer: 0.15,                   // ios: ポインタの合図が抜けるタッチの割合(10/7 の実機では千ノーツあたり18ほど)
-  lateRate: 0.1, lateMs: [30, 120],    // 遅れて届くタッチの割合と遅れ
+  dropPointer: args.includes('--legacy-ios') ? 0.15 : 0.01,   // 実機(iPhone)の記録は1000タッチあたり7.9(タッチだけ)。--legacy-ios は10/7 の初版の強すぎる設定                   // ios: ポインタの合図が抜けるタッチの割合(10/7 の実機では千ノーツあたり18ほど)
+  lateRate: Number(argOf('late-rate', args.includes('--legacy-ios') ? 0.1 : 0.0204)),   // --late-rate 0.06 で、遅れて届くタッチを増やして数を稼ぐ(実機の約3倍)
+  lateMs: [30, 120], lateDist: args.includes('--legacy-ios') ? 'uniform' : 'real',   // 実機(iPhone)は50ms以上遅れたタッチが1000タッチあたり20.4(最大1671ms)    // 遅れて届くタッチの割合と遅れ
 };
 const stamp = (() => { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-'); })();
 const TAG = argOf('tag', '');
@@ -144,7 +145,11 @@ async function auditBuild(playwright, root, label, port) {
         await s.wait(1500);
         if (await s.page.evaluate(() => !!(window.__feel && window.__feel.done))) break;
       }
-      const data = await s.page.evaluate(() => ({ presses: window.__feel.presses, results: window.__feel.results }));
+      const data = await s.page.evaluate(() => ({ presses: window.__feel.presses, results: window.__feel.results, ageLog: window.__feel.ageLog }));
+      // 押した時刻に近い(前後40ms)ところで、ゲームが差し引いた遅れの値を押下へ付ける
+      for (const pr of data.presses) { const at = pr.pressSong + (pr.lateMs || 0); const e = (data.ageLog || []).filter((q) => q.age > 0 && Math.abs(q.t - at) < 40).sort((a, b) => Math.abs(a.t - at) - Math.abs(b.t - at))[0]; if (e) pr.gameAge = e.age; }
+      // 元の記録(押下・判定・ゲームが差し引いた遅れ)を曲ごとに残す(あとで別の見方で調べ直せるように。--raw のときだけ)
+      if (args.includes('--raw')) { try { fs.writeFileSync(path.join(OUT, `raw-${songId}.json`), JSON.stringify({ songId, difficulty: DIFFICULTY, notesInfo: installed.notesInfo, presses: data.presses, results: data.results, ageLog: data.ageLog })); } catch { /* 書けなくても点検は続ける */ } }
       const a = analyzeFeel({ notesInfo: installed.notesInfo, presses: data.presses, results: data.results });
       Object.assign(row, { ok: true, title, ...a.summary, probes: data.presses.filter((x) => x.edgeProbe), samples: { tapMissed: a.tapMissed.slice(0, 8), drift: a.drift.slice(0, 8), stolen: a.stolen.slice(0, 8), holdBroken: a.holdBroken.slice(0, 8) } });
       console.log(`${label} ${title} ${DIFFICULTY}: 押した ${a.summary.pressed} / 押したのに取れない ${a.summary.tapMissed}(合図が抜けた ${a.summary.tapMissedDroppedPointer}・遅れた ${a.summary.tapMissedLate}) / 判定のずれ ${a.summary.driftCount}(差の中央値 ${a.summary.errorMedianMs}ms・90%が ${a.summary.errorP90AbsMs}ms 以内) / 早取り ${a.summary.stolen} / ホールドが切れた ${a.summary.holdBroken}(受付の端で押さえて切れた ${a.summary.holdBrokenAtEdge}/${a.summary.edgeProbes})`);
@@ -201,7 +206,8 @@ const worse = (before, now) => {
     try { report.runs.before = await auditBuild(playwright, wt, `前(${compareRef})`, PORT_BASE + 1); }
     finally { spawnSync('git', ['worktree', 'remove', '--force', wt], { cwd: ROOT }); }
   }
-  report.runs.now = await auditBuild(playwright, ROOT, '今', PORT_BASE);
+  // --root <フォルダ>: 配信するゲームの場所(ふだんはこのリポジトリ。直し方の入れ方を変えた手元の写しで比べるときに使う)
+  report.runs.now = await auditBuild(playwright, path.resolve(argOf('root', ROOT)), '今', PORT_BASE);
   const now = total(report.runs.now);
   const before = report.runs.before ? total(report.runs.before) : null;
   report.total = { now, before };
