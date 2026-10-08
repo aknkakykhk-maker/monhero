@@ -17,8 +17,9 @@ for (const d of fs.existsSync(root) ? fs.readdirSync(root).sort() : []) {
   const m = d.match(/^feel-\d{8}-\d{4}-(.+)$/);
   if (!m) continue;
   // 組の名前(-r2 -r3 などの回し直しの印は外して、同じ種類の組へまとめる)
-  const kind = m[1].replace(/-r\d+$/, '');
-  if (tags.length && !tags.some((t) => t.replace(/-r\d+$/, '') === kind)) continue;
+  // --tags に回し直しの印つきの名前(A-master-r4)を渡すと、その回だけ。印なし(A-master)なら、回し直しをまとめる
+  const kind = tags.includes(m[1]) ? m[1] : m[1].replace(/-r\d+$/, '');
+  if (tags.length && !tags.some((t) => t === m[1] || (!/-r\d+$/.test(t) && t === kind))) continue;
   for (const f of fs.readdirSync(path.join(root, d)).filter((x) => /^partial-.*\.json$/.test(x))) {
     let rows = []; try { rows = JSON.parse(fs.readFileSync(path.join(root, d, f), 'utf8')); } catch { continue; }
     const g = groups.get(kind) || new Map();
