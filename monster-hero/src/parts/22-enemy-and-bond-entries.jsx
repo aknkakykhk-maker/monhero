@@ -431,6 +431,10 @@ const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
   if (trait.kind === 'note') return hit ? (card.type === 'unique' ? 2 : 1) : 0;
   return 0;
 };
+// ★内部の印(画面には出さない): メロディー・クロミーと2体由来の技は、本体のデータの collab:'sanrio' で見分ける(2026-10-08 ユーザー指示)。
+//   判定はこの2つの関数だけを通す。技は出自のモンスターで見る(固有技は card.monId。通常技を受け継げるようになったら card.originMonId を足す)
+const collabOfMonster = (monId) => (monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId] ? (ALL_PLAYER_MONSTERS[monId].collab || null) : null);
+const isSanrioCollabSkill = (card) => !!card && collabOfMonster(card.originMonId || card.monId) === 'sanrio';
 // 増やしたあとの数(上限で止める)
 const addSweetStack = (n, gain) => sweetStackCountOf(sweetStackCountOf(n) + Math.max(0, Math.floor(Number(gain) || 0)));
 // クッキーの効き目(味方全体)。数に応じて { hpRegen, gutsRegen, takenMult, dmgMult }

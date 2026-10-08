@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5a3def6fefe6c25d
+// generated-sha256: a2b536d3e78bbd86
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-08 17:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-08 18:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11764,6 +11764,10 @@ const sweetStackGainOf = (ownerId, actorId, card, hit = false) => {
   if (trait.kind === 'note') return hit ? (card.type === 'unique' ? 2 : 1) : 0;
   return 0;
 };
+// ★内部の印(画面には出さない): メロディー・クロミーと2体由来の技は、本体のデータの collab:'sanrio' で見分ける(2026-10-08 ユーザー指示)。
+//   判定はこの2つの関数だけを通す。技は出自のモンスターで見る(固有技は card.monId。通常技を受け継げるようになったら card.originMonId を足す)
+const collabOfMonster = (monId) => (monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId] ? (ALL_PLAYER_MONSTERS[monId].collab || null) : null);
+const isSanrioCollabSkill = (card) => !!card && collabOfMonster(card.originMonId || card.monId) === 'sanrio';
 // 増やしたあとの数(上限で止める)
 const addSweetStack = (n, gain) => sweetStackCountOf(sweetStackCountOf(n) + Math.max(0, Math.floor(Number(gain) || 0)));
 // クッキーの効き目(味方全体)。数に応じて { hpRegen, gutsRegen, takenMult, dmgMult }

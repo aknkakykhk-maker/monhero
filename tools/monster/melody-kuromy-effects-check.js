@@ -55,10 +55,13 @@ check('勇者特性の名前', M.Melody?.trait === 'メロディの手作りク�
 check('血統はユグドラシル×？？？(レア)と図鑑の文',
   /Melody:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages) && /Kuromy:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages)
   && /Melody: 'マイメロディとぞうさんの力を宿した/.test(lineages) && /Kuromy: 'クロミとバクの力を宿した/.test(lineages));
-// ★2026-10-08 ユーザー指示「新モンスター実装は早く取り下げて」で、販売と交換を止めた(本体は残し、交換済みの人はそのまま使える)
-check('取り下げ中: マーケットの6件はすべて近日追加(available:false)',
-  ['melody_icon', 'melody_disc_icon', 'Melody', 'kuromy_icon', 'kuromy_disc_icon', 'Kuromy'].every(id => new RegExp(`id:'${id}',[^\\n]*available:false`).test(breeder)));
-check('取り下げ中: ビートP交換所に円盤石を並べていない', !/rhythmEventDiscOffer\('(Melody|Kuromy)'/.test(event));
+// ★2026-10-08 いったん取り下げたあと、ユーザー指示「公開して」で再公開した(アイコン2種は販売、ダイヤの円盤石は近日追加のまま)
+check('アイコン2種ずつは販売中、ダイヤの円盤石は近日追加のまま',
+  /id:'melody_icon',[^\n]*cost:1 \}/.test(breeder) && /id:'kuromy_disc_icon',[^\n]*cost:1 \}/.test(breeder)
+  && /id:'Melody',[^\n]*available:false/.test(breeder) && /id:'Kuromy',[^\n]*available:false/.test(breeder));
+check('ビートP交換所で円盤石を先行公開', /rhythmEventDiscOffer\('Melody', 'メロディー'\)/.test(event) && /rhythmEventDiscOffer\('Kuromy', 'クロミー'\)/.test(event));
+check('内部の印(collab:sanrio)が2体にだけ付いている', M.Melody?.collab === 'sanrio' && M.Kuromy?.collab === 'sanrio'
+  && Object.values(M).filter(m => m.collab).length === 2);
 // 2026-10-08 ユーザー指示「2体とも専用アクションを力入れて作って」: ユグドラシルの型は使わず、段階の順に専用の動きを持つ
 const fxSrc = read('monster-hero/src/parts/24-battle-fx.jsx');
 const css = read('monster-hero/src/parts/70-bootstrap.jsx');
@@ -93,6 +96,13 @@ check('黒音符の段階(1個ごと与ダメ+3% / 5個 会心率+10% / 10個 �
   && near(n10.dmgMult, 1.3) && n10.combo && n10.combo.count === 1 && near(n10.combo.rate, 0.15));
 check('黒音符の連撃は、EXや運命の連撃のうしろへ並べる', s.withBlackNoteCombo(null, null) === null
   && s.withBlackNoteCombo({ count: 4, rate: 0.3 }, n10.combo).length === 2 && s.withBlackNoteCombo(null, n10.combo).length === 1);
+// 内部の印の判定(本体のデータを読むので ALL_PLAYER_MONSTERS を渡す)
+vm.runInContext('globalThis.ALL_PLAYER_MONSTERS = __M;', Object.assign(sb, { __M: M }));
+vm.runInContext('globalThis.s2={isSanrioCollabSkill};', sb);
+check('内部の印の判定は技の出自で見る(固有技は monId、通常技を受け継げるようになったら originMonId)',
+  sb.s2.isSanrioCollabSkill({ type: 'unique', monId: 'Melody' }) && sb.s2.isSanrioCollabSkill({ type: 'atk', originMonId: 'Kuromy' })
+  && !sb.s2.isSanrioCollabSkill({ type: 'unique', monId: 'Yggdrasil' }) && !sb.s2.isSanrioCollabSkill(null));
+check('受け継いだ固有技で場の本人に貯まる仕組みは作らない(ユーザー判断)', !app.includes('gainSweetStackFromInherited'));
 check('札に出す文', s.sweetStackEffectText('Melody', 10).includes('与ダメージ+15%') && s.sweetStackEffectText('Kuromy', 5).includes('会心率+10%'));
 
 // ---------- ③ 本体の分岐 ----------
@@ -168,7 +178,7 @@ check('メロディボックスは全体バフへ、メロディ・キーの敵�
   && app.includes('const nm=tacticsExNightmareEnemyOf(tacticsExStateRef.current,tacticsUnitsRef.current,live.now);'));
 
 // ---------- ⑥ 言葉 ----------
-const texts = [allies, lineages, breeder, read('monster-hero/data/help.js'), slice(read('monster-hero/data/changelog.js'), 'const CHANGELOG = [', "id:'update_notice_melody_kuromy_release_v1'"),
+const texts = [allies, lineages, breeder, read('monster-hero/data/help.js'), slice(read('monster-hero/data/changelog.js'), 'const CHANGELOG = [', "id:'update_notice_melody_kuromy_v2'"),
   read('docs/spec/MELODY_KUROMY_SKILLS.md'), stackSrc,
   read('tools/image/make-melody-kuromy-release-notice.js')];
 // 禁止語そのものをソースへ書かないよう、文字コードで持つ

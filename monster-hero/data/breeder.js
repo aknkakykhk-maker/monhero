@@ -383,12 +383,13 @@ const BREEDER_MARKET_ITEMS = [
   // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はゴースト・スプーキーと同じ(円盤石150,000ダイヤ・アイコンは各1)。
   // 正式実装のときに available:false を外す。
   // 2026-10-08 にいったん正式実装して販売したが、同じ日のユーザー指示「新モンスター実装は早く取り下げて」で、6件とも
-  // available:false(近日追加)へ戻した。本体(ALL_PLAYER_MONSTERS)は残すので、交換済みの人はそのまま使える
-  { id:'melody_icon', name:"メロディーのアイコン", type:'icon', icon:MELODY_FACE_ICON, cost:1, available:false },
-  { id:'melody_disc_icon', name:"メロディーの円盤石アイコン", type:'icon', icon:MELODY_DISC_ICON, cost:1, available:false },
+  // available:false(近日追加)へ戻した。本体(ALL_PLAYER_MONSTERS)は残すので、交換済みの人はそのまま使える。
+  // 同じ日のユーザー指示「公開して」で再公開し、アイコン2種の available:false をまた外した(ダイヤの円盤石は近日追加のまま)
+  { id:'melody_icon', name:"メロディーのアイコン", type:'icon', icon:MELODY_FACE_ICON, cost:1 },
+  { id:'melody_disc_icon', name:"メロディーの円盤石アイコン", type:'icon', icon:MELODY_DISC_ICON, cost:1 },
   { id:'Melody', name:"メロディーの円盤石", type:'disc', icon:MELODY_DISC_ICON, cost:150000, available:false },
-  { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1, available:false },
-  { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1, available:false },
+  { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1 },
+  { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1 },
   { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
