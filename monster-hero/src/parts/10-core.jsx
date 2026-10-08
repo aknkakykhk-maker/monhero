@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-08 11:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-08 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -802,6 +802,8 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 // ★持っているときだけの話(スキップチケット)や、仕様の言い換えだけの行も置かない。
 // ★points は「詳しいルール」で開く本文。モードの説明モーダルと同じ形なので、
 //   画面はモードと仕組みを区別せずに出せる(battleInfoById)。
+// モンヒロバトルの入口の助手(立ち絵/コメント)の出し入れ。モンヒロビート用のキーは流用しない新しいキー(2026-10-08)
+const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
     id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',

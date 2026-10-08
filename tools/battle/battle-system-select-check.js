@@ -206,7 +206,7 @@ check('仕組みとモードを同じ入口から引ける',
     && has('{modeInfoId&&(()=>{const mode=battleInfoById(modeInfoId);return('));
 check('カードから「詳しいルール」を開ける',
   has('<button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}')
-    && has('詳しいルール<ChevronRight size={12}'));
+    && has('aria-label={`${sys.label}の詳しいルール`}'));
 // 準備中でも中身は読めるようにしておく(何が来るのか分かるように)。
 // ★止めてよいのはバトルのれんしゅう中だけ(台本から外れないように)。
 //   準備中(soon)やβ版を理由に読めなくしない
@@ -216,13 +216,15 @@ check('準備中の仕組みでも詳しいルールは読める', (() => {
   return (info.match(/disabled=\{[^}]*\}/g) || []).every(d => d === 'disabled={!!battleTutorial}')
     && !/soon|beta/.test(info);
 })());
-check('売りの3行を画面へ出している',
-  has('{sys.highlights.map(([icon,text])=>(') && has('<li key={text}'));
+// 2026-10-08: モンヒロビートのモードえらびと同じ作り(舞台+大きな札)に変えた。札には名前とひとこと(tagline)だけを出し、
+// 細かい説明は「？」の詳しいルールへ回す
+check('札に名前とひとことを出している',
+  has('{sys.tagline}</small>') && has('className={`mhms-card mhms-in flex min-h-[84px]'));
 // ★1画面に収まる高さは tools/battle/battle-system-fit-check.js が実際に測る。
 //   ここでは「収まる作りを崩していないか」の目印だけを見る
 check('1画面に収める作りが残っている',
   has('data-battle-system-card={sys.id}')
-    && source.includes('tools/battle/battle-system-fit-check.js を通すこと'));
+    && has('data-battle-systems={systems.length}'));
 
 // ===== ②-2 β版（タクティクスプロだけ先に出す） =====
 // 2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」。
@@ -319,7 +321,9 @@ check('そのまま難易度へ入ったときは、戻ると入口に帰る',
 
 // ===== ④ ヘルプと助手 =====
 check('画面がヘルプの対応表にある', help.includes("BATTLE_SYSTEM_SELECT:     'basics/battle-modes',"));
-check('助手のひとことが付いている', has('<AssistantBubble scene="battleSystemSelect" compact/>'));
+check('助手のひとことが付いている', has("pickAssistantLine('battleSystemSelect'") && has('<ModeSelectAssistantPanel assistant={battleSelectAssistant}'));
+check('立ち絵/コメントの出し入れは新しい保存キーに持つ(ビート用を流用しない)',
+  has("const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1'") && has('storeSet(BATTLE_SELECT_ASSIST_KEY'));
 check('助手の場面が定義してある', assistants.includes('battleSystemSelect: {'));
 check('助手4人ぶんのセリフがある',
   ['battleSystemSelectGuide', 'battleSystemSelectGuideKiki', 'battleSystemSelectGuideMomosuke', 'battleSystemSelectGuideDra']

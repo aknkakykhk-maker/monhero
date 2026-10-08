@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aaae63718401371c
+// source-sha256: 20546405d335599b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 11:20";
+const BUILD_DATE = "2026-10-08 12:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -668,6 +668,7 @@ const BATTLE_MODES = [{
 const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
+const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   id: BATTLE_SYSTEM_CLASSIC,
   label: 'クラシックバトル',
@@ -65873,7 +65874,9 @@ const RHYTHM_MODE_SELECT_SPARKS = Object.freeze([{
   top: '40%',
   delay: '-1.3s'
 }]);
-function RhythmModeSelectStage() {
+function RhythmModeSelectStage({
+  notes = true
+}) {
   return React.createElement("div", {
     className: "mhms-fx",
     "aria-hidden": "true"
@@ -65893,7 +65896,7 @@ function RhythmModeSelectStage() {
       top: sp.top,
       animationDelay: sp.delay
     }
-  })), RHYTHM_MODE_SELECT_NOTES.map((n, i) => React.createElement("span", {
+  })), notes && RHYTHM_MODE_SELECT_NOTES.map((n, i) => React.createElement("span", {
     key: `n${i}`,
     className: "mhms-note",
     style: {
@@ -65902,6 +65905,108 @@ function RhythmModeSelectStage() {
       animationDelay: n.delay
     }
   }, n.ch)));
+}
+function useModeSelectStageCss() {
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-rhythm-mode-select-css';
+    tag.textContent = RHYTHM_MODE_SELECT_CSS;
+    document.head.appendChild(tag);
+  }, []);
+}
+function ModeSelectAssistToggles({
+  assistant,
+  showArt,
+  showComment,
+  onToggle,
+  cls,
+  withLabel
+}) {
+  return onToggle ? React.createElement("div", {
+    "data-rhythm-mode-assistant-toggles": true,
+    role: "group",
+    "aria-label": "助手の表示",
+    className: `flex items-center gap-1.5 ${cls}`
+  }, withLabel && React.createElement("small", {
+    className: "mr-auto text-[10px] font-black text-slate-400"
+  }, "助手 ", assistant ? assistant.name : ''), [['modeSelectArt', showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
+    key: key,
+    type: "button",
+    [attr]: '',
+    "aria-pressed": on,
+    onClick: () => onToggle(key),
+    className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+  }, label, " ", on ? 'ON' : 'OFF'))) : null;
+}
+function ModeSelectAssistantPanel({
+  assistant,
+  showArt,
+  showComment,
+  onToggle
+}) {
+  if (!assistant || !(showArt || showComment)) return null;
+  return React.createElement("div", {
+    "data-rhythm-mode-assistant": true,
+    className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
+  }, showArt && React.createElement("div", {
+    "data-rhythm-mode-assistant-art-box": true,
+    className: "relative min-h-0 flex-1 overflow-hidden"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mhms-glow"
+  }), React.createElement(ModeSelectAssistToggles, {
+    assistant: assistant,
+    showArt: showArt,
+    showComment: showComment,
+    onToggle: onToggle,
+    cls: "absolute bottom-1.5 right-1.5 z-20",
+    withLabel: false
+  }), React.createElement("div", {
+    className: "mhms-float pointer-events-none absolute inset-0"
+  }, RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
+    const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
+    const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1];
+    const cx = fr.cxBy && fr.cxBy[ex] || fr.cx;
+    return React.createElement("img", {
+      "data-rhythm-mode-assistant-art": true,
+      src: assistant.image,
+      alt: "",
+      draggable: false,
+      className: "absolute max-w-none",
+      style: {
+        width: `${fr.zoom * 100}%`,
+        height: 'auto',
+        left: '50%',
+        top: `${fr.top * 100}%`,
+        transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`
+      }
+    });
+  })() : React.createElement("img", {
+    "data-rhythm-mode-assistant-art": true,
+    src: assistant.image,
+    alt: "",
+    draggable: false,
+    className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
+  }))), !showArt && React.createElement(ModeSelectAssistToggles, {
+    assistant: assistant,
+    showArt: showArt,
+    showComment: showComment,
+    onToggle: onToggle,
+    cls: "mx-2 mt-2 justify-end",
+    withLabel: true
+  }), showComment && React.createElement("p", {
+    "data-rhythm-mode-assistant-line": true,
+    className: `mhms-bubble ${showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`,
+    style: {
+      borderColor: assistant.accent
+    }
+  }, React.createElement("b", {
+    className: "mb-0.5 block text-[10px]",
+    style: {
+      color: assistant.accent
+    }
+  }, assistant.name), assistant.text));
 }
 const RHYTHM_BUDDY_LEAVE_GUARD_MS = 500;
 function RhythmMultiScreen({
@@ -65929,13 +66034,7 @@ function RhythmMultiScreen({
   onOpenMasuBeat = null
 }) {
   const view = useRhythmMultiView();
-  React.useEffect(() => {
-    if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
-    const tag = document.createElement('style');
-    tag.id = 'mh-rhythm-mode-select-css';
-    tag.textContent = RHYTHM_MODE_SELECT_CSS;
-    document.head.appendChild(tag);
-  }, []);
+  useModeSelectStageCss();
   const difficultyIds = difficultyList.map(d => d.id);
   const songIds = songs.map(song => song.songId);
   React.useEffect(() => {
@@ -66481,21 +66580,14 @@ function RhythmMultiScreen({
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
-    const assistToggles = (cls, withLabel) => ms.onToggleAssistant && React.createElement("div", {
-      "data-rhythm-mode-assistant-toggles": true,
-      role: "group",
-      "aria-label": "助手の表示",
-      className: `flex items-center gap-1.5 ${cls}`
-    }, withLabel && React.createElement("small", {
-      className: "mr-auto text-[10px] font-black text-slate-400"
-    }, "助手 ", ms.assistant ? ms.assistant.name : ''), [['modeSelectArt', ms.showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', ms.showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => React.createElement("button", {
-      key: key,
-      type: "button",
-      [attr]: '',
-      "aria-pressed": on,
-      onClick: () => ms.onToggleAssistant(key),
-      className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
-    }, label, " ", on ? 'ON' : 'OFF')));
+    const assistToggles = (cls, withLabel) => React.createElement(ModeSelectAssistToggles, {
+      assistant: ms.assistant,
+      showArt: ms.showArt,
+      showComment: ms.showComment,
+      onToggle: ms.onToggleAssistant,
+      cls: cls,
+      withLabel: withLabel
+    });
     return React.createElement("main", {
       "data-rhythm-mode-select": true,
       "data-rhythm-multi-step": "rooms",
@@ -66535,53 +66627,12 @@ function RhythmMultiScreen({
       className: "text-sm font-black text-amber-200"
     }, "周回を終えています…")), React.createElement("div", {
       className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`
-    }, ms.assistant && (ms.showArt || ms.showComment) && React.createElement("div", {
-      "data-rhythm-mode-assistant": true,
-      className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${ms.showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
-    }, ms.showArt && React.createElement("div", {
-      "data-rhythm-mode-assistant-art-box": true,
-      className: "relative min-h-0 flex-1 overflow-hidden"
-    }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mhms-glow"
-    }), assistToggles('absolute bottom-1.5 right-1.5 z-20', false), React.createElement("div", {
-      className: "mhms-float pointer-events-none absolute inset-0"
-    }, RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id] ? (() => {
-      const fr = RHYTHM_MODE_ASSISTANT_FRAMES[ms.assistant.id];
-      const ex = (/_([a-z]+)\.png$/i.exec(ms.assistant.image || '') || [])[1];
-      const cx = fr.cxBy && fr.cxBy[ex] || fr.cx;
-      return React.createElement("img", {
-        "data-rhythm-mode-assistant-art": true,
-        src: ms.assistant.image,
-        alt: "",
-        draggable: false,
-        className: "absolute max-w-none",
-        style: {
-          width: `${fr.zoom * 100}%`,
-          height: 'auto',
-          left: '50%',
-          top: `${fr.top * 100}%`,
-          transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`
-        }
-      });
-    })() : React.createElement("img", {
-      "data-rhythm-mode-assistant-art": true,
-      src: ms.assistant.image,
-      alt: "",
-      draggable: false,
-      className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
-    }))), !ms.showArt && assistToggles('mx-2 mt-2 justify-end', true), ms.showComment && React.createElement("p", {
-      "data-rhythm-mode-assistant-line": true,
-      className: `mhms-bubble ${ms.showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`,
-      style: {
-        borderColor: ms.assistant.accent
-      }
-    }, React.createElement("b", {
-      className: "mb-0.5 block text-[10px]",
-      style: {
-        color: ms.assistant.accent
-      }
-    }, ms.assistant.name), ms.assistant.text)), React.createElement("div", {
+    }, React.createElement(ModeSelectAssistantPanel, {
+      assistant: ms.assistant,
+      showArt: ms.showArt,
+      showComment: ms.showComment,
+      onToggle: ms.onToggleAssistant
+    }), React.createElement("div", {
       className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
     }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
@@ -77216,6 +77267,49 @@ function MonsterHeroGame() {
       text
     };
   }, [rhythmModeSelectOpen, activeAssistant && activeAssistant.id]);
+  useModeSelectStageCss();
+  const [battleSelectAssist, setBattleSelectAssist] = useState({
+    modeSelectArt: true,
+    modeSelectComment: true
+  });
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const saved = await storeGet(BATTLE_SELECT_ASSIST_KEY, null);
+        if (alive && saved && typeof saved === 'object') setBattleSelectAssist({
+          modeSelectArt: saved.modeSelectArt !== false,
+          modeSelectComment: saved.modeSelectComment !== false
+        });
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggleBattleSelectAssist = key => {
+    if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
+    const next = {
+      ...battleSelectAssist,
+      [key]: battleSelectAssist[key] === false
+    };
+    setBattleSelectAssist(next);
+    void storeSet(BATTLE_SELECT_ASSIST_KEY, next).catch(() => {});
+  };
+  const battleSystemSelectOpen = gameState === 'BATTLE_SYSTEM_SELECT';
+  const battleSelectAssistant = useMemo(() => {
+    if (!battleSystemSelectOpen || !activeAssistant) return null;
+    const line = typeof pickAssistantLine === 'function' ? pickAssistantLine('battleSystemSelect', null, assistantBondLevelNow, activeAssistant.id) : null;
+    const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
+    return {
+      id: activeAssistant.id,
+      name: activeAssistant.name,
+      accent: activeAssistant.accent,
+      image: assistantFullImage(activeAssistant, line && line.e || 'happy'),
+      face: assistantFaceSrc(activeAssistant, line && line.e || 'happy'),
+      text
+    };
+  }, [battleSystemSelectOpen, activeAssistant && activeAssistant.id]);
   const newProfileFrames = ownedProfileFrames.filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
   const newProfileFrameAssistantName = (() => {
     const ids = [...new Set(newProfileFrames.map(frame => (profileFrameUnlock(frame) || {}).assistantId).filter(Boolean))];
@@ -91251,32 +91345,62 @@ function MonsterHeroGame() {
       const systems = visibleBattleSystems({
         debugBattle: systemDebug
       });
+      const tileLook = {
+        [BATTLE_SYSTEM_CLASSIC]: {
+          grad: 'from-indigo-200 via-indigo-400 to-violet-500',
+          mark: 'CLASSIC BATTLE'
+        },
+        [BATTLE_SYSTEM_TACTICS]: {
+          grad: 'from-amber-200 via-orange-400 to-red-500',
+          mark: 'TACTICS BATTLE'
+        },
+        [BATTLE_SYSTEM_QUICK]: {
+          grad: 'from-yellow-100 via-yellow-300 to-amber-400',
+          mark: 'QUICK MODE'
+        }
+      };
+      const assistShown = !!battleSelectAssistant && (battleSelectAssist.modeSelectArt || battleSelectAssist.modeSelectComment);
       return React.createElement("div", {
         "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 px-4",
-        style: {
-          paddingTop: '.35rem',
-          paddingBottom: '.35rem'
-        }
-      }, React.createElement("div", {
-        className: "flex items-center gap-1 mb-1 shrink-0"
+        "data-battle-system-select": true,
+        className: "mhms-stage relative flex-1 flex flex-col h-full min-h-0 overflow-hidden text-white"
+      }, React.createElement(RhythmModeSelectStage, {
+        notes: false
+      }), React.createElement("header", {
+        className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm"
       }, React.createElement("button", {
         "aria-label": "戻る",
         disabled: !!battleTutorial,
         onClick: returnToHome,
-        className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      }))), React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
-      }, React.createElement("h2", {
-        className: "text-center text-lg font-black leading-tight shrink-0 mt-0.5"
-      }, "モンヒロバトル"), React.createElement("p", {
-        className: "text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0"
-      }, "どのバトルで遊ぶかを選びます"), React.createElement("div", {
+        className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30"
+      }, "←"), React.createElement("div", {
+        className: "min-w-0 flex-1 leading-none"
+      }, React.createElement("small", {
+        className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
+      }, "MONHERO BATTLE ・ SELECT"), React.createElement("b", {
+        className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
+      }, "モンヒロバトル"), React.createElement("small", {
+        className: "block truncate text-[9px] font-black text-slate-300/90"
+      }, "どのバトルで遊ぶかを選びます"))), React.createElement("div", {
+        className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown ? '' : 'portrait:justify-center'}`
+      }, React.createElement(ModeSelectAssistantPanel, {
+        assistant: battleSelectAssistant,
+        showArt: battleSelectAssist.modeSelectArt,
+        showComment: battleSelectAssist.modeSelectComment,
+        onToggle: toggleBattleSelectAssist
+      }), React.createElement("div", {
+        className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2"
+      }, !assistShown && battleSelectAssistant && React.createElement(ModeSelectAssistToggles, {
+        assistant: battleSelectAssistant,
+        showArt: battleSelectAssist.modeSelectArt,
+        showComment: battleSelectAssist.modeSelectComment,
+        onToggle: toggleBattleSelectAssist,
+        cls: "justify-end",
+        withLabel: true
+      }), React.createElement("div", {
         "data-battle-systems": systems.length,
-        className: `flex flex-col gap-0.5 shrink-0${battleTutorialSpotClass('systemCards')}`
-      }, systems.map(sys => {
+        className: `flex flex-col gap-2${battleTutorialSpotClass('systemCards')}`
+      }, systems.map((sys, idx) => {
         const soon = battleSystemComingSoon(sys.id, {
           debugBattle: systemDebug
         });
@@ -91285,65 +91409,52 @@ function MonsterHeroGame() {
         });
         const tutorialLocked = !!battleTutorial && sys.id !== battleTutorialSystem;
         const sysSpot = sys.id === BATTLE_SYSTEM_CLASSIC ? battleTutorialSpotClass('systemClassic') : sys.id === BATTLE_SYSTEM_TACTICS ? battleTutorialSpotClass('systemTactics') : sys.id === BATTLE_SYSTEM_QUICK ? battleTutorialSpotClass('systemQuick') : '';
+        const look = tileLook[sys.id] || tileLook[BATTLE_SYSTEM_CLASSIC];
         return React.createElement("div", {
           key: sys.id,
           "data-battle-system-card": sys.id,
-          className: `w-full rounded-2xl border-2 overflow-hidden ${soon ? 'bg-slate-900/40' : 'bg-slate-900/80'}${sysSpot}`,
-          style: {
-            borderColor: soon ? 'rgba(148,163,184,.45)' : sys.color
-          }
+          className: `relative${sysSpot}`
         }, React.createElement("button", {
           "data-battle-system": sys.id,
           "data-battle-system-soon": soon ? '1' : undefined,
           disabled: soon || tutorialLocked,
           onClick: () => openBattleSystem(sys.id),
           "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
-          className: `w-full px-3 pt-2 pb-1 text-left transition-transform ${soon ? 'opacity-60' : 'active:scale-[.98]'}`
-        }, React.createElement("div", {
-          className: "flex items-center gap-2"
-        }, React.createElement("span", {
-          className: "text-lg leading-none"
-        }, sys.emoji), React.createElement("span", {
-          className: "text-[15px] font-black leading-tight",
+          className: `mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon ? 'opacity-60 grayscale' : ''}`,
           style: {
-            color: soon ? '#94a3b8' : sys.color
+            animationDelay: `${.05 + idx * .07}s`
           }
+        }, React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mhms-mark"
+        }, look.mark), React.createElement("span", {
+          "aria-hidden": "true",
+          className: "mhms-ico relative shrink-0 text-3xl leading-none"
+        }, sys.emoji), React.createElement("span", {
+          className: "relative min-w-0 flex-1"
+        }, React.createElement("span", {
+          className: "flex items-center gap-1.5"
+        }, React.createElement("b", {
+          className: "block min-w-0 truncate text-[18px] font-black italic leading-tight"
         }, sys.label), soon && React.createElement("span", {
-          className: "ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5"
+          className: "shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black"
         }, "準備中"), beta && React.createElement("span", {
           "data-battle-system-beta": true,
-          className: "ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5"
+          className: "shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-amber-200"
         }, "β版"), !soon && !beta && sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && React.createElement("span", {
-          className: "ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5"
-        }, "DEBUG")), React.createElement("div", {
-          className: "text-[11px] text-slate-200 font-bold leading-snug mt-1"
-        }, sys.tagline), React.createElement("ul", {
-          className: "mt-1 space-y-0.5"
-        }, sys.highlights.map(([icon, text]) => React.createElement("li", {
-          key: text,
-          className: "flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-px text-[10px] font-black text-slate-200"
-        }, React.createElement("span", {
-          className: "shrink-0"
-        }, icon), React.createElement("span", {
-          className: "min-w-0 flex-1 leading-tight"
-        }, text)))), React.createElement("div", {
-          className: "text-[9px] text-slate-400 leading-snug mt-1"
-        }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : beta ? 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です' : sys.note)), React.createElement("button", {
+          className: "shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300"
+        }, "DEBUG")), React.createElement("small", {
+          className: "block text-[10px] font-black leading-tight text-slate-900/80"
+        }, sys.tagline), (soon || beta) && React.createElement("small", {
+          className: "mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70"
+        }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'))), React.createElement("button", {
           "data-battle-system-info": sys.id,
           disabled: !!battleTutorial,
           onClick: () => setModeInfoId(sys.id),
           "aria-label": `${sys.label}の詳しいルール`,
-          className: "mh-hit-expand-down relative w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[11px] font-black text-slate-300 active:scale-[.98] disabled:opacity-50 flex items-center justify-center gap-1"
-        }, "詳しいルール", React.createElement(ChevronRight, {
-          size: 12,
-          className: "shrink-0"
-        })));
-      })), React.createElement("div", {
-        className: "mt-1 shrink-0"
-      }, React.createElement(AssistantBubble, {
-        scene: "battleSystemSelect",
-        compact: true
-      }))));
+          className: "absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-slate-950/55 text-[17px] font-black text-white backdrop-blur-sm active:scale-90 disabled:opacity-40"
+        }, "？"));
+      })))));
     })(), gameState === 'BATTLE_MODE_SELECT' && (() => {
       const modes = battleSystemModes(battleSystem, {
         debugBattle
