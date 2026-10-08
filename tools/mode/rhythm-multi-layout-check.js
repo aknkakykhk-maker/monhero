@@ -262,6 +262,35 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     }
     await C.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
     await C.setViewportSize({ width: 844, height: 390 });
+      // チャット欄(2026-10-08・ユーザー報告「定型文でチャットログが見づらい・定型文のゾーンが動かせず、下の自由入力が出せない」)。
+      //   マスモンを呼んだ状態(「マスモンに聞く」の札も並ぶ)で、入力欄が画面に収まり、発言の一覧が読める高さを保つ
+      await C.evaluate(() => RHYTHM_MULTI.summon({ masuId: 'm1', name: 'もちまる', level: 5, baseId: 'Mocchi', colors: [] }));
+      await C.waitForFunction(() => RHYTHM_MULTI.view() && (RHYTHM_MULTI.view().myCpus || []).length === 1, null, { timeout: 8000 }).catch(() => {});
+      for (const text of ['よろしく!', 'もちまる、調子どう?', 'ナイス!']) { await C.evaluate((t) => RHYTHM_MULTI.sendChat(t), text); await C.waitForTimeout(1300); }
+      for (const [w, h, rotated, label] of [[390, 844, false, '縦画面'], [375, 667, false, '小さい縦画面'], [390, 844, true, '回転(横)'], [844, 390, false, '横画面'], [667, 375, false, '小さい横画面']]) {
+        await C.setViewportSize({ width: w, height: h });
+        await C.evaluate((on) => RHYTHM_VIEW_ROTATION.set(on ? 90 : 0), !!rotated);
+        await C.waitForTimeout(rotated ? 1000 : 600);
+        if (!(await C.evaluate(() => !!document.querySelector('[data-rhythm-multi-chat]')))) await C.evaluate(() => document.querySelector('[data-rhythm-multi-chat-open]')?.click());
+        await C.waitForSelector('[data-rhythm-multi-chat-input]', { timeout: 5000 });
+        await C.waitForTimeout(300);
+        if (process.env.MH_SHOT_DIR) await C.screenshot({ path: path.join(process.env.MH_SHOT_DIR, `chat-${label}.png`) });
+        const c = await C.evaluate(() => {
+          const r = (el) => el.getBoundingClientRect();
+          const input = document.querySelector('[data-rhythm-multi-chat-input]');
+          const list = document.querySelector('[data-rhythm-multi-chat-list]');
+          const quick = document.querySelector('[data-rhythm-multi-chat-quick]');
+          const ib = r(input);
+          return { inView: ib.width > 0 && ib.left >= -1 && ib.right <= window.innerWidth + 1 && ib.top >= -1 && ib.bottom <= window.innerHeight + 1, listH: list ? list.offsetHeight : -1, quickH: quick ? quick.offsetHeight : -1, ask: !!document.querySelector('[data-rhythm-buddy-ask]') };
+        });
+        const need = w > h || rotated ? 150 : 130;
+        check(`チャット欄(${label}): 自由入力の欄が画面に収まる`, c.inView, JSON.stringify(c));
+        check(`チャット欄(${label}): 発言の一覧が読める高さ(${need}px以上)`, c.listH >= need, `${c.listH}px`);
+        check(`チャット欄(${label}): 定型文と「マスモンに聞く」の札が、高さを取りすぎない(${w > h || rotated ? '1行で横にすべらせる' : '中だけ上下にすべらせる'})`, c.quickH <= (w > h || rotated ? 50 : 140), `${c.quickH}px`);
+        await C.evaluate(() => document.querySelector('[data-rhythm-multi-chat-close]')?.click());
+        await C.waitForTimeout(300);
+      }
+      await C.evaluate(() => RHYTHM_VIEW_ROTATION.set(0));
       await C.close();
       await D.close();
     }

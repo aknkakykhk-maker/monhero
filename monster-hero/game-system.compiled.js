@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7a4d2297d8994e61
+// source-sha256: 5b171040681f5147
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 12:08";
+const BUILD_DATE = "2026-10-08 12:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -65344,12 +65344,12 @@ function RhythmMultiChatPanel({
     className: "min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200"
   }, "✕")), talkTip && React.createElement("div", {
     "data-rhythm-buddy-talk-tip": true,
-    className: "mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2"
+    className: "mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2 landscape:p-1.5"
   }, React.createElement("span", {
     "aria-hidden": "true",
     className: "text-lg leading-none"
   }, "🎵"), React.createElement("p", {
-    className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100"
+    className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100 landscape:line-clamp-2 landscape:text-[10px]"
   }, "呼んだマスモンに話しかけてみよう。「", talkTip, "、調子どう?」のように名前を付けて聞くと、そのマスモンの本当の調子で答えます。「みんな」と呼ぶと全員が返します"), onTalkTipClose && React.createElement("button", {
     type: "button",
     "aria-label": "案内を閉じる",
@@ -65382,9 +65382,12 @@ function RhythmMultiChatPanel({
     }, c.name), React.createElement("span", {
       className: `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`
     }, c.text)));
-  })), askName && React.createElement("div", {
+  })), React.createElement("div", {
+    "data-rhythm-multi-chat-quick": true,
+    className: "mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none landscape:flex-row landscape:items-center landscape:gap-1.5 landscape:overflow-x-auto landscape:overflow-y-hidden landscape:[scrollbar-width:none]"
+  }, askName && React.createElement("div", {
     "data-rhythm-buddy-ask": true,
-    className: "mt-2 flex shrink-0 flex-wrap items-center gap-1.5"
+    className: "flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap"
   }, React.createElement("b", {
     className: "shrink-0 text-[10px] font-black text-lime-300"
   }, "🎵 ", askName, "に聞く"), RHYTHM_BUDDY_ASK_CHIPS.map(chip => React.createElement("button", {
@@ -65398,8 +65401,8 @@ function RhythmMultiChatPanel({
     onSend: send,
     wrap: true,
     limit: 10,
-    className: "mt-2 shrink-0"
-  }), waitNote && React.createElement("small", {
+    className: "shrink-0 landscape:flex-nowrap"
+  })), waitNote && React.createElement("small", {
     "data-rhythm-multi-chat-wait": true,
     className: "mt-1 block shrink-0 text-[11px] font-black text-amber-300"
   }, "続けて送るときは、少し待ってね"), React.createElement("form", {

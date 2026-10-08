@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8ba2caf5b8c3d416
+// generated-sha256: 2b22c2a17992f876
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-08 12:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-08 12:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -40071,9 +40071,9 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
         {onClose && <button data-rhythm-multi-chat-close type="button" aria-label="チャットを閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200">✕</button>}
       </div>
       {talkTip && (
-        <div data-rhythm-buddy-talk-tip className="mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2">
+        <div data-rhythm-buddy-talk-tip className="mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2 landscape:p-1.5">
           <span aria-hidden="true" className="text-lg leading-none">🎵</span>
-          <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">呼んだマスモンに話しかけてみよう。「{talkTip}、調子どう?」のように名前を付けて聞くと、そのマスモンの本当の調子で答えます。「みんな」と呼ぶと全員が返します</p>
+          <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100 landscape:line-clamp-2 landscape:text-[10px]">呼んだマスモンに話しかけてみよう。「{talkTip}、調子どう?」のように名前を付けて聞くと、そのマスモンの本当の調子で答えます。「みんな」と呼ぶと全員が返します</p>
           {onTalkTipClose && <button type="button" aria-label="案内を閉じる" onClick={onTalkTipClose} className="min-h-[36px] min-w-[36px] shrink-0 rounded-lg bg-slate-800 text-sm font-black">✕</button>}
         </div>
       )}
@@ -40096,16 +40096,20 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
           );
         })}
       </ul>
-      {askName && (
-        <div data-rhythm-buddy-ask className="mt-2 flex shrink-0 flex-wrap items-center gap-1.5">
-          <b className="shrink-0 text-[10px] font-black text-lime-300">🎵 {askName}に聞く</b>
-          {RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
-            <button key={chip.label} data-rhythm-buddy-ask-chip type="button" onClick={() => send(`${askName}、${chip.text}`)}
-              className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/50 bg-lime-950/70 px-2.5 text-[11px] font-black text-lime-100 transition active:scale-95">{chip.label}</button>
-          ))}
-        </div>
-      )}
-      <RhythmMultiStampBar phase={phase} onSend={send} wrap limit={10} className="mt-2 shrink-0" />
+      {/* 「マスモンに聞く」札と定型文。縦は高さを抑えて中だけ上下にすべらせ、横向きは1行で横にすべらせる
+          (チャットの発言と自由入力の欄を押しつぶさない。2026-10-08・ユーザー報告「定型文のゾーンが動かせず、下の自由入力が出せない」) */}
+      <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none landscape:flex-row landscape:items-center landscape:gap-1.5 landscape:overflow-x-auto landscape:overflow-y-hidden landscape:[scrollbar-width:none]">
+        {askName && (
+          <div data-rhythm-buddy-ask className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap">
+            <b className="shrink-0 text-[10px] font-black text-lime-300">🎵 {askName}に聞く</b>
+            {RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
+              <button key={chip.label} data-rhythm-buddy-ask-chip type="button" onClick={() => send(`${askName}、${chip.text}`)}
+                className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/50 bg-lime-950/70 px-2.5 text-[11px] font-black text-lime-100 transition active:scale-95">{chip.label}</button>
+            ))}
+          </div>
+        )}
+        <RhythmMultiStampBar phase={phase} onSend={send} wrap limit={10} className="shrink-0 landscape:flex-nowrap" />
+      </div>
       {waitNote && <small data-rhythm-multi-chat-wait className="mt-1 block shrink-0 text-[11px] font-black text-amber-300">続けて送るときは、少し待ってね</small>}
       <form className="mt-2 flex shrink-0 gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <input data-rhythm-multi-chat-input value={chatText} maxLength={RHYTHM_MULTI_CHAT_MAX_LENGTH} autoComplete="off" enterKeyHint="send"
