@@ -6907,6 +6907,35 @@ function MonsterHeroGame() {
     return { id: activeAssistant.id, name: activeAssistant.name, accent: activeAssistant.accent,
       image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
   }, [rhythmModeSelectOpen, activeAssistant && activeAssistant.id]);
+  // モンヒロバトルの入口でも、助手が立ち絵でひとこと(2026-10-08・ユーザー指示「モンビーのトップページみたいにモンバトも見た目の改良」)。
+  // 立ち絵/コメントの出し入れはモンヒロビートの設定(rhythmSettings)を流用せず、新しい保存キーに持つ。
+  // 保存値が無い・壊れているときは両方ON(既定)で補う
+  useModeSelectStageCss();
+  const [battleSelectAssist, setBattleSelectAssist] = useState({ modeSelectArt: true, modeSelectComment: true });
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const saved = await storeGet(BATTLE_SELECT_ASSIST_KEY, null);
+        if (alive && saved && typeof saved === 'object') setBattleSelectAssist({ modeSelectArt: saved.modeSelectArt !== false, modeSelectComment: saved.modeSelectComment !== false });
+      } catch (_) { /* 読めなければ既定(両方ON) */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const toggleBattleSelectAssist = (key) => {
+    if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
+    const next = { ...battleSelectAssist, [key]: battleSelectAssist[key] === false };
+    setBattleSelectAssist(next);
+    void storeSet(BATTLE_SELECT_ASSIST_KEY, next).catch(() => {});
+  };
+  const battleSystemSelectOpen = gameState === 'BATTLE_SYSTEM_SELECT';
+  const battleSelectAssistant = useMemo(() => {
+    if (!battleSystemSelectOpen || !activeAssistant) return null;
+    const line = (typeof pickAssistantLine === 'function') ? pickAssistantLine('battleSystemSelect', null, assistantBondLevelNow, activeAssistant.id) : null;
+    const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
+    return { id: activeAssistant.id, name: activeAssistant.name, accent: activeAssistant.accent,
+      image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
+  }, [battleSystemSelectOpen, activeAssistant && activeAssistant.id]);
   // まだ助手が知らせていない飾り枠。もらった順に並ぶ
   const newProfileFrames = ownedProfileFrames
     .filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
@@ -16519,73 +16548,70 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const tutorialNeedsDebugSystems=!!battleTutorial&&battleSystemComingSoon(battleTutorialSystem,{debugBattle:false});
           const systemDebug=debugBattle&&(!battleTutorial||tutorialNeedsDebugSystems);
           const systems=visibleBattleSystems({debugBattle:systemDebug});
+          // 札の色と英字の透かし(モンヒロビートのモードえらびと同じ作り)。仕組みのidで引く
+          const tileLook={
+            [BATTLE_SYSTEM_CLASSIC]:{grad:'from-indigo-200 via-indigo-400 to-violet-500',mark:'CLASSIC BATTLE'},
+            [BATTLE_SYSTEM_TACTICS]:{grad:'from-amber-200 via-orange-400 to-red-500',mark:'TACTICS BATTLE'},
+            [BATTLE_SYSTEM_QUICK]:{grad:'from-yellow-100 via-yellow-300 to-amber-400',mark:'QUICK MODE'},
+          };
+          const assistShown=!!battleSelectAssistant&&(battleSelectAssist.modeSelectArt||battleSelectAssist.modeSelectComment);
           return (
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0">
-              <button aria-label="戻る" disabled={!!battleTutorial} onClick={returnToHome} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30"><ArrowLeft size={20}/></button>
-            </div>
-            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
-              <h2 className="text-center text-lg font-black leading-tight shrink-0 mt-0.5">モンヒロバトル</h2>
-              <p className="text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0">どのバトルで遊ぶかを選びます</p>
-              {/* ★カード3枚＋助手のひとことが、いちばん小さい端末(375×667)でも1画面へ収まる高さにしてある。
-                  行を足す・余白を広げるときは tools/battle/battle-system-fit-check.js を通すこと */}
-              <div data-battle-systems={systems.length} className={`flex flex-col gap-0.5 shrink-0${battleTutorialSpotClass('systemCards')}`}>
-                {systems.map(sys=>{
-                  // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
-                  //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
-                  const soon=battleSystemComingSoon(sys.id,{debugBattle:systemDebug});
-                  // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
-                  //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
-                  const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});
-                  // れんしゅう中は、その台本の仕組みだけを押せるようにして流れを保つ
-                  const tutorialLocked=!!battleTutorial&&sys.id!==battleTutorialSystem;
-                  // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
-                  // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのは
-                  //  このキーなので、検査が追えるよう文字で書いておく)
-                  const sysSpot=sys.id===BATTLE_SYSTEM_CLASSIC?battleTutorialSpotClass('systemClassic')
-                    :sys.id===BATTLE_SYSTEM_TACTICS?battleTutorialSpotClass('systemTactics')
-                    :sys.id===BATTLE_SYSTEM_QUICK?battleTutorialSpotClass('systemQuick'):'';
-                  // ★カードは「選ぶ」と「詳しいルール」の2つのボタンでできている。
-                  //   準備中でも中身は読めるようにしておく(何が来るのか分かるように)
-                  return (
-                  <div key={sys.id} data-battle-system-card={sys.id}
-                    className={`w-full rounded-2xl border-2 overflow-hidden ${soon?'bg-slate-900/40':'bg-slate-900/80'}${sysSpot}`}
-                    style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
-                    <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
-                      disabled={soon||tutorialLocked} onClick={()=>openBattleSystem(sys.id)}
-                      aria-label={soon?`${sys.label}（準備中）`:sys.label}
-                      className={`w-full px-3 pt-2 pb-1 text-left transition-transform ${soon?'opacity-60':'active:scale-[.98]'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg leading-none">{sys.emoji}</span>
-                        <span className="text-[15px] font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
-                        {soon&&(
-                          <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
-                        )}
-                        {beta&&(
-                          <span data-battle-system-beta className="ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5">β版</span>
-                        )}
-                        {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
-                          <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1">{sys.tagline}</div>
-                      {/* 売りを3行。どの仕組みも同じ数・同じ並びなので、見比べて選べる */}
-                      <ul className="mt-1 space-y-0.5">{sys.highlights.map(([icon,text])=>(
-                        <li key={text} className="flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-px text-[10px] font-black text-slate-200">
-                          <span className="shrink-0">{icon}</span><span className="min-w-0 flex-1 leading-tight">{text}</span>
-                        </li>
-                      ))}</ul>
-                      <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
-                    </button>
-                    <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
-                      aria-label={`${sys.label}の詳しいルール`}
-                      className="mh-hit-expand-down relative w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[11px] font-black text-slate-300 active:scale-[.98] disabled:opacity-50 flex items-center justify-center gap-1">
-                      詳しいルール<ChevronRight size={12} className="shrink-0"/>
-                    </button>
-                  </div>);
-                })}
+          <div data-mh-screen data-battle-system-select className="mhms-stage relative flex-1 flex flex-col h-full min-h-0 overflow-hidden text-white">
+            <RhythmModeSelectStage notes={false}/>
+            <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
+              <button aria-label="戻る" disabled={!!battleTutorial} onClick={returnToHome} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>
+              <div className="min-w-0 flex-1 leading-none">
+                <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONHERO BATTLE ・ SELECT</small>
+                <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モンヒロバトル</b>
+                <small className="block truncate text-[9px] font-black text-slate-300/90">どのバトルで遊ぶかを選びます</small>
               </div>
-              <div className="mt-1 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
+            </header>
+            {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下に札。横画面: 左に立ち絵、右に札 */}
+            <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
+              <ModeSelectAssistantPanel assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist}/>
+              <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+                {!assistShown&&battleSelectAssistant&&<ModeSelectAssistToggles assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist} cls="justify-end" withLabel/>}
+                <div data-battle-systems={systems.length} className={`flex flex-col gap-2${battleTutorialSpotClass('systemCards')}`}>
+                  {systems.map((sys,idx)=>{
+                    // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。デバッグからは今までどおり遊べる
+                    const soon=battleSystemComingSoon(sys.id,{debugBattle:systemDebug});
+                    // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、入口でそのことが分かるようにしておく
+                    const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});
+                    // れんしゅう中は、その台本の仕組みだけを押せるようにして流れを保つ
+                    const tutorialLocked=!!battleTutorial&&sys.id!==battleTutorialSystem;
+                    // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
+                    // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのはこのキーなので、検査が追えるよう文字で書いておく)
+                    const sysSpot=sys.id===BATTLE_SYSTEM_CLASSIC?battleTutorialSpotClass('systemClassic')
+                      :sys.id===BATTLE_SYSTEM_TACTICS?battleTutorialSpotClass('systemTactics')
+                      :sys.id===BATTLE_SYSTEM_QUICK?battleTutorialSpotClass('systemQuick'):'';
+                    const look=tileLook[sys.id]||tileLook[BATTLE_SYSTEM_CLASSIC];
+                    // ★札は「選ぶ」ボタンと、右の「？(詳しいルール)」ボタンの2つでできている。準備中でも中身は読める
+                    return (
+                    <div key={sys.id} data-battle-system-card={sys.id} className={`relative${sysSpot}`}>
+                      <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
+                        disabled={soon||tutorialLocked} onClick={()=>openBattleSystem(sys.id)}
+                        aria-label={soon?`${sys.label}（準備中）`:sys.label}
+                        className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
+                        <span aria-hidden="true" className="mhms-mark">{look.mark}</span>
+                        <span aria-hidden="true" className="mhms-ico relative shrink-0 text-3xl leading-none">{sys.emoji}</span>
+                        <span className="relative min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <b className="block min-w-0 truncate text-[18px] font-black italic leading-tight">{sys.label}</b>
+                            {soon&&<span className="shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black">準備中</span>}
+                            {beta&&<span data-battle-system-beta className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-amber-200">β版</span>}
+                            {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&<span className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300">DEBUG</span>}
+                          </span>
+                          <small className="block text-[10px] font-black leading-tight text-slate-900/80">{sys.tagline}</small>
+                          {(soon||beta)&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">{soon?'いま準備しています。遊べるようになったらお知らせします':'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'}</small>}
+                        </span>
+                      </button>
+                      <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
+                        aria-label={`${sys.label}の詳しいルール`}
+                        className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-slate-950/55 text-[17px] font-black text-white backdrop-blur-sm active:scale-90 disabled:opacity-40">？</button>
+                    </div>);
+                  })}
+                </div>
+              </div>
             </div>
           </div>);
         })()}

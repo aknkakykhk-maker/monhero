@@ -1,7 +1,7 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // バトルの入口(BATTLE_SYSTEM_SELECT)が、小さい端末でも1画面に収まることを実際に測る。
 //
-// 【なぜ道具にするか】
+// 【なぜ道具にするか】(2026-10-08 に札+舞台の作りへ変えた。測るのは「札3枚が画面に収まり、文字があふれない」)
 // この画面はカード3枚＋助手のひとことを縦に並べるだけなので、
 // 行を1つ足す・余白を少し広げる、で簡単に画面からあふれる。
 // あふれてもエラーは出ず、大きい端末では気づけない(2026-09-21・ユーザー報告
@@ -23,6 +23,8 @@ const SIZES = [
   { w: 375, h: 667, name: 'iPhone SE' },
   { w: 390, h: 844, name: 'iPhone 13/14' },
   { w: 430, h: 932, name: 'iPhone Pro Max' },
+  { w: 360, h: 640, name: '小さい画面' },
+  { w: 844, h: 390, name: '横向き', landscape: true },
 ];
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
   '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp',
@@ -85,23 +87,26 @@ const serve = () => new Promise((resolve) => {
         const screen = document.querySelector('[data-mh-screen]');
         const scroller = screen && screen.querySelector('.overflow-y-auto');
         const cards = [...document.querySelectorAll('[data-battle-system-card]')];
-        const lines = [...document.querySelectorAll('[data-battle-system-card] li')];
+        // 札(押す側のボタン)が3枚とも画面の中に収まっているか。文字が札から出ていないかも見る
+        const tiles = [...document.querySelectorAll('[data-battle-system]')];
+        const tileOut = tiles.filter(t => { const r = t.getBoundingClientRect(); return r.top < 0 || r.bottom > window.innerHeight + 1; }).length;
+        // 透かしの英字ははみ出す作りなので数えない。名前とひとこと(最後の span)が札の中にあるかを見る
+        const textOut = tiles.filter(t => { const r = t.getBoundingClientRect(); const x = t.lastElementChild.getBoundingClientRect(); return x.top < r.top - 1 || x.bottom > r.bottom + 1; }).length;
         return {
           cards: cards.length,
           content: scroller ? Math.round(scroller.scrollHeight) : 0,
           frame: scroller ? Math.round(scroller.clientHeight) : 0,
-          // 1行が折り返すと高さが増える。折り返しの有無は行の高さで分かる
-          lineHeights: [...new Set(lines.map(li => Math.round(li.getBoundingClientRect().height)))],
+          tileOut, textOut,
           wide: document.documentElement.scrollWidth > window.innerWidth,
         };
       });
       const over = m.content - m.frame;
-      check(`${size.name}(${size.w}×${size.h}) で1画面に収まる`, m.cards === 3 && over <= 1,
-        over > 1 ? `${over}px はみ出している（中身 ${m.content} / 画面 ${m.frame}）` : `余り ${-over}px`);
+      // 横向きは右の列が自分でスクロールするので、札が画面の中にあるかだけを見る
+      check(`${size.name}(${size.w}×${size.h}) で1画面に収まる`, m.cards === 3 && m.tileOut === 0 && (size.landscape || over <= 1),
+        over > 1 ? `${over}px はみ出している（中身 ${m.content} / 画面 ${m.frame}・画面外の札 ${m.tileOut}）` : `余り ${-over}px・画面外の札 ${m.tileOut}`);
       check(`${size.name} で横にはみ出さない`, m.wide === false);
-      // ★売りの3行はどれも1行で収まること。折り返すとカードが伸びて、いちばん下が隠れる
-      check(`${size.name} で売りの行が折り返していない`, m.lineHeights.length === 1,
-        `行の高さ ${m.lineHeights.join(' / ')}`);
+      // ★札の文字が札からあふれていないこと(タイトルとひとことが折り返しすぎると札が伸びられず切れる)
+      check(`${size.name} で札の文字が札からあふれていない`, m.textOut === 0, `あふれた札 ${m.textOut}`);
       await page.close();
     }
   } catch (e) {
