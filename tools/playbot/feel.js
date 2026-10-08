@@ -147,6 +147,8 @@ async function auditBuild(playwright, root, label, port) {
         if (await s.page.evaluate(() => !!(window.__feel && window.__feel.done))) break;
       }
       const data = await s.page.evaluate(() => ({ presses: window.__feel.presses, results: window.__feel.results, ageLog: window.__feel.ageLog }));
+      // ゲームの時刻の診断(本当の遅れでノーツを選んだ回数など。その版に無ければ空)
+      row.timingDiag = await s.page.evaluate(() => { try { const t = RHYTHM_TIMING_DIAG.snapshot(); return { matchByAge: t.matchByAge ?? null, ageBacked: t.ageBacked, ageUnbacked: t.ageUnbacked, ageCapped: t.ageCapped }; } catch { return null; } });
       // 押した時刻に近い(前後40ms)ところで、ゲームが差し引いた遅れの値を押下へ付ける
       for (const pr of data.presses) { const at = pr.pressSong + (pr.lateMs || 0); const e = (data.ageLog || []).filter((q) => q.age > 0 && Math.abs(q.t - at) < 40).sort((a, b) => Math.abs(a.t - at) - Math.abs(b.t - at))[0]; if (e) pr.gameAge = e.age; }
       // 元の記録(押下・判定・ゲームが差し引いた遅れ)を曲ごとに残す(あとで別の見方で調べ直せるように。--raw のときだけ)
