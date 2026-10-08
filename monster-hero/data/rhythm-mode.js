@@ -1225,7 +1225,7 @@ const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 //   hidden … 演奏中にアプリを離れた(画面が隠れた)回数。pen … ペンで直接押した回数
 //   outLatMs / baseLatMs / hasTs / rate / headMs … その端末の出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音の長さ
 const RHYTHM_TIMING_DIAG=(()=>{
-  const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
+  const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,matchByAge:0,frames:0,stalls:0,maxStepMs:0,hidden:0,pen:0});
   let stats=zero(),meta={},lastSong=null,lastTick=0,lastStallAt=0,biasList=[];
   const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
   return {
@@ -1238,6 +1238,8 @@ const RHYTHM_TIMING_DIAG=(()=>{
     // 直前のコマの時刻。「入力が遅れて届いた」と言っているとき、本当にその間コマが止まっていたか(重い処理があったか)を見るのに使う
     stalledSince(nowPerfMs){const n=Number(nowPerfMs);return lastTick>0&&Number.isFinite(n)?Math.max(0,n-lastTick):0;},
     ageBacked(){stats.ageBacked++;},
+    // 当てるノーツを、補正の上限を超えた本当の遅れで選んだ回数(2026-10-08。rhythmInputMatchAgeFor)
+    matchByAge(){stats.matchByAge++;},
     ageUnbacked(){stats.ageUnbacked++;},
     frame(songMs){const tickNow=typeof performance!=='undefined'&&performance.now?performance.now():0;if(lastTick>0&&tickNow-lastTick>=80)lastStallAt=tickNow;lastTick=tickNow;const v=Number(songMs);if(!Number.isFinite(v))return;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;},
     meta(value){if(value&&typeof value==='object')meta={...meta,...value};},
@@ -1251,7 +1253,15 @@ const RHYTHM_INPUT_AGE_CAP_WIDE_MS=300;
 // 遅れて届いたと言う入力の遅れのうち、この割合以上のあいだコマが止まっていたら「本当に重かった」と見る(重い処理が入力の直後に始まった場合も拾うため、1より小さくしてある)
 const RHYTHM_INPUT_AGE_STALL_SHARE=.6;
 const rhythmInputAgeCapMs=()=>rhythmTouchFixOn('inputAgeCap')?RHYTHM_INPUT_AGE_CAP_WIDE_MS:RHYTHM_INPUT_AGE_MAX_MS;
+// 【2026-10-08】直前の rhythmInputAgeMs が覚えた「本当の遅れ」を、同じ入力の inputStarts が1回だけ受け取る(上の rhythmSetMatchNow と組で使う)
+let rhythmInputMatchAgeHint=null;
+const rhythmInputMatchAgeFor=ageMs=>{
+  const hint=rhythmInputMatchAgeHint;rhythmInputMatchAgeHint=null;
+  if(Number.isFinite(hint)&&hint>(Number(ageMs)||0)){RHYTHM_TIMING_DIAG.matchByAge();return hint;}
+  return Number(ageMs)||0;
+};
 const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
+  rhythmInputMatchAgeHint=null;
   const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
   if(!Number.isFinite(stamp)||!Number.isFinite(now))return 0;
   const age=now-stamp;
@@ -1261,6 +1271,9 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
   const aligned=rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS;
   // 直し方 inputAgeCap を入れていない端末は、これまでどおり(上限80ms・基準がそろっていなければ0)
+  // 当てるノーツを選ぶための本当の遅れ(rhythmInputMatchAgeFor)。基準がそろっていて、その間ゲームが本当に止まっていたと見えたときだけ覚える
+  // (「時刻だけ古い」入力では覚えない＝これまでどおり)。判定に使う遅れ(下で返す値)は変えない
+  if(aligned&&RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE)rhythmInputMatchAgeHint=Math.min(age,RHYTHM_INPUT_AGE_CAP_WIDE_MS);
   if(!rhythmTouchFixOn('inputAgeCap'))return aligned?RHYTHM_INPUT_AGE_MAX_MS:0;
   // 直し方 inputAgeCap を入れた端末。広げた上限(300ms)を使うのは、
   //   ①時計の基準がそろっていて、かつ ②その間ゲームが本当に止まっていた(コマが来ていなかった)と見えたときだけ。
@@ -3333,8 +3346,17 @@ const rhythmOrderInputsForMatch=(inputs,isInsideSomeNote)=>{
     .sort((a,b)=>a.inside-b.inside||a.order-b.order)
     .map(entry=>entry.input);
 };
+// 当てるノーツを選ぶときだけ使う時刻(2026-10-08・ビート部の点検「隣に取られる」)。rhythmSetMatchNow で1回の照合のあいだだけ入れる。
+// 処理が本当に詰まって補正の上限(80ms)を超えて遅れて届いた入力は、判定に使う時刻(nowMs)が本当より遅くなり、次のノーツへ当たる
+// (その次の入力がさらに次へ…と、連打のあいだ1つずつずれていく)。そのときだけ本当の遅れで選ぶ。
+// 判定のずれ(touchDelta)・押さえ始めの時刻(bind)・触れた音は、これまでどおり nowMs で測る＝判定の感触は変わらない
+let rhythmMatchNowOverride=null;
+const rhythmSetMatchNow=value=>{rhythmMatchNowOverride=value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?Number(value):null;};
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
-  const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
+  const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),judgeNow=Number(nowMs),offset=Number(offsetMs)||0;
+  // 入れた値は1回の照合で使い切る(例外で抜けても、次の照合へ残さない)
+  const matchOverride=rhythmMatchNowOverride;rhythmMatchNowOverride=null;
+  const now=matchOverride!==null&&matchOverride<judgeNow?matchOverride:judgeNow;
   const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
   // 相手を決める前に、選べる先が狭い入力から順に並べ替える(上の説明)。
   // 見るのは位置だけで、時刻の取り合い(switchAt)には一切触れない。
@@ -3625,10 +3647,10 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     // bind が note.type を 'HOLD' へ書き換えているので、picked.type だけを見ると
     // 持ち替えた瞬間にSLIDEが普通のHOLDへ変わり、経路の追従が消える
     const originalType=picked._rhythmOriginalType||picked.type;
-    if(originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked,originalType,now,offset);
+    if(originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked,originalType,judgeNow,offset);
     // 触れた瞬間の音。判定のずれで鳴らし分ける(判定の関数は本体側にあるので、無いときはいちばん良い音)。
     // ★フリックは触れた瞬間には鳴らさず、払えたときにフリック音を鳴らす(プロセカ・バンドリ！と同じ。2026-09-27)
-    const touchDelta=now-(picked.timeMs+offset);
+    const touchDelta=judgeNow-(picked.timeMs+offset);
     if(originalType==='FLICK')RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled();
     else RHYTHM_NOTE_SE_RUNTIME.play(null,typeof rhythmJudgeTap==='function'?rhythmJudgeTap(touchDelta):null);
     return {input,target:picked,deltaMs:touchDelta};

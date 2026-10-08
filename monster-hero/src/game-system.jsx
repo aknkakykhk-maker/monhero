@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a893f4d4bad74ab8
+// generated-sha256: 390603363a8a4154
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-08 16:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-08 16:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20665,7 +20665,7 @@ scheduleTick();};
   const abort=()=>{++generationRef.current;startLockRef.current=false;disposeRun();onExit();};
   // ageMs … 入力イベントが起きてから処理されるまでの遅れ(rhythmInputAgeMs)。判定に使う曲の時刻から差し引く。
   //          指が触れた瞬間の曲の時刻で判定するためのもので、判定窓そのものは変えない
-  const inputStarts=(inputs,ageMs=0)=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs()-(Number(ageMs)>0?Number(ageMs):0);if(Array.isArray(run.inputTimes)&&run.inputTimes.length<20000&&inputs.some(input=>!input?.rejudge))run.inputTimes.push(now);run.inputFeedbackState=run.inputFeedbackState||new Map();RHYTHM_GESTURE_RUNTIME.setInputAge?.(ageMs);const matchedInputs=rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs);RHYTHM_GESTURE_RUNTIME.setInputAge?.(0);matchedInputs.forEach(({input,target,deltaMs,standby})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(input.subLaneCoordinate))),subLaneCoordinate:Number(input.subLaneCoordinate),empty:!target||target.type==='TAP'});RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey,target);
+  const inputStarts=(inputs,ageMs=0)=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs()-(Number(ageMs)>0?Number(ageMs):0);if(Array.isArray(run.inputTimes)&&run.inputTimes.length<20000&&inputs.some(input=>!input?.rejudge))run.inputTimes.push(now);run.inputFeedbackState=run.inputFeedbackState||new Map();RHYTHM_GESTURE_RUNTIME.setInputAge?.(ageMs);const matchAgeMs=rhythmInputMatchAgeFor(ageMs);rhythmSetMatchNow(matchAgeMs>(Number(ageMs)||0)?run.audio.songTimeMs()-matchAgeMs:null);const matchedInputs=rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs);rhythmSetMatchNow(null);RHYTHM_GESTURE_RUNTIME.setInputAge?.(0);matchedInputs.forEach(({input,target,deltaMs,standby})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(input.subLaneCoordinate))),subLaneCoordinate:Number(input.subLaneCoordinate),empty:!target||target.type==='TAP'});RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey,target);
       // いま押さえている帯へ、持ち替えのために置いた2本目の指。
       // まだ何も取らないが、1本目が離れたらこの指へそのまま渡す(inputEndsを参照)。
       // 空打ちの音は鳴らさない(押し損ねたわけではないので)
