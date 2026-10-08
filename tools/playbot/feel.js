@@ -126,9 +126,9 @@ async function auditBuild(playwright, root, label, port) {
         console.log(`曲の順番(ホールドの近くのノーツが多い順): ${sorted.map((x) => `${x}:${score[x] || 0}`).join(' ')}`);
         songId = sorted[0]; queue = sorted.slice(1); k = originalIndex(songId); row.songId = songId;
       }
-      const title = await s.page.evaluate((id) => { try { return (RHYTHM_SONGS.find((x) => x.songId === id) || {}).displayName || ''; } catch { return ''; } }, songId);
+      const title = await s.page.evaluate((id) => { try { return (() => { const x = RHYTHM_SONGS.find((y) => y.songId === id); return x ? (typeof rhythmSongFullName === 'function' ? rhythmSongFullName(x) : x.displayName) : ''; })(); } catch { return ''; } }, songId);
       if (!title) { row.why = `曲 ${songId} がこの版に無い`; throw new Error(row.why); }
-      const picked = await openSoloLive(s, { songName: title, difficulty: DIFFICULTY });
+      const picked = await openSoloLive(s, { songName: title, difficulty: DIFFICULTY, strict: true });
       if (!picked) { row.why = '曲えらびまで行けない'; throw new Error(row.why); }
       await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|はじめる)$/i, 2500);
       await s.dismissOverlays(4);
@@ -136,6 +136,9 @@ async function auditBuild(playwright, root, label, port) {
       if (!ready) { row.why = '演奏画面が開かない'; throw new Error(row.why); }
       const installed = await s.page.evaluate(installFeelPlayer, { ...OPTS, touchSrc: touchInputSource, seed: SEED * 31 + k });
       if (!installed.ok) { row.why = installed.why; throw new Error(row.why); }
+      // 遊んでいる譜面が、頼んだ曲・難易度のものか確かめる(ノーツ数が違えば、別の曲を選んでしまっている)
+      const expectedNotes = await s.page.evaluate(({ id, d }) => { try { return RHYTHM_SONGS.find((x) => x.songId === id).difficulties[d].notes.length; } catch { return null; } }, { id: songId, d: DIFFICULTY });
+      if (expectedNotes != null && expectedNotes !== installed.notes) { row.why = `別の曲を遊んでいる(ノーツ数 ${installed.notes}、${songId} の ${DIFFICULTY} は ${expectedNotes})`; throw new Error(row.why); }
       const t0 = Date.now();
       while (Date.now() - t0 < 300000) {
         await s.wait(1500);

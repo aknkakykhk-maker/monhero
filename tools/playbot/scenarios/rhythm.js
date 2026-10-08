@@ -348,7 +348,7 @@ async function unlockHarderCharts(s) {
   if (!done) await s.boot();
 }
 
-async function openSoloLive(s, { songName = '', difficulty = '', harder = false } = {}) {
+async function openSoloLive(s, { songName = '', difficulty = '', harder = false, strict = false } = {}) {
   const { page, rand } = s;
   if (harder || /^(EXPERT|MASTER)$/.test(difficulty)) await unlockHarderCharts(s);
   await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.innerText || '').trim() === 'モンヒロビート')?.click());
@@ -378,7 +378,20 @@ async function openSoloLive(s, { songName = '', difficulty = '', harder = false 
     if (!canGo) return null;
     picked = { song: '(選ばれていた曲)', difficulty: '' };
   } else {
-    const song = (songName && songs.find((b) => b.label.startsWith(songName))) || songs[Math.floor(rand() * songs.length)];
+    // 曲名が決まっているのに、いまの画面に見えていなければ、その曲のカードまで送ってから探す(見えている曲だけから選ぶと、別の曲を遊んでしまう)
+    if (songName && !songs.find((b) => b.label.startsWith(songName))) {
+      const scrolled = await s.page.evaluate((name) => {
+        const norm = (t) => (t || '').replace(/\s+/g, ' ').trim();
+        const b = [...document.querySelectorAll('button')].find((x) => /Lv\.\s*\d+/.test(x.innerText || '') && !/大きく見る|お気に入り/.test(x.getAttribute('aria-label') || '') && norm(x.innerText).startsWith(name));
+        if (!b) return false;
+        b.scrollIntoView({ block: 'center' });
+        return true;
+      }, songName);
+      if (scrolled) { await s.wait(400); songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label)); }
+    }
+    const named = songName && songs.find((b) => b.label.startsWith(songName));
+    if (songName && !named && strict) { await s.addIssue('進めない', `曲えらびに「${songName}」が見つからない`); return null; }
+    const song = named || songs[Math.floor(rand() * songs.length)];
     await s.tap(song, '曲を選ぶ');
     picked = { song: song.label.replace(/\s*Lv\..*$/, ''), difficulty: '' };
   }
