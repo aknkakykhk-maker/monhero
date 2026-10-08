@@ -289,10 +289,10 @@ const ROLES = GROUPS.map((g) => {
 // `--team <id>` で受け持ちの担当だけを動かし、深く調べて報告する(ROUTINE.md「班分け」)。
 // ★担当を足したら、どこかの班へ必ず入れる(入れ忘れると毎晩だれも動かさない。playbot.js が起動時に見張る)
 const TEAMS = [
-  { id: 'battle', name: 'バトル班', roles: ['battle', 'event'] },
-  { id: 'rhythm', name: '音ゲー班', roles: ['rhythm', 'multi', 'raidbeat'] },
-  { id: 'patrol', name: 'はじめて・見回り班', roles: ['new', 'walk', 'story', 'look'] },
-  { id: 'guard', name: '守り班', roles: ['time', 'count', 'mean'] },
+  { id: 'battle', name: 'バトル部:タクティクスくん', roles: ['battle', 'event'] },
+  { id: 'rhythm', name: 'ビート部:リズムくん', roles: ['rhythm', 'multi', 'raidbeat'] },
+  { id: 'patrol', name: '見回り部:パトロールくん', roles: ['new', 'walk', 'story', 'look'] },
+  { id: 'guard', name: '守り部:セーブくん', roles: ['time', 'count', 'mean'] },
 ];
 
 module.exports = { ROLES, TEAMS, PARTS };
