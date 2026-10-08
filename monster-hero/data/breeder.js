@@ -380,13 +380,14 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Spooky', name:"スプーキーの円盤石", type:'disc', icon:SPOOKY_DISC_ICON, cost:150000, available:false },
   // メロディーとクロミー(ユグドラシル×？？？のレア2体)。
   // 2026-10-07 ユーザー指示「ゴーストのときと同じを一式」で、6件とも available:false(「近日追加」)で並べた。
-  // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はゴースト・スプーキーと同じ(円盤石150,000ダイヤ・アイコンは各1)。
-  // 正式実装のときに available:false を外す
-  { id:'melody_icon', name:"メロディーのアイコン", type:'icon', icon:MELODY_FACE_ICON, cost:1, available:false },
-  { id:'melody_disc_icon', name:"メロディーの円盤石アイコン", type:'icon', icon:MELODY_DISC_ICON, cost:1, available:false },
+  // 値段はゴースト・スプーキーと同じ(円盤石150,000ダイヤ・アイコンは各1)。
+  // 2026-10-08 の正式実装で、ゴースト種と同じく円盤石はビートP交換所で先行公開(data/rhythm-event.js・各1,500P)し、
+  // アイコン2種(本人・円盤石)の available:false を外した。ダイヤショップの円盤石は「近日追加」のまま
+  { id:'melody_icon', name:"メロディーのアイコン", type:'icon', icon:MELODY_FACE_ICON, cost:1 },
+  { id:'melody_disc_icon', name:"メロディーの円盤石アイコン", type:'icon', icon:MELODY_DISC_ICON, cost:1 },
   { id:'Melody', name:"メロディーの円盤石", type:'disc', icon:MELODY_DISC_ICON, cost:150000, available:false },
-  { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1, available:false },
-  { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1, available:false },
+  { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1 },
+  { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1 },
   { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },

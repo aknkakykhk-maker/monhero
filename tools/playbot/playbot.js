@@ -55,6 +55,8 @@ if (args.includes('--list')) {
 const TEAM_ID = argOf('team', '');
 const TEAM = TEAM_ID ? TEAMS.find((t) => t.id === TEAM_ID || t.name === TEAM_ID) : null;
 if (TEAM_ID && !TEAM) { console.log(`知らない班: ${TEAM_ID}(--list で一覧)`); process.exit(1); }
+// --hero Melody,Kuromy … バトル係・タクティクスの勇者モン(と供モン)を、ランダムではなくこの子たちにする(新モンスターの確認用。2026-10-08)
+if (argOf('hero', '')) process.env.PLAYBOT_HERO_IDS = argOf('hero', '');
 const STEPS = Math.max(1, Number(argOf('steps', 150)) || 150);
 const SEED = Number(argOf('seed', Date.now() % 1000000)) || 1;
 const PARALLEL = Math.max(1, Math.min(4, Number(argOf('parallel', 3)) || 3));
