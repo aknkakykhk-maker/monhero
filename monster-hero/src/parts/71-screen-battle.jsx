@@ -689,7 +689,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, fateWheelView, enemyConfuseTurns, luckBanners,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, fateWheelView, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -1750,6 +1750,16 @@ function BattleScreen({
               if(!parts.length) return;
               const who=key==='party'?'':(slots[Number(key)]?.name||'');
               chip(`trick${key}`,<Sparkles size={9}/>,`${who}トリック`,parts.join(' '),'text-violet-300 border-violet-400/50',{short:parts.join(' ')});
+            });
+            // メロディーのクッキー・クロミーの黒音符(勇者特性)。ランのあいだ持ち越す。
+            //   既存5モードはパーティに1つ('party')、タクティクスは持っている子ごと(枠の番号)。値は いまの数/上限 と効いている段階
+            Object.entries(sweetStackView||{}).forEach(([key,n])=>{
+              const ownerId=key==='party'?mainHero?.id:slots[Number(key)]?.id;
+              const trait=sweetStackTraitOf(ownerId), count=sweetStackCountOf(n);
+              if(!trait||count<=0) return;
+              const who=key==='party'?'':(slots[Number(key)]?.name||'');
+              chip(`sweet${key}`,<Sparkles size={9}/>,`${who}${trait.label}`,`${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId,count)}`,
+                trait.kind==='cookie'?'text-pink-300 border-pink-400/50':'text-fuchsia-300 border-fuchsia-400/50',{short:`${trait.icon}${count}/${SWEET_STACK_MAX}`,pulse:count>=SWEET_STACK_MAX});
             });
             // 運命のコイン・運命の輪(ゴースト・スプーキー)で積んだもの。ランが終わるまで残る(その子の攻撃だけに効く)
             {

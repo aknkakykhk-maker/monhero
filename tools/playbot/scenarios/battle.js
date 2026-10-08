@@ -40,16 +40,22 @@ async function enterQuickBattle(s, { system = 'systemQuick', mode = 'challenge' 
   // 勇者モンは毎回ちがう子を選ぶ。カードは「総合力」と「詳細を見る」を含む枠で見分ける
   // ★画像の有無で探すと、助手の顔(吹き出しの横)を勇者モンと取り違える
   const pick = Math.floor(rand() * 8);
-  const heroName = await page.evaluate((n) => {
+  // --hero で指定があれば、その子たち(のどれか)を勇者モンにする
+  const wantIds = String(process.env.PLAYBOT_HERO_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const want = wantIds.length ? wantIds[pick % wantIds.length] : '';
+  const heroName = await page.evaluate(([n, wantId]) => {
     const cards = [...document.querySelectorAll('article,button,[role="button"],div')]
       .filter((x) => /総合力/.test(x.innerText || '') && /詳細を見る/.test(x.innerText || '') && x.querySelectorAll('img').length === 1);
-    const card = cards[n % Math.max(1, cards.length)];
+    // eslint-disable-next-line no-undef
+    const wantName = wantId && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[wantId] ? ALL_PLAYER_MONSTERS[wantId].name : '';
+    const named = wantName ? cards.find((x) => (x.innerText || '').split('\n')[0].trim() === wantName) : null;
+    const card = named || cards[n % Math.max(1, cards.length)];
     if (!card) return '';
     card.scrollIntoView({ block: 'center' });
     const detail = [...card.querySelectorAll('button')].find((b) => /詳細を見る/.test(b.innerText || ''));
     (detail || card).click();
     return (card.innerText || '').split('\n')[0].trim();
-  }, pick);
+  }, [pick, want]);
   await s.wait(900);
   await s.inspect();
   await s.tapLabel(/勇者モンに選ぶ/, 900);

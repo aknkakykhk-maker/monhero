@@ -56,7 +56,8 @@ check('大樹の加護は固有技(技の出自がユグドラシル種)だけ',
   t.isLifeTreeGuardCard({ type: 'unique', monId: 'Yggdrasil' }) && t.isLifeTreeGuardCard({ type: 'unique', monId: 'MelWhip' })
   && !t.isLifeTreeGuardCard({ type: 'atk', monId: 'Yggdrasil' }) && !t.isLifeTreeGuardCard({ type: 'unique', monId: 'Mocchi' }));
 check('軽減は30%(半減なら15%)', Math.abs(t.lifeTreeGuardMult(1) - 0.7) < 1e-9 && Math.abs(t.lifeTreeGuardMult(0.5) - 0.85) < 1e-9);
-const branch = slice(app, "else if(card.monId==='Yggdrasil'||card.monId==='MelWhip'){", "else if(card.monId==='Pandora'){");
+// 2026-10-08 メロディー・クロミーも同じ効果を持つようになり、分岐は isLifeTreeGuardCard を見る形になった
+const branch = slice(app, "else if(isLifeTreeGuardCard(card)){", "else if(card.monId==='Pandora'){");
 check('固有技の分岐がある(ガッツ20%・このターンの即時倍率・次ターンの予約)', branch.length > 0
   && /gainGutsByRate\(slotIdx,0\.2\*effMul\)/.test(branch)
   && /immediateTakenMultBySlot\[slotIdx\]=guardMult;/.test(branch) && /immediateTakenMult=guardMult;/.test(branch));

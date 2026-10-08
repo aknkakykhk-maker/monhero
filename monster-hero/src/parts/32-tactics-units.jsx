@@ -1021,6 +1021,11 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   avoidCharges … (avoidCharge) 使うともらう「完全回避」の回数。狙われた攻撃1回(技1回)につき1つ減る
 //   partyHealRate … 使った瞬間に、味方全員のライフとガッツを上限のこの割合ぶん回復する
 //   partyStatRate … (trickConfuse) 効いているあいだ、味方全員のちから・丈夫さをこの割合上げる
+//   stackSpend … (cookieBox / nightmareKey) 勇者特性のスタック(クッキー・黒音符)を全部使うEX。数字は「1個あたり」。
+//                cookieBox:   { full, heal, guts, dmg, taken, fullTurns } 使った瞬間に全員のライフ heal×個・ガッツ guts×個、
+//                             効いているあいだ全員の与ダメ+dmg×個・被ダメ−taken×個。full個で使うと効果が fullTurns ターンに伸びる
+//                nightmareKey: { full, dmg, crit, enemyTaken, fullCombo } 効いているあいだ本人の与ダメ+dmg×個・会心率+crit×個・
+//                             敵の被ダメ+enemyTaken×個。full個で使うと本人の攻撃へ fullCombo の連撃が付く
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
@@ -1353,17 +1358,42 @@ const TACTICS_EX_SKILLS = Object.freeze({
     partyHealRate: 0.3, partyStatRate: 0.1,
     effect: 'trickConfuse',
   }),
+  // ★2026-10-08 ユーザーと決めた値(docs/spec/MELODY_KUROMY_SKILLS.md)。勇者特性のクッキーを全部配る「蓄積型の支援EX」。
+  //   クッキーを持ち続けて常時の支援を保つか、全部配って一気に立て直すかを選ぶ
+  Melody: Object.freeze({
+    id: 'melody_melody_box',
+    name: 'おねがい♪メロディボックス',
+    useNote: 'クッキーを全部配る・全員回復＋3ターン与ダメ↑被ダメ↓',
+    desc: 'クッキーを全部使って、味方全員へ振る舞う（1個から使える）。\n・使った瞬間に、味方全員のライフが上限の「個数×5%」、ガッツが「個数×4%」回復\n・3ターンのあいだ、味方全員の与ダメージ+「個数×2%」・被ダメージ−「個数×2%」\n・10個で使うと、効果が5ターンに伸びる\n・使うとクッキーは0個に戻る',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    stackSpend: Object.freeze({ full: 10, heal: 0.05, guts: 0.04, dmg: 0.02, taken: 0.02, fullTurns: 5 }),
+    conditions: Object.freeze(['hasStack']),
+    effect: 'cookieBox',
+  }),
+  // ★2026-10-08 ユーザーと決めた値。黒音符を全部使って本人の攻撃を一気に上げる「攻撃特化EX」(メロディーの「配る」に対して「叩き込む」)
+  Kuromy: Object.freeze({
+    id: 'kuromy_melody_key',
+    name: '悪夢全開！メロディ・キー',
+    useNote: '黒音符を全部使う・3ターン クロミーの与ダメ・会心率・敵の被ダメ↑',
+    desc: '黒音符を全部使って、悪夢魔法を全開にする（1個から使える）。\n・3ターンのあいだ、クロミーの与ダメージ+「個数×4%」・会心率+「個数×3%」\n・3ターンのあいだ、敵の被ダメージ+「個数×2%」\n・10個で使うと、さらにクロミーの攻撃へ与ダメージ30%の連撃が2回付く\n・使うと黒音符は0個に戻る',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    stackSpend: Object.freeze({ full: 10, dmg: 0.04, crit: 0.03, enemyTaken: 0.02, fullCombo: Object.freeze({ count: 2, rate: 0.3 }) }),
+    conditions: Object.freeze(['hasStack']),
+    effect: 'nightmareKey',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
 // 条件の中身を本体へ書かずにここへ集めるので、EXを足すときは定義に名前を書くだけで済む
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: (ctx) => (ctx && ctx.active ? '効果が続いているあいだは使えない' : null),
+  // 勇者特性のスタック(クッキー・黒音符)を全部使うEX。1個も無いと使えない。ctx.stacks はいまの数、ctx.stackLabel はその呼び名
+  hasStack: (ctx) => (ctx && Number(ctx.stacks) > 0 ? null : `${(ctx && ctx.stackLabel) || 'スタック'}が1つも無いと使えない`),
 });
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1459,6 +1489,14 @@ const normalizeTacticsExDef = (raw) => {
         crit: n(raw.present.crit), heal: n(raw.present.heal), guts: n(raw.present.guts), draws: Math.min(6, Math.max(1, tacticsSafeInt(raw.present.draws, 1))),
         grow: raw.present.grow && typeof raw.present.grow === 'object' ? { effect: n(raw.present.grow.effect), fixedGuts: n(raw.present.grow.fixedGuts), jackpot: n(raw.present.grow.jackpot), maxLevel: Math.min(30, tacticsSafeInt(raw.present.grow.maxLevel, 0)) } : null,
         combo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate) } : null };
+    })() : null,
+    stackSpend: raw.stackSpend && typeof raw.stackSpend === 'object' && tacticsSafeInt(raw.stackSpend.full, 0) > 0 ? (() => {
+      const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
+      const c = raw.stackSpend.fullCombo;
+      return { full: Math.min(99, tacticsSafeInt(raw.stackSpend.full, 0)), heal: Math.min(0.2, n(raw.stackSpend.heal)), guts: Math.min(0.2, n(raw.stackSpend.guts)),
+        dmg: n(raw.stackSpend.dmg), taken: Math.min(0.09, n(raw.stackSpend.taken)), crit: n(raw.stackSpend.crit), enemyTaken: n(raw.stackSpend.enemyTaken),
+        fullTurns: Math.min(9, tacticsSafeInt(raw.stackSpend.fullTurns, 0)),
+        fullCombo: c && typeof c === 'object' && tacticsSafeInt(c.count, 0) > 0 && Number(c.rate) > 0 ? { count: tacticsSafeInt(c.count, 0), rate: Number(c.rate) } : null };
     })() : null,
     lifeCostRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.lifeCostRate)) ? Number(raw.lifeCostRate) : 0)),
     dmgRate: Math.max(0, Number.isFinite(Number(raw.dmgRate)) ? Number(raw.dmgRate) : 0),
@@ -1565,7 +1603,8 @@ const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsEx
 // 使うときに払うライフ(最大ライフの lifeCostRate。切り捨て)。払わないEXは0
 const tacticsExLifeCost = (def, maxHp) => (def && def.lifeCostRate > 0 ? Math.floor(Math.max(0, Number(maxHp) || 0) * def.lifeCostRate) : 0);
 // hp / maxHp … 使う子のいまのライフと最大ライフ(ライフを払うEXの判定に使う。渡さなければ見ない)
-const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false, hp = null, maxHp = null } = {}) => {
+// stacks / stackLabel … 勇者特性のスタックを使うEX(hasStack)のための、いまの数と呼び名
+const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false, hp = null, maxHp = null, stacks = null, stackLabel = null } = {}) => {
   if (!def) return { ok: false, reason: 'EXスキルを持っていない' };
   if (busy) return { ok: false, reason: '行動中は使えない' };
   if (!alive) return { ok: false, reason: '倒れているあいだは使えない' };
@@ -1581,7 +1620,7 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
   }
   const active = isTacticsExEffectActive(safe, slot, monId, now);
   for (const key of def.conditions || []) {
-    const why = TACTICS_EX_CONDITIONS[key] ? TACTICS_EX_CONDITIONS[key]({ active }) : null;
+    const why = TACTICS_EX_CONDITIONS[key] ? TACTICS_EX_CONDITIONS[key]({ active, stacks, stackLabel }) : null;
     if (why) return { ok: false, reason: why };
   }
   return { ok: true, reason: null };
@@ -1591,6 +1630,13 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
 // choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
 // target … 味方を選んで使うEX(生命の泉)で、選んだ味方の枠
+// スタックを使うEX(stackSpend)で、使った個数(snapshot.spent)。ほかのEXは0
+const tacticsExSpentOf = (snapshot) => Math.min(99, Math.max(0, tacticsSafeInt(snapshot && snapshot.spent, 0)));
+// 効く長さ。スタックを満タン(full個)で使い、fullTurns があればそのターン数(おねがい♪メロディボックスの5ターン)
+const tacticsExStackSpendTurns = (def, snapshot) => {
+  const cfg = def && def.stackSpend;
+  return cfg && cfg.fullTurns > 0 && tacticsExSpentOf(snapshot) >= cfg.full ? cfg.fullTurns : def.turns;
+};
 const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null, presentLevel = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
@@ -1604,7 +1650,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
     effects: { ...safe.effects, [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
       on: def.duration === 'style' ? style !== def.defaultStyle : true,
       style,
-      turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
+      turns: def.duration === 'turns' ? tacticsExStackSpendTurns(def, snapshot) : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
       rates: def.rates ? { ...def.rates } : null, regenRates: def.regenRates ? { ...def.regenRates } : null,
       partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
@@ -1621,6 +1667,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       damageBackCfg: def.damageBack ? { ...def.damageBack } : null,
       psychoLockCfg: def.psychoLock ? { ...def.psychoLock } : null,
       counterCfg: def.counter ? { ...def.counter } : null, counter: def.counter ? def.counter.start : 0,
+      stackSpendCfg: def.stackSpend ? { ...def.stackSpend } : null, spent: def.stackSpend ? tacticsExSpentOf(snapshot) : 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1733,6 +1780,11 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const t = tacticsExThunderOf(state, units, slot, now);
     return t && t.combo ? t.combo : null;
   }
+  // 悪夢全開！メロディ・キー: 黒音符を満タン(10個)で使ったときだけ、連撃が付く
+  if (kind === 'nightmareKey') {
+    const k = tacticsExNightmareOf(state, units, slot, now);
+    return k && k.combo ? k.combo : null;
+  }
   if (kind !== 'comboBurst' && kind !== 'multiBuff' && kind !== 'avoidCharge') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
@@ -1781,6 +1833,11 @@ const tacticsExMultiBuffOf = (state, units, slot, now) => {
     const cp = normalizeTacticsExState(state).effects[slot].snapshot;
     const c = cp && cp.copied;
     return c ? { dmg: c.dmg, taken: c.taken, critRate: c.critRate, critAdd: c.critAdd, critDmg: c.critDmg, distMult: 0 } : null;
+  }
+  // 悪夢全開！メロディ・キー(nightmareKey): 使った黒音符の数ぶん、本人の与ダメージと会心率(足し算)が上がる
+  if (kind === 'nightmareKey') {
+    const k = tacticsExNightmareOf(state, units, slot, now);
+    return k ? { dmg: k.dmgMult, taken: 1, critRate: 1, critAdd: k.critAdd, critDmg: 1, distMult: 0 } : null;
   }
   if (kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot];
@@ -2137,6 +2194,49 @@ const addTacticsExCounter = (state, units, now, slot, n) => {
 const tacticsExCounterMult = (state, units, slot, now) => {
   const c = tacticsExCounterOf(state, units, slot, now);
   return c && c.counter > 0 && c.mult > 0 ? c.mult * c.counter : 1;
+};
+// ---- メロディー(cookieBox): おねがい♪メロディボックス ----
+// 効いているあいだの味方全員の与ダメ・被ダメの倍率(使ったクッキーの数ぶん)。効いていなければ両方1。
+// ★使った子が倒れても効果は残る(振る舞ったクッキーはもう配ってある)。WAVEが変わると切れる
+const tacticsExCookieBoxOf = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((acc, key) => {
+    const slot = Number(key), unit = Array.isArray(units) ? units[slot] : null, e = effects[key];
+    if (!unit || !e || !e.stackSpendCfg || tacticsExActiveEffect(state, slot, unit.id, now) !== 'cookieBox') return acc;
+    const spent = tacticsSafeInt(e.spent, 0), cfg = e.stackSpendCfg;
+    return { dmgMult: acc.dmgMult * (1 + (Number(cfg.dmg) || 0) * spent), takenMult: acc.takenMult * (1 - Math.min(0.9, (Number(cfg.taken) || 0) * spent)) };
+  }, { dmgMult: 1, takenMult: 1 });
+};
+// ---- クロミー(nightmareKey): 悪夢全開！メロディ・キー ----
+// その子の強化(使った黒音符の数ぶん)。効いていなければ null。
+// { spent, dmgMult, critAdd(足し算), enemyTaken(敵の被ダメへ足す), combo(満タンで使ったときだけ), turnsLeft }
+const tacticsExNightmareOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'nightmareKey') return null;
+  const e = normalizeTacticsExState(state).effects[slot], cfg = e.stackSpendCfg;
+  if (!cfg) return null;
+  const spent = tacticsSafeInt(e.spent, 0);
+  return { spent, dmgMult: 1 + (Number(cfg.dmg) || 0) * spent, critAdd: (Number(cfg.crit) || 0) * spent, enemyTaken: (Number(cfg.enemyTaken) || 0) * spent,
+    combo: spent >= cfg.full && cfg.fullCombo ? { count: cfg.fullCombo.count, rate: cfg.fullCombo.rate, label: '悪夢全開' } : null,
+    turnsLeft: Math.max(0, tacticsSafeInt(e.turn, 0) + tacticsSafeInt(e.turns, 0) - tacticsSafeInt(now && now.turn, 0)) };
+};
+// 盤面のだれかの「悪夢全開」で、敵の被ダメージへ足す割合(いちばん大きいもの)と残りターン。効いていなければ0
+const tacticsExNightmareEnemyOf = (state, units, now) => (Array.isArray(units) ? units : []).reduce((acc, unit, slot) => {
+  const k = unit ? tacticsExNightmareOf(state, units, slot, now) : null;
+  return k && k.enemyTaken > acc.enemyTaken ? { enemyTaken: k.enemyTaken, turnsLeft: k.turnsLeft } : acc;
+}, { enemyTaken: 0, turnsLeft: 0 });
+// 使った直後に出す文(カットインの下の行・ログ)
+const tacticsExStackSpendNote = (def, spent) => {
+  const cfg = def && def.stackSpend;
+  if (!cfg) return '';
+  const pct = (v) => Math.round(v * 100);
+  const full = spent >= cfg.full;
+  if (def.effect === 'cookieBox') {
+    const turns = full && cfg.fullTurns > 0 ? cfg.fullTurns : def.turns;
+    return `クッキー${spent}個を配った・全員ライフ+${pct(cfg.heal * spent)}% ガッツ+${pct(cfg.guts * spent)}%・${turns}ターン与ダメ+${pct(cfg.dmg * spent)}% 被ダメ−${pct(cfg.taken * spent)}%`;
+  }
+  return `黒音符${spent}個で全開・${def.turns}ターン与ダメ+${pct(cfg.dmg * spent)}% 会心率+${pct(cfg.crit * spent)}% 敵の被ダメ+${pct(cfg.enemyTaken * spent)}%`
+    + (full && cfg.fullCombo ? `・連撃${pct(cfg.fullCombo.rate)}%×${cfg.fullCombo.count}` : '');
 };
 // サイコロックオン(psychoLock)が効いているか。効いているあいだ、敵は距離を動かせず(移動を選んでも何もしない)、
 // 敵の与ダメージが enemyDmgDown 下がり、敵の被ダメージが enemyTakenUp 上がる。効いていなければ active:false・倍率は変えない
