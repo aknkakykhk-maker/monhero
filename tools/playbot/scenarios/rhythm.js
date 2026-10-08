@@ -24,7 +24,7 @@ const MISS_RATE = 0.03;
 const installArgs = (s) => ({ sigma: SIGMA_MS, missRate: MISS_RATE, seed: Math.floor(s.rand() * 1e9), persona: process.env.PLAYBOT_FINGER || '', input: process.env.PLAYBOT_INPUT || 'ios', touchSrc: touchInputSource });
 
 // ページの中で動く演奏係。requestAnimationFrame で再生位置を見ながら、予定の時刻に指を下ろす
-function installPlayer({ sigma, missRate, seed, human = true, persona = '', input = 'ios', dropRate = 0.04, lateRate = 0.04, lateMs = [30, 120], touchSrc = '' }) {
+function installPlayer({ sigma, missRate, seed, human = true, persona = '', input = 'ios', dropRate = 0.01, lateRate = 0.0204, lateMs = [30, 120], touchSrc = '' }) {
   let st = seed >>> 0;
   const rand = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const gauss = () => { const u = Math.max(1e-9, rand()), v = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -93,7 +93,7 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
     : n.lane);
   let pid = 100;
   // 指の合図は共有の部品(lib/touch-input.js。反応の点検 feel.js と同じ作り方)で送る。既定は本物のタッチの経路(touchstart と pointerType 'touch')。
-  // 'ios' は、ときどきポインタの合図が抜け(dropRate)・遅れて届く(lateRate)iPhone のくせも入れる。MISS が増えて読みにくくならないよう、feel.js より少なめにしてある。
+  // 'ios' は、ときどきポインタの合図が抜け(dropRate)・遅れて届く(lateRate)iPhone のくせも入れる。割合と遅れの分布は、実機(iPhone)の診断の記録に合わせてある(feel.js と同じ)。
   // 'mouse' はこれまでのマウスの合図(PLAYBOT_INPUT=mouse)。起こした数は stats.input に数える(報告に出す)
   const ti = touchSrc ? (0, eval)('(' + touchSrc + ')')(area, input === 'mouse' ? 'mouse' : 'touch') : null;
   const lateOf = new Map();
@@ -104,7 +104,7 @@ function installPlayer({ sigma, missRate, seed, human = true, persona = '', inpu
     let drop = false, late = lateOf.get(id) || 0;
     if (t === 'down') {
       drop = input === 'ios' && rand() < dropRate;
-      late = input === 'ios' && rand() < lateRate ? lateMs[0] + rand() * (lateMs[1] - lateMs[0]) : 0;   // 遅れた指は、そのあとの動き・離すのも同じだけ遅れて届く(順番が入れ替わらない)
+      late = input === 'ios' && rand() < lateRate ? (() => { const u = rand(); return u < 0.27 ? 50 + rand() * 30 : u < 0.65 ? 80 + rand() * 70 : u < 0.78 ? 150 + rand() * 150 : 300 + rand() * 700; })() : 0;   // 遅れた指は、そのあとの動き・離すのも同じだけ遅れて届く(順番が入れ替わらない)
       lateOf.set(id, late);
       inputStats.downs += 1; if (drop) inputStats.dropped += 1; if (late > 0) inputStats.late += 1;
     }
