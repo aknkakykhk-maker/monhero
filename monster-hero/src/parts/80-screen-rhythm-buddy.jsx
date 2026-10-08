@@ -92,7 +92,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
   // 直近に言ったものは避ける(マスモンごとに8つ覚える)
-  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false }) {
+  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false, missRate = 0, topicKind = '', topicSongId = '' }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -106,9 +106,15 @@ const rhythmBuddyMakeBrain = (songs) => ({
     if (kind === 'reactResult') {
       const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
-      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? 'hLow' : '';
+      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? (Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow') : '';
       if (!scene) return '';
     }
+    // 時間帯のあいさつ・遊んだ回数に触れるあいさつ(部屋へ来たとき・あいさつされたとき、ときどき)
+    if (kind === 'join' && Math.random() < 0.35) {
+      const hour = new Date().getHours();
+      scene = hour >= 5 && hour < 11 ? 'timeMorning' : hour >= 11 && hour < 17 ? 'timeNoon' : hour >= 17 && hour < 22 ? 'timeEvening' : 'timeNight';
+    }
+    if ((kind === 'join' || kind === 'replyHello') && norm.lives >= 5 && Math.random() < 0.4) scene = kind === 'join' ? 'bondJoin' : 'bondHello';
     const nameOf = (id) => { const song = id ? (songs || []).find((x) => x.songId === id) : null; if (!song) return ''; const full = rhythmSongFullName(song); return full.length <= 14 ? full : String(song.displayName || full); };
     // 会話のセリフに混ぜる、自分の育ち(無いものは入れない。値の無い穴を持つ文は選ばれない)
     const top = rhythmBuddyTopSongs(mon, 1)[0];
@@ -123,6 +129,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
       trait: traitDef ? traitDef.label : '',
       plays: norm.lives > 0 ? String(norm.lives) : '',
       days: norm.streakDays > 0 ? String(norm.streakDays) : '',
+      topic: topicSongId ? nameOf(topicSongId) : (RHYTHM_BUDDY_CONVO_TOPIC[topicKind] || ''),
       score: lastScore > 0 ? `${Math.round(lastScore / 10000)}万点` : '',
     };
     const key = String(masuId);
@@ -135,8 +142,24 @@ const rhythmBuddyMakeBrain = (songs) => ({
       const call = `${vars.who}${vars.hon}、`;
       if ((call + text).length <= RHYTHM_BUDDY_TALK_MAX) text = call + text;
     }
+    // 性格ごとの話しぶり: ときどき文の終わりに絵文字を添える(ひょうきん=😆 甘えん坊=💕 など)
+    const style = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    if (text && style && style.emoji.length && Math.random() < 0.25 && (text + '😆').length <= RHYTHM_BUDDY_TALK_MAX) text += style.emoji[Math.floor(Math.random() * style.emoji.length)];
     if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
     return text;
+  },
+  // 性格ごとの話しぶり(聞き返す頻度・自分から話しかけるときの好み)
+  style(masuId) {
+    const norm = rhythmBuddyNormalizeMon(RHYTHM_BUDDY_STORE.get().mons[masuId]);
+    const st = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    return st ? { ask: st.ask, starter: st.starter } : { ask: 0.6, starter: [1, 1, 1] };
+  },
+  // 2体のやりとりの種類(banter / banterRival / banterFriend)。性格が決まっていなければふつうの banter
+  pair(masuIdA, masuIdB) {
+    const mons = RHYTHM_BUDDY_STORE.get().mons;
+    const a = rhythmBuddyNormalizeMon(mons[masuIdA]).trait;
+    const b = rhythmBuddyNormalizeMon(mons[masuIdB]).trait;
+    return a && b ? rhythmBuddyPairKind(a, b) : 'banter';
   },
   // 人の発言を読む(意図・曲名・呼ばれたマスモン)。names は呼んでいるマスモンの名前の並び。awaiting は聞き返して待っている返事の種類
   understand({ text, names = [], awaiting = '' }) {
@@ -741,7 +764,7 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
       if (!r.gain) return null;
       outcome = r;
       return { ...st, mons: { ...st.mons, [masu.id]: r.mon } };
-    }).then(() => { if (alive && outcome) setShown(outcome); });
+    }).then(() => { if (alive && outcome) { setShown(outcome); if (typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) RHYTHM_MULTI.noteBuddyGrowth(masu.id, outcome); } });
     return () => { alive = false; };
   }, [masu && masu.id, round]);
   if (!shown || !masu) return null;

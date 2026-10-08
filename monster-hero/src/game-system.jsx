@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 689e94797207c119
+// generated-sha256: 530ead52799f1b8e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-08 11:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-08 11:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24431,6 +24431,7 @@ const rhythmBuddyTalkReplyKind = (text) => {
 // ---- 意図の読み取り(上にあるほど先に当てる)----
 // ask=聞き返す場面(返事のあとに続けて言う)と、その返事を待つ種類(awaits)。話しかけられたとき、何も当てはまらなければ ''
 const RHYTHM_BUDDY_CONVO_RULES = Object.freeze([
+  { kind: 'recallAsk', re: /(さっき|先ほど|さきほど|前の話|まえの話|何の話|なんの話)/ },
   { kind: 'replyCall', re: /マスモン(入れて|いれて|呼んで|よんで|出して|きて|来て)/ },
   { kind: 'howMe', re: /(調子|元気|げんき|気分|きぶん|どう\?|どう$|大丈夫|だいじょうぶ)/, ask: 'qHow', awaits: 'how', needsAsk: true },
   { kind: 'lvAsk', re: /(レベル|Lv|lv|ビートレベル|何レベ|れべる)/, needsAsk: true },
@@ -24471,12 +24472,43 @@ const RHYTHM_BUDDY_CONVO_ANSWERS = Object.freeze({
   ],
   fav: [],
 });
+// 質問として答える種類(1つの発言にふたつ入っていれば、続けて両方に答える)
+const RHYTHM_BUDDY_CONVO_ASKABLE = Object.freeze(['howMe', 'lvAsk', 'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk']);
+// 会話の記憶で「さっきは◯◯の話」と呼ぶときの言い方(曲の話は曲名を使う)
+const RHYTHM_BUDDY_CONVO_TOPIC = Object.freeze({
+  howMe: '調子', lvAsk: 'ビートLv', favAsk: '得意な曲', traitAsk: '性格', scoreAsk: 'スコア', daysAsk: '来てくれた日', nameAsk: '名前',
+  fullcombo: 'フルコン', missTalk: 'ミス', hardTalk: '難しい曲', easyTalk: '簡単な曲', cheer: '気合い', challenge: '勝負', happy: 'うれしいこと',
+  sad: 'つらいこと', tired: '眠い話', hungry: 'ごはん', cute: 'ほめてくれたこと',
+});
+// 性格ごとの話しぶり(文の終わりに添える絵文字・聞き返す頻度・自分から話しかけるときの好み[調子, 得意な曲, 呼びかけ]の重み)
+const RHYTHM_BUDDY_TRAIT_STYLE = Object.freeze({
+  jester: { emoji: ['😆', '🤣', '✌️'], ask: 0.7, starter: [2, 1, 2] }, brave: { emoji: ['🔥', '💪'], ask: 0.5, starter: [1, 1, 3] },
+  clingy: { emoji: ['💕', '🥺', '✨'], ask: 0.9, starter: [3, 1, 2] }, smart: { emoji: ['📊', '🧐'], ask: 0.6, starter: [1, 3, 1] },
+  serious: { emoji: ['🙇', '🎵'], ask: 0.6, starter: [2, 3, 1] }, proud: { emoji: ['✨', '😎'], ask: 0.3, starter: [1, 2, 3] },
+  worrier: { emoji: ['💦', '😥'], ask: 0.8, starter: [3, 1, 1] }, stubborn: { emoji: [], ask: 0.3, starter: [1, 2, 3] },
+  easygoing: { emoji: ['☺️', '🍃', '💤'], ask: 0.6, starter: [3, 2, 1] },
+});
+// 2体の相性(マスモンどうしのやりとりの種類)。ライバル同士は張り合い、仲良し寄りの子とは和やかに話す
+const RHYTHM_BUDDY_PAIR_RIVALS = Object.freeze(['brave|proud', 'proud|smart', 'brave|stubborn', 'proud|stubborn', 'jester|serious', 'smart|stubborn']);
+const rhythmBuddyPairKind = (a, b) => {
+  const key = [a, b].sort().join('|');
+  if (RHYTHM_BUDDY_PAIR_RIVALS.indexOf(key) >= 0) return 'banterRival';
+  if (a === 'clingy' || b === 'clingy' || a === 'easygoing' || b === 'easygoing' || key === 'jester|worrier') return 'banterFriend';
+  return 'banter';
+};
 // 話しかけられているか(質問・呼びかけ)。名前を呼ばれた・「みんな」・疑問の「?」・文の終わりの「?」
 const rhythmBuddyConvoNormalize = (text) => {
   let t = String(text == null ? '' : text);
   try { t = t.normalize('NFKC'); } catch (_) { /* そのまま */ }
-  return t.replace(/\s+/g, '').toLowerCase();
+  // 絵文字・飾りを落とし、同じ字の3連続以上は2つに縮める(「ありがとーーー」「wwwww」「すごいいいい」)
+  t = t.replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F\u200D]/gu, '');
+  return t.replace(/\s+/g, '').toLowerCase().replace(/(.)\1{2,}/gu, '$1$1');
 };
+// ひらがな⇄カタカナの読み替え(「ミス」でも「みす」でも、「ありがとう」でも「アリガトウ」でも当たる)
+const rhythmBuddyConvoShiftKana = (t, toKata) => String(t).replace(toKata ? /[\u3041-\u3096]/g : /[\u30A1-\u30F6]/g,
+  (c) => String.fromCharCode(c.charCodeAt(0) + (toKata ? 0x60 : -0x60)));
+const rhythmBuddyConvoForms = (t) => [t, rhythmBuddyConvoShiftKana(t, true), rhythmBuddyConvoShiftKana(t, false)];
+const rhythmBuddyConvoTest = (re, forms) => forms.some((f) => re.test(f));
 // 曲名と一緒に出てきたら、その曲の話として読む種類
 const RHYTHM_BUDDY_CONVO_SOFT = Object.freeze(['cute', 'replyNice', 'happy', 'laugh', 'hardTalk', 'easyTalk', 'missTalk', 'fullcombo', 'cheer', 'challenge', 'sad', 'tired']);
 const RHYTHM_BUDDY_CONVO_ALL = /(みんな|みなさん|全員|ぜんいん|マスモンたち|ますもんたち)/;
@@ -24496,7 +24528,8 @@ const rhythmBuddyConvoFindSong = (text, songs) => {
 // kind が '' のときは、特に返す言葉が見つからなかった
 const rhythmBuddyConvoParse = ({ text, names = [], songs = [], awaiting = '' }) => {
   const t = rhythmBuddyConvoNormalize(text);
-  const out = { kind: '', mentioned: [], all: false, song: null, isQuestion: false, answered: false, ask: '', awaits: '' };
+  const out = { kind: '', mentioned: [], all: false, song: null, isQuestion: false, answered: false, ask: '', awaits: '', extra: '' };
+  const forms = rhythmBuddyConvoForms(t);
   if (!t) return out;
   out.isQuestion = /[?？]/.test(String(text)) || /(ですか|ますか|かな|だよね)$/.test(t);
   (Array.isArray(names) ? names : []).forEach((name, i) => {
@@ -24507,7 +24540,7 @@ const rhythmBuddyConvoParse = ({ text, names = [], songs = [], awaiting = '' }) 
   out.song = rhythmBuddyConvoFindSong(text, songs);
   // 聞き返した答え
   if (awaiting && RHYTHM_BUDDY_CONVO_ANSWERS[awaiting]) {
-    const hit = RHYTHM_BUDDY_CONVO_ANSWERS[awaiting].find((r) => r.re.test(t));
+    const hit = RHYTHM_BUDDY_CONVO_ANSWERS[awaiting].find((r) => rhythmBuddyConvoTest(r.re, forms));
     if (hit) { out.kind = hit.kind; out.answered = true; return out; }
   }
   if (awaiting === 'fav' && out.song) { out.kind = 'songTalk'; out.answered = true; return out; }
@@ -24515,10 +24548,19 @@ const rhythmBuddyConvoParse = ({ text, names = [], songs = [], awaiting = '' }) 
     const rule = RHYTHM_BUDDY_CONVO_RULES[i];
     // 質問のかたちでないと当てない種類(「今日は元気!」は、調子を聞かれたのではない)
     if (rule.needsAsk && !(out.isQuestion || out.mentioned.length > 0 || out.all)) continue;
-    if (rule.re.test(t)) {
+    if (rhythmBuddyConvoTest(rule.re, forms)) {
       // 曲名が入っていて、感想のような軽い当たりなら、その曲の話として読む(「◯◯、好き」「◯◯ むずい」)
       if (out.song && RHYTHM_BUDDY_CONVO_SOFT.indexOf(rule.kind) >= 0) { out.kind = 'songTalk'; return out; }
       out.kind = rule.kind; out.ask = rule.ask || ''; out.awaits = rule.awaits || '';
+      // 1つの発言に2つ質問が入っているとき(「調子どう?あと得意な曲は?」)、2つ目も読む
+      if (RHYTHM_BUDDY_CONVO_ASKABLE.indexOf(rule.kind) >= 0) {
+        for (let j = i + 1; j < RHYTHM_BUDDY_CONVO_RULES.length; j += 1) {
+          const r2 = RHYTHM_BUDDY_CONVO_RULES[j];
+          if (RHYTHM_BUDDY_CONVO_ASKABLE.indexOf(r2.kind) < 0 || r2.kind === rule.kind) continue;
+          if (r2.needsAsk && !(out.isQuestion || out.mentioned.length > 0 || out.all)) continue;
+          if (rhythmBuddyConvoTest(r2.re, forms)) { out.extra = r2.kind; out.ask = ''; out.awaits = ''; break; }
+        }
+      }
       return out;
     }
   }
@@ -24891,12 +24933,92 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     },
     mood: { great: ['{who}さん!!今日は最高だね!!'], good: ['{who}さん、いい感じだね!'], normal: [], bad: ['…{who}さん'], awful: ['…{who}さん、なに'] },
   },
+
+  // ---- 会話の記憶・つきあい・時間帯・ビートLv・性格の相性(2026-10-08・ユーザー指示「会話の改良」)----
+  // 「さっきの話は?」→ 前の話題を言う({topic}=話題。曲の話なら曲名)
+  recall: {
+    common: ['さっきは{topic}の話をしてたよね!', 'えっと、{topic}の話だったよね?', 'さっきの話?{topic}だよ!', '{topic}の話、まだ覚えてるよ!'],
+    trait: { jester: ['{topic}の話!ウケたよね!'], brave: ['{topic}の話だ!忘れてないぞ!'], clingy: ['{topic}の話、ちゃんと覚えてるよ〜!'], smart: ['直前の話題は{topic}です'], serious: ['{topic}のお話でしたね'], proud: ['{topic}の話でしょ。覚えてるわよ'], worrier: ['え、{topic}の話…だったよね?'], stubborn: ['{topic}の話だったな'], easygoing: ['{topic}の話だっけ〜?のんびり覚えてる〜'] },
+    mood: { great: ['{topic}の話!!ちゃんと覚えてるよ!!'], good: [], normal: [], bad: ['…{topic}の話でしょ'], awful: [] },
+  },
+  // 「さっきの話は?」→ まだ話していないとき
+  recallNone: {
+    common: ['まだ何も話してないよ?', 'さっきの話?これからだよ!', 'あれ、まだ話してなかったっけ?', '話はこれから!なんでも聞いて!'],
+    trait: { jester: ['話してないよ!今から盛り上がろう!'], brave: ['まだだ!何でも聞いてくれ!'], clingy: ['まだお話してない〜!なにか聞いて〜!'], smart: ['記録上、まだ会話はありません'], serious: ['まだお話はしておりません'], proud: ['まだ何も話してないわ。話しかけなさい'], worrier: ['え、ま、まだ何も話してない…よね?'], stubborn: ['まだ話していないな'], easygoing: ['まだ何も話してないよ〜'] },
+    mood: { great: ['まだだよ!!今から話そう!!'], good: [], normal: [], bad: ['…まだ話してない'], awful: [] },
+  },
+  // 何度も来てくれた人へのあいさつ({plays}=遊んだ回数)
+  bondHello: {
+    common: ['もう{plays}回も遊んだね!', '{plays}回目のライブ、いっしょに楽しもう!', 'いつも呼んでくれてありがとう!', '何度もいっしょでうれしいな!'],
+    trait: { jester: ['{plays}回も呼ばれるなんて、人気者だね!'], brave: ['{plays}回、戦ってきた戦友だな!'], clingy: ['{plays}回もいっしょ!うれしい〜!'], smart: ['累計{plays}回の演奏ですね'], serious: ['{plays}回もお声がけいただき光栄です'], proud: ['{plays}回も私を選ぶなんて、見る目があるわ'], worrier: ['{plays}回もいっしょ…ありがとう…'], stubborn: ['{plays}回目か。悪くない'], easygoing: ['{plays}回目〜、もう慣れっこだね〜'] },
+    mood: { great: ['{plays}回目!!最高の仲間だね!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 部屋に入ったとき、遊んだ回数に触れる
+  bondJoin: {
+    common: ['また呼んでくれてありがとう!', '{plays}回目の登場だよ!', 'おなじみのメンバーだね!', '今日もよろしくね!{plays}回目!'],
+    trait: { jester: ['{plays}回目のご来場!盛り上げるよ!'], brave: ['{plays}回目、今日も前線は任せろ!'], clingy: ['また呼んでくれた〜!{plays}回目!うれしい〜!'], smart: ['{plays}回目の演奏準備、完了です'], serious: ['{plays}回目、本日もよろしくお願いします'], proud: ['{plays}回目の私に、期待しなさい'], worrier: ['{plays}回目なのに、まだ緊張する…'], stubborn: ['{plays}回目か。今日もやるぞ'], easygoing: ['{plays}回目〜、今日ものんびり〜'] },
+    mood: { great: ['{plays}回目!!張り切っていくよ!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 朝(5〜10時)のあいさつ
+  timeMorning: {
+    common: ['おはよう!朝から元気にいこう!', '朝のライブ、気持ちいいね!', 'おはよう!早起きだね!', '朝イチの演奏、がんばるよ!'],
+    trait: { jester: ['おはよう!朝からボケていくよ!'], brave: ['おはよう!朝から全力だ!'], clingy: ['おはよ〜!朝から会えてうれしい〜!'], smart: ['おはようございます。本日も良好です'], serious: ['おはようございます!今日もよろしく!'], proud: ['おはよう。朝から私と遊べるなんて幸運よ'], worrier: ['お、おはよう…早いね…'], stubborn: ['おはよう。朝は嫌いじゃない'], easygoing: ['おはよ〜…まだちょっとねむい〜'] },
+    mood: { great: ['おはよう!!最高の朝だね!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 昼(11〜16時)のあいさつ
+  timeNoon: {
+    common: ['こんにちは!お昼のライブだね!', '昼間のライブ、いいね!', 'こんにちは!ひと休みに一曲どう?', '昼でも夜でも、リズムはいっしょ!'],
+    trait: { jester: ['こんにちは!昼から笑いをとるぞ!'], brave: ['こんにちは!昼間も全開だ!'], clingy: ['こんにちは〜!お昼もいっしょでうれしい〜!'], smart: ['こんにちは。昼の集中力は高めです'], serious: ['こんにちは、本日もよろしくお願いします'], proud: ['こんにちは。昼の私も輝いてるわよ'], worrier: ['こ、こんにちは…昼でも緊張する…'], stubborn: ['こんにちは。昼でもやるときはやる'], easygoing: ['こんにちは〜、お昼ごはんのあとは眠いね〜'] },
+    mood: { great: ['こんにちは!!元気いっぱいだよ!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 夕方〜夜(17〜21時)のあいさつ
+  timeEvening: {
+    common: ['こんばんは!夜のライブ、わくわく!', 'こんばんは!今日もおつかれさま!', '夜になると気分が上がるね!', 'こんばんは!ゆっくり楽しもう!'],
+    trait: { jester: ['こんばんは!夜のステージは任せて!'], brave: ['こんばんは!夜の部も全力だ!'], clingy: ['こんばんは〜!夜もいっしょ〜!'], smart: ['こんばんは。夜間の演奏も安定しています'], serious: ['こんばんは、今日もおつかれさまです'], proud: ['こんばんは。夜の舞台は私の出番ね'], worrier: ['こんばんは…夜はちょっと緊張するね…'], stubborn: ['こんばんは。夜こそ本番だ'], easygoing: ['こんばんは〜、まったり遊ぼ〜'] },
+    mood: { great: ['こんばんは!!夜も最高!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 深夜(22〜4時)のあいさつ
+  timeNight: {
+    common: ['こんな夜ふかしに、ありがとう!', '夜ふかしライブ、ひみつっぽいね!', '夜ふかしだね。ほどほどにね!', '静かな夜のライブも、いいね!'],
+    trait: { jester: ['夜ふかしライブ、深夜テンションでいくよ!'], brave: ['夜ふかしか!つき合うぞ!'], clingy: ['こんな時間に呼んでくれてうれしい〜!でも寝てね〜'], smart: ['深夜帯です。睡眠も大切ですよ'], serious: ['夜遅くまでおつかれさまです。無理なさらず'], proud: ['こんな時間まで起きてるなんて、やるじゃない'], worrier: ['こんな時間…明日だいじょうぶ…?'], stubborn: ['夜ふかしか。ほどほどにな'], easygoing: ['ふぁ…もう夜おそいね〜'] },
+    mood: { great: ['夜ふかしライブ!!テンション上がる!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 結果で、自分のビートLvが上がった({lv}=新しいLv)
+  lvUp: {
+    common: ['ビートLvが上がった!', 'レベルアップ!やったー!', 'Lv.{lv}になったよ!', '成長した気がする!Lv.{lv}!'],
+    trait: { jester: ['Lv.{lv}!ボケの腕も上がったかも!'], brave: ['Lv.{lv}!強くなったぞ!'], clingy: ['Lv.{lv}になったよ〜!ほめて〜!'], smart: ['Lv.{lv}に到達しました。想定どおりです'], serious: ['Lv.{lv}になりました!努力が実りました!'], proud: ['Lv.{lv}。当然の結果ね'], worrier: ['Lv.{lv}…ほんとに?うれしい…'], stubborn: ['Lv.{lv}か。まだまだこれからだ'], easygoing: ['Lv.{lv}だって〜、やったね〜'] },
+    mood: { great: ['Lv.{lv}!!最高にうれしい!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 結果で、性格が決まった({trait}=決まった性格)
+  traitNew: {
+    common: ['性格が決まったよ!', 'わたし、{trait}って言われた!', '{trait}…これがわたしの性格かあ', '性格が決まった!これからは{trait}でいくよ!'],
+    trait: { jester: ['性格は{trait}!ウケるでしょ!'], brave: ['{trait}か!悪くない!'], clingy: ['{trait}になったよ〜!どうかな〜?'], smart: ['性格は{trait}と判定されました'], serious: ['{trait}になりました。精進します'], proud: ['{trait}…ふふ、私にぴったりね'], worrier: ['{trait}…ぼくで、いいのかな…'], stubborn: ['{trait}か。受け入れよう'], easygoing: ['{trait}らしいよ〜、のんびりいこ〜'] },
+    mood: { great: ['{trait}!!わたしの性格、気に入った!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // マスモンどうしの張り合い({mate}=いっしょのマスモン)
+  banterRival: {
+    common: ['{mate}には負けないよ!', '{mate}、今日こそ勝負だ!', '{mate}、スコアで勝負しよう!', '{mate}、手加減はなしだよ!'],
+    trait: { jester: ['{mate}、笑いも演奏も負けないよ!'], brave: ['{mate}、勝負だ!全力でこい!'], clingy: ['{mate}、負けないもん!'], smart: ['{mate}の分析、上回ってみせます'], serious: ['{mate}、正々堂々と勝負です'], proud: ['{mate}、私に勝てると思ってるの?'], worrier: ['{mate}、強そう…でも負けない…'], stubborn: ['{mate}、勝つのはこっちだ'], easygoing: ['{mate}〜、ほどほどに勝負しよ〜'] },
+    mood: { great: ['{mate}!!絶対負けないからね!!'], good: [], normal: [], bad: ['…{mate}には負けない'], awful: [] },
+  },
+  // マスモンどうしの和やかなやりとり({mate}=いっしょのマスモン)
+  banterFriend: {
+    common: ['{mate}といると落ち着くな〜', '{mate}、いっしょでうれしい!', '{mate}、仲良くしようね!', '{mate}とならうまくいきそう!'],
+    trait: { jester: ['{mate}、二人で笑いをとろう!'], brave: ['{mate}、いい仲間だな!'], clingy: ['{mate}〜、ずっとなかよしでいてね〜'], smart: ['{mate}との連携は良好です'], serious: ['{mate}さんとご一緒できて光栄です'], proud: ['{mate}、あなたとなら悪くないわ'], worrier: ['{mate}がいてくれて、ほっとする…'], stubborn: ['{mate}か。頼りにしてるぞ'], easygoing: ['{mate}〜、いっしょにのんびりしよ〜'] },
+    mood: { great: ['{mate}!!大好き!!いっしょに叩こう!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // ほかの人の結果で、ミスが多め({who}=その人)
+  hMiss: {
+    common: ['{who}さん、次はきっと大丈夫!', '{who}さん、ミスは気にしない!', '{who}さん、そういう日もあるよ!', '{who}さん、ドンマイ!次いこう!'],
+    trait: { jester: ['{who}さん、ミスもネタにしちゃえ!'], brave: ['{who}さん、次は取り返せる!'], clingy: ['{who}さん、元気出して〜!ぎゅー!'], smart: ['{who}さん、次は集中すれば大丈夫です'], serious: ['{who}さん、次に活かしましょう'], proud: ['{who}さん、私もたまにミスするわよ…たまにね'], worrier: ['{who}さん、ぼくもよくミスするから大丈夫…'], stubborn: ['{who}さん、次がある'], easygoing: ['{who}さん、気にしない気にしない〜'] },
+    mood: { great: ['{who}さん!!次は絶対いける!!'], good: [], normal: [], bad: [], awful: [] },
+  },
 });
 
 // 返事の頭に、人の名前を呼びかける言葉を付けてよい場面(ときどき。「{who}さん、」の部分は性格ごとの呼び方になる)
 const RHYTHM_BUDDY_CONVO_CALLABLE = Object.freeze(['replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'howMe', 'lvAsk',
   'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk', 'cute', 'sorry', 'laugh', 'tired', 'hungry', 'sad', 'happy', 'cheer', 'fullcombo', 'missTalk',
-  'hardTalk', 'easyTalk', 'bye', 'challenge', 'hey', 'songTalk', 'join', 'mvp', 'high', 'mid', 'low']);
+  'hardTalk', 'easyTalk', 'bye', 'challenge', 'hey', 'songTalk', 'join', 'mvp', 'high', 'mid', 'low', 'recall', 'recallNone', 'bondHello', 'hMiss']);
 // 書き換えられない1つの表にする(rhythmBuddyTalkPick が、場面の名前でここも探す)
 const RHYTHM_BUDDY_CONVO_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_CONVO_BASE));
 const RHYTHM_BUDDY_CONVO = typeof rhythmBuddyTalkMerge === 'function'
@@ -38820,6 +38942,12 @@ const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
   result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!'],
 });
+// 呼んだマスモンに話しかける札(2026-10-08・ユーザー指示「マスモンに聞くボタン」)。押すと「{名前}、{text}」を送る。
+// 何を聞くかはマスモンの会話(33-rhythm-buddy-convo.jsx)が読み取れるものだけ。名前は12文字までなので、40文字に収まる
+const RHYTHM_BUDDY_ASK_CHIPS = Object.freeze([
+  { label: '調子は?', text: '調子どう?' }, { label: '得意な曲は?', text: '得意な曲は?' }, { label: 'レベルは?', text: 'レベルいくつ?' },
+  { label: 'さっきの話は?', text: 'さっきの話は?' }, { label: '何点だった?', text: '何点だった?' }, { label: '性格は?', text: 'どんな性格?' },
+]);
 // マスモンを呼ぶ遊びの定型文(2026-10-07・ユーザー指示「マスモンいれてーとかマスモン出せないとか」)。共通の最後に並べる
 const RHYTHM_MULTI_CHAT_BUDDY_STAMPS = Object.freeze(['マスモン入れて!', 'マスモン入れたよ!', 'マスモンうまい!', 'マスモン出せない…', '無料おわった…', '券がない…', '席ゆずるね!']);
 const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
@@ -39092,6 +39220,13 @@ const rhythmMultiOpenSocket = ({ topic, onOpen, onMessage, onClose }) => {
 };
 
 // ---- 部屋の状態(React の外に置く) ----
+// 結果のなかで、ミスが占める割合(判定の数がなければ 0)。マスモンが「ミス多めだったね」と励ますかの目安
+const rhythmMultiMissRate = (res) => {
+  const j = res && Array.isArray(res.j) ? res.j : null;
+  if (!j || j.length < RHYTHM_MULTI_JUDGMENT_IDS.length) return 0;
+  const total = j.reduce((sum, n) => sum + (Number(n) || 0), 0);
+  return total > 0 ? (Number(j[RHYTHM_MULTI_JUDGMENT_IDS.length - 1]) || 0) / total : 0;
+};
 const RHYTHM_MULTI = (() => {
   const listeners = new Set();
   const startListeners = new Set();
@@ -39315,17 +39450,34 @@ const RHYTHM_MULTI = (() => {
     if (!responders.length) return;
     s.talk.replyAt = now;
     const mateOf = (x) => cpuNameOf(s.cpus.find((c) => c.id !== x.id));
+    // 会話の記憶(直近4つの話題・10分のあいだ)。「さっきの話は?」には、ひとつ前の話題を答える
+    const topics = (s.talk.topics || (s.talk.topics = [])).filter((t) => now - t.at < 10 * 60 * 1000);
+    let kind = parsed.kind;
+    let topicVars = {};
+    if (kind === 'recallAsk') {
+      const prev = topics[0];
+      kind = prev ? 'recall' : 'recallNone';
+      topicVars = prev ? { topicKind: prev.kind, topicSongId: prev.songId || '' } : {};
+    } else if (parsed.songId && kind === 'songTalk') topics.unshift({ kind: 'songTalk', songId: parsed.songId, at: now });
+    else if (typeof RHYTHM_BUDDY_CONVO_TOPIC !== 'undefined' && RHYTHM_BUDDY_CONVO_TOPIC[kind] && !(topics[0] && topics[0].kind === kind)) topics.unshift({ kind, songId: '', at: now });
+    s.talk.topics = topics.slice(0, 4);
     // 呼ばれた・聞かれたときの返事は、直前に話していたとしても返す(返事をしない子になってしまうため)
-    responders.forEach((x, i) => cpuSay(x, parsed.kind, { who: msg.name, mate: mateOf(x), songId: parsed.songId || '' }, { extraDelay: i * 1300, skipGap: direct }));
+    responders.forEach((x, i) => cpuSay(x, kind, { who: msg.name, mate: mateOf(x), songId: parsed.songId || '', ...topicVars }, { extraDelay: i * 1300, skipGap: direct }));
     if (aw && parsed.answered) s.talk.awaiting = null;
     const first = responders[0];
-    if (parsed.ask && parsed.awaits && Math.random() < 0.6) {
+    // 1つの発言に質問がふたつ入っていたら、続けてふたつ目にも答える(「調子どう?あと得意な曲は?」)
+    if (parsed.extra) cpuSay(first, parsed.extra, { who: msg.name, mate: mateOf(first), songId: parsed.songId || '' }, { extraDelay: 2200, skipGap: true });
+    // 聞き返す頻度は性格で変わる(甘えん坊は何度も聞き、プライドは聞かない)
+    const askRate = cpuBrain && typeof cpuBrain.style === 'function' ? cpuBrain.style(first.masuId).ask : 0.6;
+    if (!parsed.extra && parsed.ask && parsed.awaits && Math.random() < askRate) {
       cpuSay(first, parsed.ask, { who: msg.name }, { extraDelay: 2600, skipGap: true });
       s.talk.awaiting = { cpuId: first.id, from: msg.id, kind: parsed.awaits, until: now + RHYTHM_MULTI_CPU_AWAIT_MS };
     } else if (responders.length === 1 && s.cpus.length > 1 && now - s.talk.banterAt > RHYTHM_MULTI_CPU_BANTER_GAP_MS && Math.random() < 0.3) {
       const other = s.cpus.find((c) => c.id !== first.id);
       s.talk.banterAt = now;
-      cpuSay(other, 'banter', { mate: cpuNameOf(first) }, { extraDelay: 3400, skipGap: true });
+      // 2体の性格の相性で、張り合ったり和やかに話したりする
+      const pairKind = cpuBrain && typeof cpuBrain.pair === 'function' ? cpuBrain.pair(first.masuId, other.masuId) : 'banter';
+      cpuSay(other, pairKind, { mate: cpuNameOf(first) }, { extraDelay: 3400, skipGap: true });
     }
   };
   // 場面の変わり目で話す(曲が決まった・結果が出た)。1回の場面につき1度だけ
@@ -39380,9 +39532,12 @@ const RHYTHM_MULTI = (() => {
         const target = humans.length ? humans[Math.floor(Math.random() * humans.length)] : null;
         const starter = cpuPickOne();
         if (target && starter && Math.random() < 0.6) {
-          const pickKind = Math.random();
-          if (pickKind < 0.67) {
-            const how = pickKind < 0.33;
+          // 何を話しかけるかは性格で変わる(甘えん坊・のんびりは調子、真面目・賢いは得意な曲、強気な子は呼びかけ)
+          const w = cpuBrain && typeof cpuBrain.style === 'function' ? cpuBrain.style(starter.masuId).starter : [1, 1, 1];
+          const roll = Math.random() * (w[0] + w[1] + w[2]);
+          const how = roll < w[0];
+          const fav = !how && roll < w[0] + w[1];
+          if (how || fav) {
             cpuSay(starter, how ? 'qHow' : 'qFav', { who: target.name });
             s.talk.awaiting = { cpuId: starter.id, from: target.id, kind: how ? 'how' : 'fav', until: Date.now() + RHYTHM_MULTI_CPU_AWAIT_MS };
           } else cpuSay(starter, 'callOut', { who: target.name });
@@ -39403,7 +39558,7 @@ const RHYTHM_MULTI = (() => {
       const humanRows = team.rows.filter((q) => !q.m.cpu && !q.m.gone && q.res);
       humanRows.sort((a, b) => ((b.m.id === team.mvpId ? 2 : 0) + Math.random()) - ((a.m.id === team.mvpId ? 2 : 0) + Math.random()));
       humanRows.slice(0, 2).forEach((q, i) => {
-        cpuSay(s.cpus[i % s.cpus.length], 'reactResult', { who: q.m.name, score: q.res.score, diffId: q.res.diffId, mvp: team.mvpId === q.m.id, fc: q.res.fc || 0, quit: !!q.res.quit }, { extraDelay: 1800 + i * 1500, skipGap: true });
+        cpuSay(s.cpus[i % s.cpus.length], 'reactResult', { who: q.m.name, score: q.res.score, diffId: q.res.diffId, mvp: team.mvpId === q.m.id, fc: q.res.fc || 0, quit: !!q.res.quit, missRate: rhythmMultiMissRate(q.res) }, { extraDelay: 1800 + i * 1500, skipGap: true });
       });
     }
     reactToHumans(r);
@@ -39661,7 +39816,7 @@ const RHYTHM_MULTI = (() => {
         // 自分が呼んだマスモン(CPU)の一覧 [{ id, masuId }]。部屋を出たら消える(呼んだ1回ぶんはそこで使い切り)
         cpus: [],
         // 呼んだマスモンのおしゃべり(最後に話した時刻・場面ごとに1回だけ話すための印)
-        talk: { at: {}, songRound: '', resultRound: '', replyAt: 0, idleAt: now, awaiting: null, banterAt: 0 },
+        talk: { at: {}, songRound: '', resultRound: '', replyAt: 0, idleAt: now, awaiting: null, banterAt: 0, topics: [] },
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
@@ -39816,6 +39971,14 @@ const RHYTHM_MULTI = (() => {
       reportCpuResult(round);
       sendHb(); emit();
     },
+    // 呼んだマスモンが結果で育ったとき(ビートLvが上がった・性格が決まった)、本人が一言祝う
+    noteBuddyGrowth(masuId, growth) {
+      if (!s || !growth) return;
+      const x = s.cpus.find((c) => c.masuId === masuId);
+      if (!x) return;
+      if (growth.levelUp > 0) cpuSay(x, 'lvUp', { who: ownerName() }, { extraDelay: 800, skipGap: true });
+      if (growth.traitNew) cpuSay(x, 'traitNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
+    },
     // 部屋のチャット。自分の発言も部屋からの返りで表示する(=相手にも届いたと分かる)。続けて送るのは受けない
     sendChat(text) {
       if (!s || !socket) return false;
@@ -39884,7 +40047,7 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
 // 部屋の中の状態は React の外(RHYTHM_MULTI)にあるので、画面を行き来しても部屋は切れない。
 // チャット欄(2026-10-03・ユーザー指摘「チャットが使いにくい」で作り直し)。
 // 上に見出しと✕、真ん中に発言の一覧(高さいっぱい)、下に定型文(折り返して全部見せる)と入力欄
-function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null, talkTip = '', onTalkTipClose = null }) {
+function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null, talkTip = '', onTalkTipClose = null, askName = '' }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
   const listRef = React.useRef(null);
@@ -39933,6 +40096,15 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
           );
         })}
       </ul>
+      {askName && (
+        <div data-rhythm-buddy-ask className="mt-2 flex shrink-0 flex-wrap items-center gap-1.5">
+          <b className="shrink-0 text-[10px] font-black text-lime-300">🎵 {askName}に聞く</b>
+          {RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
+            <button key={chip.label} data-rhythm-buddy-ask-chip type="button" onClick={() => send(`${askName}、${chip.text}`)}
+              className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/50 bg-lime-950/70 px-2.5 text-[11px] font-black text-lime-100 transition active:scale-95">{chip.label}</button>
+          ))}
+        </div>
+      )}
       <RhythmMultiStampBar phase={phase} onSend={send} wrap limit={10} className="mt-2 shrink-0" />
       {waitNote && <small data-rhythm-multi-chat-wait className="mt-1 block shrink-0 text-[11px] font-black text-amber-300">続けて送るときは、少し待ってね</small>}
       <form className="mt-2 flex shrink-0 gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -40663,7 +40835,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     <div className="absolute inset-0 z-[80000]">
       <button type="button" aria-label="チャットを閉じる" className="absolute inset-0 bg-slate-950/55" onClick={() => setChatOpen(false)} />
       <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[50%] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
-        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} talkTip={!talkTipSeen && (view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} onTalkTipClose={closeTalkTip} />
+        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} askName={(view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} talkTip={!talkTipSeen && (view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} onTalkTipClose={closeTalkTip} />
       </div>
     </div>
   );
@@ -41385,7 +41557,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
   // 直近に言ったものは避ける(マスモンごとに8つ覚える)
-  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false }) {
+  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false, missRate = 0, topicKind = '', topicSongId = '' }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -41399,9 +41571,15 @@ const rhythmBuddyMakeBrain = (songs) => ({
     if (kind === 'reactResult') {
       const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
-      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? 'hLow' : '';
+      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? (Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow') : '';
       if (!scene) return '';
     }
+    // 時間帯のあいさつ・遊んだ回数に触れるあいさつ(部屋へ来たとき・あいさつされたとき、ときどき)
+    if (kind === 'join' && Math.random() < 0.35) {
+      const hour = new Date().getHours();
+      scene = hour >= 5 && hour < 11 ? 'timeMorning' : hour >= 11 && hour < 17 ? 'timeNoon' : hour >= 17 && hour < 22 ? 'timeEvening' : 'timeNight';
+    }
+    if ((kind === 'join' || kind === 'replyHello') && norm.lives >= 5 && Math.random() < 0.4) scene = kind === 'join' ? 'bondJoin' : 'bondHello';
     const nameOf = (id) => { const song = id ? (songs || []).find((x) => x.songId === id) : null; if (!song) return ''; const full = rhythmSongFullName(song); return full.length <= 14 ? full : String(song.displayName || full); };
     // 会話のセリフに混ぜる、自分の育ち(無いものは入れない。値の無い穴を持つ文は選ばれない)
     const top = rhythmBuddyTopSongs(mon, 1)[0];
@@ -41416,6 +41594,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
       trait: traitDef ? traitDef.label : '',
       plays: norm.lives > 0 ? String(norm.lives) : '',
       days: norm.streakDays > 0 ? String(norm.streakDays) : '',
+      topic: topicSongId ? nameOf(topicSongId) : (RHYTHM_BUDDY_CONVO_TOPIC[topicKind] || ''),
       score: lastScore > 0 ? `${Math.round(lastScore / 10000)}万点` : '',
     };
     const key = String(masuId);
@@ -41428,8 +41607,24 @@ const rhythmBuddyMakeBrain = (songs) => ({
       const call = `${vars.who}${vars.hon}、`;
       if ((call + text).length <= RHYTHM_BUDDY_TALK_MAX) text = call + text;
     }
+    // 性格ごとの話しぶり: ときどき文の終わりに絵文字を添える(ひょうきん=😆 甘えん坊=💕 など)
+    const style = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    if (text && style && style.emoji.length && Math.random() < 0.25 && (text + '😆').length <= RHYTHM_BUDDY_TALK_MAX) text += style.emoji[Math.floor(Math.random() * style.emoji.length)];
     if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
     return text;
+  },
+  // 性格ごとの話しぶり(聞き返す頻度・自分から話しかけるときの好み)
+  style(masuId) {
+    const norm = rhythmBuddyNormalizeMon(RHYTHM_BUDDY_STORE.get().mons[masuId]);
+    const st = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    return st ? { ask: st.ask, starter: st.starter } : { ask: 0.6, starter: [1, 1, 1] };
+  },
+  // 2体のやりとりの種類(banter / banterRival / banterFriend)。性格が決まっていなければふつうの banter
+  pair(masuIdA, masuIdB) {
+    const mons = RHYTHM_BUDDY_STORE.get().mons;
+    const a = rhythmBuddyNormalizeMon(mons[masuIdA]).trait;
+    const b = rhythmBuddyNormalizeMon(mons[masuIdB]).trait;
+    return a && b ? rhythmBuddyPairKind(a, b) : 'banter';
   },
   // 人の発言を読む(意図・曲名・呼ばれたマスモン)。names は呼んでいるマスモンの名前の並び。awaiting は聞き返して待っている返事の種類
   understand({ text, names = [], awaiting = '' }) {
@@ -42034,7 +42229,7 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
       if (!r.gain) return null;
       outcome = r;
       return { ...st, mons: { ...st.mons, [masu.id]: r.mon } };
-    }).then(() => { if (alive && outcome) setShown(outcome); });
+    }).then(() => { if (alive && outcome) { setShown(outcome); if (typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) RHYTHM_MULTI.noteBuddyGrowth(masu.id, outcome); } });
     return () => { alive = false; };
   }, [masu && masu.id, round]);
   if (!shown || !masu) return null;

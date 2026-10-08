@@ -582,6 +582,46 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   check('呼びかけの無い発言には1体だけが返し、もう1体が話に加わる(マスモンどうし)', t.filter((x) => x.kind === 'replyNice').length === 1 && t.some((x) => x.kind === 'banter' && x.mate), JSON.stringify(t.map((x) => `${x.masuId}:${x.kind}:${x.mate || ''}`)));
   a.M.leave();
 }
+// B-11c 会話の記憶(さっきの話)・質問がふたつ・Lv.UPのお祝い
+{
+  const a = makeClient('A', { talk: true });
+  join(a, 'CONV4', 'free');
+  clock.advance(3000);
+  a.M.summon(MATE);
+  clock.advance(5000);
+  const say = (text, ms = 6000) => { a.M.sendChat(text); clock.advance(ms); };
+  let n = a.talks.length;
+  say('モッチー、さっきの話は?');
+  check('まだ何も話していないとき「さっきの話」には、話していないと答える', a.talks.slice(n).some((t) => t.kind === 'recallNone'), JSON.stringify(a.talks.slice(n).map((t) => t.kind)));
+  say('モッチー、調子どう?');
+  say('元気だよ');
+  n = a.talks.length;
+  say('モッチー、さっきの話は?');
+  const r = a.talks.slice(n).find((t) => t.kind === 'recall');
+  check('「さっきの話は?」には、ひとつ前の話題(調子)を覚えていて答える', !!r && r.topicKind === 'howMe', JSON.stringify(a.talks.slice(n).map((t) => `${t.kind}:${t.topicKind}`)));
+  say('テスト曲Aが好き');
+  n = a.talks.length;
+  say('モッチー、さっきの話は?');
+  const r2 = a.talks.slice(n).find((t) => t.kind === 'recall');
+  check('曲の話をしたあとは、その曲を覚えている', !!r2 && r2.topicSongId === 'songA', JSON.stringify(a.talks.slice(n).map((t) => `${t.kind}:${t.topicSongId}`)));
+  n = a.talks.length;
+  say('モッチー、レベルいくつ?あと何点だった?');
+  const t3 = a.talks.slice(n).map((t) => t.kind);
+  check('質問がふたつ入った発言には、続けて両方に答える(レベル+スコア)', t3.includes('lvAsk') && t3.includes('scoreAsk') && !t3.includes('qHow'), JSON.stringify(t3));
+  n = a.talks.length;
+  say('アリガトウ');
+  check('カタカナの「アリガトウ」にも返す', a.talks.slice(n).some((t) => t.kind === 'replyThanks'));
+  n = a.talks.length;
+  a.M.noteBuddyGrowth('masu_1', { levelUp: 1, traitNew: 'brave' });
+  clock.advance(8000);
+  const g = a.talks.slice(n).map((t) => t.kind);
+  check('ビートLvが上がった・性格が決まったとき、本人がお祝いを言う', g.includes('lvUp') && g.includes('traitNew'), JSON.stringify(g));
+  n = a.talks.length;
+  a.M.noteBuddyGrowth('masu_zzz', { levelUp: 1 });
+  clock.advance(5000);
+  check('呼んでいないマスモンの育ちには、何も言わない', a.talks.length === n);
+  a.M.leave();
+}
 // B-13 部屋のほかの人への反応(入室・退室・選曲・結果)と、名前での呼びかけ
 {
   const a = makeClient('A', { talk: true });
