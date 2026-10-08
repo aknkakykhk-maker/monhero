@@ -128,6 +128,8 @@
 - 難易度ごとの最高スコアは、育ちの保存(`mh_rhythm_buddy_v1`)へ項目 `best` を足して持つ(`{ EASY:{score,songId}… }`)。
   無い人は、残っている最近のスコア(30件)から拾い直す。ここより前の最高は拾えない。
 - 改名で同じ個体が2行になったら、ブリーダーID(無ければ名前)が同じものを新しい方だけ見せる。
+- 行を押すと詳細(`RhythmBuddyRankDetail`・2026-10-08): 絵(染色つき)・ビートLv・経験値・ライブ回数・難易度ごとの最高スコア(曲名つき)。上の「フレンドだけ」(`data-rhythm-buddy-ranking-friends`)で絞り込める。`sbFetchRhythmBuddyRanks` は全件を返し、表示だけ `RHYTHM_BUDDY_RANK_SHOW_LIMIT`(50)で切る。
+- 一度きりの案内: ランキングの見かた `mh_rhythm_buddy_rank_seen_v1`(`data-rhythm-buddy-rank-intro`)、おしゃべりの使い方 `mh_rhythm_buddy_talk_seen_v1`(`data-rhythm-buddy-talk-tip`)。
 - 検査: `node tools/mode/rhythm-buddy-rank-check.js`
 
 ### 5.2 モードえらびの並び(2026-10-07)

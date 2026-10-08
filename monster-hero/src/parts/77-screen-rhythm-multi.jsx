@@ -1130,7 +1130,7 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
 // 部屋の中の状態は React の外(RHYTHM_MULTI)にあるので、画面を行き来しても部屋は切れない。
 // チャット欄(2026-10-03・ユーザー指摘「チャットが使いにくい」で作り直し)。
 // 上に見出しと✕、真ん中に発言の一覧(高さいっぱい)、下に定型文(折り返して全部見せる)と入力欄
-function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null }) {
+function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null, talkTip = '', onTalkTipClose = null }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
   const listRef = React.useRef(null);
@@ -1153,6 +1153,13 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
         <h3 className="min-w-0 flex-1 text-sm font-black text-cyan-100">💬 チャット<small className="ml-1.5 text-[10px] font-bold text-slate-400">ルームの{count}件</small></h3>
         {onClose && <button data-rhythm-multi-chat-close type="button" aria-label="チャットを閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200">✕</button>}
       </div>
+      {talkTip && (
+        <div data-rhythm-buddy-talk-tip className="mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2">
+          <span aria-hidden="true" className="text-lg leading-none">🎵</span>
+          <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">呼んだマスモンに話しかけてみよう。「{talkTip}、調子どう?」のように名前を付けて聞くと、そのマスモンの本当の調子で答えます。「みんな」と呼ぶと全員が返します</p>
+          {onTalkTipClose && <button type="button" aria-label="案内を閉じる" onClick={onTalkTipClose} className="min-h-[36px] min-w-[36px] shrink-0 rounded-lg bg-slate-800 text-sm font-black">✕</button>}
+        </div>
+      )}
       {/* LINE のように、自分の発言は右、ほかの人は左(顔アイコンつき) */}
       <ul ref={listRef} data-rhythm-multi-chat-list className="min-h-[6rem] flex-1 space-y-1.5 overflow-y-auto rounded-xl bg-slate-950/70 p-2 text-[15px] font-bold">
         {count === 0 && <li className="text-[12px] text-slate-500">まだ発言はありません。下の定型文をタップすると、すぐに送れます</li>}
@@ -1559,6 +1566,24 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     void storeSet(RHYTHM_BUDDY_SEEN_KEY, true).catch(() => {});
     if (open && onOpenMasuBeat) onOpenMasuBeat();
   };
+  // 「マスモンランキングができた」の一度きりの案内と、「マスモンに話しかけてみよう」の一度きりの案内(新しい保存キー)。
+  // 読めなければ出さない。先に「マスモンを呼べるようになった」案内を出し、それを閉じてから出す(2枚が重ならない)
+  const [rankIntroSeen, setRankIntroSeen] = React.useState(true);
+  const [talkTipSeen, setTalkTipSeen] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try { const seen = await storeGet(RHYTHM_BUDDY_RANK_SEEN_KEY, false); if (alive) setRankIntroSeen(seen === true); } catch (_) { /* 出さない */ }
+      try { const seen = await storeGet(RHYTHM_BUDDY_TALK_SEEN_KEY, false); if (alive) setTalkTipSeen(seen === true); } catch (_) { /* 出さない */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const closeRankIntro = (open) => {
+    setRankIntroSeen(true);
+    void storeSet(RHYTHM_BUDDY_RANK_SEEN_KEY, true).catch(() => {});
+    if (open) openRankHub('buddy');
+  };
+  const closeTalkTip = () => { setTalkTipSeen(true); void storeSet(RHYTHM_BUDDY_TALK_SEEN_KEY, true).catch(() => {}); };
   // 呼んだときに何で払ったか(人が来て席をゆずったとき、同じものを返す)
   const buddyPaidRef = React.useRef({});
   const refundBuddy = (masuId) => {
@@ -1848,10 +1873,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   // モードえらびの「ランキング」。全国ランキング(いつもの画面)とマスモンランキングを切り替える。
   // 全国のほうは曲ごとの順位なので、見る曲は部屋の中のときと同じ決め方
-  const openRankHub = () => {
+  const openRankHub = (tab) => {
     const song = songById(rankingSongId);
     if (rankingSupport && song) rankingSupport.open(song);
-    setRankHubTab('national');
+    setRankHubTab(tab === 'buddy' ? 'buddy' : 'national');
     setRankHubOpen(true);
   };
   const rankingButton = (extra = '') => rankingSupport && (
@@ -1884,7 +1909,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     <div className="absolute inset-0 z-[80000]">
       <button type="button" aria-label="チャットを閉じる" className="absolute inset-0 bg-slate-950/55" onClick={() => setChatOpen(false)} />
       <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[50%] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
-        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} />
+        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} talkTip={!talkTipSeen && (view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} onTalkTipClose={closeTalkTip} />
       </div>
     </div>
   );
@@ -1998,7 +2023,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">プライベート</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">合言葉で友だちと遊ぶ</small></span>
               </button>}
               {/* ランキング: 全国ランキングとマスモンランキング */}
-              {ms.multi && <button data-rhythm-mode-ranking type="button" onClick={openRankHub}
+              {ms.multi && <button data-rhythm-mode-ranking type="button" onClick={() => openRankHub('national')}
                 className="mhms-card rank mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-lime-200 via-emerald-300 to-teal-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.24s' }}>
                 <span aria-hidden="true" className="mhms-mark">RANKING</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🏆</span>
@@ -2012,6 +2037,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります</p>
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
                 <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
+              </section>
+            )}
+            {ms.multi && buddyIntroSeen && !rankIntroSeen && (
+              <section data-rhythm-buddy-rank-intro className="mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5">
+                <span aria-hidden="true" className="text-2xl leading-none">🏆</span>
+                <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">「ランキング」に「マスモンランキング」ができました。育てたマスモンのビートLvと最高スコアの順位が見られます</p>
+                <button type="button" onClick={() => closeRankIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">見てみる</button>
+                <button type="button" aria-label="閉じる" onClick={() => closeRankIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </section>
             )}
             {/* マスモンを呼べる回数。1日の無料ぶんの残りと、セッション券の枚数(部屋の「マスモンを呼ぶ」で使う) */}
@@ -2079,7 +2112,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div className="flex min-h-0 flex-1 flex-col">
               {rankHubTab === 'national'
                 ? (rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null)
-                : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} />}
+                : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
               {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (

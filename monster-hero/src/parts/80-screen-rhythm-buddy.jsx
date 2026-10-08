@@ -763,12 +763,55 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
 // 中身は rhythm_buddy_ranks(39-rhythm-buddy-rank-api.jsx)。テーブルがまだ無いときは「準備中」と出す。
 const RHYTHM_BUDDY_RANK_CACHE_MS = 20000;
 const rhythmBuddyRankCache = new Map();
-function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onClose = null }) {
+// 行を押すと開く、そのマスモンの詳しい画面(ランキングの行に入っている中身だけで出す。通信は増やさない)
+function RhythmBuddyRankDetail({ entry, onClose, renderBreederIcon = null, songName }) {
+  const base = ALL_PLAYER_MONSTERS[entry.monsterId];
+  return (
+    <div data-rhythm-buddy-rank-detail className="absolute inset-0 z-20 flex flex-col gap-2 overflow-y-auto bg-slate-950 p-3">
+      <div className="flex items-center gap-2">
+        <button data-rhythm-buddy-rank-detail-back type="button" aria-label="一覧へ戻る" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>
+        <b className="min-w-0 flex-1 truncate text-base font-black text-lime-100">{entry.monName}</b>
+      </div>
+      <div className="flex flex-col items-center gap-3 landscape:flex-row landscape:items-start">
+        <span className="relative block h-40 w-40 shrink-0 overflow-hidden rounded-2xl border border-lime-300/40 bg-slate-900 landscape:h-36 landscape:w-36">
+          <DyedMonsterImage baseId={entry.monsterId} src={masuDisplayImageUrl(base)} alt="" masuColors={entry.colors} draggable={false} className="h-full w-full object-contain" />
+        </span>
+        <div className="min-w-0 flex-1 space-y-2 self-stretch">
+          <div className="flex items-center gap-2">
+            {renderBreederIcon ? renderBreederIcon({ userName: entry.userName, icon: entry.icon, profileFrame: entry.profileFrame, breederId: entry.breederId }) : null}
+            <span className="min-w-0 flex-1 leading-tight"><small className="block text-[10px] font-bold text-slate-400">ブリーダー</small><b className="block truncate text-sm font-black text-white">{entry.userName}</b></span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            {[['ビートLv', `Lv.${entry.beatLevel}`], ['経験値', entry.beatExp.toLocaleString()], ['ライブ', `${entry.lives}回`]].map(([k, v]) => (
+              <div key={k} className="rounded-xl border border-white/10 bg-slate-900 px-1 py-1.5"><small className="block text-[9px] font-bold text-slate-400">{k}</small><b className="block text-sm font-black text-lime-200">{v}</b></div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <section data-rhythm-buddy-rank-detail-scores className="rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2">
+        <b className="mb-1 block text-[12px] font-black text-lime-100">難易度ごとの最高スコア</b>
+        <ul className="space-y-1">
+          {RHYTHM_BUDDY_DIFF_IDS.map((id) => (
+            <li key={id} className="flex items-center gap-2 text-[11px] font-bold">
+              <span className="w-16 shrink-0 text-slate-400">{rhythmBuddyDiffShort[id]}</span>
+              {entry.scores[id]
+                ? <><b className="shrink-0 font-black text-lime-200">{entry.scores[id].toLocaleString()}点</b><span className="min-w-0 flex-1 truncate text-slate-400">{songName(entry.songs[id]) || ''}</span></>
+                : <span className="text-slate-600">まだ記録がありません</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onClose = null, friendIds = null }) {
   const [kind, setKind] = React.useState('level');
   const [diffId, setDiffId] = React.useState('MASTER');
   const [state, setState] = React.useState({ status: 'loading', entries: [] });
   const [selfId, setSelfId] = React.useState('');
   const [retry, setRetry] = React.useState(0);
+  const [detail, setDetail] = React.useState(null);
+  const [friendOnly, setFriendOnly] = React.useState(false);
   React.useEffect(() => { let alive = true; ensureBreederId().then((id) => { if (alive && typeof id === 'string') setSelfId(id); }).catch(() => {}); return () => { alive = false; }; }, []);
   const cacheKey = kind === 'score' ? `score:${diffId}` : 'level';
   React.useEffect(() => {
@@ -786,10 +829,13 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
     return () => { alive = false; };
   }, [cacheKey, retry]);
   const songName = (id) => { const song = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).find((x) => x.songId === id); return song ? rhythmSongFullName(song) : ''; };
+  // 上位50。フレンドだけのときは、取ってきた中からフレンドと自分のマスモンに絞ってから50に切る
+  const friendSet = new Set(Array.isArray(friendIds) ? friendIds : []);
+  const shown = (friendOnly ? state.entries.filter((e) => (e.breederId && (friendSet.has(e.breederId) || e.breederId === selfId)) || (!e.breederId && e.userName === selfName)) : state.entries).slice(0, RHYTHM_BUDDY_RANK_SHOW_LIMIT);
   const chip = (on) => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
   const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1));
   return (
-    <div data-rhythm-buddy-ranking className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+    <div data-rhythm-buddy-ranking className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">
       <div className="flex items-center gap-2">
         {onClose && <button data-rhythm-buddy-ranking-back type="button" aria-label="戻る" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>}
         <div className="min-w-0 flex-1 leading-tight">
@@ -801,6 +847,11 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
         <button type="button" data-rhythm-buddy-ranking-tab="level" onClick={() => setKind('level')} className={chip(kind === 'level')}>ビートLv</button>
         <button type="button" data-rhythm-buddy-ranking-tab="score" onClick={() => setKind('score')} className={chip(kind === 'score')}>最高スコア</button>
       </div>
+      {Array.isArray(friendIds) && friendIds.length > 0 && (
+        <div className="flex gap-1.5">
+          <button type="button" data-rhythm-buddy-ranking-friends aria-pressed={friendOnly} onClick={() => setFriendOnly((v) => !v)} className={chip(friendOnly)}>フレンドだけ</button>
+        </div>
+      )}
       {kind === 'score' && (
         <div data-rhythm-buddy-ranking-diffs className="flex gap-1.5 overflow-x-auto">
           {RHYTHM_BUDDY_DIFF_IDS.map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
@@ -815,15 +866,17 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
             <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
           </div>
         )}
-        {state.status === 'ready' && state.entries.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう</p>}
-        {state.status === 'ready' && state.entries.map((e, i) => {
+        {state.status === 'ready' && shown.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">{friendOnly ? 'フレンドのマスモンは、まだ載っていません' : 'まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう'}</p>}
+        {state.status === 'ready' && shown.map((e, i) => {
           const base = ALL_PLAYER_MONSTERS[e.monsterId];
           const mine = (selfId && e.breederId === selfId) || (!e.breederId && !!selfName && e.userName === selfName);
           const score = e.scores[diffId] || 0;
           const sub = kind === 'score' ? (songName(e.songs[diffId]) || '') : `${e.lives}ライブ`;
           return (
             <article key={`${e.breederId || e.userName}-${e.individualId}`} data-rhythm-buddy-ranking-row={i + 1} data-mine={mine ? '1' : undefined}
-              className={`grid grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`}>
+              role="button" tabIndex={0} aria-label={`${e.monName}の詳しい画面を開く`} onClick={() => setDetail(e)}
+              onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setDetail(e); } }}
+              className={`grid cursor-pointer grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 active:scale-[.99] ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`}>
               <b className="text-center text-sm font-black text-slate-200">{medal(i)}</b>
               {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true" className="text-lg">👤</span>}
               <span className="relative block h-11 w-11 overflow-hidden rounded-lg bg-slate-800">
@@ -841,6 +894,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
           );
         })}
       </div>
+      {detail && <RhythmBuddyRankDetail entry={detail} onClose={() => setDetail(null)} renderBreederIcon={renderBreederIcon} songName={songName} />}
     </div>
   );
 }
