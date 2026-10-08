@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e0cc7943f5b27d99
+// source-sha256: b66cafa8ba11a43e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 16:23";
+const BUILD_DATE = "2026-10-08 16:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -66062,9 +66062,41 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
 .mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
-.mhbs-cardbody{position:relative}
-.mhbs-mark.light{color:rgba(255,255,255,.18);font-size:22px;top:auto;bottom:-3px;right:6px}
-.mhbs-mark{position:absolute;top:2px;right:10px;font-size:30px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.1);white-space:nowrap;pointer-events:none}
+.mhbs-tabs{display:grid;gap:3px;padding:3px;border-radius:14px;background:rgba(8,5,24,.6);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.mhbs-tab{min-height:36px;border-radius:11px;font-weight:900;color:rgba(203,213,225,.75);transition:background .2s,color .2s}
+.mhbs-tab.on{color:#fff;background:linear-gradient(135deg,rgba(232,121,249,.55),rgba(139,92,246,.55));box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 4px 14px -4px rgba(217,70,239,.7)}
+.mhbs-tab.on.x{background:linear-gradient(135deg,rgba(244,63,94,.6),rgba(217,70,239,.6))}
+.mhbt-tile{position:relative;overflow:hidden;color:#0f172a;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px));background:linear-gradient(150deg,color-mix(in srgb,var(--acc) 22%,white),color-mix(in srgb,var(--acc) 55%,white) 38%,var(--acc) 78%,color-mix(in srgb,var(--acc) 78%,black));box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+.mhbt-tile::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:38%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:mhmsShine 4.6s ease-in-out infinite;pointer-events:none}
+.mhbt-tile:not(.on)::after{display:none}
+.mhbt-tile.dim{filter:grayscale(1)}
+.mhbt-mark{position:absolute;right:-10px;top:112px;font-size:58px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.03em;color:rgba(255,255,255,.2);white-space:nowrap;transform:rotate(-6deg);pointer-events:none}
+.mhbt-eyebrow{position:relative;font-size:9px;font-weight:900;letter-spacing:.3em;color:rgba(15,23,42,.58)}
+.mhbt-name{position:relative;margin-top:2px;font-weight:900;font-style:italic;line-height:1.12;letter-spacing:.01em}
+.mhbt-sub{position:relative;margin-top:4px;min-height:28px;font-size:10.5px;font-weight:800;line-height:1.35;color:rgba(15,23,42,.72)}
+.mhbt-score{position:relative;margin-top:8px}
+.mhbt-score b{display:block;font-size:30px;line-height:1;font-style:italic;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhbt-score small{display:block;margin-top:3px;font-size:9.5px;font-weight:900;color:rgba(15,23,42,.66);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhbt-feats{position:relative;display:grid;gap:4px;margin-top:9px}
+.mhbt-feats li{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:9px;font-size:10.5px;font-weight:900;background:rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.mhbt-cells{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:8px}
+.mhbt-cells>div{border-radius:9px;padding:3px 0;text-align:center;font-size:8.5px;font-weight:900;color:rgba(15,23,42,.62);background:rgba(255,255,255,.38);white-space:nowrap}
+.mhbt-cells b{display:block;font-size:13px;color:#0f172a}
+.mhbt-note{position:relative;margin-top:5px;display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:9px;font-weight:900;color:rgba(15,23,42,.72);white-space:nowrap;overflow:hidden}
+.mhbt-reward{position:relative;margin-top:6px;border-radius:10px;padding:5px 9px;background:rgba(15,23,42,.82);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.mhbt-ic{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:46px;min-height:50px;border-radius:12px;background:rgba(255,255,255,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.6);color:#0f172a;line-height:1}
+.mhbt-ic b{font-size:17px}.mhbt-ic small{margin-top:3px;font-size:8.5px;font-weight:900}
+.mhbt-ic:active,.mhbt-go:active{transform:scale(.96)}
+.mhbt-go{position:relative;min-height:50px;padding:0 6px;white-space:nowrap;background:#0f172a;color:#fff;font-size:15px;font-style:italic;font-weight:900;letter-spacing:.02em;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.mhbt-go::after{content:" ▶";font-size:11px;font-style:normal}
+.mhbt-go{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mhbt-go.sm{font-size:12px;letter-spacing:0}
+.mhbt-pb{flex:1 1 0;min-width:0;min-height:36px;border-radius:10px;font-size:11px;font-weight:900;white-space:nowrap;color:#0f172a;background:rgba(255,255,255,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+.mhbt-pb:active{transform:scale(.96)}
+.mhbs-hint{text-align:center;font-size:8px;font-weight:900;letter-spacing:.24em;color:rgba(240,171,252,.7)}
+.mhbs-arrow{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;color:#fff;background:rgba(14,9,38,.78);border:1px solid rgba(255,255,255,.18);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.mhbs-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.22);transition:all .2s}
+.mhbs-dot.on{width:16px;background:linear-gradient(90deg,#f0abfc,#a78bfa)}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
@@ -91958,7 +91990,7 @@ function MonsterHeroGame() {
       }), React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
-        className: `grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`
+        className: `mhbs-tabs grid-cols-4 mb-2 shrink-0${battleTutorialSpotClass('modeRankTabs')}`
       }, [['mode', 'モード選択'], ['breeder', 'ブリーダーLv'], ['bond', '絆Lv'], ['power', '総合力']].map(([key, label]) => React.createElement("button", {
         key: key,
         disabled: !!battleTutorial,
@@ -91971,21 +92003,23 @@ function MonsterHeroGame() {
           loadRankings(null, true, false, key === 'power' ? 'bond' : key);
         },
         "aria-label": key === 'mode' ? 'モード選択' : `${label}ランキング`,
-        className: `min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab === key ? 'bg-indigo-600 text-white' : 'text-slate-400'}`
+        className: `mhbs-tab text-[9px] leading-tight active:scale-95 disabled:opacity-40 ${modeSelectTab === key ? 'on' : ''}`
       }, key !== 'mode' && React.createElement("span", {
         "aria-hidden": "true",
         className: "mr-0.5"
       }, "🏆"), label))), modeSelectTab === 'mode' && React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
-        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
+        className: "mhbs-hint mt-auto mb-1 shrink-0"
       }, "左右にスワイプしてモードを選択"), React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('modeCards')}`
       }, React.createElement("button", {
         "aria-label": "前のモード",
         onClick: () => stepMode(-1),
-        className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"
-      }, React.createElement(ChevronLeft, null)), React.createElement("div", {
+        className: "mhbs-arrow absolute left-0 top-[42%] z-20"
+      }, React.createElement(ChevronLeft, {
+        size: 18
+      })), React.createElement("div", {
         ref: modeCarouselRef,
         onScroll: () => {
           const index = centeredLoopIndex();
@@ -91994,7 +92028,7 @@ function MonsterHeroGame() {
           if (modeLoopTimerRef.current) clearTimeout(modeLoopTimerRef.current);
           modeLoopTimerRef.current = setTimeout(recenterModeLoop, 180);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -92019,65 +92053,60 @@ function MonsterHeroGame() {
         return React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           "data-battle-mode": m.id,
-          className: `mhbs-cardbody snap-center shrink-0 w-[82%] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `mhbt-tile snap-center shrink-0 w-[82%] h-[366px] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'}`,
           style: {
-            borderColor: active ? m.color : 'rgba(255,255,255,.12)',
-            background: `linear-gradient(160deg,color-mix(in srgb,${m.color} 30%,#1d0d45),#150b38 55%,#0a1030)`,
-            boxShadow: active ? `0 0 30px ${m.color}55` : 'none',
-            clipPath: 'polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))'
-          }
-        }, React.createElement("div", {
-          className: "relative -mx-3 -mt-2.5 mb-1 px-3 pt-2.5 pb-1 overflow-hidden",
-          style: {
-            background: `linear-gradient(135deg,color-mix(in srgb,${m.color} 45%,white),${m.color} 60%,color-mix(in srgb,${m.color} 65%,black))`
+            '--acc': m.color
           }
         }, React.createElement("span", {
           "aria-hidden": "true",
-          className: "mhbs-mark light"
+          className: "mhbt-mark"
         }, String(m.id).replace(/([A-Z])/g, ' $1').toUpperCase()), React.createElement("div", {
-          className: "text-center text-[7px] tracking-[.2em] text-slate-900/70 font-black"
+          className: "mhbt-eyebrow"
         }, "BATTLE MODE"), React.createElement("h3", {
-          className: `text-center font-black italic leading-tight ${(m.cardLabel || m.label).length >= 10 ? 'text-[15px]' : 'text-lg'}`,
-          style: {
-            color: '#0f172a'
-          }
-        }, m.emoji, " ", m.cardLabel || m.label), React.createElement("p", {
-          className: "text-center text-[9px] font-bold text-slate-900/80 leading-snug mt-0.5 min-h-[26px]"
-        }, m.tagline)), modeSoon ? React.createElement("div", {
-          className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
-        }, React.createElement("small", {
-          className: "block text-[8px] text-slate-400 font-black"
-        }, "準備中"), React.createElement("b", {
-          className: "block text-right text-base leading-tight text-slate-300"
-        }, "遊べません"), React.createElement("span", {
-          className: "block text-right text-[9px] text-amber-300"
-        }, "遊べるようになったらお知らせします")) : React.createElement("div", {
-          className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
-        }, React.createElement("small", {
-          className: "block text-[8px] text-slate-400 font-black"
-        }, isSpecies ? speciesLocked ? '解放条件' : 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), React.createElement("b", {
-          className: "block text-right text-base leading-tight",
-          style: {
-            color: m.color
-          }
-        }, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("span", {
-          className: "block text-right text-[9px] text-amber-300"
-        }, isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : modeHasRanking(m.id) ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("ul", {
-          className: "mt-1.5 space-y-0.5"
-        }, m.highlights.map(([icon, text]) => React.createElement("li", {
-          key: text,
-          className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black text-slate-200"
+          className: `mhbt-name truncate ${(m.cardLabel || m.label).length >= 10 ? 'text-[16px]' : (m.cardLabel || m.label).length >= 7 ? 'text-[19px]' : 'text-[23px]'}`
         }, React.createElement("span", {
-          className: "shrink-0"
+          "aria-hidden": "true",
+          className: "mr-1 not-italic"
+        }, m.emoji), m.cardLabel || m.label), React.createElement("p", {
+          className: "mhbt-sub"
+        }, m.tagline), modeSoon ? React.createElement("div", {
+          className: "mhbt-score"
+        }, React.createElement("b", null, "遊べません"), React.createElement("small", null, "準備中 ・ 遊べるようになったらお知らせします")) : React.createElement("div", {
+          className: "mhbt-score"
+        }, React.createElement("b", null, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, isSpecies ? speciesLocked ? '解放条件' : 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`, " ・ ", isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : modeHasRanking(m.id) ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("ul", {
+          className: "mhbt-feats"
+        }, m.highlights.map(([icon, text]) => React.createElement("li", {
+          key: text
+        }, React.createElement("span", {
+          "aria-hidden": "true"
         }, icon), React.createElement("span", {
           className: "truncate"
         }, text)))), React.createElement("div", {
-          className: "grid gap-1.5 mt-auto pt-1.5"
+          className: "mt-auto grid grid-cols-[minmax(0,1fr)] gap-1.5 pt-2"
+        }, React.createElement("div", {
+          className: "flex min-w-0 gap-1.5"
         }, React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => setModeInfoId(m.id),
-          className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
-        }, "このモードの説明"), React.createElement("button", {
+          "aria-label": "このモードの説明",
+          className: "mhbt-pb disabled:opacity-40"
+        }, "？ 説明"), isExtreme && React.createElement("button", {
+          disabled: extremeLocked || !!battleTutorial,
+          onClick: () => openModeScoreRanking(m.id, EXTREME_SETTING.id, 'BATTLE_MODE_SELECT'),
+          className: "mhbt-pb disabled:opacity-40"
+        }, "🏆 ランキング"), isSpecies && !modeSoon && React.createElement("button", {
+          "data-species-record-link": true,
+          disabled: speciesLocked || !!battleTutorial,
+          onClick: () => openSpeciesChallengeRecords('BATTLE_MODE_SELECT', {
+            mode: m.id
+          }),
+          className: "mhbt-pb disabled:opacity-40"
+        }, "🏆 記録"), ranked && React.createElement("button", {
+          "data-mode-ranking-link": m.id,
+          disabled: !!battleTutorial,
+          onClick: () => openModeScoreRanking(m.id, safeDifficulty, 'BATTLE_MODE_SELECT'),
+          className: "mhbt-pb disabled:opacity-40"
+        }, "🏆 ランキング")), React.createElement("button", {
           "data-battle-mode-soon": modeSoon ? '1' : undefined,
           disabled: extremeLocked || speciesLocked || modeSoon || !!battleTutorial && m.id !== battleTutorialMode,
           onClick: () => {
@@ -92092,54 +92121,23 @@ function MonsterHeroGame() {
             }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
-          className: `mhms-card min-h-[44px] font-black text-sm disabled:opacity-30${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`,
-          style: {
-            backgroundColor: m.color,
-            color: '#0f172a'
-          }
-        }, modeSoon ? '準備中' : extremeLocked || speciesLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ'), isExtreme && React.createElement("button", {
-          disabled: extremeLocked || !!battleTutorial,
-          onClick: () => openModeScoreRanking(m.id, EXTREME_SETTING.id, 'BATTLE_MODE_SELECT'),
-          className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
-        }, React.createElement("span", {
-          className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 このモードのランキング"), React.createElement(ChevronRight, {
-          size: 14
-        })), isSpecies && !modeSoon && React.createElement("button", {
-          "data-species-record-link": true,
-          disabled: speciesLocked || !!battleTutorial,
-          onClick: () => openSpeciesChallengeRecords('BATTLE_MODE_SELECT', {
-            mode: m.id
-          }),
-          className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
-        }, React.createElement("span", {
-          className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 このモードのランキング"), React.createElement(ChevronRight, {
-          size: 14
-        })), ranked && React.createElement("button", {
-          "data-mode-ranking-link": m.id,
-          disabled: !!battleTutorial,
-          onClick: () => openModeScoreRanking(m.id, safeDifficulty, 'BATTLE_MODE_SELECT'),
-          className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
-        }, React.createElement("span", {
-          className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 このモードのランキング"), React.createElement(ChevronRight, {
-          size: 16,
-          className: "shrink-0"
-        }))));
+          className: `mhbt-go w-full disabled:opacity-40${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`
+        }, modeSoon ? '準備中' : extremeLocked || speciesLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ')));
       })), React.createElement("button", {
         "aria-label": "次のモード",
         onClick: () => stepMode(1),
-        className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70"
-      }, React.createElement(ChevronRight, null))), React.createElement("div", {
-        className: "flex justify-center gap-1 py-0.5"
+        className: "mhbs-arrow absolute right-0 top-[42%] z-20"
+      }, React.createElement(ChevronRight, {
+        size: 18
+      }))), React.createElement("div", {
+        className: "flex justify-center items-center gap-1 py-0.5"
       }, modes.map((m, i) => React.createElement("button", {
         key: m.id,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => scrollToLoopIndex(modes.length + i),
-        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `mhbs-dot relative mx-1 mh-hit-expand-dot ${m.id === current.id ? 'on' : ''}`
       }))), React.createElement("div", {
-        className: "shrink-0 pt-1.5 pb-1"
+        className: "shrink-0 pt-2 pb-1 mb-auto"
       }, React.createElement(AssistantBubble, {
         key: current.id,
         scene: battleModeAssistantScene(current.id),
@@ -92452,7 +92450,7 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
-        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
+        className: "mhbs-hint mt-auto mb-1 shrink-0"
       }, "左右にスワイプして難易度を選択"), quick && React.createElement("fieldset", {
         className: "shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1"
       }, React.createElement("legend", {
@@ -92476,7 +92474,7 @@ function MonsterHeroGame() {
         className: "mt-1 text-center text-[8px] font-black text-slate-400"
       }, "同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放")), hasExtremeTab && React.createElement("div", {
         "data-difficulty-tabs": true,
-        className: "flex gap-1.5 w-full shrink-0 mb-1"
+        className: "mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5"
       }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
         const on = activeDifficultyTab === tabId;
         const toExtreme = tabId === DIFFICULTY_TAB_EXTREME;
@@ -92498,7 +92496,7 @@ function MonsterHeroGame() {
             setDifficultySelectTab(tabId);
             if (group[0]) chooseDifficulty(group[0][0]);
           },
-          className: `flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 disabled:opacity-40 ${on ? toExtreme ? 'bg-fuchsia-700 border-fuchsia-300 text-white' : 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+          className: `mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${on ? toExtreme ? 'on x' : 'on' : ''}`
         }, tabLabel, React.createElement("span", {
           className: "ml-1 text-[9px] opacity-75"
         }, locked ? '🔒' : count));
@@ -92511,8 +92509,10 @@ function MonsterHeroGame() {
         "aria-label": "前の難易度",
         disabled: selectedIndex === 0,
         onClick: () => selectDifficultyIndex(selectedIndex - 1),
-        className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
-      }, React.createElement(ChevronLeft, null)), React.createElement("div", {
+        className: "mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"
+      }, React.createElement(ChevronLeft, {
+        size: 18
+      })), React.createElement("div", {
         ref: modeDifficultyCarouselRef,
         onScroll: e => {
           const root = e.currentTarget,
@@ -92528,7 +92528,7 @@ function MonsterHeroGame() {
           });
           if (difficulties[best]?.[0] !== selectedDifficulty) chooseDifficulty(difficulties[best][0]);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -92555,63 +92555,38 @@ function MonsterHeroGame() {
           key: key,
           "aria-disabled": !quickUnlocked,
           "data-difficulty-card": key,
-          className: `mhbs-cardbody snap-center shrink-0 w-[82%] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[384px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'} ${quickUnlocked ? '' : 'grayscale'}`,
+          className: `mhbt-tile snap-center shrink-0 w-[82%] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${quickUnlocked ? '' : 'dim'}`,
           style: {
-            borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
-            background: 'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',
-            boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none',
-            clipPath: 'polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))'
-          }
-        }, React.createElement("div", {
-          className: "relative -mx-3 -mt-2 mb-1 px-3 pt-2 pb-1 overflow-hidden",
-          style: {
-            background: `linear-gradient(135deg,color-mix(in srgb,${setting.bg} 60%,white),${setting.bg} 60%,color-mix(in srgb,${setting.bg} 65%,black))`
+            '--acc': setting.text
           }
         }, React.createElement("span", {
           "aria-hidden": "true",
-          className: "mhbs-mark light"
+          className: "mhbt-mark"
         }, String(key).toUpperCase()), React.createElement("div", {
-          className: `text-center text-[7px] tracking-[.2em] font-black ${key === 'EXTREME' ? 'text-fuchsia-100' : 'text-slate-900/70'}`
+          className: "mhbt-eyebrow"
         }, key === 'EXTREME' ? '―― 極限難易度 ――' : 'BATTLE DIFFICULTY'), React.createElement("h3", {
-          className: "text-center text-lg font-black italic leading-tight",
-          style: {
-            color: setting.darkText ? '#0f172a' : '#ffffff'
-          }
+          className: `mhbt-name truncate ${setting.label.length >= 10 ? 'text-[19px]' : 'text-[24px]'}`
         }, setting.label, species && speciesCleared(key) && React.createElement("span", {
           role: "img",
           "aria-label": "クリア済み",
           "data-species-cleared-mark": key,
           className: "ml-1 align-middle text-[11px]"
-        }, "✅"))), React.createElement("div", {
-          className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
-        }, React.createElement("small", {
-          className: "block text-[8px] text-slate-400 font-black"
-        }, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE'), React.createElement("b", {
-          className: `block text-right text-base leading-tight ${species ? 'text-cyan-200' : ranked ? 'text-indigo-200' : 'text-amber-300'}`
-        }, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("span", {
-          className: "block text-right text-[9px] text-amber-300"
-        }, species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
-          className: "grid grid-cols-3 gap-1 mt-1.5"
+        }, "✅")), React.createElement("div", {
+          className: "mhbt-score"
+        }, React.createElement("b", null, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE', " ・ ", species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
+          className: "mhbt-cells"
         }, rateCells(setting).map(([label, value, boosted]) => React.createElement("div", {
-          key: label,
-          className: "rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap"
+          key: label
         }, label, React.createElement("b", {
-          className: "block text-xs",
-          style: {
-            color: boosted ? mode.color : '#ffffff'
-          }
+          className: boosted ? 'underline decoration-2' : ''
         }, value)))), React.createElement("div", {
-          className: "mt-1 rounded-xl border px-2 py-0.5 text-[8px] font-black whitespace-nowrap overflow-hidden flex items-center justify-between gap-1",
-          style: {
-            borderColor: `${mode.color}55`,
-            color: mode.color
-          }
+          className: "mhbt-note"
         }, React.createElement("span", {
           className: "truncate"
         }, noteText), quick && hasExtremeSpecialRules(key) && React.createElement("span", {
-          className: "shrink-0 text-[8px] text-amber-300"
+          className: "shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300"
         }, "特殊ルールあり")), React.createElement("div", {
-          className: `mt-1.5 min-h-[54px] rounded-xl border px-2.5 py-1 flex items-center gap-2 ${species && speciesRewardClaimed(key) ? 'border-white/10 bg-slate-900/50' : 'border-fuchsia-400/35 bg-fuchsia-950/35'}`,
+          className: `mhbt-reward min-h-[54px] flex items-center gap-2 ${species && speciesRewardClaimed(key) ? 'opacity-70' : ''}`,
           "data-psyche-reward": key,
           "data-species-reward-claimed": species ? String(speciesRewardClaimed(key)) : undefined
         }, React.createElement("span", {
@@ -92643,15 +92618,32 @@ function MonsterHeroGame() {
           "data-hero-proof-shard-reward": key,
           className: "block text-[10px] text-amber-100"
         }, "🎖️ 勇者の証片：", heroProofShardReward, "個")))), React.createElement("div", {
-          className: `grid gap-1.5 mt-1.5 ${quick ? 'mt-auto' : ''}`
+          className: "mt-auto grid grid-cols-[minmax(0,1fr)] gap-1.5 pt-2"
+        }, React.createElement("div", {
+          className: "flex min-w-0 items-stretch gap-1.5"
         }, !species && React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => {
             setDifficulty(key);
             setShowWaveDetails(true);
           },
-          className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30"
-        }, "全WAVE詳細"), React.createElement("button", {
+          className: "mhbt-pb disabled:opacity-40"
+        }, "📋 全WAVE詳細"), ranked && React.createElement("button", {
+          disabled: !!battleTutorial,
+          onClick: () => openModeScoreRanking(battleMode, key, 'BATTLE_DIFFICULTY_SELECT'),
+          "aria-label": `${setting.label}のランキング`,
+          className: "mhbt-pb disabled:opacity-40"
+        }, "🏆 ランキング"), species && React.createElement("button", {
+          "data-species-difficulty-record-link": true,
+          disabled: !!battleTutorial,
+          onClick: () => openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT', {
+            speciesId: speciesChallengeSelection.speciesId,
+            difficultyId: key,
+            mode: battleMode
+          }),
+          "aria-label": `${lineageById(speciesChallengeSelection.speciesId).name}種のランキング`,
+          className: "mhbt-pb disabled:opacity-40"
+        }, "🏆 種族の記録")), React.createElement("button", {
           disabled: pro && !proReady || !quickUnlocked || !!battleTutorial && key !== 'Beginner',
           onClick: () => {
             if (battleTutorial) {
@@ -92695,41 +92687,14 @@ function MonsterHeroGame() {
             setHeroPickTab(pro ? 'base' : 'roster');
             advanceRunStage('PICK_HERO');
           },
-          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
-          style: {
-            backgroundColor: setting.bg,
-            color: setting.darkText ? '#0f172a' : '#ffffff'
-          }
-        }, !quickUnlocked ? lockText : pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && React.createElement("button", {
-          disabled: !!battleTutorial,
-          onClick: () => openModeScoreRanking(battleMode, key, 'BATTLE_DIFFICULTY_SELECT'),
-          className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
-        }, React.createElement("span", {
-          className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", setting.label, "のランキング"), React.createElement(ChevronRight, {
-          size: 16,
-          className: "shrink-0"
-        })), species && React.createElement("button", {
-          "data-species-difficulty-record-link": true,
-          disabled: !!battleTutorial,
-          onClick: () => openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT', {
-            speciesId: speciesChallengeSelection.speciesId,
-            difficultyId: key,
-            mode: battleMode
-          }),
-          className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
-        }, React.createElement("span", {
-          className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", lineageById(speciesChallengeSelection.speciesId).name, "種のランキング"), React.createElement(ChevronRight, {
-          size: 16,
-          className: "shrink-0"
-        })), quick && (() => {
+          className: `mhbt-go w-full ${!quickUnlocked || pro && !proReady ? 'sm' : ''} disabled:opacity-40${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`
+        }, !quickUnlocked ? lockText : pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), quick && (() => {
           const tid = SKIP_TICKETS[key];
           if (!tid) return null;
           const have = ownedItems[tid] || 0;
           const policyOk = skipAllowedByPolicy(quickRewardPolicy);
           if (!policyOk) return React.createElement("div", {
-            className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight"
+            className: "min-h-[40px] rounded-xl bg-white/40 flex items-center justify-center px-2 text-[10px] font-black text-slate-700 text-center leading-tight"
           }, "スキップは「育成」方針のときだけ使えます");
           return React.createElement("div", {
             className: "flex gap-1.5"
@@ -92740,29 +92705,31 @@ function MonsterHeroGame() {
               setDifficulty(key);
               openBattleSkip(key);
             },
-            className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked && have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+            className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked && have > 0 ? 'bg-slate-900 text-white active:scale-95' : 'bg-white/40 text-slate-500'}`
           }, React.createElement("span", null, "スキップ"), React.createElement("span", {
-            className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked && have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
+            className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked && have > 0 ? 'bg-white/20 text-teal-100' : 'bg-white/40 text-slate-500'}`
           }, have, "枚")), React.createElement("button", {
             onClick: () => setSkipInfoItemId(tid),
             "aria-label": "スキップの説明",
-            className: "shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
+            className: "shrink-0 w-11 min-h-[40px] rounded-xl bg-white/45 text-slate-900 font-black active:scale-95"
           }, "？"));
         })()));
       })), React.createElement("button", {
         "aria-label": "次の難易度",
         disabled: selectedIndex === difficulties.length - 1,
         onClick: () => selectDifficultyIndex(selectedIndex + 1),
-        className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
-      }, React.createElement(ChevronRight, null))), React.createElement("div", {
-        className: "flex justify-center gap-1 py-0.5"
+        className: "mhbs-arrow absolute right-0 top-[42%] z-20 disabled:opacity-20"
+      }, React.createElement(ChevronRight, {
+        size: 18
+      }))), React.createElement("div", {
+        className: "flex justify-center items-center gap-1 py-0.5"
       }, difficulties.map(([key], i) => React.createElement("button", {
         key: key,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
-        className: `relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+        className: `mhbs-dot relative mx-1 mh-hit-expand-dot ${key === safeDifficulty ? 'on' : ''}`
       }))), React.createElement("div", {
-        className: `shrink-0 ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
+        className: `shrink-0 mb-auto ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
         "data-difficulty-assistant": true
       }, React.createElement(AssistantBubble, {
         key: battleMode,
