@@ -11,6 +11,7 @@
 // ---- 意図の読み取り(上にあるほど先に当てる)----
 // ask=聞き返す場面(返事のあとに続けて言う)と、その返事を待つ種類(awaits)。話しかけられたとき、何も当てはまらなければ ''
 const RHYTHM_BUDDY_CONVO_RULES = Object.freeze([
+  { kind: 'recallAsk', re: /(さっき|先ほど|さきほど|前の話|まえの話|何の話|なんの話)/ },
   { kind: 'replyCall', re: /マスモン(入れて|いれて|呼んで|よんで|出して|きて|来て)/ },
   { kind: 'howMe', re: /(調子|元気|げんき|気分|きぶん|どう\?|どう$|大丈夫|だいじょうぶ)/, ask: 'qHow', awaits: 'how', needsAsk: true },
   { kind: 'lvAsk', re: /(レベル|Lv|lv|ビートレベル|何レベ|れべる)/, needsAsk: true },
@@ -51,12 +52,43 @@ const RHYTHM_BUDDY_CONVO_ANSWERS = Object.freeze({
   ],
   fav: [],
 });
+// 質問として答える種類(1つの発言にふたつ入っていれば、続けて両方に答える)
+const RHYTHM_BUDDY_CONVO_ASKABLE = Object.freeze(['howMe', 'lvAsk', 'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk']);
+// 会話の記憶で「さっきは◯◯の話」と呼ぶときの言い方(曲の話は曲名を使う)
+const RHYTHM_BUDDY_CONVO_TOPIC = Object.freeze({
+  howMe: '調子', lvAsk: 'ビートLv', favAsk: '得意な曲', traitAsk: '性格', scoreAsk: 'スコア', daysAsk: '来てくれた日', nameAsk: '名前',
+  fullcombo: 'フルコン', missTalk: 'ミス', hardTalk: '難しい曲', easyTalk: '簡単な曲', cheer: '気合い', challenge: '勝負', happy: 'うれしいこと',
+  sad: 'つらいこと', tired: '眠い話', hungry: 'ごはん', cute: 'ほめてくれたこと',
+});
+// 性格ごとの話しぶり(文の終わりに添える絵文字・聞き返す頻度・自分から話しかけるときの好み[調子, 得意な曲, 呼びかけ]の重み)
+const RHYTHM_BUDDY_TRAIT_STYLE = Object.freeze({
+  jester: { emoji: ['😆', '🤣', '✌️'], ask: 0.7, starter: [2, 1, 2] }, brave: { emoji: ['🔥', '💪'], ask: 0.5, starter: [1, 1, 3] },
+  clingy: { emoji: ['💕', '🥺', '✨'], ask: 0.9, starter: [3, 1, 2] }, smart: { emoji: ['📊', '🧐'], ask: 0.6, starter: [1, 3, 1] },
+  serious: { emoji: ['🙇', '🎵'], ask: 0.6, starter: [2, 3, 1] }, proud: { emoji: ['✨', '😎'], ask: 0.3, starter: [1, 2, 3] },
+  worrier: { emoji: ['💦', '😥'], ask: 0.8, starter: [3, 1, 1] }, stubborn: { emoji: [], ask: 0.3, starter: [1, 2, 3] },
+  easygoing: { emoji: ['☺️', '🍃', '💤'], ask: 0.6, starter: [3, 2, 1] },
+});
+// 2体の相性(マスモンどうしのやりとりの種類)。ライバル同士は張り合い、仲良し寄りの子とは和やかに話す
+const RHYTHM_BUDDY_PAIR_RIVALS = Object.freeze(['brave|proud', 'proud|smart', 'brave|stubborn', 'proud|stubborn', 'jester|serious', 'smart|stubborn']);
+const rhythmBuddyPairKind = (a, b) => {
+  const key = [a, b].sort().join('|');
+  if (RHYTHM_BUDDY_PAIR_RIVALS.indexOf(key) >= 0) return 'banterRival';
+  if (a === 'clingy' || b === 'clingy' || a === 'easygoing' || b === 'easygoing' || key === 'jester|worrier') return 'banterFriend';
+  return 'banter';
+};
 // 話しかけられているか(質問・呼びかけ)。名前を呼ばれた・「みんな」・疑問の「?」・文の終わりの「?」
 const rhythmBuddyConvoNormalize = (text) => {
   let t = String(text == null ? '' : text);
   try { t = t.normalize('NFKC'); } catch (_) { /* そのまま */ }
-  return t.replace(/\s+/g, '').toLowerCase();
+  // 絵文字・飾りを落とし、同じ字の3連続以上は2つに縮める(「ありがとーーー」「wwwww」「すごいいいい」)
+  t = t.replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F\u200D]/gu, '');
+  return t.replace(/\s+/g, '').toLowerCase().replace(/(.)\1{2,}/gu, '$1$1');
 };
+// ひらがな⇄カタカナの読み替え(「ミス」でも「みす」でも、「ありがとう」でも「アリガトウ」でも当たる)
+const rhythmBuddyConvoShiftKana = (t, toKata) => String(t).replace(toKata ? /[\u3041-\u3096]/g : /[\u30A1-\u30F6]/g,
+  (c) => String.fromCharCode(c.charCodeAt(0) + (toKata ? 0x60 : -0x60)));
+const rhythmBuddyConvoForms = (t) => [t, rhythmBuddyConvoShiftKana(t, true), rhythmBuddyConvoShiftKana(t, false)];
+const rhythmBuddyConvoTest = (re, forms) => forms.some((f) => re.test(f));
 // 曲名と一緒に出てきたら、その曲の話として読む種類
 const RHYTHM_BUDDY_CONVO_SOFT = Object.freeze(['cute', 'replyNice', 'happy', 'laugh', 'hardTalk', 'easyTalk', 'missTalk', 'fullcombo', 'cheer', 'challenge', 'sad', 'tired']);
 const RHYTHM_BUDDY_CONVO_ALL = /(みんな|みなさん|全員|ぜんいん|マスモンたち|ますもんたち)/;
@@ -76,7 +108,8 @@ const rhythmBuddyConvoFindSong = (text, songs) => {
 // kind が '' のときは、特に返す言葉が見つからなかった
 const rhythmBuddyConvoParse = ({ text, names = [], songs = [], awaiting = '' }) => {
   const t = rhythmBuddyConvoNormalize(text);
-  const out = { kind: '', mentioned: [], all: false, song: null, isQuestion: false, answered: false, ask: '', awaits: '' };
+  const out = { kind: '', mentioned: [], all: false, song: null, isQuestion: false, answered: false, ask: '', awaits: '', extra: '' };
+  const forms = rhythmBuddyConvoForms(t);
   if (!t) return out;
   out.isQuestion = /[?？]/.test(String(text)) || /(ですか|ますか|かな|だよね)$/.test(t);
   (Array.isArray(names) ? names : []).forEach((name, i) => {
@@ -87,7 +120,7 @@ const rhythmBuddyConvoParse = ({ text, names = [], songs = [], awaiting = '' }) 
   out.song = rhythmBuddyConvoFindSong(text, songs);
   // 聞き返した答え
   if (awaiting && RHYTHM_BUDDY_CONVO_ANSWERS[awaiting]) {
-    const hit = RHYTHM_BUDDY_CONVO_ANSWERS[awaiting].find((r) => r.re.test(t));
+    const hit = RHYTHM_BUDDY_CONVO_ANSWERS[awaiting].find((r) => rhythmBuddyConvoTest(r.re, forms));
     if (hit) { out.kind = hit.kind; out.answered = true; return out; }
   }
   if (awaiting === 'fav' && out.song) { out.kind = 'songTalk'; out.answered = true; return out; }
@@ -95,10 +128,19 @@ const rhythmBuddyConvoParse = ({ text, names = [], songs = [], awaiting = '' }) 
     const rule = RHYTHM_BUDDY_CONVO_RULES[i];
     // 質問のかたちでないと当てない種類(「今日は元気!」は、調子を聞かれたのではない)
     if (rule.needsAsk && !(out.isQuestion || out.mentioned.length > 0 || out.all)) continue;
-    if (rule.re.test(t)) {
+    if (rhythmBuddyConvoTest(rule.re, forms)) {
       // 曲名が入っていて、感想のような軽い当たりなら、その曲の話として読む(「◯◯、好き」「◯◯ むずい」)
       if (out.song && RHYTHM_BUDDY_CONVO_SOFT.indexOf(rule.kind) >= 0) { out.kind = 'songTalk'; return out; }
       out.kind = rule.kind; out.ask = rule.ask || ''; out.awaits = rule.awaits || '';
+      // 1つの発言に2つ質問が入っているとき(「調子どう?あと得意な曲は?」)、2つ目も読む
+      if (RHYTHM_BUDDY_CONVO_ASKABLE.indexOf(rule.kind) >= 0) {
+        for (let j = i + 1; j < RHYTHM_BUDDY_CONVO_RULES.length; j += 1) {
+          const r2 = RHYTHM_BUDDY_CONVO_RULES[j];
+          if (RHYTHM_BUDDY_CONVO_ASKABLE.indexOf(r2.kind) < 0 || r2.kind === rule.kind) continue;
+          if (r2.needsAsk && !(out.isQuestion || out.mentioned.length > 0 || out.all)) continue;
+          if (rhythmBuddyConvoTest(r2.re, forms)) { out.extra = r2.kind; out.ask = ''; out.awaits = ''; break; }
+        }
+      }
       return out;
     }
   }
@@ -471,12 +513,92 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     },
     mood: { great: ['{who}さん!!今日は最高だね!!'], good: ['{who}さん、いい感じだね!'], normal: [], bad: ['…{who}さん'], awful: ['…{who}さん、なに'] },
   },
+
+  // ---- 会話の記憶・つきあい・時間帯・ビートLv・性格の相性(2026-10-08・ユーザー指示「会話の改良」)----
+  // 「さっきの話は?」→ 前の話題を言う({topic}=話題。曲の話なら曲名)
+  recall: {
+    common: ['さっきは{topic}の話をしてたよね!', 'えっと、{topic}の話だったよね?', 'さっきの話?{topic}だよ!', '{topic}の話、まだ覚えてるよ!'],
+    trait: { jester: ['{topic}の話!ウケたよね!'], brave: ['{topic}の話だ!忘れてないぞ!'], clingy: ['{topic}の話、ちゃんと覚えてるよ〜!'], smart: ['直前の話題は{topic}です'], serious: ['{topic}のお話でしたね'], proud: ['{topic}の話でしょ。覚えてるわよ'], worrier: ['え、{topic}の話…だったよね?'], stubborn: ['{topic}の話だったな'], easygoing: ['{topic}の話だっけ〜?のんびり覚えてる〜'] },
+    mood: { great: ['{topic}の話!!ちゃんと覚えてるよ!!'], good: [], normal: [], bad: ['…{topic}の話でしょ'], awful: [] },
+  },
+  // 「さっきの話は?」→ まだ話していないとき
+  recallNone: {
+    common: ['まだ何も話してないよ?', 'さっきの話?これからだよ!', 'あれ、まだ話してなかったっけ?', '話はこれから!なんでも聞いて!'],
+    trait: { jester: ['話してないよ!今から盛り上がろう!'], brave: ['まだだ!何でも聞いてくれ!'], clingy: ['まだお話してない〜!なにか聞いて〜!'], smart: ['記録上、まだ会話はありません'], serious: ['まだお話はしておりません'], proud: ['まだ何も話してないわ。話しかけなさい'], worrier: ['え、ま、まだ何も話してない…よね?'], stubborn: ['まだ話していないな'], easygoing: ['まだ何も話してないよ〜'] },
+    mood: { great: ['まだだよ!!今から話そう!!'], good: [], normal: [], bad: ['…まだ話してない'], awful: [] },
+  },
+  // 何度も来てくれた人へのあいさつ({plays}=遊んだ回数)
+  bondHello: {
+    common: ['もう{plays}回も遊んだね!', '{plays}回目のライブ、いっしょに楽しもう!', 'いつも呼んでくれてありがとう!', '何度もいっしょでうれしいな!'],
+    trait: { jester: ['{plays}回も呼ばれるなんて、人気者だね!'], brave: ['{plays}回、戦ってきた戦友だな!'], clingy: ['{plays}回もいっしょ!うれしい〜!'], smart: ['累計{plays}回の演奏ですね'], serious: ['{plays}回もお声がけいただき光栄です'], proud: ['{plays}回も私を選ぶなんて、見る目があるわ'], worrier: ['{plays}回もいっしょ…ありがとう…'], stubborn: ['{plays}回目か。悪くない'], easygoing: ['{plays}回目〜、もう慣れっこだね〜'] },
+    mood: { great: ['{plays}回目!!最高の仲間だね!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 部屋に入ったとき、遊んだ回数に触れる
+  bondJoin: {
+    common: ['また呼んでくれてありがとう!', '{plays}回目の登場だよ!', 'おなじみのメンバーだね!', '今日もよろしくね!{plays}回目!'],
+    trait: { jester: ['{plays}回目のご来場!盛り上げるよ!'], brave: ['{plays}回目、今日も前線は任せろ!'], clingy: ['また呼んでくれた〜!{plays}回目!うれしい〜!'], smart: ['{plays}回目の演奏準備、完了です'], serious: ['{plays}回目、本日もよろしくお願いします'], proud: ['{plays}回目の私に、期待しなさい'], worrier: ['{plays}回目なのに、まだ緊張する…'], stubborn: ['{plays}回目か。今日もやるぞ'], easygoing: ['{plays}回目〜、今日ものんびり〜'] },
+    mood: { great: ['{plays}回目!!張り切っていくよ!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 朝(5〜10時)のあいさつ
+  timeMorning: {
+    common: ['おはよう!朝から元気にいこう!', '朝のライブ、気持ちいいね!', 'おはよう!早起きだね!', '朝イチの演奏、がんばるよ!'],
+    trait: { jester: ['おはよう!朝からボケていくよ!'], brave: ['おはよう!朝から全力だ!'], clingy: ['おはよ〜!朝から会えてうれしい〜!'], smart: ['おはようございます。本日も良好です'], serious: ['おはようございます!今日もよろしく!'], proud: ['おはよう。朝から私と遊べるなんて幸運よ'], worrier: ['お、おはよう…早いね…'], stubborn: ['おはよう。朝は嫌いじゃない'], easygoing: ['おはよ〜…まだちょっとねむい〜'] },
+    mood: { great: ['おはよう!!最高の朝だね!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 昼(11〜16時)のあいさつ
+  timeNoon: {
+    common: ['こんにちは!お昼のライブだね!', '昼間のライブ、いいね!', 'こんにちは!ひと休みに一曲どう?', '昼でも夜でも、リズムはいっしょ!'],
+    trait: { jester: ['こんにちは!昼から笑いをとるぞ!'], brave: ['こんにちは!昼間も全開だ!'], clingy: ['こんにちは〜!お昼もいっしょでうれしい〜!'], smart: ['こんにちは。昼の集中力は高めです'], serious: ['こんにちは、本日もよろしくお願いします'], proud: ['こんにちは。昼の私も輝いてるわよ'], worrier: ['こ、こんにちは…昼でも緊張する…'], stubborn: ['こんにちは。昼でもやるときはやる'], easygoing: ['こんにちは〜、お昼ごはんのあとは眠いね〜'] },
+    mood: { great: ['こんにちは!!元気いっぱいだよ!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 夕方〜夜(17〜21時)のあいさつ
+  timeEvening: {
+    common: ['こんばんは!夜のライブ、わくわく!', 'こんばんは!今日もおつかれさま!', '夜になると気分が上がるね!', 'こんばんは!ゆっくり楽しもう!'],
+    trait: { jester: ['こんばんは!夜のステージは任せて!'], brave: ['こんばんは!夜の部も全力だ!'], clingy: ['こんばんは〜!夜もいっしょ〜!'], smart: ['こんばんは。夜間の演奏も安定しています'], serious: ['こんばんは、今日もおつかれさまです'], proud: ['こんばんは。夜の舞台は私の出番ね'], worrier: ['こんばんは…夜はちょっと緊張するね…'], stubborn: ['こんばんは。夜こそ本番だ'], easygoing: ['こんばんは〜、まったり遊ぼ〜'] },
+    mood: { great: ['こんばんは!!夜も最高!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 深夜(22〜4時)のあいさつ
+  timeNight: {
+    common: ['こんな夜ふかしに、ありがとう!', '夜ふかしライブ、ひみつっぽいね!', '夜ふかしだね。ほどほどにね!', '静かな夜のライブも、いいね!'],
+    trait: { jester: ['夜ふかしライブ、深夜テンションでいくよ!'], brave: ['夜ふかしか!つき合うぞ!'], clingy: ['こんな時間に呼んでくれてうれしい〜!でも寝てね〜'], smart: ['深夜帯です。睡眠も大切ですよ'], serious: ['夜遅くまでおつかれさまです。無理なさらず'], proud: ['こんな時間まで起きてるなんて、やるじゃない'], worrier: ['こんな時間…明日だいじょうぶ…?'], stubborn: ['夜ふかしか。ほどほどにな'], easygoing: ['ふぁ…もう夜おそいね〜'] },
+    mood: { great: ['夜ふかしライブ!!テンション上がる!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 結果で、自分のビートLvが上がった({lv}=新しいLv)
+  lvUp: {
+    common: ['ビートLvが上がった!', 'レベルアップ!やったー!', 'Lv.{lv}になったよ!', '成長した気がする!Lv.{lv}!'],
+    trait: { jester: ['Lv.{lv}!ボケの腕も上がったかも!'], brave: ['Lv.{lv}!強くなったぞ!'], clingy: ['Lv.{lv}になったよ〜!ほめて〜!'], smart: ['Lv.{lv}に到達しました。想定どおりです'], serious: ['Lv.{lv}になりました!努力が実りました!'], proud: ['Lv.{lv}。当然の結果ね'], worrier: ['Lv.{lv}…ほんとに?うれしい…'], stubborn: ['Lv.{lv}か。まだまだこれからだ'], easygoing: ['Lv.{lv}だって〜、やったね〜'] },
+    mood: { great: ['Lv.{lv}!!最高にうれしい!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // 結果で、性格が決まった({trait}=決まった性格)
+  traitNew: {
+    common: ['性格が決まったよ!', 'わたし、{trait}って言われた!', '{trait}…これがわたしの性格かあ', '性格が決まった!これからは{trait}でいくよ!'],
+    trait: { jester: ['性格は{trait}!ウケるでしょ!'], brave: ['{trait}か!悪くない!'], clingy: ['{trait}になったよ〜!どうかな〜?'], smart: ['性格は{trait}と判定されました'], serious: ['{trait}になりました。精進します'], proud: ['{trait}…ふふ、私にぴったりね'], worrier: ['{trait}…ぼくで、いいのかな…'], stubborn: ['{trait}か。受け入れよう'], easygoing: ['{trait}らしいよ〜、のんびりいこ〜'] },
+    mood: { great: ['{trait}!!わたしの性格、気に入った!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // マスモンどうしの張り合い({mate}=いっしょのマスモン)
+  banterRival: {
+    common: ['{mate}には負けないよ!', '{mate}、今日こそ勝負だ!', '{mate}、スコアで勝負しよう!', '{mate}、手加減はなしだよ!'],
+    trait: { jester: ['{mate}、笑いも演奏も負けないよ!'], brave: ['{mate}、勝負だ!全力でこい!'], clingy: ['{mate}、負けないもん!'], smart: ['{mate}の分析、上回ってみせます'], serious: ['{mate}、正々堂々と勝負です'], proud: ['{mate}、私に勝てると思ってるの?'], worrier: ['{mate}、強そう…でも負けない…'], stubborn: ['{mate}、勝つのはこっちだ'], easygoing: ['{mate}〜、ほどほどに勝負しよ〜'] },
+    mood: { great: ['{mate}!!絶対負けないからね!!'], good: [], normal: [], bad: ['…{mate}には負けない'], awful: [] },
+  },
+  // マスモンどうしの和やかなやりとり({mate}=いっしょのマスモン)
+  banterFriend: {
+    common: ['{mate}といると落ち着くな〜', '{mate}、いっしょでうれしい!', '{mate}、仲良くしようね!', '{mate}とならうまくいきそう!'],
+    trait: { jester: ['{mate}、二人で笑いをとろう!'], brave: ['{mate}、いい仲間だな!'], clingy: ['{mate}〜、ずっとなかよしでいてね〜'], smart: ['{mate}との連携は良好です'], serious: ['{mate}さんとご一緒できて光栄です'], proud: ['{mate}、あなたとなら悪くないわ'], worrier: ['{mate}がいてくれて、ほっとする…'], stubborn: ['{mate}か。頼りにしてるぞ'], easygoing: ['{mate}〜、いっしょにのんびりしよ〜'] },
+    mood: { great: ['{mate}!!大好き!!いっしょに叩こう!!'], good: [], normal: [], bad: [], awful: [] },
+  },
+  // ほかの人の結果で、ミスが多め({who}=その人)
+  hMiss: {
+    common: ['{who}さん、次はきっと大丈夫!', '{who}さん、ミスは気にしない!', '{who}さん、そういう日もあるよ!', '{who}さん、ドンマイ!次いこう!'],
+    trait: { jester: ['{who}さん、ミスもネタにしちゃえ!'], brave: ['{who}さん、次は取り返せる!'], clingy: ['{who}さん、元気出して〜!ぎゅー!'], smart: ['{who}さん、次は集中すれば大丈夫です'], serious: ['{who}さん、次に活かしましょう'], proud: ['{who}さん、私もたまにミスするわよ…たまにね'], worrier: ['{who}さん、ぼくもよくミスするから大丈夫…'], stubborn: ['{who}さん、次がある'], easygoing: ['{who}さん、気にしない気にしない〜'] },
+    mood: { great: ['{who}さん!!次は絶対いける!!'], good: [], normal: [], bad: [], awful: [] },
+  },
 });
 
 // 返事の頭に、人の名前を呼びかける言葉を付けてよい場面(ときどき。「{who}さん、」の部分は性格ごとの呼び方になる)
 const RHYTHM_BUDDY_CONVO_CALLABLE = Object.freeze(['replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'howMe', 'lvAsk',
   'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk', 'cute', 'sorry', 'laugh', 'tired', 'hungry', 'sad', 'happy', 'cheer', 'fullcombo', 'missTalk',
-  'hardTalk', 'easyTalk', 'bye', 'challenge', 'hey', 'songTalk', 'join', 'mvp', 'high', 'mid', 'low']);
+  'hardTalk', 'easyTalk', 'bye', 'challenge', 'hey', 'songTalk', 'join', 'mvp', 'high', 'mid', 'low', 'recall', 'recallNone', 'bondHello', 'hMiss']);
 // 書き換えられない1つの表にする(rhythmBuddyTalkPick が、場面の名前でここも探す)
 const RHYTHM_BUDDY_CONVO_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_CONVO_BASE));
 const RHYTHM_BUDDY_CONVO = typeof rhythmBuddyTalkMerge === 'function'

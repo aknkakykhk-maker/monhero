@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04b8363585ba9546
+// source-sha256: aaae63718401371c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 11:02";
+const BUILD_DATE = "2026-10-08 11:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -38461,6 +38461,9 @@ const rhythmBuddyTalkReplyKind = text => {
   return '';
 };
 const RHYTHM_BUDDY_CONVO_RULES = Object.freeze([{
+  kind: 'recallAsk',
+  re: /(さっき|先ほど|さきほど|前の話|まえの話|何の話|なんの話)/
+}, {
   kind: 'replyCall',
   re: /マスモン(入れて|いれて|呼んで|よんで|出して|きて|来て)/
 }, {
@@ -38571,13 +38574,92 @@ const RHYTHM_BUDDY_CONVO_ANSWERS = Object.freeze({
   }],
   fav: []
 });
+const RHYTHM_BUDDY_CONVO_ASKABLE = Object.freeze(['howMe', 'lvAsk', 'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk']);
+const RHYTHM_BUDDY_CONVO_TOPIC = Object.freeze({
+  howMe: '調子',
+  lvAsk: 'ビートLv',
+  favAsk: '得意な曲',
+  traitAsk: '性格',
+  scoreAsk: 'スコア',
+  daysAsk: '来てくれた日',
+  nameAsk: '名前',
+  fullcombo: 'フルコン',
+  missTalk: 'ミス',
+  hardTalk: '難しい曲',
+  easyTalk: '簡単な曲',
+  cheer: '気合い',
+  challenge: '勝負',
+  happy: 'うれしいこと',
+  sad: 'つらいこと',
+  tired: '眠い話',
+  hungry: 'ごはん',
+  cute: 'ほめてくれたこと'
+});
+const RHYTHM_BUDDY_TRAIT_STYLE = Object.freeze({
+  jester: {
+    emoji: ['😆', '🤣', '✌️'],
+    ask: 0.7,
+    starter: [2, 1, 2]
+  },
+  brave: {
+    emoji: ['🔥', '💪'],
+    ask: 0.5,
+    starter: [1, 1, 3]
+  },
+  clingy: {
+    emoji: ['💕', '🥺', '✨'],
+    ask: 0.9,
+    starter: [3, 1, 2]
+  },
+  smart: {
+    emoji: ['📊', '🧐'],
+    ask: 0.6,
+    starter: [1, 3, 1]
+  },
+  serious: {
+    emoji: ['🙇', '🎵'],
+    ask: 0.6,
+    starter: [2, 3, 1]
+  },
+  proud: {
+    emoji: ['✨', '😎'],
+    ask: 0.3,
+    starter: [1, 2, 3]
+  },
+  worrier: {
+    emoji: ['💦', '😥'],
+    ask: 0.8,
+    starter: [3, 1, 1]
+  },
+  stubborn: {
+    emoji: [],
+    ask: 0.3,
+    starter: [1, 2, 3]
+  },
+  easygoing: {
+    emoji: ['☺️', '🍃', '💤'],
+    ask: 0.6,
+    starter: [3, 2, 1]
+  }
+});
+const RHYTHM_BUDDY_PAIR_RIVALS = Object.freeze(['brave|proud', 'proud|smart', 'brave|stubborn', 'proud|stubborn', 'jester|serious', 'smart|stubborn']);
+const rhythmBuddyPairKind = (a, b) => {
+  const key = [a, b].sort().join('|');
+  if (RHYTHM_BUDDY_PAIR_RIVALS.indexOf(key) >= 0) return 'banterRival';
+  if (a === 'clingy' || b === 'clingy' || a === 'easygoing' || b === 'easygoing' || key === 'jester|worrier') return 'banterFriend';
+  return 'banter';
+};
 const rhythmBuddyConvoNormalize = text => {
   let t = String(text == null ? '' : text);
   try {
     t = t.normalize('NFKC');
   } catch (_) {}
-  return t.replace(/\s+/g, '').toLowerCase();
+  t = t.replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F\u200D]/gu, '');
+  return t.replace(/\s+/g, '').toLowerCase().replace(/(.)\1{2,}/gu, '$1$1');
 };
+const rhythmBuddyConvoShiftKana = (t, toKata) => String(t).replace(toKata ? /[\u3041-\u3096]/g : /[\u30A1-\u30F6]/g, c => String.fromCharCode(c.charCodeAt(0) + (toKata ? 0x60 : -0x60)));
+const rhythmBuddyConvoForms = t => [t, rhythmBuddyConvoShiftKana(t, true), rhythmBuddyConvoShiftKana(t, false)];
+const rhythmBuddyConvoTest = (re, forms) => forms.some(f => re.test(f));
 const RHYTHM_BUDDY_CONVO_SOFT = Object.freeze(['cute', 'replyNice', 'happy', 'laugh', 'hardTalk', 'easyTalk', 'missTalk', 'fullcombo', 'cheer', 'challenge', 'sad', 'tired']);
 const RHYTHM_BUDDY_CONVO_ALL = /(みんな|みなさん|全員|ぜんいん|マスモンたち|ますもんたち)/;
 const rhythmBuddyConvoFindSong = (text, songs) => {
@@ -38607,8 +38689,10 @@ const rhythmBuddyConvoParse = ({
     isQuestion: false,
     answered: false,
     ask: '',
-    awaits: ''
+    awaits: '',
+    extra: ''
   };
+  const forms = rhythmBuddyConvoForms(t);
   if (!t) return out;
   out.isQuestion = /[?？]/.test(String(text)) || /(ですか|ますか|かな|だよね)$/.test(t);
   (Array.isArray(names) ? names : []).forEach((name, i) => {
@@ -38618,7 +38702,7 @@ const rhythmBuddyConvoParse = ({
   out.all = RHYTHM_BUDDY_CONVO_ALL.test(t);
   out.song = rhythmBuddyConvoFindSong(text, songs);
   if (awaiting && RHYTHM_BUDDY_CONVO_ANSWERS[awaiting]) {
-    const hit = RHYTHM_BUDDY_CONVO_ANSWERS[awaiting].find(r => r.re.test(t));
+    const hit = RHYTHM_BUDDY_CONVO_ANSWERS[awaiting].find(r => rhythmBuddyConvoTest(r.re, forms));
     if (hit) {
       out.kind = hit.kind;
       out.answered = true;
@@ -38633,7 +38717,7 @@ const rhythmBuddyConvoParse = ({
   for (let i = 0; i < RHYTHM_BUDDY_CONVO_RULES.length; i += 1) {
     const rule = RHYTHM_BUDDY_CONVO_RULES[i];
     if (rule.needsAsk && !(out.isQuestion || out.mentioned.length > 0 || out.all)) continue;
-    if (rule.re.test(t)) {
+    if (rhythmBuddyConvoTest(rule.re, forms)) {
       if (out.song && RHYTHM_BUDDY_CONVO_SOFT.indexOf(rule.kind) >= 0) {
         out.kind = 'songTalk';
         return out;
@@ -38641,6 +38725,19 @@ const rhythmBuddyConvoParse = ({
       out.kind = rule.kind;
       out.ask = rule.ask || '';
       out.awaits = rule.awaits || '';
+      if (RHYTHM_BUDDY_CONVO_ASKABLE.indexOf(rule.kind) >= 0) {
+        for (let j = i + 1; j < RHYTHM_BUDDY_CONVO_RULES.length; j += 1) {
+          const r2 = RHYTHM_BUDDY_CONVO_RULES[j];
+          if (RHYTHM_BUDDY_CONVO_ASKABLE.indexOf(r2.kind) < 0 || r2.kind === rule.kind) continue;
+          if (r2.needsAsk && !(out.isQuestion || out.mentioned.length > 0 || out.all)) continue;
+          if (rhythmBuddyConvoTest(r2.re, forms)) {
+            out.extra = r2.kind;
+            out.ask = '';
+            out.awaits = '';
+            break;
+          }
+        }
+      }
       return out;
     }
   }
@@ -39477,9 +39574,282 @@ const RHYTHM_BUDDY_CONVO_BASE = {
       bad: ['…{who}さん'],
       awful: ['…{who}さん、なに']
     }
+  },
+  recall: {
+    common: ['さっきは{topic}の話をしてたよね!', 'えっと、{topic}の話だったよね?', 'さっきの話?{topic}だよ!', '{topic}の話、まだ覚えてるよ!'],
+    trait: {
+      jester: ['{topic}の話!ウケたよね!'],
+      brave: ['{topic}の話だ!忘れてないぞ!'],
+      clingy: ['{topic}の話、ちゃんと覚えてるよ〜!'],
+      smart: ['直前の話題は{topic}です'],
+      serious: ['{topic}のお話でしたね'],
+      proud: ['{topic}の話でしょ。覚えてるわよ'],
+      worrier: ['え、{topic}の話…だったよね?'],
+      stubborn: ['{topic}の話だったな'],
+      easygoing: ['{topic}の話だっけ〜?のんびり覚えてる〜']
+    },
+    mood: {
+      great: ['{topic}の話!!ちゃんと覚えてるよ!!'],
+      good: [],
+      normal: [],
+      bad: ['…{topic}の話でしょ'],
+      awful: []
+    }
+  },
+  recallNone: {
+    common: ['まだ何も話してないよ?', 'さっきの話?これからだよ!', 'あれ、まだ話してなかったっけ?', '話はこれから!なんでも聞いて!'],
+    trait: {
+      jester: ['話してないよ!今から盛り上がろう!'],
+      brave: ['まだだ!何でも聞いてくれ!'],
+      clingy: ['まだお話してない〜!なにか聞いて〜!'],
+      smart: ['記録上、まだ会話はありません'],
+      serious: ['まだお話はしておりません'],
+      proud: ['まだ何も話してないわ。話しかけなさい'],
+      worrier: ['え、ま、まだ何も話してない…よね?'],
+      stubborn: ['まだ話していないな'],
+      easygoing: ['まだ何も話してないよ〜']
+    },
+    mood: {
+      great: ['まだだよ!!今から話そう!!'],
+      good: [],
+      normal: [],
+      bad: ['…まだ話してない'],
+      awful: []
+    }
+  },
+  bondHello: {
+    common: ['もう{plays}回も遊んだね!', '{plays}回目のライブ、いっしょに楽しもう!', 'いつも呼んでくれてありがとう!', '何度もいっしょでうれしいな!'],
+    trait: {
+      jester: ['{plays}回も呼ばれるなんて、人気者だね!'],
+      brave: ['{plays}回、戦ってきた戦友だな!'],
+      clingy: ['{plays}回もいっしょ!うれしい〜!'],
+      smart: ['累計{plays}回の演奏ですね'],
+      serious: ['{plays}回もお声がけいただき光栄です'],
+      proud: ['{plays}回も私を選ぶなんて、見る目があるわ'],
+      worrier: ['{plays}回もいっしょ…ありがとう…'],
+      stubborn: ['{plays}回目か。悪くない'],
+      easygoing: ['{plays}回目〜、もう慣れっこだね〜']
+    },
+    mood: {
+      great: ['{plays}回目!!最高の仲間だね!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  bondJoin: {
+    common: ['また呼んでくれてありがとう!', '{plays}回目の登場だよ!', 'おなじみのメンバーだね!', '今日もよろしくね!{plays}回目!'],
+    trait: {
+      jester: ['{plays}回目のご来場!盛り上げるよ!'],
+      brave: ['{plays}回目、今日も前線は任せろ!'],
+      clingy: ['また呼んでくれた〜!{plays}回目!うれしい〜!'],
+      smart: ['{plays}回目の演奏準備、完了です'],
+      serious: ['{plays}回目、本日もよろしくお願いします'],
+      proud: ['{plays}回目の私に、期待しなさい'],
+      worrier: ['{plays}回目なのに、まだ緊張する…'],
+      stubborn: ['{plays}回目か。今日もやるぞ'],
+      easygoing: ['{plays}回目〜、今日ものんびり〜']
+    },
+    mood: {
+      great: ['{plays}回目!!張り切っていくよ!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  timeMorning: {
+    common: ['おはよう!朝から元気にいこう!', '朝のライブ、気持ちいいね!', 'おはよう!早起きだね!', '朝イチの演奏、がんばるよ!'],
+    trait: {
+      jester: ['おはよう!朝からボケていくよ!'],
+      brave: ['おはよう!朝から全力だ!'],
+      clingy: ['おはよ〜!朝から会えてうれしい〜!'],
+      smart: ['おはようございます。本日も良好です'],
+      serious: ['おはようございます!今日もよろしく!'],
+      proud: ['おはよう。朝から私と遊べるなんて幸運よ'],
+      worrier: ['お、おはよう…早いね…'],
+      stubborn: ['おはよう。朝は嫌いじゃない'],
+      easygoing: ['おはよ〜…まだちょっとねむい〜']
+    },
+    mood: {
+      great: ['おはよう!!最高の朝だね!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  timeNoon: {
+    common: ['こんにちは!お昼のライブだね!', '昼間のライブ、いいね!', 'こんにちは!ひと休みに一曲どう?', '昼でも夜でも、リズムはいっしょ!'],
+    trait: {
+      jester: ['こんにちは!昼から笑いをとるぞ!'],
+      brave: ['こんにちは!昼間も全開だ!'],
+      clingy: ['こんにちは〜!お昼もいっしょでうれしい〜!'],
+      smart: ['こんにちは。昼の集中力は高めです'],
+      serious: ['こんにちは、本日もよろしくお願いします'],
+      proud: ['こんにちは。昼の私も輝いてるわよ'],
+      worrier: ['こ、こんにちは…昼でも緊張する…'],
+      stubborn: ['こんにちは。昼でもやるときはやる'],
+      easygoing: ['こんにちは〜、お昼ごはんのあとは眠いね〜']
+    },
+    mood: {
+      great: ['こんにちは!!元気いっぱいだよ!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  timeEvening: {
+    common: ['こんばんは!夜のライブ、わくわく!', 'こんばんは!今日もおつかれさま!', '夜になると気分が上がるね!', 'こんばんは!ゆっくり楽しもう!'],
+    trait: {
+      jester: ['こんばんは!夜のステージは任せて!'],
+      brave: ['こんばんは!夜の部も全力だ!'],
+      clingy: ['こんばんは〜!夜もいっしょ〜!'],
+      smart: ['こんばんは。夜間の演奏も安定しています'],
+      serious: ['こんばんは、今日もおつかれさまです'],
+      proud: ['こんばんは。夜の舞台は私の出番ね'],
+      worrier: ['こんばんは…夜はちょっと緊張するね…'],
+      stubborn: ['こんばんは。夜こそ本番だ'],
+      easygoing: ['こんばんは〜、まったり遊ぼ〜']
+    },
+    mood: {
+      great: ['こんばんは!!夜も最高!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  timeNight: {
+    common: ['こんな夜ふかしに、ありがとう!', '夜ふかしライブ、ひみつっぽいね!', '夜ふかしだね。ほどほどにね!', '静かな夜のライブも、いいね!'],
+    trait: {
+      jester: ['夜ふかしライブ、深夜テンションでいくよ!'],
+      brave: ['夜ふかしか!つき合うぞ!'],
+      clingy: ['こんな時間に呼んでくれてうれしい〜!でも寝てね〜'],
+      smart: ['深夜帯です。睡眠も大切ですよ'],
+      serious: ['夜遅くまでおつかれさまです。無理なさらず'],
+      proud: ['こんな時間まで起きてるなんて、やるじゃない'],
+      worrier: ['こんな時間…明日だいじょうぶ…?'],
+      stubborn: ['夜ふかしか。ほどほどにな'],
+      easygoing: ['ふぁ…もう夜おそいね〜']
+    },
+    mood: {
+      great: ['夜ふかしライブ!!テンション上がる!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  lvUp: {
+    common: ['ビートLvが上がった!', 'レベルアップ!やったー!', 'Lv.{lv}になったよ!', '成長した気がする!Lv.{lv}!'],
+    trait: {
+      jester: ['Lv.{lv}!ボケの腕も上がったかも!'],
+      brave: ['Lv.{lv}!強くなったぞ!'],
+      clingy: ['Lv.{lv}になったよ〜!ほめて〜!'],
+      smart: ['Lv.{lv}に到達しました。想定どおりです'],
+      serious: ['Lv.{lv}になりました!努力が実りました!'],
+      proud: ['Lv.{lv}。当然の結果ね'],
+      worrier: ['Lv.{lv}…ほんとに?うれしい…'],
+      stubborn: ['Lv.{lv}か。まだまだこれからだ'],
+      easygoing: ['Lv.{lv}だって〜、やったね〜']
+    },
+    mood: {
+      great: ['Lv.{lv}!!最高にうれしい!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  traitNew: {
+    common: ['性格が決まったよ!', 'わたし、{trait}って言われた!', '{trait}…これがわたしの性格かあ', '性格が決まった!これからは{trait}でいくよ!'],
+    trait: {
+      jester: ['性格は{trait}!ウケるでしょ!'],
+      brave: ['{trait}か!悪くない!'],
+      clingy: ['{trait}になったよ〜!どうかな〜?'],
+      smart: ['性格は{trait}と判定されました'],
+      serious: ['{trait}になりました。精進します'],
+      proud: ['{trait}…ふふ、私にぴったりね'],
+      worrier: ['{trait}…ぼくで、いいのかな…'],
+      stubborn: ['{trait}か。受け入れよう'],
+      easygoing: ['{trait}らしいよ〜、のんびりいこ〜']
+    },
+    mood: {
+      great: ['{trait}!!わたしの性格、気に入った!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  banterRival: {
+    common: ['{mate}には負けないよ!', '{mate}、今日こそ勝負だ!', '{mate}、スコアで勝負しよう!', '{mate}、手加減はなしだよ!'],
+    trait: {
+      jester: ['{mate}、笑いも演奏も負けないよ!'],
+      brave: ['{mate}、勝負だ!全力でこい!'],
+      clingy: ['{mate}、負けないもん!'],
+      smart: ['{mate}の分析、上回ってみせます'],
+      serious: ['{mate}、正々堂々と勝負です'],
+      proud: ['{mate}、私に勝てると思ってるの?'],
+      worrier: ['{mate}、強そう…でも負けない…'],
+      stubborn: ['{mate}、勝つのはこっちだ'],
+      easygoing: ['{mate}〜、ほどほどに勝負しよ〜']
+    },
+    mood: {
+      great: ['{mate}!!絶対負けないからね!!'],
+      good: [],
+      normal: [],
+      bad: ['…{mate}には負けない'],
+      awful: []
+    }
+  },
+  banterFriend: {
+    common: ['{mate}といると落ち着くな〜', '{mate}、いっしょでうれしい!', '{mate}、仲良くしようね!', '{mate}とならうまくいきそう!'],
+    trait: {
+      jester: ['{mate}、二人で笑いをとろう!'],
+      brave: ['{mate}、いい仲間だな!'],
+      clingy: ['{mate}〜、ずっとなかよしでいてね〜'],
+      smart: ['{mate}との連携は良好です'],
+      serious: ['{mate}さんとご一緒できて光栄です'],
+      proud: ['{mate}、あなたとなら悪くないわ'],
+      worrier: ['{mate}がいてくれて、ほっとする…'],
+      stubborn: ['{mate}か。頼りにしてるぞ'],
+      easygoing: ['{mate}〜、いっしょにのんびりしよ〜']
+    },
+    mood: {
+      great: ['{mate}!!大好き!!いっしょに叩こう!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
+  },
+  hMiss: {
+    common: ['{who}さん、次はきっと大丈夫!', '{who}さん、ミスは気にしない!', '{who}さん、そういう日もあるよ!', '{who}さん、ドンマイ!次いこう!'],
+    trait: {
+      jester: ['{who}さん、ミスもネタにしちゃえ!'],
+      brave: ['{who}さん、次は取り返せる!'],
+      clingy: ['{who}さん、元気出して〜!ぎゅー!'],
+      smart: ['{who}さん、次は集中すれば大丈夫です'],
+      serious: ['{who}さん、次に活かしましょう'],
+      proud: ['{who}さん、私もたまにミスするわよ…たまにね'],
+      worrier: ['{who}さん、ぼくもよくミスするから大丈夫…'],
+      stubborn: ['{who}さん、次がある'],
+      easygoing: ['{who}さん、気にしない気にしない〜']
+    },
+    mood: {
+      great: ['{who}さん!!次は絶対いける!!'],
+      good: [],
+      normal: [],
+      bad: [],
+      awful: []
+    }
   }
 };
-const RHYTHM_BUDDY_CONVO_CALLABLE = Object.freeze(['replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'howMe', 'lvAsk', 'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk', 'cute', 'sorry', 'laugh', 'tired', 'hungry', 'sad', 'happy', 'cheer', 'fullcombo', 'missTalk', 'hardTalk', 'easyTalk', 'bye', 'challenge', 'hey', 'songTalk', 'join', 'mvp', 'high', 'mid', 'low']);
+const RHYTHM_BUDDY_CONVO_CALLABLE = Object.freeze(['replyHello', 'replyThanks', 'replyNice', 'replyAgain', 'replyCall', 'replyDrop', 'replyWait', 'howMe', 'lvAsk', 'favAsk', 'traitAsk', 'scoreAsk', 'daysAsk', 'nameAsk', 'cute', 'sorry', 'laugh', 'tired', 'hungry', 'sad', 'happy', 'cheer', 'fullcombo', 'missTalk', 'hardTalk', 'easyTalk', 'bye', 'challenge', 'hey', 'songTalk', 'join', 'mvp', 'high', 'mid', 'low', 'recall', 'recallNone', 'bondHello', 'hMiss']);
 const RHYTHM_BUDDY_CONVO_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_CONVO_BASE));
 const RHYTHM_BUDDY_CONVO = typeof rhythmBuddyTalkMerge === 'function' ? rhythmBuddyTalkMerge(RHYTHM_BUDDY_CONVO_BASE, {}) : RHYTHM_BUDDY_CONVO_BASE;
 const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -63236,6 +63606,25 @@ const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
   result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!']
 });
+const RHYTHM_BUDDY_ASK_CHIPS = Object.freeze([{
+  label: '調子は?',
+  text: '調子どう?'
+}, {
+  label: '得意な曲は?',
+  text: '得意な曲は?'
+}, {
+  label: 'レベルは?',
+  text: 'レベルいくつ?'
+}, {
+  label: 'さっきの話は?',
+  text: 'さっきの話は?'
+}, {
+  label: '何点だった?',
+  text: '何点だった?'
+}, {
+  label: '性格は?',
+  text: 'どんな性格?'
+}]);
 const RHYTHM_MULTI_CHAT_BUDDY_STAMPS = Object.freeze(['マスモン入れて!', 'マスモン入れたよ!', 'マスモンうまい!', 'マスモン出せない…', '無料おわった…', '券がない…', '席ゆずるね!']);
 const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
 const rhythmMultiStampsFor = phase => {
@@ -63564,6 +63953,12 @@ const rhythmMultiOpenSocket = ({
       } catch (_) {}
     }
   };
+};
+const rhythmMultiMissRate = res => {
+  const j = res && Array.isArray(res.j) ? res.j : null;
+  if (!j || j.length < RHYTHM_MULTI_JUDGMENT_IDS.length) return 0;
+  const total = j.reduce((sum, n) => sum + (Number(n) || 0), 0);
+  return total > 0 ? (Number(j[RHYTHM_MULTI_JUDGMENT_IDS.length - 1]) || 0) / total : 0;
 };
 const RHYTHM_MULTI = (() => {
   const listeners = new Set();
@@ -63939,17 +64334,47 @@ const RHYTHM_MULTI = (() => {
     if (!responders.length) return;
     s.talk.replyAt = now;
     const mateOf = x => cpuNameOf(s.cpus.find(c => c.id !== x.id));
-    responders.forEach((x, i) => cpuSay(x, parsed.kind, {
+    const topics = (s.talk.topics || (s.talk.topics = [])).filter(t => now - t.at < 10 * 60 * 1000);
+    let kind = parsed.kind;
+    let topicVars = {};
+    if (kind === 'recallAsk') {
+      const prev = topics[0];
+      kind = prev ? 'recall' : 'recallNone';
+      topicVars = prev ? {
+        topicKind: prev.kind,
+        topicSongId: prev.songId || ''
+      } : {};
+    } else if (parsed.songId && kind === 'songTalk') topics.unshift({
+      kind: 'songTalk',
+      songId: parsed.songId,
+      at: now
+    });else if (typeof RHYTHM_BUDDY_CONVO_TOPIC !== 'undefined' && RHYTHM_BUDDY_CONVO_TOPIC[kind] && !(topics[0] && topics[0].kind === kind)) topics.unshift({
+      kind,
+      songId: '',
+      at: now
+    });
+    s.talk.topics = topics.slice(0, 4);
+    responders.forEach((x, i) => cpuSay(x, kind, {
       who: msg.name,
       mate: mateOf(x),
-      songId: parsed.songId || ''
+      songId: parsed.songId || '',
+      ...topicVars
     }, {
       extraDelay: i * 1300,
       skipGap: direct
     }));
     if (aw && parsed.answered) s.talk.awaiting = null;
     const first = responders[0];
-    if (parsed.ask && parsed.awaits && Math.random() < 0.6) {
+    if (parsed.extra) cpuSay(first, parsed.extra, {
+      who: msg.name,
+      mate: mateOf(first),
+      songId: parsed.songId || ''
+    }, {
+      extraDelay: 2200,
+      skipGap: true
+    });
+    const askRate = cpuBrain && typeof cpuBrain.style === 'function' ? cpuBrain.style(first.masuId).ask : 0.6;
+    if (!parsed.extra && parsed.ask && parsed.awaits && Math.random() < askRate) {
       cpuSay(first, parsed.ask, {
         who: msg.name
       }, {
@@ -63965,7 +64390,8 @@ const RHYTHM_MULTI = (() => {
     } else if (responders.length === 1 && s.cpus.length > 1 && now - s.talk.banterAt > RHYTHM_MULTI_CPU_BANTER_GAP_MS && Math.random() < 0.3) {
       const other = s.cpus.find(c => c.id !== first.id);
       s.talk.banterAt = now;
-      cpuSay(other, 'banter', {
+      const pairKind = cpuBrain && typeof cpuBrain.pair === 'function' ? cpuBrain.pair(first.masuId, other.masuId) : 'banter';
+      cpuSay(other, pairKind, {
         mate: cpuNameOf(first)
       }, {
         extraDelay: 3400,
@@ -64054,9 +64480,11 @@ const RHYTHM_MULTI = (() => {
         const target = humans.length ? humans[Math.floor(Math.random() * humans.length)] : null;
         const starter = cpuPickOne();
         if (target && starter && Math.random() < 0.6) {
-          const pickKind = Math.random();
-          if (pickKind < 0.67) {
-            const how = pickKind < 0.33;
+          const w = cpuBrain && typeof cpuBrain.style === 'function' ? cpuBrain.style(starter.masuId).starter : [1, 1, 1];
+          const roll = Math.random() * (w[0] + w[1] + w[2]);
+          const how = roll < w[0];
+          const fav = !how && roll < w[0] + w[1];
+          if (how || fav) {
             cpuSay(starter, how ? 'qHow' : 'qFav', {
               who: target.name
             });
@@ -64095,7 +64523,8 @@ const RHYTHM_MULTI = (() => {
           diffId: q.res.diffId,
           mvp: team.mvpId === q.m.id,
           fc: q.res.fc || 0,
-          quit: !!q.res.quit
+          quit: !!q.res.quit,
+          missRate: rhythmMultiMissRate(q.res)
         }, {
           extraDelay: 1800 + i * 1500,
           skipGap: true
@@ -64549,7 +64978,8 @@ const RHYTHM_MULTI = (() => {
           replyAt: 0,
           idleAt: now,
           awaiting: null,
-          banterAt: 0
+          banterAt: 0,
+          topics: []
         }
       };
       s.members[id] = {
@@ -64768,6 +65198,23 @@ const RHYTHM_MULTI = (() => {
       sendHb();
       emit();
     },
+    noteBuddyGrowth(masuId, growth) {
+      if (!s || !growth) return;
+      const x = s.cpus.find(c => c.masuId === masuId);
+      if (!x) return;
+      if (growth.levelUp > 0) cpuSay(x, 'lvUp', {
+        who: ownerName()
+      }, {
+        extraDelay: 800,
+        skipGap: true
+      });
+      if (growth.traitNew) cpuSay(x, 'traitNew', {
+        who: ownerName()
+      }, {
+        extraDelay: growth.levelUp > 0 ? 3000 : 800,
+        skipGap: true
+      });
+    },
     sendChat(text) {
       if (!s || !socket) return false;
       const clean = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
@@ -64860,7 +65307,8 @@ function RhythmMultiChatPanel({
   resolveIconUrl = null,
   onClose = null,
   talkTip = '',
-  onTalkTipClose = null
+  onTalkTipClose = null,
+  askName = ''
 }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
@@ -64934,7 +65382,18 @@ function RhythmMultiChatPanel({
     }, c.name), React.createElement("span", {
       className: `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`
     }, c.text)));
-  })), React.createElement(RhythmMultiStampBar, {
+  })), askName && React.createElement("div", {
+    "data-rhythm-buddy-ask": true,
+    className: "mt-2 flex shrink-0 flex-wrap items-center gap-1.5"
+  }, React.createElement("b", {
+    className: "shrink-0 text-[10px] font-black text-lime-300"
+  }, "🎵 ", askName, "に聞く"), RHYTHM_BUDDY_ASK_CHIPS.map(chip => React.createElement("button", {
+    key: chip.label,
+    "data-rhythm-buddy-ask-chip": true,
+    type: "button",
+    onClick: () => send(`${askName}、${chip.text}`),
+    className: "min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/50 bg-lime-950/70 px-2.5 text-[11px] font-black text-lime-100 transition active:scale-95"
+  }, chip.label))), React.createElement(RhythmMultiStampBar, {
     phase: phase,
     onSend: send,
     wrap: true,
@@ -66005,6 +66464,7 @@ function RhythmMultiScreen({
     members: view.members,
     resolveIconUrl: resolveIconUrl,
     onClose: () => setChatOpen(false),
+    askName: (view.myCpus || []).length > 0 ? (view.members.find(m => m.id === view.myCpus[0].id) || {}).name || 'マスモン' : '',
     talkTip: !talkTipSeen && (view.myCpus || []).length > 0 ? (view.members.find(m => m.id === view.myCpus[0].id) || {}).name || 'マスモン' : '',
     onTalkTipClose: closeTalkTip
   })));
@@ -67257,7 +67717,10 @@ const rhythmBuddyMakeBrain = songs => ({
     who = '',
     mate = '',
     fc = 0,
-    quit = false
+    quit = false,
+    missRate = 0,
+    topicKind = '',
+    topicSongId = ''
   }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
@@ -67271,9 +67734,14 @@ const rhythmBuddyMakeBrain = songs => ({
     if (kind === 'reactResult') {
       const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find(d => d.id === diffId);
       const ratio = Number(score) / (diffDef && diffDef.maxScore || 1000000);
-      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? 'hLow' : '';
+      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow' : '';
       if (!scene) return '';
     }
+    if (kind === 'join' && Math.random() < 0.35) {
+      const hour = new Date().getHours();
+      scene = hour >= 5 && hour < 11 ? 'timeMorning' : hour >= 11 && hour < 17 ? 'timeNoon' : hour >= 17 && hour < 22 ? 'timeEvening' : 'timeNight';
+    }
+    if ((kind === 'join' || kind === 'replyHello') && norm.lives >= 5 && Math.random() < 0.4) scene = kind === 'join' ? 'bondJoin' : 'bondHello';
     const nameOf = id => {
       const song = id ? (songs || []).find(x => x.songId === id) : null;
       if (!song) return '';
@@ -67294,6 +67762,7 @@ const rhythmBuddyMakeBrain = songs => ({
       trait: traitDef ? traitDef.label : '',
       plays: norm.lives > 0 ? String(norm.lives) : '',
       days: norm.streakDays > 0 ? String(norm.streakDays) : '',
+      topic: topicSongId ? nameOf(topicSongId) : RHYTHM_BUDDY_CONVO_TOPIC[topicKind] || '',
       score: lastScore > 0 ? `${Math.round(lastScore / 10000)}万点` : ''
     };
     const key = String(masuId);
@@ -67311,8 +67780,27 @@ const rhythmBuddyMakeBrain = songs => ({
       const call = `${vars.who}${vars.hon}、`;
       if ((call + text).length <= RHYTHM_BUDDY_TALK_MAX) text = call + text;
     }
+    const style = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    if (text && style && style.emoji.length && Math.random() < 0.25 && (text + '😆').length <= RHYTHM_BUDDY_TALK_MAX) text += style.emoji[Math.floor(Math.random() * style.emoji.length)];
     if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
     return text;
+  },
+  style(masuId) {
+    const norm = rhythmBuddyNormalizeMon(RHYTHM_BUDDY_STORE.get().mons[masuId]);
+    const st = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    return st ? {
+      ask: st.ask,
+      starter: st.starter
+    } : {
+      ask: 0.6,
+      starter: [1, 1, 1]
+    };
+  },
+  pair(masuIdA, masuIdB) {
+    const mons = RHYTHM_BUDDY_STORE.get().mons;
+    const a = rhythmBuddyNormalizeMon(mons[masuIdA]).trait;
+    const b = rhythmBuddyNormalizeMon(mons[masuIdB]).trait;
+    return a && b ? rhythmBuddyPairKind(a, b) : 'banter';
   },
   understand({
     text,
@@ -68467,7 +68955,10 @@ function RhythmBuddyGrowth({
         }
       };
     }).then(() => {
-      if (alive && outcome) setShown(outcome);
+      if (alive && outcome) {
+        setShown(outcome);
+        if (typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) RHYTHM_MULTI.noteBuddyGrowth(masu.id, outcome);
+      }
     });
     return () => {
       alive = false;

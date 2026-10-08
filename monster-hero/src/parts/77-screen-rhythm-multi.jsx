@@ -66,6 +66,12 @@ const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
   result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!'],
 });
+// 呼んだマスモンに話しかける札(2026-10-08・ユーザー指示「マスモンに聞くボタン」)。押すと「{名前}、{text}」を送る。
+// 何を聞くかはマスモンの会話(33-rhythm-buddy-convo.jsx)が読み取れるものだけ。名前は12文字までなので、40文字に収まる
+const RHYTHM_BUDDY_ASK_CHIPS = Object.freeze([
+  { label: '調子は?', text: '調子どう?' }, { label: '得意な曲は?', text: '得意な曲は?' }, { label: 'レベルは?', text: 'レベルいくつ?' },
+  { label: 'さっきの話は?', text: 'さっきの話は?' }, { label: '何点だった?', text: '何点だった?' }, { label: '性格は?', text: 'どんな性格?' },
+]);
 // マスモンを呼ぶ遊びの定型文(2026-10-07・ユーザー指示「マスモンいれてーとかマスモン出せないとか」)。共通の最後に並べる
 const RHYTHM_MULTI_CHAT_BUDDY_STAMPS = Object.freeze(['マスモン入れて!', 'マスモン入れたよ!', 'マスモンうまい!', 'マスモン出せない…', '無料おわった…', '券がない…', '席ゆずるね!']);
 const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
@@ -338,6 +344,13 @@ const rhythmMultiOpenSocket = ({ topic, onOpen, onMessage, onClose }) => {
 };
 
 // ---- 部屋の状態(React の外に置く) ----
+// 結果のなかで、ミスが占める割合(判定の数がなければ 0)。マスモンが「ミス多めだったね」と励ますかの目安
+const rhythmMultiMissRate = (res) => {
+  const j = res && Array.isArray(res.j) ? res.j : null;
+  if (!j || j.length < RHYTHM_MULTI_JUDGMENT_IDS.length) return 0;
+  const total = j.reduce((sum, n) => sum + (Number(n) || 0), 0);
+  return total > 0 ? (Number(j[RHYTHM_MULTI_JUDGMENT_IDS.length - 1]) || 0) / total : 0;
+};
 const RHYTHM_MULTI = (() => {
   const listeners = new Set();
   const startListeners = new Set();
@@ -561,17 +574,34 @@ const RHYTHM_MULTI = (() => {
     if (!responders.length) return;
     s.talk.replyAt = now;
     const mateOf = (x) => cpuNameOf(s.cpus.find((c) => c.id !== x.id));
+    // 会話の記憶(直近4つの話題・10分のあいだ)。「さっきの話は?」には、ひとつ前の話題を答える
+    const topics = (s.talk.topics || (s.talk.topics = [])).filter((t) => now - t.at < 10 * 60 * 1000);
+    let kind = parsed.kind;
+    let topicVars = {};
+    if (kind === 'recallAsk') {
+      const prev = topics[0];
+      kind = prev ? 'recall' : 'recallNone';
+      topicVars = prev ? { topicKind: prev.kind, topicSongId: prev.songId || '' } : {};
+    } else if (parsed.songId && kind === 'songTalk') topics.unshift({ kind: 'songTalk', songId: parsed.songId, at: now });
+    else if (typeof RHYTHM_BUDDY_CONVO_TOPIC !== 'undefined' && RHYTHM_BUDDY_CONVO_TOPIC[kind] && !(topics[0] && topics[0].kind === kind)) topics.unshift({ kind, songId: '', at: now });
+    s.talk.topics = topics.slice(0, 4);
     // 呼ばれた・聞かれたときの返事は、直前に話していたとしても返す(返事をしない子になってしまうため)
-    responders.forEach((x, i) => cpuSay(x, parsed.kind, { who: msg.name, mate: mateOf(x), songId: parsed.songId || '' }, { extraDelay: i * 1300, skipGap: direct }));
+    responders.forEach((x, i) => cpuSay(x, kind, { who: msg.name, mate: mateOf(x), songId: parsed.songId || '', ...topicVars }, { extraDelay: i * 1300, skipGap: direct }));
     if (aw && parsed.answered) s.talk.awaiting = null;
     const first = responders[0];
-    if (parsed.ask && parsed.awaits && Math.random() < 0.6) {
+    // 1つの発言に質問がふたつ入っていたら、続けてふたつ目にも答える(「調子どう?あと得意な曲は?」)
+    if (parsed.extra) cpuSay(first, parsed.extra, { who: msg.name, mate: mateOf(first), songId: parsed.songId || '' }, { extraDelay: 2200, skipGap: true });
+    // 聞き返す頻度は性格で変わる(甘えん坊は何度も聞き、プライドは聞かない)
+    const askRate = cpuBrain && typeof cpuBrain.style === 'function' ? cpuBrain.style(first.masuId).ask : 0.6;
+    if (!parsed.extra && parsed.ask && parsed.awaits && Math.random() < askRate) {
       cpuSay(first, parsed.ask, { who: msg.name }, { extraDelay: 2600, skipGap: true });
       s.talk.awaiting = { cpuId: first.id, from: msg.id, kind: parsed.awaits, until: now + RHYTHM_MULTI_CPU_AWAIT_MS };
     } else if (responders.length === 1 && s.cpus.length > 1 && now - s.talk.banterAt > RHYTHM_MULTI_CPU_BANTER_GAP_MS && Math.random() < 0.3) {
       const other = s.cpus.find((c) => c.id !== first.id);
       s.talk.banterAt = now;
-      cpuSay(other, 'banter', { mate: cpuNameOf(first) }, { extraDelay: 3400, skipGap: true });
+      // 2体の性格の相性で、張り合ったり和やかに話したりする
+      const pairKind = cpuBrain && typeof cpuBrain.pair === 'function' ? cpuBrain.pair(first.masuId, other.masuId) : 'banter';
+      cpuSay(other, pairKind, { mate: cpuNameOf(first) }, { extraDelay: 3400, skipGap: true });
     }
   };
   // 場面の変わり目で話す(曲が決まった・結果が出た)。1回の場面につき1度だけ
@@ -626,9 +656,12 @@ const RHYTHM_MULTI = (() => {
         const target = humans.length ? humans[Math.floor(Math.random() * humans.length)] : null;
         const starter = cpuPickOne();
         if (target && starter && Math.random() < 0.6) {
-          const pickKind = Math.random();
-          if (pickKind < 0.67) {
-            const how = pickKind < 0.33;
+          // 何を話しかけるかは性格で変わる(甘えん坊・のんびりは調子、真面目・賢いは得意な曲、強気な子は呼びかけ)
+          const w = cpuBrain && typeof cpuBrain.style === 'function' ? cpuBrain.style(starter.masuId).starter : [1, 1, 1];
+          const roll = Math.random() * (w[0] + w[1] + w[2]);
+          const how = roll < w[0];
+          const fav = !how && roll < w[0] + w[1];
+          if (how || fav) {
             cpuSay(starter, how ? 'qHow' : 'qFav', { who: target.name });
             s.talk.awaiting = { cpuId: starter.id, from: target.id, kind: how ? 'how' : 'fav', until: Date.now() + RHYTHM_MULTI_CPU_AWAIT_MS };
           } else cpuSay(starter, 'callOut', { who: target.name });
@@ -649,7 +682,7 @@ const RHYTHM_MULTI = (() => {
       const humanRows = team.rows.filter((q) => !q.m.cpu && !q.m.gone && q.res);
       humanRows.sort((a, b) => ((b.m.id === team.mvpId ? 2 : 0) + Math.random()) - ((a.m.id === team.mvpId ? 2 : 0) + Math.random()));
       humanRows.slice(0, 2).forEach((q, i) => {
-        cpuSay(s.cpus[i % s.cpus.length], 'reactResult', { who: q.m.name, score: q.res.score, diffId: q.res.diffId, mvp: team.mvpId === q.m.id, fc: q.res.fc || 0, quit: !!q.res.quit }, { extraDelay: 1800 + i * 1500, skipGap: true });
+        cpuSay(s.cpus[i % s.cpus.length], 'reactResult', { who: q.m.name, score: q.res.score, diffId: q.res.diffId, mvp: team.mvpId === q.m.id, fc: q.res.fc || 0, quit: !!q.res.quit, missRate: rhythmMultiMissRate(q.res) }, { extraDelay: 1800 + i * 1500, skipGap: true });
       });
     }
     reactToHumans(r);
@@ -907,7 +940,7 @@ const RHYTHM_MULTI = (() => {
         // 自分が呼んだマスモン(CPU)の一覧 [{ id, masuId }]。部屋を出たら消える(呼んだ1回ぶんはそこで使い切り)
         cpus: [],
         // 呼んだマスモンのおしゃべり(最後に話した時刻・場面ごとに1回だけ話すための印)
-        talk: { at: {}, songRound: '', resultRound: '', replyAt: 0, idleAt: now, awaiting: null, banterAt: 0 },
+        talk: { at: {}, songRound: '', resultRound: '', replyAt: 0, idleAt: now, awaiting: null, banterAt: 0, topics: [] },
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
@@ -1062,6 +1095,14 @@ const RHYTHM_MULTI = (() => {
       reportCpuResult(round);
       sendHb(); emit();
     },
+    // 呼んだマスモンが結果で育ったとき(ビートLvが上がった・性格が決まった)、本人が一言祝う
+    noteBuddyGrowth(masuId, growth) {
+      if (!s || !growth) return;
+      const x = s.cpus.find((c) => c.masuId === masuId);
+      if (!x) return;
+      if (growth.levelUp > 0) cpuSay(x, 'lvUp', { who: ownerName() }, { extraDelay: 800, skipGap: true });
+      if (growth.traitNew) cpuSay(x, 'traitNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
+    },
     // 部屋のチャット。自分の発言も部屋からの返りで表示する(=相手にも届いたと分かる)。続けて送るのは受けない
     sendChat(text) {
       if (!s || !socket) return false;
@@ -1130,7 +1171,7 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
 // 部屋の中の状態は React の外(RHYTHM_MULTI)にあるので、画面を行き来しても部屋は切れない。
 // チャット欄(2026-10-03・ユーザー指摘「チャットが使いにくい」で作り直し)。
 // 上に見出しと✕、真ん中に発言の一覧(高さいっぱい)、下に定型文(折り返して全部見せる)と入力欄
-function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null, talkTip = '', onTalkTipClose = null }) {
+function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl = null, onClose = null, talkTip = '', onTalkTipClose = null, askName = '' }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
   const listRef = React.useRef(null);
@@ -1179,6 +1220,15 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
           );
         })}
       </ul>
+      {askName && (
+        <div data-rhythm-buddy-ask className="mt-2 flex shrink-0 flex-wrap items-center gap-1.5">
+          <b className="shrink-0 text-[10px] font-black text-lime-300">🎵 {askName}に聞く</b>
+          {RHYTHM_BUDDY_ASK_CHIPS.map((chip) => (
+            <button key={chip.label} data-rhythm-buddy-ask-chip type="button" onClick={() => send(`${askName}、${chip.text}`)}
+              className="min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-lime-300/50 bg-lime-950/70 px-2.5 text-[11px] font-black text-lime-100 transition active:scale-95">{chip.label}</button>
+          ))}
+        </div>
+      )}
       <RhythmMultiStampBar phase={phase} onSend={send} wrap limit={10} className="mt-2 shrink-0" />
       {waitNote && <small data-rhythm-multi-chat-wait className="mt-1 block shrink-0 text-[11px] font-black text-amber-300">続けて送るときは、少し待ってね</small>}
       <form className="mt-2 flex shrink-0 gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -1909,7 +1959,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     <div className="absolute inset-0 z-[80000]">
       <button type="button" aria-label="チャットを閉じる" className="absolute inset-0 bg-slate-950/55" onClick={() => setChatOpen(false)} />
       <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[50%] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
-        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} talkTip={!talkTipSeen && (view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} onTalkTipClose={closeTalkTip} />
+        <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} askName={(view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} talkTip={!talkTipSeen && (view.myCpus || []).length > 0 ? ((view.members.find((m) => m.id === view.myCpus[0].id) || {}).name || 'マスモン') : ''} onTalkTipClose={closeTalkTip} />
       </div>
     </div>
   );

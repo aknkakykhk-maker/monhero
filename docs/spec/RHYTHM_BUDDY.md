@@ -184,6 +184,15 @@ AIは使わない(サーバーも契約も要らない)まま、5.3 のおしゃ
 - 古い形のおしゃべりの頭(`understand` が無い)でも、5.3 のキーワードの返事は動く。
 - 検査: `node tools/mode/rhythm-buddy-convo-check.js`(セリフ集・読み取り・呼び方)、`node tools/mode/rhythm-buddy-check.js` の B-11・B-11b・B-12・B-13・B-13b(部屋の中の会話・ほかの人への反応)
 
+
+- **改良(2026-10-08・ユーザー指示「聞くボタン・記憶・聞き取り・性格差・状況反応」)**
+  - 「マスモンに聞く」札(`RHYTHM_BUDDY_ASK_CHIPS`・`data-rhythm-buddy-ask`): チャットの定型文の上に、呼んだマスモンの名前つきで 調子/得意な曲/レベル/さっきの話/何点/性格 を送る。
+  - 記憶: 部屋ごとの `s.talk.topics`(直近4つ・10分)。`recallAsk`(「さっきの話は?」)で1つ前の話題を `recall` で答える。無ければ `recallNone`。話題の呼び名は `RHYTHM_BUDDY_CONVO_TOPIC`。
+  - 聞き取り: 全角半角・ひらがな/カタカナ・絵文字・同じ字の連続を吸収(`rhythmBuddyConvoNormalize`/`Forms`)。質問がふたつ入っていれば `extra` に2つ目を入れ、続けて答える(聞き返しはしない)。
+  - 性格差: `RHYTHM_BUDDY_TRAIT_STYLE`(文末の絵文字・聞き返す頻度・自分から話しかけるときの好み)。2体の相性は `rhythmBuddyPairKind`(`banterRival`/`banterFriend`/`banter`)。
+  - 状況反応: 入室の時間帯あいさつ(`timeMorning`ほか)・遊んだ回数に触れる `bondHello`/`bondJoin`・ビートLv.UPの `lvUp`・性格決定の `traitNew`(`RHYTHM_MULTI.noteBuddyGrowth`)・ミス多めの人への `hMiss`。
+  - 保存データは増やしていない(記憶は部屋の中だけ)。検査: `rhythm-buddy-convo-check.js`(52場面・約850セリフ)・`rhythm-buddy-check.js`(B-11c)。
+
 ## 6. 保存(CLAUDE.md ⑦)
 
 - 新しいキー `mh_rhythm_buddy_v1`: `{ day, used, mons: { [masuId]: 育ち具合 } }`。
