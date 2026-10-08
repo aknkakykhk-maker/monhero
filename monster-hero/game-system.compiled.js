@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad04ac0a44504adb
+// source-sha256: e280e713b93341fd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 18:46";
+const BUILD_DATE = "2026-10-09 08:52";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -59702,7 +59702,8 @@ function BattleScreen({
         value,
         tone,
         short: o.short != null ? o.short : value,
-        pulse: !!o.pulse
+        pulse: !!o.pulse,
+        glow: o.glow || ''
       });
     };
     const atkPct = Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100);
@@ -59784,7 +59785,8 @@ function BattleScreen({
         size: 9
       }), `${who}${trait.label}`, `${trait.icon}${count}/${SWEET_STACK_MAX} ${sweetStackEffectText(ownerId, count)}`, trait.kind === 'cookie' ? 'text-pink-300 border-pink-400/50' : 'text-fuchsia-300 border-fuchsia-400/50', {
         short: `${trait.icon}${count}/${SWEET_STACK_MAX}`,
-        pulse: count >= SWEET_STACK_MAX
+        pulse: count >= SWEET_STACK_MAX,
+        glow: trait.kind === 'cookie' && count >= SWEET_STACK_MAX ? 'mh-cookie-full' : ''
       });
     });
     Object.entries(bowStackView || {}).forEach(([key, n]) => {
@@ -59875,7 +59877,7 @@ function BattleScreen({
       }
     }, chips.map(c => React.createElement("div", {
       key: c.key,
-      className: `text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse ? ' animate-pulse' : ''}`
+      className: `text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse ? ' animate-pulse' : ''}${c.glow ? ` ${c.glow}` : ''}`
     }, c.mark, " ", c.label, c.value ? ` ${c.value}` : ''))) : React.createElement("div", {
       "data-battle-buff-icons": true,
       className: "flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide"
@@ -59883,7 +59885,7 @@ function BattleScreen({
       key: c.key,
       "aria-label": `${c.label}${c.value ? ` ${c.value}` : ''}`,
       title: `${c.label}${c.value ? ` ${c.value}` : ''}`,
-      className: `shrink-0 text-[10px] font-black bg-black/60 px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 leading-none ${c.tone}${c.pulse ? ' animate-pulse' : ''}`
+      className: `shrink-0 text-[10px] font-black bg-black/60 px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 leading-none ${c.tone}${c.pulse ? ' animate-pulse' : ''}${c.glow ? ` ${c.glow}` : ''}`
     }, c.mark, c.short ? React.createElement("span", null, c.short) : null))), React.createElement("button", {
       type: "button",
       "data-battle-buff-toggle": buffDetail ? 'close' : 'open',
@@ -61048,7 +61050,14 @@ function BattleScreen({
       fill: "currentColor",
       size: 12
     }), " ", actionHint || 'Action');
-  })())), React.createElement("div", {
+  })())), tacticsExTurnUsed && passTacticsTurn && selectedCards.length === 0 && !autoBattle && tacticsCardBlock && hand.length > 0 && (() => {
+    const blocks = hand.map((c, i) => tacticsCardBlock(c, i));
+    if (!blocks.every(b => b && !b.ok) || !blocks.some(b => b.kind === 'ex')) return null;
+    return React.createElement("div", {
+      "data-tactics-ex-turn-note": true,
+      className: "pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-fuchsia-300/60 bg-slate-950/95 px-3 py-1 text-[10px] font-black text-fuchsia-100 shadow-lg"
+    }, "EXスキルを使ったので、このターンはカードを使えません →「ターンを進める」");
+  })(), React.createElement("div", {
     className: `flex-1 flex gap-1 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
   }, hand.map((c, i) => {
     const isSel = selectedCards.includes(i);
