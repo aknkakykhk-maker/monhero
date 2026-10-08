@@ -96,7 +96,9 @@ function installFeelPlayer(o) {
       const id = pid++;
       // 向きは画面の中心寄り。判定ラインより手前ではレーンが広がって見えるので、「判定ラインの高さに直した位置」が受付を広げるのは
       // 中心寄りの側。押し始めがそれで通り、押さえている最中は指の高さだけで見ていた(10/7 の食い違い)のはこちらの端
-      const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && rand() < o.edgeProbe ? (centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1) : 0;
+      // 途中で帯が動く・細くなるホールド(holdPoints)は、人は帯を目で追って指を動かす。受付の端で動かさずに押さえると、帯のほうが先に離れて切れるのは当たり前(ボットの勘違い)なので、端の確かめには使わず、指は帯の中心を追う
+      const gn = real.get(n.index), varying = !!(gn && Array.isArray(gn.holdPoints) && gn.holdPoints.some((q) => q.subLane !== gn.holdPoints[0].subLane || q.subLaneWidth !== gn.holdPoints[0].subLaneWidth));
+      const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && !varying && rand() < o.edgeProbe ? (centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1) : 0;
       const p = (probeSide && edgeProbePoint(n, y, probeSide)) || pointAt(c, y);
       const dropPointer = o.mode === 'ios' && rand() < o.dropPointer;
       const lateMs = o.mode !== 'mouse' && rand() < o.lateRate ? o.lateMs[0] + rand() * (o.lateMs[1] - o.lateMs[0]) : 0;
@@ -124,7 +126,7 @@ function installFeelPlayer(o) {
         });
       } else if (o.nudgePx > 0) holding.forEach((h) => { if (!h.press.edgeProbe && rand() < 0.6) { const hc = centerOf(h.n), out = hc <= 0.25 ? -1 : hc >= RHYTHM_LANE_COUNT - 1.25 ? 1 : (rand() < 0.5 ? -1 : 1); const dx = out * o.nudgePx * (0.5 + rand() * 0.5); h.p = { x: h.p.x + dx, y: h.p.y + (rand() - 0.5) * 4 }; send(makeEvents('move', h.id, h.p)); } });
       if (n.type === 'HOLD' || n.type === 'SLIDE') {
-        holding.push({ id, n, p, yRatio: y, press, until: (Number(n.endTimeMs) || n.timeMs) + gauss() * o.sigma * 0.5 });
+        holding.push({ id, n, p, yRatio: y, press, varying, off: c - centerOf(n), until: (Number(n.endTimeMs) || n.timeMs) + gauss() * o.sigma * 0.5 });
       } else if (n.type === 'FLICK') {
         setTimeout(() => { const fd = flickDirOf(n.index), q1 = flickTo(p, fd, 30), q2 = flickTo(p, fd, 70); send(makeEvents('move', id, q1)); send(makeEvents('move', id, q2)); send(makeEvents('up', id, q2)); }, 25 + lateMs);
       } else {
@@ -142,6 +144,8 @@ function installFeelPlayer(o) {
           if (ses && ses.note && ses.note.index === h.n.index) { h.press.sessionSeen = true; h.press.sessionKey = ses.key; h.press.myId = h.id; try { const box = RHYTHM_GESTURE_RUNTIME.areaRect(); const act = rhythmLaneCoordinateAtPoint(h.p.x, h.p.y, box); const tr = rhythmHoldTrackedLane(ses.note, now - (ses.offsetMs || 0)); const lim = tr.half + rhythmHoldTrackingMarginLanes(tr.half * 4); const slack = act == null ? -9 : lim - Math.abs(act - tr.center); const sub = typeof rhythmSubLaneCoordinateAtLineIfBelow === 'function' ? rhythmSubLaneCoordinateAtLineIfBelow(h.p.x, h.p.y, box) : undefined; const atLine = Number.isFinite(sub) ? sub / 2 - 0.5 : null; const slackLine = atLine == null ? -9 : lim - Math.abs(atLine - tr.center); const best = Math.max(slack, slackLine); if (h.press.minSlackBest == null || best < h.press.minSlackBest) h.press.minSlackBest = Math.round(best * 1000) / 1000; if (h.press.minSlack == null || slack < h.press.minSlack) { h.press.minSlack = Math.round(slack * 1000) / 1000; h.press.track = { act: act == null ? null : Math.round(act * 1000) / 1000, center: tr.center, half: tr.half, lim: Math.round(lim * 1000) / 1000 }; } } catch (e) { h.press.trackErr = String(e && e.message || e); } if (ses.trackingBadSincePerf != null) h.press.trackingBad = true; if (ses.failed) h.press.sessionFailed = true; }
         }
       }
+      // 帯が動くホールドは、帯の中心を追って指を動かす(押し始めの位置の、帯の中心からのずれはそのまま)
+      if (h.varying && typeof rhythmHoldTrackedLane === 'function') { const g = real.get(h.n.index); if (g) { const tr = rhythmHoldTrackedLane(g, now); const q = pointAt(tr.center + h.off, h.yRatio); if (Math.abs(q.x - h.p.x) >= 0.5) { h.p = q; h.base = null; send(makeEvents('move', h.id, q)); } } }
       if (h.n.type === 'SLIDE') { const cc = lerpLane(h.n.slidePoints, now); if (cc !== null) { const q = pointAt(cc, h.yRatio); h.p = q; send(makeEvents('move', h.id, q)); } }
       if (endFlick.has(h.n.index) && !h.flicked && now >= h.until - 40) {
         // 終わりの少し前から、上へ素早く弾いて離す
