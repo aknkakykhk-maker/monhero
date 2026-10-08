@@ -92,7 +92,7 @@ const rhythmBuddyMakeBrain = (songs) => ({
   },
   // 部屋のチャットで話す一言(2026-10-07)。性格・その日の調子で変わる。kind='result' のときは、MVP・出来で場面を決める。
   // 直近に言ったものは避ける(マスモンごとに8つ覚える)
-  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false }) {
+  talk({ masuId, kind, songId = '', score = 0, diffId = '', mvp = false, me = '', who = '', mate = '', fc = 0, quit = false, missRate = 0, topicKind = '', topicSongId = '' }) {
     const mon = RHYTHM_BUDDY_STORE.get().mons[masuId];
     const norm = rhythmBuddyNormalizeMon(mon);
     const mood = rhythmBuddyMood(masuId, rhythmBuddyDayKey(Date.now()), mon);
@@ -102,15 +102,76 @@ const rhythmBuddyMakeBrain = (songs) => ({
       const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
       scene = mvp ? 'mvp' : ratio >= 0.9 ? 'high' : ratio >= 0.7 ? 'mid' : 'low';
     }
-    const song = songId ? (songs || []).find((x) => x.songId === songId) : null;
+    // 部屋のほかの人(自分を含む)の結果への反応。目立つ結果(MVP・フルコン・高得点・伸びなかった・途中でやめた)だけに反応する
+    if (kind === 'reactResult') {
+      const diffDef = (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).find((d) => d.id === diffId);
+      const ratio = Number(score) / ((diffDef && diffDef.maxScore) || 1000000);
+      scene = quit ? 'hQuit' : Number(fc) > 0 ? 'hFull' : mvp ? 'hMvp' : ratio >= 0.9 ? 'hHigh' : ratio < 0.6 ? (Number(missRate) >= 0.15 && Math.random() < 0.5 ? 'hMiss' : 'hLow') : '';
+      if (!scene) return '';
+    }
+    // 時間帯のあいさつ・遊んだ回数に触れるあいさつ(部屋へ来たとき・あいさつされたとき、ときどき)
+    if (kind === 'join' && Math.random() < 0.35) {
+      const hour = new Date().getHours();
+      scene = hour >= 5 && hour < 11 ? 'timeMorning' : hour >= 11 && hour < 17 ? 'timeNoon' : hour >= 17 && hour < 22 ? 'timeEvening' : 'timeNight';
+    }
+    if ((kind === 'join' || kind === 'replyHello') && norm.lives >= 5 && Math.random() < 0.4) scene = kind === 'join' ? 'bondJoin' : 'bondHello';
+    const nameOf = (id) => { const song = id ? (songs || []).find((x) => x.songId === id) : null; if (!song) return ''; const full = rhythmSongFullName(song); return full.length <= 14 ? full : String(song.displayName || full); };
+    // 会話のセリフに混ぜる、自分の育ち(無いものは入れない。値の無い穴を持つ文は選ばれない)
+    const top = rhythmBuddyTopSongs(mon, 1)[0];
+    const lastScore = norm.recent[0] ? norm.recent[0].score : 0;
+    const traitDef = norm.trait ? rhythmBuddyTraitOf(norm.trait) : null;
+    const vars = {
+      song: nameOf(songId),
+      fav: top ? nameOf(top.songId) : '',
+      me: String(me || '').slice(0, 12), who: String(who || '').slice(0, 12), mate: String(mate || '').slice(0, 12),
+      lv: String(rhythmBuddyLevelInfo(norm.exp).level),
+      mood: mood && mood.label ? mood.label : '',
+      trait: traitDef ? traitDef.label : '',
+      plays: norm.lives > 0 ? String(norm.lives) : '',
+      days: norm.streakDays > 0 ? String(norm.streakDays) : '',
+      topic: topicSongId ? nameOf(topicSongId) : (RHYTHM_BUDDY_CONVO_TOPIC[topicKind] || ''),
+      score: lastScore > 0 ? `${Math.round(lastScore / 10000)}万点` : '',
+    };
     const key = String(masuId);
     const recent = rhythmBuddyTalkRecent.get(key) || [];
-    const text = rhythmBuddyTalkPick({
-      kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal',
-      vars: { song: song ? rhythmSongFullName(song) : '' }, recent, rand: Math.random,
-    });
+    // 人の呼び方は性格で変わる(「たろうっち」「たろうちゃん」「たろう様」「たろう」)
+    vars.hon = rhythmBuddyHonorific(norm.trait);
+    let text = rhythmBuddyTalkPick({ kind: scene, trait: norm.trait, moodId: mood && mood.id ? mood.id : 'normal', vars, recent, rand: Math.random });
+    // 返事の頭に、ときどき名前の呼びかけを付ける(「たろうっち、ナイス!」)。入りきらない・すでに名前が入っているときは付けない
+    if (text && vars.who && RHYTHM_BUDDY_CONVO_CALLABLE.indexOf(scene) >= 0 && text.indexOf(vars.who) < 0 && Math.random() < 0.3) {
+      const call = `${vars.who}${vars.hon}、`;
+      if ((call + text).length <= RHYTHM_BUDDY_TALK_MAX) text = call + text;
+    }
+    // 性格ごとの話しぶり: ときどき文の終わりに絵文字を添える(ひょうきん=😆 甘えん坊=💕 など)
+    const style = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    if (text && style && style.emoji.length && Math.random() < 0.25 && (text + '😆').length <= RHYTHM_BUDDY_TALK_MAX) text += style.emoji[Math.floor(Math.random() * style.emoji.length)];
     if (text) rhythmBuddyTalkRecent.set(key, [text, ...recent].slice(0, 8));
     return text;
+  },
+  // 性格ごとの話しぶり(聞き返す頻度・自分から話しかけるときの好み)
+  style(masuId) {
+    const norm = rhythmBuddyNormalizeMon(RHYTHM_BUDDY_STORE.get().mons[masuId]);
+    const st = RHYTHM_BUDDY_TRAIT_STYLE[norm.trait];
+    return st ? { ask: st.ask, starter: st.starter } : { ask: 0.6, starter: [1, 1, 1] };
+  },
+  // 2体のやりとりの種類(banter / banterRival / banterFriend)。性格が決まっていなければふつうの banter
+  pair(masuIdA, masuIdB) {
+    const mons = RHYTHM_BUDDY_STORE.get().mons;
+    const a = rhythmBuddyNormalizeMon(mons[masuIdA]).trait;
+    const b = rhythmBuddyNormalizeMon(mons[masuIdB]).trait;
+    return a && b ? rhythmBuddyPairKind(a, b) : 'banter';
+  },
+  // 人の発言を読む(意図・曲名・呼ばれたマスモン)。names は呼んでいるマスモンの名前の並び。awaiting は聞き返して待っている返事の種類
+  understand({ text, names = [], awaiting = '' }) {
+    const list = [];
+    (songs || []).forEach((song) => {
+      if (!song || !song.songId) return;
+      if (song.displayName) list.push({ id: song.songId, name: String(song.displayName) });
+      const full = rhythmSongFullName(song);
+      if (full && full !== song.displayName) list.push({ id: song.songId, name: full });
+    });
+    const parsed = rhythmBuddyConvoParse({ text, names, songs: list, awaiting });
+    return { ...parsed, songId: parsed.song ? parsed.song.id : '' };
   },
   // 性格と今日の調子で選び方が変わる(たまに新しい曲にも挑戦)。{ songId, why }。遊べる曲が無ければ songId は ''
   pick(catalog, masuId) {
@@ -409,8 +470,8 @@ function RhythmBuddyListBar({ settings, onOpen, onChange }) {
   const lineage = settings.lineage !== 'all' && typeof lineageById === 'function' ? lineageById(settings.lineage) : null;
   const btn = 'min-h-[44px] flex items-center gap-1.5 rounded-xl border px-3 py-2 active:scale-95';
   return (
-    <div data-rhythm-buddy-list-bar className="flex gap-2">
-      <button type="button" onClick={() => onOpen('sort')} className={`${btn} min-w-0 flex-1 justify-between border-white/10 bg-slate-900`}>
+    <div data-rhythm-buddy-list-bar className="flex flex-wrap gap-2">
+      <button type="button" onClick={() => onOpen('sort')} className={`${btn} min-w-[9rem] flex-1 justify-between border-white/10 bg-slate-900 landscape:basis-full`}>
         <span className="truncate text-[11px] font-black text-white">並べ替え: {sortOpt.label}{settings.dir === 'asc' ? '▲' : '▼'}</span>
         <span aria-hidden="true" className="shrink-0 text-slate-400">›</span>
       </button>
@@ -593,7 +654,9 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
   return (
     <div className="absolute inset-0 z-[86000] flex items-end justify-center landscape:items-center">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/75" onClick={onClose} />
-      <section data-rhythm-buddy-sheet className="relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:rounded-3xl" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
+      <section data-rhythm-buddy-sheet className="relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:h-[92%] landscape:max-h-[92%] landscape:max-w-3xl landscape:flex-row landscape:gap-3 landscape:rounded-3xl" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
+        {/* 横画面は、左に説明(題・残り回数・ことわり)、右にマスモンの一覧を並べる(高さが足りず、一覧が1段しか見えなかった。2026-10-07) */}
+        <div className="shrink-0 landscape:w-[34%] landscape:overflow-y-auto">
         <header className="mb-2 flex items-center gap-2">
           <h3 className="min-w-0 flex-1 text-base font-black text-lime-200">🎵 マスモンを呼ぶ</h3>
           <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
@@ -602,6 +665,8 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400">
           マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日{RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。
         </p>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
             ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
@@ -647,6 +712,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         })()}
         {listControls.sheet}
         {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+        </div>
       </section>
     </div>
   );
@@ -663,17 +729,21 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
   const listControls = useRhythmBuddyListControls();
   return (
     <div data-mh-screen data-masu-beat className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
-      <div className={`mx-auto w-full max-w-md space-y-2 ${SCREEN_LIST_CLASS}`}>
-        <section className="rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
-          <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
-            モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。
-          </p>
-        </section>
+      {/* 横画面は、根の直下の子を「左の列(見出し・説明・並べ替え)」と「右の列(スクロールする一覧)」へ振り分ける
+          (index.html の [data-mh-screen]:has(> .mh-scroll))。一覧だけを右の列へ入れ、広く使う。
+          以前は説明も並べ替えも一覧と同じ入れ物に入れて max-w-md にしたため、左の列が空いて右が狭く、文字や札が切れた */}
+      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
+      <section className="mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
+        <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
+        <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
+          モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。
+        </p>
+      </section>
+      {!detail && <div className="mb-2 shrink-0">{listControls.bar}</div>}
+      <div className={`w-full ${SCREEN_LIST_CLASS}`}>
         {detail
           ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
-          : <>{listControls.bar}<RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} settings={listControls.settings} /></>}
+          : <RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} settings={listControls.settings} />}
       </div>
       {listControls.sheet}
     </div>
@@ -694,7 +764,7 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
       if (!r.gain) return null;
       outcome = r;
       return { ...st, mons: { ...st.mons, [masu.id]: r.mon } };
-    }).then(() => { if (alive && outcome) setShown(outcome); });
+    }).then(() => { if (alive && outcome) { setShown(outcome); if (typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.noteBuddyGrowth) RHYTHM_MULTI.noteBuddyGrowth(masu.id, outcome); } });
     return () => { alive = false; };
   }, [masu && masu.id, round]);
   if (!shown || !masu) return null;
@@ -716,12 +786,55 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
 // 中身は rhythm_buddy_ranks(39-rhythm-buddy-rank-api.jsx)。テーブルがまだ無いときは「準備中」と出す。
 const RHYTHM_BUDDY_RANK_CACHE_MS = 20000;
 const rhythmBuddyRankCache = new Map();
-function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onClose = null }) {
+// 行を押すと開く、そのマスモンの詳しい画面(ランキングの行に入っている中身だけで出す。通信は増やさない)
+function RhythmBuddyRankDetail({ entry, onClose, renderBreederIcon = null, songName }) {
+  const base = ALL_PLAYER_MONSTERS[entry.monsterId];
+  return (
+    <div data-rhythm-buddy-rank-detail className="absolute inset-0 z-20 flex flex-col gap-2 overflow-y-auto bg-slate-950 p-3">
+      <div className="flex items-center gap-2">
+        <button data-rhythm-buddy-rank-detail-back type="button" aria-label="一覧へ戻る" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>
+        <b className="min-w-0 flex-1 truncate text-base font-black text-lime-100">{entry.monName}</b>
+      </div>
+      <div className="flex flex-col items-center gap-3 landscape:flex-row landscape:items-start">
+        <span className="relative block h-40 w-40 shrink-0 overflow-hidden rounded-2xl border border-lime-300/40 bg-slate-900 landscape:h-36 landscape:w-36">
+          <DyedMonsterImage baseId={entry.monsterId} src={masuDisplayImageUrl(base)} alt="" masuColors={entry.colors} draggable={false} className="h-full w-full object-contain" />
+        </span>
+        <div className="min-w-0 flex-1 space-y-2 self-stretch">
+          <div className="flex items-center gap-2">
+            {renderBreederIcon ? renderBreederIcon({ userName: entry.userName, icon: entry.icon, profileFrame: entry.profileFrame, breederId: entry.breederId }) : null}
+            <span className="min-w-0 flex-1 leading-tight"><small className="block text-[10px] font-bold text-slate-400">ブリーダー</small><b className="block truncate text-sm font-black text-white">{entry.userName}</b></span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            {[['ビートLv', `Lv.${entry.beatLevel}`], ['経験値', entry.beatExp.toLocaleString()], ['ライブ', `${entry.lives}回`]].map(([k, v]) => (
+              <div key={k} className="rounded-xl border border-white/10 bg-slate-900 px-1 py-1.5"><small className="block text-[9px] font-bold text-slate-400">{k}</small><b className="block text-sm font-black text-lime-200">{v}</b></div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <section data-rhythm-buddy-rank-detail-scores className="rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2">
+        <b className="mb-1 block text-[12px] font-black text-lime-100">難易度ごとの最高スコア</b>
+        <ul className="space-y-1">
+          {RHYTHM_BUDDY_DIFF_IDS.map((id) => (
+            <li key={id} className="flex items-center gap-2 text-[11px] font-bold">
+              <span className="w-16 shrink-0 text-slate-400">{rhythmBuddyDiffShort[id]}</span>
+              {entry.scores[id]
+                ? <><b className="shrink-0 font-black text-lime-200">{entry.scores[id].toLocaleString()}点</b><span className="min-w-0 flex-1 truncate text-slate-400">{songName(entry.songs[id]) || ''}</span></>
+                : <span className="text-slate-600">まだ記録がありません</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onClose = null, friendIds = null }) {
   const [kind, setKind] = React.useState('level');
   const [diffId, setDiffId] = React.useState('MASTER');
   const [state, setState] = React.useState({ status: 'loading', entries: [] });
   const [selfId, setSelfId] = React.useState('');
   const [retry, setRetry] = React.useState(0);
+  const [detail, setDetail] = React.useState(null);
+  const [friendOnly, setFriendOnly] = React.useState(false);
   React.useEffect(() => { let alive = true; ensureBreederId().then((id) => { if (alive && typeof id === 'string') setSelfId(id); }).catch(() => {}); return () => { alive = false; }; }, []);
   const cacheKey = kind === 'score' ? `score:${diffId}` : 'level';
   React.useEffect(() => {
@@ -739,10 +852,13 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
     return () => { alive = false; };
   }, [cacheKey, retry]);
   const songName = (id) => { const song = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).find((x) => x.songId === id); return song ? rhythmSongFullName(song) : ''; };
+  // 上位50。フレンドだけのときは、取ってきた中からフレンドと自分のマスモンに絞ってから50に切る
+  const friendSet = new Set(Array.isArray(friendIds) ? friendIds : []);
+  const shown = (friendOnly ? state.entries.filter((e) => (e.breederId && (friendSet.has(e.breederId) || e.breederId === selfId)) || (!e.breederId && e.userName === selfName)) : state.entries).slice(0, RHYTHM_BUDDY_RANK_SHOW_LIMIT);
   const chip = (on) => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
   const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1));
   return (
-    <div data-rhythm-buddy-ranking className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+    <div data-rhythm-buddy-ranking className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">
       <div className="flex items-center gap-2">
         {onClose && <button data-rhythm-buddy-ranking-back type="button" aria-label="戻る" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>}
         <div className="min-w-0 flex-1 leading-tight">
@@ -754,6 +870,11 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
         <button type="button" data-rhythm-buddy-ranking-tab="level" onClick={() => setKind('level')} className={chip(kind === 'level')}>ビートLv</button>
         <button type="button" data-rhythm-buddy-ranking-tab="score" onClick={() => setKind('score')} className={chip(kind === 'score')}>最高スコア</button>
       </div>
+      {Array.isArray(friendIds) && friendIds.length > 0 && (
+        <div className="flex gap-1.5">
+          <button type="button" data-rhythm-buddy-ranking-friends aria-pressed={friendOnly} onClick={() => setFriendOnly((v) => !v)} className={chip(friendOnly)}>フレンドだけ</button>
+        </div>
+      )}
       {kind === 'score' && (
         <div data-rhythm-buddy-ranking-diffs className="flex gap-1.5 overflow-x-auto">
           {RHYTHM_BUDDY_DIFF_IDS.map((id) => <button key={id} type="button" onClick={() => setDiffId(id)} className={chip(diffId === id)}>{rhythmBuddyDiffShort[id]}</button>)}
@@ -768,15 +889,17 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
             <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
           </div>
         )}
-        {state.status === 'ready' && state.entries.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう</p>}
-        {state.status === 'ready' && state.entries.map((e, i) => {
+        {state.status === 'ready' && shown.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">{friendOnly ? 'フレンドのマスモンは、まだ載っていません' : 'まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう'}</p>}
+        {state.status === 'ready' && shown.map((e, i) => {
           const base = ALL_PLAYER_MONSTERS[e.monsterId];
           const mine = (selfId && e.breederId === selfId) || (!e.breederId && !!selfName && e.userName === selfName);
           const score = e.scores[diffId] || 0;
           const sub = kind === 'score' ? (songName(e.songs[diffId]) || '') : `${e.lives}ライブ`;
           return (
             <article key={`${e.breederId || e.userName}-${e.individualId}`} data-rhythm-buddy-ranking-row={i + 1} data-mine={mine ? '1' : undefined}
-              className={`grid grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`}>
+              role="button" tabIndex={0} aria-label={`${e.monName}の詳しい画面を開く`} onClick={() => setDetail(e)}
+              onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setDetail(e); } }}
+              className={`grid cursor-pointer grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 active:scale-[.99] ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`}>
               <b className="text-center text-sm font-black text-slate-200">{medal(i)}</b>
               {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true" className="text-lg">👤</span>}
               <span className="relative block h-11 w-11 overflow-hidden rounded-lg bg-slate-800">
@@ -794,6 +917,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
           );
         })}
       </div>
+      {detail && <RhythmBuddyRankDetail entry={detail} onClose={() => setDetail(null)} renderBreederIcon={renderBreederIcon} songName={songName} />}
     </div>
   );
 }

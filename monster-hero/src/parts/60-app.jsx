@@ -6907,6 +6907,35 @@ function MonsterHeroGame() {
     return { id: activeAssistant.id, name: activeAssistant.name, accent: activeAssistant.accent,
       image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
   }, [rhythmModeSelectOpen, activeAssistant && activeAssistant.id]);
+  // モンヒロバトルの入口でも、助手が立ち絵でひとこと(2026-10-08・ユーザー指示「モンビーのトップページみたいにモンバトも見た目の改良」)。
+  // 立ち絵/コメントの出し入れはモンヒロビートの設定(rhythmSettings)を流用せず、新しい保存キーに持つ。
+  // 保存値が無い・壊れているときは両方ON(既定)で補う
+  useModeSelectStageCss();
+  const [battleSelectAssist, setBattleSelectAssist] = useState({ modeSelectArt: true, modeSelectComment: true });
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const saved = await storeGet(BATTLE_SELECT_ASSIST_KEY, null);
+        if (alive && saved && typeof saved === 'object') setBattleSelectAssist({ modeSelectArt: saved.modeSelectArt !== false, modeSelectComment: saved.modeSelectComment !== false });
+      } catch (_) { /* 読めなければ既定(両方ON) */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const toggleBattleSelectAssist = (key) => {
+    if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
+    const next = { ...battleSelectAssist, [key]: battleSelectAssist[key] === false };
+    setBattleSelectAssist(next);
+    void storeSet(BATTLE_SELECT_ASSIST_KEY, next).catch(() => {});
+  };
+  const battleSystemSelectOpen = gameState === 'BATTLE_SYSTEM_SELECT';
+  const battleSelectAssistant = useMemo(() => {
+    if (!battleSystemSelectOpen || !activeAssistant) return null;
+    const line = (typeof pickAssistantLine === 'function') ? pickAssistantLine('battleSystemSelect', null, assistantBondLevelNow, activeAssistant.id) : null;
+    const text = line ? assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyles[activeAssistant.id] || null, activeAssistant.id) : '';
+    return { id: activeAssistant.id, name: activeAssistant.name, accent: activeAssistant.accent,
+      image: assistantFullImage(activeAssistant, (line && line.e) || 'happy'), face: assistantFaceSrc(activeAssistant, (line && line.e) || 'happy'), text };
+  }, [battleSystemSelectOpen, activeAssistant && activeAssistant.id]);
   // まだ助手が知らせていない飾り枠。もらった順に並ぶ
   const newProfileFrames = ownedProfileFrames
     .filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
@@ -16482,7 +16511,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               )}<div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
               {/* 難易度カード。WAVE1の敵情報は「全WAVE詳細」で見られるためカードには出さず、
                   そのぶんカードを縦に縮めて下のランキングボタンと助手コメントの場所を空けている */}
-              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className={`text-center text-[7px] tracking-[.2em] font-black ${key==='EXTREME'?'text-fuchsia-300':'text-slate-400'}`}>{key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'}</div><h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>{(()=>{const rec=recordBox(key);return(
+              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className={`text-center text-[7px] tracking-[.2em] font-black ${key==='EXTREME'?'text-fuchsia-300':'text-slate-400'}`}>{key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'}</div><h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>{(()=>{const rec=recordBox(key);return(
                 <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="block text-[8px] text-slate-400 font-black">{rec.label}</small><b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b><span className="block text-right text-[9px] text-amber-300">{rec.sub}</span></div>
               );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>{/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                 ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');advanceRunStage('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
@@ -16519,73 +16548,77 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const tutorialNeedsDebugSystems=!!battleTutorial&&battleSystemComingSoon(battleTutorialSystem,{debugBattle:false});
           const systemDebug=debugBattle&&(!battleTutorial||tutorialNeedsDebugSystems);
           const systems=visibleBattleSystems({debugBattle:systemDebug});
+          // 札の色と英字の透かし(モンヒロビートのモードえらびと同じ作り)。仕組みのidで引く
+          const tileLook={
+            [BATTLE_SYSTEM_CLASSIC]:{grad:'from-orange-200 via-orange-400 to-rose-500',mark:'CLASSIC BATTLE'},
+            [BATTLE_SYSTEM_TACTICS]:{grad:'from-sky-200 via-blue-400 to-violet-600',mark:'TACTICS BATTLE'},
+            [BATTLE_SYSTEM_QUICK]:{grad:'from-lime-200 via-emerald-300 to-teal-500',mark:'QUICK MODE'},
+          };
+          const assistShown=!!battleSelectAssistant&&(battleSelectAssist.modeSelectArt||battleSelectAssist.modeSelectComment);
           return (
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0">
-              <button aria-label="戻る" disabled={!!battleTutorial} onClick={returnToHome} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30"><ArrowLeft size={20}/></button>
-            </div>
-            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
-              <h2 className="text-center text-lg font-black leading-tight shrink-0 mt-0.5">モンヒロバトル</h2>
-              <p className="text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0">どのバトルで遊ぶかを選びます</p>
-              {/* ★カード3枚＋助手のひとことが、いちばん小さい端末(375×667)でも1画面へ収まる高さにしてある。
-                  行を足す・余白を広げるときは tools/battle/battle-system-fit-check.js を通すこと */}
-              <div data-battle-systems={systems.length} className={`flex flex-col gap-0.5 shrink-0${battleTutorialSpotClass('systemCards')}`}>
-                {systems.map(sys=>{
-                  // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
-                  //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
-                  const soon=battleSystemComingSoon(sys.id,{debugBattle:systemDebug});
-                  // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
-                  //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
-                  const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});
-                  // れんしゅう中は、その台本の仕組みだけを押せるようにして流れを保つ
-                  const tutorialLocked=!!battleTutorial&&sys.id!==battleTutorialSystem;
-                  // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
-                  // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのは
-                  //  このキーなので、検査が追えるよう文字で書いておく)
-                  const sysSpot=sys.id===BATTLE_SYSTEM_CLASSIC?battleTutorialSpotClass('systemClassic')
-                    :sys.id===BATTLE_SYSTEM_TACTICS?battleTutorialSpotClass('systemTactics')
-                    :sys.id===BATTLE_SYSTEM_QUICK?battleTutorialSpotClass('systemQuick'):'';
-                  // ★カードは「選ぶ」と「詳しいルール」の2つのボタンでできている。
-                  //   準備中でも中身は読めるようにしておく(何が来るのか分かるように)
-                  return (
-                  <div key={sys.id} data-battle-system-card={sys.id}
-                    className={`w-full rounded-2xl border-2 overflow-hidden ${soon?'bg-slate-900/40':'bg-slate-900/80'}${sysSpot}`}
-                    style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
-                    <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
-                      disabled={soon||tutorialLocked} onClick={()=>openBattleSystem(sys.id)}
-                      aria-label={soon?`${sys.label}（準備中）`:sys.label}
-                      className={`w-full px-3 pt-2 pb-1 text-left transition-transform ${soon?'opacity-60':'active:scale-[.98]'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg leading-none">{sys.emoji}</span>
-                        <span className="text-[15px] font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
-                        {soon&&(
-                          <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
-                        )}
-                        {beta&&(
-                          <span data-battle-system-beta className="ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5">β版</span>
-                        )}
-                        {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
-                          <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1">{sys.tagline}</div>
-                      {/* 売りを3行。どの仕組みも同じ数・同じ並びなので、見比べて選べる */}
-                      <ul className="mt-1 space-y-0.5">{sys.highlights.map(([icon,text])=>(
-                        <li key={text} className="flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-px text-[10px] font-black text-slate-200">
-                          <span className="shrink-0">{icon}</span><span className="min-w-0 flex-1 leading-tight">{text}</span>
-                        </li>
-                      ))}</ul>
-                      <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
-                    </button>
-                    <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
-                      aria-label={`${sys.label}の詳しいルール`}
-                      className="mh-hit-expand-down relative w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[11px] font-black text-slate-300 active:scale-[.98] disabled:opacity-50 flex items-center justify-center gap-1">
-                      詳しいルール<ChevronRight size={12} className="shrink-0"/>
-                    </button>
-                  </div>);
-                })}
+          <div data-mh-screen data-battle-system-select className="mhms-stage relative flex-1 flex flex-col h-full min-h-0 overflow-hidden text-white">
+            <RhythmModeSelectStage notes={false}/>
+            <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
+              <button aria-label="戻る" disabled={!!battleTutorial} onClick={returnToHome} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>
+              <div className="min-w-0 flex-1 leading-none">
+                <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONHERO BATTLE ・ SELECT</small>
+                <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モンヒロバトル</b>
+                <small className="block truncate text-[9px] font-black text-slate-300/90">どのバトルで遊ぶかを選びます</small>
               </div>
-              <div className="mt-1 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
+            </header>
+            {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下に札。横画面: 左に立ち絵、右に札 */}
+            <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
+              <ModeSelectAssistantPanel assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist}/>
+              <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+                {!assistShown&&battleSelectAssistant&&<ModeSelectAssistToggles assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist} cls="justify-end" withLabel/>}
+                <div data-battle-systems={systems.length} className={`flex flex-col gap-2${battleTutorialSpotClass('systemCards')}`}>
+                  {systems.map((sys,idx)=>{
+                    // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。デバッグからは今までどおり遊べる
+                    const soon=battleSystemComingSoon(sys.id,{debugBattle:systemDebug});
+                    // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、入口でそのことが分かるようにしておく
+                    const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});
+                    // れんしゅう中は、その台本の仕組みだけを押せるようにして流れを保つ
+                    const tutorialLocked=!!battleTutorial&&sys.id!==battleTutorialSystem;
+                    // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
+                    // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのはこのキーなので、検査が追えるよう文字で書いておく)
+                    const sysSpot=sys.id===BATTLE_SYSTEM_CLASSIC?battleTutorialSpotClass('systemClassic')
+                      :sys.id===BATTLE_SYSTEM_TACTICS?battleTutorialSpotClass('systemTactics')
+                      :sys.id===BATTLE_SYSTEM_QUICK?battleTutorialSpotClass('systemQuick'):'';
+                    const look=tileLook[sys.id]||tileLook[BATTLE_SYSTEM_CLASSIC];
+                    // ★札は「選ぶ」ボタンと、右の「？(詳しいルール)」ボタンの2つでできている。準備中でも中身は読める
+                    return (
+                    <div key={sys.id} data-battle-system-card={sys.id} className={`relative${sysSpot}`}>
+                      <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
+                        disabled={soon||tutorialLocked} onClick={()=>openBattleSystem(sys.id)}
+                        aria-label={soon?`${sys.label}（準備中）`:sys.label}
+                        className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
+                        <span aria-hidden="true" className="mhms-mark">{look.mark}</span>
+                        <span aria-hidden="true" className="mhms-ico relative shrink-0 text-3xl leading-none">{sys.emoji}</span>
+                        <span className="relative min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <b className="block min-w-0 truncate text-[18px] font-black italic leading-tight">{sys.label}</b>
+                            {soon&&<span className="shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black">準備中</span>}
+                            {beta&&<span data-battle-system-beta className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-amber-200">β版</span>}
+                            {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&<span className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300">DEBUG</span>}
+                          </span>
+                          <small className="block text-[10px] font-black leading-tight text-slate-900/80">{sys.tagline}</small>
+                          {(soon||beta)&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">{soon?'いま準備しています。遊べるようになったらお知らせします':'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'}</small>}
+                        </span>
+                      </button>
+                      <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
+                        aria-label={`${sys.label}の詳しいルール`}
+                        className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-slate-950/55 text-[17px] font-black text-white backdrop-blur-sm active:scale-90 disabled:opacity-40">？</button>
+                    </div>);
+                  })}
+                </div>
+                {/* 下の小さいボタンの列(モンヒロビートのモードえらびと同じ並び)。ランキングと、ヘルプへの近道 */}
+                <div data-battle-system-shortcuts className="flex gap-2 pt-1">
+                  <button data-battle-system-ranking type="button" disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(BATTLE_MODE_CHALLENGE,difficulty,'BATTLE_SYSTEM_SELECT')}
+                    className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-emerald-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">🏆</span><b className="text-[11px] font-black">ランキング</b></button>
+                  <button data-battle-system-help type="button" disabled={!!battleTutorial} onClick={()=>openHelp()}
+                    className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-amber-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">📖</span><b className="text-[11px] font-black">ヘルプ</b></button>
+                </div>
+              </div>
             </div>
           </div>);
         })()}
@@ -16612,9 +16645,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 真ん中のコピーの外にいたら、同じモードが同じ見え方で並んでいる真ん中へ差し替える
           const recenterModeLoop=()=>{const root=modeCarouselRef.current;if(!root)return;const index=centeredLoopIndex();if(index>=modes.length&&index<modes.length*2)return;const target=modes.length+(index%modes.length);const from=root.children[index],to=root.children[target];if(!from||!to)return;root.scrollLeft+=to.offsetLeft-from.offsetLeft;};
           return (
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+            <RhythmModeSelectStage notes={false}/>
             {/* ランキングのタブを見ているときは、いきなりホームへ帰らずまずモード選択へ戻す */}
-            <ScreenHead compact title="バトル" accent="text-indigo-400" disabled={!!battleTutorial} onBack={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}setGameState('BATTLE_SYSTEM_SELECT');}}/>
+            <BattleScreenHead eyebrow="MONHERO BATTLE ・ SELECT MODE" title={(BATTLE_SYSTEMS.find(sy=>sy.id===battleSystem)||BATTLE_SYSTEMS[0]).label} accentStyle={{color:(BATTLE_SYSTEMS.find(sy=>sy.id===battleSystem)||BATTLE_SYSTEMS[0]).color}} disabled={!!battleTutorial} onBack={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}setGameState('BATTLE_SYSTEM_SELECT');}}/>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
@@ -16633,7 +16667,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"><ChevronLeft/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
-                      <article key={`${m.id}-${loopIndex}`} data-battle-mode={m.id} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
+                      <article key={`${m.id}-${loopIndex}`} data-battle-mode={m.id} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE MODE</div>
                         {/* ★名前の長いモード(タクティクス種族チャレンジ など)は、そのままだと2行に折り返して読みにくい。
                               字を落として1行に収める(名前は正式名称のまま。CLAUDE.md ⑤) */}
@@ -16693,11 +16727,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const selectedIndex=Math.max(0,difficulties.findIndex(setting=>setting.id===extremeDifficulty));
           const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setExtremeDifficulty(difficulties[safe].id);centerCarouselChild(modeDifficultyCarouselRef.current,safe,behavior);};
           return (
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" data-extreme-difficulties style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" data-extreme-difficulties style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+            <RhythmModeSelectStage notes={false}/>
             {/* ★極限チャレンジがモードのカードだった頃は、カードの「このモードの説明」から読めた。
                  チャレンジの極限タブへ入れ込んだとき(2026-09-19)に入口ごと無くなっていたので、ここへ置き直す。
                  説明の中身は EXTREME_MODE の points。モードの説明モーダルをそのまま使う */}
-            <ScreenHead compact title="極限チャレンジ" accent="text-fuchsia-300" onBack={()=>setGameState('BATTLE_MODE_SELECT')}
+            <BattleScreenHead eyebrow="EXTREME CHALLENGE ・ SELECT LEVEL" title="極限チャレンジ" accent="text-fuchsia-300" onBack={()=>setGameState('BATTLE_MODE_SELECT')}
               right={<button data-extreme-mode-info aria-label="極限チャレンジの説明を開く" onClick={()=>setModeInfoId(EXTREME_MODE.id)} className="shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95">このモードの説明</button>}/>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
@@ -16810,8 +16845,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesRewardClaimed=difficultyId=>isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           const speciesCleared=difficultyId=>isSpeciesChallengeCleared(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           return (
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
-            <ScreenHead compact title={mode.label} accentStyle={{color:mode.color}} disabled={!!battleTutorial} onBack={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':(battleSystemOf(battleMode).direct?'BATTLE_SYSTEM_SELECT':'BATTLE_MODE_SELECT'))}/>
+          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+            <RhythmModeSelectStage notes={false}/>
+            <BattleScreenHead eyebrow="MONHERO BATTLE ・ SELECT LEVEL" title={mode.label} accentStyle={{color:mode.color}} disabled={!!battleTutorial} onBack={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':(battleSystemOf(battleMode).direct?'BATTLE_SYSTEM_SELECT':'BATTLE_MODE_SELECT'))}/>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
@@ -16864,7 +16900,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         :tacticsDiff?(isExtremeDifficultyId(TACTICS_DIFFICULTY_IDS[TACTICS_DIFFICULTY_IDS.indexOf(key)-1])?'🔒 前の難易度クリアで解放':`🔒 ${TACTICS_EXTREME_UNLOCK_TEXT}`)
                         :'🔒 同じ難易度クリアで解放';
                       const heroProofReward=heroProofClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});const heroProofShardReward=heroProofShardClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});return (
-                      <article key={key} aria-disabled={!quickUnlocked} data-difficulty-card={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick?'h-[384px] flex flex-col':''} ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'} ${quickUnlocked?'':'grayscale'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}>
+                      <article key={key} aria-disabled={!quickUnlocked} data-difficulty-card={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick?'h-[384px] flex flex-col':''} ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'} ${quickUnlocked?'':'grayscale'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(160deg,#2a1257,#150b38 60%,#0a1030)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}>
                         <div className={`text-center text-[7px] tracking-[.2em] font-black ${key==='EXTREME'?'text-fuchsia-300':'text-slate-400'}`}>{key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'}</div>
                         {/* 14難易度を横に送るので、どこまでクリアしたかが見出しだけで分かるようにする */}
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}{species&&speciesCleared(key)&&<span role="img" aria-label="クリア済み" data-species-cleared-mark={key} className="ml-1 align-middle text-[11px]">✅</span>}</h3>
@@ -16919,10 +16955,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {gameState==='BATTLE_SCORE_RANKING'&&(()=>{const mode=battleModeInfo(scoreRankingMode);const species=isSpeciesChallengeMode(scoreRankingMode);return (
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+            <RhythmModeSelectStage notes={false}/>
             {/* ★名前の長いモードでは「◯◯ランキング」が1行に入らず、モード名のほうが切れていた。
                   モード名を主にして、「ランキング」は小さく下へ置く(2026-09-21) */}
-            <ScreenHead compact title={mode.label} accentStyle={{color:mode.color}} note="ランキング" onBack={()=>setGameState(scoreRankingBack)}/>
+            <BattleScreenHead eyebrow="MONHERO BATTLE ・ RANKING" title={mode.label} accentStyle={{color:mode.color}} note="ランキング" onBack={()=>setGameState(scoreRankingBack)}/>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>
               {/* 一覧はモード選択画面・既存のバトル画面と同じ描画を呼ぶ(画面を複製しない)。
