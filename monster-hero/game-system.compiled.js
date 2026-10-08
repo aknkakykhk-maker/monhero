@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb4037e0fd6c5409
+// source-sha256: 04b8363585ba9546
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-08 07:56";
+const BUILD_DATE = "2026-10-08 11:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37104,6 +37104,8 @@ const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) 
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
 const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
+const RHYTHM_BUDDY_RANK_SEEN_KEY = 'mh_rhythm_buddy_rank_seen_v1';
+const RHYTHM_BUDDY_TALK_SEEN_KEY = 'mh_rhythm_buddy_talk_seen_v1';
 const RHYTHM_BUDDY_FREE_PER_DAY = 3;
 const RHYTHM_BUDDY_LEVEL_MAX = 100;
 const RHYTHM_BUDDY_TRAIT_LEVEL = 30;
@@ -42049,7 +42051,7 @@ const sbFetchRhythmBuddyRanks = async (kind, diffId = 'MASTER') => {
     const rows = JSON.parse(body || '[]');
     const entries = rhythmBuddyRankMerge((Array.isArray(rows) ? rows : []).map(rhythmBuddyRankEntryFromRow));
     entries.sort(kind === 'score' ? (a, b) => (b.scores[diffId] || 0) - (a.scores[diffId] || 0) : (a, b) => b.beatLevel - a.beatLevel || b.beatExp - a.beatExp);
-    return entries.slice(0, RHYTHM_BUDDY_RANK_SHOW_LIMIT);
+    return entries;
   } finally {
     clearTimeout(timer);
   }
@@ -64856,7 +64858,9 @@ function RhythmMultiChatPanel({
   phase = '',
   members = [],
   resolveIconUrl = null,
-  onClose = null
+  onClose = null,
+  talkTip = '',
+  onTalkTipClose = null
 }) {
   const [chatText, setChatText] = React.useState('');
   const [waitNote, setWaitNote] = React.useState(false);
@@ -64890,6 +64894,19 @@ function RhythmMultiChatPanel({
     "aria-label": "チャットを閉じる",
     onClick: onClose,
     className: "min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200"
+  }, "✕")), talkTip && React.createElement("div", {
+    "data-rhythm-buddy-talk-tip": true,
+    className: "mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-lg leading-none"
+  }, "🎵"), React.createElement("p", {
+    className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100"
+  }, "呼んだマスモンに話しかけてみよう。「", talkTip, "、調子どう?」のように名前を付けて聞くと、そのマスモンの本当の調子で答えます。「みんな」と呼ぶと全員が返します"), onTalkTipClose && React.createElement("button", {
+    type: "button",
+    "aria-label": "案内を閉じる",
+    onClick: onTalkTipClose,
+    className: "min-h-[36px] min-w-[36px] shrink-0 rounded-lg bg-slate-800 text-sm font-black"
   }, "✕")), React.createElement("ul", {
     ref: listRef,
     "data-rhythm-multi-chat-list": true,
@@ -65529,6 +65546,33 @@ function RhythmMultiScreen({
     void storeSet(RHYTHM_BUDDY_SEEN_KEY, true).catch(() => {});
     if (open && onOpenMasuBeat) onOpenMasuBeat();
   };
+  const [rankIntroSeen, setRankIntroSeen] = React.useState(true);
+  const [talkTipSeen, setTalkTipSeen] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const seen = await storeGet(RHYTHM_BUDDY_RANK_SEEN_KEY, false);
+        if (alive) setRankIntroSeen(seen === true);
+      } catch (_) {}
+      try {
+        const seen = await storeGet(RHYTHM_BUDDY_TALK_SEEN_KEY, false);
+        if (alive) setTalkTipSeen(seen === true);
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const closeRankIntro = open => {
+    setRankIntroSeen(true);
+    void storeSet(RHYTHM_BUDDY_RANK_SEEN_KEY, true).catch(() => {});
+    if (open) openRankHub('buddy');
+  };
+  const closeTalkTip = () => {
+    setTalkTipSeen(true);
+    void storeSet(RHYTHM_BUDDY_TALK_SEEN_KEY, true).catch(() => {});
+  };
   const buddyPaidRef = React.useRef({});
   const refundBuddy = masuId => {
     const paid = buddyPaidRef.current[masuId];
@@ -65902,10 +65946,10 @@ function RhythmMultiScreen({
     setChatOpen(false);
     setRankingOpen(true);
   };
-  const openRankHub = () => {
+  const openRankHub = tab => {
     const song = songById(rankingSongId);
     if (rankingSupport && song) rankingSupport.open(song);
-    setRankHubTab('national');
+    setRankHubTab(tab === 'buddy' ? 'buddy' : 'national');
     setRankHubOpen(true);
   };
   const rankingButton = (extra = '') => rankingSupport && React.createElement("button", {
@@ -65960,7 +66004,9 @@ function RhythmMultiScreen({
     phase: room ? room.phase : '',
     members: view.members,
     resolveIconUrl: resolveIconUrl,
-    onClose: () => setChatOpen(false)
+    onClose: () => setChatOpen(false),
+    talkTip: !talkTipSeen && (view.myCpus || []).length > 0 ? (view.members.find(m => m.id === view.myCpus[0].id) || {}).name || 'マスモン' : '',
+    onTalkTipClose: closeTalkTip
   })));
   const countdownLayer = countdown && React.createElement("div", {
     "data-rhythm-multi-countdown": true,
@@ -66161,7 +66207,7 @@ function RhythmMultiScreen({
     }, "合言葉で友だちと遊ぶ"))), ms.multi && React.createElement("button", {
       "data-rhythm-mode-ranking": true,
       type: "button",
-      onClick: openRankHub,
+      onClick: () => openRankHub('national'),
       className: "mhms-card rank mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-lime-200 via-emerald-300 to-teal-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.24s'
@@ -66197,6 +66243,23 @@ function RhythmMultiScreen({
       type: "button",
       "aria-label": "閉じる",
       onClick: () => closeBuddyIntro(false),
+      className: "min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black"
+    }, "✕")), ms.multi && buddyIntroSeen && !rankIntroSeen && React.createElement("section", {
+      "data-rhythm-buddy-rank-intro": true,
+      className: "mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-2xl leading-none"
+    }, "🏆"), React.createElement("p", {
+      className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100"
+    }, "「ランキング」に「マスモンランキング」ができました。育てたマスモンのビートLvと最高スコアの順位が見られます"), React.createElement("button", {
+      type: "button",
+      onClick: () => closeRankIntro(true),
+      className: "min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950"
+    }, "見てみる"), React.createElement("button", {
+      type: "button",
+      "aria-label": "閉じる",
+      onClick: () => closeRankIntro(false),
       className: "min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black"
     }, "✕")), ms.multi && React.createElement("div", {
       "data-rhythm-mode-session": true,
@@ -66362,7 +66425,8 @@ function RhythmMultiScreen({
     }, rankHubTab === 'national' ? rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null : React.createElement(RhythmBuddyRankingBoard, {
       renderBreederIcon: rankingSupport && rankingSupport.breederIcon,
       selfName: myProfile().name,
-      onClose: () => setRankHubOpen(false)
+      onClose: () => setRankHubOpen(false),
+      friendIds: friendsOn ? (roster || []).map(f => f.otherId) : null
     })), React.createElement("div", {
       "data-rhythm-mode-ranking-tabs": true,
       className: "flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2",
@@ -68430,10 +68494,86 @@ function RhythmBuddyGrowth({
 }
 const RHYTHM_BUDDY_RANK_CACHE_MS = 20000;
 const rhythmBuddyRankCache = new Map();
+function RhythmBuddyRankDetail({
+  entry,
+  onClose,
+  renderBreederIcon = null,
+  songName
+}) {
+  const base = ALL_PLAYER_MONSTERS[entry.monsterId];
+  return React.createElement("div", {
+    "data-rhythm-buddy-rank-detail": true,
+    className: "absolute inset-0 z-20 flex flex-col gap-2 overflow-y-auto bg-slate-950 p-3"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("button", {
+    "data-rhythm-buddy-rank-detail-back": true,
+    type: "button",
+    "aria-label": "一覧へ戻る",
+    onClick: onClose,
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300"
+  }, "←"), React.createElement("b", {
+    className: "min-w-0 flex-1 truncate text-base font-black text-lime-100"
+  }, entry.monName)), React.createElement("div", {
+    className: "flex flex-col items-center gap-3 landscape:flex-row landscape:items-start"
+  }, React.createElement("span", {
+    className: "relative block h-40 w-40 shrink-0 overflow-hidden rounded-2xl border border-lime-300/40 bg-slate-900 landscape:h-36 landscape:w-36"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: entry.monsterId,
+    src: masuDisplayImageUrl(base),
+    alt: "",
+    masuColors: entry.colors,
+    draggable: false,
+    className: "h-full w-full object-contain"
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1 space-y-2 self-stretch"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, renderBreederIcon ? renderBreederIcon({
+    userName: entry.userName,
+    icon: entry.icon,
+    profileFrame: entry.profileFrame,
+    breederId: entry.breederId
+  }) : null, React.createElement("span", {
+    className: "min-w-0 flex-1 leading-tight"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "ブリーダー"), React.createElement("b", {
+    className: "block truncate text-sm font-black text-white"
+  }, entry.userName))), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5 text-center"
+  }, [['ビートLv', `Lv.${entry.beatLevel}`], ['経験値', entry.beatExp.toLocaleString()], ['ライブ', `${entry.lives}回`]].map(([k, v]) => React.createElement("div", {
+    key: k,
+    className: "rounded-xl border border-white/10 bg-slate-900 px-1 py-1.5"
+  }, React.createElement("small", {
+    className: "block text-[9px] font-bold text-slate-400"
+  }, k), React.createElement("b", {
+    className: "block text-sm font-black text-lime-200"
+  }, v)))))), React.createElement("section", {
+    "data-rhythm-buddy-rank-detail-scores": true,
+    className: "rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2"
+  }, React.createElement("b", {
+    className: "mb-1 block text-[12px] font-black text-lime-100"
+  }, "難易度ごとの最高スコア"), React.createElement("ul", {
+    className: "space-y-1"
+  }, RHYTHM_BUDDY_DIFF_IDS.map(id => React.createElement("li", {
+    key: id,
+    className: "flex items-center gap-2 text-[11px] font-bold"
+  }, React.createElement("span", {
+    className: "w-16 shrink-0 text-slate-400"
+  }, rhythmBuddyDiffShort[id]), entry.scores[id] ? React.createElement(React.Fragment, null, React.createElement("b", {
+    className: "shrink-0 font-black text-lime-200"
+  }, entry.scores[id].toLocaleString(), "点"), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-slate-400"
+  }, songName(entry.songs[id]) || '')) : React.createElement("span", {
+    className: "text-slate-600"
+  }, "まだ記録がありません"))))));
+}
 function RhythmBuddyRankingBoard({
   renderBreederIcon = null,
   selfName = '',
-  onClose = null
+  onClose = null,
+  friendIds = null
 }) {
   const [kind, setKind] = React.useState('level');
   const [diffId, setDiffId] = React.useState('MASTER');
@@ -68443,6 +68583,8 @@ function RhythmBuddyRankingBoard({
   });
   const [selfId, setSelfId] = React.useState('');
   const [retry, setRetry] = React.useState(0);
+  const [detail, setDetail] = React.useState(null);
+  const [friendOnly, setFriendOnly] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
     ensureBreederId().then(id => {
@@ -68497,11 +68639,13 @@ function RhythmBuddyRankingBoard({
     const song = (typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []).find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '';
   };
+  const friendSet = new Set(Array.isArray(friendIds) ? friendIds : []);
+  const shown = (friendOnly ? state.entries.filter(e => e.breederId && (friendSet.has(e.breederId) || e.breederId === selfId) || !e.breederId && e.userName === selfName) : state.entries).slice(0, RHYTHM_BUDDY_RANK_SHOW_LIMIT);
   const chip = on => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
   const medal = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1);
   return React.createElement("div", {
     "data-rhythm-buddy-ranking": true,
-    className: "flex min-h-0 flex-1 flex-col gap-2 p-3"
+    className: "relative flex min-h-0 flex-1 flex-col gap-2 p-3"
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, onClose && React.createElement("button", {
@@ -68528,7 +68672,15 @@ function RhythmBuddyRankingBoard({
     "data-rhythm-buddy-ranking-tab": "score",
     onClick: () => setKind('score'),
     className: chip(kind === 'score')
-  }, "最高スコア")), kind === 'score' && React.createElement("div", {
+  }, "最高スコア")), Array.isArray(friendIds) && friendIds.length > 0 && React.createElement("div", {
+    className: "flex gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-buddy-ranking-friends": true,
+    "aria-pressed": friendOnly,
+    onClick: () => setFriendOnly(v => !v),
+    className: chip(friendOnly)
+  }, "フレンドだけ")), kind === 'score' && React.createElement("div", {
     "data-rhythm-buddy-ranking-diffs": true,
     className: "flex gap-1.5 overflow-x-auto"
   }, RHYTHM_BUDDY_DIFF_IDS.map(id => React.createElement("button", {
@@ -68554,9 +68706,9 @@ function RhythmBuddyRankingBoard({
       setRetry(n => n + 1);
     },
     className: "mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black"
-  }, "もう一度読み込む")), state.status === 'ready' && state.entries.length === 0 && React.createElement("p", {
+  }, "もう一度読み込む")), state.status === 'ready' && shown.length === 0 && React.createElement("p", {
     className: "py-8 text-center text-sm font-bold text-slate-400"
-  }, "まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう"), state.status === 'ready' && state.entries.map((e, i) => {
+  }, friendOnly ? 'フレンドのマスモンは、まだ載っていません' : 'まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう'), state.status === 'ready' && shown.map((e, i) => {
     const base = ALL_PLAYER_MONSTERS[e.monsterId];
     const mine = selfId && e.breederId === selfId || !e.breederId && !!selfName && e.userName === selfName;
     const score = e.scores[diffId] || 0;
@@ -68565,7 +68717,17 @@ function RhythmBuddyRankingBoard({
       key: `${e.breederId || e.userName}-${e.individualId}`,
       "data-rhythm-buddy-ranking-row": i + 1,
       "data-mine": mine ? '1' : undefined,
-      className: `grid grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`
+      role: "button",
+      tabIndex: 0,
+      "aria-label": `${e.monName}の詳しい画面を開く`,
+      onClick: () => setDetail(e),
+      onKeyDown: ev => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          setDetail(e);
+        }
+      },
+      className: `grid cursor-pointer grid-cols-[28px_32px_44px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 active:scale-[.99] ${mine ? 'border-lime-300/70 bg-lime-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/5 bg-slate-900'}`
     }, React.createElement("b", {
       className: "text-center text-sm font-black text-slate-200"
     }, medal(i)), renderBreederIcon ? renderBreederIcon({
@@ -68600,7 +68762,12 @@ function RhythmBuddyRankingBoard({
     }, "点")) : React.createElement(React.Fragment, null, "Lv.", e.beatLevel, React.createElement("small", {
       className: "block text-[9px] font-bold text-slate-400"
     }, e.beatExp.toLocaleString(), "EXP"))));
-  })));
+  })), detail && React.createElement(RhythmBuddyRankDetail, {
+    entry: detail,
+    onClose: () => setDetail(null),
+    renderBreederIcon: renderBreederIcon,
+    songName: songName
+  }));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',

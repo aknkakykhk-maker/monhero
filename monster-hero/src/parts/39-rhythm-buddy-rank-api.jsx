@@ -125,7 +125,8 @@ const sbFetchRhythmBuddyRanks = async (kind, diffId = 'MASTER') => {
     entries.sort(kind === 'score'
       ? (a, b) => (b.scores[diffId] || 0) - (a.scores[diffId] || 0)
       : (a, b) => b.beatLevel - a.beatLevel || b.beatExp - a.beatExp);
-    return entries.slice(0, RHYTHM_BUDDY_RANK_SHOW_LIMIT);
+    // 並べたまま全部返す(画面が上位50に切る。フレンドだけに絞るときは、絞ってから50に切る)
+    return entries;
   } finally {
     clearTimeout(timer);
   }
