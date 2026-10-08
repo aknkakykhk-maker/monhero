@@ -2,7 +2,7 @@
 // iPhone のくせ)で演奏し、押したのに取れない・判定のずれ・ホールドが切れた、を数える。中身は lib/feel.js。
 // ユーザー指示「音ゲー班が自分で遊んで、操作性や反応の悪さを直す仕組み」。音ゲー班が毎回と、演奏まわりを変えたときに回す(ROUTINE.md)。
 //
-//   node tools/playbot/feel.js                        いまの版で3曲(HARD)を点検
+//   node tools/playbot/feel.js                        いまの版で3曲(HARD。ハルカ・Stay With Me・FREEDOM DiVE↓)を点検
 //   node tools/playbot/feel.js --compare origin/main~5   前の版(git の参照)と今の版を、同じ曲・同じ指(同じ種)で比べる
 //   node tools/playbot/feel.js --songs haruka,anima --difficulty HARD --mode ios|touch|mouse --seed 7 --cpu 4
 //
@@ -20,7 +20,7 @@ const { touchInputSource } = require('./lib/touch-input');
 const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback; };
-const SONG_IDS = argOf('songs', 'haruka,stay_with_me_short,freedom_dive').split(',').map((x) => x.trim()).filter(Boolean);
+const SONG_IDS = argOf('songs', 'haruka,stay_with_me,freedom_dive').split(',').map((x) => x.trim()).filter(Boolean);
 const DIFFICULTY = argOf('difficulty', 'HARD');
 const SEED = Number(argOf('seed', 20261007)) || 1;
 const CPU = Math.max(1, Number(argOf('cpu', 1)) || 1);
