@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6aca86949fec0c5e
+// source-sha256: f2ae08627a3ab54e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 00:39";
+const BUILD_DATE = "2026-10-10 00:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15665,10 +15665,15 @@ const availableUpdateNotices = ({
 } = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string' && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id) && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
-  const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
+  const all = Array.isArray(notices) ? notices : [];
+  const openIds = new Set(all.map(notice => notice && notice.id));
+  const isSuperseded = notice => !!notice && typeof notice.supersededBy === 'string' && openIds.has(notice.supersededBy);
+  const unseenAll = all.filter(notice => !seen.includes(notice.id));
+  const superseded = unseenAll.filter(isSuperseded);
+  const unseen = unseenAll.filter(notice => !isSuperseded(notice));
   return {
     queue: unseen.slice(0, UPDATE_NOTICE_LOGIN_LIMIT),
-    seen: normalizeSeenUpdateNoticeIds([...seen, ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)])
+    seen: normalizeSeenUpdateNoticeIds([...seen, ...superseded.map(notice => notice.id), ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)])
   };
 };
 const localCalendarDate = (now = new Date()) => {
@@ -56995,6 +57000,74 @@ function HomeFriendRequestNotice({
     className: "min-h-[50px] rounded-2xl bg-rose-500 text-sm font-black text-white active:scale-95"
   }, "見にいく"))));
 }
+function HomeUpdateGuideBundle({
+  activeAssistant,
+  assistantBondLevelNow,
+  assistantCallStyle,
+  breederName,
+  selectedAssistantId,
+  updateGuideQueue,
+  openUpdateGuideDetail,
+  dismissUpdateGuideAll
+}) {
+  const who = activeAssistant;
+  const headline = n => {
+    const pages = typeof assistantNoticePagesFor === 'function' ? assistantNoticePagesFor(n, who && who.id) : Array.isArray(n.pages) ? n.pages : [];
+    const first = pages[0];
+    const text = typeof assistantNoticePageText === 'function' ? assistantNoticePageText(first) : String(first || '');
+    return assistantSpeakText(text, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId);
+  };
+  return React.createElement("div", {
+    "data-update-guide-bundle": true,
+    className: "fixed inset-0 flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 76000,
+      backgroundColor: 'rgba(2,6,23,.94)'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "新しいお知らせの一覧"
+  }, React.createElement("div", {
+    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+    style: {
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 56,
+    accent: who.accent,
+    expression: "happy"
+  }), React.createElement("div", {
+    className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white"
+  }, "新しいお知らせが", updateGuideQueue.length, "件あるよ♪ 読みたいものだけ「くわしく」で開いてね。")), React.createElement("div", {
+    className: "mt-3 space-y-2"
+  }, updateGuideQueue.map(n => React.createElement("div", {
+    key: n.id,
+    "data-update-guide-bundle-item": n.id,
+    className: "flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "text-[13px] font-black leading-snug text-pink-200"
+  }, n.title), React.createElement("div", {
+    className: "mt-0.5 truncate text-[10px] font-bold text-slate-400"
+  }, headline(n))), React.createElement("button", {
+    type: "button",
+    onClick: () => openUpdateGuideDetail(n.id),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950"
+  }, "くわしく")))), React.createElement("button", {
+    type: "button",
+    "data-update-guide-bundle-later": true,
+    onClick: dismissUpdateGuideAll,
+    className: "mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white"
+  }, "あとで読む"), React.createElement("p", {
+    className: "mt-2 text-center text-[10px] font-bold text-slate-500"
+  }, "更新履歴からいつでも読めます")));
+}
 function HomeUpdateGuideOverlay({
   activeAssistant,
   assistantBondLevelNow,
@@ -57004,8 +57077,21 @@ function HomeUpdateGuideOverlay({
   selectedAssistantId,
   setUpdateGuidePage,
   updateGuidePage,
-  updateGuideQueue
+  updateGuideQueue,
+  updateGuideDetail,
+  openUpdateGuideDetail,
+  dismissUpdateGuideAll
 }) {
+  if (updateGuideQueue.length >= 2 && !updateGuideDetail && !updateGuideQueue[0].debugPreview) return React.createElement(HomeUpdateGuideBundle, {
+    activeAssistant: activeAssistant,
+    assistantBondLevelNow: assistantBondLevelNow,
+    assistantCallStyle: assistantCallStyle,
+    breederName: breederName,
+    selectedAssistantId: selectedAssistantId,
+    updateGuideQueue: updateGuideQueue,
+    openUpdateGuideDetail: openUpdateGuideDetail,
+    dismissUpdateGuideAll: dismissUpdateGuideAll
+  });
   const notice = updateGuideQueue[0];
   const who = activeAssistant;
   const pages = typeof assistantNoticePagesFor === 'function' ? assistantNoticePagesFor(notice, who && who.id) : Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
@@ -72194,6 +72280,7 @@ function MonsterHeroGame() {
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
+  const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
@@ -82634,11 +82721,34 @@ function MonsterHeroGame() {
       await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     }
     setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
     setUpdateGuideQueue(queue => queue.slice(1));
     const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[current.id];
     if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
+  };
+  const openUpdateGuideDetail = id => {
+    setUpdateGuidePage(0);
+    setUpdateGuideQueue(queue => {
+      const picked = queue.find(n => n && n.id === id);
+      return picked ? [picked, ...queue.filter(n => n !== picked)] : queue;
+    });
+    setUpdateGuideDetail(true);
+  };
+  const dismissUpdateGuideAll = async () => {
+    const list = updateGuideQueue.filter(n => n && !n.debugPreview);
+    if (list.length > 0) {
+      const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, ...list.map(n => n.id)]), false);
+    }
+    for (const n of list) {
+      const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[n.id];
+      if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
+    }
+    setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
+    setUpdateGuideQueue([]);
   };
   const debugPlayUpdateGuide = async () => {
     const notice = availableUpdateNotices({
@@ -100531,7 +100641,10 @@ function MonsterHeroGame() {
       selectedAssistantId: selectedAssistantId,
       setUpdateGuidePage: setUpdateGuidePage,
       updateGuidePage: updateGuidePage,
-      updateGuideQueue: updateGuideQueue
+      updateGuideQueue: updateGuideQueue,
+      updateGuideDetail: updateGuideDetail,
+      openUpdateGuideDetail: openUpdateGuideDetail,
+      dismissUpdateGuideAll: dismissUpdateGuideAll
     }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length === 0 && RELEASE_FLAGS.friends === true && friendRequestInfo.count > 0 && friendNoticeDismissed !== (friendRequestInfo.ids || []).join(',') && React.createElement(HomeFriendRequestNotice, {
       activeAssistant: activeAssistant,
       count: friendRequestInfo.count,

@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-10 00:44", type:'update', title:'起動したときのお知らせが、1枚の一覧にまとまりました', status:'new',
+    items:[
+      '久しぶりにゲームを開いたとき、お知らせが何枚も続けて出ていたのを、見出しの一覧1枚にまとめました。読みたいお知らせだけ「くわしく」で開けます。',
+      '「あとで読む」を押すと、一覧に並んでいたお知らせはまとめて読んだことになります。内容は更新履歴からいつでも読めます。',
+      'もう公開されたモンスターの「近日実装」の予告は、出ないようにしました。',
+    ],
+  },
+  {
     date: "2026-10-10 00:28", type:'update', group:'ui', title:'「M/B」「ベースモン」「マスモン」「勇者モン」「供モン」が何のことか、入口で分かるようになりました', status:'new',
     items:[
       'HOMEの「M/B管理」の看板の下に「モンスター・編成」と小さく出るようになりました。',
@@ -485,7 +493,7 @@ const CHANGELOG = [
       { caption:'メロディー 染色イメージ「もりのくまさん」', image:'images/events/melody-dye-preview.jpg?v=4d178afc6186' },
       { caption:'クロミー 染色イメージ「ゆうやけグラデ」', image:'images/events/kuromy-dye-preview.jpg?v=51d670dbfaab' },
     ],
-    assistantNotice: { id:'update_notice_melody_kuromy_soon_v1', type:'market' },
+    assistantNotice: { id:'update_notice_melody_kuromy_soon_v1', type:'market', supersededBy:'update_notice_melody_kuromy_v2' },
   },
   {
     date: "2026-10-07 18:06", type:'update', title:'絆Lv・総合力ランキングで、同じ人の同じモンスターが何度も並ばなくなりました', status:'new', group:'ranking',
@@ -1025,7 +1033,7 @@ const CHANGELOG = [
       { caption:'ゴースト 染色イメージ「パンプキンナイト」', image:'images/events/ghost-dye-preview.jpg?v=a44df82dcc3d' },
       { caption:'スプーキー 染色イメージ「魔女のパープル」', image:'images/events/spooky-dye-preview.jpg?v=5f2023b32279' },
     ],
-    assistantNotice: { id:'update_notice_ghost_spooky_soon_v1', type:'market' },
+    assistantNotice: { id:'update_notice_ghost_spooky_soon_v1', type:'market', supersededBy:'update_notice_ghost_spooky_release_v1' },
   },
   {
     // EX周りの分かりやすさ(2026-10-05 ユーザー指示「残り効果ターンも分かるように・全てのモンスターのEX周りをもっとわかりやすく」)
@@ -2572,7 +2580,7 @@ const CHANGELOG = [
       { caption:'ユグドラシル 染色イメージ「紅葉カラー」', image:'images/events/yggdrasil-dye-preview.jpg?v=1fc38d84ced6' },
       { caption:'メルホイップ 染色イメージ「いちごチョコ」', image:'images/events/mel-whip-dye-preview.jpg?v=49120d3129ad' },
     ],
-    assistantNotice: { id:'update_notice_yggdrasil_lineage_preview_v1', type:'content' },
+    assistantNotice: { id:'update_notice_yggdrasil_lineage_preview_v1', type:'content', supersededBy:'update_notice_yggdrasil_release_v1' },
   },
   {
     // 2026-09-28 ユーザー指示「新モンスターは新モンスターとか新血統とかそういうタブにして」
@@ -2611,7 +2619,7 @@ const CHANGELOG = [
       '円盤石の予定価格は、ダイヤショップでそれぞれ150,000ダイヤです。',
       'ふたりはダイヤショップより先に、ビートP交換所で先行公開します。ビートP交換所では、円盤石をそれぞれ1,500ビートPで交換できるようになる予定です。',
     ],
-    assistantNotice: { id:'update_notice_yggdrasil_mel_whip_soon_v1', type:'market' },
+    assistantNotice: { id:'update_notice_yggdrasil_mel_whip_soon_v1', type:'market', supersededBy:'update_notice_yggdrasil_release_v1' },
   },
   {
     // 2026-09-28 ユーザー指示「マーケット周り調整。各円盤石(新モンスター)の価格を100倍にアップ」

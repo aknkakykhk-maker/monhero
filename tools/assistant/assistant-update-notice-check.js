@@ -145,6 +145,24 @@ assert.strictEqual(resumedLogin.seen.length, 8, '古い7件は次回ログイン
 
 const allThreeConfirmed = markConfirmed(markConfirmed(afterOneConfirmed, firstLogin.queue[1]), firstLogin.queue[2]);
 assert.deepStrictEqual(planLogin(fixtureNotices.slice(1), allThreeConfirmed).queue, [], '既読通知は再表示してはいけません');
+
+// 実装予告(supersededBy)は、本物の告知が出せる状態なら出さず、既読の列へ足すだけ(2026-10-10・保存キーの意味は変えない)
+{
+  const withSoon = [{ id: 'real_v2' }, { id: 'other' }, { id: 'real_soon_v1', supersededBy: 'real_v2' }];
+  const plan = planLogin(withSoon, []);
+  assert.deepStrictEqual(plan.queue.map(n => n.id), ['real_v2', 'other'], '本物が出せるなら、実装予告は案内に並べてはいけません');
+  assert.deepStrictEqual(plan.seen, ['real_soon_v1'], '出さない予告は既読の列へ足す必要があります');
+  const onlySoon = planLogin([{ id: 'real_soon_v1', supersededBy: 'real_v2' }], []);
+  assert.deepStrictEqual(onlySoon.queue.map(n => n.id), ['real_soon_v1'], '本物がまだ出せないなら、予告は今までどおり案内する必要があります');
+  const already = planLogin(withSoon, ['real_soon_v1']);
+  assert.deepStrictEqual(already.seen, ['real_soon_v1'], '既読の列を重ねて書き換えてはいけません');
+  // 実データ: 公開済みの本物がある予告には、本物のidが書いてある
+  const soonEntries = annotatedEntries.filter(e => e.assistantNotice && e.assistantNotice.supersededBy);
+  assert(soonEntries.length >= 4, 'メロディー・クロミー/ゴースト/ユグドラシルの予告に supersededBy が必要です');
+  for (const e of soonEntries) {
+    assert(officialNotices.some(n => n.id === e.assistantNotice.supersededBy), `supersededBy の相手(${e.assistantNotice.supersededBy})が実在する告知である必要があります`);
+  }
+}
 const afterNewNotice = planLogin(fixtureNotices, allThreeConfirmed);
 assert.deepStrictEqual(afterNewNotice.queue.map(n => n.id), ['notice_11'], '新しい通知の追加後は新たな未読を正常に案内する必要があります');
 

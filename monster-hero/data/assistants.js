@@ -187,6 +187,8 @@ const assistantUpdateNoticeFromChangelog = entry => {
     pages: items.slice(), destination,
     // 助手ごとのセリフ(あれば)。無ければ items をそのまま読む
     scripts: ASSISTANT_UPDATE_NOTICE_SCRIPTS[meta.id.trim()] || null,
+    // 実装予告などが「この告知が出せるなら、自分は出さない」相手のid(本物の告知)。planUpdateNoticesForLogin が見る
+    supersededBy: typeof meta.supersededBy === 'string' && meta.supersededBy.trim() ? meta.supersededBy.trim() : null,
     buttonLabel: meta.buttonLabel || (meta.type === 'market' ? 'マーケットを見る' : meta.type === 'mode' ? 'バトルへ行く' : undefined),
   };
 };
