@@ -274,8 +274,10 @@ function decidePick(b, opts, ctx) {
     if (g && (ctx.guarded[want.i] || 0) < 2) return { kind: 'guard', card: g.o.card, slot: g.slot, value: g.value, why: '攻撃が置けないので、ガードを構える(余りはライフとガッツになる)' };
   }
   // ⑥ 支援
+  // ★支援は20ガッツかかる。ガッツが細っているとき(いちばん多い子でも6割未満)は使わず、⑦の「捨ててガッツを戻す」へ回す
+  const richest = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
   const buff = opts.find((o) => o.card.type === 'buff' && !/自傷/.test(o.card.label));
-  if (buff && b.enemy && b.enemy.hp > b.enemy.max * 0.3 && !ctx.buffed) return { kind: 'support', card: buff.card, why: '攻撃が置けないので支援' };
+  if (buff && richest >= 0.6 && b.enemy && b.enemy.hp > b.enemy.max * 0.3 && !ctx.buffed) return { kind: 'support', card: buff.card, why: '攻撃が置けないので支援' };
   return null;
 }
 
