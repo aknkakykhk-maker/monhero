@@ -1,0 +1,234 @@
+// 味方モンスターの「Tier 表」のページを作る。社長が見るパネル式の1枚(アーティファクト用)。
+//
+// 研究所が数字を直すのは docs/playbot/reports/tier/tier.json(monster-tier.md と同じ値を写したもの)。
+// 直したら、このコマンドで作り直す(出来たページは統括部長が Artifact で同じ URL へ出し直す):
+//
+//   node tools/playbot/tier-page.js [--out <出力先>]    既定: docs/playbot/dashboard/tier.html
+//   node tools/playbot/tier-page.js --check             tier.json の形だけ確かめる(ページは作らない)
+//
+// 顔アイコンは docs/playbot/dashboard/tier-icons/(96px。map.json が 名前 → ファイル)から data URI で埋め込む。
+// スクリプトを使わない素の HTML(<details> で開閉)。社長室(president-room.js)と同じ作り・色。
+// tier.json の形がおかしいときは、ページを作らずに止める(validate)。
+'use strict';
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..', '..');
+const JSON_PATH = path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'tier.json');
+const ICON_DIR = path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier-icons');
+const outArg = process.argv.indexOf('--out');
+const OUT = outArg > 0 ? path.resolve(process.argv[outArg + 1]) : path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier.html');
+
+const TIERS = ['S', 'A', 'B', 'C', 'D', '保留'];
+const DIFFS = ['Hard', 'Expert', 'Master'];
+const DIFF_TIERS = [...TIERS, '—']; // — はその難易度でまだ測れていない
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function validate(d) {
+  const p = [];
+  if (!d || typeof d !== 'object') return ['tier.json がオブジェクトではありません'];
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(d.更新 || '')) p.push('更新は "2026-10-10 07:42" の形(日本時間)');
+  if (!d.数えた回 || !Number.isFinite(d.数えた回.合計)) p.push('数えた回.合計 は数');
+  if (!d.決め方 || !d.決め方.重み || !DIFFS.every((k) => Number.isFinite(d.決め方.重み[k]))) p.push('決め方.重み に Hard・Expert・Master の数が要る');
+  if (!Array.isArray(d.決め方 && d.決め方.文)) p.push('決め方.文 は文の配列');
+  if (!Array.isArray(d.モンスター) || !d.モンスター.length) return p.concat('モンスター が空か配列ではありません');
+  const names = new Set();
+  for (const m of d.モンスター) {
+    const at = `モンスター「${m && m.名前}」`;
+    if (!m || !m.名前) { p.push('名前の無いモンスターがあります'); continue; }
+    if (names.has(m.名前)) p.push(`${at}: 名前が重なっています`);
+    names.add(m.名前);
+    if (!TIERS.includes(m.総合)) p.push(`${at}: 総合 は ${TIERS.join('・')} のどれか(いま「${m.総合}」)`);
+    for (const k of DIFFS) if (!DIFF_TIERS.includes(m[k])) p.push(`${at}: ${k} は ${DIFF_TIERS.join('・')} のどれか(いま「${m[k]}」)`);
+    if (typeof m.暫定 !== 'boolean') p.push(`${at}: 暫定 は true / false`);
+    if (!m.役) p.push(`${at}: 役が空です`);
+    if (!m.理由) p.push(`${at}: 理由が空です`);
+    if (typeof m.強み !== 'string' || typeof m.弱み !== 'string') p.push(`${at}: 強み・弱み は文字(無ければ "")`);
+    if (!m.回数 || !DIFFS.every((k) => Number.isInteger(m.回数[k]) && m.回数[k] >= 0)) p.push(`${at}: 回数 に Hard・Expert・Master の0以上の整数が要る`);
+    if (m.机上 && (!Number.isFinite(m.机上.通常技1発) || !m.机上.受けられる || !DIFFS.every((k) => Number.isFinite(m.机上.受けられる[k])))) p.push(`${at}: 机上の形がおかしい(通常技1発・20ターンの火力・受けられる{Hard,Expert,Master})`);
+  }
+  return p;
+}
+
+// 顔アイコンは「ゲームと同じ定義」から引く(2026-10-10 社長「顔アイコンはゲーム上に実装されてるから、それと同じ仕組みを使えない?」)。
+// images-ally.js と ally-monsters.js を読み、ALL_PLAYER_MONSTERS[...].faceIconUrl のファイルを 96px に縮めて tier-icons/ に置き(置いたものは使い回す)、
+// data URI で埋め込む。名前の対応は手で書かない。縮めるのは ImageMagick の convert(置き済みのものがあれば要らない)。
+function gameFaceFiles() {
+  const vm = require('vm');
+  const ctx = vm.createContext({ console, Object, Math });
+  const MH = path.join(ROOT, 'monster-hero');
+  for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js']) {
+    vm.runInContext(fs.readFileSync(path.join(MH, f), 'utf8') + '\n;this.__r = typeof ALL_PLAYER_MONSTERS !== "undefined" ? ALL_PLAYER_MONSTERS : null', ctx, { filename: f });
+  }
+  const out = {};
+  for (const m of Object.values(ctx.__r || {})) {
+    const u = String(m.faceIconUrl || m.iconUrl || '').split('?')[0];
+    if (u && !u.startsWith('data:')) out[m.name] = path.join(MH, u);
+  }
+  return out;
+}
+
+function loadIcons(names) {
+  const files = gameFaceFiles();
+  const css = [];
+  const cls = {};
+  fs.mkdirSync(ICON_DIR, { recursive: true });
+  names.forEach((n, i) => {
+    const src = files[n];
+    if (!src || !fs.existsSync(src)) return; // ゲームに顔アイコンが無い子は頭文字のタイル
+    const dst = path.join(ICON_DIR, path.basename(src, path.extname(src)).toLowerCase() + '.png');
+    if (!fs.existsSync(dst) || fs.statSync(dst).mtimeMs < fs.statSync(src).mtimeMs) {
+      require('child_process').execFileSync('convert', [src, '-resize', '96x96^', '-strip', dst]);
+    }
+    cls[n] = 'i' + i;
+    css.push(`.i${i}{background-image:url(data:image/png;base64,${fs.readFileSync(dst).toString('base64')})}`);
+  });
+  return { cls, css: css.join('\n') };
+}
+
+function build(d) {
+  const mons = d.モンスター;
+  const { cls, css } = loadIcons(mons.map((m) => m.名前));
+  const tcls = (t) => (t === '保留' || t === '—' ? 'h' : t);
+  const tier = (t) => `<b class="t t-${tcls(t)}">${esc(t)}</b>`;
+  const tile = (m, bodyHtml, letter, prov) => `
+      <details class="mon">
+        <summary><span class="ic ${cls[m.名前] || 'noic'}" role="img" aria-label="${esc(m.名前)}">${cls[m.名前] ? '' : esc(m.名前.slice(0, 1))}</span>${prov ? '<span class="prov">暫定</span>' : ''}<span class="nm">${esc(m.名前)}</span>${letter ? `<span class="lt">${tier(letter)}</span>` : ''}</summary>
+        <div class="body">${bodyHtml}</div>
+      </details>`;
+  const kv = (rows) => `<dl>${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
+  const diffTable = (m) => `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+  const fullBody = (m) => kv([
+    ['役', esc(m.役)],
+    ['ひとこと', esc(m.理由)],
+    m.強み ? ['強み', esc(m.強み)] : null,
+    m.弱み ? ['弱み', esc(m.弱み)] : null,
+    m.動いた理由 ? ['動き', esc(m.動いた理由)] : null,
+    m.机上 ? ['机上', `通常技1発 ${m.机上.通常技1発.toLocaleString('en-US')} / 20ターンの火力 ${(m.机上['20ターンの火力'] || 0).toLocaleString('en-US')}`] : null,
+  ]) + diffTable(m);
+  const diffBody = (m, k) => kv([
+    ['役', esc(m.役)],
+    ['この難易度', `${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' 暫定' : ''}(総合 ${esc(m.総合)})`],
+    ['試した回数', `${m.回数[k]}回${m.勇者の回数 ? `(勇者モンにした回数 ${m.勇者の回数[k]})` : ''}`],
+    m.机上 ? ['受けられる', `WAVE 1 の通常攻撃を ${m.机上.受けられる[k]} 発`] : null,
+    ['ひとこと', esc(m.理由)],
+  ]);
+  const panels = (key, bodyOf, withLetter, tiers) => tiers.map((t) => {
+    const list = mons.filter((m) => m[key] === t);
+    if (!list.length && t === '—') return '';
+    return `
+    <section class="panel tp-${tcls(t)}">
+      <h3>${tier(t)}<span class="cnt">${list.length}体${t === '保留' ? '(まだ決められない)' : t === '—' ? '(まだ試していない)' : ''}</span></h3>
+      <div class="grid">${list.length ? list.map((m) => tile(m, bodyOf(m), withLetter, key === '総合' && m.暫定)).join('') : '<p class="empty">いません</p>'}
+      </div>
+    </section>`;
+  }).join('');
+  const diffSections = DIFFS.map((k) => `
+  <details class="diff">
+    <summary>${k} の Tier(重み ${d.決め方.重み[k]})</summary>
+    ${panels(k, (m) => diffBody(m, k), null, DIFF_TIERS)}
+  </details>`).join('');
+  const weights = DIFFS.map((k) => `${k} ${d.決め方.重み[k]}`).join('・');
+  const c = d.数えた回;
+
+  return `<title>モンスター Tier 表</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
+<style>
+/* 上から「総合 Tier(S〜保留のパネル)」→「難易度ごと」→「決め方」。アイコンを押すと、その子の詳細が開く(スクリプトなし) */
+:root{--bg:#f3f5f8;--panel:#ffffff;--fg:#18202c;--muted:#5b6676;--line:#dde2ea;--accent:#2a56c6;--track:#e8ecf2;
+--tS:#c0392b;--tA:#c76a00;--tB:#2f8a3e;--tC:#2a6fd0;--tD:#7a4fb8;--tH:#6b7685;
+--bS:#fdecea;--bA:#fff2e0;--bB:#e8f6ea;--bC:#e8f0fc;--bD:#f1eafa;--bH:#eef0f3;
+--font-head:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;--font-body:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11161e;--panel:#19202b;--fg:#e8edf4;--muted:#9aa6b6;--line:#2a3442;--accent:#7fa2ff;--track:#232c39;
+--tS:#ff8a7a;--tA:#ffb35c;--tB:#6fd27f;--tC:#7fa2ff;--tD:#c3a0f5;--tH:#9aa6b6;
+--bS:#33191b;--bA:#33260f;--bB:#16291a;--bC:#16233a;--bD:#251c36;--bH:#222a35;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11161e;--panel:#19202b;--fg:#e8edf4;--muted:#9aa6b6;--line:#2a3442;--accent:#7fa2ff;--track:#232c39;
+--tS:#ff8a7a;--tA:#ffb35c;--tB:#6fd27f;--tC:#7fa2ff;--tD:#c3a0f5;--tH:#9aa6b6;
+--bS:#33191b;--bA:#33260f;--bB:#16291a;--bC:#16233a;--bD:#251c36;--bH:#222a35;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6}
+.wrap{max-width:68rem;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--font-head);margin:0}
+h1{font-size:24px;font-weight:800;letter-spacing:.02em}
+h2{font-size:18px;font-weight:800}
+.lead{margin:4px 0 0;color:var(--muted);font-size:13px}
+.note{font-size:12px;color:var(--muted);margin:0}
+.panel{border:1px solid var(--line);border-left:6px solid var(--c);border-radius:12px;background:var(--bg2);padding:10px 12px 12px;margin-bottom:10px}
+.tp-S{--c:var(--tS);--bg2:var(--bS)}.tp-A{--c:var(--tA);--bg2:var(--bA)}.tp-B{--c:var(--tB);--bg2:var(--bB)}
+.tp-C{--c:var(--tC);--bg2:var(--bC)}.tp-D{--c:var(--tD);--bg2:var(--bD)}.tp-h{--c:var(--tH);--bg2:var(--bH)}
+.panel h3{display:flex;align-items:center;gap:10px;font-size:15px;margin-bottom:8px}
+.cnt{font-size:12px;font-weight:500;color:var(--muted);font-family:var(--font-body)}
+.t{display:inline-block;min-width:1.9em;padding:0 8px;border-radius:8px;text-align:center;font-family:var(--font-head);font-weight:800;color:#fff;line-height:1.5}
+.t-S{background:var(--tS)}.t-A{background:var(--tA)}.t-B{background:var(--tB)}.t-C{background:var(--tC)}.t-D{background:var(--tD)}.t-h{background:var(--tH)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .t{color:#11161e}}
+:root[data-theme="dark"] .t{color:#11161e}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;align-items:start}
+.mon{min-width:0}
+.mon[open]{grid-column:1/-1}
+.mon>summary{list-style:none;cursor:pointer;width:72px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;-webkit-tap-highlight-color:transparent}
+.mon>summary::-webkit-details-marker{display:none}
+.ic{display:block;width:56px;height:56px;border-radius:12px;background-color:var(--panel);background-size:cover;background-position:center 15%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:24px;color:var(--muted)}
+.mon[open]>summary .ic{border-color:var(--c)}
+.nm{font-size:11px;line-height:1.25;text-align:center;overflow-wrap:anywhere;max-width:72px}
+.lt{margin-top:1px}.lt .t{min-width:1.6em;padding:0 5px;font-size:12px}
+.prov{position:absolute;top:-4px;right:2px;font-size:9px;line-height:1.3;padding:0 4px;border-radius:6px;background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.body{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;min-width:0}
+dl{margin:0 0 8px;display:grid;grid-template-columns:auto 1fr;gap:3px 12px}
+dt{color:var(--muted);font-size:12px;white-space:nowrap}
+dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;font-size:12px;width:100%}
+th,td{border:1px solid var(--line);padding:3px 6px;text-align:left;white-space:nowrap}
+small{color:var(--muted)}
+.diff{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px}
+.diff>summary{cursor:pointer;padding:12px 0;font-family:var(--font-head);font-weight:800;list-style-position:inside}
+.diff[open]>summary{color:var(--accent);border-bottom:1px solid var(--line);margin-bottom:12px}
+.diff .panel:last-child{margin-bottom:12px}
+.empty{margin:0;color:var(--muted);font-size:13px}
+.how{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.how p{margin:0}
+.noic{background-image:none}
+${css}
+</style>
+<div class="wrap">
+  <header>
+    <h1>モンスター Tier 表</h1>
+    <p class="lead">${esc(d.更新)} 更新 / 研究所:ハカセくん / 数えた回 ${c.合計}回(Hard ${c.Hard}・Expert ${c.Expert}・Master ${c.Master})・戦った ${d.戦った体数}/${d.全体数}体。アイコンを押すと詳細が開きます。</p>
+  </header>
+
+  <section>
+    <h2>総合 Tier</h2>
+    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。</p>${panels('総合', fullBody, null, TIERS)}
+  </section>
+
+  <section>
+    <h2>難易度で見る</h2>
+    <p class="note" style="margin-bottom:10px">難易度で敵の火力とライフが大きく違うので、難易度ごとにも付けています(押して開く)。</p>${diffSections}
+  </section>
+
+  <section>
+    <h2>決め方</h2>
+    <div class="how">${d.決め方.文.map((s) => `<p>${esc(s)}</p>`).join('')}<p>${esc(d.決め方.暫定 || '')}</p></div>
+  </section>
+</div>
+`;
+}
+
+function main() {
+  const d = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
+  const problems = validate(d);
+  if (problems.length) {
+    console.error('tier.json に問題があります(ページは作りません):\n' + problems.map((x) => '  - ' + x).join('\n'));
+    process.exit(1);
+  }
+  if (process.argv.includes('--check')) { console.log(`tier.json OK(${d.モンスター.length}体)`); return; }
+  const html = build(d);
+  fs.writeFileSync(OUT, html);
+  console.log(`作りました: ${path.relative(ROOT, OUT)}(${(html.length / 1024).toFixed(0)}KB・${d.モンスター.length}体)`);
+}
+if (require.main === module) main();
+module.exports = { validate, build };
