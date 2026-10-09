@@ -53,13 +53,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 17:12 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 18:01 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>7</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>10</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>12</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -95,23 +95,33 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">Tierは Hard / Expert / Master の難易度ごとに分けて付ける(社長の頼み)。Hard でも全モンスターを回す。机上の表(desk.md)はできたがまだ公開前。次は簡易シミュレーター</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み Hard の集めの見込みはハカセくんが連絡 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
+        <div class="row-body">Tierを Hard / Expert / Master の3列に分けた(次の公開で入る)。2段以上動いた子は理由つき(例: ライガーはライフ400で、敵の火力が上がると打たれ弱さが効く)。Hard は26体を1回ずつ集め、そのあと Expert と交互に回数を足す。次は簡易シミュレーター。ヤオビクニのEXでターンが止まった件は、ゲームの不具合ではなくボットの見誤り(「悠久の刻」はターンの数字が進まない仕様)と分かり、ボットを直した</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み Expert の数字入り 18:30〜19:00 / Hard の全種 20:30〜21:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
       </li>
       <li id="w6">
         <div class="row-title">通信不良の演奏での「範囲の中なのにMISS」の調べ直し</div>
-        <div class="row-body">守り部の記録を見ると、出たのは通信不良の中での演奏(Stay With Me EXPERT・MASTER)で、午前の小さい画面とは別の場面だった。その押下でほかのノーツを取ったかをボットに記録させて、同じ条件で回している</div>
-        <div class="meta"><span>部長テンポくん(フィールくん)</span><span>見込み 17:45〜18:15</span></div>
+        <div class="row-body">同じ条件で再現できた。ボットがわざと見送った1つ前のノーツが、次のノーツを狙った押下をゲームの決まりどおり受け取っていた(ゲームの不具合ではない見込み)。見分けを入れたボットで、守り部の条件も含めて確かめ中</div>
+        <div class="meta"><span>部長テンポくん(フィールくん)</span><span>見込み 18:15〜18:35(20〜30分遅れ)</span></div>
       </li>
-      <li id="p9">
-        <div class="row-title">Tier表の机上の計算(公開待ち)</div>
-        <div class="row-body">できたと連絡があったが、まだ main に入っていない。公開まで進めるよう伝えた</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み ハカセくんが連絡</span></div>
+      <li id="w9">
+        <div class="row-title">起動してマスモン一覧を押すと少し固まる</div>
+        <div class="row-body">まず何が重いかを記録で測り、直し方がはっきりしていれば直して公開する</div>
+        <div class="meta"><span>ドライバーくん</span><span>見込み ドライバーくんが連絡</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="w7">
+        <div class="row-title">マルチの部屋でもマスモンのステータスが見られる</div>
+        <div class="row-body">部屋(マッチング・選曲・準備・待機・結果)のマスモンの札に「i」。自分の子を押すと相棒の画面と同じ詳しい窓。ほかの人の子は名前とビートLvだけ。窓を開いたままでも選曲・準備は進む</div>
+        <div class="meta"><span>ドライバーくん</span><span>PR #2403</span><span>モンヒロビート → フリーマッチかプライベート → マスモンを呼ぶ → 部屋の上の札を押す</span></div>
+      </li>
+      <li id="p9">
+        <div class="row-title">Tier表を6項目で見る形に・机上の性能表・ボットの直し</div>
+        <div class="row-body">Tier表に攻め・守り・勇者特性・固有技・EX・間合いの6項目と「保留」を入れた。机上の性能表(desk.md)も公開。ボットの勇者選びとEXの使い方を直した。技と間合いの回数はこれからの対戦で数える</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2401</span><span>docs/playbot/reports/tier/</span></div>
+      </li>
       <li id="p10">
         <div class="row-title">タクティクスの検査2本を直した</div>
         <div class="row-body">公開版でも落ちていた検査2本(研究所のハカセくんが見つけた件)。ゲームの動きは変わらない</div>
@@ -177,8 +187,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li>
         <div class="row-title"><span class="team">ビート部</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">通信不良の演奏でのMISSの調べ直し(17:45〜18:15)</div>
-        <div class="meta"><span>部長テンポくん</span><span>部員 リズムくん・マルチくん・レイドくん・フィールくん</span><span>最後の報告 10/09 17:03</span></div>
+        <div class="row-body">MISSの調べ直し(18:15〜18:35)</div>
+        <div class="meta"><span>部長テンポくん</span><span>部員 リズムくん・マルチくん・レイドくん・フィールくん</span><span>最後の報告 10/09 17:40</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">見回り部</span><span class="chip idle">待機</span></div>
@@ -192,8 +202,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">Tier表(机上の表はできた・シミュレーターは10/10)</div>
-        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 16:59</span></div>
+        <div class="row-body">Tier表(Expert集め → 18:30から Hard)</div>
+        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 17:13</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">開発部</span><span class="chip idle">待機</span></div>
@@ -201,9 +211,9 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>クラフトくん(減給1回)</span><span>最後の報告 10/09</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">修理部</span><span class="chip idle">待機</span></div>
-        <div class="row-body">頼みごとごとに立てる</div>
-        <div class="meta"><span>ドライバーくん</span></div>
+        <div class="row-title"><span class="team">修理部</span><span class="chip ok">作業中</span></div>
+        <div class="row-body">マスモン一覧が少し固まる件</div>
+        <div class="meta"><span>ドライバーくん(session_01UPffASX3yavnvax9F9gNen)</span><span>最後の報告 10/09 17:45</span></div>
       </li></ul>
     </section>
     <section id="scores">
@@ -227,17 +237,22 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">4</span>
       </div>
       <div class="bar-row">
+        <span class="bar-name">ハカセくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:10.34%"></span></span>
+        <span class="bar-val">3</span>
+      </div>
+      <div class="bar-row">
         <span class="bar-name">部長テンポくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
         <span class="bar-val">2</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">ハカセくん</span>
+        <span class="bar-name">部長ガードくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
         <span class="bar-val">2</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">部長ガードくん</span>
+        <span class="bar-name">ドライバーくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
         <span class="bar-val">2</span>
       </div>
