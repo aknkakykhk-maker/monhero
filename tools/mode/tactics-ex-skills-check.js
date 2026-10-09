@@ -645,7 +645,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('ヒット列に与ダメ5%(50)の連撃が5本だけ足される', withCombos.length - noCombos.length === 5 && withCombos.slice(noCombos.length).every(h => h.dmg === 50 && h.skillName === '堕天の烙印'), `${noCombos.length}→${withCombos.length}`);
   check('本体: 与ダメ(getDmg)・会心率・会心ダメ(3か所)・被ダメ(applyTurnDamageReduction)へ結線してある',
     // ★2026-10-08 メロディーのクッキー・クロミーの黒音符(勇者特性)の倍率と会心率が、間に入ってよい
-    /const totalBuffMult=traitMult\*(cookieEffectNow\(\)\.dmgMult\*blackNoteEffectAt\(slotIdx,mon\?\.id\)\.dmgMult\*)?tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
+    // ★2026-10-09 弓の勇者特性の倍率(bowAtkMultAt)も間に入ってよい(EXの倍率の結線はそのまま)
+    /const totalBuffMult=traitMult\*(cookieEffectNow\(\)\.dmgMult\*blackNoteEffectAt\(slotIdx,mon\?\.id\)\.dmgMult\*)?(bowAtkMultAt\(slotIdx\)\*)?tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
     && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus(\+\(tacticsExMultiBuffNow\(slotIdx\)\.critAdd\|\|0\))?(\+blackNoteEffectAt\(slotIdx,activeMon\?\.id\)\.critAdd)?\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
     && (app.match(/critDmgMult:tacticsExMultiBuffNow\(slotIdx\)\.critDmg/g) || []).length === 3);
 }
