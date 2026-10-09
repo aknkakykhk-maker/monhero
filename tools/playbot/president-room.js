@@ -192,7 +192,7 @@ try {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
   const log = execSync(`git log origin/main --first-parent --since="${today} 00:00 +0900" --format=%s`, { cwd: ROOT, encoding: 'utf8' });
   const listed = new Set((JSON.stringify(board).match(/#\d+/g) || []));
-  const missing = log.split('\n').filter((s) => s && !/window-requests|playbot-history/.test(s))
+  const missing = log.split('\n').filter((s) => s && !/window-requests|playbot-history|^台帳[:：]/.test(s))
     .map((s) => ({ s, n: (s.match(/#(\d+)/) || [])[0] })).filter((x) => x.n && !listed.has(x.n));
   if (missing.length) {
     console.log('要確認: 今日公開されたのに社長室に載っていない PR が ' + missing.length + ' 件(載せるか、載せない理由があればそのまま):');
