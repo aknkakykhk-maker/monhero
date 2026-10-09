@@ -53,13 +53,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 19:00 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 19:10 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>17</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>19</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -98,20 +98,25 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-body">数字入り版は公開(#2407)。今夜は Hard の全種集めを続け、Hard の1周目を入れた版を出す。新しい調整の案は、5回以上戦った子が増えてから。次は簡易シミュレーター</div>
         <div class="meta"><span>ハカセくん</span><span>見込み Hard の1周目 20:30〜21:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396・#2401・#2407</span></div>
       </li>
-      <li id="w11">
-        <div class="row-title">CLAUDE.md を軽くする</div>
-        <div class="row-body">毎回読み込まれる量を 25KB から 12〜15KB くらいへ。場面が限られる決まりはその場所の CLAUDE.md へ、手順はスキルへ、見張りがある決まりは1行に。決まりは1つも消さず移すだけ</div>
-        <div class="meta"><span>ドライバーくん2号</span><span>見込み ドライバーくん2号が連絡</span></div>
-      </li>
-      <li id="d4">
-        <div class="row-title">オート強化のはじめの配り方を「1Pずつ」に</div>
-        <div class="row-body">社長が「1Pずつにする」を選んだ。まだ使っていない子(ONにしたことも設定を保存したことも無い子)だけ1Pずつ。使っている子は従来どおり。実装は済み、広い検査(140本)を最後まで回し中</div>
-        <div class="meta"><span>部長ガードくん</span><span>見込み 19:40〜20:30 に公開</span><span>PR #2412</span></div>
+      <li id="w13">
+        <div class="row-title">main でも落ちている検査4本を直す</div>
+        <div class="row-body">技の点数・転生の費用・転生ロック・譜面ツールの検査。検査が古いだけか、ゲームが本当に壊れたかを1本ずつ確かめる。検査を外したり弱めたりはしない</div>
+        <div class="meta"><span>ドライバーくん</span><span>見込み ドライバーくんが連絡</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="d4">
+        <div class="row-title">オート強化のはじめの配り方を「1Pずつ」に</div>
+        <div class="row-body">まだ使っていない子だけ「1Pずつ」から始まる。使っている子は従来どおり</div>
+        <div class="meta"><span>部長ガードくん</span><span>PR #2415</span><span>マスモン詳細 → 強化 → オート強化</span></div>
+      </li>
+      <li id="w11">
+        <div class="row-title">CLAUDE.md を軽くした(25.2KB → 15.5KB)</div>
+        <div class="row-body">場面が限られる決まりを、その場所の CLAUDE.md(画像・音源・データ・譜面ツール)とスキルへ移した。決まりは消さず移しただけ。見張りの上限も 16.5KB に下げ、移した先で言葉が消えても気づけるようにした</div>
+        <div class="meta"><span>ドライバーくん2号</span><span>PR #2414</span><span>CLAUDE.md・docs/rules/README.md「節の置き場所」</span></div>
+      </li>
       <li id="w10">
         <div class="row-title">オート強化が使いやすくなった</div>
         <div class="row-body">設定を変えても確定までは保存も強化もしない(「こう上がります」の案に項目ごとの+n)。確定後は「こう上がりました」が残る。余りの配り方を「順番に上限まで」「1Pずつ順番に配る」から選べる。保存データは項目を足しただけ</div>
@@ -221,9 +226,9 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>部長マップくん</span><span>部員 ルーキーくん・パトロールくん・ストーリーくん・デザインくん</span><span>最後の報告 10/09 14:25</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">守り部</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">オート強化のはじめの配り方(19:40〜20:30 公開)</div>
-        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 19:00</span></div>
+        <div class="row-title"><span class="team">守り部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">次の定期点検(日曜夜)</div>
+        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 19:09</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
@@ -237,8 +242,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li>
         <div class="row-title"><span class="team">修理部</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">CLAUDE.md を軽くする(2号)</div>
-        <div class="meta"><span>ドライバーくん / ドライバーくん2号</span><span>最後の報告 10/09 18:55</span></div>
+        <div class="row-body">main でも落ちている検査4本(1号)</div>
+        <div class="meta"><span>ドライバーくん / ドライバーくん2号</span><span>最後の報告 10/09 19:09</span></div>
       </li></ul>
     </section>
     <section id="scores">
@@ -250,6 +255,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-name">デザインくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar top" style="left:10.34%;width:89.66%"></span></span>
         <span class="bar-val">26</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">部長ガードくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:20.69%"></span></span>
+        <span class="bar-val">6</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">ドライバーくん</span>
@@ -267,11 +277,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">4</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">部長ガードくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:13.79%"></span></span>
-        <span class="bar-val">4</span>
-      </div>
-      <div class="bar-row">
         <span class="bar-name">部長テンポくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:10.34%"></span></span>
         <span class="bar-val">3</span>
@@ -280,6 +285,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-name">ハカセくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:10.34%"></span></span>
         <span class="bar-val">3</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">ドライバーくん2号</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
+        <span class="bar-val">2</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">イベントくん</span>
