@@ -52,18 +52,24 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 16:41 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 16:43 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち</span></a>
+    <a class="count warn" href="#decide"><b>2</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>6</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>7</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
     <h2>社長の判断待ち</h2>
     <div class="cards">
+      <article class="card decide" id="d3">
+        <span class="chip warn">決めてほしいこと</span>
+        <h3>ライガーの調整案(1件)</h3>
+        <p>ライガーが弱め。案はライフ 400→460、または固有技のガッツ 46→37 のどちらか。Tier表はまだ暫定(回数が少ない)</p>
+        <div class="meta"><span>研究所 ハカセくん</span><span>reports/tier/monster-tier.md</span><span>10/09</span></div>
+      </article>
       <article class="card decide" id="d2">
         <span class="chip warn">決めてほしいこと</span>
         <h3>守り部の提案(2件)</h3>
@@ -103,14 +109,19 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/12 8:52</span></div>
       </li>
       <li id="w5">
-        <div class="row-title">モンスターのTier表とバランス調整提案</div>
-        <div class="row-body">Expert の全種集め(いま半分)の成績から暫定版を作る。そのあと毎晩、試した回数の少ない子から足していく</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み 暫定版 17:30〜18:30</span></div>
+        <div class="row-title">モンスターのTier表(残り8体)</div>
+        <div class="row-body">暫定版は公開済み(18/26体・38回)。残り8体と回数の少ない子を毎晩足す。ハム・ゴーレム・オボロゲソウはボットがEXを使えていない疑いがあり、先にボットを直す</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 毎晩の点検ごと</span><span>PR #2396</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p7">
+        <div class="row-title">モンスターのTier表(暫定版)</div>
+        <div class="row-body">18/26体・38回ぶん。強め: ミタラシ・モッチー・剣士モッチー・クロミー・モノリス・ピクシーなど / 弱め: ゴーレム・スエゾー・エイキ・イブリース・ウンディーネ(どれも暫定)</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2396</span><span>docs/playbot/reports/tier/monster-tier.md</span></div>
+      </li>
       <li id="p6">
         <div class="row-title">DEBUG MENU に「すべて解放してバトル」</div>
         <div class="row-body">社長の案。全モンスター・全アシカ・全難易度で戦える(保存も記録もしない)。ボットの学び直し用</div>
