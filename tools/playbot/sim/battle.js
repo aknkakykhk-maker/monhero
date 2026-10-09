@@ -1,6 +1,6 @@
 // 簡易シミュレーター: タクティクスプロを、ブラウザなしで 1 ラン(WAVE 1〜10)まるごと回す。
 //
-//   node tools/playbot/sim/battle.js --diff Hard,Expert,Master --runs 300 --ex bot,best [--seed 1] [--max-wave 10] [--md <file>]
+//   node tools/playbot/sim/battle.js --diff Hard,Expert,Master --runs 300 --ex bot,best [--seed 1] [--max-wave 10] [--md <file>] [--assist bot|none|<カードの id>]
 //     --ex … EX の使い方。bot(いまのボットの決め方 = tactics-brain.js maybeUseEx と同じ条件)・
 //            best(上手な使い方)・none(EX を使わない)。カンマ区切りで並べると全部回して並べる(「bot|best」とも書ける)
 //   SIM_TRACE=1 を付けると、1ターンごとの経過(予告・EX・使ったカード・与ダメ・ライフ/ガッツ)を出す
@@ -1373,6 +1373,7 @@ if (require.main === module) {
   const MAX_WAVE = Number(argOf('--max-wave', '10'));
   const MODES = argOf('--ex', 'bot,best').split(/[,|]/).filter((x) => EX_POLICIES[x]);
   const ONLY = argOf('--hero', '');
+  const ASSIST = argOf('--assist', 'bot'); // アシカの選び方(bot・none・カードの id)。3 版目から既定は bot(いまのボットと同じ)
   const mdFile = argOf('--md', '');
   const oldFile = argOf('--old', path.join(__dirname, '..', '..', '..', 'docs', 'playbot', 'reports', 'tier', 'sim.md'));
   const OLD = readOldTables(oldFile); // md を書き換える前に、前の版の数字を読んでおく
@@ -1388,7 +1389,7 @@ if (require.main === module) {
         const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0;
         for (let i = 0; i < RUNS; i++) {
           const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
-          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode });
+          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST });
           waves.push(r.wave);
           if (r.wave > 2 || r.result === 'clear') past2++;
           if (r.result === 'clear') clear++; else if (r.result === 'wipe') wipe++; else timeout++;
@@ -1489,7 +1490,7 @@ if (require.main === module) {
   out();
   out('## ブラウザとの突き合わせ(tactics-knowledge.json の runs)');
   out();
-  out('実戦はトレーニング・アシストカードがあるぶん強いはず。ずれは式を合わせに行かず、そのまま書く(差 = 実戦 − シミュレーター)。');
+  out('実戦はトレーニングがあるぶん強いはず(アシストカードは 3 版目から入れた。選び方 --assist、既定は bot)。ずれは式を合わせに行かず、そのまま書く(差 = 実戦 − シミュレーター)。');
   out('ボットが途中で止まった回(stopped)は除いた。実戦のクリアは WAVE 10 として数えた。「前の版」は 1 版目(スキル無し)。');
   out();
   out(`| 勇者モン | 難易度 | 実戦の回数 | 実戦の平均 WAVE | 前の版 | ${MODES.map((mo) => `${MODE_JA[mo]} | 差`).join(' | ')} |`);
