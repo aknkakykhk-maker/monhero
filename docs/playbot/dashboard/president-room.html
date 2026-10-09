@@ -52,13 +52,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 16:56 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 16:59 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>7</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>8</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -66,9 +66,9 @@ section{display:flex;flex-direction:column;gap:10px}
     <div class="cards">
       <article class="card decide" id="d2">
         <span class="chip warn">決めてほしいこと</span>
-        <h3>守り部の提案(2件)</h3>
-        <p>強化画面の「完了」で振った分を消す前に確かめる/戻るボタンでゲームの外へ出ない。ガードくんから選択式で聞く予定だった件(返事済みならコメントで教えてください)</p>
-        <div class="meta"><span>守り部 部長ガードくん</span><span>reports/2026-10-09/guard.md</span><span>10/09</span></div>
+        <h3>守り部のMISS調べを続けるか</h3>
+        <p>小さい画面の「指が範囲の中なのにMISS」が、ボットの遅らせたタッチを外しても出た(指は判定ラインより約140〜160px下、ずれ15〜54ms)。ビート部は「ボットの見間違い」と結論していた件。続けるなら、深く押したときの受付の仕組みを調べる</p>
+        <div class="meta"><span>守り部 部長ガードくん</span><span>守り部のセッション</span><span>10/09 16:45</span></div>
       </article>
     </div>
   </section>
@@ -111,6 +111,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p8">
+        <div class="row-title">強化の「完了」に確認・ブラウザの戻るでゲームの外へ出ない</div>
+        <div class="row-body">マスモン強化で確定せずに「完了」や戻るを押すと確認窓。HOME以外ではブラウザの戻る=画面の戻るボタン</div>
+        <div class="meta"><span>部長ガードくん</span><span>PR #2397</span><span>マスモン強化/スマホの戻る操作</span></div>
+      </li>
       <li id="p7">
         <div class="row-title">モンスターのTier表(暫定版)</div>
         <div class="row-body">18/26体・38回ぶん。強め: ミタラシ・モッチー・剣士モッチー・クロミー・モノリス・ピクシーなど / 弱め: ゴーレム・スエゾー・エイキ・イブリース・ウンディーネ(どれも暫定)</div>
@@ -171,8 +176,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li>
         <div class="row-title"><span class="team">守り部</span><span class="chip warn">返事待ち</span></div>
-        <div class="row-body">提案2件の返事待ち</div>
-        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 8:22</span></div>
+        <div class="row-body">MISS調べを続けるかの返事待ち</div>
+        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 16:45</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
@@ -217,6 +222,11 @@ section{display:flex;flex-direction:column;gap:10px}
       </div>
       <div class="bar-row">
         <span class="bar-name">ハカセくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
+        <span class="bar-val">2</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">部長ガードくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
         <span class="bar-val">2</span>
       </div>
