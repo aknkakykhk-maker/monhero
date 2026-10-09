@@ -314,6 +314,12 @@ F. **演奏まわり(rhythm-mode.js の判定・受付・追従、30-rhythm-play
 - 統括部長は、部から届いた結果を**部ごとに1枚**、`docs/playbot/reports/<日付>/<部id>.md`(battle / rhythm / patrol / guard)にまとめる(2026-10-09 社長が「部ごとに分ける」を選んだ)。部員ごとの表・公開したもの・決めてほしいこと・調べ中のことを書く(社長へは送らない。社長室を直す)。部をまたぐ話は、関係する部のファイルそれぞれに1行ずつ書き、どの部に回したかを添える
 - ファイルは PR でマージして残す(部の記録 `docs/playbot/history/<部id>.md` とは別)
 
+#### 部署紹介(2026-10-09 社長と決めた)
+
+- 部署ごとのプロフィール(部長と部員・得意なこと・これまでの働き・気をつけること・部の点)を「モンヒロ社 部署紹介」(https://claude.ai/artifact/Yb1njCnwmyWJtHcpLHXiRi)にまとめる(社長「部署紹介と言うか部署のプロフィールみたいのも作って」)
+- 中身は `docs/playbot/dashboard/departments.json`。部の点は `scores.json` から道具が足す。`node tools/playbot/department-profiles.js` で作り直し、`Artifact` で `departments.html` を出し直す(URL はそのまま)
+- 書き足すのは、部が大きな仕事を公開したとき・部員や部署が変わったとき・減給や降格があったとき・毎週の週報のとき
+
 #### 社長のプロフィール(2026-10-09 社長と決めた)
 
 - 統括部長が見た社長の強み・性格・話し方・気をつけることを、**非公開のアーティファクト**「社長のプロフィール」(https://claude.ai/artifact/LN7wYH32TQjCKiE2XC39Hs)にまとめ、育てていく(社長「そのデータをベースに更新していっていつでも見れるようにして」)
