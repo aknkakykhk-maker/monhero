@@ -725,7 +725,15 @@ function preferredOrder(difficulty, rand, roster) {
       return { nm, v: mean + (strict ? 0.05 : 0.35) / Math.sqrt((x ? x.n : 0) + 1) + rand() * (strict ? 0.05 : 0.15) };
     }).sort((a, z) => z.v - a.v).map((x) => x.nm);
   };
-  const hero = rank('hero')[0];
+  let hero = rank('hero')[0];
+  // PLAYBOT_TACTICS_EXPLORE=1 … 全モンスターを一通り試す(その難易度で勇者モンにした回数が少ない子から。供モンの候補はばらばらに)。
+  //   全部解放で、どの子がどれくらい戦えるかを集めるため(2026-10-09)
+  if (process.env.PLAYBOT_TACTICS_EXPLORE === '1') {
+    const tried = (nm) => k.runs.filter((r) => r.difficulty === difficulty && r.hero === nm).length;
+    hero = [...names].sort((a, z) => tried(a) - tried(z) || rand() - 0.5)[0];
+    const others = names.filter((nm) => nm !== hero).sort(() => rand() - 0.5);
+    return { hero, order: [hero, ...others], knownRuns: k.runs.length };
+  }
   let allies = rank('ally').filter((nm) => nm !== hero);
   if (hard) allies = allies.map((nm, i) => ({ nm, v: allyScore(nm) - i * 0.05 })).sort((a, z) => z.v - a.v).map((x) => x.nm);
   return { hero, order: [hero, ...allies], knownRuns: k.runs.length };
