@@ -68,26 +68,19 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 07:26 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/10 07:28 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち(うち提案 1)</span></a>
-    <a class="count" href="#work"><b>1</b><span>進行中</span></a>
+    <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
+    <a class="count" href="#work"><b>2</b><span>進行中</span></a>
     <a class="count" href="#shipped"><b>34</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
     <h2>社長の判断待ち(提案・質問)</h2>
     <p class="note">部からの提案は「提案」、進め方の確認は「質問」の札で出ます。決めたら、チャットで番号や案を伝えてください。</p>
-    <div class="cards">
-      <article class="card decide" id="q1zan">
-        <span class="chip warn">提案</span>
-        <h3>調整の案1: ザンがどの難易度でも弱め</h3>
-        <p>実戦 Hard C(6回)・Expert C(3回)・Master D(1回)。WAVE 1 の通常攻撃を Hard 4発・Expert 2発・Master 1発しか受けられない(全員で最少)。丈夫さ 30 は全員で2番目に低い。シミュレーター(素の性能)で Expert 序盤を越える割合 0%。届く WAVE の平均はいま Hard 3.96 / Expert 1.15。どの案でも Master の序盤は越えられない(Master はほぼ全員が WAVE 1〜3 で負けるので別の問題)。ゲームの数字はまだ変えていない</p>
-        <ol class="options"><li>(おすすめ)丈夫さ 30 → 60: Hard 4.49 / Expert 1.61。いちばん効く</li><li>ライフ 300 → 360: Hard 4.23 / Expert 1.21。効き目は小さめ</li><li>いまのまま: シミュレーターに EX・育成を入れてから決める</li></ol>
-        <div class="meta"><span>研究所 ハカセくん</span><span>10/10 07:26</span></div>
-      </article>
+    <div class="cards"><p class="empty">いま決めてほしいことはありません。</p>
     </div>
   </section>
 
@@ -95,6 +88,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
+      <li id="q1zan">
+        <div class="row-title">調整の案1: ザン(保留。スキルを入れて判断し直す)</div>
+        <div class="row-body">社長「ステは弱いけどスキル系で調整してるからそこもちゃんと見て判断して」→ 保留。固有技・EX「血踊」・勇者特性「連撃」・適性をシミュレーターに入れ、使いこなした時の強さで判断し直す。ゲームの数字は変えていない</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 研究所から見込みが届きしだい書く</span></div>
+      </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
         <div class="row-body">社長の選択で 10/10 朝からすぐ再開。①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
