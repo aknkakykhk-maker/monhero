@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9014d9d53df0aa59
+// source-sha256: bd4f8446d5a26a47
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 16:03";
+const BUILD_DATE = "2026-10-09 16:43";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -51865,6 +51865,7 @@ function MasuTranscendEnhanceScreen({
 }
 function MasuEnhanceScreen({
   addAssistantBond,
+  askConfirm,
   autoEnhanceIntroVisible,
   bulkEnhanceUnit,
   bulkPlan,
@@ -51898,7 +51899,16 @@ function MasuEnhanceScreen({
   const currentPower = masuPowerOf(masu);
   const ps = mergeMasuIntoMon(masu)?.plusStats || {};
   const autoEnhance = normalizeMasuAutoEnhance(masu.autoEnhance);
-  const backToDetail = onBack;
+  const backToDetail = async () => {
+    const drafted = bulkPlan && (bulkPlan.apt.some(n => n > 0) || Object.values(bulkPlan.stat).some(n => n > 0));
+    if (drafted && !(await askConfirm({
+      title: '振った分を確定せずに戻りますか？',
+      message: 'まだ確定していない強化の振り分けは消えます。確定するには、画面下の「◯ptを使って強化する」を押してください。',
+      confirmLabel: '破棄して戻る',
+      danger: true
+    }))) return;
+    onBack();
+  };
   const plan = bulkPlan || {
     apt: [0, 0, 0, 0],
     stat: {
@@ -75505,6 +75515,40 @@ function MonsterHeroGame() {
       window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     } catch (error) {}
   }, []);
+  const gameStateForBackRef = useRef(gameState);
+  gameStateForBackRef.current = gameState;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let armed = false;
+    const arm = () => {
+      try {
+        window.history.pushState({
+          mhBack: 1
+        }, '', window.location.href);
+        armed = true;
+      } catch (error) {
+        armed = false;
+      }
+    };
+    const onPop = () => {
+      armed = false;
+      if (gameStateForBackRef.current === 'HOME') return;
+      arm();
+      try {
+        const heads = Array.from(document.querySelectorAll('header.mh-screen-head > button[aria-label]'));
+        const back = heads.find(b => !b.disabled);
+        if (back) back.click();
+      } catch (error) {}
+    };
+    const timer = setInterval(() => {
+      if (!armed && gameStateForBackRef.current !== 'HOME') arm();
+    }, 500);
+    window.addEventListener('popstate', onPop);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('popstate', onPop);
+    };
+  }, []);
   useEffect(() => {
     if (!pendingFriendCode) return;
     if (RELEASE_FLAGS.friends !== true) {
@@ -97949,6 +97993,7 @@ function MonsterHeroGame() {
       useTranscendResetScroll: useTranscendResetScroll
     }), gameState === 'MASU_ENHANCE' && masuMonDetail && React.createElement(MasuEnhanceScreen, {
       addAssistantBond: addAssistantBond,
+      askConfirm: askConfirm,
       autoEnhanceIntroVisible: autoEnhanceIntroVisible,
       bulkEnhanceUnit: bulkEnhanceUnit,
       bulkPlan: bulkPlan,

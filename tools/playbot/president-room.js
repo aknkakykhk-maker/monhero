@@ -30,16 +30,20 @@ const updatedAt = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', m
 
 const byKind = (k) => board.filter((r) => r.区分 === k);
 const decide = byKind('判断待ち');
+const proposals = decide.filter((r) => r.種類 === '提案').length;
 const work = byKind('進行中');
 const shipped = byKind('公開');
 
+// 判断待ちの種類。提案 = 部が出した改良・調整の案(案を `案` に並べる) / 質問 = 部が進め方を聞いている
+const KIND = { 提案: '提案', 質問: '質問' };
 const meta = (parts) => parts.filter(Boolean).map((p) => `<span>${esc(p)}</span>`).join('');
 const decideHtml = decide.length
   ? decide.map((r) => `
       <article class="card decide" id="${esc(r.id)}">
-        <span class="chip warn">決めてほしいこと</span>
+        <span class="chip warn">${esc(KIND[r.種類] || '決めてほしいこと')}</span>
         <h3>${esc(r.件名)}</h3>
-        <p>${esc(r.中身)}</p>
+        <p>${esc(r.中身)}</p>${Array.isArray(r.案) && r.案.length ? `
+        <ol class="options">${r.案.map((o) => `<li>${esc(o)}</li>`).join('')}</ol>` : ''}
         <div class="meta">${meta([r.部 + ' ' + r.担当, r.見る場所, r.日付])}</div>
       </article>`).join('')
   : '<p class="empty">いま決めてほしいことはありません。</p>';
@@ -105,6 +109,7 @@ section{display:flex;flex-direction:column;gap:10px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .card.decide{background:var(--warn-bg);border-color:var(--warn)}
 .card p{margin:0}
+.options{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:2px;font-size:14px}
 .chip{display:inline-block;align-self:flex-start;border:1px solid currentColor;border-radius:999px;padding:0 9px;font-size:12px;line-height:20px;white-space:nowrap}
 .chip.warn{color:var(--warn)}.chip.ok{color:var(--ok)}.chip.bad{color:var(--bad)}.chip.idle{color:var(--muted)}
 .meta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12px;color:var(--muted)}
@@ -136,13 +141,14 @@ section{display:flex;flex-direction:column;gap:10px}
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>${decide.length}</b><span>社長の判断待ち</span></a>
+    <a class="count warn" href="#decide"><b>${decide.length}</b><span>社長の判断待ち${proposals ? `(うち提案 ${proposals})` : ''}</span></a>
     <a class="count" href="#work"><b>${work.length}</b><span>進行中</span></a>
     <a class="count" href="#shipped"><b>${shipped.length}</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
-    <h2>社長の判断待ち</h2>
+    <h2>社長の判断待ち(提案・質問)</h2>
+    <p class="note">部からの提案は「提案」、進め方の確認は「質問」の札で出ます。決めたら、チャットで番号や案を伝えてください。</p>
     <div class="cards">${decideHtml}
     </div>
   </section>
@@ -178,3 +184,20 @@ section{display:flex;flex-direction:column;gap:10px}
 `;
 fs.writeFileSync(OUT, html);
 console.log('OK: ' + path.relative(ROOT, OUT) + ' (判断待ち ' + decide.length + ' / 進行中 ' + work.length + ' / 公開 ' + shipped.length + ')');
+
+// 載せ忘れの見張り(2026-10-09 社長「社長室の内容は更新内容ちゃんとしてくれないと困る」。部が報告を送らずに公開した件が漏れた)。
+// 今日 main に入った PR のうち、board.json のどこにも番号が無いものを並べる。統括部長の記録用の PR(window-requests)と部の記録だけの PR(playbot-history)は除く。
+try {
+  const { execSync } = require('child_process');
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+  const log = execSync(`git log origin/main --first-parent --since="${today} 00:00 +0900" --format=%s`, { cwd: ROOT, encoding: 'utf8' });
+  const listed = new Set((JSON.stringify(board).match(/#\d+/g) || []));
+  const missing = log.split('\n').filter((s) => s && !/window-requests|playbot-history/.test(s))
+    .map((s) => ({ s, n: (s.match(/#(\d+)/) || [])[0] })).filter((x) => x.n && !listed.has(x.n));
+  if (missing.length) {
+    console.log('要確認: 今日公開されたのに社長室に載っていない PR が ' + missing.length + ' 件(載せるか、載せない理由があればそのまま):');
+    missing.forEach((x) => console.log('  ' + x.s));
+  }
+} catch (e) {
+  console.log('要確認: 公開の載せ忘れを確かめられなかった(' + e.message.split('\n')[0] + ')');
+}

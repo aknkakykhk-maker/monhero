@@ -10,7 +10,7 @@
 //   確定バーは一覧の中へ sticky で入れない(下の中身をスクロール中ずっと覆ってしまう)
 
 function MasuEnhanceScreen({
-  addAssistantBond, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
+  addAssistantBond, askConfirm, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
   onBack, onDismissAutoEnhanceIntro, onMissing, onOpenAutoEnhance, onOpenTranscendEnhance,
   renderPowerBadge, saveMissionProgress,
   setBulkEnhanceUnit, setBulkPlan, setEffect, setMasuMonDetail, spendPointsBulk,
@@ -33,7 +33,12 @@ function MasuEnhanceScreen({
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
       // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
-      const backToDetail = onBack;
+      // 振りかけの下書き(確定前)があるまま離れると消えるので、先に確かめる
+      const backToDetail = async () => {
+        const drafted = bulkPlan && (bulkPlan.apt.some(n=>n>0) || Object.values(bulkPlan.stat).some(n=>n>0));
+        if (drafted && !(await askConfirm({ title:'振った分を確定せずに戻りますか？', message:'まだ確定していない強化の振り分けは消えます。確定するには、画面下の「◯ptを使って強化する」を押してください。', confirmLabel:'破棄して戻る', danger:true }))) return;
+        onBack();
+      };
       // --- まとめて振るモード ---
       const plan = bulkPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
       const planUsed = plan.apt.reduce((a,b)=>a+b,0) + Object.values(plan.stat).reduce((a,b)=>a+b,0);
