@@ -68,12 +68,12 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 06:40 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/10 06:41 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>0</b><span>進行中</span></a>
+    <a class="count" href="#work"><b>1</b><span>進行中</span></a>
     <a class="count" href="#shipped"><b>33</b><span>公開したもの</span></a>
   </nav>
 
@@ -87,7 +87,12 @@ section{display:flex;flex-direction:column;gap:10px}
   <div class="cols">
     <section id="work">
       <h2>進行中の作業</h2>
-      <p class="empty">ありません。</p>
+      <ul class="list">
+      <li id="w5">
+        <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
+        <div class="row-body">今夜の対戦は締めた。明日は ①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 社長の選択で 06:41 に始めた。①シミュレーターの見込みは研究所から届きしだい書く</span><span>PR #2396・#2401・#2407</span></div>
+      </li></ul>
       <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
       <ul class="list">
       <li id="w3">
@@ -99,11 +104,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">初めての週報</div>
         <div class="row-body">部ごとのまとめ・今週のMVP・使用量</div>
         <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/12 8:52</span></div>
-      </li>
-      <li id="w5">
-        <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">今夜の対戦は締めた。明日は ①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み 10/10 昼に始める予定(研究所は 10/10 3:04 から止まっている)</span><span>PR #2396・#2401・#2407</span></div>
       </li></ul>
     </section>
     <section id="shipped">
