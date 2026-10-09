@@ -43,6 +43,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-10-10 00:23", type:'update', group:'rhythm', title:'モンヒロビートのこれから入る新曲は、HARDをクリアすればEXPERTとMASTERが一度に開くようになります', status:'new',
+    items:[
+      'これから入る新曲は、その曲のHARDを1回クリアすると、EXPERTとMASTERが一度に開きます。MASTERだけを遊びたいときも、EXPERTを先にクリアする必要はありません。',
+      'いまある曲の開き方は変わりません(HARDのクリアでEXPERT、EXPERTのクリアでMASTERが開きます)。すでに開いている難易度もそのままです。',
+    ],
+  },
+  {
     date: "2026-10-10 00:18", type:'update', group:'assistant', title:'助手のひとことを、毎回出すか・1日1回にするか・出さないかを選べるようになりました', status:'new',
     items:[
       '設定に「助手のひとこと」ができました。画面の上に出る助手の吹き出しを「いつも」「1日1回」「出さない」から選べます。はじめは「いつも」で、これまでと同じです。',
