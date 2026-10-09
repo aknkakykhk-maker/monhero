@@ -53,19 +53,26 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 18:55 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 18:56 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>16</b><span>公開したもの</span></a>
+    <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち(うち提案 1)</span></a>
+    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>17</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
     <h2>社長の判断待ち(提案・質問)</h2>
     <p class="note">部からの提案は「提案」、進め方の確認は「質問」の札で出ます。決めたら、チャットで番号や案を伝えてください。</p>
-    <div class="cards"><p class="empty">いま決めてほしいことはありません。</p>
+    <div class="cards">
+      <article class="card decide" id="d4">
+        <span class="chip warn">提案</span>
+        <h3>オート強化の余りの配り方、はじめの設定はどちら?</h3>
+        <p>新しくオート強化を使う子の、はじめの配り方。いまは従来と同じ「順番に上限まで」(上限なしが上にあると1項目に集まる)</p>
+        <ol class="options"><li>「1Pずつ順番に配る」をはじめの設定にする(均等に上がる)</li><li>いまのまま「順番に上限まで」</li></ol>
+        <div class="meta"><span>守り部 部長ガードくん</span><span>マスモン詳細 → 強化 → オート強化</span><span>10/09 18:56</span></div>
+      </article>
     </div>
   </section>
 
@@ -98,11 +105,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-body">数字入り版は公開(#2407)。今夜は Hard の全種集めを続け、Hard の1周目を入れた版を出す。新しい調整の案は、5回以上戦った子が増えてから。次は簡易シミュレーター</div>
         <div class="meta"><span>ハカセくん</span><span>見込み Hard の1周目 20:30〜21:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396・#2401・#2407</span></div>
       </li>
-      <li id="w10">
-        <div class="row-title">オート強化を使いやすくする</div>
-        <div class="row-body">原因が分かった: 押した瞬間に保存・即反映され、振り方は優先順位の上から上限まで入れるので、「上限なし」が上にあると残りを全部取る(かんたん設定「全部」だと、いちばん上の項目だけに入る)。社長の答え: 案を出して確定で反映/余りの配り方を選べるように(順番に全部・1Pずつ)</div>
-        <div class="meta"><span>部長ガードくん</span><span>見込み 18:45〜19:15 に公開(実装・ヘルプ・更新履歴は済み、全検査中)</span></div>
-      </li>
       <li id="w11">
         <div class="row-title">CLAUDE.md を軽くする</div>
         <div class="row-body">毎回読み込まれる量を 25KB から 12〜15KB くらいへ。場面が限られる決まりはその場所の CLAUDE.md へ、手順はスキルへ、見張りがある決まりは1行に。決まりは1つも消さず移すだけ</div>
@@ -112,6 +114,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="w10">
+        <div class="row-title">オート強化が使いやすくなった</div>
+        <div class="row-body">設定を変えても確定までは保存も強化もしない(「こう上がります」の案に項目ごとの+n)。確定後は「こう上がりました」が残る。余りの配り方を「順番に上限まで」「1Pずつ順番に配る」から選べる。保存データは項目を足しただけ</div>
+        <div class="meta"><span>部長ガードくん</span><span>PR #2412</span><span>マスモン詳細 → 強化 → 「オート強化」タブ</span></div>
+      </li>
       <li id="w12">
         <div class="row-title">保存キー3つを仕様書に載せた</div>
         <div class="row-body">検査で見つかった載せ忘れを docs/spec/SAVE_DATA.md に書き足した(ゲームの動きは変わらない)。モンヒロビートの直し方の切り替えは、いまは画面から書く所がなく検査ツールからだけ書かれる、とも書いた</div>
@@ -216,9 +223,9 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>部長マップくん</span><span>部員 ルーキーくん・パトロールくん・ストーリーくん・デザインくん</span><span>最後の報告 10/09 14:25</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">守り部</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">オート強化(18:45〜19:15 公開)</div>
-        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 18:23</span></div>
+        <div class="row-title"><span class="team">守り部</span><span class="chip warn">返事待ち</span></div>
+        <div class="row-body">オート強化のはじめの配り方の返事待ち</div>
+        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 18:56</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
@@ -262,6 +269,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">4</span>
       </div>
       <div class="bar-row">
+        <span class="bar-name">部長ガードくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:13.79%"></span></span>
+        <span class="bar-val">4</span>
+      </div>
+      <div class="bar-row">
         <span class="bar-name">部長テンポくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:10.34%"></span></span>
         <span class="bar-val">3</span>
@@ -270,11 +282,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-name">ハカセくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:10.34%"></span></span>
         <span class="bar-val">3</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-name">部長ガードくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
-        <span class="bar-val">2</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">イベントくん</span>
