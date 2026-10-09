@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 85afc45db184027c
+// source-sha256: d3afc76ae2480f32
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 18:48";
+const BUILD_DATE = "2026-10-09 18:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -1449,6 +1449,7 @@ const normalizeMasuAutoEnhance = value => {
     order,
     statTargets,
     aptLimits,
+    distribution: source.distribution === 'even' ? 'even' : 'order',
     ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? {
       statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key, Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0]))
     } : {})
@@ -1505,28 +1506,51 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
       guts: 0
     }
   };
-  for (const target of settings.order) {
-    if (remaining <= 0) break;
+  const capacityOf = target => {
     const aptIndex = autoEnhanceAptIndexOf(target);
     if (aptIndex != null) {
       const limitGrade = settings.aptLimits[aptIndex];
-      if (limitGrade === null) continue;
+      if (limitGrade === null) return 0;
       const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[aptIndex] || 'C'));
       const limitIndex = Math.min(DIST_APTITUDE_GRADES.length - 1, DIST_APTITUDE_GRADES.indexOf(limitGrade));
-      const take = Math.min(Math.max(0, limitIndex - currentIndex), remaining);
-      plan.apt[aptIndex] = take;
-      remaining -= take;
-      continue;
+      return Math.max(0, limitIndex - currentIndex);
     }
-    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
+    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) return 0;
     const goal = statTargets[target];
-    if (goal === 0) continue;
+    if (goal === 0) return 0;
+    if (goal === null) return null;
     const gain = STAT_POINT_GAIN[target] || 1;
     const currentValue = Math.max(0, Math.floor(Number(individual[target]) || 0)) + Math.max(0, Number(masu.statPoints?.[target]) || 0);
-    const capacity = goal === null ? remaining : Math.max(0, Math.floor((goal - currentValue) / gain));
-    const take = Math.min(capacity, remaining);
-    plan.stat[target] = take;
-    remaining -= take;
+    return Math.max(0, Math.floor((goal - currentValue) / gain));
+  };
+  const give = (target, count) => {
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    if (aptIndex != null) plan.apt[aptIndex] += count;else plan.stat[target] += count;
+  };
+  if (settings.distribution === 'even') {
+    const room = new Map(settings.order.map(target => [target, capacityOf(target)]));
+    let gave = true;
+    while (remaining > 0 && gave) {
+      gave = false;
+      for (const target of settings.order) {
+        if (remaining <= 0) break;
+        const left = room.get(target);
+        if (left !== null && left <= 0) continue;
+        give(target, 1);
+        remaining -= 1;
+        if (left !== null) room.set(target, left - 1);
+        gave = true;
+      }
+    }
+  } else {
+    for (const target of settings.order) {
+      if (remaining <= 0) break;
+      const capacity = capacityOf(target);
+      const take = capacity === null ? remaining : Math.min(capacity, remaining);
+      if (take <= 0) continue;
+      give(target, take);
+      remaining -= take;
+    }
   }
   const used = plan.apt.reduce((sum, value) => sum + value, 0) + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
   return used > 0 ? {
@@ -61843,6 +61867,7 @@ function SoulBattleEffects({
 }
 function MasuAutoEnhanceScreen({
   applyAutoEnhanceNow,
+  askConfirm,
   autoEnhanceLog,
   getMasuMon,
   masuMonDetail,
@@ -61855,22 +61880,26 @@ function MasuAutoEnhanceScreen({
   updateAutoEnhance
 }) {
   const [limitDraft, setLimitDraft] = useState(null);
+  const [draftSettings, setDraftSettings] = useState(null);
+  const [appliedLines, setAppliedLines] = useState(null);
   const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
   const base = ALL_PLAYER_MONSTERS[masu.baseId];
   if (!base) {
     onMissing();
     return null;
   }
-  const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+  const savedSettings = normalizeMasuAutoEnhance(masu.autoEnhance);
+  const settings = draftSettings || savedSettings;
+  const dirty = !!draftSettings;
   const points = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
   const resolvedApt = resolveMasuDistAptitude(masu, base);
   const baseApt = masuTranscendBaseAptitude(masu, base);
   const individual = resolveMasuIndividualStats(masu, base);
-  const statTargets = autoEnhanceStatTargetsOf(masu, base);
+  const statTargets = dirty ? settings.statTargets : autoEnhanceStatTargetsOf(masu, base);
   const baseStatOf = key => Math.max(0, Math.floor(Number(individual[key]) || 0));
   const spentStatOf = key => Math.max(0, Number(masu.statPoints?.[key]) || 0);
   const currentStatOf = key => baseStatOf(key) + spentStatOf(key);
-  const hasTarget = autoEnhanceHasTarget(masu, base);
+  const hasTarget = dirty ? settings.statTargets && Object.values(settings.statTargets).some(v => v === null || v > 0) || settings.aptLimits.some(v => v !== null) : autoEnhanceHasTarget(masu, base);
   const awaitsReset = masuAwaitsBondResetReallocation(masu);
   const planned = buildMasuAutoEnhancePlan({
     ...masu,
@@ -61886,12 +61915,24 @@ function MasuAutoEnhanceScreen({
     const goal = statTargets[key];
     return goal === null ? '' : String(goal);
   };
+  const updateDraft = patch => {
+    const from = draftSettings || {
+      ...savedSettings,
+      statTargets: autoEnhanceStatTargetsOf(masu, base)
+    };
+    setDraftSettings(normalizeMasuAutoEnhance({
+      ...from,
+      ...patch,
+      version: AUTO_ENHANCE_SETTINGS_VERSION
+    }));
+    setAppliedLines(null);
+  };
   const commitStatTarget = key => {
     if (!limitDraft || limitDraft.key !== key) return;
     const text = limitDraft.text.trim();
     setLimitDraft(null);
     const digits = text.replace(/[^0-9]/g, '');
-    updateAutoEnhance(masu.id, {
+    updateDraft({
       statTargets: {
         ...statTargets,
         [key]: digits === '' ? null : Number(digits)
@@ -61900,7 +61941,7 @@ function MasuAutoEnhanceScreen({
   };
   const setStatTarget = (key, value) => {
     setLimitDraft(null);
-    updateAutoEnhance(masu.id, {
+    updateDraft({
       statTargets: {
         ...statTargets,
         [key]: value
@@ -61910,7 +61951,7 @@ function MasuAutoEnhanceScreen({
   const setAptLimit = (index, grade) => {
     const aptLimits = [...settings.aptLimits];
     aptLimits[index] = grade;
-    updateAutoEnhance(masu.id, {
+    updateDraft({
       aptLimits
     });
   };
@@ -61918,7 +61959,7 @@ function MasuAutoEnhanceScreen({
     const captured = buildAutoEnhanceLimitsFromCurrent(masu, base);
     if (captured) {
       setLimitDraft(null);
-      updateAutoEnhance(masu.id, captured);
+      updateDraft(captured);
     }
   };
   const applyPreset = kind => {
@@ -61947,7 +61988,7 @@ function MasuAutoEnhanceScreen({
       statTargets: noStat,
       aptLimits: allApt
     };
-    updateAutoEnhance(masu.id, {
+    updateDraft({
       enabled: true,
       ...patch
     });
@@ -61957,13 +61998,13 @@ function MasuAutoEnhanceScreen({
       applyPreset('all');
       return;
     }
-    updateAutoEnhance(masu.id, {
+    updateDraft({
       enabled: !settings.enabled
     });
   };
   const clearAll = () => {
     setLimitDraft(null);
-    updateAutoEnhance(masu.id, {
+    updateDraft({
       statTargets: {
         hp: 0,
         atk: 0,
@@ -61972,6 +62013,49 @@ function MasuAutoEnhanceScreen({
       },
       aptLimits: [null, null, null, null]
     });
+  };
+  const moveOrder = (target, direction) => {
+    const from = settings.order.indexOf(target);
+    const to = from + (direction < 0 ? -1 : 1);
+    if (from < 0 || to < 0 || to >= settings.order.length) return;
+    const order = [...settings.order];
+    [order[from], order[to]] = [order[to], order[from]];
+    updateDraft({
+      order
+    });
+  };
+  const confirmDraft = () => {
+    if (!draftSettings) return;
+    const lines = draftSettings.enabled && planned && !awaitsReset ? plannedLines : [];
+    updateAutoEnhance(masu.id, {
+      enabled: draftSettings.enabled,
+      statTargets: draftSettings.statTargets,
+      aptLimits: draftSettings.aptLimits,
+      order: draftSettings.order,
+      distribution: draftSettings.distribution
+    });
+    setDraftSettings(null);
+    setLimitDraft(null);
+    setAppliedLines(lines);
+  };
+  const cancelDraft = () => {
+    setDraftSettings(null);
+    setLimitDraft(null);
+    setAppliedLines(null);
+  };
+  const leave = async go => {
+    if (dirty && !(await askConfirm({
+      title: '変更を確定せずに戻りますか？',
+      message: '確定していない設定の変更は消えます。残したいときは「確定する」を押してください。',
+      confirmLabel: '破棄して戻る',
+      danger: true
+    }))) return;
+    go();
+  };
+  const plannedGainOf = target => {
+    if (!planned) return 0;
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    return aptIndex != null ? planned.plan.apt[aptIndex] : (planned.plan.stat[target] || 0) * (STAT_POINT_GAIN[target] || 1);
   };
   const rowLabel = target => {
     const aptIndex = autoEnhanceAptIndexOf(target);
@@ -61994,12 +62078,12 @@ function MasuAutoEnhanceScreen({
   }, React.createElement(ScreenHead, {
     title: "オート強化",
     accent: "text-lime-300",
-    onBack: onBack,
+    onBack: () => leave(onBack),
     backLabel: "マスモン詳細へ戻る"
   }), React.createElement(EnhanceModeTabs, {
     current: "auto",
-    onNormal: onOpenNormalEnhance,
-    onTranscend: onOpenTranscendEnhance,
+    onNormal: () => leave(onOpenNormalEnhance),
+    onTranscend: () => leave(onOpenTranscendEnhance),
     autoOn: settings.enabled
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -62031,7 +62115,43 @@ function MasuAutoEnhanceScreen({
   }, renderPowerBadge(masuPowerOf(masu), {
     dense: true,
     size: 'sm'
-  })))), React.createElement("div", {
+  })))), dirty && React.createElement("div", {
+    "data-auto-enhance-draft": true,
+    className: "rounded-2xl border-2 border-amber-400/70 bg-amber-950/30 p-3"
+  }, React.createElement("div", {
+    className: "text-[13px] font-black text-amber-200"
+  }, "設定を変えています（まだ保存していません）"), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-200 leading-relaxed"
+  }, !settings.enabled ? '確定するとオート強化をOFFにします。いまは何も振りません。' : awaitsReset ? '絆ポイントリセットの直後なので、確定しても自動では振りません。' : plannedLines.length > 0 ? '確定すると、いまの強化ポイントがこう上がります。' : '確定しても、いまの強化ポイントで振る先はありません。次に強化ポイントが入ったときから、この設定で振ります。'), settings.enabled && !awaitsReset && plannedLines.length > 0 && React.createElement("div", {
+    className: "mt-1 space-y-0.5"
+  }, plannedLines.map((line, idx) => React.createElement("div", {
+    key: idx,
+    className: "text-[12px] font-black text-white"
+  }, "・", line)), React.createElement("div", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, planned.used, "P を使い、", points - planned.used, "P が残ります。")), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-confirm": true,
+    onClick: confirmDraft,
+    className: "min-h-[52px] rounded-xl bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950 font-black text-[13px] active:scale-95"
+  }, "確定する"), React.createElement("button", {
+    type: "button",
+    "data-auto-enhance-cancel": true,
+    onClick: cancelDraft,
+    className: "min-h-[52px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 font-black text-[13px] active:scale-95"
+  }, "やめる"))), !dirty && appliedLines && appliedLines.length > 0 && React.createElement("div", {
+    "data-auto-enhance-applied": true,
+    className: "rounded-2xl border border-lime-400/60 bg-lime-950/30 p-3"
+  }, React.createElement("div", {
+    className: "text-[13px] font-black text-lime-300"
+  }, "こう上がりました"), React.createElement("div", {
+    className: "mt-1 space-y-0.5"
+  }, appliedLines.map((line, idx) => React.createElement("div", {
+    key: idx,
+    className: "text-[12px] font-black text-white"
+  }, "・", line)))), React.createElement("div", {
     className: `rounded-2xl border p-3 shadow-xl ${settings.enabled ? 'border-lime-400/60 bg-lime-950/25' : 'border-white/10 bg-slate-900'}`
   }, React.createElement("button", {
     type: "button",
@@ -62053,7 +62173,7 @@ function MasuAutoEnhanceScreen({
     className: "rounded-2xl border border-lime-500/40 bg-slate-900 p-3"
   }, React.createElement("div", {
     className: "text-[13px] font-black text-lime-300"
-  }, "かんたん設定（押すだけで ON）"), React.createElement("div", {
+  }, "かんたん設定（押すと案が出て、確定でON）"), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -62105,8 +62225,12 @@ function MasuAutoEnhanceScreen({
     className: "mt-1 text-[10px] font-bold text-slate-400"
   }, planned.used, "P を使い、", points - planned.used, "P が残ります。", awaitsReset && '（絆ポイントリセットの直後なので、自動では振りません）'), React.createElement("button", {
     type: "button",
-    onClick: () => applyAutoEnhanceNow(masu.id),
-    className: "mt-2 w-full min-h-[52px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[13px] active:scale-95"
+    disabled: dirty,
+    onClick: () => {
+      applyAutoEnhanceNow(masu.id);
+      setAppliedLines(plannedLines);
+    },
+    className: "disabled:opacity-40 mt-2 w-full min-h-[52px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[13px] active:scale-95"
   }, "この内容でいますぐ振る")) : React.createElement("div", {
     className: "text-[11px] text-amber-300 font-bold"
   }, "目標まで届いているので、いまの設定では振る先がありません。")), React.createElement("div", {
@@ -62119,7 +62243,28 @@ function MasuAutoEnhanceScreen({
     size: 14
   }), "優先順位と上限"), React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold"
-  }, "上から順に埋めます")), React.createElement("div", {
+  }, settings.distribution === 'even' ? '上から1Pずつ配ります' : '上から順に埋めます')), React.createElement("div", {
+    "data-auto-enhance-distribution": true,
+    className: "mb-2"
+  }, React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "aria-pressed": settings.distribution !== 'even',
+    onClick: () => updateDraft({
+      distribution: 'order'
+    }),
+    className: `min-h-[44px] rounded-xl px-2 text-[11px] font-black leading-tight active:scale-95 ${settings.distribution !== 'even' ? 'bg-lime-600 text-slate-950' : 'bg-slate-800 border border-white/10 text-slate-300'}`
+  }, "順番に上限まで"), React.createElement("button", {
+    type: "button",
+    "aria-pressed": settings.distribution === 'even',
+    onClick: () => updateDraft({
+      distribution: 'even'
+    }),
+    className: `min-h-[44px] rounded-xl px-2 text-[11px] font-black leading-tight active:scale-95 ${settings.distribution === 'even' ? 'bg-lime-600 text-slate-950' : 'bg-slate-800 border border-white/10 text-slate-300'}`
+  }, "1Pずつ順番に配る")), React.createElement("div", {
+    className: "mt-1.5 text-[10px] font-bold text-slate-300 leading-relaxed"
+  }, settings.distribution === 'even' ? '上から順に1Pずつ配るのを繰り返します。上限に届いた項目は飛ばし、上限なしの項目が複数あれば均等に上がります。全部の上限に届くと止まり、残りは手元に残ります。' : '上の項目から順に、上限まで入れてから次へ進みます。上限なしの項目は残りを全部使うので、それより下の項目には回りません。全部の上限に届くと止まり、残りは手元に残ります。')), React.createElement("div", {
     className: "space-y-1.5"
   }, settings.order.map((target, rank) => {
     const aptIndex = autoEnhanceAptIndexOf(target);
@@ -62141,17 +62286,20 @@ function MasuAutoEnhanceScreen({
       className: `w-6 h-6 shrink-0 rounded-full text-[10px] font-black flex items-center justify-center ${active ? 'bg-lime-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`
     }, rank + 1), React.createElement("span", {
       className: `flex-1 min-w-0 truncate text-[12px] font-black ${active ? 'text-white' : 'text-slate-400'}`
-    }, rowLabel(target)), React.createElement("button", {
+    }, rowLabel(target)), plannedGainOf(target) > 0 && React.createElement("span", {
+      "data-auto-enhance-gain": true,
+      className: "shrink-0 rounded-full bg-lime-500 px-2 py-0.5 text-[11px] font-black text-slate-950"
+    }, isApt ? `+${plannedGainOf(target)}段階` : `+${plannedGainOf(target)}`), React.createElement("button", {
       type: "button",
       "aria-label": `${rowLabel(target)}の優先順位を上げる`,
       disabled: rank <= 0,
-      onClick: () => moveAutoEnhanceOrder(masu.id, target, -1),
+      onClick: () => moveOrder(target, -1),
       className: "w-11 h-11 shrink-0 rounded-xl bg-slate-700 text-sm font-black active:scale-95 disabled:bg-slate-800 disabled:opacity-30"
     }, "↑"), React.createElement("button", {
       type: "button",
       "aria-label": `${rowLabel(target)}の優先順位を下げる`,
       disabled: rank >= settings.order.length - 1,
-      onClick: () => moveAutoEnhanceOrder(masu.id, target, 1),
+      onClick: () => moveOrder(target, 1),
       className: "w-11 h-11 shrink-0 rounded-xl bg-slate-700 text-sm font-black active:scale-95 disabled:bg-slate-800 disabled:opacity-30"
     }, "↓")), isApt ? React.createElement("div", {
       className: "mt-1.5 flex flex-wrap items-center gap-1.5"
@@ -62248,7 +62396,7 @@ function MasuAutoEnhanceScreen({
     className: "text-[11px] font-bold text-slate-300 leading-relaxed"
   }, entry.lines.join(' ／ ')))))), React.createElement("button", {
     type: "button",
-    onClick: onBack,
+    onClick: () => leave(onBack),
     className: "w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2"
   }, "完了")));
 }
@@ -98253,6 +98401,7 @@ function MonsterHeroGame() {
       spendPointsBulk: spendPointsBulk
     }), gameState === 'MASU_AUTO_ENHANCE' && masuMonDetail && React.createElement(MasuAutoEnhanceScreen, {
       applyAutoEnhanceNow: applyAutoEnhanceNow,
+      askConfirm: askConfirm,
       autoEnhanceLog: autoEnhanceLog,
       getMasuMon: getMasuMon,
       masuMonDetail: masuMonDetail,

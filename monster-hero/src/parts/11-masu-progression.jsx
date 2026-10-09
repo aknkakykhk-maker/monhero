@@ -504,6 +504,8 @@ const normalizeMasuAutoEnhance = (value) => {
     order,
     statTargets,
     aptLimits,
+    // 余ったポイントの配り方。項目を持っていない既存ユーザーは、いままでと同じ「順番に上限まで」
+    distribution: source.distribution === 'even' ? 'even' : 'order',
     ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? { statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
       Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0])) } : {}),
   };
@@ -563,30 +565,56 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
   const individual = resolveMasuIndividualStats(masu, base);
   const statTargets = autoEnhanceStatTargetsOf(masu, base);
   const plan = { apt:[0,0,0,0], stat:{ hp:0, atk:0, def:0, guts:0 } };
-  for (const target of settings.order) {
-    if (remaining <= 0) break;
+  // 項目ごとに「あと何P入れてよいか」。null は上限なし(残りを全部使える)、0 は振らない・届いている
+  const capacityOf = (target) => {
     const aptIndex = autoEnhanceAptIndexOf(target);
     if (aptIndex != null) {
       const limitGrade = settings.aptLimits[aptIndex];
-      if (limitGrade === null) continue;
+      if (limitGrade === null) return 0;
       const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[aptIndex] || 'C'));
       const limitIndex = Math.min(DIST_APTITUDE_GRADES.length - 1, DIST_APTITUDE_GRADES.indexOf(limitGrade));
-      const take = Math.min(Math.max(0, limitIndex - currentIndex), remaining);
-      plan.apt[aptIndex] = take;
-      remaining -= take;
-      continue;
+      return Math.max(0, limitIndex - currentIndex);
     }
-    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
+    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) return 0;
     const goal = statTargets[target];
-    if (goal === 0) continue;
+    if (goal === 0) return 0;
+    if (goal === null) return null;
     const gain = STAT_POINT_GAIN[target] || 1;
     // いまの値は「素の値(超越の基礎UPを含む) ＋ 強化で振ったぶん」。強化画面に出ている数字と同じ
     const currentValue = Math.max(0, Math.floor(Number(individual[target]) || 0)) + Math.max(0, Number(masu.statPoints?.[target]) || 0);
     // 1Pあたりの上昇量で割り切れないときは、目標をこえないように切り捨てる
-    const capacity = goal === null ? remaining : Math.max(0, Math.floor((goal - currentValue) / gain));
-    const take = Math.min(capacity, remaining);
-    plan.stat[target] = take;
-    remaining -= take;
+    return Math.max(0, Math.floor((goal - currentValue) / gain));
+  };
+  const give = (target, count) => {
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    if (aptIndex != null) plan.apt[aptIndex] += count; else plan.stat[target] += count;
+  };
+  if (settings.distribution === 'even') {
+    // 優先順位の上から1Pずつ配る周回を、配れなくなるまで繰り返す。上限に届いた項目は飛ばす
+    const room = new Map(settings.order.map(target => [target, capacityOf(target)]));
+    let gave = true;
+    while (remaining > 0 && gave) {
+      gave = false;
+      for (const target of settings.order) {
+        if (remaining <= 0) break;
+        const left = room.get(target);
+        if (left !== null && left <= 0) continue;
+        give(target, 1);
+        remaining -= 1;
+        if (left !== null) room.set(target, left - 1);
+        gave = true;
+      }
+    }
+  } else {
+    // 優先順位の上から、上限まで入れてから次へ。上限なしの項目は残りを全部使う
+    for (const target of settings.order) {
+      if (remaining <= 0) break;
+      const capacity = capacityOf(target);
+      const take = capacity === null ? remaining : Math.min(capacity, remaining);
+      if (take <= 0) continue;
+      give(target, take);
+      remaining -= take;
+    }
   }
   const used = plan.apt.reduce((sum, value) => sum + value, 0)
     + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);

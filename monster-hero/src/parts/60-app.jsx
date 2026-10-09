@@ -19246,6 +19246,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_AUTO_ENHANCE'&&masuMonDetail&&(
           <MasuAutoEnhanceScreen
             applyAutoEnhanceNow={applyAutoEnhanceNow}
+            askConfirm={askConfirm}
             autoEnhanceLog={autoEnhanceLog}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}
