@@ -253,6 +253,15 @@ function decidePick(b, opts, ctx) {
   const downed = b.slots.filter((x) => x.occupied && x.downed).length;
   const heal = opts.find((o) => o.card.type === 'heal');
   if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.35))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
+  // ④' あとから出たアシストカード。ガッツや手数を増やすものは、早めに使うほど得
+  const richestG = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
+  const leanG = alive.some((x) => x.guts && x.guts.max && x.guts.now < x.guts.max * 0.35);
+  const named2 = (re) => opts.find((o) => re.test(o.card.label.replace(/^\d+\s*/, '')));
+  const kiki = named2(/^きき/), poltz = named2(/^ポルツ/), momo = named2(/^ももすけ/), meloso = named2(/^メロソ/);
+  if (momo && leanG && !ctx.healed) return { kind: 'support', card: momo.card, why: 'ガッツが細った子がいる(ももすけ: ガッツ回復)' };
+  if (kiki && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.3) return { kind: 'support', card: kiki.card, why: '次のターンからカードの上限を増やす(きき)' };
+  if (poltz && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.4) return { kind: 'support', card: poltz.card, why: '受けるたびにガッツが戻るようにする(ポルツ)' };
+  if (meloso && !ctx.healed && (hpMax && hpNow / hpMax < 0.55)) return { kind: 'support', card: meloso.card, why: 'ライフが減っている(メロソ: 回復とガード)' };
   // ⑤ 攻撃。★スタンのカード(あつの挑発など・type debuff)は「ためる」「貫通の構え」のターンまで取っておく。
   //   先に撃つと、必殺技(×2.5)を止められずに倒れる(2026-10-09 Master の WAVE 3)。とどめのときだけは使ってよい
   const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
@@ -324,8 +333,11 @@ async function maybeUseEx(s, b, mem, log) {
   const threat = threatOf(b);
   const bigHit = threat === 'big' || threat === 'all' || threat === 'pierce' || (threat === 'multi' && b.aimedDamage > 0)
     || b.slots.some((x) => x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.8);
+  const aliveCount = b.slots.filter((y) => y.occupied && !y.downed).length;
   for (const x of b.slots.filter((y) => y.occupied && !y.downed && y.ex && !y.exActive)) {
     const role = exRoleOf(x.name, '');
+    // かばう EX(モノリス)は、かばう相手がいないと意味がない
+    if (role === 'shield' && x.name === 'モノリス' && aliveCount < 2) continue;
     const enemyFull = b.enemy && b.enemy.hp >= b.enemy.max * 0.5;
     const gutsLow = x.guts && x.guts.now < x.guts.max * 0.25;
     const hpLow = x.hp && x.hp.now < x.hp.max * 0.4;
@@ -570,13 +582,16 @@ async function chooseBetween(s, mem, log) {
     // 書かれている%で比べる(攻撃 20%アップ > 攻撃 3%アップ)。WAVE は20ターンの打ち切りがあるので火力を重く見る
     const pctOf = (t, re) => { const m = t.match(re); return m ? Number(m[1]) : 0; };
     const atkPct = (t) => pctOf(t, /攻撃\s*(\d+(?:\.\d+)?)%アップ/) + (/攻撃\s*(\d+(?:\.\d+)?)倍/.test(t) && !/自傷/.test(t) ? (pctOf(t, /攻撃\s*(\d+(?:\.\d+)?)倍/) - 1) * 100 : 0);
-    const score = (t) => (/自傷/.test(t) ? -5 : 0) + atkPct(t) / 5 + (isHeal(t) ? (hurt ? 3 : 1.5) : 0)
+    // あとから出たアシストカード(2026-10-09 に全部解放で使えるようにした)。ボットが詰まっていた「ガッツ」と「手数」を直接補う
+    //   きき=次ターンからカード上限アップ・全体連撃 / ポルツ=受けるたびガッツ回復・自動回復アップ / ももすけ=ガッツ回復・能力永続アップ / メロソ=回復・ガード
+    const named = (t) => (/^きき/.test(t) ? 5 : 0) + (/^ポルツ/.test(t) ? (starved ? 5 : 3.5) : 0) + (/^ももすけ/.test(t) ? (starved ? 4.5 : 3) : 0) + (/^メロソ/.test(t) ? (hurt ? 3.5 : 2) : 0);
+    const score = (t) => (/自傷/.test(t) ? -5 : 0) + atkPct(t) / 5 + (isHeal(t) ? (hurt ? 3 : 1.5) : 0) + named(t)
       + (isGuts(t) ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(t) ? 2.5 : 0);
     const best = cards.sort((a, z) => score(z) - score(a))[0];
     // 理由は、点数にいちばん効いた項目で言う
     const parts = [['火力を伸ばす', atkPct(best) / 5], [hurt ? '被ダメージが多いので回復' : '回復の手段を持つ', isHeal(best) ? (hurt ? 3 : 1.5) : 0],
       [starved ? 'ガッツ不足が多い' : 'ガッツを補う', isGuts(best) ? (starved ? 3.2 : 1.2) : 0], ['守りを固める', /被ダメ|軽減|守り/.test(best) ? (hurt ? 2.5 : 1) : 0],
-      ['敵の行動を止める', /行動を無効|スタン/.test(best) ? 2.5 : 0]];
+      ['敵の行動を止める', /行動を無効|スタン/.test(best) ? 2.5 : 0], ['手数とガッツを補う(あとから出たカード)', named(best)]];
     const kind = parts.sort((p, q) => q[1] - p[1])[0][0];
     log.note(`アシストカード: ${best.slice(0, 24)}(${kind})`);
     log.data.build.assists.push({ wave: log.data.waves.length, card: best.split(/\s+/)[0], text: best.slice(0, 40), upgrade: !/新規習得/.test(best) });
@@ -683,9 +698,17 @@ function scoreNames(k, difficulty, role) {
   return acc;
 }
 // 勇者モン → 供モン5体の順に並べた名前の一覧(画面にある名前を上から順に選ぶ)
-function preferredOrder(difficulty, rand) {
+// roster: ゲームから読んだ全モンスター(すべて解放のときは全種が選べる)。試していない子の見込みは、能力から決める:
+//   勇者モン=1体で戦う WAVE 1〜2 を持ちこたえる打たれ強さ(ライフ×丈夫さ)、供モン=ちから
+function preferredOrder(difficulty, rand, roster) {
   const k = loadKnowledge();
-  const names = [...new Set([...BASE_NAMES, ...k.runs.flatMap((r) => [r.hero, ...(r.pool || [])]).filter(Boolean)])];
+  const mons = roster && Array.isArray(roster.monsters) ? roster.monsters.filter((m) => !m.debugOnly && m.name) : [];
+  const names = [...new Set([...(mons.length ? mons.map((m) => m.name) : BASE_NAMES), ...k.runs.flatMap((r) => [r.hero, ...(r.pool || [])]).filter(Boolean)])];
+  const statOf = (nm) => mons.find((m) => m.name === nm);
+  // 勇者モンは1体で WAVE 1〜2 を倒しきる必要があるので「打たれ強さ×ちから」で見る(打たれ強いだけのモノリスは火力が足りなかった)
+  const heroVal = (m) => Math.sqrt((m.hp || 0) * (m.def || 0)) * (m.atk || 0);
+  const maxTank = Math.max(1, ...mons.map(heroVal));
+  const maxAtk = Math.max(1, ...mons.map((m) => m.atk || 0));
   // ★Expert 以上で、試していない子を勇者モンにすると、1体で戦う WAVE 1〜2 で倒れることが多い
   //   (2026-10-09 Master: ライフ 250 のピクシー・400 のライガーが WAVE 1〜2 で負けた)。
   //   難しい難易度ほど「知っている、成績のよい子」を選び、試すのは供モンの候補と、やさしい難易度で行う
@@ -696,7 +719,9 @@ function preferredOrder(difficulty, rand) {
     // 平均の出来 + 試した回数が少ないほど足す(よく知らない子も試す)
     return names.map((nm) => {
       const x = sc[nm];
-      const mean = x && x.w ? x.v / x.w : (strict ? 0.15 : 1.2);
+      const st = statOf(nm);
+      const guess = st ? (role === 'hero' ? heroVal(st) / maxTank : (st.atk || 0) / maxAtk) : 0.5;
+      const mean = x && x.w ? x.v / x.w : (strict ? 0.1 + 0.4 * guess : 0.9 + 0.6 * guess);
       return { nm, v: mean + (strict ? 0.05 : 0.35) / Math.sqrt((x ? x.n : 0) + 1) + rand() * (strict ? 0.05 : 0.15) };
     }).sort((a, z) => z.v - a.v).map((x) => x.nm);
   };
@@ -726,6 +751,15 @@ function allyScore(name) {
   const base = rel.length ? rel.reduce((a, x) => a + x, 0) / rel.length : 1;
   return base + (name === 'モノリス' ? 0.8 : 0);
 }
+// 全モンスター・全アシストカード・全 EX の一覧を tools/playbot/tactics-roster.json に書く(人が読む一覧。ゲームのデータから毎回作り直す)
+const ROSTER = path.resolve(__dirname, '..', 'tactics-roster.json');
+function saveRoster(roster) {
+  try {
+    const body = { note: 'タクティクスくんがゲームのデータ(ALL_PLAYER_MONSTERS・TEACHING_CARDS・TACTICS_EX_SKILLS)から読んだ一覧。ボットが動くたびに作り直す', ...roster };
+    const text = `${JSON.stringify(body, null, 1)}\n`;
+    if (!fs.existsSync(ROSTER) || fs.readFileSync(ROSTER, 'utf8') !== text) fs.writeFileSync(ROSTER, text);
+  } catch (e) { /* 書けなくても戦える */ }
+}
 function rememberRun(L, stats) {
   if (process.env.PLAYBOT_TACTICS_LEARN === '0') return;
   const k = loadKnowledge();
@@ -743,4 +777,4 @@ function rememberRun(L, stats) {
   fs.writeFileSync(KNOWLEDGE, `${JSON.stringify(k, null, 1)}\n`);
 }
 
-module.exports = { preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
+module.exports = { saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
