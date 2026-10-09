@@ -336,7 +336,10 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
   mem.roster = await readRoster(s).catch(() => null);
   if (mem.roster) brain.saveRoster(mem.roster);
   let entered = '';
-  for (const mode of modes) {
+  // ★「すべて解放」はタクティクスプロだけで回す。ふつうのタクティクスは自分の育てた子(編成 | ベースモン の8体)で戦うモードで、
+  //   そちらへ入れた回は、勇者モンを選べず Beginner で戦っていた(2026-10-10。Tier 表の成績に混ざらないよう、入れない)
+  const modeList = unlockAll ? ['tacticsPro'] : modes;
+  for (const mode of modeList) {
     entered = await enterTactics(s, { mode, difficulty, stats, ctx: { mem, log }, unlockAll });
     if (entered === 'ok') { stats.mode = mode; break; }
     await s.backHome();
