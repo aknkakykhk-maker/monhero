@@ -5407,6 +5407,8 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      // 助手のひとことの出し方も先に読んでおく(最初に開いた画面で、出てから消えるちらつきを防ぐ)
+      void ASSISTANT_BUBBLE_STORE.load();
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
       let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
