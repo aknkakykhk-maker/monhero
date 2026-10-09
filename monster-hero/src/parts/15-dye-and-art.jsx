@@ -1074,6 +1074,11 @@ const _recolorImageData = (data, colorId, baseId, regionIdx) => {
   const t = _resolveColorTarget(colorId);
   if (!t) return;
   const { gloss, sat } = _regionDyeSettingFor(baseId, regionIdx);
+  _recolorPixels(data, t, gloss, sat);
+};
+// 画素の置き換えの本体。色の決め方(t・gloss・sat)は呼ぶ側で決めて渡す。
+// _rgbToHsv / _hsvToRgb 以外を使わないので、そのまま裏の作業(Worker)へ写して動かせる(_dyeRecolorWorker)
+const _recolorPixels = (data, t, gloss, sat) => {
   const targetS = Math.max(0, Math.min(1, t.s * sat));
   let satRef = 1;
   if (typeof gloss === 'number') {
@@ -1113,7 +1118,111 @@ const _dyeRecolorCacheGet = (key) => {
 };
 const _dyeRecolorCacheSet = (key, promise) => {
   _dyeRecolorCache.set(key, promise);
-  while (_dyeRecolorCache.size > DYE_RECOLOR_CACHE_MAX) _dyeRecolorCache.delete(_dyeRecolorCache.keys().next().value);
+  while (_dyeRecolorCache.size > DYE_RECOLOR_CACHE_MAX) {
+    const oldKey = _dyeRecolorCache.keys().next().value;
+    const old = _dyeRecolorCache.get(oldKey);
+    _dyeRecolorCache.delete(oldKey);
+    _dyeBlobEvict(old);
+  }
+};
+// 裏の作業で作った絵は blob: のURLで渡す(dataURL だと、絵を貼るたびに長い文字列の読み解きで画面が止まった。
+// 40体で1回目0.6秒・2回目1.2秒)。blob: のURLは自分で片づけないと端末のメモリに残り続けるので、
+// 控えから捨てられ、しかもどの絵も使っていない(数が0)ときだけ片づける。表示中の絵は片づけない。
+// 使う側(DyedMonsterImage・bakeDyedMonsterCanvas)は、受け取ったらすぐ _dyeBlobRetain、要らなくなったら _dyeBlobRelease
+const _dyeBlobRefs = new Map();
+const _dyeBlobEvicted = new Set();
+const _isDyeBlobUrl = (url) => typeof url === 'string' && url.startsWith('blob:');
+const _dyeBlobRevokeIfUnused = (url) => {
+  if (!_dyeBlobEvicted.has(url) || _dyeBlobRefs.get(url)) return;
+  _dyeBlobEvicted.delete(url);
+  try { window.URL.revokeObjectURL(url); } catch (_) { /* 片づけられなくても表示には関係しない */ }
+};
+const _dyeBlobRetain = (url) => { if (_isDyeBlobUrl(url)) _dyeBlobRefs.set(url, (_dyeBlobRefs.get(url) || 0) + 1); };
+const _dyeBlobRelease = (url) => {
+  if (!_isDyeBlobUrl(url)) return;
+  const n = (_dyeBlobRefs.get(url) || 0) - 1;
+  if (n > 0) { _dyeBlobRefs.set(url, n); return; }
+  _dyeBlobRefs.delete(url);
+  _dyeBlobRevokeIfUnused(url);
+};
+const _dyeBlobEvict = (promise) => {
+  Promise.resolve(promise).then((url) => {
+    if (!_isDyeBlobUrl(url)) return;
+    _dyeBlobEvicted.add(url);
+    // 受け取った直後の使う側が数を足し終えてから確かめる(Promise の続きは setTimeout より先に走る)
+    setTimeout(() => _dyeBlobRevokeIfUnused(url), 0);
+  }, () => {});
+};
+// 染め直しを裏の作業(Worker)で行う(2026-10-09・ユーザー報告「ゲームを始めてマスモン一覧を押すと少し固まる」)。
+// 起動して初めてマスモン一覧を開くと、染色した子の数×部位の数だけ、1024px前後の絵を1画素ずつ染め直して
+// PNGへ書き出す処理が画面と同じ所で走り、40体(半分が染色)で3秒以上止まっていた(染色なしなら0.2秒)。
+// 作る絵は同じ(同じ大きさ・同じ計算・同じPNG。渡し方だけ blob: のURL。片づけ方は _dyeBlobRefs)。OffscreenCanvas が無い端末や、途中で失敗したときは
+// null を返し、呼ぶ側が今までどおり画面側で作る
+let _dyeRecolorWorker = null;
+let _dyeRecolorWorkerBroken = false;
+let _dyeRecolorSeq = 0;
+const _dyeRecolorWaiting = new Map();
+const _dyeRecolorWorkerGet = () => {
+  if (_dyeRecolorWorker || _dyeRecolorWorkerBroken) return _dyeRecolorWorker;
+  try {
+    if (typeof window === 'undefined' || typeof window.Worker !== 'function' || typeof window.OffscreenCanvas !== 'function'
+      || typeof window.OffscreenCanvas.prototype.convertToBlob !== 'function'
+      || typeof window.Blob !== 'function' || !window.URL || typeof window.URL.createObjectURL !== 'function') {
+      _dyeRecolorWorkerBroken = true; return null;
+    }
+    const code = [
+      `const _rgbToHsv = ${_rgbToHsv.toString()};`,
+      `const _hsvToRgb = ${_hsvToRgb.toString()};`,
+      `const _recolorPixels = ${_recolorPixels.toString()};`,
+      'self.onmessage = async (e) => {',
+      '  const { id, url, w, h, t, gloss, sat } = e.data;',
+      '  try {',
+      '    const res = await fetch(url);',
+      '    if (!res.ok) throw new Error("load");',
+      '    const bmp = await createImageBitmap(await res.blob());',
+      '    const canvas = new OffscreenCanvas(w, h);',
+      '    const ctx = canvas.getContext("2d");',
+      '    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";',
+      '    ctx.drawImage(bmp, 0, 0, w, h);',
+      '    if (bmp.close) bmp.close();',
+      '    const imgData = ctx.getImageData(0, 0, w, h);',
+      '    _recolorPixels(imgData.data, t, gloss, sat);',
+      '    ctx.putImageData(imgData, 0, 0);',
+      '    const blob = await canvas.convertToBlob({ type: "image/png" });',
+      '    self.postMessage({ id, blob });',
+      '  } catch (err) { self.postMessage({ id, blob: null }); }',
+      '};',
+    ].join('\n');
+    const url = window.URL.createObjectURL(new window.Blob([code], { type: 'text/javascript' }));
+    const worker = new window.Worker(url);
+    worker.onmessage = (e) => {
+      const done = _dyeRecolorWaiting.get(e.data && e.data.id);
+      if (!done) return;
+      _dyeRecolorWaiting.delete(e.data.id);
+      done(e.data.blob || null);
+    };
+    worker.onerror = () => {
+      // 裏の作業ごと動かない端末。待っているものは画面側で作り直してもらい、以後は使わない
+      _dyeRecolorWorkerBroken = true; _dyeRecolorWorker = null;
+      for (const done of _dyeRecolorWaiting.values()) done(null);
+      _dyeRecolorWaiting.clear();
+      try { worker.terminate(); } catch (_) { /* 止められなくてもよい */ }
+    };
+    _dyeRecolorWorker = worker;
+  } catch (_) { _dyeRecolorWorkerBroken = true; _dyeRecolorWorker = null; }
+  return _dyeRecolorWorker;
+};
+// 絵の読み込み(と画素への展開)も裏の作業で行う。画面側で絵を渡す形にすると、その展開だけで40体ぶん約1秒止まっていた
+const _recolorInWorker = async (imgUrl, w, h, t, dye) => {
+  try {
+    if (!t || typeof imgUrl !== 'string' || !imgUrl) return null;
+    const worker = _dyeRecolorWorkerGet();
+    if (!worker) return null;
+    const url = new window.URL(imgUrl, window.location.href).href;
+    const id = ++_dyeRecolorSeq;
+    const blob = await new Promise((resolve) => { _dyeRecolorWaiting.set(id, resolve); worker.postMessage({ id, url, w, h, t, gloss: dye.gloss, sat: dye.sat }); });
+    return blob ? window.URL.createObjectURL(blob) : null;
+  } catch (_) { return null; }
 };
 const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   // 濃さ(@NN)は重ねるときの透明度で表現するので、染め直した画像そのものには影響しない。
@@ -1131,7 +1240,7 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   const promise = new Promise((resolve) => {
     try {
       const img = new window.Image();
-      img.onload = () => {
+      img.onload = async () => {
         try {
           const natW = img.naturalWidth || img.width;
           const natH = img.naturalHeight || img.height;
@@ -1140,6 +1249,11 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
             : 1;
           const w = Math.max(1, Math.round(natW * scale));
           const h = Math.max(1, Math.round(natH * scale));
+          // 使える端末では裏の作業で作る(画面が止まらない)。作れなかったときだけ、下の今までのやり方で作る。
+          // 縮小して作る絵(モッチー)は、縮め方が画面側と裏の作業でわずかに違い色が変わるので、今までどおり画面側で作る
+          // (小さい絵なので軽い)。縮小しない絵は、画面側で作ったものと1画素も違わないことを確かめてある
+          const viaWorker = scale === 1 ? await _recolorInWorker(imgUrl, w, h, _resolveColorTarget(colorId), dye) : null;
+          if (viaWorker) { resolve(viaWorker); return; }
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
@@ -1217,6 +1331,10 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
   const [recolored, setRecolored] = useState({});
+  // いま使っている染め絵のURL(blob: は数えておき、控えから捨てられても表示中は片づけさせない)
+  const heldDyeUrlsRef = useRef([]);
+  const holdDyeUrls = (urls) => { urls.forEach(_dyeBlobRetain); heldDyeUrlsRef.current.forEach(_dyeBlobRelease); heldDyeUrlsRef.current = urls; };
+  useEffect(() => () => holdDyeUrls([]), []);
   const rawColors = masuColors || [];
   const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
   const colors = (fallbackMap && hues) ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
@@ -1234,13 +1352,14 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
     // 中身が同じなら前のものをそのまま使う(新しい空の箱を入れるたびに描き直しが1回増えていた。
     // 待機の動きで部位ごとに絵を重ねる子は、その枚数ぶん増えていた)
-    if (wanted.length === 0) { setRecolored((prev) => (Object.keys(prev).length === 0 ? prev : {})); return; }
+    if (wanted.length === 0) { holdDyeUrls([]); setRecolored((prev) => (Object.keys(prev).length === 0 ? prev : {})); return; }
     let cancelled = false;
     // 濃さ(@NN)は重ねる透明度で出すので、作る絵は濃さ抜きの色で1枚。
     // 置き場所の名前も濃さ抜きにしておくと、スライダーを動かしている間に絵を作り直さない
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])))
       .then((entries) => {
         if (cancelled) return;
+        holdDyeUrls(entries.map(([, url]) => url));
         const next = Object.fromEntries(entries);
         setRecolored((prev) => {
           const keys = Object.keys(next);
@@ -1322,7 +1441,8 @@ const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
     ctx.imageSmoothingQuality = 'high';
     if (!hues || hues.length === 0) {
       const recoloredUrl = colors[0] ? await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0)) : null;
-      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl) : null;
+      _dyeBlobRetain(recoloredUrl);
+      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl).finally(() => _dyeBlobRelease(recoloredUrl)) : null;
       const alpha = colorAlphaOf(colors[0]);
       if (recolored && alpha < MASU_COLOR_ALPHA_MAX) {
         _drawContain(ctx, base, px);
@@ -1347,7 +1467,8 @@ const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
       if (!colors[idx] || !masks[idx]) continue;
       const recoloredUrl = await Promise.resolve(getRecoloredImage(src, colors[idx], baseId, idx));
       if (!recoloredUrl) continue;
-      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]);
+      _dyeBlobRetain(recoloredUrl);
+      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]).finally(() => _dyeBlobRelease(recoloredUrl));
       if (!recolored || !mask) continue;
       // CSS の mask-image(アルファで切り抜く・mask-size:contain・中央)と同じことを canvas でする
       lctx.globalCompositeOperation = 'source-over';

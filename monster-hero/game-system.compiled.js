@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66bc5deaf39feedf
+// source-sha256: 85afc45db184027c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 17:18";
+const BUILD_DATE = "2026-10-09 18:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -9513,6 +9513,9 @@ const _recolorImageData = (data, colorId, baseId, regionIdx) => {
     gloss,
     sat
   } = _regionDyeSettingFor(baseId, regionIdx);
+  _recolorPixels(data, t, gloss, sat);
+};
+const _recolorPixels = (data, t, gloss, sat) => {
   const targetS = Math.max(0, Math.min(1, t.s * sat));
   let satRef = 1;
   if (typeof gloss === 'number') {
@@ -9549,7 +9552,104 @@ const _dyeRecolorCacheGet = key => {
 };
 const _dyeRecolorCacheSet = (key, promise) => {
   _dyeRecolorCache.set(key, promise);
-  while (_dyeRecolorCache.size > DYE_RECOLOR_CACHE_MAX) _dyeRecolorCache.delete(_dyeRecolorCache.keys().next().value);
+  while (_dyeRecolorCache.size > DYE_RECOLOR_CACHE_MAX) {
+    const oldKey = _dyeRecolorCache.keys().next().value;
+    const old = _dyeRecolorCache.get(oldKey);
+    _dyeRecolorCache.delete(oldKey);
+    _dyeBlobEvict(old);
+  }
+};
+const _dyeBlobRefs = new Map();
+const _dyeBlobEvicted = new Set();
+const _isDyeBlobUrl = url => typeof url === 'string' && url.startsWith('blob:');
+const _dyeBlobRevokeIfUnused = url => {
+  if (!_dyeBlobEvicted.has(url) || _dyeBlobRefs.get(url)) return;
+  _dyeBlobEvicted.delete(url);
+  try {
+    window.URL.revokeObjectURL(url);
+  } catch (_) {}
+};
+const _dyeBlobRetain = url => {
+  if (_isDyeBlobUrl(url)) _dyeBlobRefs.set(url, (_dyeBlobRefs.get(url) || 0) + 1);
+};
+const _dyeBlobRelease = url => {
+  if (!_isDyeBlobUrl(url)) return;
+  const n = (_dyeBlobRefs.get(url) || 0) - 1;
+  if (n > 0) {
+    _dyeBlobRefs.set(url, n);
+    return;
+  }
+  _dyeBlobRefs.delete(url);
+  _dyeBlobRevokeIfUnused(url);
+};
+const _dyeBlobEvict = promise => {
+  Promise.resolve(promise).then(url => {
+    if (!_isDyeBlobUrl(url)) return;
+    _dyeBlobEvicted.add(url);
+    setTimeout(() => _dyeBlobRevokeIfUnused(url), 0);
+  }, () => {});
+};
+let _dyeRecolorWorker = null;
+let _dyeRecolorWorkerBroken = false;
+let _dyeRecolorSeq = 0;
+const _dyeRecolorWaiting = new Map();
+const _dyeRecolorWorkerGet = () => {
+  if (_dyeRecolorWorker || _dyeRecolorWorkerBroken) return _dyeRecolorWorker;
+  try {
+    if (typeof window === 'undefined' || typeof window.Worker !== 'function' || typeof window.OffscreenCanvas !== 'function' || typeof window.OffscreenCanvas.prototype.convertToBlob !== 'function' || typeof window.Blob !== 'function' || !window.URL || typeof window.URL.createObjectURL !== 'function') {
+      _dyeRecolorWorkerBroken = true;
+      return null;
+    }
+    const code = [`const _rgbToHsv = ${_rgbToHsv.toString()};`, `const _hsvToRgb = ${_hsvToRgb.toString()};`, `const _recolorPixels = ${_recolorPixels.toString()};`, 'self.onmessage = async (e) => {', '  const { id, url, w, h, t, gloss, sat } = e.data;', '  try {', '    const res = await fetch(url);', '    if (!res.ok) throw new Error("load");', '    const bmp = await createImageBitmap(await res.blob());', '    const canvas = new OffscreenCanvas(w, h);', '    const ctx = canvas.getContext("2d");', '    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";', '    ctx.drawImage(bmp, 0, 0, w, h);', '    if (bmp.close) bmp.close();', '    const imgData = ctx.getImageData(0, 0, w, h);', '    _recolorPixels(imgData.data, t, gloss, sat);', '    ctx.putImageData(imgData, 0, 0);', '    const blob = await canvas.convertToBlob({ type: "image/png" });', '    self.postMessage({ id, blob });', '  } catch (err) { self.postMessage({ id, blob: null }); }', '};'].join('\n');
+    const url = window.URL.createObjectURL(new window.Blob([code], {
+      type: 'text/javascript'
+    }));
+    const worker = new window.Worker(url);
+    worker.onmessage = e => {
+      const done = _dyeRecolorWaiting.get(e.data && e.data.id);
+      if (!done) return;
+      _dyeRecolorWaiting.delete(e.data.id);
+      done(e.data.blob || null);
+    };
+    worker.onerror = () => {
+      _dyeRecolorWorkerBroken = true;
+      _dyeRecolorWorker = null;
+      for (const done of _dyeRecolorWaiting.values()) done(null);
+      _dyeRecolorWaiting.clear();
+      try {
+        worker.terminate();
+      } catch (_) {}
+    };
+    _dyeRecolorWorker = worker;
+  } catch (_) {
+    _dyeRecolorWorkerBroken = true;
+    _dyeRecolorWorker = null;
+  }
+  return _dyeRecolorWorker;
+};
+const _recolorInWorker = async (imgUrl, w, h, t, dye) => {
+  try {
+    if (!t || typeof imgUrl !== 'string' || !imgUrl) return null;
+    const worker = _dyeRecolorWorkerGet();
+    if (!worker) return null;
+    const url = new window.URL(imgUrl, window.location.href).href;
+    const id = ++_dyeRecolorSeq;
+    const blob = await new Promise(resolve => {
+      _dyeRecolorWaiting.set(id, resolve);
+      worker.postMessage({
+        id,
+        url,
+        w,
+        h,
+        t,
+        gloss: dye.gloss,
+        sat: dye.sat
+      });
+    });
+    return blob ? window.URL.createObjectURL(blob) : null;
+  } catch (_) {
+    return null;
+  }
 };
 const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   const colorId = splitColorAlpha(rawColorId).base;
@@ -9561,13 +9661,18 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   const promise = new Promise(resolve => {
     try {
       const img = new window.Image();
-      img.onload = () => {
+      img.onload = async () => {
         try {
           const natW = img.naturalWidth || img.width;
           const natH = img.naturalHeight || img.height;
           const scale = baseId === 'Mocchi' ? Math.min(1, MASK_ANALYSIS_MAX_SIZE / Math.max(natW, natH)) : 1;
           const w = Math.max(1, Math.round(natW * scale));
           const h = Math.max(1, Math.round(natH * scale));
+          const viaWorker = scale === 1 ? await _recolorInWorker(imgUrl, w, h, _resolveColorTarget(colorId), dye) : null;
+          if (viaWorker) {
+            resolve(viaWorker);
+            return;
+          }
           const canvas = document.createElement('canvas');
           canvas.width = w;
           canvas.height = h;
@@ -9643,6 +9748,13 @@ const DyedMonsterImage = ({
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
   const [recolored, setRecolored] = useState({});
+  const heldDyeUrlsRef = useRef([]);
+  const holdDyeUrls = urls => {
+    urls.forEach(_dyeBlobRetain);
+    heldDyeUrlsRef.current.forEach(_dyeBlobRelease);
+    heldDyeUrlsRef.current = urls;
+  };
+  useEffect(() => () => holdDyeUrls([]), []);
   const rawColors = masuColors || [];
   const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
   const colors = fallbackMap && hues ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
@@ -9663,12 +9775,14 @@ const DyedMonsterImage = ({
   useEffect(() => {
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
     if (wanted.length === 0) {
+      holdDyeUrls([]);
       setRecolored(prev => Object.keys(prev).length === 0 ? prev : {});
       return;
     }
     let cancelled = false;
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [_recoloredKey(idx, c), url]))).then(entries => {
       if (cancelled) return;
+      holdDyeUrls(entries.map(([, url]) => url));
       const next = Object.fromEntries(entries);
       setRecolored(prev => {
         const keys = Object.keys(next);
@@ -9815,7 +9929,8 @@ const bakeDyedMonsterCanvas = async ({
     ctx.imageSmoothingQuality = 'high';
     if (!hues || hues.length === 0) {
       const recoloredUrl = colors[0] ? await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0)) : null;
-      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl) : null;
+      _dyeBlobRetain(recoloredUrl);
+      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl).finally(() => _dyeBlobRelease(recoloredUrl)) : null;
       const alpha = colorAlphaOf(colors[0]);
       if (recolored && alpha < MASU_COLOR_ALPHA_MAX) {
         _drawContain(ctx, base, px);
@@ -9841,7 +9956,8 @@ const bakeDyedMonsterCanvas = async ({
       if (!colors[idx] || !masks[idx]) continue;
       const recoloredUrl = await Promise.resolve(getRecoloredImage(src, colors[idx], baseId, idx));
       if (!recoloredUrl) continue;
-      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]);
+      _dyeBlobRetain(recoloredUrl);
+      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]).finally(() => _dyeBlobRelease(recoloredUrl));
       if (!recolored || !mask) continue;
       lctx.globalCompositeOperation = 'source-over';
       lctx.clearRect(0, 0, px, px);
