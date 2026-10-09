@@ -468,7 +468,10 @@ async function chooseBetween(s, mem, log) {
   if (placeBtns.length) {
     const best = placeBtns.sort((a, z) => GRADE.indexOf(a.split(/\s+/)[1]) - GRADE.indexOf(z.split(/\s+/)[1]))[0];
     log.note(`置き場所: ${best.split(/\s+/).slice(0, 2).join(' ')}(適性がいちばん高い距離)`);
-    log.data.build.placements.push({ wave: log.data.waves.length, name: mem.lastPicked || '', dist: best.split(/\s+/)[0].replace('距離', ''), grade: best.split(/\s+/)[1] });
+    // 置き場所は押し直せる(1回目で仮に決まり、2回目で動かすことがある)。同じ子は最後の1つだけ残す
+    const pl = log.data.build.placements;
+    const entry = { wave: log.data.waves.length, name: mem.lastPicked || '', dist: best.split(/\s+/)[0].replace('距離', ''), grade: best.split(/\s+/)[1] };
+    if (pl.length && pl[pl.length - 1].name === entry.name && pl[pl.length - 1].wave === entry.wave) pl[pl.length - 1] = entry; else pl.push(entry);
     return press(new RegExp(`^${best.split(/\s+/)[0]}`), '置き場所(適性)');
   }
   // 供モン: 総合力のいちばん高い子
@@ -476,7 +479,7 @@ async function chooseBetween(s, mem, log) {
   if (allyBtns.length && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする)/.test(t))) {
     const best = allyBtns.sort((a, z) => num(z.match(/総合力\s*([\d,]+)/)[1]) - num(a.match(/総合力\s*([\d,]+)/)[1]))[0];
     log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]})`);
-    log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
+    if (!log.data.build.allies.some((x) => x.wave === log.data.waves.length)) log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
     mem.lastPicked = best.split(/\s+/)[0];
     return press(new RegExp(`^${best.split(/\s+/)[0]}\\s+総合力`), '供モン(総合力)');
   }
@@ -544,8 +547,11 @@ function makeLog(meta) {
         cur.byType[p.type || p.kind] = (cur.byType[p.type || p.kind] || 0) + 1;
         if (p.kind === 'attack' && p.mon) cur.byMon[p.mon] = (cur.byMon[p.mon] || 0) + Math.round(dealt * (p.value / planned));
       }
-      const pend = L.ex.filter((e) => e.wave === b.wave && e.turn === b.turn && e.dealt == null);
-      for (const e of pend) e.dealt = dealt;
+      // EX の効き目: 使ったターンから3ターンぶんのダメージを足す(多くの EX は3〜5ターン続く)
+      for (const e of L.ex.filter((x) => x.wave === b.wave && b.turn >= x.turn && b.turn < x.turn + 3)) {
+        e.dealtSum = (e.dealtSum || 0) + dealt; e.turnsCounted = (e.turnsCounted || 0) + 1;
+        if (b.turn === e.turn) e.dealt = dealt;
+      }
       if (after && after.wave === b.wave) {
         const before = sumHp(b), now = sumHp(after);
         if (now < before) cur.taken += before - now; else cur.healed += now - before;

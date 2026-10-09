@@ -89,15 +89,26 @@ for (const r of runs) for (const w of r.waves) {
   for (const [m, d] of Object.entries(w.byMon || {})) { mons[m] = mons[m] || { dmg: 0, turns: 0, waves: 0 }; mons[m].dmg += d; }
   for (const [m, t] of Object.entries(w.presence || {})) { mons[m] = mons[m] || { dmg: 0, turns: 0, waves: 0 }; mons[m].turns += t; mons[m].waves += 1; }
 }
-const monRows = Object.entries(mons).filter(([, v]) => v.turns > 0).map(([m, v]) => ({ m, ...v, perTurn: v.dmg / v.turns })).sort((a, b) => b.perTurn - a.perTurn);
+// ★1ターンあたりの量で比べると、後半の WAVE(敵のライフが大きい)にだけ出た子が強く見える。
+//   WAVE ごとに「その子の割合 ÷ そのとき立っていた子の数で割った割合(=頭割り)」を出し、出ていた WAVE で平均した「頭割り比」で比べる
+const shareAcc = {};
+for (const r of runs) for (const w of r.waves) {
+  const present = Object.keys(w.presence || {});
+  const total = sum(Object.values(w.byMon || {}));
+  if (!present.length || !total) continue;
+  for (const m of present) { shareAcc[m] = shareAcc[m] || []; shareAcc[m].push(((w.byMon || {})[m] || 0) / total * present.length); }
+}
+const monRows = Object.entries(mons).filter(([, v]) => v.turns > 0).map(([m, v]) => ({ m, ...v, perTurn: v.dmg / v.turns, rel: avg(shareAcc[m] || [0]), waves: (shareAcc[m] || []).length })).sort((a, b) => b.rel - a.rel);
 const totalDmg = sum(monRows.map((x) => x.dmg)) || 1;
 out('## モンスターごとの貢献(与えたダメージ)');
 out();
 out('ダメージは、そのターンに敵のライフが減った分を、置いたカードの見込みダメージの割合で子ごとに分けたもの。');
 out();
-out('| モンスター | 出ていたターン | 与えたダメージ(合計) | 1ターンあたり | 全体に占める割合 |');
-out('| --- | --- | --- | --- | --- |');
-for (const x of monRows) out(`| ${x.m} | ${x.turns} | ${Math.round(x.dmg).toLocaleString()} | ${Math.round(x.perTurn).toLocaleString()} | ${pct(x.dmg / totalDmg)} |`);
+out('「頭割り比」は、WAVE ごとに「その子が出したダメージの割合 ÷ 頭割り(1 ÷ 立っていた子の数)」を出して平均したもの。1.0 で人並み、2.0 なら2人分。');
+out();
+out('| モンスター | 出ていたWAVE | 出ていたターン | 与えたダメージ(合計) | 全体に占める割合 | 頭割り比 |');
+out('| --- | --- | --- | --- | --- | --- |');
+for (const x of monRows) out(`| ${x.m} | ${x.waves} | ${x.turns} | ${Math.round(x.dmg).toLocaleString()} | ${pct(x.dmg / totalDmg)} | ${r1(x.rel)} |`);
 out();
 
 // ---- EX ----
@@ -109,14 +120,16 @@ for (const e of exAll) {
   exBy[k] = exBy[k] || { n: 0, ratio: [], why: {} };
   exBy[k].n += 1;
   const base = turnDmgOf(e.run, e.wave);
-  if (base > 0 && e.dealt != null) exBy[k].ratio.push(e.dealt / base);
+  // 使ったターンから3ターンの平均(古い記録は使ったターンだけ)を、そのWAVEの1ターン平均と比べる
+  const per = e.turnsCounted ? e.dealtSum / e.turnsCounted : e.dealt;
+  if (base > 0 && per != null) exBy[k].ratio.push(per / base);
   exBy[k].why[e.why] = (exBy[k].why[e.why] || 0) + 1;
 }
 out('## EX スキル');
 out();
 if (!exAll.length) out('使った EX は無かった。');
 else {
-  out('| EX | 使った回数 | 使ったターンのダメージ ÷ そのWAVEの1ターン平均 | 使った理由 |');
+  out('| EX | 使った回数 | 使ってから3ターンの平均ダメージ ÷ そのWAVEの1ターン平均 | 使った理由 |');
   out('| --- | --- | --- | --- |');
   for (const [k, v] of Object.entries(exBy).sort((a, b) => b[1].n - a[1].n)) out(`| ${k} | ${v.n} | ${v.ratio.length ? `×${r1(avg(v.ratio))}` : '-'} | ${Object.entries(v.why).map(([w, n]) => `${w}(${n})`).join('・')} |`);
 }
@@ -158,26 +171,27 @@ out();
 
 // ---- 提案 ----
 const props = [];
+// 変え幅は1回あたり3割まで(大きく動かすと、ほかとの釣り合いが一度に崩れる。様子を見て2回目を足す)
+const step = (x) => pct(Math.min(0.3, Math.max(0.05, x)));
 const medTurns = median(waveRows.map((w) => w.turns));
 for (const w of waveRows) {
-  if (w.turns >= Math.max(6, medTurns * 1.8)) props.push(`WAVE ${w.wave}「${w.enemy}」が長引く(平均${r1(w.turns)}ターン・ほかのWAVEの中央値${r1(medTurns)})。敵のライフを ${pct(1 - medTurns * 1.4 / w.turns)} ほど下げると、ほかのWAVEと同じくらいの長さになる(TACTICS_ENEMY_DATA の hp)`);
+  if (w.turns >= Math.max(6, medTurns * 1.8)) props.push(`WAVE ${w.wave}「${w.enemy}」が長引く(平均${r1(w.turns)}ターン・ほかのWAVEの中央値${r1(medTurns)})。敵のライフをまず ${step(1 - medTurns * 1.4 / w.turns)} 下げる案(TACTICS_ENEMY_DATA の hp)`);
   if (w.downs >= 1 || w.takenRatio >= 0.6) props.push(`WAVE ${w.wave}「${w.enemy}」で削られすぎる(倒れた平均${r1(w.downs)}・受けたダメージ ${pct(w.takenRatio)})。この敵の技の倍率か、ちからを 1割ほど下げる案`);
   if (w.lost > 0) props.push(`WAVE ${w.wave}「${w.enemy}」で ${w.lost}/${w.n}回 負けた。上の2つのどちらが効いているかを先に見る`);
   if (w.wave >= 5 && w.turns <= 1.5 && w.takenRatio < 0.1) props.push(`WAVE ${w.wave}「${w.enemy}」が手応えなく終わる(平均${r1(w.turns)}ターン・受けたダメージ ${pct(w.takenRatio)})。後半の敵としては弱い。ライフを上げるか、難易度で増える技を早めに持たせる案`);
 }
 if (monRows.length >= 3) {
-  const medPer = median(monRows.map((x) => x.perTurn));
   for (const x of monRows) {
-    if (x.turns < 6) continue;
-    if (x.perTurn >= medPer * 2) props.push(`${x.m} の火力が高い(1ターン ${Math.round(x.perTurn)}・中央値 ${Math.round(medPer)} の ${r1(x.perTurn / medPer)}倍)。固有技の倍率(baseMult)を ${pct(1 - 1.5 / (x.perTurn / medPer))} ほど下げる案`);
-    if (x.perTurn <= medPer * 0.4) props.push(`${x.m} の火力が低い(1ターン ${Math.round(x.perTurn)}・中央値の ${r1(x.perTurn / medPer)}倍)。固有技の倍率を上げるか、得意な距離の補正を見直す案(守り役なら、この数字は低くてよい)`);
+    if (x.waves < 3) continue;
+    if (x.rel >= 2) props.push(`${x.m} の火力が高い(頭割り比 ${r1(x.rel)}・${x.waves}WAVE分)。固有技の倍率(baseMult)をまず ${step(1 - 1.5 / x.rel)} 下げて、もう一度回して比べる案`);
+    if (x.rel <= 0.4) props.push(`${x.m} の火力が低い(頭割り比 ${r1(x.rel)}・${x.waves}WAVE分)。固有技の倍率をまず ${step(0.8 / Math.max(0.1, x.rel) - 1)} 上げるか、得意な距離の補正を見直す案(守り役なら、この数字は低くてよい)`);
   }
 }
 for (const [k, v] of Object.entries(exBy)) {
   if (v.ratio.length < 2) continue;
   const m = avg(v.ratio);
-  if (m >= 3) props.push(`EX ${k} が強い(使ったターンのダメージがそのWAVEの平均の ${r1(m)}倍)。回数か倍率を少し下げる案`);
-  if (m <= 1.05 && Object.keys(v.why).some((w) => /火力/.test(w))) props.push(`EX ${k} は火力の EX なのに、使ったターンのダメージが平均と変わらない(×${r1(m)})。効き目を上げる案`);
+  if (m >= 3) props.push(`EX ${k} が強い(使ってから3ターンのダメージがそのWAVEの平均の ${r1(m)}倍)。回数か倍率を少し下げる案`);
+  if (m <= 1.05 && Object.keys(v.why).some((w) => /火力/.test(w))) props.push(`EX ${k} は火力の EX なのに、使ってから3ターンのダメージが平均と変わらない(×${r1(m)})。効き目を上げるか、ボットの使いどころを見直す`);
 }
 const clears = runs.filter((r) => r.result === 'clear');
 if (runs.length >= 2 && clears.length === runs.length) {
