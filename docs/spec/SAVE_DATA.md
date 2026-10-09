@@ -195,6 +195,8 @@
 | `mh_battle_select_assist_v1` | object / 未設定なら `{ modeSelectArt:true, modeSelectComment:true }` | モンヒロバトルの入口(`BATTLE_SYSTEM_SELECT`)で、助手の立ち絵・コメントを出すか(2026-10-08)。入口のトグルを押したときに書く。読むときは `false` のときだけ消し、それ以外・壊れた値は出す側へ倒す。モンヒロビート用のキーは流用しない |
 | `mh_masu_offering_intro_seen_v1` | `true` / 未設定 | 神殿の「お布施」の使い方案内を見たか(2026-10-05)。初めてお布施の画面を開いたときに1度だけ出し、閉じたときに `true` を書く。読むときは `=== true` のときだけ見た扱い |
 | `mh_rhythm_fix_override_v1` | object / 未設定なら `{}` | モンヒロビートの「実機でしか分からない直し方」(`RHYTHM_TOUCH_FIXES`)を、この端末だけで入れる/切る上書き(2026-10-07)。`{ 直し方の名前: boolean }`。**`storeSet` ではなく `localStorage` へ直接**書く(`rhythmTouchFixSetOverride`)。読むときは表にある名前の boolean だけ拾い、それ以外・壊れた値は捨てる(上書きなし=表のとおり)。いまゲームの画面からは書かない(検査と手で試すとき用) |
+| `mh_assistant_bubble_mode_v1` | `'ALWAYS'` / `'DAILY'` / `'OFF'` / 既定 `'ALWAYS'` | 助手の吹き出し(画面ごとのひとこと)の出し方(2026-10-10・改善G6)。設定画面のボタンで書く。`normalizeAssistantBubbleMode` で既定へ倒す。はじめての案内・`…Intro` の場面・HOMEの助手・助手の告知には効かない |
+| `mh_assistant_bubble_seen_v1` | object / 未設定なら空 | 「1日1回」のときに、その日に出した場面 `{ day:'YYYY-MM-DD'(朝5:00区切り), scenes:[場面のキー] }`。日が違う・壊れた値は空として読む(`normalizeAssistantBubbleSeen`) |
 
 移行・補償のフラグ(第3章の表に載っていないもの):
 

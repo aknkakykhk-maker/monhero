@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a920858a22a2965c
+// source-sha256: 8283913463ca5fc0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 00:09";
+const BUILD_DATE = "2026-10-10 00:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16003,6 +16003,106 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     className: "text-[12px] text-slate-200 leading-relaxed"
   }, b.text);
 });
+const ASSISTANT_BUBBLE_MODES = ['ALWAYS', 'DAILY', 'OFF'];
+const normalizeAssistantBubbleMode = value => ASSISTANT_BUBBLE_MODES.includes(String(value)) ? String(value) : 'ALWAYS';
+const ASSISTANT_BUBBLE_MODE_KEY = 'mh_assistant_bubble_mode_v1';
+const ASSISTANT_BUBBLE_SEEN_KEY = 'mh_assistant_bubble_seen_v1';
+const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([{
+  id: 'ALWAYS',
+  label: 'いつも',
+  note: 'これまでどおり'
+}, {
+  id: 'DAILY',
+  label: '1日1回',
+  note: '同じ画面は1日1回'
+}, {
+  id: 'OFF',
+  label: '出さない',
+  note: 'ひとことを隠す'
+}]);
+const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
+const assistantBubbleAlwaysShown = scene => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+const normalizeAssistantBubbleSeen = (raw, day) => raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes) ? {
+  day,
+  scenes: raw.scenes.filter(x => typeof x === 'string').slice(0, 300)
+} : {
+  day,
+  scenes: []
+};
+const ASSISTANT_BUBBLE_STORE = (() => {
+  let state = {
+    mode: 'ALWAYS',
+    seen: null,
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let mode = 'ALWAYS',
+          seen = null;
+        try {
+          mode = normalizeAssistantBubbleMode(await storeGet(ASSISTANT_BUBBLE_MODE_KEY, 'ALWAYS', false));
+        } catch (_) {}
+        try {
+          seen = await storeGet(ASSISTANT_BUBBLE_SEEN_KEY, null, false);
+        } catch (_) {}
+        state = {
+          mode,
+          seen,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    setMode(next) {
+      state = {
+        ...state,
+        mode: normalizeAssistantBubbleMode(next)
+      };
+      emit();
+      void storeSet(ASSISTANT_BUBBLE_MODE_KEY, state.mode).catch(() => {});
+    },
+    markSeen(scene) {
+      const day = assistantBubbleDayKey();
+      const cur = normalizeAssistantBubbleSeen(state.seen, day);
+      if (!scene || cur.scenes.includes(scene)) return;
+      const next = {
+        day,
+        scenes: [...cur.scenes, scene]
+      };
+      state = {
+        ...state,
+        seen: next
+      };
+      void storeSet(ASSISTANT_BUBBLE_SEEN_KEY, next).catch(() => {});
+    }
+  };
+})();
+const useAssistantBubbleState = () => {
+  const [state, setState] = useState(() => ASSISTANT_BUBBLE_STORE.get());
+  useEffect(() => {
+    const off = ASSISTANT_BUBBLE_STORE.subscribe(setState);
+    setState(ASSISTANT_BUBBLE_STORE.get());
+    void ASSISTANT_BUBBLE_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 const AssistantBubble = ({
   scene = null,
   assistantId = null,
@@ -16017,6 +16117,21 @@ const AssistantBubble = ({
   defaultOpen = false
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const bubbleSetting = useAssistantBubbleState();
+  const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
+  const bubbleDecisionRef = useRef(null);
+  if (!bubbleExempt && bubbleSetting.loaded && bubbleDecisionRef.current?.key !== `${scene}|${bubbleSetting.mode}`) {
+    const mode = bubbleSetting.mode;
+    const seen = normalizeAssistantBubbleSeen(ASSISTANT_BUBBLE_STORE.get().seen, assistantBubbleDayKey());
+    bubbleDecisionRef.current = {
+      key: `${scene}|${mode}`,
+      hide: mode === 'OFF' || mode === 'DAILY' && seen.scenes.includes(scene)
+    };
+  }
+  const bubbleHidden = !bubbleExempt && !!bubbleDecisionRef.current?.hide;
+  useEffect(() => {
+    if (!bubbleExempt && bubbleSetting.loaded && bubbleSetting.mode === 'DAILY' && !bubbleHidden) ASSISTANT_BUBBLE_STORE.markSeen(scene);
+  }, [scene, bubbleSetting.loaded, bubbleSetting.mode, bubbleHidden, bubbleExempt]);
   const sceneDef = assistantSceneById(scene);
   const bond = useAssistantBond();
   const activeId = assistantId || sceneDef?.assistantId || bond.assistantId || null;
@@ -16088,6 +16203,7 @@ const AssistantBubble = ({
   const hasDetail = !!(paragraphs && paragraphs.length || topic);
   const Wrapper = hasDetail ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
+  if (bubbleHidden) return null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "w-full flex items-end gap-2"
   }, React.createElement("button", {
@@ -44667,6 +44783,7 @@ function SettingsScreen({
   battleFxAutoLoad
 }) {
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  const assistantBubble = useAssistantBubbleState();
   if (battleSettingsOpen) {
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -44819,6 +44936,26 @@ function SettingsScreen({
   }, option.note)))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
   }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    "data-assistant-bubble-setting": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "助手のひとこと"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
+    key: option.id,
+    type: "button",
+    "data-assistant-bubble-mode": option.id,
+    "aria-pressed": assistantBubble.mode === option.id,
+    onClick: () => ASSISTANT_BUBBLE_STORE.setMode(option.id),
+    className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, option.label), React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold opacity-80"
+  }, option.note))))), React.createElement("div", {
     className: "border-t border-white/10 pt-6 space-y-3"
   }, React.createElement("div", {
     className: "text-center text-[10px] font-mono text-slate-400"
@@ -77025,6 +77162,7 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      void ASSISTANT_BUBBLE_STORE.load();
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
       let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);

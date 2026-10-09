@@ -40,6 +40,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
+  const assistantBubble = useAssistantBubbleState();
   if (battleSettingsOpen) {
     return (
       <div data-mh-screen data-battle-settings-page className={SCREEN_SHELL_CLASS}>
@@ -131,6 +133,23 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             ))}
           </div>
           <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+        </div>
+        {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
+            止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
+        <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+          <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
+              <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
+                aria-pressed={assistantBubble.mode === option.id}
+                onClick={() => ASSISTANT_BUBBLE_STORE.setMode(option.id)}
+                className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                <span className="block">{option.label}</span>
+                <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+              </button>
+            ))}
+          </div>
         </div>
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
