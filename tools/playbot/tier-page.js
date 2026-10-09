@@ -4,6 +4,7 @@
 // 直したら、このコマンドで作り直す(出来たページは統括部長が Artifact で同じ URL へ出し直す):
 //
 //   node tools/playbot/tier-page.js [--out <出力先>]    既定: docs/playbot/dashboard/tier.html
+//   node tools/playbot/tier-page.js --rebuild-icons     縮めた顔アイコンを作り直してからページを作る
 //   node tools/playbot/tier-page.js --check             tier.json の形だけ確かめる(ページは作らない)
 //
 // 顔アイコンは docs/playbot/dashboard/tier-icons/(96px。map.json が 名前 → ファイル)から data URI で埋め込む。
@@ -19,6 +20,7 @@ const ICON_DIR = path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier-icons');
 const outArg = process.argv.indexOf('--out');
 const OUT = outArg > 0 ? path.resolve(process.argv[outArg + 1]) : path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier.html');
 
+const REBUILD_ICONS = process.argv.includes('--rebuild-icons'); // 縮めたアイコンを作り直す(寄せ指定や大きさを変えたとき)
 const TIERS = ['S', 'A', 'B', 'C', 'D', '保留'];
 const OVERALL_TIERS = [...TIERS, '回数不足']; // 回数不足 = どの難易度も5回未満で、総合はまだ付けない
 const DIFFS = ['Hard', 'Expert', 'Master'];
@@ -52,49 +54,66 @@ function validate(d) {
 }
 
 // 顔アイコンは「ゲームと同じ定義」から引く(2026-10-10 社長「顔アイコンはゲーム上に実装されてるから、それと同じ仕組みを使えない?」)。
-// images-ally.js と ally-monsters.js を読み、ALL_PLAYER_MONSTERS[...].faceIconUrl のファイルを 96px に縮めて tier-icons/ に置き(置いたものは使い回す)、
+// images-ally.js と ally-monsters.js を読み、ALL_PLAYER_MONSTERS[...].faceIconUrl のファイルを縮めて tier-icons/ に置き(置いたものは使い回す)、
 // data URI で埋め込む。名前の対応は手で書かない。縮めるのは ImageMagick の convert(置き済みのものがあれば要らない)。
-function gameFaceFiles() {
+// 立ち絵そのものを顔アイコンにしている子(ライガー・ミーア・パンドラ・プラント)は、ゲームのプロフィールアイコン(BreederIcon)と同じ
+// 「contain で置き、MARKET_PROFILE_ICON_STYLES の scale / x / y で寄せる」やり方で出す(値は 20-market-notices-help.jsx から読む。手で写さない)。
+function gameFaces() {
   const vm = require('vm');
   const ctx = vm.createContext({ console, Object, Math });
   const MH = path.join(ROOT, 'monster-hero');
   for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js']) {
     vm.runInContext(fs.readFileSync(path.join(MH, f), 'utf8') + '\n;this.__r = typeof ALL_PLAYER_MONSTERS !== "undefined" ? ALL_PLAYER_MONSTERS : null', ctx, { filename: f });
   }
+  const market = fs.readFileSync(path.join(MH, 'src', 'parts', '20-market-notices-help.jsx'), 'utf8');
+  // ほかの定数を参照する行(kiki_icon: KIKI_… など)があるので、全体を評価せず「モンスターの id: { scale, x, y }」の行だけ読む
+  const mm = /const MARKET_PROFILE_ICON_STYLES = \{([\s\S]*?)\n\};/.exec(market);
+  const styles = {};
+  for (const line of (mm ? mm[1] : '').split('\n')) {
+    const r = /^\s*(\w+): \{ scale: ([\d.-]+), x: ([\d.-]+), y: ([\d.-]+) \}/.exec(line);
+    if (r) styles[r[1]] = { scale: +r[2], x: +r[3], y: +r[4] };
+  }
   const out = {};
-  for (const m of Object.values(ctx.__r || {})) {
+  for (const [id, m] of Object.entries(ctx.__r || {})) {
     const u = String(m.faceIconUrl || m.iconUrl || '').split('?')[0];
-    if (u && !u.startsWith('data:')) out[m.name] = path.join(MH, u);
+    if (!u || u.startsWith('data:')) continue;
+    // 立ち絵そのものが顔アイコンの子だけ、ゲームのプロフィールアイコン(<id小文字>_icon。無ければ id)の寄せ指定を当てる
+    const sameArt = u === String(m.imgUrl || '').split('?')[0];
+    out[m.name] = { file: path.join(MH, u), style: (sameArt && (styles[id.toLowerCase() + '_icon'] || styles[id])) || { scale: 1, x: 0, y: 0 } };
   }
   return out;
 }
 
 function loadIcons(names) {
-  const files = gameFaceFiles();
+  const faces = gameFaces();
   const css = [];
   const cls = {};
+  const style = {};
   fs.mkdirSync(ICON_DIR, { recursive: true });
   names.forEach((n, i) => {
-    const src = files[n];
-    if (!src || !fs.existsSync(src)) return; // ゲームに顔アイコンが無い子は頭文字のタイル
-    const dst = path.join(ICON_DIR, path.basename(src, path.extname(src)).toLowerCase() + '.png');
-    if (!fs.existsSync(dst) || fs.statSync(dst).mtimeMs < fs.statSync(src).mtimeMs) {
-      require('child_process').execFileSync('convert', [src, '-resize', '96x96^', '-strip', dst]);
+    const f = faces[n];
+    if (!f || !fs.existsSync(f.file)) return; // ゲームに顔アイコンが無い子は頭文字のタイル
+    const dst = path.join(ICON_DIR, path.basename(f.file, path.extname(f.file)).toLowerCase() + '.png');
+    if (REBUILD_ICONS || !fs.existsSync(dst) || fs.statSync(dst).mtimeMs < fs.statSync(f.file).mtimeMs) {
+      const px = f.style.scale > 2 ? 360 : f.style.scale > 1.2 ? 224 : 104; // 大きく寄せる絵は粗くならないよう大きめに残す
+      require('child_process').execFileSync('convert', [f.file, '-resize', `${px}x${px}`, '-strip', dst]);
     }
     cls[n] = 'i' + i;
+    const { scale = 1, x = 0, y = 0 } = f.style;
+    style[n] = scale === 1 && !x && !y ? '' : ` style="transform:translate(${x}%,${y}%) scale(${scale})"`;
     css.push(`.i${i}{background-image:url(data:image/png;base64,${fs.readFileSync(dst).toString('base64')})}`);
   });
-  return { cls, css: css.join('\n') };
+  return { cls, style, css: css.join('\n') };
 }
 
 function build(d) {
   const mons = d.モンスター;
-  const { cls, css } = loadIcons(mons.map((m) => m.名前));
+  const { cls, style, css } = loadIcons(mons.map((m) => m.名前));
   const tcls = (t) => (['保留', '—', '回数不足'].includes(t) ? 'h' : t);
   const tier = (t) => `<b class="t t-${tcls(t)}">${esc(t)}</b>`;
   const tile = (m, bodyHtml, letter, prov) => `
       <details class="mon">
-        <summary><span class="ic ${cls[m.名前] || 'noic'}" role="img" aria-label="${esc(m.名前)}">${cls[m.名前] ? '' : esc(m.名前.slice(0, 1))}</span>${prov ? '<span class="prov">暫定</span>' : ''}<span class="nm">${esc(m.名前)}</span>${letter ? `<span class="lt">${tier(letter)}</span>` : ''}</summary>
+        <summary><span class="ic" role="img" aria-label="${esc(m.名前)}">${cls[m.名前] ? `<i class="${cls[m.名前]}"${style[m.名前]}></i>` : esc(m.名前.slice(0, 1))}</span>${prov ? '<span class="prov">暫定</span>' : ''}<span class="nm">${esc(m.名前)}</span>${letter ? `<span class="lt">${tier(letter)}</span>` : ''}</summary>
         <div class="body">${bodyHtml}</div>
       </details>`;
   const kv = (rows) => `<dl>${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
@@ -173,7 +192,7 @@ h2{font-size:18px;font-weight:800}
 .mon[open]{grid-column:1/-1}
 .mon>summary{list-style:none;cursor:pointer;width:72px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;-webkit-tap-highlight-color:transparent}
 .mon>summary::-webkit-details-marker{display:none}
-.ic{display:block;width:56px;height:56px;border-radius:12px;background-color:var(--panel);background-size:cover;background-position:center 15%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:24px;color:var(--muted)}
+.ic{position:relative;overflow:hidden;width:56px;height:56px;border-radius:12px;background-color:var(--panel);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:24px;color:var(--muted)}
 .mon[open]>summary .ic{border-color:var(--c)}
 .nm{font-size:11px;line-height:1.25;text-align:center;overflow-wrap:anywhere;max-width:72px}
 .lt{margin-top:1px}.lt .t{min-width:1.6em;padding:0 5px;font-size:12px}
@@ -193,7 +212,7 @@ small{color:var(--muted)}
 .empty{margin:0;color:var(--muted);font-size:13px}
 .how{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .how p{margin:0}
-.noic{background-image:none}
+.ic>i{position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform-origin:center center}
 ${css}
 </style>
 <div class="wrap">
