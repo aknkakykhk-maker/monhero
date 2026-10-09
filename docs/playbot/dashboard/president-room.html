@@ -52,24 +52,18 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 16:49 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 17:02 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち</span></a>
+    <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>7</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>11</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
     <h2>社長の判断待ち</h2>
-    <div class="cards">
-      <article class="card decide" id="d2">
-        <span class="chip warn">決めてほしいこと</span>
-        <h3>守り部の提案(2件)</h3>
-        <p>強化画面の「完了」で振った分を消す前に確かめる/戻るボタンでゲームの外へ出ない。ガードくんから選択式で聞く予定だった件(返事済みならコメントで教えてください)</p>
-        <div class="meta"><span>守り部 部長ガードくん</span><span>reports/2026-10-09/guard.md</span><span>10/09</span></div>
-      </article>
+    <div class="cards"><p class="empty">いま決めてほしいことはありません。</p>
     </div>
   </section>
 
@@ -83,14 +77,9 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>ハカセくん</span><span>見込み 18:30〜19:30</span></div>
       </li>
       <li id="w1">
-        <div class="row-title">タクティクス Master のクリア(全モンスターで学び直し)</div>
-        <div class="row-body">全モンスター・全アシカの中身をゲームから読んで一覧にし、Expert で全種の成績を集めてから Master に挑む</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み Expert の後</span><span>PR #2380・#2388</span></div>
-      </li>
-      <li id="w2">
-        <div class="row-title">タクティクスの検査2本が落ちている件</div>
-        <div class="row-body">公開版でも落ちていた(ハカセくんが見つけた)。原因を調べて直す</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>見込み 未定</span></div>
+        <div class="row-title">タクティクス Master のクリア</div>
+        <div class="row-body">いまは全モンスター・全アシカで Expert の成績を集め直し中。そのあと Master に挑む(最高は最後の WAVE 10 まで)</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 18:30〜19:30</span><span>PR #2380・#2388・#2393</span></div>
       </li>
       <li id="w3">
         <div class="row-title">日曜夜の定期点検が各部へ届くかの確認</div>
@@ -104,13 +93,33 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">社長の指摘で直す: 間合い適性を入れる/固有技・EX・勇者特性を使った回数を数える/EXを使えていない子は「保留」/攻め・守り・特性・固有技・EX・間合いの内訳を付ける。ライガーの案は見直しのあとで出し直す。ボットのEXの使い方は全員ぶん直した(ゴーレムは一度も使っておらず、ハム・オボロゲソウ・エイキは使いどころを外していた)。今後は「机上の計算(ゲームの式で多数回まわす)」と「実戦」の2本立てで判断する(進め方をハカセくんが連絡)</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み 直した版 17:40〜18:10 / 回数の数字 18:30〜19:00</span><span>PR #2396</span></div>
+        <div class="row-body">机上の表はできた(reports/tier/desk.md)。例: ゴーレムは1発の火力とガッツ効率が全員でいちばん上だが、ガッツ上限70で20ターンに通常技6発・Master WAVE 1 で敵の攻撃を2発しか受けられず、実戦で序盤に倒れたのと合う。人はガッツを補う育て方・アシカ・ガードで弱点を消していると見て、ボットにも入れた。次は簡易シミュレーターで机上と実戦の間を埋める</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 数字入りの版 18:30〜19:00 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
+      </li>
+      <li id="w6">
+        <div class="row-title">小さい画面の「範囲の中なのにMISS」の調べ直し</div>
+        <div class="row-body">守り部が、ボットの遅らせたタッチを外しても出ると確かめた。午前の結論(ボットの見間違い)と食い違う理由から調べる(社長がビート部に回すと選んだ)</div>
+        <div class="meta"><span>部長テンポくん(フィールくん)</span><span>見込み テンポくんが連絡</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p10">
+        <div class="row-title">タクティクスの検査2本を直した</div>
+        <div class="row-body">公開版でも落ちていた検査2本(研究所のハカセくんが見つけた件)。ゲームの動きは変わらない</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>PR #2387</span><span>(ゲームは変わらない)</span></div>
+      </li>
+      <li id="p9">
+        <div class="row-title">Tier表の机上の計算(最初の版)</div>
+        <div class="row-body">ゲームの式をそのまま使い、モンスターごとの1発の火力・ガッツ効率・序盤に1体で戦う強さを難易度ごとに出した</div>
+        <div class="meta"><span>ハカセくん</span><span>docs/playbot/reports/tier/desk.md</span></div>
+      </li>
+      <li id="p8">
+        <div class="row-title">強化の「完了」に確認・ブラウザの戻るでゲームの外へ出ない</div>
+        <div class="row-body">マスモン強化で確定せずに「完了」や戻るを押すと確認窓。HOME以外ではブラウザの戻る=画面の戻るボタン</div>
+        <div class="meta"><span>部長ガードくん</span><span>PR #2397</span><span>マスモン強化/スマホの戻る操作</span></div>
+      </li>
       <li id="p7">
         <div class="row-title">モンスターのTier表(暫定版)</div>
         <div class="row-body">18/26体・38回ぶん。強め: ミタラシ・モッチー・剣士モッチー・クロミー・モノリス・ピクシーなど / 弱め: ゴーレム・スエゾー・エイキ・イブリース・ウンディーネ(どれも暫定)</div>
@@ -145,6 +154,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">組織図・社則・成績表</div>
         <div class="row-body">日報・週報の決めごと、新しい部署3つ</div>
         <div class="meta"><span>統括部長:モンヒロくん</span><span>PR #2389</span><span>docs/playbot/ORG.md</span></div>
+      </li>
+      <li id="p11">
+        <div class="row-title">朝の試しの点検で社長が選んだ直し</div>
+        <div class="row-body">ビート部: iPhoneの遅れの分け方・MASTERのフリックのMISS報告(#2373)/見回り部: 見た目の基準の撮り直し・会話の数え方(#2374)/バトル部とビート部: ボットの押し方の漏れと見間違いを直した(#2368・#2370)</div>
+        <div class="meta"><span>各部長</span><span>PR #2368・#2370・#2373・#2374</span><span>(ゲームはほぼ変わらない)</span></div>
       </li></ul>
       <p class="note">本番: https://aknkakykhk-maker.github.io/monhero/</p>
     </section>
@@ -155,13 +169,13 @@ section{display:flex;flex-direction:column;gap:10px}
       <h2>各部の様子</h2>
       <ul class="list">
       <li>
-        <div class="row-title"><span class="team">バトル部</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">タクティクスの検査2本の調べ</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>部員 クラシックくん・タクティクスくん・イベントくん</span><span>最後の報告 10/09 14:15</span></div>
+        <div class="row-title"><span class="team">バトル部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">次の定期点検(日曜夜)</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>部員 クラシックくん・タクティクスくん・イベントくん</span><span>最後の報告 10/09 14:33</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">ビート部</span><span class="chip idle">待機</span></div>
-        <div class="row-body">次の定期点検(日曜夜)</div>
+        <div class="row-title"><span class="team">ビート部</span><span class="chip ok">作業中</span></div>
+        <div class="row-body">小さい画面のMISSの調べ直し</div>
         <div class="meta"><span>部長テンポくん</span><span>部員 リズムくん・マルチくん・レイドくん・フィールくん</span><span>最後の報告 10/09 11:14</span></div>
       </li>
       <li>
@@ -170,14 +184,14 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>部長マップくん</span><span>部員 ルーキーくん・パトロールくん・ストーリーくん・デザインくん</span><span>最後の報告 10/09 14:25</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">守り部</span><span class="chip warn">返事待ち</span></div>
-        <div class="row-body">提案2件の返事待ち</div>
-        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 8:22</span></div>
+        <div class="row-title"><span class="team">守り部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">次の定期点検(日曜夜)</div>
+        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 16:59</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">全モンスターで学び直し(18:30〜19:30)</div>
-        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 16:05</span></div>
+        <div class="row-body">Tier表(机上の表はできた・シミュレーターは10/10)</div>
+        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 16:59</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">開発部</span><span class="chip idle">待機</span></div>
@@ -217,6 +231,11 @@ section{display:flex;flex-direction:column;gap:10px}
       </div>
       <div class="bar-row">
         <span class="bar-name">ハカセくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
+        <span class="bar-val">2</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">部長ガードくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
         <span class="bar-val">2</span>
       </div>
