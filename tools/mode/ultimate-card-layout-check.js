@@ -57,7 +57,8 @@ check('ルール詳細・全WAVE詳細・挑戦・ランキングをカード内
   && card.includes('全WAVE詳細')
   && card.includes('この難易度で挑戦')
   && card.includes('のランキング')
-  && card.includes('className="grid gap-1.5 mt-auto pt-2 pb-1"')
+  // 2026-10-09: 難易度えらびと同じ札の作りにした。ボタンの並びは下へ寄せたまま、横はみ出しを防ぐ列の決め方にした
+  && card.includes('className="grid grid-cols-[minmax(0,1fr)] gap-1.5 mt-auto pt-2 pb-1"')
   && (card.match(/<button [^>]*disabled=/g) || []).length >= 4);
 check('ボタンの並びはルール詳細→全WAVE詳細→挑戦→ランキング',
   card.indexOf('ルール詳細') < card.indexOf('全WAVE詳細')

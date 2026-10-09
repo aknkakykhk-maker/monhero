@@ -180,7 +180,11 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 14:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+<<<<<<< HEAD
+const BUILD_DATE = "2026-10-09 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+=======
+const BUILD_DATE = "2026-10-09 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+>>>>>>> origin/main
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -804,6 +808,9 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 //   画面はモードと仕組みを区別せずに出せる(battleInfoById)。
 // モンヒロバトルの入口の助手(立ち絵/コメント)の出し入れ。モンヒロビート用のキーは流用しない新しいキー(2026-10-08)
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
+// 難易度えらびの札で、地が暗いので白い文字にする難易度(2026-10-09 ユーザー指示「難易度にあった色合いで、強弱を」)。
+// 色そのものは 77-screen-rhythm-multi.jsx の .mhbt-d-<難易度> にまとめてある
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM']);
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
     id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
