@@ -3914,6 +3914,8 @@ function MonsterHeroGame() {
   //   戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
   //   デバッグ画面(RHYTHM_DEBUG)と、未公開のときに出る案内(RHYTHM_INFO)は入口ではないので入れない
   const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'];
+  // 負けたあと、自動で始め直すまでの間(負けた知らせを読めるだけ置く)
+  const QUICK_RUN_AUTO_RETRY_MS = 4000;
   // 裏で周回してよい状態か。
   //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
   //  ・演奏中は止める(曲が終われば自動で再開する)
@@ -10166,6 +10168,13 @@ function MonsterHeroGame() {
       returnToHome();
       return;
     }
+    // 勝負のついた(負けた・やめた)裏周回が残っていたら、ここで片づけてから出る(2026-10-10)。
+    // 残したまま出ると、次にモンヒロビートを開いたとき前の周回の終わった状態が見えたままになる。
+    // 報酬は負けた・やめた時点で配り終えているので、片づけても取りこぼしはない
+    if (runStageRef.current && runResultFinishedRef.current && isQuickMode(runMode) && RHYTHM_MODE_PUBLIC_RELEASE) {
+      returnToHome();
+      return;
+    }
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');
   };
 
@@ -13164,6 +13173,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!repeatTemplateFromAutoSettings()) return;
     startQuickRunFromRhythm();
   }, [gameState]);
+  // ===== 負けたら、数秒おいて1周目から自動で始め直す(2026-10-10・社長の選択「両方+自動で始め直す」) =====
+  // AUTO設定の「モンヒロビートを開いたら自動で始める」がONの人だけ。モンヒロビートの中(演奏中を除く)にいて、
+  // 記録の途中でないときだけ。始め直すのは曲えらびの帯・モードえらびの札と同じ startQuickRunFromRhythm。
+  // ★これまでの「負けたときは自動では開始しない」(§12・アプリに戻ったときの自動再開)は、裏に回って止まった周回の
+  //   続きの話。こちらは続きではなく1周目からの始め直しなので、§12 の決まりは変えない
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const timer = setTimeout(() => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      startQuickRunFromRhythm();
+    }, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
@@ -13193,7 +13219,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
   // 通常のWAVE結果・選択画面ではOFFにしない。
+  // ★止めるのは、負けた・やめた・勇者を選び直したが**起きたその時だけ**(2026-10-10・社長の報告
+  //   「モンビーで裏周回を負けたときに再度挑戦ができない場面が多い」)。gameState も見ているので、
+  //   負けたあと(hp が0のまま)ホームへ移ってモンヒロビートを開き直すと、そこで自動で始めた新しい周回を、
+  //   同じ描画のうちに前の「負け」で止めていた。同じ理由が続いているあいだは、2回目を止めない
+  const autoStopKeyRef=useRef('');
   useEffect(()=>{
+    const stopKey=hp<=0?'defeat':gaveUp?'retire':gameState==='PICK_HERO'?'manual':'';
+    const prevStopKey=autoStopKeyRef.current;
+    autoStopKeyRef.current=stopKey;
+    if(stopKey&&stopKey===prevStopKey)return;
     // なぜ止まったかを帯へ出せるよう、理由を分けて渡す(2026-09-07)
     if(hp<=0)stopAllAuto('defeat');
     else if(gaveUp)stopAllAuto('retire');
@@ -17753,7 +17788,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
-          quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
+          quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):'',
+            // 負けた・やめたあと、ここから1周目を始め直せるか(曲えらびの帯の「⚔ 1周目から新しく始める」と同じ条件)
+            canRestart:!!quickRunProgress.finished&&!quickRunResumable&&!!repeatTemplateForNewRun(),processing:resultProcessing,
+            // 止まったが勝負はついていない(アプリが裏に回った・AUTOを切った)ときは、続きから再開できる(曲えらびの帯の「▶ 周回を再開する」と同じ)
+            canResume:!!quickRunProgress.finished&&quickRunResumable}:null}
+          onRestartQuickRun={()=>startQuickRunFromRhythm()}
+          onResumeQuickRun={()=>resumeQuickRunFromRhythm()}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
           rankingSupport={{

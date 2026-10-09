@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2ae08627a3ab54e
+// source-sha256: 6c09243b7a4c9b53
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 00:45";
+const BUILD_DATE = "2026-10-10 05:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -67405,6 +67405,39 @@ function ModeSelectAssistantPanel({
   }, assistant.name), assistant.text));
 }
 const RHYTHM_BUDDY_LEAVE_GUARD_MS = 500;
+function RhythmQuickRunPill({
+  info,
+  onRestart = null,
+  onResume = null,
+  widthClass = ''
+}) {
+  const [failed, setFailed] = React.useState(false);
+  if (!info) return null;
+  const resumable = !!(info.finished && info.canResume && onResume);
+  const restartable = !resumable && !!(info.finished && info.canRestart && onRestart);
+  if (resumable || restartable) {
+    const run = resumable ? onResume : onRestart;
+    const label = resumable ? '▶ 周回を再開する' : '⚔ 周回を始め直す';
+    return React.createElement("button", {
+      type: "button",
+      "data-rhythm-multi-quick-run": true,
+      "data-rhythm-multi-quick-run-restart": restartable ? '' : undefined,
+      "data-rhythm-multi-quick-run-resume": resumable ? '' : undefined,
+      disabled: restartable && !!info.processing,
+      "aria-label": `${info.reason}。${resumable ? '続きから再開する' : '1周目から始め直す'}`,
+      title: failed ? 'いま周回を始められませんでした' : info.reason,
+      onClick: () => {
+        const ok = run();
+        setFailed(!ok);
+      },
+      className: `${widthClass} min-h-[32px] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black active:scale-[.97] disabled:opacity-50 ${failed ? 'border-red-300/60 bg-red-950/40 text-red-200' : resumable ? 'border-emerald-300/60 bg-emerald-900/40 text-emerald-100' : 'border-amber-300/60 bg-amber-900/40 text-amber-100'}`
+    }, restartable && info.processing ? '記録しています…' : failed ? '始められませんでした' : label);
+  }
+  return React.createElement("small", {
+    "data-rhythm-multi-quick-run": true,
+    className: `${widthClass} shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${info.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
+  }, info.finished ? info.reason : `🔁 WAVE ${info.wave}/10・${info.loops}周目${info.catchingUp ? '・追いつき中' : ''}`);
+}
 function RhythmMultiScreen({
   profile,
   songs,
@@ -67413,6 +67446,8 @@ function RhythmMultiScreen({
   bestRecords,
   resolveIconUrl,
   quickRunInfo = null,
+  onRestartQuickRun = null,
+  onResumeQuickRun = null,
   onPreviewSong = null,
   onUserGesture = null,
   multiLook = 'LIGHT',
@@ -67907,10 +67942,12 @@ function RhythmMultiScreen({
     className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement("small", {
-    "data-rhythm-multi-quick-run": true,
-    className: `max-w-[38%] max-[480px]:max-w-[24%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
-  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.buddy && buddyHeaderButton(), opts.advance && isHost && React.createElement("button", {
+  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    info: quickRunInfo,
+    onRestart: onRestartQuickRun,
+    onResume: onResumeQuickRun,
+    widthClass: "max-w-[38%] max-[480px]:max-w-[24%]"
+  }), opts.buddy && buddyHeaderButton(), opts.advance && isHost && React.createElement("button", {
     "data-rhythm-multi-advance": true,
     type: "button",
     onClick: () => {
@@ -68053,10 +68090,12 @@ function RhythmMultiScreen({
     }, "モードえらび"), ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
       className: "block truncate text-[9px] font-black text-violet-200/90"
-    }, ms.beatPointText)), quickRunInfo && React.createElement("small", {
-      "data-rhythm-multi-quick-run": true,
-      className: `max-w-[42%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
-    }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), React.createElement(RhythmOrientationButton, null)), ms.exiting && React.createElement("div", {
+    }, ms.beatPointText)), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+      info: quickRunInfo,
+      onRestart: onRestartQuickRun,
+      onResume: onResumeQuickRun,
+      widthClass: "max-w-[42%]"
+    }), React.createElement(RhythmOrientationButton, null)), ms.exiting && React.createElement("div", {
       "data-quick-run-exit-overlay": true,
       className: "absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"
     }, React.createElement("b", {
@@ -76013,6 +76052,7 @@ function MonsterHeroGame() {
   const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_MODE_SELECT', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS', 'RHYTHM_MULTI', 'RHYTHM_MASU_BEAT'];
   const rhythmScreenOpen = isRhythmScreen(gameState);
   const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'];
+  const QUICK_RUN_AUTO_RETRY_MS = 4000;
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
   const runBackgroundAllowed = rhythmScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
@@ -83298,6 +83338,10 @@ function MonsterHeroGame() {
       returnToHome();
       return;
     }
+    if (runStageRef.current && runResultFinishedRef.current && isQuickMode(runMode) && RHYTHM_MODE_PUBLIC_RELEASE) {
+      returnToHome();
+      return;
+    }
     setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
   };
   const handleRetry = () => {
@@ -86723,6 +86767,18 @@ function MonsterHeroGame() {
     if (!repeatTemplateFromAutoSettings()) return;
     startQuickRunFromRhythm();
   }, [gameState]);
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const timer = setTimeout(() => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      startQuickRunFromRhythm();
+    }, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   const cycleBattleAuto = () => {
     if (autoRepeatRef.current) {
       setAutoBattleEnabled(false);
@@ -86746,7 +86802,12 @@ function MonsterHeroGame() {
     });
     return () => cancelAnimationFrame(frame);
   }, [extremeRuleOpen, autoBattle, autoRepeat]);
+  const autoStopKeyRef = useRef('');
   useEffect(() => {
+    const stopKey = hp <= 0 ? 'defeat' : gaveUp ? 'retire' : gameState === 'PICK_HERO' ? 'manual' : '';
+    const prevStopKey = autoStopKeyRef.current;
+    autoStopKeyRef.current = stopKey;
+    if (stopKey && stopKey === prevStopKey) return;
     if (hp <= 0) stopAllAuto('defeat');else if (gaveUp) stopAllAuto('retire');else if (gameState === 'PICK_HERO') stopAllAuto('manual');
   }, [hp, gaveUp, gameState]);
   useEffect(() => {
@@ -95648,8 +95709,13 @@ function MonsterHeroGame() {
         loops: quickRunProgress.loops,
         finished: !!quickRunProgress.finished,
         catchingUp,
-        reason: quickRunProgress.finished ? quickRunFinishReasonText(quickRunProgress.reason) : ''
+        reason: quickRunProgress.finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+        canRestart: !!quickRunProgress.finished && !quickRunResumable && !!repeatTemplateForNewRun(),
+        processing: resultProcessing,
+        canResume: !!quickRunProgress.finished && quickRunResumable
       } : null,
+      onRestartQuickRun: () => startQuickRunFromRhythm(),
+      onResumeQuickRun: () => resumeQuickRunFromRhythm(),
       onBack: gameState === 'RHYTHM_MODE_SELECT' ? exitRhythmSongSelect : () => setGameState('RHYTHM_MODE_SELECT'),
       onRoomEntered: () => setGameState('RHYTHM_MULTI'),
       rankingSupport: {
