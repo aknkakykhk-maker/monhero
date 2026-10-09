@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 265226b5a2a23b96
+// source-sha256: d72b92868e8611f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 14:00";
+const BUILD_DATE = "2026-10-09 14:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -46226,7 +46226,7 @@ function ProfileScreen({
       }), React.createElement("span", {
         className: "min-w-0 flex-1"
       }, React.createElement("b", {
-        className: "block text-[12px] font-black text-white truncate"
+        className: "block text-[12px] font-black leading-tight text-white break-words [text-wrap:balance]"
       }, who.name, active && '（選択中）'), React.createElement("small", {
         className: "block text-[10px] text-slate-400 truncate"
       }, "Lv.", lv, " ", t ? t.title : '')));
