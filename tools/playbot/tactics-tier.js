@@ -197,31 +197,85 @@ out('研究所:ハカセくんが作る。タクティクスプロはベース�
 out('「すべて解放してバトル」(デバッグ。記録・ランキング・報酬はつかない)で、勇者モンを入れ替えながら少しずつ集めています。');
 out('**試した回数が5回より少ない子は「暫定」です。** 回数が増えると Tier は動きます。');
 out();
+// ---------- 社長室(iPhone)向けの上の3節(2026-10-10 社長「見づらい。総合的なTierもほしい」) ----------
+// 総合 Tier: 難易度ごとの点を Hard 0.4・Expert 0.4・Master 0.2 で重みづけ(Master はいまボットの戦い方の差が大きいので軽く見る)
+const DIFF_WEIGHT = { Hard: 0.4, Expert: 0.4, Master: 0.2 };
+const tierOfScore = (sc) => (sc >= 0.45 ? 'S' : sc >= 0.15 ? 'A' : sc >= -0.15 ? 'B' : sc >= -0.45 ? 'C' : 'D');
+const overall = stats.map((s) => {
+  const per = TIER_DIFFS.map((d) => ({ d, x: statsByDiff[d].find((y) => y.m.name === s.m.name) })).filter((v) => v.x && v.x.n);
+  const usable = per.filter((v) => v.x.tier !== '保留' && Number.isFinite(v.x.score));
+  const n = per.reduce((a, v) => a + v.x.n, 0);
+  let tier = '未計測';
+  let score = NaN;
+  if (per.length && !usable.length) tier = '保留';
+  else if (usable.length) {
+    const w = usable.reduce((a, v) => a + DIFF_WEIGHT[v.d], 0);
+    score = usable.reduce((a, v) => a + v.x.score * DIFF_WEIGHT[v.d], 0) / w;
+    tier = tierOfScore(score);
+  }
+  const short = (d) => { const v = per.find((q) => q.d === d); return v ? v.x.tier.replace('未計測', '—') : '—'; };
+  return { s, tier, score, n, provisional: n < 8 || usable.length < 2, short };
+});
+const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '保留', '未計測'];
+overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
+// ひとことの理由(30字くらい): 効いている項目と足りない項目、打たれ弱さ・保留の事情
+const oneLine = (o) => {
+  const s = o.s;
+  if (!s.n) return 'まだ戦っていない';
+  if (o.tier === '保留') return 'EX をまだ使えていない。ボットを直して測り直す';
+  const good = KEYS.filter((k) => s.marks[k] === '◎').slice(0, 2);
+  const bad = KEYS.filter((k) => s.marks[k] === '△').slice(0, 2);
+  const bits = [];
+  if (good.length) bits.push(`${good.join('・')}が効く`);
+  if (bad.length) bits.push(`${bad.join('・')}が弱い`);
+  if (s.m.hp <= 350) bits.push('打たれ弱く序盤がつらい');
+  return bits.join('。') || 'どの項目も人並み';
+};
+out('## 総合 Tier');
+out();
+for (const t of ['S', 'A', 'B', 'C', 'D', '保留']) {
+  const xs = overall.filter((o) => o.tier === t);
+  if (xs.length) out(`- **${t}** ${xs.map((o) => `${o.s.m.name}${o.provisional && t !== '保留' ? '(暫定)' : ''}`).join('・')}`);
+}
+out();
+out('決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 4・Expert 4・Master 2 の重みで合わせる。Master はいまボットの戦い方の差が大きいので軽く見る。');
+out('固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。試した回数が8回より少ないか、2つ以上の難易度で測れていない子は「暫定」。');
+out();
+out('## 早見表');
+out();
+out('| モンスター | 総合 | Hard | Expert | Master |');
+out('| --- | --- | --- | --- | --- |');
+for (const o of overall) out(`| ${o.s.m.name} | ${o.tier.replace('未計測', '—')} | ${o.short('Hard')} | ${o.short('Expert')} | ${o.short('Master')} |`);
+out();
+out('## ひとことの理由');
+out();
+for (const o of overall) out(`- **${o.s.m.name}**: ${oneLine(o)}`);
+out();
+function emitHowTo() {
 out('## Tier の決め方');
+  out();
+  out('ステータスだけでは決めません。次の6つを ◎○△ で見て、理由に「どれが効いてその Tier なのか」を書きます(— はまだ数えていない)。');
+  out();
+  out('| 項目 | 見るもの |');
+  out('| --- | --- |');
+  out('| 攻め | 頭割り比(その回のダメージ ÷ 味方の平均。1.0 で人並み)。◎ 1.3 以上・○ 0.8 以上 |');
+  out('| 守り | 打たれ強さ(ライフ×丈夫さ。全員の中で上・中・下)。守り役は、その子が入った回の届いた WAVE |');
+  out('| 勇者特性 | 勇者モンにした回の届いた WAVE(難易度の平均との差)。◎ +1 以上・○ −1 以上。記録欄に特性の文が出た回数も数える |');
+  out('| 固有技 | 1回の戦いで撃った回数。◎ 3回以上・○ 1回以上 |');
+  out('| EX | 1回の戦いで使った回数。◎ 2回以上・○ 1回以上・**未 = 一度も使えていない → Tier を付けず「保留」** |');
+  out('| 間合い | 間合い適性(零・近・中・遠。立っている枠で A +10%・G −20%)。数えた回があれば、撃ったときの「適性の補正 × 距離の倍率(敵との距離の差で ×1.5 / 1.3 / 1.1 / 0.9)」の平均。◎ 1.4 以上・○ 1.2 以上 |');
+  out();
+  out('点(並べる順と S〜D の線引き): 攻め役は頭割り比と勇者の伸び、守り・支え役は入った回の伸びと勇者の伸び。');
+  out('S ≥ 0.45 > A ≥ 0.15 > B ≥ −0.15 > C ≥ −0.45 > D。勇者モンにした回が3回より少ないうちは、勇者の伸びを軽く見ます。');
+  out();
+}
+out('## 難易度ごとの Tier(回数つき)');
 out();
-out('ステータスだけでは決めません。次の6つを ◎○△ で見て、理由に「どれが効いてその Tier なのか」を書きます(— はまだ数えていない)。');
-out();
-out('| 項目 | 見るもの |');
-out('| --- | --- |');
-out('| 攻め | 頭割り比(その回のダメージ ÷ 味方の平均。1.0 で人並み)。◎ 1.3 以上・○ 0.8 以上 |');
-out('| 守り | 打たれ強さ(ライフ×丈夫さ。全員の中で上・中・下)。守り役は、その子が入った回の届いた WAVE |');
-out('| 勇者特性 | 勇者モンにした回の届いた WAVE(難易度の平均との差)。◎ +1 以上・○ −1 以上。記録欄に特性の文が出た回数も数える |');
-out('| 固有技 | 1回の戦いで撃った回数。◎ 3回以上・○ 1回以上 |');
-out('| EX | 1回の戦いで使った回数。◎ 2回以上・○ 1回以上・**未 = 一度も使えていない → Tier を付けず「保留」** |');
-out('| 間合い | 間合い適性(零・近・中・遠。立っている枠で A +10%・G −20%)。数えた回があれば、撃ったときの「適性の補正 × 距離の倍率(敵との距離の差で ×1.5 / 1.3 / 1.1 / 0.9)」の平均。◎ 1.4 以上・○ 1.2 以上 |');
-out();
-out('点(並べる順と S〜D の線引き): 攻め役は頭割り比と勇者の伸び、守り・支え役は入った回の伸びと勇者の伸び。');
-out('S ≥ 0.45 > A ≥ 0.15 > B ≥ −0.15 > C ≥ −0.45 > D。勇者モンにした回が3回より少ないうちは、勇者の伸びを軽く見ます。');
-out();
-out('## 難易度ごとの Tier');
-out();
-out('難易度で敵の火力とライフが大きく違うので、Tier は難易度ごとに付けます。かっこの中は、その難易度で試した回数(勇者モンにした回数)。');
+out('難易度で敵の火力とライフが大きく違うので、難易度ごとにも付けます。マスの数字は「試した回数(勇者モンにした回数)」。');
 out('2段以上動いた子は、理由を1行で書きます。');
 out();
-out('机上の欄は sim/desk.js(ゲームの式・素のベースモン)から: 「通常技1発 / 20ターンで出せるダメージ / その難易度の WAVE 1 の通常攻撃を何発受けられるか(Hard・Expert・Master)」。');
-out();
-out('| モンスター | 役 | 机上 | Hard | Expert | Master | 難易度で動いた理由 |');
-out('| --- | --- | --- | --- | --- | --- | --- |');
+out('| モンスター | Hard | Expert | Master | 動いた理由 |');
+out('| --- | --- | --- | --- | --- |');
 const TIER_STEP = { S: 0, A: 1, B: 2, C: 3, D: 4 };
 for (const s of stats) {
   const cells = TIER_DIFFS.map((d) => {
@@ -239,9 +293,19 @@ for (const s of stats) {
     if (!bits.length) bits.push('回数が少なく、ぶれている可能性(回数を増やして確かめる)');
     why = bits.join(' / ');
   }
+  out(`| ${s.m.name} | ${cells.join(' | ')} | ${why} |`);
+}
+out();
+out('## 机上の数字');
+out();
+out('sim/desk.js(ゲームの式・素のベースモン)から。「受けられる」は WAVE 1 の敵の通常攻撃を何発受けられるか(Hard・Expert・Master)。');
+out();
+out('| モンスター | 通常技1発 | 20ターンの火力 | 受けられる |');
+out('| --- | --- | --- | --- |');
+for (const s of stats) {
   const dr = deskByName[s.m.name];
-  const desk = dr ? `${Math.round(dr.nHit)} / ${dr.dmg20.toLocaleString()} / ${TIER_DIFFS.map((d) => (dr.byDiff[d] ? dr.byDiff[d].w1Hits : '—')).join('・')}発` : '—';
-  out(`| ${s.m.name} | ${s.role} | ${desk} | ${cells.join(' | ')} | ${why} |`);
+  if (!dr) continue;
+  out(`| ${s.m.name} | ${Math.round(dr.nHit)} | ${dr.dmg20.toLocaleString()} | ${TIER_DIFFS.map((d) => (dr.byDiff[d] ? dr.byDiff[d].w1Hits : '—')).join('・')} |`);
 }
 out();
 // 勇者モンの初期スタイル(剣士モッチー)ごとの成績。heroStyle が無い回は片手剣(2026-10-09 まで、ボットは選んでいなかった)
@@ -317,7 +381,9 @@ for (const s of withAssist) {
   out(`- **${s.m.name}**: よい ${best}${worst ? ` / よくない ${worst}` : ''}`);
 }
 out();
-out('## バランス調整の案(案だけ。ゲームの数字は変えていません)');
+out('## 調整の候補(機械が出したもの。社長へはまだ出さない)');
+out();
+out('**素の性能と実戦の点だけで機械的に出した候補です。** 2026-10-10 の社長の決まりで、調整の案はスキル(固有技の効果・EX・勇者特性・適性)を入れたシミュレーターで測り直してから、1件ずつ社長へ出します。ここにあるものは、その測り直しの順番を決めるための候補です。');
 out();
 out('回数が5回以上あり、6つの項目をボットが使いこなせている子(EX を使えている・技と間合いまで数えた回がある)だけ、数字の案を出します。');
 out('「保留」と、敵と離れたまま撃っている子(間合いの倍率が ×1.2 未満)は、先にボットの戦い方を直します。');
@@ -343,6 +409,7 @@ if (!k) out('- いまは出せる案がありません。技と間合いまで�
 const held = stats.filter((s) => s.tier === '保留').map((s) => s.m.name);
 if (held.length) { out(); out(`保留(ボットの直しが先): ${held.join('・')}`); }
 out();
+emitHowTo();
 out('## 集め方(次に回すとき)');
 out();
 const least = stats.filter((s) => s.heroN === 0).map((s) => s.m.name);
