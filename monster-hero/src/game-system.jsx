@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 371074ffe763cdba
+// generated-sha256: da2df3bb3cee3199
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -60304,7 +60304,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <span aria-hidden="true" className="mhbt-mark">{String(m.id).replace(/([A-Z])/g,' $1').toUpperCase()}</span>
                         <div className="mhbt-eyebrow">BATTLE MODE</div>
                         {/* ★名前の長いモード(タクティクス種族チャレンジ など)は、字を落として1行に収める(名前は正式名称のまま。CLAUDE.md ⑤) */}
-                        <h3 className={`mhbt-name truncate ${(m.cardLabel||m.label).length>=10?'text-[16px]':(m.cardLabel||m.label).length>=7?'text-[19px]':'text-[23px]'}`}><span aria-hidden="true" className="mr-1 not-italic">{m.emoji}</span>{m.cardLabel||m.label}</h3>
+                        <h3 className={`mhbt-name truncate ${(m.cardLabel||m.label).length>=10?'text-[16px]':(m.cardLabel||m.label).length>=7?'text-[19px]':'text-[23px]'}`}><span aria-hidden="true" className="not-italic">{m.emoji}</span> {m.cardLabel||m.label}</h3>
                         <p className="mhbt-sub">{m.tagline}</p>
                         {/* スコア対象モードは全難易度の自己ベスト最大値、クイックは従来どおり選択中難易度のWAVE記録を出す。
                             β版の「準備中」カードは、記録の代わりに何を待っているかを出す */}
