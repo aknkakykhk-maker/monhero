@@ -1027,7 +1027,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             const tone=rhythmDifficultyTone(item.id);
             const open=unlocked(item);
             const on=!!difficulty&&item.id===difficulty.id;
-            const need=rhythmDifficultyUnlockRequirement(item.id);
+            const need=rhythmDifficultyUnlockRequirement(item.id,song.songId);
             // 高さは固定(h-[66px])。ロック中だけ「◯◯で解放」が2行になり、
             // その曲だけボタンが高くなって下の行までずれていた。
             return <button key={item.id} type="button" data-rhythm-difficulty={item.id} aria-pressed={on}
