@@ -83,7 +83,9 @@ check('人が耳で確認した既存の正式候補v1は「押せない」が0�
 const tempDir=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-v2-step6-check-'));
 const authoring=path.join(ROOT,'tools/mode/authoring');
 const beforeAuthoring=new Map();
-for(const f of fs.readdirSync(authoring))beforeAuthoring.set(f,hash(path.join(authoring,f)));
+// 控えるのはファイルだけ。authoring の中には、あとから記録の置き場のフォルダ(playlog・touchdiag。2026-10-08)が
+// できたので、フォルダまで読もうとして EISDIR で落ちていた(2026-10-09 に直した)。見張る STEP5 の出力はどれもファイル
+for(const f of fs.readdirSync(authoring))if(fs.statSync(path.join(authoring,f)).isFile())beforeAuthoring.set(f,hash(path.join(authoring,f)));
 
 // 道具は --source で決め打ちの場所しか読まないので、
 // 「押せない譜面」を判定できるかは、同じ規則をここで再現して確かめる。

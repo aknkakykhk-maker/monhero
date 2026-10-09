@@ -144,12 +144,38 @@ check('転生の費用は「レベル×100の半額」', R.masuRebirthCost(30) =
 check('転生の費用は壊れた値でも0以上', R.masuRebirthCost(null) === 0 && R.masuRebirthCost(-5) === 0 && R.masuRebirthCost(undefined) === 0);
 // 限界突破と転生はどちらも同じ費用計算を使う。画面側だけ別の式で出すと、
 // 表示と実際に引かれる額が食い違う(以前それで「押せないのに足りているように見える」不具合が出た)
+// 2026-10-08 に転生が「何回ぶんかまとめて」(buildMasuReincarnationBatch・PR #2348)になり、転生の画面は
+// まとめ転生の見積もりから費用を出すようになった。まとめ転生は1回ぶんの転生(中で masuRebirthCost)を
+// くり返すだけなので、画面と実処理が同じ関数から同じ額を出す、という意図はそのまま。2026-10-09 に今の書き方へ合わせた
 check('限界突破・転生とも確認画面と実処理で同じ費用計算を使う',
   has('const masuRebirthCost = (level) =>')
-    && (source.match(/masuRebirthCost\(/g) || []).length === 5
     && (source.match(/const cost = masuRebirthCost\(level\);/g) || []).length === 2
-    && (source.match(/cost=masuRebirthCost\(lvl\.level\)/g) || []).length === 2,
+    && (source.match(/cost=masuRebirthCost\(lvl\.level\)/g) || []).length === 1
+    && has('const batch=buildMasuReincarnationBatch({...batchArgs,count:times});')
+    && has('const cost=batch.ok?batch.cost:masuRebirthCost(lvl.level);')
+    && has('const result = buildMasuReincarnationBatch({ masu, skillKey:reincarnateSkillKey, gold, lockedIds:rebirthLockedMasuIds, count:reincarnateTimes });')
+    && has('const r = buildMasuReincarnation({ masu:cur, skillKey, gold:goldLeft, lockedIds });'),
   `masuRebirthCost の使用箇所 ${(source.match(/masuRebirthCost\(/g) || []).length}`);
+// まとめ転生の費用は、1回ずつ転生したときの費用の合計と同じ。足りなくなったらそこで止まり、引く額もそこまで
+{
+  const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
+  const ctx = {
+    BREEDER_MARKET_ITEMS: [],
+    React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
+    ALL_PLAYER_MONSTERS: { Ark: { id:'Ark', name:'アーク', baseHp:100, baseAtk:20, baseDef:20, baseGuts:20, distAptitude:['C','C','C','C'] } },
+  };
+  vm.createContext(ctx);
+  vm.runInContext(`${prefix}\nglobalThis.__b = { buildMasuReincarnation, buildMasuReincarnationBatch, masuRebirthCost, masuBondLevelInfo };`, ctx);
+  const B = ctx.__b;
+  const mon = { id:'b1', baseId:'Ark', name:'リンネ', bondXp:9999999, levelCap:999 };
+  let cur = mon, sum = 0, n = 0;
+  for (let i = 0; i < 3; i++) { const r = B.buildMasuReincarnation({ masu:cur, skillKey:'', gold:99999999 }); if (!r.ok) break; sum += r.cost; cur = r.nextMasu; n++; }
+  const batch = B.buildMasuReincarnationBatch({ masu:mon, skillKey:'', gold:99999999, count:3 });
+  check('まとめ転生の費用は、1回ずつ転生した費用の合計と同じ', n > 0 && batch.ok && batch.count === n && batch.cost === sum && batch.nextGold === 99999999 - sum, `1回ずつ ${n}回 ${sum} / まとめ ${batch.count}回 ${batch.cost}`);
+  const first = B.buildMasuReincarnation({ masu:mon, skillKey:'', gold:99999999 });
+  const short = B.buildMasuReincarnationBatch({ masu:mon, skillKey:'', gold:first.cost, count:3 });
+  check('ダイヤが足りなくなったら、払えた回数までで止まる(足りないぶんは引かない)', first.ok && short.ok && short.count >= 1 && short.cost <= first.cost && short.nextGold >= 0, `${short.count}回 ${short.cost} 残り${short.nextGold}`);
+}
 check('転生の画面に古い×100の計算が残っていない', !has('cost=lvl.level*100'));
 // 必要ダイヤは、押す前に気づける場所へ出す
 // ★文字の色(text-slate-400 など)まで固定すると、見た目を整えるたびにここだけが落ちる。
