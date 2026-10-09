@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f80969a00f473972
+// generated-sha256: bc9d431650470c8d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 00:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10939,12 +10939,20 @@ const availableUpdateNotices = ({ debug=false, nowMs=null }={}) =>
     .filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string'
       && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id)
       && (debug ? notice.debugOnly === true : notice.debugOnly !== true)));
+// ★実装予告(supersededBy を持つ告知)は、本物の告知が出せる状態(notices に入っている)なら出さない。
+//   もう出ているものの「近日実装」を読まされないため(2026-10-10・ユーザー指示)。
+//   出さない予告は既読の列へ足すだけ(保存キーの意味は変えない)。更新履歴には残る
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
-  const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
+  const all = Array.isArray(notices) ? notices : [];
+  const openIds = new Set(all.map(notice => notice && notice.id));
+  const isSuperseded = notice => !!notice && typeof notice.supersededBy === 'string' && openIds.has(notice.supersededBy);
+  const unseenAll = all.filter(notice => !seen.includes(notice.id));
+  const superseded = unseenAll.filter(isSuperseded);
+  const unseen = unseenAll.filter(notice => !isSuperseded(notice));
   return {
     queue: unseen.slice(0, UPDATE_NOTICE_LOGIN_LIMIT),
-    seen: normalizeSeenUpdateNoticeIds([...seen, ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)]),
+    seen: normalizeSeenUpdateNoticeIds([...seen, ...superseded.map(notice => notice.id), ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)]),
   };
 };
 const localCalendarDate = (now = new Date()) => {
@@ -34769,10 +34777,31 @@ function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLate
     </div>);
 }
 
+// 起動時のお知らせが2件以上たまっているとき、見出しの一覧を1枚だけ出す(2026-10-10・ユーザー指示「起動時のお知らせを1枚にまとめる」)。
+// 読みたい件だけ「くわしく」で開く(開いた件は今までどおりのページ送り)。「あとで読む」はその場の全件を既読にする(更新履歴にはいつでも残る)
+function HomeUpdateGuideBundle({ activeAssistant, assistantBondLevelNow, assistantCallStyle, breederName, selectedAssistantId, updateGuideQueue, openUpdateGuideDetail, dismissUpdateGuideAll }) {
+const who=activeAssistant;
+const headline=n=>{const pages=(typeof assistantNoticePagesFor==='function')?assistantNoticePagesFor(n,who&&who.id):(Array.isArray(n.pages)?n.pages:[]);const first=pages[0];const text=(typeof assistantNoticePageText==='function')?assistantNoticePageText(first):String(first||'');return assistantSpeakText(text,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId);};
+return(
+  <div data-update-guide-bundle className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="新しいお知らせの一覧">
+    <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
+      <div className="flex items-center gap-2"><AssistantFace who={who} size={56} accent={who.accent} expression="happy"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white">新しいお知らせが{updateGuideQueue.length}件あるよ♪ 読みたいものだけ「くわしく」で開いてね。</div></div>
+      <div className="mt-3 space-y-2">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
+        <div className="min-w-0 flex-1"><div className="text-[13px] font-black leading-snug text-pink-200">{n.title}</div><div className="mt-0.5 truncate text-[10px] font-bold text-slate-400">{headline(n)}</div></div>
+        <button type="button" onClick={()=>openUpdateGuideDetail(n.id)} className="min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950">くわしく</button>
+      </div>)}</div>
+      <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
+      <p className="mt-2 text-center text-[10px] font-bold text-slate-500">更新履歴からいつでも読めます</p>
+    </div>
+  </div>);
+}
 function HomeUpdateGuideOverlay({
   activeAssistant, assistantBondLevelNow, assistantCallStyle, breederName, finishUpdateGuide,
   selectedAssistantId, setUpdateGuidePage, updateGuidePage, updateGuideQueue,
+  updateGuideDetail, openUpdateGuideDetail, dismissUpdateGuideAll,
 }) {
+if(updateGuideQueue.length>=2&&!updateGuideDetail&&!updateGuideQueue[0].debugPreview)
+  return <HomeUpdateGuideBundle activeAssistant={activeAssistant} assistantBondLevelNow={assistantBondLevelNow} assistantCallStyle={assistantCallStyle} breederName={breederName} selectedAssistantId={selectedAssistantId} updateGuideQueue={updateGuideQueue} openUpdateGuideDetail={openUpdateGuideDetail} dismissUpdateGuideAll={dismissUpdateGuideAll}/>;
 const notice=updateGuideQueue[0];const who=activeAssistant;
 // ★選んでいる助手が自分の口調で話す(2026-09-11・ユーザー指示)。
 //   その助手のセリフが用意されていない告知は、今までどおり更新履歴の本文をそのまま読む。
@@ -44153,6 +44182,8 @@ function MonsterHeroGame() {
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
+  // 起動時のお知らせが2件以上のとき、一覧(まとめ)から「くわしく」で1件を開いている間だけ true(保存しない)
+  const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
@@ -53728,12 +53759,34 @@ function MonsterHeroGame() {
       await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     }
     setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
     setUpdateGuideQueue(queue => queue.slice(1));
     // 同じ機能の解放の案内が続けて出ないようにする(いま解放済みの人だけ)
     const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[current.id];
     if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
+  };
+  // まとめの一覧から1件を開く。開いた件を先頭へ持ってくる(finishUpdateGuide は先頭を既読にする)
+  const openUpdateGuideDetail = (id) => {
+    setUpdateGuidePage(0);
+    setUpdateGuideQueue(queue => { const picked = queue.find(n => n && n.id === id); return picked ? [picked, ...queue.filter(n => n !== picked)] : queue; });
+    setUpdateGuideDetail(true);
+  };
+  // 「あとで読む」。その場の全件を既読の列へ足して閉じる(保存キーの意味は変えず、足すだけ。更新履歴にはいつでも残る)
+  const dismissUpdateGuideAll = async () => {
+    const list = updateGuideQueue.filter(n => n && !n.debugPreview);
+    if (list.length > 0) {
+      const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, ...list.map(n => n.id)]), false);
+    }
+    for (const n of list) {
+      const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[n.id];
+      if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
+    }
+    setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
+    setUpdateGuideQueue([]);
   };
   const debugPlayUpdateGuide = async () => {
     const notice = availableUpdateNotices({debug:true})[0];
@@ -64160,6 +64213,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           finishUpdateGuide={finishUpdateGuide} selectedAssistantId={selectedAssistantId}
           setUpdateGuidePage={setUpdateGuidePage} updateGuidePage={updateGuidePage}
           updateGuideQueue={updateGuideQueue}
+          updateGuideDetail={updateGuideDetail} openUpdateGuideDetail={openUpdateGuideDetail} dismissUpdateGuideAll={dismissUpdateGuideAll}
         />
       )}
 

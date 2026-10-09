@@ -190,6 +190,8 @@ function MonsterHeroGame() {
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
+  // 起動時のお知らせが2件以上のとき、一覧(まとめ)から「くわしく」で1件を開いている間だけ true(保存しない)
+  const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
@@ -9765,12 +9767,34 @@ function MonsterHeroGame() {
       await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     }
     setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
     setUpdateGuideQueue(queue => queue.slice(1));
     // 同じ機能の解放の案内が続けて出ないようにする(いま解放済みの人だけ)
     const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[current.id];
     if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
+  };
+  // まとめの一覧から1件を開く。開いた件を先頭へ持ってくる(finishUpdateGuide は先頭を既読にする)
+  const openUpdateGuideDetail = (id) => {
+    setUpdateGuidePage(0);
+    setUpdateGuideQueue(queue => { const picked = queue.find(n => n && n.id === id); return picked ? [picked, ...queue.filter(n => n !== picked)] : queue; });
+    setUpdateGuideDetail(true);
+  };
+  // 「あとで読む」。その場の全件を既読の列へ足して閉じる(保存キーの意味は変えず、足すだけ。更新履歴にはいつでも残る)
+  const dismissUpdateGuideAll = async () => {
+    const list = updateGuideQueue.filter(n => n && !n.debugPreview);
+    if (list.length > 0) {
+      const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, ...list.map(n => n.id)]), false);
+    }
+    for (const n of list) {
+      const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[n.id];
+      if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
+    }
+    setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
+    setUpdateGuideQueue([]);
   };
   const debugPlayUpdateGuide = async () => {
     const notice = availableUpdateNotices({debug:true})[0];
@@ -20197,6 +20221,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           finishUpdateGuide={finishUpdateGuide} selectedAssistantId={selectedAssistantId}
           setUpdateGuidePage={setUpdateGuidePage} updateGuidePage={updateGuidePage}
           updateGuideQueue={updateGuideQueue}
+          updateGuideDetail={updateGuideDetail} openUpdateGuideDetail={openUpdateGuideDetail} dismissUpdateGuideAll={dismissUpdateGuideAll}
         />
       )}
 

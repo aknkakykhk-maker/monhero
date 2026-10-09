@@ -519,12 +519,20 @@ const availableUpdateNotices = ({ debug=false, nowMs=null }={}) =>
     .filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string'
       && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id)
       && (debug ? notice.debugOnly === true : notice.debugOnly !== true)));
+// ★実装予告(supersededBy を持つ告知)は、本物の告知が出せる状態(notices に入っている)なら出さない。
+//   もう出ているものの「近日実装」を読まされないため(2026-10-10・ユーザー指示)。
+//   出さない予告は既読の列へ足すだけ(保存キーの意味は変えない)。更新履歴には残る
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
-  const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
+  const all = Array.isArray(notices) ? notices : [];
+  const openIds = new Set(all.map(notice => notice && notice.id));
+  const isSuperseded = notice => !!notice && typeof notice.supersededBy === 'string' && openIds.has(notice.supersededBy);
+  const unseenAll = all.filter(notice => !seen.includes(notice.id));
+  const superseded = unseenAll.filter(isSuperseded);
+  const unseen = unseenAll.filter(notice => !isSuperseded(notice));
   return {
     queue: unseen.slice(0, UPDATE_NOTICE_LOGIN_LIMIT),
-    seen: normalizeSeenUpdateNoticeIds([...seen, ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)]),
+    seen: normalizeSeenUpdateNoticeIds([...seen, ...superseded.map(notice => notice.id), ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)]),
   };
 };
 const localCalendarDate = (now = new Date()) => {

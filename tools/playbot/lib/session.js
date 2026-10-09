@@ -213,7 +213,7 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     for (let i = 0; i < max; i++) {
       const list = await s.listButtons();
       const b = list.find((x) => x.overlay && /^スキップ$/.test(x.label))
-        || list.find((x) => x.overlay && /^(確認|閉じる|OK|受け取る|次へ|わかった！?|はい|とじる|×|今は見ない|あとで)$/.test(x.label));
+        || list.find((x) => x.overlay && /^(確認|閉じる|OK|受け取る|次へ|わかった！?|はい|とじる|×|今は見ない|あとで読む|あとで)$/.test(x.label));
       if (!b) break;
       if (!first) {
         first = await page.evaluate(({ x, y }) => {
@@ -230,6 +230,7 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
       await s.tap(b, '重なりを閉じる');
       pressed += 1;
     }
+    if (process.env.PLAYBOT_DEBUG && pressed) console.log(`    [重なり] ${pressed}回押して閉じた(スキップの見えない「次へ」${noSkipNext}回)`);
     // スキップの無い長い会話は、遊ぶ人にとっても長い。何の会話かを残す
     if (noSkipNext >= 12) await s.addIssue('長い会話', `スキップできない会話で${noSkipNext}回押した: ${first.replace(/\s+/g, ' ').slice(0, 160)}`, { firstImage: firstShot });
   };
