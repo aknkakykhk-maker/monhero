@@ -325,7 +325,7 @@ const EX_ROLE_BY_EFFECT = {
   //   tactics.js の「動いたか」の判定は、手札が配り直されたことでも見る
   statBoost: 'refill', coverAll: 'shield', partyGuard: 'shield', timeStop: 'shield',
   damageBack: 'selfGuard', avoidCharge: 'selfGuard', dodgeCombo: 'dodge', distMatch: 'distBurst', counter: 'counter',
-  allIn: 'allIn', lifeSpring: 'heal', cookieBox: 'heal', trickConfuse: 'heal', present: 'present',
+  allIn: 'allIn', lifeSpring: 'heal', cookieBox: 'heal', trickConfuse: 'burst', present: 'present', // trickConfuse(スプーキー)は全員の回復と強化を一度に。回復待ちだと一度も使わなかった(2026-10-09)
   psychoLock: 'burst', thunder: 'burst', multiBuff: 'burst', stage: 'burst', pandoraBox: 'burst', partyBoost: 'burst',
   weaponChange: 'burst', comboBurst: 'burst', nightmareKey: 'burst',
 };
