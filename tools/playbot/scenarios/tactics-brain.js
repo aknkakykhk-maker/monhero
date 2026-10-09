@@ -531,7 +531,13 @@ async function chooseBetween(s, mem, log) {
   if (allyBtns.length && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする)/.test(t))) {
     // ★敵は「編成の総合力 ÷ 始めの総合力」の0.7乗で強くなる(32-tactics-units.jsx・上限6倍)。総合力が高いだけの子を入れると敵も強くなる。
     //   覚え書きで「実際にダメージを出した子」(頭割り比)を先に、かばう EX(モノリス)は守りの柱として足し、総合力は低いほうを少しよしとする
-    const scoreAlly = (t) => { const nm = t.split(/\s+/)[0]; return allyScore(nm) - num(t.match(/総合力\s*([\d,]+)/)[1]) / 4000; };
+    const diff = (log.data.meta || {}).difficulty || '';
+    const first = !log.data.build.allies.length;
+    const scoreAlly = (t) => {
+      const nm = t.split(/\s+/)[0];
+      const f = first ? firstAllyScore(nm, diff) : null;
+      return (f != null ? f + allyScore(nm) * 0.1 : allyScore(nm)) - num(t.match(/総合力\s*([\d,]+)/)[1]) / 4000;
+    };
     const best = allyBtns.sort((a, z) => scoreAlly(z) - scoreAlly(a))[0];
     log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]}・覚え書きの頭割り比 ${allyScore(best.split(/\s+/)[0]).toFixed(2)})`);
     if (!log.data.build.allies.some((x) => x.wave === log.data.waves.length)) log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
@@ -698,6 +704,13 @@ function preferredOrder(difficulty, rand) {
   return { hero, order: [hero, ...allies], knownRuns: k.runs.length };
 }
 // 供モンの見込み: 覚え書きの「その子のダメージ ÷ 頭割り」の平均(記録が無ければ 1.0)。モノリスはかばう EX があるので +0.8
+// 同じ難易度で「その子を最初の供モンにした回」がどこまで行けたか(着いた WAVE ÷ 5)。WAVE 3〜4 の2体の時間がいちばん苦しいので、
+// ここを持ちこたえられる子を選ぶ(2026-10-09 Master: モノリス・ハムは WAVE 5 まで、ライガーは2回とも WAVE 3 で負けた)
+function firstAllyScore(name, difficulty) {
+  const rs = loadKnowledge().runs.filter((r) => r.difficulty === difficulty && (r.allies || [])[0] === name);
+  if (!rs.length) return null;
+  return rs.reduce((a, r) => a + (r.wave || 0) + (r.result === 'clear' ? 5 : 0), 0) / rs.length / 5;
+}
 function allyScore(name) {
   const k = loadKnowledge();
   const rel = [];
