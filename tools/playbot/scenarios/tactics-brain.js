@@ -669,13 +669,16 @@ function makeLog(meta) {
       const enemyAfter = after && after.enemy && after.wave === b.wave ? after.enemy.hp : 0;
       const dealt = b.enemy ? Math.max(0, b.enemy.hp - enemyAfter) : 0;
       cur.dealt += dealt;
-      // 子ごとに、撃った技の種類と、そのときの「敵のいる間合いでのその子の適性」(S〜G)を数える
+      // 子ごとに、撃った技の種類と、間合いの効き方を数える(60-app.jsx の getDmg):
+      // - 間合い適性は「攻撃した子が立っている枠」のもの(A +10%・G −20%)… apt に S〜G の文字で
+      // - 距離の倍率は「立っている枠と敵の距離の差」で ×1.5 / 1.3 / 1.1 / 0.9 … dd に 0〜3 で
       const di = b.enemy ? DISTS.indexOf(b.enemy.dist) : -1;
       for (const p of picks.filter((q) => q.mon && (q.kind === 'attack' || q.type === 'unique'))) {
-        const u = (cur.use[p.mon] = cur.use[p.mon] || { atk: 0, unique: 0, other: 0, apt: {} });
+        const u = (cur.use[p.mon] = cur.use[p.mon] || { atk: 0, unique: 0, other: 0, apt: {}, dd: {} });
         if (p.type === 'unique') u.unique += 1; else if (/^atk/.test(p.type || '')) u.atk += 1; else u.other += 1;
-        const apt = di >= 0 && ROSTER_BY_NAME[p.mon] && Array.isArray(ROSTER_BY_NAME[p.mon].dist) ? ROSTER_BY_NAME[p.mon].dist[di] : '';
+        const apt = p.slot != null && ROSTER_BY_NAME[p.mon] && Array.isArray(ROSTER_BY_NAME[p.mon].dist) ? ROSTER_BY_NAME[p.mon].dist[p.slot] : '';
         if (apt) u.apt[apt] = (u.apt[apt] || 0) + 1;
+        if (di >= 0 && p.slot != null) { const d = Math.abs(p.slot - di); u.dd[d] = (u.dd[d] || 0) + 1; }
       }
       for (const p of picks) {
         if (p.kind === 'guard') cur.guards += 1;
@@ -864,9 +867,10 @@ function rememberRun(L, stats) {
   const texts = {};
   for (const w of L.waves) {
     for (const [m, u] of Object.entries(w.use || {})) {
-      const t = (use[m] = use[m] || { atk: 0, unique: 0, other: 0, apt: {} });
+      const t = (use[m] = use[m] || { atk: 0, unique: 0, other: 0, apt: {}, dd: {} });
       t.atk += u.atk; t.unique += u.unique; t.other += u.other;
       for (const [g, n] of Object.entries(u.apt)) t.apt[g] = (t.apt[g] || 0) + n;
+      for (const [g, n] of Object.entries(u.dd || {})) t.dd[g] = (t.dd[g] || 0) + n;
     }
     for (const [t, n] of Object.entries(w.texts || {})) texts[t] = (texts[t] || 0) + n;
   }
