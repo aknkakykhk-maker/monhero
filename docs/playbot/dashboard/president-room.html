@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 05:26 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/10 05:38 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>32</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>5</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>33</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,11 +88,6 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="r2610100050">
-        <div class="row-title">裏でクイックで負けたあと、再挑戦できない場面が多い</div>
-        <div class="row-body">原因が分かった: ①モードえらびとマルチの部屋では負けた札が文字だけで、始め直す入口がなかった ②ホームへ戻って開き直すと、前の負けで新しい周回まで止めていた ③自動で始める設定でも、負けたあとは始め直さなかった。社長が「両方直す+負けたら自動で始め直す」を選んだ</div>
-        <div class="meta"><span>部長テンポくん</span><span>見込み 06:00〜06:30 に公開</span></div>
-      </li>
       <li id="d1">
         <div class="row-title">タクティクスのバランス提案の見直し</div>
         <div class="row-body">初期の8体・6種類だけで出した案だったため、ちからの提案は取り下げ。全モンスター・全アシカで Expert の成績を集め直してから出し直す</div>
@@ -122,6 +117,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="r2610100050">
+        <div class="row-title">裏でクイックで負けたあと、再挑戦できない場面が多い</div>
+        <div class="row-body">原因は ①モードえらびとマルチの部屋に始め直す入口がなかった ②ホームから開き直すと前の負けで新しい周回まで止めていた。負けた札を「⚔ 周回を始め直す」ボタンにし、止める処理は負けたその時だけにした。自動で始める設定なら負けて4秒後に1周目から始め直す(社長の選択)。チケット・回数・保存には触れていない</div>
+        <div class="meta"><span>部長テンポくん</span><span>PR #2442</span><span>マルチの部屋かモードえらびで裏周回に負けたら、上の札を押すと1周目から始まる(自動で始める設定がONなら待つだけ)</span></div>
+      </li>
       <li id="p12">
         <div class="row-title">モンスターのTier表(26体・101回)</div>
         <div class="row-body">Hard のSはクロミー・剣士モッチー。Hard をクリアした勇者モン: 剣士モッチー・スプーキー(各2回)・ゴーレム・オボロゲソウ・スエゾー・プラント・イブリース。難易度で大きく動く子: 剣士モッチー(Hard S → Expert D 暫定、打たれ弱さ)・モッチー(Hard C → Expert S、回数の偏りを疑う)。剣士モッチーは初期スタイルを選べるようにして比べた(社長の指摘): Hard は片手剣が4回中4回クリアでいちばん、Expert は片手盾が届いたWAVEの平均4.0でいちばん(打たれ弱さを補う)。Tier はいちばんよいスタイルで戦えた前提で見る</div>
@@ -564,14 +564,14 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">10</span>
       </div>
       <div class="bar-row">
+        <span class="bar-name">部長テンポくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:33.33%"></span></span>
+        <span class="bar-val">9</span>
+      </div>
+      <div class="bar-row">
         <span class="bar-name">部長ガードくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:29.63%"></span></span>
         <span class="bar-val">8</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-name">部長テンポくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:25.93%"></span></span>
-        <span class="bar-val">7</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長マップくん</span>
