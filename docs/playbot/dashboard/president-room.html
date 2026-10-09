@@ -53,13 +53,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 17:12 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 17:15 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>7</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>10</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>11</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -103,15 +103,20 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-body">守り部の記録を見ると、出たのは通信不良の中での演奏(Stay With Me EXPERT・MASTER)で、午前の小さい画面とは別の場面だった。その押下でほかのノーツを取ったかをボットに記録させて、同じ条件で回している</div>
         <div class="meta"><span>部長テンポくん(フィールくん)</span><span>見込み 17:45〜18:15</span></div>
       </li>
-      <li id="p9">
-        <div class="row-title">Tier表の机上の計算(公開待ち)</div>
-        <div class="row-body">できたと連絡があったが、まだ main に入っていない。公開まで進めるよう伝えた</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み ハカセくんが連絡</span></div>
+      <li id="w7">
+        <div class="row-title">マルチの部屋でもマスモンのステータスを見られるようにする</div>
+        <div class="row-body">部屋(セッション中)とマスモンを呼ぶ画面で、マスモンを押すと相棒の画面と同じ詳しい窓(ビートLv・調子・性格・熟練・得意な曲など)が出るようにする</div>
+        <div class="meta"><span>ドライバーくん</span><span>見込み ドライバーくんが連絡</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p9">
+        <div class="row-title">Tier表を6項目で見る形に・机上の性能表・ボットの直し</div>
+        <div class="row-body">Tier表に攻め・守り・勇者特性・固有技・EX・間合いの6項目と「保留」を入れた。机上の性能表(desk.md)も公開。ボットの勇者選びとEXの使い方を直した。技と間合いの回数はこれからの対戦で数える</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2401</span><span>docs/playbot/reports/tier/</span></div>
+      </li>
       <li id="p10">
         <div class="row-title">タクティクスの検査2本を直した</div>
         <div class="row-body">公開版でも落ちていた検査2本(研究所のハカセくんが見つけた件)。ゲームの動きは変わらない</div>
@@ -201,9 +206,9 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>クラフトくん(減給1回)</span><span>最後の報告 10/09</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">修理部</span><span class="chip idle">待機</span></div>
-        <div class="row-body">頼みごとごとに立てる</div>
-        <div class="meta"><span>ドライバーくん</span></div>
+        <div class="row-title"><span class="team">修理部</span><span class="chip ok">作業中</span></div>
+        <div class="row-body">マルチの部屋でマスモンのステータスを見る件</div>
+        <div class="meta"><span>ドライバーくん(session_01UPffASX3yavnvax9F9gNen)</span><span>最後の報告 10/09 17:35</span></div>
       </li></ul>
     </section>
     <section id="scores">
