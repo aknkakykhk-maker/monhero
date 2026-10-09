@@ -6,7 +6,8 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const GAME = path.join(ROOT, 'monster-hero');
-const DATA = ['data/skills.js', 'data/ally-monsters.js', 'data/enemy-monsters.js'];
+// data/breeder.js はアシストカード(TEACHING_CARDS・CADMIUM_TIERS・POLTZ_TIERS・BREEDER_EVO_NAMES)のため(2026-10-10 アシカ入りのシミュレーター)
+const DATA = ['data/skills.js', 'data/ally-monsters.js', 'data/enemy-monsters.js', 'data/breeder.js'];
 const PARTS = ['17-release-changelog-login-missions.jsx', '18-points-and-auto.jsx', '19-difficulties-and-rules.jsx', '22-enemy-and-bond-entries.jsx', '32-tactics-units.jsx'];
 
 // [ファイル, [名前…]]。どれも純粋な定義(画面・state を触らない)
@@ -15,7 +16,8 @@ const PICKS = [
     'BATTLE_MODE_RAID_JACK_A', 'BATTLE_MODE_RAID_JACK_B', 'RAID_JACK_BATTLE_MODES', 'isRaidJackMode', 'isTacticsMode', 'resolveEffectiveMaxStat']],
   ['15-dye-and-art.jsx', ['RANGE_LABELS', 'rangeAttackDamageMultiplier']],
   ['11-masu-progression.jsx', ['combineSoulProbabilityPoints', 'buildUnifiedSpecialDefense', 'rollUnifiedSpecialDefense',
-    'MONSTER_POWER_STAT_WEIGHT', 'MONSTER_POWER_APTITUDE', 'MONSTER_POWER_UNIQUE_OWNED', 'MONSTER_POWER_UNIQUE_PER_LEVEL', 'monsterPowerUniques']],
+    'MONSTER_POWER_STAT_WEIGHT', 'MONSTER_POWER_APTITUDE', 'MONSTER_POWER_UNIQUE_OWNED', 'MONSTER_POWER_UNIQUE_PER_LEVEL', 'monsterPowerUniques',
+    'myaruSelfDamageRate']],
 ];
 // 「const 名前 = …」の1つの定義を、かっこの数が釣り合うところ(行末が ; )まで切り出す
 function pickConst(text, name) {
