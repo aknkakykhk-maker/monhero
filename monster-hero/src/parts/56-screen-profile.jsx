@@ -277,7 +277,7 @@ function ProfileScreen({
                           style={{border:`2px solid ${active?who.accent:'rgba(255,255,255,.1)'}`,backgroundColor:active?`${who.accent}22`:'rgba(15,23,42,.6)'}}>
                           <AssistantFace who={who} size={30} accent={who.accent} expression={active?'happy':'normal'}/>
                           <span className="min-w-0 flex-1">
-                            <b className="block text-[12px] font-black text-white truncate">{who.name}{active&&'（選択中）'}</b>
+                            <b className="block text-[12px] font-black leading-tight text-white break-words [text-wrap:balance]">{who.name}{active&&'（選択中）'}</b>
                             <small className="block text-[10px] text-slate-400 truncate">Lv.{lv} {t?t.title:''}</small>
                           </span>
                         </button>

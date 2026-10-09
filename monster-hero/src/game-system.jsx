@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 371074ffe763cdba
+// generated-sha256: 0f74cc5959f17aa4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29430,7 +29430,7 @@ function ProfileScreen({
                           style={{border:`2px solid ${active?who.accent:'rgba(255,255,255,.1)'}`,backgroundColor:active?`${who.accent}22`:'rgba(15,23,42,.6)'}}>
                           <AssistantFace who={who} size={30} accent={who.accent} expression={active?'happy':'normal'}/>
                           <span className="min-w-0 flex-1">
-                            <b className="block text-[12px] font-black text-white truncate">{who.name}{active&&'（選択中）'}</b>
+                            <b className="block text-[12px] font-black leading-tight text-white break-words [text-wrap:balance]">{who.name}{active&&'（選択中）'}</b>
                             <small className="block text-[10px] text-slate-400 truncate">Lv.{lv} {t?t.title:''}</small>
                           </span>
                         </button>
