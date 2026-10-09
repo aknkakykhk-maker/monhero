@@ -333,8 +333,11 @@ async function maybeUseEx(s, b, mem, log) {
   const threat = threatOf(b);
   const bigHit = threat === 'big' || threat === 'all' || threat === 'pierce' || (threat === 'multi' && b.aimedDamage > 0)
     || b.slots.some((x) => x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.8);
+  const aliveCount = b.slots.filter((y) => y.occupied && !y.downed).length;
   for (const x of b.slots.filter((y) => y.occupied && !y.downed && y.ex && !y.exActive)) {
     const role = exRoleOf(x.name, '');
+    // かばう EX(モノリス)は、かばう相手がいないと意味がない
+    if (role === 'shield' && x.name === 'モノリス' && aliveCount < 2) continue;
     const enemyFull = b.enemy && b.enemy.hp >= b.enemy.max * 0.5;
     const gutsLow = x.guts && x.guts.now < x.guts.max * 0.25;
     const hpLow = x.hp && x.hp.now < x.hp.max * 0.4;
@@ -702,7 +705,9 @@ function preferredOrder(difficulty, rand, roster) {
   const mons = roster && Array.isArray(roster.monsters) ? roster.monsters.filter((m) => !m.debugOnly && m.name) : [];
   const names = [...new Set([...(mons.length ? mons.map((m) => m.name) : BASE_NAMES), ...k.runs.flatMap((r) => [r.hero, ...(r.pool || [])]).filter(Boolean)])];
   const statOf = (nm) => mons.find((m) => m.name === nm);
-  const maxTank = Math.max(1, ...mons.map((m) => (m.hp || 0) * (m.def || 0)));
+  // 勇者モンは1体で WAVE 1〜2 を倒しきる必要があるので「打たれ強さ×ちから」で見る(打たれ強いだけのモノリスは火力が足りなかった)
+  const heroVal = (m) => Math.sqrt((m.hp || 0) * (m.def || 0)) * (m.atk || 0);
+  const maxTank = Math.max(1, ...mons.map(heroVal));
   const maxAtk = Math.max(1, ...mons.map((m) => m.atk || 0));
   // ★Expert 以上で、試していない子を勇者モンにすると、1体で戦う WAVE 1〜2 で倒れることが多い
   //   (2026-10-09 Master: ライフ 250 のピクシー・400 のライガーが WAVE 1〜2 で負けた)。
@@ -715,7 +720,7 @@ function preferredOrder(difficulty, rand, roster) {
     return names.map((nm) => {
       const x = sc[nm];
       const st = statOf(nm);
-      const guess = st ? (role === 'hero' ? (st.hp * st.def) / maxTank : (st.atk || 0) / maxAtk) : 0.5;
+      const guess = st ? (role === 'hero' ? heroVal(st) / maxTank : (st.atk || 0) / maxAtk) : 0.5;
       const mean = x && x.w ? x.v / x.w : (strict ? 0.1 + 0.4 * guess : 0.9 + 0.6 * guess);
       return { nm, v: mean + (strict ? 0.05 : 0.35) / Math.sqrt((x ? x.n : 0) + 1) + rand() * (strict ? 0.05 : 0.15) };
     }).sort((a, z) => z.v - a.v).map((x) => x.nm);
