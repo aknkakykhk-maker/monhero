@@ -53,13 +53,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 18:09 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 18:21 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>7</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>13</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>14</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -95,8 +95,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">Tierを Hard / Expert / Master の3列に分けた(次の公開で入る)。2段以上動いた子は理由つき(例: ライガーはライフ400で、敵の火力が上がると打たれ弱さが効く)。Hard は26体を1回ずつ集め、そのあと Expert と交互に回数を足す。次は簡易シミュレーター。ヤオビクニのEXでターンが止まった件は、ゲームの不具合ではなくボットの見誤り(「悠久の刻」はターンの数字が進まない仕様)と分かり、ボットを直した</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み Expert の数字入り 18:30〜19:00 / Hard の全種 20:30〜21:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
+        <div class="row-body">数字入り版は公開(#2407)。今夜は Hard の全種集めを続け、Hard の1周目を入れた版を出す。新しい調整の案は、5回以上戦った子が増えてから。次は簡易シミュレーター</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み Hard の1周目 20:30〜21:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396・#2401・#2407</span></div>
       </li>
       <li id="w9">
         <div class="row-title">起動してマスモン一覧を押すと少し固まる</div>
@@ -112,6 +112,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p12">
+        <div class="row-title">モンスターのTier表(数字入り・難易度ごと)</div>
+        <div class="row-body">25/26体・50回ぶん。Hard / Expert / Master の3列と机上の数字を並べた。難易度で動いた子: ライガー(Hard S → Master D)・ピクシー・ミーア(ライフが少なく、敵の火力が上がると打たれ弱さが効く)。ゴーレム・スエゾー・スプーキーはまだ保留</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2407</span><span>docs/playbot/reports/tier/monster-tier.md</span></div>
+      </li>
       <li id="w6">
         <div class="row-title">通信不良の演奏での「範囲の中なのにMISS」はゲームの不具合ではなかった</div>
         <div class="row-body">ボットがわざと見送った1つ前のノーツが、次を狙った押下をゲームの決まりどおり受け取っていた(どちらを取っても1つはMISSになる形)。ボットで見分けて候補から外した。守り部の条件でも候補0件</div>
@@ -207,8 +212,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">Tier表(Expert集め → 18:30から Hard)</div>
-        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 17:13</span></div>
+        <div class="row-body">Tier表(Hard の全種集め 〜21:30)</div>
+        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 18:21</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">開発部</span><span class="chip idle">待機</span></div>
