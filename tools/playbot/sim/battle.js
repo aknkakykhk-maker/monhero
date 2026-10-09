@@ -337,10 +337,12 @@ function cardLimitOf(st) {
   let limit = 1;
   if (alive.length >= 3) limit = 3; else if (alive.length >= 2) limit = 2;
   const heroBonus = alive.filter((i) => G.heroCardBonusOf(st.units[i].id) > 0).length;
-  const kikiBonus = ((st.snap ? st.snap.perma : st.perma).kikiCardBonusTurns || 0) > 0 ? 1 : 0; // 60-app.jsx kikiCardBonus 9162
+  const kikiBonus = kikiBonusOf(st); // 60-app.jsx kikiCardBonus 9162
   return Math.min(5, Math.min(5, limit + heroBonus + kikiBonus) + G.tacticsExCardBonusTotal(st.ex, st.units, nowOf(st)));
 }
-const slotMaxUses = (st, slot, cardLimit) => Math.min(cardLimit, 1 + G.heroCardBonusOf(st.units[slot] && st.units[slot].id) + G.tacticsExCardBonusAt(st.ex, st.units, slot, nowOf(st)));
+// 60-app.jsx slotMaxUses 9197〜9208: ききが効いているあいだは、1体ぶんの上限も +1
+const kikiBonusOf = (st) => (((st.snap ? st.snap.perma : st.perma).kikiCardBonusTurns || 0) > 0 ? 1 : 0);
+const slotMaxUses = (st, slot, cardLimit) => Math.min(cardLimit, 1 + G.heroCardBonusOf(st.units[slot] && st.units[slot].id) + kikiBonusOf(st) + G.tacticsExCardBonusAt(st.ex, st.units, slot, nowOf(st)));
 // 予告で狙われている子が受けるダメージの見込み(画面の数字。ターンの軽減まで入れる)
 const aimDamageOf = (st, slot) => (targetsNow(st, st.intent, st.dist).includes(slot) ? turnReduce(st, incomingFor(st, st.intent, slot), slot) : 0);
 
@@ -732,6 +734,177 @@ function policyBest(st) {
 }
 const EX_POLICIES = { none: () => {}, bot: policyBot, best: policyBest };
 
+// ---------- アシカ(アシストカード) ----------
+// カードの定義は data/breeder.js の TEACHING_CARDS(load-game.js で読む)。効果の量は 60-app.jsx processTurn から写した
+const TEACH_BY_ID = Object.fromEntries(G.TEACHING_CARDS.map((t) => [t.id, t]));
+const TEACH_IDS = G.TEACHING_CARDS.map((t) => t.id);
+const ownedTeaching = (st, id) => st.teachings.find((t) => t.id === id) || null;
+// 回復カードの「全体回復」(60-app.jsx 12707〜12716 tacticsRateHeal。倒れた子にも入る・ミーアのボルテージで増える)
+const healBoard = (st, hpRate, gutsRate) => { st.units = G.rateHealTacticsBoard(st.units, hpRate, gutsRate, true).units; };
+// みゅあ・かどみうむ・ももすけの上限アップを1体ずつへ(60-app.jsx 2755 の useEffect)
+const scaleMua = (st) => { st.units = G.scaleTacticsUnits(st.units, st.perma.muaHpPct || 0, st.perma.muaGutsPct || 0); };
+
+// 手札のアシカを使う(60-app.jsx processTurn 12437〜12527)。effMul は同じ子の2枚目なら 0.5
+function playTeaching(st, card, slot, effMul, usedCount, guardBySlot, startDist, localOryo, localDmgMod, localGlobalCombo) {
+  const out = { oryo: 0, combo: 0, invincible: false, dealt: 0 };
+  const owned = ownedTeaching(st, card.id);
+  const level = owned ? owned.evoLevel || 0 : 0;
+  const p = st.perma;
+  const add = (k, v) => { p[k] = (p[k] || 0) + v; };
+  if (card.subType === 'atk_buff') { const boost = card.baseValue * effMul; add('atkPct', boost); out.oryo = boost; } // 12438(localBoostFromCard 11008)
+  else if (card.subType === 'dmg_cut_buff') { const cut = (level === 0 ? 0.03 : (level === 1 ? 0.06 : 0.10)) * effMul; p.dmgCutPct = Math.min(0.9, (p.dmgCutPct || 0) + cut); } // 12439
+  else if (card.subType === 'guts_buff') { // 12441(CADMIUM_TIERS)
+    const tier = G.CADMIUM_TIERS[Math.min(level, G.CADMIUM_TIERS.length - 1)];
+    if (tier.autoGuts > 0) add('gutsRecoverPct', tier.autoGuts * effMul);
+    if (tier.gutsLimit > 0) add('muaGutsPct', tier.gutsLimit * effMul);
+    if (tier.hpLimit > 0) add('muaHpPct', tier.hpLimit * effMul);
+    if (tier.autoHp > 0) st.autoHp += tier.autoHp * effMul; // permaBuffs.autoHpRecovery
+    scaleMua(st);
+  } else if (card.subType === 'stun_atsu') { // 12442〜12456: このターンの敵の行動を無効・攻撃(会心はメインに乗らない)
+    out.invincible = true;
+    const mon = st.mons[slot];
+    const d = Math.floor(getDmg(st, card, slot, localOryo, localDmgMod, false, startDist) * effMul);
+    const perma = st.snap.perma; const tb = st.turnB || {};
+    const hits = G.buildAttackHits({ d, card, attackerId: mon.id, heroId: st.heroId, traitOwnerId: mon.id,
+      comboDmgBonus: perma.comboDmgPct || 0, critDmgBonus: perma.critDmgPct || 0, kenshiExtraCombos: perma.kenshiExtraCombo || 0,
+      guaranteedCrit: !!tb.guaranteedCrit || G.tacticsSlotFlag(tb.bySlot, slot, 'guaranteedCrit') || critFixedNow(st, slot, card),
+      rollCrit: () => st.rng() < Math.min(1, (card.crit || 0.1) + (perma.critRatePct || 0)),
+      globalComboRate: (perma.globalComboDmgPct || 0) + localGlobalCombo, mainCanCrit: false,
+      exCombos: G.withFateCombo(exCombosAt(st, slot, card), st.fate, slot), critDmgMult: multiBuffNow(st, slot).critDmg });
+    out.dealt = d + hits.slice(1).reduce((a, h) => a + h.dmg, 0);
+  } else if (card.subType === 'buff_myaru') { // 12457〜12472: 飲んだ子だけ次のターン攻撃×倍。自傷は飲んだ子の今のライフから(倒れない)
+    setNextSlot(st, slot, 'atkMult', 1 + (card.baseValue - 1) * effMul);
+    const hp = G.normalizeTacticsUnit(st.units[slot]).hp;
+    st.units = G.selfDamageTacticsAt(st.units, slot, Math.floor(hp * G.myaruSelfDamageRate(card) * effMul));
+  } else if (card.subType === 'buff_poltz') { // 12480〜12485: 待機回数を張り直す
+    const tier = Math.min(level, G.POLTZ_TIERS.length - 1);
+    p.poltzTier = tier; p.poltzEffMul = effMul; p.poltzCharges = G.POLTZ_TIERS[tier].charges;
+  } else if (card.subType === 'buff_kiki') { // 12486
+    const lv = Math.min(level, 2);
+    const combo = (0.03 + lv * 0.02) * effMul;
+    add('globalComboDmgPct', combo); out.combo = combo;
+    p.kikiCardBonusTurns = Math.max(1, (lv + 1) * effMul) + 2;
+  } else if (card.type === 'heal') { // 12488〜12527
+    let healRate = 0;
+    if (card.id === 'meloso') {
+      healRate = 0.3 * effMul;
+      healBoard(st, 0, 0.3 * effMul); // gainGutsByRateAll
+      const g = G.GUARD_EVOLUTION[st.guardLevel];
+      const e = guardBySlot[slot] || (guardBySlot[slot] = { flat: 0, mult: 0, weight: 0, cards: 0 });
+      e.flat += g.flat * effMul; e.mult += g.mult * effMul; e.cards += 1;
+      if (level >= 1 && usedCount >= 2) st.nextB = { ...st.nextB, takenDamageMult: 1 - 0.5 * effMul };
+      else if (level >= 1 && usedCount === 1) st.nextB = { ...st.nextB, takenDamageMult: 1 - 0.25 * effMul };
+      if (level >= 2 && usedCount >= 3) st.nextB = { ...st.nextB, melosoFullRecoveryMult: effMul };
+    } else if (card.id === 'mua') {
+      const hpRec = level === 1 ? 0.7 : (level >= 2 ? 0.9 : 0.5); const gutsRec = level >= 1 ? (level >= 2 ? 0.9 : 0.7) : 0;
+      const hpB = level === 1 ? 0.05 : (level >= 2 ? 0.08 : 0.03); const atkB = level >= 2 ? 0.05 : 0.03; const gutsB = level >= 2 ? 0.05 : 0.03;
+      healRate = hpRec * effMul;
+      add('muaHpPct', hpB * effMul); add('muaAtkPct', atkB * effMul); add('muaGutsPct', gutsB * effMul);
+      if (gutsRec > 0) healBoard(st, 0, gutsRec * effMul);
+    } else if (card.id === 'momosuke') {
+      const gutsRec = level === 1 ? 0.7 : (level >= 2 ? 0.9 : 0.5); const hpRec = level === 1 ? 0.7 : (level >= 2 ? 0.9 : 0);
+      const hpB = level >= 2 ? 0.05 : 0.03; const gutsB = level === 1 ? 0.05 : (level >= 2 ? 0.08 : 0.03); const defB = level >= 2 ? 0.05 : 0.03;
+      if (hpRec > 0) healRate = hpRec * effMul;
+      add('muaHpPct', hpB * effMul); add('muaGutsPct', gutsB * effMul); add('defPct', defB * effMul);
+      healBoard(st, 0, gutsRec * effMul);
+    }
+    if (healRate > 0) healBoard(st, healRate * partyBuffNow(st).heal, 0);
+    scaleMua(st);
+  }
+  return out;
+}
+// ポルツ: 敵の攻撃を受け止めたら1回ぶん(60-app.jsx consumePoltzCharge 11223〜11240)
+function consumePoltz(st) {
+  const p = st.perma;
+  const charges = Math.floor(Number(p.poltzCharges) || 0);
+  if (charges <= 0) return;
+  const tier = G.POLTZ_TIERS[Math.max(0, Math.min(Math.floor(Number(p.poltzTier) || 0), G.POLTZ_TIERS.length - 1))];
+  const eff = Number(p.poltzEffMul) > 0 ? Number(p.poltzEffMul) : 1;
+  p.poltzCharges = Math.max(0, charges - 1);
+  healBoard(st, 0, tier.healGuts * eff);
+  if (tier.gutsRecover > 0) p.gutsRecoverPct = (p.gutsRecoverPct || 0) + tier.gutsRecover * eff;
+  if (tier.atk > 0) p.atkPct = (p.atkPct || 0) + tier.atk * eff;
+}
+
+// カードの文(60-app.jsx getDynamicDesc 15126 の写し)。ボットはこの文を読んで選ぶ
+function teachingDesc(id, level) {
+  const t = TEACH_BY_ID[id];
+  const pct = (v) => String(Math.round(v * 1000) / 10);
+  if (id === 'oryo') return `攻撃 ${pct(0.1 + level * 0.1)}%アップ`;
+  if (id === 'dra') return `被ダメージ ${[3, 6, 10][level]}%ダウン（次のターンから）`;
+  if (id === 'cadmium') {
+    const tier = G.CADMIUM_TIERS[Math.min(level, G.CADMIUM_TIERS.length - 1)];
+    const parts = [];
+    if (tier.autoHp > 0) parts.push(`ライフ自動回復 ${pct(tier.autoHp)}%アップ（次のターンから）`);
+    if (tier.autoGuts > 0) parts.push(`ガッツ自動回復 ${pct(tier.autoGuts)}%アップ（次のターンから）`);
+    if (tier.hpLimit > 0 && tier.hpLimit === tier.gutsLimit) parts.push(`ライフ/ガッツ上限 ${pct(tier.gutsLimit)}%アップ`);
+    else { if (tier.hpLimit > 0) parts.push(`ライフ上限 ${pct(tier.hpLimit)}%アップ`); if (tier.gutsLimit > 0) parts.push(`ガッツ上限 ${pct(tier.gutsLimit)}%アップ`); }
+    return parts.join('・');
+  }
+  if (id === 'mua') return level === 0 ? 'ライフ 50%回復・ライフ/ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）' : (level === 1 ? 'ライフ・ガッツ 70%回復・ライフ上限 5%アップ・ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）' : 'ライフ・ガッツ 90%回復・ライフ上限 8%アップ・ガッツ上限 5%アップ・攻撃 5%アップ（次のターンから）');
+  if (id === 'momosuke') return level === 0 ? 'ガッツ 50%回復・ライフ/ガッツ上限 3%アップ・丈夫さ 3%アップ（次のターンから）' : (level === 1 ? 'ライフ・ガッツ 70%回復・ライフ上限 3%アップ・ガッツ上限 5%アップ・丈夫さ 3%アップ（次のターンから）' : 'ライフ・ガッツ 90%回復・ライフ上限 5%アップ・ガッツ上限 8%アップ・丈夫さ 5%アップ（次のターンから）');
+  if (id === 'atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue + level * t.step).toFixed(1)}倍`;
+  if (id === 'myaru') { const v = t.baseValue + level * t.step; const d = pct(G.myaruSelfDamageRate(t, level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`; }
+  if (id === 'kiki') return `次の${level + 2}ターン 使用可能カード枚数 +1・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
+  if (id === 'poltz') {
+    const tier = G.POLTZ_TIERS[Math.min(level, G.POLTZ_TIERS.length - 1)];
+    const parts = [`敵の攻撃を受けるたびに発動（${tier.charges}回まで）`, `発動ごとにガッツ ${pct(tier.healGuts)}%回復`, `ガッツ自動回復 ${pct(tier.gutsRecover)}%アップ（次のターンから・バトル中永続）`];
+    if (tier.atk > 0) parts.push(`攻撃 ${pct(tier.atk)}%アップ（バトル中永続）`);
+    return parts.join('・');
+  }
+  if (id === 'meloso') return level === 0 ? 'ライフ・ガッツ30%回復・現在ガード' : (level === 1 ? 'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚以上で50%減' : 'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚で50%減・合計3枚以上で50%減+次ターン開始時ライフ・ガッツ全回復');
+  return t.desc;
+}
+// 選ぶ画面に並ぶカード。kind: 'start'(ランの始め 60-app.jsx confirmProParty 14673。持ち込める全部)・
+//   'odd'(WAVE 1・3・5・7・9 のあと 14812〜14820)・'join'(供モンが入った WAVE のあと proceedAfterUniqueUpgrade 14860)
+function teachingPool(st, kind) {
+  const active = G.TEACHING_CARDS.filter((t) => t && !t.debugOnly); // 「すべて解放」と同じ(getActiveTeachingCards 6955)
+  if (kind === 'start') return active.slice();
+  if (kind === 'join') return shuffle(active.filter((tc) => { const o = ownedTeaching(st, tc.id); return !o || o.evoLevel < 2; }), st.rng).slice(0, 4);
+  const upgradeableIds = st.teachings.filter((ot) => ot.evoLevel < 2).map((ot) => ot.id);
+  const upgradeable = active.filter((tc) => upgradeableIds.includes(tc.id));
+  const notOwned = active.filter((tc) => !st.teachings.some((ot) => ot.id === tc.id));
+  const pool = [];
+  if (upgradeable.length > 0) pool.push(...shuffle(upgradeable, st.rng).slice(0, 2));
+  const needed = 4 - pool.length; if (needed > 0 && notOwned.length > 0) pool.push(...shuffle(notOwned, st.rng).slice(0, needed));
+  while (pool.length < 4 && active.length >= 4) { const r = active[Math.floor(st.rng() * active.length)]; if (!pool.find((x) => x.id === r.id)) pool.push(r); }
+  return pool;
+}
+// いまのボットの点数(tactics-brain.js 649〜670 の写し)。カードの文(選んだあとの段)で点を付ける
+function botTeachingScore(st, t) {
+  const o = ownedTeaching(st, t.id);
+  const shown = o ? (o.evoLevel >= 2 ? o.evoLevel : o.evoLevel + 1) : 0; // 67-screen-pick.jsx 772
+  const text = `${G.BREEDER_EVO_NAMES[t.id][shown]} ${teachingDesc(t.id, shown)}`;
+  const heroGuts = (MON_BY_ID[st.heroId] || {}).baseGuts;
+  const starved = st.gutsShort >= 3 || (Number.isFinite(heroGuts) && heroGuts <= 90);
+  const hurt = false; // ボットの mem.dmgTakenWave はどこでも増えないので、いつも false(tactics-brain.js 656)
+  const isHeal = /ライフ[^ガ]*回復|回復・全体/.test(text);
+  const isGuts = /ガッツ/.test(text) && !isHeal;
+  const pctOf = (re) => { const m = text.match(re); return m ? Number(m[1]) : 0; };
+  const atkPct = pctOf(/攻撃\s*(\d+(?:\.\d+)?)%アップ/) + (/攻撃\s*(\d+(?:\.\d+)?)倍/.test(text) && !/自傷/.test(text) ? (pctOf(/攻撃\s*(\d+(?:\.\d+)?)倍/) - 1) * 100 : 0);
+  const named = (/^きき/.test(text) ? 5 : 0) + (/^ポルツ/.test(text) ? (starved ? 5 : 3.5) : 0) + (/^ももすけ/.test(text) ? (starved ? 4.5 : 3) : 0) + (/^メロソ/.test(text) ? (hurt ? 3.5 : 2) : 0);
+  return (/自傷/.test(text) ? -5 : 0) + atkPct / 5 + (isHeal ? (hurt ? 3 : 1.5) : 0) + named
+    + (isGuts ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(text) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(text) ? 2.5 : 0);
+}
+// 選ぶ。st.assist: 'bot'(いまのボット)・カードの id(そのカードがあれば必ず。無ければボットの点数)・'none'(選ばない)
+function chooseTeaching(st, pool) {
+  if (!pool.length || st.assist === 'none') return null;
+  if (TEACH_BY_ID[st.assist]) {
+    const want = pool.find((t) => t.id === st.assist);
+    const o = ownedTeaching(st, st.assist);
+    if (want && (!o || o.evoLevel < 2)) return want;
+  }
+  return pool.map((t, i) => ({ t, i, sc: botTeachingScore(st, t) })).sort((a, z) => z.sc - a.sc || a.i - z.i)[0].t;
+}
+// 習得・強化(60-app.jsx confirmPickTeaching 14689〜14693)。★強化は段が MAX でも baseValue へ step を足す(ゲームのとおり)
+function learnTeaching(st, t) {
+  if (!t) return;
+  const o = ownedTeaching(st, t.id);
+  if (o) st.teachings = st.teachings.map((x) => (x.id === t.id ? { ...x, evoLevel: Math.min(2, x.evoLevel + 1), baseValue: x.baseValue + x.step } : x));
+  else st.teachings.push({ ...t });
+  st.assistLog.push(`${t.id}${o ? '+' : ''}`);
+}
+
 // ---------- 1ターン(60-app.jsx processTurn 12304〜・敵の番 handleEnemyTurn 11250〜・ターン終わり 11742〜) ----------
 const addPerma = (st, key, v) => { st.perma[key] = (st.perma[key] || 0) + v; };
 const setNextSlot = (st, slot, key, value) => { st.nextB = { ...st.nextB, bySlot: G.withTacticsSlotBuff(st.nextB.bySlot, slot, key, value) }; };
@@ -1081,7 +1254,7 @@ function settlePandora(st, step) {
 // 勇者モンはいちばん得意な枠、供モンは空いた枠のうち得意なもの(同じなら番号の小さい枠)
 const bestSlotFor = (mon, free) => free.slice().sort((a, b) => (G.DIST_APTITUDE_MULT[(mon.distAptitude || [])[b]] ?? 1) - (G.DIST_APTITUDE_MULT[(mon.distAptitude || [])[a]] ?? 1) || a - b)[0];
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot' }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot' }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1092,10 +1265,14 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     dealtTotal: 0, taken: 0, recentDealt: 0, recentWave: 0, turnsTotal: 0, waveTurns: [],
     // ランのあいだ残るもの: EX の回数・permaBuffs・クッキー/黒音符・メロディ・ボゥの積み・運命のコイン/輪の積み
     ex: G.createTacticsExState(), perma: {}, sweet: {}, bow: {}, fate: {}, exUses: {}, dodges: 0, allInDone: {}, dmgBySlot: {},
+    // アシカ: 持っているカード(段つき)・選び方・使い方・使った回数・選んだ順・ボットの「ガッツ不足」の数
+    teachings: [], assist, assistPlay, assistUses: {}, assistLog: [], gutsShort: 0,
   };
+  if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   st.heroSlot = bestSlotFor(hero, [0, 1, 2, 3]);
   st.mons[st.heroSlot] = hero; st.units[st.heroSlot] = G.createTacticsUnit(hero);
   const waiting = allies.slice();
+  learnTeaching(st, chooseTeaching(st, teachingPool(st, 'start'))); // ランの始めに1枚(PICK_TEACHING)
   for (let w = 1; w <= maxWave; w++) {
     st.wave = w;
     // 敵を出す(60-app.jsx spawnEnemy 13629): 総合力で敵が強くなる。WAVE で消えるもの(waveBuffs・turnBuffs・運命の輪・乱心・トリックスタート)を消す
@@ -1105,7 +1282,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     st.waveB = {}; st.turnB = {}; st.nextB = {}; st.fateWheel = { atkDown: 0, takenUp: 0 }; st.confuse = 0;
     st.ex = G.resetTacticsExWaveUses(st.ex); // スネグーラチカのプレゼントは WAVE ごとに回数が戻る
     st.guardLevel = computeGuardLevel(G.tacticsMaxDef(st.units));
-    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist), st.guardLevel, rng);
+    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist), st.guardLevel, rng, st.teachings);
     st.hand = pool.slice(0, 5); st.deck = pool.slice(5); st.graveyard = [];
     st.turn = 1;
     st.intent = aim(st, nextAction(st, st.dist, null, { unannounced: true }));
@@ -1128,7 +1305,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
@@ -1140,15 +1317,23 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     if (exp.changed) st.units = G.scaleTacticsUnits(exp.units, st.perma.muaHpPct || 0, st.perma.muaGutsPct || 0);
     // 供モンは WAVE 2・4・6 のあと(19-difficulties-and-rules.jsx POST_WAVE_JOIN_WAVES)。空いている枠のうち適性のいちばん高いところへ
     const free = [0, 1, 2, 3].filter((i) => !st.units[i]);
+    let joined = false;
     if (G.POST_WAVE_JOIN_WAVES.includes(w) && free.length && waiting.length) {
       const mon = MON_BY_ID[waiting.shift()];
       const slot = bestSlotFor(mon, free);
       st.mons[slot] = mon;
       st.units[slot] = G.applyTacticsJoinCatchUp(G.createTacticsUnit(mon), st.joinCatchUp);
+      scaleMua(st); // 入った子にも、みゅあ・かどみうむの上限アップ
       st.powerNow += monsterPowerOf(mon);
+      joined = true;
+    }
+    // WAVE のあとのアシカ選び(60-app.jsx 14799〜14822): 供モンが入った WAVE は固有技の強化のあと、WAVE 1・3・5・7・9 はトレーニングのあと
+    if (w < maxWave) {
+      if (joined) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'join')));
+      else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses };
 }
 
 function pickAllies(heroId, rng, n = 3) {
@@ -1156,7 +1341,8 @@ function pickAllies(heroId, rng, n = 3) {
 }
 
 // G … シミュレーターが読み込んだゲームのデータ。調整の案の効き目を測るとき、メモリの中だけ数字を変えるのに使う(ゲームのファイルは変えない)
-module.exports = { simulateRun, pickAllies, monsterPowerOf, MONS, EX_POLICIES, G };
+// TEACH_IDS … アシカの id(TEACHING_CARDS の並び)。APPROX_ASSIST_MISSING … アシカで入れられなかったもの
+module.exports = { simulateRun, pickAllies, monsterPowerOf, MONS, EX_POLICIES, G, TEACH_IDS, TEACH_BY_ID, APPROX, APPROX_ASSIST_MISSING, mulberry32, hashSeed };
 
 // ---------- 一括で回す ----------
 // 前の版(スキル無し)の md の表を読む。勇者モン名 → 難易度 → { avg, past2, clear }
