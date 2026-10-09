@@ -138,7 +138,8 @@ async function evalHand(s, b, skipLabels) {
     seen.add(c.label);
     if (!/atk|unique|guard|debuff/.test(c.type)) { opts.push({ card: c, previews: [] }); continue; }
     const before = await readBoard(s);
-    // ★敵の番のすぐあとは、押しても選ばれないことがある。見込みも選ばれた印も出なければ押し直す
+    // ★置き済みのカードがあると、その枠には置き済みぶんの合計が出ている。押す前の数字との差で、このカードの見込みを見る
+    const base = await readPreviews(s);
     let pv = [];
     let mid = before;
     for (let k = 0; k < 3; k++) {
@@ -156,7 +157,8 @@ async function evalHand(s, b, skipLabels) {
       await s.wait(700);
       if (await stillPicked()) await s.wait(600);
     }
-    opts.push({ card: c, previews: pv.filter((p) => p.dmg > 0 || p.guard > 0), auto: (mid.picked || 0) > (before.picked || 0) });
+    const net = pv.map((p) => { const b0 = base.find((x) => x.i === p.i) || { dmg: 0, guard: 0 }; return { i: p.i, dmg: p.dmg !== b0.dmg ? p.dmg : 0, guard: p.guard !== b0.guard ? p.guard : 0 }; });
+    opts.push({ card: c, previews: net.filter((p) => p.dmg > 0 || p.guard > 0), auto: (mid.picked || 0) > (before.picked || 0) });
   }
   return opts;
 }
