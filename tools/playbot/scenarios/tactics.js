@@ -215,7 +215,7 @@ const readTactics = (s) => s.page.evaluate(() => {
     // ★WAVE の始まりの演出のあいだは実行ボタンの目印が出ない。手札か味方の枠が並んでいればバトルの中
     // ★WAVE を倒したあとの「WAVE n リザルト」の画面でも盤面(party-slot)が残っているので、見出しで戦いの外と見る
     //   (2026-10-09 Hard: 敵のライフ0のまま「実行が押せない」で打ち切りになっていた)
-    hand, inBattle: !/リザルト/.test(((document.querySelector('h2,h1') || {}).innerText || '')) && (!!action || hand.length > 0 || !!document.querySelector('[data-tactics-party-slot]')), actionEnabled: !!action && !action.disabled, actionPresent: !!action,
+    hand, inBattle: ![...document.querySelectorAll('h1,h2,h3')].some((h) => { const r = h.getBoundingClientRect(); return r.width > 0 && r.height > 0 && /リザルト/.test(h.innerText || ''); }) && (!!action || hand.length > 0 || !!document.querySelector('[data-tactics-party-slot]')), actionEnabled: !!action && !action.disabled, actionPresent: !!action,
     // 実行ボタンの文字。「カードを選ぶ」→(攻撃カードを選ぶと)「置き場所を選ぶ」→「ACTION」と変わる
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
