@@ -431,7 +431,10 @@ async function chooseBetween(s, mem, log) {
         return press(new RegExp(`^${nm}を起こす`), 'トレーニング(起こす)');
       }
     }
-    if (scr.trainingName && !scr.trainingDone && scr.picked < 2) {
+    // 同じ合間で同じ子を2回選び終えたら、もう押さない(決定のあとの演出のあいだも、名前の札が残っている)
+    const tkey = `${log.data.waves.length}:${scr.trainingName}`;
+    mem.trained = mem.trained || {};
+    if (scr.trainingName && !scr.trainingDone && scr.picked < 2 && (mem.trained[tkey] || 0) < 2) {
       const m = monOf(mem, scr.trainingName);
       const hpRatio = (mem.lastParty || {})[scr.trainingName];
       let plan;
@@ -439,9 +442,9 @@ async function chooseBetween(s, mem, log) {
       else if (m.gutsShort >= 2) plan = ['猛勉強', 'ドミノ倒し'];
       else plan = ['ドミノ倒し', 'ドミノ倒し'];
       const want = plan[scr.picked] || plan[0];
-      if (scr.picked === 0) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(狙われた${m.aimed}回・ガッツ不足${m.gutsShort}回)`);
+      if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(狙われた${m.aimed}回・ガッツ不足${m.gutsShort}回)`);
       if (process.env.PLAYBOT_DEBUG) console.log(`      [トレーニング] ${scr.trainingName} 選んだ数${scr.picked} → ${want}`);
-      if (await press(new RegExp(`^${want}`), 'トレーニング')) { await s.wait(500); return true; }
+      if (await press(new RegExp(`^${want}`), 'トレーニング')) { mem.trained[tkey] = (mem.trained[tkey] || 0) + 1; await s.wait(500); return true; }
     }
     return false;
   }
@@ -482,7 +485,10 @@ async function chooseBetween(s, mem, log) {
     const score = (t) => (/自傷/.test(t) ? -5 : 0) + (/攻撃.*アップ|与ダメ/.test(t) ? 3 : 0) + (isHeal(t) ? (hurt ? 3.5 : 2) : 0)
       + (isGuts(t) ? (starved ? 3.2 : 1.5) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 3 : 1.8) : 0);
     const best = cards.sort((a, z) => score(z) - score(a))[0];
-    const kind = /攻撃.*アップ|与ダメ/.test(best) ? '火力を伸ばす' : isHeal(best) ? (hurt ? '被ダメージが多いので回復' : '回復の手段を持つ') : isGuts(best) ? (starved ? 'ガッツ不足が多い' : 'ガッツを補う') : '守りを固める';
+    // 理由は、点数にいちばん効いた項目で言う
+    const parts = [['火力を伸ばす', /攻撃.*アップ|与ダメ/.test(best) ? 3 : 0], [hurt ? '被ダメージが多いので回復' : '回復の手段を持つ', isHeal(best) ? (hurt ? 3.5 : 2) : 0],
+      [starved ? 'ガッツ不足が多い' : 'ガッツを補う', isGuts(best) ? (starved ? 3.2 : 1.5) : 0], ['守りを固める', /被ダメ|軽減|守り/.test(best) ? (hurt ? 3 : 1.8) : 0]];
+    const kind = parts.sort((p, q) => q[1] - p[1])[0][0];
     log.note(`アシストカード: ${best.slice(0, 24)}(${kind})`);
     return press(new RegExp(`^${best.slice(0, 8).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), 'アシストカード');
   }
