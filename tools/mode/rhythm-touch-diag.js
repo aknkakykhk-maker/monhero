@@ -166,7 +166,7 @@ const timingSummary=(rows,{days=null,now=Date.now()}={})=>{
     hasTsShare:g.hasTsKnown?g.hasTs/g.hasTsKnown:null,outLatMedian:median(g.outLat),baseLatMedian:median(g.baseLat),tsLatMedian:median(g.tsLat),biasMedian:median(g.bias),biasPlays:g.bias.length,
     headBySong:Object.fromEntries([...g.head].map(([song,v])=>[song,median(v)]))})).sort((a,b)=>a.key.localeCompare(b.key));
 };
-// 判定と、合う直し方。数字の目安は初期値。ageBacked / ageUnbacked は、直し方 inputAgeCap を入れた端末の記録にだけ入る。実際の記録を見て、ユーザーと決める
+// 判定と、合う直し方。数字の目安は初期値。ageBacked / ageUnbacked は、2026-10-09 からは直し方を入れていない端末の記録にも入る(それより前は inputAgeCap を入れた端末だけ)。実際の記録を見て、ユーザーと決める
 const TIMING_FIX_FOR={cappedPer1k:'inputAgeCap',stallShare:'smoothSongClock',hiddenShare:'autoPauseOnHidden'};
 const timingLines=summary=>{
   const lines=[];

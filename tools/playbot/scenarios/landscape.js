@@ -2,7 +2,7 @@
 //   ・開いた画面や窓を、閉じる/戻るで本当に閉じられるか(ボタンが画面の外なら、人と同じくスクロールして探す)
 //   ・横向きのまま1曲演奏して、押した位置がずれていないか(MISS が多すぎないか)
 // を見る。2026-10-06 に、横画面のときだけイベント詳細の「閉じる」が押せない不具合があった(プレイボットが見つけた)。
-const { installPlayer, collectFingerSuspects, installArgs } = require('./rhythm');
+const { installPlayer, collectFingerSuspects, installArgs, unlockHarderCharts } = require('./rhythm');
 
 const CLOSE = /^(閉じる|とじる|×|✕|戻る|もどる|モードえらびへ戻る|ルームを出る|OK)$/;
 
@@ -103,15 +103,27 @@ async function landscapeScenario(s) {
 }
 
 async function playLandscape(s) {
+  // 試すとき: PLAYBOT_SONG=曲名の先頭 PLAYBOT_DIFFICULTY=MASTER で、縦画面の音ゲー係と同じ曲・難易度を横向きで遊べる(縦と横の MISS を比べるため。2026-10-09)
+  const wantSong = process.env.PLAYBOT_SONG || '', wantDiff = process.env.PLAYBOT_DIFFICULTY || '';
+  if (/^(EXPERT|MASTER)$/.test(wantDiff)) await unlockHarderCharts(s);
   await openRhythmLandscape(s);
   if (!(await s.tapLabel(/ソロライブ/, 2000))) return { ok: true, note: '演奏はしなかった(ソロライブが無い)' };
   await s.dismissOverlays(4);
   await s.tapLabel(/^この案内を閉じる$/, 500);
   const songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label) && !/大きく見る|お気に入り/.test(b.label));
   if (!songs.length) return { ok: true, note: '演奏はしなかった(曲が見えない)' };
-  await s.tap(songs[Math.floor(s.rand() * Math.min(4, songs.length))], '曲を選ぶ');
-  const easy = (await s.listButtons()).find((b) => /^\d+ EASY\b/.test(b.label));
-  if (easy) await s.tap(easy, 'EASY');
+  let pickSong = songs[Math.floor(s.rand() * Math.min(4, songs.length))];
+  if (wantSong) {
+    await s.page.evaluate((name) => { const b = [...document.querySelectorAll('button')].find((x) => /Lv\.\s*\d+/.test(x.innerText || '') && (x.innerText || '').replace(/\s+/g, ' ').trim().startsWith(name)); if (b) b.scrollIntoView({ block: 'center' }); }, wantSong);
+    await s.wait(400);
+    const named = (await s.listButtons()).find((b) => /Lv\.\s*\d+/.test(b.label) && b.label.startsWith(wantSong));
+    if (!named) return { ok: true, note: `演奏はしなかった(「${wantSong}」が見つからない)` };
+    pickSong = named;
+  }
+  await s.tap(pickSong, '曲を選ぶ');
+  const diffRe = wantDiff ? new RegExp(`^\\d+ ${wantDiff}\\b`) : /^\d+ EASY\b/;
+  const easy = (await s.listButtons()).find((b) => diffRe.test(b.label));
+  if (easy) await s.tap(easy, wantDiff || 'EASY');
   if (!(await s.tapLabel(/^決定$/, 2500))) return { ok: true, note: '演奏はしなかった(決定が無い)' };
   await s.dismissOverlays(4);
   const ready = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && typeof window.__mhTestHooks.rhythmNotes === 'function' && (window.__mhTestHooks.rhythmNotes() || []).length > 0, { timeout: 30000 }).then(() => true).catch(() => false);
