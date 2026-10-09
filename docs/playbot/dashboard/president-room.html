@@ -53,7 +53,7 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 19:26 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 20:30 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
@@ -95,13 +95,18 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">ゴーレムを勇者モンにして Hard をクリアした(EX「捨て身」3回・固有技6回・ずっと得意な間合い)。前に低く出たのはボットの取りこぼしだった見立てどおりで、次の版で保留が外れる(まだ1回なので暫定)。Hard の1周目は26体中16体まで</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み Hard の1周目 20:30〜21:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396・#2401・#2407</span></div>
+        <div class="row-body">夜の点検の時間まで Hard と Expert を交互に回して回数を足す。調整の案は回数がそろってから。Hard でまだ保留: ゴースト・ハム・ウンディーネ・ザン・スプーキー(EX を使う場面が来ないまま終わった回だけ)</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み シミュレーター 10/10 昼〜夕方</span><span>PR #2396・#2401・#2407</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p12">
+        <div class="row-title">モンスターのTier表(Hard の1周目入り)</div>
+        <div class="row-body">26/26体・67回ぶん。Hard で上: クロミー(S)・パンドラ(A)・ミーア(A 暫定)。ゴーレムは Hard B(取りこぼしを直したら勇者モンでクリア)。難易度で動いた子: ピクシー・ライガー・イブリース(ライフが少なく、敵が強いほど打たれ弱さが効く)。Hard の WAVE 10(覚醒ムー)は編成の総合力で敵のライフが約2.6倍になり、多くの回がここで負けている</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2407・#2419</span><span>docs/playbot/reports/tier/monster-tier.md</span></div>
+      </li>
       <li id="w13">
         <div class="row-title">main でも落ちていた検査4本を直した(ゲームは壊れていなかった)</div>
         <div class="row-body">4本とも検査が古くなっていただけ(10/08 のまとめ転生と、譜面ツールのフォルダ追加のあと)。ゲームのコードは変えず、検査は弱めずに今の作りへ合わせ、転生の費用(まとめ3回=1回ずつの合計)とロック中は転生しないことを動かして確かめる項目を足した</div>
@@ -131,11 +136,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">マスモン一覧が固まらなくなった</div>
         <div class="row-body">染めた絵の作り直しを裏の作業へ移した。40体・半分染色のセーブで、一覧が出るまで4.1秒→0.2秒(2回目も1.7秒→0.4秒)。絵は1画素も変わらない。モンヒロビートのマスモン一覧など、染めた絵を出すほかの画面も軽くなる</div>
         <div class="meta"><span>ドライバーくん</span><span>PR #2410</span><span>ゲームを始める → M/B管理 → マスモン一覧(染色した子が多いほど違いが分かる)</span></div>
-      </li>
-      <li id="p12">
-        <div class="row-title">モンスターのTier表(数字入り・難易度ごと)</div>
-        <div class="row-body">25/26体・50回ぶん。Hard / Expert / Master の3列と机上の数字を並べた。難易度で動いた子: ライガー(Hard S → Master D)・ピクシー・ミーア(ライフが少なく、敵の火力が上がると打たれ弱さが効く)。ゴーレム・スエゾー・スプーキーはまだ保留</div>
-        <div class="meta"><span>ハカセくん</span><span>PR #2407</span><span>docs/playbot/reports/tier/monster-tier.md</span></div>
       </li>
       <li id="w6">
         <div class="row-title">通信不良の演奏での「範囲の中なのにMISS」はゲームの不具合ではなかった</div>
@@ -232,8 +232,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">Tier表(Hard 16/26体・〜21:30)</div>
-        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 19:26</span></div>
+        <div class="row-body">Tier表(Hard と Expert を交互に)</div>
+        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 20:29</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">開発部</span><span class="chip idle">待機</span></div>
