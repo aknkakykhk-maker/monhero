@@ -152,13 +152,13 @@ function ProfileScreen({
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white">{profileMessage||'まだ書いていません'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{profileMessage||'まだ書いていません'}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
                   {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
                 </button>
               )}
             </div>);

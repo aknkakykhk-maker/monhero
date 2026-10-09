@@ -2076,7 +2076,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // 横画面(推奨)では左に助手の立ち絵とひとこと、右に遊び方のボタンを並べる
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
-    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 leading-none';
     const assistToggles = (cls, withLabel) => <ModeSelectAssistToggles assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} cls={cls} withLabel={withLabel} />;
     return (
       <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`}>
@@ -2176,7 +2176,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-6 items-center">{ms.monsterFaces.length
                   ? ms.monsterFaces.map((face, i) => <span key={face.id} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i ? { marginLeft: '-7px' } : undefined}>{face.src && <img src={face.src} alt="" draggable={false} className="h-full w-full object-cover" />}</span>)
                   : <span className="text-lg leading-none">👾</span>}</span>
-                <span className="text-[11px] font-black">マスモン {ms.monsterCount}/{ms.monsterMax}</span>
+                <span className="whitespace-nowrap text-[10px] font-black">マスモン {ms.monsterCount}/{ms.monsterMax}</span>
               </button>
               <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} mhms-glass min-w-0 text-amber-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">📖</span><span className="text-[11px] font-black">遊びかた</span>
@@ -2188,7 +2188,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span aria-hidden="true" className="text-lg leading-none">📈</span><span className="text-[11px] font-black">ビートLv</span>
               </button>}
               <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} mhms-glass min-w-0 text-cyan-100`}>
-                <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="text-[11px] font-black">オプション</span>
+                <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="whitespace-nowrap text-[11px] font-black">オプション</span>
               </button>
             </div>
           </div>

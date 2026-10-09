@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 919f364cc3152c22
+// generated-sha256: fc435e8ce198baa1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 09:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 12:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28946,10 +28946,10 @@ function BreederMarketScreen({
             >
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
-                <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.titleLines?section.titleLines.map(line=><span key={line} className="block">{line}</span>):section.label}</span>
+                <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.titleLines?section.titleLines.map(line=><span key={line} className="block whitespace-nowrap">{line}</span>):section.label}</span>
               </div>
               <div className="mt-2.5 font-mono text-xl font-black text-white">{section.value!==null?section.value:' '}</div>
-              <div className="mt-0.5 text-[10px] font-bold text-slate-400">{section.hint}</div>
+              <div className="mt-0.5 text-[10px] font-bold text-slate-400 [text-wrap:balance]">{section.hint}</div>
               <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.arrow}`}>›</span>
             </button>
           ))}
@@ -29302,13 +29302,13 @@ function ProfileScreen({
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white">{profileMessage||'まだ書いていません'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{profileMessage||'まだ書いていません'}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
                   {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
                 </button>
               )}
             </div>);
@@ -41225,7 +41225,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   // 横画面(推奨)では左に助手の立ち絵とひとこと、右に遊び方のボタンを並べる
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
-    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 leading-none';
     const assistToggles = (cls, withLabel) => <ModeSelectAssistToggles assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} cls={cls} withLabel={withLabel} />;
     return (
       <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`}>
@@ -41325,7 +41325,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-6 items-center">{ms.monsterFaces.length
                   ? ms.monsterFaces.map((face, i) => <span key={face.id} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i ? { marginLeft: '-7px' } : undefined}>{face.src && <img src={face.src} alt="" draggable={false} className="h-full w-full object-cover" />}</span>)
                   : <span className="text-lg leading-none">👾</span>}</span>
-                <span className="text-[11px] font-black">マスモン {ms.monsterCount}/{ms.monsterMax}</span>
+                <span className="whitespace-nowrap text-[10px] font-black">マスモン {ms.monsterCount}/{ms.monsterMax}</span>
               </button>
               <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} mhms-glass min-w-0 text-amber-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">📖</span><span className="text-[11px] font-black">遊びかた</span>
@@ -41337,7 +41337,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 <span aria-hidden="true" className="text-lg leading-none">📈</span><span className="text-[11px] font-black">ビートLv</span>
               </button>}
               <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} mhms-glass min-w-0 text-cyan-100`}>
-                <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="text-[11px] font-black">オプション</span>
+                <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="whitespace-nowrap text-[11px] font-black">オプション</span>
               </button>
             </div>
           </div>
