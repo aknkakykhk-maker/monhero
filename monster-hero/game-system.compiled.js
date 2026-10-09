@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 699f881a42fe0ac6
+// source-sha256: f2ae08627a3ab54e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 00:28";
+const BUILD_DATE = "2026-10-10 00:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15665,10 +15665,15 @@ const availableUpdateNotices = ({
 } = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string' && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id) && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
-  const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
+  const all = Array.isArray(notices) ? notices : [];
+  const openIds = new Set(all.map(notice => notice && notice.id));
+  const isSuperseded = notice => !!notice && typeof notice.supersededBy === 'string' && openIds.has(notice.supersededBy);
+  const unseenAll = all.filter(notice => !seen.includes(notice.id));
+  const superseded = unseenAll.filter(isSuperseded);
+  const unseen = unseenAll.filter(notice => !isSuperseded(notice));
   return {
     queue: unseen.slice(0, UPDATE_NOTICE_LOGIN_LIMIT),
-    seen: normalizeSeenUpdateNoticeIds([...seen, ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)])
+    seen: normalizeSeenUpdateNoticeIds([...seen, ...superseded.map(notice => notice.id), ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)])
   };
 };
 const localCalendarDate = (now = new Date()) => {
@@ -16035,6 +16040,106 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     className: "text-[12px] text-slate-200 leading-relaxed"
   }, b.text);
 });
+const ASSISTANT_BUBBLE_MODES = ['ALWAYS', 'DAILY', 'OFF'];
+const normalizeAssistantBubbleMode = value => ASSISTANT_BUBBLE_MODES.includes(String(value)) ? String(value) : 'ALWAYS';
+const ASSISTANT_BUBBLE_MODE_KEY = 'mh_assistant_bubble_mode_v1';
+const ASSISTANT_BUBBLE_SEEN_KEY = 'mh_assistant_bubble_seen_v1';
+const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([{
+  id: 'ALWAYS',
+  label: 'いつも',
+  note: 'これまでどおり'
+}, {
+  id: 'DAILY',
+  label: '1日1回',
+  note: '同じ画面は1日1回'
+}, {
+  id: 'OFF',
+  label: '出さない',
+  note: 'ひとことを隠す'
+}]);
+const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
+const assistantBubbleAlwaysShown = scene => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+const normalizeAssistantBubbleSeen = (raw, day) => raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes) ? {
+  day,
+  scenes: raw.scenes.filter(x => typeof x === 'string').slice(0, 300)
+} : {
+  day,
+  scenes: []
+};
+const ASSISTANT_BUBBLE_STORE = (() => {
+  let state = {
+    mode: 'ALWAYS',
+    seen: null,
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let mode = 'ALWAYS',
+          seen = null;
+        try {
+          mode = normalizeAssistantBubbleMode(await storeGet(ASSISTANT_BUBBLE_MODE_KEY, 'ALWAYS', false));
+        } catch (_) {}
+        try {
+          seen = await storeGet(ASSISTANT_BUBBLE_SEEN_KEY, null, false);
+        } catch (_) {}
+        state = {
+          mode,
+          seen,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    setMode(next) {
+      state = {
+        ...state,
+        mode: normalizeAssistantBubbleMode(next)
+      };
+      emit();
+      void storeSet(ASSISTANT_BUBBLE_MODE_KEY, state.mode).catch(() => {});
+    },
+    markSeen(scene) {
+      const day = assistantBubbleDayKey();
+      const cur = normalizeAssistantBubbleSeen(state.seen, day);
+      if (!scene || cur.scenes.includes(scene)) return;
+      const next = {
+        day,
+        scenes: [...cur.scenes, scene]
+      };
+      state = {
+        ...state,
+        seen: next
+      };
+      void storeSet(ASSISTANT_BUBBLE_SEEN_KEY, next).catch(() => {});
+    }
+  };
+})();
+const useAssistantBubbleState = () => {
+  const [state, setState] = useState(() => ASSISTANT_BUBBLE_STORE.get());
+  useEffect(() => {
+    const off = ASSISTANT_BUBBLE_STORE.subscribe(setState);
+    setState(ASSISTANT_BUBBLE_STORE.get());
+    void ASSISTANT_BUBBLE_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 const AssistantBubble = ({
   scene = null,
   assistantId = null,
@@ -16049,6 +16154,21 @@ const AssistantBubble = ({
   defaultOpen = false
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const bubbleSetting = useAssistantBubbleState();
+  const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
+  const bubbleDecisionRef = useRef(null);
+  if (!bubbleExempt && bubbleSetting.loaded && bubbleDecisionRef.current?.key !== `${scene}|${bubbleSetting.mode}`) {
+    const mode = bubbleSetting.mode;
+    const seen = normalizeAssistantBubbleSeen(ASSISTANT_BUBBLE_STORE.get().seen, assistantBubbleDayKey());
+    bubbleDecisionRef.current = {
+      key: `${scene}|${mode}`,
+      hide: mode === 'OFF' || mode === 'DAILY' && seen.scenes.includes(scene)
+    };
+  }
+  const bubbleHidden = !bubbleExempt && !!bubbleDecisionRef.current?.hide;
+  useEffect(() => {
+    if (!bubbleExempt && bubbleSetting.loaded && bubbleSetting.mode === 'DAILY' && !bubbleHidden) ASSISTANT_BUBBLE_STORE.markSeen(scene);
+  }, [scene, bubbleSetting.loaded, bubbleSetting.mode, bubbleHidden, bubbleExempt]);
   const sceneDef = assistantSceneById(scene);
   const bond = useAssistantBond();
   const activeId = assistantId || sceneDef?.assistantId || bond.assistantId || null;
@@ -16120,6 +16240,7 @@ const AssistantBubble = ({
   const hasDetail = !!(paragraphs && paragraphs.length || topic);
   const Wrapper = hasDetail ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
+  if (bubbleHidden) return null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "w-full flex items-end gap-2"
   }, React.createElement("button", {
@@ -29227,7 +29348,7 @@ const RhythmSongSelect = ({
     const tone = rhythmDifficultyTone(item.id);
     const open = unlocked(item);
     const on = !!difficulty && item.id === difficulty.id;
-    const need = rhythmDifficultyUnlockRequirement(item.id);
+    const need = rhythmDifficultyUnlockRequirement(item.id, song.songId);
     return React.createElement("button", {
       key: item.id,
       type: "button",
@@ -34296,16 +34417,17 @@ const RhythmTapTest = ({
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
-      const opened = Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id => RHYTHM_DIFFICULTY_UNLOCK_BY[id] === difficulty.id && rhythmChartPlayable(song, id));
-      if (!opened) return null;
+      const openedIds = RHYTHM_DEMO_DIFFICULTY_IDS.filter(id => rhythmDifficultyUnlockRequirement(id, song.songId) === difficulty.id && rhythmChartPlayable(song, id));
+      if (!openedIds.length) return null;
+      const opened = openedIds.join('・');
       return React.createElement("div", {
-        "data-rhythm-result-unlock": opened,
+        "data-rhythm-result-unlock": openedIds.join(','),
         className: "mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"
       }, React.createElement("b", {
         className: "block text-base font-black text-amber-100"
       }, "🔓 ", opened, " が解放されました！"), React.createElement("small", {
         className: "mt-0.5 block text-[10px] font-bold text-amber-200/90"
-      }, "この曲の ", opened, "（Lv.", song.difficulties[opened].level, "）を曲えらびで選べます"));
+      }, "この曲の ", openedIds.map(id => `${id}（Lv.${song.difficulties[id].level}）`).join('・'), " を曲えらびで選べます"));
     })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && React.createElement("div", {
       "data-rhythm-result-luck": true,
       className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"
@@ -44702,6 +44824,7 @@ function SettingsScreen({
   battleFxAutoLoad
 }) {
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  const assistantBubble = useAssistantBubbleState();
   if (battleSettingsOpen) {
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -44854,6 +44977,26 @@ function SettingsScreen({
   }, option.note)))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
   }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    "data-assistant-bubble-setting": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "助手のひとこと"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
+    key: option.id,
+    type: "button",
+    "data-assistant-bubble-mode": option.id,
+    "aria-pressed": assistantBubble.mode === option.id,
+    onClick: () => ASSISTANT_BUBBLE_STORE.setMode(option.id),
+    className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, option.label), React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold opacity-80"
+  }, option.note))))), React.createElement("div", {
     className: "border-t border-white/10 pt-6 space-y-3"
   }, React.createElement("div", {
     className: "text-center text-[10px] font-mono text-slate-400"
@@ -56857,6 +57000,74 @@ function HomeFriendRequestNotice({
     className: "min-h-[50px] rounded-2xl bg-rose-500 text-sm font-black text-white active:scale-95"
   }, "見にいく"))));
 }
+function HomeUpdateGuideBundle({
+  activeAssistant,
+  assistantBondLevelNow,
+  assistantCallStyle,
+  breederName,
+  selectedAssistantId,
+  updateGuideQueue,
+  openUpdateGuideDetail,
+  dismissUpdateGuideAll
+}) {
+  const who = activeAssistant;
+  const headline = n => {
+    const pages = typeof assistantNoticePagesFor === 'function' ? assistantNoticePagesFor(n, who && who.id) : Array.isArray(n.pages) ? n.pages : [];
+    const first = pages[0];
+    const text = typeof assistantNoticePageText === 'function' ? assistantNoticePageText(first) : String(first || '');
+    return assistantSpeakText(text, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId);
+  };
+  return React.createElement("div", {
+    "data-update-guide-bundle": true,
+    className: "fixed inset-0 flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 76000,
+      backgroundColor: 'rgba(2,6,23,.94)'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "新しいお知らせの一覧"
+  }, React.createElement("div", {
+    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+    style: {
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 56,
+    accent: who.accent,
+    expression: "happy"
+  }), React.createElement("div", {
+    className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white"
+  }, "新しいお知らせが", updateGuideQueue.length, "件あるよ♪ 読みたいものだけ「くわしく」で開いてね。")), React.createElement("div", {
+    className: "mt-3 space-y-2"
+  }, updateGuideQueue.map(n => React.createElement("div", {
+    key: n.id,
+    "data-update-guide-bundle-item": n.id,
+    className: "flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "text-[13px] font-black leading-snug text-pink-200"
+  }, n.title), React.createElement("div", {
+    className: "mt-0.5 truncate text-[10px] font-bold text-slate-400"
+  }, headline(n))), React.createElement("button", {
+    type: "button",
+    onClick: () => openUpdateGuideDetail(n.id),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950"
+  }, "くわしく")))), React.createElement("button", {
+    type: "button",
+    "data-update-guide-bundle-later": true,
+    onClick: dismissUpdateGuideAll,
+    className: "mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white"
+  }, "あとで読む"), React.createElement("p", {
+    className: "mt-2 text-center text-[10px] font-bold text-slate-500"
+  }, "更新履歴からいつでも読めます")));
+}
 function HomeUpdateGuideOverlay({
   activeAssistant,
   assistantBondLevelNow,
@@ -56866,8 +57077,21 @@ function HomeUpdateGuideOverlay({
   selectedAssistantId,
   setUpdateGuidePage,
   updateGuidePage,
-  updateGuideQueue
+  updateGuideQueue,
+  updateGuideDetail,
+  openUpdateGuideDetail,
+  dismissUpdateGuideAll
 }) {
+  if (updateGuideQueue.length >= 2 && !updateGuideDetail && !updateGuideQueue[0].debugPreview) return React.createElement(HomeUpdateGuideBundle, {
+    activeAssistant: activeAssistant,
+    assistantBondLevelNow: assistantBondLevelNow,
+    assistantCallStyle: assistantCallStyle,
+    breederName: breederName,
+    selectedAssistantId: selectedAssistantId,
+    updateGuideQueue: updateGuideQueue,
+    openUpdateGuideDetail: openUpdateGuideDetail,
+    dismissUpdateGuideAll: dismissUpdateGuideAll
+  });
   const notice = updateGuideQueue[0];
   const who = activeAssistant;
   const pages = typeof assistantNoticePagesFor === 'function' ? assistantNoticePagesFor(notice, who && who.id) : Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
@@ -72056,6 +72280,7 @@ function MonsterHeroGame() {
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
+  const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
@@ -77074,6 +77299,7 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      void ASSISTANT_BUBBLE_STORE.load();
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
       let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
@@ -82495,11 +82721,34 @@ function MonsterHeroGame() {
       await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     }
     setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
     setUpdateGuideQueue(queue => queue.slice(1));
     const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[current.id];
     if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
+  };
+  const openUpdateGuideDetail = id => {
+    setUpdateGuidePage(0);
+    setUpdateGuideQueue(queue => {
+      const picked = queue.find(n => n && n.id === id);
+      return picked ? [picked, ...queue.filter(n => n !== picked)] : queue;
+    });
+    setUpdateGuideDetail(true);
+  };
+  const dismissUpdateGuideAll = async () => {
+    const list = updateGuideQueue.filter(n => n && !n.debugPreview);
+    if (list.length > 0) {
+      const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, ...list.map(n => n.id)]), false);
+    }
+    for (const n of list) {
+      const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[n.id];
+      if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
+    }
+    setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
+    setUpdateGuideQueue([]);
   };
   const debugPlayUpdateGuide = async () => {
     const notice = availableUpdateNotices({
@@ -100392,7 +100641,10 @@ function MonsterHeroGame() {
       selectedAssistantId: selectedAssistantId,
       setUpdateGuidePage: setUpdateGuidePage,
       updateGuidePage: updateGuidePage,
-      updateGuideQueue: updateGuideQueue
+      updateGuideQueue: updateGuideQueue,
+      updateGuideDetail: updateGuideDetail,
+      openUpdateGuideDetail: openUpdateGuideDetail,
+      dismissUpdateGuideAll: dismissUpdateGuideAll
     }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length === 0 && RELEASE_FLAGS.friends === true && friendRequestInfo.count > 0 && friendNoticeDismissed !== (friendRequestInfo.ids || []).join(',') && React.createElement(HomeFriendRequestNotice, {
       activeAssistant: activeAssistant,
       count: friendRequestInfo.count,

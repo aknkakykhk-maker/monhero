@@ -25931,11 +25931,26 @@ const RHYTHM_DEMO_DIFFICULTY_LABELS=Object.freeze({
 // EXPERT以上は「同じ曲の1つ下の難易度をクリアしている」ことが条件(2026-09-05・ユーザー指示)。
 // 判定に使うのは既にある自己ベスト(mh_rhythm_best_v1)の clear だけで、新しい保存キーは足さない。
 const RHYTHM_DIFFICULTY_UNLOCK_BY=Object.freeze({EXPERT:'HARD', MASTER:'EXPERT'});
-// 解放に必要な1つ下の難易度id(いらない難易度はnull)。
-const rhythmDifficultyUnlockRequirement=difficultyId=>RHYTHM_DIFFICULTY_UNLOCK_BY[difficultyId]||null;
+// ★新曲は「HARDを1回クリアすれば、EXPERTとMASTERが一度に開く」(2026-10-09・社長の選択。改善部の提案 G5
+//   「MASTERだけ遊びたい人でも1曲ごとに2回の遠回り」)。いま入っている曲は、これまでどおり1段ずつ開く。
+//   新曲を足す人が書き忘れても新しい開き方になるよう、逆向きに「これまでの開き方の曲」をここで固定する
+//   (この一覧へは**曲を足さない**。2026-10-09 時点で RHYTHM_SONGS にあった曲すべて。公開前・確かめ用の曲も含む)。
+//   判定は自己ベストの clear だけで、新しい保存キーは足さない。すでに開いている曲の記録はそのまま
+const RHYTHM_DIFFICULTY_STEP_UNLOCK_SONG_IDS=Object.freeze(new Set([
+  'atsu_cup_theme_test','width_test','wide_width_test','end_flick_test','monster_note_test','monster_hero_theme_candidate','monster_hero_theme_candidate_v2',
+  'monster_hero_theme_candidate_v3','six_eternel_remix_beat','mf_ichika_mix','monster_hero','monster_hero_another','six_eternel_beat','six_eternel_remix',
+  'stay_with_me','kiki_issen','kaze_ga_soyogu','close_to_your_heart','eiki_boss_remix','pandora_boss_remix','dullahan','dullahan_clockwork','toriko',
+  '4u_hitasura','kindan_no_resistance','crossing_field','nothing_without_you','mou_hitotsu_no_sekai_e','senjou_no_shippuu','makutsu_no_senritsu',
+  'the_city_beneath_the_comets','freedom_dive','only_my_railgun','big_bridge_no_shitou','rising_hope','haruka','stay_with_me_short','kiki_issen_short',
+  'crazy_party_night','crazy_party_night_full','emerald_rush','wrath_of_the_thorn_king','monster','monster_short','anima','atsu_cup_theme_debug_short',
+]));
+const RHYTHM_DIFFICULTY_UNLOCK_BY_NEW_SONG=Object.freeze({EXPERT:'HARD', MASTER:'HARD'});
+const rhythmDifficultyUnlockTable=songId=>(songId&&!RHYTHM_DIFFICULTY_STEP_UNLOCK_SONG_IDS.has(songId)?RHYTHM_DIFFICULTY_UNLOCK_BY_NEW_SONG:RHYTHM_DIFFICULTY_UNLOCK_BY);
+// 解放に必要な難易度id(いらない難易度はnull)。songId を渡すと、その曲の開き方で答える(渡さなければ1段ずつのほう)
+const rhythmDifficultyUnlockRequirement=(difficultyId,songId='')=>rhythmDifficultyUnlockTable(songId)[difficultyId]||null;
 // 記録の形が壊れていても「解放されていない」に倒す(勝手に開けない)。
 const rhythmDifficultyUnlocked=(songId,difficultyId,bestRecords)=>{
-  const required=RHYTHM_DIFFICULTY_UNLOCK_BY[difficultyId];
+  const required=rhythmDifficultyUnlockTable(songId)[difficultyId];
   if(!required)return true;
   const bySong=bestRecords&&typeof bestRecords==='object'?bestRecords[songId]:null;
   const record=bySong&&typeof bySong==='object'?bySong[required]:null;

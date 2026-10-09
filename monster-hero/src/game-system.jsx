@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9446a6b6e7c2b6fd
+// generated-sha256: dc35ab746da002e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 00:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 00:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10983,12 +10983,20 @@ const availableUpdateNotices = ({ debug=false, nowMs=null }={}) =>
     .filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string'
       && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id)
       && (debug ? notice.debugOnly === true : notice.debugOnly !== true)));
+// ★実装予告(supersededBy を持つ告知)は、本物の告知が出せる状態(notices に入っている)なら出さない。
+//   もう出ているものの「近日実装」を読まされないため(2026-10-10・ユーザー指示)。
+//   出さない予告は既読の列へ足すだけ(保存キーの意味は変えない)。更新履歴には残る
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
-  const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
+  const all = Array.isArray(notices) ? notices : [];
+  const openIds = new Set(all.map(notice => notice && notice.id));
+  const isSuperseded = notice => !!notice && typeof notice.supersededBy === 'string' && openIds.has(notice.supersededBy);
+  const unseenAll = all.filter(notice => !seen.includes(notice.id));
+  const superseded = unseenAll.filter(isSuperseded);
+  const unseen = unseenAll.filter(notice => !isSuperseded(notice));
   return {
     queue: unseen.slice(0, UPDATE_NOTICE_LOGIN_LIMIT),
-    seen: normalizeSeenUpdateNoticeIds([...seen, ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)]),
+    seen: normalizeSeenUpdateNoticeIds([...seen, ...superseded.map(notice => notice.id), ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)]),
   };
 };
 const localCalendarDate = (now = new Date()) => {
@@ -11389,6 +11397,78 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if(b.t==='data'){const rows=helpDataRows(b.id);if(rows.length===0)return null;return(<div key={i}><div className="text-[10px] font-black mb-1 tracking-wider" style={{color:accent}}>{HELP_DATA_TITLES[b.id]||''}</div><div className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{r[1]}</span></div>))}</div></div>);}
   return <p key={i} className="text-[12px] text-slate-200 leading-relaxed">{b.text}</p>;
 });
+// ---- 助手のひとことを出す回数(2026-10-10・改善 G6「助手の吹き出しが、ほぼ全画面に出たまま」→ 社長が選択肢1) ----
+//   'ALWAYS' … いつも(これまでどおり。既定。保存が無い既存ユーザーも同じ見え方)
+//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝5:00で戻る)
+//   'OFF'    … 出さない
+// ★止めるのは「画面ごとの決まったひとこと」だけ。次は設定にかかわらず出す(大事な案内まで消さないため):
+//   ・文を直接渡す吹き出し(line=。はじめての名前決めの案内・ヘルプ画面)と、最初から開く吹き出し(defaultOpen)
+//   ・一度きりの案内の場面(名前が …Intro で終わるもの・quickRhythmBackground・rhythmWeeklyEvent)
+//   ・HOMEの助手(scene="home"。お知らせや話しかけの入口)
+//   助手の告知(アップデートのお知らせ)はこの部品を使っていないので、この設定の影響を受けない
+// 保存は新しいキーだけ(既存の mh_* は触らない・CLAUDE.md ⑦)。読むときは必ず正規化する
+const ASSISTANT_BUBBLE_MODES = ['ALWAYS', 'DAILY', 'OFF'];
+const normalizeAssistantBubbleMode = (value) => (ASSISTANT_BUBBLE_MODES.includes(String(value)) ? String(value) : 'ALWAYS');
+const ASSISTANT_BUBBLE_MODE_KEY = 'mh_assistant_bubble_mode_v1';
+const ASSISTANT_BUBBLE_SEEN_KEY = 'mh_assistant_bubble_seen_v1';
+const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([
+  { id: 'ALWAYS', label: 'いつも', note: 'これまでどおり' },
+  { id: 'DAILY', label: '1日1回', note: '同じ画面は1日1回' },
+  { id: 'OFF', label: '出さない', note: 'ひとことを隠す' },
+]);
+const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
+const assistantBubbleAlwaysShown = (scene) => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
+// 日の区切りは朝5:00(日本時間)。モンヒロビートの相棒の調子と同じ
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+// 見た場面の記録 { day, scenes:[場面のキー] }。日が変わったもの・壊れたものは空にする
+const normalizeAssistantBubbleSeen = (raw, day) => (raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes))
+  ? { day, scenes: raw.scenes.filter((x) => typeof x === 'string').slice(0, 300) }
+  : { day, scenes: [] };
+const ASSISTANT_BUBBLE_STORE = (() => {
+  let state = { mode: 'ALWAYS', seen: null, loaded: false };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach((fn) => { try { fn(state); } catch (_) { /* 画面側の失敗で止めない */ } });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let mode = 'ALWAYS', seen = null;
+        try { mode = normalizeAssistantBubbleMode(await storeGet(ASSISTANT_BUBBLE_MODE_KEY, 'ALWAYS', false)); } catch (_) { /* 読めなければ「いつも」 */ }
+        try { seen = await storeGet(ASSISTANT_BUBBLE_SEEN_KEY, null, false); } catch (_) { /* 読めなければ空 */ }
+        state = { mode, seen, loaded: true };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    setMode(next) {
+      state = { ...state, mode: normalizeAssistantBubbleMode(next) };
+      emit();
+      void storeSet(ASSISTANT_BUBBLE_MODE_KEY, state.mode).catch(() => {});
+    },
+    // 見たことだけ覚える(知らせない。いま出ている吹き出しを途中で消さないため)
+    markSeen(scene) {
+      const day = assistantBubbleDayKey();
+      const cur = normalizeAssistantBubbleSeen(state.seen, day);
+      if (!scene || cur.scenes.includes(scene)) return;
+      const next = { day, scenes: [...cur.scenes, scene] };
+      state = { ...state, seen: next };
+      void storeSet(ASSISTANT_BUBBLE_SEEN_KEY, next).catch(() => {});
+    },
+  };
+})();
+const useAssistantBubbleState = () => {
+  const [state, setState] = useState(() => ASSISTANT_BUBBLE_STORE.get());
+  useEffect(() => {
+    const off = ASSISTANT_BUBBLE_STORE.subscribe(setState);
+    setState(ASSISTANT_BUBBLE_STORE.get());
+    void ASSISTANT_BUBBLE_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 // 助手の吹き出し。どの画面でもこれ1つ置けばよい。
 //   scene       … data/assistants.js の ASSISTANT_SCENES のキー(これだけで完結する)
 //   line/detail … sceneを使わず直接セリフと詳細を渡したいとき
@@ -11398,6 +11478,19 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
 const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false }) => {
   const [open, setOpen] = useState(defaultOpen);
+  // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
+  const bubbleSetting = useAssistantBubbleState();
+  const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
+  const bubbleDecisionRef = useRef(null);
+  if (!bubbleExempt && bubbleSetting.loaded && bubbleDecisionRef.current?.key !== `${scene}|${bubbleSetting.mode}`) {
+    const mode = bubbleSetting.mode;
+    const seen = normalizeAssistantBubbleSeen(ASSISTANT_BUBBLE_STORE.get().seen, assistantBubbleDayKey());
+    bubbleDecisionRef.current = { key: `${scene}|${mode}`, hide: mode === 'OFF' || (mode === 'DAILY' && seen.scenes.includes(scene)) };
+  }
+  const bubbleHidden = !bubbleExempt && !!bubbleDecisionRef.current?.hide;
+  useEffect(() => {
+    if (!bubbleExempt && bubbleSetting.loaded && bubbleSetting.mode === 'DAILY' && !bubbleHidden) ASSISTANT_BUBBLE_STORE.markSeen(scene);
+  }, [scene, bubbleSetting.loaded, bubbleSetting.mode, bubbleHidden, bubbleExempt]);
   const sceneDef = assistantSceneById(scene);
   // 親密度。呼び方と、候補に入るセリフがこれで変わる
   const bond = useAssistantBond();
@@ -11460,6 +11553,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const hasDetail = !!((paragraphs && paragraphs.length) || topic);
   const Wrapper = hasDetail ? 'button' : 'div';
   const size = faceSize != null ? faceSize : (compact ? 48 : 88);
+  if (bubbleHidden) return null;
   return (
     <>
       <div className="w-full flex items-end gap-2">
@@ -18660,7 +18754,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             const tone=rhythmDifficultyTone(item.id);
             const open=unlocked(item);
             const on=!!difficulty&&item.id===difficulty.id;
-            const need=rhythmDifficultyUnlockRequirement(item.id);
+            const need=rhythmDifficultyUnlockRequirement(item.id,song.songId);
             // 高さは固定(h-[66px])。ロック中だけ「◯◯で解放」が2行になり、
             // その曲だけボタンが高くなって下の行までずれていた。
             return <button key={item.id} type="button" data-rhythm-difficulty={item.id} aria-pressed={on}
@@ -21319,7 +21413,7 @@ scheduleTick();};
     それまでは戻って難易度ボタンを見ないと気づけなかった。
     ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
-{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_DEMO_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -28684,6 +28778,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
+  const assistantBubble = useAssistantBubbleState();
   if (battleSettingsOpen) {
     return (
       <div data-mh-screen data-battle-settings-page className={SCREEN_SHELL_CLASS}>
@@ -28775,6 +28871,23 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             ))}
           </div>
           <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+        </div>
+        {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
+            止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
+        <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+          <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
+              <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
+                aria-pressed={assistantBubble.mode === option.id}
+                onClick={() => ASSISTANT_BUBBLE_STORE.setMode(option.id)}
+                className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                <span className="block">{option.label}</span>
+                <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+              </button>
+            ))}
+          </div>
         </div>
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
@@ -34822,10 +34935,31 @@ function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLate
     </div>);
 }
 
+// 起動時のお知らせが2件以上たまっているとき、見出しの一覧を1枚だけ出す(2026-10-10・ユーザー指示「起動時のお知らせを1枚にまとめる」)。
+// 読みたい件だけ「くわしく」で開く(開いた件は今までどおりのページ送り)。「あとで読む」はその場の全件を既読にする(更新履歴にはいつでも残る)
+function HomeUpdateGuideBundle({ activeAssistant, assistantBondLevelNow, assistantCallStyle, breederName, selectedAssistantId, updateGuideQueue, openUpdateGuideDetail, dismissUpdateGuideAll }) {
+const who=activeAssistant;
+const headline=n=>{const pages=(typeof assistantNoticePagesFor==='function')?assistantNoticePagesFor(n,who&&who.id):(Array.isArray(n.pages)?n.pages:[]);const first=pages[0];const text=(typeof assistantNoticePageText==='function')?assistantNoticePageText(first):String(first||'');return assistantSpeakText(text,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId);};
+return(
+  <div data-update-guide-bundle className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="新しいお知らせの一覧">
+    <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
+      <div className="flex items-center gap-2"><AssistantFace who={who} size={56} accent={who.accent} expression="happy"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white">新しいお知らせが{updateGuideQueue.length}件あるよ♪ 読みたいものだけ「くわしく」で開いてね。</div></div>
+      <div className="mt-3 space-y-2">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
+        <div className="min-w-0 flex-1"><div className="text-[13px] font-black leading-snug text-pink-200">{n.title}</div><div className="mt-0.5 truncate text-[10px] font-bold text-slate-400">{headline(n)}</div></div>
+        <button type="button" onClick={()=>openUpdateGuideDetail(n.id)} className="min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950">くわしく</button>
+      </div>)}</div>
+      <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
+      <p className="mt-2 text-center text-[10px] font-bold text-slate-500">更新履歴からいつでも読めます</p>
+    </div>
+  </div>);
+}
 function HomeUpdateGuideOverlay({
   activeAssistant, assistantBondLevelNow, assistantCallStyle, breederName, finishUpdateGuide,
   selectedAssistantId, setUpdateGuidePage, updateGuidePage, updateGuideQueue,
+  updateGuideDetail, openUpdateGuideDetail, dismissUpdateGuideAll,
 }) {
+if(updateGuideQueue.length>=2&&!updateGuideDetail&&!updateGuideQueue[0].debugPreview)
+  return <HomeUpdateGuideBundle activeAssistant={activeAssistant} assistantBondLevelNow={assistantBondLevelNow} assistantCallStyle={assistantCallStyle} breederName={breederName} selectedAssistantId={selectedAssistantId} updateGuideQueue={updateGuideQueue} openUpdateGuideDetail={openUpdateGuideDetail} dismissUpdateGuideAll={dismissUpdateGuideAll}/>;
 const notice=updateGuideQueue[0];const who=activeAssistant;
 // ★選んでいる助手が自分の口調で話す(2026-09-11・ユーザー指示)。
 //   その助手のセリフが用意されていない告知は、今までどおり更新履歴の本文をそのまま読む。
@@ -44206,6 +44340,8 @@ function MonsterHeroGame() {
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
+  // 起動時のお知らせが2件以上のとき、一覧(まとめ)から「くわしく」で1件を開いている間だけ true(保存しない)
+  const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
@@ -49423,6 +49559,8 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      // 助手のひとことの出し方も先に読んでおく(最初に開いた画面で、出てから消えるちらつきを防ぐ)
+      void ASSISTANT_BUBBLE_STORE.load();
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
       let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
@@ -53794,12 +53932,34 @@ function MonsterHeroGame() {
       await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     }
     setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
     setUpdateGuideQueue(queue => queue.slice(1));
     // 同じ機能の解放の案内が続けて出ないようにする(いま解放済みの人だけ)
     const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[current.id];
     if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
+  };
+  // まとめの一覧から1件を開く。開いた件を先頭へ持ってくる(finishUpdateGuide は先頭を既読にする)
+  const openUpdateGuideDetail = (id) => {
+    setUpdateGuidePage(0);
+    setUpdateGuideQueue(queue => { const picked = queue.find(n => n && n.id === id); return picked ? [picked, ...queue.filter(n => n !== picked)] : queue; });
+    setUpdateGuideDetail(true);
+  };
+  // 「あとで読む」。その場の全件を既読の列へ足して閉じる(保存キーの意味は変えず、足すだけ。更新履歴にはいつでも残る)
+  const dismissUpdateGuideAll = async () => {
+    const list = updateGuideQueue.filter(n => n && !n.debugPreview);
+    if (list.length > 0) {
+      const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, ...list.map(n => n.id)]), false);
+    }
+    for (const n of list) {
+      const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[n.id];
+      if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
+    }
+    setUpdateGuidePage(0);
+    setUpdateGuideDetail(false);
+    setUpdateGuideQueue([]);
   };
   const debugPlayUpdateGuide = async () => {
     const notice = availableUpdateNotices({debug:true})[0];
@@ -64226,6 +64386,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           finishUpdateGuide={finishUpdateGuide} selectedAssistantId={selectedAssistantId}
           setUpdateGuidePage={setUpdateGuidePage} updateGuidePage={updateGuidePage}
           updateGuideQueue={updateGuideQueue}
+          updateGuideDetail={updateGuideDetail} openUpdateGuideDetail={openUpdateGuideDetail} dismissUpdateGuideAll={dismissUpdateGuideAll}
         />
       )}
 
