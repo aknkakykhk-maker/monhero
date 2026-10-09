@@ -469,8 +469,9 @@ async function playTurn(s, b0, mem, log, stats) {
       const pool = blocked.length ? blocked : b.hand.filter((c) => !c.discard && !c.selected && !/guard/.test(c.type)).sort((a, z) => z.cost - a.cost);
       const n = Math.min(left, b.picked > 0 ? blocked.length : Math.max(1, blocked.length));
       for (const c of pool.slice(0, n)) {
-        if (await discardCard(s, c)) { stats.discards += 1; picks.push({ kind: 'discard', label: c.label, why: 'ガッツが足りず使えないので捨てて、ガッツを戻す' }); }
-        if (process.env.PLAYBOT_DEBUG) console.log(`    [判断] W${b.wave} T${b.turn} discard ${c.label} … ガッツが足りず使えないので捨てて、ガッツを戻す`);
+        const done = await discardCard(s, c);
+        if (done) { stats.discards += 1; picks.push({ kind: 'discard', label: c.label, why: 'ガッツが足りず使えないので捨てて、ガッツを戻す' }); }
+        if (process.env.PLAYBOT_DEBUG) console.log(`    [判断] W${b.wave} T${b.turn} discard ${c.label} … ${done ? 'ガッツが足りず使えないので捨てて、ガッツを戻す' : '捨てられなかった(ドラッグが効かない)'}`);
       }
       break;
     }
@@ -504,14 +505,20 @@ async function discardCard(s, card) {
   }, card.i);
   if (!pos) return false;
   const { mouse } = s.page;
-  await mouse.move(pos.from.x, pos.from.y);
-  await mouse.down();
-  await mouse.move(pos.from.x, pos.from.y - 40, { steps: 4 });
-  await mouse.move(pos.to.x, pos.to.y, { steps: 10 });
-  await s.wait(250);
-  await mouse.up();
-  await s.wait(700);
-  return true;
+  // ★ドラッグが効かないことがある(2026-10-10: 手札が支援だけのターンに1枚捨てたつもりで実行できず、打ち切り)。
+  //   捨てた印(data-card-discard)が付いたかを確かめ、付かなければもう1回だけゆっくりドラッグする
+  const marked = () => s.page.evaluate((i) => { const el = document.querySelector(`[data-hand-card="${i}"]`); return !el || el.hasAttribute('data-card-discard'); }, card.i);
+  for (let k = 0; k < 2; k++) {
+    await mouse.move(pos.from.x, pos.from.y);
+    await mouse.down();
+    await mouse.move(pos.from.x, pos.from.y - 40, { steps: 4 + k * 6 });
+    await mouse.move(pos.to.x, pos.to.y, { steps: 10 + k * 10 });
+    await s.wait(250 + k * 300);
+    await mouse.up();
+    await s.wait(700);
+    if (await marked()) return true;
+  }
+  return false;
 }
 
 // ---------- WAVE の合間 ----------
