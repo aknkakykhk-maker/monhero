@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 28847e022a6bd57e
+// generated-sha256: 4be895d0e63f8b91
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 13:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 13:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -40675,6 +40675,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-tile[class*="mhbt-d-"] .mhbt-mark{color:var(--d-mark,rgba(255,255,255,.2))}
 .mhbt-tile[class*="mhbt-d-"]::after{animation-duration:var(--d-shine,4.6s);background:linear-gradient(90deg,transparent,var(--d-sheen,rgba(255,255,255,.35)),transparent)}
 .mhbt-tile.dark{color:#fff}
+.mhbt-tile[class*="mhbt-d-"] .mhbt-name{color:var(--d-name,#0f172a)}
 .mhbt-tile.dark .mhbt-eyebrow{color:var(--d-eyebrow,rgba(255,255,255,.7))}
 .mhbt-tile.dark .mhbt-sub,.mhbt-tile.dark .mhbt-score small,.mhbt-tile.dark .mhbt-note{color:rgba(255,255,255,.78)}
 .mhbt-tile.dark .mhbt-name{text-shadow:0 0 14px var(--d-ring,transparent),0 2px 0 rgba(0,0,0,.4)}
@@ -40683,21 +40684,24 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-tile.dark .mhbt-reward{background:rgba(0,0,0,.5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
 .mhbt-tile.dark .mhbt-pb{color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
 .mhbt-tile.dark .mhbt-go{background:linear-gradient(135deg,#fff,var(--d-go,#e2e8f0));color:#0f172a}
-.mhbt-d-Beginner{--d-bg:linear-gradient(150deg,#f0fdf4,#bbf7d0 45%,#86efac);--d-mark:rgba(22,101,52,.12);--d-shine:6s}
-.mhbt-d-Easy{--d-bg:linear-gradient(150deg,#ecfeff,#a5f3fc 45%,#67e8f9);--d-mark:rgba(14,116,144,.13);--d-shine:5.6s}
-.mhbt-d-Normal{--d-bg:linear-gradient(150deg,#eff6ff,#93c5fd 42%,#3b82f6);--d-mark:rgba(255,255,255,.22);--d-shine:5.2s;--d-ring:rgba(59,130,246,.5);--d-ringw:1px}
-.mhbt-d-Hard{--d-bg:linear-gradient(150deg,#fff7ed,#fdba74 38%,#f97316 78%,#c2410c);--d-mark:rgba(255,255,255,.26);--d-shine:4.6s;--d-ring:rgba(249,115,22,.65);--d-ringw:2px;--d-deep:rgba(154,52,18,.45)}
-.mhbt-d-Expert{--d-bg:linear-gradient(150deg,#f87171,#dc2626 45%,#7f1d1d);--d-mark:rgba(255,255,255,.16);--d-shine:4s;--d-ring:rgba(254,202,202,.7);--d-ringw:2px;--d-deep:rgba(69,10,10,.6);--d-go:#fecaca}
-.mhbt-d-Master{--d-bg:linear-gradient(150deg,#c084fc,#7e22ce 45%,#3b0764);--d-mark:rgba(255,255,255,.16);--d-shine:3.6s;--d-ring:rgba(233,213,255,.75);--d-ringw:2px;--d-deep:rgba(30,6,60,.6);--d-go:#e9d5ff}
-.mhbt-d-GrandMaster{--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(251,191,36,.28),transparent 60%),linear-gradient(150deg,#5b21b6,#2e1065 50%,#14072b);--d-mark:rgba(251,191,36,.18);--d-shine:3.2s;--d-ring:#fbbf24;--d-ringw:3px;--d-deep:rgba(10,3,24,.7);--d-eyebrow:#fcd34d;--d-sheen:rgba(253,230,138,.45);--d-go:#fde68a}
-.mhbt-d-Hell{--d-bg:radial-gradient(100% 55% at 50% 105%,rgba(220,38,38,.65),transparent 65%),radial-gradient(60% 40% at 80% 0%,rgba(127,29,29,.6),transparent 70%),linear-gradient(170deg,#2a0606,#0c0101 60%,#000);--d-mark:rgba(248,113,113,.2);--d-shine:2.8s;--d-ring:#dc2626;--d-ringw:3px;--d-eyebrow:#fca5a5;--d-sheen:rgba(248,113,113,.4);--d-go:#fca5a5}
-.mhbt-d-Legend{--d-bg:linear-gradient(150deg,#fef3c7,#fbbf24 32%,#f59e0b 62%,#92400e);--d-mark:rgba(255,255,255,.4);--d-shine:2.4s;--d-ring:rgba(255,255,255,.85);--d-ringw:3px;--d-deep:rgba(120,53,15,.35);--d-sheen:rgba(255,255,255,.7)}
+.mhbt-d-Beginner{--d-name:#14532d;--d-bg:linear-gradient(150deg,#f0fdf4,#bbf7d0 45%,#86efac);--d-mark:rgba(22,101,52,.12);--d-shine:6s}
+.mhbt-d-Easy{--d-name:#155e75;--d-bg:linear-gradient(150deg,#ecfeff,#a5f3fc 45%,#67e8f9);--d-mark:rgba(14,116,144,.13);--d-shine:5.6s}
+.mhbt-d-Normal{--d-name:#1e3a8a;--d-bg:linear-gradient(150deg,#eff6ff,#93c5fd 42%,#3b82f6);--d-mark:rgba(255,255,255,.22);--d-shine:5.2s;--d-ring:rgba(59,130,246,.5);--d-ringw:1px}
+.mhbt-d-Hard{--d-name:#7c2d12;--d-bg:linear-gradient(150deg,#fff7ed,#fdba74 38%,#f97316 78%,#c2410c);--d-mark:rgba(255,255,255,.26);--d-shine:4.6s;--d-ring:rgba(249,115,22,.65);--d-ringw:2px;--d-deep:rgba(154,52,18,.45)}
+.mhbt-d-Expert{--d-name:#fee2e2;--d-bg:linear-gradient(150deg,#f87171,#dc2626 45%,#7f1d1d);--d-mark:rgba(255,255,255,.16);--d-shine:4s;--d-ring:rgba(254,202,202,.7);--d-ringw:2px;--d-deep:rgba(69,10,10,.6);--d-go:#fecaca}
+.mhbt-d-Master{--d-name:#f3e8ff;--d-bg:linear-gradient(150deg,#c084fc,#7e22ce 45%,#3b0764);--d-mark:rgba(255,255,255,.16);--d-shine:3.6s;--d-ring:rgba(233,213,255,.75);--d-ringw:2px;--d-deep:rgba(30,6,60,.6);--d-go:#e9d5ff}
+.mhbt-d-GrandMaster{--d-name:#fde68a;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(251,191,36,.28),transparent 60%),linear-gradient(150deg,#5b21b6,#2e1065 50%,#14072b);--d-mark:rgba(251,191,36,.18);--d-shine:3.2s;--d-ring:#fbbf24;--d-ringw:3px;--d-deep:rgba(10,3,24,.7);--d-eyebrow:#fcd34d;--d-sheen:rgba(253,230,138,.45);--d-go:#fde68a}
+.mhbt-d-Hell{--d-name:#fecaca;--d-bg:radial-gradient(100% 55% at 50% 105%,rgba(220,38,38,.65),transparent 65%),radial-gradient(60% 40% at 80% 0%,rgba(127,29,29,.6),transparent 70%),linear-gradient(170deg,#2a0606,#0c0101 60%,#000);--d-mark:rgba(248,113,113,.2);--d-shine:2.8s;--d-ring:#dc2626;--d-ringw:3px;--d-eyebrow:#fca5a5;--d-sheen:rgba(248,113,113,.4);--d-go:#fca5a5}
+.mhbt-d-Legend{--d-name:#78350f;--d-bg:linear-gradient(150deg,#fef3c7,#fbbf24 32%,#f59e0b 62%,#92400e);--d-mark:rgba(255,255,255,.4);--d-shine:2.4s;--d-ring:rgba(255,255,255,.85);--d-ringw:3px;--d-deep:rgba(120,53,15,.35);--d-sheen:rgba(255,255,255,.7)}
 .mhbt-d-Legend::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(244,114,182,.7),rgba(250,204,21,.5),rgba(52,211,153,.6),rgba(96,165,250,.7),rgba(192,132,252,.7),rgba(244,114,182,.7));background-size:300% 100%;mix-blend-mode:overlay;opacity:.9;animation:mhbtRainbow 6s linear infinite}
-.mhbt-d-EXTREME{--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(232,121,249,.45),transparent 62%),linear-gradient(160deg,#4a044e,#1e0322 60%,#0a010c);--d-mark:rgba(240,171,252,.22);--d-shine:2.6s;--d-ring:#e879f9;--d-ringw:3px;--d-eyebrow:#f5d0fe;--d-go:#f5d0fe}
-.mhbt-d-NIGHTMARE{--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:3px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
-.mhbt-d-CHAOS{--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:3px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
-.mhbt-d-ULTIMATE{--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:3px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
-.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM{--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:3px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-EXTREME{--d-name:#f5d0fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(232,121,249,.45),transparent 62%),linear-gradient(160deg,#4a044e,#1e0322 60%,#0a010c);--d-mark:rgba(240,171,252,.22);--d-shine:2.6s;--d-ring:#e879f9;--d-ringw:4px;--d-eyebrow:#f5d0fe;--d-go:#f5d0fe}
+.mhbt-d-NIGHTMARE{--d-name:#c7d2fe;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:4px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
+.mhbt-d-CHAOS{--d-name:#fbcfe8;--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:4px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
+.mhbt-d-ULTIMATE{--d-name:#f1f5f9;--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:4px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM{--d-name:#fef08a;--d-name:#99f6e4;--d-deep:rgba(250,204,21,.25);--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:5px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+.mhbt-d-GOD{--d-name:#fffbeb;--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.55),transparent 55%),radial-gradient(80% 50% at 50% 100%,rgba(250,204,21,.45),transparent 65%),linear-gradient(160deg,#78350f,#1c1003 55%,#000);--d-ring:#fff7d6;--d-ringw:6px;--d-shine:1.5s;--d-sheen:rgba(255,255,255,.7);--d-mark:rgba(255,247,214,.28)}
+.mhbt-d-RAGNAROK{--d-name:#fed7aa;--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(239,68,68,.75),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(250,204,21,.45),transparent 65%),linear-gradient(170deg,#3b0505,#120000 55%,#000);--d-ring:#f59e0b;--d-ringw:6px;--d-shine:1.3s;--d-sheen:rgba(254,215,170,.65);--d-mark:rgba(252,165,165,.28);--d-eyebrow:#fed7aa;--d-go:#fed7aa}
+.mhbt-d-HELHEIM{--d-bg:radial-gradient(90% 60% at 50% 100%,rgba(45,212,191,.55),transparent 62%),radial-gradient(70% 45% at 50% 0%,rgba(167,139,250,.45),transparent 65%),linear-gradient(170deg,#042f2e,#020617 55%,#000);--d-ring:#5eead4;--d-ringw:6px;--d-shine:1.2s;--d-sheen:rgba(204,251,241,.6);--d-mark:rgba(153,246,228,.26);--d-eyebrow:#99f6e4;--d-go:#ccfbf1}
 @keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
 @media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
 .mhbt-go::after{content:" ▶";font-size:11px;font-style:normal}
@@ -60357,7 +60361,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     極限チャレンジはチャレンジの極限タブとして入れ込んだので、
                     ここから通常の9段階へ戻れないと行き来できない(2026-09-19 ユーザー指示)。
                     どちらの画面も同じ横カルーセルなので、遊ぶ側にはタブの切り替えに見える */}
-                <div data-difficulty-tabs className="flex gap-1.5 w-full shrink-0 mb-1">
+                <div data-difficulty-tabs className="mhbs-tabs grid-cols-2 w-full shrink-0 mb-1.5">
                   {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
                     const on=tabId===DIFFICULTY_TAB_EXTREME;
                     return <button key={tabId} aria-pressed={on} onClick={()=>{
@@ -60365,20 +60369,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
                       setBattleMode(BATTLE_MODE_CHALLENGE);
                       setGameState('BATTLE_DIFFICULTY_SELECT');
-                    }} className={`flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${on?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-slate-700 text-slate-400'}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{on?difficulties.length:Object.keys(DIFFICULTY_SETTINGS).length}</span></button>;
+                    }} className={`mhbs-tab text-[12px] active:scale-95 ${on?'on x':''}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{on?difficulties.length:Object.keys(DIFFICULTY_SETTINGS).length}</span></button>;
                   })}
                 </div>
-                <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
+                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度を選択</div>
                 <div className="relative shrink-0">
-                  <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
+                  <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
-                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?theme.accent:`rgba(${theme.rgb},.28)`,background:previewable?theme.background:`linear-gradient(180deg,rgba(${theme.rgb},.10),#0d142b)`,boxShadow:active?`0 0 ${theme.shadowBlur}px rgba(${theme.rgb},${theme.glow})`:'none'}}>
-                        <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
-                        <h3 className="text-center text-lg font-black leading-tight" style={{color:theme.accent,textShadow:active?`0 0 10px rgba(${theme.rgb},${theme.titleGlow})`:'none'}}>{setting.label}</h3>
-                        <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
-                          <small className="block text-[8px] text-slate-400 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
-                          <b className="block text-right text-base leading-tight" style={{color:theme.accent}}>{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
+                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'} ${previewable?'':'dim'}`} style={{'--acc':theme.accent}}>
+                        <span aria-hidden="true" className="mhbt-mark">{setting.label}</span>
+                        <div className="mhbt-eyebrow">EXTREME DIFFICULTY</div>
+                        <h3 className="mhbt-name truncate text-[22px]">{setting.label}</h3>
+                        <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]">
+                          <small className="block text-[8px] text-white/70 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
+                          <b className="block text-right text-base italic leading-tight text-white">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
                           <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':'選択できません'}</span>
                         </div>
                         {previewable?<>
@@ -60389,21 +60394,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               INFINITYのように数が増えても、カードの高さと文字の大きさを変えずに済む */}
                           <div data-extreme-special-rules={setting.id} className="mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border px-2 text-center" style={{borderColor:`rgba(${theme.rgb},.58)`,backgroundColor:`rgba(${theme.rgb},.14)`}}><b className="text-[10px] leading-tight text-amber-300">⚠ {setting.label} {extremeRuleSummaryText(setting.id)}</b></div>
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
-                        <div data-extreme-card-actions className="grid gap-1.5 mt-auto pt-2 pb-1">
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <button data-extreme-rule-detail-open={setting.id} disabled={!previewable} onClick={()=>setExtremeRuleDetail(setting.id)} className="min-h-[38px] rounded-xl border font-black text-xs disabled:opacity-50" style={{backgroundColor:`rgba(${theme.rgb},.18)`,borderColor:`rgba(${theme.rgb},.55)`,color:theme.accent}}>{previewable?'ルール詳細':'ルール ？？？'}</button>
-                            <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
+                        <div data-extreme-card-actions className="grid grid-cols-[minmax(0,1fr)] gap-1.5 mt-auto pt-2 pb-1">
+                          <div className="flex min-w-0 gap-1.5">
+                            <button data-extreme-rule-detail-open={setting.id} disabled={!previewable} onClick={()=>setExtremeRuleDetail(setting.id)} className="mhbt-pb disabled:opacity-50">{previewable?'ルール詳細':'ルール ？？？'}</button>
+                            <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="mhbt-pb disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
                           </div>
                           {/* 極限は難易度そのものが別表なので、通常の難易度は Normal のまま触らない。
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
                               その周回は今までどおり報酬もクリア記録も保存されない(正式プレイと混ざらない) */}
-                          <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');advanceRunStage('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm disabled:bg-slate-800 disabled:text-slate-500" style={previewable?{background:theme.action,color:theme.actionText,boxShadow:active?`0 0 18px rgba(${theme.rgb},${theme.actionGlow})`:'none'}:undefined}>{previewable?'この難易度で挑戦':'選択できません'}</button>
-                          <button disabled={!setting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
+                          <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');advanceRunStage('PICK_HERO');}} className="mhbt-go w-full disabled:opacity-40">{previewable?'この難易度で挑戦':'選択できません'}</button>
+                          <button disabled={!setting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="mhbt-pb w-full flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="whitespace-nowrap">🏆 {setting.label}のランキング</span></button>
                         </div>
                       </article>
                     );})}
                   </div>
-                  <button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
+                  <button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="mhbs-arrow absolute right-0 top-[42%] z-20 disabled:opacity-20"><ChevronRight size={18}/></button>
                 </div>
                 <div data-extreme-page-dots className="flex justify-center gap-1 pt-1.5 pb-1">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
                 <div data-extreme-assistant className="shrink-0 pt-2 pb-1"><AssistantBubble key={extremeDifficultyAssistantScene} scene={extremeDifficultyAssistantScene} accent="#e879f9" faceSize={56} compact/></div>
