@@ -2,7 +2,7 @@
 
 社長: ユーザー / まとめ: 統括部長:モンヒロくん / 2026-10-09 につくった(社長「遊び心も取り込んで組織化をちゃんと作り上げたい」)
 
-社長が見るのは「モンヒロ社 社長室」(https://claude.ai/artifact/LqxjT2ydSgcpsh53BYidsX)1ページ。決めごとは [社則](RULES.md)、成績は [成績表](SCOREBOARD.md)、いまの仕事は [頼みごとの台帳](REQUESTS.md)、日々の報告は `reports/<日付>/`(日報)と `reports/weekly/`(週報)。
+社長が見るのは「モンヒロ社 社長室」(https://claude.ai/artifact/DWfz9ngj3ybfvSUTHDd1YP)1ページ。決めごとは [社則](RULES.md)、成績は [成績表](SCOREBOARD.md)、いまの仕事は [頼みごとの台帳](REQUESTS.md)、日々の報告は `reports/<日付>/`(日報)と `reports/weekly/`(週報)。
 
 ## 組織図
 
