@@ -68,53 +68,19 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 07:57 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/10 08:00 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>3</b><span>社長の判断待ち(うち提案 3)</span></a>
+    <a class="count warn" href="#decide"><b>2</b><span>社長の判断待ち(うち提案 2)</span></a>
     <a class="count" href="#work"><b>5</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>37</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>38</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
     <h2>社長の判断待ち(提案・質問)</h2>
     <p class="note">部からの提案は「提案」、進め方の確認は「質問」の札で出ます。決めたら、チャットで番号や案を伝えてください。</p>
     <div class="cards">
-      <article class="card decide" id="kK1">
-        <span class="chip warn">提案</span>
-        <h3>K1 EXPERT・MASTER の鍵が新曲だけ</h3>
-        <p>#2438 の鍵は新曲だけ。いまある46曲(別の版を含む)は MASTER まで92回・3〜4時間の遠回りが残る(10/9 の「約26曲」は数え間違いで、本当は46曲)</p>
-        <ol class="options"><li>(推奨)どれか1曲で MASTER をクリアした人は全曲開く</li><li>いまある曲も HARD 1回で開く</li><li>今のまま</li></ol>
-        <div class="meta"><span>改善部 部長ダメダシくん</span><span>10/10 07:56</span></div><details class="more"><summary>くわしく見る: 改善部の記録</summary><div class="md"><p>時間: 07:50〜08:30 / 依頼: 統括部長(社長「批判目線で見る部署も、もっと積極的に見させて」)</p>
-<ul>
-<li><b>作らずに提案だけ。</b> ゲームも研究所の表も変えていない。案はおすすめを先頭に置いた</li>
-<li>遊んで確かめたものは、起動からHOMEまでの押す回数を数える小さな台本(ボットの <code>openSession</code>。<code>lib/fake-supabase.js</code> のままなので、ランキングへは送っていない)</li>
-</ul>
-<details class="md-sec"><summary>1. 研究所の Tier 表(monster-tier.md 07:42版・記録146回)</summary>
-<p>研究所:ハカセくんへ直接送り、統括部長にも同じものを送った。</p>
-<div class="md-table"><table><thead><tr><th>#</th><th>件名</th><th>根拠</th></tr></thead><tbody><tr><td>T1</td><td>同じ資料の中で、Tier が2通りある</td><td>「総合 Tier」と「全難易度をまとめた表(参考)」で10体の Tier が違う。オボロゲソウ・クロミー・ピクシーは S/A、モッチーは A/S、モノリス・ゴーレム・スプーキーは A/B、アークは B/C、ウンディーネは D/C、ハムは C/D</td></tr><tr><td>T2</td><td>Master の「勇者の伸び」が、時期の違う回どうしを比べている。少ない回数で S が付いている</td><td>Master 59回: 15時より前の28回は平均 W3.9(勇者はモッチーが23回)、15時からの31回は平均 W1.8(勇者21種・1体1〜3回)。伸びは「難易度の平均との差」なので、昼のモッチーが上に、夕方に少しだけ試した子が下に出る。クロミーは総合 S だが、Master は2回とも W2、Expert は3回で0勝。ミタラシの S は勇者3回の +3.7 にほぼ乗っている</td></tr><tr><td>T3</td><td>Hard の重み4は、差がほとんど出ない物差しに重みを置いている</td><td>Hard 44回のうち43回が W10 に届く。違うのは最後のボスに勝つか負けるかだけ(13勝・29負・時間切れ2)。そのせいか、ミタラシ・モッチー・ゴースト・スネグーラチカは Hard C → Expert S と、やさしいほうが低い。簡易シミュレーターは Hard の平均が W6・クリア0%で、実戦の W9.9 とかけ離れている(EX・トレーニング・アシストが入っていない)</td></tr></tbody></table></div>
-<ul>
-<li>T1 の案: (推奨)参考の表から Tier の列を外す / 列の名前を「全難易度を混ぜた場合」にして違いを1行で書く / 今のまま</li>
-<li>T2 の案: (推奨)伸びは同じ時期・同じボットの版の回どうしで比べる / 勇者3回未満のマスは Tier を付けず、総合でも数えない / Master を総合から外す</li>
-<li>T3 の案: (推奨)Hard はクリア率だけで見て、重みを下げる(例: Hard 2・Expert 5・Master 3) / Hard を外して Expert を中心にする / 今のまま</li>
-<li>社長の印象へ寄せた跡は見当たらない(ゴーレムは総合 A・参考表 B のまま)。「特性の文」は多くの子で0回なので、勇者特性の◎○は WAVE の伸びだけで決まっている</li>
-</ul>
-</details>
-<details class="md-sec"><summary>2. きのう〜きょう公開したゲームの変更(改善部の提案から作ったもの)</summary>
-<div class="md-table"><table><thead><tr><th>#</th><th>件名</th><th>根拠</th></tr></thead><tbody><tr><td>K1</td><td>EXPERT・MASTER の鍵: 直したのは新曲だけで、いまある46曲(別の版を含む)の遠回りは残っている(#2438)</td><td>今ある曲は前と同じ「HARD→EXPERT→MASTER」の順。MASTER を遊ぶには1曲あたり2回の遠回りで、46曲で92回・3〜4時間。<b>10/9 の G5 で「約26曲・2時間」と書いたのは数え間違いで、本当は46曲(別の版を含む。どれも MASTER あり)</b>(<code>RHYTHM_DIFFICULTY_STEP_UNLOCK_SONG_IDS</code>)。毎日遊んでいる人の手間はほぼ減っていない。曲によって開き方が違うのも、見ただけでは分からない</td></tr><tr><td>K2</td><td>ひさしぶりの起動: 35回→12回に減ったが、スキップの無い会話が10枚残る(#2439)</td><td>古いセーブで起動→HOME: スキップを押す人は 35回・36秒 → <b>12回・18秒</b>。押さない人は 190回 → 59回。残りの10回は「あたらしい助手」の紹介(10ページ・スキップ無し)。その前に「お詫びの配布」の窓も重なる</td></tr><tr><td>K3</td><td>曲えらび: 5曲遊んだ人で畳むのは吹き出し1つだけ(#2433)</td><td>畳むのは一覧の上の吹き出しだけ(<code>noticeOpen</code>)。いちばん上の吹き出し(×付き)と「裏でクイックの∞周回を回すには？」の行は残る。一覧が増えるのは約80px で、3行が4行ほどになるだけ</td></tr></tbody></table></div>
-<ul>
-<li>K1 の案: (推奨)どれか1曲で MASTER をクリアした人は、いまある曲も全部開く / いまある曲も HARD 1回で開く / 今のまま</li>
-<li>K2 の案: (推奨)「あたらしい助手」の紹介にスキップを付ける / 前から遊んでいる人には紹介を3ページに縮める / 今のまま</li>
-<li>K3 の案: (推奨)💬で、上の吹き出し・裏クイックの行・下の吹き出しを全部まとめて畳む / 裏クイックの行は💬の中へ入れる / 今のまま</li>
-</ul>
-</details>
-<details class="md-sec"><summary>間違いの訂正</summary>
-<ul>
-<li>10/9 の G5 の曲数(約26曲)は誤りで、46曲。手間の見積もり(約2時間)も小さすぎた(本当は3〜4時間)</li>
-</ul>
-</details></div></details>
-      </article>
       <article class="card decide" id="kK2">
         <span class="chip warn">提案</span>
         <h3>K2 ひさしぶりの起動で、あたらしい助手の紹介が長い</h3>
@@ -146,6 +112,14 @@ section{display:flex;flex-direction:column;gap:10px}
 <details class="md-sec"><summary>間違いの訂正</summary>
 <ul>
 <li>10/9 の G5 の曲数(約26曲)は誤りで、46曲。手間の見積もり(約2時間)も小さすぎた(本当は3〜4時間)</li>
+</ul>
+</details>
+<details class="md-sec"><summary>追記(08:00): 研究所の直し(#2464)の確かめ</summary>
+<ul>
+<li>T1〜T3 は書いてあるとおりに直っていた(参考の表から Tier の列を外した / 直したボットの回どうしで比べる / Hard 2・Expert 5・Master 3)</li>
+<li><b>T4(新しく研究所へ送った)</b>: 「5回未満のマスは総合に数えない」と決めたのに、数えるマスが1つも無い8体に総合の Tier が付いている(イブリース・オボロゲソウ・メロディー・ゴーストは S、スプーキー・ウンディーネ・プラントは A、ヤオビクニは C)。総合 S の6体のうち4体がこれ</li>
+<li>案: (推奨)総合を「保留」にして分けて並べる / 決まりを書き直し、総合にも * を付ける / 今のまま</li>
+<li>26体のうち21体が暫定なので、社長へ Tier 表を出すのはこの件が片づいてからがよい(統括部長へ送った)</li>
 </ul>
 </details></div></details>
       </article>
@@ -181,6 +155,14 @@ section{display:flex;flex-direction:column;gap:10px}
 <ul>
 <li>10/9 の G5 の曲数(約26曲)は誤りで、46曲。手間の見積もり(約2時間)も小さすぎた(本当は3〜4時間)</li>
 </ul>
+</details>
+<details class="md-sec"><summary>追記(08:00): 研究所の直し(#2464)の確かめ</summary>
+<ul>
+<li>T1〜T3 は書いてあるとおりに直っていた(参考の表から Tier の列を外した / 直したボットの回どうしで比べる / Hard 2・Expert 5・Master 3)</li>
+<li><b>T4(新しく研究所へ送った)</b>: 「5回未満のマスは総合に数えない」と決めたのに、数えるマスが1つも無い8体に総合の Tier が付いている(イブリース・オボロゲソウ・メロディー・ゴーストは S、スプーキー・ウンディーネ・プラントは A、ヤオビクニは C)。総合 S の6体のうち4体がこれ</li>
+<li>案: (推奨)総合を「保留」にして分けて並べる / 決まりを書き直し、総合にも * を付ける / 今のまま</li>
+<li>26体のうち21体が暫定なので、社長へ Tier 表を出すのはこの件が片づいてからがよい(統括部長へ送った)</li>
+</ul>
 </details></div></details>
       </article>
     </div>
@@ -190,10 +172,45 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="r2610100753tier">
-        <div class="row-title">Tier表をパネル式の別ページに(アイコンを押すと詳細)</div>
-        <div class="row-body">S〜D・保留の段ごとのパネルに顔アイコン。押すと難易度ごとの Tier・理由・強み弱み・回数が開く(スクリプトなし)。研究所が数字を直すと道具がページを作り直す。サイドバーに固定し、社長室からも飛べるようにする</div>
-        <div class="meta"><span>ドライバーくん</span><span>見込み 10/10 09:00ごろ公開(顔アイコンはゲームと同じ定義を使う)</span></div>
+      <li id="kK1">
+        <div class="row-title">K1 EXPERT・MASTER の鍵が新曲だけ</div>
+        <div class="row-body">#2438 の鍵は新曲だけ。いまある46曲(別の版を含む)は MASTER まで92回・3〜4時間の遠回りが残る(10/9 の「約26曲」は数え間違いで、本当は46曲)。社長の選択: いまある曲も HARD 1回で開く</div>
+        <div class="meta"><span>部長テンポくん</span><span>見込み ビート部が書く</span></div><details class="more"><summary>くわしく見る: 改善部の記録</summary><div class="md"><p>時間: 07:50〜08:30 / 依頼: 統括部長(社長「批判目線で見る部署も、もっと積極的に見させて」)</p>
+<ul>
+<li><b>作らずに提案だけ。</b> ゲームも研究所の表も変えていない。案はおすすめを先頭に置いた</li>
+<li>遊んで確かめたものは、起動からHOMEまでの押す回数を数える小さな台本(ボットの <code>openSession</code>。<code>lib/fake-supabase.js</code> のままなので、ランキングへは送っていない)</li>
+</ul>
+<details class="md-sec"><summary>1. 研究所の Tier 表(monster-tier.md 07:42版・記録146回)</summary>
+<p>研究所:ハカセくんへ直接送り、統括部長にも同じものを送った。</p>
+<div class="md-table"><table><thead><tr><th>#</th><th>件名</th><th>根拠</th></tr></thead><tbody><tr><td>T1</td><td>同じ資料の中で、Tier が2通りある</td><td>「総合 Tier」と「全難易度をまとめた表(参考)」で10体の Tier が違う。オボロゲソウ・クロミー・ピクシーは S/A、モッチーは A/S、モノリス・ゴーレム・スプーキーは A/B、アークは B/C、ウンディーネは D/C、ハムは C/D</td></tr><tr><td>T2</td><td>Master の「勇者の伸び」が、時期の違う回どうしを比べている。少ない回数で S が付いている</td><td>Master 59回: 15時より前の28回は平均 W3.9(勇者はモッチーが23回)、15時からの31回は平均 W1.8(勇者21種・1体1〜3回)。伸びは「難易度の平均との差」なので、昼のモッチーが上に、夕方に少しだけ試した子が下に出る。クロミーは総合 S だが、Master は2回とも W2、Expert は3回で0勝。ミタラシの S は勇者3回の +3.7 にほぼ乗っている</td></tr><tr><td>T3</td><td>Hard の重み4は、差がほとんど出ない物差しに重みを置いている</td><td>Hard 44回のうち43回が W10 に届く。違うのは最後のボスに勝つか負けるかだけ(13勝・29負・時間切れ2)。そのせいか、ミタラシ・モッチー・ゴースト・スネグーラチカは Hard C → Expert S と、やさしいほうが低い。簡易シミュレーターは Hard の平均が W6・クリア0%で、実戦の W9.9 とかけ離れている(EX・トレーニング・アシストが入っていない)</td></tr></tbody></table></div>
+<ul>
+<li>T1 の案: (推奨)参考の表から Tier の列を外す / 列の名前を「全難易度を混ぜた場合」にして違いを1行で書く / 今のまま</li>
+<li>T2 の案: (推奨)伸びは同じ時期・同じボットの版の回どうしで比べる / 勇者3回未満のマスは Tier を付けず、総合でも数えない / Master を総合から外す</li>
+<li>T3 の案: (推奨)Hard はクリア率だけで見て、重みを下げる(例: Hard 2・Expert 5・Master 3) / Hard を外して Expert を中心にする / 今のまま</li>
+<li>社長の印象へ寄せた跡は見当たらない(ゴーレムは総合 A・参考表 B のまま)。「特性の文」は多くの子で0回なので、勇者特性の◎○は WAVE の伸びだけで決まっている</li>
+</ul>
+</details>
+<details class="md-sec"><summary>2. きのう〜きょう公開したゲームの変更(改善部の提案から作ったもの)</summary>
+<div class="md-table"><table><thead><tr><th>#</th><th>件名</th><th>根拠</th></tr></thead><tbody><tr><td>K1</td><td>EXPERT・MASTER の鍵: 直したのは新曲だけで、いまある46曲(別の版を含む)の遠回りは残っている(#2438)</td><td>今ある曲は前と同じ「HARD→EXPERT→MASTER」の順。MASTER を遊ぶには1曲あたり2回の遠回りで、46曲で92回・3〜4時間。<b>10/9 の G5 で「約26曲・2時間」と書いたのは数え間違いで、本当は46曲(別の版を含む。どれも MASTER あり)</b>(<code>RHYTHM_DIFFICULTY_STEP_UNLOCK_SONG_IDS</code>)。毎日遊んでいる人の手間はほぼ減っていない。曲によって開き方が違うのも、見ただけでは分からない</td></tr><tr><td>K2</td><td>ひさしぶりの起動: 35回→12回に減ったが、スキップの無い会話が10枚残る(#2439)</td><td>古いセーブで起動→HOME: スキップを押す人は 35回・36秒 → <b>12回・18秒</b>。押さない人は 190回 → 59回。残りの10回は「あたらしい助手」の紹介(10ページ・スキップ無し)。その前に「お詫びの配布」の窓も重なる</td></tr><tr><td>K3</td><td>曲えらび: 5曲遊んだ人で畳むのは吹き出し1つだけ(#2433)</td><td>畳むのは一覧の上の吹き出しだけ(<code>noticeOpen</code>)。いちばん上の吹き出し(×付き)と「裏でクイックの∞周回を回すには？」の行は残る。一覧が増えるのは約80px で、3行が4行ほどになるだけ</td></tr></tbody></table></div>
+<ul>
+<li>K1 の案: (推奨)どれか1曲で MASTER をクリアした人は、いまある曲も全部開く / いまある曲も HARD 1回で開く / 今のまま</li>
+<li>K2 の案: (推奨)「あたらしい助手」の紹介にスキップを付ける / 前から遊んでいる人には紹介を3ページに縮める / 今のまま</li>
+<li>K3 の案: (推奨)💬で、上の吹き出し・裏クイックの行・下の吹き出しを全部まとめて畳む / 裏クイックの行は💬の中へ入れる / 今のまま</li>
+</ul>
+</details>
+<details class="md-sec"><summary>間違いの訂正</summary>
+<ul>
+<li>10/9 の G5 の曲数(約26曲)は誤りで、46曲。手間の見積もり(約2時間)も小さすぎた(本当は3〜4時間)</li>
+</ul>
+</details>
+<details class="md-sec"><summary>追記(08:00): 研究所の直し(#2464)の確かめ</summary>
+<ul>
+<li>T1〜T3 は書いてあるとおりに直っていた(参考の表から Tier の列を外した / 直したボットの回どうしで比べる / Hard 2・Expert 5・Master 3)</li>
+<li><b>T4(新しく研究所へ送った)</b>: 「5回未満のマスは総合に数えない」と決めたのに、数えるマスが1つも無い8体に総合の Tier が付いている(イブリース・オボロゲソウ・メロディー・ゴーストは S、スプーキー・ウンディーネ・プラントは A、ヤオビクニは C)。総合 S の6体のうち4体がこれ</li>
+<li>案: (推奨)総合を「保留」にして分けて並べる / 決まりを書き直し、総合にも * を付ける / 今のまま</li>
+<li>26体のうち21体が暫定なので、社長へ Tier 表を出すのはこの件が片づいてからがよい(統括部長へ送った)</li>
+</ul>
+</details></div></details>
       </li>
       <li id="r2610100750a">
         <div class="row-title">Tier の暫定を早めに外す(社長の目線は抜きで)</div>
@@ -231,21 +248,26 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="r2610100753tier">
+        <div class="row-title">Tier表をパネル式の別ページに(アイコンを押すと詳細)</div>
+        <div class="row-body">S〜D・保留の段ごとのパネルに顔アイコン。押すと難易度ごとの Tier・理由・強み弱み・回数が開く(スクリプトなし)。研究所が数字を直すと道具がページを作り直す。サイドバーに固定し、社長室からも飛べるようにする</div>
+        <div class="meta"><span>ドライバーくん</span><span>PR #2469</span><span>モンスター Tier 表 https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8(サイドバーに固定)</span></div>
+      </li>
       <li id="kT">
-        <div class="row-title">改善部が Tier 表を点検(研究所が答える)</div>
-        <div class="row-body">改善部の指摘3件を研究所が反映: Tier を1通りに・直したボットで戦った回だけで比べる・重みを Hard 2・Expert 5・Master 3 に(Hard はほぼ全員が最後まで届き差が出ないため)。数える回を絞ったので、いまは多くの子が暫定に戻り、Tier も大きく動いた(例: ミタラシ S→C、ウンディーネ D→A)</div>
-        <div class="meta"><span>ハカセくん</span><span>PR #2463・#2464</span><span>docs/playbot/reports/tier/monster-tier.md</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:55(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
+        <div class="row-title">改善部が Tier 表を点検し、研究所が4件直した</div>
+        <div class="row-body">改善部の指摘3件を研究所が反映: Tier を1通りに・直したボットで戦った回だけで比べる・重みを Hard 2・Expert 5・Master 3 に(Hard はほぼ全員が最後まで届き差が出ないため)。数える回を絞ったので、いまは多くの子が暫定に戻り、Tier も大きく動いた(例: ミタラシ S→C、ウンディーネ D→A)。続けて T4(回数の無い子に総合が付いていた)も直し、総合 S はピクシー・クロミー(暫定)だけに。回数不足の10体は下に分けた</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2463・#2464・#2466・#2467・#2468</span><span>docs/playbot/reports/tier/monster-tier.md</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:58(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
 <p>研究所:ハカセくんが作る。タクティクスプロはベースモンを使うので、全員が同じ条件です。</p>
 <p>「すべて解放してバトル」(デバッグ。記録・ランキング・報酬はつかない)で、勇者モンを入れ替えながら少しずつ集めています。</p>
-<p><b>試した回数が5回より少ない子は「暫定」です。</b> 回数が増えると Tier は動きます。</p>
+<p><b>総合 Tier は、その難易度で5回以上試したマスが2つ以上そろうまで「暫定」です。</b> 5回以上のマスが1つも無い子は「回数不足」として総合を付けません。回数が増えると Tier は動きます。</p>
 <details class="md-sec"><summary>総合 Tier</summary>
 <ul>
-<li><b>S</b> イブリース(暫定)・ピクシー・オボロゲソウ(暫定)・メロディー(暫定)・クロミー(暫定)・ゴースト(暫定)</li>
-<li><b>A</b> ゴーレム(暫定)・スプーキー(暫定)・ウンディーネ(暫定)・ミーア(暫定)・プラント(暫定)・モッチー</li>
-<li><b>B</b> ユグドラシル(暫定)・パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
-<li><b>C</b> スエゾー・ザン(暫定)・ヤオビクニ(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
-<li><b>D</b> エイキ(暫定)</li>
+<li><b>S</b> ピクシー・クロミー(暫定)</li>
+<li><b>A</b> ゴーレム(暫定)・ミーア(暫定)・モッチー</li>
+<li><b>B</b> パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
+<li><b>C</b> スエゾー・ザン(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
 </ul>
+<p>回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ゴースト(仮S)・メロディー(仮S)・オボロゲソウ(仮S)・プラント(仮A)・ユグドラシル(仮B)・イブリース(仮S)・ウンディーネ(仮A)・スプーキー(仮A)・ヤオビクニ(仮C)・エイキ(仮D)</p>
 <p>決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。</p>
 <p>数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。</p>
 </details>
@@ -253,23 +275,15 @@ section{display:flex;flex-direction:column;gap:10px}
 <ul>
 <li>は、その難易度で5回未満(暫定。総合には数えない)。</li>
 </ul>
-<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>イブリース</td><td>S</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>オボロゲソウ</td><td>S</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>メロディー</td><td>S</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴースト</td><td>S</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>スプーキー</td><td>A</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>A</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>プラント</td><td>A</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>ユグドラシル</td><td>B</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>ヤオビクニ</td><td>C</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>エイキ</td><td>D</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
+<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>ゴースト</td><td>不足</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>メロディー</td><td>不足</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>オボロゲソウ</td><td>不足</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>プラント</td><td>不足</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>ユグドラシル</td><td>不足</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>イブリース</td><td>不足</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>不足</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>スプーキー</td><td>不足</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ヤオビクニ</td><td>不足</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>エイキ</td><td>不足</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
 </details>
 <details class="md-sec"><summary>ひとことの理由</summary>
 <ul>
-<li><b>イブリース</b>: 固有技・EXが効く。攻め・守りが弱い</li>
 <li><b>ピクシー</b>: 固有技・EXが効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>オボロゲソウ</b>: 守り・固有技が効く。攻めが弱い</li>
-<li><b>メロディー</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>クロミー</b>: 攻め・守りが効く</li>
-<li><b>ゴースト</b>: 勇者特性・固有技が効く。守りが弱い</li>
 <li><b>ゴーレム</b>: 攻め・守りが効く。間合いが弱い</li>
-<li><b>スプーキー</b>: 固有技が効く</li>
-<li><b>ウンディーネ</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミーア</b>: 攻め・固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>プラント</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>モッチー</b>: 守り・勇者特性が効く。攻めが弱い</li>
-<li><b>ユグドラシル</b>: 守り・固有技が効く</li>
 <li><b>パンドラ</b>: 固有技・EXが効く</li>
 <li><b>メルホイップ</b>: 守り・固有技が効く</li>
 <li><b>モノリス</b>: 守り・固有技が効く。攻めが弱い</li>
@@ -277,12 +291,20 @@ section{display:flex;flex-direction:column;gap:10px}
 <li><b>アーク</b>: 固有技・EXが効く</li>
 <li><b>スエゾー</b>: 固有技・EXが効く。攻めが弱い</li>
 <li><b>ザン</b>: 固有技・間合いが効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>ヤオビクニ</b>: 固有技・間合いが効く。攻めが弱い</li>
 <li><b>スネグーラチカ</b>: 勇者特性・固有技が効く</li>
 <li><b>剣士モッチー</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミタラシ</b>: 守り・勇者特性が効く</li>
 <li><b>ハム</b>: 固有技が効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>エイキ</b>: 固有技・EXが効く。攻め・守りが弱い</li>
+<li><b>ゴースト</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>メロディー</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>オボロゲソウ</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>プラント</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ユグドラシル</b>: 回数が足りない(仮B)。いま回数を足している</li>
+<li><b>イブリース</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>ウンディーネ</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>スプーキー</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ヤオビクニ</b>: 回数が足りない(仮C)。いま回数を足している</li>
+<li><b>エイキ</b>: 回数が足りない(仮D)。いま回数を足している</li>
 </ul>
 </details>
 <details class="md-sec"><summary>難易度ごとの Tier(回数つき)</summary>
@@ -428,23 +450,31 @@ section{display:flex;flex-direction:column;gap:10px}
 <ul>
 <li>10/9 の G5 の曲数(約26曲)は誤りで、46曲。手間の見積もり(約2時間)も小さすぎた(本当は3〜4時間)</li>
 </ul>
+</details>
+<details class="md-sec"><summary>追記(08:00): 研究所の直し(#2464)の確かめ</summary>
+<ul>
+<li>T1〜T3 は書いてあるとおりに直っていた(参考の表から Tier の列を外した / 直したボットの回どうしで比べる / Hard 2・Expert 5・Master 3)</li>
+<li><b>T4(新しく研究所へ送った)</b>: 「5回未満のマスは総合に数えない」と決めたのに、数えるマスが1つも無い8体に総合の Tier が付いている(イブリース・オボロゲソウ・メロディー・ゴーストは S、スプーキー・ウンディーネ・プラントは A、ヤオビクニは C)。総合 S の6体のうち4体がこれ</li>
+<li>案: (推奨)総合を「保留」にして分けて並べる / 決まりを書き直し、総合にも * を付ける / 今のまま</li>
+<li>26体のうち21体が暫定なので、社長へ Tier 表を出すのはこの件が片づいてからがよい(統括部長へ送った)</li>
+</ul>
 </details></div></details>
       </li>
       <li id="r2610100741">
         <div class="row-title">Tier表を見やすくし、総合 Tier も付ける</div>
         <div class="row-body">上から 総合 Tier → 早見表(5列・1文字)→ ひとことの理由、詳しい表はその下へ。総合 S: オボロゲソウ・クロミー・ピクシー・ミタラシ / A: モッチー・モノリス・ゴーレム・メロディー(暫定)・ゴースト・スプーキー(暫定)・スネグーラチカ。総合は Hard 4・Expert 4・Master 2 の重み</div>
-        <div class="meta"><span>ハカセくん</span><span>PR #2457</span><span>社長室の「公開したもの」→ この項目の「Tier表」を開く(いちばん上が総合 Tier)</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:55(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
+        <div class="meta"><span>ハカセくん</span><span>PR #2457</span><span>社長室の「公開したもの」→ この項目の「Tier表」を開く(いちばん上が総合 Tier)</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:58(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
 <p>研究所:ハカセくんが作る。タクティクスプロはベースモンを使うので、全員が同じ条件です。</p>
 <p>「すべて解放してバトル」(デバッグ。記録・ランキング・報酬はつかない)で、勇者モンを入れ替えながら少しずつ集めています。</p>
-<p><b>試した回数が5回より少ない子は「暫定」です。</b> 回数が増えると Tier は動きます。</p>
+<p><b>総合 Tier は、その難易度で5回以上試したマスが2つ以上そろうまで「暫定」です。</b> 5回以上のマスが1つも無い子は「回数不足」として総合を付けません。回数が増えると Tier は動きます。</p>
 <details class="md-sec"><summary>総合 Tier</summary>
 <ul>
-<li><b>S</b> イブリース(暫定)・ピクシー・オボロゲソウ(暫定)・メロディー(暫定)・クロミー(暫定)・ゴースト(暫定)</li>
-<li><b>A</b> ゴーレム(暫定)・スプーキー(暫定)・ウンディーネ(暫定)・ミーア(暫定)・プラント(暫定)・モッチー</li>
-<li><b>B</b> ユグドラシル(暫定)・パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
-<li><b>C</b> スエゾー・ザン(暫定)・ヤオビクニ(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
-<li><b>D</b> エイキ(暫定)</li>
+<li><b>S</b> ピクシー・クロミー(暫定)</li>
+<li><b>A</b> ゴーレム(暫定)・ミーア(暫定)・モッチー</li>
+<li><b>B</b> パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
+<li><b>C</b> スエゾー・ザン(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
 </ul>
+<p>回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ゴースト(仮S)・メロディー(仮S)・オボロゲソウ(仮S)・プラント(仮A)・ユグドラシル(仮B)・イブリース(仮S)・ウンディーネ(仮A)・スプーキー(仮A)・ヤオビクニ(仮C)・エイキ(仮D)</p>
 <p>決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。</p>
 <p>数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。</p>
 </details>
@@ -452,23 +482,15 @@ section{display:flex;flex-direction:column;gap:10px}
 <ul>
 <li>は、その難易度で5回未満(暫定。総合には数えない)。</li>
 </ul>
-<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>イブリース</td><td>S</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>オボロゲソウ</td><td>S</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>メロディー</td><td>S</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴースト</td><td>S</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>スプーキー</td><td>A</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>A</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>プラント</td><td>A</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>ユグドラシル</td><td>B</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>ヤオビクニ</td><td>C</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>エイキ</td><td>D</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
+<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>ゴースト</td><td>不足</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>メロディー</td><td>不足</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>オボロゲソウ</td><td>不足</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>プラント</td><td>不足</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>ユグドラシル</td><td>不足</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>イブリース</td><td>不足</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>不足</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>スプーキー</td><td>不足</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ヤオビクニ</td><td>不足</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>エイキ</td><td>不足</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
 </details>
 <details class="md-sec"><summary>ひとことの理由</summary>
 <ul>
-<li><b>イブリース</b>: 固有技・EXが効く。攻め・守りが弱い</li>
 <li><b>ピクシー</b>: 固有技・EXが効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>オボロゲソウ</b>: 守り・固有技が効く。攻めが弱い</li>
-<li><b>メロディー</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>クロミー</b>: 攻め・守りが効く</li>
-<li><b>ゴースト</b>: 勇者特性・固有技が効く。守りが弱い</li>
 <li><b>ゴーレム</b>: 攻め・守りが効く。間合いが弱い</li>
-<li><b>スプーキー</b>: 固有技が効く</li>
-<li><b>ウンディーネ</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミーア</b>: 攻め・固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>プラント</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>モッチー</b>: 守り・勇者特性が効く。攻めが弱い</li>
-<li><b>ユグドラシル</b>: 守り・固有技が効く</li>
 <li><b>パンドラ</b>: 固有技・EXが効く</li>
 <li><b>メルホイップ</b>: 守り・固有技が効く</li>
 <li><b>モノリス</b>: 守り・固有技が効く。攻めが弱い</li>
@@ -476,12 +498,20 @@ section{display:flex;flex-direction:column;gap:10px}
 <li><b>アーク</b>: 固有技・EXが効く</li>
 <li><b>スエゾー</b>: 固有技・EXが効く。攻めが弱い</li>
 <li><b>ザン</b>: 固有技・間合いが効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>ヤオビクニ</b>: 固有技・間合いが効く。攻めが弱い</li>
 <li><b>スネグーラチカ</b>: 勇者特性・固有技が効く</li>
 <li><b>剣士モッチー</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミタラシ</b>: 守り・勇者特性が効く</li>
 <li><b>ハム</b>: 固有技が効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>エイキ</b>: 固有技・EXが効く。攻め・守りが弱い</li>
+<li><b>ゴースト</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>メロディー</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>オボロゲソウ</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>プラント</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ユグドラシル</b>: 回数が足りない(仮B)。いま回数を足している</li>
+<li><b>イブリース</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>ウンディーネ</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>スプーキー</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ヤオビクニ</b>: 回数が足りない(仮C)。いま回数を足している</li>
+<li><b>エイキ</b>: 回数が足りない(仮D)。いま回数を足している</li>
 </ul>
 </details>
 <details class="md-sec"><summary>難易度ごとの Tier(回数つき)</summary>
@@ -605,18 +635,18 @@ section{display:flex;flex-direction:column;gap:10px}
       <li id="p14master">
         <div class="row-title">Tier表を Master まで更新(26体・146回)</div>
         <div class="row-body">Master はほとんどの勇者モンが WAVE 1〜3 で負け、届いた最高は WAVE 4(ゴースト)。人は Legend までクリアしているので、まずボットの戦い方の差を疑っている(Master の結果は Tier にまだ強く効かせない)</div>
-        <div class="meta"><span>ハカセくん</span><span>PR #2450・#2452</span><span>docs/playbot/reports/tier/monster-tier.md</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:55(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
+        <div class="meta"><span>ハカセくん</span><span>PR #2450・#2452</span><span>docs/playbot/reports/tier/monster-tier.md</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:58(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
 <p>研究所:ハカセくんが作る。タクティクスプロはベースモンを使うので、全員が同じ条件です。</p>
 <p>「すべて解放してバトル」(デバッグ。記録・ランキング・報酬はつかない)で、勇者モンを入れ替えながら少しずつ集めています。</p>
-<p><b>試した回数が5回より少ない子は「暫定」です。</b> 回数が増えると Tier は動きます。</p>
+<p><b>総合 Tier は、その難易度で5回以上試したマスが2つ以上そろうまで「暫定」です。</b> 5回以上のマスが1つも無い子は「回数不足」として総合を付けません。回数が増えると Tier は動きます。</p>
 <details class="md-sec"><summary>総合 Tier</summary>
 <ul>
-<li><b>S</b> イブリース(暫定)・ピクシー・オボロゲソウ(暫定)・メロディー(暫定)・クロミー(暫定)・ゴースト(暫定)</li>
-<li><b>A</b> ゴーレム(暫定)・スプーキー(暫定)・ウンディーネ(暫定)・ミーア(暫定)・プラント(暫定)・モッチー</li>
-<li><b>B</b> ユグドラシル(暫定)・パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
-<li><b>C</b> スエゾー・ザン(暫定)・ヤオビクニ(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
-<li><b>D</b> エイキ(暫定)</li>
+<li><b>S</b> ピクシー・クロミー(暫定)</li>
+<li><b>A</b> ゴーレム(暫定)・ミーア(暫定)・モッチー</li>
+<li><b>B</b> パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
+<li><b>C</b> スエゾー・ザン(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
 </ul>
+<p>回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ゴースト(仮S)・メロディー(仮S)・オボロゲソウ(仮S)・プラント(仮A)・ユグドラシル(仮B)・イブリース(仮S)・ウンディーネ(仮A)・スプーキー(仮A)・ヤオビクニ(仮C)・エイキ(仮D)</p>
 <p>決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。</p>
 <p>数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。</p>
 </details>
@@ -624,23 +654,15 @@ section{display:flex;flex-direction:column;gap:10px}
 <ul>
 <li>は、その難易度で5回未満(暫定。総合には数えない)。</li>
 </ul>
-<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>イブリース</td><td>S</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>オボロゲソウ</td><td>S</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>メロディー</td><td>S</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴースト</td><td>S</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>スプーキー</td><td>A</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>A</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>プラント</td><td>A</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>ユグドラシル</td><td>B</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>ヤオビクニ</td><td>C</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>エイキ</td><td>D</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
+<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>ゴースト</td><td>不足</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>メロディー</td><td>不足</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>オボロゲソウ</td><td>不足</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>プラント</td><td>不足</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>ユグドラシル</td><td>不足</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>イブリース</td><td>不足</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>不足</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>スプーキー</td><td>不足</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ヤオビクニ</td><td>不足</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>エイキ</td><td>不足</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
 </details>
 <details class="md-sec"><summary>ひとことの理由</summary>
 <ul>
-<li><b>イブリース</b>: 固有技・EXが効く。攻め・守りが弱い</li>
 <li><b>ピクシー</b>: 固有技・EXが効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>オボロゲソウ</b>: 守り・固有技が効く。攻めが弱い</li>
-<li><b>メロディー</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>クロミー</b>: 攻め・守りが効く</li>
-<li><b>ゴースト</b>: 勇者特性・固有技が効く。守りが弱い</li>
 <li><b>ゴーレム</b>: 攻め・守りが効く。間合いが弱い</li>
-<li><b>スプーキー</b>: 固有技が効く</li>
-<li><b>ウンディーネ</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミーア</b>: 攻め・固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>プラント</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>モッチー</b>: 守り・勇者特性が効く。攻めが弱い</li>
-<li><b>ユグドラシル</b>: 守り・固有技が効く</li>
 <li><b>パンドラ</b>: 固有技・EXが効く</li>
 <li><b>メルホイップ</b>: 守り・固有技が効く</li>
 <li><b>モノリス</b>: 守り・固有技が効く。攻めが弱い</li>
@@ -648,12 +670,20 @@ section{display:flex;flex-direction:column;gap:10px}
 <li><b>アーク</b>: 固有技・EXが効く</li>
 <li><b>スエゾー</b>: 固有技・EXが効く。攻めが弱い</li>
 <li><b>ザン</b>: 固有技・間合いが効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>ヤオビクニ</b>: 固有技・間合いが効く。攻めが弱い</li>
 <li><b>スネグーラチカ</b>: 勇者特性・固有技が効く</li>
 <li><b>剣士モッチー</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミタラシ</b>: 守り・勇者特性が効く</li>
 <li><b>ハム</b>: 固有技が効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>エイキ</b>: 固有技・EXが効く。攻め・守りが弱い</li>
+<li><b>ゴースト</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>メロディー</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>オボロゲソウ</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>プラント</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ユグドラシル</b>: 回数が足りない(仮B)。いま回数を足している</li>
+<li><b>イブリース</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>ウンディーネ</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>スプーキー</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ヤオビクニ</b>: 回数が足りない(仮C)。いま回数を足している</li>
+<li><b>エイキ</b>: 回数が足りない(仮D)。いま回数を足している</li>
 </ul>
 </details>
 <details class="md-sec"><summary>難易度ごとの Tier(回数つき)</summary>
@@ -829,18 +859,18 @@ section{display:flex;flex-direction:column;gap:10px}
       <li id="p12">
         <div class="row-title">モンスターのTier表(26体・101回)</div>
         <div class="row-body">Hard のSはクロミー・剣士モッチー。Hard をクリアした勇者モン: 剣士モッチー・スプーキー(各2回)・ゴーレム・オボロゲソウ・スエゾー・プラント・イブリース。難易度で大きく動く子: 剣士モッチー(Hard S → Expert D 暫定、打たれ弱さ)・モッチー(Hard C → Expert S、回数の偏りを疑う)。剣士モッチーは初期スタイルを選べるようにして比べた(社長の指摘): Hard は片手剣が4回中4回クリアでいちばん、Expert は片手盾が届いたWAVEの平均4.0でいちばん(打たれ弱さを補う)。Tier はいちばんよいスタイルで戦えた前提で見る</div>
-        <div class="meta"><span>ハカセくん</span><span>PR #2407・#2419・#2421・#2437・#2441</span><span>docs/playbot/reports/tier/monster-tier.md</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:55(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
+        <div class="meta"><span>ハカセくん</span><span>PR #2407・#2419・#2421・#2437・#2441</span><span>docs/playbot/reports/tier/monster-tier.md</span></div><details class="more"><summary>くわしく見る: Tier表</summary><div class="md"><p>更新: 2026-10-10 07:58(JST)・数えた回: 108回(Hard 43 / Expert 34 / Master 31)・戦ったモンスター: 26 / 26体・技と間合いまで数えた回: 108回</p>
 <p>研究所:ハカセくんが作る。タクティクスプロはベースモンを使うので、全員が同じ条件です。</p>
 <p>「すべて解放してバトル」(デバッグ。記録・ランキング・報酬はつかない)で、勇者モンを入れ替えながら少しずつ集めています。</p>
-<p><b>試した回数が5回より少ない子は「暫定」です。</b> 回数が増えると Tier は動きます。</p>
+<p><b>総合 Tier は、その難易度で5回以上試したマスが2つ以上そろうまで「暫定」です。</b> 5回以上のマスが1つも無い子は「回数不足」として総合を付けません。回数が増えると Tier は動きます。</p>
 <details class="md-sec"><summary>総合 Tier</summary>
 <ul>
-<li><b>S</b> イブリース(暫定)・ピクシー・オボロゲソウ(暫定)・メロディー(暫定)・クロミー(暫定)・ゴースト(暫定)</li>
-<li><b>A</b> ゴーレム(暫定)・スプーキー(暫定)・ウンディーネ(暫定)・ミーア(暫定)・プラント(暫定)・モッチー</li>
-<li><b>B</b> ユグドラシル(暫定)・パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
-<li><b>C</b> スエゾー・ザン(暫定)・ヤオビクニ(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
-<li><b>D</b> エイキ(暫定)</li>
+<li><b>S</b> ピクシー・クロミー(暫定)</li>
+<li><b>A</b> ゴーレム(暫定)・ミーア(暫定)・モッチー</li>
+<li><b>B</b> パンドラ・メルホイップ(暫定)・モノリス(暫定)・ライガー・アーク(暫定)</li>
+<li><b>C</b> スエゾー・ザン(暫定)・スネグーラチカ(暫定)・剣士モッチー・ミタラシ(暫定)・ハム</li>
 </ul>
+<p>回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ゴースト(仮S)・メロディー(仮S)・オボロゲソウ(仮S)・プラント(仮A)・ユグドラシル(仮B)・イブリース(仮S)・ウンディーネ(仮A)・スプーキー(仮A)・ヤオビクニ(仮C)・エイキ(仮D)</p>
 <p>決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。</p>
 <p>数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。</p>
 </details>
@@ -848,23 +878,15 @@ section{display:flex;flex-direction:column;gap:10px}
 <ul>
 <li>は、その難易度で5回未満(暫定。総合には数えない)。</li>
 </ul>
-<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>イブリース</td><td>S</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>オボロゲソウ</td><td>S</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>メロディー</td><td>S</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴースト</td><td>S</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>スプーキー</td><td>A</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>A</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>プラント</td><td>A</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>ユグドラシル</td><td>B</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>ヤオビクニ</td><td>C</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>エイキ</td><td>D</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
+<div class="md-table"><table><thead><tr><th>モンスター</th><th>総合</th><th>Hard</th><th>Expert</th><th>Master</th></tr></thead><tbody><tr><td>ピクシー</td><td>S</td><td>B</td><td>S</td><td>B*</td></tr><tr><td>クロミー</td><td>S</td><td>S</td><td>A*</td><td>保留</td></tr><tr><td>ゴーレム</td><td>A</td><td>A</td><td>S*</td><td>保留</td></tr><tr><td>ミーア</td><td>A</td><td>A</td><td>A*</td><td>B*</td></tr><tr><td>モッチー</td><td>A</td><td>C</td><td>A</td><td>保留</td></tr><tr><td>パンドラ</td><td>B</td><td>B</td><td>B</td><td>B*</td></tr><tr><td>メルホイップ</td><td>B</td><td>B</td><td>B*</td><td>保留</td></tr><tr><td>モノリス</td><td>B</td><td>B</td><td>A*</td><td>—</td></tr><tr><td>ライガー</td><td>B</td><td>C</td><td>B</td><td>C*</td></tr><tr><td>アーク</td><td>B</td><td>B</td><td>C*</td><td>保留</td></tr><tr><td>スエゾー</td><td>C</td><td>B</td><td>C</td><td>C*</td></tr><tr><td>ザン</td><td>C</td><td>C</td><td>D*</td><td>B*</td></tr><tr><td>スネグーラチカ</td><td>C</td><td>C</td><td>S*</td><td>B*</td></tr><tr><td>剣士モッチー</td><td>C</td><td>A</td><td>D</td><td>D*</td></tr><tr><td>ミタラシ</td><td>C</td><td>C</td><td>S*</td><td>保留</td></tr><tr><td>ハム</td><td>C</td><td>C</td><td>D</td><td>D*</td></tr><tr><td>ゴースト</td><td>不足</td><td>C*</td><td>S*</td><td>S*</td></tr><tr><td>メロディー</td><td>不足</td><td>B*</td><td>S*</td><td>S*</td></tr><tr><td>オボロゲソウ</td><td>不足</td><td>A*</td><td>S*</td><td>—</td></tr><tr><td>プラント</td><td>不足</td><td>A*</td><td>B*</td><td>S*</td></tr><tr><td>ユグドラシル</td><td>不足</td><td>A*</td><td>C*</td><td>A*</td></tr><tr><td>イブリース</td><td>不足</td><td>A*</td><td>S*</td><td>保留</td></tr><tr><td>ウンディーネ</td><td>不足</td><td>保留</td><td>A*</td><td>A*</td></tr><tr><td>スプーキー</td><td>不足</td><td>A*</td><td>保留</td><td>保留</td></tr><tr><td>ヤオビクニ</td><td>不足</td><td>B*</td><td>C*</td><td>C*</td></tr><tr><td>エイキ</td><td>不足</td><td>C*</td><td>D*</td><td>B*</td></tr></tbody></table></div>
 </details>
 <details class="md-sec"><summary>ひとことの理由</summary>
 <ul>
-<li><b>イブリース</b>: 固有技・EXが効く。攻め・守りが弱い</li>
 <li><b>ピクシー</b>: 固有技・EXが効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>オボロゲソウ</b>: 守り・固有技が効く。攻めが弱い</li>
-<li><b>メロディー</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>クロミー</b>: 攻め・守りが効く</li>
-<li><b>ゴースト</b>: 勇者特性・固有技が効く。守りが弱い</li>
 <li><b>ゴーレム</b>: 攻め・守りが効く。間合いが弱い</li>
-<li><b>スプーキー</b>: 固有技が効く</li>
-<li><b>ウンディーネ</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミーア</b>: 攻め・固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>プラント</b>: 守り・固有技が効く。攻めが弱い</li>
 <li><b>モッチー</b>: 守り・勇者特性が効く。攻めが弱い</li>
-<li><b>ユグドラシル</b>: 守り・固有技が効く</li>
 <li><b>パンドラ</b>: 固有技・EXが効く</li>
 <li><b>メルホイップ</b>: 守り・固有技が効く</li>
 <li><b>モノリス</b>: 守り・固有技が効く。攻めが弱い</li>
@@ -872,12 +894,20 @@ section{display:flex;flex-direction:column;gap:10px}
 <li><b>アーク</b>: 固有技・EXが効く</li>
 <li><b>スエゾー</b>: 固有技・EXが効く。攻めが弱い</li>
 <li><b>ザン</b>: 固有技・間合いが効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>ヤオビクニ</b>: 固有技・間合いが効く。攻めが弱い</li>
 <li><b>スネグーラチカ</b>: 勇者特性・固有技が効く</li>
 <li><b>剣士モッチー</b>: 固有技が効く。守りが弱い。打たれ弱く序盤がつらい</li>
 <li><b>ミタラシ</b>: 守り・勇者特性が効く</li>
 <li><b>ハム</b>: 固有技が効く。攻め・守りが弱い。打たれ弱く序盤がつらい</li>
-<li><b>エイキ</b>: 固有技・EXが効く。攻め・守りが弱い</li>
+<li><b>ゴースト</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>メロディー</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>オボロゲソウ</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>プラント</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ユグドラシル</b>: 回数が足りない(仮B)。いま回数を足している</li>
+<li><b>イブリース</b>: 回数が足りない(仮S)。いま回数を足している</li>
+<li><b>ウンディーネ</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>スプーキー</b>: 回数が足りない(仮A)。いま回数を足している</li>
+<li><b>ヤオビクニ</b>: 回数が足りない(仮C)。いま回数を足している</li>
+<li><b>エイキ</b>: 回数が足りない(仮D)。いま回数を足している</li>
 </ul>
 </details>
 <details class="md-sec"><summary>難易度ごとの Tier(回数つき)</summary>
@@ -1310,8 +1340,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </div>
       <div class="bar-row">
         <span class="bar-name">ドライバーくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:37.04%"></span></span>
-        <span class="bar-val">10</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:44.44%"></span></span>
+        <span class="bar-val">12</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長テンポくん</span>
@@ -1329,14 +1359,14 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">7</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">ハカセくん</span>
+        <span class="bar-name">ドライバーくん2号</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
         <span class="bar-val">6</span>
       </div>
       <div class="bar-row">
-        <span class="bar-name">ドライバーくん2号</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
-        <span class="bar-val">6</span>
+        <span class="bar-name">ハカセくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:18.52%"></span></span>
+        <span class="bar-val">5</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長ダメダシくん</span>
