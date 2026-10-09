@@ -884,7 +884,7 @@ function rememberRun(L, stats) {
   }
   k.runs.push({
     at: new Date().toISOString().slice(0, 16), mode: L.meta.mode, difficulty: L.meta.difficulty, hero: L.build.hero, pool: L.build.pool,
-    allies: L.build.allies.map((a) => a.name), placements: L.build.placements.map((p) => `${p.name || '?'}:${p.dist}${p.grade}`),
+    allies: [...new Set(L.build.allies.map((a) => a.name))], // 同じ子を2回選んだ記録(押し直し)は1つにまとめる placements: L.build.placements.map((p) => `${p.name || '?'}:${p.dist}${p.grade}`),
     assists: L.build.assists.map((a) => `${a.card}${a.upgrade ? '+' : ''}`), ex: Object.entries(L.ex.reduce((o, e) => { o[e.ex || e.mon] = (o[e.ex || e.mon] || 0) + 1; return o; }, {})).map(([n, c]) => `${n}×${c}`),
     result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
