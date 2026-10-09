@@ -217,7 +217,7 @@ const readTactics = (s) => s.page.evaluate(() => {
     // 実行ボタンの文字。「カードを選ぶ」→(攻撃カードを選ぶと)「置き場所を選ぶ」→「ACTION」と変わる
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
-    over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北/.test(text),
+    over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北|DEBUG\s*勝\s*利/.test(text),
   };
 });
 
@@ -474,6 +474,9 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       if (x.occupied && x.downed && was && !was.downed && x.name) brain.monOf(ctx.mem, x.name).downs += 1;
     }
     ctx.mem.lastParty = Object.fromEntries((after.wave === b.wave ? after : b).slots.filter((x) => x.occupied).map((x) => [x.name, x.hp ? x.hp.now / Math.max(1, x.hp.max) : 1]));
+    // 「すべて解放」の WAVE 10 は、倒すと「DEBUG 勝利」の画面で止まる(盤面は残っている)。これもその WAVE のクリアと数える
+    const debugWin = after.over && await s.page.evaluate(() => /DEBUG\s*勝\s*利/.test((document.body.innerText || '').replace(/\s+/g, ' ')));
+    if (debugWin) ctx.log.waveEnd('clear');
     if (after.wave !== b.wave || !after.inBattle) {
       ctx.log.waveEnd(after.inBattle || !after.over ? 'clear' : '');
       // 合間のアシストカード選びで使う: このWAVEで味方の最大ライフの何割を受けたか

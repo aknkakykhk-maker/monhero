@@ -13220,7 +13220,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const handleNextWave = async () => {
     // 練習の台本があるときは、強化フェーズまで通して見せたいので
     // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
-    if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && !battleScenarioRef.current && !(extremeRunRef.current&&extremeDistanceBreakRule(extremeDifficulty))) {
+    // 「すべて解放してバトル」は、ふつうのランと同じく WAVE 10 まで続ける(記録しないのは debugBattleRef のまま)。
+    // WAVE 10 を倒したときだけ、ここで勝ち表示を出して止める
+    if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && !battleScenarioRef.current && !(extremeRunRef.current&&extremeDistanceBreakRule(extremeDifficulty)) && !(debugUnlockAllRef.current && wave < 10)) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
