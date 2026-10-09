@@ -209,7 +209,7 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
   // 重なった案内・会話・ログインボーナスを閉じる。
   // ★会話(イベントのお話など)は「次へ」を何十回も押すことになるので、「スキップ」を先に押す
   s.dismissOverlays = async (max = 40) => {
-    let first = '', firstShot = '', pressed = 0;
+    let first = '', firstShot = '', pressed = 0, noSkipNext = 0;
     for (let i = 0; i < max; i++) {
       const list = await s.listButtons();
       const b = list.find((x) => x.overlay && /^スキップ$/.test(x.label))
@@ -225,11 +225,13 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
         }, { x: b.x, y: b.y }).catch(() => '');
         firstShot = await s.shot('long-talk');
       }
+      // スキップが見えているときの「次へ」は、長い会話には数えない(スキップできる会話は長くても困らない)
+      if (b.label === '次へ' && !list.some((x) => x.overlay && /^スキップ$/.test(x.label))) noSkipNext += 1;
       await s.tap(b, '重なりを閉じる');
       pressed += 1;
     }
     // スキップの無い長い会話は、遊ぶ人にとっても長い。何の会話かを残す
-    if (pressed >= 12) await s.addIssue('長い会話', `スキップできない会話で${pressed}回押した: ${first.replace(/\s+/g, ' ').slice(0, 160)}`, { firstImage: firstShot });
+    if (noSkipNext >= 12) await s.addIssue('長い会話', `スキップできない会話で${noSkipNext}回押した: ${first.replace(/\s+/g, ' ').slice(0, 160)}`, { firstImage: firstShot });
   };
 
   s.boot = async ({ toHome = true } = {}) => {
