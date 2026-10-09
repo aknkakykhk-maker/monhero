@@ -97,17 +97,27 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
   // 難易度を名前で指定したとき(Master など)は、いちばん前へ戻してから、その札まで送る(すべて解放だと極限まで開いているため)
   if (difficulty && !['max', 'keep'].includes(difficulty)) {
     for (let k = 0; k < 25; k++) {
+      const before = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="前の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      await s.wait(150);
+      for (let w = 0; w < 15; w++) {
+        await s.wait(150);
+        const now = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
+        if (now !== before) break;
+      }
     }
+    // ★札の切り替えは少し遅れて .on が動く。押したあと切り替わるのを確かめてから次を押す
+    //   (2026-10-09: 0.2秒で次を押して Hard を通り過ぎ、Expert で戦っていた)
+    const onKey = () => page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
+    await s.wait(600);
     for (let k = 0; k < 25; k++) {
-      const key = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
+      const key = await onKey();
       if (key === difficulty) break;
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="次の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      await s.wait(200);
+      for (let w = 0; w < 15 && (await onKey()) === key; w++) await s.wait(150);
     }
+    if ((await onKey()) !== difficulty) return `no-difficulty:${difficulty}`;
   }
   // ★難易度の札(article[data-difficulty-card])は全部の難易度ぶん並んでいて、どの札にも「この難易度で挑戦」がある。
   //   文字で探して押すと、いつも先頭の Beginner を押してしまう(2026-10-09 まで、ずっと Beginner で戦っていた)。
