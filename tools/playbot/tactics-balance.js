@@ -16,7 +16,10 @@ const OUT_ROOT = path.join(ROOT, 'tools', 'out', 'playbot');
 const args = process.argv.slice(2);
 const mdAt = args.indexOf('--md');
 const mdFile = mdAt >= 0 ? args[mdAt + 1] : '';
-const dirsArg = args.filter((a, i) => !a.startsWith('--') && i !== mdAt + 1);
+// --diff Master … その難易度の回だけ数える(難易度で敵の強さが大きく違うので、まとめて数えると WAVE ごとの数字がぼやける)
+const diffAt = args.indexOf('--diff');
+const diffOnly = diffAt >= 0 ? args[diffAt + 1] : '';
+const dirsArg = args.filter((a, i) => !a.startsWith('--') && i !== mdAt + 1 && i !== diffAt + 1);
 
 const logsIn = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /^tactics-log-\d+\.json$/.test(f)).map((f) => path.join(dir, f)) : []);
 let files = [];
@@ -31,7 +34,10 @@ else {
   }
 }
 if (!files.length) { console.log('タクティクスの記録(tactics-log-*.json)が見つからない。先に node tools/playbot/playbot.js --only tactics を回す'); process.exit(0); }
-const runs = files.map((f) => ({ file: f, ...JSON.parse(fs.readFileSync(f, 'utf8')) }));
+const runs = files.map((f) => ({ file: f, ...JSON.parse(fs.readFileSync(f, 'utf8')) }))
+  // 途中で打ち切った回(時間の上限・作りかけの確かめ)は数えない
+  .filter((r) => r.result !== 'stopped' && (!diffOnly || r.meta.difficulty === diffOnly));
+if (!runs.length) { console.log(`数えられる回が無い${diffOnly ? `(難易度 ${diffOnly})` : ''}`); process.exit(0); }
 
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const avg = (a) => (a.length ? sum(a) / a.length : 0);
@@ -44,7 +50,7 @@ const THREAT_JA = { none: '様子見など', single: '1発', big: '必殺技', m
 const lines = [];
 const out = (t = '') => lines.push(t);
 
-out(`# タクティクスくんのバランス確認(${runs.length}回分)`);
+out(`# タクティクスくんのバランス確認(${diffOnly ? `${diffOnly}・` : ''}${runs.length}回分)`);
 out();
 out('## 1回ずつの結果');
 out();
@@ -144,7 +150,7 @@ const fromLogs = runs.map((r) => ({ difficulty: r.meta.difficulty, hero: r.build
   assists: ((r.build && r.build.assists) || []).map((a) => `${a.card}${a.upgrade ? '+' : ''}`), result: r.result, wave: r.waves.length, turns: sum(r.waves.map((w) => w.turns)), downs: sum(r.waves.map((w) => w.downs)), at: r.meta.startedAt }));
 // 同じ回が両方にあるときは記録のほうを使う(覚え書きは開始時刻を分単位で持つ)
 const seenAt = new Set(fromLogs.map((r) => String(r.at || '').slice(0, 16)));
-const all = [...pastRuns.filter((r) => !seenAt.has(String(r.at || '').slice(0, 16))), ...fromLogs].filter((r) => r.hero || (r.pool || []).length);
+const all = [...pastRuns.filter((r) => !seenAt.has(String(r.at || '').slice(0, 16))), ...fromLogs].filter((r) => (r.hero || (r.pool || []).length) && (!diffOnly || r.difficulty === diffOnly) && r.result !== 'stopped');
 const table = (title, keyOf) => {
   const g = {};
   for (const r of all) for (const k of new Set(keyOf(r).filter(Boolean))) { g[k] = g[k] || []; g[k].push(r); }
