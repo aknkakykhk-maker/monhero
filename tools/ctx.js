@@ -460,7 +460,11 @@ function cmdDoc(argv, opts) {
 // ---- ルール -----------------------------------------------------------------
 function ruleFiles() {
   const out = [];
-  for (const rel of ['CLAUDE.md', 'AGENTS.md']) if (fs.existsSync(path.join(ROOT, rel))) out.push(path.join(ROOT, rel));
+  // ルートから移した節の置き場所(サブフォルダの CLAUDE.md とスキル。一覧は docs/rules/README.md「節の置き場所」)も引く
+  for (const rel of ['CLAUDE.md', 'AGENTS.md',
+    'monster-hero/images/CLAUDE.md', 'monster-hero/audio/CLAUDE.md', 'monster-hero/data/CLAUDE.md', 'tools/mode/CLAUDE.md',
+    '.claude/skills/changelog-help-update/SKILL.md', '.claude/skills/rhythm-song-add/SKILL.md',
+  ]) if (fs.existsSync(path.join(ROOT, rel))) out.push(path.join(ROOT, rel));
   const dir = path.join(ROOT, 'docs/rules');
   if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir).sort()) if (f.endsWith('.md')) out.push(path.join(dir, f));
   return out;
