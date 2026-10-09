@@ -200,6 +200,11 @@ function decidePick(b, opts, ctx) {
     const full = !g || !g.max || g.now >= g.max * 0.85;
     a0.rank = full ? a0.value : a0.value / Math.pow(Math.max(8, a0.o.card.cost || 8), 0.7) * 7;
   }
+  // ★通常技の段階(倍率)は「敵がいる距離の枠に立っている子の適性」で決まる(BATTLE_NEW_MODE_PLAN.md 4.4)。
+  //   敵が誰もいない距離にいるときは、いちばんダメージを出している子の距離の距離撃で引き寄せる(当てたあと敵がその距離へ動く)
+  if (b.enemy && ctx.mainDist != null && DISTS[ctx.mainDist] !== b.enemy.dist && !b.slots.some((x) => x.occupied && !x.downed && DISTS[x.i] === b.enemy.dist)) {
+    for (const a0 of atkOpts) if (a0.o.card.type === 'range_atk' && new RegExp(`^\\d+\\s*${DISTS[ctx.mainDist]}\\s`).test(a0.o.card.label)) { a0.rank *= 3; a0.pull = true; }
+  }
   atkOpts.sort((a, z) => z.rank - a.rank);
   // ① とどめ: 残りの行動回数ぶんの上位の見込みで倒せるなら攻撃だけ
   const topSum = atkOpts.slice(0, left).reduce((a, x) => a + x.value, 0) + (ctx.plannedDmg || 0);
@@ -247,14 +252,14 @@ function decidePick(b, opts, ctx) {
   const hpMax = b.slots.filter((x) => x.occupied).reduce((a, x) => a + (x.hp ? x.hp.max : 0), 0);
   const downed = b.slots.filter((x) => x.occupied && x.downed).length;
   const heal = opts.find((o) => o.card.type === 'heal');
-  if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.5))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
+  if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.35))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
   // ⑤ 攻撃。★スタンのカード(あつの挑発など・type debuff)は「ためる」「貫通の構え」のターンまで取っておく。
   //   先に撃つと、必殺技(×2.5)を止められずに倒れる(2026-10-09 Master の WAVE 3)。とどめのときだけは使ってよい
   const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
   const atkUse = keepStun ? atkOpts.filter((a) => a.o.card.type !== 'debuff') : atkOpts;
   if (atkUse.length) {
     const a = atkUse[0];
-    return { kind: 'attack', card: a.o.card, slot: a.slot, value: a.value, why: lethal ? 'とどめ' : '見込みのダメージがいちばん大きい' };
+    return { kind: 'attack', card: a.o.card, slot: a.slot, value: a.value, why: lethal ? 'とどめ' : a.pull ? `敵を${DISTS[ctx.mainDist]}距離へ引き寄せる(通常技の段階が上がる)` : '見込みのダメージがいちばん大きい' };
   }
   // ⑤' 見込みが読めなかった攻撃カード(押しても印が出ない)でも、使えるなら置いてみる
   const blind = opts.find((o) => /atk|unique/.test(o.card.type) && !o.previews.length && !ctx.blindTried);
@@ -327,6 +332,8 @@ async function maybeUseEx(s, b, mem, log) {
     if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
     else if (role === 'dodge' && x.aimed && b.enemy && b.enemy.dist === DISTS[x.i] && bigHit) why = '狙われていて、敵と同じ距離(回避のEX)';
     // 満タンにする EX は回数が少ない(モッチー3回)。敵がもうすぐ倒れるときは使わない
+    // 手強い WAVE(敵のライフが、いまの1ターンのダメージの8倍より多い)の始めは、ガッツが7割を切っていれば先に使う(+30% が5ターン続く)
+    else if (role === 'refill' && b.enemy && b.enemy.hp >= b.enemy.max * 0.9 && (b.turn || 1) <= 2 && mem.recentWave && b.enemy.max > mem.recentWave * 8 && x.guts && x.guts.now < x.guts.max * 0.7) why = '手強いWAVEの始め(満タンにして力を上げるEX)';
     else if (role === 'refill' && (gutsLow || hpLow) && (hpLow || (b.enemy && b.enemy.hp >= b.enemy.max * 0.4))) why = gutsLow ? 'ガッツが細った(満タンにするEX)' : 'ライフが細った(満タンにするEX)';
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
     if (!why) continue;
@@ -365,7 +372,8 @@ async function maybeUseEx(s, b, mem, log) {
 // カードを選び終えるまで。戻り値は置いたカードの一覧(記録用)
 async function playTurn(s, b0, mem, log, stats) {
   const picks = [];
-  const ctx = { guarded: {}, healed: false, buffed: false, stunned: false, plannedDmg: 0, recentDealt: mem.recentDealt || 0 };
+  const top = b0.slots.filter((x) => x.occupied && !x.downed && x.name).sort((p, q) => monOf(mem, q.name).dmg - monOf(mem, p.name).dmg)[0];
+  const ctx = { guarded: {}, healed: false, buffed: false, stunned: false, plannedDmg: 0, recentDealt: mem.recentDealt || 0, mainDist: top ? top.i : null };
   const limit = Math.max(1, b0.limit || 1);
   const failed = new Set();
   // ガッツが足りずに使えない攻撃カードがある子を数える(トレーニングの猛勉強・ガッツ系のアシストカード選びに使う)

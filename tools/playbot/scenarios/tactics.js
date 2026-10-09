@@ -407,7 +407,8 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const dealt = b.enemy ? Math.max(0, b.enemy.hp - (after.enemy && after.wave === b.wave ? after.enemy.hp : 0)) : 0;
     for (const p of picks) if (p.kind === 'attack' && p.mon) brain.monOf(ctx.mem, p.mon).dmg += dealt * (p.value / planned);
     // 1ターンあたりのダメージ(なだらかに)。WAVE が変わったら数え直す
-    if (after.wave === b.wave) ctx.mem.recentDealt = ctx.mem.recentDealt ? ctx.mem.recentDealt * 0.6 + dealt * 0.4 : dealt; else ctx.mem.recentDealt = 0;
+    if (after.wave === b.wave) ctx.mem.recentDealt = ctx.mem.recentDealt ? ctx.mem.recentDealt * 0.6 + dealt * 0.4 : dealt;
+    else { ctx.mem.recentWave = ctx.mem.recentDealt || ctx.mem.recentWave || 0; ctx.mem.recentDealt = 0; }
     for (const x of after.slots || []) {
       const was = b.slots.find((y) => y.i === x.i);
       if (x.occupied && x.downed && was && !was.downed && x.name) brain.monOf(ctx.mem, x.name).downs += 1;
