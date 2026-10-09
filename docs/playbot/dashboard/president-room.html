@@ -25,6 +25,7 @@ section{display:flex;flex-direction:column;gap:10px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .card.decide{background:var(--warn-bg);border-color:var(--warn)}
 .card p{margin:0}
+.options{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:2px;font-size:14px}
 .chip{display:inline-block;align-self:flex-start;border:1px solid currentColor;border-radius:999px;padding:0 9px;font-size:12px;line-height:20px;white-space:nowrap}
 .chip.warn{color:var(--warn)}.chip.ok{color:var(--ok)}.chip.bad{color:var(--bad)}.chip.idle{color:var(--muted)}
 .meta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12px;color:var(--muted)}
@@ -52,7 +53,7 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 17:04 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 17:06 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
@@ -62,7 +63,8 @@ section{display:flex;flex-direction:column;gap:10px}
   </nav>
 
   <section id="decide">
-    <h2>社長の判断待ち</h2>
+    <h2>社長の判断待ち(提案・質問)</h2>
+    <p class="note">部からの提案は「提案」、進め方の確認は「質問」の札で出ます。決めたら、チャットで番号や案を伝えてください。</p>
     <div class="cards"><p class="empty">いま決めてほしいことはありません。</p>
     </div>
   </section>
