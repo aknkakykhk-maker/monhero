@@ -17,7 +17,7 @@ async function offlinePlayScenario(s, shared) {
   shared.netSong = { song: r.stats && r.stats.song, difficulty: r.stats && r.stats.difficulty };
   if (r.ok && pending < 1) await s.addIssue('記録が消える', `つながらないまま演奏を終えたのに、送れなかった記録が端末に取っておかれていない(控え ${pending}件)`);
   await s.backHome();
-  return { ok: r.ok && pending >= 1, note: `つながらないまま ${shared.netSong.song} ${shared.netSong.difficulty} を演奏 → 端末の控え ${pending}件(断られた通信 ${s.supabase.net.refused}回)` };
+  return { ok: r.ok && pending >= 1, note: `つながらないまま ${shared.netSong.song} ${shared.netSong.difficulty} を演奏 → 端末の控え ${pending}件(断られた通信 ${s.supabase.net.refused}回)${r.note ? `【演奏: ${r.note}】` : ''}` };
 }
 
 async function resendScenario(s, shared) {
