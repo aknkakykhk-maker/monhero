@@ -640,11 +640,19 @@ function scoreNames(k, difficulty, role) {
 function preferredOrder(difficulty, rand) {
   const k = loadKnowledge();
   const names = [...new Set([...BASE_NAMES, ...k.runs.flatMap((r) => [r.hero, ...(r.pool || [])]).filter(Boolean)])];
+  // ★Expert 以上で、試していない子を勇者モンにすると、1体で戦う WAVE 1〜2 で倒れることが多い
+  //   (2026-10-09 Master: ライフ 250 のピクシー・400 のライガーが WAVE 1〜2 で負けた)。
+  //   難しい難易度ほど「知っている、成績のよい子」を選び、試すのは供モンの候補と、やさしい難易度で行う
+  const hard = DIFF_ORDER.indexOf(difficulty) >= DIFF_ORDER.indexOf('Expert');
   const rank = (role) => {
     const sc = scoreNames(k, difficulty, role);
+    const strict = hard && role === 'hero';
     // 平均の出来 + 試した回数が少ないほど足す(よく知らない子も試す)
-    return names.map((nm) => { const x = sc[nm]; const mean = x && x.w ? x.v / x.w : 1.2; return { nm, v: mean + 0.35 / Math.sqrt((x ? x.n : 0) + 1) + rand() * 0.15 }; })
-      .sort((a, z) => z.v - a.v).map((x) => x.nm);
+    return names.map((nm) => {
+      const x = sc[nm];
+      const mean = x && x.w ? x.v / x.w : (strict ? 0.3 : 1.2);
+      return { nm, v: mean + (strict ? 0.05 : 0.35) / Math.sqrt((x ? x.n : 0) + 1) + rand() * (strict ? 0.05 : 0.15) };
+    }).sort((a, z) => z.v - a.v).map((x) => x.nm);
   };
   const hero = rank('hero')[0];
   const allies = rank('ally').filter((nm) => nm !== hero);
