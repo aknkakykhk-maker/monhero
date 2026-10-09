@@ -40,6 +40,7 @@ const byKind = (k) => board.filter((r) => r.区分 === k);
 const decide = byKind('判断待ち');
 const proposals = decide.filter((r) => r.種類 === '提案').length;
 const work = byKind('進行中');
+const planned = byKind('予定'); // 始めるのが先の作業・定期の仕事。進行中に数えない(2026-10-10 社長の指摘)
 const shipped = byKind('公開');
 
 // 判断待ちの種類。提案 = 部が出した改良・調整の案(案を `案` に並べる) / 質問 = 部が進め方を聞いている
@@ -219,6 +220,8 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       ${listHtml(work, ['担当', '見込み', 'PR'])}
+      <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
+      ${listHtml(planned, ['担当', '見込み', 'PR'])}
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
@@ -245,7 +248,7 @@ section{display:flex;flex-direction:column;gap:10px}
 </div>
 `;
 fs.writeFileSync(OUT, html);
-console.log('OK: ' + path.relative(ROOT, OUT) + ' (判断待ち ' + decide.length + ' / 進行中 ' + work.length + ' / 公開 ' + shipped.length + ')');
+console.log('OK: ' + path.relative(ROOT, OUT) + ' (判断待ち ' + decide.length + ' / 進行中 ' + work.length + ' / 予定 ' + planned.length + ' / 公開 ' + shipped.length + ')');
 
 // 載せ忘れの見張り(2026-10-09 社長「社長室の内容は更新内容ちゃんとしてくれないと困る」。部が報告を送らずに公開した件が漏れた)。
 // 今日 main に入った PR のうち、board.json のどこにも番号が無いものを並べる。統括部長の記録用の PR(window-requests)と部の記録だけの PR(playbot-history)は除く。
