@@ -53,7 +53,8 @@ const readBoard = (s) => s.page.evaluate(() => {
   });
   const barEl = document.querySelector('[data-enemy-bar]');
   const bar = barEl ? (barEl.innerText || '').replace(/\s+/g, ' ').trim() : '';
-  const bm = bar.match(/^(.*?)\s+(零|近|中|遠)\s+([\d,]+)\s*\/\s*([\d,]+)/);
+  // 「メタルナー 遠 ⬆ +10% ▼ 258 / 825」のように、距離とライフのあいだに強化・弱体の印が入ることがある
+  const bm = bar.match(/^(.*?)\s+(零|近|中|遠)\s.*?([\d,]+)\s*\/\s*([\d,]+)\s*$/) || bar.match(/^(.*?)\s+(零|近|中|遠)\s.*?([\d,]+)\s*\/\s*([\d,]+)/);
   const hand = [...document.querySelectorAll('[data-hand-card]')].map((el) => ({
     i: el.getAttribute('data-hand-card'), type: el.getAttribute('data-card-type') || '', cost: Number(el.getAttribute('data-card-cost')) || 0,
     usable: el.getAttribute('data-card-usable') === 'true', block: el.getAttribute('data-card-block') || '',
@@ -106,10 +107,17 @@ async function boxOf(s, sel) {
   }, sel);
 }
 // 見込みを読むための押し・取り消しは、記録に残さず素早く押す(人が指で触って確かめるのと同じ)
+// ★同じカードを続けて押すときは 0.8秒あける。350ms 以内の2回目は「ダブルタップ=カードの説明を開く」になる
+//   (10-core.jsx の CARD_DOUBLE_TAP_MS・60-app.jsx の selectCardAt)。見込みを読んだあとの取り消しが説明を開いてしまい、
+//   そのあとのカードが置けなくなっていた(2026-10-09)
+const lastTapAt = new Map();
 async function quickTap(s, sel) {
+  const since = Date.now() - (lastTapAt.get(sel) || 0);
+  if (since < 800) await s.wait(800 - since);
   const b = await boxOf(s, sel);
   if (!b) return false;
   await s.page.mouse.click(b.x, b.y);
+  lastTapAt.set(sel, Date.now());
   return true;
 }
 
@@ -243,6 +251,7 @@ async function placePick(s, d) {
   }
   // 置けなかった。押したカードを取り消す
   now = await readBoard(s);
+  if (process.env.PLAYBOT_DEBUG) console.log(`      [置けない] ${d.card.label} 枚数${before.picked}→${now.picked}/${now.limit} 実行「${now.actionText}」 置き場所待ち${now.needsPlace} 手札 ${now.hand.map((c) => `${c.i}:${c.type}${c.usable ? '' : '×'}`).join(' ')}`);
   if (now.needsPlace) { await quickTap(s, `[data-hand-card="${d.card.i}"]`); await s.wait(300); }
   return false;
 }
@@ -431,6 +440,7 @@ async function chooseBetween(s, mem, log) {
       else plan = ['ドミノ倒し', 'ドミノ倒し'];
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(狙われた${m.aimed}回・ガッツ不足${m.gutsShort}回)`);
+      if (process.env.PLAYBOT_DEBUG) console.log(`      [トレーニング] ${scr.trainingName} 選んだ数${scr.picked} → ${want}`);
       if (await press(new RegExp(`^${want}`), 'トレーニング')) { await s.wait(500); return true; }
     }
     return false;
@@ -466,10 +476,13 @@ async function chooseBetween(s, mem, log) {
     if (!cards.length) return false;
     const starved = Object.values(mem.mons).reduce((a, m) => a + m.gutsShort, 0) >= 3;
     const hurt = mem.dmgTakenWave > 0.5;
-    const score = (t) => (/自傷/.test(t) ? -5 : 0) + (/攻撃.*アップ|与ダメ/.test(t) ? 3 : 0) + (/回復/.test(t) ? (hurt ? 3.5 : 2) : 0)
-      + (/ガッツ/.test(t) ? (starved ? 3.2 : 1.5) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 3 : 1.8) : 0);
+    // ★「ガッツ自動回復」は回復(ライフ)ではなくガッツのカード。ライフの回復は「ライフ … 回復」
+    const isHeal = (t) => /ライフ[^ガ]*回復|回復・全体/.test(t);
+    const isGuts = (t) => /ガッツ/.test(t) && !isHeal(t);
+    const score = (t) => (/自傷/.test(t) ? -5 : 0) + (/攻撃.*アップ|与ダメ/.test(t) ? 3 : 0) + (isHeal(t) ? (hurt ? 3.5 : 2) : 0)
+      + (isGuts(t) ? (starved ? 3.2 : 1.5) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 3 : 1.8) : 0);
     const best = cards.sort((a, z) => score(z) - score(a))[0];
-    const kind = /自傷/.test(best) ? '' : /攻撃.*アップ|与ダメ/.test(best) ? '火力を伸ばす' : /回復/.test(best) ? (hurt ? '被ダメージが多いので回復' : '回復の手段を持つ') : /ガッツ/.test(best) ? (starved ? 'ガッツ不足が多い' : 'ガッツを補う') : '守りを固める';
+    const kind = /攻撃.*アップ|与ダメ/.test(best) ? '火力を伸ばす' : isHeal(best) ? (hurt ? '被ダメージが多いので回復' : '回復の手段を持つ') : isGuts(best) ? (starved ? 'ガッツ不足が多い' : 'ガッツを補う') : '守りを固める';
     log.note(`アシストカード: ${best.slice(0, 24)}(${kind})`);
     return press(new RegExp(`^${best.slice(0, 8).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), 'アシストカード');
   }
