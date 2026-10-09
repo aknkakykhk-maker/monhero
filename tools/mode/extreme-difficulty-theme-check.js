@@ -30,11 +30,21 @@ assert.strictEqual(new Set(themes.map(t => t.accent)).size, order.length, '極�
 for (let i = 1; i < themes.length; i++) assert(themes[i].glow > themes[i-1].glow, `${themes[i].id} は一つ前より強い発光にしてください`);
 for (const required of [
   'const theme=extremeDifficultyTheme(setting.id);',
-  'background:previewable?theme.background',
-  'background:theme.action',
+  // 2026-10-09: 札そのものは難易度えらびと同じ作り(77-screen-rhythm-multi.jsx の .mhbt-d-<難易度>)で色を付ける。
+  // 段ごとの色と「上ほど強い光」はそちらで持ち、ここの theme は札の差し色・ルール欄・ランキングのタブで使う
+  'mhbt-tile mhbt-d-${setting.id} dark',
+  "'--acc':theme.accent",
   'borderColor:`rgba(${theme.rgb},.58)`',
   'text-[10px] leading-tight text-amber-300',
 ]) assert(source.includes(required), `実装に ${required} が必要です`);
+// 札の色: 極限の段ごとに別の色があり、上の段ほどふちの光が太いこと
+{
+  const rhythm = require('fs').readFileSync(require('path').join(__dirname, '../../monster-hero/src/parts/77-screen-rhythm-multi.jsx'), 'utf8');
+  const ringOf = (id) => { const m = rhythm.match(new RegExp(`\\.mhbt-d-${id}[{,][^}]*?--d-ringw:(\\d+)px`)); return m ? Number(m[1]) : null; };
+  const rings = order.map(ringOf);
+  rings.forEach((w, i) => assert(Number.isFinite(w), `${order[i]} の札の色(.mhbt-d-${order[i]})が必要です`));
+  for (let i = 1; i < rings.length; i++) assert(rings[i] >= rings[i-1], `${order[i]} の札のふちは一つ前より細くしないでください`);
+}
 
 const rankingCssStart = index.indexOf('/* 極限チャレンジランキングの7難易度タブ。');
 // 極限タブのCSSだけを切り出す。ここを種族タブの塊まで広げてしまうと、
