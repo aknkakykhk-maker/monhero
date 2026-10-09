@@ -1,6 +1,8 @@
 // 「モンヒロ社 社長室」のページを作る。社長が見る報告のまとめ(アーティファクト1枚)。
 //
-// 中身は docs/playbot/dashboard/ の3つの JSON(board: 判断待ち・進行中・公開 / teams: 各部の様子 / scores: 成績)。
+// 中身は docs/playbot/dashboard/ の JSON(ledger: 頼みと仕事の台帳 / teams: 各部の様子 / scores: 成績)。
+// 判断待ち・進行中・公開は台帳(ledger.json)から ledger.js が作る(2026-10-09 改善部の提案 C1)。
+// board.json も読む(台帳へ移す前の書き方。台帳と同じ id の項目は台帳を優先)。
 // 統括部長:モンヒロくんが JSON を直してこれを回し、出来たページを Artifact で同じ URL へ出し直す。
 // スクリプトを使わない素の HTML にしてある(2026-10-09 ダッシュボード型が社長の iPhone で「対応していないブラウザ」になったため)。
 //
@@ -22,7 +24,13 @@ function readRows(name) {
 }
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const board = readRows('board');
+// 成績は「できごとの記録」から数え直してから読む(scores.json を手で直さない。scoreboard.js)
+require('./scoreboard.js').writeAll();
+const TODAY = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+const ledger = require('./ledger.js').writeAll(TODAY); // 台帳を確かめ、REQUESTS.md の表も作り直す
+const legacy = fs.existsSync(path.join(DIR, 'board.json')) ? readRows('board') : [];
+const ledgerIds = new Set(ledger.board.map((r) => r.id).concat(ledger.rows.map((e) => e.id)));
+const board = [...ledger.board, ...legacy.filter((r) => !ledgerIds.has(r.id))];
 const teams = readRows('teams');
 const scores = readRows('scores').map((r) => ({ ...r, 点: Number(r.点) || 0, 本物: Number(r.本物) || 0 }))
   .sort((a, b) => b.点 - a.点 || b.本物 - a.本物);
@@ -243,14 +251,21 @@ console.log('OK: ' + path.relative(ROOT, OUT) + ' (判断待ち ' + decide.lengt
 // 今日 main に入った PR のうち、board.json のどこにも番号が無いものを並べる。統括部長の記録用の PR(window-requests)と部の記録だけの PR(playbot-history)は除く。
 try {
   const { execSync } = require('child_process');
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+  const today = TODAY;
   const log = execSync(`git log origin/main --first-parent --since="${today} 00:00 +0900" --format=%s`, { cwd: ROOT, encoding: 'utf8' });
-  const listed = new Set((JSON.stringify(board).match(/#\d+/g) || []));
+  const listed = new Set([...(JSON.stringify(board).match(/#\d+/g) || []), ...ledger.prs]);
   const missing = log.split('\n').filter((s) => s && !/window-requests|playbot-history|^台帳[:：]/.test(s))
     .map((s) => ({ s, n: (s.match(/#(\d+)/) || [])[0] })).filter((x) => x.n && !listed.has(x.n));
   if (missing.length) {
     console.log('要確認: 今日公開されたのに社長室に載っていない PR が ' + missing.length + ' 件(載せるか、載せない理由があればそのまま):');
     missing.forEach((x) => console.log('  ' + x.s));
+  }
+  // 台帳の「いま」が古いままの件(PR はすべて main に入ったのに、受けたのまま。2026-10-09 改善部 C1)
+  const merged = new Set(execSync('git log origin/main --first-parent -800 --format=%s', { cwd: ROOT, encoding: 'utf8' }).match(/#\d+/g) || []);
+  const stale = require('./ledger.js').staleRows(ledger.rows, merged);
+  if (stale.length) {
+    console.log('要確認: PR はすべて公開済みなのに、台帳の「いま」が「受けた」のままの件が ' + stale.length + ' 件(終わっていれば 公開済み に、作業中なら 班で作業中 に):');
+    stale.forEach((e) => console.log('  ' + e.id + ' ' + (e.件名 || e.頼み).slice(0, 30) + ' … ' + e.いま + ' ' + e.PR.join('・')));
   }
 } catch (e) {
   console.log('要確認: 公開の載せ忘れを確かめられなかった(' + e.message.split('\n')[0] + ')');

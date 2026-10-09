@@ -4,6 +4,16 @@
 // ツアー: HOME のボタンを1つずつ開き、その中で少し遊んでから HOME へ戻る。
 //         探索は乱数しだいで行かない場所が出るので、ツアーで「全部の入口」を必ず1回は通る。
 
+// 選んだ印の一覧(押す前と後で比べる)。「選ばれている札」「開いている／閉じている」の切り替えを、文字の変化とは別に見る
+const toggleSig = (s) => s.page.evaluate(() => [...document.querySelectorAll('[aria-pressed],[aria-selected],[aria-checked],[aria-expanded]')]
+  .map((e) => `${e.getAttribute('aria-pressed')}${e.getAttribute('aria-selected')}${e.getAttribute('aria-checked')}${e.getAttribute('aria-expanded')}`).join(',')).catch(() => '');
+// 押した札がすでに「選ばれている」ものか(押し直しても変わらないのが正しい)
+const isSelectedChip = (s, b) => s.page.evaluate(({ x, y }) => {
+  const e = document.elementFromPoint(x, y);
+  const el = e && e.closest('[aria-pressed],[aria-selected],[aria-checked]');
+  return !!el && ['aria-pressed', 'aria-selected', 'aria-checked'].some((a) => el.getAttribute(a) === 'true');
+}, { x: b.x, y: b.y }).catch(() => false);
+
 async function step(s, ctx) {
   const { rand, report } = ctx;
   s.state.step += 1;
@@ -25,10 +35,18 @@ async function step(s, ctx) {
   const key = `${before}|${pick.label}`;
   report.clickCount.set(key, (report.clickCount.get(key) || 0) + 1);
   const textBefore = ((await s.health()) || { text: '' }).text;
+  const sigBefore = await toggleSig(s);
   await s.tap(pick, '探索');
-  const { name, h } = await s.inspect();
+  let { name, h } = await s.inspect();
   // 押しても画面の文字が1文字も変わらない → 3回続いたら「反応しないボタン」
+  // ★文字が変わらなくても、選んだ印(aria-pressed など)が変わったなら反応している(画面テーマの「おまかせ」「クラシック」など)。
+  //   選ばれている札を押し直しても何も変わらないのは正しい動き。また、切り替えの動きの最中に読んで見逃さないよう、少し待って読み直す
   if (h && h.text === textBefore && pick.tag !== 'SELECT' && pick.tag !== 'INPUT') {
+    await s.wait(700);
+    const again = await s.inspect();
+    h = again.h; name = again.name;
+  }
+  if (h && h.text === textBefore && (await toggleSig(s)) === sigBefore && pick.tag !== 'SELECT' && pick.tag !== 'INPUT' && !(await isSelectedChip(s, pick))) {
     const n = (ctx.noEffect.get(key) || 0) + 1; ctx.noEffect.set(key, n);
     if (n === 3) await s.addIssue('反応なし', `「${pick.label}」を押しても画面が変わらない`);
   }

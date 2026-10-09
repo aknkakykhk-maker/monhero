@@ -18,6 +18,8 @@ const OUT = outArg > 0 ? path.resolve(process.argv[outArg + 1]) : path.join(DIR,
 const read = (name) => JSON.parse(fs.readFileSync(path.join(DIR, name + '.json'), 'utf8'));
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const depts = read('departments');
+// 成績は「できごとの記録」から数え直してから読む(scores.json を手で直さない。scoreboard.js)
+require('./scoreboard.js').writeAll();
 const scores = read('scores');
 const updatedAt = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
