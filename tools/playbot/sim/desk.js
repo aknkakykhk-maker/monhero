@@ -22,7 +22,7 @@ const { loadGame } = require('./load-game');
 
 const args = process.argv.slice(2);
 const argOf = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const DIFFS = argOf('--diff', 'Expert,Master').split(',');
+const DIFFS = argOf('--diff', 'Hard,Expert,Master').split(',');
 const mdFile = argOf('--md', '');
 
 const G = loadGame();

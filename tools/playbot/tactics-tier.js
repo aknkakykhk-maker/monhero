@@ -80,10 +80,11 @@ const toughOf = (m) => Math.sqrt((m.hp || 0) * (m.def || 0));
 const toughSorted = roster.monsters.filter((m) => m && !m.debugOnly).map(toughOf).sort((a, b) => a - b);
 const toughRank = (m) => toughSorted.indexOf(toughOf(m)) / Math.max(1, toughSorted.length - 1);
 
-const stats = roster.monsters.filter((m) => m && !m.debugOnly).map((m) => {
+// rs: 数える回(全部、または1つの難易度だけ)
+const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m) => {
   const dist = DIST_BY_NAME[m.name] || m.dist || null;
-  const inRuns = runs.filter((r) => membersOf(r).includes(m.name));
-  const heroRuns = runs.filter((r) => r.hero === m.name);
+  const inRuns = rs.filter((r) => membersOf(r).includes(m.name));
+  const heroRuns = rs.filter((r) => r.hero === m.name);
   const shares = [];
   for (const r of inRuns) {
     const d = r.dmg || {};
@@ -155,6 +156,10 @@ const stats = roster.monsters.filter((m) => m && !m.debugOnly).map((m) => {
 });
 
 const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', '保留', '未計測'];
+const stats = statsOf(runs);
+// 難易度ごとの Tier(2026-10-09 社長「難易度によって結構Tierも変わる」)。1つにまとめない
+const TIER_DIFFS = ['Hard', 'Expert', 'Master'];
+const statsByDiff = Object.fromEntries(TIER_DIFFS.map((d) => [d, statsOf(runs.filter((r) => r.difficulty === d))]));
 stats.sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier) || (b.score || -9) - (a.score || -9) || b.n - a.n);
 
 const KEYS = ['攻め', '守り', '勇者特性', '固有技', 'EX', '間合い'];
@@ -205,7 +210,34 @@ out();
 out('点(並べる順と S〜D の線引き): 攻め役は頭割り比と勇者の伸び、守り・支え役は入った回の伸びと勇者の伸び。');
 out('S ≥ 0.45 > A ≥ 0.15 > B ≥ −0.15 > C ≥ −0.45 > D。勇者モンにした回が3回より少ないうちは、勇者の伸びを軽く見ます。');
 out();
-out('## Tier 表');
+out('## 難易度ごとの Tier');
+out();
+out('難易度で敵の火力とライフが大きく違うので、Tier は難易度ごとに付けます。かっこの中は、その難易度で試した回数(勇者モンにした回数)。');
+out('2段以上動いた子は、理由を1行で書きます。');
+out();
+out('| モンスター | 役 | Hard | Expert | Master | 難易度で動いた理由 |');
+out('| --- | --- | --- | --- | --- | --- |');
+const TIER_STEP = { S: 0, A: 1, B: 2, C: 3, D: 4 };
+for (const s of stats) {
+  const cells = TIER_DIFFS.map((d) => {
+    const x = statsByDiff[d].find((y) => y.m.name === s.m.name);
+    if (!x || !x.n) return '—';
+    return `${x.tier}${x.provisional && x.tier !== '保留' ? '(暫定)' : ''} ${x.n}(${x.heroN})`;
+  });
+  const steps = TIER_DIFFS.map((d) => statsByDiff[d].find((y) => y.m.name === s.m.name)).filter((x) => x && x.n && TIER_STEP[x.tier] != null).map((x) => TIER_STEP[x.tier]);
+  let why = '';
+  if (steps.length >= 2 && Math.max(...steps) - Math.min(...steps) >= 2) {
+    const m = s.m;
+    const bits = [];
+    if (m.hp <= 400) bits.push(`ライフ ${m.hp}。敵の火力が上がると、打たれ弱さが効いてくる`);
+    if (m.guts <= 90) bits.push(`ガッツ上限 ${m.guts}。敵のライフが増えると、撃てる回数の少なさが効いてくる`);
+    if (!bits.length) bits.push('回数が少なく、ぶれている可能性(回数を増やして確かめる)');
+    why = bits.join(' / ');
+  }
+  out(`| ${s.m.name} | ${s.role} | ${cells.join(' | ')} | ${why} |`);
+}
+out();
+out('## 全難易度をまとめた表(参考。6項目の中身と理由)');
 out();
 out('| Tier | モンスター | 役 | 間合い(零近中遠) | 攻め | 守り | 勇者特性 | 固有技 | EX | 間合い | 試した回数(勇者) | 理由 |');
 out('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
