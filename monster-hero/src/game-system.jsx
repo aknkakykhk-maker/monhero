@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1b35fc6c3200bd15
+// generated-sha256: 51aff4afd29dadf2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 00:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 00:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4281,7 +4281,11 @@ const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 // noticeOpenShort … 縦が低い画面(高さ700px以下)での助手のひとことの開け閉め(2026-10-07)。低い画面ではひとことを出すと
 //   曲の一覧が1行も見えなくなるので、はじめは畳んでおく。新しい項目なので、持っていない既存ユーザーは false で補われる
 //   (ふつうの画面の noticeOpen とは別に持つ。片方を変えても、もう片方は変わらない)
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, genre:'all', favorites:Object.freeze([]) });
+// noticeTouched … ふつうの画面で💬を押して、助手のひとことの開け閉めを自分で選んだか(2026-10-09)。押したことのない人は、
+//   5曲以上遊んでいればはじめから畳む(RHYTHM_NOTICE_FOLD_PLAYED_SONGS)。新しい項目なので、持っていない既存ユーザーは false で補われる
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, noticeTouched:false, genre:'all', favorites:Object.freeze([]) });
+// 何曲遊んだら、助手のひとことをはじめから畳むか(2026-10-09・社長の選択「5曲遊んだ人は畳む」。曲の一覧が3行しか見えなかった)
+const RHYTHM_NOTICE_FOLD_PLAYED_SONGS = 5;
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
@@ -4291,6 +4295,7 @@ const normalizeRhythmSelectView = value => {
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
     noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
+    noticeTouched: source.noticeTouched === true,
     genre,
     favorites: Array.isArray(source.favorites)
       ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX)
@@ -18208,7 +18213,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     window.addEventListener('resize',onResize);
     return ()=>window.removeEventListener('resize',onResize);
   },[]);
-  const noticeOpen=isShortScreen?state.noticeOpenShort:state.noticeOpen;
+  // 5曲以上遊んだ人は、ひとことをはじめから畳んでおく(2026-10-09・社長の選択。390×844で曲の一覧が3行しか見えなかった)。
+  // 💬を押して自分で選んだ人(noticeTouched)は、その選んだほうのまま。はじめての人はこれまでどおり開いている
+  const playedSongCount=React.useMemo(()=>Object.values(bestRecords&&typeof bestRecords==='object'?bestRecords:{})
+    .filter(rec=>rec&&typeof rec==='object'&&Object.values(rec).some(r=>r&&(r.played===true||Number(r.bestScore)>0))).length,[bestRecords]);
+  const foldByPlays=!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
+  const noticeOpen=isShortScreen?state.noticeOpenShort:(foldByPlays?false:state.noticeOpen);
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -18446,7 +18456,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
-          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen})}
+          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen,noticeTouched:true})}
           title={noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>
