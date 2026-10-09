@@ -210,26 +210,30 @@ const overall = stats.map((s) => {
   const measured = per.filter((v) => v.x.tier !== '保留' && Number.isFinite(v.x.score));
   // 暫定のマス(その難易度で5回未満)は総合に数えない。暫定しか無い子は、暫定のマスで出して「暫定」と書く(改善部 T2)
   const firmCells = measured.filter((v) => !v.x.provisional);
-  const usable = firmCells.length ? firmCells : measured;
+  // 数えるマス(5回以上)が1つも無い子は、総合を付けない(「回数不足」。2026-10-10 改善部 T4)。仮の Tier は * のマスから出して添える
+  const usable = firmCells.length ? firmCells : [];
+  const guess = measured.length && !firmCells.length ? tierOfScore(measured.reduce((a, v) => a + v.x.score * DIFF_WEIGHT[v.d], 0) / measured.reduce((a, v) => a + DIFF_WEIGHT[v.d], 0)) : '';
   const n = per.reduce((a, v) => a + v.x.n, 0);
   let tier = '未計測';
   let score = NaN;
-  if (per.length && !usable.length) tier = '保留';
+  if (per.length && !measured.length) tier = '保留';
+  else if (per.length && !usable.length) tier = '回数不足';
   else if (usable.length) {
     const w = usable.reduce((a, v) => a + DIFF_WEIGHT[v.d], 0);
     score = usable.reduce((a, v) => a + v.x.score * DIFF_WEIGHT[v.d], 0) / w;
     tier = tierOfScore(score);
   }
   const short = (d) => { const v = per.find((q) => q.d === d); return v ? `${v.x.tier.replace('未計測', '—')}${v.x.provisional && v.x.tier !== '保留' ? '*' : ''}` : '—'; };
-  return { s, tier, score, n, provisional: !firmCells.length || firmCells.length < 2, short };
+  return { s, tier, score, n, provisional: firmCells.length < 2, short, guess };
 });
-const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '保留', '未計測'];
+const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '回数不足', '保留', '未計測'];
 overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
 // ひとことの理由(30字くらい): 効いている項目と足りない項目、打たれ弱さ・保留の事情
 const oneLine = (o) => {
   const s = o.s;
   if (!s.n) return 'まだ戦っていない';
   if (o.tier === '保留') return 'EX をまだ使えていない。ボットを直して測り直す';
+  if (o.tier === '回数不足') return `回数が足りない(仮${o.guess})。いま回数を足している`;
   const good = KEYS.filter((k) => s.marks[k] === '◎').slice(0, 2);
   const bad = KEYS.filter((k) => s.marks[k] === '△').slice(0, 2);
   const bits = [];
@@ -240,10 +244,14 @@ const oneLine = (o) => {
 };
 out('## 総合 Tier');
 out();
-for (const t of ['S', 'A', 'B', 'C', 'D', '保留']) {
+for (const t of ['S', 'A', 'B', 'C', 'D']) {
   const xs = overall.filter((o) => o.tier === t);
-  if (xs.length) out(`- **${t}** ${xs.map((o) => `${o.s.m.name}${o.provisional && t !== '保留' ? '(暫定)' : ''}`).join('・')}`);
+  if (xs.length) out(`- **${t}** ${xs.map((o) => `${o.s.m.name}${o.provisional ? '(暫定)' : ''}`).join('・')}`);
 }
+const few = overall.filter((o) => o.tier === '回数不足');
+if (few.length) { out(); out(`回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ${few.map((o) => `${o.s.m.name}(仮${o.guess})`).join('・')}`); }
+const heldAll = overall.filter((o) => o.tier === '保留');
+if (heldAll.length) { out(); out(`保留(EX をまだ使えていない): ${heldAll.map((o) => o.s.m.name).join('・')}`); }
 out();
 out('決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。');
 out('数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。');
@@ -254,7 +262,7 @@ out('* は、その難易度で5回未満(暫定。総合には数えない)。'
 out();
 out('| モンスター | 総合 | Hard | Expert | Master |');
 out('| --- | --- | --- | --- | --- |');
-for (const o of overall) out(`| ${o.s.m.name} | ${o.tier.replace('未計測', '—')} | ${o.short('Hard')} | ${o.short('Expert')} | ${o.short('Master')} |`);
+for (const o of overall) out(`| ${o.s.m.name} | ${o.tier.replace('未計測', '—').replace('回数不足', '不足')} | ${o.short('Hard')} | ${o.short('Expert')} | ${o.short('Master')} |`);
 out();
 out('## ひとことの理由');
 out();
