@@ -158,6 +158,8 @@ const reasonOf = (s) => {
   if (s.role !== '攻め') bits.push(`${s.role}役。入った回は平均より WAVE ${sgn(s.memberLift)}`);
   if (s.heroN) bits.push(`勇者モンで WAVE ${sgn(s.heroLift)}(${s.heroN}回)`);
   if (s.m.hp <= 400 && s.heroN && s.heroLift < 0) bits.push(`ライフ ${s.m.hp} で1体の序盤がつらい`);
+  const goodDists = (s.dist || []).map((g, i) => (GOOD_APT.test(g) ? DIST_JA[i] : '')).filter(Boolean);
+  if (s.dist && goodDists.length === 1) bits.push(`得意な間合いが${goodDists[0]}だけ(勇者モンなら${goodDists[0]}へ置けるが、供モンでは空いた枠しか選べない)`);
   if (s.aptN && s.aptGood < 0.3) bits.push(`得意な間合いで撃てたのは ${pct(s.aptGood)}(ボットの置き方・引き寄せを確かめる)`);
   return bits.join(' / ');
 };

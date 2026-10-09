@@ -559,7 +559,9 @@ async function chooseBetween(s, mem, log) {
       //   同じ項目を2回選ぶと掛け算で効く。2026-10-09 までダメージ役にドミノ倒しを選び続けて、モッチーのライフが WAVE 5 でも最初の 720 のまま、
       //   敵の1発(1,000〜2,800)で倒れていた。基本は「丸太うけ+走り込み」。ガッツ切れが続く子だけ猛勉強を1つ混ぜる
       let plan = ['丸太うけ', '走り込み'];
-      if (m.gutsShort >= 4 && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
+      // ガッツの少ない子(元のガッツ 90 以下)は、詰まる前から猛勉強を混ぜる(ゴーレムは通常技4発でガッツが尽きていた)
+      const baseGuts = (ROSTER_BY_NAME[scr.trainingName] || {}).guts;
+      if ((m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
       if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(ダメージの割合${Math.round(share * 100)}%・倒れた${m.downs}回・ガッツ不足${m.gutsShort}回)`);
@@ -581,7 +583,9 @@ async function chooseBetween(s, mem, log) {
   }
   // 供モン: 総合力のいちばん高い子
   const allyBtns = scr.buttons.filter((t) => /総合力\s*[\d,]+/.test(t));
-  if (allyBtns.length && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする)/.test(t))) {
+  // ★WAVE の合間に加わる供モンだけを選ぶ。戦う前の勇者モン・供モン候補の画面にも「総合力」のボタンが並ぶが、
+  //   そこで選ぶとねらった勇者モン(試したい子)ではなくモッチーを押し続けていた(2026-10-09。Tier 表で精度が低かった理由の1つ)
+  if (allyBtns.length && log.data.waves.length > 0 && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする|この子で挑む)/.test(t))) {
     // ★敵は「編成の総合力 ÷ 始めの総合力」の0.7乗で強くなる(32-tactics-units.jsx・上限6倍)。総合力が高いだけの子を入れると敵も強くなる。
     //   覚え書きで「実際にダメージを出した子」(頭割り比)を先に、かばう EX(モノリス)は守りの柱として足し、総合力は低いほうを少しよしとする
     const diff = (log.data.meta || {}).difficulty || '';
@@ -613,7 +617,9 @@ async function chooseBetween(s, mem, log) {
     if (scr.buttons.some((t) => /^(習得する|強化する)$/.test(t))) return false;
     const cards = scr.buttons.filter((t) => /アップ|ダウン|回復|ガッツ|倍|軽減|守り/.test(t) && !/話しかける|説明/.test(t));
     if (!cards.length) return false;
-    const starved = Object.values(mem.mons).reduce((a, m) => a + m.gutsShort, 0) >= 3;
+    // ガッツの少ない勇者モン(ゴーレム 70・モノリス 80)は、はじめからガッツが詰まる。1体で戦う序盤に備えて、最初からガッツを補う
+    const heroGuts = (ROSTER_BY_NAME[log.data.build.hero] || {}).guts;
+    const starved = Object.values(mem.mons).reduce((a, m) => a + m.gutsShort, 0) >= 3 || (Number.isFinite(heroGuts) && heroGuts <= 90);
     const hurt = mem.dmgTakenWave > 0.5;
     // ★「ガッツ自動回復」は回復(ライフ)ではなくガッツのカード。ライフの回復は「ライフ … 回復」
     const isHeal = (t) => /ライフ[^ガ]*回復|回復・全体/.test(t);
