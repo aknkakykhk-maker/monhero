@@ -1729,7 +1729,36 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle })
 // 「マスモンを呼ぶ」を閉じてから「ルームを出る」を受け付けるまでの時間(ms)。二度押しの間隔(ふつう 100〜300ms)より長く、
 // わざと出る人が待たされたと感じない長さ
 const RHYTHM_BUDDY_LEAVE_GUARD_MS = 500;
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
+// 裏でクイックの周回の札(モードえらび・マルチの部屋の見出し)。
+// 負けた・やめたあとは押せるボタンにして、その場で1周目から始め直せるようにする(2026-10-10・社長の報告
+// 「モンビーで裏周回を負けたときに再度挑戦ができない場面が多い」。それまでは札が文字だけで、始め直すにはソロの曲えらびの帯まで行く必要があり、
+// マルチの部屋の中からは部屋を出ないかぎり始め直せなかった)。始め直す処理は曲えらびの帯の「⚔ 1周目から新しく始める」と同じもの
+// 止まったが勝負はついていない(アプリが裏に回った・AUTOを切った)ときは「▶ 周回を再開する」(続きから)。曲えらびの帯の②③と同じ分け方
+function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClass = '' }) {
+  const [failed, setFailed] = React.useState(false);
+  if (!info) return null;
+  const resumable = !!(info.finished && info.canResume && onResume);
+  const restartable = !resumable && !!(info.finished && info.canRestart && onRestart);
+  if (resumable || restartable) {
+    const run = resumable ? onResume : onRestart;
+    const label = resumable ? '▶ 周回を再開する' : '⚔ 周回を始め直す';
+    return (
+      <button type="button" data-rhythm-multi-quick-run data-rhythm-multi-quick-run-restart={restartable ? '' : undefined} data-rhythm-multi-quick-run-resume={resumable ? '' : undefined}
+        disabled={restartable && !!info.processing}
+        aria-label={`${info.reason}。${resumable ? '続きから再開する' : '1周目から始め直す'}`} title={failed ? 'いま周回を始められませんでした' : info.reason}
+        onClick={() => { const ok = run(); setFailed(!ok); }}
+        className={`${widthClass} min-h-[32px] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black active:scale-[.97] disabled:opacity-50 ${failed ? 'border-red-300/60 bg-red-950/40 text-red-200' : resumable ? 'border-emerald-300/60 bg-emerald-900/40 text-emerald-100' : 'border-amber-300/60 bg-amber-900/40 text-amber-100'}`}>
+        {restartable && info.processing ? '記録しています…' : failed ? '始められませんでした' : label}
+      </button>
+    );
+  }
+  return (
+    <small data-rhythm-multi-quick-run className={`${widthClass} shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${info.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
+      {info.finished ? info.reason : `🔁 WAVE ${info.wave}/10・${info.loops}周目${info.catchingUp ? '・追いつき中' : ''}`}
+    </small>
+  );
+}
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -2089,9 +2118,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <small className="mt-0.5 block truncate text-[10px] font-black text-fuchsia-200">▶ {step}{view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : ''}</small>
       </div>
       {/* クイック∞周回を裏で回しているときの進み具合(曲えらびの帯と同じ中身)。対戦の待ち時間も周回は進む */}
-      {quickRunInfo && <small data-rhythm-multi-quick-run className={`max-w-[38%] max-[480px]:max-w-[24%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
-        {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
-      </small>}
+      {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[38%] max-[480px]:max-w-[24%]" />}
       {/* ホストだけの「待たずに進む」(2026-10-03・ユーザー指示「時間を待たずに先に進めるボタンもほしい」) */}
       {opts.buddy && buddyHeaderButton()}
       {opts.advance && isHost && <button data-rhythm-multi-advance type="button" onClick={() => { if (opts.gesture && onUserGesture) onUserGesture(); RHYTHM_MULTI.hostAdvance(); }}
@@ -2197,9 +2224,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
           </div>
-          {quickRunInfo && <small data-rhythm-multi-quick-run className={`max-w-[42%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
-            {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
-          </small>}
+          {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
         </header>
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
