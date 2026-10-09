@@ -22,13 +22,14 @@ module.exports = async function probe(s, tag) {
   const hand = out.before.hand.filter((h) => h.a['data-card-usable'] === 'true');
   for (const h of hand.slice(0, 5)) {
     const i = h.a['data-hand-card'];
-    await page.evaluate((x) => document.querySelector(`[data-hand-card="${x}"]`).click(), i);
+    const tapIt = async () => { const b = await page.evaluate((x) => { const r = document.querySelector(`[data-hand-card="${x}"]`).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, label: 'card' + x }; }, i); await s.tap(b, 'probe'); };
+    await tapIt();
     await s.wait(600);
     const sel = await snap();
-    await page.evaluate((x) => document.querySelector(`[data-hand-card="${x}"]`)?.click(), i);
+    await tapIt();
     await s.wait(600);
     const after = await snap();
-    out.tries.push({ card: h.text, type: h.a['data-card-type'], sel: { slots: sel.slots.map((x) => ({ i: x.a['data-slot-index'], dmg: x.dmg, guard: x.guard, dis: x.a.disabled })), action: sel.action, total: sel.total, hand: sel.hand.map((x) => x.cls.includes('ring') || x.cls.includes('translate') ? x.a['data-hand-card'] + '*' : x.a['data-hand-card']).join(',') }, afterAction: after.action, afterTotal: after.total });
+    out.tries.push({ card: h.text, type: h.a['data-card-type'], sel: { slots: sel.slots.map((x) => ({ i: x.a['data-slot-index'], dmg: x.dmg, guard: x.guard, dis: x.a.disabled })), action: sel.action, total: sel.total, handCls: sel.hand.map((x) => x.cls.slice(0, 90)), top: sel.top.slice(0, 200) }, afterAction: after.action, afterTotal: after.total });
   }
   fs.appendFileSync('/tmp/claude-0/-home-user-monhero/a423a0de-a63f-572f-9f64-ba59ea25b32e/scratchpad/probe.jsonl', JSON.stringify(out) + '\n');
 };
