@@ -22,6 +22,8 @@ function readRows(name) {
 }
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// 成績は「できごとの記録」から数え直してから読む(scores.json を手で直さない。scoreboard.js)
+require('./scoreboard.js').writeAll();
 const board = readRows('board');
 const teams = readRows('teams');
 const scores = readRows('scores').map((r) => ({ ...r, 点: Number(r.点) || 0, 本物: Number(r.本物) || 0 }))

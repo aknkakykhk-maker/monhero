@@ -295,7 +295,7 @@ F. **演奏まわり(rhythm-mode.js の判定・受付・追従、30-rhythm-play
 
 - **社長が見るのは「モンヒロ社 社長室」1ページだけ**: https://claude.ai/artifact/DWfz9ngj3ybfvSUTHDd1YP (非公開・サイドバーに固定)。上から「社長の判断待ち」「進行中の作業」「公開したもの」「各部の様子」「成績表」
 - **更新するのは統括部長だけ**(部のセッションは書き込まない)。部から結果が届いたら、日報ファイル(下)を書いたうえで、
-  `docs/playbot/dashboard/` の JSON(`board.json` 判断待ち・進行中・公開 / `teams.json` 部の様子 / `scores.json` 成績)を直し、
+  `docs/playbot/dashboard/` の JSON(`board.json` 判断待ち・進行中・公開 / `teams.json` 部の様子)を直し(`scores.json` は成績表の記録から道具が作る)、
   `node tools/playbot/president-room.js` で `president-room.html` を作り直して、`Artifact` で**同じファイルを出し直す**(URL はそのまま)。JSON とページは区切りのいいところでコミットする
 - **出し直す前に、毎回「漏れ」を確かめる**(2026-10-09 社長「社長室の内容は更新内容ちゃんとしてくれないと困る」。部が報告を送らずに公開・質問した件が残っていた):
   1. `president-room.js` の最後の「要確認: 今日公開されたのに社長室に載っていない PR」を0件にする(載せるか、載せない理由を自分で判断する)
@@ -331,7 +331,8 @@ F. **演奏まわり(rhythm-mode.js の判定・受付・追従、30-rhythm-play
 #### 日報・週報・成績表(2026-10-09 社長と決めた)
 
 - **日報**: 上の部ごとのファイル(`docs/playbot/reports/<日付>/<部id>.md`)を日報と呼ぶ。部が書き、統括部長がまとめる
-- **成績表**: 統括部長は日報を読んだら、[`docs/playbot/SCOREBOARD.md`](../../docs/playbot/SCOREBOARD.md) の「できごとの記録」へ1行足し、部員ごとの表の点を直す。
+- **成績表**: 統括部長は日報を読んだら、[`docs/playbot/SCOREBOARD.md`](../../docs/playbot/SCOREBOARD.md) の「できごとの記録」へ1行足す(種類の列も書く)。
+  **部員ごとの表と `scores.json` は手で直さない**: `node tools/playbot/scoreboard.js` が記録の足し算で作る(社長室・部署紹介の道具も、作り直す前に自動で回す。2026-10-09 改善部の提案 C2)。
   点の数え方は成績表の頭にある(本物の不具合 +3 / 社長が選んだ改良の公開 +2 / ボット直し +1 / 見込み当たり +1 / 見間違い −1 / 見込み外れ −1 / 指示違反 −5)。
   その日いちばん点を取った者を「今日のMVP」として表彰へ1行
 - **週報**: 毎週月曜の朝(定期実行「週報(統括部長)」`trig_019dzuRsVDx9PopEUkgebzLD`、8:52)、統括部長が `docs/playbot/reports/weekly/<月曜の日付>.md` を書く(前の週の月〜日)。中身は
