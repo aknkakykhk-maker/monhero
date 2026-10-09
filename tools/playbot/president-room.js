@@ -178,3 +178,20 @@ section{display:flex;flex-direction:column;gap:10px}
 `;
 fs.writeFileSync(OUT, html);
 console.log('OK: ' + path.relative(ROOT, OUT) + ' (判断待ち ' + decide.length + ' / 進行中 ' + work.length + ' / 公開 ' + shipped.length + ')');
+
+// 載せ忘れの見張り(2026-10-09 社長「社長室の内容は更新内容ちゃんとしてくれないと困る」。部が報告を送らずに公開した件が漏れた)。
+// 今日 main に入った PR のうち、board.json のどこにも番号が無いものを並べる。統括部長の記録用の PR(window-requests)と部の記録だけの PR(playbot-history)は除く。
+try {
+  const { execSync } = require('child_process');
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+  const log = execSync(`git log origin/main --first-parent --since="${today} 00:00 +0900" --format=%s`, { cwd: ROOT, encoding: 'utf8' });
+  const listed = new Set((JSON.stringify(board).match(/#\d+/g) || []));
+  const missing = log.split('\n').filter((s) => s && !/window-requests|playbot-history/.test(s))
+    .map((s) => ({ s, n: (s.match(/#(\d+)/) || [])[0] })).filter((x) => x.n && !listed.has(x.n));
+  if (missing.length) {
+    console.log('要確認: 今日公開されたのに社長室に載っていない PR が ' + missing.length + ' 件(載せるか、載せない理由があればそのまま):');
+    missing.forEach((x) => console.log('  ' + x.s));
+  }
+} catch (e) {
+  console.log('要確認: 公開の載せ忘れを確かめられなかった(' + e.message.split('\n')[0] + ')');
+}
