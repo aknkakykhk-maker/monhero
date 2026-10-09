@@ -490,9 +490,10 @@ function decideTurn(st) {
       if (heal && !healed && hurtBad) { take(heal, 'support'); continue; }
       const momo = supFor('momosuke');
       if (momo && !healed && leanG) { take(momo, 'support'); continue; }
-      if (enemyRate > 0.3) {
-        // 1ターンに1枚まで(buffed)。ききは早いほど手数が増え、ニコラオ・ポルツ・かどみうむ・ドラはバトル中ずっと続く
-        const o = buffed ? null : ['kiki', 'oryo', 'poltz', 'cadmium', 'dra'].map(supFor).find((x) => x && !x.halved);
+      // 1ターンに1枚まで(buffed)。ききは早いほど手数が増え、ニコラオ・ポルツはバトル中ずっと続く。
+      // 1体だけのとき(手番が1つ)は攻撃を1枚あきらめることになるので、強化は2体以上そろってから(ドラ・かどみうむは下の⑥だけ)
+      if (enemyRate > 0.3 && aliveNow.length >= 2) {
+        const o = buffed ? null : ['kiki', 'oryo', 'poltz'].map(supFor).find((x) => x && !x.halved);
         if (o) { take(o, 'support'); continue; }
       }
       // みゃるの薬: いちばんダメージを出している子に、次のターン撃てるガッツが残るときだけ飲ませる
@@ -1254,6 +1255,8 @@ function settlePandora(st, step) {
 // 勇者モンはいちばん得意な枠、供モンは空いた枠のうち得意なもの(同じなら番号の小さい枠)
 const bestSlotFor = (mon, free) => free.slice().sort((a, b) => (G.DIST_APTITUDE_MULT[(mon.distAptitude || [])[b]] ?? 1) - (G.DIST_APTITUDE_MULT[(mon.distAptitude || [])[a]] ?? 1) || a - b)[0];
 
+// 子ごとの与ダメージ(組み合わせの理由に使う)
+const dmgById = (st) => Object.fromEntries(Object.entries(st.dmgBySlot).filter(([i]) => st.mons[i]).map(([i, v]) => [st.mons[i].id, v]));
 function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot' }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
@@ -1305,7 +1308,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, dmgById: dmgById(st) };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
@@ -1333,7 +1336,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, dmgById: dmgById(st) };
 }
 
 function pickAllies(heroId, rng, n = 3) {
