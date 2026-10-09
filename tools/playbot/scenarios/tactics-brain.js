@@ -315,11 +315,33 @@ async function placePick(s, d) {
 
 // ---------- EX ----------
 // 名前 → 使い方。表に無い子は、説明の文字で決める
-const EX_ROLE = {
-  モノリス: 'shield', ユグドラシル: 'shield', ヤオビクニ: 'shield', エイキ: 'dodge', ザン: 'dodge',
-  モッチー: 'refill', ミタラシ: 'refill', メロディー: 'refill',
-  アーク: 'burst', イブリース: 'burst', メルホイップ: 'burst', クロミー: 'burst', 剣士モッチー: 'burst', ゴーレム: 'skip',
+// EX の役目。名簿(tactics-roster.json。ゲームの TACTICS_EX_SKILLS から読んだ effect)があれば、それで全員ぶん決める。
+// 2026-10-09: 表に無い子は「火力」扱いで、ゴーレム(使わない)・オボロゲソウ(吸収)・ハム(カウンター)・エイキ(距離)などが
+// 使いどころを外していた(Tier 表で「EX を使えていない」と出た)。
+// 名前 → 名簿の1体(間合い適性 dist・特性 trait・固有技・EX)。記録で「得意な間合いで撃てたか」「特性が効いたか」を数えるのに使う
+const ROSTER_BY_NAME = {};
+const EX_ROLE_BY_EFFECT = {
+  statBoost: 'refill', coverAll: 'shield', partyGuard: 'shield', timeStop: 'shield',
+  damageBack: 'selfGuard', avoidCharge: 'selfGuard', dodgeCombo: 'dodge', distMatch: 'distBurst', counter: 'counter',
+  allIn: 'allIn', lifeSpring: 'heal', cookieBox: 'heal', trickConfuse: 'heal', present: 'present',
+  psychoLock: 'burst', thunder: 'burst', multiBuff: 'burst', stage: 'burst', pandoraBox: 'burst', partyBoost: 'burst',
+  weaponChange: 'burst', comboBurst: 'burst', nightmareKey: 'burst',
 };
+const EX_ROLE = (() => {
+  const out = {
+    モノリス: 'shield', ユグドラシル: 'shield', ヤオビクニ: 'shield', エイキ: 'distBurst', ザン: 'dodge',
+    モッチー: 'refill', ミタラシ: 'refill', メロディー: 'heal', ゴーレム: 'allIn', ハム: 'counter', オボロゲソウ: 'selfGuard',
+    アーク: 'burst', イブリース: 'burst', メルホイップ: 'burst', クロミー: 'burst', 剣士モッチー: 'burst',
+  };
+  try {
+    const r = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'tactics-roster.json'), 'utf8'));
+    for (const m of r.monsters || []) {
+      if (m && m.ex && EX_ROLE_BY_EFFECT[m.ex.effect]) out[m.name] = EX_ROLE_BY_EFFECT[m.ex.effect];
+      if (m && m.name) ROSTER_BY_NAME[m.name] = m;
+    }
+  } catch (e) { /* 名簿が無いときは上の表だけ */ }
+  return out;
+})();
 function exRoleOf(name, desc) {
   if (EX_ROLE[name]) return EX_ROLE[name];
   if (/かばう|被ダメ|行動しない|無効|守り/.test(desc)) return 'shield';
@@ -353,7 +375,24 @@ async function maybeUseEx(s, b, mem, log) {
     else if (role === 'refill' && b.enemy && b.enemy.hp >= b.enemy.max * 0.9 && (b.turn || 1) <= 2 && mem.recentWave && b.enemy.max > mem.recentWave * 8 && x.guts && x.guts.now < x.guts.max * 0.7) why = '手強いWAVEの始め(満タンにして力を上げるEX)';
     else if (role === 'refill' && (gutsLow || hpLow) && (hpLow || (b.enemy && b.enemy.hp >= b.enemy.max * 0.4))) why = gutsLow ? 'ガッツが細った(満タンにするEX)' : 'ライフが細った(満タンにするEX)';
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
+    // 自分だけを守る EX(オボロゲソウの吸収・ゴーストの完全回避): 自分が狙われて、重く削られるとき
+    else if (role === 'selfGuard' && x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.3) why = '自分が狙われて重い(自分を守るEX)';
+    // カウンター(ハム): 自分が狙われているターン。貫通撃は受けきれないので外す
+    else if (role === 'counter' && x.aimed && threat !== 'pierce' && x.hp && x.aimDamage < x.hp.now) why = '狙われているので、カウンターで返す';
+    // 距離の EX(エイキ): 敵が自分と同じ距離にいて、ライフがたっぷり残っている
+    else if (role === 'distBurst' && b.enemy && b.enemy.dist === DISTS[x.i] && enemyFull) why = '敵が同じ距離にいる(距離補正×1.7と回避のEX)';
+    // 全力(ゴーレム): 丈夫さが0になるので、狙われていないターンに、手強い敵へだけ
+    else if (role === 'allIn' && !x.aimed && !bigHit && enemyFull && (late || (b.enemy && b.enemy.max >= 8000)) && x.hp && x.hp.now >= x.hp.max * 0.7 && !mem.allInDone?.[x.name + (b.wave || 0)]) {
+      why = '狙われていない手強い敵(丈夫さを力へ回すEX)';
+      mem.allInDone = mem.allInDone || {}; mem.allInDone[x.name + (b.wave || 0)] = 1;
+    }
+    // 回復の EX(ウンディーネ・メロディー・スプーキー): 誰かのライフが4割を切った
+    else if (role === 'heal' && b.slots.some((y) => y.occupied && !y.downed && y.hp && y.hp.now < y.hp.max * 0.4)) why = '味方のライフが細った(回復のEX)';
+    // 1WAVE に1回の EX(スネグーラチカ): ガッツが細ってきたら
+    else if (role === 'present' && b.slots.filter((y) => y.occupied && !y.downed && y.guts).some((y) => y.guts.now < y.guts.max * 0.5)) why = 'ガッツが細ってきた(1WAVEに1回のEX)';
     if (!why) continue;
+    // 選んだ味方へ使う EX(ウンディーネ)は、いちばんライフの細い子を選ぶ
+    const healTarget = role === 'heal' ? (b.slots.filter((y) => y.occupied && !y.downed && y.hp).sort((p, q) => p.hp.now / p.hp.max - q.hp.now / q.hp.max)[0] || {}).name : '';
     await quickTap(s, `[data-slot-index="${x.i}"]`);
     await s.wait(500);
     const panel = await s.page.evaluate(() => {
@@ -371,11 +410,11 @@ async function maybeUseEx(s, b, mem, log) {
       await quickTap(s, '[data-tactics-ex-use]');
       await s.wait(800);
       // 選ぶものがあれば、火力寄りのもの(二刀流など)を先に、無ければ最初の1つ
-      await s.page.evaluate(() => {
+      await s.page.evaluate((target) => {
         const bs = [...document.querySelectorAll('[data-tactics-ex-choices] button')].filter((y) => !y.disabled && !y.hasAttribute('data-tactics-ex-choice-back'));
-        const pick = bs.find((y) => /二刀流|攻撃|火力/.test(y.innerText || '')) || bs[0];
+        const pick = (target && bs.find((y) => (y.innerText || '').includes(target))) || bs.find((y) => /二刀流|攻撃|火力/.test(y.innerText || '')) || bs[0];
         if (pick) pick.click();
-      });
+      }, healTarget);
       await s.wait(700);
       await s.wait(1200);
       mem.exUsed[panel.name || x.name] = (mem.exUsed[panel.name || x.name] || 0) + 1;
@@ -520,7 +559,9 @@ async function chooseBetween(s, mem, log) {
       //   同じ項目を2回選ぶと掛け算で効く。2026-10-09 までダメージ役にドミノ倒しを選び続けて、モッチーのライフが WAVE 5 でも最初の 720 のまま、
       //   敵の1発(1,000〜2,800)で倒れていた。基本は「丸太うけ+走り込み」。ガッツ切れが続く子だけ猛勉強を1つ混ぜる
       let plan = ['丸太うけ', '走り込み'];
-      if (m.gutsShort >= 4 && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
+      // ガッツの少ない子(元のガッツ 90 以下)は、詰まる前から猛勉強を混ぜる(ゴーレムは通常技4発でガッツが尽きていた)
+      const baseGuts = (ROSTER_BY_NAME[scr.trainingName] || {}).guts;
+      if ((m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
       if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(ダメージの割合${Math.round(share * 100)}%・倒れた${m.downs}回・ガッツ不足${m.gutsShort}回)`);
@@ -542,7 +583,9 @@ async function chooseBetween(s, mem, log) {
   }
   // 供モン: 総合力のいちばん高い子
   const allyBtns = scr.buttons.filter((t) => /総合力\s*[\d,]+/.test(t));
-  if (allyBtns.length && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする)/.test(t))) {
+  // ★WAVE の合間に加わる供モンだけを選ぶ。戦う前の勇者モン・供モン候補の画面にも「総合力」のボタンが並ぶが、
+  //   そこで選ぶとねらった勇者モン(試したい子)ではなくモッチーを押し続けていた(2026-10-09。Tier 表で精度が低かった理由の1つ)
+  if (allyBtns.length && log.data.waves.length > 0 && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする|この子で挑む)/.test(t))) {
     // ★敵は「編成の総合力 ÷ 始めの総合力」の0.7乗で強くなる(32-tactics-units.jsx・上限6倍)。総合力が高いだけの子を入れると敵も強くなる。
     //   覚え書きで「実際にダメージを出した子」(頭割り比)を先に、かばう EX(モノリス)は守りの柱として足し、総合力は低いほうを少しよしとする
     const diff = (log.data.meta || {}).difficulty || '';
@@ -574,7 +617,9 @@ async function chooseBetween(s, mem, log) {
     if (scr.buttons.some((t) => /^(習得する|強化する)$/.test(t))) return false;
     const cards = scr.buttons.filter((t) => /アップ|ダウン|回復|ガッツ|倍|軽減|守り/.test(t) && !/話しかける|説明/.test(t));
     if (!cards.length) return false;
-    const starved = Object.values(mem.mons).reduce((a, m) => a + m.gutsShort, 0) >= 3;
+    // ガッツの少ない勇者モン(ゴーレム 70・モノリス 80)は、はじめからガッツが詰まる。1体で戦う序盤に備えて、最初からガッツを補う
+    const heroGuts = (ROSTER_BY_NAME[log.data.build.hero] || {}).guts;
+    const starved = Object.values(mem.mons).reduce((a, m) => a + m.gutsShort, 0) >= 3 || (Number.isFinite(heroGuts) && heroGuts <= 90);
     const hurt = mem.dmgTakenWave > 0.5;
     // ★「ガッツ自動回復」は回復(ライフ)ではなくガッツのカード。ライフの回復は「ライフ … 回復」
     const isHeal = (t) => /ライフ[^ガ]*回復|回復・全体/.test(t);
@@ -613,7 +658,7 @@ function makeLog(meta) {
       if (!b.wave) return;
       if (!cur || cur.wave !== b.wave) {
         cur = { wave: b.wave, enemy: b.enemy ? b.enemy.name : '?', enemyMax: b.enemy ? b.enemy.max : 0, turns: 0, threats: {}, guards: 0,
-          dealt: 0, taken: 0, healed: 0, downs: 0, byMon: {}, byType: {}, presence: {}, partyMax: 0, startParty: partyOf(b), endParty: null, result: '' };
+          dealt: 0, taken: 0, healed: 0, downs: 0, byMon: {}, byType: {}, use: {}, texts: {}, traitHits: 0, presence: {}, partyMax: 0, startParty: partyOf(b), endParty: null, result: '' };
         L.waves.push(cur);
       }
       cur.turns = Math.max(cur.turns, b.turn || 0);
@@ -624,6 +669,17 @@ function makeLog(meta) {
       const enemyAfter = after && after.enemy && after.wave === b.wave ? after.enemy.hp : 0;
       const dealt = b.enemy ? Math.max(0, b.enemy.hp - enemyAfter) : 0;
       cur.dealt += dealt;
+      // 子ごとに、撃った技の種類と、間合いの効き方を数える(60-app.jsx の getDmg):
+      // - 間合い適性は「攻撃した子が立っている枠」のもの(A +10%・G −20%)… apt に S〜G の文字で
+      // - 距離の倍率は「立っている枠と敵の距離の差」で ×1.5 / 1.3 / 1.1 / 0.9 … dd に 0〜3 で
+      const di = b.enemy ? DISTS.indexOf(b.enemy.dist) : -1;
+      for (const p of picks.filter((q) => q.mon && (q.kind === 'attack' || q.type === 'unique'))) {
+        const u = (cur.use[p.mon] = cur.use[p.mon] || { atk: 0, unique: 0, other: 0, apt: {}, dd: {} });
+        if (p.type === 'unique') u.unique += 1; else if (/^atk/.test(p.type || '')) u.atk += 1; else u.other += 1;
+        const apt = p.slot != null && ROSTER_BY_NAME[p.mon] && Array.isArray(ROSTER_BY_NAME[p.mon].dist) ? ROSTER_BY_NAME[p.mon].dist[p.slot] : '';
+        if (apt) u.apt[apt] = (u.apt[apt] || 0) + 1;
+        if (di >= 0 && p.slot != null) { const d = Math.abs(p.slot - di); u.dd[d] = (u.dd[d] || 0) + 1; }
+      }
       for (const p of picks) {
         if (p.kind === 'guard') cur.guards += 1;
         cur.byType[p.type || p.kind] = (cur.byType[p.type || p.kind] || 0) + 1;
@@ -642,6 +698,18 @@ function makeLog(meta) {
       }
       if (after) cur.endParty = partyOf(after.wave === b.wave ? after : b);
     },
+    // バトルの記録欄(Battle Log)に新しく出た文。数字だけのダメージの行は除き、文ごとに数える。
+    // 勇者特性の名前(「眼力！」など)が入った行は、特性が効いた回として数える(特性は勇者モンのものだけが効く)
+    lines: (newLines) => {
+      if (!cur) return;
+      const trait = (ROSTER_BY_NAME[L.build.hero] || {}).trait || '';
+      for (const t0 of newLines) {
+        const t = String(t0).replace(/[\d,]+/g, '#').slice(0, 40);
+        if (/^敵に # ダメージ|^味方が # ダメージを受けた|^ターン|^WAVE/.test(t)) continue;
+        cur.texts[t] = (cur.texts[t] || 0) + 1;
+        if (trait && String(t0).includes(trait)) cur.traitHits += 1;
+      }
+    },
     waveEnd: (result) => { if (cur && !cur.result) cur.result = result; },
     finish: (result, reason) => { L.result = result; L.reason = reason; if (cur && !cur.result) cur.result = result === 'clear' ? 'clear' : result; },
   };
@@ -649,6 +717,28 @@ function makeLog(meta) {
 }
 const partyOf = (b) => b.slots.filter((x) => x.occupied).map((x) => ({ name: x.name, hp: x.hp ? x.hp.now : 0, max: x.hp ? x.hp.max : 0, downed: x.downed }));
 const sumHp = (b) => b.slots.filter((x) => x.occupied).reduce((a, x) => a + (x.hp ? x.hp.now : 0), 0);
+
+// バトルの記録欄を開いて読み、前回から増えた行だけ返す(開いて読んで閉じる。1ターンに1回、0.5秒ほど)
+async function readBattleLog(s, mem) {
+  const opened = await s.page.evaluate(() => { const b = document.querySelector('[data-battle-log-button]'); if (!b) return false; b.click(); return true; }).catch(() => false);
+  if (!opened) return [];
+  await s.wait(250);
+  const lines = await s.page.evaluate(() => [...document.querySelectorAll('[data-battle-log-list] li')].map((li) => (li.innerText || '').replace(/\s+/g, ' ').trim())).catch(() => []);
+  await s.page.evaluate(() => {
+    const l = document.querySelector('[data-battle-log-list]');
+    const root = l && l.parentElement;
+    const btn = root && [...root.querySelectorAll('button')].find((x) => /閉じる/.test(x.innerText || ''));
+    if (btn) btn.click();
+  }).catch(() => {});
+  await s.wait(200);
+  const prev = mem.logLines || [];
+  let start = 0;
+  for (let k = Math.min(prev.length, lines.length); k > 0; k--) {
+    if (prev.slice(-k).join('\n') === lines.slice(0, k).join('\n')) { start = k; break; }
+  }
+  mem.logLines = lines;
+  return lines.slice(start);
+}
 
 // 勝てた/負けた理由を、記録から1〜3行で言う
 function explain(L) {
@@ -773,16 +863,31 @@ function rememberRun(L, stats) {
   const k = loadKnowledge();
   const dmg = {};
   for (const w of L.waves) for (const [m, d] of Object.entries(w.byMon || {})) dmg[m] = (dmg[m] || 0) + d;
+  const use = {};
+  const texts = {};
+  for (const w of L.waves) {
+    for (const [m, u] of Object.entries(w.use || {})) {
+      const t = (use[m] = use[m] || { atk: 0, unique: 0, other: 0, apt: {}, dd: {} });
+      t.atk += u.atk; t.unique += u.unique; t.other += u.other;
+      for (const [g, n] of Object.entries(u.apt)) t.apt[g] = (t.apt[g] || 0) + n;
+      for (const [g, n] of Object.entries(u.dd || {})) t.dd[g] = (t.dd[g] || 0) + n;
+    }
+    for (const [t, n] of Object.entries(w.texts || {})) texts[t] = (texts[t] || 0) + n;
+  }
   k.runs.push({
     at: new Date().toISOString().slice(0, 16), mode: L.meta.mode, difficulty: L.meta.difficulty, hero: L.build.hero, pool: L.build.pool,
     allies: L.build.allies.map((a) => a.name), placements: L.build.placements.map((p) => `${p.name || '?'}:${p.dist}${p.grade}`),
     assists: L.build.assists.map((a) => `${a.card}${a.upgrade ? '+' : ''}`), ex: Object.entries(L.ex.reduce((o, e) => { o[e.ex || e.mon] = (o[e.ex || e.mon] || 0) + 1; return o; }, {})).map(([n, c]) => `${n}×${c}`),
     result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
+    // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
+    use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
+    exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
+    texts: Object.entries(texts).sort((a, b) => b[1] - a[1]).slice(0, 30),
   });
   // 増えすぎないよう、新しい 300 回ぶんだけ持つ
   k.runs = k.runs.slice(-300);
   fs.writeFileSync(KNOWLEDGE, `${JSON.stringify(k, null, 1)}\n`);
 }
 
-module.exports = { saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
+module.exports = { readBattleLog, saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
