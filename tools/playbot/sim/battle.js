@@ -15,7 +15,11 @@
 //   - 固有技の「次のターンから」「WAVE 限定」「ずっと続く」効果(permaBuffs / waveBuffs / nextTurnBuffs を持つ)
 //   - 勇者特性すべて(ステータスの持ち主は「その枠の子」。連撃系の勇者だけのものは buildAttackHits が heroId で見分ける)
 //   - 間合い: 勇者モンはいちばん得意な枠、供モンは空いた枠のうち得意なもの。引き寄せはボット(decidePick の pull)に合わせた
-// ★まだ入れていないもの: トレーニング(倒れた子を起こすのも無し)・アシストカード・魂格・固有技の強化・
+// ★3 版目(2026-10-10)でアシストカード(アシカ)を入れた: WAVE の合間に選んで習得・強化する流れ(60-app.jsx 14673・14812・14860)と、
+//   手札に入って使ったときの効果 10 枚ぶん(processTurn 12437〜12527・ポルツの消化 11224・メロソの全回復 11878・ききの枚数 9162/12939)。
+//   選び方は simulateRun({ assist }) で 'bot'(いまのボット tactics-brain.js 649 と同じ点数)・カードの id(そのカードを優先)・'none'(選ばない)。
+//   戦いの中の使い方は assistPlay で 'bot'(tactics-brain.js decidePick 245〜289 と同じ条件)・'best'(上手な使い方)
+// ★まだ入れていないもの: トレーニング(倒れた子を起こすのも無し)・魂格・固有技の強化・
 //   WAVE 報酬の間合いボーナス(distDmgBonus)・緊急回復。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
 const path = require('path');
@@ -34,7 +38,15 @@ const APPROX = [
   'スネグーラチカのプレゼント・コイン・輪・乱心などの乱数は seed 付きの乱数で引く',
   '剣士モッチーの初期スタイルは片手剣(配置の画面で選べる初期スタイルは選ばない)。bot は EX で二刀流へ、best は勇者なら二刀流・供モンなら片手盾へ切り替える',
   'ボットの「見込みのダメージ」は画面の数字を読むが、ここでは同じ式(getDmg・被ダメージ)で出す',
-  '緊急回復・トレーニング・アシストカード・魂格・WAVE 報酬・固有技の強化は入れていない(実戦より弱く出る)',
+  '緊急回復・トレーニング・魂格・WAVE 報酬・固有技の強化は入れていない(実戦より弱く出る)',
+  'アシカのポルツは「味方のだれかが敵の攻撃を受けた・ガードで受け止めた」ターンに1回ぶん消化する(ゲームは handleEnemyTurn の tookEnemyAttack)',
+  'アシカのみゅあ・かどみうむ・ももすけの上限アップは、そのカードの回復のあとで1体ずつの上限へ掛ける(ゲームは permaBuffs が変わったあとの useEffect で掛ける)',
+  'アシカを選ぶ画面の並び(Math.random の混ぜ方)は seed 付きの乱数で引く。ボットの「ガッツ不足」の数え方は、ガッツが足りずに置けない攻撃カードがあるターンに、ガッツ35%未満の子を1ずつ数える',
+];
+const APPROX_ASSIST_MISSING = [
+  'アシカの演出(fireTeachingFx)・ポップアップの文字は数えない(効果だけ)',
+  'デバッグの「すべて解放」と同じく、10 枚すべてを選べる前提(ふだんのプレイは編成の6枚から)',
+  'EXTREME などの効果倍率(effMul の難易度ぶん)は無い。同じ子が1ターンに2枚目を使ったときの半分(×0.5)だけを数える',
 ];
 
 // ---------- 乱数(seed 付き) ----------
@@ -90,7 +102,7 @@ const computeGuardLevel = (defVal) => Math.max(0, Math.min(G.GUARD_EVOLUTION.len
 const guardCardCount = (guardLv) => Math.min(4, 2 + Math.floor(Math.max(0, guardLv || 0) / 2));
 
 // 60-app.jsx buildDeck(13520)を簡略化: 通常技2枚・ガード・各子の距離撃1枚・固有技1枚(強化Lv0)。アシストカードは入れない
-function buildDeck(mons, aLvl, gLvl, rng) {
+function buildDeck(mons, aLvl, gLvl, rng, teachings = []) {
   const pool = [];
   const atk = G.BASE_ATK_EVOLUTION[aLvl];
   pool.push({ ...atk, type: 'atk', name: '通常技' }, { ...atk, type: 'atk', name: '通常技' });
@@ -102,6 +114,8 @@ function buildDeck(mons, aLvl, gLvl, rng) {
     const u = m.unique;
     if (u) pool.push({ ...u, name: u.names ? u.names[0] : u.name, type: 'unique', guts: u.guts || u.baseGuts, baseGuts: u.baseGuts, baseMult: u.baseMult, evoLevel: 0, monId: u.monId || m.id, crit: 0.10, ownerSlotIdx: idx });
   });
+  // 60-app.jsx buildDeck(13544): 持っているアシカを1枚ずつ(名前は段の名前・消費ガッツ 20)
+  teachings.forEach((t) => pool.push({ ...t, name: G.BREEDER_EVO_NAMES[t.id][Math.min(t.evoLevel || 0, 2)], guts: 20, teach: true }));
   return shuffle(pool, rng);
 }
 // 60-app.jsx applyAtkTierChoice(13587): 敵の距離が変わったら、通常技・距離撃を段階に合わせ直す
@@ -228,7 +242,8 @@ function getDmg(st, card, slot, additionalOryo, additionalDmgMod, halved, attack
   const mb = multiBuffNow(st, slot);
   const distMult = exEffectAt(st, slot) === 'distMatch' ? G.TACTICS_EX_DIST_MATCH_MULT : (mb.distMult > 0 ? mb.distMult : ([1.5, 1.3, 1.1, 0.9][distDiff] || 1.0));
   let baseDmgMult;
-  if (card.type === 'unique') { const chuuniBonus = (card.monId === 'Ark' || card.monId === 'Iblis') ? 0.1 * (perma.chuuniUniqueStack || 0) : 0; baseDmgMult = card.baseMult + (card.evoLevel || 0) * 0.5 + chuuniBonus; }
+  if (card.subType === 'stun_atsu') baseDmgMult = card.baseValue || 1.5; // 60-app.jsx getDmg 11064(あつの挑発)
+  else if (card.type === 'unique') { const chuuniBonus = (card.monId === 'Ark' || card.monId === 'Iblis') ? 0.1 * (perma.chuuniUniqueStack || 0) : 0; baseDmgMult = card.baseMult + (card.evoLevel || 0) * 0.5 + chuuniBonus; }
   else if (card.type === 'range_atk') baseDmgMult = G.rangeAttackDamageMultiplier(card, attackStartDist);
   else baseDmgMult = card.mult || card.baseMult || 1.0;
   const id = mon.id;
@@ -237,7 +252,9 @@ function getDmg(st, card, slot, additionalOryo, additionalDmgMod, halved, attack
   const distBonusMult = 1.0 + (aptPctOf(mon)[slot] || 0);
   const totalBuffMult = traitMult * cookieNow(st).dmgMult * blackNoteAt(st, slot, id).dmgMult * G.bowAtkMultOf(st.bow[slot])
     * mb.dmg * (card.type === 'unique' ? pandoraDevilNow(st, slot).dmg : 1)
-    * (1.0 + (perma.atkPct || 0) + additionalOryo) * distBonusMult;
+    // 60-app.jsx 11086: みゃるの薬(getTurnBuff atkMult・tacticsSlotAtkMult)と、みゅあの muaAtkPct
+    * ((st.turnB || {}).atkMult || 1) * G.tacticsSlotRate((st.turnB || {}).bySlot, slot, 'atkMult', 1.0)
+    * (1.0 + (perma.atkPct || 0) + (perma.muaAtkPct || 0) + additionalOryo) * distBonusMult;
   const attackerAtk = Math.max(0, G.normalizeTacticsUnit(battleUnit(st, slot)).atk) * G.trickStartAtkMult(st.trick[slot]) * G.fateAtkMult(st.fate, slot);
   const enemyTaken = (st.snap.wave.enemyTakenDmgBonus || 0) + G.fateWheelEnemyTakenBonus(st.fateWheel) + psychoNow(st).enemyTakenBonus + additionalDmgMod;
   let d = Math.floor(attackerAtk * distMult * baseDmgMult * (skillDmgMult > 0 ? skillDmgMult : 1) * totalBuffMult * (1.0 + enemyTaken));
@@ -320,7 +337,8 @@ function cardLimitOf(st) {
   let limit = 1;
   if (alive.length >= 3) limit = 3; else if (alive.length >= 2) limit = 2;
   const heroBonus = alive.filter((i) => G.heroCardBonusOf(st.units[i].id) > 0).length;
-  return Math.min(5, Math.min(5, limit + heroBonus) + G.tacticsExCardBonusTotal(st.ex, st.units, nowOf(st)));
+  const kikiBonus = ((st.snap ? st.snap.perma : st.perma).kikiCardBonusTurns || 0) > 0 ? 1 : 0; // 60-app.jsx kikiCardBonus 9162
+  return Math.min(5, Math.min(5, limit + heroBonus + kikiBonus) + G.tacticsExCardBonusTotal(st.ex, st.units, nowOf(st)));
 }
 const slotMaxUses = (st, slot, cardLimit) => Math.min(cardLimit, 1 + G.heroCardBonusOf(st.units[slot] && st.units[slot].id) + G.tacticsExCardBonusAt(st.ex, st.units, slot, nowOf(st)));
 // 予告で狙われている子が受けるダメージの見込み(画面の数字。ターンの軽減まで入れる)
@@ -339,8 +357,13 @@ function decideTurn(st) {
   const turnsLeft = Math.max(1, 20 - st.turn + 1);
   const rushing = st.recentDealt > 0 && st.enemy.hp > st.recentDealt * turnsLeft * 0.9;
   const hint = st.hint || {};
-  let planned = 0; let stunned = false;
+  let planned = 0; let stunned = false; let healed = false; let buffed = false;
   const gutsLeft = (slot) => G.normalizeTacticsUnit(st.units[slot]).guts - (spent[slot] || 0);
+  const playBest = st.assistPlay === 'best';
+  // ボットの「ガッツ不足」の数え方(tactics-brain.js 443〜445): ガッツが足りずに置けない攻撃カードがあるターンに、ガッツ35%未満の子を数える
+  if (st.hand.some((c) => isAttackType(c) && !actors.some((s0) => gutsLeft(s0) >= getCardGuts(st, c, s0)))) {
+    st.gutsShort += alive.filter((i) => { const u = G.normalizeTacticsUnit(st.units[i]); return u.guts < u.maxGuts * 0.35; }).length;
+  }
   const aimed = targetsNow(st, st.intent, st.dist);
   const aimCache = {};
   const aimDamage = (slot) => (slot in aimCache ? aimCache[slot] : (aimCache[slot] = aimDamageOf(st, slot)));
@@ -351,13 +374,24 @@ function decideTurn(st) {
   const wantPull = mainDist != null && st.dist !== mainDist && !alive.includes(st.dist);
   while (picks.length + discards.length < limit) {
     const left = limit - picks.length - discards.length;
-    const atkOpts = []; const guardOpts = [];
+    const atkOpts = []; const guardOpts = []; const supOpts = [];
     st.hand.forEach((card, hi) => {
       if (used.has(hi)) return;
       for (const slot of actors) {
         if ((usesBy[slot] || 0) >= slotMaxUses(st, slot, limit)) continue;
         if (card.type === 'unique' && card.ownerSlotIdx !== slot) continue;
         const halved = (usesBy[slot] || 0) > 0;
+        if (card.teach) {
+          // アシカ。あつの挑発(debuff)はボットと同じく攻撃の候補にも入れる(見込みのダメージが出るため。tactics-brain.js 189)
+          const cost = getCardGuts(st, card, slot);
+          if (gutsLeft(slot) < cost) continue;
+          if (card.subType === 'stun_atsu') {
+            const value = Math.floor(getDmg(st, card, slot, 0, 0, false, st.dist) * (halved ? 0.5 : 1));
+            atkOpts.push({ hi, card, slot, value, rank: value / Math.pow(Math.max(8, cost), 0.7) * 7, cost, stunCard: true });
+          }
+          supOpts.push({ hi, card, slot, cost, halved });
+          continue;
+        }
         if (isAttackType(card)) {
           const cost = getCardGuts(st, card, slot);
           if (gutsLeft(slot) < cost) continue;
@@ -381,7 +415,20 @@ function decideTurn(st) {
       usesBy[o.slot] = (usesBy[o.slot] || 0) + 1; spent[o.slot] = (spent[o.slot] || 0) + (o.cost || 0);
       if (kind === 'attack') planned += o.value;
       if (kind === 'guard') guarded[o.slot] = (guarded[o.slot] || 0) + 1;
+      if (o.card && o.card.teach) { if (o.card.type === 'heal') healed = true; if (o.card.type === 'buff') buffed = true; }
+      if (o.stunCard) stunned = true;
     };
+    // アシカの支援: 払うのはガッツのいちばん多い子(tactics-brain.js placePick 296)。半分になる2枚目は避ける
+    const supFor = (id) => supOpts.filter((o) => o.card.id === id).sort((a, z) => (a.halved - z.halved) || (gutsLeft(z.slot) - gutsLeft(a.slot)))[0];
+    const supOfType = (fn) => { const o = supOpts.filter((x) => fn(x.card)); return o.length ? supFor(o[0].card.id) : null; };
+    const aliveNow = G.tacticsAliveSlots(st.units);
+    const hpNow = aliveNow.reduce((a, i) => a + G.normalizeTacticsUnit(st.units[i]).hp, 0);
+    const hpMax = G.tacticsFilledSlots(st.units).reduce((a, i) => a + G.normalizeTacticsUnit(st.units[i]).maxHp, 0);
+    const downedN = G.tacticsFilledSlots(st.units).length - aliveNow.length;
+    const gutsRate = (i) => { const u = G.normalizeTacticsUnit(st.units[i]); return u.maxGuts ? gutsLeft(i) / u.maxGuts : 0; };
+    const richestG = aliveNow.reduce((m, i) => Math.max(m, gutsRate(i)), 0);
+    const leanG = aliveNow.some((i) => gutsRate(i) < 0.35);
+    const enemyRate = st.enemy.hp / Math.max(1, st.enemy.maxHp);
     // best: 回避の EX が効いている子へ敵を引き寄せる距離撃は、ほかより先に置く
     if (hint.pullTo != null && !hint.pulled) {
       const p = atkOpts.find((a) => a.card.type === 'range_atk' && a.card.rangeIdx === hint.pullTo);
@@ -418,11 +465,48 @@ function decideTurn(st) {
     }
     // ③ 止める(ハムの固有技はスタン)
     if ((threat === 'charge' || threat === 'pierceCharge') && !stunned) {
+      const a0 = atkOpts.find((a) => a.stunCard); // tactics-brain.js 246: スタンのカード(あつの挑発)で止める
+      if (a0) { take(a0, 'attack'); continue; }
       const s = atkOpts.find((a) => a.card.type === 'unique' && a.card.monId === 'Ham');
       if (s) { take(s, 'attack'); stunned = true; continue; }
     }
-    // ⑤ 攻撃
-    if (atkOpts.length) { take(atkOpts[0], 'attack'); continue; }
+    if (!lethal && !playBest) {
+      // ④ 回復(tactics-brain.js 250〜254): 倒れた子がいるか、全体のライフが35%未満
+      const heal = supOfType((c) => c.type === 'heal');
+      if (heal && !healed && (downedN > 0 || (hpMax && hpNow / hpMax < 0.35))) { take(heal, 'support'); continue; }
+      // ④' あとから出たアシカ(tactics-brain.js 256〜264)
+      const momo = supFor('momosuke'); const kiki = supFor('kiki'); const poltz = supFor('poltz'); const meloso = supFor('meloso');
+      if (momo && leanG && !healed) { take(momo, 'support'); continue; }
+      if (kiki && !buffed && richestG >= 0.3 && enemyRate > 0.3) { take(kiki, 'support'); continue; }
+      if (poltz && !buffed && richestG >= 0.3 && enemyRate > 0.4) { take(poltz, 'support'); continue; }
+      if (meloso && !healed && hpMax && hpNow / hpMax < 0.55) { take(meloso, 'support'); continue; }
+    }
+    if (!lethal && playBest) {
+      // 上手な使い方: ずっと続く強化は WAVE の早いうちに(遅いほど効く回数が減る)、回復は細ったとき、薬は火力の柱に飲ませる
+      const heal = supFor('mua') || supFor('meloso') || supFor('momosuke');
+      const hurtBad = downedN > 0 || (hpMax && hpNow / hpMax < 0.5) || aimed.some((sl) => { const u = G.normalizeTacticsUnit(st.units[sl]); return u && !u.downed && aimDamage(sl) >= u.hp; });
+      if (heal && !healed && hurtBad) { take(heal, 'support'); continue; }
+      const momo = supFor('momosuke');
+      if (momo && !healed && leanG) { take(momo, 'support'); continue; }
+      if (enemyRate > 0.3) {
+        // 1ターンに1枚まで(buffed)。ききは早いほど手数が増え、ニコラオ・ポルツ・かどみうむ・ドラはバトル中ずっと続く
+        const o = buffed ? null : ['kiki', 'oryo', 'poltz', 'cadmium', 'dra'].map(supFor).find((x) => x && !x.halved);
+        if (o) { take(o, 'support'); continue; }
+      }
+      // みゃるの薬: いちばんダメージを出している子に、次のターン撃てるガッツが残るときだけ飲ませる
+      const myaru = supOpts.filter((o) => o.card.id === 'myaru' && o.slot === mainDist && !o.halved)[0];
+      if (myaru && enemyRate > 0.35) {
+        const u = G.normalizeTacticsUnit(st.units[myaru.slot]);
+        if (u.hp > u.maxHp * 0.6 && gutsLeft(myaru.slot) - myaru.cost >= u.maxGuts * 0.4 && !aimed.includes(myaru.slot)) { take(myaru, 'support'); continue; }
+      }
+      // あつの挑発: ためる・貫通の構えのほか、だれかが一撃で倒れる攻撃も止める
+      const atsu = atkOpts.find((a) => a.stunCard);
+      if (atsu && !stunned && aimed.some((sl) => { const u = G.normalizeTacticsUnit(st.units[sl]); return u && !u.downed && aimDamage(sl) >= u.hp * 0.85; })) { take(atsu, 'attack'); continue; }
+    }
+    // ⑤ 攻撃。スタンのカード(あつの挑発)は、とどめ・ためる/貫通の構えのとき以外は取っておく(tactics-brain.js 268)
+    const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
+    const atkUse = keepStun ? atkOpts.filter((a) => !a.stunCard) : atkOpts;
+    if (atkUse.length) { take(atkUse[0], 'attack'); continue; }
     // ⑦ 捨ててガッツを戻す(ガッツが足りずに使えない攻撃カードがあるとき)
     const starved = st.hand.findIndex((c, hi) => !used.has(hi) && isAttackType(c) && !actors.some((s) => gutsLeft(s) >= getCardGuts(st, c, s)));
     if (starved >= 0) { discards.push(starved); used.add(starved); continue; }
@@ -434,6 +518,12 @@ function decideTurn(st) {
       })[0];
       const g = guardOpts.filter((x) => x.slot === want).sort((p, q) => q.value - p.value)[0];
       if (g && (guarded[want] || 0) < 2) { take(g, 'guard'); continue; }
+    }
+    // ⑥ 支援(tactics-brain.js 286〜289): 攻撃が置けないとき、自傷の無い強化を1枚。いちばん多い子でもガッツ6割未満なら使わない
+    if (!buffed && enemyRate > 0.3) {
+      const richest = aliveNow.reduce((m, i) => Math.max(m, gutsRate(i)), 0);
+      const buff = supOfType((c) => c.type === 'buff' && c.id !== 'myaru');
+      if (buff && (richest >= 0.6 || playBest)) { take(buff, 'support'); continue; }
     }
     break;
   }
@@ -665,6 +755,7 @@ function playTurn(st) {
   const startDist = st.dist;
   let attackDistance = st.dist; let forcedMoveTarget = null;
   let localOryo = 0; let localDmgMod = 0; let stun = false; let dealt = 0; let iceRefreshed = false;
+  let localGlobalCombo = 0; let invincible = false; // ききの全体連撃(その場のぶん)・あつの挑発の無効化(60-app.jsx 12354)
   const immBySlot = {}; const guardBySlot = {}; const usesBy = {};
   const crossed = {};
   // 眼力(スエゾー): その子が攻撃したターンに 40% でスタン(60-app.jsx processTurn 12319)
@@ -684,7 +775,15 @@ function playTurn(st) {
     }
     const cost = getCardGuts(st, card, slot);
     st.units = G.payTacticsGutsAt(st.units, slot, cost).units;
-    gainSweetStack(st, slot, mon.id, card); // メロディーのクッキー(カード1枚ごと)
+    if (!card.teach) gainSweetStack(st, slot, mon.id, card); // メロディーのクッキー(カード1枚ごと。アシカは数えない 60-app.jsx 12432)
+    if (card.teach) {
+      st.assistUses[card.id] = (st.assistUses[card.id] || 0) + 1;
+      const r = playTeaching(st, card, slot, effMul, picks.length, guardBySlot, startDist, localOryo, localDmgMod, localGlobalCombo);
+      localOryo += r.oryo; localGlobalCombo += r.combo;
+      if (r.invincible) invincible = true;
+      if (r.dealt > 0) { dealt += r.dealt; st.dmgBySlot[slot] = (st.dmgBySlot[slot] || 0) + r.dealt; if (crossMultNow(st, slot) > 1) crossed[slot] = true; }
+      continue;
+    }
     if (!isAttackType(card)) continue;
     // ---- 固有技の「使った瞬間」の効果(60-app.jsx 12524〜) ----
     let skillMult = 1; let wheel = null;
@@ -713,7 +812,7 @@ function playTurn(st) {
       comboDmgBonus: perma.comboDmgPct || 0, critDmgBonus: perma.critDmgPct || 0, kenshiExtraCombos: perma.kenshiExtraCombo || 0,
       guaranteedCrit: !!tb.guaranteedCrit || G.tacticsSlotFlag(tb.bySlot, slot, 'guaranteedCrit') || critFixedNow(st, slot, card),
       rollCrit: () => rng() < Math.min(1, ((card.crit || 0.1) + (perma.critRatePct || 0) + (mb.critAdd || 0) + bn.critAdd) * mb.critRate),
-      globalComboRate: 0, swordSkill: exStyleAt(st, slot) !== 'shield', hitRepeat: exStyleAt(st, slot) === 'dual' ? G.TACTICS_EX_DUAL_HIT_REPEAT : 1,
+      globalComboRate: (perma.globalComboDmgPct || 0) + localGlobalCombo, swordSkill: exStyleAt(st, slot) !== 'shield', hitRepeat: exStyleAt(st, slot) === 'dual' ? G.TACTICS_EX_DUAL_HIT_REPEAT : 1,
       exCombos: G.withBlackNoteCombo(G.withFateCombo(exCombosAt(st, slot, card), st.fate, slot), bn.combo), critDmgMult: mb.critDmg });
     const finalD = hits[0].dmg;
     let total = hits.reduce((s, h) => s + h.dmg, 0);
@@ -806,6 +905,7 @@ function playTurn(st) {
   // クロスカウンターを出したハムのカウンター+1(60-app.jsx commitTacticsExCrossCounters 10660)
   Object.keys(crossed).forEach((k) => { st.ex = G.addTacticsExCounter(st.ex, st.units, now, Number(k), 1); });
 
+  if ((st.perma.kikiCardBonusTurns || 0) > 0) st.perma.kikiCardBonusTurns = Math.max(0, st.perma.kikiCardBonusTurns - 1); // 60-app.jsx 12939
   // ===== 敵の番(60-app.jsx handleEnemyTurn 11250〜) =====
   const intent = st.intent;
   const timeStopSlot = G.tacticsExTimeStopSlot(st.ex, st.units, now);
@@ -813,7 +913,7 @@ function playTurn(st) {
   let performed = false;
   if (timeStopSlot != null) { /* 時間停止: 敵は動かない */ }
   else if (intent && intent.type === 'CONFUSED') { /* 意味不明 */ }
-  else if (tb.invincible) { /* 無敵(あつの挑発。ここでは出ない) */ }
+  else if (tb.invincible || invincible) { /* 無効化(あつの挑発。60-app.jsx 11281) */ }
   else if (tb.stunEnemy || stun) { /* スタン */ }
   else if (intent) {
     performed = true;
@@ -844,7 +944,7 @@ function playTurn(st) {
         }
       } else {
         const rushHits = intent.variant === 'rush' ? Math.max(1, Math.floor(Number(intent.hits) || 1)) : 1;
-        let reflectBack = 0;
+        let reflectBack = 0; let tookHit = false;
         const evadedSlot = res === 'evasion' ? defenseSlot : null;
         const reflectedSlot = res === 'reflect' ? defenseSlot : null;
         for (const slot of aimedSlots) {
@@ -860,6 +960,7 @@ function playTurn(st) {
           const base = slotGuardValue(st, guardBySlot, slot);
           const slotGuard = intent.variant === 'pierce' ? 0 : base;
           const hit = G.resolveTacticsGuardedHit(incomingFor(st, actingIntent, slot), rushHits, slotGuard, G.tacticsGuardHits(own.cards, rushHits));
+          tookHit = true;
           if (hit.taken > 0) {
             let fd = imm(slot, hit.taken);
             const ku = G.normalizeTacticsUnit(st.units[slot]);
@@ -875,6 +976,7 @@ function playTurn(st) {
           }
           if (hit.saved > 0) st.units = G.recoverTacticsGutsAt(G.healTacticsAt(st.units, slot, hit.saved), slot, Math.floor(hit.saved * 0.1));
         }
+        if (tookHit) consumePoltz(st); // 60-app.jsx 11750 consumePoltzCharge
         if (reflectBack > 0) { st.enemy.hp = Math.max(0, st.enemy.hp - reflectBack); if (st.enemy.hp <= 0) return 'clear'; }
       }
     }
@@ -886,7 +988,7 @@ function playTurn(st) {
   // ターン終わりの回復(60-app.jsx 11742〜): ライフ autoHpRecovery、ガッツ 5% + (autoHpRecovery − 10%)。ボルテージの上乗せ
   {
     const party = partyBuffNow(st);
-    const baseGuts = Math.max(0, 0.05 + (st.autoHp - 0.1));
+    const baseGuts = Math.max(0, 0.05 + (st.autoHp - 0.1)) + (st.perma.gutsRecoverPct || 0); // 60-app.jsx 11761(かどみうむ・ポルツの gutsRecoverPct)
     st.units = G.rateHealTacticsBoard(st.units, st.autoHp + party.hpAdd, baseGuts + party.gutsAdd, false).units;
     // 60-app.jsx tacticsRegen(1367): EX の自動回復の上乗せ(ガッツ全開っちー・世界樹の守り・緑のめぐみ・雷纏・時間停止のコピー)
     const n = nowOf(st);
@@ -914,8 +1016,13 @@ function playTurn(st) {
   });
   { const c = cookieNow(st); if (c.hpRegen > 0 || c.gutsRegen > 0) st.units = G.rateHealTacticsBoard(st.units, c.hpRegen, c.gutsRegen, false).units; }
   // ターンのバフの入れ替え(60-app.jsx 11850〜): 次ターン予約 → いま。双極共振の残りターンは持ち越す
+  // メロソの最適解: 次のターンの始めにライフ・ガッツ全回復(60-app.jsx 11878)
+  if (timeStopSlot == null && (st.nextB.melosoFullRecoveryMult || 0) > 0) {
+    const r = st.nextB.melosoFullRecoveryMult;
+    st.units = G.rateHealTacticsBoard(st.units, r, r, true).units;
+  }
   if (timeStopSlot == null) {
-    const active = { ...st.nextB };
+    const active = { ...st.nextB }; delete active.melosoFullRecoveryMult;
     const carryAll = Math.max(0, (st.turnB.pandoraResonanceTurns || 0) - 1);
     if (active.pandoraResonanceTurns == null && carryAll > 0) active.pandoraResonanceTurns = carryAll;
     const carried = G.carryTacticsSlotBuffs(active.bySlot, st.turnB.bySlot, 'pandoraResonanceTurns');
@@ -1011,7 +1118,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       if (out === 'frozen') { if (++frozen > 40) break; } else st.turn += 1; // 時間停止のターンは数えない
       // 上限を上げる EX が切れたら戻す(60-app.jsx 10548)
       const exp = G.expireTacticsExMaxRates(st.units, st.ex, nowOf(st));
-      if (exp.changed) st.units = G.scaleTacticsUnits(exp.units, 0, 0);
+      if (exp.changed) st.units = G.scaleTacticsUnits(exp.units, st.perma.muaHpPct || 0, st.perma.muaGutsPct || 0);
       // 通常技・距離撃の段階を、敵の今の距離に合わせ直す(syncAtkTierForDist)
       if (st.dist !== before) {
         const lvl = computeAtkTier(st.mons, st.dist);
@@ -1030,7 +1137,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     st.recentWave = st.recentDealt || st.recentWave; st.recentDealt = 0; // tactics.js 513
     // EX の上限アップは WAVE をまたがない
     const exp = G.expireTacticsExMaxRates(st.units, st.ex, { wave: w + 1, turn: 1 });
-    if (exp.changed) st.units = G.scaleTacticsUnits(exp.units, 0, 0);
+    if (exp.changed) st.units = G.scaleTacticsUnits(exp.units, st.perma.muaHpPct || 0, st.perma.muaGutsPct || 0);
     // 供モンは WAVE 2・4・6 のあと(19-difficulties-and-rules.jsx POST_WAVE_JOIN_WAVES)。空いている枠のうち適性のいちばん高いところへ
     const free = [0, 1, 2, 3].filter((i) => !st.units[i]);
     if (G.POST_WAVE_JOIN_WAVES.includes(w) && free.length && waiting.length) {
