@@ -658,7 +658,7 @@ const BASE_NAMES = ['モッチー', 'スエゾー', 'ゴーレム', 'ライガ�
 const DIFF_ORDER = ['Beginner', 'Easy', 'Normal', 'Hard', 'Expert', 'Master', 'GrandMaster', 'Hell', 'Legend'];
 function loadKnowledge() {
   try { const k = JSON.parse(fs.readFileSync(KNOWLEDGE, 'utf8')); if (Array.isArray(k.runs)) return k; } catch (e) { /* 無ければ空から */ }
-  return { note: 'タクティクスくんの覚え書き。tools/playbot/scenarios/tactics-brain.js が1回ごとに足す。消してよい(覚え直す)', runs: [] };
+  return { note: 'タクティクスくんの覚え書き。tools/playbot/scenarios/tactics-brain.js が1回ごとに足す。消してよい(覚え直す)。★タクティクスプロはベースモンだけを使うので、セーブ(育ち)に関係なく全員が同じ条件。勝ち負けを分けるのは戦い方・編成・アシストカードの選び方だけ', runs: [] };
 }
 // 1回の出来: 着いたWAVE(10で1.0)+クリアで1。倒れた回数で少し引く
 const runValue = (r) => (r.wave || 0) / 10 + (r.result === 'clear' ? 1 : 0) - Math.min(0.3, (r.downs || 0) * 0.03);
