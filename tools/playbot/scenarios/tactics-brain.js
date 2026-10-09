@@ -504,12 +504,11 @@ async function chooseBetween(s, mem, log) {
       // 狙われた回数ではなく「倒れた・削られた」で守りを上げる。ダメージ役(頭割り以上を出した子)はちからを上げる
       const share = totalDmg > 1 ? m.dmg / totalDmg : 0;
       const members = Math.max(1, Object.keys(mem.lastParty || {}).length);
-      let plan;
-      if (m.downs > 0 || (hpRatio != null && hpRatio < 0.4)) plan = ['丸太うけ', '走り込み'];
-      else if (m.gutsShort >= 3) plan = share >= 1 / members ? ['猛勉強', 'ドミノ倒し'] : ['猛勉強', '猛勉強'];
-      else if (share >= 1 / members || members === 1) plan = ['ドミノ倒し', 'ドミノ倒し'];
-      else if (hpRatio != null && hpRatio < 0.7) plan = ['丸太うけ', 'ドミノ倒し'];
-      else plan = ['ドミノ倒し', '丸太うけ'];
+      // ★伸び方: 走り込み=ライフ+20%・丸太うけ=丈夫さ+20%(ガードの量も丈夫さで決まる)に対して、ドミノ倒し=ちから+5&+5%・猛勉強=ガッツ+5&+5%。
+      //   同じ項目を2回選ぶと掛け算で効く。2026-10-09 までダメージ役にドミノ倒しを選び続けて、モッチーのライフが WAVE 5 でも最初の 720 のまま、
+      //   敵の1発(1,000〜2,800)で倒れていた。基本は「丸太うけ+走り込み」。ガッツ切れが続く子だけ猛勉強を1つ混ぜる
+      let plan = ['丸太うけ', '走り込み'];
+      if (m.gutsShort >= 4 && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
       if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(ダメージの割合${Math.round(share * 100)}%・倒れた${m.downs}回・ガッツ不足${m.gutsShort}回)`);
