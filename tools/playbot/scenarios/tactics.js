@@ -98,7 +98,15 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     const step = await page.evaluate(() => {
       const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
       const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
-      const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|はじめる|^決定$|^確定$/); if (go) { go.click(); return go.textContent.trim(); }
+      // ★勇者モン・供モンの画面は、はじめから誰かが選ばれていて「この子で挑む」「供モンNにする」が押せる。
+      //   先に決定を押すと、選びたい子ではなく前回の子・一覧の先頭の子になる。選びたい子が画面にいれば、先にその子を押す
+      const monsEarly = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
+      const wantBtnEarly = (name) => live.find((x) => x.textContent.trim().replace(/^前回/, '') === name) || monsEarly.find((x) => x.textContent.includes(name));
+      if (!window.__pbJustPicked && pick(/この子で挑む|供モン\d*にする/)) {
+        const at = (window.__pbWant || []).findIndex((name) => !!wantBtnEarly(name));
+        if (at >= 0) { const name = window.__pbWant.splice(at, 1)[0]; wantBtnEarly(name).click(); window.__pbJustPicked = true; return `mon:${name}`; }
+      }
+      const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|はじめる|^決定$|^確定$/); if (go) { window.__pbJustPicked = false; go.click(); return go.textContent.trim(); }
       const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
       const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
       const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
