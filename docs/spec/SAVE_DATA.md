@@ -192,6 +192,9 @@
 | `mh_rhythm_clear_total_v1` | number / `0` | モンヒロビートの通算クリア回数(2026-10-03・スエゾービートのフレームを買える条件「10回クリア」に使う)。**この更新から数えはじめる**(既存の `mh_rhythm_best_v1` は曲×難易度ごとのクリア有無しか持たず、回数が分からないため。過去の分は入れない)。ライフを残して終えた演奏だけ+1(練習・アシストモード・失敗は数えない)。`normalizeRhythmClearTotal` を通す。減らさない・消さない |
 | `mh_update_notice_style_v1` | `'FULL'` / `'MINI'` / `'OFF'` / 既定 `'FULL'` | 更新のお知らせの出し方(`normalizeUpdateNoticeStyle` で既定へ倒す) |
 | `mh_rhythm_strip_v1` | object / `{}` | モンヒロビートの見た目をデバッグ画面で間引く設定。ふだんは空で、通常プレイでは何も起きない(既存の音ゲー設定・BESTには触らない別キー) |
+| `mh_battle_select_assist_v1` | object / 未設定なら `{ modeSelectArt:true, modeSelectComment:true }` | モンヒロバトルの入口(`BATTLE_SYSTEM_SELECT`)で、助手の立ち絵・コメントを出すか(2026-10-08)。入口のトグルを押したときに書く。読むときは `false` のときだけ消し、それ以外・壊れた値は出す側へ倒す。モンヒロビート用のキーは流用しない |
+| `mh_masu_offering_intro_seen_v1` | `true` / 未設定 | 神殿の「お布施」の使い方案内を見たか(2026-10-05)。初めてお布施の画面を開いたときに1度だけ出し、閉じたときに `true` を書く。読むときは `=== true` のときだけ見た扱い |
+| `mh_rhythm_fix_override_v1` | object / 未設定なら `{}` | モンヒロビートの「実機でしか分からない直し方」(`RHYTHM_TOUCH_FIXES`)を、この端末だけで入れる/切る上書き(2026-10-07)。`{ 直し方の名前: boolean }`。**`storeSet` ではなく `localStorage` へ直接**書く(`rhythmTouchFixSetOverride`)。読むときは表にある名前の boolean だけ拾い、それ以外・壊れた値は捨てる(上書きなし=表のとおり)。いまゲームの画面からは書かない(検査と手で試すとき用) |
 
 移行・補償のフラグ(第3章の表に載っていないもの):
 
