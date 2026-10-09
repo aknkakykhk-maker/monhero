@@ -315,11 +315,28 @@ async function placePick(s, d) {
 
 // ---------- EX ----------
 // 名前 → 使い方。表に無い子は、説明の文字で決める
-const EX_ROLE = {
-  モノリス: 'shield', ユグドラシル: 'shield', ヤオビクニ: 'shield', エイキ: 'dodge', ザン: 'dodge',
-  モッチー: 'refill', ミタラシ: 'refill', メロディー: 'refill',
-  アーク: 'burst', イブリース: 'burst', メルホイップ: 'burst', クロミー: 'burst', 剣士モッチー: 'burst', ゴーレム: 'skip',
+// EX の役目。名簿(tactics-roster.json。ゲームの TACTICS_EX_SKILLS から読んだ effect)があれば、それで全員ぶん決める。
+// 2026-10-09: 表に無い子は「火力」扱いで、ゴーレム(使わない)・オボロゲソウ(吸収)・ハム(カウンター)・エイキ(距離)などが
+// 使いどころを外していた(Tier 表で「EX を使えていない」と出た)。
+const EX_ROLE_BY_EFFECT = {
+  statBoost: 'refill', coverAll: 'shield', partyGuard: 'shield', timeStop: 'shield',
+  damageBack: 'selfGuard', avoidCharge: 'selfGuard', dodgeCombo: 'dodge', distMatch: 'distBurst', counter: 'counter',
+  allIn: 'allIn', lifeSpring: 'heal', cookieBox: 'heal', trickConfuse: 'heal', present: 'present',
+  psychoLock: 'burst', thunder: 'burst', multiBuff: 'burst', stage: 'burst', pandoraBox: 'burst', partyBoost: 'burst',
+  weaponChange: 'burst', comboBurst: 'burst', nightmareKey: 'burst',
 };
+const EX_ROLE = (() => {
+  const out = {
+    モノリス: 'shield', ユグドラシル: 'shield', ヤオビクニ: 'shield', エイキ: 'distBurst', ザン: 'dodge',
+    モッチー: 'refill', ミタラシ: 'refill', メロディー: 'heal', ゴーレム: 'allIn', ハム: 'counter', オボロゲソウ: 'selfGuard',
+    アーク: 'burst', イブリース: 'burst', メルホイップ: 'burst', クロミー: 'burst', 剣士モッチー: 'burst',
+  };
+  try {
+    const r = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'tactics-roster.json'), 'utf8'));
+    for (const m of r.monsters || []) if (m && m.ex && EX_ROLE_BY_EFFECT[m.ex.effect]) out[m.name] = EX_ROLE_BY_EFFECT[m.ex.effect];
+  } catch (e) { /* 名簿が無いときは上の表だけ */ }
+  return out;
+})();
 function exRoleOf(name, desc) {
   if (EX_ROLE[name]) return EX_ROLE[name];
   if (/かばう|被ダメ|行動しない|無効|守り/.test(desc)) return 'shield';
@@ -353,7 +370,24 @@ async function maybeUseEx(s, b, mem, log) {
     else if (role === 'refill' && b.enemy && b.enemy.hp >= b.enemy.max * 0.9 && (b.turn || 1) <= 2 && mem.recentWave && b.enemy.max > mem.recentWave * 8 && x.guts && x.guts.now < x.guts.max * 0.7) why = '手強いWAVEの始め(満タンにして力を上げるEX)';
     else if (role === 'refill' && (gutsLow || hpLow) && (hpLow || (b.enemy && b.enemy.hp >= b.enemy.max * 0.4))) why = gutsLow ? 'ガッツが細った(満タンにするEX)' : 'ライフが細った(満タンにするEX)';
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
+    // 自分だけを守る EX(オボロゲソウの吸収・ゴーストの完全回避): 自分が狙われて、重く削られるとき
+    else if (role === 'selfGuard' && x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.3) why = '自分が狙われて重い(自分を守るEX)';
+    // カウンター(ハム): 自分が狙われているターン。貫通撃は受けきれないので外す
+    else if (role === 'counter' && x.aimed && threat !== 'pierce' && x.hp && x.aimDamage < x.hp.now) why = '狙われているので、カウンターで返す';
+    // 距離の EX(エイキ): 敵が自分と同じ距離にいて、ライフがたっぷり残っている
+    else if (role === 'distBurst' && b.enemy && b.enemy.dist === DISTS[x.i] && enemyFull) why = '敵が同じ距離にいる(距離補正×1.7と回避のEX)';
+    // 全力(ゴーレム): 丈夫さが0になるので、狙われていないターンに、手強い敵へだけ
+    else if (role === 'allIn' && !x.aimed && !bigHit && enemyFull && (late || (b.enemy && b.enemy.max >= 8000)) && x.hp && x.hp.now >= x.hp.max * 0.7 && !mem.allInDone?.[x.name + (b.wave || 0)]) {
+      why = '狙われていない手強い敵(丈夫さを力へ回すEX)';
+      mem.allInDone = mem.allInDone || {}; mem.allInDone[x.name + (b.wave || 0)] = 1;
+    }
+    // 回復の EX(ウンディーネ・メロディー・スプーキー): 誰かのライフが4割を切った
+    else if (role === 'heal' && b.slots.some((y) => y.occupied && !y.downed && y.hp && y.hp.now < y.hp.max * 0.4)) why = '味方のライフが細った(回復のEX)';
+    // 1WAVE に1回の EX(スネグーラチカ): ガッツが細ってきたら
+    else if (role === 'present' && b.slots.filter((y) => y.occupied && !y.downed && y.guts).some((y) => y.guts.now < y.guts.max * 0.5)) why = 'ガッツが細ってきた(1WAVEに1回のEX)';
     if (!why) continue;
+    // 選んだ味方へ使う EX(ウンディーネ)は、いちばんライフの細い子を選ぶ
+    const healTarget = role === 'heal' ? (b.slots.filter((y) => y.occupied && !y.downed && y.hp).sort((p, q) => p.hp.now / p.hp.max - q.hp.now / q.hp.max)[0] || {}).name : '';
     await quickTap(s, `[data-slot-index="${x.i}"]`);
     await s.wait(500);
     const panel = await s.page.evaluate(() => {
@@ -371,11 +405,11 @@ async function maybeUseEx(s, b, mem, log) {
       await quickTap(s, '[data-tactics-ex-use]');
       await s.wait(800);
       // 選ぶものがあれば、火力寄りのもの(二刀流など)を先に、無ければ最初の1つ
-      await s.page.evaluate(() => {
+      await s.page.evaluate((target) => {
         const bs = [...document.querySelectorAll('[data-tactics-ex-choices] button')].filter((y) => !y.disabled && !y.hasAttribute('data-tactics-ex-choice-back'));
-        const pick = bs.find((y) => /二刀流|攻撃|火力/.test(y.innerText || '')) || bs[0];
+        const pick = (target && bs.find((y) => (y.innerText || '').includes(target))) || bs.find((y) => /二刀流|攻撃|火力/.test(y.innerText || '')) || bs[0];
         if (pick) pick.click();
-      });
+      }, healTarget);
       await s.wait(700);
       await s.wait(1200);
       mem.exUsed[panel.name || x.name] = (mem.exUsed[panel.name || x.name] || 0) + 1;
