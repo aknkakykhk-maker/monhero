@@ -190,7 +190,15 @@ function decidePick(b, opts, ctx) {
       if (p.guard > 0 && /guard/.test(o.card.type)) guardOpts.push({ o, slot: p.i, value: p.guard });
     }
   }
-  atkOpts.sort((a, z) => z.value - a.value);
+  // ★ガッツは1ターンに最大の5%しか戻らない。払う子のガッツが細っているときは「ガッツ1あたりのダメージ」で選ぶ
+  //   (Master の WAVE 4 でガッツ切れが続いて負けた。2026-10-09)。たっぷりあるときは、1手あたりのダメージで選ぶ
+  const gutsOf = (slot) => { const x = b.slots.find((y) => y.i === slot); return x && x.guts ? x.guts : null; };
+  for (const a0 of atkOpts) {
+    const g = gutsOf(a0.slot);
+    const tight = g && g.max && g.now < g.max * 0.6;
+    a0.rank = tight ? a0.value / Math.max(8, a0.o.card.cost || 8) * 40 : a0.value;
+  }
+  atkOpts.sort((a, z) => z.rank - a.rank);
   // ① とどめ: 残りの行動回数ぶんの上位の見込みで倒せるなら攻撃だけ
   const topSum = atkOpts.slice(0, left).reduce((a, x) => a + x.value, 0) + (ctx.plannedDmg || 0);
   const lethal = b.enemy && topSum >= enemyHp;
@@ -247,7 +255,9 @@ function decidePick(b, opts, ctx) {
   if (blind) { ctx.blindTried = true; return { kind: 'attack', card: blind.card, slot: null, value: 0, why: '見込みが読めなかったが使える攻撃カード' }; }
   // ⑥' ガードはガッツを使わない。攻撃が置けず行動回数が余ったら、狙われた子(いなければライフのいちばん減った子)へ置く。
   //     1ヒットの攻撃で余ったガードは、構えた子のライフとガッツになる(BATTLE_NEW_MODE_PLAN.md 段階7)
-  if (guardOpts.length && threat !== 'pierce' && threat !== 'none') {
+  //     ガッツが足りずに使えないカードがあるときは、ガードより「捨ててガッツを戻す」ほうを先にする(下の⑦)
+  const starvedHand = b.hand.some((c) => c.block === 'guts' && !c.discard && !c.selected);
+  if (guardOpts.length && threat !== 'pierce' && threat !== 'none' && !starvedHand) {
     const want = b.slots.find((x) => x.aimed && !x.downed) || [...alive].sort((p, q) => (p.hp ? p.hp.now / p.hp.max : 1) - (q.hp ? q.hp.now / q.hp.max : 1))[0];
     const g = want && guardOpts.filter((x) => x.slot === want.i).sort((p, q) => q.value - p.value)[0];
     if (g && (ctx.guarded[want.i] || 0) < 2) return { kind: 'guard', card: g.o.card, slot: g.slot, value: g.value, why: '攻撃が置けないので、ガードを構える(余りはライフとガッツになる)' };
@@ -352,6 +362,9 @@ async function playTurn(s, b0, mem, log, stats) {
   const ctx = { guarded: {}, healed: false, buffed: false, stunned: false, plannedDmg: 0, recentDealt: mem.recentDealt || 0 };
   const limit = Math.max(1, b0.limit || 1);
   const failed = new Set();
+  // ガッツが足りずに使えない攻撃カードがある子を数える(トレーニングの猛勉強・ガッツ系のアシストカード選びに使う)
+  const blockedTypes = b0.hand.filter((c) => c.block === 'guts' && /atk|unique/.test(c.type));
+  if (blockedTypes.length) for (const x of b0.slots.filter((y) => y.occupied && !y.downed && y.guts && y.guts.now < y.guts.max * 0.35)) monOf(mem, x.name).gutsShort += 1;
   for (let n = 0; n < limit + 2; n++) {
     let b = await readBoard(s);
     if (Number.isFinite(b.picked) && b.picked >= limit) break;
@@ -371,11 +384,15 @@ async function playTurn(s, b0, mem, log, stats) {
       console.log(`    [判断なし] 敵「${b.enemy ? b.enemy.name : '?'}」 手札 ${b.hand.map((c) => `${c.type}${c.usable ? '' : '×'}${c.block ? `(${c.block})` : ''}`).join(' ')} 候補 ${opts.map((o) => `${o.card.type}:${o.previews.length}`).join(' ')} 失敗 ${[...failed].join(',')} 一番下の要素 ${top} 枚数${b.picked}/${b.limit} 実行「${b.actionText}」`);
     }
     if (!d) {
-      // ⑦ ガッツ不足で何も置けない → 重いカードを1枚捨ててガッツを戻す(置けたカードが無いときだけ)
-      if (!(b.picked > 0)) {
-        const heavy = b.hand.filter((c) => !c.discard).sort((a, z) => z.cost - a.cost)[0];
-        if (heavy && await discardCard(s, heavy)) { stats.discards += 1; picks.push({ kind: 'discard', label: heavy.label, why: 'ガッツが足りず置けない' }); }
-        for (const x of b.slots.filter((y) => y.occupied && !y.downed)) monOf(mem, x.name).gutsShort += 1;
+      // ⑦ 置けるものが無い → 余った行動回数ぶん、ガッツが足りずに使えないカードを捨てる(1枚で全員が最大ガッツの5%戻る)。
+      //    置けたカードが無いときは、1枚は必ず捨てる(実行できないため)
+      const left = Math.max(0, (b.limit || 1) - (b.picked || 0));
+      const blocked = b.hand.filter((c) => !c.discard && !c.selected && (!c.usable || c.block === 'guts')).sort((a, z) => z.cost - a.cost);
+      const pool = blocked.length ? blocked : b.hand.filter((c) => !c.discard && !c.selected && !/guard/.test(c.type)).sort((a, z) => z.cost - a.cost);
+      const n = Math.min(left, b.picked > 0 ? blocked.length : Math.max(1, blocked.length));
+      for (const c of pool.slice(0, n)) {
+        if (await discardCard(s, c)) { stats.discards += 1; picks.push({ kind: 'discard', label: c.label, why: 'ガッツが足りず使えないので捨てて、ガッツを戻す' }); }
+        if (process.env.PLAYBOT_DEBUG) console.log(`    [判断] W${b.wave} T${b.turn} discard ${c.label} … ガッツが足りず使えないので捨てて、ガッツを戻す`);
       }
       break;
     }
@@ -470,7 +487,7 @@ async function chooseBetween(s, mem, log) {
       const members = Math.max(1, Object.keys(mem.lastParty || {}).length);
       let plan;
       if (m.downs > 0 || (hpRatio != null && hpRatio < 0.4)) plan = ['丸太うけ', '走り込み'];
-      else if (m.gutsShort >= 3 && share >= 1 / members) plan = ['猛勉強', 'ドミノ倒し'];
+      else if (m.gutsShort >= 3) plan = share >= 1 / members ? ['猛勉強', 'ドミノ倒し'] : ['猛勉強', '猛勉強'];
       else if (share >= 1 / members || members === 1) plan = ['ドミノ倒し', 'ドミノ倒し'];
       else if (hpRatio != null && hpRatio < 0.7) plan = ['丸太うけ', 'ドミノ倒し'];
       else plan = ['ドミノ倒し', '丸太うけ'];
