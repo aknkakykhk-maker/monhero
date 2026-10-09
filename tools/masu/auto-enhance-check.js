@@ -72,13 +72,17 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
   const order = ['atk','hp','def','guts','apt0','apt1','apt2','apt3'];
   const open = { hp:null, atk:null, def:0, guts:0 };
   const byOrder = m.applyMasuAutoEnhance(makeMasu({ enabled:true, order, statTargets:open, aptLimits:[null,null,null,null] }));
-  assert.strictEqual(m.normalizeMasuAutoEnhance({}).distribution, 'order', '項目の無い既存データは「順番に上限まで」');
+  assert.strictEqual(m.normalizeMasuAutoEnhance({}).distribution, 'even', 'まだ使っていない子は「1Pずつ」から始まる');
+  assert.strictEqual(m.normalizeMasuAutoEnhance({ version:0, enabled:false }).distribution, 'even', '保存された初期値のままの子も「1Pずつ」');
+  assert.strictEqual(m.normalizeMasuAutoEnhance({ enabled:true }).distribution, 'order', 'ONにしたことがある子は従来どおり「順番に上限まで」');
+  assert.strictEqual(m.normalizeMasuAutoEnhance({ version:2, enabled:false }).distribution, 'order', '設定を保存したことがある子は従来どおり');
+  assert.strictEqual(m.normalizeMasuAutoEnhance({ version:1 }).distribution, 'order', '版1の保存も従来どおり');
   assert.strictEqual(byOrder.masu.statPoints.hp || 0, 0, '順番に配るなら、上限なしの先頭(ちから)が全部取り、ライフは0');
   const even = m.applyMasuAutoEnhance(makeMasu({ enabled:true, order, statTargets:open, aptLimits:[null,null,null,null], distribution:'even' }));
   assert.strictEqual(even.used, 10, '1Pずつ配っても10P全部使う');
   assert.strictEqual(even.masu.statPoints.atk / 3, 5, 'ちからに5P(1Pで+3)');
   assert.ok(even.masu.statPoints.hp > 0, '1Pずつ配るなら、ライフにも回る');
-  assert.strictEqual(m.normalizeMasuAutoEnhance({ distribution:'ふしぎ' }).distribution, 'order', '壊れた値は既定へ戻る');
+  assert.strictEqual(m.normalizeMasuAutoEnhance({ distribution:'ふしぎ', enabled:true }).distribution, 'order', '壊れた値は、使っている子なら従来どおりへ戻る');
 }
 
 // ---- 3b. 1Pで割り切れない目標は、こえない手前で止まる ----

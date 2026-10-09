@@ -504,8 +504,11 @@ const normalizeMasuAutoEnhance = (value) => {
     order,
     statTargets,
     aptLimits,
-    // 余ったポイントの配り方。項目を持っていない既存ユーザーは、いままでと同じ「順番に上限まで」
-    distribution: source.distribution === 'even' ? 'even' : 'order',
+    // 余ったポイントの配り方。保存に項目が無いときは、すでにオート強化を使っている子(ONにしたことがある・設定を保存したことがある)だけ、
+    // いままでと同じ「順番に上限まで」。まだ使っていない子は「1Pずつ順番に配る」から始める(2026-10-09・社長の選択)
+    distribution: source.distribution === 'even' ? 'even'
+      : source.distribution === 'order' ? 'order'
+      : (source.enabled === true || version >= 1) ? 'order' : 'even',
     ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? { statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
       Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0])) } : {}),
   };
