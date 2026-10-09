@@ -1048,7 +1048,8 @@ function pickAllies(heroId, rng, n = 3) {
   return shuffle(MONS.map((m) => m.id).filter((id) => id !== heroId), rng).slice(0, n);
 }
 
-module.exports = { simulateRun, pickAllies, monsterPowerOf, MONS, EX_POLICIES };
+// G … シミュレーターが読み込んだゲームのデータ。調整の案の効き目を測るとき、メモリの中だけ数字を変えるのに使う(ゲームのファイルは変えない)
+module.exports = { simulateRun, pickAllies, monsterPowerOf, MONS, EX_POLICIES, G };
 
 // ---------- 一括で回す ----------
 // 前の版(スキル無し)の md の表を読む。勇者モン名 → 難易度 → { avg, past2, clear }
