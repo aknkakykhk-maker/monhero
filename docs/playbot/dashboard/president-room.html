@@ -53,13 +53,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 17:06 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 17:12 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>11</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>10</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -95,13 +95,18 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">机上の表はできた(reports/tier/desk.md)。例: ゴーレムは1発の火力とガッツ効率が全員でいちばん上だが、ガッツ上限70で20ターンに通常技6発・Master WAVE 1 で敵の攻撃を2発しか受けられず、実戦で序盤に倒れたのと合う。人はガッツを補う育て方・アシカ・ガードで弱点を消していると見て、ボットにも入れた。次は簡易シミュレーターで机上と実戦の間を埋める</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み 数字入りの版 18:30〜19:00 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
+        <div class="row-body">Tierは Hard / Expert / Master の難易度ごとに分けて付ける(社長の頼み)。Hard でも全モンスターを回す。机上の表(desk.md)はできたがまだ公開前。次は簡易シミュレーター</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み Hard の集めの見込みはハカセくんが連絡 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
       </li>
       <li id="w6">
         <div class="row-title">通信不良の演奏での「範囲の中なのにMISS」の調べ直し</div>
         <div class="row-body">守り部の記録を見ると、出たのは通信不良の中での演奏(Stay With Me EXPERT・MASTER)で、午前の小さい画面とは別の場面だった。その押下でほかのノーツを取ったかをボットに記録させて、同じ条件で回している</div>
         <div class="meta"><span>部長テンポくん(フィールくん)</span><span>見込み 17:45〜18:15</span></div>
+      </li>
+      <li id="p9">
+        <div class="row-title">Tier表の机上の計算(公開待ち)</div>
+        <div class="row-body">できたと連絡があったが、まだ main に入っていない。公開まで進めるよう伝えた</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み ハカセくんが連絡</span></div>
       </li></ul>
     </section>
     <section id="shipped">
@@ -111,11 +116,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">タクティクスの検査2本を直した</div>
         <div class="row-body">公開版でも落ちていた検査2本(研究所のハカセくんが見つけた件)。ゲームの動きは変わらない</div>
         <div class="meta"><span>部長ブレイブくん</span><span>PR #2387</span><span>(ゲームは変わらない)</span></div>
-      </li>
-      <li id="p9">
-        <div class="row-title">Tier表の机上の計算(最初の版)</div>
-        <div class="row-body">ゲームの式をそのまま使い、モンスターごとの1発の火力・ガッツ効率・序盤に1体で戦う強さを難易度ごとに出した</div>
-        <div class="meta"><span>ハカセくん</span><span>docs/playbot/reports/tier/desk.md</span></div>
       </li>
       <li id="p8">
         <div class="row-title">強化の「完了」に確認・ブラウザの戻るでゲームの外へ出ない</div>
