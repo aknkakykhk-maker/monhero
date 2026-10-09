@@ -13,7 +13,9 @@
 //   日時     … 受けた日時 "2026-10-09 23:21"(日本時間。時刻が分からなければ "2026-10-08 午前" / 日付だけ)
 //   件名     … 社長室に出す短い名前 / 頼み … 頼みごとの本文(頼みは件名か頼みのどちらかが要る)
 //   部・担当 … "修理部" と "ドライバーくん2号"(台帳の表には「修理部:ドライバーくん2号」と出る)
-//   いま     … 受けた / 班で作業中 / ユーザーの判断待ち / 公開済み / 取りやめ のどれか(ほかは止める)
+//   いま     … 受けた / 班で作業中 / 予定 / ユーザーの判断待ち / 公開済み / 取りやめ のどれか(ほかは止める)
+//              班で作業中は「いま実際に部が動いている」ものだけ。始めるのが先の日時(定期の仕事・あすの作業)は 予定
+//              (2026-10-10 社長「進行中が5件あるけどこれはほんとに進行中のものなの?」— 止まっている部の作業や先の予定まで進行中に数えていた)
 //   PR       … ["#2426"](無ければ [])
 //   公開     … 公開した日時(公開済みのとき。社長室の「公開したもの」に出る時刻)
 //   見込み・結果 … 終わるまでは見込み、公開済み・取りやめでは結果
@@ -28,9 +30,9 @@ const ROOT = path.join(__dirname, '..', '..');
 const LEDGER = path.join(ROOT, 'docs', 'playbot', 'dashboard', 'ledger.json');
 const REQUESTS = path.join(ROOT, 'docs', 'playbot', 'REQUESTS.md');
 
-const STATES = ['受けた', '班で作業中', 'ユーザーの判断待ち', '公開済み', '取りやめ'];
+const STATES = ['受けた', '班で作業中', '予定', 'ユーザーの判断待ち', '公開済み', '取りやめ'];
 const KINDS = ['頼み', '仕事'];
-const BOARD_KIND = { 受けた: '進行中', 班で作業中: '進行中', ユーザーの判断待ち: '判断待ち', 公開済み: '公開' };
+const BOARD_KIND = { 受けた: '進行中', 班で作業中: '進行中', 予定: '予定', ユーザーの判断待ち: '判断待ち', 公開済み: '公開' };
 const SHOW_DAYS = 3; // 公開から3日たったものは社長室から外す(ROUTINE.md「社長室」)
 const TABLE_NOTE = '<!-- この表は node tools/playbot/ledger.js が docs/playbot/dashboard/ledger.json から作る。手で直さない -->';
 
@@ -74,6 +76,13 @@ function validate(rows) {
     const p = rows.find((x) => x.id === e.親);
     if (!p) problems.push(`台帳「${e.id}」: 親「${e.親}」が台帳にありません`);
     else if (p.種別 !== '頼み') problems.push(`台帳「${e.id}」: 親「${e.親}」は頼みにする`);
+  }
+  // 子の仕事がみな終わったのに、頼みだけが「受けた」のまま(社長室には子しか出ないので、台帳の表だけが古くなる)
+  const DONE = ['公開済み', '取りやめ'];
+  for (const e of rows) {
+    if (e.種別 !== '頼み' || DONE.includes(e.いま)) continue;
+    const kids = childrenOf(rows, e.id);
+    if (kids.length && kids.every((k) => DONE.includes(k.いま))) problems.push(`台帳「${e.id}」: 子の仕事がみな終わっている。頼みも 公開済み / 取りやめ にする(続きがあれば子の仕事を足す)`);
   }
   return problems;
 }

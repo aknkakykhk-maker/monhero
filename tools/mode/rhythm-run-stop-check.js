@@ -89,5 +89,29 @@ for (const [rel, src] of sources) {
     compact.includes("quickRunProgress.finished&&!quickRunResumable?'⚔バトルへ戻って結果を見る':'⚔バトルへ戻る'"));
 }
 
+// ---- 2026-10-10・社長の報告「モンビーで裏周回を負けたときに再度挑戦ができない場面が多い」 ----
+// ①負けたあとホームへ戻って開き直すと、自動で始めた新しい周回を、画面の切り替わりに反応した「負けたら止める」が
+//   前の負け(hp が0のまま)で止めていた。②モードえらびとマルチの部屋は、終わった札が文字だけで始め直せなかった。
+//   ③自動で始める設定の人は、負けたら数秒おいて1周目から始め直す(社長の選択)。編成元だけを見る(生成物は JSX が崩れて読めない)
+{
+  const [rel, src] = sources[0];
+  const compact = src.replace(/\s+/g, '');
+  check(`${rel}: 「負けたら止める」は負けたその時だけ動く(同じ理由が続いているあいだは2回目を止めない)`,
+    compact.includes("conststopKey=hp<=0?'defeat':gaveUp?'retire':gameState==='PICK_HERO'?'manual':'';")
+    && compact.includes('if(stopKey&&stopKey===prevStopKey)return;'));
+  check(`${rel}: モードえらび・マルチの札は、勝負がついたら「始め直す」、止まっただけなら「再開する」のボタンになる`,
+    src.includes('data-rhythm-multi-quick-run-restart') && src.includes('data-rhythm-multi-quick-run-resume')
+    && compact.includes('canRestart:!!quickRunProgress.finished&&!quickRunResumable&&!!repeatTemplateForNewRun()')
+    && compact.includes('canResume:!!quickRunProgress.finished&&quickRunResumable')
+    && compact.includes('onRestartQuickRun={()=>startQuickRunFromRhythm()}')
+    && compact.includes('onResumeQuickRun={()=>resumeQuickRunFromRhythm()}'));
+  check(`${rel}: 自動で始める設定の人は、負けたら数秒おいて1周目から始め直す`,
+    compact.includes("if(!quickRunProgress||!quickRunProgress.finished||quickRunProgress.reason!=='defeat')returnundefined;")
+    && /constQUICK_RUN_AUTO_RETRY_MS=\d+;/.test(compact)
+    && compact.includes('},QUICK_RUN_AUTO_RETRY_MS);'));
+  check(`${rel}: モンヒロビートから出るとき、勝負のついた周回は片づけてから出る`,
+    compact.includes('if(runStageRef.current&&runResultFinishedRef.current&&isQuickMode(runMode)&&RHYTHM_MODE_PUBLIC_RELEASE){returnToHome();return;}'));
+}
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
