@@ -158,7 +158,14 @@ async function evalHand(s, b, skipLabels) {
       if (await stillPicked()) await s.wait(600);
     }
     const net = pv.map((p) => { const b0 = base.find((x) => x.i === p.i) || { dmg: 0, guard: 0 }; return { i: p.i, dmg: p.dmg !== b0.dmg ? p.dmg : 0, guard: p.guard !== b0.guard ? p.guard : 0 }; });
-    opts.push({ card: c, previews: net.filter((p) => p.dmg > 0 || p.guard > 0), auto: (mid.picked || 0) > (before.picked || 0) });
+    let previews = net.filter((p) => p.dmg > 0 || p.guard > 0);
+    // ★置ける子が1体だけのときは、押した瞬間にその子へ置かれ、ガードの見込みは枠に出ない(攻撃は出る)。
+    //   ガードが「置けない」に見えて、WAVE 1 で一度も守れずに倒れた(2026-10-09 Master)。その子へ置けるものとして扱う
+    if (!previews.length && /guard/.test(c.type) && (mid.picked || 0) > (before.picked || 0)) {
+      const alive = before.slots.filter((x) => x.occupied && !x.downed);
+      if (alive.length === 1) previews = [{ i: alive[0].i, dmg: 0, guard: 1 }];
+    }
+    opts.push({ card: c, previews, auto: (mid.picked || 0) > (before.picked || 0) });
   }
   return opts;
 }
