@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 65e846c43e700f41
+// generated-sha256: 2ed75f0f9f6b9c7a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 16:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 16:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32234,7 +32234,7 @@ function MasuTranscendEnhanceScreen({
 //   確定バーは一覧の中へ sticky で入れない(下の中身をスクロール中ずっと覆ってしまう)
 
 function MasuEnhanceScreen({
-  addAssistantBond, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
+  addAssistantBond, askConfirm, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
   onBack, onDismissAutoEnhanceIntro, onMissing, onOpenAutoEnhance, onOpenTranscendEnhance,
   renderPowerBadge, saveMissionProgress,
   setBulkEnhanceUnit, setBulkPlan, setEffect, setMasuMonDetail, spendPointsBulk,
@@ -32257,7 +32257,12 @@ function MasuEnhanceScreen({
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
       // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
-      const backToDetail = onBack;
+      // 振りかけの下書き(確定前)があるまま離れると消えるので、先に確かめる
+      const backToDetail = async () => {
+        const drafted = bulkPlan && (bulkPlan.apt.some(n=>n>0) || Object.values(bulkPlan.stat).some(n=>n>0));
+        if (drafted && !(await askConfirm({ title:'振った分を確定せずに戻りますか？', message:'まだ確定していない強化の振り分けは消えます。確定するには、画面下の「◯ptを使って強化する」を押してください。', confirmLabel:'破棄して戻る', danger:true }))) return;
+        onBack();
+      };
       // --- まとめて振るモード ---
       const plan = bulkPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
       const planUsed = plan.apt.reduce((a,b)=>a+b,0) + Object.values(plan.stat).reduce((a,b)=>a+b,0);
@@ -47940,6 +47945,29 @@ function MonsterHeroGame() {
       window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     } catch (error) { /* URLを直せなくても、申請の確認は出せる */ }
   }, []);
+  // ブラウザ(スマホ)の「戻る」でゲームの外へ出ないようにする。HOME 以外では画面の「戻る」ボタンを押したのと同じ動きにし、
+  // 押せる戻るが無い画面(バトル中など)は何もしない。HOME では履歴を足さず、そのままブラウザの戻るに任せる。
+  // 保存データには触らない(履歴の目印を足すだけ)
+  const gameStateForBackRef = useRef(gameState);
+  gameStateForBackRef.current = gameState;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let armed = false;
+    const arm = () => { try { window.history.pushState({ mhBack:1 }, '', window.location.href); armed = true; } catch (error) { armed = false; } };
+    const onPop = () => {
+      armed = false;
+      if (gameStateForBackRef.current === 'HOME') return;
+      arm();
+      try {
+        const heads = Array.from(document.querySelectorAll('header.mh-screen-head > button[aria-label]'));
+        const back = heads.find(b => !b.disabled);
+        if (back) back.click();
+      } catch (error) { /* 戻るボタンを探せなくても、ゲームの外へは出ない */ }
+    };
+    const timer = setInterval(() => { if (!armed && gameStateForBackRef.current !== 'HOME') arm(); }, 500);
+    window.addEventListener('popstate', onPop);
+    return () => { clearInterval(timer); window.removeEventListener('popstate', onPop); };
+  }, []);
   useEffect(() => {
     if (!pendingFriendCode) return;
     if (RELEASE_FLAGS.friends !== true) { setPendingFriendCode(''); return; }
@@ -62723,6 +62751,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_ENHANCE'&&masuMonDetail&&(
           <MasuEnhanceScreen
             addAssistantBond={addAssistantBond}
+            askConfirm={askConfirm}
             autoEnhanceIntroVisible={autoEnhanceIntroVisible}
             bulkEnhanceUnit={bulkEnhanceUnit}
             bulkPlan={bulkPlan}
