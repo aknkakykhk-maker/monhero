@@ -126,6 +126,21 @@ const rhythmBuddyNormalizeMon = (raw) => {
     recent,
   };
 };
+// ---- 呼んだ1回ごとの控え(2026-10-09・ユーザー指示「曲を演奏しなかったらチケットや無料分を消費しない」→「1曲も始まらなければ返す」) ----
+// calls: [{ id, masuId, paid:'free'|'ticket', day(払った日), at, load(呼んだときの起動), started }]。既存の保存(mh_rhythm_buddy_v1)へ項目を足す形(CLAUDE.md ⑦)。
+// 部屋を出たとき(呼んだ人が抜けた・部屋が解散した)、1曲も始まっていなければ払ったものを返し、控えを消す。始まっていれば消すだけ。
+// 控えを消すのと無料1回を返すのを同じ書き込みでするので、二重に返らない。アプリを閉じて残った控え(ほかの起動のもの)は、次に開いたとき一度だけ返す。
+// 無料1回は、払った日と同じ日のときだけ返す(朝5:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
+const RHYTHM_BUDDY_CALLS_KEEP = 40;
+const rhythmBuddyNormalizeCalls = (raw) => (Array.isArray(raw) ? raw : [])
+  .filter((x) => x && typeof x === 'object' && !Array.isArray(x))
+  .slice(-RHYTHM_BUDDY_CALLS_KEEP)
+  .map((x) => ({
+    id: rhythmBuddyStr(x.id, 40), masuId: rhythmBuddyStr(x.masuId, 80),
+    paid: x.paid === 'ticket' ? 'ticket' : x.paid === 'free' ? 'free' : '',
+    day: rhythmBuddyStr(x.day, 10), at: rhythmBuddyInt(x.at, 9e15), load: rhythmBuddyStr(x.load, 40), started: x.started === true,
+  }))
+  .filter((x) => x.id && x.paid);
 const rhythmBuddyNormalize = (raw) => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const mons = {};
@@ -135,7 +150,7 @@ const rhythmBuddyNormalize = (raw) => {
       if (key) mons[key] = rhythmBuddyNormalizeMon(o.mons[id]);
     });
   }
-  return { day: rhythmBuddyStr(o.day, 10), used: rhythmBuddyInt(o.used, 99), mons };
+  return { day: rhythmBuddyStr(o.day, 10), used: rhythmBuddyInt(o.used, 99), mons, calls: rhythmBuddyNormalizeCalls(o.calls) };
 };
 
 // ---- 1日の回数 ----
@@ -157,6 +172,60 @@ const rhythmBuddyRefundFree = (state, dayKey) => {
   const st = rhythmBuddyNormalize(state);
   if (st.day !== dayKey || st.used <= 0) return null;
   return { ...st, used: st.used - 1 };
+};
+
+// 呼んだ1回を控えに足す。call = { id, masuId, paid, day, at, load }
+const rhythmBuddyAddCall = (state, call) => {
+  const st = rhythmBuddyNormalize(state);
+  const [c] = rhythmBuddyNormalizeCalls([{ ...call, started: false }]);
+  if (!c || st.calls.some((x) => x.id === c.id)) return null;
+  return { ...st, calls: [...st.calls, c] };
+};
+// 無料1回を使って、同じ書き込みで控えも足す(途中で閉じても、使ったのに控えが無い、にならない)
+const rhythmBuddyUseFreeWithCall = (state, dayKey, call) => {
+  const used = rhythmBuddyUseFree(state, dayKey);
+  return used ? rhythmBuddyAddCall(used, { ...call, paid: 'free', day: dayKey }) : null;
+};
+// 1曲始まった(その1回は使った扱い)。控えは部屋を出るまで残す(席をゆずったときに返すため)
+const rhythmBuddyMarkStarted = (state, callId) => {
+  const st = rhythmBuddyNormalize(state);
+  if (!st.calls.some((x) => x.id === callId && !x.started)) return null;
+  return { ...st, calls: st.calls.map((x) => (x.id === callId ? { ...x, started: true } : x)) };
+};
+// 控えを1つ片づける。how: 'bump'(人が来て席をゆずった。始まっていても返す・いままでどおり)/ 'end'(部屋を出た。始まっていなければ返す)。
+// 戻り値 { next, refund:'free'|'ticket'|'' }。控えが無い(片づけ済み)なら null。無料1回は next の中で返す。券は呼ぶ側が1枚足す
+const rhythmBuddySettleCall = (state, callId, how, dayKey) => {
+  const st = rhythmBuddyNormalize(state);
+  const call = st.calls.find((x) => x.id === callId);
+  if (!call) return null;
+  const give = how === 'bump' || !call.started;
+  const calls = st.calls.filter((x) => x.id !== callId);
+  if (!give) return { next: { ...st, calls }, refund: '' };
+  if (call.paid === 'ticket') return { next: { ...st, calls }, refund: 'ticket' };
+  // 無料1回: 払った日と同じ日だけ返す(日付が変わっていれば、もう戻っている)
+  if (st.day === call.day && call.day === dayKey && st.used > 0) return { next: { ...st, calls, used: st.used - 1 }, refund: 'free' };
+  return { next: { ...st, calls }, refund: '' };
+};
+// アプリを閉じて残った控え(いまの起動 load 以外のもの)をまとめて片づける。戻り値 { next, free, tickets }(片づけるものが無ければ null)
+const rhythmBuddySettleLeftovers = (state, load, dayKey) => {
+  let st = rhythmBuddyNormalize(state);
+  const left = st.calls.filter((x) => x.load !== load);
+  if (!left.length) return null;
+  let free = 0, tickets = 0;
+  left.forEach((call) => {
+    const r = rhythmBuddySettleCall(st, call.id, 'end', dayKey);
+    if (!r) return;
+    st = rhythmBuddyNormalize(r.next);
+    if (r.refund === 'free') free += 1; else if (r.refund === 'ticket') tickets += 1;
+  });
+  return { next: st, free, tickets };
+};
+// 返したときの一言
+const rhythmBuddyRefundText = (free, tickets) => {
+  const parts = [];
+  if (free > 0) parts.push(`無料${free}回`);
+  if (tickets > 0) parts.push(`セッション券${tickets}枚`);
+  return parts.length ? `演奏しなかったので、${parts.join('と')}を返しました` : '';
 };
 
 // ---- レベル ----

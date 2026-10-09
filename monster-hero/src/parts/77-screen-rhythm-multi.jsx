@@ -409,7 +409,7 @@ const RHYTHM_MULTI = (() => {
     sendCpuHb();
   };
   // 自分が呼んだ相棒のぶんの知らせ。相棒は部屋主にならない(呼んだ時刻が joinedAt なので、呼んだ人より必ず後)
-  // 1人で何体も呼べる(2026-10-07・ユーザー指示「無料枠と券がある分だけ入れられる」)。s.cpus = [{ id, masuId }]
+  // 1人で何体も呼べる(2026-10-07・ユーザー指示「無料枠と券がある分だけ入れられる」)。s.cpus = [{ id, masuId, callId }](callId は呼んだ1回ごとの控えの id。曲が始まった・部屋を出たを cpuBrain へ知らせるときに渡す)
   const myCpu = (id) => (s && s.cpus.some((c) => c.id === id) ? s.members[id] : null);
   const sendCpuHb = () => { if (s) s.cpus.forEach((x) => sendOneCpuHb(x.id)); };
   const sendOneCpuHb = (cpuId) => {
@@ -697,7 +697,7 @@ const RHYTHM_MULTI = (() => {
       delete s.members[gone.id];
       s.cpus = s.cpus.filter((c) => c.id !== gone.id);
       if (socket) socket.send({ t: 'bye', id: gone.id });
-      try { if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId); } catch (_) { /* 返せなくても部屋は続ける */ }
+      try { if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId, gone.callId); } catch (_) { /* 返せなくても部屋は続ける */ }
     });
   };
   // 相棒は、選曲の段に入ったらすぐ選び(得意な曲)、準備の段に入ったらすぐ準備完了にする。難易度は呼んだ人と同じ
@@ -833,6 +833,8 @@ const RHYTHM_MULTI = (() => {
         s.playUntil = Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS;
         msg.participants.forEach((pid) => { if (s.members[pid]) s.members[pid].playing = true; });
         s.cpus.forEach((c) => { if (s.members[c.id]) s.members[c.id].res = null; });
+        // 呼んだマスモンが1曲目に入った: その1回は使った扱い(部屋を出ても返さない。2026-10-09・ユーザー指示「1曲も始まらなければ返す」)
+        s.cpus.filter((c) => msg.participants.includes(c.id)).forEach((c) => { try { if (cpuBrain && cpuBrain.started) cpuBrain.started(c.masuId, c.callId); } catch (_) { /* 印が付けられなくても部屋は続ける */ } });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
@@ -884,7 +886,7 @@ const RHYTHM_MULTI = (() => {
       const id = rhythmMultiMakeId('c');
       const masuId = rhythmMultiText(buddy.masuId, 80);
       if (s.cpus.some((c) => c.masuId === masuId)) return false; // 同じ子は2体呼べない
-      s.cpus.push({ id, masuId });
+      s.cpus.push({ id, masuId, callId: rhythmMultiText(buddy.callId, 40) });
       s.members[id] = {
         id, cpu: true, owner: s.selfId, name: rhythmMultiText(buddy.name, 12) || 'マスモン', level: rhythmMultiInt(buddy.level, 9999),
         mb: rhythmMultiText(buddy.baseId, 40).replace(/[^A-Za-z0-9_-]/g, ''),
@@ -957,6 +959,8 @@ const RHYTHM_MULTI = (() => {
       emit();
     },
     leave() {
+      // 呼んだマスモンも一緒に帰る。1曲も始まっていない子は、呼ぶ側(cpuBrain.ended)が払ったものを返す
+      if (s) s.cpus.forEach((c) => { try { if (cpuBrain && cpuBrain.ended) cpuBrain.ended(c.masuId, c.callId); } catch (_) { /* 返せなくても抜ける */ } });
       if (socket) {
         try { socket.send({ t: 'bye', id: s && s.selfId }); if (s) s.cpus.forEach((c) => socket.send({ t: 'bye', id: c.id })); } catch (_) { /* 無視 */ }
         socket.close();
@@ -1809,28 +1813,38 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     if (open) openRankHub('buddy');
   };
   const closeTalkTip = () => { setTalkTipSeen(true); void storeSet(RHYTHM_BUDDY_TALK_SEEN_KEY, true).catch(() => {}); };
-  // 呼んだときに何で払ったか(人が来て席をゆずったとき、同じものを返す)
-  const buddyPaidRef = React.useRef({});
-  const refundBuddy = (masuId) => {
-    const paid = buddyPaidRef.current[masuId];
-    delete buddyPaidRef.current[masuId];
-    if (paid === 'free') void RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyRefundFree(st, rhythmBuddyDayKey(Date.now())));
-    else if (paid === 'ticket' && onRefundBuddyTicket) void onRefundBuddyTicket();
+  // 払ったものは、呼んだ1回ごとの控え(mh_rhythm_buddy_v1 の calls)で数える(2026-10-09・ユーザー指示「1曲も始まらなければ返す」)。
+  //   人が来て席をゆずった … いままでどおり返す(cpuBrain.refund)
+  //   部屋を出た(呼んだ人が抜けた・部屋が解散した) … 1曲も始まっていなければ返す(cpuBrain.ended)。1曲始まったら使った扱い(cpuBrain.started)
+  //   アプリを閉じて残った控え … 次にモンヒロビートを開いたとき一度だけ返す(rhythmBuddySettleLeftoversOnce)
+  const refundBuddy = (masuId, callId) => {
+    void rhythmBuddySettle(callId, 'bump', onRefundBuddyTicket);
     setBuddyBumped(true);
   };
+  const endBuddy = (masuId, callId) => {
+    void rhythmBuddySettle(callId, 'end', onRefundBuddyTicket).then((paid) => { if (paid) RHYTHM_BUDDY_REFUND_NOTE.add(paid); });
+  };
+  const startBuddy = (masuId, callId) => { void RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyMarkStarted(st, callId)); };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
-  React.useEffect(() => { RHYTHM_MULTI.setCpuBrain({ ...rhythmBuddyMakeBrain(songs), refund: refundBuddy }); }, [buddySongKey]);
-  // 呼ぶ: 先に今日の無料ぶん、なければセッション券を1枚使ってから部屋へ入れる
+  React.useEffect(() => { RHYTHM_MULTI.setCpuBrain({ ...rhythmBuddyMakeBrain(songs), refund: refundBuddy, ended: endBuddy, started: startBuddy }); }, [buddySongKey]);
+  React.useEffect(() => { void rhythmBuddySettleLeftoversOnce(onRefundBuddyTicket); }, []);
+  const buddyRefundNote = useRhythmBuddyRefundNote();
+  // 呼ぶ: 先に今日の無料ぶん、なければセッション券を1枚使ってから部屋へ入れる。払ったのと同時に控えを残す
   const callBuddy = async (masu) => {
     if (!masu || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return; }
     const day = rhythmBuddyDayKey(Date.now());
-    let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFree(st, day))) ? 'free' : '';
-    if (!paid && onUseBuddyTicket) { try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; } }
+    const call = { id: rhythmBuddyCallId(), masuId: masu.id, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID };
+    let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    if (!paid && onUseBuddyTicket) {
+      try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
+      if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));
+    }
     if (!paid) return;
-    buddyPaidRef.current[masu.id] = paid;
     setBuddyBumped(false);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masu.id];
-    RHYTHM_MULTI.summon({ masuId: masu.id, name: rhythmBuddyMasuName(masu), level: mon ? rhythmBuddyLevelInfo(mon.exp).level : 1, baseId: masu.baseId, colors: getMasuColors(masu) });
+    const joined = RHYTHM_MULTI.summon({ masuId: masu.id, callId: call.id, name: rhythmBuddyMasuName(masu), level: mon ? rhythmBuddyLevelInfo(mon.exp).level : 1, baseId: masu.baseId, colors: getMasuColors(masu) });
+    // 払っているあいだに満員・ライブ中になって入れなかったら、払ったぶんをすぐ返す
+    if (!joined) endBuddy(masu.id, call.id);
     setBuddySheet('');
   };
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
@@ -2286,6 +2300,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div aria-hidden="true" className="shrink-0" style={{ height: 'var(--mh-sa-bottom)' }} />
         {recordOpen && <RhythmMultiRecordSheet songName={(id) => { const song = songById(id); return song ? rhythmSongFullName(song) : '(曲)'; }} onClose={() => setRecordOpen(false)} />}
         {buddySheetLayer}
+        {buddyRefundNote && <div data-rhythm-buddy-refund role="status" className="pointer-events-none absolute inset-x-3 top-3 z-[86000] mx-auto max-w-sm rounded-xl border border-lime-300/60 bg-slate-950/90 px-3 py-2 text-center text-xs font-black leading-snug text-lime-100 shadow-lg" style={{ marginTop: 'var(--mh-sa-top)' }}>{buddyRefundNote}</div>}
         {/* プライベートルーム: 部屋をつくる / 合言葉で入る(2026-10-07。もとは欄の中に作成・コード・入室を並べていた) */}
         {privateOpen && (
           <div className="absolute inset-0 z-[85000]">

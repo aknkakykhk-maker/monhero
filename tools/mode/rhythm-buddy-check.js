@@ -34,7 +34,8 @@ const pure = (() => {
   vm.createContext(sb);
   vm.runInContext(`${BUDDY}\n;globalThis.__b={norm:rhythmBuddyNormalize,normMon:rhythmBuddyNormalizeMon,freeLeft:rhythmBuddyFreeLeft,useFree:rhythmBuddyUseFree,
     choose:rhythmBuddyChooseSong,whyText:RHYTHM_BUDDY_PICK_WHY,newChance:rhythmBuddyNewSongChance,topSongs:rhythmBuddyTopSongs,level:rhythmBuddyLevelInfo,apply:rhythmBuddyApplyLive,stars:rhythmBuddyFamiliarStars,mood:rhythmBuddyMood,moods:RHYTHM_BUDDY_MOODS,
-    play:rhythmBuddyPlay,lean:rhythmBuddySpeciesLean,comfort:rhythmBuddyComfortLevelOf,day:rhythmBuddyDayKey,key:RHYTHM_BUDDY_KEY,free:RHYTHM_BUDDY_FREE_PER_DAY,max:RHYTHM_BUDDY_LEVEL_MAX,need:rhythmBuddyNeedExp};`, sb);
+    play:rhythmBuddyPlay,lean:rhythmBuddySpeciesLean,comfort:rhythmBuddyComfortLevelOf,day:rhythmBuddyDayKey,key:RHYTHM_BUDDY_KEY,free:RHYTHM_BUDDY_FREE_PER_DAY,max:RHYTHM_BUDDY_LEVEL_MAX,need:rhythmBuddyNeedExp,
+    addCall:rhythmBuddyAddCall,useFreeCall:rhythmBuddyUseFreeWithCall,markStarted:rhythmBuddyMarkStarted,settle:rhythmBuddySettleCall,leftovers:rhythmBuddySettleLeftovers,refundText:rhythmBuddyRefundText};`, sb);
   return sb.__b;
 })();
 {
@@ -217,6 +218,39 @@ const pure = (() => {
     bases.map((x) => b.lean(x, bases)).join(',') === 'easygoing,brave,serious,jester');
 }
 
+// A-控え 呼んだ1回ごとの控え(2026-10-09・ユーザー指示「1曲も始まらなければ返す」)
+{
+  const B = pure, day = '2026-10-09', next = '2026-10-10';
+  const call = (id, extra = {}) => ({ id, masuId: 'm1', at: 1, load: 'L1', ...extra });
+  const st = B.useFreeCall(B.norm(null), day, call('c1'));
+  check('無料1回を使うのと同じ書き込みで、呼んだ1回の控えが残る', st && st.used === 1 && st.calls.length === 1 && st.calls[0].paid === 'free' && st.calls[0].started === false, JSON.stringify(st));
+  const r1 = B.settle(st, 'c1', 'end', day);
+  check('1曲も始まらないまま部屋を出たら、無料1回が返り、控えが消える', r1 && r1.refund === 'free' && r1.next.used === 0 && r1.next.calls.length === 0, JSON.stringify(r1));
+  check('同じ控えを二度片づけても、二度は返らない', B.settle(r1.next, 'c1', 'end', day) === null);
+  const st2 = B.markStarted(B.useFreeCall(B.norm(null), day, call('c2')), 'c2');
+  const r2 = B.settle(st2, 'c2', 'end', day);
+  check('1曲始まったあとに部屋を出ても返さない(使った扱い。控えは消える)', r2 && r2.refund === '' && r2.next.used === 1 && r2.next.calls.length === 0, JSON.stringify(r2));
+  check('1曲始まった印は二度付けない', B.markStarted(st2, 'c2') === null);
+  const r3 = B.settle(st2, 'c2', 'bump', day);
+  check('人が来て席をゆずったときは、1曲始まっていてもいままでどおり返す', r3 && r3.refund === 'free' && r3.next.used === 0);
+  const r4 = B.settle(B.useFreeCall(B.norm(null), day, call('c3')), 'c3', 'end', next);
+  check('朝5:00をまたいだら、無料1回は返さない(無料回数はもう戻っているので増えすぎない)', r4 && r4.refund === '' && r4.next.calls.length === 0, JSON.stringify(r4));
+  const r5 = B.settle(B.addCall(B.norm(null), { ...call('c4'), paid: 'ticket', day }), 'c4', 'end', day);
+  check('セッション券で呼んだ子は、券を1枚返す(日付をまたいでも返す)', r5 && r5.refund === 'ticket' && r5.next.used === 0 && B.settle(B.addCall(B.norm(null), { ...call('c5'), paid: 'ticket', day }), 'c5', 'end', next).refund === 'ticket');
+  let st6 = B.useFreeCall(B.norm(null), day, call('o1', { load: 'OLD' }));
+  st6 = B.addCall(st6, { ...call('o2', { load: 'OLD' }), paid: 'ticket', day });
+  st6 = B.markStarted(B.addCall(st6, { ...call('o3', { load: 'OLD' }), paid: 'ticket', day }), 'o3');
+  st6 = B.useFreeCall(st6, day, call('n1', { load: 'NOW' }));
+  const left = B.leftovers(st6, 'NOW', day);
+  check('アプリを閉じて残った控えは、次に開いたとき、始まっていない子のぶんだけ返す(無料1回・券1枚)', left && left.free === 1 && left.tickets === 1 && left.next.used === 1, JSON.stringify(left));
+  check('いま部屋にいる子(いまの起動)の控えは片づけない', left && left.next.calls.map((c) => c.id).join() === 'n1');
+  check('残りを片づけたあとは、もう一度やっても何も返らない(二重に返らない)', left && B.leftovers(left.next, 'NOW', day) === null);
+  const old = B.norm({ day, used: 2, mons: {} });
+  check('控えの無い、いままでの保存もそのまま読める(回数は変わらない)', Array.isArray(old.calls) && old.calls.length === 0 && old.used === 2 && old.day === day);
+  check('壊れた控えは捨てて読む', B.norm({ day, used: 1, calls: [null, 3, { id: 'x' }, { id: 'y', paid: 'ticket' }] }).calls.map((c) => c.id).join() === 'y');
+  check('返したときの一言', B.refundText(1, 0) === '演奏しなかったので、無料1回を返しました' && B.refundText(0, 1) === '演奏しなかったので、セッション券1枚を返しました' && B.refundText(1, 2) === '演奏しなかったので、無料1回とセッション券2枚を返しました' && B.refundText(0, 0) === '');
+}
+
 // ===== B. 部屋の中の相棒 =====
 const clock = {
   now: 1_800_000_000_000, seq: 0, timers: new Map(),
@@ -281,19 +315,24 @@ const makeClient = (name, { brain = true, talk = false } = {}) => {
   api.M.setCatalog(['songA', 'songB', 'songC'], { songA: 60000, songB: 90000, songC: 120000 });
   const plays = [];
   const refunds = [];
+  const refundCalls = [];
+  const startedCalls = [];
+  const endedCalls = [];
   const talks = [];
   if (brain) {
     api.M.setCpuBrain({
       play: (req) => { plays.push(req); return { score: 650000, maxCombo: 300, judgments: { MARVELOUS: 300, EXCELLENT: 50, GREAT: 20, GOOD: 5, BAD: 2, MISS: 3 }, fast: 30, slow: 47 }; },
       pick: () => 'songC',
-      refund: (masuId) => refunds.push(masuId),
+      refund: (masuId, callId) => { refunds.push(masuId); refundCalls.push(callId); },
+      started: (masuId, callId) => startedCalls.push(callId),
+      ended: (masuId, callId) => endedCalls.push(callId),
       // おしゃべり: 場面を「T:場面」の文にして返す(中身の選び方は rhythm-buddy-talk-check.js が見る)
       talk: (req) => { talks.push(req); return `T:${req.kind}`; },
       // 人の発言を読む(本物の読み取り)。曲の一覧は2曲だけの偽物
       understand: (req) => { const parsed = api.parse({ text: req.text, names: req.names, awaiting: req.awaiting, songs: [{ id: 'songA', name: 'テスト曲A' }, { id: 'songB', name: 'ビートB' }] }); return { ...parsed, songId: parsed.song ? parsed.song.id : '' }; },
     });
   }
-  return { name, ...api, starts, plays, refunds, talks };
+  return { name, ...api, starts, plays, refunds, refundCalls, startedCalls, endedCalls, talks };
 };
 const view = (c) => c.M.view();
 const phaseOf = (c) => (view(c) ? view(c).room.phase : '-');
@@ -389,7 +428,7 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   const cs = ['A', 'B', 'C', 'D'].map((n) => makeClient(n));
   cs.forEach((c, i) => join(c, 'FULL', 'private', i));
   clock.advance(3000);
-  check('4人の部屋で、1人がマスモンを呼べる', cs[0].M.summon(MATE) === true);
+  check('4人の部屋で、1人がマスモンを呼べる', cs[0].M.summon({ ...MATE, callId: 'call_bump' }) === true);
   clock.advance(2500);
   check('5人で満員になり、ほかの人はもう呼べない', view(cs[1]).members.length === 5 && cs[1].M.canSummon() === false);
   const e = makeClient('E');
@@ -398,7 +437,39 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   check('人が入ってくると、呼んだマスモンが席をゆずって帰る', view(e).full === false && view(cs[1]).members.length === 5 && !view(cs[1]).members.some((m) => m.cpu), view(cs[1]).members.map((m) => m.name).join(','));
   check('席をゆずったぶん、呼んだ人に回数・券が返る(1回だけ)', cs[0].refunds.length === 1 && cs[0].refunds[0] === 'masu_1', JSON.stringify(cs[0].refunds));
   check('席をゆずったあとは、呼んでいる子がいなくなる', cs[0].M.myBuddies().length === 0);
+  check('席をゆずって返すときは、呼んだ1回の控えの id を渡す', cs[0].refundCalls.join() === 'call_bump');
   [...cs, e].forEach((c) => c.M.leave());
+}
+
+// B-14 1曲も始まらないまま部屋を出たら返す・1曲始まったら返さない(2026-10-09・ユーザー指示)
+{
+  const a = makeClient('A');
+  join(a, 'BACK', 'free');
+  clock.advance(3000);
+  a.M.summon({ ...MATE, callId: 'call_1' });
+  a.M.summon({ ...MATE, masuId: 'masu_2', callId: 'call_2' });
+  clock.advance(2500);
+  a.M.leave();
+  check('1曲も始まらないまま部屋を出ると、呼んだ子それぞれの「部屋を出た」が控えの id つきで1回ずつ届く', a.endedCalls.join() === 'call_1,call_2' && a.startedCalls.length === 0, JSON.stringify({ e: a.endedCalls, s: a.startedCalls }));
+  a.M.leave();
+  check('もう一度抜けても、二度は届かない', a.endedCalls.length === 2);
+}
+{
+  const a = makeClient('A');
+  join(a, 'PLAY', 'free');
+  clock.advance(3000);
+  a.M.summon({ ...MATE, callId: 'call_p' });
+  clock.advance(2500);
+  clock.advance(17500);
+  a.M.pick('songA');
+  clock.advance(5000);
+  a.M.ready();
+  clock.advance(1500);
+  check('ライブが始まると、呼んだ子の「1曲始まった」が控えの id つきで1回届く', phaseOf(a) === 'playing' && a.startedCalls.join() === 'call_p', JSON.stringify({ phase: phaseOf(a), s: a.startedCalls }));
+  a.M.reportResult(view(a).room.round, { score: 600000, maxCombo: 200, cleared: true, judgments: {} }, false, { diffId: 'HARD' });
+  clock.advance(1500);
+  a.M.leave();
+  check('そのあと部屋を出ても「部屋を出た」は届く(返すかどうかは控えの「始まった」の印で決まり、ここでは返らない)', a.endedCalls.join() === 'call_p' && a.startedCalls.length === 1);
 }
 
 // B-6 ひとりで何体も呼べる(空きがあるだけ)。報酬は人+50%、マスモンは+30%/+20%/+10%/+10%

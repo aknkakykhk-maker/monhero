@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1a9d0c270d995c9
+// source-sha256: 09b373ef2c5fbd2b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 18:59";
+const BUILD_DATE = "2026-10-09 22:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37945,6 +37945,16 @@ const rhythmBuddyNormalizeMon = raw => {
     recent
   };
 };
+const RHYTHM_BUDDY_CALLS_KEEP = 40;
+const rhythmBuddyNormalizeCalls = raw => (Array.isArray(raw) ? raw : []).filter(x => x && typeof x === 'object' && !Array.isArray(x)).slice(-RHYTHM_BUDDY_CALLS_KEEP).map(x => ({
+  id: rhythmBuddyStr(x.id, 40),
+  masuId: rhythmBuddyStr(x.masuId, 80),
+  paid: x.paid === 'ticket' ? 'ticket' : x.paid === 'free' ? 'free' : '',
+  day: rhythmBuddyStr(x.day, 10),
+  at: rhythmBuddyInt(x.at, 9e15),
+  load: rhythmBuddyStr(x.load, 40),
+  started: x.started === true
+})).filter(x => x.id && x.paid);
 const rhythmBuddyNormalize = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const mons = {};
@@ -37957,7 +37967,8 @@ const rhythmBuddyNormalize = raw => {
   return {
     day: rhythmBuddyStr(o.day, 10),
     used: rhythmBuddyInt(o.used, 99),
-    mons
+    mons,
+    calls: rhythmBuddyNormalizeCalls(o.calls)
   };
 };
 const rhythmBuddyFreeLeft = (state, dayKey) => {
@@ -37982,6 +37993,97 @@ const rhythmBuddyRefundFree = (state, dayKey) => {
     ...st,
     used: st.used - 1
   };
+};
+const rhythmBuddyAddCall = (state, call) => {
+  const st = rhythmBuddyNormalize(state);
+  const [c] = rhythmBuddyNormalizeCalls([{
+    ...call,
+    started: false
+  }]);
+  if (!c || st.calls.some(x => x.id === c.id)) return null;
+  return {
+    ...st,
+    calls: [...st.calls, c]
+  };
+};
+const rhythmBuddyUseFreeWithCall = (state, dayKey, call) => {
+  const used = rhythmBuddyUseFree(state, dayKey);
+  return used ? rhythmBuddyAddCall(used, {
+    ...call,
+    paid: 'free',
+    day: dayKey
+  }) : null;
+};
+const rhythmBuddyMarkStarted = (state, callId) => {
+  const st = rhythmBuddyNormalize(state);
+  if (!st.calls.some(x => x.id === callId && !x.started)) return null;
+  return {
+    ...st,
+    calls: st.calls.map(x => x.id === callId ? {
+      ...x,
+      started: true
+    } : x)
+  };
+};
+const rhythmBuddySettleCall = (state, callId, how, dayKey) => {
+  const st = rhythmBuddyNormalize(state);
+  const call = st.calls.find(x => x.id === callId);
+  if (!call) return null;
+  const give = how === 'bump' || !call.started;
+  const calls = st.calls.filter(x => x.id !== callId);
+  if (!give) return {
+    next: {
+      ...st,
+      calls
+    },
+    refund: ''
+  };
+  if (call.paid === 'ticket') return {
+    next: {
+      ...st,
+      calls
+    },
+    refund: 'ticket'
+  };
+  if (st.day === call.day && call.day === dayKey && st.used > 0) return {
+    next: {
+      ...st,
+      calls,
+      used: st.used - 1
+    },
+    refund: 'free'
+  };
+  return {
+    next: {
+      ...st,
+      calls
+    },
+    refund: ''
+  };
+};
+const rhythmBuddySettleLeftovers = (state, load, dayKey) => {
+  let st = rhythmBuddyNormalize(state);
+  const left = st.calls.filter(x => x.load !== load);
+  if (!left.length) return null;
+  let free = 0,
+    tickets = 0;
+  left.forEach(call => {
+    const r = rhythmBuddySettleCall(st, call.id, 'end', dayKey);
+    if (!r) return;
+    st = rhythmBuddyNormalize(r.next);
+    if (r.refund === 'free') free += 1;else if (r.refund === 'ticket') tickets += 1;
+  });
+  return {
+    next: st,
+    free,
+    tickets
+  };
+};
+const rhythmBuddyRefundText = (free, tickets) => {
+  const parts = [];
+  if (free > 0) parts.push(`無料${free}回`);
+  if (tickets > 0) parts.push(`セッション券${tickets}枚`);
+  return parts.length ? `演奏しなかったので、${parts.join('と')}を返しました` : '';
 };
 const rhythmBuddyNeedExp = level => Math.round(6 + 1.2 * Math.max(1, level));
 const rhythmBuddyLevelInfo = exp => {
@@ -65361,7 +65463,7 @@ const RHYTHM_MULTI = (() => {
         id: gone.id
       });
       try {
-        if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId);
+        if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId, gone.callId);
       } catch (_) {}
     });
   };
@@ -65604,6 +65706,11 @@ const RHYTHM_MULTI = (() => {
         s.cpus.forEach(c => {
           if (s.members[c.id]) s.members[c.id].res = null;
         });
+        s.cpus.filter(c => msg.participants.includes(c.id)).forEach(c => {
+          try {
+            if (cpuBrain && cpuBrain.started) cpuBrain.started(c.masuId, c.callId);
+          } catch (_) {}
+        });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true;
@@ -65681,7 +65788,8 @@ const RHYTHM_MULTI = (() => {
       if (s.cpus.some(c => c.masuId === masuId)) return false;
       s.cpus.push({
         id,
-        masuId
+        masuId,
+        callId: rhythmMultiText(buddy.callId, 40)
       });
       s.members[id] = {
         id,
@@ -65819,6 +65927,11 @@ const RHYTHM_MULTI = (() => {
       emit();
     },
     leave() {
+      if (s) s.cpus.forEach(c => {
+        try {
+          if (cpuBrain && cpuBrain.ended) cpuBrain.ended(c.masuId, c.callId);
+        } catch (_) {}
+      });
       if (socket) {
         try {
           socket.send({
@@ -67142,45 +67255,68 @@ function RhythmMultiScreen({
     setTalkTipSeen(true);
     void storeSet(RHYTHM_BUDDY_TALK_SEEN_KEY, true).catch(() => {});
   };
-  const buddyPaidRef = React.useRef({});
-  const refundBuddy = masuId => {
-    const paid = buddyPaidRef.current[masuId];
-    delete buddyPaidRef.current[masuId];
-    if (paid === 'free') void RHYTHM_BUDDY_STORE.update(st => rhythmBuddyRefundFree(st, rhythmBuddyDayKey(Date.now())));else if (paid === 'ticket' && onRefundBuddyTicket) void onRefundBuddyTicket();
+  const refundBuddy = (masuId, callId) => {
+    void rhythmBuddySettle(callId, 'bump', onRefundBuddyTicket);
     setBuddyBumped(true);
+  };
+  const endBuddy = (masuId, callId) => {
+    void rhythmBuddySettle(callId, 'end', onRefundBuddyTicket).then(paid => {
+      if (paid) RHYTHM_BUDDY_REFUND_NOTE.add(paid);
+    });
+  };
+  const startBuddy = (masuId, callId) => {
+    void RHYTHM_BUDDY_STORE.update(st => rhythmBuddyMarkStarted(st, callId));
   };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
   React.useEffect(() => {
     RHYTHM_MULTI.setCpuBrain({
       ...rhythmBuddyMakeBrain(songs),
-      refund: refundBuddy
+      refund: refundBuddy,
+      ended: endBuddy,
+      started: startBuddy
     });
   }, [buddySongKey]);
+  React.useEffect(() => {
+    void rhythmBuddySettleLeftoversOnce(onRefundBuddyTicket);
+  }, []);
+  const buddyRefundNote = useRhythmBuddyRefundNote();
   const callBuddy = async masu => {
     if (!masu || !RHYTHM_MULTI.canSummon()) {
       setBuddySheet('');
       return;
     }
     const day = rhythmBuddyDayKey(Date.now());
-    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFree(st, day))) ? 'free' : '';
+    const call = {
+      id: rhythmBuddyCallId(),
+      masuId: masu.id,
+      at: Date.now(),
+      load: RHYTHM_BUDDY_LOAD_ID
+    };
+    let paid = (await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
     if (!paid && onUseBuddyTicket) {
       try {
         paid = (await onUseBuddyTicket()) === true ? 'ticket' : '';
       } catch (_) {
         paid = '';
       }
+      if (paid) await RHYTHM_BUDDY_STORE.update(st => rhythmBuddyAddCall(st, {
+        ...call,
+        paid: 'ticket',
+        day
+      }));
     }
     if (!paid) return;
-    buddyPaidRef.current[masu.id] = paid;
     setBuddyBumped(false);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masu.id];
-    RHYTHM_MULTI.summon({
+    const joined = RHYTHM_MULTI.summon({
       masuId: masu.id,
+      callId: call.id,
       name: rhythmBuddyMasuName(masu),
       level: mon ? rhythmBuddyLevelInfo(mon.exp).level : 1,
       baseId: masu.baseId,
       colors: getMasuColors(masu)
     });
+    if (!joined) endBuddy(masu.id, call.id);
     setBuddySheet('');
   };
   const buddySongName = id => {
@@ -67892,7 +68028,14 @@ function RhythmMultiScreen({
         return song ? rhythmSongFullName(song) : '(曲)';
       },
       onClose: () => setRecordOpen(false)
-    }), buddySheetLayer, privateOpen && React.createElement("div", {
+    }), buddySheetLayer, buddyRefundNote && React.createElement("div", {
+      "data-rhythm-buddy-refund": true,
+      role: "status",
+      className: "pointer-events-none absolute inset-x-3 top-3 z-[86000] mx-auto max-w-sm rounded-xl border border-lime-300/60 bg-slate-950/90 px-3 py-2 text-center text-xs font-black leading-snug text-lime-100 shadow-lg",
+      style: {
+        marginTop: 'var(--mh-sa-top)'
+      }
+    }, buddyRefundNote), privateOpen && React.createElement("div", {
       className: "absolute inset-0 z-[85000]"
     }, React.createElement("button", {
       type: "button",
@@ -68729,6 +68872,88 @@ const RHYTHM_BUDDY_STORE = (() => {
   };
   return api;
 })();
+const RHYTHM_BUDDY_LOAD_ID = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const rhythmBuddyCallId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+const RHYTHM_BUDDY_REFUND_NOTE = (() => {
+  let note = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(note);
+    } catch (_) {}
+  });
+  return {
+    get: () => note && Date.now() < note.until ? note : null,
+    add(paid, n = 1) {
+      if (paid !== 'free' && paid !== 'ticket') return;
+      const live = note && Date.now() < note.until ? note : {
+        free: 0,
+        tickets: 0
+      };
+      note = {
+        free: live.free + (paid === 'free' ? n : 0),
+        tickets: live.tickets + (paid === 'ticket' ? n : 0),
+        until: Date.now() + 6000
+      };
+      emit();
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    }
+  };
+})();
+const useRhythmBuddyRefundNote = () => {
+  const [note, setNote] = React.useState(() => RHYTHM_BUDDY_REFUND_NOTE.get());
+  React.useEffect(() => RHYTHM_BUDDY_REFUND_NOTE.subscribe(setNote), []);
+  React.useEffect(() => {
+    if (!note) return undefined;
+    const timer = setTimeout(() => setNote(RHYTHM_BUDDY_REFUND_NOTE.get()), Math.max(0, note.until - Date.now()) + 50);
+    return () => clearTimeout(timer);
+  }, [note]);
+  return note ? rhythmBuddyRefundText(note.free, note.tickets) : '';
+};
+const rhythmBuddySettle = async (callId, how, refundTicket) => {
+  if (!callId) return '';
+  let r = null;
+  await RHYTHM_BUDDY_STORE.update(st => {
+    r = rhythmBuddySettleCall(st, callId, how, rhythmBuddyDayKey(Date.now()));
+    return r ? r.next : null;
+  });
+  if (!r || !r.refund) return '';
+  if (r.refund === 'ticket') {
+    if (!refundTicket) return '';
+    try {
+      await refundTicket();
+    } catch (_) {
+      return '';
+    }
+  }
+  return r.refund;
+};
+let rhythmBuddyLeftoversDone = false;
+const rhythmBuddySettleLeftoversOnce = async refundTicket => {
+  if (rhythmBuddyLeftoversDone) return;
+  rhythmBuddyLeftoversDone = true;
+  let r = null;
+  await RHYTHM_BUDDY_STORE.update(st => {
+    r = rhythmBuddySettleLeftovers(st, RHYTHM_BUDDY_LOAD_ID, rhythmBuddyDayKey(Date.now()));
+    return r ? r.next : null;
+  });
+  if (!r) return;
+  let tickets = 0;
+  for (let i = 0; i < r.tickets; i += 1) {
+    if (!refundTicket) break;
+    try {
+      await refundTicket();
+      tickets += 1;
+    } catch (_) {
+      break;
+    }
+  }
+  if (r.free) RHYTHM_BUDDY_REFUND_NOTE.add('free', r.free);
+  if (tickets) RHYTHM_BUDDY_REFUND_NOTE.add('ticket', tickets);
+};
 const useRhythmBuddyState = () => {
   const [state, setState] = React.useState(() => RHYTHM_BUDDY_STORE.get());
   React.useEffect(() => {
