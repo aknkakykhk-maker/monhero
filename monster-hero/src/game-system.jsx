@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bc9d431650470c8d
+// generated-sha256: dc35ab746da002e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 00:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 00:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4281,7 +4281,11 @@ const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 // noticeOpenShort … 縦が低い画面(高さ700px以下)での助手のひとことの開け閉め(2026-10-07)。低い画面ではひとことを出すと
 //   曲の一覧が1行も見えなくなるので、はじめは畳んでおく。新しい項目なので、持っていない既存ユーザーは false で補われる
 //   (ふつうの画面の noticeOpen とは別に持つ。片方を変えても、もう片方は変わらない)
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, genre:'all', favorites:Object.freeze([]) });
+// noticeTouched … ふつうの画面で💬を押して、助手のひとことの開け閉めを自分で選んだか(2026-10-09)。押したことのない人は、
+//   5曲以上遊んでいればはじめから畳む(RHYTHM_NOTICE_FOLD_PLAYED_SONGS)。新しい項目なので、持っていない既存ユーザーは false で補われる
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, noticeTouched:false, genre:'all', favorites:Object.freeze([]) });
+// 何曲遊んだら、助手のひとことをはじめから畳むか(2026-10-09・社長の選択「5曲遊んだ人は畳む」。曲の一覧が3行しか見えなかった)
+const RHYTHM_NOTICE_FOLD_PLAYED_SONGS = 5;
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
@@ -4291,6 +4295,7 @@ const normalizeRhythmSelectView = value => {
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
     noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
+    noticeTouched: source.noticeTouched === true,
     genre,
     favorites: Array.isArray(source.favorites)
       ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX)
@@ -8633,9 +8638,40 @@ const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
   return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
 };
 
-const grantCompensationGifts = (gifts, now=Date.now()) => {
+// ===== はじめての人には、7〜8月の不具合のお詫びを配らない(2026-10-09・社長の選択) =====
+// お詫びは、その時期に遊んでいた人だけのもの。これからはじめる人は不具合に遭っていないので、
+// 最初のギフトボックスにお詫びが4通並ぶのをやめ、同じ中身の合計を「プレオープン記念」へ足す。
+// ・配らなかったidは COMPENSATION_WAIVED_KEY(新しいキー)へ控える。控えが無いと、はじめての設定を終えた次の起動で
+//   「idが無い」とみなして配ってしまう。既存の保存キーは変えず、既にギフトにあるidは控えに入れない(取り上げない)
+// ・控えるのは下のidだけ。これから足すお詫び(新しいid)は、はじめての人にも普通に届く
+const COMPENSATION_WAIVED_KEY = 'mh_compensation_waived_v1';
+const NEW_PLAYER_WAIVED_COMPENSATION_IDS = Object.freeze([
+  'gift_compensation_20260731_battle',
+  'gift_compensation_20260801_points',
+  'gift_compensation_20260823_skip',
+  'gift_compensation_20260807_dye',
+]);
+const normalizeWaivedCompensationIds = (value) => (Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : []);
+// 配らないと決めたお詫びのうち、まだギフトボックスに無いもの(=控えに足すもの)
+const compensationIdsToWaive = (gifts, waivedIds) => {
   const list = Array.isArray(gifts) ? gifts : [];
-  const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  return NEW_PLAYER_WAIVED_COMPENSATION_IDS.filter(id => !waived.includes(id) && !list.some(item => item?.id === id));
+};
+// 控えたお詫びのうち、ギフトボックスに無いものの報酬を、種類ごとに合計する(プレオープン記念へ足す分)
+const waivedCompensationRewards = (gifts, waivedIds) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const totals = new Map();
+  COMPENSATION_GIFTS
+    .filter(def => NEW_PLAYER_WAIVED_COMPENSATION_IDS.includes(def.id) && waived.includes(def.id) && !list.some(item => item?.id === def.id))
+    .forEach(def => def.rewards.forEach(r => totals.set(r.type, (totals.get(r.type) || 0) + Math.floor(Number(r.amount) || 0))));
+  return [...totals.entries()].map(([type, amount]) => ({ type, amount }));
+};
+const grantCompensationGifts = (gifts, now=Date.now(), waivedIds=[]) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const missing = COMPENSATION_GIFTS.filter(def => !waived.includes(def.id) && !list.some(item => item?.id === def.id));
   if (missing.length === 0) return { granted:false, gifts:list };
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
@@ -8715,14 +8751,22 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
   ],
 });
 // ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
-const grantNewPlayerCampaignGift = (gifts, now=Date.now()) => {
+// extraRewards … 配らなかったお詫びの合計(waivedCompensationRewards)。同じ種類は数を足し、新しい種類は並べる
+const grantNewPlayerCampaignGift = (gifts, now=Date.now(), extraRewards=[]) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return { granted:false, gifts:list };
   if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return { granted:false, gifts:list };
+  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r}));
+  (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
+    const amount = Math.floor(Number(extra?.amount) || 0);
+    if (!extra?.type || amount <= 0) return;
+    const same = rewards.find(r => r.type === extra.type);
+    if (same) same.amount += amount; else rewards.push({ type:extra.type, amount });
+  });
   const gift = {
     ...NEW_PLAYER_CAMPAIGN_GIFT,
     source: 'campaign',
-    rewards: NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r})),
+    rewards,
     createdAt: new Date(now).toISOString(),
     claimedAt: null,
   };
@@ -11353,6 +11397,78 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if(b.t==='data'){const rows=helpDataRows(b.id);if(rows.length===0)return null;return(<div key={i}><div className="text-[10px] font-black mb-1 tracking-wider" style={{color:accent}}>{HELP_DATA_TITLES[b.id]||''}</div><div className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{r[1]}</span></div>))}</div></div>);}
   return <p key={i} className="text-[12px] text-slate-200 leading-relaxed">{b.text}</p>;
 });
+// ---- 助手のひとことを出す回数(2026-10-10・改善 G6「助手の吹き出しが、ほぼ全画面に出たまま」→ 社長が選択肢1) ----
+//   'ALWAYS' … いつも(これまでどおり。既定。保存が無い既存ユーザーも同じ見え方)
+//   'DAILY'  … 同じ画面のひとことは1日1回だけ(朝5:00で戻る)
+//   'OFF'    … 出さない
+// ★止めるのは「画面ごとの決まったひとこと」だけ。次は設定にかかわらず出す(大事な案内まで消さないため):
+//   ・文を直接渡す吹き出し(line=。はじめての名前決めの案内・ヘルプ画面)と、最初から開く吹き出し(defaultOpen)
+//   ・一度きりの案内の場面(名前が …Intro で終わるもの・quickRhythmBackground・rhythmWeeklyEvent)
+//   ・HOMEの助手(scene="home"。お知らせや話しかけの入口)
+//   助手の告知(アップデートのお知らせ)はこの部品を使っていないので、この設定の影響を受けない
+// 保存は新しいキーだけ(既存の mh_* は触らない・CLAUDE.md ⑦)。読むときは必ず正規化する
+const ASSISTANT_BUBBLE_MODES = ['ALWAYS', 'DAILY', 'OFF'];
+const normalizeAssistantBubbleMode = (value) => (ASSISTANT_BUBBLE_MODES.includes(String(value)) ? String(value) : 'ALWAYS');
+const ASSISTANT_BUBBLE_MODE_KEY = 'mh_assistant_bubble_mode_v1';
+const ASSISTANT_BUBBLE_SEEN_KEY = 'mh_assistant_bubble_seen_v1';
+const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([
+  { id: 'ALWAYS', label: 'いつも', note: 'これまでどおり' },
+  { id: 'DAILY', label: '1日1回', note: '同じ画面は1日1回' },
+  { id: 'OFF', label: '出さない', note: 'ひとことを隠す' },
+]);
+const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
+const assistantBubbleAlwaysShown = (scene) => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
+// 日の区切りは朝5:00(日本時間)。モンヒロビートの相棒の調子と同じ
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+// 見た場面の記録 { day, scenes:[場面のキー] }。日が変わったもの・壊れたものは空にする
+const normalizeAssistantBubbleSeen = (raw, day) => (raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes))
+  ? { day, scenes: raw.scenes.filter((x) => typeof x === 'string').slice(0, 300) }
+  : { day, scenes: [] };
+const ASSISTANT_BUBBLE_STORE = (() => {
+  let state = { mode: 'ALWAYS', seen: null, loaded: false };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach((fn) => { try { fn(state); } catch (_) { /* 画面側の失敗で止めない */ } });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let mode = 'ALWAYS', seen = null;
+        try { mode = normalizeAssistantBubbleMode(await storeGet(ASSISTANT_BUBBLE_MODE_KEY, 'ALWAYS', false)); } catch (_) { /* 読めなければ「いつも」 */ }
+        try { seen = await storeGet(ASSISTANT_BUBBLE_SEEN_KEY, null, false); } catch (_) { /* 読めなければ空 */ }
+        state = { mode, seen, loaded: true };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    setMode(next) {
+      state = { ...state, mode: normalizeAssistantBubbleMode(next) };
+      emit();
+      void storeSet(ASSISTANT_BUBBLE_MODE_KEY, state.mode).catch(() => {});
+    },
+    // 見たことだけ覚える(知らせない。いま出ている吹き出しを途中で消さないため)
+    markSeen(scene) {
+      const day = assistantBubbleDayKey();
+      const cur = normalizeAssistantBubbleSeen(state.seen, day);
+      if (!scene || cur.scenes.includes(scene)) return;
+      const next = { day, scenes: [...cur.scenes, scene] };
+      state = { ...state, seen: next };
+      void storeSet(ASSISTANT_BUBBLE_SEEN_KEY, next).catch(() => {});
+    },
+  };
+})();
+const useAssistantBubbleState = () => {
+  const [state, setState] = useState(() => ASSISTANT_BUBBLE_STORE.get());
+  useEffect(() => {
+    const off = ASSISTANT_BUBBLE_STORE.subscribe(setState);
+    setState(ASSISTANT_BUBBLE_STORE.get());
+    void ASSISTANT_BUBBLE_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 // 助手の吹き出し。どの画面でもこれ1つ置けばよい。
 //   scene       … data/assistants.js の ASSISTANT_SCENES のキー(これだけで完結する)
 //   line/detail … sceneを使わず直接セリフと詳細を渡したいとき
@@ -11362,6 +11478,19 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
 const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false }) => {
   const [open, setOpen] = useState(defaultOpen);
+  // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
+  const bubbleSetting = useAssistantBubbleState();
+  const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
+  const bubbleDecisionRef = useRef(null);
+  if (!bubbleExempt && bubbleSetting.loaded && bubbleDecisionRef.current?.key !== `${scene}|${bubbleSetting.mode}`) {
+    const mode = bubbleSetting.mode;
+    const seen = normalizeAssistantBubbleSeen(ASSISTANT_BUBBLE_STORE.get().seen, assistantBubbleDayKey());
+    bubbleDecisionRef.current = { key: `${scene}|${mode}`, hide: mode === 'OFF' || (mode === 'DAILY' && seen.scenes.includes(scene)) };
+  }
+  const bubbleHidden = !bubbleExempt && !!bubbleDecisionRef.current?.hide;
+  useEffect(() => {
+    if (!bubbleExempt && bubbleSetting.loaded && bubbleSetting.mode === 'DAILY' && !bubbleHidden) ASSISTANT_BUBBLE_STORE.markSeen(scene);
+  }, [scene, bubbleSetting.loaded, bubbleSetting.mode, bubbleHidden, bubbleExempt]);
   const sceneDef = assistantSceneById(scene);
   // 親密度。呼び方と、候補に入るセリフがこれで変わる
   const bond = useAssistantBond();
@@ -11424,6 +11553,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const hasDetail = !!((paragraphs && paragraphs.length) || topic);
   const Wrapper = hasDetail ? 'button' : 'div';
   const size = faceSize != null ? faceSize : (compact ? 48 : 88);
+  if (bubbleHidden) return null;
   return (
     <>
       <div className="w-full flex items-end gap-2">
@@ -18216,7 +18346,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     window.addEventListener('resize',onResize);
     return ()=>window.removeEventListener('resize',onResize);
   },[]);
-  const noticeOpen=isShortScreen?state.noticeOpenShort:state.noticeOpen;
+  // 5曲以上遊んだ人は、ひとことをはじめから畳んでおく(2026-10-09・社長の選択。390×844で曲の一覧が3行しか見えなかった)。
+  // 💬を押して自分で選んだ人(noticeTouched)は、その選んだほうのまま。はじめての人はこれまでどおり開いている
+  const playedSongCount=React.useMemo(()=>Object.values(bestRecords&&typeof bestRecords==='object'?bestRecords:{})
+    .filter(rec=>rec&&typeof rec==='object'&&Object.values(rec).some(r=>r&&(r.played===true||Number(r.bestScore)>0))).length,[bestRecords]);
+  const foldByPlays=!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
+  const noticeOpen=isShortScreen?state.noticeOpenShort:(foldByPlays?false:state.noticeOpen);
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -18454,7 +18589,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
-          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen})}
+          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen,noticeTouched:true})}
           title={noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>
@@ -18619,7 +18754,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             const tone=rhythmDifficultyTone(item.id);
             const open=unlocked(item);
             const on=!!difficulty&&item.id===difficulty.id;
-            const need=rhythmDifficultyUnlockRequirement(item.id);
+            const need=rhythmDifficultyUnlockRequirement(item.id,song.songId);
             // 高さは固定(h-[66px])。ロック中だけ「◯◯で解放」が2行になり、
             // その曲だけボタンが高くなって下の行までずれていた。
             return <button key={item.id} type="button" data-rhythm-difficulty={item.id} aria-pressed={on}
@@ -21278,7 +21413,7 @@ scheduleTick();};
     それまでは戻って難易度ボタンを見ないと気づけなかった。
     ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
-{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_DEMO_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -28643,6 +28778,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
+  const assistantBubble = useAssistantBubbleState();
   if (battleSettingsOpen) {
     return (
       <div data-mh-screen data-battle-settings-page className={SCREEN_SHELL_CLASS}>
@@ -28734,6 +28871,23 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             ))}
           </div>
           <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+        </div>
+        {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
+            止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
+        <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+          <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
+              <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
+                aria-pressed={assistantBubble.mode === option.id}
+                onClick={() => ASSISTANT_BUBBLE_STORE.setMode(option.id)}
+                className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                <span className="block">{option.label}</span>
+                <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+              </button>
+            ))}
+          </div>
         </div>
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
@@ -31319,7 +31473,7 @@ function MasuMonsScreen({
 }) {
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" onBack={onBack} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" note="マスモン＝自分で育てた子。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuList" compact/></div>
         <ScreenLead>勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</ScreenLead>
         {renderMonsterSortFilterBar({ singleType: true })}
@@ -33386,7 +33540,9 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2>
+        {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
+        <p data-pick-term-note className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間'}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -33676,7 +33832,8 @@ function PickProAlliesScreen({
     <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
       <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'.35rem'}}>
         <button type="button" aria-label="戻る" onClick={returnToHero} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-        <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
+        <div className="min-w-0"><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
+        <p data-pick-term-note className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">勇者モン＝主役 / 供モン＝一緒に戦う仲間(最大3体)</p></div>
         <div className="w-10"></div>
       </div>
       <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col">
@@ -34619,7 +34776,8 @@ function HomeScreen({
           </section>
         </header>
         <nav className="mh-home-facilities" aria-label="拠点施設">
-          <button className={`mh-home-facility management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
+          {/* 看板の下に小さく1行(2026-10-09 ユーザー選択。G7「呼び名が分かりにくい」→ 呼び名は変えず、入口に何のことかを足す) */}
+          <button className={`mh-home-facility management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理"><span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span></button>
           <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
           <button className={`mh-home-facility market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
           {/* 修行の施設をやめ、その場所を音ゲー「モンヒロビート」に譲った(2026-09-03にユーザーが決定、
@@ -43033,7 +43191,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       {/* 横画面は、根の直下の子を「左の列(見出し・説明・並べ替え)」と「右の列(スクロールする一覧)」へ振り分ける
           (index.html の [data-mh-screen]:has(> .mh-scroll))。一覧だけを右の列へ入れ、広く使う。
           以前は説明も並べ替えも一覧と同じ入れ物に入れて max-w-md にしたため、左の列が空いて右が狭く、文字や札が切れた */}
-      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
+      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" note="マスモン＝自分で育てた子。マルチに呼ぶと一緒に演奏する" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
       <section className="mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
         <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
@@ -49401,6 +49559,8 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      // 助手のひとことの出し方も先に読んでおく(最初に開いた画面で、出てから消えるちらつきを防ぐ)
+      void ASSISTANT_BUBBLE_STORE.load();
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
       let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
@@ -49759,7 +49919,17 @@ function MonsterHeroGame() {
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
-      const compensationGrant = grantCompensationGifts(loginGrant.gifts);
+      // はじめて遊ぶ人(compensationEverPlayed が false)には、7〜8月の不具合のお詫びは配らない。
+      // 配らなかったidは新しいキーへ控え、はじめての設定を終えたあとの起動でも配られないようにする
+      let waivedCompensationIds = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+      if (!compensationEverPlayed) {
+        const toWaive = compensationIdsToWaive(loginGrant.gifts, waivedCompensationIds);
+        if (toWaive.length > 0) {
+          waivedCompensationIds = [...waivedCompensationIds, ...toWaive];
+          await storeSet(COMPENSATION_WAIVED_KEY, waivedCompensationIds, false);
+        }
+      }
+      const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
       // その人だけに届くお詫び。PLAYER ID はタイトル画面に出しているものと同じ経路
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
@@ -50428,7 +50598,10 @@ function MonsterHeroGame() {
         const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
         if (issued !== true) {
           const savedGifts = await storeGet('mh_gifts', [], false);
-          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          const giftsNow = Array.isArray(savedGifts) ? savedGifts : [];
+          // 配らなかったお詫びの合計を、プレオープン記念へ足す(すでにギフトボックスにあるお詫びは足さない)
+          const waivedNow = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+          const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
         }
@@ -60154,14 +60327,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           );
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-            <ScreenHead title="M/B管理" accent="text-indigo-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
+            <ScreenHead title="M/B管理" accent="text-indigo-300" note="M/B＝モンスターとブリーダー。仲間の一覧・編成・図鑑・アシストカードはここ" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement" compact/></div>
             <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
               items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
               {managementTab==='monster'?<>
-                {managementLink(<List size={18}/>,'ベースモン一覧','解放したベースモンを並べて確かめる',()=>setGameState('OWNED_MONSTERS'))}
-                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','育てたマスモンの絆・状態を見る',()=>setGameState('MASU_MONS'))}
+                {managementLink(<List size={18}/>,'ベースモン一覧','ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる',()=>setGameState('OWNED_MONSTERS'))}
+                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','マスモン＝自分で育てた子。絆・状態を見る',()=>setGameState('MASU_MONS'))}
                 {/* モンヒロビートのマルチに呼んだマスモンの育ち具合(ビートLv)。バトルの育ちとは別(docs/spec/RHYTHM_BUDDY.md) */}
                 {RELEASE_FLAGS.rhythmMulti===true&&managementLink(<Activity size={18}/>,'マスモン一覧(モンヒロビート)','マルチに呼んだマスモンのビートLv・調子・得意な曲を見る',()=>openMasuBeat('MB_MANAGEMENT'),{'data-mb-masu-beat':true})}
                 {managementLink(<BookOpen size={18}/>,'モンスター図鑑','出会ったモンスターと血統をふり返る',()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');})}
@@ -62674,7 +62847,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モンスター一覧(解放済みの種を一覧表示・タップで詳細) */}
         {gameState==='OWNED_MONSTERS'&&(
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-            <ScreenHead title="ベースモン一覧" accent="text-cyan-400" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
+            <ScreenHead title="ベースモン一覧" accent="text-cyan-400" note="ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className="shrink-0 w-full mb-2"><AssistantBubble scene="monsterList" compact/></div>
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
@@ -70068,7 +70241,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:152px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:10px;text-align:right}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:152px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:10px;text-align:right}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも

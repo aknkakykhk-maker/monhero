@@ -424,10 +424,12 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       await s.wait(500);
       st = await readTactics(s);
     }
+    // 待っているあいだにリザルトへ移った(戦いの外になった)ら、頭へ戻って合間へ進む
+    if (!st.inBattle && !st.over) continue;
     let b = await brain.readBoard(s);
     // ★敵のライフが0なら、その WAVE はもう終わっている。「WAVE n リザルト」は少し遅れて出るので、出るまで待って合間へ進む
     //   (2026-10-09 Hard: 倒した直後に手札の無い盤面を読み、「実行が押せない」で打ち切りになっていた)
-    if (b.enemy && b.enemy.hp === 0) {
+    if ((b.enemy && b.enemy.hp === 0) || (!b.enemy && !b.wave)) {
       ctx && ctx.log.waveEnd('clear');
       for (let k = 0; k < 20 && (await readTactics(s)).inBattle; k++) await s.wait(500);
       zeroHpWaits += 1;

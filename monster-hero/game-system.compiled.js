@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9dbd42856492073
+// source-sha256: f2ae08627a3ab54e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 00:30";
+const BUILD_DATE = "2026-10-10 00:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5363,9 +5363,11 @@ const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({
   desc: false,
   noticeOpen: true,
   noticeOpenShort: false,
+  noticeTouched: false,
   genre: 'all',
   favorites: Object.freeze([])
 });
+const RHYTHM_NOTICE_FOLD_PLAYED_SONGS = 5;
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre : source.eventOnly === true ? 'event' : DEFAULT_RHYTHM_SELECT_VIEW.genre;
@@ -5374,6 +5376,7 @@ const normalizeRhythmSelectView = value => {
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
     noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
+    noticeTouched: source.noticeTouched === true,
     genre,
     favorites: Array.isArray(source.favorites) ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX) : []
   };
@@ -12014,9 +12017,28 @@ const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
   const keep = new Set(prunable.slice().sort((a, b) => claimedAtOf(b) - claimedAtOf(a)).slice(0, limit));
   return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
 };
-const grantCompensationGifts = (gifts, now = Date.now()) => {
+const COMPENSATION_WAIVED_KEY = 'mh_compensation_waived_v1';
+const NEW_PLAYER_WAIVED_COMPENSATION_IDS = Object.freeze(['gift_compensation_20260731_battle', 'gift_compensation_20260801_points', 'gift_compensation_20260823_skip', 'gift_compensation_20260807_dye']);
+const normalizeWaivedCompensationIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
+const compensationIdsToWaive = (gifts, waivedIds) => {
   const list = Array.isArray(gifts) ? gifts : [];
-  const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  return NEW_PLAYER_WAIVED_COMPENSATION_IDS.filter(id => !waived.includes(id) && !list.some(item => item?.id === id));
+};
+const waivedCompensationRewards = (gifts, waivedIds) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const totals = new Map();
+  COMPENSATION_GIFTS.filter(def => NEW_PLAYER_WAIVED_COMPENSATION_IDS.includes(def.id) && waived.includes(def.id) && !list.some(item => item?.id === def.id)).forEach(def => def.rewards.forEach(r => totals.set(r.type, (totals.get(r.type) || 0) + Math.floor(Number(r.amount) || 0))));
+  return [...totals.entries()].map(([type, amount]) => ({
+    type,
+    amount
+  }));
+};
+const grantCompensationGifts = (gifts, now = Date.now(), waivedIds = []) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const missing = COMPENSATION_GIFTS.filter(def => !waived.includes(def.id) && !list.some(item => item?.id === def.id));
   if (missing.length === 0) return {
     granted: false,
     gifts: list
@@ -12093,7 +12115,7 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
     amount: 100
   }]
 });
-const grantNewPlayerCampaignGift = (gifts, now = Date.now()) => {
+const grantNewPlayerCampaignGift = (gifts, now = Date.now(), extraRewards = []) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return {
     granted: false,
@@ -12103,12 +12125,22 @@ const grantNewPlayerCampaignGift = (gifts, now = Date.now()) => {
     granted: false,
     gifts: list
   };
+  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r => ({
+    ...r
+  }));
+  (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
+    const amount = Math.floor(Number(extra?.amount) || 0);
+    if (!extra?.type || amount <= 0) return;
+    const same = rewards.find(r => r.type === extra.type);
+    if (same) same.amount += amount;else rewards.push({
+      type: extra.type,
+      amount
+    });
+  });
   const gift = {
     ...NEW_PLAYER_CAMPAIGN_GIFT,
     source: 'campaign',
-    rewards: NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r => ({
-      ...r
-    })),
+    rewards,
     createdAt: new Date(now).toISOString(),
     claimedAt: null
   };
@@ -16008,6 +16040,106 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     className: "text-[12px] text-slate-200 leading-relaxed"
   }, b.text);
 });
+const ASSISTANT_BUBBLE_MODES = ['ALWAYS', 'DAILY', 'OFF'];
+const normalizeAssistantBubbleMode = value => ASSISTANT_BUBBLE_MODES.includes(String(value)) ? String(value) : 'ALWAYS';
+const ASSISTANT_BUBBLE_MODE_KEY = 'mh_assistant_bubble_mode_v1';
+const ASSISTANT_BUBBLE_SEEN_KEY = 'mh_assistant_bubble_seen_v1';
+const ASSISTANT_BUBBLE_MODE_LABELS = Object.freeze([{
+  id: 'ALWAYS',
+  label: 'いつも',
+  note: 'これまでどおり'
+}, {
+  id: 'DAILY',
+  label: '1日1回',
+  note: '同じ画面は1日1回'
+}, {
+  id: 'OFF',
+  label: '出さない',
+  note: 'ひとことを隠す'
+}]);
+const ASSISTANT_BUBBLE_ALWAYS_SCENES = Object.freeze(['home', 'quickRhythmBackground', 'rhythmWeeklyEvent']);
+const assistantBubbleAlwaysShown = scene => !scene || ASSISTANT_BUBBLE_ALWAYS_SCENES.includes(scene) || /Intro$/.test(String(scene));
+const assistantBubbleDayKey = (now = Date.now()) => new Date(Number(now) + (9 - 5) * 3600000).toISOString().slice(0, 10);
+const normalizeAssistantBubbleSeen = (raw, day) => raw && typeof raw === 'object' && raw.day === day && Array.isArray(raw.scenes) ? {
+  day,
+  scenes: raw.scenes.filter(x => typeof x === 'string').slice(0, 300)
+} : {
+  day,
+  scenes: []
+};
+const ASSISTANT_BUBBLE_STORE = (() => {
+  let state = {
+    mode: 'ALWAYS',
+    seen: null,
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let mode = 'ALWAYS',
+          seen = null;
+        try {
+          mode = normalizeAssistantBubbleMode(await storeGet(ASSISTANT_BUBBLE_MODE_KEY, 'ALWAYS', false));
+        } catch (_) {}
+        try {
+          seen = await storeGet(ASSISTANT_BUBBLE_SEEN_KEY, null, false);
+        } catch (_) {}
+        state = {
+          mode,
+          seen,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    setMode(next) {
+      state = {
+        ...state,
+        mode: normalizeAssistantBubbleMode(next)
+      };
+      emit();
+      void storeSet(ASSISTANT_BUBBLE_MODE_KEY, state.mode).catch(() => {});
+    },
+    markSeen(scene) {
+      const day = assistantBubbleDayKey();
+      const cur = normalizeAssistantBubbleSeen(state.seen, day);
+      if (!scene || cur.scenes.includes(scene)) return;
+      const next = {
+        day,
+        scenes: [...cur.scenes, scene]
+      };
+      state = {
+        ...state,
+        seen: next
+      };
+      void storeSet(ASSISTANT_BUBBLE_SEEN_KEY, next).catch(() => {});
+    }
+  };
+})();
+const useAssistantBubbleState = () => {
+  const [state, setState] = useState(() => ASSISTANT_BUBBLE_STORE.get());
+  useEffect(() => {
+    const off = ASSISTANT_BUBBLE_STORE.subscribe(setState);
+    setState(ASSISTANT_BUBBLE_STORE.get());
+    void ASSISTANT_BUBBLE_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 const AssistantBubble = ({
   scene = null,
   assistantId = null,
@@ -16022,6 +16154,21 @@ const AssistantBubble = ({
   defaultOpen = false
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const bubbleSetting = useAssistantBubbleState();
+  const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
+  const bubbleDecisionRef = useRef(null);
+  if (!bubbleExempt && bubbleSetting.loaded && bubbleDecisionRef.current?.key !== `${scene}|${bubbleSetting.mode}`) {
+    const mode = bubbleSetting.mode;
+    const seen = normalizeAssistantBubbleSeen(ASSISTANT_BUBBLE_STORE.get().seen, assistantBubbleDayKey());
+    bubbleDecisionRef.current = {
+      key: `${scene}|${mode}`,
+      hide: mode === 'OFF' || mode === 'DAILY' && seen.scenes.includes(scene)
+    };
+  }
+  const bubbleHidden = !bubbleExempt && !!bubbleDecisionRef.current?.hide;
+  useEffect(() => {
+    if (!bubbleExempt && bubbleSetting.loaded && bubbleSetting.mode === 'DAILY' && !bubbleHidden) ASSISTANT_BUBBLE_STORE.markSeen(scene);
+  }, [scene, bubbleSetting.loaded, bubbleSetting.mode, bubbleHidden, bubbleExempt]);
   const sceneDef = assistantSceneById(scene);
   const bond = useAssistantBond();
   const activeId = assistantId || sceneDef?.assistantId || bond.assistantId || null;
@@ -16093,6 +16240,7 @@ const AssistantBubble = ({
   const hasDetail = !!(paragraphs && paragraphs.length || topic);
   const Wrapper = hasDetail ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
+  if (bubbleHidden) return null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "w-full flex items-end gap-2"
   }, React.createElement("button", {
@@ -28691,7 +28839,9 @@ const RhythmSongSelect = ({
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  const noticeOpen = isShortScreen ? state.noticeOpenShort : state.noticeOpen;
+  const playedSongCount = React.useMemo(() => Object.values(bestRecords && typeof bestRecords === 'object' ? bestRecords : {}).filter(rec => rec && typeof rec === 'object' && Object.values(rec).some(r => r && (r.played === true || Number(r.bestScore) > 0))).length, [bestRecords]);
+  const foldByPlays = !state.noticeTouched && playedSongCount >= RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
+  const noticeOpen = isShortScreen ? state.noticeOpenShort : foldByPlays ? false : state.noticeOpen;
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
@@ -28935,7 +29085,8 @@ const RhythmSongSelect = ({
       noticeOpenShort: !noticeOpen
     } : {
       ...state,
-      noticeOpen: !noticeOpen
+      noticeOpen: !noticeOpen,
+      noticeTouched: true
     }),
     title: noticeOpen ? '助手のひとことを畳む' : '助手のひとことを出す',
     className: `flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
@@ -29197,7 +29348,7 @@ const RhythmSongSelect = ({
     const tone = rhythmDifficultyTone(item.id);
     const open = unlocked(item);
     const on = !!difficulty && item.id === difficulty.id;
-    const need = rhythmDifficultyUnlockRequirement(item.id);
+    const need = rhythmDifficultyUnlockRequirement(item.id, song.songId);
     return React.createElement("button", {
       key: item.id,
       type: "button",
@@ -34266,16 +34417,17 @@ const RhythmTapTest = ({
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
-      const opened = Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id => RHYTHM_DIFFICULTY_UNLOCK_BY[id] === difficulty.id && rhythmChartPlayable(song, id));
-      if (!opened) return null;
+      const openedIds = RHYTHM_DEMO_DIFFICULTY_IDS.filter(id => rhythmDifficultyUnlockRequirement(id, song.songId) === difficulty.id && rhythmChartPlayable(song, id));
+      if (!openedIds.length) return null;
+      const opened = openedIds.join('・');
       return React.createElement("div", {
-        "data-rhythm-result-unlock": opened,
+        "data-rhythm-result-unlock": openedIds.join(','),
         className: "mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"
       }, React.createElement("b", {
         className: "block text-base font-black text-amber-100"
       }, "🔓 ", opened, " が解放されました！"), React.createElement("small", {
         className: "mt-0.5 block text-[10px] font-bold text-amber-200/90"
-      }, "この曲の ", opened, "（Lv.", song.difficulties[opened].level, "）を曲えらびで選べます"));
+      }, "この曲の ", openedIds.map(id => `${id}（Lv.${song.difficulties[id].level}）`).join('・'), " を曲えらびで選べます"));
     })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && React.createElement("div", {
       "data-rhythm-result-luck": true,
       className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"
@@ -44672,6 +44824,7 @@ function SettingsScreen({
   battleFxAutoLoad
 }) {
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  const assistantBubble = useAssistantBubbleState();
   if (battleSettingsOpen) {
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -44824,6 +44977,26 @@ function SettingsScreen({
   }, option.note)))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
   }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    "data-assistant-bubble-setting": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "助手のひとこと"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝5:00で戻ります)。「出さない」にしても、はじめての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
+    key: option.id,
+    type: "button",
+    "data-assistant-bubble-mode": option.id,
+    "aria-pressed": assistantBubble.mode === option.id,
+    onClick: () => ASSISTANT_BUBBLE_STORE.setMode(option.id),
+    className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, option.label), React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold opacity-80"
+  }, option.note))))), React.createElement("div", {
     className: "border-t border-white/10 pt-6 space-y-3"
   }, React.createElement("div", {
     className: "text-center text-[10px] font-mono text-slate-400"
@@ -48777,6 +48950,7 @@ function MasuMonsScreen({
   }, React.createElement(ScreenHead, {
     title: "マスモン一覧(バトル)",
     accent: "text-pink-400",
+    note: "マスモン＝自分で育てた子。絆・状態を見る",
     onBack: onBack,
     backLabel: "M/B管理へ戻る"
   }), React.createElement("div", {
@@ -54047,9 +54221,14 @@ function PickHeroAllyScreen({
       className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"
     }, React.createElement(ArrowLeft, {
       size: 20
-    })), React.createElement("h2", {
+    })), React.createElement("div", {
+      className: "min-w-0"
+    }, React.createElement("h2", {
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
-    }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("div", {
+    }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("p", {
+      "data-pick-term-note": true,
+      className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
+    }, pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間')), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
       className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
@@ -54523,12 +54702,17 @@ function PickProAlliesScreen({
     className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
   }, React.createElement(ArrowLeft, {
     size: 20
-  })), React.createElement("h2", {
+  })), React.createElement("div", {
+    className: "min-w-0"
+  }, React.createElement("h2", {
     className: "text-xl font-black italic uppercase tracking-widest truncate",
     style: {
       color: mode.color
     }
-  }, proEditingAllyIndex === null ? 'プロモード編成' : `供モン${proEditingAllyIndex + 1}を変更`), React.createElement("div", {
+  }, proEditingAllyIndex === null ? 'プロモード編成' : `供モン${proEditingAllyIndex + 1}を変更`), React.createElement("p", {
+    "data-pick-term-note": true,
+    className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
+  }, "勇者モン＝主役 / 供モン＝一緒に戦う仲間(最大3体)")), React.createElement("div", {
     className: "w-10"
   })), React.createElement("div", {
     className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
@@ -56511,7 +56695,9 @@ function HomeScreen({
     "aria-label": "M/B管理"
   }, React.createElement("span", null, React.createElement(Layers, {
     size: 18
-  }), "M/B管理")), React.createElement("button", {
+  }), React.createElement("b", {
+    className: "mh-home-facility-label"
+  }, "M/B管理", React.createElement("small", null, "モンスター・編成")))), React.createElement("button", {
     className: `mh-home-facility temple${spotClass('temple')}`,
     onClick: onOpenTemple,
     "aria-label": "神殿"
@@ -70268,6 +70454,7 @@ function MasuBeatScreen({
   }, React.createElement(ScreenHead, {
     title: "マスモン一覧(モンヒロビート)",
     accent: "text-lime-300",
+    note: "マスモン＝自分で育てた子。マルチに呼ぶと一緒に演奏する",
     wrapTitle: true,
     onBack: detail ? () => setDetailId('') : onBack,
     backLabel: detail ? '一覧へ戻る' : backLabel
@@ -77112,6 +77299,7 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      void ASSISTANT_BUBBLE_STORE.load();
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
       let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
@@ -77433,7 +77621,15 @@ function MonsterHeroGame() {
       if (bondLogin.changed) await storeSet(assistantBondKeyFor(activeAssistant), bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
-      const compensationGrant = grantCompensationGifts(loginGrant.gifts);
+      let waivedCompensationIds = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+      if (!compensationEverPlayed) {
+        const toWaive = compensationIdsToWaive(loginGrant.gifts, waivedCompensationIds);
+        if (toWaive.length > 0) {
+          waivedCompensationIds = [...waivedCompensationIds, ...toWaive];
+          await storeSet(COMPENSATION_WAIVED_KEY, waivedCompensationIds, false);
+        }
+      }
+      const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
       let currentPlayerId = '';
       try {
         currentPlayerId = window.localStorage.getItem('mh_player_id') || '';
@@ -78106,7 +78302,9 @@ function MonsterHeroGame() {
         const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
         if (issued !== true) {
           const savedGifts = await storeGet('mh_gifts', [], false);
-          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          const giftsNow = Array.isArray(savedGifts) ? savedGifts : [];
+          const waivedNow = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+          const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) {
             await storeSet('mh_gifts', grant.gifts, false);
             setGifts(grant.gifts);
@@ -91722,6 +91920,7 @@ function MonsterHeroGame() {
       }, React.createElement(ScreenHead, {
         title: "M/B管理",
         accent: "text-indigo-300",
+        note: "M/B＝モンスターとブリーダー。仲間の一覧・編成・図鑑・アシストカードはここ",
         onBack: returnToHome,
         backLabel: "HOMEへ戻る"
       }), React.createElement("div", {
@@ -91746,9 +91945,9 @@ function MonsterHeroGame() {
         className: `w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`
       }, managementTab === 'monster' ? React.createElement(React.Fragment, null, managementLink(React.createElement(List, {
         size: 18
-      }), 'ベースモン一覧', '解放したベースモンを並べて確かめる', () => setGameState('OWNED_MONSTERS')), managementLink(React.createElement(Star, {
+      }), 'ベースモン一覧', 'ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる', () => setGameState('OWNED_MONSTERS')), managementLink(React.createElement(Star, {
         size: 18
-      }), 'マスモン一覧(バトル)', '育てたマスモンの絆・状態を見る', () => setGameState('MASU_MONS')), RELEASE_FLAGS.rhythmMulti === true && managementLink(React.createElement(Activity, {
+      }), 'マスモン一覧(バトル)', 'マスモン＝自分で育てた子。絆・状態を見る', () => setGameState('MASU_MONS')), RELEASE_FLAGS.rhythmMulti === true && managementLink(React.createElement(Activity, {
         size: 18
       }), 'マスモン一覧(モンヒロビート)', 'マルチに呼んだマスモンのビートLv・調子・得意な曲を見る', () => openMasuBeat('MB_MANAGEMENT'), {
         'data-mb-masu-beat': true
@@ -97728,6 +97927,7 @@ function MonsterHeroGame() {
     }, React.createElement(ScreenHead, {
       title: "ベースモン一覧",
       accent: "text-cyan-400",
+      note: "ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる",
       onBack: () => setGameState('MB_MANAGEMENT'),
       backLabel: "M/B管理へ戻る"
     }), React.createElement("div", {
@@ -107666,7 +107866,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:152px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:10px;text-align:right}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:152px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:10px;text-align:right}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
