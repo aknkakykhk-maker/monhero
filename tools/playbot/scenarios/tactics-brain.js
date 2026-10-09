@@ -78,7 +78,7 @@ const readBoard = (s) => s.page.evaluate(() => {
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
     exPass: (() => { const b = document.querySelector('[data-tactics-ex-pass]'); return !!b && !b.disabled; })(),
-    over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北/.test(text),
+    over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北|DEBUG\s*勝\s*利/.test(text),
     cleared: /ALL CLEAR|全WAVE制覇|CHAMPION|優勝|完全制覇/.test(text), gameOver: /敗\s*北|GAME OVER|ゲームオーバー|全滅/.test(text),
   };
 });
@@ -725,7 +725,15 @@ function preferredOrder(difficulty, rand, roster) {
       return { nm, v: mean + (strict ? 0.05 : 0.35) / Math.sqrt((x ? x.n : 0) + 1) + rand() * (strict ? 0.05 : 0.15) };
     }).sort((a, z) => z.v - a.v).map((x) => x.nm);
   };
-  const hero = rank('hero')[0];
+  let hero = rank('hero')[0];
+  // PLAYBOT_TACTICS_EXPLORE=1 … 全モンスターを一通り試す(その難易度で勇者モンにした回数が少ない子から。供モンの候補はばらばらに)。
+  //   全部解放で、どの子がどれくらい戦えるかを集めるため(2026-10-09)
+  if (process.env.PLAYBOT_TACTICS_EXPLORE === '1') {
+    const tried = (nm) => k.runs.filter((r) => r.difficulty === difficulty && r.hero === nm).length;
+    hero = [...names].sort((a, z) => tried(a) - tried(z) || rand() - 0.5)[0];
+    const others = names.filter((nm) => nm !== hero).sort(() => rand() - 0.5);
+    return { hero, order: [hero, ...others], knownRuns: k.runs.length };
+  }
   let allies = rank('ally').filter((nm) => nm !== hero);
   if (hard) allies = allies.map((nm, i) => ({ nm, v: allyScore(nm) - i * 0.05 })).sort((a, z) => z.v - a.v).map((x) => x.nm);
   return { hero, order: [hero, ...allies], knownRuns: k.runs.length };
