@@ -62,14 +62,21 @@ const PARTS = [
   },
   {
     id: 'tactics', name: 'タクティクス係', prepare: 'veteran', boot: true,
-    does: 'タクティクスバトルを手で6分遊ぶ。敵の予告で狙われた子が危なければ守りのカードを選ぶ',
-    run: async (s, { phase, numbers }) => {
-      await phase('タクティクスを手で戦う', async () => {
-        const r = await tacticsScenario(s, { maxMs: Number(process.env.PLAYBOT_TACTICS_MS) || 360000 });
-        if (r.stats.entered) numbers['バトル係: タクティクスで着いたWAVE'] = r.stats.waveReached;
-        await s.backHome();
-        return r;
-      });
+    does: 'タクティクスバトルを、開いている中でいちばん難しい難易度で最後のWAVEまで戦う。予告を読んで守り、見込みダメージで技と置き場所を選び、EX・トレーニングも考えて選ぶ。WAVEごとの記録と勝ち負けの理由を残す(tools/playbot/tactics-balance.js で集計)',
+    // PLAYBOT_TACTICS_RUNS … 何回戦うか(既定1)。PLAYBOT_TACTICS_DIFF … max(既定)/ keep(前回の難易度)。PLAYBOT_TACTICS_MS … 1回の上限(既定40分)
+    run: async (s, { phase, numbers, out }) => {
+      const runs = Math.max(1, Number(process.env.PLAYBOT_TACTICS_RUNS) || 1);
+      for (let n = 1; n <= runs; n++) {
+        await phase(`タクティクスを最後のWAVEまで戦う${runs > 1 ? `(${n}回目)` : ''}`, async () => {
+          const r = await tacticsScenario(s, { maxMs: Number(process.env.PLAYBOT_TACTICS_MS) || 2400000, difficulty: process.env.PLAYBOT_TACTICS_DIFF || 'max', out, runNo: n });
+          if (r.stats.entered && n === 1) {
+            numbers['バトル係: タクティクスで着いたWAVE'] = r.stats.waveReached;
+            numbers['バトル係: タクティクスのターン数'] = r.stats.turns;
+          }
+          await s.backHome();
+          return r;
+        });
+      }
     },
   },
   {
