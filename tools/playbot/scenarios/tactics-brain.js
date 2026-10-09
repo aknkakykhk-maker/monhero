@@ -653,7 +653,9 @@ function scoreNames(k, difficulty, role) {
   const d0 = DIFF_ORDER.indexOf(difficulty);
   const acc = {};
   for (const r of k.runs) {
-    const w = r.difficulty === difficulty ? 1 : (d0 >= 0 && Math.abs(DIFF_ORDER.indexOf(r.difficulty) - d0) === 1 ? 0.5 : 0.2);
+    // 同じ難易度は1、近い難易度ほど重く数える(下の難易度でクリアした子は、上でも勇者モンの候補になる)
+    const gap = d0 >= 0 ? Math.abs(DIFF_ORDER.indexOf(r.difficulty) - d0) : 9;
+    const w = gap === 0 ? 1 : gap === 1 ? 0.6 : gap === 2 ? 0.45 : 0.25;
     const names = role === 'hero' ? [r.hero] : (r.pool || []);
     for (const nm of names.filter(Boolean)) { acc[nm] = acc[nm] || { v: 0, w: 0, n: 0 }; acc[nm].v += runValue(r) * w; acc[nm].w += w; acc[nm].n += 1; }
   }
@@ -673,7 +675,7 @@ function preferredOrder(difficulty, rand) {
     // 平均の出来 + 試した回数が少ないほど足す(よく知らない子も試す)
     return names.map((nm) => {
       const x = sc[nm];
-      const mean = x && x.w ? x.v / x.w : (strict ? 0.3 : 1.2);
+      const mean = x && x.w ? x.v / x.w : (strict ? 0.15 : 1.2);
       return { nm, v: mean + (strict ? 0.05 : 0.35) / Math.sqrt((x ? x.n : 0) + 1) + rand() * (strict ? 0.05 : 0.15) };
     }).sort((a, z) => z.v - a.v).map((x) => x.nm);
   };
