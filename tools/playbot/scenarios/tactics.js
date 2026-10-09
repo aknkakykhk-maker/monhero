@@ -330,7 +330,7 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const danger = aimedSlot && aimedSlot.hp && aimedSlot.aimDamage > 0
       && (aimedSlot.aimDamage >= aimedSlot.hp.max * 0.25 || aimedSlot.aimDamage >= aimedSlot.hp.now * 0.6);
     if (aimedSlot && aimedSlot.name) brain.monOf(ctx.mem, aimedSlot.name).aimed += 1;
-    if (process.env.PLAYBOT_DEBUG) console.log(`    [タクティクス] W${b.wave} T${b.turn} 敵 ${b.enemy ? `${b.enemy.name}(${b.enemy.dist}) ${b.enemy.hp}/${b.enemy.max}` : '?'} 予告「${b.notice}」${aimedSlot ? ` 🎯${aimedSlot.name} ${aimedSlot.aimDamage}` : ''} 枚数${b.picked}/${b.limit} 味方 ${b.slots.filter((x) => x.occupied).map((x) => `${x.name}${x.downed ? '(倒)' : ''} ${x.hp ? x.hp.now : '?'}/${x.guts ? x.guts.now : '?'}G`).join(' ')}`);
+    if (process.env.PLAYBOT_DEBUG) console.log(`    [タクティクス] W${b.wave} T${b.turn} 敵 ${b.enemy ? `${b.enemy.name}(${b.enemy.dist}) ${b.enemy.hp}/${b.enemy.max}` : `?「${b.enemyBar}」`} 予告「${b.notice}」${aimedSlot ? ` 🎯${aimedSlot.name} ${aimedSlot.aimDamage}` : ''} 枚数${b.picked}/${b.limit} 味方 ${b.slots.filter((x) => x.occupied).map((x) => `${x.name}${x.downed ? '(倒)' : ''} ${x.hp ? x.hp.now : '?'}/${x.guts ? x.guts.now : '?'}G`).join(' ')}`);
     const exBefore = ctx.log.data.ex.length;
     await brain.maybeUseEx(s, b, ctx.mem, ctx.log);
     stats.exUsed += ctx.log.data.ex.length - exBefore;

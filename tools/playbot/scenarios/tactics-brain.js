@@ -65,6 +65,7 @@ const readBoard = (s) => s.page.evaluate(() => {
     wave: n(/WAVE\s*(\d+)\s*\/\s*\d+/), waveMax: n(/WAVE\s*\d+\s*\/\s*(\d+)/), turn: n(/TURN\s*(\d+)\s*\/\s*\d+/), turnMax: n(/TURN\s*\d+\s*\/\s*(\d+)/),
     picked: n(/ACTION CARDS\s*(\d+)\s*\//i), limit: n(/ACTION CARDS\s*\d+\s*\/\s*(\d+)/i),
     slots, party: slots.filter((x) => x.occupied).map((x) => ({ slot: x.i, hp: x.hp, downed: x.downed })),
+    enemyBar: bar.slice(0, 60),
     enemy: bm ? { name: bm[1].trim(), dist: bm[2], hp: Number(bm[3].replace(/,/g, '')), max: Number(bm[4].replace(/,/g, '')) } : null,
     notice: ((document.querySelector('[data-enemy-notice]') || {}).innerText || '').replace(/\s+/g, ' ').trim().slice(0, 40),
     intent: ((document.querySelector('[data-enemy-intent]') || {}).innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60),
@@ -98,7 +99,9 @@ async function boxOf(s, sel) {
   return s.page.evaluate((q) => {
     const el = document.querySelector(q);
     if (!el) return null;
-    const r = el.getBoundingClientRect();
+    let r = el.getBoundingClientRect();
+    // 画面の外にあると、指(マウス)で押しても届かない。人と同じく見えるところまで送る
+    if (r.bottom > innerHeight || r.top < 0) { el.scrollIntoView({ block: 'nearest' }); r = el.getBoundingClientRect(); }
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
   }, sel);
 }
@@ -327,6 +330,10 @@ async function playTurn(s, b0, mem, log, stats) {
       b = await readBoard(s);
       opts = await evalHand(s, b, failed);
       d = decidePick(b, opts, ctx);
+    }
+    if (!d && process.env.PLAYBOT_DEBUG) {
+      const top = await s.page.evaluate(() => { const el = document.elementFromPoint(innerWidth / 2, innerHeight - 60); return el ? `${el.tagName}.${String(el.className).slice(0, 60)}` : ''; });
+      console.log(`    [判断なし] 敵「${b.enemy ? b.enemy.name : '?'}」 手札 ${b.hand.map((c) => `${c.type}${c.usable ? '' : '×'}${c.block ? `(${c.block})` : ''}`).join(' ')} 候補 ${opts.map((o) => `${o.card.type}:${o.previews.length}`).join(' ')} 失敗 ${[...failed].join(',')} 一番下の要素 ${top} 枚数${b.picked}/${b.limit} 実行「${b.actionText}」`);
     }
     if (!d) {
       // ⑦ ガッツ不足で何も置けない → 重いカードを1枚捨ててガッツを戻す(置けたカードが無いときだけ)
