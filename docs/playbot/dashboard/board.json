@@ -81,7 +81,17 @@
   "見込み": "",
   "PR": "#2407・#2419・#2421",
   "見る場所": "docs/playbot/reports/tier/monster-tier.md",
-  "日付": "10/09 22:32"
+  "日付": "10/09 22:32",
+  "詳細": [
+   {
+    "名前": "Tier表",
+    "path": "docs/playbot/reports/tier/monster-tier.md"
+   },
+   {
+    "名前": "机上の計算",
+    "path": "docs/playbot/reports/tier/desk.md"
+   }
+  ]
  },
  {
   "id": "w13",
