@@ -527,8 +527,11 @@ async function chooseBetween(s, mem, log) {
   // 供モン: 総合力のいちばん高い子
   const allyBtns = scr.buttons.filter((t) => /総合力\s*[\d,]+/.test(t));
   if (allyBtns.length && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする)/.test(t))) {
-    const best = allyBtns.sort((a, z) => num(z.match(/総合力\s*([\d,]+)/)[1]) - num(a.match(/総合力\s*([\d,]+)/)[1]))[0];
-    log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]})`);
+    // ★敵は「編成の総合力 ÷ 始めの総合力」の0.7乗で強くなる(32-tactics-units.jsx・上限6倍)。総合力が高いだけの子を入れると敵も強くなる。
+    //   覚え書きで「実際にダメージを出した子」(頭割り比)を先に、かばう EX(モノリス)は守りの柱として足し、総合力は低いほうを少しよしとする
+    const scoreAlly = (t) => { const nm = t.split(/\s+/)[0]; return allyScore(nm) - num(t.match(/総合力\s*([\d,]+)/)[1]) / 4000; };
+    const best = allyBtns.sort((a, z) => scoreAlly(z) - scoreAlly(a))[0];
+    log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]}・覚え書きの頭割り比 ${allyScore(best.split(/\s+/)[0]).toFixed(2)})`);
     if (!log.data.build.allies.some((x) => x.wave === log.data.waves.length)) log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
     mem.lastPicked = best.split(/\s+/)[0];
     return press(new RegExp(`^${best.split(/\s+/)[0]}\\s+総合力`), '供モン(総合力)');
@@ -688,8 +691,23 @@ function preferredOrder(difficulty, rand) {
     }).sort((a, z) => z.v - a.v).map((x) => x.nm);
   };
   const hero = rank('hero')[0];
-  const allies = rank('ally').filter((nm) => nm !== hero);
+  let allies = rank('ally').filter((nm) => nm !== hero);
+  if (hard) allies = allies.map((nm, i) => ({ nm, v: allyScore(nm) - i * 0.05 })).sort((a, z) => z.v - a.v).map((x) => x.nm);
   return { hero, order: [hero, ...allies], knownRuns: k.runs.length };
+}
+// 供モンの見込み: 覚え書きの「その子のダメージ ÷ 頭割り」の平均(記録が無ければ 1.0)。モノリスはかばう EX があるので +0.8
+function allyScore(name) {
+  const k = loadKnowledge();
+  const rel = [];
+  for (const r of k.runs) {
+    const d = r.dmg || {};
+    const members = Object.keys(d);
+    const total = Object.values(d).reduce((a, x) => a + x, 0);
+    if (!members.includes(name) || !total || members.length < 2) continue;
+    rel.push(d[name] / (total / members.length));
+  }
+  const base = rel.length ? rel.reduce((a, x) => a + x, 0) / rel.length : 1;
+  return base + (name === 'モノリス' ? 0.8 : 0);
 }
 function rememberRun(L, stats) {
   if (process.env.PLAYBOT_TACTICS_LEARN === '0') return;
