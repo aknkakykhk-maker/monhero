@@ -97,17 +97,27 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
   // 難易度を名前で指定したとき(Master など)は、いちばん前へ戻してから、その札まで送る(すべて解放だと極限まで開いているため)
   if (difficulty && !['max', 'keep'].includes(difficulty)) {
     for (let k = 0; k < 25; k++) {
+      const before = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="前の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      await s.wait(150);
+      for (let w = 0; w < 15; w++) {
+        await s.wait(150);
+        const now = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
+        if (now !== before) break;
+      }
     }
+    // ★札の切り替えは少し遅れて .on が動く。押したあと切り替わるのを確かめてから次を押す
+    //   (2026-10-09: 0.2秒で次を押して Hard を通り過ぎ、Expert で戦っていた)
+    const onKey = () => page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
+    await s.wait(600);
     for (let k = 0; k < 25; k++) {
-      const key = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
+      const key = await onKey();
       if (key === difficulty) break;
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="次の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
-      await s.wait(200);
+      for (let w = 0; w < 15 && (await onKey()) === key; w++) await s.wait(150);
     }
+    if ((await onKey()) !== difficulty) return `no-difficulty:${difficulty}`;
   }
   // ★難易度の札(article[data-difficulty-card])は全部の難易度ぶん並んでいて、どの札にも「この難易度で挑戦」がある。
   //   文字で探して押すと、いつも先頭の Beginner を押してしまう(2026-10-09 まで、ずっと Beginner で戦っていた)。
@@ -213,7 +223,9 @@ const readTactics = (s) => s.page.evaluate(() => {
     party, aimed: aimedEl ? Number(aimedEl.getAttribute('data-slot-index')) : null, aimedDamage,
     intent: ((document.querySelector('[data-enemy-intent]') || {}).innerText || '').replace(/\s+/g, ' ').slice(0, 60),
     // ★WAVE の始まりの演出のあいだは実行ボタンの目印が出ない。手札か味方の枠が並んでいればバトルの中
-    hand, inBattle: !!action || hand.length > 0 || !!document.querySelector('[data-tactics-party-slot]'), actionEnabled: !!action && !action.disabled, actionPresent: !!action,
+    // ★WAVE を倒したあとの「WAVE n リザルト」の画面でも盤面(party-slot)が残っているので、見出しで戦いの外と見る
+    //   (2026-10-09 Hard: 敵のライフ0のまま「実行が押せない」で打ち切りになっていた)
+    hand, inBattle: ![...document.querySelectorAll('h1,h2,h3')].some((h) => { const r = h.getBoundingClientRect(); return r.width > 0 && r.height > 0 && /リザルト/.test(h.innerText || ''); }) && (!!action || hand.length > 0 || !!document.querySelector('[data-tactics-party-slot]')), actionEnabled: !!action && !action.disabled, actionPresent: !!action,
     // 実行ボタンの文字。「カードを選ぶ」→(攻撃カードを選ぶと)「置き場所を選ぶ」→「ACTION」と変わる
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
@@ -392,6 +404,7 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
   }
   const t0 = Date.now();
   let lastDowned = 0;
+  let zeroHpWaits = 0;
   while (Date.now() - t0 < maxMs) {
     s.state.step += 1;
     await s.dismissOverlays(4);
@@ -412,6 +425,16 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       st = await readTactics(s);
     }
     let b = await brain.readBoard(s);
+    // ★敵のライフが0なら、その WAVE はもう終わっている。「WAVE n リザルト」は少し遅れて出るので、出るまで待って合間へ進む
+    //   (2026-10-09 Hard: 倒した直後に手札の無い盤面を読み、「実行が押せない」で打ち切りになっていた)
+    if (b.enemy && b.enemy.hp === 0) {
+      ctx && ctx.log.waveEnd('clear');
+      for (let k = 0; k < 20 && (await readTactics(s)).inBattle; k++) await s.wait(500);
+      zeroHpWaits += 1;
+      if (zeroHpWaits > 3) { await s.addIssue('進行停止', `タクティクスで敵のライフが0のまま、リザルトへ進まない (W${b.wave})`); break; }
+      continue;
+    }
+    zeroHpWaits = 0;
     stats.waveReached = Math.max(stats.waveReached, b.wave || 0);
     stats.waveMax = Math.max(stats.waveMax || 0, b.waveMax || 0);
     const downed = b.slots.filter((x) => x.occupied && x.downed).length;
@@ -458,7 +481,11 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       await s.wait(500);
       const now = await readTactics(s);
       // ★負けたときは「敗北」の画面が盤面の上に出る(手札は残っている)ので、それも動いたと見る
-      moved = !now.inBattle || now.over || now.turn !== before.turn || now.wave !== before.wave;
+      // ★ヤオビクニの「悠久の刻」(時間停止)を使ったターンは、ターンの数字が進まない(EX の説明どおり)。
+      //   手札が配り直されたことでも「動いた」と見る(2026-10-09 はこれを進行停止と見誤っていた)
+      const handSig = (t) => (t.hand || []).map((c) => c.label || c.type).join('|');
+      moved = !now.inBattle || now.over || now.turn !== before.turn || now.wave !== before.wave
+        || (k >= 4 && handSig(now) !== handSig(before) && (now.picked || 0) === 0 && now.hand.some((c) => c.usable));
     }
     const after = await brain.readBoard(s);
     // 記録: このターンに出たダメージを、置いたカードの見込みの割合で子ごとに分ける

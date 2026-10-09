@@ -321,6 +321,8 @@ async function placePick(s, d) {
 // 名前 → 名簿の1体(間合い適性 dist・特性 trait・固有技・EX)。記録で「得意な間合いで撃てたか」「特性が効いたか」を数えるのに使う
 const ROSTER_BY_NAME = {};
 const EX_ROLE_BY_EFFECT = {
+  // timeStop(ヤオビクニ「悠久の刻」)は、使ったターンのターンの数字が進まない(EX の説明どおり。不具合ではない)。
+  //   tactics.js の「動いたか」の判定は、手札が配り直されたことでも見る
   statBoost: 'refill', coverAll: 'shield', partyGuard: 'shield', timeStop: 'shield',
   damageBack: 'selfGuard', avoidCharge: 'selfGuard', dodgeCombo: 'dodge', distMatch: 'distBurst', counter: 'counter',
   allIn: 'allIn', lifeSpring: 'heal', cookieBox: 'heal', trickConfuse: 'heal', present: 'present',
@@ -368,6 +370,12 @@ async function maybeUseEx(s, b, mem, log) {
     // モノリスの「みんなをかばう」は1ランで10回。かばう子(自分)以外が倒れそうなら使う(打たれ弱いピクシー・ライガーを守る)
     const victim = b.slots.find((y) => y.occupied && !y.downed && y.i !== x.i && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.5);
     if (role === 'shield' && x.name === 'モノリス' && victim && x.hp && x.hp.now > victim.aimDamage * 0.4) why = `${victim.name}が倒れそうなので、モノリスがかばう(守りのEX)`;
+    // 時間停止(ヤオビクニ「悠久の刻」)は1ランで2回だけ。必殺技・貫通撃・全体攻撃で、ライフの4割以上を削られるときまで取っておく
+    //   (2026-10-09: WAVE 1 の3連撃 132 ダメージに使い、2回とも WAVE 1 で使い切っていた)
+    else if (role === 'shield' && x.name === 'ヤオビクニ') {
+      const heavy = (threat === 'big' || threat === 'pierce' || threat === 'all') && b.slots.some((y) => y.occupied && !y.downed && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.4);
+      if (heavy) why = '必殺技・貫通撃・全体攻撃で大きく削られる予告(時間停止のEX)';
+    }
     else if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
     else if (role === 'dodge' && x.aimed && b.enemy && b.enemy.dist === DISTS[x.i] && bigHit) why = '狙われていて、敵と同じ距離(回避のEX)';
     // 満タンにする EX は回数が少ない(モッチー3回)。敵がもうすぐ倒れるときは使わない
