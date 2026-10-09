@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 00:09 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/10 00:14 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>13</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>23</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>11</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>26</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,6 +88,36 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
+      <li id="kG1">
+        <div class="row-title">G1 ひさしぶりに開くと会話が積み重なる</div>
+        <div class="row-body">社長が選んだ案: 起動時のお知らせを見出し1枚にまとめ、本物が出た予告は出さない。(もとの指摘: 昔のセーブで起動すると、HOMEまでスキップを押しても35回・36秒。スキップの無いページが27枚、もう公開済みの「メロディー・クロミー実装予告」7枚も出る)</div>
+        <div class="meta"><span>部長マップくん</span><span>見込み 設計案を社長へ先に見せる(社長が選んだ)。公開は案が決まってから</span><span>PR #2425</span></div>
+      </li>
+      <li id="kG2">
+        <div class="row-title">G2 はじめての人に「お詫びのしるし」が4通</div>
+        <div class="row-body">社長が選んだ案: はじめての人には配らず、その分は記念の贈りものに足す(受け取り済みの分はそのまま)。(もとの指摘: 新人のギフト6件のうち4件が、7〜8月の不具合のお詫び)</div>
+        <div class="meta"><span>部長ガードくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
+      </li>
+      <li id="kG4">
+        <div class="row-title">G4 曲えらびで曲が3行しか見えない</div>
+        <div class="row-body">社長が選んだ案: 5曲以上遊んだ人は、曲えらびの上の案内をはじめから畳む。(もとの指摘: 390×844 の画面で、吹き出し2つと「裏でクイック…」が上を取り、一覧は画面の24%)</div>
+        <div class="meta"><span>部長テンポくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
+      </li>
+      <li id="kG5">
+        <div class="row-title">G5 EXPERT・MASTERの鍵が曲ごと</div>
+        <div class="row-body">社長が選んだ案: 新曲だけ、HARDを1回遊べばEXPERT・MASTERが開く(既存の曲は今のまま)。(もとの指摘: MASTERを遊ぶのに1曲あたり2回の遠回り(約26曲で約52回・2時間)</div>
+        <div class="meta"><span>部長テンポくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
+      </li>
+      <li id="kG6">
+        <div class="row-title">G6 助手の吹き出しが、ほぼ全画面に出たまま</div>
+        <div class="row-body">社長が選んだ案: 設定に「いつも / 同じ画面は1日1回 / 出さない」。(もとの指摘: 8画面で約70〜80px(画面の約9%)。消せるのはモンヒロビートの入口だけ)</div>
+        <div class="meta"><span>ドライバーくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
+      </li>
+      <li id="kG7">
+        <div class="row-title">G7 呼び名が分かりにくい</div>
+        <div class="row-body">社長が選んだ案: 呼び名は変えず、8か所の入口に小さく説明を足す。HOMEのM/B管理は看板の下に小さく1行(社長が選んだ)</div>
+        <div class="meta"><span>クラフトくん</span><span>見込み 40〜70分</span><span>PR #2425</span></div>
+      </li>
       <li id="d1">
         <div class="row-title">タクティクスのバランス提案の見直し</div>
         <div class="row-body">初期の8体・6種類だけで出した案だったため、ちからの提案は取り下げ。全モンスター・全アシカで Expert の成績を集め直してから出し直す</div>
@@ -112,51 +142,26 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
         <div class="row-body">今夜は Hard と Expert を交互に回し続け、明日の朝に結果を足した版を出す。調整の案は、Hard で5回以上そろった子が増えてきたので、明日シミュレーターと合わせて出す</div>
         <div class="meta"><span>ハカセくん</span><span>見込み 朝の版 10/10 朝 / シミュレーターと調整案 10/10 昼〜夕方</span><span>PR #2396・#2401・#2407</span></div>
-      </li>
-      <li id="kG1">
-        <div class="row-title">G1 ひさしぶりに開くと会話が積み重なる</div>
-        <div class="row-body">社長が選んだ案: 起動時のお知らせを見出し1枚にまとめ、本物が出た予告は出さない。(もとの指摘: 昔のセーブで起動すると、HOMEまでスキップを押しても35回・36秒。スキップの無いページが27枚、もう公開済みの「メロディー・クロミー実装予告」7枚も出る)</div>
-        <div class="meta"><span>部長マップくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
-      </li>
-      <li id="kG2">
-        <div class="row-title">G2 はじめての人に「お詫びのしるし」が4通</div>
-        <div class="row-body">社長が選んだ案: はじめての人には配らず、その分は記念の贈りものに足す(受け取り済みの分はそのまま)。(もとの指摘: 新人のギフト6件のうち4件が、7〜8月の不具合のお詫び)</div>
-        <div class="meta"><span>部長ガードくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
-      </li>
-      <li id="kG3">
-        <div class="row-title">G3 ヘルプが長く、はじめての入口が最後</div>
-        <div class="row-body">社長が選んだ案: ヘルプの先頭に「3分でわかる」を置いて並べ直す。(もとの指摘: 93項目・約15万字。基本ルールの1番目が「横画面で遊ぶ」、「はじめての設定」は13番目(最後)</div>
-        <div class="meta"><span>ドライバーくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
-      </li>
-      <li id="kG4">
-        <div class="row-title">G4 曲えらびで曲が3行しか見えない</div>
-        <div class="row-body">社長が選んだ案: 5曲以上遊んだ人は、曲えらびの上の案内をはじめから畳む。(もとの指摘: 390×844 の画面で、吹き出し2つと「裏でクイック…」が上を取り、一覧は画面の24%)</div>
-        <div class="meta"><span>部長テンポくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
-      </li>
-      <li id="kG5">
-        <div class="row-title">G5 EXPERT・MASTERの鍵が曲ごと</div>
-        <div class="row-body">社長が選んだ案: 新曲だけ、HARDを1回遊べばEXPERT・MASTERが開く(既存の曲は今のまま)。(もとの指摘: MASTERを遊ぶのに1曲あたり2回の遠回り(約26曲で約52回・2時間)</div>
-        <div class="meta"><span>部長テンポくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
-      </li>
-      <li id="kG6">
-        <div class="row-title">G6 助手の吹き出しが、ほぼ全画面に出たまま</div>
-        <div class="row-body">社長が選んだ案: 設定に「いつも / 同じ画面は1日1回 / 出さない」。(もとの指摘: 8画面で約70〜80px(画面の約9%)。消せるのはモンヒロビートの入口だけ)</div>
-        <div class="meta"><span>ドライバーくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
-      </li>
-      <li id="kG7">
-        <div class="row-title">G7 呼び名が分かりにくい</div>
-        <div class="row-body">社長が選んだ案: 呼び名は変えず、わかりにくい呼び名が出る画面の入口に小さく説明を足す。(もとの指摘: M/B管理・ベースモン・マスモン・勇者モン・供モン・序破急など。「M/B管理」が何の略か画面に出ない)</div>
-        <div class="meta"><span>クラフトくん</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
-      </li>
-      <li id="kC1">
-        <div class="row-title">C1 同じことを5か所に書いていて、台帳がもう食い違っている</div>
-        <div class="row-body">社長が選んだ案: 台帳を1つのJSONにして、社長室・台帳の表はそこから作る。(もとの指摘: 台帳18行のうち4行が古い。「いま」の書き方も決めた5種類が8種類に増えている)</div>
-        <div class="meta"><span>ドライバーくん2号</span><span>見込み 担当が連絡</span><span>PR #2425</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="w2610100015patrol">
+        <div class="row-title">改善部から回った2件はボットの見間違いだった</div>
+        <div class="row-body">「おまかせ」は初めから選ばれている札で押しても変わらないのが正しい。全WAVE詳細の「戻る」も10件すべて一覧へ戻る。探検ボットの読み方を直した(ゲームは変わらない)</div>
+        <div class="meta"><span>部長マップくん</span><span>PR #2428</span><span>(ゲームは変わらない)</span></div>
+      </li>
+      <li id="kG3">
+        <div class="row-title">G3 ヘルプの先頭に「3分でわかる」</div>
+        <div class="row-body">ヘルプ「基本ルール・ゲームの目的」の先頭に「3分でわかるモンスターヒーロー」を置き、はじめての設定 → ゲームの目的 → 1周の流れ の順に並べ直した</div>
+        <div class="meta"><span>ドライバーくん</span><span>PR #2430</span><span>本番 → 設定 → ヘルプ → 基本ルール・ゲームの目的</span></div>
+      </li>
+      <li id="kC1">
+        <div class="row-title">C1 台帳を1つのJSONにした</div>
+        <div class="row-body">台帳の正は ledger.json だけ。台帳の表(REQUESTS.md)と社長室は道具が作る。移すとき古かった4行を PR を根拠に直した</div>
+        <div class="meta"><span>ドライバーくん2号</span><span>PR #2429</span></div>
+      </li>
       <li id="kC2">
         <div class="row-title">C2 成績表は記録から道具で足し算するようにした</div>
         <div class="row-body">社長が選んだ案: 点は記録だけに書き、表は道具で足し算する。(もとの指摘: ガードくんは表で6点・記録で4点。記録の行が無い点がある)</div>
@@ -402,11 +407,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-body">場面が限られる決まりを、その場所の CLAUDE.md(画像・音源・データ・譜面ツール)とスキルへ移した。決まりは消さず移しただけ。見張りの上限も 16.5KB に下げ、移した先で言葉が消えても気づけるようにした</div>
         <div class="meta"><span>ドライバーくん2号</span><span>PR #2414</span><span>CLAUDE.md・docs/rules/README.md「節の置き場所」</span></div>
       </li>
-      <li id="w10">
-        <div class="row-title">オート強化が使いやすくなった</div>
-        <div class="row-body">設定を変えても確定までは保存も強化もしない(「こう上がります」の案に項目ごとの+n)。確定後は「こう上がりました」が残る。余りの配り方を「順番に上限まで」「1Pずつ順番に配る」から選べる。保存データは項目を足しただけ</div>
-        <div class="meta"><span>部長ガードくん</span><span>PR #2412</span><span>マスモン詳細 → 強化 → 「オート強化」タブ</span></div>
-      </li>
       <li id="w12">
         <div class="row-title">保存キー3つを仕様書に載せた</div>
         <div class="row-body">検査で見つかった載せ忘れを docs/spec/SAVE_DATA.md に書き足した(ゲームの動きは変わらない)。モンヒロビートの直し方の切り替えは、いまは画面から書く所がなく検査ツールからだけ書かれる、とも書いた</div>
@@ -416,6 +416,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">マスモン一覧が固まらなくなった</div>
         <div class="row-body">染めた絵の作り直しを裏の作業へ移した。40体・半分染色のセーブで、一覧が出るまで4.1秒→0.2秒(2回目も1.7秒→0.4秒)。絵は1画素も変わらない。モンヒロビートのマスモン一覧など、染めた絵を出すほかの画面も軽くなる</div>
         <div class="meta"><span>ドライバーくん</span><span>PR #2410</span><span>ゲームを始める → M/B管理 → マスモン一覧(染色した子が多いほど違いが分かる)</span></div>
+      </li>
+      <li id="w10">
+        <div class="row-title">オート強化が使いやすくなった</div>
+        <div class="row-body">設定を変えても確定までは保存も強化もしない(「こう上がります」の案に項目ごとの+n)。確定後は「こう上がりました」が残る。余りの配り方を「順番に上限まで」「1Pずつ順番に配る」から選べる。保存データは項目を足しただけ</div>
+        <div class="meta"><span>部長ガードくん</span><span>PR #2412</span><span>マスモン詳細 → 強化 → 「オート強化」タブ</span></div>
       </li>
       <li id="w6">
         <div class="row-title">通信不良の演奏での「範囲の中なのにMISS」はゲームの不具合ではなかった</div>
@@ -427,15 +432,20 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-body">部屋(マッチング・選曲・準備・待機・結果)のマスモンの札に「i」。自分の子を押すと相棒の画面と同じ詳しい窓。ほかの人の子は名前とビートLvだけ。窓を開いたままでも選曲・準備は進む</div>
         <div class="meta"><span>ドライバーくん</span><span>PR #2403</span><span>モンヒロビート → フリーマッチかプライベート → マスモンを呼ぶ → 部屋の上の札を押す</span></div>
       </li>
-      <li id="p9">
-        <div class="row-title">Tier表を6項目で見る形に・机上の性能表・ボットの直し</div>
-        <div class="row-body">Tier表に攻め・守り・勇者特性・固有技・EX・間合いの6項目と「保留」を入れた。机上の性能表(desk.md)も公開。ボットの勇者選びとEXの使い方を直した。技と間合いの回数はこれからの対戦で数える</div>
-        <div class="meta"><span>ハカセくん</span><span>PR #2401</span><span>docs/playbot/reports/tier/</span></div>
-      </li>
       <li id="p10">
         <div class="row-title">タクティクスの検査2本を直した</div>
         <div class="row-body">公開版でも落ちていた検査2本(研究所のハカセくんが見つけた件)。ゲームの動きは変わらない</div>
         <div class="meta"><span>部長ブレイブくん</span><span>PR #2387</span><span>(ゲームは変わらない)</span></div>
+      </li>
+      <li id="p11">
+        <div class="row-title">朝の試しの点検で社長が選んだ直し</div>
+        <div class="row-body">ビート部: iPhoneの遅れの分け方・MASTERのフリックのMISS報告(#2373)/見回り部: 見た目の基準の撮り直し・会話の数え方(#2374)/バトル部とビート部: ボットの押し方の漏れと見間違いを直した(#2368・#2370)</div>
+        <div class="meta"><span>各部長</span><span>PR #2368・#2370・#2373・#2374</span><span>(ゲームはほぼ変わらない)</span></div>
+      </li>
+      <li id="p9">
+        <div class="row-title">Tier表を6項目で見る形に・机上の性能表・ボットの直し</div>
+        <div class="row-body">Tier表に攻め・守り・勇者特性・固有技・EX・間合いの6項目と「保留」を入れた。机上の性能表(desk.md)も公開。ボットの勇者選びとEXの使い方を直した。技と間合いの回数はこれからの対戦で数える</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2401</span><span>docs/playbot/reports/tier/</span></div>
       </li>
       <li id="p8">
         <div class="row-title">強化の「完了」に確認・ブラウザの戻るでゲームの外へ出ない</div>
@@ -476,11 +486,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">組織図・社則・成績表</div>
         <div class="row-body">日報・週報の決めごと、新しい部署3つ</div>
         <div class="meta"><span>統括部長:モンヒロくん</span><span>PR #2389</span><span>docs/playbot/ORG.md</span></div>
-      </li>
-      <li id="p11">
-        <div class="row-title">朝の試しの点検で社長が選んだ直し</div>
-        <div class="row-body">ビート部: iPhoneの遅れの分け方・MASTERのフリックのMISS報告(#2373)/見回り部: 見た目の基準の撮り直し・会話の数え方(#2374)/バトル部とビート部: ボットの押し方の漏れと見間違いを直した(#2368・#2370)</div>
-        <div class="meta"><span>各部長</span><span>PR #2368・#2370・#2373・#2374</span><span>(ゲームはほぼ変わらない)</span></div>
       </li></ul>
       <p class="note">本番: https://aknkakykhk-maker.github.io/monhero/</p>
     </section>

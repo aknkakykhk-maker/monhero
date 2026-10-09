@@ -4,8 +4,8 @@ const fs=require('fs'),vm=require('vm'),path=require('path');
 const source=fs.readFileSync(path.join(TOOLS_DIR,'..','monster-hero','src','game-system.jsx'),'utf8');
 const prefix=source.slice(source.indexOf('const LOGIN_BONUS_REWARDS'),source.indexOf('const STAT_POINT_GAIN'));
 const context={React:{ Component: class { setState() {} }, PureComponent: class { setState() {} },createElement(){},useState(){},useEffect(){},useCallback(){},useMemo(){},useRef(){}}};vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.x={loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,grantPlayerCompensationGifts,PLAYER_COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards};`,context);
-const {loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,grantPlayerCompensationGifts,PLAYER_COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards}=context.x;let failed=0;
+vm.runInContext(`${prefix}\nglobalThis.x={loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,grantPlayerCompensationGifts,PLAYER_COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards,NEW_PLAYER_WAIVED_COMPENSATION_IDS,COMPENSATION_WAIVED_KEY,normalizeWaivedCompensationIds,compensationIdsToWaive,waivedCompensationRewards,grantNewPlayerCampaignGift,NEW_PLAYER_CAMPAIGN_GIFT};`,context);
+const {loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,grantPlayerCompensationGifts,PLAYER_COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards,NEW_PLAYER_WAIVED_COMPENSATION_IDS,COMPENSATION_WAIVED_KEY,normalizeWaivedCompensationIds,compensationIdsToWaive,waivedCompensationRewards,grantNewPlayerCampaignGift,NEW_PLAYER_CAMPAIGN_GIFT}=context.x;let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
 const at=s=>Date.parse(s);
 check('JST 03:59と04:00で期間が切り替わる',loginBonusPeriodKey(at('2026-07-28T18:59:00Z'))==='2026-07-28'&&loginBonusPeriodKey(at('2026-07-28T19:00:00Z'))==='2026-07-29');
@@ -56,7 +56,7 @@ const addDye=grantCompensationGifts(onlyOld,at('2026-08-07T00:00:00Z'));
 check('過去のお詫びを受け取り済みでも染色のぶんは届く',addDye.granted&&addDye.gifts.filter(g=>g.id===dyeId).length===1);
 check('過去のお詫びを重ねて配らない',addDye.gifts.filter(g=>g.id!==dyeId).length===onlyOld.length);
 check('染色のお詫びも2回目は配らない',grantCompensationGifts(addDye.gifts,at('2026-08-08T00:00:00Z')).granted===false);
-check('起動時にお詫びも配る',source.includes('const compensationGrant = grantCompensationGifts(loginGrant.gifts);')
+check('起動時にお詫びも配る',source.includes('const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);')
   &&/if \(loginGrant\.granted \|\| compensationGrant\.granted[^)]*\) \{[\s\S]{0,200}?storeSet\('mh_gifts'/.test(source));
 
 // その人だけに届くお詫び(PLAYER ID が一致した端末にだけ配る)
@@ -76,5 +76,40 @@ check('配る相手のIDはギフトへ残さない',!('playerIds' in mineGift))
 check('報酬の形が通常のギフトとして成り立つ',!!normalizeGiftRewards(mineGift));
 check('ダイヤ2億が入っている',buildGiftClaim(mineGift,{gold:0},at('2026-09-21T00:00:00Z')).balances.gold===200000000);
 check('起動時にPLAYER IDを見て配る',source.includes('grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId)')&&source.includes("window.localStorage.getItem('mh_player_id')"));
+
+// はじめての人には7〜8月のお詫びを配らず、同じ合計をプレオープン記念へ足す(2026-10-09・社長の選択)
+const allIds=COMPENSATION_GIFTS.map(d=>d.id);
+check('控えるお詫びのidは、いま配っている4件と同じ',NEW_PLAYER_WAIVED_COMPENSATION_IDS.length===4&&NEW_PLAYER_WAIVED_COMPENSATION_IDS.every(id=>allIds.includes(id)));
+check('控えのキーは新しいキー',COMPENSATION_WAIVED_KEY==='mh_compensation_waived_v1');
+const toWaiveNew=compensationIdsToWaive([],[]);
+check('はじめての人(ギフトが空)は4件とも控える',toWaiveNew.length===4);
+const noComp=grantCompensationGifts([],at('2026-10-09T00:00:00Z'),toWaiveNew);
+check('控えたお詫びは配らない',noComp.granted===false&&noComp.gifts.length===0);
+check('2回目の起動(控えが保存済み)でも配らない',grantCompensationGifts(noComp.gifts,at('2026-10-10T00:00:00Z'),toWaiveNew).granted===false);
+check('控えを渡さなければ従来どおり全員に届く',grantCompensationGifts([],at('2026-10-09T00:00:00Z')).gifts.length===4);
+check('控えの対象は固定の4件だけ(これから足すお詫びのidは入らない)',!NEW_PLAYER_WAIVED_COMPENSATION_IDS.includes('gift_compensation_future')&&Object.isFrozen(NEW_PLAYER_WAIVED_COMPENSATION_IDS));
+// すでにギフトボックスにあるお詫びは、控えに入れない・取り上げない・足さない
+const hasTwo=COMPENSATION_GIFTS.slice(0,2).map(d=>({...d,claimedAt:null}));
+const toWaivePart=compensationIdsToWaive(hasTwo,[]);
+check('すでにあるお詫びは控えに入れない',toWaivePart.length===2&&toWaivePart.every(id=>!hasTwo.some(g=>g.id===id)));
+check('持っているお詫びは配らない控えでも消えない',grantCompensationGifts(hasTwo,at('2026-10-09T00:00:00Z'),toWaivePart).gifts.length===2);
+const partRewards=waivedCompensationRewards(hasTwo,toWaivePart);
+const partSum=(t)=>partRewards.filter(r=>r.type===t).reduce((a,r)=>a+r.amount,0);
+check('持っているお詫びの分は、記念の贈りものへ足さない(二重にならない)',partSum('diamond')===0&&partSum('skipTicketJo')===0);
+// 足す量は、4通の合計そのまま
+const sumRewards=waivedCompensationRewards([],toWaiveNew);
+const sumOf=(t)=>sumRewards.filter(r=>r.type===t).reduce((a,r)=>a+r.amount,0);
+check('足す量: ダイヤ1000・序2・破2・急7・染色もどき5',sumOf('diamond')===1000&&sumOf('skipTicketJo')===2&&sumOf('skipTicketHa')===2&&sumOf('skipTicketKyu')===7&&sumOf('dyeMock')===5);
+check('足す量の種類は5つだけ',sumRewards.length===5);
+check('控えが無ければ足さない',waivedCompensationRewards([],[]).length===0);
+const withExtra=grantNewPlayerCampaignGift([],at('2026-10-09T00:00:00Z'),sumRewards);
+const giftSum=(t)=>withExtra.gifts[0].rewards.filter(r=>r.type===t).reduce((a,r)=>a+r.amount,0);
+check('記念の贈りものに足される',withExtra.granted&&giftSum('diamond')===101000&&giftSum('rainbowPsyche')===100&&giftSum('dyeMock')===5&&giftSum('skipTicketKyu')===7);
+check('足してもギフトの定義そのものは変わらない',NEW_PLAYER_CAMPAIGN_GIFT.rewards.length===2&&NEW_PLAYER_CAMPAIGN_GIFT.rewards[0].amount===100000);
+check('足す量なしなら従来どおり',grantNewPlayerCampaignGift([],at('2026-10-09T00:00:00Z')).gifts[0].rewards.length===2);
+check('すでにある記念の贈りものには足さない',grantNewPlayerCampaignGift([{id:NEW_PLAYER_CAMPAIGN_GIFT.id}],at('2026-10-09T00:00:00Z'),sumRewards).granted===false);
+check('壊れた控えの値でも落ちない',normalizeWaivedCompensationIds('x').length===0&&normalizeWaivedCompensationIds([1,'a','a',null]).length===1);
+check('起動時: はじめて遊ぶ人だけ控える・既存の人は控えない',source.includes('if (!compensationEverPlayed) {')&&source.includes('compensationIdsToWaive(loginGrant.gifts, waivedCompensationIds)'));
+check('はじめての設定の終わりに、合計を記念の贈りものへ足す',source.includes('waivedCompensationRewards(giftsNow, waivedNow)'));
 
 process.exit(failed?1:0);

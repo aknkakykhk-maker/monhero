@@ -63,6 +63,7 @@ const serve=()=>new Promise(resolve=>{
         // 並び順と助手の畳みも、本体(App)と同じように外側が持つ
         const [view,setView]=React.useState(DEFAULT_RHYTHM_SELECT_VIEW);
         window.__view=view;
+        window.__resetView=()=>setView(DEFAULT_RHYTHM_SELECT_VIEW);
         return React.createElement(RhythmSongSelect,{
           songs:RHYTHM_SONGS,
           difficulties:RHYTHM_DIFFICULTIES,
@@ -429,6 +430,25 @@ const serve=()=>new Promise(resolve=>{
       &&gameSource.includes('normalizeRhythmSelectView')
       &&gameSource.includes('storeSet(RHYTHM_SELECT_VIEW_KEY'));
     await page.click('#song-select-probe [data-rhythm-song-notice-toggle]');
+    await page.waitForTimeout(250);
+
+    // ---- 5曲以上遊んだ人は、はじめから畳む(2026-10-09・社長の選択)。💬を押して自分で選んだ人は、その選んだほうのまま ----
+    // 上で💬を2回押したので、いまは「自分で開いた人」。押したことのない人として見るため、見た目の設定を最初に戻してから記録を差し替える
+    const playedRecords=n=>page.evaluate(n=>{const out={};RHYTHM_SONGS.slice(0,n).forEach(song=>{out[song.songId]={HARD:{played:true,bestScore:500000}};});return out;},n);
+    const noticeShown=()=>page.evaluate(()=>!!document.querySelector('#song-select-probe [data-rhythm-song-notice]'));
+    await page.evaluate(()=>{window.__resetView&&window.__resetView();});
+    await page.evaluate(r=>window.__rerender(r),await playedRecords(4));
+    await page.waitForTimeout(250);
+    ok('遊んだ曲が4曲までなら、助手のひとことは開いたまま',await noticeShown());
+    await page.evaluate(r=>window.__rerender(r),await playedRecords(5));
+    await page.waitForTimeout(250);
+    ok('5曲以上遊んだ人は、はじめから畳んである',!(await noticeShown()));
+    await page.click('#song-select-probe [data-rhythm-song-notice-toggle]');
+    await page.waitForTimeout(250);
+    ok('畳んであっても💬で開け、開いたことは覚える(noticeTouched)',await noticeShown()&&await page.evaluate(()=>window.__view&&window.__view.noticeTouched===true));
+    ok('今までの保存(noticeTouched が無い)は「まだ押していない」として読む',
+      await page.evaluate(()=>normalizeRhythmSelectView({noticeOpen:true}).noticeTouched===false&&normalizeRhythmSelectView({noticeTouched:true}).noticeTouched===true));
+    await page.evaluate(()=>window.__rerender([]));
     await page.waitForTimeout(250);
 
     // ---- 一覧を輪にする(2026-09-05・ユーザー指示
