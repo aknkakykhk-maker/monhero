@@ -19,9 +19,51 @@
 // 入口: モンヒロバトル → タクティクス → モード → 難易度 → 勇者モン・供モン → 距離・アシストカード → WAVE 1
 // ★押すものは「その画面にしか無いもの」で選ぶ(とりあえず押せるものを押すと、戻るを踏む)。
 //   道筋は tools/battle/lib/tactics-battle-page.js と同じ
-async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = null }) {
+// 全モンスター・全アシストカード・全 EX の中身を、ゲームのデータ(ALL_PLAYER_MONSTERS・TEACHING_CARDS・TACTICS_EX_SKILLS)から読む。
+// 戦い方の判断(打たれ強さ・火力・EX の役目)と、報告の一覧(tactics-roster.json)に使う(2026-10-09 社長「勇者特性や固有技の効果、EXスキルなどを全て理解した上で」)
+const readRoster = (s) => s.page.evaluate(() => {
+  /* eslint-disable no-undef */
+  const mons = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS) : [];
+  const exs = typeof TACTICS_EX_SKILLS !== 'undefined' ? TACTICS_EX_SKILLS : {};
+  const cards = typeof TEACHING_CARDS !== 'undefined' ? TEACHING_CARDS : [];
+  /* eslint-enable no-undef */
+  const ex = (id) => { const e = exs[id]; return e ? { name: e.name, desc: String(e.desc || '').replace(/\s+/g, ' ').slice(0, 220), note: e.useNote || '', uses: e.unlimited ? '無制限' : (e.maxUses || e.usesPerWave || null), perWave: !!e.usesPerWave, withCards: e.withCards !== false, duration: e.duration || '', effect: e.effect || '' } : null; };
+  return {
+    monsters: mons.filter((m) => m && m.id).map((m) => ({
+      id: m.id, name: m.name, debugOnly: !!m.debugOnly, hp: m.baseHp, atk: m.baseAtk, def: m.baseDef, guts: m.baseGuts,
+      trait: m.trait || '', traitDesc: m.traitDesc || '',
+      unique: m.unique ? { name: m.unique.name, mult: m.unique.baseMult, guts: m.unique.baseGuts, desc: String(m.unique.effectDesc || m.unique.desc || '').replace(/\s+/g, ' ').slice(0, 160) } : null,
+      ex: ex(m.id),
+    })),
+    assists: cards.map((c) => ({ id: c.id, name: c.baseName, type: c.type, subType: c.subType, desc: c.desc, base: c.baseValue, step: c.step, guts: c.guts })),
+  };
+});
+
+// デバッグ設定の「🔓 すべて解放してバトル」へ入る(設定 → ヘルプ → いちばん下の印のないボタン → DEBUG MENU → ⚔️ バトル)。
+// 全モンスター・全アシストカード・全難易度を選べ、記録・ランキング・報酬はつかない(60-app.jsx の debugUnlockAllRef)
+async function openUnlockAll(s) {
+  const { page } = s;
+  try {
+    await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
+    await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
+    await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
+    await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+    await page.locator('footer button[aria-label=""]').dispatchEvent('click');
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+    await page.locator('[data-debug-unlock-all-battle]').dispatchEvent('click');
+    await s.wait(1500);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = null, unlockAll = false }) {
   const { page, rand } = s;
-  await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+  if (unlockAll) {
+    if (!(await openUnlockAll(s))) return 'no-unlock-all';
+  } else await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
   await s.wait(1200);
   await s.dismissOverlays(6);
   await s.inspect();
@@ -50,6 +92,21 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="次の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
       if (!moved) break;
       await s.wait(250);
+    }
+  }
+  // 難易度を名前で指定したとき(Master など)は、いちばん前へ戻してから、その札まで送る(すべて解放だと極限まで開いているため)
+  if (difficulty && !['max', 'keep'].includes(difficulty)) {
+    for (let k = 0; k < 25; k++) {
+      const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="前の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
+      if (!moved) break;
+      await s.wait(150);
+    }
+    for (let k = 0; k < 25; k++) {
+      const key = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
+      if (key === difficulty) break;
+      const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="次の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
+      if (!moved) break;
+      await s.wait(200);
     }
   }
   // ★難易度の札(article[data-difficulty-card])は全部の難易度ぶん並んでいて、どの札にも「この難易度で挑戦」がある。
@@ -81,7 +138,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
   }, [Math.floor(rand() * 6), wantIds]);
   // --hero の指定が無ければ、覚え書き(tactics-knowledge.json)の成績から勇者モン・供モンの順を決める
   if (!wantIds.length && ctx) {
-    const pref = brain.preferredOrder(stats.difficulty || '', rand);
+    const pref = brain.preferredOrder(stats.difficulty || '', rand, ctx.mem.roster);
     await page.evaluate((names) => { window.__pbWant = names; }, pref.order);
     ctx.log.note(`編成の順(覚え書き ${pref.knownRuns}回ぶんから): ${pref.order.join('・')}`);
   }
@@ -258,14 +315,17 @@ async function betweenWaves(s, ctx) {
 }
 
 // difficulty: 'max' … 開いている中でいちばん難しい難易度 / 'keep' … 前回の難易度のまま(既定)
-async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tacticsPro'], difficulty = 'keep', out = '', runNo = 1 } = {}) {
+async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tacticsPro'], difficulty = 'keep', out = '', runNo = 1, unlockAll = false } = {}) {
   const stats = { mode: '', difficulty: '', entered: false, turns: 0, waveReached: 0, waveMax: 0, downs: 0, aimedDanger: 0, guardsWhenAimed: 0, dangerNoGuard: 0,
     guards: 0, exUsed: 0, discards: 0, pickFailed: 0, cards: {}, finished: false, result: '' };
   const mem = brain.newMemory();
-  const log = brain.makeLog({ mode: '', difficulty: '', runNo, startedAt: new Date().toISOString() });
+  const log = brain.makeLog({ mode: '', difficulty: '', runNo, startedAt: new Date().toISOString(), unlockAll });
+  // 全モンスター・全アシストカード・全 EX の中身。判断に使い、一覧として書き出す
+  mem.roster = await readRoster(s).catch(() => null);
+  if (mem.roster) brain.saveRoster(mem.roster);
   let entered = '';
   for (const mode of modes) {
-    entered = await enterTactics(s, { mode, difficulty, stats, ctx: { mem, log } });
+    entered = await enterTactics(s, { mode, difficulty, stats, ctx: { mem, log }, unlockAll });
     if (entered === 'ok') { stats.mode = mode; break; }
     await s.backHome();
   }
