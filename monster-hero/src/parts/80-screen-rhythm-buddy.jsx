@@ -43,6 +43,60 @@ const RHYTHM_BUDDY_STORE = (() => {
   return api;
 })();
 
+// ---- 呼んだ1回ごとの控え(2026-10-09・ユーザー指示「1曲も始まらなければ返す」。計算は 33-rhythm-buddy.jsx) ----
+// いまの起動の印。アプリを閉じて残った控え(ほかの起動のもの)と、いま部屋にいる子の控えを見分ける
+const RHYTHM_BUDDY_LOAD_ID = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const rhythmBuddyCallId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+// 返したときの一言。部屋を出てモードえらびへ戻った画面でも出るよう、画面の外に数秒だけ持つ(保存しない)。続けて返したぶんは足して出す
+const RHYTHM_BUDDY_REFUND_NOTE = (() => {
+  let note = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach((fn) => { try { fn(note); } catch (_) { /* 画面側の失敗は無視 */ } });
+  return {
+    get: () => (note && Date.now() < note.until ? note : null),
+    add(paid, n = 1) {
+      if (paid !== 'free' && paid !== 'ticket') return;
+      const live = note && Date.now() < note.until ? note : { free: 0, tickets: 0 };
+      note = { free: live.free + (paid === 'free' ? n : 0), tickets: live.tickets + (paid === 'ticket' ? n : 0), until: Date.now() + 6000 };
+      emit();
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+  };
+})();
+const useRhythmBuddyRefundNote = () => {
+  const [note, setNote] = React.useState(() => RHYTHM_BUDDY_REFUND_NOTE.get());
+  React.useEffect(() => RHYTHM_BUDDY_REFUND_NOTE.subscribe(setNote), []);
+  React.useEffect(() => {
+    if (!note) return undefined;
+    const timer = setTimeout(() => setNote(RHYTHM_BUDDY_REFUND_NOTE.get()), Math.max(0, note.until - Date.now()) + 50);
+    return () => clearTimeout(timer);
+  }, [note]);
+  return note ? rhythmBuddyRefundText(note.free, note.tickets) : '';
+};
+// 控えを1つ片づけて、払ったものを返す。控えを消すのと無料1回を返すのは同じ書き込み(二重に返らない)。券は refundTicket で1枚足す。
+// 戻り値: 返したもの 'free' / 'ticket' / ''(返さなかった・片づけ済み)
+const rhythmBuddySettle = async (callId, how, refundTicket) => {
+  if (!callId) return '';
+  let r = null;
+  await RHYTHM_BUDDY_STORE.update((st) => { r = rhythmBuddySettleCall(st, callId, how, rhythmBuddyDayKey(Date.now())); return r ? r.next : null; });
+  if (!r || !r.refund) return '';
+  if (r.refund === 'ticket') { if (!refundTicket) return ''; try { await refundTicket(); } catch (_) { return ''; } }
+  return r.refund;
+};
+// アプリを閉じて残った控えを、起動ごとに一度だけ片づける(モンヒロビートの画面を開いたとき)
+let rhythmBuddyLeftoversDone = false;
+const rhythmBuddySettleLeftoversOnce = async (refundTicket) => {
+  if (rhythmBuddyLeftoversDone) return;
+  rhythmBuddyLeftoversDone = true;
+  let r = null;
+  await RHYTHM_BUDDY_STORE.update((st) => { r = rhythmBuddySettleLeftovers(st, RHYTHM_BUDDY_LOAD_ID, rhythmBuddyDayKey(Date.now())); return r ? r.next : null; });
+  if (!r) return;
+  let tickets = 0;
+  for (let i = 0; i < r.tickets; i += 1) { if (!refundTicket) break; try { await refundTicket(); tickets += 1; } catch (_) { break; } }
+  if (r.free) RHYTHM_BUDDY_REFUND_NOTE.add('free', r.free);
+  if (tickets) RHYTHM_BUDDY_REFUND_NOTE.add('ticket', tickets);
+};
+
 const useRhythmBuddyState = () => {
   const [state, setState] = React.useState(() => RHYTHM_BUDDY_STORE.get());
   React.useEffect(() => {
@@ -732,7 +786,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       {/* 横画面は、根の直下の子を「左の列(見出し・説明・並べ替え)」と「右の列(スクロールする一覧)」へ振り分ける
           (index.html の [data-mh-screen]:has(> .mh-scroll))。一覧だけを右の列へ入れ、広く使う。
           以前は説明も並べ替えも一覧と同じ入れ物に入れて max-w-md にしたため、左の列が空いて右が狭く、文字や札が切れた */}
-      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
+      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" note="マスモン＝自分で育てた子。マルチに呼ぶと一緒に演奏する" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
       <section className="mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
         <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">

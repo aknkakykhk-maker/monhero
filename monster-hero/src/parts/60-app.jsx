@@ -5765,7 +5765,17 @@ function MonsterHeroGame() {
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
-      const compensationGrant = grantCompensationGifts(loginGrant.gifts);
+      // はじめて遊ぶ人(compensationEverPlayed が false)には、7〜8月の不具合のお詫びは配らない。
+      // 配らなかったidは新しいキーへ控え、はじめての設定を終えたあとの起動でも配られないようにする
+      let waivedCompensationIds = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+      if (!compensationEverPlayed) {
+        const toWaive = compensationIdsToWaive(loginGrant.gifts, waivedCompensationIds);
+        if (toWaive.length > 0) {
+          waivedCompensationIds = [...waivedCompensationIds, ...toWaive];
+          await storeSet(COMPENSATION_WAIVED_KEY, waivedCompensationIds, false);
+        }
+      }
+      const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
       // その人だけに届くお詫び。PLAYER ID はタイトル画面に出しているものと同じ経路
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
@@ -6434,7 +6444,10 @@ function MonsterHeroGame() {
         const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
         if (issued !== true) {
           const savedGifts = await storeGet('mh_gifts', [], false);
-          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          const giftsNow = Array.isArray(savedGifts) ? savedGifts : [];
+          // 配らなかったお詫びの合計を、プレオープン記念へ足す(すでにギフトボックスにあるお詫びは足さない)
+          const waivedNow = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+          const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
         }
@@ -16138,14 +16151,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           );
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-            <ScreenHead title="M/B管理" accent="text-indigo-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
+            <ScreenHead title="M/B管理" accent="text-indigo-300" note="M/B＝モンスターとブリーダー。仲間の一覧・編成・図鑑・アシストカードはここ" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement" compact/></div>
             <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
               items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
               {managementTab==='monster'?<>
-                {managementLink(<List size={18}/>,'ベースモン一覧','解放したベースモンを並べて確かめる',()=>setGameState('OWNED_MONSTERS'))}
-                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','育てたマスモンの絆・状態を見る',()=>setGameState('MASU_MONS'))}
+                {managementLink(<List size={18}/>,'ベースモン一覧','ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる',()=>setGameState('OWNED_MONSTERS'))}
+                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','マスモン＝自分で育てた子。絆・状態を見る',()=>setGameState('MASU_MONS'))}
                 {/* モンヒロビートのマルチに呼んだマスモンの育ち具合(ビートLv)。バトルの育ちとは別(docs/spec/RHYTHM_BUDDY.md) */}
                 {RELEASE_FLAGS.rhythmMulti===true&&managementLink(<Activity size={18}/>,'マスモン一覧(モンヒロビート)','マルチに呼んだマスモンのビートLv・調子・得意な曲を見る',()=>openMasuBeat('MB_MANAGEMENT'),{'data-mb-masu-beat':true})}
                 {managementLink(<BookOpen size={18}/>,'モンスター図鑑','出会ったモンスターと血統をふり返る',()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');})}
@@ -18658,7 +18671,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モンスター一覧(解放済みの種を一覧表示・タップで詳細) */}
         {gameState==='OWNED_MONSTERS'&&(
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-            <ScreenHead title="ベースモン一覧" accent="text-cyan-400" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
+            <ScreenHead title="ベースモン一覧" accent="text-cyan-400" note="ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className="shrink-0 w-full mb-2"><AssistantBubble scene="monsterList" compact/></div>
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}

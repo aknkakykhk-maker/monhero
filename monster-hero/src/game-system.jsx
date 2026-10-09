@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8946eaa3e0d2bc71
+// generated-sha256: 9446a6b6e7c2b6fd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 18:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 00:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4281,7 +4281,11 @@ const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 // noticeOpenShort … 縦が低い画面(高さ700px以下)での助手のひとことの開け閉め(2026-10-07)。低い画面ではひとことを出すと
 //   曲の一覧が1行も見えなくなるので、はじめは畳んでおく。新しい項目なので、持っていない既存ユーザーは false で補われる
 //   (ふつうの画面の noticeOpen とは別に持つ。片方を変えても、もう片方は変わらない)
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, genre:'all', favorites:Object.freeze([]) });
+// noticeTouched … ふつうの画面で💬を押して、助手のひとことの開け閉めを自分で選んだか(2026-10-09)。押したことのない人は、
+//   5曲以上遊んでいればはじめから畳む(RHYTHM_NOTICE_FOLD_PLAYED_SONGS)。新しい項目なので、持っていない既存ユーザーは false で補われる
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, noticeOpenShort:false, noticeTouched:false, genre:'all', favorites:Object.freeze([]) });
+// 何曲遊んだら、助手のひとことをはじめから畳むか(2026-10-09・社長の選択「5曲遊んだ人は畳む」。曲の一覧が3行しか見えなかった)
+const RHYTHM_NOTICE_FOLD_PLAYED_SONGS = 5;
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
@@ -4291,6 +4295,7 @@ const normalizeRhythmSelectView = value => {
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
     noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
+    noticeTouched: source.noticeTouched === true,
     genre,
     favorites: Array.isArray(source.favorites)
       ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX)
@@ -8633,9 +8638,40 @@ const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
   return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
 };
 
-const grantCompensationGifts = (gifts, now=Date.now()) => {
+// ===== はじめての人には、7〜8月の不具合のお詫びを配らない(2026-10-09・社長の選択) =====
+// お詫びは、その時期に遊んでいた人だけのもの。これからはじめる人は不具合に遭っていないので、
+// 最初のギフトボックスにお詫びが4通並ぶのをやめ、同じ中身の合計を「プレオープン記念」へ足す。
+// ・配らなかったidは COMPENSATION_WAIVED_KEY(新しいキー)へ控える。控えが無いと、はじめての設定を終えた次の起動で
+//   「idが無い」とみなして配ってしまう。既存の保存キーは変えず、既にギフトにあるidは控えに入れない(取り上げない)
+// ・控えるのは下のidだけ。これから足すお詫び(新しいid)は、はじめての人にも普通に届く
+const COMPENSATION_WAIVED_KEY = 'mh_compensation_waived_v1';
+const NEW_PLAYER_WAIVED_COMPENSATION_IDS = Object.freeze([
+  'gift_compensation_20260731_battle',
+  'gift_compensation_20260801_points',
+  'gift_compensation_20260823_skip',
+  'gift_compensation_20260807_dye',
+]);
+const normalizeWaivedCompensationIds = (value) => (Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : []);
+// 配らないと決めたお詫びのうち、まだギフトボックスに無いもの(=控えに足すもの)
+const compensationIdsToWaive = (gifts, waivedIds) => {
   const list = Array.isArray(gifts) ? gifts : [];
-  const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  return NEW_PLAYER_WAIVED_COMPENSATION_IDS.filter(id => !waived.includes(id) && !list.some(item => item?.id === id));
+};
+// 控えたお詫びのうち、ギフトボックスに無いものの報酬を、種類ごとに合計する(プレオープン記念へ足す分)
+const waivedCompensationRewards = (gifts, waivedIds) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const totals = new Map();
+  COMPENSATION_GIFTS
+    .filter(def => NEW_PLAYER_WAIVED_COMPENSATION_IDS.includes(def.id) && waived.includes(def.id) && !list.some(item => item?.id === def.id))
+    .forEach(def => def.rewards.forEach(r => totals.set(r.type, (totals.get(r.type) || 0) + Math.floor(Number(r.amount) || 0))));
+  return [...totals.entries()].map(([type, amount]) => ({ type, amount }));
+};
+const grantCompensationGifts = (gifts, now=Date.now(), waivedIds=[]) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const missing = COMPENSATION_GIFTS.filter(def => !waived.includes(def.id) && !list.some(item => item?.id === def.id));
   if (missing.length === 0) return { granted:false, gifts:list };
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
@@ -8715,14 +8751,22 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
   ],
 });
 // ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
-const grantNewPlayerCampaignGift = (gifts, now=Date.now()) => {
+// extraRewards … 配らなかったお詫びの合計(waivedCompensationRewards)。同じ種類は数を足し、新しい種類は並べる
+const grantNewPlayerCampaignGift = (gifts, now=Date.now(), extraRewards=[]) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return { granted:false, gifts:list };
   if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return { granted:false, gifts:list };
+  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r}));
+  (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
+    const amount = Math.floor(Number(extra?.amount) || 0);
+    if (!extra?.type || amount <= 0) return;
+    const same = rewards.find(r => r.type === extra.type);
+    if (same) same.amount += amount; else rewards.push({ type:extra.type, amount });
+  });
   const gift = {
     ...NEW_PLAYER_CAMPAIGN_GIFT,
     source: 'campaign',
-    rewards: NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r})),
+    rewards,
     createdAt: new Date(now).toISOString(),
     claimedAt: null,
   };
@@ -18208,7 +18252,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     window.addEventListener('resize',onResize);
     return ()=>window.removeEventListener('resize',onResize);
   },[]);
-  const noticeOpen=isShortScreen?state.noticeOpenShort:state.noticeOpen;
+  // 5曲以上遊んだ人は、ひとことをはじめから畳んでおく(2026-10-09・社長の選択。390×844で曲の一覧が3行しか見えなかった)。
+  // 💬を押して自分で選んだ人(noticeTouched)は、その選んだほうのまま。はじめての人はこれまでどおり開いている
+  const playedSongCount=React.useMemo(()=>Object.values(bestRecords&&typeof bestRecords==='object'?bestRecords:{})
+    .filter(rec=>rec&&typeof rec==='object'&&Object.values(rec).some(r=>r&&(r.played===true||Number(r.bestScore)>0))).length,[bestRecords]);
+  const foldByPlays=!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
+  const noticeOpen=isShortScreen?state.noticeOpenShort:(foldByPlays?false:state.noticeOpen);
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -18446,7 +18495,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
-          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen})}
+          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen,noticeTouched:true})}
           title={noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>
@@ -24020,6 +24069,21 @@ const rhythmBuddyNormalizeMon = (raw) => {
     recent,
   };
 };
+// ---- 呼んだ1回ごとの控え(2026-10-09・ユーザー指示「曲を演奏しなかったらチケットや無料分を消費しない」→「1曲も始まらなければ返す」) ----
+// calls: [{ id, masuId, paid:'free'|'ticket', day(払った日), at, load(呼んだときの起動), started }]。既存の保存(mh_rhythm_buddy_v1)へ項目を足す形(CLAUDE.md ⑦)。
+// 部屋を出たとき(呼んだ人が抜けた・部屋が解散した)、1曲も始まっていなければ払ったものを返し、控えを消す。始まっていれば消すだけ。
+// 控えを消すのと無料1回を返すのを同じ書き込みでするので、二重に返らない。アプリを閉じて残った控え(ほかの起動のもの)は、次に開いたとき一度だけ返す。
+// 無料1回は、払った日と同じ日のときだけ返す(朝5:00を過ぎたら無料回数はもう戻っているので、返すと増えすぎる)
+const RHYTHM_BUDDY_CALLS_KEEP = 40;
+const rhythmBuddyNormalizeCalls = (raw) => (Array.isArray(raw) ? raw : [])
+  .filter((x) => x && typeof x === 'object' && !Array.isArray(x))
+  .slice(-RHYTHM_BUDDY_CALLS_KEEP)
+  .map((x) => ({
+    id: rhythmBuddyStr(x.id, 40), masuId: rhythmBuddyStr(x.masuId, 80),
+    paid: x.paid === 'ticket' ? 'ticket' : x.paid === 'free' ? 'free' : '',
+    day: rhythmBuddyStr(x.day, 10), at: rhythmBuddyInt(x.at, 9e15), load: rhythmBuddyStr(x.load, 40), started: x.started === true,
+  }))
+  .filter((x) => x.id && x.paid);
 const rhythmBuddyNormalize = (raw) => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const mons = {};
@@ -24029,7 +24093,7 @@ const rhythmBuddyNormalize = (raw) => {
       if (key) mons[key] = rhythmBuddyNormalizeMon(o.mons[id]);
     });
   }
-  return { day: rhythmBuddyStr(o.day, 10), used: rhythmBuddyInt(o.used, 99), mons };
+  return { day: rhythmBuddyStr(o.day, 10), used: rhythmBuddyInt(o.used, 99), mons, calls: rhythmBuddyNormalizeCalls(o.calls) };
 };
 
 // ---- 1日の回数 ----
@@ -24051,6 +24115,60 @@ const rhythmBuddyRefundFree = (state, dayKey) => {
   const st = rhythmBuddyNormalize(state);
   if (st.day !== dayKey || st.used <= 0) return null;
   return { ...st, used: st.used - 1 };
+};
+
+// 呼んだ1回を控えに足す。call = { id, masuId, paid, day, at, load }
+const rhythmBuddyAddCall = (state, call) => {
+  const st = rhythmBuddyNormalize(state);
+  const [c] = rhythmBuddyNormalizeCalls([{ ...call, started: false }]);
+  if (!c || st.calls.some((x) => x.id === c.id)) return null;
+  return { ...st, calls: [...st.calls, c] };
+};
+// 無料1回を使って、同じ書き込みで控えも足す(途中で閉じても、使ったのに控えが無い、にならない)
+const rhythmBuddyUseFreeWithCall = (state, dayKey, call) => {
+  const used = rhythmBuddyUseFree(state, dayKey);
+  return used ? rhythmBuddyAddCall(used, { ...call, paid: 'free', day: dayKey }) : null;
+};
+// 1曲始まった(その1回は使った扱い)。控えは部屋を出るまで残す(席をゆずったときに返すため)
+const rhythmBuddyMarkStarted = (state, callId) => {
+  const st = rhythmBuddyNormalize(state);
+  if (!st.calls.some((x) => x.id === callId && !x.started)) return null;
+  return { ...st, calls: st.calls.map((x) => (x.id === callId ? { ...x, started: true } : x)) };
+};
+// 控えを1つ片づける。how: 'bump'(人が来て席をゆずった。始まっていても返す・いままでどおり)/ 'end'(部屋を出た。始まっていなければ返す)。
+// 戻り値 { next, refund:'free'|'ticket'|'' }。控えが無い(片づけ済み)なら null。無料1回は next の中で返す。券は呼ぶ側が1枚足す
+const rhythmBuddySettleCall = (state, callId, how, dayKey) => {
+  const st = rhythmBuddyNormalize(state);
+  const call = st.calls.find((x) => x.id === callId);
+  if (!call) return null;
+  const give = how === 'bump' || !call.started;
+  const calls = st.calls.filter((x) => x.id !== callId);
+  if (!give) return { next: { ...st, calls }, refund: '' };
+  if (call.paid === 'ticket') return { next: { ...st, calls }, refund: 'ticket' };
+  // 無料1回: 払った日と同じ日だけ返す(日付が変わっていれば、もう戻っている)
+  if (st.day === call.day && call.day === dayKey && st.used > 0) return { next: { ...st, calls, used: st.used - 1 }, refund: 'free' };
+  return { next: { ...st, calls }, refund: '' };
+};
+// アプリを閉じて残った控え(いまの起動 load 以外のもの)をまとめて片づける。戻り値 { next, free, tickets }(片づけるものが無ければ null)
+const rhythmBuddySettleLeftovers = (state, load, dayKey) => {
+  let st = rhythmBuddyNormalize(state);
+  const left = st.calls.filter((x) => x.load !== load);
+  if (!left.length) return null;
+  let free = 0, tickets = 0;
+  left.forEach((call) => {
+    const r = rhythmBuddySettleCall(st, call.id, 'end', dayKey);
+    if (!r) return;
+    st = rhythmBuddyNormalize(r.next);
+    if (r.refund === 'free') free += 1; else if (r.refund === 'ticket') tickets += 1;
+  });
+  return { next: st, free, tickets };
+};
+// 返したときの一言
+const rhythmBuddyRefundText = (free, tickets) => {
+  const parts = [];
+  if (free > 0) parts.push(`無料${free}回`);
+  if (tickets > 0) parts.push(`セッション券${tickets}枚`);
+  return parts.length ? `演奏しなかったので、${parts.join('と')}を返しました` : '';
 };
 
 // ---- レベル ----
@@ -31242,7 +31360,7 @@ function MasuMonsScreen({
 }) {
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" onBack={onBack} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" note="マスモン＝自分で育てた子。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuList" compact/></div>
         <ScreenLead>勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</ScreenLead>
         {renderMonsterSortFilterBar({ singleType: true })}
@@ -33309,7 +33427,9 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2>
+        {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
+        <p data-pick-term-note className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間'}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -33599,7 +33719,8 @@ function PickProAlliesScreen({
     <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
       <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'.35rem'}}>
         <button type="button" aria-label="戻る" onClick={returnToHero} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-        <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
+        <div className="min-w-0"><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
+        <p data-pick-term-note className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">勇者モン＝主役 / 供モン＝一緒に戦う仲間(最大3体)</p></div>
         <div className="w-10"></div>
       </div>
       <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col">
@@ -34542,7 +34663,8 @@ function HomeScreen({
           </section>
         </header>
         <nav className="mh-home-facilities" aria-label="拠点施設">
-          <button className={`mh-home-facility management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
+          {/* 看板の下に小さく1行(2026-10-09 ユーザー選択。G7「呼び名が分かりにくい」→ 呼び名は変えず、入口に何のことかを足す) */}
+          <button className={`mh-home-facility management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理"><span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span></button>
           <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
           <button className={`mh-home-facility market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
           {/* 修行の施設をやめ、その場所を音ゲー「モンヒロビート」に譲った(2026-09-03にユーザーが決定、
@@ -39805,7 +39927,7 @@ const RHYTHM_MULTI = (() => {
     sendCpuHb();
   };
   // 自分が呼んだ相棒のぶんの知らせ。相棒は部屋主にならない(呼んだ時刻が joinedAt なので、呼んだ人より必ず後)
-  // 1人で何体も呼べる(2026-10-07・ユーザー指示「無料枠と券がある分だけ入れられる」)。s.cpus = [{ id, masuId }]
+  // 1人で何体も呼べる(2026-10-07・ユーザー指示「無料枠と券がある分だけ入れられる」)。s.cpus = [{ id, masuId, callId }](callId は呼んだ1回ごとの控えの id。曲が始まった・部屋を出たを cpuBrain へ知らせるときに渡す)
   const myCpu = (id) => (s && s.cpus.some((c) => c.id === id) ? s.members[id] : null);
   const sendCpuHb = () => { if (s) s.cpus.forEach((x) => sendOneCpuHb(x.id)); };
   const sendOneCpuHb = (cpuId) => {
@@ -40093,7 +40215,7 @@ const RHYTHM_MULTI = (() => {
       delete s.members[gone.id];
       s.cpus = s.cpus.filter((c) => c.id !== gone.id);
       if (socket) socket.send({ t: 'bye', id: gone.id });
-      try { if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId); } catch (_) { /* 返せなくても部屋は続ける */ }
+      try { if (cpuBrain && cpuBrain.refund) cpuBrain.refund(gone.masuId, gone.callId); } catch (_) { /* 返せなくても部屋は続ける */ }
     });
   };
   // 相棒は、選曲の段に入ったらすぐ選び(得意な曲)、準備の段に入ったらすぐ準備完了にする。難易度は呼んだ人と同じ
@@ -40229,6 +40351,8 @@ const RHYTHM_MULTI = (() => {
         s.playUntil = Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS;
         msg.participants.forEach((pid) => { if (s.members[pid]) s.members[pid].playing = true; });
         s.cpus.forEach((c) => { if (s.members[c.id]) s.members[c.id].res = null; });
+        // 呼んだマスモンが1曲目に入った: その1回は使った扱い(部屋を出ても返さない。2026-10-09・ユーザー指示「1曲も始まらなければ返す」)
+        s.cpus.filter((c) => msg.participants.includes(c.id)).forEach((c) => { try { if (cpuBrain && cpuBrain.started) cpuBrain.started(c.masuId, c.callId); } catch (_) { /* 印が付けられなくても部屋は続ける */ } });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
@@ -40280,7 +40404,7 @@ const RHYTHM_MULTI = (() => {
       const id = rhythmMultiMakeId('c');
       const masuId = rhythmMultiText(buddy.masuId, 80);
       if (s.cpus.some((c) => c.masuId === masuId)) return false; // 同じ子は2体呼べない
-      s.cpus.push({ id, masuId });
+      s.cpus.push({ id, masuId, callId: rhythmMultiText(buddy.callId, 40) });
       s.members[id] = {
         id, cpu: true, owner: s.selfId, name: rhythmMultiText(buddy.name, 12) || 'マスモン', level: rhythmMultiInt(buddy.level, 9999),
         mb: rhythmMultiText(buddy.baseId, 40).replace(/[^A-Za-z0-9_-]/g, ''),
@@ -40353,6 +40477,8 @@ const RHYTHM_MULTI = (() => {
       emit();
     },
     leave() {
+      // 呼んだマスモンも一緒に帰る。1曲も始まっていない子は、呼ぶ側(cpuBrain.ended)が払ったものを返す
+      if (s) s.cpus.forEach((c) => { try { if (cpuBrain && cpuBrain.ended) cpuBrain.ended(c.masuId, c.callId); } catch (_) { /* 返せなくても抜ける */ } });
       if (socket) {
         try { socket.send({ t: 'bye', id: s && s.selfId }); if (s) s.cpus.forEach((c) => socket.send({ t: 'bye', id: c.id })); } catch (_) { /* 無視 */ }
         socket.close();
@@ -41205,28 +41331,38 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     if (open) openRankHub('buddy');
   };
   const closeTalkTip = () => { setTalkTipSeen(true); void storeSet(RHYTHM_BUDDY_TALK_SEEN_KEY, true).catch(() => {}); };
-  // 呼んだときに何で払ったか(人が来て席をゆずったとき、同じものを返す)
-  const buddyPaidRef = React.useRef({});
-  const refundBuddy = (masuId) => {
-    const paid = buddyPaidRef.current[masuId];
-    delete buddyPaidRef.current[masuId];
-    if (paid === 'free') void RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyRefundFree(st, rhythmBuddyDayKey(Date.now())));
-    else if (paid === 'ticket' && onRefundBuddyTicket) void onRefundBuddyTicket();
+  // 払ったものは、呼んだ1回ごとの控え(mh_rhythm_buddy_v1 の calls)で数える(2026-10-09・ユーザー指示「1曲も始まらなければ返す」)。
+  //   人が来て席をゆずった … いままでどおり返す(cpuBrain.refund)
+  //   部屋を出た(呼んだ人が抜けた・部屋が解散した) … 1曲も始まっていなければ返す(cpuBrain.ended)。1曲始まったら使った扱い(cpuBrain.started)
+  //   アプリを閉じて残った控え … 次にモンヒロビートを開いたとき一度だけ返す(rhythmBuddySettleLeftoversOnce)
+  const refundBuddy = (masuId, callId) => {
+    void rhythmBuddySettle(callId, 'bump', onRefundBuddyTicket);
     setBuddyBumped(true);
   };
+  const endBuddy = (masuId, callId) => {
+    void rhythmBuddySettle(callId, 'end', onRefundBuddyTicket).then((paid) => { if (paid) RHYTHM_BUDDY_REFUND_NOTE.add(paid); });
+  };
+  const startBuddy = (masuId, callId) => { void RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyMarkStarted(st, callId)); };
   const [buddyBumped, setBuddyBumped] = React.useState(false);
-  React.useEffect(() => { RHYTHM_MULTI.setCpuBrain({ ...rhythmBuddyMakeBrain(songs), refund: refundBuddy }); }, [buddySongKey]);
-  // 呼ぶ: 先に今日の無料ぶん、なければセッション券を1枚使ってから部屋へ入れる
+  React.useEffect(() => { RHYTHM_MULTI.setCpuBrain({ ...rhythmBuddyMakeBrain(songs), refund: refundBuddy, ended: endBuddy, started: startBuddy }); }, [buddySongKey]);
+  React.useEffect(() => { void rhythmBuddySettleLeftoversOnce(onRefundBuddyTicket); }, []);
+  const buddyRefundNote = useRhythmBuddyRefundNote();
+  // 呼ぶ: 先に今日の無料ぶん、なければセッション券を1枚使ってから部屋へ入れる。払ったのと同時に控えを残す
   const callBuddy = async (masu) => {
     if (!masu || !RHYTHM_MULTI.canSummon()) { setBuddySheet(''); return; }
     const day = rhythmBuddyDayKey(Date.now());
-    let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFree(st, day))) ? 'free' : '';
-    if (!paid && onUseBuddyTicket) { try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; } }
+    const call = { id: rhythmBuddyCallId(), masuId: masu.id, at: Date.now(), load: RHYTHM_BUDDY_LOAD_ID };
+    let paid = (await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyUseFreeWithCall(st, day, call))) ? 'free' : '';
+    if (!paid && onUseBuddyTicket) {
+      try { paid = (await onUseBuddyTicket()) === true ? 'ticket' : ''; } catch (_) { paid = ''; }
+      if (paid) await RHYTHM_BUDDY_STORE.update((st) => rhythmBuddyAddCall(st, { ...call, paid: 'ticket', day }));
+    }
     if (!paid) return;
-    buddyPaidRef.current[masu.id] = paid;
     setBuddyBumped(false);
     const mon = RHYTHM_BUDDY_STORE.get().mons[masu.id];
-    RHYTHM_MULTI.summon({ masuId: masu.id, name: rhythmBuddyMasuName(masu), level: mon ? rhythmBuddyLevelInfo(mon.exp).level : 1, baseId: masu.baseId, colors: getMasuColors(masu) });
+    const joined = RHYTHM_MULTI.summon({ masuId: masu.id, callId: call.id, name: rhythmBuddyMasuName(masu), level: mon ? rhythmBuddyLevelInfo(mon.exp).level : 1, baseId: masu.baseId, colors: getMasuColors(masu) });
+    // 払っているあいだに満員・ライブ中になって入れなかったら、払ったぶんをすぐ返す
+    if (!joined) endBuddy(masu.id, call.id);
     setBuddySheet('');
   };
   const buddySongName = (id) => { const song = songs.find((x) => x.songId === id); return song ? rhythmSongFullName(song) : '(曲)'; };
@@ -41682,6 +41818,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div aria-hidden="true" className="shrink-0" style={{ height: 'var(--mh-sa-bottom)' }} />
         {recordOpen && <RhythmMultiRecordSheet songName={(id) => { const song = songById(id); return song ? rhythmSongFullName(song) : '(曲)'; }} onClose={() => setRecordOpen(false)} />}
         {buddySheetLayer}
+        {buddyRefundNote && <div data-rhythm-buddy-refund role="status" className="pointer-events-none absolute inset-x-3 top-3 z-[86000] mx-auto max-w-sm rounded-xl border border-lime-300/60 bg-slate-950/90 px-3 py-2 text-center text-xs font-black leading-snug text-lime-100 shadow-lg" style={{ marginTop: 'var(--mh-sa-top)' }}>{buddyRefundNote}</div>}
         {/* プライベートルーム: 部屋をつくる / 合言葉で入る(2026-10-07。もとは欄の中に作成・コード・入室を並べていた) */}
         {privateOpen && (
           <div className="absolute inset-0 z-[85000]">
@@ -42176,6 +42313,60 @@ const RHYTHM_BUDDY_STORE = (() => {
   };
   return api;
 })();
+
+// ---- 呼んだ1回ごとの控え(2026-10-09・ユーザー指示「1曲も始まらなければ返す」。計算は 33-rhythm-buddy.jsx) ----
+// いまの起動の印。アプリを閉じて残った控え(ほかの起動のもの)と、いま部屋にいる子の控えを見分ける
+const RHYTHM_BUDDY_LOAD_ID = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const rhythmBuddyCallId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+// 返したときの一言。部屋を出てモードえらびへ戻った画面でも出るよう、画面の外に数秒だけ持つ(保存しない)。続けて返したぶんは足して出す
+const RHYTHM_BUDDY_REFUND_NOTE = (() => {
+  let note = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach((fn) => { try { fn(note); } catch (_) { /* 画面側の失敗は無視 */ } });
+  return {
+    get: () => (note && Date.now() < note.until ? note : null),
+    add(paid, n = 1) {
+      if (paid !== 'free' && paid !== 'ticket') return;
+      const live = note && Date.now() < note.until ? note : { free: 0, tickets: 0 };
+      note = { free: live.free + (paid === 'free' ? n : 0), tickets: live.tickets + (paid === 'ticket' ? n : 0), until: Date.now() + 6000 };
+      emit();
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+  };
+})();
+const useRhythmBuddyRefundNote = () => {
+  const [note, setNote] = React.useState(() => RHYTHM_BUDDY_REFUND_NOTE.get());
+  React.useEffect(() => RHYTHM_BUDDY_REFUND_NOTE.subscribe(setNote), []);
+  React.useEffect(() => {
+    if (!note) return undefined;
+    const timer = setTimeout(() => setNote(RHYTHM_BUDDY_REFUND_NOTE.get()), Math.max(0, note.until - Date.now()) + 50);
+    return () => clearTimeout(timer);
+  }, [note]);
+  return note ? rhythmBuddyRefundText(note.free, note.tickets) : '';
+};
+// 控えを1つ片づけて、払ったものを返す。控えを消すのと無料1回を返すのは同じ書き込み(二重に返らない)。券は refundTicket で1枚足す。
+// 戻り値: 返したもの 'free' / 'ticket' / ''(返さなかった・片づけ済み)
+const rhythmBuddySettle = async (callId, how, refundTicket) => {
+  if (!callId) return '';
+  let r = null;
+  await RHYTHM_BUDDY_STORE.update((st) => { r = rhythmBuddySettleCall(st, callId, how, rhythmBuddyDayKey(Date.now())); return r ? r.next : null; });
+  if (!r || !r.refund) return '';
+  if (r.refund === 'ticket') { if (!refundTicket) return ''; try { await refundTicket(); } catch (_) { return ''; } }
+  return r.refund;
+};
+// アプリを閉じて残った控えを、起動ごとに一度だけ片づける(モンヒロビートの画面を開いたとき)
+let rhythmBuddyLeftoversDone = false;
+const rhythmBuddySettleLeftoversOnce = async (refundTicket) => {
+  if (rhythmBuddyLeftoversDone) return;
+  rhythmBuddyLeftoversDone = true;
+  let r = null;
+  await RHYTHM_BUDDY_STORE.update((st) => { r = rhythmBuddySettleLeftovers(st, RHYTHM_BUDDY_LOAD_ID, rhythmBuddyDayKey(Date.now())); return r ? r.next : null; });
+  if (!r) return;
+  let tickets = 0;
+  for (let i = 0; i < r.tickets; i += 1) { if (!refundTicket) break; try { await refundTicket(); tickets += 1; } catch (_) { break; } }
+  if (r.free) RHYTHM_BUDDY_REFUND_NOTE.add('free', r.free);
+  if (tickets) RHYTHM_BUDDY_REFUND_NOTE.add('ticket', tickets);
+};
 
 const useRhythmBuddyState = () => {
   const [state, setState] = React.useState(() => RHYTHM_BUDDY_STORE.get());
@@ -42866,7 +43057,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       {/* 横画面は、根の直下の子を「左の列(見出し・説明・並べ替え)」と「右の列(スクロールする一覧)」へ振り分ける
           (index.html の [data-mh-screen]:has(> .mh-scroll))。一覧だけを右の列へ入れ、広く使う。
           以前は説明も並べ替えも一覧と同じ入れ物に入れて max-w-md にしたため、左の列が空いて右が狭く、文字や札が切れた */}
-      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
+      <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" note="マスモン＝自分で育てた子。マルチに呼ぶと一緒に演奏する" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
       <section className="mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
         <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
@@ -49590,7 +49781,17 @@ function MonsterHeroGame() {
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
-      const compensationGrant = grantCompensationGifts(loginGrant.gifts);
+      // はじめて遊ぶ人(compensationEverPlayed が false)には、7〜8月の不具合のお詫びは配らない。
+      // 配らなかったidは新しいキーへ控え、はじめての設定を終えたあとの起動でも配られないようにする
+      let waivedCompensationIds = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+      if (!compensationEverPlayed) {
+        const toWaive = compensationIdsToWaive(loginGrant.gifts, waivedCompensationIds);
+        if (toWaive.length > 0) {
+          waivedCompensationIds = [...waivedCompensationIds, ...toWaive];
+          await storeSet(COMPENSATION_WAIVED_KEY, waivedCompensationIds, false);
+        }
+      }
+      const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
       // その人だけに届くお詫び。PLAYER ID はタイトル画面に出しているものと同じ経路
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
@@ -50259,7 +50460,10 @@ function MonsterHeroGame() {
         const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
         if (issued !== true) {
           const savedGifts = await storeGet('mh_gifts', [], false);
-          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          const giftsNow = Array.isArray(savedGifts) ? savedGifts : [];
+          // 配らなかったお詫びの合計を、プレオープン記念へ足す(すでにギフトボックスにあるお詫びは足さない)
+          const waivedNow = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+          const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
         }
@@ -59963,14 +60167,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           );
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-            <ScreenHead title="M/B管理" accent="text-indigo-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
+            <ScreenHead title="M/B管理" accent="text-indigo-300" note="M/B＝モンスターとブリーダー。仲間の一覧・編成・図鑑・アシストカードはここ" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement" compact/></div>
             <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
               items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
               {managementTab==='monster'?<>
-                {managementLink(<List size={18}/>,'ベースモン一覧','解放したベースモンを並べて確かめる',()=>setGameState('OWNED_MONSTERS'))}
-                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','育てたマスモンの絆・状態を見る',()=>setGameState('MASU_MONS'))}
+                {managementLink(<List size={18}/>,'ベースモン一覧','ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる',()=>setGameState('OWNED_MONSTERS'))}
+                {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','マスモン＝自分で育てた子。絆・状態を見る',()=>setGameState('MASU_MONS'))}
                 {/* モンヒロビートのマルチに呼んだマスモンの育ち具合(ビートLv)。バトルの育ちとは別(docs/spec/RHYTHM_BUDDY.md) */}
                 {RELEASE_FLAGS.rhythmMulti===true&&managementLink(<Activity size={18}/>,'マスモン一覧(モンヒロビート)','マルチに呼んだマスモンのビートLv・調子・得意な曲を見る',()=>openMasuBeat('MB_MANAGEMENT'),{'data-mb-masu-beat':true})}
                 {managementLink(<BookOpen size={18}/>,'モンスター図鑑','出会ったモンスターと血統をふり返る',()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');})}
@@ -62483,7 +62687,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* モンスター一覧(解放済みの種を一覧表示・タップで詳細) */}
         {gameState==='OWNED_MONSTERS'&&(
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-            <ScreenHead title="ベースモン一覧" accent="text-cyan-400" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
+            <ScreenHead title="ベースモン一覧" accent="text-cyan-400" note="ベースモン＝解放した種族そのもの。勇者モンにして遊ぶとマスモンになる" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className="shrink-0 w-full mb-2"><AssistantBubble scene="monsterList" compact/></div>
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
@@ -69876,7 +70080,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:152px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:10px;text-align:right}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:152px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:10px;text-align:right}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも

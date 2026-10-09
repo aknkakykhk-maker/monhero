@@ -1,6 +1,8 @@
 // 「モンヒロ社 社長室」のページを作る。社長が見る報告のまとめ(アーティファクト1枚)。
 //
-// 中身は docs/playbot/dashboard/ の3つの JSON(board: 判断待ち・進行中・公開 / teams: 各部の様子 / scores: 成績)。
+// 中身は docs/playbot/dashboard/ の JSON(ledger: 頼みと仕事の台帳 / teams: 各部の様子 / scores: 成績)。
+// 判断待ち・進行中・公開は台帳(ledger.json)から ledger.js が作る(2026-10-09 改善部の提案 C1)。
+// board.json も読む(台帳へ移す前の書き方。台帳と同じ id の項目は台帳を優先)。
 // 統括部長:モンヒロくんが JSON を直してこれを回し、出来たページを Artifact で同じ URL へ出し直す。
 // スクリプトを使わない素の HTML にしてある(2026-10-09 ダッシュボード型が社長の iPhone で「対応していないブラウザ」になったため)。
 //
@@ -22,7 +24,13 @@ function readRows(name) {
 }
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const board = readRows('board');
+// 成績は「できごとの記録」から数え直してから読む(scores.json を手で直さない。scoreboard.js)
+require('./scoreboard.js').writeAll();
+const TODAY = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+const ledger = require('./ledger.js').writeAll(TODAY); // 台帳を確かめ、REQUESTS.md の表も作り直す
+const legacy = fs.existsSync(path.join(DIR, 'board.json')) ? readRows('board') : [];
+const ledgerIds = new Set(ledger.board.map((r) => r.id).concat(ledger.rows.map((e) => e.id)));
+const board = [...ledger.board, ...legacy.filter((r) => !ledgerIds.has(r.id))];
 const teams = readRows('teams');
 const scores = readRows('scores').map((r) => ({ ...r, 点: Number(r.点) || 0, 本物: Number(r.本物) || 0 }))
   .sort((a, b) => b.点 - a.点 || b.本物 - a.本物);
@@ -36,6 +44,45 @@ const shipped = byKind('公開');
 
 // 判断待ちの種類。提案 = 部が出した改良・調整の案(案を `案` に並べる) / 質問 = 部が進め方を聞いている
 const KIND = { 提案: '提案', 質問: '質問' };
+// 押すと開く「くわしく」欄(2026-10-09 社長「社長室でタップしたらさらに細かく見れる仕組みって作れる?」)。
+// board.json の項目に `詳細: [{ 名前, path }]` を書くと、その資料(リポジトリの .md)を項目の下に開閉式で出す。
+// スクリプトは使わず <details> で開閉する(社長の iPhone でも動く)。資料の ## ごとにさらに開閉できる。
+function inlineMd(t) {
+  return esc(t).replace(/&lt;br&gt;/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+function mdToHtml(text) {
+  const out = [];
+  let open = false, list = null, table = null;
+  const flushList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  const flushTable = () => {
+    if (!table) return;
+    const rows = table.filter((r) => !/^\|\s*:?-{2,}/.test(r)).map((r) => r.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()));
+    const [head, ...body] = rows;
+    out.push(`<div class="md-table"><table><thead><tr>${head.map((c) => `<th>${inlineMd(c)}</th>`).join('')}</tr></thead><tbody>${
+      body.map((r) => `<tr>${r.map((c) => `<td>${inlineMd(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+    table = null;
+  };
+  for (const raw of text.split('\n')) {
+    const line = raw.trimEnd();
+    if (/^\|/.test(line)) { flushList(); (table = table || []).push(line); continue; }
+    flushTable();
+    let m;
+    if ((m = line.match(/^# (.+)/))) { flushList(); continue; }
+    if ((m = line.match(/^## (.+)/))) { flushList(); if (open) out.push('</details>'); out.push(`<details class="md-sec"><summary>${inlineMd(m[1])}</summary>`); open = true; continue; }
+    if ((m = line.match(/^#{3,} (.+)/))) { flushList(); out.push(`<h4>${inlineMd(m[1])}</h4>`); continue; }
+    if ((m = line.match(/^\s*(?:[-*]|\d+\.) (.+)/))) { const kind = /^\s*\d/.test(line) ? 'ol' : 'ul'; if (list !== kind) { flushList(); out.push(`<${kind}>`); list = kind; } out.push(`<li>${inlineMd(m[1])}</li>`); continue; }
+    flushList();
+    if (line.trim()) out.push(`<p>${inlineMd(line)}</p>`);
+  }
+  flushList(); flushTable(); if (open) out.push('</details>');
+  return out.join('\n');
+}
+const more = (r) => (Array.isArray(r.詳細) ? r.詳細 : []).map((d) => {
+  let body;
+  try { body = mdToHtml(fs.readFileSync(path.join(ROOT, d.path), 'utf8')); } catch (e) { body = `<p class="empty">資料が見つかりません(${esc(d.path)})</p>`; }
+  return `<details class="more"><summary>くわしく見る: ${esc(d.名前)}</summary><div class="md">${body}</div></details>`;
+}).join('');
+
 const meta = (parts) => parts.filter(Boolean).map((p) => `<span>${esc(p)}</span>`).join('');
 const decideHtml = decide.length
   ? decide.map((r) => `
@@ -44,7 +91,7 @@ const decideHtml = decide.length
         <h3>${esc(r.件名)}</h3>
         <p>${esc(r.中身)}</p>${Array.isArray(r.案) && r.案.length ? `
         <ol class="options">${r.案.map((o) => `<li>${esc(o)}</li>`).join('')}</ol>` : ''}
-        <div class="meta">${meta([r.部 + ' ' + r.担当, r.見る場所, r.日付])}</div>
+        <div class="meta">${meta([r.部 + ' ' + r.担当, r.見る場所, r.日付])}</div>${more(r)}
       </article>`).join('')
   : '<p class="empty">いま決めてほしいことはありません。</p>';
 
@@ -53,7 +100,7 @@ const listHtml = (rows, fields) => rows.length
       <li id="${esc(r.id)}">
         <div class="row-title">${esc(r.件名)}</div>
         ${r.中身 ? `<div class="row-body">${esc(r.中身)}</div>` : ''}
-        <div class="meta">${meta(fields.map((f) => (r[f] ? (f === 'PR' ? 'PR ' + r[f] : f === '見込み' ? '見込み ' + r[f] : r[f]) : '')))}</div>
+        <div class="meta">${meta(fields.map((f) => (r[f] ? (f === 'PR' ? 'PR ' + r[f] : f === '見込み' ? '見込み ' + r[f] : r[f]) : '')))}</div>${more(r)}
       </li>`).join('')}</ul>`
   : '<p class="empty">ありません。</p>';
 
@@ -133,6 +180,21 @@ section{display:flex;flex-direction:column;gap:10px}
 .bar.neg{background:var(--bad);opacity:.8}
 .bar-val{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
 .note{font-size:12px;color:var(--muted);margin:0}
+.more{margin-top:6px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.more>summary{cursor:pointer;padding:8px 12px;font-size:13px;font-weight:700;color:var(--accent);list-style-position:inside}
+.more[open]>summary{border-bottom:1px solid var(--line)}
+.md{padding:8px 12px 12px;display:flex;flex-direction:column;gap:6px;font-size:13px;min-width:0}
+.md p{margin:0}
+.md ul,.md ol{margin:0;padding-left:1.3em}
+.md h4{margin:6px 0 0;font-size:13px}
+.md code{font-size:12px;background:var(--track);border-radius:4px;padding:0 3px}
+.md-sec{border-top:1px solid var(--line);padding-top:4px}
+.md-sec>summary{cursor:pointer;font-weight:700;padding:4px 0;font-size:13px}
+.md-sec[open]>summary{color:var(--accent)}
+.md-table{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+.md-table table{border-collapse:collapse;font-size:12px;min-width:100%}
+.md-table th,.md-table td{border:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top;white-space:nowrap}
+.md-table td:last-child{white-space:normal;min-width:14em}
 </style>
 <div class="wrap">
   <header>
@@ -189,14 +251,21 @@ console.log('OK: ' + path.relative(ROOT, OUT) + ' (判断待ち ' + decide.lengt
 // 今日 main に入った PR のうち、board.json のどこにも番号が無いものを並べる。統括部長の記録用の PR(window-requests)と部の記録だけの PR(playbot-history)は除く。
 try {
   const { execSync } = require('child_process');
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+  const today = TODAY;
   const log = execSync(`git log origin/main --first-parent --since="${today} 00:00 +0900" --format=%s`, { cwd: ROOT, encoding: 'utf8' });
-  const listed = new Set((JSON.stringify(board).match(/#\d+/g) || []));
+  const listed = new Set([...(JSON.stringify(board).match(/#\d+/g) || []), ...ledger.prs]);
   const missing = log.split('\n').filter((s) => s && !/window-requests|playbot-history|^台帳[:：]/.test(s))
     .map((s) => ({ s, n: (s.match(/#(\d+)/) || [])[0] })).filter((x) => x.n && !listed.has(x.n));
   if (missing.length) {
     console.log('要確認: 今日公開されたのに社長室に載っていない PR が ' + missing.length + ' 件(載せるか、載せない理由があればそのまま):');
     missing.forEach((x) => console.log('  ' + x.s));
+  }
+  // 台帳の「いま」が古いままの件(PR はすべて main に入ったのに、受けたのまま。2026-10-09 改善部 C1)
+  const merged = new Set(execSync('git log origin/main --first-parent -800 --format=%s', { cwd: ROOT, encoding: 'utf8' }).match(/#\d+/g) || []);
+  const stale = require('./ledger.js').staleRows(ledger.rows, merged);
+  if (stale.length) {
+    console.log('要確認: PR はすべて公開済みなのに、台帳の「いま」が「受けた」のままの件が ' + stale.length + ' 件(終わっていれば 公開済み に、作業中なら 班で作業中 に):');
+    stale.forEach((e) => console.log('  ' + e.id + ' ' + (e.件名 || e.頼み).slice(0, 30) + ' … ' + e.いま + ' ' + e.PR.join('・')));
   }
 } catch (e) {
   console.log('要確認: 公開の載せ忘れを確かめられなかった(' + e.message.split('\n')[0] + ')');
