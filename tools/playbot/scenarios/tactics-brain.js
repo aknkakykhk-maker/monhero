@@ -318,6 +318,8 @@ async function placePick(s, d) {
 // EX の役目。名簿(tactics-roster.json。ゲームの TACTICS_EX_SKILLS から読んだ effect)があれば、それで全員ぶん決める。
 // 2026-10-09: 表に無い子は「火力」扱いで、ゴーレム(使わない)・オボロゲソウ(吸収)・ハム(カウンター)・エイキ(距離)などが
 // 使いどころを外していた(Tier 表で「EX を使えていない」と出た)。
+// 名前 → 名簿の1体(間合い適性 dist・特性 trait・固有技・EX)。記録で「得意な間合いで撃てたか」「特性が効いたか」を数えるのに使う
+const ROSTER_BY_NAME = {};
 const EX_ROLE_BY_EFFECT = {
   statBoost: 'refill', coverAll: 'shield', partyGuard: 'shield', timeStop: 'shield',
   damageBack: 'selfGuard', avoidCharge: 'selfGuard', dodgeCombo: 'dodge', distMatch: 'distBurst', counter: 'counter',
@@ -333,7 +335,10 @@ const EX_ROLE = (() => {
   };
   try {
     const r = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'tactics-roster.json'), 'utf8'));
-    for (const m of r.monsters || []) if (m && m.ex && EX_ROLE_BY_EFFECT[m.ex.effect]) out[m.name] = EX_ROLE_BY_EFFECT[m.ex.effect];
+    for (const m of r.monsters || []) {
+      if (m && m.ex && EX_ROLE_BY_EFFECT[m.ex.effect]) out[m.name] = EX_ROLE_BY_EFFECT[m.ex.effect];
+      if (m && m.name) ROSTER_BY_NAME[m.name] = m;
+    }
   } catch (e) { /* 名簿が無いときは上の表だけ */ }
   return out;
 })();
@@ -647,7 +652,7 @@ function makeLog(meta) {
       if (!b.wave) return;
       if (!cur || cur.wave !== b.wave) {
         cur = { wave: b.wave, enemy: b.enemy ? b.enemy.name : '?', enemyMax: b.enemy ? b.enemy.max : 0, turns: 0, threats: {}, guards: 0,
-          dealt: 0, taken: 0, healed: 0, downs: 0, byMon: {}, byType: {}, presence: {}, partyMax: 0, startParty: partyOf(b), endParty: null, result: '' };
+          dealt: 0, taken: 0, healed: 0, downs: 0, byMon: {}, byType: {}, use: {}, texts: {}, traitHits: 0, presence: {}, partyMax: 0, startParty: partyOf(b), endParty: null, result: '' };
         L.waves.push(cur);
       }
       cur.turns = Math.max(cur.turns, b.turn || 0);
@@ -658,6 +663,14 @@ function makeLog(meta) {
       const enemyAfter = after && after.enemy && after.wave === b.wave ? after.enemy.hp : 0;
       const dealt = b.enemy ? Math.max(0, b.enemy.hp - enemyAfter) : 0;
       cur.dealt += dealt;
+      // 子ごとに、撃った技の種類と、そのときの「敵のいる間合いでのその子の適性」(S〜G)を数える
+      const di = b.enemy ? DISTS.indexOf(b.enemy.dist) : -1;
+      for (const p of picks.filter((q) => q.mon && (q.kind === 'attack' || q.type === 'unique'))) {
+        const u = (cur.use[p.mon] = cur.use[p.mon] || { atk: 0, unique: 0, other: 0, apt: {} });
+        if (p.type === 'unique') u.unique += 1; else if (/^atk/.test(p.type || '')) u.atk += 1; else u.other += 1;
+        const apt = di >= 0 && ROSTER_BY_NAME[p.mon] && Array.isArray(ROSTER_BY_NAME[p.mon].dist) ? ROSTER_BY_NAME[p.mon].dist[di] : '';
+        if (apt) u.apt[apt] = (u.apt[apt] || 0) + 1;
+      }
       for (const p of picks) {
         if (p.kind === 'guard') cur.guards += 1;
         cur.byType[p.type || p.kind] = (cur.byType[p.type || p.kind] || 0) + 1;
@@ -676,6 +689,18 @@ function makeLog(meta) {
       }
       if (after) cur.endParty = partyOf(after.wave === b.wave ? after : b);
     },
+    // バトルの記録欄(Battle Log)に新しく出た文。数字だけのダメージの行は除き、文ごとに数える。
+    // 勇者特性の名前(「眼力！」など)が入った行は、特性が効いた回として数える(特性は勇者モンのものだけが効く)
+    lines: (newLines) => {
+      if (!cur) return;
+      const trait = (ROSTER_BY_NAME[L.build.hero] || {}).trait || '';
+      for (const t0 of newLines) {
+        const t = String(t0).replace(/[\d,]+/g, '#').slice(0, 40);
+        if (/^敵に # ダメージ|^味方が # ダメージを受けた|^ターン|^WAVE/.test(t)) continue;
+        cur.texts[t] = (cur.texts[t] || 0) + 1;
+        if (trait && String(t0).includes(trait)) cur.traitHits += 1;
+      }
+    },
     waveEnd: (result) => { if (cur && !cur.result) cur.result = result; },
     finish: (result, reason) => { L.result = result; L.reason = reason; if (cur && !cur.result) cur.result = result === 'clear' ? 'clear' : result; },
   };
@@ -683,6 +708,28 @@ function makeLog(meta) {
 }
 const partyOf = (b) => b.slots.filter((x) => x.occupied).map((x) => ({ name: x.name, hp: x.hp ? x.hp.now : 0, max: x.hp ? x.hp.max : 0, downed: x.downed }));
 const sumHp = (b) => b.slots.filter((x) => x.occupied).reduce((a, x) => a + (x.hp ? x.hp.now : 0), 0);
+
+// バトルの記録欄を開いて読み、前回から増えた行だけ返す(開いて読んで閉じる。1ターンに1回、0.5秒ほど)
+async function readBattleLog(s, mem) {
+  const opened = await s.page.evaluate(() => { const b = document.querySelector('[data-battle-log-button]'); if (!b) return false; b.click(); return true; }).catch(() => false);
+  if (!opened) return [];
+  await s.wait(250);
+  const lines = await s.page.evaluate(() => [...document.querySelectorAll('[data-battle-log-list] li')].map((li) => (li.innerText || '').replace(/\s+/g, ' ').trim())).catch(() => []);
+  await s.page.evaluate(() => {
+    const l = document.querySelector('[data-battle-log-list]');
+    const root = l && l.parentElement;
+    const btn = root && [...root.querySelectorAll('button')].find((x) => /閉じる/.test(x.innerText || ''));
+    if (btn) btn.click();
+  }).catch(() => {});
+  await s.wait(200);
+  const prev = mem.logLines || [];
+  let start = 0;
+  for (let k = Math.min(prev.length, lines.length); k > 0; k--) {
+    if (prev.slice(-k).join('\n') === lines.slice(0, k).join('\n')) { start = k; break; }
+  }
+  mem.logLines = lines;
+  return lines.slice(start);
+}
 
 // 勝てた/負けた理由を、記録から1〜3行で言う
 function explain(L) {
@@ -807,16 +854,30 @@ function rememberRun(L, stats) {
   const k = loadKnowledge();
   const dmg = {};
   for (const w of L.waves) for (const [m, d] of Object.entries(w.byMon || {})) dmg[m] = (dmg[m] || 0) + d;
+  const use = {};
+  const texts = {};
+  for (const w of L.waves) {
+    for (const [m, u] of Object.entries(w.use || {})) {
+      const t = (use[m] = use[m] || { atk: 0, unique: 0, other: 0, apt: {} });
+      t.atk += u.atk; t.unique += u.unique; t.other += u.other;
+      for (const [g, n] of Object.entries(u.apt)) t.apt[g] = (t.apt[g] || 0) + n;
+    }
+    for (const [t, n] of Object.entries(w.texts || {})) texts[t] = (texts[t] || 0) + n;
+  }
   k.runs.push({
     at: new Date().toISOString().slice(0, 16), mode: L.meta.mode, difficulty: L.meta.difficulty, hero: L.build.hero, pool: L.build.pool,
     allies: L.build.allies.map((a) => a.name), placements: L.build.placements.map((p) => `${p.name || '?'}:${p.dist}${p.grade}`),
     assists: L.build.assists.map((a) => `${a.card}${a.upgrade ? '+' : ''}`), ex: Object.entries(L.ex.reduce((o, e) => { o[e.ex || e.mon] = (o[e.ex || e.mon] || 0) + 1; return o; }, {})).map(([n, c]) => `${n}×${c}`),
     result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
+    // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
+    use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
+    exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
+    texts: Object.entries(texts).sort((a, b) => b[1] - a[1]).slice(0, 30),
   });
   // 増えすぎないよう、新しい 300 回ぶんだけ持つ
   k.runs = k.runs.slice(-300);
   fs.writeFileSync(KNOWLEDGE, `${JSON.stringify(k, null, 1)}\n`);
 }
 
-module.exports = { saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
+module.exports = { readBattleLog, saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
