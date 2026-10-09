@@ -414,6 +414,12 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       st = await readTactics(s);
     }
     let b = await brain.readBoard(s);
+    // ★敵のライフが0なら、その WAVE はもう終わっている。「WAVE n リザルト」は少し遅れて出るので、出るまで待って合間へ進む
+    //   (2026-10-09 Hard: 倒した直後に手札の無い盤面を読み、「実行が押せない」で打ち切りになっていた)
+    if (b.enemy && b.enemy.hp === 0) {
+      for (let k = 0; k < 20 && (await readTactics(s)).inBattle; k++) await s.wait(500);
+      continue;
+    }
     stats.waveReached = Math.max(stats.waveReached, b.wave || 0);
     stats.waveMax = Math.max(stats.waveMax || 0, b.waveMax || 0);
     const downed = b.slots.filter((x) => x.occupied && x.downed).length;
