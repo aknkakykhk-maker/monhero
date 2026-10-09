@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0d068ac36e41a6f
+// source-sha256: 59c56cff0e1bef47
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 14:32";
+const BUILD_DATE = "2026-10-09 15:52";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -73518,6 +73518,7 @@ function MonsterHeroGame() {
   const [debugBattle, setDebugBattle] = useState(false);
   const debugBattleRef = useRef(false);
   const debugMonsterPreviewRef = useRef(false);
+  const debugUnlockAllRef = useRef(false);
   const [extremeRun, setExtremeRun] = useState(false);
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
@@ -77895,13 +77896,14 @@ function MonsterHeroGame() {
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon => mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = list => {
     if (battleScenarioRef.current) return list;
+    if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon = makeDebugStrongestMonster();
     const preview = debugOnlyMonsterList();
     const previewIds = new Set(preview.map(mon => mon.id));
     return [debugMon, ...preview, ...list.filter(mon => mon?.id !== debugMon.id && !previewIds.has(mon?.id))];
   };
-  const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
+  const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => m && (debugUnlockAllRef.current ? !m.debugOnly : unlockedMonsterIds.includes(m.id)));
   const speciesChallengeJoinPool = () => {
     const run = speciesChallengeBattleRunRef.current;
     if (!run) return null;
@@ -77915,6 +77917,7 @@ function MonsterHeroGame() {
   };
   const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
   const getActiveTeachingCards = () => {
+    if (debugUnlockAllRef.current) return TEACHING_CARDS.filter(t => t && !t.debugOnly);
     const list = TEACHING_CARDS.filter(t => teachingRosterIds.includes(t.id));
     return list.length > 0 ? list : TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
   };
@@ -81906,6 +81909,7 @@ function MonsterHeroGame() {
     clearQuickRunProgress();
     debugBattleRef.current = false;
     debugMonsterPreviewRef.current = false;
+    debugUnlockAllRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
     raidJackRunRef.current = null;
@@ -92020,9 +92024,9 @@ function MonsterHeroGame() {
             setRunMode(battleMode);
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
-            debugBattleRef.current = false;
+            debugBattleRef.current = debugUnlockAllRef.current;
             extremeRunRef.current = false;
-            setDebugBattle(false);
+            setDebugBattle(debugUnlockAllRef.current);
             setExtremeRun(false);
             setDebugOutcome(null);
             setMonSelection(getActiveMonsterList());
@@ -92988,9 +92992,9 @@ function MonsterHeroGame() {
             quickRewardPolicyRunRef.current = quick ? normalizeQuickRewardPolicy(quickRewardPolicy) : QUICK_REWARD_POLICY_GROWTH;
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
-            debugBattleRef.current = false;
+            debugBattleRef.current = debugUnlockAllRef.current;
             extremeRunRef.current = tacticsExtreme;
-            setDebugBattle(false);
+            setDebugBattle(debugUnlockAllRef.current);
             setExtremeRun(tacticsExtreme);
             setDebugOutcome(null);
             const baseMons = pro ? getUnlockedBaseMonsterList() : [];
@@ -95417,6 +95421,23 @@ function MonsterHeroGame() {
     }, "⚔️ バトルモード", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません")), React.createElement("button", {
+      "data-debug-unlock-all-battle": true,
+      onClick: () => {
+        debugUnlockAllRef.current = true;
+        debugBattleRef.current = true;
+        debugMonsterPreviewRef.current = false;
+        extremeRunRef.current = false;
+        setDebugBattle(true);
+        setExtremeRun(false);
+        setBattleMode(BATTLE_MODE_CHALLENGE);
+        setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+        setModeSelectTab('mode');
+        setGameState('BATTLE_SYSTEM_SELECT');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "🔓 すべて解放してバトル", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "全モンスター・全アシストカード・全難易度を選べます・解放は保存されず、記録・ランキング・報酬もつきません")), React.createElement("button", {
       type: "button",
       "data-battle-perf-toggle": true,
       "aria-pressed": battlePerfOn,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e3bfe702b4e4480d
+// generated-sha256: b2582d56e2ed92a0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 14:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 15:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -45970,6 +45970,11 @@ function MonsterHeroGame() {
   // 「公開前のタクティクスEXスキルを距離枠から開けるようにするか」(tacticsExEnabled)だけに使い、
   // 保存・スコア・ランキングの判定には一切使わない。HOMEへ戻ると落ちる
   const debugMonsterPreviewRef = useRef(false);
+  // 「デバッグ設定の 🔓 すべて解放してバトル から入った」しるし(2026-10-09 ユーザー指示「デバッグでできるようにできないの？
+  // 専用デバッグモード作れば」。ボット(タクティクスくん)と人が、全モンスター・全アシストカードで同じ条件を試すため)。
+  // 立っているあいだは、解放していないモンスター・アシストカードも選べる。★解放そのものは保存しない(このしるしはメモリだけ)。
+  // 持っていない子で遊ぶので、記録・ランキング・報酬はすべて止める(debugBattleRef を立てたままにする。HOMEへ戻ると落ちる)
+  const debugUnlockAllRef = useRef(false);
   const [extremeRun, setExtremeRun] = useState(false);
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
@@ -50393,6 +50398,8 @@ function MonsterHeroGame() {
     // 台本の敵(HP500)を距離技の一撃で倒してしまい、通常攻撃・技変更・固有技の説明が
     // まるごと飛ぶ(2026-09-12・ユーザー指摘)
     if (battleScenarioRef.current) return list;
+    // 「すべて解放してバトル」は公開済みの全モンスターで比べるための入口。デバッグ最強モン・正式実装前の子は混ぜない
+    if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
     const preview=debugOnlyMonsterList();
@@ -50401,7 +50408,8 @@ function MonsterHeroGame() {
   };
   // 勇者モン選択の「ベースモン」タブ用。解放済みの種は編成に入れていなくても選べる。
   // マスモン登録のためだけに編成を入れ替える手間を無くすためのもの。
-  const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
+  // 「すべて解放してバトル」のあいだは、正式実装前(debugOnly)を除く全種を並べる
+  const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => m && (debugUnlockAllRef.current ? !m.debugOnly : unlockedMonsterIds.includes(m.id)));
   // 種族チャレンジで合流できるのは「出撃前に選んだ供モンのうち、まだ合流していない子」だけ。
   // 種族チャレンジのランでなければnullを返す
   const speciesChallengeJoinPool = () => {
@@ -50425,6 +50433,8 @@ function MonsterHeroGame() {
   // 一度に見せる候補の数。プロは5体からランダムに3体だけ見せる
   const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
   const getActiveTeachingCards = () => {
+    // 「すべて解放してバトル」のあいだは、全アシストカードを持っていることにする(保存はしない)
+    if (debugUnlockAllRef.current) return TEACHING_CARDS.filter(t => t && !t.debugOnly);
     const list = TEACHING_CARDS.filter(t => teachingRosterIds.includes(t.id));
     return list.length > 0 ? list : TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
   };
@@ -53351,6 +53361,7 @@ function MonsterHeroGame() {
     debugBattleRef.current = false;
     // 正式実装前のモンスターを勇者モン選択へ出すしるしも、HOMEへ戻る時点で必ず落とす
     debugMonsterPreviewRef.current = false;
+    debugUnlockAllRef.current = false; // 「すべて解放してバトル」もHOMEで落とす(解放は保存していない)
     extremeRunRef.current = false;
     debugResultRef.current = false;
     raidJackRunRef.current = null;
@@ -60147,7 +60158,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className={`text-center text-[7px] tracking-[.2em] font-black ${key==='EXTREME'?'text-fuchsia-300':'text-slate-400'}`}>{key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'}</div><h3 className="text-center text-lg font-black italic leading-tight" style={{color:setting.text}}>{setting.label}</h3>{(()=>{const rec=recordBox(key);return(
                 <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="block text-[8px] text-slate-400 font-black">{rec.label}</small><b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b><span className="block text-right text-[9px] text-amber-300">{rec.sub}</span></div>
               );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>{/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
-                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');advanceRunStage('PICK_HERO');}} className={`mhms-card min-h-[44px] font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
+                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=debugUnlockAllRef.current;extremeRunRef.current=false;setDebugBattle(debugUnlockAllRef.current);setExtremeRun(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');advanceRunStage('PICK_HERO');}} className={`mhms-card min-h-[44px] font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
                 スキップはクイックモード専用。チャレンジで使えるとスコアを出さずに報酬だけ取れてしまい、
                 ランキングを競う意味が薄れるため */}{(()=>{const tid=SKIP_TICKETS[key];if(!quick)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">スキップはクイックモード専用</div>);if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);if(!skipAllowedByPolicy(quickRewardPolicy))return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight">スキップは「育成」方針のときだけ使えます</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`relative mx-1.5 mh-hit-expand-dot w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* ランキングへの導線はモードのタブのすぐ下へ移したので、ここには助手コメントだけを置く */}
@@ -60558,7 +60569,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             // debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。
                             // 難易度を確定したら、そのまま種族チャレンジの勇者選択へ戻す
                             if(species){Audio_.se.tap();setSpeciesChallengeSelection(current=>({...current,difficultyId:key,heroId:'',allyIds:[],run:null,step:'hero'}));setGameState('SPECIES_CHALLENGE_SELECT');return;}
-                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=tacticsExtreme;setDebugBattle(false);setExtremeRun(tacticsExtreme);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');advanceRunStage('PICK_HERO');}} className={`mhbt-go w-full ${!quickUnlocked||(pro&&!proReady)?'sm':''} disabled:opacity-40${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`}>{!quickUnlocked?lockText:pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=debugUnlockAllRef.current;extremeRunRef.current=tacticsExtreme;setDebugBattle(debugUnlockAllRef.current);setExtremeRun(tacticsExtreme);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');advanceRunStage('PICK_HERO');}} className={`mhbt-go w-full ${!quickUnlocked||(pro&&!proReady)?'sm':''} disabled:opacity-40${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`}>{!quickUnlocked?lockText:pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
                           {quick&&(()=>{const tid=SKIP_TICKETS[key];if(!tid)return null;const have=ownedItems[tid]||0;const policyOk=skipAllowedByPolicy(quickRewardPolicy);if(!policyOk)return(<div className="min-h-[40px] rounded-xl bg-white/40 flex items-center justify-center px-2 text-[10px] font-black text-slate-700 text-center leading-tight">スキップは「育成」方針のときだけ使えます</div>);return(
                             <div className="flex gap-1.5"><button disabled={!quickUnlocked||have<=0||!!battleTutorial} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked&&have>0?'bg-slate-900 text-white active:scale-95':'bg-white/40 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked&&have>0?'bg-white/20 text-teal-100':'bg-white/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-white/45 text-slate-900 font-black active:scale-95">？</button></div>
@@ -61512,6 +61523,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">⚔️ バトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">モード選択・デバッグ戦・種族チャレンジ・ダンジョンRPG・チュートリアル</small></summary>
                 <div className="space-y-2 border-t border-fuchsia-500/30 p-3">
                   <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+                  {/* 全モンスター・全アシストカードを選べる状態で、ふつうの入口(仕組みえらび)から遊ぶ。解放は保存せず、記録・ランキング・報酬は止める。
+                      ボット(タクティクスくん)のバランス確認と、人が同じ条件を試すための入口(2026-10-09 ユーザー指示) */}
+                  <button data-debug-unlock-all-battle onClick={()=>{debugUnlockAllRef.current=true;debugBattleRef.current=true;debugMonsterPreviewRef.current=false;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🔓 すべて解放してバトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全モンスター・全アシストカード・全難易度を選べます・解放は保存されず、記録・ランキング・報酬もつきません</small></button>
                   {/* バトルの性能計測(2026-09-28)。ONにするとタクティクス新画面の左上に、コマの速さ・遅いコマの割合・
                       長い処理・動き続けているアニメーションの数・自動で軽さを下げた記録を出す。OFFのあいだは数えない。
                       プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
