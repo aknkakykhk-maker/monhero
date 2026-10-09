@@ -161,6 +161,13 @@
   node tools/playbot/tactics-balance.js --md docs/playbot/reports/<日付>/tactics-balance.md
   ```
   `PLAYBOT_TACTICS_UNLOCK` は、その難易度の1つ前までをクリアしたことにして始める(ボットの手元のブラウザだけ。本物のセーブには触れない)
+- **モンスターの Tier 表**(2026-10-09 社長「徐々にで良いから色んなモンスターを使って Tier 表も…バランス調整提案も」)は研究所が育てる。
+  点検の時間(60分まで)で回る分だけ、「すべて解放してバトル」で勇者モンを**試した回数の少ない子から**入れ替えて足す。表と案は `tactics-tier.js` が覚え書きから作る(**案だけ。ゲームの数字は変えない**)
+  ```
+  PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_EXPLORE=1 PLAYBOT_TACTICS_DIFF=Expert PLAYBOT_TACTICS_RUNS=2 node tools/playbot/playbot.js --only tactics
+  node tools/playbot/tactics-tier.js --md docs/playbot/reports/tier/monster-tier.md
+  ```
+  更新したら統括部長へ「何体ぶん増えた・Tier が動いた子・新しい提案」を2〜3行で送る
 - 止まった・負けたときは、記録の `why`(理由)と `waves[].threats`(その WAVE の予告)を見て、ゲームの不具合か、ボットの判断の足りなさかを分けて書く。
   ボットの判断の足りなさは、研究所:ハカセくんへ回す(その場で済む待ち方・押し方の直しは部で直してよい)
 
