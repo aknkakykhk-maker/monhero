@@ -367,7 +367,6 @@ function decideTurn(st) {
           let rank = full ? value : value / Math.pow(Math.max(8, cost), 0.7) * 7;
           if (card.type === 'range_atk' && wantPull && card.rangeIdx === mainDist) rank *= 3;
           // best の使い方: 回避の EX が効いている子へ敵を引き寄せる・カウンターのハムに殴らせる
-          if (card.type === 'range_atk' && hint.pullTo != null && card.rangeIdx === hint.pullTo) rank *= 5;
           if (hint.mustAttack != null && slot === hint.mustAttack) rank *= 4;
           atkOpts.push({ hi, card, slot, value, rank, cost });
         } else if (card.type === 'guard') {
@@ -383,6 +382,13 @@ function decideTurn(st) {
       if (kind === 'attack') planned += o.value;
       if (kind === 'guard') guarded[o.slot] = (guarded[o.slot] || 0) + 1;
     };
+    // best: 回避の EX が効いている子へ敵を引き寄せる距離撃は、ほかより先に置く
+    if (hint.pullTo != null && !hint.pulled) {
+      const p = atkOpts.find((a) => a.card.type === 'range_atk' && a.card.rangeIdx === hint.pullTo);
+      hint.pulled = true;
+      if (p) { take(p, 'attack'); continue; }
+      hint.noGuard = (hint.noGuard || []).filter((s) => s !== hint.pullTo); // 引き寄せられないなら守る
+    }
     // ① とどめ
     const lethal = atkOpts.slice(0, left).reduce((s, x) => s + x.value, 0) + planned >= st.enemy.hp;
     if (!lethal) {
@@ -525,41 +531,44 @@ const EX_ROLE_BY_EFFECT = {
   psychoLock: 'burst', thunder: 'burst', multiBuff: 'burst', stage: 'burst', pandoraBox: 'burst', partyBoost: 'burst',
   weaponChange: 'burst', comboBurst: 'burst', nightmareKey: 'burst',
 };
-// (a) いまのボットの決め方。tactics-brain.js maybeUseEx(356〜)の条件をそのまま写した
-function policyBot(st) {
-  const b = boardView(st);
+// (a) いまのボットの決め方。tactics-brain.js maybeUseEx(356〜)の条件をそのまま写した。
+//   botWhy は「使う理由」(使わないなら '')。best からも呼ぶ
+function botWhy(st, b, x) {
   const threat = b.threat;
   const bigHit = threat === 'big' || threat === 'all' || threat === 'pierce' || (threat === 'multi' && b.aimedDamage > 0)
-    || b.slots.some((x) => x.aimDamage && x.hp && x.aimDamage >= x.hp.now * 0.8);
+    || b.slots.some((y) => y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.8);
   const aliveCount = b.slots.filter((y) => y.occupied && !y.downed).length;
+  const role = EX_ROLE_BY_EFFECT[x.def.effect] || 'burst';
+  if (role === 'shield' && x.id === 'Monol' && aliveCount < 2) return '';
+  const enemyFull = b.enemy.hp >= b.enemy.max * 0.5;
+  const gutsLow = x.guts.now < x.guts.max * 0.25;
+  const hpLow = x.hp.now < x.hp.max * 0.4;
+  const late = b.wave >= 5;
+  const victim = b.slots.find((y) => y.occupied && !y.downed && y.i !== x.i && y.aimDamage && y.aimDamage >= y.hp.now * 0.5);
+  if (role === 'shield' && x.id === 'Monol') return victim && x.hp.now > victim.aimDamage * 0.4 ? 'cover' : '';
+  if (role === 'shield' && x.id === 'Yaobikuni') {
+    const heavy = (threat === 'big' || threat === 'pierce' || threat === 'all') && b.slots.some((y) => y.occupied && !y.downed && y.aimDamage && y.aimDamage >= y.hp.now * 0.4);
+    return heavy ? 'timeStop' : '';
+  }
+  if (role === 'shield' && bigHit) return 'shield';
+  if (role === 'dodge' && x.aimed && b.enemy.dist === x.i && bigHit) return 'dodge';
+  if (role === 'refill' && b.enemy.hp >= b.enemy.max * 0.9 && b.turn <= 2 && st.recentWave && b.enemy.max > st.recentWave * 8 && x.guts.now < x.guts.max * 0.7) return 'refill-start';
+  if (role === 'refill' && (gutsLow || hpLow) && (hpLow || b.enemy.hp >= b.enemy.max * 0.4)) return 'refill';
+  if (role === 'burst' && enemyFull && (late || b.enemy.max >= 3000)) return 'burst';
+  if (role === 'selfGuard' && x.aimDamage && x.aimDamage >= x.hp.now * 0.3) return 'selfGuard';
+  if (role === 'counter' && x.aimed && threat !== 'pierce' && x.aimDamage < x.hp.now) return 'counter';
+  if (role === 'distBurst' && b.enemy.dist === x.i && enemyFull) return 'distBurst';
+  if (role === 'allIn' && !x.aimed && !bigHit && enemyFull && (late || b.enemy.max >= 8000) && x.hp.now >= x.hp.max * 0.7 && !st.allInDone[`${x.id}${b.wave}`]) {
+    st.allInDone[`${x.id}${b.wave}`] = 1; return 'allIn';
+  }
+  if (role === 'heal' && b.slots.some((y) => y.occupied && !y.downed && y.hp.now < y.hp.max * 0.4)) return 'heal';
+  if (role === 'present' && b.slots.filter((y) => y.occupied && !y.downed).some((y) => y.guts.now < y.guts.max * 0.5)) return 'present';
+  return '';
+}
+function policyBot(st) {
+  const b = boardView(st);
   for (const x of b.slots.filter((y) => y.occupied && !y.downed && y.def && !y.exActive)) {
-    const role = EX_ROLE_BY_EFFECT[x.def.effect] || 'burst';
-    if (role === 'shield' && x.id === 'Monol' && aliveCount < 2) continue;
-    const enemyFull = b.enemy.hp >= b.enemy.max * 0.5;
-    const gutsLow = x.guts.now < x.guts.max * 0.25;
-    const hpLow = x.hp.now < x.hp.max * 0.4;
-    const late = b.wave >= 5;
-    let why = '';
-    const victim = b.slots.find((y) => y.occupied && !y.downed && y.i !== x.i && y.aimDamage && y.aimDamage >= y.hp.now * 0.5);
-    if (role === 'shield' && x.id === 'Monol' && victim && x.hp.now > victim.aimDamage * 0.4) why = 'cover';
-    else if (role === 'shield' && x.id === 'Yaobikuni') {
-      const heavy = (threat === 'big' || threat === 'pierce' || threat === 'all') && b.slots.some((y) => y.occupied && !y.downed && y.aimDamage && y.aimDamage >= y.hp.now * 0.4);
-      if (heavy) why = 'timeStop';
-    }
-    else if (role === 'shield' && bigHit) why = 'shield';
-    else if (role === 'dodge' && x.aimed && b.enemy.dist === x.i && bigHit) why = 'dodge';
-    else if (role === 'refill' && b.enemy.hp >= b.enemy.max * 0.9 && b.turn <= 2 && st.recentWave && b.enemy.max > st.recentWave * 8 && x.guts.now < x.guts.max * 0.7) why = 'refill-start';
-    else if (role === 'refill' && (gutsLow || hpLow) && (hpLow || b.enemy.hp >= b.enemy.max * 0.4)) why = 'refill';
-    else if (role === 'burst' && enemyFull && (late || b.enemy.max >= 3000)) why = 'burst';
-    else if (role === 'selfGuard' && x.aimDamage && x.aimDamage >= x.hp.now * 0.3) why = 'selfGuard';
-    else if (role === 'counter' && x.aimed && threat !== 'pierce' && x.aimDamage < x.hp.now) why = 'counter';
-    else if (role === 'distBurst' && b.enemy.dist === x.i && enemyFull) why = 'distBurst';
-    else if (role === 'allIn' && !x.aimed && !bigHit && enemyFull && (late || b.enemy.max >= 8000) && x.hp.now >= x.hp.max * 0.7 && !st.allInDone[`${x.id}${b.wave}`]) {
-      why = 'allIn'; st.allInDone[`${x.id}${b.wave}`] = 1;
-    }
-    else if (role === 'heal' && b.slots.some((y) => y.occupied && !y.downed && y.hp.now < y.hp.max * 0.4)) why = 'heal';
-    else if (role === 'present' && b.slots.filter((y) => y.occupied && !y.downed).some((y) => y.guts.now < y.guts.max * 0.5)) why = 'present';
-    if (!why) continue;
+    if (!botWhy(st, b, x)) continue;
     // 選ぶもの: 味方を選ぶ EX はいちばんライフの細い子(立っている子)、スタイルは二刀流を先に
     let choice = null;
     if (x.def.target === 'ally') choice = (b.slots.filter((y) => y.occupied && !y.downed).sort((p, q) => p.hp.now / p.hp.max - q.hp.now / q.hp.max)[0] || {}).i ?? null;
@@ -567,12 +576,14 @@ function policyBot(st) {
     useEx(st, x.i, choice);
   }
 }
-// (b) 上手な使い方。回避・カウンターは狙われたターンに必ず、火力は手強い WAVE の始めに、守りは重い攻撃の前に
+// (b) 上手な使い方。ボットの条件をもとに、外している場面を足し、まずい場面を外す:
+//   回避(血踊・緋桜瞬歩)・カウンターは狙われたターンに必ず(敵が同じ距離にいなければ、その子の距離の距離撃で引き寄せる)、
+//   火力・強化は手強い WAVE の始めに、守りは重い攻撃の前に、回復は倒れた子(生命の泉で起こす)・細った子へ
 function policyBest(st) {
   const b = boardView(st);
   st.hint = {};
   const threat = b.threat;
-  const attackComing = threat === 'single' || threat === 'multi' || threat === 'big' || threat === 'all' || threat === 'pierce';
+  const attackComing = ['single', 'multi', 'big', 'all', 'pierce'].includes(threat);
   const perTurn = st.recentDealt || st.recentWave || 0;
   const tough = !perTurn || b.enemy.hp > perTurn * 5; // いまの火力で5ターンより長くかかる
   const waveStart = b.turn <= 2 && b.enemy.hp >= b.enemy.max * 0.7;
@@ -581,44 +592,51 @@ function policyBest(st) {
   const deadly = alive.filter((y) => y.aimDamage && y.aimDamage >= y.hp.now * 0.85);
   const heavy = alive.filter((y) => y.aimDamage && y.aimDamage >= y.hp.now * 0.4);
   const canAttack = (slot) => st.hand.some((c) => isAttackType(c) && (c.type !== 'unique' || c.ownerSlotIdx === slot) && unitAt(st, slot).guts >= getCardGuts(st, c, slot));
+  const pullCard = (slot) => st.hand.some((c) => c.type === 'range_atk' && c.rangeIdx === slot && alive.some((y) => y.i !== slot && !exLockedSlots(st).includes(y.i) && unitAt(st, y.i).guts >= getCardGuts(st, c, y.i)));
   for (const x of alive.filter((y) => y.def)) {
     const e = x.def.effect;
+    const bot = !x.exActive && !!botWhy(st, b, x);
     let go = false; let choice = null;
-    if (e === 'coverAll') {
-      const others = heavy.filter((y) => y.i !== x.i);
-      const take = others.length ? turnReduce(st, incomingFor(st, st.intent, x.i), x.i) * (threat === 'multi' ? Number(st.intent.hits) || 1 : 1) * Math.max(1, targetsNow(st, st.intent, st.dist).length) : 0;
-      go = others.length > 0 && x.hp.now > take;
-    } else if (e === 'partyGuard') go = heavy.length > 0 || (threat === 'all' && attackComing) || (alive.some((y) => hurt(y, 0.5)) && !x.exActive);
-    else if (e === 'timeStop') go = deadly.length > 0 || ((threat === 'big' || threat === 'all' || threat === 'pierce') && heavy.length > 0);
-    else if (e === 'damageBack') go = heavy.length > 0 && !x.exActive;
-    else if (e === 'avoidCharge') go = !x.exActive && ((x.aimed && attackComing) || (waveStart && tough));
-    else if (e === 'dodgeCombo') {
-      // 狙われたターンに必ず。敵が同じ距離にいなければ、ザンの距離の距離撃で引き寄せる(当てたあと敵がその距離から攻撃する)
-      const pullable = st.hand.some((c) => c.type === 'range_atk' && c.rangeIdx === x.i && alive.some((y) => unitAt(st, y.i).guts >= getCardGuts(st, c, y.i)));
-      go = x.aimed && attackComing && (b.enemy.dist === x.i || pullable);
-      if (go && b.enemy.dist !== x.i) st.hint.pullTo = x.i;
-      if (go) st.hint.noGuard = [...(st.hint.noGuard || []), x.i];
-    } else if (e === 'distMatch') go = !x.exActive && tough && b.enemy.hp >= b.enemy.max * 0.5;
-    else if (e === 'counter') {
-      go = x.aimed && attackComing && threat !== 'pierce' && canAttack(x.i);
-      if (go || x.exActive) { st.hint.mustAttack = x.i; st.hint.noGuard = [...(st.hint.noGuard || []), x.i]; }
-    } else if (e === 'allIn') go = tough && waveStart && !(x.aimed && x.aimDamage >= x.hp.now * 0.3) && x.hp.now >= x.hp.max * 0.6;
+    if (e === 'coverAll') go = bot || (heavy.some((y) => y.i !== x.i) && x.hp.now > Math.max(...heavy.map((y) => y.aimDamage)) * 1.2);
+    else if (e === 'partyGuard') go = !x.exActive && (bot || heavy.length > 0 || alive.filter((y) => hurt(y, 0.5)).length >= 2);
+    else if (e === 'timeStop') go = bot || deadly.length > 0;
+    else if (e === 'damageBack') go = !x.exActive && (bot || heavy.length > 0);
+    else if (e === 'avoidCharge') go = !x.exActive && x.aimed && attackComing && x.aimDamage >= x.hp.now * 0.15;
+    else if (e === 'dodgeCombo' || e === 'distMatch') {
+      // 狙われたターンに必ず。敵が同じ距離にいなければ、ほかの子の距離撃で引き寄せる(当てたあと敵はその距離から攻撃する)。
+      // 緋桜瞬歩は使ったターン本人がカードを使えないので、ほかの子が引き寄せる。ザンの血踊はザン自身も殴れる
+      const same = b.enemy.dist === x.i;
+      const dodgeNow = !x.exActive && x.aimed && attackComing && (same || pullCard(x.i));
+      const burst = e === 'distMatch' && !x.exActive && same && tough && b.enemy.hp >= b.enemy.max * 0.5;
+      go = dodgeNow || burst;
+      if ((go || x.exActive) && x.aimed && attackComing) {
+        if (!same) st.hint.pullTo = x.i;
+        st.hint.noGuard = [...(st.hint.noGuard || []), x.i];
+      }
+    } else if (e === 'counter') {
+      go = !x.exActive && x.aimed && attackComing && threat !== 'pierce' && canAttack(x.i);
+      if ((go || x.exActive) && x.aimed && attackComing && threat !== 'pierce') { st.hint.mustAttack = x.i; st.hint.noGuard = [...(st.hint.noGuard || []), x.i]; }
+    } else if (e === 'allIn') go = bot; // 丈夫さ0は危ない。ボットの条件(狙われていない・手強い敵・ライフ7割以上・WAVE に1回)のまま
     else if (e === 'lifeSpring') {
       const down = b.slots.filter((y) => y.occupied && y.downed)[0];
       const low = alive.filter((y) => hurt(y, 0.4) || deadly.includes(y)).sort((p, q) => p.hp.now / p.hp.max - q.hp.now / q.hp.max)[0];
       const t = down || low; go = !!t; choice = t ? t.i : null;
     } else if (e === 'cookieBox') {
       const n = G.sweetStackCountOf(st.sweet[x.i]);
-      go = (n >= 10 && (alive.some((y) => hurt(y, 0.7)) || (waveStart && tough))) || (n >= 3 && alive.some((y) => hurt(y, 0.35)));
-    } else if (e === 'nightmareKey') { const n = G.sweetStackCountOf(st.sweet[x.i]); go = n >= 10 || (n >= 6 && tough && waveStart); }
+      go = (n >= 10 && (alive.some((y) => hurt(y, 0.7)) || (waveStart && tough))) || (n >= 3 && alive.some((y) => hurt(y, 0.4)));
+    } else if (e === 'nightmareKey') { const n = G.sweetStackCountOf(st.sweet[x.i]); go = !x.exActive && (n >= 10 || (n >= 6 && tough && waveStart)); }
     else if (e === 'present') go = true; // 1WAVE に1回。3ターンの強化とガッツをいちばん早く
-    else if (e === 'trickConfuse') go = !x.exActive && ((waveStart && tough) || alive.filter((y) => hurt(y, 0.6)).length >= 2);
-    else if (e === 'comboBurst') go = canAttack(x.i) && (tough || b.enemy.hp > perTurn * 2);
-    else if (e === 'pandoraBox') go = tough && x.hp.now >= x.hp.max * 0.75;
-    else if (e === 'multiBuff' && x.def.lifeCostRate > 0) go = !x.exActive && tough && x.hp.now >= x.hp.max * 0.6;
-    else if (e === 'weaponChange') { choice = x.i === st.heroSlot ? 'dual' : 'shield'; go = G.tacticsExStyleOf(x.def, st.ex, x.i, x.id) !== choice; }
-    else if (e === 'statBoost') go = !x.exActive && ((waveStart && tough && b.wave >= 3) || hurt(x, 0.35) || x.guts.now < x.guts.max * 0.2);
-    else if (['psychoLock', 'thunder', 'multiBuff', 'stage', 'partyBoost'].includes(e)) go = !x.exActive && tough && (waveStart || b.enemy.hp >= b.enemy.max * 0.6);
+    else if (e === 'trickConfuse') go = !x.exActive && (bot || (waveStart && tough) || alive.filter((y) => hurt(y, 0.6)).length >= 2);
+    else if (e === 'comboBurst') go = canAttack(x.i) && (bot || tough);
+    else if (e === 'pandoraBox') go = bot && x.hp.now >= x.hp.max * 0.75;
+    else if (e === 'multiBuff' && x.def.lifeCostRate > 0) go = !x.exActive && (bot || (tough && waveStart)) && x.hp.now >= x.hp.max * 0.6;
+    else if (e === 'weaponChange') {
+      // 勇者の剣士モッチーは、手強い敵へは二刀流(連撃が2回ぶん)、ライフが細ったら片手盾(丈夫さ+ちから)。供モンは片手盾
+      const style = G.tacticsExStyleOf(x.def, st.ex, x.i, x.id);
+      choice = x.i !== st.heroSlot ? 'shield' : (hurt(x, 0.4) ? 'shield' : (tough && x.hp.now >= x.hp.max * 0.6 ? 'dual' : style));
+      go = style !== choice;
+    } else if (e === 'statBoost') go = !x.exActive && (bot || (waveStart && tough && b.wave >= 3));
+    else if (['psychoLock', 'thunder', 'multiBuff', 'stage', 'partyBoost'].includes(e)) go = !x.exActive && (bot || (tough && (waveStart || b.enemy.hp >= b.enemy.max * 0.6)));
     if (go) useEx(st, x.i, choice);
   }
 }
@@ -1037,12 +1055,14 @@ module.exports = { simulateRun, pickAllies, monsterPowerOf, MONS, EX_POLICIES };
 function readOldTables(file) {
   const out = {};
   if (!file || !fs.existsSync(file)) return out;
-  let diff = null;
+  let diff = null; let carried = false;
   for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
     const h = line.match(/^## (Hard|Expert|Master)\s*$/); if (h) { diff = h[1]; continue; }
     if (/^## /.test(line)) { diff = null; continue; }
-    const m = diff && line.match(/^\| ([^|]+) \| ([\d.]+) \| [\d.]+ \| (\d+)% \| (\d+)% \|/);
-    if (m) (out[m[1].trim()] = out[m[1].trim()] || {})[diff] = { avg: Number(m[2]), past2: Number(m[3]) / 100, clear: Number(m[4]) / 100 };
+    // 2 版目の md(「前の版」の列がある)なら、その列をそのまま引き継ぐ(序盤越え・クリア率は持たない)
+    if (diff && /^\| 勇者モン \| 前の版 \|/.test(line)) { carried = true; continue; }
+    const m = diff && (carried ? line.match(/^\| ([^|]+) \| ([\d.]+) \|/) : line.match(/^\| ([^|]+) \| ([\d.]+) \| [\d.]+ \| (\d+)% \| (\d+)% \|/));
+    if (m) (out[m[1].trim()] = out[m[1].trim()] || {})[diff] = { avg: Number(m[2]), past2: m[3] != null ? Number(m[3]) / 100 : null, clear: m[4] != null ? Number(m[4]) / 100 : null };
   }
   return out;
 }
@@ -1163,7 +1183,7 @@ if (require.main === module) {
       const old = (OLD['ザン'] || {})[d];
       const r = real[`Zan|${d}`];
       const exCell = (mo) => (stats[mo] ? `${stats[mo].Zan[d].heroEx.toFixed(1)} 回 / ${stats[mo].Zan[d].dodges.toFixed(1)} 回` : '-');
-      out(`| ${d} | ${old ? `${old.avg.toFixed(2)} / ${pct(old.past2)} / ${pct(old.clear)}` : '-'} | ${MODES.map((mo) => { const s = stats[mo].Zan[d]; return `${s.avg.toFixed(2)} / ${pct(s.past2)} / ${pct(s.clear)}`; }).join(' | ')} | ${exCell('bot')} | ${exCell('best')} | ${r ? `${(r.reduce((a, b) => a + b, 0) / r.length).toFixed(2)}(${r.length} 回)` : '-'} |`);
+      out(`| ${d} | ${old ? `${old.avg.toFixed(2)}${old.past2 != null ? ` / ${pct(old.past2)} / ${pct(old.clear)}` : ''}` : '-'} | ${MODES.map((mo) => { const s = stats[mo].Zan[d]; return `${s.avg.toFixed(2)} / ${pct(s.past2)} / ${pct(s.clear)}`; }).join(' | ')} | ${exCell('bot')} | ${exCell('best')} | ${r ? `${(r.reduce((a, b) => a + b, 0) / r.length).toFixed(2)}(${r.length} 回)` : '-'} |`);
     }
     out();
     const rank = (mo, d) => [...heroes].sort((a, b) => stats[mo][b.id][d].avg - stats[mo][a.id][d].avg).findIndex((m) => m.id === 'Zan') + 1;
