@@ -295,7 +295,8 @@ async function maybeUseEx(s, b, mem, log) {
     let why = '';
     if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
     else if (role === 'dodge' && x.aimed && b.enemy && b.enemy.dist === DISTS[x.i] && bigHit) why = '狙われていて、敵と同じ距離(回避のEX)';
-    else if (role === 'refill' && (gutsLow || hpLow)) why = gutsLow ? 'ガッツが細った(満タンにするEX)' : 'ライフが細った(満タンにするEX)';
+    // 満タンにする EX は回数が少ない(モッチー3回)。敵がもうすぐ倒れるときは使わない
+    else if (role === 'refill' && (gutsLow || hpLow) && (hpLow || (b.enemy && b.enemy.hp >= b.enemy.max * 0.4))) why = gutsLow ? 'ガッツが細った(満タンにするEX)' : 'ライフが細った(満タンにするEX)';
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
     if (!why) continue;
     await quickTap(s, `[data-slot-index="${x.i}"]`);

@@ -122,6 +122,40 @@ else {
 }
 out();
 
+// ---- 編成・アシストカードごと(2026-10-09 社長「どのモンスターを使ったとか、どのアシカを使ったとか…覚えてもらわないと」) ----
+// 覚え書き(tactics-knowledge.json)にある過去の回も合わせて数える(--no-knowledge で今回の記録だけ)
+const KN = path.join(__dirname, 'tactics-knowledge.json');
+let pastRuns = [];
+if (!args.includes('--no-knowledge') && fs.existsSync(KN)) { try { pastRuns = JSON.parse(fs.readFileSync(KN, 'utf8')).runs || []; } catch (e) { pastRuns = []; } }
+const fromLogs = runs.map((r) => ({ difficulty: r.meta.difficulty, hero: r.build && r.build.hero, pool: (r.build && r.build.pool) || [], allies: ((r.build && r.build.allies) || []).map((a) => a.name),
+  assists: ((r.build && r.build.assists) || []).map((a) => `${a.card}${a.upgrade ? '+' : ''}`), result: r.result, wave: r.waves.length, turns: sum(r.waves.map((w) => w.turns)), downs: sum(r.waves.map((w) => w.downs)), at: r.meta.startedAt }));
+// 同じ回が両方にあるときは記録のほうを使う(覚え書きは開始時刻を分単位で持つ)
+const seenAt = new Set(fromLogs.map((r) => String(r.at || '').slice(0, 16)));
+const all = [...pastRuns.filter((r) => !seenAt.has(String(r.at || '').slice(0, 16))), ...fromLogs].filter((r) => r.hero || (r.pool || []).length);
+const table = (title, keyOf) => {
+  const g = {};
+  for (const r of all) for (const k of new Set(keyOf(r).filter(Boolean))) { g[k] = g[k] || []; g[k].push(r); }
+  const rows = Object.entries(g).map(([k, rs]) => ({ k, n: rs.length, clear: rs.filter((r) => r.result === 'clear').length, wave: avg(rs.map((r) => r.wave || 0)), turns: avg(rs.map((r) => r.turns || 0)), downs: avg(rs.map((r) => r.downs || 0)), diffs: [...new Set(rs.map((r) => r.difficulty))].join('/') }))
+    .sort((a, z) => z.clear / z.n - a.clear / a.n || z.wave - a.wave);
+  out(`### ${title}`);
+  out();
+  out('| | 回数 | クリア | 着いたWAVE(平均) | ターン(平均) | 倒れた(平均) | 難易度 |');
+  out('| --- | --- | --- | --- | --- | --- | --- |');
+  for (const x of rows) out(`| ${x.k} | ${x.n} | ${x.clear}/${x.n}(${pct(x.clear / x.n)}) | ${r1(x.wave)} | ${r1(x.turns)} | ${r1(x.downs)} | ${x.diffs} |`);
+  out();
+  return rows;
+};
+out(`## 編成・アシストカードごとの成績(覚え書きと合わせて ${all.length}回)`);
+out();
+if (all.length) {
+  table('勇者モンごと', (r) => [r.hero]);
+  table('供モンの候補(5体)に入れた子ごと', (r) => r.pool || []);
+  table('実際に加わった供モンごと', (r) => r.allies || []);
+  table('アシストカードごと(+ は強化)', (r) => r.assists || []);
+  table('編成(勇者モン + 候補)ごと', (r) => [`${r.hero || '?'} + ${[...(r.pool || [])].sort().join('・')}`]);
+} else out('編成の記録がまだ無い。');
+out();
+
 // ---- 提案 ----
 const props = [];
 const medTurns = median(waveRows.map((w) => w.turns));
