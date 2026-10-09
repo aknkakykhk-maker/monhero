@@ -619,7 +619,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     window.addEventListener('resize',onResize);
     return ()=>window.removeEventListener('resize',onResize);
   },[]);
-  const noticeOpen=isShortScreen?state.noticeOpenShort:state.noticeOpen;
+  // 5曲以上遊んだ人は、ひとことをはじめから畳んでおく(2026-10-09・社長の選択。390×844で曲の一覧が3行しか見えなかった)。
+  // 💬を押して自分で選んだ人(noticeTouched)は、その選んだほうのまま。はじめての人はこれまでどおり開いている
+  const playedSongCount=React.useMemo(()=>Object.values(bestRecords&&typeof bestRecords==='object'?bestRecords:{})
+    .filter(rec=>rec&&typeof rec==='object'&&Object.values(rec).some(r=>r&&(r.played===true||Number(r.bestScore)>0))).length,[bestRecords]);
+  const foldByPlays=!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
+  const noticeOpen=isShortScreen?state.noticeOpenShort:(foldByPlays?false:state.noticeOpen);
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -857,7 +862,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
-          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen})}
+          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen,noticeTouched:true})}
           title={noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>

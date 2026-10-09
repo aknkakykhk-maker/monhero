@@ -46,8 +46,21 @@ async function newPlayerScenario(s, { maxSteps = 150 } = {}) {
   else if (stepsTaken > 60) await s.addIssue('たどり着けない', `はじめての設定を終えるまで ${stepsTaken}手かかる(長い)`);
   const name = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_breeder_name') || 'null'); } catch { return null; } });
   if (reached && name !== s.BOT_NAME) await s.addIssue('進めない', `打った名前が保存されていない(保存値: ${JSON.stringify(name)})`);
+  // はじめての人のギフトボックス: 7〜8月の不具合のお詫びは並ばず、同じ合計がプレオープン記念に入っているか
+  let giftNote = '';
+  if (reached) {
+    const box = await page.evaluate(() => { try { return { gifts: JSON.parse(localStorage.getItem('mh_gifts') || '[]'), waived: JSON.parse(localStorage.getItem('mh_compensation_waived_v1') || '[]') }; } catch { return { gifts: [], waived: [] }; } });
+    const gifts = Array.isArray(box.gifts) ? box.gifts : [];
+    const oldComp = gifts.filter((g) => /^gift_compensation_/.test(g?.id || ''));
+    const campaign = gifts.find((g) => g?.id === 'monhiro_beat_preopen_new_player_v1');
+    const sum = (type) => (campaign?.rewards || []).filter((r) => r.type === type).reduce((a, r) => a + Math.floor(Number(r.amount) || 0), 0);
+    if (oldComp.length > 0) await s.addIssue('はじめての人にお詫びが届いている', `はじめての人のギフトボックスに7〜8月のお詫びが ${oldComp.length} 通ある`);
+    if (!campaign) await s.addIssue('記念の贈りものが届いていない', 'はじめての設定を終えたのに、プレオープン記念のギフトが無い');
+    else if (sum('diamond') !== 101000 || sum('skipTicketKyu') !== 7 || sum('dyeMock') !== 5) await s.addIssue('記念の贈りものの中身が違う', `お詫びの合計が足されていない(ダイヤ ${sum('diamond')} / 急 ${sum('skipTicketKyu')} / 染色もどき ${sum('dyeMock')})`);
+    giftNote = `・ギフト ${gifts.length}通(お詫び ${oldComp.length}通・記念 ${campaign ? 'あり' : 'なし'}・控え ${Array.isArray(box.waived) ? box.waived.length : 0}件)`;
+  }
   await s.shot('new-player-setup-done');
-  return { ok: reached, note: reached ? `${stepsTaken}手・${(ms / 1000).toFixed(0)}秒ではじめての設定を終えた(名前を${typed}回入力)` : 'はじめての設定を終えられない', stats: { reached, stepsTaken, ms } };
+  return { ok: reached, note: reached ? `${stepsTaken}手・${(ms / 1000).toFixed(0)}秒ではじめての設定を終えた(名前を${typed}回入力)${giftNote}` : 'はじめての設定を終えられない', stats: { reached, stepsTaken, ms } };
 }
 
 module.exports = { newPlayerScenario };
