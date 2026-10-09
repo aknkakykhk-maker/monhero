@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 09b373ef2c5fbd2b
+// source-sha256: 98b8f162c497a23a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 22:40";
+const BUILD_DATE = "2026-10-10 00:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5363,9 +5363,11 @@ const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({
   desc: false,
   noticeOpen: true,
   noticeOpenShort: false,
+  noticeTouched: false,
   genre: 'all',
   favorites: Object.freeze([])
 });
+const RHYTHM_NOTICE_FOLD_PLAYED_SONGS = 5;
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre : source.eventOnly === true ? 'event' : DEFAULT_RHYTHM_SELECT_VIEW.genre;
@@ -5374,6 +5376,7 @@ const normalizeRhythmSelectView = value => {
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
     noticeOpenShort: typeof source.noticeOpenShort === 'boolean' ? source.noticeOpenShort : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpenShort,
+    noticeTouched: source.noticeTouched === true,
     genre,
     favorites: Array.isArray(source.favorites) ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX) : []
   };
@@ -28686,7 +28689,9 @@ const RhythmSongSelect = ({
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  const noticeOpen = isShortScreen ? state.noticeOpenShort : state.noticeOpen;
+  const playedSongCount = React.useMemo(() => Object.values(bestRecords && typeof bestRecords === 'object' ? bestRecords : {}).filter(rec => rec && typeof rec === 'object' && Object.values(rec).some(r => r && (r.played === true || Number(r.bestScore) > 0))).length, [bestRecords]);
+  const foldByPlays = !state.noticeTouched && playedSongCount >= RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
+  const noticeOpen = isShortScreen ? state.noticeOpenShort : foldByPlays ? false : state.noticeOpen;
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
@@ -28930,7 +28935,8 @@ const RhythmSongSelect = ({
       noticeOpenShort: !noticeOpen
     } : {
       ...state,
-      noticeOpen: !noticeOpen
+      noticeOpen: !noticeOpen,
+      noticeTouched: true
     }),
     title: noticeOpen ? '助手のひとことを畳む' : '助手のひとことを出す',
     className: `flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
