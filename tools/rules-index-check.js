@@ -8,10 +8,13 @@
 //   node tools/rules-index-check.js
 //
 // 見るもの:
-//   1. CLAUDE.md の大きさが上限以内か（また膨らんでいないか）
-//   2. CLAUDE.md と docs/rules/ のリンク先が実在するか
-//   3. docs/rules/ に、どこからも参照されていない置き去りのページが無いか
-//   4. 要のことばが CLAUDE.md 本体から消えていないか  ← これが本体
+//   1. CLAUDE.md の大きさが上限以内か（また膨らんでいないか）。サブフォルダの CLAUDE.md も
+//   2. CLAUDE.md・サブフォルダの CLAUDE.md・スキル・docs/rules/ のリンク先が実在するか
+//   3. docs/rules/ に、どこからも参照されていない置き去りのページが無いか。
+//      サブフォルダの CLAUDE.md が、ルートの場面の表と docs/rules/README.md からたどれるか
+//   4. 要のことばが、決められた置き場所から消えていないか  ← これが本体
+//      （2026-10-09 に場面が限られる節をサブフォルダの CLAUDE.md とスキルへ移した。
+//        ことばごとに「どこに残っているべきか」を持たせ、移した先で消えても気づけるようにしている）
 //   5. tools/ 直下のスクリプトが tools/README.md に載っているか
 //      （直下は CLAUDE.md と CI が名指しする場所。ここだけは掲載を必須にする）
 //   6. tools/ のスクリプト全部が、先頭に「何をするものか」の1行を持っているか
@@ -24,12 +27,29 @@ const ROOT = path.resolve(__dirname, '..');
 const CLAUDE_MD = path.join(ROOT, 'CLAUDE.md');
 const RULES_DIR = path.join(ROOT, 'docs/rules');
 
-// 2026-09-17に 42650 → 22780 バイトへ寄せた。余白は持たせつつ、元の大きさへ戻るのは止める。
-const MAX_BYTES = 26000;
+// 2026-09-17に 42650 → 22780 バイトへ寄せた。2026-10-09 に場面が限られる節を移して 25237 → 15528 バイト。
+// 余白は少しだけ持たせ、また膨らむのは止める（上限を上げるのではなく、場面が限られる決まりは下の PLACES へ移す）。
+const MAX_BYTES = 16500;
 
-// CLAUDE.md 本体に必ず残っていなければならないことば。
+// ルートから移した節の置き場所。サブフォルダの CLAUDE.md は、Claude Code がそのフォルダのファイルを
+// 読んだときに読み込む（2026-10-09 に tools/mode と monster-hero/data で確かめた）。
+// スキルは、ルートの場面の表から「この場面ではこのスキルを開く」とたどる。
+const PLACES = {
+  root: 'CLAUDE.md',
+  images: 'monster-hero/images/CLAUDE.md',
+  audio: 'monster-hero/audio/CLAUDE.md',
+  data: 'monster-hero/data/CLAUDE.md',
+  mode: 'tools/mode/CLAUDE.md',
+  changelogSkill: '.claude/skills/changelog-help-update/SKILL.md',
+  songSkill: '.claude/skills/rhythm-song-add/SKILL.md',
+};
+// サブフォルダの CLAUDE.md の上限（読み込まれるのはその場所を触るときだけだが、それでも膨らませない）
+const SUB_MAX_BYTES = 4500;
+
+// 決められた置き場所に必ず残っていなければならないことば。[ことば, 何の決まりか, 置き場所(PLACES のキー。省略はルート)]
+// 置き場所を複数書いたものは、その全部に残っていること。
 // 「詳細は docs/rules/ へ」と移してよいのは経緯・失敗例・手順であって、下の語が指す決めごとは
-// 本体に無いと、読み込まれた時点で見えない＝守られない。
+// 読み込まれるファイルに無いと、その場面で見えない＝守られない。
 const MUST_KEEP = [
   // 会話とフロー
   ['日本語に固定', '会話言語'],
@@ -41,19 +61,27 @@ const MUST_KEEP = [
   ['monster-hero/data/changelog.js', '⑤更新履歴の場所'],
   ['monster-hero/data/help.js', '⑤ヘルプの場所'],
   ["TZ=Asia/Tokyo date", '⑤日時は実時刻(JST)'],
-  ['配列の先頭', '⑤足す位置'],
-  ["{ t:'data', id:'...' }", '⑤一覧は実データから作る'],
-  ['HELP_SCREEN_COVERAGE', '⑤画面を増やしたとき'],
-  ['addAssistantLinePack', '⑤助手のセリフの足し方'],
-  ['assistantNotice', '⑤助手の告知'],
-  ['`market`', '⑤告知の種別'],
-  ['`mode`', '⑤告知の種別'],
-  ['`content`', '⑤告知の種別'],
-  ['mh_◯◯_seen_v1', '⑤一度きりの案内'],
-  ['RELEASE_FLAGS', '⑤案内は同じフラグで出し入れ'],
+  ['配列の先頭', '⑤足す位置', 'changelogSkill'],
+  ["{ t:'data', id:'...' }", '⑤一覧は実データから作る', 'changelogSkill'],
+  ['HELP_SCREEN_COVERAGE', '⑤画面を増やしたとき', 'changelogSkill'],
+  ['addAssistantLinePack', '⑤助手のセリフの足し方', 'changelogSkill'],
+  ['assistantNotice', '⑤助手の告知', 'changelogSkill'],
+  ['`market`', '⑤告知の種別', 'changelogSkill'],
+  ['`mode`', '⑤告知の種別', 'changelogSkill'],
+  ['`content`', '⑤告知の種別', 'changelogSkill'],
+  ['mh_◯◯_seen_v1', '⑤一度きりの案内', 'changelogSkill'],
+  ['RELEASE_FLAGS', '⑤案内は同じフラグで出し入れ', 'changelogSkill'],
   ['モンヒロビート', '⑤正式名称'],
   ['モンビー', '⑤略称を使ってよい場面'],
   ['DEBUG_SETTINGS', '⑤デバッグ専用は載せない'],
+  ['DEBUG_SETTINGS', '⑤デバッグ専用は載せない', 'changelogSkill'],
+  ['changelog-help-update', '⑤スキルを開く'],
+  ['player-words-check.js', '⑤プレイヤー向けの文'],
+  ['player-words-check.js', '⑤プレイヤー向けの文', 'changelogSkill'],
+  ['ネタバレ', '⑤敵の数字・まだ出ていない敵を書かない'],
+  ['ネタバレ', '⑤敵の数字・まだ出ていない敵を書かない', 'changelogSkill'],
+  ['TZ=Asia/Tokyo date', '⑤日時は実時刻(JST)', 'changelogSkill'],
+  ['モンビー', '⑤略称を使ってよい場面', 'changelogSkill'],
   // ビルドと検査
   ['node tools/build.js', '⑥ビルド'],
   ['check-syntax.js', '⑥検査'],
@@ -61,30 +89,35 @@ const MUST_KEEP = [
   ['jsx-text-brace-check.js', '⑥検査'],
   ['render-error-check.js', '⑥検査'],
   ['image-asset-check.js', '⑥絵を差し替えたとき'],
+  ['image-asset-check.js', '⑥絵を差し替えたとき', 'images,audio'],
+  ['data/images/images-*.js', '⑥絵はパスだけ書く', 'images,audio'],
   ['home-layout-check.js', '⑥HOMEの配置'],
   // 画像・音源
-  ['512×512', '⑥-2ジャケットの形'],
-  ['-14 LUFS', '⑥-2音量'],
-  ['-1 dBTP', '⑥-2真のピーク'],
-  ['BGM_TRACKS', '⑥-2 gain では直せない'],
-  ["force-cache", '⑥-2音源を差し替えたらビルド'],
-  ['1104', '⑥-2エンコーダ遅延'],
+  ['512×512', '⑥-2ジャケットの形', 'images,audio'],
+  ['-14 LUFS', '⑥-2音量', 'images,audio'],
+  ['-1 dBTP', '⑥-2真のピーク', 'images,audio'],
+  ['BGM_TRACKS', '⑥-2 gain では直せない', 'images,audio'],
+  ["force-cache", '⑥-2音源を差し替えたらビルド', 'images,audio'],
+  ['1104', '⑥-2エンコーダ遅延', 'images,audio'],
   // 新曲
   ['rhythm-song-add', '⑥-3スキル'],
-  ['challengeFactor', '⑥-3難易度'],
-  ['CHALLENGE_', '⑥-3測り方は触らない'],
-  ['RELEASED_MARKERS', '⑥-3登録し忘れ'],
-  ['RELEASED_TRACKS', '⑥-3登録し忘れ'],
-  ['song-art-notice-check.js', '⑥-3ジャケットの絵'],
-  ['changelogSafeLink', '⑥-3外部リンク'],
-  ['chartIntensity', '⑥-3上だけ尖らせる'],
+  ['難易度は、こちらで決めずに聞く', '⑥-3聞き返すのは難易度だけ', 'songSkill'],
+  ['RHYTHM_EVENT_PLAYBOOK.md', '⑥-4手順書', 'data'],
+  ['monster-add', 'モンスター追加のスキル'],
+  ['challengeFactor', '⑥-3難易度', 'songSkill'],
+  ['CHALLENGE_', '⑥-3測り方は触らない', 'songSkill'],
+  ['RELEASED_MARKERS', '⑥-3登録し忘れ', 'songSkill'],
+  ['RELEASED_TRACKS', '⑥-3登録し忘れ', 'songSkill'],
+  ['song-art-notice-check.js', '⑥-3ジャケットの絵', 'songSkill'],
+  ['changelogSafeLink', '⑥-3外部リンク', 'songSkill'],
+  ['chartIntensity', '⑥-3上だけ尖らせる', 'songSkill'],
   // イベント
-  ['rhythm-event.js', '⑥-4足す場所'],
-  ['月曜5:00', '⑥-4終わりの時刻'],
-  ['visibleFrom', '⑥-4公開の時刻'],
-  ['notifyFrom', '⑥-4告知の時刻'],
-  ['RHYTHM_SWITCHING_CHARTS', '⑥-4譜面の入れ替え'],
-  ['rhythmChartSwitchHold', '⑥-4演奏中は固定'],
+  ['rhythm-event.js', '⑥-4足す場所', 'data'],
+  ['月曜5:00', '⑥-4終わりの時刻', 'data'],
+  ['visibleFrom', '⑥-4公開の時刻', 'data'],
+  ['notifyFrom', '⑥-4告知の時刻', 'data'],
+  ['RHYTHM_SWITCHING_CHARTS', '⑥-4譜面の入れ替え', 'data'],
+  ['rhythmChartSwitchHold', '⑥-4演奏中は固定', 'data'],
   // 保存データ
   ['mh_*', '⑦保存キー'],
   ['Number.isFinite', '⑦型を確かめる'],
@@ -100,8 +133,11 @@ const MUST_KEEP = [
   ['60-app.jsx', '⑨開かないファイル'],
   ['tools/ctx.js', '⑨代わりに打つもの'],
   ['ultracode', '⑩設定よりこのルールが優先'],
-  ['--reanalyze', '⑩-2やってはいけない'],
-  ['--release', '⑩-2やってはいけない'],
+  ['--reanalyze', '⑩-2やってはいけない', 'mode'],
+  ['--release', '⑩-2やってはいけない', 'mode'],
+  ['chartRevision', '⑩-2リビジョンを上げる', 'mode'],
+  ['japanese-only-check.js', '会話言語のフック'],
+  ['AskUserQuestion', '返事待ちは選択式'],
 ];
 
 const problems = [];
@@ -112,6 +148,17 @@ const bytes = Buffer.byteLength(text, 'utf8');
 if (bytes > MAX_BYTES) {
   problems.push(`CLAUDE.md が ${bytes} バイトで上限 ${MAX_BYTES} を超えています。`
     + '\n    足した決めごとは残し、経緯・失敗例・手順を docs/rules/ へ移してください（中身を削るのではなく置き場所を変える）。');
+}
+
+const placeText = {};
+for (const [key, rel] of Object.entries(PLACES)) {
+  const full = path.join(ROOT, rel);
+  if (!fs.existsSync(full)) { problems.push(`${rel} がありません（ルートから移した決まりの置き場所。消すならルートへ戻してから）。`); placeText[key] = ''; continue; }
+  placeText[key] = fs.readFileSync(full, 'utf8');
+  if (key !== 'root' && rel.endsWith('CLAUDE.md')) {
+    const b = Buffer.byteLength(placeText[key], 'utf8');
+    if (b > SUB_MAX_BYTES) problems.push(`${rel} が ${b} バイトで上限 ${SUB_MAX_BYTES} を超えています（経緯・手順は docs/rules/ へ）。`);
+  }
 }
 
 // 2. リンク先が実在するか
@@ -128,10 +175,11 @@ function linksOf(file) {
   return out;
 }
 
+const placeFiles = Object.values(PLACES).filter(r => r !== 'CLAUDE.md').map(r => path.join(ROOT, r)).filter(f => fs.existsSync(f));
 const checkedFiles = [CLAUDE_MD];
 if (fs.existsSync(RULES_DIR)) for (const f of fs.readdirSync(RULES_DIR).sort()) if (f.endsWith('.md')) checkedFiles.push(path.join(RULES_DIR, f));
 
-for (const file of checkedFiles) {
+for (const file of [...checkedFiles, ...placeFiles]) {
   for (const href of linksOf(file)) {
     if (!href) continue;
     const target = path.resolve(path.dirname(file), href);
@@ -151,13 +199,24 @@ if (fs.existsSync(RULES_DIR)) {
     if (!f.endsWith('.md') || f === 'README.md') continue;
     if (!referenced.has(f)) problems.push(`docs/rules/${f} がどこからも参照されていません（CLAUDE.md か docs/rules/README.md から案内してください）。`);
   }
+  // サブフォルダの CLAUDE.md は、ルートの場面の表と docs/rules/README.md の両方からたどれること
+  const rootLinks = new Set(linksOf(CLAUDE_MD).map(h => path.normalize(h)));
+  const readmeLinks = fs.existsSync(readme) ? new Set(linksOf(readme).map(h => path.normalize(path.relative(ROOT, path.resolve(RULES_DIR, h))))) : new Set();
+  for (const rel of Object.values(PLACES)) {
+    if (rel === 'CLAUDE.md') continue;
+    if (rel.endsWith('CLAUDE.md') && !rootLinks.has(path.normalize(rel))) problems.push(`${rel} がルートの CLAUDE.md からリンクされていません（場面の表から移した先へたどれるようにする）。`);
+    if (!readmeLinks.has(path.normalize(rel))) problems.push(`${rel} が docs/rules/README.md「節の置き場所」に載っていません。`);
+  }
 }
 
 // 4. 要のことばが残っているか
-const missing = MUST_KEEP.filter(([word]) => !text.includes(word));
-for (const [word, where] of missing) {
-  problems.push(`CLAUDE.md から「${word}」（${where}）が消えています。`
-    + '\n    移してよいのは経緯・失敗例・手順だけです。決めごと本体は CLAUDE.md に残してください。');
+for (const [word, where, places = 'root'] of MUST_KEEP) {
+  for (const key of places.split(',')) {
+    if (!(key in PLACES)) { problems.push(`MUST_KEEP の置き場所「${key}」が PLACES にありません（${word}）。`); continue; }
+    if ((placeText[key] || '').includes(word)) continue;
+    problems.push(`${PLACES[key]} から「${word}」（${where}）が消えています。`
+      + '\n    移してよいのは経緯・失敗例・手順だけです。決めごと本体は置き場所に残してください（置き場所を変えたら MUST_KEEP も直す）。');
+  }
 }
 
 // 5. tools/ 直下の索引（CLAUDE.md と CI が名指しする場所だけを見る）
@@ -203,4 +262,4 @@ if (problems.length) {
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
-console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在 / tools直下 ${rootScripts} 本すべて索引済み / スクリプト ${scripts} 本すべて説明つき`);
+console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 移した先 ${Object.keys(PLACES).length - 1} か所 / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在 / tools直下 ${rootScripts} 本すべて索引済み / スクリプト ${scripts} 本すべて説明つき`);

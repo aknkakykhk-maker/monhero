@@ -23,7 +23,7 @@ const context = {
   },
 };
 vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.__lock = { MASU_LOCK_KEY, MASU_REBIRTH_LOCK_KEY, MASU_LOCK_KINDS, normalizeMasuLockIds, isMasuLocked, toggleMasuLockIds, buildMasuDonation, buildMasuDonations, buildMasuReincarnation };`, context);
+vm.runInContext(`${prefix}\nglobalThis.__lock = { MASU_LOCK_KEY, MASU_REBIRTH_LOCK_KEY, MASU_LOCK_KINDS, normalizeMasuLockIds, isMasuLocked, toggleMasuLockIds, buildMasuDonation, buildMasuDonations, buildMasuReincarnation, buildMasuReincarnationBatch };`, context);
 const L = context.__lock;
 let failed = 0;
 const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); if (!ok) failed++; };
@@ -68,6 +68,11 @@ const reinBlocked = L.buildMasuReincarnation({ masu:lv100, skillKey:'', gold:999
 check('転生ロックの子は転生できない(理由に転生ロックと出る)', !reinBlocked.ok && /転生ロック/.test(reinBlocked.reason));
 check('転生ロックは別の子には効かない', !/転生ロック/.test(L.buildMasuReincarnation({ masu:lv100, skillKey:'', gold:99999999, lockedIds:['other'] }).reason || ''));
 check('お気に入りだけでは転生は止まらない(別々のロック)', !/転生ロック/.test(L.buildMasuReincarnation({ masu:lv100, skillKey:'', gold:99999999, lockedIds:[] }).reason || ''));
+// まとめ転生(2026-10-08 PR #2348)も、1回ぶんの転生と同じロックで止まる(何回ぶんでも、1回目で止まって何も変わらない)
+const batchBlocked = L.buildMasuReincarnationBatch({ masu:lv100, skillKey:'', gold:99999999, lockedIds:['r1'], count:5 });
+check('まとめ転生でも、転生ロックの子は1回も転生できない', !batchBlocked.ok && batchBlocked.count === 0 && /転生ロック/.test(batchBlocked.reason || ''));
+const batchOther = L.buildMasuReincarnationBatch({ masu:lv100, skillKey:'', gold:99999999, lockedIds:['other'], count:2 });
+check('まとめ転生の転生ロックも、別の子には効かない', !/転生ロック/.test(batchOther.reason || '') && !/転生ロック/.test(batchOther.stopReason || ''));
 check('転生ロックだけでは寄付は止まらない(別々のロック)', L.buildMasuDonation({ ...base, targetId:'target', lockedIds:[] }).ok);
 
 // ③ 処理の止め(本体)
@@ -82,7 +87,13 @@ check('起動時に印を読み込む(お気に入りと転生ロック)',
 check('印の保存は種類ごとの専用キーだけ(マスモン本体には書かない)',
   /const toggleMasuLock = \(masuId, kind = 'keep'\) => \{[\s\S]{0,420}storeSet\(storeKey, next, false\);/.test(source)
   && source.includes('(MASU_LOCK_KINDS[kind] || MASU_LOCK_KINDS.keep).key'));
-check('転生の処理へ転生ロックを渡している', source.includes('buildMasuReincarnation({ masu, skillKey:reincarnateSkillKey, gold, lockedIds:rebirthLockedMasuIds })'));
+// 転生ボタンの処理は、まとめ転生(buildMasuReincarnationBatch)へ転生ロックを渡し、まとめ転生は1回ごとの転生へそのまま渡す
+// (2026-10-08 にまとめ転生へ変わり、ここが1回ぶんの呼び方のままで落ちていた。2026-10-09 に今の書き方へ合わせた)
+check('転生の処理へ転生ロックを渡している',
+  source.includes('buildMasuReincarnationBatch({ masu, skillKey:reincarnateSkillKey, gold, lockedIds:rebirthLockedMasuIds, count:reincarnateTimes })')
+    && source.includes('const r = buildMasuReincarnation({ masu:cur, skillKey, gold:goldLeft, lockedIds });'));
+check('転生の画面の「何回ぶん」の見積もりにも、同じ転生ロックを渡している',
+  source.includes('const batchArgs={masu:selected,skillKey:reincarnateSkillKey||\'\',gold,lockedIds:rebirthLockedMasuIds};'));
 
 // ④ 画面
 check('詳細の見出しの下に、お気に入りと転生ロックの切り替えが並ぶ(右上の✕から離れている)',

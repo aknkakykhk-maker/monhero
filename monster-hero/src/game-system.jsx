@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c3f6b62b0c699500
+// generated-sha256: 8946eaa3e0d2bc71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 17:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 18:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1508,6 +1508,11 @@ const normalizeMasuAutoEnhance = (value) => {
     order,
     statTargets,
     aptLimits,
+    // 余ったポイントの配り方。保存に項目が無いときは、すでにオート強化を使っている子(ONにしたことがある・設定を保存したことがある)だけ、
+    // いままでと同じ「順番に上限まで」。まだ使っていない子は「1Pずつ順番に配る」から始める(2026-10-09・社長の選択)
+    distribution: source.distribution === 'even' ? 'even'
+      : source.distribution === 'order' ? 'order'
+      : (source.enabled === true || version >= 1) ? 'order' : 'even',
     ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? { statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
       Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0])) } : {}),
   };
@@ -1567,30 +1572,56 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
   const individual = resolveMasuIndividualStats(masu, base);
   const statTargets = autoEnhanceStatTargetsOf(masu, base);
   const plan = { apt:[0,0,0,0], stat:{ hp:0, atk:0, def:0, guts:0 } };
-  for (const target of settings.order) {
-    if (remaining <= 0) break;
+  // 項目ごとに「あと何P入れてよいか」。null は上限なし(残りを全部使える)、0 は振らない・届いている
+  const capacityOf = (target) => {
     const aptIndex = autoEnhanceAptIndexOf(target);
     if (aptIndex != null) {
       const limitGrade = settings.aptLimits[aptIndex];
-      if (limitGrade === null) continue;
+      if (limitGrade === null) return 0;
       const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[aptIndex] || 'C'));
       const limitIndex = Math.min(DIST_APTITUDE_GRADES.length - 1, DIST_APTITUDE_GRADES.indexOf(limitGrade));
-      const take = Math.min(Math.max(0, limitIndex - currentIndex), remaining);
-      plan.apt[aptIndex] = take;
-      remaining -= take;
-      continue;
+      return Math.max(0, limitIndex - currentIndex);
     }
-    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
+    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) return 0;
     const goal = statTargets[target];
-    if (goal === 0) continue;
+    if (goal === 0) return 0;
+    if (goal === null) return null;
     const gain = STAT_POINT_GAIN[target] || 1;
     // いまの値は「素の値(超越の基礎UPを含む) ＋ 強化で振ったぶん」。強化画面に出ている数字と同じ
     const currentValue = Math.max(0, Math.floor(Number(individual[target]) || 0)) + Math.max(0, Number(masu.statPoints?.[target]) || 0);
     // 1Pあたりの上昇量で割り切れないときは、目標をこえないように切り捨てる
-    const capacity = goal === null ? remaining : Math.max(0, Math.floor((goal - currentValue) / gain));
-    const take = Math.min(capacity, remaining);
-    plan.stat[target] = take;
-    remaining -= take;
+    return Math.max(0, Math.floor((goal - currentValue) / gain));
+  };
+  const give = (target, count) => {
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    if (aptIndex != null) plan.apt[aptIndex] += count; else plan.stat[target] += count;
+  };
+  if (settings.distribution === 'even') {
+    // 優先順位の上から1Pずつ配る周回を、配れなくなるまで繰り返す。上限に届いた項目は飛ばす
+    const room = new Map(settings.order.map(target => [target, capacityOf(target)]));
+    let gave = true;
+    while (remaining > 0 && gave) {
+      gave = false;
+      for (const target of settings.order) {
+        if (remaining <= 0) break;
+        const left = room.get(target);
+        if (left !== null && left <= 0) continue;
+        give(target, 1);
+        remaining -= 1;
+        if (left !== null) room.set(target, left - 1);
+        gave = true;
+      }
+    }
+  } else {
+    // 優先順位の上から、上限まで入れてから次へ。上限なしの項目は残りを全部使う
+    for (const target of settings.order) {
+      if (remaining <= 0) break;
+      const capacity = capacityOf(target);
+      const take = capacity === null ? remaining : Math.min(capacity, remaining);
+      if (take <= 0) continue;
+      give(target, take);
+      remaining -= take;
+    }
   }
   const used = plan.apt.reduce((sum, value) => sum + value, 0)
     + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
@@ -6897,6 +6928,11 @@ const _recolorImageData = (data, colorId, baseId, regionIdx) => {
   const t = _resolveColorTarget(colorId);
   if (!t) return;
   const { gloss, sat } = _regionDyeSettingFor(baseId, regionIdx);
+  _recolorPixels(data, t, gloss, sat);
+};
+// 画素の置き換えの本体。色の決め方(t・gloss・sat)は呼ぶ側で決めて渡す。
+// _rgbToHsv / _hsvToRgb 以外を使わないので、そのまま裏の作業(Worker)へ写して動かせる(_dyeRecolorWorker)
+const _recolorPixels = (data, t, gloss, sat) => {
   const targetS = Math.max(0, Math.min(1, t.s * sat));
   let satRef = 1;
   if (typeof gloss === 'number') {
@@ -6936,7 +6972,111 @@ const _dyeRecolorCacheGet = (key) => {
 };
 const _dyeRecolorCacheSet = (key, promise) => {
   _dyeRecolorCache.set(key, promise);
-  while (_dyeRecolorCache.size > DYE_RECOLOR_CACHE_MAX) _dyeRecolorCache.delete(_dyeRecolorCache.keys().next().value);
+  while (_dyeRecolorCache.size > DYE_RECOLOR_CACHE_MAX) {
+    const oldKey = _dyeRecolorCache.keys().next().value;
+    const old = _dyeRecolorCache.get(oldKey);
+    _dyeRecolorCache.delete(oldKey);
+    _dyeBlobEvict(old);
+  }
+};
+// 裏の作業で作った絵は blob: のURLで渡す(dataURL だと、絵を貼るたびに長い文字列の読み解きで画面が止まった。
+// 40体で1回目0.6秒・2回目1.2秒)。blob: のURLは自分で片づけないと端末のメモリに残り続けるので、
+// 控えから捨てられ、しかもどの絵も使っていない(数が0)ときだけ片づける。表示中の絵は片づけない。
+// 使う側(DyedMonsterImage・bakeDyedMonsterCanvas)は、受け取ったらすぐ _dyeBlobRetain、要らなくなったら _dyeBlobRelease
+const _dyeBlobRefs = new Map();
+const _dyeBlobEvicted = new Set();
+const _isDyeBlobUrl = (url) => typeof url === 'string' && url.startsWith('blob:');
+const _dyeBlobRevokeIfUnused = (url) => {
+  if (!_dyeBlobEvicted.has(url) || _dyeBlobRefs.get(url)) return;
+  _dyeBlobEvicted.delete(url);
+  try { window.URL.revokeObjectURL(url); } catch (_) { /* 片づけられなくても表示には関係しない */ }
+};
+const _dyeBlobRetain = (url) => { if (_isDyeBlobUrl(url)) _dyeBlobRefs.set(url, (_dyeBlobRefs.get(url) || 0) + 1); };
+const _dyeBlobRelease = (url) => {
+  if (!_isDyeBlobUrl(url)) return;
+  const n = (_dyeBlobRefs.get(url) || 0) - 1;
+  if (n > 0) { _dyeBlobRefs.set(url, n); return; }
+  _dyeBlobRefs.delete(url);
+  _dyeBlobRevokeIfUnused(url);
+};
+const _dyeBlobEvict = (promise) => {
+  Promise.resolve(promise).then((url) => {
+    if (!_isDyeBlobUrl(url)) return;
+    _dyeBlobEvicted.add(url);
+    // 受け取った直後の使う側が数を足し終えてから確かめる(Promise の続きは setTimeout より先に走る)
+    setTimeout(() => _dyeBlobRevokeIfUnused(url), 0);
+  }, () => {});
+};
+// 染め直しを裏の作業(Worker)で行う(2026-10-09・ユーザー報告「ゲームを始めてマスモン一覧を押すと少し固まる」)。
+// 起動して初めてマスモン一覧を開くと、染色した子の数×部位の数だけ、1024px前後の絵を1画素ずつ染め直して
+// PNGへ書き出す処理が画面と同じ所で走り、40体(半分が染色)で3秒以上止まっていた(染色なしなら0.2秒)。
+// 作る絵は同じ(同じ大きさ・同じ計算・同じPNG。渡し方だけ blob: のURL。片づけ方は _dyeBlobRefs)。OffscreenCanvas が無い端末や、途中で失敗したときは
+// null を返し、呼ぶ側が今までどおり画面側で作る
+let _dyeRecolorWorker = null;
+let _dyeRecolorWorkerBroken = false;
+let _dyeRecolorSeq = 0;
+const _dyeRecolorWaiting = new Map();
+const _dyeRecolorWorkerGet = () => {
+  if (_dyeRecolorWorker || _dyeRecolorWorkerBroken) return _dyeRecolorWorker;
+  try {
+    if (typeof window === 'undefined' || typeof window.Worker !== 'function' || typeof window.OffscreenCanvas !== 'function'
+      || typeof window.OffscreenCanvas.prototype.convertToBlob !== 'function'
+      || typeof window.Blob !== 'function' || !window.URL || typeof window.URL.createObjectURL !== 'function') {
+      _dyeRecolorWorkerBroken = true; return null;
+    }
+    const code = [
+      `const _rgbToHsv = ${_rgbToHsv.toString()};`,
+      `const _hsvToRgb = ${_hsvToRgb.toString()};`,
+      `const _recolorPixels = ${_recolorPixels.toString()};`,
+      'self.onmessage = async (e) => {',
+      '  const { id, url, w, h, t, gloss, sat } = e.data;',
+      '  try {',
+      '    const res = await fetch(url);',
+      '    if (!res.ok) throw new Error("load");',
+      '    const bmp = await createImageBitmap(await res.blob());',
+      '    const canvas = new OffscreenCanvas(w, h);',
+      '    const ctx = canvas.getContext("2d");',
+      '    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";',
+      '    ctx.drawImage(bmp, 0, 0, w, h);',
+      '    if (bmp.close) bmp.close();',
+      '    const imgData = ctx.getImageData(0, 0, w, h);',
+      '    _recolorPixels(imgData.data, t, gloss, sat);',
+      '    ctx.putImageData(imgData, 0, 0);',
+      '    const blob = await canvas.convertToBlob({ type: "image/png" });',
+      '    self.postMessage({ id, blob });',
+      '  } catch (err) { self.postMessage({ id, blob: null }); }',
+      '};',
+    ].join('\n');
+    const url = window.URL.createObjectURL(new window.Blob([code], { type: 'text/javascript' }));
+    const worker = new window.Worker(url);
+    worker.onmessage = (e) => {
+      const done = _dyeRecolorWaiting.get(e.data && e.data.id);
+      if (!done) return;
+      _dyeRecolorWaiting.delete(e.data.id);
+      done(e.data.blob || null);
+    };
+    worker.onerror = () => {
+      // 裏の作業ごと動かない端末。待っているものは画面側で作り直してもらい、以後は使わない
+      _dyeRecolorWorkerBroken = true; _dyeRecolorWorker = null;
+      for (const done of _dyeRecolorWaiting.values()) done(null);
+      _dyeRecolorWaiting.clear();
+      try { worker.terminate(); } catch (_) { /* 止められなくてもよい */ }
+    };
+    _dyeRecolorWorker = worker;
+  } catch (_) { _dyeRecolorWorkerBroken = true; _dyeRecolorWorker = null; }
+  return _dyeRecolorWorker;
+};
+// 絵の読み込み(と画素への展開)も裏の作業で行う。画面側で絵を渡す形にすると、その展開だけで40体ぶん約1秒止まっていた
+const _recolorInWorker = async (imgUrl, w, h, t, dye) => {
+  try {
+    if (!t || typeof imgUrl !== 'string' || !imgUrl) return null;
+    const worker = _dyeRecolorWorkerGet();
+    if (!worker) return null;
+    const url = new window.URL(imgUrl, window.location.href).href;
+    const id = ++_dyeRecolorSeq;
+    const blob = await new Promise((resolve) => { _dyeRecolorWaiting.set(id, resolve); worker.postMessage({ id, url, w, h, t, gloss: dye.gloss, sat: dye.sat }); });
+    return blob ? window.URL.createObjectURL(blob) : null;
+  } catch (_) { return null; }
 };
 const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   // 濃さ(@NN)は重ねるときの透明度で表現するので、染め直した画像そのものには影響しない。
@@ -6954,7 +7094,7 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   const promise = new Promise((resolve) => {
     try {
       const img = new window.Image();
-      img.onload = () => {
+      img.onload = async () => {
         try {
           const natW = img.naturalWidth || img.width;
           const natH = img.naturalHeight || img.height;
@@ -6963,6 +7103,11 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
             : 1;
           const w = Math.max(1, Math.round(natW * scale));
           const h = Math.max(1, Math.round(natH * scale));
+          // 使える端末では裏の作業で作る(画面が止まらない)。作れなかったときだけ、下の今までのやり方で作る。
+          // 縮小して作る絵(モッチー)は、縮め方が画面側と裏の作業でわずかに違い色が変わるので、今までどおり画面側で作る
+          // (小さい絵なので軽い)。縮小しない絵は、画面側で作ったものと1画素も違わないことを確かめてある
+          const viaWorker = scale === 1 ? await _recolorInWorker(imgUrl, w, h, _resolveColorTarget(colorId), dye) : null;
+          if (viaWorker) { resolve(viaWorker); return; }
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
@@ -7040,6 +7185,10 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
   const [recolored, setRecolored] = useState({});
+  // いま使っている染め絵のURL(blob: は数えておき、控えから捨てられても表示中は片づけさせない)
+  const heldDyeUrlsRef = useRef([]);
+  const holdDyeUrls = (urls) => { urls.forEach(_dyeBlobRetain); heldDyeUrlsRef.current.forEach(_dyeBlobRelease); heldDyeUrlsRef.current = urls; };
+  useEffect(() => () => holdDyeUrls([]), []);
   const rawColors = masuColors || [];
   const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
   const colors = (fallbackMap && hues) ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
@@ -7057,13 +7206,14 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
     // 中身が同じなら前のものをそのまま使う(新しい空の箱を入れるたびに描き直しが1回増えていた。
     // 待機の動きで部位ごとに絵を重ねる子は、その枚数ぶん増えていた)
-    if (wanted.length === 0) { setRecolored((prev) => (Object.keys(prev).length === 0 ? prev : {})); return; }
+    if (wanted.length === 0) { holdDyeUrls([]); setRecolored((prev) => (Object.keys(prev).length === 0 ? prev : {})); return; }
     let cancelled = false;
     // 濃さ(@NN)は重ねる透明度で出すので、作る絵は濃さ抜きの色で1枚。
     // 置き場所の名前も濃さ抜きにしておくと、スライダーを動かしている間に絵を作り直さない
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])))
       .then((entries) => {
         if (cancelled) return;
+        holdDyeUrls(entries.map(([, url]) => url));
         const next = Object.fromEntries(entries);
         setRecolored((prev) => {
           const keys = Object.keys(next);
@@ -7145,7 +7295,8 @@ const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
     ctx.imageSmoothingQuality = 'high';
     if (!hues || hues.length === 0) {
       const recoloredUrl = colors[0] ? await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0)) : null;
-      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl) : null;
+      _dyeBlobRetain(recoloredUrl);
+      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl).finally(() => _dyeBlobRelease(recoloredUrl)) : null;
       const alpha = colorAlphaOf(colors[0]);
       if (recolored && alpha < MASU_COLOR_ALPHA_MAX) {
         _drawContain(ctx, base, px);
@@ -7170,7 +7321,8 @@ const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
       if (!colors[idx] || !masks[idx]) continue;
       const recoloredUrl = await Promise.resolve(getRecoloredImage(src, colors[idx], baseId, idx));
       if (!recoloredUrl) continue;
-      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]);
+      _dyeBlobRetain(recoloredUrl);
+      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]).finally(() => _dyeBlobRelease(recoloredUrl));
       if (!recolored || !mask) continue;
       // CSS の mask-image(アルファで切り抜く・mask-size:contain・中央)と同じことを canvas でする
       lctx.globalCompositeOperation = 'source-over';
@@ -37423,27 +37575,34 @@ function SoulBattleEffects({
 //   (横画面で2カラムへ組み替わる目印)で、一覧は根の直下に1つだけ置く
 
 function MasuAutoEnhanceScreen({
-  applyAutoEnhanceNow, autoEnhanceLog, getMasuMon, masuMonDetail, moveAutoEnhanceOrder,
+  applyAutoEnhanceNow, askConfirm, autoEnhanceLog, getMasuMon, masuMonDetail, moveAutoEnhanceOrder,
   onBack, onMissing, onOpenNormalEnhance, onOpenTranscendEnhance, renderPowerBadge, updateAutoEnhance,
 }) {
       // ★フックは必ずいちばん上で呼ぶ。下の「ベースが見つからない」で早期に返す行より後ろへ置くと、
       //   ある回だけフックの数が変わってReactが壊れる。上限の数値は入力中だけ下書きで持つ
       const [limitDraft, setLimitDraft] = useState(null);
+      // 設定の下書き。設定を変えても確定するまで保存しない(null=変更なし)。確定したぶんの結果は appliedLines へ控える
+      const [draftSettings, setDraftSettings] = useState(null);
+      const [appliedLines, setAppliedLines] = useState(null);
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       if (!base) { onMissing(); return null; }
-      const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+      const savedSettings = normalizeMasuAutoEnhance(masu.autoEnhance);
+      const settings = draftSettings || savedSettings;
+      const dirty = !!draftSettings;
       const points = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
       const resolvedApt = resolveMasuDistAptitude(masu, base);
       const baseApt = masuTranscendBaseAptitude(masu, base);
       // ステータスは「合計いくつまで上げてよいか」で決める。素の値(超越の基礎UPを含む)と
       // いまの値は、強化画面に出ている数字とまったく同じものを使う
       const individual = resolveMasuIndividualStats(masu, base);
-      const statTargets = autoEnhanceStatTargetsOf(masu, base);
+      const statTargets = dirty ? settings.statTargets : autoEnhanceStatTargetsOf(masu, base);
       const baseStatOf = (key) => Math.max(0, Math.floor(Number(individual[key]) || 0));
       const spentStatOf = (key) => Math.max(0, Number(masu.statPoints?.[key]) || 0);
       const currentStatOf = (key) => baseStatOf(key) + spentStatOf(key);
-      const hasTarget = autoEnhanceHasTarget(masu, base);
+      const hasTarget = dirty
+        ? (settings.statTargets && Object.values(settings.statTargets).some(v => v === null || v > 0)) || settings.aptLimits.some(v => v !== null)
+        : autoEnhanceHasTarget(masu, base);
       // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
       // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
       const awaitsReset = masuAwaitsBondResetReallocation(masu);
@@ -37459,26 +37618,32 @@ function MasuAutoEnhanceScreen({
         const goal = statTargets[key];
         return goal === null ? '' : String(goal);
       };
+      // 下書きを書き換える。保存はしない(確定で初めて保存する)
+      const updateDraft = (patch) => {
+        const from = draftSettings || { ...savedSettings, statTargets:autoEnhanceStatTargetsOf(masu, base) };
+        setDraftSettings(normalizeMasuAutoEnhance({ ...from, ...patch, version:AUTO_ENHANCE_SETTINGS_VERSION }));
+        setAppliedLines(null);
+      };
       const commitStatTarget = (key) => {
         if (!limitDraft || limitDraft.key !== key) return;
         const text = limitDraft.text.trim();
         setLimitDraft(null);
         // 空欄は「上限なし」。数字以外が混ざっていたら数字だけを拾う(スマホのキーボード対策)
         const digits = text.replace(/[^0-9]/g, '');
-        updateAutoEnhance(masu.id, { statTargets:{ ...statTargets, [key]: digits === '' ? null : Number(digits) } });
+        updateDraft({ statTargets:{ ...statTargets, [key]: digits === '' ? null : Number(digits) } });
       };
       const setStatTarget = (key, value) => {
         setLimitDraft(null);
-        updateAutoEnhance(masu.id, { statTargets:{ ...statTargets, [key]: value } });
+        updateDraft({ statTargets:{ ...statTargets, [key]: value } });
       };
       const setAptLimit = (index, grade) => {
         const aptLimits = [...settings.aptLimits];
         aptLimits[index] = grade;
-        updateAutoEnhance(masu.id, { aptLimits });
+        updateDraft({ aptLimits });
       };
       const captureCurrent = () => {
         const captured = buildAutoEnhanceLimitsFromCurrent(masu, base);
-        if (captured) { setLimitDraft(null); updateAutoEnhance(masu.id, captured); }
+        if (captured) { setLimitDraft(null); updateDraft(captured); }
       };
       // かんたん設定。1タップで目標と ON をまとめて決める(優先順位はいまのまま)。
       // ステータスの上限なし=null、間合い適性は M を目標にすると上限なしと同じ
@@ -37491,16 +37656,46 @@ function MasuAutoEnhanceScreen({
         const patch = kind === 'all' ? { statTargets:allStat, aptLimits:allApt }
           : kind === 'stat' ? { statTargets:allStat, aptLimits:noApt }
           : { statTargets:noStat, aptLimits:allApt };
-        updateAutoEnhance(masu.id, { enabled:true, ...patch });
+        updateDraft({ enabled:true, ...patch });
       };
       // OFF→ON のとき、振る先がまだ1つも無ければ「おまかせ」にして、押しただけで働くようにする
       const toggleEnabled = () => {
         if (!settings.enabled && !hasTarget) { applyPreset('all'); return; }
-        updateAutoEnhance(masu.id, { enabled: !settings.enabled });
+        updateDraft({ enabled: !settings.enabled });
       };
       const clearAll = () => {
         setLimitDraft(null);
-        updateAutoEnhance(masu.id, { statTargets:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+        updateDraft({ statTargets:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+      };
+      // 優先順位の入れ替え(下書きの中だけ。端では動かさない)
+      const moveOrder = (target, direction) => {
+        const from = settings.order.indexOf(target);
+        const to = from + (direction < 0 ? -1 : 1);
+        if (from < 0 || to < 0 || to >= settings.order.length) return;
+        const order = [...settings.order];
+        [order[from], order[to]] = [order[to], order[from]];
+        updateDraft({ order });
+      };
+      // 確定すると初めて保存する。ONで強化Pが残っていれば、その場で案のとおりに振られる
+      const confirmDraft = () => {
+        if (!draftSettings) return;
+        const lines = (draftSettings.enabled && planned && !awaitsReset) ? plannedLines : [];
+        updateAutoEnhance(masu.id, { enabled:draftSettings.enabled, statTargets:draftSettings.statTargets, aptLimits:draftSettings.aptLimits, order:draftSettings.order, distribution:draftSettings.distribution });
+        setDraftSettings(null);
+        setLimitDraft(null);
+        setAppliedLines(lines);
+      };
+      const cancelDraft = () => { setDraftSettings(null); setLimitDraft(null); setAppliedLines(null); };
+      // 確定していない変更があるまま離れるときは、先に確かめる
+      const leave = async (go) => {
+        if (dirty && !(await askConfirm({ title:'変更を確定せずに戻りますか？', message:'確定していない設定の変更は消えます。残したいときは「確定する」を押してください。', confirmLabel:'破棄して戻る', danger:true }))) return;
+        go();
+      };
+      // 案で各項目がいくつ上がるか(行ごとの +n)
+      const plannedGainOf = (target) => {
+        if (!planned) return 0;
+        const aptIndex = autoEnhanceAptIndexOf(target);
+        return aptIndex != null ? planned.plan.apt[aptIndex] : (planned.plan.stat[target] || 0) * (STAT_POINT_GAIN[target] || 1);
       };
       const rowLabel = (target) => {
         const aptIndex = autoEnhanceAptIndexOf(target);
@@ -37514,8 +37709,8 @@ function MasuAutoEnhanceScreen({
 
       return (
         <div data-mh-screen style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 overflow-hidden ${SCREEN_SHELL_CLASS}`} data-auto-enhance={masu.id}>
-          <ScreenHead title="オート強化" accent="text-lime-300" onBack={onBack} backLabel="マスモン詳細へ戻る"/>
-          <EnhanceModeTabs current="auto" onNormal={onOpenNormalEnhance} onTranscend={onOpenTranscendEnhance} autoOn={settings.enabled}/>
+          <ScreenHead title="オート強化" accent="text-lime-300" onBack={()=>leave(onBack)} backLabel="マスモン詳細へ戻る"/>
+          <EnhanceModeTabs current="auto" onNormal={()=>leave(onOpenNormalEnhance)} onTranscend={()=>leave(onOpenTranscendEnhance)} autoOn={settings.enabled}/>
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuAutoEnhance" compact/></div>
           <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3`}>
 
@@ -37527,6 +37722,38 @@ function MasuAutoEnhanceScreen({
                 <div className="mt-1">{renderPowerBadge(masuPowerOf(masu), {dense:true, size:'sm'})}</div>
               </div>
             </div>
+
+            {/* 確定前の案。設定を変えただけでは保存も強化もしない */}
+            {dirty&&(
+              <div data-auto-enhance-draft className="rounded-2xl border-2 border-amber-400/70 bg-amber-950/30 p-3">
+                <div className="text-[13px] font-black text-amber-200">設定を変えています（まだ保存していません）</div>
+                <div className="mt-1 text-[11px] font-bold text-slate-200 leading-relaxed">
+                  {!settings.enabled
+                    ? '確定するとオート強化をOFFにします。いまは何も振りません。'
+                    : awaitsReset
+                      ? '絆ポイントリセットの直後なので、確定しても自動では振りません。'
+                      : plannedLines.length>0
+                        ? '確定すると、いまの強化ポイントがこう上がります。'
+                        : '確定しても、いまの強化ポイントで振る先はありません。次に強化ポイントが入ったときから、この設定で振ります。'}
+                </div>
+                {settings.enabled&&!awaitsReset&&plannedLines.length>0&&(
+                  <div className="mt-1 space-y-0.5">
+                    {plannedLines.map((line,idx)=><div key={idx} className="text-[12px] font-black text-white">・{line}</div>)}
+                    <div className="text-[10px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。</div>
+                  </div>
+                )}
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" data-auto-enhance-confirm onClick={confirmDraft} className="min-h-[52px] rounded-xl bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950 font-black text-[13px] active:scale-95">確定する</button>
+                  <button type="button" data-auto-enhance-cancel onClick={cancelDraft} className="min-h-[52px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 font-black text-[13px] active:scale-95">やめる</button>
+                </div>
+              </div>
+            )}
+            {!dirty&&appliedLines&&appliedLines.length>0&&(
+              <div data-auto-enhance-applied className="rounded-2xl border border-lime-400/60 bg-lime-950/30 p-3">
+                <div className="text-[13px] font-black text-lime-300">こう上がりました</div>
+                <div className="mt-1 space-y-0.5">{appliedLines.map((line,idx)=><div key={idx} className="text-[12px] font-black text-white">・{line}</div>)}</div>
+              </div>
+            )}
 
             {/* オン / オフ */}
             <div className={`rounded-2xl border p-3 shadow-xl ${settings.enabled?'border-lime-400/60 bg-lime-950/25':'border-white/10 bg-slate-900'}`}>
@@ -37554,7 +37781,7 @@ function MasuAutoEnhanceScreen({
 
             {/* かんたん設定: 細かい上限や順番を決めなくても、押すだけで ON になって働く */}
             <div data-auto-enhance-presets className="rounded-2xl border border-lime-500/40 bg-slate-900 p-3">
-              <div className="text-[13px] font-black text-lime-300">かんたん設定（押すだけで ON）</div>
+              <div className="text-[13px] font-black text-lime-300">かんたん設定（押すと案が出て、確定でON）</div>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button type="button" data-auto-enhance-preset="all" onClick={()=>applyPreset('all')} className="min-h-[56px] rounded-xl bg-lime-600 text-slate-950 text-[11px] font-black active:scale-95 px-1 leading-tight">おまかせ<br/><span className="text-[9px] font-bold">全部上げる</span></button>
                 <button type="button" data-auto-enhance-preset="stat" onClick={()=>applyPreset('stat')} className="min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight">ステータスだけ<br/><span className="text-[9px] font-bold text-slate-400">適性は振らない</span></button>
@@ -37579,7 +37806,7 @@ function MasuAutoEnhanceScreen({
                   ? (<>
                       <div className="space-y-0.5">{plannedLines.map((line,idx)=><div key={idx} className="text-[12px] font-black text-white">・{line}</div>)}</div>
                       <div className="mt-1 text-[10px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。{awaitsReset&&'（絆ポイントリセットの直後なので、自動では振りません）'}</div>
-                      <button type="button" onClick={()=>applyAutoEnhanceNow(masu.id)} className="mt-2 w-full min-h-[52px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[13px] active:scale-95">この内容でいますぐ振る</button>
+                      <button type="button" disabled={dirty} onClick={()=>{applyAutoEnhanceNow(masu.id);setAppliedLines(plannedLines);}} className="disabled:opacity-40 mt-2 w-full min-h-[52px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[13px] active:scale-95">この内容でいますぐ振る</button>
                     </>)
                   : <div className="text-[11px] text-amber-300 font-bold">目標まで届いているので、いまの設定では振る先がありません。</div>}
             </div>
@@ -37588,7 +37815,18 @@ function MasuAutoEnhanceScreen({
             <div className="bg-slate-900 border border-lime-500/40 rounded-2xl p-3 shadow-xl">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="text-[13px] font-black text-lime-300 flex items-center gap-1.5"><Sparkles size={14}/>優先順位と上限</div>
-                <div className="text-[10px] text-slate-400 font-bold">上から順に埋めます</div>
+                <div className="text-[10px] text-slate-400 font-bold">{settings.distribution==='even'?'上から1Pずつ配ります':'上から順に埋めます'}</div>
+              </div>
+              <div data-auto-enhance-distribution className="mb-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" aria-pressed={settings.distribution!=='even'} onClick={()=>updateDraft({distribution:'order'})} className={`min-h-[44px] rounded-xl px-2 text-[11px] font-black leading-tight active:scale-95 ${settings.distribution!=='even'?'bg-lime-600 text-slate-950':'bg-slate-800 border border-white/10 text-slate-300'}`}>順番に上限まで</button>
+                  <button type="button" aria-pressed={settings.distribution==='even'} onClick={()=>updateDraft({distribution:'even'})} className={`min-h-[44px] rounded-xl px-2 text-[11px] font-black leading-tight active:scale-95 ${settings.distribution==='even'?'bg-lime-600 text-slate-950':'bg-slate-800 border border-white/10 text-slate-300'}`}>1Pずつ順番に配る</button>
+                </div>
+                <div className="mt-1.5 text-[10px] font-bold text-slate-300 leading-relaxed">
+                  {settings.distribution==='even'
+                    ? '上から順に1Pずつ配るのを繰り返します。上限に届いた項目は飛ばし、上限なしの項目が複数あれば均等に上がります。全部の上限に届くと止まり、残りは手元に残ります。'
+                    : '上の項目から順に、上限まで入れてから次へ進みます。上限なしの項目は残りを全部使うので、それより下の項目には回りません。全部の上限に届くと止まり、残りは手元に残ります。'}
+                </div>
               </div>
               <div className="space-y-1.5">
                 {settings.order.map((target,rank)=>{
@@ -37608,8 +37846,9 @@ function MasuAutoEnhanceScreen({
                       <div className="flex items-center gap-1.5">
                         <span className={`w-6 h-6 shrink-0 rounded-full text-[10px] font-black flex items-center justify-center ${active?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>{rank+1}</span>
                         <span className={`flex-1 min-w-0 truncate text-[12px] font-black ${active?'text-white':'text-slate-400'}`}>{rowLabel(target)}</span>
-                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を上げる`} disabled={rank<=0} onClick={()=>moveAutoEnhanceOrder(masu.id,target,-1)} className="w-11 h-11 shrink-0 rounded-xl bg-slate-700 text-sm font-black active:scale-95 disabled:bg-slate-800 disabled:opacity-30">↑</button>
-                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を下げる`} disabled={rank>=settings.order.length-1} onClick={()=>moveAutoEnhanceOrder(masu.id,target,1)} className="w-11 h-11 shrink-0 rounded-xl bg-slate-700 text-sm font-black active:scale-95 disabled:bg-slate-800 disabled:opacity-30">↓</button>
+                        {plannedGainOf(target)>0&&<span data-auto-enhance-gain className="shrink-0 rounded-full bg-lime-500 px-2 py-0.5 text-[11px] font-black text-slate-950">{isApt?`+${plannedGainOf(target)}段階`:`+${plannedGainOf(target)}`}</span>}
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を上げる`} disabled={rank<=0} onClick={()=>moveOrder(target,-1)} className="w-11 h-11 shrink-0 rounded-xl bg-slate-700 text-sm font-black active:scale-95 disabled:bg-slate-800 disabled:opacity-30">↑</button>
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を下げる`} disabled={rank>=settings.order.length-1} onClick={()=>moveOrder(target,1)} className="w-11 h-11 shrink-0 rounded-xl bg-slate-700 text-sm font-black active:scale-95 disabled:bg-slate-800 disabled:opacity-30">↓</button>
                       </div>
                       {isApt
                         ? (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -37670,7 +37909,7 @@ function MasuAutoEnhanceScreen({
                   ))}</div>}
             </div>
 
-            <button type="button" onClick={onBack} className="w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2">完了</button>
+            <button type="button" onClick={()=>leave(onBack)} className="w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2">完了</button>
           </div>
         </div>
       );
@@ -62832,6 +63071,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_AUTO_ENHANCE'&&masuMonDetail&&(
           <MasuAutoEnhanceScreen
             applyAutoEnhanceNow={applyAutoEnhanceNow}
+            askConfirm={askConfirm}
             autoEnhanceLog={autoEnhanceLog}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}

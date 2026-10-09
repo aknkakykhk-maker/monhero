@@ -180,8 +180,9 @@ check('限界突破の画面であとで決められる',
   has("<button onClick={()=>setRebirthSkillKey('')}") && has('あとで決める（ポイントとして残す）'));
 check('転生の画面でもあとで決められる', has("<button onClick={()=>setReincarnateSkillKey('')}"));
 check('保留ポイントの使用場所を両画面で案内する', (source.match(/保留したポイントはマスモン詳細の「固有技強化」から使用できます/g)||[]).length===2);
+// 転生のボタンは、まとめ転生(2026-10-08)で「見積もりが通ること(batch.ok)」も条件に加わった。選ぶまで押せないのは同じ
 check('何も選ばないうちは押せない',
-  has('disabled={rebirthSkillKey==null||gold<cost') && has('disabled={reincarnateSkillKey==null||gold<cost'));
+  has('disabled={rebirthSkillKey==null||gold<cost') && has('disabled={reincarnateSkillKey==null||!batch.ok||gold<cost'));
 
 // --- ⑦ 保存 ---
 check('新しい保存キーを作らず、マスモンの中の項目として持つ',

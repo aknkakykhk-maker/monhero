@@ -138,7 +138,7 @@ Mia: { id:'Mia', name:"ミーア", emoji:"🧚", imgUrl:MIA_IMG, iconUrl:MIA_ICO
 
 ## 2. 絵を整える
 
-**受け取った画像をそのまま入れない**(CLAUDE.md ⑥-2)。順に通す。
+**受け取った画像をそのまま入れない**(`monster-hero/images/CLAUDE.md` ⑥-2)。順に通す。
 
 ```bash
 # ① 立ち絵。正方形・余白そろえ・透過へ
