@@ -31,7 +31,7 @@ const readRoster = (s) => s.page.evaluate(() => {
   return {
     monsters: mons.filter((m) => m && m.id).map((m) => ({
       id: m.id, name: m.name, debugOnly: !!m.debugOnly, hp: m.baseHp, atk: m.baseAtk, def: m.baseDef, guts: m.baseGuts,
-      trait: m.trait || '', traitDesc: m.traitDesc || '',
+      trait: m.trait || '', traitDesc: m.traitDesc || '', dist: Array.isArray(m.distAptitude) ? m.distAptitude.slice(0, 4) : null,
       unique: m.unique ? { name: m.unique.name, mult: m.unique.baseMult, guts: m.unique.baseGuts, desc: String(m.unique.effectDesc || m.unique.desc || '').replace(/\s+/g, ' ').slice(0, 160) } : null,
       ex: ex(m.id),
     })),
@@ -463,6 +463,8 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const after = await brain.readBoard(s);
     // 記録: このターンに出たダメージを、置いたカードの見込みの割合で子ごとに分ける
     ctx.log.turn(b, picks, after);
+    // バトルの記録欄から、特性・技の文を読む(負けの画面が出ているときは読まない)
+    if (after.inBattle && !after.over) ctx.log.lines(await brain.readBattleLog(s, ctx.mem));
     const planned = picks.filter((p) => p.kind === 'attack').reduce((a, p) => a + p.value, 0) || 1;
     const dealt = b.enemy ? Math.max(0, b.enemy.hp - (after.enemy && after.wave === b.wave ? after.enemy.hp : 0)) : 0;
     for (const p of picks) if (p.kind === 'attack' && p.mon) brain.monOf(ctx.mem, p.mon).dmg += dealt * (p.value / planned);
