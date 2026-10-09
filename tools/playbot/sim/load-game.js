@@ -40,7 +40,11 @@ function loadGame() {
   });
   base.globalThis = base;
   const ctx = vm.createContext(sandbox);
-  let src = '';
+  // ★よく使う組み込み(Math・Number・Object…)は、先にスクリプトの const として置く。
+  //   置かないと、呼ぶたびに上の Proxy(has: () => true)を通って探すので、EX の関数を何度も呼ぶ
+  //   シミュレーターが 10 倍ほど遅くなった(2026-10-10。計算の中身は変わらない)
+  const FAST = ['Math', 'Number', 'Object', 'Array', 'String', 'Boolean', 'JSON', 'Set', 'Map', 'Symbol', 'isFinite', 'parseInt', 'parseFloat'];
+  let src = `const ${FAST.map((k) => `${k} = globalThis.${k}`).join(', ')};\n`;
   for (const f of DATA) src += `${fs.readFileSync(path.join(GAME, f), 'utf8')}\n;\n`;
   // 16-ranking-detail-and-widgets.jsx の間合い適性の倍率(画面の部品と同じファイルにあるので、この1行だけ取り出す)
   const p16 = fs.readFileSync(path.join(GAME, 'src', 'parts', '16-ranking-detail-and-widgets.jsx'), 'utf8');

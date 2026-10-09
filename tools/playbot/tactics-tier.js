@@ -56,7 +56,11 @@ const ROLE_BY_EFFECT = {
 };
 const roleOf = (m) => ROLE_BY_EFFECT[m && m.ex && m.ex.effect] || '攻め';
 
-const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty));
+// ★同じ版のボットの回どうしで比べる(2026-10-10 改善部 T2)。技と間合いまで記録している回(use)= 勇者モン選び・EX の使い方などを直したあとのボット。
+//   それより前の回(昼の Master のモッチー23回など)は、ボットの違いがモンスターの差に見えてしまうので数えない
+const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty) && r.use);
+// ★クリアした回は「WAVE 11 まで届いた」と数える(2026-10-10 改善部 T3)。Hard はほぼ全員が WAVE 10 に届くので、届いた WAVE だけでは差が出ない
+const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const avg = (a) => (a.length ? sum(a) / a.length : NaN);
 const r1 = (x) => (Number.isFinite(x) ? (Math.round(x * 10) / 10).toFixed(1) : '—');
@@ -66,7 +70,7 @@ const pct = (x) => (Number.isFinite(x) ? `${Math.round(x * 100)}%` : '—');
 // 難易度ごとの平均 WAVE
 const diffs = DIFF_ORDER.filter((d) => runs.some((r) => r.difficulty === d));
 const meanWave = {};
-for (const d of diffs) meanWave[d] = avg(runs.filter((r) => r.difficulty === d).map((r) => r.wave || 0));
+for (const d of diffs) meanWave[d] = avg(runs.filter((r) => r.difficulty === d).map(reach));
 
 // その回に戦った子(ダメージの記録がある子 + 勇者モン + 供モン)
 const membersOf = (r) => [...new Set([r.hero, ...(r.allies || []), ...Object.keys(r.dmg || {})].filter(Boolean))];
@@ -92,8 +96,8 @@ const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m)
     const tot = sum(names.map((k) => d[k]));
     if (names.length >= 2 && tot > 0 && Number.isFinite(d[m.name])) shares.push(d[m.name] / (tot / names.length));
   }
-  const heroLift = avg(heroRuns.map((r) => (r.wave || 0) - meanWave[r.difficulty]));
-  const memberLift = avg(inRuns.map((r) => (r.wave || 0) - meanWave[r.difficulty]));
+  const heroLift = avg(heroRuns.map((r) => reach(r) - meanWave[r.difficulty]));
+  const memberLift = avg(inRuns.map((r) => reach(r) - meanWave[r.difficulty]));
   const byDiff = {};
   for (const d of diffs) {
     const rs = inRuns.filter((r) => r.difficulty === d);
@@ -103,7 +107,7 @@ const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m)
   // アシストカードとの相性: その子が入った回で、カードごとの届いた WAVE の伸び(2回以上あるカードだけ)
   const byAssist = {};
   for (const r of inRuns) for (const a of new Set((r.assists || []).map((x) => String(x).replace(/\+$/, '')))) {
-    (byAssist[a] = byAssist[a] || []).push((r.wave || 0) - meanWave[r.difficulty]);
+    (byAssist[a] = byAssist[a] || []).push(reach(r) - meanWave[r.difficulty]);
   }
   const assistRank = Object.entries(byAssist).filter(([, v]) => v.length >= 2).map(([a, v]) => [a, avg(v), v.length]).sort((x, y) => y[1] - x[1]);
   // 技の回数と間合い(use は 2026-10-09 から記録している回だけ)
@@ -199,11 +203,14 @@ out('**試した回数が5回より少ない子は「暫定」です。** 回数
 out();
 // ---------- 社長室(iPhone)向けの上の3節(2026-10-10 社長「見づらい。総合的なTierもほしい」) ----------
 // 総合 Tier: 難易度ごとの点を Hard 0.4・Expert 0.4・Master 0.2 で重みづけ(Master はいまボットの戦い方の差が大きいので軽く見る)
-const DIFF_WEIGHT = { Hard: 0.4, Expert: 0.4, Master: 0.2 };
+const DIFF_WEIGHT = { Hard: 0.2, Expert: 0.5, Master: 0.3 }; // 2026-10-10 改善部 T3: Hard は差が出にくいので軽く
 const tierOfScore = (sc) => (sc >= 0.45 ? 'S' : sc >= 0.15 ? 'A' : sc >= -0.15 ? 'B' : sc >= -0.45 ? 'C' : 'D');
 const overall = stats.map((s) => {
   const per = TIER_DIFFS.map((d) => ({ d, x: statsByDiff[d].find((y) => y.m.name === s.m.name) })).filter((v) => v.x && v.x.n);
-  const usable = per.filter((v) => v.x.tier !== '保留' && Number.isFinite(v.x.score));
+  const measured = per.filter((v) => v.x.tier !== '保留' && Number.isFinite(v.x.score));
+  // 暫定のマス(その難易度で5回未満)は総合に数えない。暫定しか無い子は、暫定のマスで出して「暫定」と書く(改善部 T2)
+  const firmCells = measured.filter((v) => !v.x.provisional);
+  const usable = firmCells.length ? firmCells : measured;
   const n = per.reduce((a, v) => a + v.x.n, 0);
   let tier = '未計測';
   let score = NaN;
@@ -213,8 +220,8 @@ const overall = stats.map((s) => {
     score = usable.reduce((a, v) => a + v.x.score * DIFF_WEIGHT[v.d], 0) / w;
     tier = tierOfScore(score);
   }
-  const short = (d) => { const v = per.find((q) => q.d === d); return v ? v.x.tier.replace('未計測', '—') : '—'; };
-  return { s, tier, score, n, provisional: n < 8 || usable.length < 2, short };
+  const short = (d) => { const v = per.find((q) => q.d === d); return v ? `${v.x.tier.replace('未計測', '—')}${v.x.provisional && v.x.tier !== '保留' ? '*' : ''}` : '—'; };
+  return { s, tier, score, n, provisional: !firmCells.length || firmCells.length < 2, short };
 });
 const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '保留', '未計測'];
 overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
@@ -238,10 +245,12 @@ for (const t of ['S', 'A', 'B', 'C', 'D', '保留']) {
   if (xs.length) out(`- **${t}** ${xs.map((o) => `${o.s.m.name}${o.provisional && t !== '保留' ? '(暫定)' : ''}`).join('・')}`);
 }
 out();
-out('決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 4・Expert 4・Master 2 の重みで合わせる。Master はいまボットの戦い方の差が大きいので軽く見る。');
-out('固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。試した回数が8回より少ないか、2つ以上の難易度で測れていない子は「暫定」。');
+out('決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。');
+out('数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。');
 out();
 out('## 早見表');
+out();
+out('* は、その難易度で5回未満(暫定。総合には数えない)。');
 out();
 out('| モンスター | 総合 | Hard | Expert | Master |');
 out('| --- | --- | --- | --- | --- |');
@@ -340,13 +349,14 @@ for (const hero of styleHeroes) {
   if (bests.length) out(`- **${hero}** のいちばんよいスタイル: ${bests.join(' / ')}。Tier は難易度ごとに、このスタイルで戦えた前提で見る`);
 }
 out();
-out('## 全難易度をまとめた表(参考。6項目の中身と理由)');
+out('## 6項目の中身と理由(全難易度を混ぜて数えたもの)');
 out();
-out('| Tier | モンスター | 役 | 間合い(零近中遠) | 攻め | 守り | 勇者特性 | 固有技 | EX | 間合い | 試した回数(勇者) | 理由 |');
-out('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+out('Tier は上の「総合 Tier」と「難易度ごとの Tier」だけ。ここは中身(6項目)と理由。6項目は 攻め・守り・勇者特性・固有技・EX・間合い の順(◎○△、— はまだ数えていない、未 は EX を一度も使えていない)。');
+out();
+out('| モンスター | 役 | 6項目 | 回数(勇者) | 理由 |');
+out('| --- | --- | --- | --- | --- |');
 for (const s of stats) {
-  const t = `${s.tier}${s.provisional && s.n && s.tier !== '保留' ? '(暫定)' : ''}`;
-  out(`| ${t} | ${s.m.name} | ${s.role} | ${s.dist ? s.dist.join(' ') : '—'} | ${KEYS.map((k) => s.marks[k]).join(' | ')} | ${s.n}(${s.heroN}) | ${reasonOf(s)} |`);
+  out(`| ${s.m.name} | ${s.role} | ${KEYS.map((k) => s.marks[k]).join('')} | ${s.n}(${s.heroN}) | ${reasonOf(s)} |`);
 }
 out();
 out('## 数えた回数');
