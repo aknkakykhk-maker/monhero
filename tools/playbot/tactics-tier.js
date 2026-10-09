@@ -159,6 +159,9 @@ const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', '保留', '未計測'];
 const stats = statsOf(runs);
 // 難易度ごとの Tier(2026-10-09 社長「難易度によって結構Tierも変わる」)。1つにまとめない
 const TIER_DIFFS = ['Hard', 'Expert', 'Master'];
+// 机上の数字(sim/desk.js)。読めなければ空のまま
+let deskByName = {};
+try { process.argv.push('--diff', TIER_DIFFS.join(',')); deskByName = Object.fromEntries(require('./sim/desk').rows.map((r) => [r.m.name, r])); } catch (e) { deskByName = {}; }
 const statsByDiff = Object.fromEntries(TIER_DIFFS.map((d) => [d, statsOf(runs.filter((r) => r.difficulty === d))]));
 stats.sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier) || (b.score || -9) - (a.score || -9) || b.n - a.n);
 
@@ -215,8 +218,10 @@ out();
 out('難易度で敵の火力とライフが大きく違うので、Tier は難易度ごとに付けます。かっこの中は、その難易度で試した回数(勇者モンにした回数)。');
 out('2段以上動いた子は、理由を1行で書きます。');
 out();
-out('| モンスター | 役 | Hard | Expert | Master | 難易度で動いた理由 |');
-out('| --- | --- | --- | --- | --- | --- |');
+out('机上の欄は sim/desk.js(ゲームの式・素のベースモン)から: 「通常技1発 / 20ターンで出せるダメージ / その難易度の WAVE 1 の通常攻撃を何発受けられるか(Hard・Expert・Master)」。');
+out();
+out('| モンスター | 役 | 机上 | Hard | Expert | Master | 難易度で動いた理由 |');
+out('| --- | --- | --- | --- | --- | --- | --- |');
 const TIER_STEP = { S: 0, A: 1, B: 2, C: 3, D: 4 };
 for (const s of stats) {
   const cells = TIER_DIFFS.map((d) => {
@@ -234,7 +239,9 @@ for (const s of stats) {
     if (!bits.length) bits.push('回数が少なく、ぶれている可能性(回数を増やして確かめる)');
     why = bits.join(' / ');
   }
-  out(`| ${s.m.name} | ${s.role} | ${cells.join(' | ')} | ${why} |`);
+  const dr = deskByName[s.m.name];
+  const desk = dr ? `${Math.round(dr.nHit)} / ${dr.dmg20.toLocaleString()} / ${TIER_DIFFS.map((d) => (dr.byDiff[d] ? dr.byDiff[d].w1Hits : '—')).join('・')}発` : '—';
+  out(`| ${s.m.name} | ${s.role} | ${desk} | ${cells.join(' | ')} | ${why} |`);
 }
 out();
 out('## 全難易度をまとめた表(参考。6項目の中身と理由)');
