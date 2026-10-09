@@ -398,6 +398,7 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const downed = st.party.filter((p) => p.downed).length;
     if (downed > lastDowned) stats.downs += downed - lastDowned;
     lastDowned = downed;
+    if (process.env.PLAYBOT_TACTICS_PROBE && st.turn <= 2) await require('./tactics-probe')(s, `W${st.wave}T${st.turn}`);
     await maybeUseEx(s, stats);
     await pickCards(s, st, stats);
     // ドラッグ直後のクリックは捨てられることがあるので、少し置いてから実行する
