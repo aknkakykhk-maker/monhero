@@ -601,7 +601,31 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // 中で持っていたころは、ランキングやマスモン設定を開いてこの画面が消えるたびに選択が消え、
 // 戻ってくると先頭の曲へ戻っていた。選んでいた曲を鳴らし続けるのにも、外から見える必要がある
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
-const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
+// ===== 曲えらびの「助手のひとこと」を開いているか =====
+// 曲えらびの部品(RhythmSongSelect)と、その上に案内を並べる画面(58-screen-rhythm)が同じ答えを使う。
+// 2026-10-10(K3・社長の選択「💬で3つまとめて畳む」)から、💬は一覧の上の吹き出しと「裏でクイック…」の行もまとめて畳む。
+// 縦が低い画面(高さ700px以下)では、ひとことを出すと曲の一覧が1行も見えなくなる
+// (2026-10-07 プレイボットの小さい画面係が見つけた。幅320×高さ568で一覧の高さ16px)。
+// 低い画面だけ、開け閉めを別の項目(noticeOpenShort・はじめは畳む)で持つ。💬で開けば読める
+const rhythmShortPortraitNow=()=>typeof window!=='undefined'&&window.innerHeight<=700&&window.innerHeight>window.innerWidth;
+const useRhythmShortPortrait=()=>{
+  const [isShortScreen,setIsShortScreen]=React.useState(rhythmShortPortraitNow);
+  React.useEffect(()=>{
+    const onResize=()=>setIsShortScreen(rhythmShortPortraitNow());
+    window.addEventListener('resize',onResize);
+    return ()=>window.removeEventListener('resize',onResize);
+  },[]);
+  return isShortScreen;
+};
+// 遊んだ曲の数(どれかの難易度で最後まで演奏した、またはスコアが残っている曲)
+const rhythmPlayedSongCount=bestRecords=>Object.values(bestRecords&&typeof bestRecords==='object'?bestRecords:{})
+  .filter(rec=>rec&&typeof rec==='object'&&Object.values(rec).some(r=>r&&(r.played===true||Number(r.bestScore)>0))).length;
+// 5曲以上遊んだ人は、ひとことをはじめから畳んでおく(2026-10-09・社長の選択。390×844で曲の一覧が3行しか見えなかった)。
+// 💬を押して自分で選んだ人(noticeTouched)は、その選んだほうのまま。はじめての人はこれまでどおり開いている
+const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScreen
+  ?state.noticeOpenShort
+  :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
+const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
   listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
@@ -609,22 +633,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
-  // 縦が低い画面(高さ700px以下)では、助手のひとことを出すと曲の一覧が1行も見えなくなる
-  // (2026-10-07 プレイボットの小さい画面係が見つけた。幅320×高さ568で一覧の高さ16px)。
-  // 低い画面だけ、ひとことの開け閉めを別の項目(noticeOpenShort・はじめは畳む)で持つ。💬で開けば読める
-  const shortPortrait=()=>typeof window!=='undefined'&&window.innerHeight<=700&&window.innerHeight>window.innerWidth;
-  const [isShortScreen,setIsShortScreen]=React.useState(shortPortrait);
-  useEffect(()=>{
-    const onResize=()=>setIsShortScreen(shortPortrait());
-    window.addEventListener('resize',onResize);
-    return ()=>window.removeEventListener('resize',onResize);
-  },[]);
-  // 5曲以上遊んだ人は、ひとことをはじめから畳んでおく(2026-10-09・社長の選択。390×844で曲の一覧が3行しか見えなかった)。
-  // 💬を押して自分で選んだ人(noticeTouched)は、その選んだほうのまま。はじめての人はこれまでどおり開いている
-  const playedSongCount=React.useMemo(()=>Object.values(bestRecords&&typeof bestRecords==='object'?bestRecords:{})
-    .filter(rec=>rec&&typeof rec==='object'&&Object.values(rec).some(r=>r&&(r.played===true||Number(r.bestScore)>0))).length,[bestRecords]);
-  const foldByPlays=!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
-  const noticeOpen=isShortScreen?state.noticeOpenShort:(foldByPlays?false:state.noticeOpen);
+  // 開け閉めの判定は上の rhythmSelectNoticeOpen(58-screen-rhythm の吹き出し・「裏でクイック…」の行も同じ答えで畳む)
+  const isShortScreen=useRhythmShortPortrait();
+  const playedSongCount=React.useMemo(()=>rhythmPlayedSongCount(bestRecords),[bestRecords]);
+  const noticeOpen=rhythmSelectNoticeOpen(state,playedSongCount,isShortScreen);
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -863,9 +875,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         </button>
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
           onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen,noticeTouched:true})}
-          title={noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
-          className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+          title={noticeOpen?'助手のひとことと案内を畳む':'助手のひとことと案内を出す'}
+          aria-label={noticeOpen?'助手のひとことと案内を畳む':(noticeHidden>0?`畳んである案内が${noticeHidden+1}つあります。出す`:'助手のひとことを出す')}
+          className={`relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{noticeOpen?'▲':'▼'}</span>
+          {/* 畳んでいるあいだに、ひとこと以外の案内(一度きりの案内・週間イベントなど)も隠れているときの印 */}
+          {!noticeOpen&&noticeHidden>0&&<b data-rhythm-song-notice-badge className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[9px] leading-4 text-slate-950">{noticeHidden}</b>}
         </button>}
         {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
         {toolbarExtra}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d59d0c6a7a952784
+// source-sha256: 892ef8966835d322
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 08:21";
+const BUILD_DATE = "2026-10-10 08:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28802,12 +28802,25 @@ const rhythmChartPlayable = (song, difficultyId) => {
 };
 const RHYTHM_PREVIEW_DELAY_MS = 350;
 const RHYTHM_PREVIEW_SCREENS = Object.freeze(['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_MULTI']);
+const rhythmShortPortraitNow = () => typeof window !== 'undefined' && window.innerHeight <= 700 && window.innerHeight > window.innerWidth;
+const useRhythmShortPortrait = () => {
+  const [isShortScreen, setIsShortScreen] = React.useState(rhythmShortPortraitNow);
+  React.useEffect(() => {
+    const onResize = () => setIsShortScreen(rhythmShortPortraitNow());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isShortScreen;
+};
+const rhythmPlayedSongCount = bestRecords => Object.values(bestRecords && typeof bestRecords === 'object' ? bestRecords : {}).filter(rec => rec && typeof rec === 'object' && Object.values(rec).some(r => r && (r.played === true || Number(r.bestScore) > 0))).length;
+const rhythmSelectNoticeOpen = (state, playedSongCount, isShortScreen) => isShortScreen ? state.noticeOpenShort : !state.noticeTouched && playedSongCount >= RHYTHM_NOTICE_FOLD_PLAYED_SONGS ? false : state.noticeOpen;
 const RhythmSongSelect = ({
   songs,
   difficulties,
   bestRecords,
   onPlay,
   notice = null,
+  noticeHidden = 0,
   footer = null,
   emptyText = '遊べる譜面がまだありません。',
   spotClass = null,
@@ -28832,16 +28845,9 @@ const RhythmSongSelect = ({
     if (typeof onView === 'function') onView(next);
   };
   const state = normalizeRhythmSelectView(view);
-  const shortPortrait = () => typeof window !== 'undefined' && window.innerHeight <= 700 && window.innerHeight > window.innerWidth;
-  const [isShortScreen, setIsShortScreen] = React.useState(shortPortrait);
-  useEffect(() => {
-    const onResize = () => setIsShortScreen(shortPortrait());
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  const playedSongCount = React.useMemo(() => Object.values(bestRecords && typeof bestRecords === 'object' ? bestRecords : {}).filter(rec => rec && typeof rec === 'object' && Object.values(rec).some(r => r && (r.played === true || Number(r.bestScore) > 0))).length, [bestRecords]);
-  const foldByPlays = !state.noticeTouched && playedSongCount >= RHYTHM_NOTICE_FOLD_PLAYED_SONGS;
-  const noticeOpen = isShortScreen ? state.noticeOpenShort : foldByPlays ? false : state.noticeOpen;
+  const isShortScreen = useRhythmShortPortrait();
+  const playedSongCount = React.useMemo(() => rhythmPlayedSongCount(bestRecords), [bestRecords]);
+  const noticeOpen = rhythmSelectNoticeOpen(state, playedSongCount, isShortScreen);
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
@@ -29088,13 +29094,17 @@ const RhythmSongSelect = ({
       noticeOpen: !noticeOpen,
       noticeTouched: true
     }),
-    title: noticeOpen ? '助手のひとことを畳む' : '助手のひとことを出す',
-    className: `flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+    title: noticeOpen ? '助手のひとことと案内を畳む' : '助手のひとことと案内を出す',
+    "aria-label": noticeOpen ? '助手のひとことと案内を畳む' : noticeHidden > 0 ? `畳んである案内が${noticeHidden + 1}つあります。出す` : '助手のひとことを出す',
+    className: `relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, "💬"), React.createElement("span", {
     "aria-hidden": "true"
-  }, noticeOpen ? '▲' : '▼')), toolbarExtra), React.createElement("div", {
+  }, noticeOpen ? '▲' : '▼'), !noticeOpen && noticeHidden > 0 && React.createElement("b", {
+    "data-rhythm-song-notice-badge": true,
+    className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[9px] leading-4 text-slate-950"
+  }, noticeHidden)), toolbarExtra), React.createElement("div", {
     ref: listRef,
     onScroll: handleListScroll,
     "data-rhythm-song-list": true,
@@ -47777,6 +47787,10 @@ function RhythmSongSelectScreen({
   }, "▾")), React.createElement("p", {
     className: "pb-1"
   }, "クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。")) : null;
+  const selectNoticeShort = useRhythmShortPortrait();
+  const selectNoticesOpen = rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView), rhythmPlayedSongCount(rhythmBestRecords), selectNoticeShort);
+  const quickRunStartRowVisible = !quickRunProgress && !runStage;
+  const foldedNoticeCount = selectNoticesOpen ? 0 : [!!rhythmEventNotice, !!rhythmSixLaneIntroVisible, !!rhythmLookIntroVisible, !!quickRhythmBackgroundVisible].filter(Boolean).length;
   return React.createElement("main", {
     "data-rhythm-demo-home": true,
     className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
@@ -47932,7 +47946,7 @@ function RhythmSongSelectScreen({
     "data-quick-run-stop": true,
     onClick: () => setQuickRunStopConfirm(true),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]"
-  }, "⏹ ここで周回をやめる")))), rhythmEventNotice && React.createElement("div", {
+  }, "⏹ ここで周回をやめる")))), selectNoticesOpen && rhythmEventNotice && React.createElement("div", {
     "data-rhythm-event-notice": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -47977,7 +47991,7 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます')), rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます')), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -47992,7 +48006,7 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmSixLaneIntro,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), rhythmLookIntroVisible && React.createElement("div", {
+  }, "×"))), selectNoticesOpen && rhythmLookIntroVisible && React.createElement("div", {
     "data-rhythm-look-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -48041,7 +48055,7 @@ function RhythmSongSelectScreen({
     type: "button",
     onClick: dismissRhythmLookIntro,
     className: "min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200"
-  }, "いまのままにする")))), quickRhythmBackgroundVisible && React.createElement("div", {
+  }, "いまのままにする")))), selectNoticesOpen && quickRhythmBackgroundVisible && React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -48056,7 +48070,7 @@ function RhythmSongSelectScreen({
     onClick: dismissQuickRhythmBackground,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), !quickRunProgress && !runStage && React.createElement("div", {
+  }, "×"))), selectNoticesOpen && quickRunStartRowVisible && React.createElement("div", {
     "data-quick-run-start": true,
     "data-quick-run-start-portrait": true,
     className: "shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1"
@@ -48076,6 +48090,7 @@ function RhythmSongSelectScreen({
       scene: "rhythmHome",
       compact: true
     }),
+    noticeHidden: foldedNoticeCount,
     toolbarExtra: beatPointSideCard,
     view: rhythmSelectView,
     onView: saveRhythmSelectView,

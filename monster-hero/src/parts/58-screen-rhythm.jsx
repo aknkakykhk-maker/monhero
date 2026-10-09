@@ -140,6 +140,15 @@ function RhythmSongSelectScreen({
               <p className="pb-1">クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>
             </details>)
         : null;
+      // ===== 💬でまとめて畳む(2026-10-10・改善部の提案 K3・社長の選択「💬で3つまとめて畳む」) =====
+      // 曲えらびの💬(助手のひとこと)を畳んでいるときは、一覧の上の吹き出し(一度きりの案内・週間イベント)と、
+      // 縦持ちの「裏でクイック…」の行も一緒に畳む。答えは曲えらびの部品と同じ rhythmSelectNoticeOpen(保存は今の見た目の設定のまま)。
+      // ★裏で周回が動いているときの帯(負けて止まった・始め直すなど)は畳まない。大事な知らせは見えたままにする
+      const selectNoticeShort=useRhythmShortPortrait();
+      const selectNoticesOpen=rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView),rhythmPlayedSongCount(rhythmBestRecords),selectNoticeShort);
+      const quickRunStartRowVisible=!quickRunProgress&&!runStage;
+      const foldedNoticeCount=selectNoticesOpen?0:
+        [!!rhythmEventNotice,!!rhythmSixLaneIntroVisible,!!rhythmLookIntroVisible,!!quickRhythmBackgroundVisible].filter(Boolean).length;
       return (
       <main data-rhythm-demo-home className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
         {/* 周回を締めているあいだ。いまは報酬の付与と記録だけで端末の中で完結するので
@@ -274,7 +283,7 @@ function RhythmSongSelectScreen({
         {/* 週間ランキングの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2)。
             その週の初回に1度だけ出す。閉じるか、その週にもう一度見たら出ない。
             ★ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤) */}
-        {rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
+        {selectNoticesOpen&&rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1">
               <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
@@ -308,7 +317,7 @@ function RhythmSongSelectScreen({
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
             同じことはヘルプとリザルト(獲得したとき)で分かる。開催中の帯だけ残す */}
         {/* 6レーンになったこと・MASTERの横フリックを、曲えらびを開いた最初の1回だけ伝える(2026-09-26) */}
-        {rhythmSixLaneIntroVisible&&<div data-rhythm-six-lane-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+        {selectNoticesOpen&&rhythmSixLaneIntroVisible&&<div data-rhythm-six-lane-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmSixLaneIntro" compact/></div>
             <button type="button" onClick={dismissRhythmSixLaneIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
@@ -318,7 +327,7 @@ function RhythmSongSelectScreen({
         {/* 横持ちは高さが足りず、吹き出し＋ボタン2段(118px)で「決定」が画面の外へ押し出されていた(2026-09-27)。
             1行にまとめても高さ360pxの端末でははみ出すので、横持ちだけ左下(曲の一覧の上)へ浮かせ、
             右の列(難易度・決定)を押し下げないようにする。出し分けは index.html の素のCSS(クイック周回の帯と同じ考え方) */}
-        {rhythmLookIntroVisible&&<div data-rhythm-look-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+        {selectNoticesOpen&&rhythmLookIntroVisible&&<div data-rhythm-look-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
           <div data-rhythm-look-intro-landscape>
             <div className="flex items-start gap-1">
               <p className="min-w-0 flex-1 pt-1 text-[11px] font-black leading-snug text-cyan-100">✨ モンヒロビートの見た目を、もっと華やかにできるようになりました</p>
@@ -341,7 +350,7 @@ function RhythmSongSelectScreen({
           </div>
         </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
-        {quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
+        {selectNoticesOpen&&quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="quickRhythmBackground" compact/></div>
             <button type="button" onClick={dismissQuickRhythmBackground} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
@@ -354,7 +363,7 @@ function RhythmSongSelectScreen({
               モンヒロビートだけで遊ぶ人もいるので、塗りつぶしをやめて枠だけにし、
               主張を抑える(2026-09-07・ユーザー指摘
               「クイック前の場所は変わってない」「主張は強くしすぎないほうがいい」)。 */}
-        {!quickRunProgress&&!runStage&&<div data-quick-run-start data-quick-run-start-portrait className="shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1">
+        {selectNoticesOpen&&quickRunStartRowVisible&&<div data-quick-run-start data-quick-run-start-portrait className="shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1">
           {quickRunStartNode}
           {quickRunStartError&&<p className="mt-1 text-[9px] font-black text-red-300">いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。</p>}
         </div>}
@@ -373,6 +382,7 @@ function RhythmSongSelectScreen({
           spotClass={spotClass}
           onPlay={onPlaySong}
           notice={<AssistantBubble scene="rhythmHome" compact/>}
+          noticeHidden={foldedNoticeCount}
           toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}
           onView={saveRhythmSelectView}
