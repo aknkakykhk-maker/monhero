@@ -20,6 +20,7 @@ const outArg = process.argv.indexOf('--out');
 const OUT = outArg > 0 ? path.resolve(process.argv[outArg + 1]) : path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier.html');
 
 const TIERS = ['S', 'A', 'B', 'C', 'D', '保留'];
+const OVERALL_TIERS = [...TIERS, '回数不足']; // 回数不足 = どの難易度も5回未満で、総合はまだ付けない
 const DIFFS = ['Hard', 'Expert', 'Master'];
 const DIFF_TIERS = [...TIERS, '—']; // — はその難易度でまだ測れていない
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -38,7 +39,7 @@ function validate(d) {
     if (!m || !m.名前) { p.push('名前の無いモンスターがあります'); continue; }
     if (names.has(m.名前)) p.push(`${at}: 名前が重なっています`);
     names.add(m.名前);
-    if (!TIERS.includes(m.総合)) p.push(`${at}: 総合 は ${TIERS.join('・')} のどれか(いま「${m.総合}」)`);
+    if (!OVERALL_TIERS.includes(m.総合)) p.push(`${at}: 総合 は ${OVERALL_TIERS.join('・')} のどれか(いま「${m.総合}」)`);
     for (const k of DIFFS) if (!DIFF_TIERS.includes(m[k])) p.push(`${at}: ${k} は ${DIFF_TIERS.join('・')} のどれか(いま「${m[k]}」)`);
     if (typeof m.暫定 !== 'boolean') p.push(`${at}: 暫定 は true / false`);
     if (!m.役) p.push(`${at}: 役が空です`);
@@ -89,7 +90,7 @@ function loadIcons(names) {
 function build(d) {
   const mons = d.モンスター;
   const { cls, css } = loadIcons(mons.map((m) => m.名前));
-  const tcls = (t) => (t === '保留' || t === '—' ? 'h' : t);
+  const tcls = (t) => (['保留', '—', '回数不足'].includes(t) ? 'h' : t);
   const tier = (t) => `<b class="t t-${tcls(t)}">${esc(t)}</b>`;
   const tile = (m, bodyHtml, letter, prov) => `
       <details class="mon">
@@ -100,6 +101,7 @@ function build(d) {
   const diffTable = (m) => `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   const fullBody = (m) => kv([
     ['役', esc(m.役)],
+    m.仮の総合 ? ['仮の総合', `${tier(m.仮の総合)} (5回未満のマスから出した仮)`] : null,
     ['ひとこと', esc(m.理由)],
     m.強み ? ['強み', esc(m.強み)] : null,
     m.弱み ? ['弱み', esc(m.弱み)] : null,
@@ -118,7 +120,7 @@ function build(d) {
     if (!list.length && t === '—') return '';
     return `
     <section class="panel tp-${tcls(t)}">
-      <h3>${tier(t)}<span class="cnt">${list.length}体${t === '保留' ? '(まだ決められない)' : t === '—' ? '(まだ試していない)' : ''}</span></h3>
+      <h3>${tier(t)}<span class="cnt">${list.length}体${t === '保留' ? '(まだ決められない)' : t === '—' ? '(まだ試していない)' : t === '回数不足' ? '(どの難易度も5回未満。総合はまだ付けない)' : ''}</span></h3>
       <div class="grid">${list.length ? list.map((m) => tile(m, bodyOf(m), withLetter, key === '総合' && m.暫定)).join('') : '<p class="empty">いません</p>'}
       </div>
     </section>`;
@@ -162,7 +164,7 @@ h2{font-size:18px;font-weight:800}
 .tp-C{--c:var(--tC);--bg2:var(--bC)}.tp-D{--c:var(--tD);--bg2:var(--bD)}.tp-h{--c:var(--tH);--bg2:var(--bH)}
 .panel h3{display:flex;align-items:center;gap:10px;font-size:15px;margin-bottom:8px}
 .cnt{font-size:12px;font-weight:500;color:var(--muted);font-family:var(--font-body)}
-.t{display:inline-block;min-width:1.9em;padding:0 8px;border-radius:8px;text-align:center;font-family:var(--font-head);font-weight:800;color:#fff;line-height:1.5}
+.t{display:inline-block;min-width:1.9em;padding:0 8px;white-space:nowrap;border-radius:8px;text-align:center;font-family:var(--font-head);font-weight:800;color:#fff;line-height:1.5}
 .t-S{background:var(--tS)}.t-A{background:var(--tA)}.t-B{background:var(--tB)}.t-C{background:var(--tC)}.t-D{background:var(--tD)}.t-h{background:var(--tH)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .t{color:#11161e}}
 :root[data-theme="dark"] .t{color:#11161e}
@@ -202,7 +204,7 @@ ${css}
 
   <section>
     <h2>総合 Tier</h2>
-    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。</p>${panels('総合', fullBody, null, TIERS)}
+    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
   </section>
 
   <section>
