@@ -52,24 +52,18 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 16:59 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 17:00 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
-    <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
+    <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
+    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
     <a class="count" href="#shipped"><b>8</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
     <h2>社長の判断待ち</h2>
-    <div class="cards">
-      <article class="card decide" id="d2">
-        <span class="chip warn">決めてほしいこと</span>
-        <h3>守り部のMISS調べを続けるか</h3>
-        <p>小さい画面の「指が範囲の中なのにMISS」が、ボットの遅らせたタッチを外しても出た(指は判定ラインより約140〜160px下、ずれ15〜54ms)。ビート部は「ボットの見間違い」と結論していた件。続けるなら、深く押したときの受付の仕組みを調べる</p>
-        <div class="meta"><span>守り部 部長ガードくん</span><span>守り部のセッション</span><span>10/09 16:45</span></div>
-      </article>
+    <div class="cards"><p class="empty">いま決めてほしいことはありません。</p>
     </div>
   </section>
 
@@ -106,6 +100,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
         <div class="row-body">ゴーレムが低く出たのはボットの取りこぼし3つと判明し直した(点は社長の感覚に合わせない)。これからは2本立て: ①机上の表(モンスターごとの期待ダメージ・ガッツ効率・何発受けられるか・特性とEXの伸び) ②簡易シミュレーター(ゲームの式を写し、10WAVEを1体あたり数百回。実戦と合うか確かめてから使う)</div>
         <div class="meta"><span>ハカセくん</span><span>見込み 数字入りの版 18:30〜19:00 / 机上の表 今夜19:30〜20:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
+      </li>
+      <li id="w6">
+        <div class="row-title">小さい画面の「範囲の中なのにMISS」の調べ直し</div>
+        <div class="row-body">守り部が、ボットの遅らせたタッチを外しても出ると確かめた。午前の結論(ボットの見間違い)と食い違う理由から調べる(社長がビート部に回すと選んだ)</div>
+        <div class="meta"><span>部長テンポくん(フィールくん)</span><span>見込み テンポくんが連絡</span></div>
       </li></ul>
     </section>
     <section id="shipped">
@@ -165,8 +164,8 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>部長ブレイブくん</span><span>部員 クラシックくん・タクティクスくん・イベントくん</span><span>最後の報告 10/09 14:15</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">ビート部</span><span class="chip idle">待機</span></div>
-        <div class="row-body">次の定期点検(日曜夜)</div>
+        <div class="row-title"><span class="team">ビート部</span><span class="chip ok">作業中</span></div>
+        <div class="row-body">小さい画面のMISSの調べ直し</div>
         <div class="meta"><span>部長テンポくん</span><span>部員 リズムくん・マルチくん・レイドくん・フィールくん</span><span>最後の報告 10/09 11:14</span></div>
       </li>
       <li>
@@ -175,8 +174,8 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>部長マップくん</span><span>部員 ルーキーくん・パトロールくん・ストーリーくん・デザインくん</span><span>最後の報告 10/09 14:25</span></div>
       </li>
       <li>
-        <div class="row-title"><span class="team">守り部</span><span class="chip warn">返事待ち</span></div>
-        <div class="row-body">MISS調べを続けるかの返事待ち</div>
+        <div class="row-title"><span class="team">守り部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">次の定期点検(日曜夜)</div>
         <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 16:45</span></div>
       </li>
       <li>
