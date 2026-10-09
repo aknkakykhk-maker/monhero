@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd4f8446d5a26a47
+// source-sha256: 66bc5deaf39feedf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 16:43";
+const BUILD_DATE = "2026-10-09 17:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -66217,6 +66217,82 @@ function RhythmMultiMemberSheet({
     className: "mt-3 min-h-[42px] w-full rounded-xl bg-slate-700 text-sm font-black"
   }, "閉じる")));
 }
+function RhythmMultiBuddyInfoSheet({
+  m,
+  masu,
+  songName,
+  resolveIconUrl,
+  onClose
+}) {
+  const state = useRhythmBuddyState();
+  const dayKey = useRhythmBuddyDayKey();
+  if (masu) {
+    return React.createElement("div", {
+      className: "absolute inset-0 z-[86000] flex items-end justify-center landscape:items-center"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": "閉じる",
+      className: "absolute inset-0 bg-slate-950/75",
+      onClick: onClose
+    }), React.createElement("section", {
+      "data-rhythm-multi-buddy-info": true,
+      className: "relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:max-h-[92%] landscape:max-w-xl landscape:rounded-3xl",
+      style: {
+        paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))'
+      }
+    }, React.createElement("header", {
+      className: "mb-2 flex shrink-0 items-center gap-2"
+    }, React.createElement("h3", {
+      className: "min-w-0 flex-1 text-base font-black text-lime-200"
+    }, "🎵 マスモンのステータス"), React.createElement("button", {
+      "data-rhythm-multi-buddy-info-close": true,
+      type: "button",
+      "aria-label": "閉じる",
+      onClick: onClose,
+      className: "min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black"
+    }, "✕")), React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-y-auto"
+    }, React.createElement(RhythmBuddyDetail, {
+      masu: masu,
+      mon: state.mons[masu.id],
+      dayKey: dayKey,
+      songName: songName,
+      onBack: null
+    })), React.createElement("button", {
+      type: "button",
+      onClick: onClose,
+      className: "mt-2 min-h-[44px] w-full shrink-0 rounded-xl bg-slate-700 text-sm font-black"
+    }, "閉じる")));
+  }
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[86000] flex items-center justify-center p-4"
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-slate-950/70",
+    onClick: onClose
+  }), React.createElement("div", {
+    "data-rhythm-multi-buddy-info": true,
+    "data-rhythm-multi-buddy-info-other": true,
+    className: "relative w-full max-w-xs rounded-2xl border border-lime-300/40 bg-slate-900 p-4 text-center shadow-2xl"
+  }, React.createElement("div", {
+    className: "mx-auto w-fit"
+  }, React.createElement(RhythmMultiAvatar, {
+    m: m,
+    resolveIconUrl: resolveIconUrl,
+    sizeClass: "h-16 w-16"
+  })), React.createElement("b", {
+    className: "mt-2 block truncate text-base font-black"
+  }, m.name), React.createElement("small", {
+    className: "block text-[12px] font-black text-lime-200"
+  }, "ビートLv.", m.level), React.createElement("p", {
+    className: "mt-3 text-[11px] font-bold leading-relaxed text-slate-300"
+  }, "ほかのメンバーが呼んだマスモンです。くわしいステータスは、呼んだ人だけが見られます"), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "mt-3 min-h-[42px] w-full rounded-xl bg-slate-700 text-sm font-black"
+  }, "閉じる")));
+}
 function RhythmMultiAvatar({
   m,
   resolveIconUrl,
@@ -66260,7 +66336,8 @@ function RhythmMultiMemberCards({
   resolveIconUrl,
   badgeOf,
   size = 'tall',
-  bubbleOf = null
+  bubbleOf = null,
+  onOpen = null
 }) {
   const tall = size === 'tall';
   return React.createElement("ul", {
@@ -66276,11 +66353,26 @@ function RhythmMultiMemberCards({
     }, "募集中");
     const badge = badgeOf(m);
     const self = m.id === selfId;
-    return React.createElement("li", {
+    const openable = !!(onOpen && m.cpu);
+    const openProps = openable ? {
+      role: 'button',
+      tabIndex: 0,
+      'data-rhythm-multi-member-open': '',
+      'aria-label': `${m.name}のステータスを見る`,
+      onClick: () => onOpen(m),
+      onKeyDown: ev => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          onOpen(m);
+        }
+      }
+    } : {};
+    return React.createElement("li", _extends({
       key: m.id,
-      "data-rhythm-multi-member": true,
-      className: `relative flex min-h-0 min-w-0 rounded-xl ${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3' : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`
-    }, React.createElement(RhythmMultiChatBubble, {
+      "data-rhythm-multi-member": true
+    }, openProps, {
+      className: `relative flex min-h-0 min-w-0 rounded-xl ${openable ? 'cursor-pointer active:brightness-125 ' : ''}${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3' : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`
+    }), React.createElement(RhythmMultiChatBubble, {
       text: bubbleOf ? bubbleOf(m.id) : ''
     }), React.createElement("small", {
       "data-rhythm-multi-member-badge": true,
@@ -66294,7 +66386,10 @@ function RhythmMultiMemberCards({
     }), m.id === hostId && React.createElement("span", {
       "aria-hidden": "true",
       className: "absolute -right-1.5 -top-1.5 text-[11px]"
-    }, "👑")), React.createElement("span", {
+    }, "👑"), openable && React.createElement("span", {
+      "aria-hidden": "true",
+      className: `absolute -bottom-1 -right-1.5 flex items-center justify-center rounded-full bg-lime-300 font-black leading-none text-slate-950 ${tall ? 'h-4 w-4 text-[10px]' : 'h-3 w-3 text-[8px]'}`
+    }, "i")), React.createElement("span", {
       className: `min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`
     }, React.createElement("span", {
       className: `block truncate font-black leading-tight ${tall ? 'text-[11px] landscape:text-sm' : 'text-[10px]'}`
@@ -66828,6 +66923,23 @@ function RhythmMultiScreen({
     const song = songs.find(x => x.songId === id);
     return song ? rhythmSongFullName(song) : '(曲)';
   };
+  const [buddyInfoId, setBuddyInfoId] = React.useState('');
+  const openBuddyInfo = m => {
+    if (m && m.cpu) setBuddyInfoId(m.id);
+  };
+  const buddyInfoMember = buddyInfoId && view ? (view.members || []).find(x => x && x.id === buddyInfoId) : null;
+  const buddyInfoMine = buddyInfoMember && view && view.myCpus ? view.myCpus.find(c => c.id === buddyInfoMember.id) : null;
+  const buddyInfoLayer = buddyInfoMember ? React.createElement(RhythmMultiBuddyInfoSheet, {
+    m: buddyInfoMember,
+    songName: buddySongName,
+    resolveIconUrl: resolveIconUrl,
+    onClose: () => setBuddyInfoId(''),
+    masu: buddyInfoMine ? (masuMons || []).find(x => x && x.id === buddyInfoMine.masuId) || null : null
+  }) : null;
+  const buddyInfoPhase = view && view.room ? view.room.phase : '';
+  React.useEffect(() => {
+    if (buddyInfoPhase === 'playing') setBuddyInfoId('');
+  }, [buddyInfoPhase]);
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
@@ -67040,7 +67152,7 @@ function RhythmMultiScreen({
   const buddySheetClosedAtRef = React.useRef(0);
   const buddySheetWasOpenRef = React.useRef(false);
   React.useEffect(() => {
-    if (buddySheet) {
+    if (buddySheet || buddyInfoId) {
       buddySheetWasOpenRef.current = true;
       return;
     }
@@ -67048,7 +67160,7 @@ function RhythmMultiScreen({
       buddySheetWasOpenRef.current = false;
       buddySheetClosedAtRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
     }
-  }, [buddySheet]);
+  }, [buddySheet, buddyInfoId]);
   const leaveRoomAfterTap = () => {
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (buddySheetClosedAtRef.current > 0 && now - buddySheetClosedAtRef.current < RHYTHM_BUDDY_LEAVE_GUARD_MS) return;
@@ -67634,6 +67746,7 @@ function RhythmMultiScreen({
       className: `${btn} mt-2 w-full bg-slate-700`,
       onClick: leaveRoom
     }, "モードえらびへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
+      onOpen: openBuddyInfo,
       bubbleOf: chatBubbleOf,
       members: members,
       hostId: view ? view.hostId : '',
@@ -67763,7 +67876,7 @@ function RhythmMultiScreen({
       onClick: leaveRoomAfterTap
     }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
-    }, message)))), chatSheet, rankingLayer, buddySheetLayer);
+    }, message)))), chatSheet, rankingLayer, buddyInfoLayer, buddySheetLayer);
   }
   if (showResult) {
     const fill = Math.min(1, Math.max(0, team.average / 1000000));
@@ -67863,7 +67976,7 @@ function RhythmMultiScreen({
         key: r.m.id,
         "data-rhythm-multi-result-row": true,
         role: r.m.id !== view.selfId ? 'button' : undefined,
-        onClick: r.m.id !== view.selfId ? () => setMemberSheetId(r.m.id) : undefined,
+        onClick: r.m.id !== view.selfId ? () => r.m.cpu ? setBuddyInfoId(r.m.id) : setMemberSheetId(r.m.id) : undefined,
         className: `relative flex ${r.m.id !== view.selfId ? 'cursor-pointer active:brightness-125' : ''} min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5 [[data-mh-view-rotation=true]_&]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5 [[data-mh-view-rotation=true]_&]:pt-1.5'}`
       }, React.createElement(RhythmMultiChatBubble, {
         text: chatBubbleOf(r.m.id)
@@ -68038,7 +68151,7 @@ function RhythmMultiScreen({
       className: "px-1 tabular-nums"
     }, r.res && !r.res.quit && r.res.j ? r.res.j[k] : '—')), React.createElement("td", {
       className: "rounded-r-lg px-1 tabular-nums"
-    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))), chatSheet, rankingLayer);
+    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))), chatSheet, rankingLayer, buddyInfoLayer);
   }
   if (phase === 'playing' || phase === 'result') {
     return React.createElement("main", {
@@ -68046,6 +68159,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-step": "waiting",
       className: shell
     }, header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom), React.createElement(RhythmMultiMemberCards, {
+      onOpen: openBuddyInfo,
       bubbleOf: chatBubbleOf,
       members: members,
       hostId: view.hostId,
@@ -68080,7 +68194,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} bg-slate-700 landscape:w-48`,
       onClick: leaveRoomAfterTap
-    }, "ルームを出る")), chatSheet, rankingLayer, countdownLayer);
+    }, "ルームを出る")), chatSheet, rankingLayer, buddyInfoLayer, countdownLayer);
   }
   if (shuffleRound) {
     const picked = members.map(m => ({
@@ -68151,6 +68265,7 @@ function RhythmMultiScreen({
       advance: 'すぐ開始',
       gesture: true
     }), React.createElement(RhythmMultiMemberCards, {
+      onOpen: openBuddyInfo,
       bubbleOf: chatBubbleOf,
       members: members,
       hostId: view.hostId,
@@ -68229,7 +68344,7 @@ function RhythmMultiScreen({
       className: "min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]"
     }, iAmReady ? '準備完了!' : '準備完了', iAmReady && React.createElement("small", {
       className: "block text-[9px] font-bold"
-    }, "ほかのメンバーを待っています"))), chatSheet, rankingLayer, countdownLayer);
+    }, "ほかのメンバーを待っています"))), chatSheet, rankingLayer, buddyInfoLayer, countdownLayer);
   }
   const myPick = me && me.pickRound === room.round ? me.pick : '';
   const pickLabel = m => {
@@ -68254,6 +68369,7 @@ function RhythmMultiScreen({
     buddy: true,
     selectTime: true
   }), React.createElement(RhythmMultiMemberCards, {
+    onOpen: openBuddyInfo,
     bubbleOf: chatBubbleOf,
     members: members,
     hostId: view.hostId,
@@ -68298,7 +68414,7 @@ function RhythmMultiScreen({
       onClick: leaveRoom,
       className: "flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300"
     }, "ルームを出る"))
-  }), chatSheet, rankingLayer, buddySheetLayer, countdownLayer);
+  }), chatSheet, rankingLayer, buddyInfoLayer, buddySheetLayer, countdownLayer);
 }
 const RHYTHM_BUDDY_STORE = (() => {
   let state = rhythmBuddyNormalize(null);
