@@ -16780,7 +16780,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <span aria-hidden="true" className="mhbt-mark">{String(m.id).replace(/([A-Z])/g,' $1').toUpperCase()}</span>
                         <div className="mhbt-eyebrow">BATTLE MODE</div>
                         {/* ★名前の長いモード(タクティクス種族チャレンジ など)は、字を落として1行に収める(名前は正式名称のまま。CLAUDE.md ⑤) */}
-                        <h3 className={`mhbt-name truncate ${(m.cardLabel||m.label).length>=10?'text-[16px]':(m.cardLabel||m.label).length>=7?'text-[19px]':'text-[23px]'}`}><span aria-hidden="true" className="mr-1 not-italic">{m.emoji}</span>{m.cardLabel||m.label}</h3>
+                        <h3 className={`mhbt-name truncate ${(m.cardLabel||m.label).length>=10?'text-[16px]':(m.cardLabel||m.label).length>=7?'text-[19px]':'text-[23px]'}`}><span aria-hidden="true" className="not-italic">{m.emoji}</span> {m.cardLabel||m.label}</h3>
                         <p className="mhbt-sub">{m.tagline}</p>
                         {/* スコア対象モードは全難易度の自己ベスト最大値、クイックは従来どおり選択中難易度のWAVE記録を出す。
                             β版の「準備中」カードは、記録の代わりに何を待っているかを出す */}
