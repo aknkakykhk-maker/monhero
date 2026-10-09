@@ -5765,7 +5765,17 @@ function MonsterHeroGame() {
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
-      const compensationGrant = grantCompensationGifts(loginGrant.gifts);
+      // はじめて遊ぶ人(compensationEverPlayed が false)には、7〜8月の不具合のお詫びは配らない。
+      // 配らなかったidは新しいキーへ控え、はじめての設定を終えたあとの起動でも配られないようにする
+      let waivedCompensationIds = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+      if (!compensationEverPlayed) {
+        const toWaive = compensationIdsToWaive(loginGrant.gifts, waivedCompensationIds);
+        if (toWaive.length > 0) {
+          waivedCompensationIds = [...waivedCompensationIds, ...toWaive];
+          await storeSet(COMPENSATION_WAIVED_KEY, waivedCompensationIds, false);
+        }
+      }
+      const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
       // その人だけに届くお詫び。PLAYER ID はタイトル画面に出しているものと同じ経路
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
@@ -6434,7 +6444,10 @@ function MonsterHeroGame() {
         const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
         if (issued !== true) {
           const savedGifts = await storeGet('mh_gifts', [], false);
-          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          const giftsNow = Array.isArray(savedGifts) ? savedGifts : [];
+          // 配らなかったお詫びの合計を、プレオープン記念へ足す(すでにギフトボックスにあるお詫びは足さない)
+          const waivedNow = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+          const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
           await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
         }

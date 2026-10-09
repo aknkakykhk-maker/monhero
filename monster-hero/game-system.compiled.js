@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 09b373ef2c5fbd2b
+// source-sha256: d28028d6621e5226
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 22:40";
+const BUILD_DATE = "2026-10-10 00:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12014,9 +12014,28 @@ const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
   const keep = new Set(prunable.slice().sort((a, b) => claimedAtOf(b) - claimedAtOf(a)).slice(0, limit));
   return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
 };
-const grantCompensationGifts = (gifts, now = Date.now()) => {
+const COMPENSATION_WAIVED_KEY = 'mh_compensation_waived_v1';
+const NEW_PLAYER_WAIVED_COMPENSATION_IDS = Object.freeze(['gift_compensation_20260731_battle', 'gift_compensation_20260801_points', 'gift_compensation_20260823_skip', 'gift_compensation_20260807_dye']);
+const normalizeWaivedCompensationIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
+const compensationIdsToWaive = (gifts, waivedIds) => {
   const list = Array.isArray(gifts) ? gifts : [];
-  const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  return NEW_PLAYER_WAIVED_COMPENSATION_IDS.filter(id => !waived.includes(id) && !list.some(item => item?.id === id));
+};
+const waivedCompensationRewards = (gifts, waivedIds) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const totals = new Map();
+  COMPENSATION_GIFTS.filter(def => NEW_PLAYER_WAIVED_COMPENSATION_IDS.includes(def.id) && waived.includes(def.id) && !list.some(item => item?.id === def.id)).forEach(def => def.rewards.forEach(r => totals.set(r.type, (totals.get(r.type) || 0) + Math.floor(Number(r.amount) || 0))));
+  return [...totals.entries()].map(([type, amount]) => ({
+    type,
+    amount
+  }));
+};
+const grantCompensationGifts = (gifts, now = Date.now(), waivedIds = []) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const missing = COMPENSATION_GIFTS.filter(def => !waived.includes(def.id) && !list.some(item => item?.id === def.id));
   if (missing.length === 0) return {
     granted: false,
     gifts: list
@@ -12093,7 +12112,7 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
     amount: 100
   }]
 });
-const grantNewPlayerCampaignGift = (gifts, now = Date.now()) => {
+const grantNewPlayerCampaignGift = (gifts, now = Date.now(), extraRewards = []) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return {
     granted: false,
@@ -12103,12 +12122,22 @@ const grantNewPlayerCampaignGift = (gifts, now = Date.now()) => {
     granted: false,
     gifts: list
   };
+  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r => ({
+    ...r
+  }));
+  (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
+    const amount = Math.floor(Number(extra?.amount) || 0);
+    if (!extra?.type || amount <= 0) return;
+    const same = rewards.find(r => r.type === extra.type);
+    if (same) same.amount += amount;else rewards.push({
+      type: extra.type,
+      amount
+    });
+  });
   const gift = {
     ...NEW_PLAYER_CAMPAIGN_GIFT,
     source: 'campaign',
-    rewards: NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r => ({
-      ...r
-    })),
+    rewards,
     createdAt: new Date(now).toISOString(),
     claimedAt: null
   };
@@ -77346,7 +77375,15 @@ function MonsterHeroGame() {
       if (bondLogin.changed) await storeSet(assistantBondKeyFor(activeAssistant), bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
-      const compensationGrant = grantCompensationGifts(loginGrant.gifts);
+      let waivedCompensationIds = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+      if (!compensationEverPlayed) {
+        const toWaive = compensationIdsToWaive(loginGrant.gifts, waivedCompensationIds);
+        if (toWaive.length > 0) {
+          waivedCompensationIds = [...waivedCompensationIds, ...toWaive];
+          await storeSet(COMPENSATION_WAIVED_KEY, waivedCompensationIds, false);
+        }
+      }
+      const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
       let currentPlayerId = '';
       try {
         currentPlayerId = window.localStorage.getItem('mh_player_id') || '';
@@ -78019,7 +78056,9 @@ function MonsterHeroGame() {
         const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
         if (issued !== true) {
           const savedGifts = await storeGet('mh_gifts', [], false);
-          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          const giftsNow = Array.isArray(savedGifts) ? savedGifts : [];
+          const waivedNow = normalizeWaivedCompensationIds(await storeGet(COMPENSATION_WAIVED_KEY, [], false));
+          const grant = grantNewPlayerCampaignGift(giftsNow, Date.now(), waivedCompensationRewards(giftsNow, waivedNow));
           if (grant.granted) {
             await storeSet('mh_gifts', grant.gifts, false);
             setGifts(grant.gifts);
