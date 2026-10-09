@@ -152,6 +152,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     await page.evaluate((names) => { window.__pbWant = names; }, pref.order);
     ctx.log.note(`編成の順(覚え書き ${pref.knownRuns}回ぶんから): ${pref.order.join('・')}`);
   }
+  let notListed = 0;
   for (let i = 0; i < 40; i += 1) {
     if (await page.evaluate(() => /WAVE 1\/\d+/.test(document.body.innerText) && !!document.querySelector('[data-battle-action]'))) break;
     await s.dismissOverlays(4);
@@ -166,7 +167,8 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     //   その回は戦わない(Tier 表の成績に混ざらないように。2026-10-10)
     if (unlockAll && /勇者モン/.test(scrName)) {
       const listed = await page.evaluate(() => /すべて\s*\d+/.test([...document.querySelectorAll('button')].map((x) => x.innerText || '').join(' ')));
-      if (!listed) return 'no-unlock-all-list';
+      notListed = listed ? 0 : notListed + 1;
+      if (notListed >= 3) return 'no-unlock-all-list';
     }
     const step = await page.evaluate(() => {
       const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
