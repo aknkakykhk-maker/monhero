@@ -219,7 +219,8 @@ function decidePick(b, opts, ctx) {
     };
     if (threat === 'multi' || threat === 'single' || threat === 'big') {
       const target = b.slots.find((x) => x.aimed);
-      const want = threat === 'multi' ? 2 : 1;
+      // 3連撃は同じ子へ2枚(連撃ガード)。必殺技も1枚で受けきれないことが多いので、倒れそうなら2枚重ねる
+      const want = threat === 'multi' || (threat === 'big' && target && target.hp && target.aimDamage >= target.hp.now) ? 2 : 1;
       if (target && needFor(target) && (ctx.guarded[target.i] || 0) < want) {
         const g = guardOn(target.i);
         if (g) return { kind: 'guard', card: g.o.card, slot: g.slot, value: g.value, why: `${target.name}が${threat === 'multi' ? '3連撃' : threat === 'big' ? '必殺技' : '攻撃'}で${target.aimDamage}削られる予告` };
@@ -245,9 +246,12 @@ function decidePick(b, opts, ctx) {
   const downed = b.slots.filter((x) => x.occupied && x.downed).length;
   const heal = opts.find((o) => o.card.type === 'heal');
   if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.5))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
-  // ⑤ 攻撃
-  if (atkOpts.length) {
-    const a = atkOpts[0];
+  // ⑤ 攻撃。★スタンのカード(あつの挑発など・type debuff)は「ためる」「貫通の構え」のターンまで取っておく。
+  //   先に撃つと、必殺技(×2.5)を止められずに倒れる(2026-10-09 Master の WAVE 3)。とどめのときだけは使ってよい
+  const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
+  const atkUse = keepStun ? atkOpts.filter((a) => a.o.card.type !== 'debuff') : atkOpts;
+  if (atkUse.length) {
+    const a = atkUse[0];
     return { kind: 'attack', card: a.o.card, slot: a.slot, value: a.value, why: lethal ? 'とどめ' : '見込みのダメージがいちばん大きい' };
   }
   // ⑤' 見込みが読めなかった攻撃カード(押しても印が出ない)でも、使えるなら置いてみる
