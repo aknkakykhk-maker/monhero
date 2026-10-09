@@ -152,6 +152,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     await page.evaluate((names) => { window.__pbWant = names; }, pref.order);
     ctx.log.note(`編成の順(覚え書き ${pref.knownRuns}回ぶんから): ${pref.order.join('・')}`);
   }
+  let notListed = 0;
   for (let i = 0; i < 40; i += 1) {
     if (await page.evaluate(() => /WAVE 1\/\d+/.test(document.body.innerText) && !!document.querySelector('[data-battle-action]'))) break;
     await s.dismissOverlays(4);
@@ -162,6 +163,13 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     // 置き場所(適性)・アシストカード(足りないもの)は、戦い方の判断で選ぶ
     if (ctx && await brain.chooseBetween(s, ctx.mem, ctx.log)) { s.state.step += 1; await s.wait(900); continue; }
     const scrName = await s.screenName();
+    // ★すべて解放なのに勇者モンの画面が「すべて26」の一覧になっていなければ、解放が効いていない(最初の8体と Beginner だけ)。
+    //   その回は戦わない(Tier 表の成績に混ざらないように。2026-10-10)
+    if (unlockAll && /勇者モン/.test(scrName)) {
+      const listed = await page.evaluate(() => /すべて\s*\d+/.test([...document.querySelectorAll('button')].map((x) => x.innerText || '').join(' ')));
+      notListed = listed ? 0 : notListed + 1;
+      if (notListed >= 3) return 'no-unlock-all-list';
+    }
     const step = await page.evaluate(() => {
       const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
       const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
@@ -336,7 +344,10 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
   mem.roster = await readRoster(s).catch(() => null);
   if (mem.roster) brain.saveRoster(mem.roster);
   let entered = '';
-  for (const mode of modes) {
+  // ★「すべて解放」はタクティクスプロだけで回す。ふつうのタクティクスは自分の育てた子(編成 | ベースモン の8体)で戦うモードで、
+  //   そちらへ入れた回は、勇者モンを選べず Beginner で戦っていた(2026-10-10。Tier 表の成績に混ざらないよう、入れない)
+  const modeList = unlockAll ? ['tacticsPro'] : modes;
+  for (const mode of modeList) {
     entered = await enterTactics(s, { mode, difficulty, stats, ctx: { mem, log }, unlockAll });
     if (entered === 'ok') { stats.mode = mode; break; }
     await s.backHome();
