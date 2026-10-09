@@ -458,7 +458,11 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       await s.wait(500);
       const now = await readTactics(s);
       // ★負けたときは「敗北」の画面が盤面の上に出る(手札は残っている)ので、それも動いたと見る
-      moved = !now.inBattle || now.over || now.turn !== before.turn || now.wave !== before.wave;
+      // ★ヤオビクニの「悠久の刻」(時間停止)を使ったターンは、ターンの数字が進まない(EX の説明どおり)。
+      //   手札が配り直されたことでも「動いた」と見る(2026-10-09 はこれを進行停止と見誤っていた)
+      const handSig = (t) => (t.hand || []).map((c) => c.label || c.type).join('|');
+      moved = !now.inBattle || now.over || now.turn !== before.turn || now.wave !== before.wave
+        || (k >= 4 && handSig(now) !== handSig(before) && (now.picked || 0) === 0 && now.hand.some((c) => c.usable));
     }
     const after = await brain.readBoard(s);
     // 記録: このターンに出たダメージを、置いたカードの見込みの割合で子ごとに分ける

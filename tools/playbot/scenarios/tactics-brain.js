@@ -321,9 +321,9 @@ async function placePick(s, d) {
 // 名前 → 名簿の1体(間合い適性 dist・特性 trait・固有技・EX)。記録で「得意な間合いで撃てたか」「特性が効いたか」を数えるのに使う
 const ROSTER_BY_NAME = {};
 const EX_ROLE_BY_EFFECT = {
-  // timeStop(ヤオビクニ「悠久の刻」)は使わない: 2026-10-09 に2回とも、使ったターンの実行から60秒たってもターンが進まなかった
-  //   (ゲームの不具合か、ボットの押し方の足りなさかを切り分けるまで。docs/playbot/reports/tier/PROGRESS.md)
-  statBoost: 'refill', coverAll: 'shield', partyGuard: 'shield', timeStop: 'skip',
+  // timeStop(ヤオビクニ「悠久の刻」)は、使ったターンのターンの数字が進まない(EX の説明どおり。不具合ではない)。
+  //   tactics.js の「動いたか」の判定は、手札が配り直されたことでも見る
+  statBoost: 'refill', coverAll: 'shield', partyGuard: 'shield', timeStop: 'shield',
   damageBack: 'selfGuard', avoidCharge: 'selfGuard', dodgeCombo: 'dodge', distMatch: 'distBurst', counter: 'counter',
   allIn: 'allIn', lifeSpring: 'heal', cookieBox: 'heal', trickConfuse: 'heal', present: 'present',
   psychoLock: 'burst', thunder: 'burst', multiBuff: 'burst', stage: 'burst', pandoraBox: 'burst', partyBoost: 'burst',
@@ -331,7 +331,7 @@ const EX_ROLE_BY_EFFECT = {
 };
 const EX_ROLE = (() => {
   const out = {
-    モノリス: 'shield', ユグドラシル: 'shield', ヤオビクニ: 'skip', エイキ: 'distBurst', ザン: 'dodge',
+    モノリス: 'shield', ユグドラシル: 'shield', ヤオビクニ: 'shield', エイキ: 'distBurst', ザン: 'dodge',
     モッチー: 'refill', ミタラシ: 'refill', メロディー: 'heal', ゴーレム: 'allIn', ハム: 'counter', オボロゲソウ: 'selfGuard',
     アーク: 'burst', イブリース: 'burst', メルホイップ: 'burst', クロミー: 'burst', 剣士モッチー: 'burst',
   };
