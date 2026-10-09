@@ -78,11 +78,11 @@ function validate(d) {
   if (d.組み合わせ !== undefined) {
     if (!Array.isArray(d.組み合わせ)) p.push('組み合わせ は配列にする');
     else for (const c of d.組み合わせ) {
-      const at = `組み合わせ「${c && c.勇者}×${c && c.供}」`;
-      if (!c || !names.has(c.勇者) || !names.has(c.供)) p.push(`${at}: 勇者・供 はモンスターの名前にする`);
-      if (!c || !['よい', 'わるい'].includes(c.評価)) p.push(`${at}: 評価 は よい / わるい`);
+      const at = `組み合わせ「${c && c.勇者}×${c && c.供モン}」`;
+      if (!c || !names.has(c.勇者) || !names.has(c.供モン)) p.push(`${at}: 勇者・供モン はモンスターの名前にする`);
+      if (!c || !['良い', '合わない'].includes(c.良し悪し)) p.push(`${at}: 良し悪し は 良い / 合わない`);
       if (c && !c.理由) p.push(`${at}: 理由が空です`);
-      if (c && typeof c.確かめた !== 'boolean') p.push(`${at}: 確かめた は true / false`);
+      if (c && typeof c.実戦で確認 !== 'boolean') p.push(`${at}: 実戦で確認 は true / false`);
       if (c && c.点 !== undefined && !Number.isFinite(c.点)) p.push(`${at}: 点 は数`);
     }
   }
@@ -178,6 +178,7 @@ function build(d) {
   const diffTable = (m) => `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   const refList = (kind, list) => `<ul class="rl">${list.map((x) => `<li>${iconOf(kind, x.名前, 'sm')}<span><b>${esc(x.名前)}</b> ${esc(x.理由)}</span></li>`).join('')}</ul>`;
   const assistBody = (a) => kv([
+    a.仮の総合 ? ['仮の総合', `${tier(a.仮の総合)} (5回未満のマスから出した仮)`] : null,
     ['ひとこと', esc(a.理由)],
     a.強み ? ['強み', esc(a.強み)] : null,
     a.弱み ? ['弱み', esc(a.弱み)] : null,
@@ -217,20 +218,20 @@ function build(d) {
     ${panels(k, (m) => diffBody(m, k), null, DIFF_TIERS)}
   </details>`).join('');
   const comboRow = (c) => `
-        <li class="cb ${c.評価 === 'よい' ? 'cg' : 'cx'}">
-          <div class="pair">${iconOf('m', c.勇者)}<span class="x">×</span>${iconOf('m', c.供)}</div>
-          <div class="ct"><b>勇者 ${esc(c.勇者)} × 供 ${esc(c.供)}</b> <span class="vd">${c.評価 === 'よい' ? '◎ よく合う' : '△ 合わない'}</span>${c.点 !== undefined ? `<small> ${esc(c.点)}点</small>` : ''}<small> ${c.確かめた ? '実戦で確かめた' : '机上・シミュレーターの見立て'}</small>
+        <li class="cb ${c.良し悪し === '良い' ? 'cg' : 'cx'}">
+          <div class="pair">${iconOf('m', c.勇者)}<span class="x">×</span>${iconOf('m', c.供モン)}</div>
+          <div class="ct"><b>勇者 ${esc(c.勇者)} × 供モン ${esc(c.供モン)}</b> <span class="vd">${c.良し悪し === '良い' ? '◎ よく合う' : '△ 合わない'}</span>${c.点 !== undefined ? `<small> ${esc(c.点)}点</small>` : ''}<small> ${c.実戦で確認 ? '実戦で確かめた' : '机上・シミュレーターの見立て'}</small>
           <div>${esc(c.理由)}</div></div>
         </li>`;
   const comboGroup = (label, hit) => {
-    const list = combos.filter((c) => c.評価 === hit);
-    return `<details class="diff" ${hit === 'よい' ? 'open' : ''}><summary>${label}(${list.length}組)</summary>${list.length ? `<ul class="cbl">${list.map(comboRow).join('')}</ul>` : '<p class="empty">まだありません。</p>'}</details>`;
+    const list = combos.filter((c) => c.良し悪し === hit);
+    return `<details class="diff" ${hit === '良い' ? 'open' : ''}><summary>${label}(${list.length}組)</summary>${list.length ? `<ul class="cbl">${list.map(comboRow).join('')}</ul>` : '<p class="empty">まだありません。</p>'}</details>`;
   };
   const soon = '<p class="empty">準備中です(研究所がデータを足すと出ます)。</p>';
   const assistSection = assists
     ? panels('総合', assistBody, null, OVERALL_TIERS, assists, 'a', '枚')
     : soon;
-  const comboSection = combos ? comboGroup('よく合う組み合わせ', 'よい') + '\n    ' + comboGroup('合わない組み合わせ', 'わるい') : soon;
+  const comboSection = combos ? comboGroup('よく合う組み合わせ', '良い') + '\n    ' + comboGroup('合わない組み合わせ', '合わない') : soon;
   const weights = DIFFS.map((k) => `${k} ${d.決め方.重み[k]}`).join('・');
   const c = d.数えた回;
 
