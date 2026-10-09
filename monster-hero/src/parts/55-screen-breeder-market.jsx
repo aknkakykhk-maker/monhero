@@ -199,10 +199,10 @@ function BreederMarketScreen({
             >
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
-                <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.titleLines?section.titleLines.map(line=><span key={line} className="block">{line}</span>):section.label}</span>
+                <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.titleLines?section.titleLines.map(line=><span key={line} className="block whitespace-nowrap">{line}</span>):section.label}</span>
               </div>
               <div className="mt-2.5 font-mono text-xl font-black text-white">{section.value!==null?section.value:' '}</div>
-              <div className="mt-0.5 text-[10px] font-bold text-slate-400">{section.hint}</div>
+              <div className="mt-0.5 text-[10px] font-bold text-slate-400 [text-wrap:balance]">{section.hint}</div>
               <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.arrow}`}>›</span>
             </button>
           ))}

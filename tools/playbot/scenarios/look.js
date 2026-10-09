@@ -7,6 +7,7 @@
 // 縮めるのに sharp(tools/node_modules)を使う。無ければ撮るだけにする。
 const fs = require('fs');
 const path = require('path');
+const { scanTextWrap } = require('../lib/text-wrap');
 
 const LOOK_DIR = path.join(__dirname, '..', 'baseline', 'look');
 const W = 97, H = 211;
@@ -33,12 +34,36 @@ const SCREENS = [
 let sharp = null;
 try { sharp = require('sharp'); } catch { sharp = null; }
 
+// 文字の折り返しを見る画面の大きさ(幅×高さ)。ふだんの 390×844 のほか、小さめ・大きめ・横向き(2026-10-09)
+const WRAP_SIZES = [[390, 844], [360, 640], [430, 932], [844, 390]];
+
+// いまの画面の文字を、画面の大きさを変えながら見る。見つけたものは「どの画面の・どの文字か」を知らせる
+async function checkWraps(s, name, shotDir) {
+  const orig = s.page.viewportSize();
+  let found = 0;
+  for (const [w, h] of WRAP_SIZES) {
+    await s.page.setViewportSize({ width: w, height: h });
+    await s.wait(700);
+    const list = await scanTextWrap(s.page);
+    for (const f of list.slice(0, 6)) {
+      found += 1;
+      const img = path.join(shotDir, `wrap-${name}-${w}x${h}.png`);
+      if (!fs.existsSync(img)) fs.writeFileSync(img, await s.page.screenshot().catch(() => Buffer.alloc(0)));
+      await s.addIssue(f.kind, `「${name}」${w}×${h}で、${f.detail}(${f.text.replace(/\n/g, ' ')} / ${f.where})`);
+    }
+  }
+  await s.page.setViewportSize(orig);
+  await s.wait(500);
+  return found;
+}
+
 const small = (buf) => sharp(buf).resize(W, H, { fit: 'fill' }).grayscale().raw().toBuffer();
 
 async function lookScenario(s, { out }) {
   const save = process.argv.includes('--save-baseline');
   if (save) fs.mkdirSync(LOOK_DIR, { recursive: true });
   const shot = [], changed = [], missing = [];
+  let wraps = 0;
   for (const [name, file, steps] of SCREENS) {
     await s.backHome();
     await s.dismissOverlays(10);
@@ -55,6 +80,7 @@ async function lookScenario(s, { out }) {
     const buf = await s.page.screenshot();
     fs.writeFileSync(path.join(out, `look-${file}.png`), buf);
     shot.push(name);
+    wraps += await checkWraps(s, file, out);
     if (!sharp) continue;
     const now = await small(buf);
     const basePath = path.join(LOOK_DIR, `${file}.png`);
@@ -79,7 +105,7 @@ async function lookScenario(s, { out }) {
     if (save) await sharp(now, { raw: { width: W, height: H, channels: 1 } }).png().toFile(basePath);
   }
   await s.backHome();
-  const note = `${shot.length}画面を撮った${sharp ? '' : '(sharp が無いので比べていない)'}${changed.length ? `・大きく変わった: ${changed.join('・')}` : '・大きく変わった画面なし'}${missing.length ? `・開けなかった: ${missing.join('・')}` : ''}${save ? '・今回の分を前回の分として残した' : ''}`;
+  const note = `${shot.length}画面を撮った${sharp ? '' : '(sharp が無いので比べていない)'}${changed.length ? `・大きく変わった: ${changed.join('・')}` : '・大きく変わった画面なし'}${wraps ? `・文字の折り返しの見つけもの ${wraps}件` : '・文字の折り返しの崩れなし'}${missing.length ? `・開けなかった: ${missing.join('・')}` : ''}${save ? '・今回の分を前回の分として残した' : ''}`;
   return { ok: !missing.length, note };
 }
 

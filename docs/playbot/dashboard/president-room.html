@@ -1,0 +1,243 @@
+<title>モンヒロ社 社長室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
+<style>
+/* 社長の机の上の報告書: 上から「決める→動いている→終わった→部→成績」。スマホ1列、広い画面は2列 */
+:root{--bg:#f3f5f8;--panel:#ffffff;--fg:#18202c;--muted:#5b6676;--line:#dde2ea;--accent:#2a56c6;--warn:#a35200;--warn-bg:#fff4e5;--ok:#17803d;--bad:#b42318;--track:#e8ecf2;
+--font-head:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;--font-body:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11161e;--panel:#19202b;--fg:#e8edf4;--muted:#9aa6b6;--line:#2a3442;--accent:#7fa2ff;--warn:#ffb35c;--warn-bg:#2d2416;--ok:#5fd28a;--bad:#ff8a7a;--track:#232c39;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11161e;--panel:#19202b;--fg:#e8edf4;--muted:#9aa6b6;--line:#2a3442;--accent:#7fa2ff;--warn:#ffb35c;--warn-bg:#2d2416;--ok:#5fd28a;--bad:#ff8a7a;--track:#232c39;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6}
+.wrap{max-width:68rem;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--font-head);margin:0;text-wrap:balance}
+h1{font-size:26px;font-weight:800;letter-spacing:.02em}
+h2{font-size:18px;font-weight:800}
+h3{font-size:16px;font-weight:800}
+.lead{margin:4px 0 0;color:var(--muted);font-size:13px}
+.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.count{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;text-decoration:none;color:inherit}
+.count b{font-family:var(--font-head);font-size:28px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.count span{font-size:12px;color:var(--muted)}
+.count.warn b{color:var(--warn)}
+section{display:flex;flex-direction:column;gap:10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card.decide{background:var(--warn-bg);border-color:var(--warn)}
+.card p{margin:0}
+.chip{display:inline-block;align-self:flex-start;border:1px solid currentColor;border-radius:999px;padding:0 9px;font-size:12px;line-height:20px;white-space:nowrap}
+.chip.warn{color:var(--warn)}.chip.ok{color:var(--ok)}.chip.bad{color:var(--bad)}.chip.idle{color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12px;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.list li{padding:12px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+.list li:first-child{border-top:0}
+.row-title{font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.team{font-family:var(--font-head);font-weight:800}
+.row-body{font-size:14px}
+.empty{margin:0;color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr));gap:28px;align-items:start}
+.mvp{display:flex;flex-direction:column;gap:2px}
+.mvp b{font-family:var(--font-head);font-size:24px;font-weight:800}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:grid;grid-template-columns:minmax(0,8.5em) minmax(0,1fr) 2.6em;align-items:center;gap:8px;font-size:13px}
+.bar-name{overflow-wrap:anywhere;color:var(--muted)}
+.bar-track{position:relative;height:14px;background:var(--track);border-radius:7px}
+.bar-zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--muted)}
+.bar{position:absolute;top:0;bottom:0;border-radius:7px;background:var(--muted);opacity:.55}
+.bar.top{background:var(--accent);opacity:1}
+.bar.neg{background:var(--bad);opacity:.8}
+.bar-val{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.note{font-size:12px;color:var(--muted);margin:0}
+</style>
+<div class="wrap">
+  <header>
+    <h1>モンヒロ社 社長室</h1>
+    <p class="lead">10/9 16:40 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+  </header>
+
+  <nav class="counts" aria-label="件数">
+    <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち</span></a>
+    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>6</b><span>公開したもの</span></a>
+  </nav>
+
+  <section id="decide">
+    <h2>社長の判断待ち</h2>
+    <div class="cards">
+      <article class="card decide" id="d2">
+        <span class="chip warn">決めてほしいこと</span>
+        <h3>守り部の提案(2件)</h3>
+        <p>強化画面の「完了」で振った分を消す前に確かめる/戻るボタンでゲームの外へ出ない。ガードくんから選択式で聞く予定だった件(返事済みならコメントで教えてください)</p>
+        <div class="meta"><span>守り部 部長ガードくん</span><span>reports/2026-10-09/guard.md</span><span>10/09</span></div>
+      </article>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section id="work">
+      <h2>進行中の作業</h2>
+      <ul class="list">
+      <li id="d1">
+        <div class="row-title">タクティクスのバランス提案の見直し</div>
+        <div class="row-body">初期の8体・6種類だけで出した案だったため、ちからの提案は取り下げ。全モンスター・全アシカで Expert の成績を集め直してから出し直す</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 18:30〜19:30</span></div>
+      </li>
+      <li id="w1">
+        <div class="row-title">タクティクス Master のクリア(全モンスターで学び直し)</div>
+        <div class="row-body">全モンスター・全アシカの中身をゲームから読んで一覧にし、Expert で全種の成績を集めてから Master に挑む</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み Expert の後</span><span>PR #2380・#2388</span></div>
+      </li>
+      <li id="w2">
+        <div class="row-title">タクティクスの検査2本が落ちている件</div>
+        <div class="row-body">公開版でも落ちていた(ハカセくんが見つけた)。原因を調べて直す</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>見込み 未定</span></div>
+      </li>
+      <li id="w3">
+        <div class="row-title">日曜夜の定期点検が各部へ届くかの確認</div>
+        <div class="row-body">届かなければ直接起こす</div>
+        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/11 3:10</span></div>
+      </li>
+      <li id="w4">
+        <div class="row-title">初めての週報</div>
+        <div class="row-body">部ごとのまとめ・今週のMVP・使用量</div>
+        <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/12 8:52</span></div>
+      </li>
+      <li id="w5">
+        <div class="row-title">モンスターのTier表とバランス調整提案</div>
+        <div class="row-body">「すべて解放してバトル」でモンスターを入れ替えながら毎晩少しずつ集める。回数が少ないうちは暫定</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 最初の暫定版はハカセくんが連絡</span></div>
+      </li></ul>
+    </section>
+    <section id="shipped">
+      <h2>公開したもの</h2>
+      <ul class="list">
+      <li id="p6">
+        <div class="row-title">DEBUG MENU に「すべて解放してバトル」</div>
+        <div class="row-body">社長の案。全モンスター・全アシカ・全難易度で戦える(保存も記録もしない)。ボットの学び直し用</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2391</span><span>DEBUG MENU</span></div>
+      </li>
+      <li id="p1">
+        <div class="row-title">文字の折り返しの崩れ9件を直した</div>
+        <div class="row-body">モンヒロビートのモードえらび・オプション・マーケット・プロフィールなど</div>
+        <div class="meta"><span>デザインくん</span><span>PR #2381・#2385</span><span>モンヒロビートのモードえらび下の「マスモン 0/4」</span></div>
+      </li>
+      <li id="p2">
+        <div class="row-title">難易度えらびの色の強弱</div>
+        <div class="row-body">段階が上がるほど濃く・光が太く速く。極限チャレンジもそろえた</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>PR #2383</span><span>モンヒロバトル → クラシック → チャレンジ → 難易度</span></div>
+      </li>
+      <li id="p3">
+        <div class="row-title">EXで手札が使えない理由・クッキー満タンの光</div>
+        <div class="row-body">タクティクスで理由を1行/メロディーの札がピンクに光る</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>PR #2371</span><span>タクティクスバトル</span></div>
+      </li>
+      <li id="p4">
+        <div class="row-title">小さい画面のMISSはボットの見間違いと判明</div>
+        <div class="row-body">ゲームの不具合ではなかった。ボット側を直した</div>
+        <div class="meta"><span>部長テンポくん</span><span>PR #2377</span><span>(ゲームは変わらない)</span></div>
+      </li>
+      <li id="p5">
+        <div class="row-title">組織図・社則・成績表</div>
+        <div class="row-body">日報・週報の決めごと、新しい部署3つ</div>
+        <div class="meta"><span>統括部長:モンヒロくん</span><span>PR #2389</span><span>docs/playbot/ORG.md</span></div>
+      </li></ul>
+      <p class="note">本番: https://aknkakykhk-maker.github.io/monhero/</p>
+    </section>
+  </div>
+
+  <div class="cols">
+    <section id="teams">
+      <h2>各部の様子</h2>
+      <ul class="list">
+      <li>
+        <div class="row-title"><span class="team">バトル部</span><span class="chip ok">作業中</span></div>
+        <div class="row-body">タクティクスの検査2本の調べ</div>
+        <div class="meta"><span>部長ブレイブくん</span><span>部員 クラシックくん・タクティクスくん・イベントくん</span><span>最後の報告 10/09 14:15</span></div>
+      </li>
+      <li>
+        <div class="row-title"><span class="team">ビート部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">次の定期点検(日曜夜)</div>
+        <div class="meta"><span>部長テンポくん</span><span>部員 リズムくん・マルチくん・レイドくん・フィールくん</span><span>最後の報告 10/09 11:14</span></div>
+      </li>
+      <li>
+        <div class="row-title"><span class="team">見回り部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">次の定期点検(日曜夜)</div>
+        <div class="meta"><span>部長マップくん</span><span>部員 ルーキーくん・パトロールくん・ストーリーくん・デザインくん</span><span>最後の報告 10/09 14:25</span></div>
+      </li>
+      <li>
+        <div class="row-title"><span class="team">守り部</span><span class="chip warn">返事待ち</span></div>
+        <div class="row-body">提案2件の返事待ち</div>
+        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 8:22</span></div>
+      </li>
+      <li>
+        <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
+        <div class="row-body">全モンスターで学び直し(18:30〜19:30)</div>
+        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 16:05</span></div>
+      </li>
+      <li>
+        <div class="row-title"><span class="team">開発部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">頼みごとなし</div>
+        <div class="meta"><span>クラフトくん(減給1回)</span><span>最後の報告 10/09</span></div>
+      </li>
+      <li>
+        <div class="row-title"><span class="team">修理部</span><span class="chip idle">待機</span></div>
+        <div class="row-body">頼みごとごとに立てる</div>
+        <div class="meta"><span>ドライバーくん</span></div>
+      </li></ul>
+    </section>
+    <section id="scores">
+      <h2>成績表</h2>
+      <div class="card">
+        <div class="mvp"><span class="note">いま点がいちばん高い部員</span><b>デザインくん</b><span class="note">見回り部 / 26点</span></div>
+        <div class="bars">
+      <div class="bar-row">
+        <span class="bar-name">デザインくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar top" style="left:10.34%;width:89.66%"></span></span>
+        <span class="bar-val">26</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">部長ブレイブくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:13.79%"></span></span>
+        <span class="bar-val">4</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">部長マップくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:13.79%"></span></span>
+        <span class="bar-val">4</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">部長テンポくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
+        <span class="bar-val">2</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">ハカセくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:6.90%"></span></span>
+        <span class="bar-val">2</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">イベントくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar " style="left:10.34%;width:3.45%"></span></span>
+        <span class="bar-val">1</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">マルチくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar neg" style="left:6.90%;width:3.45%"></span></span>
+        <span class="bar-val">−1</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">イジワルくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar neg" style="left:6.90%;width:3.45%"></span></span>
+        <span class="bar-val">−1</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-name">クラフトくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:10.34%"></span><span class="bar neg" style="left:0.00%;width:10.34%"></span></span>
+        <span class="bar-val">−3</span>
+      </div>
+        </div>
+        <p class="note">本物の不具合 +3 / 社長が選んだ改良の公開 +2 / 見間違い −1 / 指示違反 −5(10/9から)</p>
+      </div>
+    </section>
+  </div>
+</div>

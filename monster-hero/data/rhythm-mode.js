@@ -1274,7 +1274,12 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   // 当てるノーツを選ぶための本当の遅れ(rhythmInputMatchAgeFor)。基準がそろっていて、その間ゲームが本当に止まっていたと見えたときだけ覚える
   // (「時刻だけ古い」入力では覚えない＝これまでどおり)。判定に使う遅れ(下で返す値)は変えない
   if(aligned&&RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE)rhythmInputMatchAgeHint=Math.min(age,RHYTHM_INPUT_AGE_CAP_WIDE_MS);
-  if(!rhythmTouchFixOn('inputAgeCap'))return aligned?RHYTHM_INPUT_AGE_MAX_MS:0;
+  if(!rhythmTouchFixOn('inputAgeCap')){
+    // 【2026-10-09・社長の指示「iPhoneの遅れの正体を調べる」】上限を超えて遅れた入力が、本当に処理が詰まった(コマが止まっていた)ものか、
+    // 端末の時刻だけ古いもの(コマは来ていた)かを、直し方を入れていない端末でも数える。数えるだけで、判定には何も効かない
+    if(aligned){if(RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE)RHYTHM_TIMING_DIAG.ageBacked();else RHYTHM_TIMING_DIAG.ageUnbacked();}
+    return aligned?RHYTHM_INPUT_AGE_MAX_MS:0;
+  }
   // 直し方 inputAgeCap を入れた端末。広げた上限(300ms)を使うのは、
   //   ①時計の基準がそろっていて、かつ ②その間ゲームが本当に止まっていた(コマが来ていなかった)と見えたときだけ。
   // ②は「入力が遅れたと言っているのに、直前のコマはつい今来ていた」なら、イベントの時刻が古いだけの疑いが強いので、これまでの上限(80ms)で止める
