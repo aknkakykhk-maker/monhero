@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 113d8fadafdd9ca4
+// source-sha256: a5facd9343ccd0ea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 00:16";
+const BUILD_DATE = "2026-10-10 00:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -29198,7 +29198,7 @@ const RhythmSongSelect = ({
     const tone = rhythmDifficultyTone(item.id);
     const open = unlocked(item);
     const on = !!difficulty && item.id === difficulty.id;
-    const need = rhythmDifficultyUnlockRequirement(item.id);
+    const need = rhythmDifficultyUnlockRequirement(item.id, song.songId);
     return React.createElement("button", {
       key: item.id,
       type: "button",
@@ -34267,16 +34267,17 @@ const RhythmTapTest = ({
       if (tutorial || calibrating || debugPlay || multi || result.assist || result.cleared === false) return null;
       const before = runRef.current?.startBest;
       if (before && before.clear === true) return null;
-      const opened = Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id => RHYTHM_DIFFICULTY_UNLOCK_BY[id] === difficulty.id && rhythmChartPlayable(song, id));
-      if (!opened) return null;
+      const openedIds = RHYTHM_DEMO_DIFFICULTY_IDS.filter(id => rhythmDifficultyUnlockRequirement(id, song.songId) === difficulty.id && rhythmChartPlayable(song, id));
+      if (!openedIds.length) return null;
+      const opened = openedIds.join('・');
       return React.createElement("div", {
-        "data-rhythm-result-unlock": opened,
+        "data-rhythm-result-unlock": openedIds.join(','),
         className: "mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"
       }, React.createElement("b", {
         className: "block text-base font-black text-amber-100"
       }, "🔓 ", opened, " が解放されました！"), React.createElement("small", {
         className: "mt-0.5 block text-[10px] font-bold text-amber-200/90"
-      }, "この曲の ", opened, "（Lv.", song.difficulties[opened].level, "）を曲えらびで選べます"));
+      }, "この曲の ", openedIds.map(id => `${id}（Lv.${song.difficulties[id].level}）`).join('・'), " を曲えらびで選べます"));
     })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && React.createElement("div", {
       "data-rhythm-result-luck": true,
       className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"
