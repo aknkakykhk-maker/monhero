@@ -65,7 +65,7 @@ const PARTS = [
     does: 'タクティクスバトルを手で6分遊ぶ。敵の予告で狙われた子が危なければ守りのカードを選ぶ',
     run: async (s, { phase, numbers }) => {
       await phase('タクティクスを手で戦う', async () => {
-        const r = await tacticsScenario(s);
+        const r = await tacticsScenario(s, { maxMs: Number(process.env.PLAYBOT_TACTICS_MS) || 360000 });
         if (r.stats.entered) numbers['バトル係: タクティクスで着いたWAVE'] = r.stats.waveReached;
         await s.backHome();
         return r;
