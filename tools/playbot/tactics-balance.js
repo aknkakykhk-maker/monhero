@@ -184,7 +184,7 @@ const medTurns = median(waveRows.map((w) => w.turns));
 for (const w of waveRows) {
   if (w.turns >= Math.max(6, medTurns * 1.8)) props.push(`WAVE ${w.wave}「${w.enemy}」が長引く(平均${r1(w.turns)}ターン・ほかのWAVEの中央値${r1(medTurns)})。敵のライフをまず ${step(1 - medTurns * 1.4 / w.turns)} 下げる案(TACTICS_ENEMY_DATA の hp)`);
   if (w.downs >= 1 || w.takenRatio >= 0.6) props.push(`WAVE ${w.wave}「${w.enemy}」で削られすぎる(倒れた平均${r1(w.downs)}・受けたダメージ ${pct(w.takenRatio)})。この敵の技の倍率か、ちからを 1割ほど下げる案`);
-  if (w.lost > 0) props.push(`WAVE ${w.wave}「${w.enemy}」で ${w.lost}/${w.n}回 負けた。上の2つのどちらが効いているかを先に見る`);
+  if (w.lost > 0) props.push(`WAVE ${w.wave}「${w.enemy}」で ${w.lost}/${w.n}回 負けた(数字を変える前に、負け方(長引いた/削られた)を記録の why で見る)`);
   if (w.wave >= 5 && w.turns <= 1.5 && w.takenRatio < 0.1) props.push(`WAVE ${w.wave}「${w.enemy}」が手応えなく終わる(平均${r1(w.turns)}ターン・受けたダメージ ${pct(w.takenRatio)})。後半の敵としては弱い。ライフを上げるか、難易度で増える技を早めに持たせる案`);
 }
 if (monRows.length >= 3) {
@@ -210,7 +210,7 @@ out();
 if (!props.length) out('目立って強すぎる・弱すぎるものは見つからなかった。');
 for (const p of props) out(`- ${p}`);
 out();
-out(`記録: ${files.map((f) => path.relative(ROOT, f)).join(', ')}`);
+out(`記録: ${runs.map((r) => path.relative(ROOT, r.file)).join(', ')}`);
 
 const text = lines.join('\n');
 console.log(text);
