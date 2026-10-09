@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cdbf06164925c63d
+// generated-sha256: 8946eaa3e0d2bc71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-09 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-09 18:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1508,8 +1508,11 @@ const normalizeMasuAutoEnhance = (value) => {
     order,
     statTargets,
     aptLimits,
-    // 余ったポイントの配り方。項目を持っていない既存ユーザーは、いままでと同じ「順番に上限まで」
-    distribution: source.distribution === 'even' ? 'even' : 'order',
+    // 余ったポイントの配り方。保存に項目が無いときは、すでにオート強化を使っている子(ONにしたことがある・設定を保存したことがある)だけ、
+    // いままでと同じ「順番に上限まで」。まだ使っていない子は「1Pずつ順番に配る」から始める(2026-10-09・社長の選択)
+    distribution: source.distribution === 'even' ? 'even'
+      : source.distribution === 'order' ? 'order'
+      : (source.enabled === true || version >= 1) ? 'order' : 'even',
     ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? { statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
       Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0])) } : {}),
   };
