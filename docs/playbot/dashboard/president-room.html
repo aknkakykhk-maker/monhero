@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 00:42 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/10 00:48 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>31</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>5</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>32</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,11 +88,6 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="kG1">
-        <div class="row-title">G1 ひさしぶりに開くと会話が積み重なる</div>
-        <div class="row-body">社長が選んだ案: 起動時のお知らせを見出し1枚にまとめ、本物が出た予告は出さない。(もとの指摘: 昔のセーブで起動すると、HOMEまでスキップを押しても35回・36秒。スキップの無いページが27枚、もう公開済みの「メロディー・クロミー実装予告」7枚も出る)</div>
-        <div class="meta"><span>部長マップくん</span><span>見込み 設計案を社長へ先に見せる(社長が選んだ)。公開は案が決まってから</span><span>PR #2425</span></div>
-      </li>
       <li id="d1">
         <div class="row-title">タクティクスのバランス提案の見直し</div>
         <div class="row-body">初期の8体・6種類だけで出した案だったため、ちからの提案は取り下げ。全モンスター・全アシカで Expert の成績を集め直してから出し直す</div>
@@ -122,6 +117,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="kG1">
+        <div class="row-title">G1 起動時のお知らせを見出し1枚に</div>
+        <div class="row-body">未読が2件以上なら見出しの一覧を1枚だけ出し、読みたい件だけ「くわしく」で開く。本物が出た実装予告は出さない。昔のセーブで起動→HOME: 押す回数 35→16回、秒数 31→19秒(残りはお知らせとは別の紹介)</div>
+        <div class="meta"><span>部長マップくん</span><span>PR #2439</span><span>久しぶりに(または別の端末で)開いて、HOMEで見出しの一覧が1枚出るか</span></div>
+      </li>
       <li id="kG5">
         <div class="row-title">G5 新曲だけ、HARDクリアでEXPERT・MASTERが開く</div>
         <div class="row-body">いまの46曲はこれまでどおり1段ずつ開く。これから足す新曲は、HARDをクリアするとEXPERTとMASTERが一度に開く(社長が選んだ: 範囲は「これから入る曲だけ」、条件は「HARDを1回クリア」)</div>
@@ -562,14 +562,14 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">7</span>
       </div>
       <div class="bar-row">
+        <span class="bar-name">部長マップくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:25.93%"></span></span>
+        <span class="bar-val">7</span>
+      </div>
+      <div class="bar-row">
         <span class="bar-name">ドライバーくん2号</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
         <span class="bar-val">6</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-name">部長マップくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:18.52%"></span></span>
-        <span class="bar-val">5</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長ブレイブくん</span>
