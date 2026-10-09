@@ -370,6 +370,12 @@ async function maybeUseEx(s, b, mem, log) {
     // モノリスの「みんなをかばう」は1ランで10回。かばう子(自分)以外が倒れそうなら使う(打たれ弱いピクシー・ライガーを守る)
     const victim = b.slots.find((y) => y.occupied && !y.downed && y.i !== x.i && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.5);
     if (role === 'shield' && x.name === 'モノリス' && victim && x.hp && x.hp.now > victim.aimDamage * 0.4) why = `${victim.name}が倒れそうなので、モノリスがかばう(守りのEX)`;
+    // 時間停止(ヤオビクニ「悠久の刻」)は1ランで2回だけ。必殺技・貫通撃・全体攻撃で、ライフの4割以上を削られるときまで取っておく
+    //   (2026-10-09: WAVE 1 の3連撃 132 ダメージに使い、2回とも WAVE 1 で使い切っていた)
+    else if (role === 'shield' && x.name === 'ヤオビクニ') {
+      const heavy = (threat === 'big' || threat === 'pierce' || threat === 'all') && b.slots.some((y) => y.occupied && !y.downed && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.4);
+      if (heavy) why = '必殺技・貫通撃・全体攻撃で大きく削られる予告(時間停止のEX)';
+    }
     else if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
     else if (role === 'dodge' && x.aimed && b.enemy && b.enemy.dist === DISTS[x.i] && bigHit) why = '狙われていて、敵と同じ距離(回避のEX)';
     // 満タンにする EX は回数が少ない(モッチー3回)。敵がもうすぐ倒れるときは使わない
