@@ -544,9 +544,40 @@ const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
   return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
 };
 
-const grantCompensationGifts = (gifts, now=Date.now()) => {
+// ===== はじめての人には、7〜8月の不具合のお詫びを配らない(2026-10-09・社長の選択) =====
+// お詫びは、その時期に遊んでいた人だけのもの。これからはじめる人は不具合に遭っていないので、
+// 最初のギフトボックスにお詫びが4通並ぶのをやめ、同じ中身の合計を「プレオープン記念」へ足す。
+// ・配らなかったidは COMPENSATION_WAIVED_KEY(新しいキー)へ控える。控えが無いと、はじめての設定を終えた次の起動で
+//   「idが無い」とみなして配ってしまう。既存の保存キーは変えず、既にギフトにあるidは控えに入れない(取り上げない)
+// ・控えるのは下のidだけ。これから足すお詫び(新しいid)は、はじめての人にも普通に届く
+const COMPENSATION_WAIVED_KEY = 'mh_compensation_waived_v1';
+const NEW_PLAYER_WAIVED_COMPENSATION_IDS = Object.freeze([
+  'gift_compensation_20260731_battle',
+  'gift_compensation_20260801_points',
+  'gift_compensation_20260823_skip',
+  'gift_compensation_20260807_dye',
+]);
+const normalizeWaivedCompensationIds = (value) => (Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : []);
+// 配らないと決めたお詫びのうち、まだギフトボックスに無いもの(=控えに足すもの)
+const compensationIdsToWaive = (gifts, waivedIds) => {
   const list = Array.isArray(gifts) ? gifts : [];
-  const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  return NEW_PLAYER_WAIVED_COMPENSATION_IDS.filter(id => !waived.includes(id) && !list.some(item => item?.id === id));
+};
+// 控えたお詫びのうち、ギフトボックスに無いものの報酬を、種類ごとに合計する(プレオープン記念へ足す分)
+const waivedCompensationRewards = (gifts, waivedIds) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const totals = new Map();
+  COMPENSATION_GIFTS
+    .filter(def => NEW_PLAYER_WAIVED_COMPENSATION_IDS.includes(def.id) && waived.includes(def.id) && !list.some(item => item?.id === def.id))
+    .forEach(def => def.rewards.forEach(r => totals.set(r.type, (totals.get(r.type) || 0) + Math.floor(Number(r.amount) || 0))));
+  return [...totals.entries()].map(([type, amount]) => ({ type, amount }));
+};
+const grantCompensationGifts = (gifts, now=Date.now(), waivedIds=[]) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const waived = normalizeWaivedCompensationIds(waivedIds);
+  const missing = COMPENSATION_GIFTS.filter(def => !waived.includes(def.id) && !list.some(item => item?.id === def.id));
   if (missing.length === 0) return { granted:false, gifts:list };
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
@@ -626,14 +657,22 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
   ],
 });
 // ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
-const grantNewPlayerCampaignGift = (gifts, now=Date.now()) => {
+// extraRewards … 配らなかったお詫びの合計(waivedCompensationRewards)。同じ種類は数を足し、新しい種類は並べる
+const grantNewPlayerCampaignGift = (gifts, now=Date.now(), extraRewards=[]) => {
   const list = Array.isArray(gifts) ? gifts : [];
   if (!NEW_PLAYER_CAMPAIGN_ENABLED) return { granted:false, gifts:list };
   if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return { granted:false, gifts:list };
+  const rewards = NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r}));
+  (Array.isArray(extraRewards) ? extraRewards : []).forEach(extra => {
+    const amount = Math.floor(Number(extra?.amount) || 0);
+    if (!extra?.type || amount <= 0) return;
+    const same = rewards.find(r => r.type === extra.type);
+    if (same) same.amount += amount; else rewards.push({ type:extra.type, amount });
+  });
   const gift = {
     ...NEW_PLAYER_CAMPAIGN_GIFT,
     source: 'campaign',
-    rewards: NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r})),
+    rewards,
     createdAt: new Date(now).toISOString(),
     claimedAt: null,
   };
