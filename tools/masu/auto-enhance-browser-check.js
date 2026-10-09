@@ -176,23 +176,42 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
       await page.locator('[data-auto-enhance-limit]').count() === 4
       && await page.evaluate(() => document.querySelectorAll('[data-auto-enhance="auto1"] select').length === 4));
 
-    // ---- 画面から ON / OFF を切り替えると、その場で保存されるか ----
+    // ---- 設定を変えても確定するまで保存されない。確定で初めて保存される ----
+    const confirmDraft = async () => { await page.evaluate(() => document.querySelector('[data-auto-enhance-confirm]')?.click()); await page.waitForTimeout(700); };
     await page.evaluate(() => [...document.querySelectorAll('button')].find(b => /オート強化 ON/.test(b.textContent)).click());
     await page.waitForTimeout(700);
-    check('画面からOFFにできて、その場で保存される', (await page.evaluate(masuOf, 'auto1')).autoEnhance.enabled === false);
+    check('OFFにしただけでは保存されず、確定の案が出る', (await page.evaluate(masuOf, 'auto1')).autoEnhance.enabled === true && await page.locator('[data-auto-enhance-draft]').count() === 1);
+    await page.evaluate(() => document.querySelector('[data-auto-enhance-cancel]')?.click());
+    await page.waitForTimeout(500);
+    check('やめるで元どおりになる', (await page.evaluate(masuOf, 'auto1')).autoEnhance.enabled === true && await page.locator('[data-auto-enhance-draft]').count() === 0);
+    await page.evaluate(() => [...document.querySelectorAll('button')].find(b => /オート強化 ON/.test(b.textContent)).click());
+    await page.waitForTimeout(500);
+    await confirmDraft();
+    check('確定するとOFFが保存される', (await page.evaluate(masuOf, 'auto1')).autoEnhance.enabled === false);
     await page.evaluate(() => [...document.querySelectorAll('button')].find(b => /オート強化 OFF/.test(b.textContent)).click());
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(500);
+    await confirmDraft();
     check('画面からONへ戻せる', (await page.evaluate(masuOf, 'auto1')).autoEnhance.enabled === true);
 
-    // ---- 優先順位の入れ替えが保存されるか ----
+    // ---- 優先順位の入れ替えが、確定で保存されるか ----
     await page.evaluate(() => document.querySelector('button[aria-label="ライフの優先順位を上げる"]').click());
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(500);
+    check('優先順位は確定するまで保存されない', (await page.evaluate(masuOf, 'auto1')).autoEnhance.order[0] !== 'hp');
+    await confirmDraft();
     const moved = await page.evaluate(masuOf, 'auto1');
-    check('優先順位を入れ替えると保存される', moved.autoEnhance.order[0] === 'hp', moved.autoEnhance.order.join(','));
+    check('優先順位を入れ替えると、確定で保存される', moved.autoEnhance.order[0] === 'hp', moved.autoEnhance.order.join(','));
+
+    // ---- 配り方を選べて、確定で保存される(既定は順番に上限まで) ----
+    check('配り方の既定は順番に上限まで', moved.autoEnhance.distribution === 'order', String(moved.autoEnhance.distribution));
+    await page.evaluate(() => [...document.querySelectorAll('[data-auto-enhance-distribution] button')].find(b => /1Pずつ/.test(b.textContent)).click());
+    await page.waitForTimeout(500);
+    await confirmDraft();
+    check('1Pずつ配る設定が確定で保存される', (await page.evaluate(masuOf, 'auto1')).autoEnhance.distribution === 'even');
 
     // ---- いまの配分を上限として取り込めるか ----
     await page.evaluate(() => [...document.querySelectorAll('button')].find(b => /いまの値を/.test(b.textContent)).click());
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(500);
+    await confirmDraft();
     const captured = await page.evaluate(masuOf, 'auto1');
     check('いまの値を目標として取り込める',
       captured.autoEnhance.statTargets.atk === TARGET.atk && captured.autoEnhance.statTargets.hp === TARGET.hp,
