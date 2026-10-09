@@ -148,9 +148,10 @@ let pastRuns = [];
 if (!args.includes('--no-knowledge') && fs.existsSync(KN)) { try { pastRuns = JSON.parse(fs.readFileSync(KN, 'utf8')).runs || []; } catch (e) { pastRuns = []; } }
 const fromLogs = runs.map((r) => ({ difficulty: r.meta.difficulty, hero: r.build && r.build.hero, pool: (r.build && r.build.pool) || [], allies: ((r.build && r.build.allies) || []).map((a) => a.name),
   assists: ((r.build && r.build.assists) || []).map((a) => `${a.card}${a.upgrade ? '+' : ''}`), result: r.result, wave: r.waves.length, turns: sum(r.waves.map((w) => w.turns)), downs: sum(r.waves.map((w) => w.downs)), at: r.meta.startedAt }));
-// 同じ回が両方にあるときは記録のほうを使う(覚え書きは開始時刻を分単位で持つ)
-const seenAt = new Set(fromLogs.map((r) => String(r.at || '').slice(0, 16)));
-const all = [...pastRuns.filter((r) => !seenAt.has(String(r.at || '').slice(0, 16))), ...fromLogs].filter((r) => (r.hero || (r.pool || []).length) && (!diffOnly || r.difficulty === diffOnly) && r.result !== 'stopped');
+// 同じ回が両方にあるときは記録のほうを使う。時刻は付け方が違う(覚え書きは終わった時刻)ので、中身で見分ける
+const keyOf = (r) => `${r.difficulty}|${r.hero}|${r.wave}|${r.turns}|${r.result}`;
+const seenKey = new Set(fromLogs.map(keyOf));
+const all = [...pastRuns.filter((r) => !seenKey.has(keyOf(r))), ...fromLogs].filter((r) => (r.hero || (r.pool || []).length) && (!diffOnly || r.difficulty === diffOnly) && r.result !== 'stopped');
 const table = (title, keyOf) => {
   const g = {};
   for (const r of all) for (const k of new Set(keyOf(r).filter(Boolean))) { g[k] = g[k] || []; g[k].push(r); }
