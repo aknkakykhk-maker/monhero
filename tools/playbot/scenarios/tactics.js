@@ -162,6 +162,12 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     // 置き場所(適性)・アシストカード(足りないもの)は、戦い方の判断で選ぶ
     if (ctx && await brain.chooseBetween(s, ctx.mem, ctx.log)) { s.state.step += 1; await s.wait(900); continue; }
     const scrName = await s.screenName();
+    // ★すべて解放なのに勇者モンの画面が「すべて26」の一覧になっていなければ、解放が効いていない(最初の8体と Beginner だけ)。
+    //   その回は戦わない(Tier 表の成績に混ざらないように。2026-10-10)
+    if (unlockAll && /勇者モン/.test(scrName)) {
+      const listed = await page.evaluate(() => /すべて\s*\d+/.test([...document.querySelectorAll('button')].map((x) => x.innerText || '').join(' ')));
+      if (!listed) return 'no-unlock-all-list';
+    }
     const step = await page.evaluate(() => {
       const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
       const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
