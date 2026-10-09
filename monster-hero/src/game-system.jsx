@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 083e8729836c5346
+// generated-sha256: 7f7d207665b21d25
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 08:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 08:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22724,6 +22724,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   }),
   // ★2026-10-02 ユーザー指示(ザンのEX)。「敵と同じ距離の場合は完全回避、回避するごとに10%連撃付与
   //   (与ダメ10%連撃が増えてく) 5ターン、ラン5回 併用あり」。名前はユーザー指定「血踊」(最初は仮に「見切り連斬」)。
+  //   のちに社長が3ターンに修正(2026-10-10 確認。ゲームの3ターンが正しい)。
   //   回避の判定はエイキの緋桜瞬歩と同じ(tacticsExDistMatchDodges)。回避した数(effects[slot].dodges)だけ、
   //   その子の攻撃へ与ダメージ10%の連撃が1回ずつ増える(tacticsExExtraCombosAt)。効果が切れたら数も消える
   Zan: Object.freeze({
