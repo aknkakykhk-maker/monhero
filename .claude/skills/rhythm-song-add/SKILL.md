@@ -8,8 +8,39 @@ description: Add a new song to モンヒロビート (the rhythm-game mode of �
 **このスキルだけで最後まで通せるように書いてある。** ただし譜面生成の仕組みそのものを触るときは
 [`docs/spec/RHYTHM_MODE.md`](../../../docs/spec/RHYTHM_MODE.md) を開くこと（そちらが正本）。
 
-運用ルールは [`CLAUDE.md`](../../../CLAUDE.md) の ⑥-2 / ⑥-3 が根拠。
+運用ルールは下の「守ること」(⑥-3 の本文)と、[`monster-hero/audio/CLAUDE.md`](../../../monster-hero/audio/CLAUDE.md)(⑥-2 画像・音源)が根拠。
 **聞き返すのは難易度だけ。** それ以外は最後まで黙って通す。
+
+## 守ること(ルートの CLAUDE.md ⑥-3 から移した本文。ここが正本)
+
+**「新曲実装」と動画・画像だけが投げられたら、それ以上聞き返さずに最後まで通す。**
+曲名は動画のファイル名から取る。手順はスキルにしてある。**`rhythm-song-add` スキルを開いてから
+始める**(`.claude/skills/rhythm-song-add/SKILL.md`)。落とし穴と経緯:
+[`docs/rules/RHYTHM_SONG.md`](../../../docs/rules/RHYTHM_SONG.md)、仕組みの正本:
+[`docs/spec/RHYTHM_MODE.md`](../../../docs/spec/RHYTHM_MODE.md)
+
+> ⚠️ **例外はひとつだけ。難易度は、こちらで決めずに聞く**(2026-09-12の指示)。
+> 依頼に指定があればそれに従う。無ければ、解析と生成を通したうえでいったん止めて、
+> ①難易度ごとのレベル・ノーツ数・密度、②既存曲の帯の中でどのあたりか、
+> ③`challengeFactor` を変えたときの候補、の3つを並べて報告し、どうするか聞く。
+> 決まったら `challengeFactor` に書く。**測り方(`CHALLENGE_*`)は触らない**。
+> ここ以外では聞き返さない(ジャケット加工・音量そろえ・マーカー登録・更新履歴は聞かずに進める)。
+
+- **名前は5か所で綴りが違う**(songId / 音源の一覧のid / BGMのtrack id / 譜面のマーカー名 / ファイル名)。
+  `tools/mode/rhythm-runtime-notes.js` の `RELEASED_MARKERS` と `RELEASED_TRACKS` への1行を忘れない
+- **ヘルプは触らない**(`{t:'data'}` が実データから作る)。更新履歴へ1件書き、
+  `assistantNotice:{id:'update_notice_◯◯_v1',type:'content'}` を付ける
+- **お知らせにジャケットの絵を付ける。** 項目へ `image:'images/song-art/◯◯.jpg'` を1行
+  (`?v=` は手で書かない)。`node tools/changelog/song-art-notice-check.js` を通す
+- **お知らせに書いてよい Lv. は、その曲のものだけ。** 比較でほかの曲の数字を並べない。
+  上下を伝えたいなら「いままででいちばん難しい譜面になりました」のように数字を出さずに書く
+- **レベルとノーツ数は行を分ける**(`レベルは …` と `ノーツ数は …` の2行)
+- よその作品の曲は、更新履歴へ `link:{url,label}` を書けば相手のページへのボタンが出る
+  (**https だけ通る**関門 `changelogSafeLink` を経由する)。**宣伝の文面は教えてもらった事実だけで書く**。
+  作者名は `BGM_TRACKS` の `creator` へ入れる
+- 難易度が既存の帯から大きく外れるときは `chartIntensity:'extreme'` を使う
+  (`challengeFactor` は5難易度まとめて効き、上げすぎるとレベルがむしろ下がる)
+
 
 ---
 
@@ -221,7 +252,7 @@ node tools/mode/rhythm-chart-level.js --write
 
 ## 7. ★ここで止まって難易度を聞く
 
-**唯一の聞き返しポイント**（CLAUDE.md ⑥-3）。依頼に難易度の指定があればそれに従う。
+**唯一の聞き返しポイント**（上の「守ること」⑥-3）。依頼に難易度の指定があればそれに従う。
 無ければ、次を並べて報告してから止まる。
 
 1. **レベル・ノーツ数・毎秒ノーツ**を難易度ごとに
