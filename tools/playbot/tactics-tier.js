@@ -263,6 +263,18 @@ for (const hero of styleHeroes) {
     }
   }
 }
+for (const hero of styleHeroes) {
+  const bests = TIER_DIFFS.map((d) => {
+    const rows = ['sword', 'shield', 'dual'].map((st) => {
+      const rs = runs.filter((r) => r.hero === hero && r.difficulty === d && (r.heroStyle || 'sword') === st);
+      return { st, n: rs.length, clear: rs.filter((r) => r.result === 'clear').length / Math.max(1, rs.length), wave: avg(rs.map((r) => r.wave || 0)) };
+    }).filter((x) => x.n >= 2);
+    if (rows.length < 2) return '';
+    const b = rows.sort((x, z) => z.clear - x.clear || z.wave - x.wave)[0];
+    return `${d} は${STYLE_JA[b.st]}(クリア ${Math.round(b.clear * 100)}%・WAVE 平均 ${r1(b.wave)})`;
+  }).filter(Boolean);
+  if (bests.length) out(`- **${hero}** のいちばんよいスタイル: ${bests.join(' / ')}。Tier は難易度ごとに、このスタイルで戦えた前提で見る`);
+}
 out();
 out('## 全難易度をまとめた表(参考。6項目の中身と理由)');
 out();
