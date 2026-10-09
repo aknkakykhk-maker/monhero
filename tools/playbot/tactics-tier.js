@@ -244,6 +244,26 @@ for (const s of stats) {
   out(`| ${s.m.name} | ${s.role} | ${desk} | ${cells.join(' | ')} | ${why} |`);
 }
 out();
+// 勇者モンの初期スタイル(剣士モッチー)ごとの成績。heroStyle が無い回は片手剣(2026-10-09 まで、ボットは選んでいなかった)
+const STYLE_JA = { sword: '片手剣', shield: '片手盾', dual: '二刀流' };
+const styleHeroes = [...new Set(runs.filter((r) => r.heroStyle).map((r) => r.hero))];
+if (!styleHeroes.includes('剣士モッチー')) styleHeroes.push('剣士モッチー');
+out('## 勇者モンの初期スタイルごとの成績');
+out();
+out('剣士モッチーは勇者モンにしたときだけ、配置の画面で初期スタイル(片手剣・片手盾・二刀流)を選べます。2026-10-09 までの回は、ボットが選ばずに片手剣で始めていました。');
+out();
+out('| 勇者モン | 難易度 | スタイル | 回数 | クリア | 届いた WAVE の平均 |');
+out('| --- | --- | --- | --- | --- | --- |');
+for (const hero of styleHeroes) {
+  for (const d of TIER_DIFFS) {
+    for (const st of ['sword', 'shield', 'dual']) {
+      const rs = runs.filter((r) => r.hero === hero && r.difficulty === d && (r.heroStyle || 'sword') === st);
+      if (!rs.length) continue;
+      out(`| ${hero} | ${d} | ${STYLE_JA[st]} | ${rs.length} | ${rs.filter((r) => r.result === 'clear').length} | ${r1(avg(rs.map((r) => r.wave || 0)))} |`);
+    }
+  }
+}
+out();
 out('## 全難易度をまとめた表(参考。6項目の中身と理由)');
 out();
 out('| Tier | モンスター | 役 | 間合い(零近中遠) | 攻め | 守り | 勇者特性 | 固有技 | EX | 間合い | 試した回数(勇者) | 理由 |');

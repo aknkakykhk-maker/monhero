@@ -581,6 +581,22 @@ async function chooseBetween(s, mem, log) {
   // 置き場所: 適性のいちばん高い距離
   const placeBtns = scr.buttons.filter((t) => /^(零|近|中|遠)距離\s+[MSABCDEFG]\b/.test(t));
   if (placeBtns.length) {
+    // ★勇者モンの初期スタイル(剣士モッチーの片手剣・片手盾・二刀流)。配置の画面に data-hero-initial-style が出る。
+    //   何も押さないと片手剣のまま(2026-10-09 まで全部そうだった)。3つを比べるため、その難易度で試した回数の少ないスタイルを選ぶ。
+    //   PLAYBOT_TACTICS_HERO_STYLE=sword|shield|dual で決め打ちもできる
+    if (!log.data.build.heroStyle) {
+      const styles = await s.page.evaluate(() => [...document.querySelectorAll('[data-hero-initial-style] [data-hero-style]')].map((b) => ({ id: b.getAttribute('data-hero-style'), label: (b.innerText || '').trim() })));
+      if (styles.length) {
+        const diff = (log.data.meta || {}).difficulty || '';
+        const hero = log.data.build.hero;
+        const tried = (id) => loadKnowledge().runs.filter((r) => r.difficulty === diff && r.hero === hero && (r.heroStyle || 'sword') === id).length;
+        const want = process.env.PLAYBOT_TACTICS_HERO_STYLE || [...styles].sort((a, z) => tried(a.id) - tried(z.id))[0].id;
+        await s.page.evaluate((id) => document.querySelector(`[data-hero-initial-style] [data-hero-style="${id}"]`)?.click(), want);
+        await s.wait(300);
+        log.data.build.heroStyle = want;
+        log.note(`初期スタイル: ${(styles.find((x) => x.id === want) || {}).label || want}(試した回数の少ないものから)`);
+      }
+    }
     const best = placeBtns.sort((a, z) => GRADE.indexOf(a.split(/\s+/)[1]) - GRADE.indexOf(z.split(/\s+/)[1]))[0];
     log.note(`置き場所: ${best.split(/\s+/).slice(0, 2).join(' ')}(適性がいちばん高い距離)`);
     // 置き場所は押し直せる(1回目で仮に決まり、2回目で動かすことがある)。同じ子は最後の1つだけ残す
@@ -889,6 +905,7 @@ function rememberRun(L, stats) {
     result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
     // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
+    heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
     texts: Object.entries(texts).sort((a, b) => b[1] - a[1]).slice(0, 30),
