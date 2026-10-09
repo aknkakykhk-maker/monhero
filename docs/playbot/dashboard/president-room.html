@@ -52,13 +52,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 17:00 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 17:01 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>7</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>8</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>9</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -98,8 +98,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
-        <div class="row-body">ゴーレムが低く出たのはボットの取りこぼし3つと判明し直した(点は社長の感覚に合わせない)。これからは2本立て: ①机上の表(モンスターごとの期待ダメージ・ガッツ効率・何発受けられるか・特性とEXの伸び) ②簡易シミュレーター(ゲームの式を写し、10WAVEを1体あたり数百回。実戦と合うか確かめてから使う)</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み 数字入りの版 18:30〜19:00 / 机上の表 今夜19:30〜20:30 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
+        <div class="row-body">机上の表はできた(reports/tier/desk.md)。例: ゴーレムは1発の火力とガッツ効率が全員でいちばん上だが、ガッツ上限70で20ターンに通常技6発・Master WAVE 1 で敵の攻撃を2発しか受けられず、実戦で序盤に倒れたのと合う。人はガッツを補う育て方・アシカ・ガードで弱点を消していると見て、ボットにも入れた。次は簡易シミュレーターで机上と実戦の間を埋める</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 数字入りの版 18:30〜19:00 / シミュレーター 10/10 昼〜夕方</span><span>PR #2396</span></div>
       </li>
       <li id="w6">
         <div class="row-title">小さい画面の「範囲の中なのにMISS」の調べ直し</div>
@@ -110,6 +110,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p9">
+        <div class="row-title">Tier表の机上の計算(最初の版)</div>
+        <div class="row-body">ゲームの式をそのまま使い、モンスターごとの1発の火力・ガッツ効率・序盤に1体で戦う強さを難易度ごとに出した</div>
+        <div class="meta"><span>ハカセくん</span><span>docs/playbot/reports/tier/desk.md</span></div>
+      </li>
       <li id="p8">
         <div class="row-title">強化の「完了」に確認・ブラウザの戻るでゲームの外へ出ない</div>
         <div class="row-body">マスモン強化で確定せずに「完了」や戻るを押すと確認窓。HOME以外ではブラウザの戻る=画面の戻るボタン</div>
@@ -176,12 +181,12 @@ section{display:flex;flex-direction:column;gap:10px}
       <li>
         <div class="row-title"><span class="team">守り部</span><span class="chip idle">待機</span></div>
         <div class="row-body">次の定期点検(日曜夜)</div>
-        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 16:45</span></div>
+        <div class="meta"><span>部長ガードくん</span><span>部員 タイムくん・カウントくん・イジワルくん</span><span>最後の報告 10/09 16:59</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">研究所</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">全モンスターで学び直し(18:30〜19:30)</div>
-        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 16:05</span></div>
+        <div class="row-body">Tier表(机上の表はできた・シミュレーターは10/10)</div>
+        <div class="meta"><span>ハカセくん</span><span>最後の報告 10/09 16:59</span></div>
       </li>
       <li>
         <div class="row-title"><span class="team">開発部</span><span class="chip idle">待機</span></div>
