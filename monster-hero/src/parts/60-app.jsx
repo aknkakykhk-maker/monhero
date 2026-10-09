@@ -4416,6 +4416,29 @@ function MonsterHeroGame() {
       window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     } catch (error) { /* URLを直せなくても、申請の確認は出せる */ }
   }, []);
+  // ブラウザ(スマホ)の「戻る」でゲームの外へ出ないようにする。HOME 以外では画面の「戻る」ボタンを押したのと同じ動きにし、
+  // 押せる戻るが無い画面(バトル中など)は何もしない。HOME では履歴を足さず、そのままブラウザの戻るに任せる。
+  // 保存データには触らない(履歴の目印を足すだけ)
+  const gameStateForBackRef = useRef(gameState);
+  gameStateForBackRef.current = gameState;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let armed = false;
+    const arm = () => { try { window.history.pushState({ mhBack:1 }, '', window.location.href); armed = true; } catch (error) { armed = false; } };
+    const onPop = () => {
+      armed = false;
+      if (gameStateForBackRef.current === 'HOME') return;
+      arm();
+      try {
+        const heads = Array.from(document.querySelectorAll('header.mh-screen-head > button[aria-label]'));
+        const back = heads.find(b => !b.disabled);
+        if (back) back.click();
+      } catch (error) { /* 戻るボタンを探せなくても、ゲームの外へは出ない */ }
+    };
+    const timer = setInterval(() => { if (!armed && gameStateForBackRef.current !== 'HOME') arm(); }, 500);
+    window.addEventListener('popstate', onPop);
+    return () => { clearInterval(timer); window.removeEventListener('popstate', onPop); };
+  }, []);
   useEffect(() => {
     if (!pendingFriendCode) return;
     if (RELEASE_FLAGS.friends !== true) { setPendingFriendCode(''); return; }
@@ -19199,6 +19222,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_ENHANCE'&&masuMonDetail&&(
           <MasuEnhanceScreen
             addAssistantBond={addAssistantBond}
+            askConfirm={askConfirm}
             autoEnhanceIntroVisible={autoEnhanceIntroVisible}
             bulkEnhanceUnit={bulkEnhanceUnit}
             bulkPlan={bulkPlan}
