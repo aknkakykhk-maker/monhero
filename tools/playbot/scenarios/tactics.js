@@ -372,7 +372,12 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const dealt = b.enemy ? Math.max(0, b.enemy.hp - (after.enemy && after.wave === b.wave ? after.enemy.hp : 0)) : 0;
     for (const p of picks) if (p.kind === 'attack' && p.mon) brain.monOf(ctx.mem, p.mon).dmg += dealt * (p.value / planned);
     ctx.mem.lastParty = Object.fromEntries((after.wave === b.wave ? after : b).slots.filter((x) => x.occupied).map((x) => [x.name, x.hp ? x.hp.now / Math.max(1, x.hp.max) : 1]));
-    if (after.wave !== b.wave || !after.inBattle) ctx.log.waveEnd(after.inBattle || !after.over ? 'clear' : '');
+    if (after.wave !== b.wave || !after.inBattle) {
+      ctx.log.waveEnd(after.inBattle || !after.over ? 'clear' : '');
+      // 合間のアシストカード選びで使う: このWAVEで味方の最大ライフの何割を受けたか
+      const w = ctx.log.data.waves[ctx.log.data.waves.length - 1];
+      if (w) ctx.mem.dmgTakenWave = w.partyMax ? w.taken / w.partyMax : 0;
+    }
     await s.inspect();
     if (!moved) { await s.addIssue('進行停止', `タクティクスで実行してから60秒たってもターンが進まない (W${before.wave}/T${before.turn})`); break; }
   }

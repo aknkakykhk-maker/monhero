@@ -299,6 +299,7 @@ async function maybeUseEx(s, b, mem, log) {
         if (pick) pick.click();
       });
       await s.wait(700);
+      await s.wait(1200);
       mem.exUsed[panel.name || x.name] = (mem.exUsed[panel.name || x.name] || 0) + 1;
       log.ex({ wave: b.wave, turn: b.turn, mon: x.name, ex: panel.name, why, enemyHp: b.enemy ? b.enemy.hp : null });
     }
@@ -314,10 +315,19 @@ async function playTurn(s, b0, mem, log, stats) {
   const limit = Math.max(1, b0.limit || 1);
   const failed = new Set();
   for (let n = 0; n < limit + 2; n++) {
-    const b = await readBoard(s);
+    let b = await readBoard(s);
     if (Number.isFinite(b.picked) && b.picked >= limit) break;
-    const opts = await evalHand(s, b, failed);
-    const d = decidePick(b, opts, ctx);
+    // EX の演出のあいだなどは、手札が一時的にどれも押せない。押せるようになるまで待つ(最大5秒)
+    for (let k = 0; k < 10 && !(b.picked > 0) && !b.hand.some((c) => c.usable); k++) { await s.wait(500); b = await readBoard(s); }
+    let opts = await evalHand(s, b, failed);
+    let d = decidePick(b, opts, ctx);
+    if (!d && !(b.picked > 0) && n === 0) {
+      // 何も置けないと出たときは、少し待ってからもう一度だけ読み直す(演出の途中で読んだことがある)
+      await s.wait(1500);
+      b = await readBoard(s);
+      opts = await evalHand(s, b, failed);
+      d = decidePick(b, opts, ctx);
+    }
     if (!d) {
       // ⑦ ガッツ不足で何も置けない → 重いカードを1枚捨ててガッツを戻す(置けたカードが無いときだけ)
       if (!(b.picked > 0)) {
@@ -379,7 +389,8 @@ async function chooseBetween(s, mem, log) {
       title: ((document.querySelector('h2') || {}).innerText || '').trim(),
       trainingName: target ? ((target.innerText || '').match(/(\S+)のトレーニング/) || [])[1] || '' : '',
       trainingDone: target ? /全員ぶん決まりました/.test(target.innerText || '') : false,
-      picked: target ? Number(((target.innerText || '').match(/選んだ数\s*(\d+)/) || [])[1] || 0) : 0,
+      // 選んだ数は「1回目の◯◯を取り消す」の札の数で数える(数字の表示は読み違えやすい)
+      picked: [...document.querySelectorAll('button[aria-label]')].filter((x) => /^\d+回目の.+を取り消す$/.test(x.getAttribute('aria-label'))).length,
       revive: [...document.querySelectorAll('[data-tactics-training-revive] button')].filter((x) => !x.disabled).map(lab),
       buttons: live.map(lab),
     };
@@ -451,7 +462,8 @@ async function chooseBetween(s, mem, log) {
     const score = (t) => (/自傷/.test(t) ? -5 : 0) + (/攻撃.*アップ|与ダメ/.test(t) ? 3 : 0) + (/回復/.test(t) ? (hurt ? 3.5 : 2) : 0)
       + (/ガッツ/.test(t) ? (starved ? 3.2 : 1.5) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 3 : 1.8) : 0);
     const best = cards.sort((a, z) => score(z) - score(a))[0];
-    log.note(`アシストカード: ${best.slice(0, 24)}(${starved ? 'ガッツ不足が多い' : hurt ? '被ダメージが多い' : '火力を伸ばす'})`);
+    const kind = /自傷/.test(best) ? '' : /攻撃.*アップ|与ダメ/.test(best) ? '火力を伸ばす' : /回復/.test(best) ? (hurt ? '被ダメージが多いので回復' : '回復の手段を持つ') : /ガッツ/.test(best) ? (starved ? 'ガッツ不足が多い' : 'ガッツを補う') : '守りを固める';
+    log.note(`アシストカード: ${best.slice(0, 24)}(${kind})`);
     return press(new RegExp(`^${best.slice(0, 8).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), 'アシストカード');
   }
   return false;
@@ -514,7 +526,8 @@ function explain(L) {
     if (slow) lines.push(`いちばん長引いたのは WAVE ${slow.wave}(${slow.enemy})の${slow.turns}ターン`);
   } else if (last) {
     const th = Object.entries(last.threats).sort((a, z) => z[1] - a[1]).map(([k, v]) => `${THREAT_JA[k] || k}${v}`).join('・');
-    lines.push(`WAVE ${last.wave}(${last.enemy})で${L.result === 'timeout' ? 'ターン切れ' : '全員倒れた'}。このWAVEの予告: ${th}`);
+    const how = L.result === 'timeout' ? 'ターン切れ' : L.result === 'wipe' ? '全員倒れた' : '途中で止まった';
+    lines.push(`WAVE ${last.wave}(${last.enemy})で${how}。このWAVEの予告: ${th}`);
     const dmgShare = last.enemyMax ? Math.round((last.dealt / last.enemyMax) * 100) : 0;
     lines.push(`敵のライフを${dmgShare}%削った。受けたダメージ ${last.taken}・ガード ${last.guards}枚`);
   }
