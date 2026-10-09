@@ -160,7 +160,7 @@ const readTactics = (s) => s.page.evaluate(() => {
     // 実行ボタンの文字。「カードを選ぶ」→(攻撃カードを選ぶと)「置き場所を選ぶ」→「ACTION」と変わる
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
-    over: !action && !hand.length && /GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text),
+    over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北/.test(text),
   };
 });
 
@@ -336,6 +336,7 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     s.state.step += 1;
     await s.dismissOverlays(4);
     let st = await readTactics(s);
+    if (st.over && waves) { stats.finished = true; break; }
     if (!st.inBattle) {
       if (!waves) break;
       const where = await betweenWaves(s, ctx);
@@ -366,6 +367,7 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     await brain.maybeUseEx(s, b, ctx.mem, ctx.log);
     stats.exUsed += ctx.log.data.ex.length - exBefore;
     b = await brain.readBoard(s);
+    ctx.mem.recentDealt = ctx.mem.recentDealt || 0;
     const picks = await brain.playTurn(s, b, ctx.mem, ctx.log, stats);
     if (danger) {
       stats.aimedDanger += 1;
@@ -395,7 +397,8 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     for (let k = 0; k < 120 && !moved; k++) {
       await s.wait(500);
       const now = await readTactics(s);
-      moved = !now.inBattle || now.turn !== before.turn || now.wave !== before.wave;
+      // ★負けたときは「敗北」の画面が盤面の上に出る(手札は残っている)ので、それも動いたと見る
+      moved = !now.inBattle || now.over || now.turn !== before.turn || now.wave !== before.wave;
     }
     const after = await brain.readBoard(s);
     // 記録: このターンに出たダメージを、置いたカードの見込みの割合で子ごとに分ける
@@ -403,6 +406,12 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const planned = picks.filter((p) => p.kind === 'attack').reduce((a, p) => a + p.value, 0) || 1;
     const dealt = b.enemy ? Math.max(0, b.enemy.hp - (after.enemy && after.wave === b.wave ? after.enemy.hp : 0)) : 0;
     for (const p of picks) if (p.kind === 'attack' && p.mon) brain.monOf(ctx.mem, p.mon).dmg += dealt * (p.value / planned);
+    // 1ターンあたりのダメージ(なだらかに)。WAVE が変わったら数え直す
+    if (after.wave === b.wave) ctx.mem.recentDealt = ctx.mem.recentDealt ? ctx.mem.recentDealt * 0.6 + dealt * 0.4 : dealt; else ctx.mem.recentDealt = 0;
+    for (const x of after.slots || []) {
+      const was = b.slots.find((y) => y.i === x.i);
+      if (x.occupied && x.downed && was && !was.downed && x.name) brain.monOf(ctx.mem, x.name).downs += 1;
+    }
     ctx.mem.lastParty = Object.fromEntries((after.wave === b.wave ? after : b).slots.filter((x) => x.occupied).map((x) => [x.name, x.hp ? x.hp.now / Math.max(1, x.hp.max) : 1]));
     if (after.wave !== b.wave || !after.inBattle) {
       ctx.log.waveEnd(after.inBattle || !after.over ? 'clear' : '');

@@ -78,8 +78,8 @@ const readBoard = (s) => s.page.evaluate(() => {
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
     exPass: (() => { const b = document.querySelector('[data-tactics-ex-pass]'); return !!b && !b.disabled; })(),
-    over: !action && !hand.length && /GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text),
-    cleared: /ALL CLEAR|全WAVE制覇|CHAMPION|優勝|完全制覇/.test(text), gameOver: /GAME OVER|ゲームオーバー|全滅/.test(text),
+    over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北/.test(text),
+    cleared: /ALL CLEAR|全WAVE制覇|CHAMPION|優勝|完全制覇/.test(text), gameOver: /敗\s*北|GAME OVER|ゲームオーバー|全滅/.test(text),
   };
 });
 
@@ -190,11 +190,17 @@ function decidePick(b, opts, ctx) {
   if (!lethal) {
     // ② 守り
     const guardOn = (slot) => guardOpts.filter((g) => g.slot === slot).sort((a, z) => z.value - a.value)[0];
+    // ★ガードは行動回数を1つ使う(=攻撃が1枚減る)。WAVE は20ターンで打ち切り(21ターン目で負け)なので、
+    //   守るのは「倒れるのを防ぐ」か「最大ライフの45%以上を削られる」ときだけにする(Master で手数が足りず負けた。2026-10-09)
+    const turnsLeft = Math.max(1, (b.turnMax || 20) - (b.turn || 1) + 1);
+    const perTurn = ctx.recentDealt || 0;
+    const rushing = b.enemy && perTurn > 0 && b.enemy.hp > perTurn * turnsLeft * 0.9;
     const needFor = (x) => {
       if (!x.occupied || x.downed || !x.aimDamage || !x.hp) return false;
-      const heavy = x.aimDamage >= x.hp.max * 0.25;
-      const deadly = x.aimDamage >= x.hp.now * 0.6;
-      return heavy || deadly;
+      const deadly = x.aimDamage >= x.hp.now * 0.85;
+      const heavy = x.aimDamage >= x.hp.max * 0.45;
+      // 残りターンで倒しきれない見込みのときは、倒れるのを防ぐときだけ守る
+      return rushing ? deadly : (deadly || heavy);
     };
     if (threat === 'multi' || threat === 'single' || threat === 'big') {
       const target = b.slots.find((x) => x.aimed);
@@ -336,7 +342,7 @@ async function maybeUseEx(s, b, mem, log) {
 // カードを選び終えるまで。戻り値は置いたカードの一覧(記録用)
 async function playTurn(s, b0, mem, log, stats) {
   const picks = [];
-  const ctx = { guarded: {}, healed: false, buffed: false, stunned: false, plannedDmg: 0 };
+  const ctx = { guarded: {}, healed: false, buffed: false, stunned: false, plannedDmg: 0, recentDealt: mem.recentDealt || 0 };
   const limit = Math.max(1, b0.limit || 1);
   const failed = new Set();
   for (let n = 0; n < limit + 2; n++) {
@@ -451,13 +457,19 @@ async function chooseBetween(s, mem, log) {
     if (scr.trainingName && !scr.trainingDone && scr.picked < 2 && (mem.trained[tkey] || 0) < 2) {
       const m = monOf(mem, scr.trainingName);
       const hpRatio = (mem.lastParty || {})[scr.trainingName];
+      // 敵は「ライフの割合が低い子」を狙いやすい(32-tactics-units.jsx)。1体しかいない WAVE 1〜2 は狙われるのが当たり前なので、
+      // 狙われた回数ではなく「倒れた・削られた」で守りを上げる。ダメージ役(頭割り以上を出した子)はちからを上げる
+      const share = totalDmg > 1 ? m.dmg / totalDmg : 0;
+      const members = Math.max(1, Object.keys(mem.lastParty || {}).length);
       let plan;
-      if (m.aimed >= 2 || (hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '走り込み'];
-      else if (m.gutsShort >= 2) plan = ['猛勉強', 'ドミノ倒し'];
-      else plan = ['ドミノ倒し', 'ドミノ倒し'];
+      if (m.downs > 0 || (hpRatio != null && hpRatio < 0.4)) plan = ['丸太うけ', '走り込み'];
+      else if (m.gutsShort >= 3 && share >= 1 / members) plan = ['猛勉強', 'ドミノ倒し'];
+      else if (share >= 1 / members || members === 1) plan = ['ドミノ倒し', 'ドミノ倒し'];
+      else if (hpRatio != null && hpRatio < 0.7) plan = ['丸太うけ', 'ドミノ倒し'];
+      else plan = ['ドミノ倒し', '丸太うけ'];
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
-      if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(狙われた${m.aimed}回・ガッツ不足${m.gutsShort}回)`);
+      if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(ダメージの割合${Math.round(share * 100)}%・倒れた${m.downs}回・ガッツ不足${m.gutsShort}回)`);
       if (process.env.PLAYBOT_DEBUG) console.log(`      [トレーニング] ${scr.trainingName} 選んだ数${scr.picked} → ${want}`);
       if (await press(new RegExp(`^${want}`), 'トレーニング')) { mem.trained[tkey] = (mem.trained[tkey] || 0) + 1; await s.wait(500); return true; }
     }
@@ -504,12 +516,16 @@ async function chooseBetween(s, mem, log) {
     // ★「ガッツ自動回復」は回復(ライフ)ではなくガッツのカード。ライフの回復は「ライフ … 回復」
     const isHeal = (t) => /ライフ[^ガ]*回復|回復・全体/.test(t);
     const isGuts = (t) => /ガッツ/.test(t) && !isHeal(t);
-    const score = (t) => (/自傷/.test(t) ? -5 : 0) + (/攻撃.*アップ|与ダメ/.test(t) ? 3 : 0) + (isHeal(t) ? (hurt ? 3.5 : 2) : 0)
-      + (isGuts(t) ? (starved ? 3.2 : 1.5) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 3 : 1.8) : 0);
+    // 書かれている%で比べる(攻撃 20%アップ > 攻撃 3%アップ)。WAVE は20ターンの打ち切りがあるので火力を重く見る
+    const pctOf = (t, re) => { const m = t.match(re); return m ? Number(m[1]) : 0; };
+    const atkPct = (t) => pctOf(t, /攻撃\s*(\d+(?:\.\d+)?)%アップ/) + (/攻撃\s*(\d+(?:\.\d+)?)倍/.test(t) && !/自傷/.test(t) ? (pctOf(t, /攻撃\s*(\d+(?:\.\d+)?)倍/) - 1) * 100 : 0);
+    const score = (t) => (/自傷/.test(t) ? -5 : 0) + atkPct(t) / 5 + (isHeal(t) ? (hurt ? 3 : 1.5) : 0)
+      + (isGuts(t) ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(t) ? 2.5 : 0);
     const best = cards.sort((a, z) => score(z) - score(a))[0];
     // 理由は、点数にいちばん効いた項目で言う
-    const parts = [['火力を伸ばす', /攻撃.*アップ|与ダメ/.test(best) ? 3 : 0], [hurt ? '被ダメージが多いので回復' : '回復の手段を持つ', isHeal(best) ? (hurt ? 3.5 : 2) : 0],
-      [starved ? 'ガッツ不足が多い' : 'ガッツを補う', isGuts(best) ? (starved ? 3.2 : 1.5) : 0], ['守りを固める', /被ダメ|軽減|守り/.test(best) ? (hurt ? 3 : 1.8) : 0]];
+    const parts = [['火力を伸ばす', atkPct(best) / 5], [hurt ? '被ダメージが多いので回復' : '回復の手段を持つ', isHeal(best) ? (hurt ? 3 : 1.5) : 0],
+      [starved ? 'ガッツ不足が多い' : 'ガッツを補う', isGuts(best) ? (starved ? 3.2 : 1.2) : 0], ['守りを固める', /被ダメ|軽減|守り/.test(best) ? (hurt ? 2.5 : 1) : 0],
+      ['敵の行動を止める', /行動を無効|スタン/.test(best) ? 2.5 : 0]];
     const kind = parts.sort((p, q) => q[1] - p[1])[0][0];
     log.note(`アシストカード: ${best.slice(0, 24)}(${kind})`);
     log.data.build.assists.push({ wave: log.data.waves.length, card: best.split(/\s+/)[0], text: best.slice(0, 40), upgrade: !/新規習得/.test(best) });
