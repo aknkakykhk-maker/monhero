@@ -5,6 +5,7 @@
 //
 //   node tools/playbot/tier-page.js [--out <出力先>]    既定: docs/playbot/dashboard/tier.html
 //   node tools/playbot/tier-page.js --rebuild-icons     縮めた顔アイコンを作り直してからページを作る
+//   node tools/playbot/tier-page.js --json <別の tier.json>   試し用(その JSON を読む。--out と合わせて使う)
 //   node tools/playbot/tier-page.js --check             tier.json の形だけ確かめる(ページは作らない)
 //
 // 顔アイコンは docs/playbot/dashboard/tier-icons/(96px。map.json が 名前 → ファイル)から data URI で埋め込む。
@@ -15,7 +16,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
-const JSON_PATH = path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'tier.json');
+const jsonArg = process.argv.indexOf('--json');
+const JSON_PATH = jsonArg > 0 ? path.resolve(process.argv[jsonArg + 1]) : path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'tier.json');
 const ICON_DIR = path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier-icons');
 const outArg = process.argv.indexOf('--out');
 const OUT = outArg > 0 ? path.resolve(process.argv[outArg + 1]) : path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier.html');
@@ -50,6 +52,40 @@ function validate(d) {
     if (!m.回数 || !DIFFS.every((k) => Number.isInteger(m.回数[k]) && m.回数[k] >= 0)) p.push(`${at}: 回数 に Hard・Expert・Master の0以上の整数が要る`);
     if (m.机上 && (!Number.isFinite(m.机上.通常技1発) || !m.机上.受けられる || !DIFFS.every((k) => Number.isFinite(m.机上.受けられる[k])))) p.push(`${at}: 机上の形がおかしい(通常技1発・20ターンの火力・受けられる{Hard,Expert,Master})`);
   }
+  const nameList = (v, at, label) => {
+    if (v === undefined) return;
+    if (!Array.isArray(v) || v.some((x) => !x || !x.名前 || !x.理由)) p.push(`${at}: ${label} は [{名前, 理由}] の配列`);
+  };
+  for (const m of d.モンスター) { nameList(m.おすすめアシカ, `モンスター「${m.名前}」`, 'おすすめアシカ'); nameList(m.相性のいい供モン, `モンスター「${m.名前}」`, '相性のいい供モン'); }
+  if (d.アシカ !== undefined) {
+    if (!Array.isArray(d.アシカ)) p.push('アシカ は配列にする');
+    else {
+      const an = new Set();
+      for (const a of d.アシカ) {
+        const at = `アシカ「${a && a.名前}」`;
+        if (!a || !a.名前) { p.push('名前の無いアシカがあります'); continue; }
+        if (an.has(a.名前)) p.push(`${at}: 名前が重なっています`);
+        an.add(a.名前);
+        if (!OVERALL_TIERS.includes(a.総合)) p.push(`${at}: 総合 は ${OVERALL_TIERS.join('・')} のどれか(いま「${a.総合}」)`);
+        for (const k of DIFFS) if (!DIFF_TIERS.includes(a[k])) p.push(`${at}: ${k} は ${DIFF_TIERS.join('・')} のどれか(いま「${a[k]}」)`);
+        if (typeof a.暫定 !== 'boolean') p.push(`${at}: 暫定 は true / false`);
+        if (!a.理由) p.push(`${at}: 理由が空です`);
+        if (a.回数 && !DIFFS.every((k) => Number.isInteger(a.回数[k]) && a.回数[k] >= 0)) p.push(`${at}: 回数 に Hard・Expert・Master の0以上の整数が要る`);
+        nameList(a.合うモンスター, at, '合うモンスター');
+      }
+    }
+  }
+  if (d.組み合わせ !== undefined) {
+    if (!Array.isArray(d.組み合わせ)) p.push('組み合わせ は配列にする');
+    else for (const c of d.組み合わせ) {
+      const at = `組み合わせ「${c && c.勇者}×${c && c.供モン}」`;
+      if (!c || !names.has(c.勇者) || !names.has(c.供モン)) p.push(`${at}: 勇者・供モン はモンスターの名前にする`);
+      if (!c || !['良い', '合わない'].includes(c.良し悪し)) p.push(`${at}: 良し悪し は 良い / 合わない`);
+      if (c && !c.理由) p.push(`${at}: 理由が空です`);
+      if (c && typeof c.実戦で確認 !== 'boolean') p.push(`${at}: 実戦で確認 は true / false`);
+      if (c && c.点 !== undefined && !Number.isFinite(c.点)) p.push(`${at}: 点 は数`);
+    }
+  }
   return p;
 }
 
@@ -62,8 +98,8 @@ function gameFaces() {
   const vm = require('vm');
   const ctx = vm.createContext({ console, Object, Math });
   const MH = path.join(ROOT, 'monster-hero');
-  for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js']) {
-    vm.runInContext(fs.readFileSync(path.join(MH, f), 'utf8') + '\n;this.__r = typeof ALL_PLAYER_MONSTERS !== "undefined" ? ALL_PLAYER_MONSTERS : null', ctx, { filename: f });
+  for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js', 'data/breeder.js']) {
+    vm.runInContext(fs.readFileSync(path.join(MH, f), 'utf8') + '\n;this.__r = typeof ALL_PLAYER_MONSTERS !== "undefined" ? ALL_PLAYER_MONSTERS : this.__r; this.__t = typeof TEACHING_CARDS !== "undefined" ? TEACHING_CARDS : this.__t', ctx, { filename: f });
   }
   const market = fs.readFileSync(path.join(MH, 'src', 'parts', '20-market-notices-help.jsx'), 'utf8');
   // ほかの定数を参照する行(kiki_icon: KIKI_… など)があるので、全体を評価せず「モンスターの id: { scale, x, y }」の行だけ読む
@@ -74,6 +110,15 @@ function gameFaces() {
     if (r) styles[r[1]] = { scale: +r[2], x: +r[3], y: +r[4] };
   }
   const out = {};
+  // アシカ(アシストカード)。ゲームの TEACHING_CARDS の icon と、15-dye-and-art.jsx の ASSIST_CARD_ICON_STYLES(ききだけ顔へ寄せる)をそのまま使う
+  const dye = fs.readFileSync(path.join(MH, 'src', 'parts', '15-dye-and-art.jsx'), 'utf8');
+  const consts = {};
+  for (const r of dye.matchAll(/const (\w+) = Object\.freeze\(\{ scale:\s*([\d.-]+),\s*x:\s*([\d.-]+),\s*y:\s*([\d.-]+)\s*\}\);/g)) consts[r[1]] = { scale: +r[2], x: +r[3], y: +r[4] };
+  const am = /const ASSIST_CARD_ICON_STYLES = Object\.freeze\(\{([\s\S]*?)\}\);/.exec(dye);
+  const assistStyles = {};
+  for (const r of (am ? am[1] : '').matchAll(/(\w+):\s*(\w+)/g)) if (consts[r[2]]) assistStyles[r[1]] = consts[r[2]];
+  const assists = (ctx.__t || []).map((c) => ({ id: c.id, name: c.baseName, file: path.join(MH, String(c.icon || '').split('?')[0]), style: assistStyles[c.id] || { scale: 1, x: 0, y: 0 } }));
+  out.__assists = assists;
   for (const [id, m] of Object.entries(ctx.__r || {})) {
     const u = String(m.faceIconUrl || m.iconUrl || '').split('?')[0];
     if (!u || u.startsWith('data:')) continue;
@@ -84,40 +129,61 @@ function gameFaces() {
   return out;
 }
 
-function loadIcons(names) {
+// アシカの名前は、ゲームの baseName(「ニコラオの力」)・id(oryo)・名前の頭(「ニコラオ」)のどれでも引ける
+function findAssist(assists, name) {
+  return assists.find((c) => c.name === name || c.id === name) || assists.find((c) => c.name.startsWith(name));
+}
+
+function loadIcons(monNames, assistNames) {
   const faces = gameFaces();
   const css = [];
   const cls = {};
   const style = {};
   fs.mkdirSync(ICON_DIR, { recursive: true });
-  names.forEach((n, i) => {
-    const f = faces[n];
+  const put = (key, i, f) => {
     if (!f || !fs.existsSync(f.file)) return; // ゲームに顔アイコンが無い子は頭文字のタイル
     const dst = path.join(ICON_DIR, path.basename(f.file, path.extname(f.file)).toLowerCase() + '.png');
     if (REBUILD_ICONS || !fs.existsSync(dst) || fs.statSync(dst).mtimeMs < fs.statSync(f.file).mtimeMs) {
-      const px = f.style.scale > 2 ? 360 : f.style.scale > 1.2 ? 224 : 104; // 大きく寄せる絵は粗くならないよう大きめに残す
+      const px = f.style.scale > 2 ? 300 : f.style.scale > 1.2 ? 200 : 96; // 大きく寄せる絵は粗くならないよう大きめに残す
       require('child_process').execFileSync('convert', [f.file, '-resize', `${px}x${px}`, '-strip', dst]);
     }
-    cls[n] = 'i' + i;
+    cls[key] = 'i' + i;
     const { scale = 1, x = 0, y = 0 } = f.style;
-    style[n] = scale === 1 && !x && !y ? '' : ` style="transform:translate(${x}%,${y}%) scale(${scale})"`;
+    style[key] = scale === 1 && !x && !y ? '' : ` style="transform:translate(${x}%,${y}%) scale(${scale})"`;
     css.push(`.i${i}{background-image:url(data:image/png;base64,${fs.readFileSync(dst).toString('base64')})}`);
-  });
+  };
+  monNames.forEach((n, i) => put('m:' + n, 'm' + i, faces[n]));
+  assistNames.forEach((n, i) => put('a:' + n, 'a' + i, findAssist(faces.__assists, n)));
   return { cls, style, css: css.join('\n') };
 }
 
 function build(d) {
   const mons = d.モンスター;
-  const { cls, style, css } = loadIcons(mons.map((m) => m.名前));
+  const assists = Array.isArray(d.アシカ) ? d.アシカ : null;
+  const combos = Array.isArray(d.組み合わせ) ? d.組み合わせ : null;
+  const aNames = [...new Set([...(assists || []).map((a) => a.名前), ...mons.flatMap((m) => (m.おすすめアシカ || []).map((x) => x.名前)), ...(assists || []).flatMap(() => [])])];
+  const { cls, style, css } = loadIcons(mons.map((m) => m.名前), aNames);
+  const iconOf = (kind, name, extra = '') => {
+    const key = kind + ':' + name;
+    return `<span class="ic ${extra}" role="img" aria-label="${esc(name)}">${cls[key] ? `<i class="${cls[key]}"${style[key]}></i>` : esc(name.slice(0, 1))}</span>`;
+  };
   const tcls = (t) => (['保留', '—', '回数不足'].includes(t) ? 'h' : t);
   const tier = (t) => `<b class="t t-${tcls(t)}">${esc(t)}</b>`;
-  const tile = (m, bodyHtml, letter, prov) => `
+  const tile = (m, bodyHtml, letter, prov, kind = 'm') => `
       <details class="mon">
-        <summary><span class="ic" role="img" aria-label="${esc(m.名前)}">${cls[m.名前] ? `<i class="${cls[m.名前]}"${style[m.名前]}></i>` : esc(m.名前.slice(0, 1))}</span>${prov ? '<span class="prov">暫定</span>' : ''}<span class="nm">${esc(m.名前)}</span>${letter ? `<span class="lt">${tier(letter)}</span>` : ''}</summary>
+        <summary>${iconOf(kind, m.名前)}${prov ? '<span class="prov">暫定</span>' : ''}<span class="nm">${esc(m.名前)}</span>${letter ? `<span class="lt">${tier(letter)}</span>` : ''}</summary>
         <div class="body">${bodyHtml}</div>
       </details>`;
   const kv = (rows) => `<dl>${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
   const diffTable = (m) => `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+  const refList = (kind, list) => `<ul class="rl">${list.map((x) => `<li>${iconOf(kind, x.名前, 'sm')}<span><b>${esc(x.名前)}</b> ${esc(x.理由)}</span></li>`).join('')}</ul>`;
+  const assistBody = (a) => kv([
+    a.仮の総合 ? ['仮の総合', `${tier(a.仮の総合)} (5回未満のマスから出した仮)`] : null,
+    ['ひとこと', esc(a.理由)],
+    a.強み ? ['強み', esc(a.強み)] : null,
+    a.弱み ? ['弱み', esc(a.弱み)] : null,
+    a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : null,
+  ]) + (a.回数 ? `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数</th></tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(a[k])}</td><td>${a.回数[k]}</td></tr>`).join('')}</tbody></table></div>` : '');
   const fullBody = (m) => kv([
     ['役', esc(m.役)],
     m.仮の総合 ? ['仮の総合', `${tier(m.仮の総合)} (5回未満のマスから出した仮)`] : null,
@@ -125,6 +191,8 @@ function build(d) {
     m.強み ? ['強み', esc(m.強み)] : null,
     m.弱み ? ['弱み', esc(m.弱み)] : null,
     m.動いた理由 ? ['動き', esc(m.動いた理由)] : null,
+    m.おすすめアシカ && m.おすすめアシカ.length ? ['おすすめアシカ', refList('a', m.おすすめアシカ)] : null,
+    m.相性のいい供モン && m.相性のいい供モン.length ? ['相性のいい供モン', refList('m', m.相性のいい供モン)] : null,
     m.机上 ? ['机上', `通常技1発 ${m.机上.通常技1発.toLocaleString('en-US')} / 20ターンの火力 ${(m.机上['20ターンの火力'] || 0).toLocaleString('en-US')}`] : null,
   ]) + diffTable(m);
   const diffBody = (m, k) => kv([
@@ -134,13 +202,13 @@ function build(d) {
     m.机上 ? ['受けられる', `WAVE 1 の通常攻撃を ${m.机上.受けられる[k]} 発`] : null,
     ['ひとこと', esc(m.理由)],
   ]);
-  const panels = (key, bodyOf, withLetter, tiers) => tiers.map((t) => {
-    const list = mons.filter((m) => m[key] === t);
+  const panels = (key, bodyOf, withLetter, tiers, src = mons, kind = 'm', unit = '体') => tiers.map((t) => {
+    const list = src.filter((m) => m[key] === t);
     if (!list.length && t === '—') return '';
     return `
     <section class="panel tp-${tcls(t)}">
-      <h3>${tier(t)}<span class="cnt">${list.length}体${t === '保留' ? '(まだ決められない)' : t === '—' ? '(まだ試していない)' : t === '回数不足' ? '(どの難易度も5回未満。総合はまだ付けない)' : ''}</span></h3>
-      <div class="grid">${list.length ? list.map((m) => tile(m, bodyOf(m), withLetter, key === '総合' && m.暫定)).join('') : '<p class="empty">いません</p>'}
+      <h3>${tier(t)}<span class="cnt">${list.length}${unit}${t === '保留' ? '(まだ決められない)' : t === '—' ? '(まだ試していない)' : t === '回数不足' ? '(どの難易度も5回未満。総合はまだ付けない)' : ''}</span></h3>
+      <div class="grid">${list.length ? list.map((m) => tile(m, bodyOf(m), withLetter, key === '総合' && m.暫定, kind)).join('') : '<p class="empty">いません</p>'}
       </div>
     </section>`;
   }).join('');
@@ -149,6 +217,21 @@ function build(d) {
     <summary>${k} の Tier(重み ${d.決め方.重み[k]})</summary>
     ${panels(k, (m) => diffBody(m, k), null, DIFF_TIERS)}
   </details>`).join('');
+  const comboRow = (c) => `
+        <li class="cb ${c.良し悪し === '良い' ? 'cg' : 'cx'}">
+          <div class="pair">${iconOf('m', c.勇者)}<span class="x">×</span>${iconOf('m', c.供モン)}</div>
+          <div class="ct"><b>勇者 ${esc(c.勇者)} × 供モン ${esc(c.供モン)}</b> <span class="vd">${c.良し悪し === '良い' ? '◎ よく合う' : '△ 合わない'}</span>${c.点 !== undefined ? `<small> ${esc(c.点)}点</small>` : ''}<small> ${c.実戦で確認 ? '実戦で確かめた' : '机上・シミュレーターの見立て'}</small>
+          <div>${esc(c.理由)}</div></div>
+        </li>`;
+  const comboGroup = (label, hit) => {
+    const list = combos.filter((c) => c.良し悪し === hit);
+    return `<details class="diff" ${hit === '良い' ? 'open' : ''}><summary>${label}(${list.length}組)</summary>${list.length ? `<ul class="cbl">${list.map(comboRow).join('')}</ul>` : '<p class="empty">まだありません。</p>'}</details>`;
+  };
+  const soon = '<p class="empty">準備中です(研究所がデータを足すと出ます)。</p>';
+  const assistSection = assists
+    ? panels('総合', assistBody, null, OVERALL_TIERS, assists, 'a', '枚')
+    : soon;
+  const comboSection = combos ? comboGroup('よく合う組み合わせ', '良い') + '\n    ' + comboGroup('合わない組み合わせ', '合わない') : soon;
   const weights = DIFFS.map((k) => `${k} ${d.決め方.重み[k]}`).join('・');
   const c = d.数えた回;
 
@@ -212,6 +295,17 @@ small{color:var(--muted)}
 .empty{margin:0;color:var(--muted);font-size:13px}
 .how{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .how p{margin:0}
+.jump{display:flex;gap:8px;position:sticky;top:0;z-index:2;background:var(--bg);padding:8px 0;margin:-8px 0 0}
+.jump a{flex:1;text-align:center;text-decoration:none;color:var(--accent);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 4px;font-family:var(--font-head);font-weight:800;font-size:13px}
+html{scroll-behavior:smooth;scroll-padding-top:56px}
+.ic.sm{width:36px;height:36px;border-radius:9px;border-width:1px;font-size:15px;flex:none}
+.rl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rl li{display:flex;gap:8px;align-items:center}
+.cbl{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px}
+.cb{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-left:5px solid var(--c);border-radius:10px;padding:8px 10px;background:var(--panel);font-size:13px;min-width:0}
+.cg{--c:var(--tB)}.cx{--c:var(--tS)}
+.pair{display:flex;align-items:center;gap:4px;flex:none}.pair .ic{width:44px;height:44px}.x{color:var(--muted);font-size:12px}
+.ct{min-width:0;overflow-wrap:anywhere}.vd{font-weight:800}
 .ic>i{position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform-origin:center center}
 ${css}
 </style>
@@ -221,14 +315,27 @@ ${css}
     <p class="lead">${esc(d.更新)} 更新 / 研究所:ハカセくん / 数えた回 ${c.合計}回(Hard ${c.Hard}・Expert ${c.Expert}・Master ${c.Master})・戦った ${d.戦った体数}/${d.全体数}体。アイコンを押すと詳細が開きます。</p>
   </header>
 
-  <section>
-    <h2>総合 Tier</h2>
+  <nav class="jump" aria-label="ページ内の移動"><a href="#monsters">モンスター</a><a href="#assists">アシカ</a><a href="#combos">組み合わせ</a></nav>
+
+  <section id="monsters">
+    <h2>モンスター 総合 Tier</h2>
     <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
   </section>
 
-  <section>
-    <h2>難易度で見る</h2>
+  <section id="monsters-diff">
+    <h2>モンスターを難易度で見る</h2>
     <p class="note" style="margin-bottom:10px">難易度で敵の火力とライフが大きく違うので、難易度ごとにも付けています(押して開く)。</p>${diffSections}
+  </section>
+
+  <section id="assists">
+    <h2>アシカ Tier(アシストカード)</h2>
+    <p class="note" style="margin-bottom:10px">モンスターと同じ決め方の Tier。アイコンを押すと、難易度ごとの Tier・理由・合うモンスターが開きます。</p>${assistSection}
+  </section>
+
+  <section id="combos">
+    <h2>勇者モン × 供モンの組み合わせ</h2>
+    <p class="note" style="margin-bottom:10px">よく合う組み合わせと合わない組み合わせ。「実戦で確かめた」は、タクティクスプロで実際に戦って確かめたもの。</p>
+    ${comboSection}
   </section>
 
   <section>
