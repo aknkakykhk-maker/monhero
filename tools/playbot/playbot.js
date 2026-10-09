@@ -73,7 +73,7 @@ const picked = ROLES.map((r) => {
   const parts = r.parts.filter((p) => ONLY.some((x) => isPart(p, x)));
   return parts.length ? { ...r, parts, alone: parts.some((p) => p.alone) } : null;
 }).filter(Boolean);
-const PORT = 8981;
+const PORT = Number(process.env.PLAYBOT_PORT) || 8981; // 2つ同時に動かすときは PLAYBOT_PORT で分ける
 // ゲームを配信する場所。ふだんはこのリポジトリ。古い版(git worktree で別の場所に出したもの)で動かして見張りが本当に見つけられるか確かめるときだけ
 // PLAYBOT_SERVE_ROOT=<その場所> で差し替える(ツールとボットはこのリポジトリのものを使う)
 const SERVE_ROOT = process.env.PLAYBOT_SERVE_ROOT ? path.resolve(process.env.PLAYBOT_SERVE_ROOT) : ROOT;

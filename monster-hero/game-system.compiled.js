@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88740474c98be7c1
+// source-sha256: 51c3f59ebe385814
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 13:57";
+const BUILD_DATE = "2026-10-09 14:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -45379,11 +45379,11 @@ function BreederMarketScreen({
     className: `text-[12px] font-black leading-tight ${section.title}`
   }, section.titleLines ? section.titleLines.map(line => React.createElement("span", {
     key: line,
-    className: "block"
+    className: "block whitespace-nowrap"
   }, line)) : section.label)), React.createElement("div", {
     className: "mt-2.5 font-mono text-xl font-black text-white"
   }, section.value !== null ? section.value : ' '), React.createElement("div", {
-    className: "mt-0.5 text-[10px] font-bold text-slate-400"
+    className: "mt-0.5 text-[10px] font-bold text-slate-400 [text-wrap:balance]"
   }, section.hint), React.createElement("span", {
     "aria-hidden": "true",
     className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
@@ -46007,7 +46007,7 @@ function ProfileScreen({
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "ひとこと"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white"
+      className: "block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]"
     }, profileMessage || 'まだ書いていません'))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-favorite-masu": true,
@@ -46025,7 +46025,7 @@ function ProfileScreen({
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
     }, "好きなモンスター"), React.createElement("b", {
-      className: "block break-words text-[11px] font-black leading-tight text-white"
+      className: "block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]"
     }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : 'まだ選んでいません'))));
   })()), React.createElement("div", {
     className: "mb-3 grid grid-cols-3 gap-2",
@@ -67221,7 +67221,7 @@ function RhythmMultiScreen({
   }, Math.max(1, countdown.left)));
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
-    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none';
+    const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 leading-none';
     const assistToggles = (cls, withLabel) => React.createElement(ModeSelectAssistToggles, {
       assistant: ms.assistant,
       showArt: ms.showArt,
@@ -67453,7 +67453,7 @@ function RhythmMultiScreen({
     }))) : React.createElement("span", {
       className: "text-lg leading-none"
     }, "👾")), React.createElement("span", {
-      className: "text-[11px] font-black"
+      className: "whitespace-nowrap text-[10px] font-black"
     }, "マスモン ", ms.monsterCount, "/", ms.monsterMax)), React.createElement("button", {
       "data-rhythm-demo-help": true,
       type: "button",
@@ -67493,7 +67493,7 @@ function RhythmMultiScreen({
       "aria-hidden": "true",
       className: "text-lg leading-none"
     }, "⚙️"), React.createElement("span", {
-      className: "text-[11px] font-black"
+      className: "whitespace-nowrap text-[11px] font-black"
     }, "オプション"))))), React.createElement("div", {
       "aria-hidden": "true",
       className: "shrink-0",
