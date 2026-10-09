@@ -22,7 +22,7 @@ const { loadGame } = require('./load-game');
 
 const args = process.argv.slice(2);
 const argOf = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const DIFFS = argOf('--diff', 'Expert,Master').split(',');
+const DIFFS = argOf('--diff', 'Hard,Expert,Master').split(',');
 const mdFile = argOf('--md', '');
 
 const G = loadGame();
@@ -118,4 +118,5 @@ for (const d of DIFFS) {
   }
 }
 const text = `${lines.join('\n')}\n`;
-if (mdFile) { fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true }); fs.writeFileSync(path.resolve(mdFile), text); console.log(`書き出した: ${mdFile}`); } else process.stdout.write(text);
+module.exports = { rows, DIFFS };
+if (require.main !== module) { /* tactics-tier.js から数字だけ使う */ } else if (mdFile) { fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true }); fs.writeFileSync(path.resolve(mdFile), text); console.log(`書き出した: ${mdFile}`); } else process.stdout.write(text);
