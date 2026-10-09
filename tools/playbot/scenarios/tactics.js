@@ -394,6 +394,7 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
   }
   const t0 = Date.now();
   let lastDowned = 0;
+  let zeroHpWaits = 0;
   while (Date.now() - t0 < maxMs) {
     s.state.step += 1;
     await s.dismissOverlays(4);
@@ -417,9 +418,13 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     // ★敵のライフが0なら、その WAVE はもう終わっている。「WAVE n リザルト」は少し遅れて出るので、出るまで待って合間へ進む
     //   (2026-10-09 Hard: 倒した直後に手札の無い盤面を読み、「実行が押せない」で打ち切りになっていた)
     if (b.enemy && b.enemy.hp === 0) {
+      ctx && ctx.log.waveEnd('clear');
       for (let k = 0; k < 20 && (await readTactics(s)).inBattle; k++) await s.wait(500);
+      zeroHpWaits += 1;
+      if (zeroHpWaits > 3) { await s.addIssue('進行停止', `タクティクスで敵のライフが0のまま、リザルトへ進まない (W${b.wave})`); break; }
       continue;
     }
+    zeroHpWaits = 0;
     stats.waveReached = Math.max(stats.waveReached, b.wave || 0);
     stats.waveMax = Math.max(stats.waveMax || 0, b.waveMax || 0);
     const downed = b.slots.filter((x) => x.occupied && x.downed).length;
