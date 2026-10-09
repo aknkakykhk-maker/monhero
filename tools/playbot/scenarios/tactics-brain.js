@@ -200,6 +200,11 @@ function decidePick(b, opts, ctx) {
     const full = !g || !g.max || g.now >= g.max * 0.85;
     a0.rank = full ? a0.value : a0.value / Math.pow(Math.max(8, a0.o.card.cost || 8), 0.7) * 7;
   }
+  // ★通常技の段階(倍率)は「敵がいる距離の枠に立っている子の適性」で決まる(BATTLE_NEW_MODE_PLAN.md 4.4)。
+  //   敵が誰もいない距離にいるときは、いちばんダメージを出している子の距離の距離撃で引き寄せる(当てたあと敵がその距離へ動く)
+  if (b.enemy && ctx.mainDist != null && DISTS[ctx.mainDist] !== b.enemy.dist && !b.slots.some((x) => x.occupied && !x.downed && DISTS[x.i] === b.enemy.dist)) {
+    for (const a0 of atkOpts) if (a0.o.card.type === 'range_atk' && new RegExp(`^\\d+\\s*${DISTS[ctx.mainDist]}\\s`).test(a0.o.card.label)) { a0.rank *= 3; a0.pull = true; }
+  }
   atkOpts.sort((a, z) => z.rank - a.rank);
   // ① とどめ: 残りの行動回数ぶんの上位の見込みで倒せるなら攻撃だけ
   const topSum = atkOpts.slice(0, left).reduce((a, x) => a + x.value, 0) + (ctx.plannedDmg || 0);
@@ -247,14 +252,14 @@ function decidePick(b, opts, ctx) {
   const hpMax = b.slots.filter((x) => x.occupied).reduce((a, x) => a + (x.hp ? x.hp.max : 0), 0);
   const downed = b.slots.filter((x) => x.occupied && x.downed).length;
   const heal = opts.find((o) => o.card.type === 'heal');
-  if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.5))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
+  if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.35))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
   // ⑤ 攻撃。★スタンのカード(あつの挑発など・type debuff)は「ためる」「貫通の構え」のターンまで取っておく。
   //   先に撃つと、必殺技(×2.5)を止められずに倒れる(2026-10-09 Master の WAVE 3)。とどめのときだけは使ってよい
   const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
   const atkUse = keepStun ? atkOpts.filter((a) => a.o.card.type !== 'debuff') : atkOpts;
   if (atkUse.length) {
     const a = atkUse[0];
-    return { kind: 'attack', card: a.o.card, slot: a.slot, value: a.value, why: lethal ? 'とどめ' : '見込みのダメージがいちばん大きい' };
+    return { kind: 'attack', card: a.o.card, slot: a.slot, value: a.value, why: lethal ? 'とどめ' : a.pull ? `敵を${DISTS[ctx.mainDist]}距離へ引き寄せる(通常技の段階が上がる)` : '見込みのダメージがいちばん大きい' };
   }
   // ⑤' 見込みが読めなかった攻撃カード(押しても印が出ない)でも、使えるなら置いてみる
   const blind = opts.find((o) => /atk|unique/.test(o.card.type) && !o.previews.length && !ctx.blindTried);
@@ -269,8 +274,10 @@ function decidePick(b, opts, ctx) {
     if (g && (ctx.guarded[want.i] || 0) < 2) return { kind: 'guard', card: g.o.card, slot: g.slot, value: g.value, why: '攻撃が置けないので、ガードを構える(余りはライフとガッツになる)' };
   }
   // ⑥ 支援
+  // ★支援は20ガッツかかる。ガッツが細っているとき(いちばん多い子でも6割未満)は使わず、⑦の「捨ててガッツを戻す」へ回す
+  const richest = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
   const buff = opts.find((o) => o.card.type === 'buff' && !/自傷/.test(o.card.label));
-  if (buff && b.enemy && b.enemy.hp > b.enemy.max * 0.3 && !ctx.buffed) return { kind: 'support', card: buff.card, why: '攻撃が置けないので支援' };
+  if (buff && richest >= 0.6 && b.enemy && b.enemy.hp > b.enemy.max * 0.3 && !ctx.buffed) return { kind: 'support', card: buff.card, why: '攻撃が置けないので支援' };
   return null;
 }
 
@@ -324,9 +331,14 @@ async function maybeUseEx(s, b, mem, log) {
     const hpLow = x.hp && x.hp.now < x.hp.max * 0.4;
     const late = (b.wave || 0) >= 5;
     let why = '';
-    if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
+    // モノリスの「みんなをかばう」は1ランで10回。かばう子(自分)以外が倒れそうなら使う(打たれ弱いピクシー・ライガーを守る)
+    const victim = b.slots.find((y) => y.occupied && !y.downed && y.i !== x.i && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.5);
+    if (role === 'shield' && x.name === 'モノリス' && victim && x.hp && x.hp.now > victim.aimDamage * 0.4) why = `${victim.name}が倒れそうなので、モノリスがかばう(守りのEX)`;
+    else if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
     else if (role === 'dodge' && x.aimed && b.enemy && b.enemy.dist === DISTS[x.i] && bigHit) why = '狙われていて、敵と同じ距離(回避のEX)';
     // 満タンにする EX は回数が少ない(モッチー3回)。敵がもうすぐ倒れるときは使わない
+    // 手強い WAVE(敵のライフが、いまの1ターンのダメージの8倍より多い)の始めは、ガッツが7割を切っていれば先に使う(+30% が5ターン続く)
+    else if (role === 'refill' && b.enemy && b.enemy.hp >= b.enemy.max * 0.9 && (b.turn || 1) <= 2 && mem.recentWave && b.enemy.max > mem.recentWave * 8 && x.guts && x.guts.now < x.guts.max * 0.7) why = '手強いWAVEの始め(満タンにして力を上げるEX)';
     else if (role === 'refill' && (gutsLow || hpLow) && (hpLow || (b.enemy && b.enemy.hp >= b.enemy.max * 0.4))) why = gutsLow ? 'ガッツが細った(満タンにするEX)' : 'ライフが細った(満タンにするEX)';
     else if (role === 'burst' && enemyFull && (late || (b.enemy && b.enemy.max >= 3000))) why = '敵のライフがたっぷり残っている(火力のEX)';
     if (!why) continue;
@@ -365,7 +377,8 @@ async function maybeUseEx(s, b, mem, log) {
 // カードを選び終えるまで。戻り値は置いたカードの一覧(記録用)
 async function playTurn(s, b0, mem, log, stats) {
   const picks = [];
-  const ctx = { guarded: {}, healed: false, buffed: false, stunned: false, plannedDmg: 0, recentDealt: mem.recentDealt || 0 };
+  const top = b0.slots.filter((x) => x.occupied && !x.downed && x.name).sort((p, q) => monOf(mem, q.name).dmg - monOf(mem, p.name).dmg)[0];
+  const ctx = { guarded: {}, healed: false, buffed: false, stunned: false, plannedDmg: 0, recentDealt: mem.recentDealt || 0, mainDist: top ? top.i : null };
   const limit = Math.max(1, b0.limit || 1);
   const failed = new Set();
   // ガッツが足りずに使えない攻撃カードがある子を数える(トレーニングの猛勉強・ガッツ系のアシストカード選びに使う)
@@ -491,12 +504,11 @@ async function chooseBetween(s, mem, log) {
       // 狙われた回数ではなく「倒れた・削られた」で守りを上げる。ダメージ役(頭割り以上を出した子)はちからを上げる
       const share = totalDmg > 1 ? m.dmg / totalDmg : 0;
       const members = Math.max(1, Object.keys(mem.lastParty || {}).length);
-      let plan;
-      if (m.downs > 0 || (hpRatio != null && hpRatio < 0.4)) plan = ['丸太うけ', '走り込み'];
-      else if (m.gutsShort >= 3) plan = share >= 1 / members ? ['猛勉強', 'ドミノ倒し'] : ['猛勉強', '猛勉強'];
-      else if (share >= 1 / members || members === 1) plan = ['ドミノ倒し', 'ドミノ倒し'];
-      else if (hpRatio != null && hpRatio < 0.7) plan = ['丸太うけ', 'ドミノ倒し'];
-      else plan = ['ドミノ倒し', '丸太うけ'];
+      // ★伸び方: 走り込み=ライフ+20%・丸太うけ=丈夫さ+20%(ガードの量も丈夫さで決まる)に対して、ドミノ倒し=ちから+5&+5%・猛勉強=ガッツ+5&+5%。
+      //   同じ項目を2回選ぶと掛け算で効く。2026-10-09 までダメージ役にドミノ倒しを選び続けて、モッチーのライフが WAVE 5 でも最初の 720 のまま、
+      //   敵の1発(1,000〜2,800)で倒れていた。基本は「丸太うけ+走り込み」。ガッツ切れが続く子だけ猛勉強を1つ混ぜる
+      let plan = ['丸太うけ', '走り込み'];
+      if (m.gutsShort >= 4 && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
       if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(ダメージの割合${Math.round(share * 100)}%・倒れた${m.downs}回・ガッツ不足${m.gutsShort}回)`);
@@ -519,8 +531,17 @@ async function chooseBetween(s, mem, log) {
   // 供モン: 総合力のいちばん高い子
   const allyBtns = scr.buttons.filter((t) => /総合力\s*[\d,]+/.test(t));
   if (allyBtns.length && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする)/.test(t))) {
-    const best = allyBtns.sort((a, z) => num(z.match(/総合力\s*([\d,]+)/)[1]) - num(a.match(/総合力\s*([\d,]+)/)[1]))[0];
-    log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]})`);
+    // ★敵は「編成の総合力 ÷ 始めの総合力」の0.7乗で強くなる(32-tactics-units.jsx・上限6倍)。総合力が高いだけの子を入れると敵も強くなる。
+    //   覚え書きで「実際にダメージを出した子」(頭割り比)を先に、かばう EX(モノリス)は守りの柱として足し、総合力は低いほうを少しよしとする
+    const diff = (log.data.meta || {}).difficulty || '';
+    const first = !log.data.build.allies.length;
+    const scoreAlly = (t) => {
+      const nm = t.split(/\s+/)[0];
+      const f = first ? firstAllyScore(nm, diff) : null;
+      return (f != null ? f + allyScore(nm) * 0.1 : allyScore(nm)) - num(t.match(/総合力\s*([\d,]+)/)[1]) / 4000;
+    };
+    const best = allyBtns.sort((a, z) => scoreAlly(z) - scoreAlly(a))[0];
+    log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]}・覚え書きの頭割り比 ${allyScore(best.split(/\s+/)[0]).toFixed(2)})`);
     if (!log.data.build.allies.some((x) => x.wave === log.data.waves.length)) log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
     mem.lastPicked = best.split(/\s+/)[0];
     return press(new RegExp(`^${best.split(/\s+/)[0]}\\s+総合力`), '供モン(総合力)');
@@ -645,7 +666,7 @@ const BASE_NAMES = ['モッチー', 'スエゾー', 'ゴーレム', 'ライガ�
 const DIFF_ORDER = ['Beginner', 'Easy', 'Normal', 'Hard', 'Expert', 'Master', 'GrandMaster', 'Hell', 'Legend'];
 function loadKnowledge() {
   try { const k = JSON.parse(fs.readFileSync(KNOWLEDGE, 'utf8')); if (Array.isArray(k.runs)) return k; } catch (e) { /* 無ければ空から */ }
-  return { note: 'タクティクスくんの覚え書き。tools/playbot/scenarios/tactics-brain.js が1回ごとに足す。消してよい(覚え直す)', runs: [] };
+  return { note: 'タクティクスくんの覚え書き。tools/playbot/scenarios/tactics-brain.js が1回ごとに足す。消してよい(覚え直す)。★タクティクスプロはベースモンだけを使うので、セーブ(育ち)に関係なく全員が同じ条件。勝ち負けを分けるのは戦い方・編成・アシストカードの選び方だけ', runs: [] };
 }
 // 1回の出来: 着いたWAVE(10で1.0)+クリアで1。倒れた回数で少し引く
 const runValue = (r) => (r.wave || 0) / 10 + (r.result === 'clear' ? 1 : 0) - Math.min(0.3, (r.downs || 0) * 0.03);
@@ -680,8 +701,30 @@ function preferredOrder(difficulty, rand) {
     }).sort((a, z) => z.v - a.v).map((x) => x.nm);
   };
   const hero = rank('hero')[0];
-  const allies = rank('ally').filter((nm) => nm !== hero);
+  let allies = rank('ally').filter((nm) => nm !== hero);
+  if (hard) allies = allies.map((nm, i) => ({ nm, v: allyScore(nm) - i * 0.05 })).sort((a, z) => z.v - a.v).map((x) => x.nm);
   return { hero, order: [hero, ...allies], knownRuns: k.runs.length };
+}
+// 供モンの見込み: 覚え書きの「その子のダメージ ÷ 頭割り」の平均(記録が無ければ 1.0)。モノリスはかばう EX があるので +0.8
+// 同じ難易度で「その子を最初の供モンにした回」がどこまで行けたか(着いた WAVE ÷ 5)。WAVE 3〜4 の2体の時間がいちばん苦しいので、
+// ここを持ちこたえられる子を選ぶ(2026-10-09 Master: モノリス・ハムは WAVE 5 まで、ライガーは2回とも WAVE 3 で負けた)
+function firstAllyScore(name, difficulty) {
+  const rs = loadKnowledge().runs.filter((r) => r.difficulty === difficulty && (r.allies || [])[0] === name);
+  if (!rs.length) return null;
+  return rs.reduce((a, r) => a + (r.wave || 0) + (r.result === 'clear' ? 5 : 0), 0) / rs.length / 5;
+}
+function allyScore(name) {
+  const k = loadKnowledge();
+  const rel = [];
+  for (const r of k.runs) {
+    const d = r.dmg || {};
+    const members = Object.keys(d);
+    const total = Object.values(d).reduce((a, x) => a + x, 0);
+    if (!members.includes(name) || !total || members.length < 2) continue;
+    rel.push(d[name] / (total / members.length));
+  }
+  const base = rel.length ? rel.reduce((a, x) => a + x, 0) / rel.length : 1;
+  return base + (name === 'モノリス' ? 0.8 : 0);
 }
 function rememberRun(L, stats) {
   if (process.env.PLAYBOT_TACTICS_LEARN === '0') return;

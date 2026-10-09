@@ -16,7 +16,10 @@ const OUT_ROOT = path.join(ROOT, 'tools', 'out', 'playbot');
 const args = process.argv.slice(2);
 const mdAt = args.indexOf('--md');
 const mdFile = mdAt >= 0 ? args[mdAt + 1] : '';
-const dirsArg = args.filter((a, i) => !a.startsWith('--') && i !== mdAt + 1);
+// --diff Master … その難易度の回だけ数える(難易度で敵の強さが大きく違うので、まとめて数えると WAVE ごとの数字がぼやける)
+const diffAt = args.indexOf('--diff');
+const diffOnly = diffAt >= 0 ? args[diffAt + 1] : '';
+const dirsArg = args.filter((a, i) => !a.startsWith('--') && i !== mdAt + 1 && i !== diffAt + 1);
 
 const logsIn = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /^tactics-log-\d+\.json$/.test(f)).map((f) => path.join(dir, f)) : []);
 let files = [];
@@ -31,7 +34,10 @@ else {
   }
 }
 if (!files.length) { console.log('タクティクスの記録(tactics-log-*.json)が見つからない。先に node tools/playbot/playbot.js --only tactics を回す'); process.exit(0); }
-const runs = files.map((f) => ({ file: f, ...JSON.parse(fs.readFileSync(f, 'utf8')) }));
+const runs = files.map((f) => ({ file: f, ...JSON.parse(fs.readFileSync(f, 'utf8')) }))
+  // 途中で打ち切った回(時間の上限・作りかけの確かめ)は数えない
+  .filter((r) => r.result !== 'stopped' && (!diffOnly || r.meta.difficulty === diffOnly));
+if (!runs.length) { console.log(`数えられる回が無い${diffOnly ? `(難易度 ${diffOnly})` : ''}`); process.exit(0); }
 
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const avg = (a) => (a.length ? sum(a) / a.length : 0);
@@ -44,7 +50,7 @@ const THREAT_JA = { none: '様子見など', single: '1発', big: '必殺技', m
 const lines = [];
 const out = (t = '') => lines.push(t);
 
-out(`# タクティクスくんのバランス確認(${runs.length}回分)`);
+out(`# タクティクスくんのバランス確認(${diffOnly ? `${diffOnly}・` : ''}${runs.length}回分)`);
 out();
 out('## 1回ずつの結果');
 out();
@@ -142,9 +148,10 @@ let pastRuns = [];
 if (!args.includes('--no-knowledge') && fs.existsSync(KN)) { try { pastRuns = JSON.parse(fs.readFileSync(KN, 'utf8')).runs || []; } catch (e) { pastRuns = []; } }
 const fromLogs = runs.map((r) => ({ difficulty: r.meta.difficulty, hero: r.build && r.build.hero, pool: (r.build && r.build.pool) || [], allies: ((r.build && r.build.allies) || []).map((a) => a.name),
   assists: ((r.build && r.build.assists) || []).map((a) => `${a.card}${a.upgrade ? '+' : ''}`), result: r.result, wave: r.waves.length, turns: sum(r.waves.map((w) => w.turns)), downs: sum(r.waves.map((w) => w.downs)), at: r.meta.startedAt }));
-// 同じ回が両方にあるときは記録のほうを使う(覚え書きは開始時刻を分単位で持つ)
-const seenAt = new Set(fromLogs.map((r) => String(r.at || '').slice(0, 16)));
-const all = [...pastRuns.filter((r) => !seenAt.has(String(r.at || '').slice(0, 16))), ...fromLogs].filter((r) => r.hero || (r.pool || []).length);
+// 同じ回が両方にあるときは記録のほうを使う。時刻は付け方が違う(覚え書きは終わった時刻)ので、中身で見分ける
+const keyOf = (r) => `${r.difficulty}|${r.hero}|${r.wave}|${r.turns}|${r.result}`;
+const seenKey = new Set(fromLogs.map(keyOf));
+const all = [...pastRuns.filter((r) => !seenKey.has(keyOf(r))), ...fromLogs].filter((r) => (r.hero || (r.pool || []).length) && (!diffOnly || r.difficulty === diffOnly) && r.result !== 'stopped');
 const table = (title, keyOf) => {
   const g = {};
   for (const r of all) for (const k of new Set(keyOf(r).filter(Boolean))) { g[k] = g[k] || []; g[k].push(r); }
@@ -177,7 +184,7 @@ const medTurns = median(waveRows.map((w) => w.turns));
 for (const w of waveRows) {
   if (w.turns >= Math.max(6, medTurns * 1.8)) props.push(`WAVE ${w.wave}「${w.enemy}」が長引く(平均${r1(w.turns)}ターン・ほかのWAVEの中央値${r1(medTurns)})。敵のライフをまず ${step(1 - medTurns * 1.4 / w.turns)} 下げる案(TACTICS_ENEMY_DATA の hp)`);
   if (w.downs >= 1 || w.takenRatio >= 0.6) props.push(`WAVE ${w.wave}「${w.enemy}」で削られすぎる(倒れた平均${r1(w.downs)}・受けたダメージ ${pct(w.takenRatio)})。この敵の技の倍率か、ちからを 1割ほど下げる案`);
-  if (w.lost > 0) props.push(`WAVE ${w.wave}「${w.enemy}」で ${w.lost}/${w.n}回 負けた。上の2つのどちらが効いているかを先に見る`);
+  if (w.lost > 0) props.push(`WAVE ${w.wave}「${w.enemy}」で ${w.lost}/${w.n}回 負けた(数字を変える前に、負け方(長引いた/削られた)を記録の why で見る)`);
   if (w.wave >= 5 && w.turns <= 1.5 && w.takenRatio < 0.1) props.push(`WAVE ${w.wave}「${w.enemy}」が手応えなく終わる(平均${r1(w.turns)}ターン・受けたダメージ ${pct(w.takenRatio)})。後半の敵としては弱い。ライフを上げるか、難易度で増える技を早めに持たせる案`);
 }
 if (monRows.length >= 3) {
@@ -203,7 +210,7 @@ out();
 if (!props.length) out('目立って強すぎる・弱すぎるものは見つからなかった。');
 for (const p of props) out(`- ${p}`);
 out();
-out(`記録: ${files.map((f) => path.relative(ROOT, f)).join(', ')}`);
+out(`記録: ${runs.map((r) => path.relative(ROOT, r.file)).join(', ')}`);
 
 const text = lines.join('\n');
 console.log(text);
