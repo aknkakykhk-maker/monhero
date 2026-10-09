@@ -52,13 +52,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 16:40 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 16:49 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>1</b><span>社長の判断待ち</span></a>
     <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>6</b><span>公開したもの</span></a>
+    <a class="count" href="#shipped"><b>7</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -103,14 +103,19 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="meta"><span>統括部長:モンヒロくん</span><span>見込み 10/12 8:52</span></div>
       </li>
       <li id="w5">
-        <div class="row-title">モンスターのTier表とバランス調整提案</div>
-        <div class="row-body">「すべて解放してバトル」でモンスターを入れ替えながら毎晩少しずつ集める。回数が少ないうちは暫定</div>
-        <div class="meta"><span>ハカセくん</span><span>見込み 最初の暫定版はハカセくんが連絡</span></div>
+        <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
+        <div class="row-body">社長の指摘で直す: 間合い適性を入れる/固有技・EX・勇者特性を使った回数を数える/EXを使えていない子は「保留」/攻め・守り・特性・固有技・EX・間合いの内訳を付ける。ライガーの案は見直しのあとで出し直す。ボットのEXの使い方は全員ぶん直した(ゴーレムは一度も使っておらず、ハム・オボロゲソウ・エイキは使いどころを外していた)。今後は「机上の計算(ゲームの式で多数回まわす)」と「実戦」の2本立てで判断する(進め方をハカセくんが連絡)</div>
+        <div class="meta"><span>ハカセくん</span><span>見込み 直した版 17:40〜18:10 / 回数の数字 18:30〜19:00</span><span>PR #2396</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="p7">
+        <div class="row-title">モンスターのTier表(暫定版)</div>
+        <div class="row-body">18/26体・38回ぶん。強め: ミタラシ・モッチー・剣士モッチー・クロミー・モノリス・ピクシーなど / 弱め: ゴーレム・スエゾー・エイキ・イブリース・ウンディーネ(どれも暫定)</div>
+        <div class="meta"><span>ハカセくん</span><span>PR #2396</span><span>docs/playbot/reports/tier/monster-tier.md</span></div>
+      </li>
       <li id="p6">
         <div class="row-title">DEBUG MENU に「すべて解放してバトル」</div>
         <div class="row-body">社長の案。全モンスター・全アシカ・全難易度で戦える(保存も記録もしない)。ボットの学び直し用</div>
