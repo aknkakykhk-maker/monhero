@@ -53,13 +53,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/9 18:54 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
+    <p class="lead">10/9 18:55 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>8</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>15</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>16</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -107,16 +107,16 @@ section{display:flex;flex-direction:column;gap:10px}
         <div class="row-title">CLAUDE.md を軽くする</div>
         <div class="row-body">毎回読み込まれる量を 25KB から 12〜15KB くらいへ。場面が限られる決まりはその場所の CLAUDE.md へ、手順はスキルへ、見張りがある決まりは1行に。決まりは1つも消さず移すだけ</div>
         <div class="meta"><span>ドライバーくん2号</span><span>見込み ドライバーくん2号が連絡</span></div>
-      </li>
-      <li id="w12">
-        <div class="row-title">保存キー3つを仕様書に載せる</div>
-        <div class="row-body">検査で見つかった載せ忘れ(バトルの入口・お布施の案内・モンヒロビートの直し方の切り替え)。意味と既定値を docs/spec/SAVE_DATA.md に書く。ゲームの動きは変えない</div>
-        <div class="meta"><span>ドライバーくん</span></div>
       </li></ul>
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="w12">
+        <div class="row-title">保存キー3つを仕様書に載せた</div>
+        <div class="row-body">検査で見つかった載せ忘れを docs/spec/SAVE_DATA.md に書き足した(ゲームの動きは変わらない)。モンヒロビートの直し方の切り替えは、いまは画面から書く所がなく検査ツールからだけ書かれる、とも書いた</div>
+        <div class="meta"><span>ドライバーくん</span><span>PR #2411</span><span>(ゲームは変わらない)</span></div>
+      </li>
       <li id="w9">
         <div class="row-title">マスモン一覧が固まらなくなった</div>
         <div class="row-body">染めた絵の作り直しを裏の作業へ移した。40体・半分染色のセーブで、一覧が出るまで4.1秒→0.2秒(2回目も1.7秒→0.4秒)。絵は1画素も変わらない。モンヒロビートのマスモン一覧など、染めた絵を出すほかの画面も軽くなる</div>
@@ -232,8 +232,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </li>
       <li>
         <div class="row-title"><span class="team">修理部</span><span class="chip ok">作業中</span></div>
-        <div class="row-body">保存キーの載せ忘れ(1号)・CLAUDE.md を軽くする(2号)</div>
-        <div class="meta"><span>ドライバーくん / ドライバーくん2号</span><span>最後の報告 10/09 18:51</span></div>
+        <div class="row-body">CLAUDE.md を軽くする(2号)</div>
+        <div class="meta"><span>ドライバーくん / ドライバーくん2号</span><span>最後の報告 10/09 18:55</span></div>
       </li></ul>
     </section>
     <section id="scores">
