@@ -588,13 +588,15 @@ async function chooseBetween(s, mem, log) {
       const styles = await s.page.evaluate(() => [...document.querySelectorAll('[data-hero-initial-style] [data-hero-style]')].map((b) => ({ id: b.getAttribute('data-hero-style'), label: (b.innerText || '').trim() })));
       if (styles.length) {
         const diff = (log.data.meta || {}).difficulty || '';
-        const hero = log.data.build.hero;
+        // 勇者モンの名前は、選んだ直後でまだ build.hero に入っていないことがある。そのときは最後に押した子
+        const hero = log.data.build.hero || mem.lastPicked || '';
         const tried = (id) => loadKnowledge().runs.filter((r) => r.difficulty === diff && r.hero === hero && (r.heroStyle || 'sword') === id).length;
-        const want = process.env.PLAYBOT_TACTICS_HERO_STYLE || [...styles].sort((a, z) => tried(a.id) - tried(z.id))[0].id;
+        const fixed = process.env.PLAYBOT_TACTICS_HERO_STYLE || '';
+        const want = fixed || [...styles].sort((a, z) => tried(a.id) - tried(z.id))[0].id;
         await s.page.evaluate((id) => document.querySelector(`[data-hero-initial-style] [data-hero-style="${id}"]`)?.click(), want);
         await s.wait(300);
         log.data.build.heroStyle = want;
-        log.note(`初期スタイル: ${(styles.find((x) => x.id === want) || {}).label || want}(試した回数の少ないものから)`);
+        log.note(`初期スタイル: ${(styles.find((x) => x.id === want) || {}).label || want}(${fixed ? '指定どおり' : `${hero || '?'}で試した回数の少ないものから`})`);
       }
     }
     const best = placeBtns.sort((a, z) => GRADE.indexOf(a.split(/\s+/)[1]) - GRADE.indexOf(z.split(/\s+/)[1]))[0];
