@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c777822502056672
+// source-sha256: 746e1541223ec5e8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-09 09:23";
+const BUILD_DATE = "2026-10-09 13:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -669,6 +669,7 @@ const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
+const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM']);
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   id: BATTLE_SYSTEM_CLASSIC,
   label: 'クラシックバトル',
@@ -66344,6 +66345,35 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbt-ic b{font-size:17px}.mhbt-ic small{margin-top:3px;font-size:8.5px;font-weight:900}
 .mhbt-ic:active,.mhbt-go:active{transform:scale(.96)}
 .mhbt-go{position:relative;min-height:50px;padding:0 6px;white-space:nowrap;background:#0f172a;color:#fff;font-size:15px;font-style:italic;font-weight:900;letter-spacing:.02em;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.mhbt-tile[class*="mhbt-d-"]{background:var(--d-bg)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 0 0 var(--d-ringw,0px) var(--d-ring,transparent),inset 0 -40px 60px -30px var(--d-deep,transparent)}
+.mhbt-tile[class*="mhbt-d-"] .mhbt-mark{color:var(--d-mark,rgba(255,255,255,.2))}
+.mhbt-tile[class*="mhbt-d-"]::after{animation-duration:var(--d-shine,4.6s);background:linear-gradient(90deg,transparent,var(--d-sheen,rgba(255,255,255,.35)),transparent)}
+.mhbt-tile.dark{color:#fff}
+.mhbt-tile.dark .mhbt-eyebrow{color:var(--d-eyebrow,rgba(255,255,255,.7))}
+.mhbt-tile.dark .mhbt-sub,.mhbt-tile.dark .mhbt-score small,.mhbt-tile.dark .mhbt-note{color:rgba(255,255,255,.78)}
+.mhbt-tile.dark .mhbt-name{text-shadow:0 0 14px var(--d-ring,transparent),0 2px 0 rgba(0,0,0,.4)}
+.mhbt-tile.dark .mhbt-cells>div,.mhbt-tile.dark .mhbt-feats li{background:rgba(0,0,0,.32);color:rgba(255,255,255,.7);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.mhbt-tile.dark .mhbt-cells b{color:#fff}
+.mhbt-tile.dark .mhbt-reward{background:rgba(0,0,0,.5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+.mhbt-tile.dark .mhbt-pb{color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.mhbt-tile.dark .mhbt-go{background:linear-gradient(135deg,#fff,var(--d-go,#e2e8f0));color:#0f172a}
+.mhbt-d-Beginner{--d-bg:linear-gradient(150deg,#f0fdf4,#bbf7d0 45%,#86efac);--d-mark:rgba(22,101,52,.12);--d-shine:6s}
+.mhbt-d-Easy{--d-bg:linear-gradient(150deg,#ecfeff,#a5f3fc 45%,#67e8f9);--d-mark:rgba(14,116,144,.13);--d-shine:5.6s}
+.mhbt-d-Normal{--d-bg:linear-gradient(150deg,#eff6ff,#93c5fd 42%,#3b82f6);--d-mark:rgba(255,255,255,.22);--d-shine:5.2s;--d-ring:rgba(59,130,246,.5);--d-ringw:1px}
+.mhbt-d-Hard{--d-bg:linear-gradient(150deg,#fff7ed,#fdba74 38%,#f97316 78%,#c2410c);--d-mark:rgba(255,255,255,.26);--d-shine:4.6s;--d-ring:rgba(249,115,22,.65);--d-ringw:2px;--d-deep:rgba(154,52,18,.45)}
+.mhbt-d-Expert{--d-bg:linear-gradient(150deg,#f87171,#dc2626 45%,#7f1d1d);--d-mark:rgba(255,255,255,.16);--d-shine:4s;--d-ring:rgba(254,202,202,.7);--d-ringw:2px;--d-deep:rgba(69,10,10,.6);--d-go:#fecaca}
+.mhbt-d-Master{--d-bg:linear-gradient(150deg,#c084fc,#7e22ce 45%,#3b0764);--d-mark:rgba(255,255,255,.16);--d-shine:3.6s;--d-ring:rgba(233,213,255,.75);--d-ringw:2px;--d-deep:rgba(30,6,60,.6);--d-go:#e9d5ff}
+.mhbt-d-GrandMaster{--d-bg:radial-gradient(90% 60% at 50% 0%,rgba(251,191,36,.28),transparent 60%),linear-gradient(150deg,#5b21b6,#2e1065 50%,#14072b);--d-mark:rgba(251,191,36,.18);--d-shine:3.2s;--d-ring:#fbbf24;--d-ringw:3px;--d-deep:rgba(10,3,24,.7);--d-eyebrow:#fcd34d;--d-sheen:rgba(253,230,138,.45);--d-go:#fde68a}
+.mhbt-d-Hell{--d-bg:radial-gradient(100% 55% at 50% 105%,rgba(220,38,38,.65),transparent 65%),radial-gradient(60% 40% at 80% 0%,rgba(127,29,29,.6),transparent 70%),linear-gradient(170deg,#2a0606,#0c0101 60%,#000);--d-mark:rgba(248,113,113,.2);--d-shine:2.8s;--d-ring:#dc2626;--d-ringw:3px;--d-eyebrow:#fca5a5;--d-sheen:rgba(248,113,113,.4);--d-go:#fca5a5}
+.mhbt-d-Legend{--d-bg:linear-gradient(150deg,#fef3c7,#fbbf24 32%,#f59e0b 62%,#92400e);--d-mark:rgba(255,255,255,.4);--d-shine:2.4s;--d-ring:rgba(255,255,255,.85);--d-ringw:3px;--d-deep:rgba(120,53,15,.35);--d-sheen:rgba(255,255,255,.7)}
+.mhbt-d-Legend::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(244,114,182,.7),rgba(250,204,21,.5),rgba(52,211,153,.6),rgba(96,165,250,.7),rgba(192,132,252,.7),rgba(244,114,182,.7));background-size:300% 100%;mix-blend-mode:overlay;opacity:.9;animation:mhbtRainbow 6s linear infinite}
+.mhbt-d-EXTREME{--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(232,121,249,.45),transparent 62%),linear-gradient(160deg,#4a044e,#1e0322 60%,#0a010c);--d-mark:rgba(240,171,252,.22);--d-shine:2.6s;--d-ring:#e879f9;--d-ringw:3px;--d-eyebrow:#f5d0fe;--d-go:#f5d0fe}
+.mhbt-d-NIGHTMARE{--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(129,140,248,.45),transparent 62%),linear-gradient(160deg,#1e1b4b,#0b0a24 60%,#020210);--d-mark:rgba(165,180,252,.22);--d-shine:2.4s;--d-ring:#818cf8;--d-ringw:3px;--d-eyebrow:#c7d2fe;--d-go:#c7d2fe}
+.mhbt-d-CHAOS{--d-bg:radial-gradient(70% 50% at 15% 10%,rgba(236,72,153,.55),transparent 65%),radial-gradient(70% 50% at 90% 95%,rgba(34,211,238,.5),transparent 65%),linear-gradient(160deg,#1a0420,#05010a);--d-mark:rgba(255,255,255,.18);--d-shine:2.1s;--d-ring:#f472b6;--d-ringw:3px;--d-eyebrow:#a5f3fc;--d-go:#fbcfe8}
+.mhbt-d-ULTIMATE{--d-bg:radial-gradient(90% 55% at 50% 0%,rgba(255,255,255,.35),transparent 60%),linear-gradient(160deg,#334155,#0f172a 55%,#000);--d-mark:rgba(255,255,255,.22);--d-shine:1.9s;--d-ring:#f8fafc;--d-ringw:3px;--d-eyebrow:#e2e8f0;--d-sheen:rgba(255,255,255,.55);--d-go:#e2e8f0}
+.mhbt-d-INFINITY,.mhbt-d-GOD,.mhbt-d-RAGNAROK,.mhbt-d-HELHEIM{--d-bg:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 75%,#fff,transparent),radial-gradient(90% 60% at 50% 0%,rgba(250,204,21,.4),transparent 60%),linear-gradient(160deg,#0c1445,#020617 60%,#000);--d-mark:rgba(253,224,71,.24);--d-shine:1.7s;--d-ring:#facc15;--d-ringw:3px;--d-eyebrow:#fde68a;--d-sheen:rgba(253,224,71,.5);--d-go:#fde68a}
+@keyframes mhbtRainbow{from{background-position:0% 0}to{background-position:300% 0}}
+@media (prefers-reduced-motion:reduce){.mhbt-tile::after,.mhbt-d-Legend::before{animation:none!important}}
 .mhbt-go::after{content:" ▶";font-size:11px;font-style:normal}
 .mhbt-go{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .mhbt-go.sm{font-size:12px;letter-spacing:0}
@@ -92851,7 +92881,8 @@ function MonsterHeroGame() {
           key: key,
           "aria-disabled": !quickUnlocked,
           "data-difficulty-card": key,
-          className: `mhbt-tile snap-center shrink-0 w-[82%] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${quickUnlocked ? '' : 'dim'}`,
+          "data-difficulty-look": key,
+          className: `mhbt-tile mhbt-d-${key} ${BATTLE_DIFFICULTY_DARK_LOOKS.has(key) ? 'dark' : ''} snap-center shrink-0 w-[82%] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${quickUnlocked ? '' : 'dim'}`,
           style: {
             '--acc': setting.text
           }
