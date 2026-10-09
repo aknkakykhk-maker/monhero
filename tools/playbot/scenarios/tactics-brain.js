@@ -59,6 +59,8 @@ const readBoard = (s) => s.page.evaluate(() => {
     i: el.getAttribute('data-hand-card'), type: el.getAttribute('data-card-type') || '', cost: Number(el.getAttribute('data-card-cost')) || 0,
     usable: el.getAttribute('data-card-usable') === 'true', block: el.getAttribute('data-card-block') || '',
     discard: el.hasAttribute('data-card-discard'),
+    // 選び済み(右上のチェック、または置いた子の顔が付く)。もう一度押すと外れてしまうので、見込みを読む対象から外す
+    selected: !!el.querySelector('.bg-cyan-400, .bg-indigo-600'),
     label: (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 30),
   }));
   const action = document.querySelector('[data-battle-action]');
@@ -132,7 +134,7 @@ async function evalHand(s, b, skipLabels) {
   const seen = new Set();
   const opts = [];
   for (const c of b.hand) {
-    if (!c.usable || c.discard || seen.has(c.label) || (skipLabels && skipLabels.has(c.i))) continue;
+    if (!c.usable || c.discard || c.selected || seen.has(c.label) || (skipLabels && skipLabels.has(c.i))) continue;
     seen.add(c.label);
     if (!/atk|unique|guard|debuff/.test(c.type)) { opts.push({ card: c, previews: [] }); continue; }
     const before = await readBoard(s);
@@ -146,12 +148,13 @@ async function evalHand(s, b, skipLabels) {
       mid = await readBoard(s);
       if (pv.some((p) => p.dmg > 0 || p.guard > 0) || (mid.picked || 0) > (before.picked || 0) || mid.needsPlace) break;
     }
-    // 取り消す(押す前の枚数へ戻るまで)
-    for (let k = 0; k < 3; k++) {
-      const now = await readBoard(s);
-      if ((now.picked || 0) <= (before.picked || 0) && !now.needsPlace) break;
+    // 取り消す(押す前の枚数へ戻るまで)。★押したあと画面へ反映されるまで待ってから確かめる。
+    //   すぐ確かめると「まだ選ばれている」と見えて、もう一度押して選び直してしまう
+    const stillPicked = async () => { const now = await readBoard(s); return (now.picked || 0) > (before.picked || 0) || now.needsPlace || now.hand.some((h) => h.i === c.i && h.selected); };
+    for (let k = 0; k < 2 && await stillPicked(); k++) {
       await quickTap(s, `[data-hand-card="${c.i}"]`);
-      await s.wait(320);
+      await s.wait(700);
+      if (await stillPicked()) await s.wait(600);
     }
     opts.push({ card: c, previews: pv.filter((p) => p.dmg > 0 || p.guard > 0), auto: (mid.picked || 0) > (before.picked || 0) });
   }
@@ -227,6 +230,13 @@ function decidePick(b, opts, ctx) {
   // ⑤' 見込みが読めなかった攻撃カード(押しても印が出ない)でも、使えるなら置いてみる
   const blind = opts.find((o) => /atk|unique/.test(o.card.type) && !o.previews.length && !ctx.blindTried);
   if (blind) { ctx.blindTried = true; return { kind: 'attack', card: blind.card, slot: null, value: 0, why: '見込みが読めなかったが使える攻撃カード' }; }
+  // ⑥' ガードはガッツを使わない。攻撃が置けず行動回数が余ったら、狙われた子(いなければライフのいちばん減った子)へ置く。
+  //     1ヒットの攻撃で余ったガードは、構えた子のライフとガッツになる(BATTLE_NEW_MODE_PLAN.md 段階7)
+  if (guardOpts.length && threat !== 'pierce' && threat !== 'none') {
+    const want = b.slots.find((x) => x.aimed && !x.downed) || [...alive].sort((p, q) => (p.hp ? p.hp.now / p.hp.max : 1) - (q.hp ? q.hp.now / q.hp.max : 1))[0];
+    const g = want && guardOpts.filter((x) => x.slot === want.i).sort((p, q) => q.value - p.value)[0];
+    if (g && (ctx.guarded[want.i] || 0) < 2) return { kind: 'guard', card: g.o.card, slot: g.slot, value: g.value, why: '攻撃が置けないので、ガードを構える(余りはライフとガッツになる)' };
+  }
   // ⑥ 支援
   const buff = opts.find((o) => o.card.type === 'buff' && !/自傷/.test(o.card.label));
   if (buff && b.enemy && b.enemy.hp > b.enemy.max * 0.3 && !ctx.buffed) return { kind: 'support', card: buff.card, why: '攻撃が置けないので支援' };
@@ -428,6 +438,7 @@ async function chooseBetween(s, mem, log) {
       if (key || names.length * 2 >= alive) {
         const nm = key || names[0];
         log.note(`トレーニング: ${nm}を起こす(${key ? 'ダメージの多い子' : '半分以上が倒れている'})`);
+        log.data.build.training.push({ wave: log.data.waves.length, name: nm, picks: ['起こす'] });
         return press(new RegExp(`^${nm}を起こす`), 'トレーニング(起こす)');
       }
     }
@@ -442,6 +453,7 @@ async function chooseBetween(s, mem, log) {
       else if (m.gutsShort >= 2) plan = ['猛勉強', 'ドミノ倒し'];
       else plan = ['ドミノ倒し', 'ドミノ倒し'];
       const want = plan[scr.picked] || plan[0];
+      if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
       if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(狙われた${m.aimed}回・ガッツ不足${m.gutsShort}回)`);
       if (process.env.PLAYBOT_DEBUG) console.log(`      [トレーニング] ${scr.trainingName} 選んだ数${scr.picked} → ${want}`);
       if (await press(new RegExp(`^${want}`), 'トレーニング')) { mem.trained[tkey] = (mem.trained[tkey] || 0) + 1; await s.wait(500); return true; }
@@ -453,6 +465,7 @@ async function chooseBetween(s, mem, log) {
   if (placeBtns.length) {
     const best = placeBtns.sort((a, z) => GRADE.indexOf(a.split(/\s+/)[1]) - GRADE.indexOf(z.split(/\s+/)[1]))[0];
     log.note(`置き場所: ${best.split(/\s+/).slice(0, 2).join(' ')}(適性がいちばん高い距離)`);
+    log.data.build.placements.push({ wave: log.data.waves.length, name: mem.lastPicked || '', dist: best.split(/\s+/)[0].replace('距離', ''), grade: best.split(/\s+/)[1] });
     return press(new RegExp(`^${best.split(/\s+/)[0]}`), '置き場所(適性)');
   }
   // 供モン: 総合力のいちばん高い子
@@ -460,6 +473,8 @@ async function chooseBetween(s, mem, log) {
   if (allyBtns.length && !scr.buttons.some((t) => /^(この供モンを選ぶ|供モン\d*にする)/.test(t))) {
     const best = allyBtns.sort((a, z) => num(z.match(/総合力\s*([\d,]+)/)[1]) - num(a.match(/総合力\s*([\d,]+)/)[1]))[0];
     log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]})`);
+    log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
+    mem.lastPicked = best.split(/\s+/)[0];
     return press(new RegExp(`^${best.split(/\s+/)[0]}\\s+総合力`), '供モン(総合力)');
   }
   // 固有技の強化: ダメージを多く出した子の固有技から上げる
@@ -470,6 +485,7 @@ async function chooseBetween(s, mem, log) {
     mem.uniqueUps = (mem.uniqueUps || 0) + 1;
     if (mem.uniqueUps > 12) return false;
     log.note(`固有技: ${best.replace(/のレベルを1つ上げる$/, '')}を上げる`);
+    log.data.build.uniques.push({ wave: log.data.waves.length, skill: best.replace(/のレベルを1つ上げる$/, '') });
     return press(new RegExp(`^${best.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '固有技の強化');
   }
   // アシストカード: 足りないものに合わせる
@@ -490,6 +506,7 @@ async function chooseBetween(s, mem, log) {
       [starved ? 'ガッツ不足が多い' : 'ガッツを補う', isGuts(best) ? (starved ? 3.2 : 1.5) : 0], ['守りを固める', /被ダメ|軽減|守り/.test(best) ? (hurt ? 3 : 1.8) : 0]];
     const kind = parts.sort((p, q) => q[1] - p[1])[0][0];
     log.note(`アシストカード: ${best.slice(0, 24)}(${kind})`);
+    log.data.build.assists.push({ wave: log.data.waves.length, card: best.split(/\s+/)[0], text: best.slice(0, 40), upgrade: !/新規習得/.test(best) });
     return press(new RegExp(`^${best.slice(0, 8).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), 'アシストカード');
   }
   return false;
@@ -498,7 +515,7 @@ async function chooseBetween(s, mem, log) {
 // ---------- 記録 ----------
 // WAVE ごとの残りライフ・倒れた子・決着までのターン・モンスター/EX ごとの貢献を数で残す
 function makeLog(meta) {
-  const L = { meta, waves: [], ex: [], notes: [], result: null, reason: '' };
+  const L = { meta, build: { hero: '', pool: [], allies: [], placements: [], assists: [], training: [], uniques: [] }, waves: [], ex: [], notes: [], result: null, reason: '' };
   let cur = null;
   const api = {
     data: L,
@@ -562,4 +579,60 @@ function explain(L) {
 }
 const THREAT_JA = { none: '様子見など', single: '1発', big: '必殺技', multi: '3連撃', all: '全体攻撃', pierce: '貫通撃', pierceCharge: '貫通の構え', charge: 'ためる' };
 
-module.exports = { readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
+// ---------- 覚え書き(どの編成・どのアシストカードで、どこまで行けたか) ----------
+// 2026-10-09 社長「どのモンスターを使ったとか、どのアシカを使ったとか、そのへんを覚えてもらわないとバランス調整なんてできない」。
+// 1回ごとの結果を tools/playbot/tactics-knowledge.json に積み、次の勇者モン・供モン選びに使う。
+// 成績のよい子を先に選びつつ、試した回数の少ない子も少しずつ試す(試さないと、よいかどうかが分からない)
+const path = require('path');
+const fs = require('fs');
+const KNOWLEDGE = path.resolve(__dirname, '..', 'tactics-knowledge.json');
+const BASE_NAMES = ['モッチー', 'スエゾー', 'ゴーレム', 'ライガー', 'ハム', 'ピクシー', 'モノリス', 'オボロゲソウ'];
+const DIFF_ORDER = ['Beginner', 'Easy', 'Normal', 'Hard', 'Expert', 'Master', 'GrandMaster', 'Hell', 'Legend'];
+function loadKnowledge() {
+  try { const k = JSON.parse(fs.readFileSync(KNOWLEDGE, 'utf8')); if (Array.isArray(k.runs)) return k; } catch (e) { /* 無ければ空から */ }
+  return { note: 'タクティクスくんの覚え書き。tools/playbot/scenarios/tactics-brain.js が1回ごとに足す。消してよい(覚え直す)', runs: [] };
+}
+// 1回の出来: 着いたWAVE(10で1.0)+クリアで1。倒れた回数で少し引く
+const runValue = (r) => (r.wave || 0) / 10 + (r.result === 'clear' ? 1 : 0) - Math.min(0.3, (r.downs || 0) * 0.03);
+function scoreNames(k, difficulty, role) {
+  const d0 = DIFF_ORDER.indexOf(difficulty);
+  const acc = {};
+  for (const r of k.runs) {
+    const w = r.difficulty === difficulty ? 1 : (d0 >= 0 && Math.abs(DIFF_ORDER.indexOf(r.difficulty) - d0) === 1 ? 0.5 : 0.2);
+    const names = role === 'hero' ? [r.hero] : (r.pool || []);
+    for (const nm of names.filter(Boolean)) { acc[nm] = acc[nm] || { v: 0, w: 0, n: 0 }; acc[nm].v += runValue(r) * w; acc[nm].w += w; acc[nm].n += 1; }
+  }
+  return acc;
+}
+// 勇者モン → 供モン5体の順に並べた名前の一覧(画面にある名前を上から順に選ぶ)
+function preferredOrder(difficulty, rand) {
+  const k = loadKnowledge();
+  const names = [...new Set([...BASE_NAMES, ...k.runs.flatMap((r) => [r.hero, ...(r.pool || [])]).filter(Boolean)])];
+  const rank = (role) => {
+    const sc = scoreNames(k, difficulty, role);
+    // 平均の出来 + 試した回数が少ないほど足す(よく知らない子も試す)
+    return names.map((nm) => { const x = sc[nm]; const mean = x && x.w ? x.v / x.w : 1.2; return { nm, v: mean + 0.35 / Math.sqrt((x ? x.n : 0) + 1) + rand() * 0.15 }; })
+      .sort((a, z) => z.v - a.v).map((x) => x.nm);
+  };
+  const hero = rank('hero')[0];
+  const allies = rank('ally').filter((nm) => nm !== hero);
+  return { hero, order: [hero, ...allies], knownRuns: k.runs.length };
+}
+function rememberRun(L, stats) {
+  if (process.env.PLAYBOT_TACTICS_LEARN === '0') return;
+  const k = loadKnowledge();
+  const dmg = {};
+  for (const w of L.waves) for (const [m, d] of Object.entries(w.byMon || {})) dmg[m] = (dmg[m] || 0) + d;
+  k.runs.push({
+    at: new Date().toISOString().slice(0, 16), mode: L.meta.mode, difficulty: L.meta.difficulty, hero: L.build.hero, pool: L.build.pool,
+    allies: L.build.allies.map((a) => a.name), placements: L.build.placements.map((p) => `${p.name || '?'}:${p.dist}${p.grade}`),
+    assists: L.build.assists.map((a) => `${a.card}${a.upgrade ? '+' : ''}`), ex: Object.entries(L.ex.reduce((o, e) => { o[e.ex || e.mon] = (o[e.ex || e.mon] || 0) + 1; return o; }, {})).map(([n, c]) => `${n}×${c}`),
+    result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
+    lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
+  });
+  // 増えすぎないよう、新しい 300 回ぶんだけ持つ
+  k.runs = k.runs.slice(-300);
+  fs.writeFileSync(KNOWLEDGE, `${JSON.stringify(k, null, 1)}\n`);
+}
+
+module.exports = { preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };

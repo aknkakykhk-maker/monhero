@@ -19,7 +19,7 @@
 // 入口: モンヒロバトル → タクティクス → モード → 難易度 → 勇者モン・供モン → 距離・アシストカード → WAVE 1
 // ★押すものは「その画面にしか無いもの」で選ぶ(とりあえず押せるものを押すと、戻るを踏む)。
 //   道筋は tools/battle/lib/tactics-battle-page.js と同じ
-async function enterTactics(s, { mode, difficulty = 'keep', stats = {} }) {
+async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = null }) {
   const { page, rand } = s;
   await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
   await s.wait(1200);
@@ -79,9 +79,22 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {} }) {
     // eslint-disable-next-line no-undef
     window.__pbWant = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ids.map((id) => ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name).filter(Boolean) : [];
   }, [Math.floor(rand() * 6), wantIds]);
+  // --hero の指定が無ければ、覚え書き(tactics-knowledge.json)の成績から勇者モン・供モンの順を決める
+  if (!wantIds.length && ctx) {
+    const pref = brain.preferredOrder(stats.difficulty || '', rand);
+    await page.evaluate((names) => { window.__pbWant = names; }, pref.order);
+    ctx.log.note(`編成の順(覚え書き ${pref.knownRuns}回ぶんから): ${pref.order.join('・')}`);
+  }
   for (let i = 0; i < 40; i += 1) {
     if (await page.evaluate(() => /WAVE 1\/\d+/.test(document.body.innerText) && !!document.querySelector('[data-battle-action]'))) break;
     await s.dismissOverlays(4);
+    if (process.env.PLAYBOT_DEBUG) {
+      const dom = await page.evaluate(() => [...document.querySelectorAll('button')].filter((x) => x.offsetParent).map((x) => `${x.disabled ? '[x]' : ''}${(x.innerText || x.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 40)}`).join(' | '));
+      console.log(`    [入口] ${await s.screenName()} ${(await page.evaluate(() => ((document.querySelector('h2,h1') || {}).innerText || '').trim().slice(0, 30)))}\n      DOM=${dom.slice(0, 1500)}`);
+    }
+    // 置き場所(適性)・アシストカード(足りないもの)は、戦い方の判断で選ぶ
+    if (ctx && await brain.chooseBetween(s, ctx.mem, ctx.log)) { s.state.step += 1; await s.wait(900); continue; }
+    const scrName = await s.screenName();
     const step = await page.evaluate(() => {
       const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
       const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
@@ -93,13 +106,20 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {} }) {
       // 勇者えらびは顔アイコンの並びで、タイルの文字は名前だけ(「前回」が付くことがある)。一覧のカードは名前を含む
       const wantBtnOf = (name) => live.find((x) => x.textContent.trim().replace(/^前回/, '') === name) || mons.find((x) => x.textContent.includes(name));
       const wantAt = (window.__pbWant || []).findIndex((name) => !!wantBtnOf(name));
-      if (wantAt >= 0) { const name = window.__pbWant.splice(wantAt, 1)[0]; wantBtnOf(name).click(); return 'mon'; }
-      if (mons.length) { const m = mons[window.__pbPick % mons.length]; window.__pbPick += 1; m.click(); return 'mon'; }
+      if (wantAt >= 0) { const name = window.__pbWant.splice(wantAt, 1)[0]; wantBtnOf(name).click(); return `mon:${name}`; }
+      if (mons.length) { const m = mons[window.__pbPick % mons.length]; window.__pbPick += 1; m.click(); return `mon:${m.textContent.trim().split(/\s/)[0]}`; }
       const changes = live.filter((x) => x.textContent.trim() === '変更');
       if (changes.length && window.__pbChange < changes.length) { changes[window.__pbChange].click(); window.__pbChange += 1; return 'change'; }
       return null;
     });
     if (!step) break;
+    // 編成を記録する(勇者モン・供モンの候補5体)
+    if (ctx && step.startsWith('mon:')) {
+      const nm = step.slice(4);
+      if (/勇者モン/.test(scrName)) ctx.log.data.build.hero = nm;
+      else if (/供モン/.test(scrName) && !ctx.log.data.build.pool.includes(nm)) ctx.log.data.build.pool.push(nm);
+      ctx.mem.lastPicked = nm;
+    }
     s.state.step += 1;
     await s.wait(1000);
   }
@@ -233,9 +253,11 @@ async function betweenWaves(s, ctx) {
 async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tacticsPro'], difficulty = 'keep', out = '', runNo = 1 } = {}) {
   const stats = { mode: '', difficulty: '', entered: false, turns: 0, waveReached: 0, waveMax: 0, downs: 0, aimedDanger: 0, guardsWhenAimed: 0, dangerNoGuard: 0,
     guards: 0, exUsed: 0, discards: 0, pickFailed: 0, cards: {}, finished: false, result: '' };
+  const mem = brain.newMemory();
+  const log = brain.makeLog({ mode: '', difficulty: '', runNo, startedAt: new Date().toISOString() });
   let entered = '';
   for (const mode of modes) {
-    entered = await enterTactics(s, { mode, difficulty, stats });
+    entered = await enterTactics(s, { mode, difficulty, stats, ctx: { mem, log } });
     if (entered === 'ok') { stats.mode = mode; break; }
     await s.backHome();
   }
@@ -244,8 +266,8 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
     return { ok: false, stats, note: `入れなかった(${entered})` };
   }
   stats.entered = true;
-  const mem = brain.newMemory();
-  const log = brain.makeLog({ mode: stats.mode, difficulty: stats.difficulty, runNo, startedAt: new Date().toISOString() });
+  log.data.meta.mode = stats.mode;
+  log.data.meta.difficulty = stats.difficulty;
   const t0 = Date.now();
   await fightTactics(s, stats, { maxMs, speedUp: true, brainCtx: { mem, log } });
   const end = await readTactics(s);
@@ -262,6 +284,7 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
   log.data.meta.minutes = +((Date.now() - t0) / 60000).toFixed(1);
   log.data.meta.party = Object.keys(mem.mons);
   log.data.why = brain.explain(log.data);
+  brain.rememberRun(log.data, stats);
   if (end.over) { await s.dismissOverlays(10); await s.inspect(); }
   if (out) {
     const fs = require('fs');
@@ -351,7 +374,8 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       acted = true;
     } else {
       if (!before.actionEnabled) {
-        await s.wait(1500);
+        // 置いた直後の演出のあいだは押せない(最大6秒待つ)
+        for (let k = 0; k < 12 && !(await readTactics(s)).actionEnabled; k++) await s.wait(500);
         if (!(await readTactics(s)).actionEnabled) { await s.addIssue('反応なし', `タクティクスで実行が押せない(手札 ${before.hand.map((c) => `${c.type}${c.usable ? '' : '×'}`).join(' ')})`); break; }
       }
       await tapEl(s, '[data-battle-action]', 'ACTION');
