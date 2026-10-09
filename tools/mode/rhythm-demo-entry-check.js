@@ -60,32 +60,29 @@ ok('曲えらびの曲はどれも5難易度そろっている',
     return `${id}(${s?o.RHYTHM_DEMO_DIFFICULTY_IDS.filter(d=>s.difficulties[d]&&s.difficulties[d].notes.length>0).length:0})`;
   }).join(' / '));
 // EXPERT以上は前の難易度をクリアするまで選べない(2026-09-05・ユーザー指示)
-ok('EXPERT以上は前の難易度をクリアで解放される',
+// EXPERT・MASTER は、その曲の HARD を1回クリアすれば一度に開く(2026-10-10・社長の選択「いまある曲も HARD 1回で開く」)
+ok('EXPERT と MASTER は、その曲の HARD のクリアで一度に開く',
   o.rhythmDifficultyUnlocked('monster_hero','EASY',{})===true
   &&o.rhythmDifficultyUnlocked('monster_hero','HARD',{})===true
   &&o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{})===false
+  &&o.rhythmDifficultyUnlocked('monster_hero','MASTER',{})===false
   &&o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{monster_hero:{HARD:{clear:true}}})===true
-  &&o.rhythmDifficultyUnlocked('monster_hero','MASTER',{monster_hero:{HARD:{clear:true}}})===false
-  &&o.rhythmDifficultyUnlocked('monster_hero','MASTER',{monster_hero:{EXPERT:{clear:true}}})===true);
+  &&o.rhythmDifficultyUnlocked('monster_hero','MASTER',{monster_hero:{HARD:{clear:true}}})===true
+  &&o.rhythmDifficultyUnlocked('monster_hero','MASTER',{monster_hero:{HARD:{played:true,clear:false}}})===false);
+ok('1段ずつのころに EXPERT のクリアで開いた MASTER は、開いたまま',
+  o.rhythmDifficultyUnlocked('monster_hero','MASTER',{monster_hero:{EXPERT:{clear:true}}})===true);
 ok('解放は曲ごと（別の曲のクリアでは開かない）',
   o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{stay_with_me:{HARD:{clear:true}}})===false);
 ok('記録が壊れていても勝手に開かない',
   o.rhythmDifficultyUnlocked('monster_hero','EXPERT',null)===false
   &&o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{monster_hero:{HARD:{clear:'yes'}}})===false);
-// 新曲は HARD のクリアで EXPERT・MASTER が一度に開く(2026-10-09・社長の選択)。いま入っている曲は1段ずつのまま
-ok('新曲(これまでの一覧に無い曲)は、HARDのクリアで EXPERT と MASTER が一度に開く',
-  o.rhythmDifficultyUnlocked('brand_new_song','EXPERT',{})===false
-  &&o.rhythmDifficultyUnlocked('brand_new_song','MASTER',{})===false
-  &&o.rhythmDifficultyUnlocked('brand_new_song','EXPERT',{brand_new_song:{HARD:{clear:true}}})===true
-  &&o.rhythmDifficultyUnlocked('brand_new_song','MASTER',{brand_new_song:{HARD:{clear:true}}})===true
-  &&o.rhythmDifficultyUnlocked('brand_new_song','MASTER',{brand_new_song:{HARD:{played:true,clear:false}}})===false
-  &&o.rhythmDifficultyUnlockRequirement('MASTER','brand_new_song')==='HARD');
-ok('いま入っている曲は、すべてこれまでどおり1段ずつ開く(EXPERTのクリアでMASTER)',
-  o.RHYTHM_SONGS.every(song=>o.rhythmDifficultyUnlockRequirement('MASTER',song.songId)==='EXPERT'
-    &&o.rhythmDifficultyUnlocked(song.songId,'MASTER',{[song.songId]:{HARD:{clear:true}}})===false),
-  o.RHYTHM_SONGS.filter(song=>o.rhythmDifficultyUnlockRequirement('MASTER',song.songId)!=='EXPERT').map(song=>song.songId).join(','));
-ok('曲を渡さないときの条件は、これまでどおり1つ下の難易度',
-  o.rhythmDifficultyUnlockRequirement('EXPERT')==='HARD'&&o.rhythmDifficultyUnlockRequirement('MASTER')==='EXPERT'&&o.rhythmDifficultyUnlockRequirement('HARD')===null);
+ok('いま入っている曲も新曲も、同じ開き方(HARD のクリアで EXPERT・MASTER)',
+  o.RHYTHM_SONGS.every(song=>o.rhythmDifficultyUnlockRequirement('MASTER',song.songId)==='HARD'
+    &&o.rhythmDifficultyUnlocked(song.songId,'MASTER',{[song.songId]:{HARD:{clear:true}}})===true)
+  &&o.rhythmDifficultyUnlocked('brand_new_song','MASTER',{brand_new_song:{HARD:{clear:true}}})===true,
+  o.RHYTHM_SONGS.filter(song=>o.rhythmDifficultyUnlockRequirement('MASTER',song.songId)!=='HARD').map(song=>song.songId).join(','));
+ok('解放に要る難易度は、EXPERT・MASTER とも HARD(それより下はいらない)',
+  o.rhythmDifficultyUnlockRequirement('EXPERT')==='HARD'&&o.rhythmDifficultyUnlockRequirement('MASTER')==='HARD'&&o.rhythmDifficultyUnlockRequirement('HARD')===null);
 ok('難易度ごとの説明を持っている',
   o.RHYTHM_DEMO_DIFFICULTY_IDS.every(id=>{
     const label=o.RHYTHM_DEMO_DIFFICULTY_LABELS[id];
