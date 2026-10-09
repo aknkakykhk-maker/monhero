@@ -193,10 +193,12 @@ function decidePick(b, opts, ctx) {
   // ★ガッツは1ターンに最大の5%しか戻らない。払う子のガッツが細っているときは「ガッツ1あたりのダメージ」で選ぶ
   //   (Master の WAVE 4 でガッツ切れが続いて負けた。2026-10-09)。たっぷりあるときは、1手あたりのダメージで選ぶ
   const gutsOf = (slot) => { const x = b.slots.find((y) => y.i === slot); return x && x.guts ? x.guts : null; };
+  //   ★カードの種類でガッツ1あたりのダメージが大きく違う(Master の例: 通常技 16ガッツで 1,378 / 固有技 84ガッツで 1,158)。
+  //   ガッツが満タン近く(85%以上=戻るぶんが無駄になる)のときだけ1手あたりで選び、それ以外は「ダメージ ÷ ガッツ^0.7」で選ぶ
   for (const a0 of atkOpts) {
     const g = gutsOf(a0.slot);
-    const tight = g && g.max && g.now < g.max * 0.6;
-    a0.rank = tight ? a0.value / Math.max(8, a0.o.card.cost || 8) * 40 : a0.value;
+    const full = !g || !g.max || g.now >= g.max * 0.85;
+    a0.rank = full ? a0.value : a0.value / Math.pow(Math.max(8, a0.o.card.cost || 8), 0.7) * 7;
   }
   atkOpts.sort((a, z) => z.rank - a.rank);
   // ① とどめ: 残りの行動回数ぶんの上位の見込みで倒せるなら攻撃だけ
