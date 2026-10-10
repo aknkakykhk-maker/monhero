@@ -28838,8 +28838,9 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
     // 空中の段(試作): 高さのある点は、その奥行きの持ち上げ幅ぶん上へ。groundOnly のときは影として地面に置く
     const skyAt=rhythmSlideHasSky(note)?rhythmSlideSkyAt(note,point.timeMs):0;
     const lift=!travel.groundOnly?rhythmSkyLiftPx(rect,yRatio)*skyAt:0;
-    // 参考のアークと同じく、空中にある所はレーンより細いリボンにする(高さ1で6割の太さ。影は太さそのまま)
-    const thin=travel.groundOnly?1:1-.4*skyAt;
+    // 空中にある所も帯の太さは変えない(2026-10-10 社長「スライドの始まりのノーツのサイズがスライドラインと違う」。
+    // 以前は参考のアークに寄せて高さ1で6割まで細くしていたが、始点の板の半分ほどになり幅が合わなかった)
+    const thin=1;
     return {y:y-lift,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:rhythmSlideHasSky(note)?rhythmSlideSkyAt(note,point.timeMs):0};
   };
   let firstIndex=0;
@@ -28873,7 +28874,11 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const chartNowMs=slideTravel?.chartNowMs;
   const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,chartNowMs);
   const projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO));
-  const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,checkpoints:null,end:null};
+  // 空中の段(試作): 高さのあるスライドは、始点の板を帯と同じ幅にする(社長「始まりのノーツのサイズとスライドラインが違う」)。
+  // 地上だけのスライド(既存の全曲)は今までどおり(板 .78・帯 .64)
+  const skySlide=rhythmNoteIsSlide(note)&&typeof rhythmSlideHasSky==='function'&&rhythmSlideHasSky(note);
+  const headW=skySlide?Math.max(4,projectedWidth*RHYTHM_BODY_WIDTH_RATIO):width;
+  const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:headW,h:noteHeight},band:null,slide:null,checkpoints:null,end:null};
   const height=Math.max(0,Number(bodyHeight)||0);
   if(rhythmNoteIsSlide(note)){
     if(slideTravel){
@@ -28931,7 +28936,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   if(rhythmNoteHasBody(note)&&Number.isFinite(Number(releaseYpx))&&releaseYpx!==null){
     const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height);
     const end=rhythmNoteHasVariableSpan(note)&&rhythmNoteIsHold(note)?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
-    out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO),scale:end.scale};
+    out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*(skySlide?RHYTHM_BODY_WIDTH_RATIO:RHYTHM_NOTE_WIDTH_RATIO)),scale:end.scale};
   }
   // 空中の段(試作): 空中の粒は高さぶん上へ。地面の位置は影として残す。スライドの頭・終わりの棒はその時刻の高さで
   const skyHead=rhythmNoteIsSlide(note)?rhythmSlideSkyAt(note,Math.max(Number(note.timeMs)||0,Number(chartNowMs)||0)):rhythmNoteSkyHeight(note);
