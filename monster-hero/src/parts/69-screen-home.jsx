@@ -71,6 +71,77 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
   display:'flex', flexDirection:'column', alignItems:'center', width:'100%',
   background:'transparent', border:'0', padding:'0', cursor:'pointer',
 });
+// ★ジャックのひとこと(吹き出し)の置き場所を、その端末の画面で測って決める(2026-10-10・社長の実機の指摘)。
+//   iPhone縦では「M/B管理」「神殿」のボタンの下へ吹き出しがもぐって文の頭が隠れ、横では上の帯の裏へ隠れていた。
+//   HOMEのボタンの位置は端末ごとに違うので、決め打ちの位置ではどこかで必ず重なる。
+//   そこで「ボタン・みゅあの吹き出し・画面の端」を障害物として測り、重ならない場所と幅を順に試す:
+//     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
+//   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
+//   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120]);
+const HOME_RAID_SAY_GAP = 6;
+const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
+const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
+  const pad = 4, edge = 6;
+  const overlap = (r) => {
+    let area = 0;
+    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) area += 1e6;
+    for (const o of obstacles) {
+      const w = Math.min(r.right, o.right + pad) - Math.max(r.left, o.left - pad);
+      const h = Math.min(r.bottom, o.bottom + pad) - Math.max(r.top, o.top - pad);
+      if (w > 0 && h > 0) area += w * h;
+    }
+    return area;
+  };
+  const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
+  const cx = (head.left + head.right) / 2;
+  const tries = [];
+  for (const w of HOME_RAID_SAY_WIDTHS) {
+    const h = measure(w);
+    const left = clampX(cx - w / 2, w);
+    tries.push({ side: 'top', left, top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
+  }
+  for (const side of ['right', 'left']) {
+    for (const w of HOME_RAID_SAY_WIDTHS) {
+      const h = measure(w);
+      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
+      const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
+      tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
+    }
+  }
+  // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
+  for (const w of HOME_RAID_SAY_WIDTHS) {
+    const h = measure(w);
+    const from = head.top - HOME_RAID_SAY_HOP - h, to = head.top + (head.bottom - head.top) * 0.75 - h;
+    for (let y = from + 6; y <= to; y += 6) tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
+  }
+  let best = null;
+  for (const t of tries) {
+    const area = overlap({ left: t.left, top: t.top, right: t.left + t.width, bottom: t.top + t.height });
+    if (area === 0) return { ...t, clear: true };
+    if (!best || area < best.area) best = { ...t, area };
+  }
+  return best ? { side: best.side, left: best.left, top: best.top, width: best.width, height: best.height, clear: false } : null;
+};
+// HOMEで吹き出しが避ける相手を集める。ボタン・リンク・みゅあの吹き出し(施設は見える札)。
+// ジャック自身・画面いっぱいの背景のような大きな押し場所・見えていないものは数えない
+const homeRaidSayObstacles = (wrap) => {
+  if (typeof document === 'undefined') return [];
+  const vw = window.innerWidth, vh = window.innerHeight, out = [];
+  document.querySelectorAll('button, a[href], [role="button"]').forEach((el) => {
+    if (wrap && wrap.contains(el)) return;
+    // HOMEの施設(M/B管理・神殿・マーケットなど)は、建物ぶんの透明な押し場所の中に「見える札」(> span)を置いた作り。
+    // 押し場所ごと避けると真ん中に置き場所が残らないので、見える札だけを避ける(押せる範囲は変えない)
+    const face = el.classList.contains('mh-home-facility') ? (el.querySelector(':scope > span') || el) : el;
+    const r = face.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2 || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh) return;
+    if (r.width * r.height > vw * vh * 0.4) return;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return;
+    out.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+  });
+  return out;
+};
 const HomeRaidJack = ({ eventId, onOpen }) => {
   // 前回取れた段階の合計から描き始める(36-raid-jack-api.jsx の raidJackTotalsCache)。読み込みが終わるまでの間を「男爵・ライフ満タン」にしない
   const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
@@ -91,6 +162,39 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     const id = setInterval(load, 60000);
     return () => { alive = false; clearInterval(id); };
   }, [eventId]);
+  // 吹き出しの置き場所(homeRaidSayPlace)。null のあいだは、これまでどおりジャックの上へ置く
+  const wrapRef = React.useRef(null);
+  const sayRef = React.useRef(null);
+  const [sayPlace, setSayPlace] = React.useState(null);
+  React.useLayoutEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const place = () => {
+      const wrap = wrapRef.current, say = sayRef.current;
+      const art = wrap && wrap.querySelector('[data-home-raid-jack] [data-jack-aura], [data-home-raid-jack] [data-home-raid-pumpkin]');
+      const img = art && art.querySelector('img.mh-home-raid-jack-img');
+      if (!wrap || !say || !art || !img) return;
+      // 跳ねている途中の位置ではなく、置かれている位置で測る(img の transform を含まない offset から出す)
+      const ar = art.getBoundingClientRect();
+      const head = { left: ar.left + img.offsetLeft, top: ar.top + img.offsetTop, right: ar.left + img.offsetLeft + img.offsetWidth, bottom: ar.top + img.offsetTop + img.offsetHeight };
+      if (head.right - head.left < 2) return;
+      const keep = say.style.width;
+      const measure = (w) => { say.style.width = `${w}px`; return say.offsetHeight; };
+      const next = homeRaidSayPlace({ head, obstacles: homeRaidSayObstacles(wrap), vw: window.innerWidth, vh: window.innerHeight, measure });
+      say.style.width = keep;
+      if (!next) return;
+      const wr = wrap.getBoundingClientRect();
+      const rel = { side: next.side, left: Math.round(next.left - wr.left), top: Math.round(next.top - wr.top), width: next.width,
+        tail: Math.round(Math.max(14, Math.min(next.width - 14, (head.left + head.right) / 2 - next.left))), tailY: Math.round(Math.max(14, Math.min(next.height - 14, head.top + 24 - next.top))) };
+      setSayPlace((prev) => (prev && prev.side === rel.side && prev.left === rel.left && prev.top === rel.top && prev.width === rel.width && prev.tail === rel.tail && prev.tailY === rel.tailY ? prev : rel));
+    };
+    place();
+    // ボタンの並び・みゅあの吹き出しの長さは、読み込みやセリフで後から変わる。軽い測り直しをときどき回す
+    const timers = [setTimeout(place, 120), setTimeout(place, 700)];
+    const id = setInterval(place, 1500);
+    window.addEventListener('resize', place);
+    window.addEventListener('orientationchange', place);
+    return () => { timers.forEach(clearTimeout); clearInterval(id); window.removeEventListener('resize', place); window.removeEventListener('orientationchange', place); };
+  }, [lineNo, totals]);
   // ときどき両腕ポーズ(約7秒に1回、1.4秒だけ)
   React.useEffect(() => {
     let alive = true; let timer = null;
@@ -114,15 +218,19 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const speech = speechLines[lineNo % speechLines.length];
   const speechAccent = allDone ? '#fdba74' : '#fb923c';
   return (
-    <div data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
+    <div ref={wrapRef} data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
     {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
-    <button type="button" key={`say${lineNo}`} data-home-raid-say data-story-pop="1" onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
-      style={{ position:'absolute', left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184, padding:'6px 10px', borderRadius:'14px',
+    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+      style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
+        padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
         border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
         boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2 }}>
       <span style={{ display:'block' }}>{speech}</span>
       <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
-      <span aria-hidden="true" style={{ position:'absolute', left:'50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />
+      {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
+      {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
+      {sayPlace && sayPlace.side === 'right' && <span aria-hidden="true" style={{ position:'absolute', left:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderRight:`9px solid ${speechAccent}` }} />}
+      {sayPlace && sayPlace.side === 'left' && <span aria-hidden="true" style={{ position:'absolute', right:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderLeft:`9px solid ${speechAccent}` }} />}
     </button>
     <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
