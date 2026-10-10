@@ -1,6 +1,6 @@
 // 簡易シミュレーター: タクティクスプロを、ブラウザなしで 1 ラン(WAVE 1〜10)まるごと回す。
 //
-//   node tools/playbot/sim/battle.js --diff Hard,Expert,Master --runs 300 --ex bot,best [--seed 1] [--max-wave 10] [--md <file>] [--assist bot|none|<カードの id>] [--training bot|none]
+//   node tools/playbot/sim/battle.js --diff Hard,Expert,Master --runs 300 --ex bot,best [--seed 1] [--max-wave 10] [--md <file>] [--assist bot|none|<カードの id>] [--training bot|none] [--emergency auto|none] [--dist-bonus on|off] [--unique-up on|off]
 //     --ex … EX の使い方。bot(いまのボットの決め方 = tactics-brain.js maybeUseEx と同じ条件)・
 //            best(上手な使い方)・none(EX を使わない)。カンマ区切りで並べると全部回して並べる(「bot|best」とも書ける)
 //   SIM_TRACE=1 を付けると、1ターンごとの経過(予告・EX・使ったカード・与ダメ・ライフ/ガッツ)を出す
@@ -22,8 +22,12 @@
 // ★4 版目(2026-10-10・ダイスくん)でトレーニングを入れた: WAVE 1〜9 のあと毎回、立っている子へ2回ずつ(60-app.jsx handleTraining 14724・
 //   resolveTrainingStats・applyTacticsTraining)。倒れた子を起こすとその WAVE はだれも鍛えない。選び方はボット(tactics-brain.js 550〜587)と同じ。
 //   simulateRun({ training: 'bot'|'none' })
-// ★まだ入れていないもの: 魂格・固有技の強化・
-//   WAVE 報酬の間合いボーナス(distDmgBonus)・緊急回復。近似したものは md の頭(APPROX)に書く。
+// ★5 版目(2026-10-10・ダイスくん)で WAVE 報酬の間合いボーナス(distDmgBonus)を入れた: WAVE ごとに、枠ごとの攻撃ダメージ × DIST_BONUS_PER_DAMAGE を足す
+//   (60-app.jsx resolveEnemyDefeat 11193)。与ダメの倍率(getDmg 11081)と通常技・距離撃の段階(computeAtkTier 13617)の両方に効く。
+//   供モンが入った枠は「これまでの合計ダメージ × 1e-5 × 追いつきの倍率」まで引き上げる(catchUpTacticsDistBonus 1290)。simulateRun({ distBonus: false }) で切れる
+// ★6 版目で固有技の強化(供モンが入るたびに強化ポイント 1〜4。ボットと同じく、いちばんダメージを出した子へ)、
+//   7 版目で緊急回復(AUTO と同じ条件)を入れた。simulateRun({ uniqueUp: false, emergency: 'none' }) で切れる
+// ★まだ入れていないもの: 魂格(Tier の対象外)・強化ポイントでガッツ+10・トレーニングと緊急回復の上手な使い方。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
 const path = require('path');
 const { loadGame } = require('./load-game');
@@ -41,7 +45,8 @@ const APPROX = [
   'スネグーラチカのプレゼント・コイン・輪・乱心などの乱数は seed 付きの乱数で引く',
   '剣士モッチーの初期スタイルは片手剣(配置の画面で選べる初期スタイルは選ばない)。bot は EX で二刀流へ、best は勇者なら二刀流・供モンなら片手盾へ切り替える',
   'ボットの「見込みのダメージ」は画面の数字を読むが、ここでは同じ式(getDmg・被ダメージ)で出す',
-  '緊急回復・魂格・WAVE 報酬・固有技の強化は入れていない(実戦より弱く出る)',
+  '魂格は入れていない(Tier の対象外。素のモンスターで比べる)。強化ポイントはすべて固有技へ使う(ガッツ+10 には使わない。ボットと同じ)',
+  '緊急回復は AUTO と同じ条件(出せるカードが無く、ガッツさえあれば出せるとき)だけ。ブラウザのボットは緊急回復を使わないので、実戦とのずれを見るときは --emergency none も並べる',
   'トレーニングの選び方はボットと同じ(丸太うけ+走り込み。ガッツの少ない子は丸太うけ+猛勉強。倒れた子を起こすかはランで1回だけ考える)。上手な選び方はまだ無い',
   'アシカのポルツは「味方のだれかが敵の攻撃を受けた・ガードで受け止めた」ターンに1回ぶん消化する(ゲームは handleEnemyTurn の tookEnemyAttack)',
   'アシカのみゅあ・かどみうむ・ももすけの上限アップは、そのカードの回復のあとで1体ずつの上限へ掛ける(ゲームは permaBuffs が変わったあとの useEffect で掛ける)',
@@ -91,11 +96,12 @@ const aptPctOf = (mon) => { // 60-app.jsx tacticsSlotApt(1185)。Hard〜Master �
 };
 // computeAtkTier(13608)の段階のしきい
 const ATK_TIER_THRESHOLDS = [0, 15, 20, 25, 30, 40, 50, 75, 100];
-// 60-app.jsx computeAtkTier(13609): 敵がいる距離の枠に立つ子の適性(+ distDmgBonus。ここでは0)で通常技・距離撃の段階が決まる
-function computeAtkTier(mons, dist) {
+// 60-app.jsx computeAtkTier(13617)・distTotalBonus(1190): 敵がいる距離の枠の「WAVE 報酬の間合いボーナス(distDmgBonus)+ そこに立つ子の適性」で
+//   通常技・距離撃の段階が決まる。素の適性は最高 A(+10%)なので、ボーナスが無いと Lv1(15%)に届かない(5 版目で入れた)
+function computeAtkTier(mons, dist, distBonus = null) {
   const mon = mons[dist];
   if (!mon) return 0;
-  const pct = (aptPctOf(mon)[dist] || 0) * 100;
+  const pct = (((distBonus || [])[dist] || 0) + (aptPctOf(mon)[dist] || 0)) * 100;
   let lvl = 0;
   for (let i = ATK_TIER_THRESHOLDS.length - 1; i >= 0; i--) { if (pct >= ATK_TIER_THRESHOLDS[i]) { lvl = i; break; } }
   return Math.max(0, Math.min(G.BASE_ATK_EVOLUTION.length - 1, lvl));
@@ -105,8 +111,8 @@ const computeGuardLevel = (defVal) => Math.max(0, Math.min(G.GUARD_EVOLUTION.len
 // 60-app.jsx guardCardCount(13516)
 const guardCardCount = (guardLv) => Math.min(4, 2 + Math.floor(Math.max(0, guardLv || 0) / 2));
 
-// 60-app.jsx buildDeck(13520)を簡略化: 通常技2枚・ガード・各子の距離撃1枚・固有技1枚(強化Lv0)。アシストカードは入れない
-function buildDeck(mons, aLvl, gLvl, rng, teachings = []) {
+// 60-app.jsx buildDeck(13520)を簡略化: 通常技2枚・ガード・各子の距離撃1枚・固有技1枚(強化した段。6 版目から)・持っているアシカ
+function buildDeck(mons, aLvl, gLvl, rng, teachings = [], uniqueLv = {}) {
   const pool = [];
   const atk = G.BASE_ATK_EVOLUTION[aLvl];
   pool.push({ ...atk, type: 'atk', name: '通常技' }, { ...atk, type: 'atk', name: '通常技' });
@@ -116,7 +122,9 @@ function buildDeck(mons, aLvl, gLvl, rng, teachings = []) {
     const revo = G.RANGE_EVOLUTION[aLvl];
     pool.push({ name: `${G.RANGE_LABELS[idx]}${revo.name}`, type: 'range_atk', rangeIdx: idx, guts: revo.guts, baseGuts: revo.baseGuts, mult: revo.mult, baseMult: revo.baseMult, crit: revo.crit, evoLevel: aLvl });
     const u = m.unique;
-    if (u) pool.push({ ...u, name: u.names ? u.names[0] : u.name, type: 'unique', guts: u.guts || u.baseGuts, baseGuts: u.baseGuts, baseMult: u.baseMult, evoLevel: 0, monId: u.monId || m.id, crit: 0.10, ownerSlotIdx: idx });
+    // 固有技の段(60-app.jsx buildDeck 13537〜13539): 名前は段の名前、会心は 10% + 5%×段(Lv8 まで)。倍率 +0.5×段は getDmg・getCardGuts が evoLevel から出す
+    const lv = Math.max(0, Math.min(MAX_UNIQUE_LV, uniqueLv[idx] || 0));
+    if (u) pool.push({ ...u, name: u.names ? u.names[Math.min(lv, u.names.length - 1)] : u.name, type: 'unique', guts: u.guts || u.baseGuts, baseGuts: u.baseGuts, baseMult: u.baseMult, evoLevel: lv, monId: u.monId || m.id, crit: 0.10 + 0.05 * lv, ownerSlotIdx: idx });
   });
   // 60-app.jsx buildDeck(13544): 持っているアシカを1枚ずつ(名前は段の名前・消費ガッツ 20)
   teachings.forEach((t) => pool.push({ ...t, name: G.BREEDER_EVO_NAMES[t.id][Math.min(t.evoLevel || 0, 2)], guts: 20, teach: true }));
@@ -253,7 +261,7 @@ function getDmg(st, card, slot, additionalOryo, additionalDmgMod, halved, attack
   const id = mon.id;
   let traitMult = (id === 'Golem' ? 1.2 : 1.0) * ((id === 'Pixie' || id === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
   if (id === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5; // 禁忌解錠(引き継いだ固有技。ここでは出ない)
-  const distBonusMult = 1.0 + (aptPctOf(mon)[slot] || 0);
+  const distBonusMult = 1.0 + (st.distBonus[slot] || 0) + (aptPctOf(mon)[slot] || 0); // 60-app.jsx 11081(distDmgBonus + その枠の子の適性)
   const totalBuffMult = traitMult * cookieNow(st).dmgMult * blackNoteAt(st, slot, id).dmgMult * G.bowAtkMultOf(st.bow[slot])
     * mb.dmg * (card.type === 'unique' ? pandoraDevilNow(st, slot).dmg : 1)
     // 60-app.jsx 11086: みゃるの薬(getTurnBuff atkMult・tacticsSlotAtkMult)と、みゅあの muaAtkPct
@@ -933,8 +941,23 @@ function playTurn(st) {
   st.aim = { intent: st.intent, dist: st.dist };
   st.hint = {};
   // EX はカードを選ぶ前に使う(tactics.js 463 maybeUseEx → playTurn)
+  const exBefore = Object.values(st.exUses).reduce((a, b) => a + b, 0);
   EX_POLICIES[st.exMode](st);
-  const { picks, discards } = decideTurn(st);
+  const exUsedNow = Object.values(st.exUses).reduce((a, b) => a + b, 0) > exBefore;
+  let { picks, discards } = decideTurn(st);
+  // 緊急回復(7 版目。60-app.jsx useEmergency 11939・AUTO の条件 12996〜13001): 出せるカードが1枚も無く(EX も使っていない)、
+  //   ガッツさえあれば出せるカードがあるターンに使う。全員(倒れた子も)のライフ・ガッツを上限の 30% ずつ戻し、そのターンはカードを使わずに敵の番へ。
+  //   ゲームでは回数の上限は無い。ここは AUTO と同じ「捨てる前に」使う(AUTO はカードを捨てない)
+  if (st.emergency === 'auto' && !picks.length && !exUsedNow && st.enemy.hp > 0) {
+    const actors = G.tacticsFilledSlots(st.units).filter((i) => G.canTacticsSlotAct(st.units, i) && !exLockedSlots(st).includes(i));
+    const lacksOnlyGuts = st.hand.some((c) => !c.teach && actors.some((i) => getCardGuts(st, c, i) <= G.normalizeTacticsUnit(st.units[i]).maxGuts));
+    if (lacksOnlyGuts) {
+      st.units = G.rateHealTacticsBoard(st.units, 0.3, 0.3, true).units;
+      st.emergencyUses += 1;
+      discards = [];
+      if (TRACE) console.log('  緊急回復(全員 30%)');
+    }
+  }
   const now = nowOf(st);
   const startDist = st.dist;
   let attackDistance = st.dist; let forcedMoveTarget = null;
@@ -1053,6 +1076,7 @@ function playTurn(st) {
     }
     dealt += total;
     st.dmgBySlot[slot] = (st.dmgBySlot[slot] || 0) + total;
+    st.waveDist[slot] += total; // 60-app.jsx 12881 turnDistDmg(攻撃カードのダメージを撃った子の枠へ)
   }
   st.enemy.hp = Math.max(0, st.enemy.hp - dealt);
   if (TRACE) {
@@ -1268,6 +1292,24 @@ const bestSlotFor = (mon, free) => free.slice().sort((a, b) => (G.DIST_APTITUDE_
 
 // 子ごとの与ダメージ(組み合わせの理由に使う)
 const dmgById = (st) => Object.fromEntries(Object.entries(st.dmgBySlot).filter(([i]) => st.mons[i]).map(([i, v]) => [st.mons[i].id, v]));
+// ---------- 固有技の強化(供モンが入った WAVE のあと) ----------
+const MAX_UNIQUE_LV = 8; // 11-masu-progression.jsx MAX_UNIQUE_SKILL_LEVEL(load-game.js は 11 を読まないので写す)
+// ゲーム: 供モンが入ると強化ポイントを 1〜4(60-app.jsx 14648: Math.floor(Math.random()*4)+1)。1ポイントで固有技が1段(upgradeUnique 14998・最大 MAX_UNIQUE_SKILL_LEVEL 8)。
+//   ポイントはガッツ+10(GUTS_RECOVERY_AMOUNT)にも使えるが、ボットは使わない。
+// 使い方はボット(tactics-brain.js 637〜646)と同じ: 1ポイントずつ、それまでにいちばんダメージを出した子の固有技(まだ Lv8 でないもの)へ。ポイントは使い切る
+function upgradeUniques(st, w) {
+  if (!st.useUniqueUp) return;
+  st.upgradePoints += Math.floor(st.rng() * 4) + 1;
+  while (st.upgradePoints > 0) {
+    const cand = G.tacticsFilledSlots(st.units).filter((i) => st.mons[i] && st.mons[i].unique && (st.uniqueLv[i] || 0) < MAX_UNIQUE_LV);
+    if (!cand.length) break;
+    const slot = cand.sort((a, z) => (st.dmgBySlot[z] || 0) - (st.dmgBySlot[a] || 0))[0];
+    st.uniqueLv[slot] = (st.uniqueLv[slot] || 0) + 1;
+    st.upgradePoints -= 1;
+    st.uniqueLog.push({ wave: w, id: st.mons[slot].id, level: st.uniqueLv[slot] });
+  }
+}
+
 // ---------- トレーニング(WAVE の合間) ----------
 // ゲーム: 60-app.jsx handleTraining 14724〜(1体ずつ2回。倒れた子を起こすと、その WAVE はだれも強化できない)・
 //   19-difficulties-and-rules.jsx resolveTrainingStats 935(選んだ順に1回ずつ掛ける)・32-tactics-units.jsx applyTacticsTraining 356 / reviveTacticsAt 347。
@@ -1306,7 +1348,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto' }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1322,6 +1364,12 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // トレーニング: 選び方('bot' = tactics-brain.js 550〜587 と同じ / 'none' = しない)・子ごとのガッツ不足・起こすかを1回だけ聞いたか・記録
     training, gutsShortBy: {}, reviveAsked: false, trainingLog: [],
     exLog: exLog ? [] : null, assistScenes: exLog ? [] : null,
+    // WAVE 報酬の間合いボーナス(distDmgBonus)と、供モンが入るときの間合いの追いつき(tacticsJoinDistCatchUpRef。始めは 1)
+    useDistBonus: distBonus, distBonus: [0, 0, 0, 0], waveDist: [0, 0, 0, 0], joinDistCatchUp: 1,
+    // 固有技の強化(6 版目): 枠ごとの段・残りの強化ポイント・強化の記録
+    useUniqueUp: uniqueUp, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
+    // 緊急回復(7 版目): 'auto'(AUTO と同じ条件)・'none'(使わない。いまのブラウザのボットは使わない)
+    emergency, emergencyUses: 0,
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (training !== 'bot' && training !== 'none') throw new Error(`トレーニングの選び方が分からない: ${training}`);
@@ -1334,11 +1382,11 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // 敵を出す(60-app.jsx spawnEnemy 13629): 総合力で敵が強くなる。WAVE で消えるもの(waveBuffs・turnBuffs・運命の輪・乱心・トリックスタート)を消す
     st.enemy = G.createBattleEnemy(w, difficulty, null, null, G.tacticsEnemyPowerMultiplier(st.powerStart, st.powerNow), { mode: 'tacticsPro' });
     st.dist = w === 1 ? st.heroSlot : Math.floor(rng() * 4);
-    st.roarStacks = 0; st.trick = [{}, {}, {}, {}]; st.trickRolled = null;
+    st.roarStacks = 0; st.trick = [{}, {}, {}, {}]; st.trickRolled = null; st.waveDist = [0, 0, 0, 0];
     st.waveB = {}; st.turnB = {}; st.nextB = {}; st.fateWheel = { atkDown: 0, takenUp: 0 }; st.confuse = 0;
     st.ex = G.resetTacticsExWaveUses(st.ex); // スネグーラチカのプレゼントは WAVE ごとに回数が戻る
     st.guardLevel = computeGuardLevel(G.tacticsMaxDef(st.units));
-    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist), st.guardLevel, rng, st.teachings);
+    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist, st.distBonus), st.guardLevel, rng, st.teachings, st.uniqueLv);
     st.hand = pool.slice(0, 5); st.deck = pool.slice(5); st.graveyard = [];
     st.turn = 1;
     st.intent = aim(st, nextAction(st, st.dist, null, { unannounced: true }));
@@ -1354,18 +1402,23 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       if (exp.changed) st.units = G.scaleTacticsUnits(exp.units, st.perma.muaHpPct || 0, st.perma.muaGutsPct || 0);
       // 通常技・距離撃の段階を、敵の今の距離に合わせ直す(syncAtkTierForDist)
       if (st.dist !== before) {
-        const lvl = computeAtkTier(st.mons, st.dist);
+        const lvl = computeAtkTier(st.mons, st.dist, st.distBonus);
         const fix = (c) => patchAtkTier(c, lvl);
         st.hand = st.hand.map(fix); st.deck = st.deck.map(fix); st.graveyard = st.graveyard.map(fix);
       }
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
     st.joinCatchUp = G.addTacticsJoinCatchUp(st.joinCatchUp, remaining);
+    if (st.useDistBonus) {
+      // 60-app.jsx resolveEnemyDefeat 11180・11193〜11198: 間合いの追いつきの倍率を積み、その WAVE に枠ごとに与えたダメージ × DIST_BONUS_PER_DAMAGE を足す
+      st.joinDistCatchUp = G.addTacticsJoinDistCatchUp(st.joinDistCatchUp, remaining);
+      st.distBonus = st.distBonus.map((b, i) => b + G.applyDistanceEnhancement(st.waveDist[i] * G.DIST_BONUS_PER_DAMAGE, null, w));
+    }
     st.autoHp = Math.max(0, st.autoHp + Math.max(-0.05, Math.min(0.05, (remaining - 10) * 0.005)));
     st.recentWave = st.recentDealt || st.recentWave; st.recentDealt = 0; // tactics.js 513
     // EX の上限アップは WAVE をまたがない
@@ -1381,17 +1434,19 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       const slot = bestSlotFor(mon, free);
       st.mons[slot] = mon;
       st.units[slot] = G.applyTacticsJoinCatchUp(G.createTacticsUnit(mon), st.joinCatchUp);
+      // 60-app.jsx catchUpTacticsDistBonus 1290〜1299: 入った枠の間合いボーナスを「これまでの合計ダメージ × 1e-5 × 追いつきの倍率」まで引き上げる
+      if (st.useDistBonus) st.distBonus = G.applyTacticsJoinDistBonus(st.distBonus, [slot], Math.max(0, G.applyDistanceEnhancement(G.tacticsJoinDistBonus(st.dealtTotal, G.DIST_BONUS_PER_DAMAGE, st.joinDistCatchUp), null, w)));
       scaleMua(st); // 入った子にも、みゅあ・かどみうむの上限アップ
       st.powerNow += monsterPowerOf(mon);
       joined = true;
     }
     // WAVE のあとのアシカ選び(60-app.jsx 14799〜14822): 供モンが入った WAVE は固有技の強化のあと、WAVE 1・3・5・7・9 はトレーニングのあと
     if (w < maxWave) {
-      if (joined) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'join')));
+      if (joined) { upgradeUniques(st, w); learnTeaching(st, chooseTeaching(st, teachingPool(st, 'join'))); }
       else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, emergencyUses: st.emergencyUses, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
 }
 
 function pickAllies(heroId, rng, n = 3) {
@@ -1428,6 +1483,9 @@ if (require.main === module) {
   const MAX_WAVE = Number(argOf('--max-wave', '10'));
   const MODES = argOf('--ex', 'bot,best').split(/[,|]/).filter((x) => EX_POLICIES[x]);
   const ONLY = argOf('--hero', '');
+  const EMERGENCY = argOf('--emergency', 'auto'); // 緊急回復(auto・none)。7 版目から既定は auto
+  const DIST_BONUS = argOf('--dist-bonus', 'on') !== 'off'; // WAVE 報酬の間合いボーナス(5 版目)
+  const UNIQUE_UP = argOf('--unique-up', 'on') !== 'off'; // 固有技の強化(6 版目)
   const TRAINING = argOf('--training', 'bot'); // トレーニングの選び方(bot・none)。4 版目から既定は bot
   const ASSIST = argOf('--assist', 'bot'); // アシカの選び方(bot・none・カードの id)。3 版目から既定は bot(いまのボットと同じ)
   const mdFile = argOf('--md', '');
@@ -1442,16 +1500,17 @@ if (require.main === module) {
     for (const m of heroes) {
       stats[mode][m.id] = {};
       for (const d of DIFFS) {
-        const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0;
+        const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0; let boss = 0;
         for (let i = 0; i < RUNS; i++) {
           const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
-          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: TRAINING });
+          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: TRAINING, emergency: EMERGENCY, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
           waves.push(r.wave);
           if (r.wave > 2 || r.result === 'clear') past2++;
+          if (r.wave >= MAX_WAVE) boss++; // ボス戦(最後の WAVE。Hard〜Master は覚醒ムー)に入った回
           if (r.result === 'clear') clear++; else if (r.result === 'wipe') wipe++; else timeout++;
           heroEx += r.exUses[m.id] || 0; dodges += r.dodges;
         }
-        stats[mode][m.id][d] = { avg: waves.reduce((a, b) => a + b, 0) / waves.length, med: median(waves), past2: past2 / RUNS, clear: clear / RUNS, wipe: wipe / RUNS, timeout: timeout / RUNS, heroEx: heroEx / RUNS, dodges: dodges / RUNS };
+        stats[mode][m.id][d] = { avg: waves.reduce((a, b) => a + b, 0) / waves.length, med: median(waves), past2: past2 / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, wipe: wipe / RUNS, timeout: timeout / RUNS, heroEx: heroEx / RUNS, dodges: dodges / RUNS };
       }
     }
     console.log(`  ${mode}: ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
@@ -1460,21 +1519,26 @@ if (require.main === module) {
   // ブラウザの実戦(tactics-knowledge.json)。ボットが止まった回(stopped)は数えない
   const knowledge = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'tactics-knowledge.json'), 'utf8'));
   const idByName = Object.fromEntries(MONS.map((m) => [m.name, m.id]));
-  const real = {};
+  const real = {}; const realClear = {};
   for (const r of knowledge.runs || []) {
     if (r.mode !== 'tacticsPro' || !['clear', 'wipe', 'timeout'].includes(r.result)) continue;
+    // 実戦のボットは 2026-10-10 から緊急回復を使える(r.bot.emergency。古い回は使わない)。シミュレーターの --emergency と同じ条件の回だけ比べる
+    if (!!(r.bot && r.bot.emergency) !== (EMERGENCY !== 'none')) continue;
     const id = idByName[r.hero]; if (!id || !DIFFS.includes(r.difficulty) || !heroes.some((m) => m.id === id)) continue;
     const k = `${id}|${r.difficulty}`;
     (real[k] = real[k] || []).push(r.result === 'clear' ? MAX_WAVE : Number(r.wave) || 0);
+    if (r.result === 'clear') realClear[r.difficulty] = (realClear[r.difficulty] || 0) + 1;
   }
 
   const L = []; const out = (t = '') => L.push(t);
   const pct = (x) => `${Math.round(x * 100)}%`;
   const sgn = (x) => `${x >= 0 ? '+' : ''}${x.toFixed(2)}`;
   const MODE_JA = { none: 'EX 無し', bot: 'EX=bot', best: 'EX=best' };
+  // ボス戦: 最後の WAVE まで届いた回のうちクリアした割合(届いた割合)。届いた回が 0 なら —
+  const bossCell = (x) => (x.boss > 0 ? `${pct(x.bossWin)}(${pct(x.boss)})` : '—');
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
-  out(`\`node tools/playbot/sim/battle.js\` の出力(4 版目・スキル・アシカ・トレーニング入り。トレーニング ${TRAINING}・アシカ ${ASSIST})。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
+  out(`\`node tools/playbot/sim/battle.js\` の出力(7 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EMERGENCY})。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
   out();
   out('**2 版目で入れたもの**(社長の決まり「ステは弱いけどスキル系で調整してるから、そこもちゃんと見て判断して」):');
   out();
@@ -1500,18 +1564,19 @@ if (require.main === module) {
   out('戦い方は tactics-brain.js の decidePick を縮めたもの(とどめ → 予告に合わせた守り → ハムのスタン → ガッツ1あたりの火力で攻撃 → 捨ててガッツを戻す → 余ればガード)。');
   out();
   out('「届いた WAVE」は負けた WAVE(クリアは 10)。「序盤越え」は WAVE 1〜2(1体の時間)を越えた割合。「EX」は勇者モンが1ランで EX を使った回数の平均。');
+  out('「ボス戦」は最後の WAVE(覚醒ムー)まで届いた回のうちクリアした割合で、かっこの中は届いた割合。Hard はほぼボス戦で勝ち負けが分かれるので、Hard はここを見る。');
   out('「前の版」は 1 版目(スキル無し)の平均 WAVE。');
   for (const d of DIFFS) {
     out();
     out(`## ${d}`);
     out();
-    const head = MODES.map((mo) => `${MODE_JA[mo]} 平均 | 序盤越え | クリア | EX`).join(' | ');
+    const head = MODES.map((mo) => `${MODE_JA[mo]} 平均 | 序盤越え | クリア | ボス戦 | EX`).join(' | ');
     out(`| 勇者モン | 前の版 | ${head} |`);
-    out(`| --- | --- | ${MODES.map(() => '--- | --- | --- | ---').join(' | ')} |`);
+    out(`| --- | --- | ${MODES.map(() => '--- | --- | --- | --- | ---').join(' | ')} |`);
     const key = MODES.includes('bot') ? 'bot' : MODES[0];
     for (const m of [...heroes].sort((a, b) => stats[key][b.id][d].avg - stats[key][a.id][d].avg)) {
       const old = (OLD[m.name] || {})[d];
-      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')} |`);
+      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${bossCell(s)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')} |`);
     }
   }
   if (MODES.includes('bot') && MODES.includes('best')) {
@@ -1548,6 +1613,7 @@ if (require.main === module) {
   out();
   out('アシストカードは 3 版目、トレーニングは 4 版目から入れた(選び方 --assist・--training、既定はどちらも bot)。ずれは式を合わせに行かず、そのまま書く(差 = 実戦 − シミュレーター)。');
   out('ボットが途中で止まった回(stopped)は除いた。実戦のクリアは WAVE 10 として数えた。「前の版」は 1 版目(スキル無し)。');
+  out(`実戦は${EMERGENCY !== 'none' ? '緊急回復を使えるボットの回だけ' : '緊急回復を使わないボットの回だけ(2026-10-10 までの回はすべてこちら)'}を数えた(シミュレーターの緊急回復 ${EMERGENCY} と合わせる)。`);
   out();
   out(`| 勇者モン | 難易度 | 実戦の回数 | 実戦の平均 WAVE | 前の版 | ${MODES.map((mo) => `${MODE_JA[mo]} | 差`).join(' | ')} |`);
   out(`| --- | --- | --- | --- | --- | ${MODES.map(() => '--- | ---').join(' | ')} |`);
@@ -1573,6 +1639,17 @@ if (require.main === module) {
     const w = (key) => { const ys = xs.filter((x) => x[key] != null); const nn = ys.reduce((a, x) => a + x.n, 0); return nn ? ys.reduce((a, x) => a + x[key] * x.n, 0) / nn : null; };
     const line = `| ${d} | ${n} | ${w('old') != null ? sgn(w('old')) : '-'} | ${MODES.map((mo) => sgn(w(mo))).join(' | ')} |`;
     out(line); summary.push(line);
+  }
+  out();
+  out('ボス戦(覚醒ムー)に入った回の勝ち率。全員ぶんを合わせたもの(届いた回で重みづけ)と、実戦(ボットがブラウザで戦った回のうち WAVE 10 まで届いた回):');
+  out();
+  out(`| 難易度 | ${MODES.map((mo) => `${MODE_JA[mo]} 勝ち率(届いた割合)`).join(' | ')} | 実戦 勝ち率(届いた回) |`);
+  out(`| --- | ${MODES.map(() => '---').join(' | ')} | --- |`);
+  for (const d of DIFFS) {
+    const cells = MODES.map((mo) => { let b = 0; let c = 0; heroes.forEach((m) => { const x = stats[mo][m.id][d]; b += x.boss; c += x.clear; }); return b > 0 ? `${pct(c / b)}(${pct(b / heroes.length)})` : '—'; });
+    const rs = Object.entries(real).filter(([k]) => k.endsWith(`|${d}`)).flatMap(([, v]) => v);
+    const rb = rs.filter((w) => w >= MAX_WAVE).length; const rc = (realClear[d] || 0);
+    out(`| ${d} | ${cells.join(' | ')} | ${rb ? `${pct(rc / rb)}(${rb} 回)` : '—'} |`);
   }
   out();
   out(`(${heroes.length} 体 × ${DIFFS.length} 難易度 × ${RUNS} 回 × 使い方 ${MODES.length} 通りを ${sec} 秒で回した。seed ${SEED})`);
