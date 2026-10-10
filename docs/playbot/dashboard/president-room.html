@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 13:23 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/10 13:24 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>56</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>5</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>57</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,11 +88,6 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="r2610101300detail">
-        <div class="row-title">Tier 表の順位・組み合わせ・パーティを、押すと根拠つきの詳細が開くように</div>
-        <div class="row-body">全部の項目を押すと詳細が開くようにし、何回測ったか・実数・比べた相手と差・実戦か机上か・効いている機能・だから何をすればよいかを載せる。根拠の言えない文は載せない。いま組み合わせの欄は開かず、パーティの「強化の順番」「基準との差」が意味を成していない。改善部が確かめてから社長へ</div>
-        <div class="meta"><span>部長ハカセくん(ページは修理部:ピンセットくん)</span><span>見込み 第1版 13:18。改善部の R1〜R3 を 13:23 までに直した(点の内訳・決め手・単位・ぶれの説明・アシカの重みで合わせた差)。改善部の最後の確認を受けて仕上げ 20:30ごろ</span><span>PR #2591・#2592・#2600・#2604・#2603</span></div>
-      </li>
       <li id="r2610101120party">
         <div class="row-title">4体パーティのおすすめと、アシカの入れ方・強化のしかた</div>
         <div class="row-body">難易度ごとに上位3〜5組の4体パーティを、機能の一覧表を踏まえて出す。各パーティにアシカの枚数・優先順・使いどころと、トレーニング・強化ポイント・固有技の強化・WAVE のごほうびの選び方を付ける。シミュレーターで広く測り、上位は実戦で確かめる。改善部が確かめてから社長へ。ページに「おすすめパーティ」の欄を足す</div>
@@ -189,6 +184,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="r2610101300detail">
+        <div class="row-title">Tier 表の順位・組み合わせ・パーティを、押すと根拠つきの詳細が開くように</div>
+        <div class="row-body">モンスター26・アシカ10・組み合わせ19・パーティ15の全項目が押すと開き、根拠(出どころ・回数・値/基準/差/ぶれと単位・効いている機能・だから・まだ分からない)が出る。モンスターは Tier の点の内訳と決め手を出し、決め手がぶれの中なら暫定(確定はピクシー・ゴーレム・モッチー・ザン)。改善部が R1〜R3 を確かめて「社長に出してよい」</div>
+        <div class="meta"><span>部長ハカセくん(ページは修理部:ピンセットくん)</span><span>PR #2591・#2592・#2600・#2604・#2603</span><span>Tier 表のページ(社長のページ)→ 各モンスター・アシカ・組み合わせ・パーティを押す →「根拠」</span></div>
+      </li>
       <li id="r2610101151song">
         <div class="row-title">新曲「Journey」(DECO*27)を入れる</div>
         <div class="row-body">rhythm-song-add スキルを最後まで通す。音を取り出して音量をそろえ、ジャケットを軽くし、テンポを測って5難易度の譜面を作る。難易度の案(レベル・ノーツ数・既存曲の帯の中の位置)を窓口へ出して社長の答えを待つ。そのあと更新履歴・ヘルプ・検査を通して公開</div>
@@ -3670,6 +3670,11 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">26</span>
       </div>
       <div class="bar-row">
+        <span class="bar-name">部長ハカセくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:55.56%"></span></span>
+        <span class="bar-val">15</span>
+      </div>
+      <div class="bar-row">
         <span class="bar-name">部長テンポくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:55.56%"></span></span>
         <span class="bar-val">15</span>
@@ -3678,11 +3683,6 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-name">部長ガードくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:51.85%"></span></span>
         <span class="bar-val">14</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-name">部長ハカセくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:48.15%"></span></span>
-        <span class="bar-val">13</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長マップくん</span>
@@ -3700,17 +3700,17 @@ section{display:flex;flex-direction:column;gap:10px}
         <span class="bar-val">8</span>
       </div>
       <div class="bar-row">
+        <span class="bar-name">ピンセットくん</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:29.63%"></span></span>
+        <span class="bar-val">8</span>
+      </div>
+      <div class="bar-row">
         <span class="bar-name">ダイスくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:25.93%"></span></span>
         <span class="bar-val">7</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">ヤスリくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
-        <span class="bar-val">6</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-name">ピンセットくん</span>
         <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:22.22%"></span></span>
         <span class="bar-val">6</span>
       </div>
