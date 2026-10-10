@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 580d3f0c3c34e264
+// source-sha256: da1b3919248ca6b3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 17:04";
+const BUILD_DATE = "2026-10-10 17:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30411,32 +30411,41 @@ function RhythmSkyStage({
       points: `${f(x - w)},${f(fr.gy)} ${f(x + w)},${f(fr.gy)} ${f(x + w * .5)},${f(fr.y)} ${f(x - w * .5)},${f(fr.y)}`,
       fill: "url(#mhSkyPost)"
     });
+  }), React.createElement("rect", {
+    x: "-2",
+    y: f(fr.y - 1.6),
+    width: "104",
+    height: "3.2",
+    fill: "url(#mhSkyBand)",
+    opacity: ".9"
   }), React.createElement("line", {
-    x1: f(fr.l),
+    x1: "-2",
     y1: f(fr.y),
-    x2: f(fr.r),
+    x2: "102",
     y2: f(fr.y),
     stroke: `rgb(${c})`,
-    strokeOpacity: ".35",
-    strokeWidth: "9",
+    strokeOpacity: ".3",
+    strokeWidth: "8",
     vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
     "data-rhythm-sky-pulse": true,
-    x1: f(fr.l),
-    y1: f(fr.y),
-    x2: f(fr.r),
-    y2: f(fr.y),
-    stroke: `rgb(${c})`,
-    strokeOpacity: ".9",
-    strokeWidth: "3.2",
+    x1: "-2",
+    y1: f(fr.y - .45),
+    x2: "102",
+    y2: f(fr.y - .45),
+    stroke: theme.core,
+    strokeOpacity: ".95",
+    strokeWidth: "1.3",
     vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
-    x1: f(fr.l),
-    y1: f(fr.y),
-    x2: f(fr.r),
-    y2: f(fr.y),
+    "data-rhythm-sky-pulse": true,
+    x1: "-2",
+    y1: f(fr.y + .45),
+    x2: "102",
+    y2: f(fr.y + .45),
     stroke: theme.core,
-    strokeWidth: "1.2",
+    strokeOpacity: ".95",
+    strokeWidth: "1.3",
     vectorEffect: "non-scaling-stroke"
   }), plane.markers.map((x, k) => React.createElement("polygon", {
     key: k,

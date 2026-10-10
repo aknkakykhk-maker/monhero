@@ -30353,6 +30353,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
+        // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
+        if(geo.skyShadow&&geo.slide&&geo.head){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
         if(geo.band)drawBand(geo,o);
         if(geo.slide)drawSlide(geo,o);
         drawEndBar(note,geo,o);
