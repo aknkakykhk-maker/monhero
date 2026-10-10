@@ -29768,7 +29768,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
     ctx.globalAlpha=opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='rgba(125,211,252,.55)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();
+    ctx.strokeStyle='rgba(251,191,36,.6)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
@@ -29796,7 +29796,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
     ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
     // ふちは明るく(2026-09-27・参考動画。以前は 1px・.56)
-    ctx.lineWidth=failed?1:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':opts.slideRgb?`rgba(${opts.slideRgb},.95)`:'rgba(243,232,255,.82)';ctx.stroke();
+    ctx.lineWidth=failed?1:opts.slideHand?2.8:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':opts.slideRgb?`rgba(${opts.slideRgb},.95)`:'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
     let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
     // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく(2026-09-28・参考動画。以前は一様に .30)
@@ -29812,6 +29812,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       quads.forEach(q=>{const a0=glow(q.y0),a1=glow(q.y1);if(a0==='0'&&a1==='0')return;
         const g=ctx.createLinearGradient(0,q.y0,0,q.y1);g.addColorStop(0,`rgba(243,232,255,${a0})`);g.addColorStop(1,`rgba(243,232,255,${a1})`);
         ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    }
+    // 空中の段(試作): 手の印。帯の芯に、左手は白い実線・右手は白い点線(色が見分けにくくても形で分かる)
+    if(opts.slideHand&&!failed){
+      ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=opts.slideHand==='L'?2.4:3;ctx.lineCap='round';
+      if(opts.slideHand==='L'){ctx.beginPath();ctx.moveTo((quads[0].l0+quads[0].r0)/2,quads[0].y0);quads.forEach(q=>ctx.lineTo((q.l1+q.r1)/2,q.y1));ctx.stroke();}
+      else quads.forEach((q,index)=>{if(index%2)return;ctx.beginPath();ctx.moveTo((q.l0+q.r0)/2,q.y0);ctx.lineTo((q.l1+q.r1)/2,q.y1);ctx.stroke();});
+      ctx.lineCap='butt';
     }
     // チェックポイント＝そこで判定が入るところ。DOM版の[data-rhythm-slide-checkpoint]と同じ見た目。
     const checkpoints=geo.checkpoints;
@@ -30223,7 +30230,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       drawn++;
       const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1,...opts};
       // 空中の段(試作): 手の色(左=水色・右=ピンク)。譜面のスライドに hand:'L'|'R' を書いたときだけ
-      if(note&&(note.hand==='L'||note.hand==='R'))o.slideRgb=note.hand==='L'?'56,189,248':'244,114,182';
+      if(note&&(note.hand==='L'||note.hand==='R')){o.slideRgb=note.hand==='L'?'34,211,238':'219,39,119';o.slideHand=note.hand;}
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
@@ -30235,11 +30242,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 押さえている最中の光は粒の下に敷く(粒の形は隠さない)。演出量「最小」では出さない
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       drawHead(note,geo,headOpts);
-      // 空中の段(試作): 空中の粒は水色の枠で囲んで、地上の粒と見分けられるようにする
+      // 空中の段(試作): 空中の粒は「金色の板+上向きの山形2つ」。地上の白い板とは色・明るさ・形の3つで分ける
+      // (色の見分けにくい人にも、明るさの差と山形の形で分かるように。スライドの水色・ピンクとも重ならない色)
       if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null){
-        const hd=geo.head,w=hd.w*sizeScale+6,h=Math.max(8,hd.h+6);
-        ctx.globalAlpha=o.alpha;ctx.strokeStyle='rgba(125,211,252,.95)';ctx.lineWidth=2;
-        ctx.beginPath();ctx.moveTo(hd.cx-w/2,hd.cy-h/2);ctx.lineTo(hd.cx+w/2,hd.cy-h/2);ctx.lineTo(hd.cx+w/2,hd.cy+h/2);ctx.lineTo(hd.cx-w/2,hd.cy+h/2);ctx.closePath();ctx.stroke();
+        const hd=geo.head,w=Math.max(18,hd.w*sizeScale+4),h=Math.max(12,hd.h+8),x0=hd.cx-w/2,y0=hd.cy-h/2;
+        ctx.globalAlpha=o.alpha;
+        ctx.fillStyle='rgba(251,191,36,1)';ctx.beginPath();ctx.moveTo(x0+3,y0);ctx.lineTo(x0+w-3,y0);ctx.lineTo(x0+w,y0+3);ctx.lineTo(x0+w,y0+h-3);ctx.lineTo(x0+w-3,y0+h);ctx.lineTo(x0+3,y0+h);ctx.lineTo(x0,y0+h-3);ctx.lineTo(x0,y0+3);ctx.closePath();ctx.fill();
+        ctx.strokeStyle='rgba(120,53,15,.95)';ctx.lineWidth=1.5;ctx.stroke();
+        const ch=Math.min(h*.6,9),cw=Math.min(w*.16,9),cy=hd.cy+ch/2;
+        ctx.strokeStyle='rgba(69,26,3,.95)';ctx.lineWidth=2.2;ctx.lineJoin='round';
+        [-1,1].forEach(side=>{const cx=hd.cx+side*w*.22;ctx.beginPath();ctx.moveTo(cx-cw,cy);ctx.lineTo(cx,cy-ch);ctx.lineTo(cx+cw,cy);ctx.stroke();});
         ctx.globalAlpha=1;
       }
     },

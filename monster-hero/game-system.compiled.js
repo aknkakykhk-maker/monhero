@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 008a18743fec2e23
+// source-sha256: 07e32516f0ff4094
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 15:46";
+const BUILD_DATE = "2026-10-10 15:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -34946,26 +34946,39 @@ const RhythmTapTest = ({
     "data-rhythm-sky-line": true,
     style: {
       position: 'absolute',
-      left: '4%',
-      right: '4%',
+      left: '2%',
+      right: '2%',
       bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO * 100}%)`,
-      height: '2px',
-      background: 'linear-gradient(90deg,transparent,#7dd3fc 18%,#e0f2fe 50%,#7dd3fc 82%,transparent)',
-      boxShadow: '0 0 12px #38bdf8',
-      opacity: .85,
+      height: '4px',
+      background: 'repeating-linear-gradient(90deg,#fbbf24 0 14px,#fde68a 14px 18px)',
+      boxShadow: '0 0 10px rgba(251,191,36,.9)',
       pointerEvents: 'none'
     }
   }, React.createElement("span", {
     style: {
       position: 'absolute',
       right: 0,
-      top: '-16px',
-      fontSize: '10px',
+      top: '-19px',
+      fontSize: '12px',
+      fontWeight: 800,
       letterSpacing: '.08em',
-      color: '#bae6fd',
-      opacity: .8
+      color: '#fcd34d',
+      textShadow: '0 0 4px #000'
     }
-  }, "SKY")), countdownStep !== null && React.createElement("div", {
+  }, "▲ SKY")), skyChart && React.createElement("span", {
+    "data-rhythm-ground-label": true,
+    style: {
+      position: 'absolute',
+      right: '2%',
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 6px)',
+      fontSize: '12px',
+      fontWeight: 800,
+      letterSpacing: '.08em',
+      color: '#f5d0fe',
+      textShadow: '0 0 4px #000',
+      pointerEvents: 'none'
+    }
+  }, "● GROUND"), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {
