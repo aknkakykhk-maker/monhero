@@ -30371,7 +30371,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const style=skyTapStyle(),theme=typeof rhythmSkyTheme==='function'?rhythmSkyTheme():null;
     const redish=/ruby|red|ring/.test(style),silverish=/silver|beam|cube|star|glass/.test(style);
     const main=redish?'239,68,68':(silverish?'226,232,240':RHYTHM_SKY_FX.main);
-    const C={core:'255,255,255',main,accent:(theme&&typeof theme.rgb==='string'&&theme.rgb)||main};
+    const accentRaw=(theme&&typeof theme.rgb==='string'&&theme.rgb)||main;
+    // 差し色は白へ6割寄せて使う(赤のままだと判定 GREAT の赤 #f87171 と取り違える・2026-10-10 ダメダシくんの指摘)。中心はいつも白
+    const tint=accentRaw.split(',').map(v=>Math.round(Number(v)*.4+255*.6)).join(',');
+    const C={core:'255,255,255',main,accent:tint};
     const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio;
     const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
     const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
@@ -30383,8 +30386,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const a1=seg(0,.35);
     if(a1<1){
       const f=(1-a1)*power,len=W*(.55+a1*.6),th=1.2*(1-a1)+.4;
-      ctx.globalAlpha=f*.8;ctx.fillStyle=`rgb(${C.accent})`;poly([cx-len,Y,cx,Y-th*2,cx+len,Y,cx,Y+th*2]);ctx.fill();
-      ctx.globalAlpha=f;ctx.fillStyle=`rgb(${C.core})`;poly([cx-len*.7,Y,cx,Y-th,cx+len*.7,Y,cx,Y+th]);ctx.fill();
+      // 横長の楕円(差し色の太い筋)は出さない。白い細い筋だけ(端に少しだけ差し色)
+      ctx.globalAlpha=f*.45;ctx.fillStyle=`rgb(${C.accent})`;poly([cx-len,Y,cx,Y-.6,cx+len,Y,cx,Y+.6]);ctx.fill();
+      ctx.globalAlpha=f;ctx.fillStyle=`rgb(${C.core})`;poly([cx-len*.7,Y,cx,Y-th*.6,cx+len*.7,Y,cx,Y+th*.6]);ctx.fill();
       // 星(4本の光の筋。縦は上へ少し長め)
       const sl=W*(.22+a1*.25),su=W*(.28+a1*.3),sw=1.6*(1-a1)+.6;
       poly([cx,Y-su,cx+sw,Y,cx,Y+sl*.7,cx-sw,Y]);ctx.fill();
@@ -30395,8 +30399,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const a2=seg(.15,.85);
     if(a2>0&&a2<1){
       const g=1-Math.pow(1-a2,3);
-      ctx.globalAlpha=(1-a2)*.85*power;ctx.lineWidth=1+(1-a2)*1.2;ctx.strokeStyle=`rgb(${C.accent})`;
-      ctx.beginPath();ctx.arc(cx,Y,W*(.12+g*.42),0,Math.PI*2);ctx.stroke();
+      // 細い輪1本だけ(大きさは前の6割ほど)。色は白へ寄せた差し色
+      ctx.globalAlpha=(1-a2)*.7*power;ctx.lineWidth=1;ctx.strokeStyle=`rgb(${C.accent})`;
+      ctx.beginPath();ctx.arc(cx,Y,W*(.08+g*.26),0,Math.PI*2);ctx.stroke();
     }
     // ③ 真ん中に残る光の点(25%〜最後。最後の3割で消える)
     const a3=seg(.25,1);
@@ -30411,7 +30416,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       for(let i=0;i<8;i++){
         const ang=-Math.PI/2+(i-3.5)*.55,dist=W*(.1+g*(.38+(i%2)*.1)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*.85+a4*a4*W*.1;
         const r=Math.max(.6,(2-(i%3)*.35)*(1-a4*.6)),turn=(i%2?1:-1)*(.5+a4*3),co=Math.cos(turn)*r,si=Math.sin(turn)*r;
-        ctx.globalAlpha=Math.max(0,(1-a4)*power);ctx.fillStyle=i%2?`rgb(${C.accent})`:`rgb(${C.core})`;
+        ctx.globalAlpha=Math.max(0,(1-a4)*power);ctx.fillStyle=i%3===1?`rgb(${C.accent})`:`rgb(${C.core})`;
         poly([x-co+si,y-si-co,x+co+si,y+si-co,x+co-si,y+si+co,x-co-si,y-si+co]);ctx.fill();
       }
     }
