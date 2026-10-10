@@ -747,10 +747,20 @@ function policyBest(st) {
       choice = x.i !== st.heroSlot ? 'shield' : (hurt(x, 0.4) ? 'shield' : (tough && x.hp.now >= x.hp.max * 0.6 ? 'dual' : style));
       go = style !== choice;
     } else if (e === 'statBoost') go = !x.exActive && (bot || (waveStart && tough && b.wave >= 3));
-    else if (['psychoLock', 'thunder', 'multiBuff', 'stage', 'partyBoost'].includes(e)) go = !x.exActive && (bot || (tough && (waveStart || b.enemy.hp >= b.enemy.max * 0.6)));
+    else if (['psychoLock', 'thunder', 'multiBuff', 'stage', 'partyBoost'].includes(e)) {
+      go = !x.exActive && (bot || (tough && (waveStart || b.enemy.hp >= b.enemy.max * 0.6)));
+      // ボス戦(最後の WAVE)のぶんを取っておく: 回数に限りのある火力・強化の EX は、ボス戦の前は残り BOSS_RESERVE 回を切らない
+      //   (2026-10-10 ダイスくん。ライガーの Hard で、best が WAVE 1〜6 に5回を使い切り、ボス戦で使えずにボットより負けていた)
+      //   ただし温存するのは「直前の WAVE を楽に抜けた」ときだけ(Expert のように毎 WAVE 苦戦するときに温存すると、ボス戦まで届かずに負ける)
+      if (go && !x.def.unlimited && st.wave < st.maxWave && coasting(st) && G.tacticsExRemaining(x.def, G.tacticsExUsesOf(st.ex, x.i, x.id)).left <= BOSS_RESERVE) go = false;
+    }
     if (go) useEx(st, x.i, choice);
   }
 }
+const BOSS_RESERVE = Number(process.env.SIM_BOSS_RESERVE ?? 2);
+const COAST_TURNS = Number(process.env.SIM_COAST_TURNS ?? 6);
+// 楽に進めているか: 直前の WAVE を COAST_TURNS ターン以内で抜けた
+const coasting = (st) => st.waveTurns.length > 0 && st.waveTurns[st.waveTurns.length - 1] <= COAST_TURNS;
 const EX_POLICIES = { none: () => {}, bot: policyBot, best: policyBest };
 
 // ---------- アシカ(アシストカード) ----------
@@ -1354,7 +1364,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
   if (!EX_POLICIES[exMode]) throw new Error(`EX の使い方が分からない: ${exMode}`);
   const st = {
-    rng, heroId, difficulty, exMode, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
+    rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
     autoHp: 0.1, joinCatchUp: 1, powerStart: monsterPowerOf(hero), powerNow: monsterPowerOf(hero),
     dealtTotal: 0, taken: 0, recentDealt: 0, recentWave: 0, turnsTotal: 0, waveTurns: [],
     // ランのあいだ残るもの: EX の回数・permaBuffs・クッキー/黒音符・メロディ・ボゥの積み・運命のコイン/輪の積み
