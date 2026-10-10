@@ -37,6 +37,21 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-soak-'));
   const report = { headed: false, shotNo: 0, issues: [], steps: [], screens: new Map(), issueKeys: new Set(), phases: [] };
   const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out, rand: makeRand(20261010), persona: 'メモリ計測', report });
+  // 音の「解いたあとの大きさ」を数える(計測用の見張りで、ゲームには何も足さない)。
+  // decodeAudioData が返した AudioBuffer の 長さ×チャンネル×4バイト を足し、曲ごとの大きさも控える
+  await s.context.addInitScript(() => {
+    window.__decoded = { count: 0, bytes: 0, list: [] };
+    const wrap = (Proto) => {
+      if (!Proto || !Proto.prototype || !Proto.prototype.decodeAudioData) return;
+      const orig = Proto.prototype.decodeAudioData;
+      Proto.prototype.decodeAudioData = function (data, ok, ng) {
+        const note = (buffer) => { try { const bytes = buffer.length * buffer.numberOfChannels * 4; window.__decoded.count += 1; window.__decoded.bytes += bytes; window.__decoded.list.push(Math.round(bytes / 1048576)); } catch (e) {} return buffer; };
+        const p = orig.call(this, data, ok ? (b) => ok(note(b)) : undefined, ng);
+        return p && p.then ? p.then(note) : p;
+      };
+    };
+    wrap(window.AudioContext); wrap(window.webkitAudioContext); wrap(window.BaseAudioContext);
+  });
   const cdp = await s.context.newCDPSession(s.page);
   await cdp.send('Performance.enable');
   const t0 = Date.now();
@@ -55,11 +70,11 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
     await cdp.send('HeapProfiler.collectGarbage').catch(() => {});
     const { metrics } = await cdp.send('Performance.getMetrics');
     const m = Object.fromEntries(metrics.map((x) => [x.name, x.value]));
-    const extra = await s.page.evaluate(() => ({ canvases: document.querySelectorAll('canvas').length, imgs: document.querySelectorAll('img').length })).catch(() => ({ canvases: -1, imgs: -1 }));
-    const row = { label, sec: Math.round((Date.now() - t0) / 1000), heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(1), rss: rssMB(), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, canvases: extra.canvases, imgs: extra.imgs };
+    const extra = await s.page.evaluate(() => { let diag = null; try { diag = Audio_.diagnose(); } catch (e) {} const d = window.__decoded || { count: 0, bytes: 0 }; return { canvases: document.querySelectorAll('canvas').length, imgs: document.querySelectorAll('img').length, kept: diag ? diag.bufferCount : -1, rate: diag ? diag.sampleRate : 0, decoded: d.count, decodedMB: Math.round(d.bytes / 1048576) }; }).catch(() => ({ canvases: -1, imgs: -1, kept: -1, rate: 0, decoded: 0, decodedMB: 0 }));
+    const row = { label, sec: Math.round((Date.now() - t0) / 1000), heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(1), rss: rssMB(), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, canvases: extra.canvases, imgs: extra.imgs, kept: extra.kept, rate: extra.rate, decoded: extra.decoded, decodedMB: extra.decodedMB };
     rows.push(row);
     const first = rows[0];
-    console.log(`${String(row.label).padEnd(16)} ${String(row.sec).padStart(5)}秒  heap ${String(row.heapMB).padStart(6)}MB (${row.heapMB - first.heapMB >= 0 ? '+' : ''}${(row.heapMB - first.heapMB).toFixed(1)})  全体 ${String(row.rss).padStart(5)}MB (${row.rss - first.rss >= 0 ? '+' : ''}${row.rss - first.rss})  nodes ${String(row.nodes).padStart(6)} (${row.nodes - first.nodes >= 0 ? '+' : ''}${row.nodes - first.nodes})  listeners ${String(row.listeners).padStart(5)} (${row.listeners - first.listeners >= 0 ? '+' : ''}${row.listeners - first.listeners})  docs ${row.docs}  canvas ${row.canvases} img ${row.imgs}`);
+    console.log(`${String(row.label).padEnd(16)} ${String(row.sec).padStart(5)}秒  heap ${String(row.heapMB).padStart(6)}MB (${row.heapMB - first.heapMB >= 0 ? '+' : ''}${(row.heapMB - first.heapMB).toFixed(1)})  全体 ${String(row.rss).padStart(5)}MB (${row.rss - first.rss >= 0 ? '+' : ''}${row.rss - first.rss})  nodes ${String(row.nodes).padStart(6)} (${row.nodes - first.nodes >= 0 ? '+' : ''}${row.nodes - first.nodes})  listeners ${String(row.listeners).padStart(5)} (${row.listeners - first.listeners >= 0 ? '+' : ''}${row.listeners - first.listeners})  docs ${row.docs}  canvas ${row.canvases} img ${row.imgs}  音: 解いた${row.decoded}本(${row.decodedMB}MB)・持っている${row.kept}本・${row.rate}Hz`);
   };
   try {
     // 遊び慣れた人の保存(はじめての設定・案内を済ませてある)で始める。バトル係・音ゲー係と同じ下準備
