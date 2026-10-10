@@ -459,6 +459,33 @@ const rhythmSlotAbility=masu=>(masu&&masu.baseId)
 //   モンスターノーツが何がつくかとか説明とかその辺の詳細を追加して」
 // 能力の一覧は実データ(RHYTHM_MONSTER_ABILITIES / RHYTHM_MONSTER_ABILITY_BY_LINEAGE)から作る。
 // 手で書き写すと、値を変えたときにここだけ古いまま残るため。
+// 空中の段の舞台(試作・2026-10-10・社長「見た目にもっと力いれてほしい」「奥行き感」)。
+// 道と同じ台形を空中の高さへ持ち上げた「空中の面」に、レーンの区切り・奥から手前へ流れる光・光る縁・手前の光の柱・空中の判定ラインを描く。
+// 色は rhythmSkyTheme()(空中のノーツの案ごと)。プレイエリアを 0〜100 の座標で描くので、画面の大きさに合わせて伸びる
+function RhythmSkyStage({plane}){
+  const theme=rhythmSkyTheme(),c=theme.rgb,f=v=>Number(v).toFixed(2),fr=plane.front;
+  return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible'}}>
+    <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
+    <defs>
+      <linearGradient id="mhSkyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".55" stopColor={`rgb(${c})`} stopOpacity=".04"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".2"/></linearGradient>
+      <linearGradient id="mhSkyBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".5" stopColor={`rgb(${c})`} stopOpacity=".22"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity="0"/></linearGradient>
+      <linearGradient id="mhSkyPost" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".55"/></linearGradient>
+      <clipPath id="mhSkyClip"><polygon points={plane.poly}/></clipPath>
+    </defs>
+    <polygon points={plane.poly} fill="url(#mhSkyFill)"/>
+    <g clipPath="url(#mhSkyClip)">
+      <rect data-rhythm-sky-flow="1" x="0" y="0" width="100" height="6" fill="url(#mhSkyBand)"/>
+      <rect data-rhythm-sky-flow="2" x="0" y="0" width="100" height="6" fill="url(#mhSkyBand)"/>
+    </g>
+    {plane.dividers.map((d,k)=><polyline key={k} points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".16" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
+    {[plane.leftEdge,plane.rightEdge].map((d,k)=><g key={k}><polyline points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".22" strokeWidth="5" vectorEffect="non-scaling-stroke"/><polyline points={d} fill="none" stroke={theme.core} strokeOpacity=".8" strokeWidth="1.4" vectorEffect="non-scaling-stroke"/></g>)}
+    {[fr.l,fr.r].map((x,k)=>{const w=1.1;return <polygon key={k} points={`${f(x-w)},${f(fr.gy)} ${f(x+w)},${f(fr.gy)} ${f(x+w*.5)},${f(fr.y)} ${f(x-w*.5)},${f(fr.y)}`} fill="url(#mhSkyPost)"/>;})}
+    <line x1={f(fr.l)} y1={f(fr.y)} x2={f(fr.r)} y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".35" strokeWidth="9" vectorEffect="non-scaling-stroke"/>
+    <line data-rhythm-sky-pulse x1={f(fr.l)} y1={f(fr.y)} x2={f(fr.r)} y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".9" strokeWidth="3.2" vectorEffect="non-scaling-stroke"/>
+    <line x1={f(fr.l)} y1={f(fr.y)} x2={f(fr.r)} y2={f(fr.y)} stroke={theme.core} strokeWidth="1.2" vectorEffect="non-scaling-stroke"/>
+    {plane.markers.map((x,k)=><polygon key={k} points={`${f(x)},${f(fr.y-.9)} ${f(x+.9)},${f(fr.y)} ${f(x)},${f(fr.y+.9)} ${f(x-.9)},${f(fr.y)}`} fill={theme.core} fillOpacity=".9"/>)}
+  </svg>;
+}
 const RhythmMonsterNoteGuide=()=>{
   const ratios=rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio=>`${Math.round(ratio*100)}%`);
   return <section data-rhythm-monster-guide className="space-y-3">
@@ -857,7 +884,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const f=v=>v.toFixed(2);
     const left=pts.map(p=>`${f(p.l)},${f(p.y)}`),right=pts.map(p=>`${f(p.r)},${f(p.y)}`).reverse();
     const last=pts[pts.length-1];
-    return {poly:[...left,...right].join(' '),leftEdge:left.join(' '),rightEdge:pts.map(p=>`${f(p.r)},${f(p.y)}`).join(' '),
+    const dividers=Array.from({length:RHYTHM_LANE_COUNT-1},(_,k)=>pts.map(p=>{const y=p.gy/100;return `${f(rhythmProjectBoundary(k+1,y)*100)},${f(p.y)}`;}).join(' '));
+    return {poly:[...left,...right].join(' '),leftEdge:left.join(' '),rightEdge:pts.map(p=>`${f(p.r)},${f(p.y)}`).join(' '),dividers,front:{l:last.l,r:last.r,y:last.y,gy:last.gy},
+      markers:Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>rhythmProjectBoundary(k,last.gy/100)*100),
       posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f))};
   })();
   useEffect(()=>{RHYTHM_SKY_INPUT.active=skyChart;return()=>{RHYTHM_SKY_INPUT.active=false;};},[skyChart]);
@@ -2655,7 +2684,7 @@ scheduleTick();};
   <i data-rhythm-judgment-edge data-edge="top" aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
   <i data-rhythm-judgment-edge data-edge="bottom" aria-hidden="true" style={{position:'absolute',left:0,right:0,bottom:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
 </div>
-<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'var(--mh-judgment-line-bottom,12%)',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{skyPlane&&<svg data-rhythm-sky-plane viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible'}}><defs><linearGradient id="mhSkyPlaneFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fbbf24" stopOpacity="0"/><stop offset=".7" stopColor="#fbbf24" stopOpacity=".05"/><stop offset="1" stopColor="#fde68a" stopOpacity=".16"/></linearGradient></defs><polygon points={skyPlane.poly} fill="url(#mhSkyPlaneFill)"/><polyline points={skyPlane.leftEdge} fill="none" stroke="#fcd34d" strokeOpacity=".55" strokeWidth="1.4" vectorEffect="non-scaling-stroke"/><polyline points={skyPlane.rightEdge} fill="none" stroke="#fcd34d" strokeOpacity=".55" strokeWidth="1.4" vectorEffect="non-scaling-stroke"/>{skyPlane.posts.map((a,i)=><line key={i} x1={a[0]} y1={a[1]} x2={a[2]} y2={a[3]} stroke="#fcd34d" strokeOpacity=".45" strokeWidth="2" strokeDasharray="3 3" vectorEffect="non-scaling-stroke"/>)}</svg>}{skyChart&&<div data-rhythm-sky-line style={{position:'absolute',left:'2%',right:'2%',bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO*100}%)`,height:'4px',background:'repeating-linear-gradient(90deg,#fbbf24 0 14px,#fde68a 14px 18px)',boxShadow:'0 0 10px rgba(251,191,36,.9)',pointerEvents:'none'}}><span style={{position:'absolute',right:0,top:'-19px',fontSize:'12px',fontWeight:800,letterSpacing:'.08em',color:'#fcd34d',textShadow:'0 0 4px #000'}}>▲ SKY</span></div>}{skyChart&&<span data-rhythm-ground-label style={{position:'absolute',right:'2%',bottom:'calc(var(--mh-judgment-line-bottom,12%) - 20px)',zIndex:12,fontSize:'12px',fontWeight:800,letterSpacing:'.08em',color:'#f5d0fe',textShadow:'0 0 4px #000',pointerEvents:'none'}}>● GROUND</span>}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
+<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'var(--mh-judgment-line-bottom,12%)',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{skyPlane&&<RhythmSkyStage plane={skyPlane}/>}{skyChart&&<span data-rhythm-sky-label style={{position:'absolute',right:'2%',bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO*100}% + 5px)`,fontSize:'12px',fontWeight:800,letterSpacing:'.12em',color:rhythmSkyTheme().core,textShadow:`0 0 6px rgb(${rhythmSkyTheme().rgb}),0 0 2px #000`,pointerEvents:'none'}}>SKY</span>}{skyChart&&<span data-rhythm-ground-label style={{position:'absolute',right:'2%',bottom:'calc(var(--mh-judgment-line-bottom,12%) - 20px)',zIndex:12,fontSize:'12px',fontWeight:800,letterSpacing:'.08em',color:'#f5d0fe',textShadow:'0 0 4px #000',pointerEvents:'none'}}>● GROUND</span>}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
 <div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:skyChart?`calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO*100}% + 150px)`:'calc(var(--mh-judgment-line-bottom,12%) + 38px)',...(skyChart?{opacity:.62,transform:'translateX(-50%) scale(.82)'}:{})}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
