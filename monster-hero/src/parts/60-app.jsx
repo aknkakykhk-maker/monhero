@@ -193,6 +193,8 @@ function MonsterHeroGame() {
   // 起動時のお知らせが2件以上のとき、一覧(まとめ)から「くわしく」で1件を開いている間だけ true(保存しない)
   const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
+  // 日次アドバイスで「あきらめる」の近道を出す、クイックのクリア回数(合計)の線
+  const DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS = 3;
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
@@ -9734,7 +9736,10 @@ function MonsterHeroGame() {
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
-      if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true });
+      // 「あきらめる」の近道は、クイックを何回かクリアした人だけへ(2026-10-10・改善部の提案G9)。
+      // まだ慣れていない人には、最後まで遊んでリザルトから登録する、ふつうの助言を出す。回数の線は既存の記録(クイックのクリア回数)の合計
+      const quickClearTotal = Object.values(quickClearCounts || {}).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
+      if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true, shortcut: quickClearTotal >= DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS });
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
@@ -20442,7 +20447,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>);
       })()}
 
-      {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor('dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
+      {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor(dailyMasuAdvice.shortcut===false?'dailyMasuAdviceBasic':'dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {dailyMasuAdvice.debugCount!=null&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・登録数{dailyMasuAdvice.debugCount}体を想定</div>}

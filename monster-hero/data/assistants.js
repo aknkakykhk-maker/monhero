@@ -879,6 +879,12 @@ const ASSISTANT_SCENES = {
     help: 'basics/battle-modes',
     lines: [],
   },
+  // 日次アドバイスの「ふつうの助言」(2026-10-10・改善部の提案G9)。クイックをまだ何回も遊んでいない人に出す。
+  // 上の dailyMasuAdvice(WAVE2まで進んで「あきらめる」)は、クイックのクリアが3回以上の人だけへ出す「近道」
+  dailyMasuAdviceBasic: {
+    help: 'basics/battle-modes',
+    lines: [],
+  },
   // セリフ本体は extremeChallengeGuide の束から合流する。
   extremeChallenge: {
     help: 'basics/extreme-challenge',
@@ -2104,11 +2110,70 @@ addAssistantLinePack({
   label: '日次・マスモン登録アドバイス',
   lines: {
     dailyMasuAdvice: [
-      { e:'wink', t:'マスモンを早く増やしたいなら、いい方法あるんだよね(ΦωΦ)ﾌﾌﾌ…' },
+      { e:'wink', t:'もう慣れてきたね！ マスモンを早く増やす近道があるんだよね(ΦωΦ)ﾌﾌﾌ…' },
       { e:'happy', t:'クイックのBeginnerでWAVE2まで進んだら、\n「あきらめる」を選んでみて！' },
       { e:'excited', t:'これがいまのとこ、マスモンを一番早く登録できる方法なんだ(｡ ˘-˘)ｳﾝｳﾝ' },
       { e:'normal', t:'WAVE2まで進むのがポイント！ そこから登録できるよ〜' },
       { e:'wink', t:'短い時間で仲間を増やしたいとき、試してみてね〜' },
+    ],
+  },
+});
+
+// ===== 日次アドバイスの「ふつうの助言」(2026-10-10) =====
+// まだクイックに慣れていない人へ。最後まで遊ぶとリザルトからマスモンを登録できる、という本来の流れを伝える。
+// 「あきらめる」の近道(dailyMasuAdvice)は、クイックを3回以上クリアした人だけに出す
+addAssistantLinePack({
+  id: 'dailyMasuAdviceBasic_mua',
+  label: '日次・マスモン登録(ふつうの助言)・みゅあ',
+  lines: {
+    dailyMasuAdviceBasic: [
+      { e:'happy', t:'マスモンを増やしたいなら、まずはクイックのBeginnerを\n最後まで遊んでみてね！' },
+      { e:'wink', t:'終わったあとのリザルトから、勇者モンにした子をマスモンに登録できるよ〜' },
+      { e:'normal', t:'慣れてきたら、もっと早く増やす近道も教えるね(ΦωΦ)ﾌﾌﾌ…' },
+      { e:'excited', t:'マスモンが増えると、編成の幅がぐっと広がるじゃん👍✨' },
+      { e:'happy', t:'ムリしないで、遊びたいときに遊んでね〜' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'dailyMasuAdviceBasic_kiki',
+  assistantId: 'kiki',
+  label: '日次・マスモン登録(ふつうの助言)・きき',
+  lines: {
+    dailyMasuAdviceBasic: [
+      { e:'normal', t:'マスモンを増やしたいなら、まずはクイックのBeginnerを最後まで遊んでほしいでつ。' },
+      { e:'happy', t:'終わったあとのリザルトから、勇者モンにした子をマスモンに登録できまつ。' },
+      { e:'wink', t:'慣れてきたら、もっと早く増やす近道も教えまつ ( ˘ω˘)9グッ!' },
+      { e:'normal', t:'マスモンが増えると、できることが一気に広がりまつ。' },
+      { e:'happy', t:'無理に続けなくて大丈夫。思い出したときで十分 (´ー`*)' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'dailyMasuAdviceBasic_momosuke',
+  assistantId: 'momosuke',
+  label: '日次・マスモン登録(ふつうの助言)・ももすけ',
+  lines: {
+    dailyMasuAdviceBasic: [
+      { e:'wink', t:'マスモンを増やしたいんでしょ？ まずはクイックのBeginnerを最後まで遊んでみてよw' },
+      { e:'happy', t:'終わったあとのリザルトから、勇者モンにした子を登録できるからね。' },
+      { e:'excited', t:'慣れてきたら、もっと早い近道もおしえたげる♪' },
+      { e:'normal', t:'マスモンが増えると、編成の幅が広がるからね。' },
+      { e:'happy', t:'ムリしないで、気が向いたときに遊べばいいよw' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'dailyMasuAdviceBasic_dra',
+  assistantId: 'dra',
+  label: '日次・マスモン登録(ふつうの助言)・ドラ',
+  lines: {
+    dailyMasuAdviceBasic: [
+      { e:'happy', t:'マスモンを増やしたいなら、まずはクイックのBeginnerを最後まで遊んでみな' },
+      { e:'normal', t:'終わったあとのリザルトで、勇者モンにした子をマスモンに登録できるわ' },
+      { e:'wink', t:'{name}、慣れてきたらもっと早い近道も教えるよ。焦らんでええからな' },
+      { e:'normal', t:'マスモンが増えると、編成の幅が広がるからな' },
+      { e:'happy', t:'無理せんでええよ。思い出したときで十分や' },
     ],
   },
 });
@@ -2571,7 +2636,7 @@ addAssistantLinePack({
   lines: {
     // ---- 日次アドバイス ----
     dailyMasuAdvice: [
-      { e:'normal',  t:'マスモンを早く増やしたいなら、いい方法あるよ。' },
+      { e:'normal',  t:'もう慣れてきたね。マスモンを早く増やす近道があるよ。' },
       { e:'happy',   t:'クイックのBeginnerでWAVE2まで進んで、\n「あきらめる」を押す。' },
       { e:'wink',    t:'これが今のところいちばん早いやつ ( ˘ω˘)9グッ!' },
       { e:'normal',  t:'WAVE2まで進むのが大事。そこから登録できまつ。' },
@@ -3192,7 +3257,7 @@ addAssistantLinePack({
   lines: {
     // ---- 日次アドバイス ----
     dailyMasuAdvice: [
-      { e:'wink',     t:'マスモンを早く増やしたいんでしょ？ いい方法おしえたげるw' },
+      { e:'wink',     t:'もう慣れてきたでしょ？ マスモンを早く増やす近道、おしえたげるw' },
       { e:'happy',    t:'クイックのBeginnerでWAVE2まで行って、\n「あきらめる」を押すの。' },
       { e:'excited',  t:'これがいまのところ最速！ ももが見つけたわけじゃないけどねw' },
       { e:'normal',   t:'WAVE2まで行くのが条件だから。そこ間違えないでよ？' },
@@ -3950,7 +4015,7 @@ addAssistantLinePack({
       { e:'troubled', t:'……なんか今日、膝が重いわぁ。気のせいかな' },
     ],
     dailyMasuAdvice: [
-      { e:'happy',    t:'マスモンを早く増やしたいんだろ？ いい方法があるわ' },
+      { e:'happy',    t:'もう慣れてきたな。マスモンを早く増やす近道があるわ' },
       { e:'normal',   t:'クイックのBeginnerでWAVE2まで行って、そこで「あきらめる」を押す' },
       { e:'wink',     t:'WAVE2まで行くのが条件な。そこだけ間違えるなよ' },
       { e:'happy',    t:'{name}、時間ないときはこれでいいよ。効率って大事やからな' },

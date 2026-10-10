@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 892ef8966835d322
+// source-sha256: c75fcbf59762a14e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 08:26";
+const BUILD_DATE = "2026-10-10 10:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -72349,6 +72349,7 @@ function MonsterHeroGame() {
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
   const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
+  const DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS = 3;
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   const [rhythmClearTotal, setRhythmClearTotal] = useState(0);
@@ -82731,9 +82732,11 @@ function MonsterHeroGame() {
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
+      const quickClearTotal = Object.values(quickClearCounts || {}).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
       if (!cancelled) setDailyMasuAdvice({
         debugCount: null,
-        eligible: true
+        eligible: true,
+        shortcut: quickClearTotal >= DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS
       });
     })();
     return () => {
@@ -101052,7 +101055,7 @@ function MonsterHeroGame() {
       }, last ? '閉じる' : '次へ'))));
     })(), dailyMasuAdvice && (() => {
       const who = activeAssistant;
-      const lines = assistantSceneLinesFor('dailyMasuAdvice');
+      const lines = assistantSceneLinesFor(dailyMasuAdvice.shortcut === false ? 'dailyMasuAdviceBasic' : 'dailyMasuAdvice');
       const eligible = dailyMasuAdvice.eligible !== false;
       return React.createElement("div", {
         className: "fixed inset-0 flex items-end justify-center",
