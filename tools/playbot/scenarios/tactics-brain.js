@@ -104,15 +104,21 @@ function threatOf(b) {
 //   「全滅の手前」だけで押す: 次の攻撃で倒れる子がいて、そのあと立っている子が1体以下になり、+30% なら持ちこたえる子がいる。
 //   使える回復カードがあるときは回復カードで(攻撃もできる)。ガードのカードがあり、倒れそうなのが1体で貫通撃でもなければ、守りの判断(②)に任せる
 //   PLAYBOT_TACTICS_EMERGENCY=0 で切れる(直す前と比べるため)
+//   PLAYBOT_TACTICS_EMERGENCY=auto … AUTO と同じ条件だけ / wipe … 全滅の手前だけ / 0 … 押さない / それ以外(既定)… 両方('auto+wipe')
+function emergencyMode() {
+  const v = process.env.PLAYBOT_TACTICS_EMERGENCY;
+  return v === '0' ? '' : v === 'auto' || v === 'wipe' ? v : 'auto+wipe';
+}
 function emergencyWhy(b) {
-  if (process.env.PLAYBOT_TACTICS_EMERGENCY === '0' || !b.emergencyReady) return '';
+  const mode = emergencyMode();
+  if (!mode || !b.emergencyReady) return '';
   const alive = b.slots.filter((x) => x.occupied && !x.downed && x.hp);
   if (!alive.length) return '';
   const usable = (re) => b.hand.some((c) => c.usable && re.test(c.type));
   // ① ゲームの AUTO と同じ条件(60-app.jsx 13001 付近 lacksOnlyGuts): 置けるカードが1枚もなく、ガッツさえ足りれば置ける。
   //   ボットは前は捨てて5%ずつ戻していた。緊急回復は回数の上限なし(2026-10-10 ハカセくん・改善部の確認)
-  if (b.hand.length && !b.hand.some((c) => c.usable) && b.hand.some((c) => c.block === 'guts')) return 'ガッツが足りず、置けるカードが1枚もない(ゲームの AUTO と同じ条件)';
-  if (usable(/heal/)) return '';
+  if (/auto/.test(mode) && b.hand.length && !b.hand.some((c) => c.usable) && b.hand.some((c) => c.block === 'guts')) return 'ガッツが足りず、置けるカードが1枚もない(ゲームの AUTO と同じ条件)';
+  if (!/wipe/.test(mode) || usable(/heal/)) return '';
   const falling = alive.filter((x) => x.aimDamage > 0 && x.aimDamage >= x.hp.now);
   // 回復はライフの上限で止まる
   const saved = falling.filter((x) => x.aimDamage < Math.min(x.hp.max, x.hp.now + Math.floor(x.hp.max * 0.3)));
@@ -703,7 +709,9 @@ async function chooseBetween(s, mem, log) {
       const f = first ? firstAllyScore(nm, diff) : null;
       return (f != null ? f + allyScore(nm) * 0.1 : allyScore(nm)) - num(t.match(/総合力\s*([\d,]+)/)[1]) / 4000;
     };
-    const best = allyBtns.sort((a, z) => scoreAlly(z) - scoreAlly(a))[0];
+    // 供モンを固定したとき(PLAYBOT_TACTICS_ALLIES)は、その順に加える
+    const fixed = (mem.fixedAllies || []).map((nm) => allyBtns.find((t) => t.split(/\s+/)[0] === nm)).find(Boolean);
+    const best = fixed || allyBtns.sort((a, z) => scoreAlly(z) - scoreAlly(a))[0];
     log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]}・覚え書きの頭割り比 ${allyScore(best.split(/\s+/)[0]).toFixed(2)})`);
     if (!log.data.build.allies.some((x) => x.wave === log.data.waves.length)) log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
     mem.lastPicked = best.split(/\s+/)[0];
@@ -750,6 +758,15 @@ async function chooseBetween(s, mem, log) {
     const score = (t) => (/自傷/.test(t) ? -5 : 0) + atkPct(t) / 5 + (isHeal(t) ? (hurt ? 3 : 1.5) : 0) + named(t)
       + (isGuts(t) ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(t) ? 2.5 : 0);
     let best = cards.sort((a, z) => score(z) - score(a))[0];
+    // PLAYBOT_TACTICS_ASSIST_ORDER=あつ,ポルツ,… … アシカをこの順で優先する(新規習得も強化も。並びの前のアシカのカードが出ていれば、それを選ぶ)。
+    //   2026-10-10 社長の「4体パーティのアシカの入れ方・強化のしかた」を実戦で確かめるため。順番に試す(下)より先に効く
+    const assistOrder = String(process.env.PLAYBOT_TACTICS_ASSIST_ORDER || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const whoOf = (c) => String(c).replace(/\+$/, '').split(/\s+/)[0].split('の')[0];
+    const ordered = assistOrder.length ? assistOrder.map((nm) => cards.find((t) => whoOf(t) === nm || t.startsWith(nm))).find(Boolean) : null;
+    if (ordered) {
+      best = ordered;
+      log.note(`アシストカード: 決めた順で選ぶ(${whoOf(best)}・${/新規習得/.test(best) ? '新規習得' : '強化'})`);
+    } else
     // PLAYBOT_TACTICS_ASSIST_ROTATE=1 … アシカを順番に試す(2026-10-10 ハカセくん・改善部の指摘 A3。ボットはほぼ毎回「あつ」を選び、
     //   ドラ・かどみうむ・みゃる・ニコラオが実戦0〜1回のままだった)。新規習得のカードのうち、覚え書きで選ばれた回がいちばん少ないものを選ぶ。
     //   同じ回数なら点数の高いほう。新規習得が無い(強化だけの)画面は今までどおり点数で選ぶ。既定は切(今のまま)
@@ -1018,7 +1035,11 @@ function rememberRun(L, stats) {
     //   arena-2 = それに EX を早めに使う直し(火力の EX を WAVE の始めに・ウンディーネ・ニコラオ。exEarly)を足した版
     //   これが無い回は、それより前の版
     //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
-    bot: { ver: 'arena-2', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1' },
+    //   emergency は押す条件の名前('auto+wipe' / 'auto' / 'wipe' / false)。2026-10-10 10:30 ごろまでの arena-1 の回は true(= auto+wipe)
+    bot: { ver: 'arena-2', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1',
+      // fixedAllies = 指定した3体(候補5体のうち3体。残り2体はふだんどおり選ぶ)・joined = WAVE の合間に実際に加わった順(毎回くじで3体出るので順は変わる)
+      ...(process.env.PLAYBOT_TACTICS_ALLIES ? { fixedAllies: process.env.PLAYBOT_TACTICS_ALLIES, joined: L.build.allies.map((a) => `W${a.wave}:${a.name}`) } : {}),
+      ...(process.env.PLAYBOT_TACTICS_ASSIST_ORDER ? { assistOrder: process.env.PLAYBOT_TACTICS_ASSIST_ORDER } : {}) },
     heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),

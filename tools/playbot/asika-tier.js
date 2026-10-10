@@ -40,9 +40,12 @@ const DIFFS = ['Hard', 'Expert', 'Master'];
 const W = { Hard: 2, Expert: 5, Master: 3 }; // tactics-tier.js の DIFF_WEIGHT と同じ重み
 const PLAYS = ['bot', 'best'];
 // 回すシミュレーターの版(sim/battle.js)。キャッシュに残し、版が違うマスは回し直す。
-// 3 = アシカまで(トレーニング・間合いボーナス・固有技の強化・緊急回復は無し) / 7 = 全部入り(緊急回復は AUTO と同じ条件)
-const SIM_VER = 7;
-const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)' };
+// 3 = アシカまで(トレーニング・間合いボーナス・固有技の強化・緊急回復は無し) / 7 = 全部入り(緊急回復は AUTO と同じ条件) / 8 = 緊急回復はボットと同じ・上手な EX はボス戦のぶんを残す
+const SIM_VER = 8;
+const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)', 8: '8 版目(7 版目+緊急回復はボットと同じ「AUTO の条件 → 全滅の手前」・上手な EX はボス戦のぶんを残す)' };
+// 緊急回復をどの条件で測ったか(md の頭に1行。2026-10-10 ハカセくん)
+const EMERGENCY_TEXT = { 3: '緊急回復は入れていない(使わない)', 7: '緊急回復は AUTO と同じ条件(出せるカードが無く、ガッツさえあれば出せるとき)で測った。ガッツの少ない子は押す回数が多く、伸びやすい', 8: '緊急回復は直したボットと同じ条件(AUTO の条件 → だめなら全滅の手前。EX を使ったターンは押さない)で測った。ガッツの少ない子は押す回数が多く、伸びやすい' };
+const emergencyText = (sec) => EMERGENCY_TEXT[(sec && sec.simVer) || 3] || '';
 const simVerText = (sec) => SIM_VER_TEXT[(sec && sec.simVer) || 3] || `${sec.simVer} 版目`;
 
 // ---------- 子プロセス: 1マス(勇者モン×難易度×設定)を N 回まわして足し合わせる ----------
@@ -64,7 +67,7 @@ if (args[0] === '--worker') {
       const ally = t.ally === '*' ? (() => { const pool = sim.MONS.map((m) => m.id).filter((id) => id !== t.hero); return pool[Math.floor(sim.mulberry32(sim.hashSeed(t.seed, 'first', t.hero, t.diff, i))() * pool.length)]; })() : t.ally;
       if (ally) allies = [ally, ...others(t.hero, ally, sim.mulberry32(sim.hashSeed(t.seed, 'combo', t.hero, t.diff, i)))];
       else allies = sim.pickAllies(t.hero, sim.mulberry32(sim.hashSeed(t.seed, 'allies', t.hero, t.diff, i)));
-      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play, ...((t.simVer || 3) >= 7 ? { training: 'bot' } : { training: 'none', distBonus: false, uniqueUp: false, emergency: 'none' }) });
+      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play, ...((t.simVer || 3) >= 8 ? { training: 'bot', emergency: 'bot' } : (t.simVer || 3) >= 7 ? { training: 'bot', emergency: 'auto' } : { training: 'none', distBonus: false, uniqueUp: false, emergency: 'none' }) });
       const reach = r.wave + (r.result === 'clear' ? 1 : 0);
       acc.n++; acc.sum += reach; acc.sq += reach * reach; if (r.result === 'clear') acc.clear++;
       if (t.card) { const u = (r.assistUses || {})[t.card] || 0; acc.uses += u; if (u > 0) acc.usedRuns++; }
@@ -214,22 +217,25 @@ function realRecords() {
   // tactics-tier.js と同じく、直したボットの回(use がある回)だけ。クリアは WAVE 11
   const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFFS.includes(r.difficulty) && r.use);
   const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
+  // アシカを順番に選ぶ回(r.bot.rotate)は、カードの実戦の「回数」には数えるが、WAVE の差(勇者モンの強さが混ざる数字)には使わない(2026-10-10 ハカセくん)
+  const rotated = (r) => !!(r.bot && r.bot.rotate);
   const meanBy = {};
-  for (const d of DIFFS) { const rs = runs.filter((r) => r.difficulty === d); meanBy[d] = rs.length ? rs.reduce((a, r) => a + reach(r), 0) / rs.length : NaN; }
+  for (const d of DIFFS) { const rs = runs.filter((r) => r.difficulty === d && !rotated(r)); meanBy[d] = rs.length ? rs.reduce((a, r) => a + reach(r), 0) / rs.length : NaN; }
   const cardsOf = (r) => [...new Set((r.assists || []).map((x) => EVO_TO_ID[String(x).replace(/\+$/, '')]).filter(Boolean))];
   const byCard = {};
   for (const id of TEACH_IDS) {
     byCard[id] = {};
     for (const d of DIFFS) {
       const rs = runs.filter((r) => r.difficulty === d && cardsOf(r).includes(id));
-      byCard[id][d] = { n: rs.length, lift: rs.length ? rs.reduce((a, r) => a + reach(r) - meanBy[d], 0) / rs.length : NaN };
+      const rl = rs.filter((r) => !rotated(r));
+      byCard[id][d] = { n: rs.length, lift: rl.length ? rl.reduce((a, r) => a + reach(r) - meanBy[d], 0) / rl.length : NaN };
     }
   }
   // 組み合わせ: 勇者×供モンの組がそろった回(供モンが入った回)
   const pair = {};
   for (const r of runs) {
-    const h = ID_BY_NAME[r.hero]; if (!h) continue;
-    for (const an of new Set(r.allies || [])) {
+    const h = ID_BY_NAME[r.hero]; if (!h || rotated(r)) continue;
+    for (const an of alliesOf(r)) {
       const a = ID_BY_NAME[an]; if (!a || a === h) continue;
       const k = `${h}|${a}|${r.difficulty}`;
       (pair[k] = pair[k] || []).push(reach(r) - meanBy[r.difficulty]);
@@ -237,6 +243,14 @@ function realRecords() {
   }
   return { runs, byCard, pair, meanBy };
 }
+
+// その回に実際に戦った供モンの名前。r.allies(選んだつもりの供モン)は 2026-10-10 まで供モン選びの不具合で実際と違う回があった(209回中57回)。
+// tactics-tier.js membersOf と同じ順: 盤面から読んだ r.alliesSeen → dmg・use の名前(盤面から読むので正しい)→ r.allies
+const alliesOf = (r) => {
+  const seen = Array.isArray(r.alliesSeen) ? r.alliesSeen : null;
+  const board = [...Object.keys(r.dmg || {}), ...Object.keys(r.use || {})];
+  return [...new Set(seen || (board.length ? board : (r.allies || [])))].filter((n) => n && n !== r.hero);
+};
 
 // ---------- アシカの集計 ----------
 function analyzeAsika(cache, real) {
@@ -442,6 +456,7 @@ function writeAll(cache) {
     o();
     o('研究所(シミュレーター: ダイスくん)。各カードを「そのカードを優先して選ぶ」設定にしてシミュレーターで回し、届いた WAVE の差で決めます。強さはスキル込み(EX・勇者特性・固有技を入れたシミュレーター)。**Tier は上手な使い方の数字だけで決めます**(ボットの数字は「ボットの使い方で弱く見えているカード」にだけ使う)。');
     o();
+    if (emergencyText(cache.asika)) { o(`${emergencyText(cache.asika)}。`); o(); }
     if (MISSING_MECHANICS.length) {
       o(`まだ入れていない・一部だけの機能(シミュレーターかボットに無く、この Tier の数字に効いていないもの。効きの大きい順): ${MISSING_MECHANICS.join('・')}。機能の一覧は docs/playbot/reports/tier/mechanics.md。この表の数字は、シミュレーター ${simVerText(cache.asika)}で回したもの。`);
       o();
@@ -498,7 +513,7 @@ function writeAll(cache) {
     }
     o('## 実戦の記録について');
     o();
-    o('実戦(ブラウザでボットが戦った回)は、ボットがほぼ毎回「あつの挑発」を最初に選ぶため、カードごとの回数がとても偏っています。差は「そのカードを選んだ回の届いた WAVE − その難易度の平均」で、選んだ回が少ないカードは当てになりません。');
+    o('実戦(ブラウザでボットが戦った回)は、ボットがほぼ毎回「あつの挑発」を最初に選ぶため、カードごとの回数がとても偏っています。差は「そのカードを選んだ回の届いた WAVE − その難易度の平均」で、選んだ回が少ないカードは当てになりません。アシカを順番に選ぶ回(ボットの rotate)は回数には数えますが、差の計算には入れていません(勇者モンの強さが混ざるため)。');
     o('もう1つの偏り: あとの WAVE で選ぶカード(2枚目・3枚目)は、そこまで届いた回にしか出てきません。そのため実戦の差は、ほとんどのカードで大きくプラスに出ます(生き残りの偏り)。いちばん最初に選ばれる「あつの挑発」だけが 0 前後になるのはこのためです。Tier は実戦の差では決めず、シミュレーターで決めています。');
     o();
     o('## 強み・弱み');
@@ -546,6 +561,7 @@ function writeAll(cache) {
     o(`更新: ${now}(JST)・シミュレーター: Expert 各 ${cache.combo.runs.Expert} 回・Master 各 ${cache.combo.runs.Master} 回(26 × 25 通り・シミュレーター ${simVerText(cache.combo)})`);
     o();
     o('勇者モンごとに、最初に入る供モン(WAVE 2 のあと)を 25 通り入れ替えて回し、その勇者モンの平均との差(届いた WAVE)を出します。残りの供モン2体はくじ。Expert 5・Master 3 の重み(Master はほとんど WAVE 2 までに決まるので差が小さい)。アシカはボットの選び方、EX とアシカの使い方は上手な使い方。');
+    if (emergencyText(cache.combo)) { o(); o(`${emergencyText(cache.combo)}。`); }
     o();
     o('**相性 = その組の伸び − その供モンがどの勇者と組んでも出す伸び(下の「供モンとしての強さ」)。** 引かないと、供モンとして強い子(ゴースト)がどの勇者とも上位に並んでしまうため。');
     o();
