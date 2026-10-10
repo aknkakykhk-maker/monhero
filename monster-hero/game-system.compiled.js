@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd23262526fee0cc
+// source-sha256: 7f4451f131a00ee0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -30398,101 +30398,46 @@ function RhythmSkyStage({
     offset: "1",
     stopColor: `rgb(${c})`,
     stopOpacity: ".55"
+  })), React.createElement("linearGradient", {
+    id: "mhSkyFloor",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "rgb(40,28,92)",
+    stopOpacity: ".30"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "rgb(58,40,128)",
+    stopOpacity: ".62"
   })), React.createElement("clipPath", {
     id: "mhSkyClip"
   }, React.createElement("polygon", {
     points: plane.poly
   }))), React.createElement("polygon", {
-    points: plane.poly,
-    fill: "url(#mhSkyFill)"
-  }), React.createElement("g", {
-    clipPath: "url(#mhSkyClip)"
-  }, React.createElement("rect", {
-    "data-rhythm-sky-flow": "1",
-    x: "0",
-    y: "0",
-    width: "100",
-    height: "6",
-    fill: "url(#mhSkyBand)"
-  }), React.createElement("rect", {
-    "data-rhythm-sky-flow": "2",
-    x: "0",
-    y: "0",
-    width: "100",
-    height: "6",
-    fill: "url(#mhSkyBand)"
-  })), plane.dividers.map((d, k) => React.createElement("polyline", {
-    key: k,
-    points: d,
-    fill: "none",
-    stroke: `rgb(${c})`,
-    strokeOpacity: ".16",
-    strokeWidth: "1",
-    vectorEffect: "non-scaling-stroke"
-  })), [plane.leftEdge, plane.rightEdge].map((d, k) => React.createElement("g", {
-    key: k
-  }, React.createElement("polyline", {
-    points: d,
-    fill: "none",
-    stroke: `rgb(${c})`,
-    strokeOpacity: ".14",
-    strokeWidth: "4",
-    vectorEffect: "non-scaling-stroke"
-  }), React.createElement("polyline", {
-    points: d,
-    fill: "none",
-    stroke: theme.core,
-    strokeOpacity: ".5",
-    strokeWidth: "1",
-    vectorEffect: "non-scaling-stroke"
-  }))), plane.markers.slice(1, -1).map((x, k) => React.createElement("line", {
-    key: 'c' + k,
-    x1: f(x),
-    y1: f(fr.gy),
-    x2: f(x),
+    points: plane.floor,
+    fill: "url(#mhSkyFloor)"
+  }), React.createElement("line", {
+    x1: "-2",
+    y1: f(fr.y),
+    x2: "102",
     y2: f(fr.y),
-    stroke: `rgb(${c})`,
-    strokeOpacity: ".13",
-    strokeWidth: "1",
-    vectorEffect: "non-scaling-stroke"
-  })), [fr.l, fr.r].map((x, k) => {
-    const w = 1.4;
-    return React.createElement("polygon", {
-      key: k,
-      points: `${f(x - w)},${f(fr.gy)} ${f(x + w)},${f(fr.gy)} ${f(x + w * .5)},${f(fr.y)} ${f(x - w * .5)},${f(fr.y)}`,
-      fill: "url(#mhSkyPost)"
-    });
-  }), React.createElement("rect", {
-    x: "-2",
-    y: f(fr.y - 1.2),
-    width: "104",
-    height: "2.4",
-    fill: "url(#mhSkyBand)",
-    opacity: ".55"
-  }), React.createElement("line", {
-    x1: "-2",
-    y1: f(fr.y - .35),
-    x2: "102",
-    y2: f(fr.y - .35),
-    stroke: theme.core,
-    strokeOpacity: ".6",
-    strokeWidth: "1",
+    stroke: "rgb(150,118,235)",
+    strokeOpacity: ".38",
+    strokeWidth: "6",
     vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
     x1: "-2",
-    y1: f(fr.y + .35),
+    y1: f(fr.y),
     x2: "102",
-    y2: f(fr.y + .35),
-    stroke: theme.core,
-    strokeOpacity: ".6",
-    strokeWidth: "1",
+    y2: f(fr.y),
+    stroke: "rgb(165,135,245)",
+    strokeOpacity: ".95",
+    strokeWidth: "2",
     vectorEffect: "non-scaling-stroke"
-  }), plane.markers.map((x, k) => React.createElement("polygon", {
-    key: k,
-    points: `${f(x)},${f(fr.y - .9)} ${f(x + .9)},${f(fr.y)} ${f(x)},${f(fr.y + .9)} ${f(x - .9)},${f(fr.y)}`,
-    fill: theme.core,
-    fillOpacity: ".55"
-  })));
+  }));
 }
 const RhythmMonsterNoteGuide = () => {
   const ratios = rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio => `${Math.round(ratio * 100)}%`);
@@ -31447,7 +31392,10 @@ const RhythmTapTest = ({
       const y = p.gy / 100;
       return `${f(rhythmProjectBoundary(k + 1, y) * 100)},${f(p.y)}`;
     }).join(' '));
+    const floorL = pts.map(p => `${f(p.l)},${f(p.gy)}`),
+      floorR = pts.map(p => `${f(p.r)},${f(p.gy)}`).reverse();
     return {
+      floor: [...floorL, ...floorR].join(' '),
       poly: [...left, ...right].join(' '),
       leftEdge: left.join(' '),
       rightEdge: pts.map(p => `${f(p.r)},${f(p.y)}`).join(' '),
@@ -35409,34 +35357,7 @@ const RhythmTapTest = ({
     }
   }), skyPlane && React.createElement(RhythmSkyStage, {
     plane: skyPlane
-  }), skyChart && React.createElement("span", {
-    "data-rhythm-sky-label": true,
-    style: {
-      position: 'absolute',
-      right: '2%',
-      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT.ratio * 100}% + 5px)`,
-      fontSize: '12px',
-      fontWeight: 800,
-      letterSpacing: '.12em',
-      color: '#ede9fe',
-      textShadow: '0 0 6px rgb(167,139,250),0 0 2px #000',
-      pointerEvents: 'none'
-    }
-  }, "SKY"), skyChart && React.createElement("span", {
-    "data-rhythm-ground-label": true,
-    style: {
-      position: 'absolute',
-      right: '2%',
-      bottom: 'calc(var(--mh-judgment-line-bottom,12%) - 20px)',
-      zIndex: 12,
-      fontSize: '12px',
-      fontWeight: 800,
-      letterSpacing: '.08em',
-      color: '#f5d0fe',
-      textShadow: '0 0 4px #000',
-      pointerEvents: 'none'
-    }
-  }, "● GROUND"), countdownStep !== null && React.createElement("div", {
+  }), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {
