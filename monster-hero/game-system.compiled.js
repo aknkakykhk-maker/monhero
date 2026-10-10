@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 150a18c2bd8ef98b
+// source-sha256: 5f7cdb8f0baf5c17
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 00:19";
+const BUILD_DATE = "2026-10-11 00:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -29239,7 +29239,7 @@ const RhythmSongSelect = ({
       'data-rhythm-song-row-level': ''
     } : {}, {
       className: `text-[14px] font-black leading-none tabular-nums text-white${spot('songLevel')}`
-    }), rowLevel(entry))), (difficulties || []).map(item => {
+    }), rowLevel(entry))), (difficulties || []).filter(item => RHYTHM_DIFFICULTIES.some(d => d.id === item.id) || rhythmChartPlayable(entry, item.id)).map(item => {
       const playable = rhythmChartPlayable(entry, item.id);
       const markId = rhythmAchievementMarkId(playable, playable ? rhythmBestRecord(bestRecords, entry.songId, item.id) : null);
       const mark = RHYTHM_ACHIEVEMENT_MARKS[markId];

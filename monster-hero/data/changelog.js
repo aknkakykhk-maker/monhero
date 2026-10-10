@@ -47,6 +47,7 @@ const CHANGELOG = [
       'レベルは HELL Lv.46 です。',
       'ノーツ数は 642 です。',
       'HELL の記録は自己ベストに残ります。全国ランキング・全曲の合計・週間・イベントの集計には入りません。',
+      'ビートPは、ほかの難易度と同じようにもらえます。',
     ],
     assistantNotice: { id:'update_notice_rhythm_hell_v1', type:'content' },
   },

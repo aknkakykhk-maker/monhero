@@ -926,7 +926,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     <small className="text-[8px] font-black text-white/80">Lv.</small>
                     <b {...(main?{'data-rhythm-song-row-level':''}:{})} className={`text-[14px] font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
                   </span>
-                  {(difficulties||[]).map(item=>{
+                  {/* HELL など5難易度の外の難易度は、その曲に譜面があるときだけ◆を出す(HELL の無い曲は今までどおり5つ) */}
+                  {(difficulties||[]).filter(item=>RHYTHM_DIFFICULTIES.some(d=>d.id===item.id)||rhythmChartPlayable(entry,item.id)).map(item=>{
                     const playable=rhythmChartPlayable(entry,item.id);
                     const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
                     const mark=RHYTHM_ACHIEVEMENT_MARKS[markId];
