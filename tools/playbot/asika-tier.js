@@ -217,21 +217,24 @@ function realRecords() {
   // tactics-tier.js と同じく、直したボットの回(use がある回)だけ。クリアは WAVE 11
   const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFFS.includes(r.difficulty) && r.use);
   const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
+  // アシカを順番に選ぶ回(r.bot.rotate)は、カードの実戦の「回数」には数えるが、WAVE の差(勇者モンの強さが混ざる数字)には使わない(2026-10-10 ハカセくん)
+  const rotated = (r) => !!(r.bot && r.bot.rotate);
   const meanBy = {};
-  for (const d of DIFFS) { const rs = runs.filter((r) => r.difficulty === d); meanBy[d] = rs.length ? rs.reduce((a, r) => a + reach(r), 0) / rs.length : NaN; }
+  for (const d of DIFFS) { const rs = runs.filter((r) => r.difficulty === d && !rotated(r)); meanBy[d] = rs.length ? rs.reduce((a, r) => a + reach(r), 0) / rs.length : NaN; }
   const cardsOf = (r) => [...new Set((r.assists || []).map((x) => EVO_TO_ID[String(x).replace(/\+$/, '')]).filter(Boolean))];
   const byCard = {};
   for (const id of TEACH_IDS) {
     byCard[id] = {};
     for (const d of DIFFS) {
       const rs = runs.filter((r) => r.difficulty === d && cardsOf(r).includes(id));
-      byCard[id][d] = { n: rs.length, lift: rs.length ? rs.reduce((a, r) => a + reach(r) - meanBy[d], 0) / rs.length : NaN };
+      const rl = rs.filter((r) => !rotated(r));
+      byCard[id][d] = { n: rs.length, lift: rl.length ? rl.reduce((a, r) => a + reach(r) - meanBy[d], 0) / rl.length : NaN };
     }
   }
   // 組み合わせ: 勇者×供モンの組がそろった回(供モンが入った回)
   const pair = {};
   for (const r of runs) {
-    const h = ID_BY_NAME[r.hero]; if (!h) continue;
+    const h = ID_BY_NAME[r.hero]; if (!h || rotated(r)) continue;
     for (const an of alliesOf(r)) {
       const a = ID_BY_NAME[an]; if (!a || a === h) continue;
       const k = `${h}|${a}|${r.difficulty}`;
@@ -510,7 +513,7 @@ function writeAll(cache) {
     }
     o('## 実戦の記録について');
     o();
-    o('実戦(ブラウザでボットが戦った回)は、ボットがほぼ毎回「あつの挑発」を最初に選ぶため、カードごとの回数がとても偏っています。差は「そのカードを選んだ回の届いた WAVE − その難易度の平均」で、選んだ回が少ないカードは当てになりません。');
+    o('実戦(ブラウザでボットが戦った回)は、ボットがほぼ毎回「あつの挑発」を最初に選ぶため、カードごとの回数がとても偏っています。差は「そのカードを選んだ回の届いた WAVE − その難易度の平均」で、選んだ回が少ないカードは当てになりません。アシカを順番に選ぶ回(ボットの rotate)は回数には数えますが、差の計算には入れていません(勇者モンの強さが混ざるため)。');
     o('もう1つの偏り: あとの WAVE で選ぶカード(2枚目・3枚目)は、そこまで届いた回にしか出てきません。そのため実戦の差は、ほとんどのカードで大きくプラスに出ます(生き残りの偏り)。いちばん最初に選ばれる「あつの挑発」だけが 0 前後になるのはこのためです。Tier は実戦の差では決めず、シミュレーターで決めています。');
     o();
     o('## 強み・弱み');
