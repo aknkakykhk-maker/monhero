@@ -217,6 +217,7 @@ function build(d) {
     m.強み ? ['強み', esc(m.強み)] : null,
     m.弱み ? ['弱み', esc(m.弱み)] : null,
     m.動いた理由 ? ['動き', esc(m.動いた理由)] : null,
+    m.緊急回復 ? ['緊急回復', esc(m.緊急回復)] : null,
     m.おすすめアシカ && m.おすすめアシカ.length ? ['おすすめアシカ', refList('a', m.おすすめアシカ)] : null,
     m.相性のいい供モン && m.相性のいい供モン.length ? ['相性のいい供モン', refList('m', m.相性のいい供モン)] : null,
     m.机上 ? ['机上', `通常技1発 ${m.机上.通常技1発.toLocaleString('en-US')} / 20ターンの火力 ${(m.机上['20ターンの火力'] || 0).toLocaleString('en-US')}`] : null,
@@ -384,7 +385,7 @@ ${css}
 
   <section id="monsters">
     <h2>モンスター 総合 Tier</h2>
-    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
+    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。モンスターの Tier はブラウザの実戦の記録から(ボットが緊急回復を使うようになったのは 2026-10-10 からで、それより前の回は使っていません)。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
   </section>
 
   <section id="monsters-diff">
@@ -394,18 +395,18 @@ ${css}
 
   <section id="assists">
     <h2>アシカ Tier(アシストカード)</h2>
-    <p class="note" style="margin-bottom:10px">モンスターと同じ決め方の Tier。アイコンを押すと、難易度ごとの Tier・理由・合うモンスターが開きます。</p>${assistSection}
+    <p class="note" style="margin-bottom:10px">モンスターと同じ決め方の Tier。アイコンを押すと、難易度ごとの Tier・理由・合うモンスターが開きます。</p><p class="note" style="margin-bottom:10px">緊急回復は、ゲームの AUTO と同じ条件(出せるカードが無くガッツさえあれば出せるとき)と全滅の手前で使った数字です。回数の上限が無いので、ガッツの少ない子(モノリスなど)ほど押す回数が多く伸びます。手で遊んで緊急回復を押さないと、順位が変わる子がいます(各モンスターの「緊急回復」の行)。</p>${assistSection}
   </section>
 
   <section id="combos">
     <h2>勇者モン × 供モンの組み合わせ</h2>
-    <p class="note" style="margin-bottom:10px">よく合う組み合わせと合わない組み合わせ。「実戦で確かめた」は、タクティクスプロで実際に戦って確かめたもの。</p>
+    <p class="note" style="margin-bottom:10px">よく合う組み合わせと合わない組み合わせ。「実戦で確かめた」は、タクティクスプロで実際に戦って確かめたもの。</p><p class="note" style="margin-bottom:10px">緊急回復は、ゲームの AUTO と同じ条件(出せるカードが無くガッツさえあれば出せるとき)と全滅の手前で使った数字です。回数の上限が無いので、ガッツの少ない子(モノリスなど)ほど押す回数が多く伸びます。手で遊んで緊急回復を押さないと、順位が変わる子がいます(各モンスターの「緊急回復」の行)。</p>
     ${comboSection}
   </section>
 
   <section id="party">
     <h2>おすすめパーティ(勇者モン+供モン3体)</h2>
-    <p class="note" style="margin-bottom:10px">難易度ごとの上位の4体パーティ。押すと、噛み合う理由・アシカの入れ方・強化の順番が開きます。左端が勇者モンです。</p>
+    <p class="note" style="margin-bottom:10px">難易度ごとの上位の4体パーティ。押すと、噛み合う理由・アシカの入れ方・強化の順番が開きます。左端が勇者モンです。</p><p class="note" style="margin-bottom:10px">緊急回復は、ゲームの AUTO と同じ条件(出せるカードが無くガッツさえあれば出せるとき)と全滅の手前で使った数字です。回数の上限が無いので、ガッツの少ない子(モノリスなど)ほど押す回数が多く伸びます。手で遊んで緊急回復を押さないと、順位が変わる子がいます(各モンスターの「緊急回復」の行)。</p>
     ${partySection}
   </section>
 
