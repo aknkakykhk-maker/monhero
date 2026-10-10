@@ -210,6 +210,7 @@ const RELEASED_MARKERS=Object.freeze({
   monster_short:'monster-short-v3',
   anima:'anima-v3',
   journey:'journey-v3',
+  sheriruth:'sheriruth-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -253,6 +254,7 @@ const RELEASED_TRACKS=Object.freeze({
   monster_short:'monster_short',
   anima:'anima',
   journey:'journey',
+  sheriruth:'sheriruth',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
