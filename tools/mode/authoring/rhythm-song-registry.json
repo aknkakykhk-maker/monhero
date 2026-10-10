@@ -754,6 +754,19 @@
     "EXPERT": "mild",
     "MASTER": "extreme"
    }
+  },
+  "journey": {
+   "audio": "monster-hero/audio/bgm-journey.mp3",
+   "chartRevision": 28,
+   "audioSha256": "bd51dcc8ef2104c18c6f1c92d45e11d88c7485a9b6f037326f95abee8a23f104",
+   "durationMs": 164196,
+   "analyzedTiming": {
+    "bpm": 128,
+    "beatZeroMs": 272.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }
