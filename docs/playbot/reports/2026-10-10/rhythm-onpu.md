@@ -9,6 +9,7 @@
 | `rhythm-ref-profiles.json` | 写し方の約束の表(画面のどこを見て、何をこちらのノーツへ写すか)。いまは `arcaea` だけ |
 | `rhythm-ref-capture.js` | 段1 読み取り。音のずれを測り(4区間でそろうかも見る)、コマから光の芯を拾って、アークの通り道とノーツの光の鎖にする |
 | `rhythm-ref-map.js` | 段2 置き換え。16分へ寄せ(音の立ち上がり優先)、6レーンへ写し、押せる形に整えて下書きにする。`--uncross` で2本のスライドを交わらせない |
+| `rhythm-ref-tiers.js` | 段3 難易度を作る。手で詰めた MASTER から EXPERT〜EASY を部分集合で作り、止まる区間を空け、レベル・押せるか(両手のシミュレートと横持ちの親指モデル)を数える |
 | `rhythm-ref-chart-check.js` | 検査。作った絵と数字だけで見る(よその譜面は使わない) |
 
 書き出し先は `tools/mode/ref-work/<曲id>/` だけ(`tools/.gitignore` で外した。道具が `git check-ignore` で確かめてから書く)。
@@ -18,6 +19,7 @@
 ```
 node tools/mode/rhythm-ref-capture.js --track <曲id> --video <参考動画> --audio <ゲームの音源> --from <秒> --to <秒>
 node tools/mode/rhythm-ref-map.js --track <曲id> [--uncross] [--audio-json <解析ファイル>]
+node tools/mode/rhythm-ref-tiers.js --track <曲id> --stop <始めms>-<終わりms>   # ref-work/<曲id>/master.json → tier-*.json
 node tools/mode/rhythm-ref-capture.js --sheet <参考動画の秒> --video <参考動画> --track <曲id>   # 目で確かめる16コマ
 ```
 
@@ -53,3 +55,13 @@ node tools/mode/rhythm-ref-capture.js --sheet <参考動画の秒> --video <参�
   止まる区間の案(下書きの 108961〜109204ms の4つの打鍵も含めて空け方を決める)/ 5難易度の下書きを 11:00〜13:00 に部長へ /
   そのあと寄せ方の道具化(④)
 - 手のモデルの直し(作業用): 空いている親指は、250msより前に押した位置ならどけられる扱いにした(前は厳しすぎた)
+
+## 夜の続き(21:52〜)— 5難易度を渡し、作り方を道具にした(④)
+
+- 済み: EASY〜EXPERT の下書きをテンポ部長へ送り、窓口へも1行送った(21:52。見込みの 23:30 より前)
+  - EASY 258 Lv.9 / NORMAL 311 Lv.14 / HARD 384 Lv.22 / EXPERT 535 Lv.33 / MASTER 642 Lv.45(止まる区間 85061〜85357 の1つを抜いた)
+  - どれも止まる区間0・両手のシミュレートで押せない0・横持ちで押せない/交差/届きにくい0
+  - 送る直前に、HARD のスライドの終わりで同じ時刻(1ms差)の点が重なっていたのを3つまとめた
+- ④ 作り方を `rhythm-ref-tiers.js`(段3)にした。sheriruth の MASTER で通すと、手作業の版との違いは各難易度で1〜3個(どれも押せない0)。
+  レベルの上限の既定は MASTER の 0.73/0.49/0.31/0.24 倍(sheriruth の 33/22/14/11 と同じ)
+- 決めごと: 写しは残さない。段3も読むのと書くのは ref-work/ だけ。検査は作った譜面だけで見る
