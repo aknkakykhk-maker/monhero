@@ -29433,7 +29433,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 赤は、フリックのピンク(#f472b6・#db2777)・横フリック左のオレンジ・判定 GREAT の赤(#f87171)から離した朱寄りの #ef4444 前後。芯は白で、縁と光だけが赤
   const SKY_NOTE_COLOR=Object.freeze({hi:'#ffe4e6',mid:'#ef4444',lo:'#b91c1c',rgb:'239,68,68'});
   const SKY_ARROW_GLOWS=Object.freeze([[5,`rgba(${SKY_NOTE_COLOR.rgb},.95)`],[11,`rgba(${SKY_NOTE_COLOR.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
-  const SKY_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,SKY_NOTE_COLOR.hi],[1,SKY_NOTE_COLOR.mid]]);
+  // 空中のフリックの▲は、縁を白・中を赤にする(地上のピンクの▲は中まで塗ってあるので、縁の有無で分かれる)
+  const SKY_ARROW_FILL=Object.freeze([[0,'#ff7b7b'],[1,'#e11d1d']]);
   const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
   const HEADS={
     TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
@@ -29453,6 +29454,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // はじめは毎フレーム「足し算(lighter)で2回貼る」形にしたが、それでフレームが60→30fpsへ落ちた
   // (CPUを1/4に絞った実測。原因を1つずつ外して特定)。焼くのは最初の1回だけなので、毎フレームの仕事は以前と同じ。
   for(const [name,style] of Object.entries(HEADS)){style.glowStrong=style.glow.length?Object.freeze([...style.glow,...style.glow]):style.glow;style.glowStrongKey=`${name}+`;}
+  // このフレームで描いた地上のノーツの外接四角(空中の細い線・影を、地上のノーツと重なる所では描かないために持つ)
+  const frameGround=[];
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // 道のふちの光(drawRoadFx)の形とグラデーションは、描く先と大きさが同じあいだは毎回同じなので使い回す(2026-09-27)。
   // 拍ごとに光るあいだ、毎フレーム4本のグラデーションと20点の投影計算を作り直していた。描く先か大きさが変われば作り直す
@@ -29514,7 +29517,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=1;
   };
   // 矢印(FLICK / 終点フリック)。三角にピンクの光(色は RHYTHM_NOTE_COLORS.FLICK)。
-  const arrowSprite=(key,w,h,glows,gradientStops)=>{
+  const arrowSprite=(key,w,h,glows,gradientStops,edge)=>{
     const id=`arrow:${key}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
     const margin=14,s=makeSpriteCanvas(w+margin*2,h+margin*2),c=s.ctx;
@@ -29522,6 +29525,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(const [blur,color] of glows){c.save();c.shadowBlur=blur;c.shadowColor=color;c.fillStyle=color;tri();c.fill();c.restore();}
     const g=c.createLinearGradient(0,margin,0,margin+h);gradientStops.forEach(([offset,color])=>g.addColorStop(offset,color));
     c.fillStyle=g;tri();c.fill();
+    if(edge){c.lineWidth=2.2;c.lineJoin='round';c.strokeStyle=edge;tri();c.stroke();}
     const sprite={...s,margin,tw:w,th:h};sprites.set(id,sprite);return sprite;
   };
   // モンスターノーツの外周の光(::before / ::after 相当)。粒の箱に対する内外の差(dx,dy)で描く。
@@ -29657,7 +29661,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // ノーツの動き: 払う向きへ、同じ山形の残像がすっと流れ出て消える(0.6秒ごと)
       if(motion){const p=(frameNow%600)/600,base=ctx.globalAlpha;ctx.globalAlpha=base*(1-p)*.6;ctx.drawImage(sprite.canvas,cx-aw/2+(sideDir==='left'?-1:1)*p*aw*.35,ay,aw,ah);ctx.globalAlpha=base;}
     }else if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
-      const sprite=isSkyPlate(note)?arrowSprite('flickSky',26,19,SKY_ARROW_GLOWS,SKY_ARROW_FILL):arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
+      const sprite=isSkyPlate(note)?arrowSprite('flickSky2',26,19,SKY_ARROW_GLOWS,SKY_ARROW_FILL,'#ffffff'):arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
       const ay=y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale;
       if(motion){
@@ -30089,10 +30093,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 床に落ちる影(参考動画「浮いていると分かるいちばん強い手がかり」)。2026-10-10 テンポ「横画面の動画で影が見えない」→ 板の幅くらいの暗い楕円を真下に置き、
       // 手前へ来るほど小さく濃く(濃さは真ん中で .6 前後)。外へ広がる3重の楕円でぼかしを出し、暗い背景でも見えるよう真ん中の輪にだけ薄い灰色の縁を引く。全体を .6 に落としていたのをやめて、不透明度はノーツと同じにした
       const rx=Math.max(8,hd.w*sizeScale*.5)*(1.15-.3*near),ry=Math.max(2.5,rx*.32);
-      [[1.7,.16],[1.3,.28],[1,.42+.22*near]].forEach(([k,al])=>{
-        ctx.fillStyle=`rgba(8,10,30,${al.toFixed(3)})`;ctx.beginPath();
+      // 4-1(テンポ): 輪ではなく中まで塗った暗い楕円。地上のノーツと重なるときは描かない。外ほど薄い3重でぼかす
+      const covered=frameGround.some(g=>sh.cx+rx>g.x0&&sh.cx-rx<g.x1&&sh.cy+ry>g.y0&&sh.cy-ry<g.y1);
+      if(!covered)[[1.5,.22],[1.2,.42],[.9,.6+.18*near]].forEach(([k,al])=>{
+        ctx.fillStyle=`rgba(4,6,22,${al.toFixed(3)})`;ctx.beginPath();
         for(let i=0;i<16;i++){const t=i/16*Math.PI*2,x=sh.cx+Math.cos(t)*rx*k,y=sh.cy+Math.sin(t)*ry*k;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-        ctx.closePath();ctx.fill();if(k===1.3){ctx.lineWidth=1;ctx.strokeStyle=`rgba(203,213,225,${(.28+.22*near).toFixed(2)})`;ctx.stroke();}});
+        ctx.closePath();ctx.fill();});
     }else{
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
     }
@@ -30100,7 +30106,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 影とノーツをつなぐ細い縦の線(テンポ「影からノーツへ細い縦の線を1本。白〜薄紫・薄く」)。ノーツ側が濃く、影へ向かって薄い。近づくほど濃い
       const g=ctx.createLinearGradient(0,hd.cy,0,sh.cy),acc=st.startsWith('glass_')||st==='plate'?'221,214,254':skyAccentRgb();
       g.addColorStop(0,`rgba(${acc},${(.3+.4*near).toFixed(2)})`);g.addColorStop(1,`rgba(${acc},${(.12+.2*near).toFixed(2)})`);
-      ctx.strokeStyle=g;ctx.lineWidth=1+1*near;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(hd.cx,hd.cy);ctx.lineTo(sh.cx,sh.cy);ctx.stroke();ctx.lineCap='butt';
+      ctx.strokeStyle=g;ctx.lineWidth=1+1*near;ctx.lineCap='round';
+      // 地上のノーツと重なる所では線を描かない(線の上を地上の頭が通ると、地上のノーツが「線と影を持った空のノーツ」に見えるため)
+      let segs=[[Math.min(hd.cy,sh.cy),Math.max(hd.cy,sh.cy)]];
+      for(const gr of frameGround){if(hd.cx<gr.x0||hd.cx>gr.x1)continue;const next=[];for(const [a0,a1] of segs){if(gr.y1<=a0||gr.y0>=a1){next.push([a0,a1]);continue;}if(gr.y0>a0)next.push([a0,gr.y0]);if(gr.y1<a1)next.push([gr.y1,a1]);}segs=next;}
+      ctx.beginPath();for(const [a0,a1] of segs){if(a1-a0<1)continue;ctx.moveTo(hd.cx,a0);ctx.lineTo(hd.cx,a1);}ctx.stroke();ctx.lineCap='butt';
     }else{ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();}
     ctx.globalAlpha=1;
   };
@@ -30619,7 +30629,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         blank=true;
       }
       ctx.setTransform(dpr,0,0,dpr,0,0);
-      pendingClear=true;
+      pendingClear=true;frameGround.length=0;
       frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
       if(typeof ctx.gpuFrameBegin==='function')ctx.gpuFrameBegin();
@@ -30660,6 +30670,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 空中の段(試作): 空中の粒の見た目(案を比べるため4通り。localStorage 'mh_sky_tap_style_proto' で選ぶ・既定は gold)
       // 近づく細い輪(drawSkyGlow)は外した(2026-10-10 社長「参考動画を手本に」→ 参考は輪ではなく「奥は暗く手前は明るい」で近さを見せる。明るさは drawSkyTap 側)
       if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null&&!skyPlate)drawSkyTap(geo.head,o);
+      // 地上のノーツの場所を覚える(あとで描く空中のノーツの線・影を、重なる所で避けるため)
+      if(!geo.skyShadow&&geo.head){const hw=geo.head.w*sizeScale/2+2,hh=Math.max(8,geo.head.h*(o.depthScale||1))/2+2;frameGround.push({x0:geo.head.cx-hw,x1:geo.head.cx+hw,y0:geo.head.cy-hh,y1:geo.head.cy+hh});
+        const pts=geo.band||null;if(pts&&pts.length>1){let lo=1e9,hi=-1e9,top=pts[0].y,bot=pts[pts.length-1].y;for(const e of pts){lo=Math.min(lo,e.left);hi=Math.max(hi,e.right);}frameGround.push({x0:lo,x1:hi,y0:Math.min(top,bot),y1:Math.max(top,bot)});}
+        if(geo.slide)for(const q of geo.slide){frameGround.push({x0:Math.min(q.l0,q.l1),x1:Math.max(q.r0,q.r1),y0:Math.min(q.y0,q.y1),y1:Math.max(q.y0,q.y1)});}}
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
     drawFace(bitmap,cx,cy,size,alpha=1){
