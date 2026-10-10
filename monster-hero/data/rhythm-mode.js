@@ -1198,6 +1198,12 @@ const rhythmScrollTimeAt=s=>{
   const p=points[lo];return p.m>0?p.t+(y-p.s)/p.m:(lo+1<points.length?points[lo+1].t:Infinity);
 };
 const RHYTHM_SKY_INPUT={active:false};
+// 空中の段の色(試作): 空中の面・空中の判定ライン・柱が使う。空中のノーツの見た目の案(localStorage 'mh_sky_tap_style_proto')ごとに変えられる。
+// 今あるノーツの色(水色・緑・紫・ピンク・オレンジ・黄緑・金のモンスターノーツ)とかぶらない色を選ぶこと
+const RHYTHM_SKY_THEMES=Object.freeze({
+  default:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀'}),
+});
+const rhythmSkyTheme=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return RHYTHM_SKY_THEMES[v]||RHYTHM_SKY_THEMES.default;}catch{return RHYTHM_SKY_THEMES.default;}};
 // 空中の段のある譜面で、指を押した高さ(プレイエリアの中の割合)。空中の段が無い譜面では null
 // 空中のノーツは「地上の判定ラインより少し上(RHYTHM_SKY_ACCEPT_BELOW)まで」、地上のノーツは「空中の判定ラインより少し下から」受け付ける。
 // あいだは両方を受け付けて、時刻と位置の近いほうを取る(親指で狙った線より下を押すくせがあっても取れるように・2026-10-10 人の指のくせの試しで空中のタップがほぼ全部取れなかったため)
@@ -30390,6 +30396,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
+        // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
+        if(geo.skyShadow&&geo.slide&&geo.head){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
         if(geo.band)drawBand(geo,o);
         if(geo.slide)drawSlide(geo,o);
         drawEndBar(note,geo,o);
