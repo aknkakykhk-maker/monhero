@@ -1166,6 +1166,35 @@ const rhythmSkyLiftPx=(rect,yRatio)=>{
 // 空中の判定ラインの高さ(プレイエリアの中の割合)と、地上と空中を分ける高さ
 const rhythmSkyLineRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT_RATIO;
 const rhythmSkySplitRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT_RATIO/2;
+// ── 速さの表(試作・2026-10-10・社長「画面が止まって動く」演出)──
+// 試作ブランチだけ。判定の時刻は音楽どおりのまま、ノーツの見た目の位置だけを速さの表で変える。
+// 譜面に scrollChanges:[[時刻ms,倍率],…] があれば、その時刻から先の流れる速さを倍率にする(0で止まる)。
+// 見た目の位置は 1-(S(t)-S(visualTime))/travelMs。S は倍率を積み上げた時刻で、表が無ければ S(t)=t(今までと同じ計算)。
+// 最初の区切りより前は倍率1。倍率は0以上だけを読む(S は時刻が進めば減らない)。
+const RHYTHM_SCROLL={points:null};
+const rhythmScrollSet=changes=>{
+  const list=(Array.isArray(changes)?changes:[]).map(c=>[Number(c?.[0]),Number(c?.[1])]).filter(([t,m])=>Number.isFinite(t)&&Number.isFinite(m)&&m>=0).sort((a,b)=>a[0]-b[0]);
+  if(!list.length){RHYTHM_SCROLL.points=null;return;}
+  const points=[{t:list[0][0],s:list[0][0],m:list[0][1]}];
+  for(let i=1;i<list.length;i++){const p=points[points.length-1];points.push({t:list[i][0],s:p.s+(list[i][0]-p.t)*p.m,m:list[i][1]});}
+  RHYTHM_SCROLL.points=points;
+};
+// 時刻 t まで積み上げた位置 S(t)
+const rhythmScrollPos=t=>{
+  const points=RHYTHM_SCROLL.points,x=Number(t);
+  if(!points||!(x>points[0].t))return x;
+  let lo=0,hi=points.length-1;
+  while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].t<=x)lo=mid;else hi=mid-1;}
+  const p=points[lo];return p.s+(x-p.t)*p.m;
+};
+// S(t)=s になるいちばん早い時刻(拍の線を探し始める所に使う)。止まったまま届かないときは Infinity
+const rhythmScrollTimeAt=s=>{
+  const points=RHYTHM_SCROLL.points,y=Number(s);
+  if(!points||!(y>points[0].s))return y;
+  let lo=0,hi=points.length-1;
+  while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].s<y)lo=mid;else hi=mid-1;}
+  const p=points[lo];return p.m>0?p.t+(y-p.s)/p.m:(lo+1<points.length?points[lo+1].t:Infinity);
+};
 const RHYTHM_SKY_INPUT={active:false};
 // 空中の段のある譜面で、地上と空中の真ん中より上を押した指か
 const rhythmSkyTouch=(clientY,rect)=>{
@@ -4075,8 +4104,9 @@ const mhSlideV2=(timeMs,endTimeMs,points,endFlick)=>{
   });
 };
 // 4つ目は道のレーン数。自動譜面制作の版5(6レーン)で作った譜面は 6 を書く。書かなければ5レーン時代の譜面
-const mhChart=(level,notes,durationMs,laneCount)=>Object.freeze({level,notes:Object.freeze(notes),totalNotes:notes.length,durationMs,
-  ...(laneCount?{laneCount}:{})});
+// extra … 譜面に足す項目(試作の速さの表 scrollChanges など)。書かなければ今までと同じ
+const mhChart=(level,notes,durationMs,laneCount,extra)=>Object.freeze({level,notes:Object.freeze(notes),totalNotes:notes.length,durationMs,
+  ...(laneCount?{laneCount}:{}),...(extra&&typeof extra==='object'?extra:{})});
 const MONSTER_HERO_EASY_DURATION_MS=152761;
 
 const monsterHeroEasyNotes=((t,h,f,s)=>[
@@ -24236,6 +24266,9 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
 // 試作(2026-10-10・社長「こんなような譜面をモンビーですることは可能？」→「まず試作だけ見せて」)。公開しない。
 // 曲の 102.5 秒から切った34秒の音源に合わせた MASTER。参考譜面(Arcaea)のアークを2本同時のスライドに置き換えた
 const SHERIRUTH_PROTO_DURATION_MS=34000;
+// 速さの表(試作・「画面が止まって動く」)。[時刻ms,倍率]。いまは仕組みを確かめるための仮の表(9.0秒で止まり、9.6秒から2.5倍、10.2秒から元の速さ)。
+// 止める時刻はオンプくんが参考譜面から読んで差し替える
+const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[9000,0],[9600,2.5],[10200,1]]);
 // 空中の段(試作): T=空中のタップ / F=空中のフリック(高さ1)/ S=高さのあるスライド(点は [時刻,レーン,幅,高さ0〜1,ease]、5つめの引数 hand は 'L'=水色・'R'=ピンク)
 const mhSkyTap=(timeMs,subLane,subLaneWidth,height=1)=>Object.freeze({...mhTap(timeMs,subLane,subLaneWidth),skyHeight:height});
 const mhSkyFlick=(timeMs,subLane,subLaneWidth,dirCode,height=1)=>Object.freeze({...mhFlick(timeMs,subLane,subLaneWidth,dirCode),skyHeight:height});
@@ -27007,7 +27040,7 @@ const RHYTHM_SONG_ENTRIES = [
     bgmTrackId:'melo_sheriruth_proto',
     artwork:'images/song-art/sheriruth.jpg?v=4302be7eca16',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
-      id,id==='MASTER'?mhChart(9,sheriruthProtoMasterNotes,SHERIRUTH_PROTO_DURATION_MS,6):emptyRhythmChart()
+      id,id==='MASTER'?mhChart(9,sheriruthProtoMasterNotes,SHERIRUTH_PROTO_DURATION_MS,6,{scrollChanges:SHERIRUTH_PROTO_SCROLL_CHANGES}):emptyRhythmChart()
     ])))
   }),
   Object.freeze({
@@ -28449,7 +28482,7 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    const progress=1-(rhythmScrollPos(point.timeMs)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     return {y,left:rect.width*span.center-half,right:rect.width*span.center+half};
   };
   let firstIndex=0;
@@ -28489,7 +28522,7 @@ const rhythmSlideCheckpointLines=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   for(let index=0;index<times.length;index++){
     const at=Number(times[index]);
     if(!Number.isFinite(at)||at<=now)continue;
-    const progress=1-(at-Number(travel.visualTime))/Number(travel.travelMs);
+    const progress=1-(rhythmScrollPos(at)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs);
     const y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight;
     if(!Number.isFinite(y)||y<-rect.height||y>rect.height)continue;
     const yRatio=rhythmClamp01(y/rect.height);
@@ -28625,7 +28658,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const holdAnchors=variableHold&&rhythmNoteHasHoldPoints(note)&&height>0&&slideTravel&&Number(slideTravel.travelMs)>0
     ?(()=>{
       const travelMs=Number(slideTravel.travelMs),visualTime=Number(slideTravel.visualTime);
-      const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(Number(timeMs)-visualTime)/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
+      const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(rhythmScrollPos(timeMs)-rhythmScrollPos(visualTime))/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
       const headMs=Math.max(Number(note.timeMs)||0,Number(slideTravel.chartNowMs)||0),endMs=rhythmReleaseTargetMs(note);
       const times=[endMs,...note.holdPoints.map(point=>Number(point.timeMs)),headMs]
         .filter(timeMs=>Number.isFinite(timeMs)&&timeMs>=Math.min(headMs,endMs)&&timeMs<=Math.max(headMs,endMs));
@@ -28735,7 +28768,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    const progress=1-(rhythmScrollPos(point.timeMs)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     // 空中の段(試作): 高さのある点は、その奥行きの持ち上げ幅ぶん上へ。groundOnly のときは影として地面に置く
     const lift=!travel.groundOnly&&rhythmSlideHasSky(note)?rhythmSkyLiftPx(rect,yRatio)*rhythmSlideSkyAt(note,point.timeMs):0;
     return {y:y-lift,left:rect.width*span.center-half,right:rect.width*span.center+half};
@@ -28787,7 +28820,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
     const holdAnchors=variableHold&&rhythmNoteHasHoldPoints(note)&&slideTravel&&Number(slideTravel.travelMs)>0
       ?(()=>{
         const travelMs=Number(slideTravel.travelMs),visualTime=Number(slideTravel.visualTime);
-        const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(Number(timeMs)-visualTime)/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
+        const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(rhythmScrollPos(timeMs)-rhythmScrollPos(visualTime))/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
         const headMs=Math.max(Number(note.timeMs)||0,Number(slideTravel.chartNowMs)||0),endMs=rhythmReleaseTargetMs(note);
         const times=[endMs,...note.holdPoints.map(point=>Number(point.timeMs)),headMs]
           .filter(timeMs=>Number.isFinite(timeMs)&&timeMs>=Math.min(headMs,endMs)&&timeMs<=Math.max(headMs,endMs));

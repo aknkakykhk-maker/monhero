@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aa3925cfa8fd8f7d
+// source-sha256: 2f20095eaa3cbb3b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 16:07";
+const BUILD_DATE = "2026-10-10 16:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31219,6 +31219,11 @@ const RhythmTapTest = ({
       RHYTHM_SKY_INPUT.active = false;
     };
   }, [skyChart]);
+  const scrollChanges = rawChart?.scrollChanges || null;
+  useEffect(() => {
+    rhythmScrollSet(scrollChanges);
+    return () => rhythmScrollSet(null);
+  }, [scrollChanges]);
   const [autoQuality, setAutoQuality] = useState(() => rhythmAutoQualityMemory.level);
   const autoQualityAtStart = useState(() => rhythmAutoQualityMemory.level)[0];
   const autoQualityLevelRef = useRef(autoQuality);
@@ -32807,12 +32812,15 @@ const RhythmTapTest = ({
             areaH = travel.rect.height,
             areaW = travel.rect.width;
           let count = 0;
-          for (let k = Math.ceil((visualTime - travelMs * .35 - rhythmBeatZeroAt(roadGrid, visualTime)) / beatMs) - 1; count < 64; k++) {
-            const t = rhythmBeatLineTime(roadGrid, zeroMs + k * beatMs);
-            if (t < visualTime - travelMs * .35) continue;
-            if (t > visualTime + travelMs * 1.05) break;
+          const scrollNow = rhythmScrollPos(visualTime),
+            beatFrom = rhythmScrollTimeAt(scrollNow - travelMs * .35);
+          for (let k = Math.ceil(((Number.isFinite(beatFrom) ? beatFrom : visualTime) - rhythmBeatZeroAt(roadGrid, visualTime)) / beatMs) - 1; count < 64; k++) {
+            const t = rhythmBeatLineTime(roadGrid, zeroMs + k * beatMs),
+              st = rhythmScrollPos(t);
+            if (st < scrollNow - travelMs * .35) continue;
+            if (st > scrollNow + travelMs * 1.05) break;
             if (t < 0) continue;
-            const progress = 1 - (t - visualTime) / travelMs,
+            const progress = 1 - (rhythmScrollPos(t) - rhythmScrollPos(visualTime)) / travelMs,
               y = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx + travel.noteHeight / 2;
             if (!(y >= 0 && y <= areaH)) continue;
             const yr = y / areaH,
@@ -32861,7 +32869,7 @@ const RhythmTapTest = ({
           note._rhythmCanvasSettled = true;
           return;
         }
-        const progress = 1 - (note.timeMs - visualTime) / travelMs,
+        const progress = 1 - (rhythmScrollPos(note.timeMs) - rhythmScrollPos(visualTime)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
         if (!visible || !travel || !canvasReady) return;
         perfDrawn++;
@@ -32870,7 +32878,7 @@ const RhythmTapTest = ({
         if (clearFlash) yPx = travel.judgmentY;
         yPx = Math.round(yPx);
         const releaseTargetMs = rhythmReleaseTargetMs(note),
-          releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
+          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs) - rhythmScrollPos(visualTime)) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
           bodyPx = Math.max(0, yPx - releaseYpx);
         const hasBody = rhythmNoteHasBody(note);
@@ -32992,7 +33000,7 @@ const RhythmTapTest = ({
           el.dataset.rhythmFailed = failedFlag;
           el._rhythmFailedFlag = failedFlag;
         }
-        const progress = 1 - (note.timeMs - visualTime) / travelMs,
+        const progress = 1 - (rhythmScrollPos(note.timeMs) - rhythmScrollPos(visualTime)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
         const nextOpacity = failedTrail ? '.34' : visible ? '1' : '0';
         if (el._rhythmOpacity !== nextOpacity) {
@@ -33016,7 +33024,7 @@ const RhythmTapTest = ({
           el._rhythmTransform = nextTransform;
         }
         const releaseTargetMs = rhythmReleaseTargetMs(note),
-          releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
+          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs) - rhythmScrollPos(visualTime)) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
           bodyPx = Math.max(0, yPx - releaseYpx);
         if (note.type === 'HOLD') {
@@ -33063,12 +33071,14 @@ const RhythmTapTest = ({
         scanFrom++;
       }
       run.scanFrom = scanFrom;
-      const scanHorizonMs = visualTime + travelMs * 1.2;
+      const scanHorizonMs = visualTime + travelMs * 1.2,
+        scanHorizonScroll = rhythmScrollPos(visualTime) + travelMs * 1.2,
+        scrollTable = !!RHYTHM_SCROLL.points;
       const heldNotes = heldNotesRef.current;
       heldNotes.length = 0;
       for (let i = scanFrom; i < notes.length; i++) {
         const note = notes[i];
-        if (run.notesReady && run.notesAscending && note.timeMs > scanHorizonMs) break;
+        if (run.notesReady && run.notesAscending && (scrollTable ? rhythmScrollPos(note.timeMs) > scanHorizonScroll : note.timeMs > scanHorizonMs)) break;
         perfScanned++;
         visitNote(note);
         if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
