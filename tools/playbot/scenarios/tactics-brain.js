@@ -615,9 +615,24 @@ async function chooseBetween(s, mem, log) {
       //   同じ項目を2回選ぶと掛け算で効く。2026-10-09 までダメージ役にドミノ倒しを選び続けて、モッチーのライフが WAVE 5 でも最初の 720 のまま、
       //   敵の1発(1,000〜2,800)で倒れていた。基本は「丸太うけ+走り込み」。ガッツ切れが続く子だけ猛勉強を1つ混ぜる
       let plan = ['丸太うけ', '走り込み'];
+      // ★2026-10-10 ハカセくんの直す順4: ドミノ倒し(ちから)も選ぶ。丸太うけはガードの枚数(いちばん硬い子の丈夫さ ÷100 の段階で 2〜4枚。
+      //   60-app.jsx の guardCardCount・guardLevelDef)を増やすので、もう4枚に届いていれば選ばない。
+      //   傷んだ子(倒れた・ライフ半分未満)は今までどおり守り。ダメージを頭割り以上出している子は「ドミノ倒し+走り込み」(ライフも伸ばす)。
+      //   丈夫さは名簿の値 ×1.2(丸太うけ1回)で見積もる。PLAYBOT_TACTICS_TRAIN_V2=0 で前の決め方
+      const v2 = process.env.PLAYBOT_TACTICS_TRAIN_V2 !== '0';
+      mem.defEst = mem.defEst || {};
+      const defOf = (nm) => (mem.defEst[nm] != null ? mem.defEst[nm] : (ROSTER_BY_NAME[nm] || {}).def || 0);
+      const maxDef = Math.max(0, ...Object.keys(mem.lastParty || {}).map(defOf));
+      const guardFull = Math.min(4, 2 + Math.floor(Math.floor(maxDef / 100) / 2)) >= 4;
+      const hurt = m.downs > 0 || (hpRatio != null && hpRatio < 0.5);
+      const dealer = share >= 1 / members;
+      if (v2 && !hurt) plan = dealer ? ['ドミノ倒し', '走り込み'] : guardFull ? ['走り込み', 'ドミノ倒し'] : ['丸太うけ', '走り込み'];
       // ガッツの少ない子(元のガッツ 90 以下)は、詰まる前から猛勉強を混ぜる(ゴーレムは通常技4発でガッツが尽きていた)
       const baseGuts = (ROSTER_BY_NAME[scr.trainingName] || {}).guts;
-      if ((m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
+      if ((m.gutsShort >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio != null && hpRatio < 0.5)) plan = v2 ? [plan[0], '猛勉強'] : ['丸太うけ', '猛勉強'];
+      // 丸太うけを選んだぶん、丈夫さの見積もりを上げる(2回目は1回目のあとの値にかかる)
+      mem.defCounted = mem.defCounted || {};
+      if (scr.picked === 0 && !mem.defCounted[tkey] && (mem.defCounted[tkey] = true)) mem.defEst[scr.trainingName] = defOf(scr.trainingName) * Math.pow(1.2, plan.filter((x) => x === '丸太うけ').length);
       const want = plan[scr.picked] || plan[0];
       if (scr.picked === 0 && !mem.trained[tkey]) log.data.build.training.push({ wave: log.data.waves.length, name: scr.trainingName, picks: plan });
       if (scr.picked === 0 && !mem.trained[tkey]) log.note(`トレーニング: ${scr.trainingName} → ${plan.join('・')}(ダメージの割合${Math.round(share * 100)}%・倒れた${m.downs}回・ガッツ不足${m.gutsShort}回)`);
