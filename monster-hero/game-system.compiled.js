@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b69e16ce3f3e05f8
+// source-sha256: 6ecaebb412d4ccd3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 21:25";
+const BUILD_DATE = "2026-10-10 22:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5320,7 +5320,18 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }];
+const BGM_PROTO_TRACKS = Object.freeze([{
+  id: 'melo_sheriruth_proto',
+  name: 'Sheriruth 試作',
+  creator: 'Team Grimoire',
+  src: 'audio/bgm-sheriruth-proto.mp3',
+  gain: 1,
+  loop: true
+}]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+BGM_PROTO_TRACKS.forEach(track => {
+  if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track;
+});
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
@@ -6510,6 +6521,7 @@ const Audio_ = (() => {
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
+    "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-six-eternel-beat.mp3": "151f94091a34",
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
@@ -30289,6 +30301,172 @@ const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(abil
   lineages: Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name)
 }));
 const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) : null;
+function RhythmSkyStage({
+  plane
+}) {
+  const theme = rhythmSkyTheme();
+  if (theme.fx) Object.assign(RHYTHM_SKY_FX, theme.fx);
+  const c = '221,214,254',
+    f = v => Number(v).toFixed(2),
+    fr = plane.front;
+  return React.createElement("svg", {
+    "data-rhythm-sky-stage": true,
+    viewBox: "0 0 100 100",
+    preserveAspectRatio: "none",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      overflow: 'visible'
+    }
+  }, React.createElement("style", null, `@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`), React.createElement("defs", null, React.createElement("linearGradient", {
+    id: "mhSkyFill",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: `rgb(${c})`,
+    stopOpacity: "0"
+  }), React.createElement("stop", {
+    offset: ".55",
+    stopColor: `rgb(${c})`,
+    stopOpacity: ".04"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: `rgb(${c})`,
+    stopOpacity: ".2"
+  })), React.createElement("linearGradient", {
+    id: "mhSkyBand",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: `rgb(${c})`,
+    stopOpacity: "0"
+  }), React.createElement("stop", {
+    offset: ".5",
+    stopColor: `rgb(${c})`,
+    stopOpacity: ".22"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: `rgb(${c})`,
+    stopOpacity: "0"
+  })), React.createElement("linearGradient", {
+    id: "mhSkyPost",
+    x1: "0",
+    y1: "1",
+    x2: "0",
+    y2: "0"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: `rgb(${c})`,
+    stopOpacity: "0"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: `rgb(${c})`,
+    stopOpacity: ".55"
+  })), React.createElement("clipPath", {
+    id: "mhSkyClip"
+  }, React.createElement("polygon", {
+    points: plane.poly
+  }))), React.createElement("polygon", {
+    points: plane.poly,
+    fill: "url(#mhSkyFill)"
+  }), React.createElement("g", {
+    clipPath: "url(#mhSkyClip)"
+  }, React.createElement("rect", {
+    "data-rhythm-sky-flow": "1",
+    x: "0",
+    y: "0",
+    width: "100",
+    height: "6",
+    fill: "url(#mhSkyBand)"
+  }), React.createElement("rect", {
+    "data-rhythm-sky-flow": "2",
+    x: "0",
+    y: "0",
+    width: "100",
+    height: "6",
+    fill: "url(#mhSkyBand)"
+  })), plane.dividers.map((d, k) => React.createElement("polyline", {
+    key: k,
+    points: d,
+    fill: "none",
+    stroke: `rgb(${c})`,
+    strokeOpacity: ".16",
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  })), [plane.leftEdge, plane.rightEdge].map((d, k) => React.createElement("g", {
+    key: k
+  }, React.createElement("polyline", {
+    points: d,
+    fill: "none",
+    stroke: `rgb(${c})`,
+    strokeOpacity: ".14",
+    strokeWidth: "4",
+    vectorEffect: "non-scaling-stroke"
+  }), React.createElement("polyline", {
+    points: d,
+    fill: "none",
+    stroke: theme.core,
+    strokeOpacity: ".5",
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }))), plane.markers.slice(1, -1).map((x, k) => React.createElement("line", {
+    key: 'c' + k,
+    x1: f(x),
+    y1: f(fr.gy),
+    x2: f(x),
+    y2: f(fr.y),
+    stroke: `rgb(${c})`,
+    strokeOpacity: ".13",
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  })), [fr.l, fr.r].map((x, k) => {
+    const w = 1.4;
+    return React.createElement("polygon", {
+      key: k,
+      points: `${f(x - w)},${f(fr.gy)} ${f(x + w)},${f(fr.gy)} ${f(x + w * .5)},${f(fr.y)} ${f(x - w * .5)},${f(fr.y)}`,
+      fill: "url(#mhSkyPost)"
+    });
+  }), React.createElement("rect", {
+    x: "-2",
+    y: f(fr.y - 1.2),
+    width: "104",
+    height: "2.4",
+    fill: "url(#mhSkyBand)",
+    opacity: ".55"
+  }), React.createElement("line", {
+    x1: "-2",
+    y1: f(fr.y - .35),
+    x2: "102",
+    y2: f(fr.y - .35),
+    stroke: theme.core,
+    strokeOpacity: ".6",
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }), React.createElement("line", {
+    x1: "-2",
+    y1: f(fr.y + .35),
+    x2: "102",
+    y2: f(fr.y + .35),
+    stroke: theme.core,
+    strokeOpacity: ".6",
+    strokeWidth: "1",
+    vectorEffect: "non-scaling-stroke"
+  }), plane.markers.map((x, k) => React.createElement("polygon", {
+    key: k,
+    points: `${f(x)},${f(fr.y - .9)} ${f(x + .9)},${f(fr.y)} ${f(x)},${f(fr.y + .9)} ${f(x - .9)},${f(fr.y)}`,
+    fill: theme.core,
+    fillOpacity: ".55"
+  })));
+}
 const RhythmMonsterNoteGuide = () => {
   const ratios = rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio => `${Math.round(ratio * 100)}%`);
   return React.createElement("section", {
@@ -31201,7 +31379,8 @@ const RhythmTapTest = ({
     generationRef = useRef(0),
     mountedRef = useRef(false),
     glowNodesRef = useRef(null),
-    liveTouchSubLanesRef = useRef([]);
+    liveTouchSubLanesRef = useRef([]),
+    liveTouchSkySubLanesRef = useRef([]);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -31213,6 +31392,62 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
+  if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
+  const skyPlane = (() => {
+    if (!skyChart) return null;
+    const line = RHYTHM_JUDGMENT_LINE_Y.ratio,
+      base = rhythmProjectionScale(line),
+      steps = 24,
+      top = .03,
+      pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const y = top + (line - top) * i / steps;
+      pts.push({
+        y: (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100,
+        l: rhythmProjectBoundary(0, y) * 100,
+        r: rhythmProjectBoundary(RHYTHM_LANE_COUNT, y) * 100,
+        gy: y * 100
+      });
+    }
+    const f = v => v.toFixed(2);
+    const left = pts.map(p => `${f(p.l)},${f(p.y)}`),
+      right = pts.map(p => `${f(p.r)},${f(p.y)}`).reverse();
+    const last = pts[pts.length - 1];
+    const dividers = Array.from({
+      length: RHYTHM_LANE_COUNT - 1
+    }, (_, k) => pts.map(p => {
+      const y = p.gy / 100;
+      return `${f(rhythmProjectBoundary(k + 1, y) * 100)},${f(p.y)}`;
+    }).join(' '));
+    return {
+      poly: [...left, ...right].join(' '),
+      leftEdge: left.join(' '),
+      rightEdge: pts.map(p => `${f(p.r)},${f(p.y)}`).join(' '),
+      dividers,
+      front: {
+        l: last.l,
+        r: last.r,
+        y: last.y,
+        gy: last.gy
+      },
+      markers: Array.from({
+        length: RHYTHM_LANE_COUNT + 1
+      }, (_, k) => rhythmProjectBoundary(k, last.gy / 100) * 100),
+      posts: [[last.l, last.gy, last.l, last.y], [last.r, last.gy, last.r, last.y]].map(a => a.map(f))
+    };
+  })();
+  useEffect(() => {
+    RHYTHM_SKY_INPUT.active = skyChart;
+    return () => {
+      RHYTHM_SKY_INPUT.active = false;
+    };
+  }, [skyChart]);
+  const scrollChanges = rawChart?.scrollChanges || null;
+  useEffect(() => {
+    rhythmScrollSet(scrollChanges);
+    return () => rhythmScrollSet(null);
+  }, [scrollChanges]);
   const [autoQuality, setAutoQuality] = useState(() => rhythmAutoQualityMemory.level);
   const autoQualityAtStart = useState(() => rhythmAutoQualityMemory.level)[0];
   const autoQualityLevelRef = useRef(autoQuality);
@@ -31249,6 +31484,7 @@ const RhythmTapTest = ({
     const onLost = () => setWebglLost(true);
     if (canvas && RHYTHM_CANVAS_RENDERER.backend === 'webgl') canvas.addEventListener('webglcontextlost', onLost);
     RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
+    RHYTHM_CANVAS_RENDERER.enableSkyHits(playAreaRef.current);
     return () => {
       if (canvas) canvas.removeEventListener('webglcontextlost', onLost);
       RHYTHM_CANVAS_RENDERER.release();
@@ -32169,6 +32405,7 @@ const RhythmTapTest = ({
     const monsterHit = judgment !== 'MISS' && !!monsterForNote(note);
     if (judgment !== 'MISS') {
       if (monsterHit) RHYTHM_NOTE_SE_RUNTIME.playMonster();
+      if (rhythmNoteSkyHeight(note) > 0) RHYTHM_NOTE_SE_RUNTIME.playSky(judgment);
       if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') {
         const area = playAreaRef.current;
         const lineY = RHYTHM_JUDGMENT_LINE_Y.ratio;
@@ -32185,7 +32422,8 @@ const RhythmTapTest = ({
           precise: preciseHit,
           defer: true,
           flick: flickHit,
-          finish: rhythmNoteHasBody(note)
+          finish: rhythmNoteHasBody(note),
+          sky: rhythmNoteSkyHeight(note) > 0
         });
         if (hitEffect) restarts.push(hitEffect);
         if (monsterHit && monsterEffect === 'NORMAL' && screenFlashRef.current) restarts.push({
@@ -32803,12 +33041,15 @@ const RhythmTapTest = ({
             areaH = travel.rect.height,
             areaW = travel.rect.width;
           let count = 0;
-          for (let k = Math.ceil((visualTime - travelMs * .35 - rhythmBeatZeroAt(roadGrid, visualTime)) / beatMs) - 1; count < 64; k++) {
-            const t = rhythmBeatLineTime(roadGrid, zeroMs + k * beatMs);
-            if (t < visualTime - travelMs * .35) continue;
-            if (t > visualTime + travelMs * 1.05) break;
+          const scrollNow = rhythmScrollPos(visualTime),
+            beatFrom = rhythmScrollTimeAt(scrollNow - travelMs * .35);
+          for (let k = Math.ceil(((Number.isFinite(beatFrom) ? beatFrom : visualTime) - rhythmBeatZeroAt(roadGrid, visualTime)) / beatMs) - 1; count < 64; k++) {
+            const t = rhythmBeatLineTime(roadGrid, zeroMs + k * beatMs),
+              st = rhythmScrollPos(t);
+            if (st < scrollNow - travelMs * .35) continue;
+            if (st > scrollNow + travelMs * 1.05) break;
             if (t < 0) continue;
-            const progress = 1 - (t - visualTime) / travelMs,
+            const progress = 1 - (rhythmScrollPos(t) - rhythmScrollPos(visualTime)) / travelMs,
               y = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx + travel.noteHeight / 2;
             if (!(y >= 0 && y <= areaH)) continue;
             const yr = y / areaH,
@@ -32857,7 +33098,7 @@ const RhythmTapTest = ({
           note._rhythmCanvasSettled = true;
           return;
         }
-        const progress = 1 - (note.timeMs - visualTime) / travelMs,
+        const progress = 1 - (rhythmScrollPos(note.timeMs) - rhythmScrollPos(visualTime)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
         if (!visible || !travel || !canvasReady) return;
         perfDrawn++;
@@ -32866,7 +33107,7 @@ const RhythmTapTest = ({
         if (clearFlash) yPx = travel.judgmentY;
         yPx = Math.round(yPx);
         const releaseTargetMs = rhythmReleaseTargetMs(note),
-          releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
+          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs) - rhythmScrollPos(visualTime)) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
           bodyPx = Math.max(0, yPx - releaseYpx);
         const hasBody = rhythmNoteHasBody(note);
@@ -32988,7 +33229,7 @@ const RhythmTapTest = ({
           el.dataset.rhythmFailed = failedFlag;
           el._rhythmFailedFlag = failedFlag;
         }
-        const progress = 1 - (note.timeMs - visualTime) / travelMs,
+        const progress = 1 - (rhythmScrollPos(note.timeMs) - rhythmScrollPos(visualTime)) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
         const nextOpacity = failedTrail ? '.34' : visible ? '1' : '0';
         if (el._rhythmOpacity !== nextOpacity) {
@@ -33012,7 +33253,7 @@ const RhythmTapTest = ({
           el._rhythmTransform = nextTransform;
         }
         const releaseTargetMs = rhythmReleaseTargetMs(note),
-          releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
+          releaseProgress = 1 - (rhythmScrollPos(releaseTargetMs) - rhythmScrollPos(visualTime)) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
           bodyPx = Math.max(0, yPx - releaseYpx);
         if (note.type === 'HOLD') {
@@ -33059,12 +33300,14 @@ const RhythmTapTest = ({
         scanFrom++;
       }
       run.scanFrom = scanFrom;
-      const scanHorizonMs = visualTime + travelMs * 1.2;
+      const scanHorizonMs = visualTime + travelMs * 1.2,
+        scanHorizonScroll = rhythmScrollPos(visualTime) + travelMs * 1.2,
+        scrollTable = !!RHYTHM_SCROLL.points;
       const heldNotes = heldNotesRef.current;
       heldNotes.length = 0;
       for (let i = scanFrom; i < notes.length; i++) {
         const note = notes[i];
-        if (run.notesReady && run.notesAscending && note.timeMs > scanHorizonMs) break;
+        if (run.notesReady && run.notesAscending && (scrollTable ? rhythmScrollPos(note.timeMs) > scanHorizonScroll : note.timeMs > scanHorizonMs)) break;
         perfScanned++;
         visitNote(note);
         if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
@@ -33427,6 +33670,7 @@ const RhythmTapTest = ({
             index: note.index,
             type: note.type,
             timeMs: note.timeMs,
+            skyHeight: rhythmNoteSkyHeight(note),
             endTimeMs: note.endTimeMs,
             lane: note.lane,
             subLane: note.subLane,
@@ -33486,6 +33730,8 @@ const RhythmTapTest = ({
     run.outsideStartInputs?.clear();
     run.inputFeedbackState?.clear();
     run.activePointerFeedback?.clear();
+    run.activePointerSkyFeedback?.clear();
+    liveTouchSkySubLanesRef.current = [];
     setPressedLanes([]);
     run.notes.forEach(note => {
       if (note.type === 'HOLD' && note.activePointerId !== null) note.activePointerId = -1;
@@ -33672,6 +33918,7 @@ const RhythmTapTest = ({
   const inputAreaRect = area => RHYTHM_GESTURE_RUNTIME.areaRect(area) || RHYTHM_VIEW_ROTATION.rectOf(area);
   const inputPoint = (clientX, clientY) => RHYTHM_VIEW_ROTATION.point(clientX, clientY);
   const pressedLanesNow = () => [...(liveTouchSubLanesRef.current || []), ...(runRef.current?.activePointerFeedback?.values() || [])];
+  const pressedSkyLanesNow = () => [...(liveTouchSkySubLanesRef.current || []), ...(runRef.current?.activePointerSkyFeedback?.values() || [])];
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
@@ -33686,6 +33933,7 @@ const RhythmTapTest = ({
       el.dataset.pressed = want;
       el.style.opacity = pressed ? glowOpacity : '0';
     });
+    if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') RHYTHM_CANVAS_RENDERER.setSkyPressed(pressedSkyLanesNow(), Number(glowOpacity));
   };
   useEffect(() => {
     if (typeof document === 'undefined' || view.status === 'result' || view.status === 'celebrate') return undefined;
@@ -33716,6 +33964,7 @@ const RhythmTapTest = ({
       const run = runRef.current;
       if (!run) return;
       if (run.activePointerFeedback) run.activePointerFeedback.delete(entry.id);
+      if (run.activePointerSkyFeedback) run.activePointerSkyFeedback.delete(entry.id);
       setPressedLanes(pressedLanesNow());
       inputEnds([{
         inputKey: rhythmInputKey('pointer', entry.id),
@@ -33736,13 +33985,15 @@ const RhythmTapTest = ({
         return;
       }
       run.activePointerFeedback = run.activePointerFeedback || new Map();
-      run.activePointerFeedback.set(entry.id, subLaneCoordinate);
+      run.activePointerSkyFeedback = run.activePointerSkyFeedback || new Map();
+      rhythmSkyGroundFeedback(p.y, rect) ? (run.activePointerFeedback.set(entry.id, subLaneCoordinate), run.activePointerSkyFeedback.delete(entry.id)) : (run.activePointerFeedback.delete(entry.id), run.activePointerSkyFeedback.set(entry.id, subLaneCoordinate));
       setPressedLanes(pressedLanesNow());
       const rawAge = nowMs() - Number(entry.stamp);
       inputStarts([{
         lane,
         subLaneCoordinate,
         inputKey: rhythmInputKey('pointer', entry.id),
+        sky: rhythmSkyTouch(p.y, rect),
         subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
         pointerId: entry.id
       }], rawAge > 0 && rawAge < 300 ? rawAge : rhythmInputAgeMs(entry.stamp, nowMs()));
@@ -33853,7 +34104,8 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (run) {
       run.activePointerFeedback = run.activePointerFeedback || new Map();
-      run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+      run.activePointerSkyFeedback = run.activePointerSkyFeedback || new Map();
+      if (rhythmSkyGroundFeedback(p.y, rect)) run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);else run.activePointerSkyFeedback.set(e.pointerId, subLaneCoordinate);
       setPressedLanes(pressedLanesNow());
     }
     const originStamp = Number(e.nativeEvent?.__mhOriginStamp);
@@ -33863,6 +34115,7 @@ const RhythmTapTest = ({
       lane,
       subLaneCoordinate,
       inputKey: rhythmInputKey('pointer', e.pointerId),
+      sky: rhythmSkyTouch(p.y, rect),
       subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
@@ -33871,14 +34124,20 @@ const RhythmTapTest = ({
   const pointerMove = e => {
     if (e.pointerType === 'touch' && !RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId)) return;
     const run = runRef.current;
-    if (!run?.activePointerFeedback?.has(e.pointerId)) return;
+    if (!run?.activePointerFeedback?.has(e.pointerId) && !run?.activePointerSkyFeedback?.has(e.pointerId)) return;
     e.preventDefault();
     const area = playAreaRef.current;
     if (!area) return;
     const mp = inputPoint(e.clientX, e.clientY),
       subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(mp.x, mp.y, inputAreaRect(area));
     if (subLaneCoordinate === null) return;
-    run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+    if (rhythmSkyGroundFeedback(mp.y, inputAreaRect(area))) {
+      run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+      run.activePointerSkyFeedback?.delete(e.pointerId);
+    } else {
+      run.activePointerFeedback.delete(e.pointerId);
+      (run.activePointerSkyFeedback = run.activePointerSkyFeedback || new Map()).set(e.pointerId, subLaneCoordinate);
+    }
     setPressedLanes(pressedLanesNow());
     inputMoves(rhythmInputKey('pointer', e.pointerId), subLaneCoordinate);
   };
@@ -33887,6 +34146,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (run?.activePointerFeedback) {
       run.activePointerFeedback.delete(e.pointerId);
+      run.activePointerSkyFeedback?.delete(e.pointerId);
       setPressedLanes(pressedLanesNow());
     } else setPressedLanes(pressedLanesNow());
     inputEnds([{
@@ -33907,6 +34167,7 @@ const RhythmTapTest = ({
       const rect = inputAreaRect(area),
         live = new Set(),
         liveSubLanes = [],
+        liveSkySubLanes = [],
         starts = [],
         movedTouchInputs = e.type === 'touchmove' ? new Set(Array.from(e.changedTouches || []).map(touch => rhythmInputKey('touch', touch.identifier))) : null;
       Array.from(e.touches || []).forEach(touch => {
@@ -33915,7 +34176,7 @@ const RhythmTapTest = ({
         const tp = inputPoint(touch.clientX, touch.clientY),
           lane = rhythmLaneAtPoint(tp.x, tp.y, rect),
           subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(tp.x, tp.y, rect);
-        if (subLaneCoordinate !== null) liveSubLanes.push(subLaneCoordinate);
+        if (subLaneCoordinate !== null && rhythmSkyGroundFeedback(tp.y, rect)) liveSubLanes.push(subLaneCoordinate);else if (subLaneCoordinate !== null) liveSkySubLanes.push(subLaneCoordinate);
         if (current.activeTouchInputs.has(inputKey)) {
           if (current.outsideStartInputs?.has(inputKey) && movedTouchInputs?.has(inputKey) && lane !== null && subLaneCoordinate !== null && subLaneCoordinate >= RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES && subLaneCoordinate <= RHYTHM_SUB_LANE_COUNT - RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES) {
             current.outsideStartInputs.delete(inputKey);
@@ -33923,6 +34184,7 @@ const RhythmTapTest = ({
               lane,
               subLaneCoordinate,
               inputKey,
+              sky: rhythmSkyTouch(tp.y, rect),
               subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect)
             });
             return;
@@ -33941,6 +34203,7 @@ const RhythmTapTest = ({
           lane,
           subLaneCoordinate,
           inputKey,
+          sky: rhythmSkyTouch(tp.y, rect),
           subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect)
         });else {
           RHYTHM_PERF.touchIgnored();
@@ -33948,6 +34211,7 @@ const RhythmTapTest = ({
         }
       });
       liveTouchSubLanesRef.current = liveSubLanes;
+      liveTouchSkySubLanesRef.current = liveSkySubLanes;
       setPressedLanes(pressedLanesNow());
       const ageMs = rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN);
       if (starts.length) inputStarts(starts, ageMs);
@@ -35116,7 +35380,36 @@ const RhythmTapTest = ({
       background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
     }
-  }), countdownStep !== null && React.createElement("div", {
+  }), skyPlane && React.createElement(RhythmSkyStage, {
+    plane: skyPlane
+  }), skyChart && React.createElement("span", {
+    "data-rhythm-sky-label": true,
+    style: {
+      position: 'absolute',
+      right: '2%',
+      bottom: `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT.ratio * 100}% + 5px)`,
+      fontSize: '12px',
+      fontWeight: 800,
+      letterSpacing: '.12em',
+      color: '#ede9fe',
+      textShadow: '0 0 6px rgb(167,139,250),0 0 2px #000',
+      pointerEvents: 'none'
+    }
+  }, "SKY"), skyChart && React.createElement("span", {
+    "data-rhythm-ground-label": true,
+    style: {
+      position: 'absolute',
+      right: '2%',
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) - 20px)',
+      zIndex: 12,
+      fontSize: '12px',
+      fontWeight: 800,
+      letterSpacing: '.08em',
+      color: '#f5d0fe',
+      textShadow: '0 0 4px #000',
+      pointerEvents: 'none'
+    }
+  }, "● GROUND"), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {
@@ -35152,7 +35445,11 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
+      bottom: skyChart ? 'calc(var(--mh-judgment-line-bottom,12%) - 64px)' : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
+      ...(skyChart ? {
+        opacity: .8,
+        transform: 'translateX(-50%) scale(.78)'
+      } : {})
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: judgmentBurstRef,
@@ -96139,6 +96436,7 @@ function MonsterHeroGame() {
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
+        if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
         const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1;
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
@@ -96210,11 +96508,11 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'multi' && !RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId)) RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, null, true, {
           diffId: rhythmPlay.difficulty.id
         });
-        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.from === 'debug' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
+        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
       },
-      debugPlay: rhythmPlay.from === 'debug',
+      debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial',
       calibrating: rhythmPlay.from === 'calibration',
       onApplyCalibration: async measured => {
@@ -96708,7 +97006,44 @@ function MonsterHeroGame() {
       className: "break-all text-right font-mono text-white"
     }, String(value))))))), React.createElement("div", {
       hidden: rhythmDebugTab !== 'play'
-    }, RHYTHM_SONGS.map(song => {
+    }, RHYTHM_PROTO_SONGS.map(song => {
+      const track = rhythmSongTrack(song);
+      return React.createElement("section", {
+        key: song.songId,
+        "data-rhythm-proto-song": song.songId,
+        className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+      }, React.createElement("div", {
+        className: "mb-2"
+      }, React.createElement("small", {
+        className: "text-[8px] text-rose-300"
+      }, "試作・", song.songId), React.createElement("h3", {
+        className: "font-black"
+      }, song.displayName, " ", React.createElement("span", {
+        className: "text-xs text-rose-200"
+      }, song.subtitle)), song.debugDescription && React.createElement("p", {
+        className: "mt-1 text-[10px] font-bold text-amber-200"
+      }, song.debugDescription), React.createElement("p", {
+        className: "break-all text-[9px] text-slate-400"
+      }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), React.createElement("div", {
+        className: "space-y-2"
+      }, RHYTHM_DIFFICULTIES.filter(difficulty => song.difficulties[difficulty.id].notes.length > 0).map(difficulty => {
+        const chart = song.difficulties[difficulty.id];
+        return React.createElement("button", {
+          key: difficulty.id,
+          type: "button",
+          "data-rhythm-proto-start": difficulty.id,
+          className: "min-h-[44px] w-full rounded-xl bg-rose-700 font-black",
+          onClick: () => {
+            setRhythmPlay({
+              song,
+              difficulty,
+              from: 'proto'
+            });
+            setGameState('RHYTHM_PLAY');
+          }
+        }, "試作をプレイ（", difficulty.id, " Lv.", chart.level, "）");
+      })));
+    }), RHYTHM_SONGS.map(song => {
       const track = rhythmSongTrack(song);
       return React.createElement("section", {
         key: song.songId,
