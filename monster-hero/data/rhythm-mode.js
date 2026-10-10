@@ -30092,11 +30092,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(glassy){
       // 床に落ちる影(参考動画「浮いていると分かるいちばん強い手がかり」)。2026-10-10 テンポ「横画面の動画で影が見えない」→ 板の幅くらいの暗い楕円を真下に置き、
       // 手前へ来るほど小さく濃く(濃さは真ん中で .6 前後)。外へ広がる3重の楕円でぼかしを出し、暗い背景でも見えるよう真ん中の輪にだけ薄い灰色の縁を引く。全体を .6 に落としていたのをやめて、不透明度はノーツと同じにした
-      const rx=Math.max(8,hd.w*sizeScale*.5)*(1.15-.3*near),ry=Math.max(2.5,rx*.32);
+      const rx=Math.max(8,hd.w*sizeScale*.53)*(1.1-.1*near),ry=Math.max(3,rx*.34);
       // 4-1(テンポ): 輪ではなく中まで塗った暗い楕円。地上のノーツと重なるときは描かない。外ほど薄い3重でぼかす
       const covered=frameGround.some(g=>sh.cx+rx>g.x0&&sh.cx-rx<g.x1&&sh.cy+ry>g.y0&&sh.cy-ry<g.y1);
-      if(!covered)[[1.5,.22],[1.2,.42],[.9,.6+.18*near]].forEach(([k,al])=>{
-        ctx.fillStyle=`rgba(4,6,22,${al.toFixed(3)})`;ctx.beginPath();
+      // 暗い床の上でも見えるよう、芯をさらに濃く・大きく(板の幅の1.0〜1.1倍)し、縁に板の色(#ef4444)のごく薄いにじみを足す(白い判定線の輪とは色で分ける・線の輪郭にはしない)
+      if(!covered)[[1.5,'239,68,68',.24],[1.3,'4,6,22',.3],[1.08,'4,6,22',.58],[.86,'4,6,22',.82+.12*near]].forEach(([k,rgb,al])=>{
+        ctx.fillStyle=`rgba(${rgb},${al.toFixed(3)})`;ctx.beginPath();
         for(let i=0;i<16;i++){const t=i/16*Math.PI*2,x=sh.cx+Math.cos(t)*rx*k,y=sh.cy+Math.sin(t)*ry*k;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
         ctx.closePath();ctx.fill();});
     }else{
