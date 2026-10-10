@@ -1545,6 +1545,7 @@ if (require.main === module) {
   const TRAINING = argOf('--training', 'bot'); // トレーニングの選び方(bot・none)。4 版目から既定は bot
   const ASSIST = argOf('--assist', 'bot'); // アシカの選び方(bot・none・カードの id)。3 版目から既定は bot(いまのボットと同じ)
   const mdFile = argOf('--md', '');
+  const tierJson = argOf('--tier-json', ''); // 子ごとの「緊急回復」の1文を、この tier.json の「モンスター」へ書く(sim.md と同じ数字から)
   const oldFile = argOf('--old', path.join(__dirname, '..', '..', '..', 'docs', 'playbot', 'reports', 'tier', 'sim.md'));
   const OLD = readOldTables(oldFile); // md を書き換える前に、前の版の数字を読んでおく
   const t0 = Date.now();
@@ -1556,7 +1557,7 @@ if (require.main === module) {
     for (const m of heroes) {
       stats[mode][m.id] = {};
       for (const d of DIFFS) {
-        const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0; let boss = 0;
+        const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0; let boss = 0; let emer = 0;
         for (let i = 0; i < RUNS; i++) {
           const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
           const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: TRAINING, emergency: EMERGENCY, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
@@ -1564,9 +1565,9 @@ if (require.main === module) {
           if (r.wave > 2 || r.result === 'clear') past2++;
           if (r.wave >= MAX_WAVE) boss++; // ボス戦(最後の WAVE。Hard〜Master は覚醒ムー)に入った回
           if (r.result === 'clear') clear++; else if (r.result === 'wipe') wipe++; else timeout++;
-          heroEx += r.exUses[m.id] || 0; dodges += r.dodges;
+          heroEx += r.exUses[m.id] || 0; dodges += r.dodges; emer += r.emergencyUses || 0;
         }
-        stats[mode][m.id][d] = { avg: waves.reduce((a, b) => a + b, 0) / waves.length, med: median(waves), past2: past2 / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, wipe: wipe / RUNS, timeout: timeout / RUNS, heroEx: heroEx / RUNS, dodges: dodges / RUNS };
+        stats[mode][m.id][d] = { avg: waves.reduce((a, b) => a + b, 0) / waves.length, med: median(waves), past2: past2 / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, wipe: wipe / RUNS, timeout: timeout / RUNS, heroEx: heroEx / RUNS, dodges: dodges / RUNS, emergency: emer / RUNS };
       }
     }
     console.log(`  ${mode}: ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
@@ -1693,6 +1694,27 @@ if (require.main === module) {
     for (const mo of MODES) out(`- ${MODE_JA[mo]} の順位(平均 WAVE): ${DIFFS.map((d) => `${d} ${rank(mo, d)} 位 / ${heroes.length}`).join('・')}`);
   }
   out();
+  // 緊急回復の効き目(子ごと)。主(EMERGENCY)と「使わない」(none)を EX=best で比べ、どれかの難易度で平均 WAVE の差が EMER_MIN 以上の子
+  //   (2026-10-10 改善部 E1・ハカセくん: ページの「緊急回復」の行に出す。tier.json へは --tier-json で同じ数字から書く)
+  const EMER_MIN = 0.5;
+  const emerRows = [];
+  if (EMERGENCY !== 'none' && statsX.none && statsX.none.best && stats.best) {
+    for (const m of heroes) {
+      const per = DIFFS.map((d) => ({ d, uses: stats.best[m.id][d].emergency, on: stats.best[m.id][d].avg, off: statsX.none.best[m.id][d].avg }));
+      const big = per.filter((x) => Math.abs(x.on - x.off) >= EMER_MIN);
+      if (big.length) emerRows.push({ m, per, big });
+    }
+    out('## 緊急回復の効き目(子ごと)');
+    out();
+    out(`緊急回復を「${EM_JA[EMERGENCY] || EMERGENCY}」で押すときと、押さないとき(EX=best・各 ${RUNS} 回)の平均 WAVE。どれかの難易度で差が ${EMER_MIN} 以上の子だけ。押す回数は1ランの平均。`);
+    out('緊急回復には回数の上限が無いので、ガッツの少ない子ほど「ガッツさえあれば出せる」ターンが多く、押す回数が増えて得をする(案ではなく気づき)。');
+    out();
+    out('| 勇者モン | 難易度 | 押す回数 | 押す 平均 | 押さない 平均 | 差 |');
+    out('| --- | --- | --- | --- | --- | --- |');
+    for (const r of emerRows) for (const x of r.per) out(`| ${r.m.name} | ${x.d} | ${x.uses.toFixed(1)} | ${x.on.toFixed(2)} | ${x.off.toFixed(2)} | ${sgn(x.on - x.off)} |`);
+    if (!emerRows.length) out('| — | — | — | — | — | — |');
+    out();
+  }
   out('## ブラウザとの突き合わせ(tactics-knowledge.json の runs)');
   out();
   out('アシストカードは 3 版目、トレーニングは 4 版目から入れた(選び方 --assist・--training、既定はどちらも bot)。ずれは式を合わせに行かず、そのまま書く(差 = 実戦 − シミュレーター)。');
@@ -1752,5 +1774,18 @@ if (require.main === module) {
   out(`(${heroes.length} 体 × ${DIFFS.length} 難易度 × ${RUNS} 回 × 使い方 ${MODES.length} 通りを ${sec} 秒で回した。seed ${SEED})`);
   const text = `${L.join('\n')}\n`;
   if (mdFile) { fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true }); fs.writeFileSync(path.resolve(mdFile), text); console.log(`書き出した: ${mdFile}`); summary.forEach((s) => console.log(s)); }
+  if (tierJson && heroes.length === MONS.length) {
+    // 「緊急回復」の1文: 差がいちばん大きい難易度で書く。差の小さい子は項目を消す(古い文を残さない)
+    const j = JSON.parse(fs.readFileSync(tierJson, 'utf8'));
+    const byName = Object.fromEntries(emerRows.map((r) => [r.m.name, r]));
+    for (const jm of j.モンスター || []) {
+      const r = byName[jm.名前];
+      if (!r) { delete jm.緊急回復; continue; }
+      const x = r.big.slice().sort((p, q) => Math.abs(q.on - q.off) - Math.abs(p.on - p.off))[0];
+      jm.緊急回復 = `${x.d} で1ランに${x.uses.toFixed(1)}回押す。押さないと平均 WAVE ${x.off.toFixed(2)}(押すと ${x.on.toFixed(2)})`;
+    }
+    fs.writeFileSync(tierJson, `${JSON.stringify(j, null, 2)}\n`);
+    console.log(`書き出した: ${tierJson}(緊急回復の文 ${emerRows.length} 体)`);
+  }
   else process.stdout.write(text);
 }
