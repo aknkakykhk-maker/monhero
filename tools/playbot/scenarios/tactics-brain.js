@@ -1046,10 +1046,11 @@ function rememberRun(L, stats) {
     emergency: L.emergency || 0, // 緊急回復を押した回数(2026-10-10 から)
     // ボットの版(2026-10-10 から)。arena-1 = アリーナくんの直し(緊急回復・自動回復の見込み・起こす・トレーニング・固有技の強化・おなら・時間停止)の入った版。
     //   arena-2 = それに EX を早めに使う直し(火力の EX を WAVE の始めに・ウンディーネ・ニコラオ。exEarly)を足した版
+    //   arena-3 = それに 供モンの押し直しのずれ・更新の知らせ・メロディーの EX の直しを足した版(2026-10-10 12:30 ごろから)
     //   これが無い回は、それより前の版
     //   切り替えごとの入/切(ハカセくんの頼み: Tier を「直したボットの回だけ」に絞れるように)。時間停止の直しは切れないので、bot がある回は全部入っている
     //   emergency は押す条件の名前('auto+wipe' / 'auto' / 'wipe' / false)。2026-10-10 10:30 ごろまでの arena-1 の回は true(= auto+wipe)
-    bot: { ver: 'arena-2', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1',
+    bot: { ver: 'arena-3', ...Object.fromEntries(['EMERGENCY', 'REGEN', 'REVIVE_EACH', 'TRAIN_V2', 'UNIQUE_ROLE', 'HAM_STUN', 'EX_EARLY'].map((f) => [f.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase()), process.env[`PLAYBOT_TACTICS_${f}`] !== '0'])), emergency: emergencyMode() || false, rotate: process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1',
       // fixedAllies = 指定した3体(候補5体のうち3体。残り2体はふだんどおり選ぶ)・joined = WAVE の合間に実際に加わった順(毎回くじで3体出るので順は変わる)
       ...(process.env.PLAYBOT_TACTICS_ALLIES ? { fixedAllies: process.env.PLAYBOT_TACTICS_ALLIES, joined: L.build.allies.map((a) => `W${a.wave}:${a.name}`) } : {}),
       ...(process.env.PLAYBOT_TACTICS_ASSIST_ORDER ? { assistOrder: process.env.PLAYBOT_TACTICS_ASSIST_ORDER } : {}) },
