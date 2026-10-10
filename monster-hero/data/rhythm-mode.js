@@ -3336,7 +3336,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   const applyTouchSpanGlow=()=>{
     if(typeof document==='undefined')return;
     const active=new Set();
-    touchStates.forEach(state=>state.subLanes.forEach(lane=>active.add(lane)));
+    touchStates.forEach(state=>{if(!state.sky)state.subLanes.forEach(lane=>active.add(lane));});
     // プレイ画面を作り直すとDOMが入れ替わるので、外れていたら引き直す
     if(!glowNodes||!glowNodes.length||!glowNodes[0].isConnected){
       RHYTHM_PERF.domQuery();
@@ -3394,7 +3394,10 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
           entered=[];
         }else acceptedRadiusX=rawRadiusX;
       }else if(rawRadiusX>0&&(!(acceptedRadiusX>0)||rawRadiusX<acceptedRadiusX))acceptedRadiusX=rawRadiusX;
-      touchStates.set(id,{...next,touch,centerAnchorX:stabilized.centerAnchorX,acceptedRadiusX});
+      // 空中の段(試作): 地上と空中の真ん中より上の指は、接触幅の地上の光も出さない(空中の光は演奏画面が空中の線の上に出す)。
+      // 空中の段が無い譜面では rhythmSkyGroundFeedback が常に true なので、今までどおり
+      const sky=typeof rhythmSkyGroundFeedback==='function'&&!rhythmSkyGroundFeedback(touch.clientY,rect);
+      touchStates.set(id,{...next,touch,centerAnchorX:stabilized.centerAnchorX,acceptedRadiusX,sky});
       if(isStart||centerChanged||entered.length)actions.push({id,touch,next,entered:isStart?next.subLanes:entered});
     });
     if(!actions.length){defer(applyTouchSpanGlow);return;}
@@ -24366,8 +24369,10 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
 // 曲の 102.5 秒から切った34秒の音源に合わせた MASTER。参考譜面(Arcaea)のアークを2本同時のスライドに置き換えた
 const SHERIRUTH_PROTO_DURATION_MS=34000;
 // 速さの表(試作・「画面が止まって動く」)。[時刻ms(試作の音源の時刻),倍率]。2026-10-10 テンポくん・オンプくんが参考譜面から決めた表。
-// 6.460〜6.866秒は止まる(この間に判定のノーツは来ない)。6.866秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ
-const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6866,1.8],[7515,1]]);
+// 6.460〜6.700秒は止まる(この間に判定のノーツは来ない)。6.700秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ。
+// 2026-10-10 止まり終わりを 6.866 → 6.700 へ(ドライバーくんの表: 前は止まっている0.4秒のあいだ、6.866秒のノーツが判定線の上に乗ったまま止まって見え、
+// 早く叩くおそれがあった。いまは止まっている間、次のノーツは判定線より手前(流れる道のりの 速度3で6%・速度6で14%・速度10で37%)に見える。判定の時刻は変わらない)
+const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6700,1.8],[7515,1]]);
 // 空中の段(試作): T=空中のタップ / F=空中のフリック(高さ1)/ S=高さのあるスライド(点は [時刻,レーン,幅,高さ0〜1,ease]、5つめの引数 hand は 'L'=水色・'R'=ピンク)
 const mhSkyTap=(timeMs,subLane,subLaneWidth,height=1)=>Object.freeze({...mhTap(timeMs,subLane,subLaneWidth),skyHeight:height});
 const mhSkyFlick=(timeMs,subLane,subLaneWidth,dirCode,height=1)=>Object.freeze({...mhFlick(timeMs,subLane,subLaneWidth,dirCode),skyHeight:height});
@@ -30301,6 +30306,30 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     return f[0]===1&&f[1]===1?null:f;};
   // skyHitArea … 空中のノーツの弾け方(試作)だけは、2D の canvas でもここで描く(地上の光は WebGL のときだけ)
   let hitArea=null,hitNext=0,skyHitArea=null;
+  // 空中の段(試作): 空中の高さで押しているサブレーンと、その光の濃さ(設定「レーンの光」と同じ 0 / .35 / 1)
+  let skyPressed=[],skyPressedAlpha=1;
+  // 空中の判定ラインの上で、押しているサブレーンを赤く光らせる(2026-10-10 社長「タップして光るレーンは、タップするところで地上と空中で変えるのは難しいかな?」)。
+  // 地上のレーンの光(下まで伸びる柱)の空中版。線から上へ短く伸びる光と、線の上の明るい筋。幅は空中の線の奥行きで投影したサブレーン1本ぶん。
+  // WebGL でも描けるように、グラデーションは使わず薄い四角を重ねる
+  const drawSkyPress=hitY=>{
+    if(!skyPressed.length||!(skyPressedAlpha>0)||!cssW||!cssH)return 0;
+    const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio,ratio=rhythmSkyLineRatio(),up=cssH*.12,down=cssH*.02,slices=8;
+    const seen=new Set();let painted=0;
+    touch();ctx.setTransform(dpr,0,0,dpr,0,0);glowBegin();
+    for(const value of skyPressed){
+      const index=Math.floor(Number(value));
+      if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
+      seen.add(index);
+      const span=rhythmProjectSubLaneRange(index,1,ratio),x=span.left*cssW,w=Math.max(2,span.width*cssW);
+      ctx.fillStyle='rgb(239,68,68)';
+      for(let k=0;k<slices;k++){const f=(k+1)/slices;ctx.globalAlpha=skyPressedAlpha*.12*f;ctx.fillRect(x,Y-up*f,w,up*f);}
+      ctx.globalAlpha=skyPressedAlpha*.4;ctx.fillRect(x,Y,w,down);
+      ctx.globalAlpha=skyPressedAlpha*.9;ctx.fillStyle='rgb(254,202,202)';ctx.fillRect(x,Y-1,w,2);
+      painted++;
+    }
+    glowEnd();ctx.globalAlpha=1;
+    return painted;
+  };
   const hitSlots=new Array(RHYTHM_HIT_EFFECT_POOL).fill(null),hitFilters=new Map();
   const readHitFilters=area=>{
     hitFilters.clear();
@@ -30612,11 +30641,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;
     },
-    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;skyHitArea=null;hitSlots.fill(null);},
+    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;skyHitArea=null;skyPressed=[];hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
     enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
     hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},
-    enableSkyHits(area){skyHitArea=area&&ctx?area:null;},
+    enableSkyHits(area){skyHitArea=area&&ctx?area:null;skyPressed=[];},
+    // 空中の高さで押しているサブレーン(演奏画面が指の出入りのたびに渡す)。alpha は設定「レーンの光」の濃さ
+    setSkyPressed(coordinates,alpha=1){skyPressed=Array.isArray(coordinates)?coordinates.slice():[];skyPressedAlpha=Number.isFinite(Number(alpha))?Math.max(0,Math.min(1,Number(alpha))):1;},
     skyHitsFor(area){return !!skyHitArea&&!!ctx&&area===skyHitArea;},
     // DOM の部品と同じく10枠を順に使い回す(11個目は1個目を切って上書きする)。演出量「最小」・軽量モードでは出さない
     pushHit(hit){
@@ -30631,6 +30662,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     drawHits(hitY){
       if(!ctx||!(hitArea||skyHitArea)||!Number.isFinite(hitY))return 0;
       const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
+      if(skyHitArea&&skyPressed.length)count+=drawSkyPress(hitY);
       for(let slot=0;slot<hitSlots.length;slot++){
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
