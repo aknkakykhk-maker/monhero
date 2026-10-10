@@ -665,7 +665,22 @@ async function chooseBetween(s, mem, log) {
     const named = (t) => (/^きき/.test(t) ? 5 : 0) + (/^ポルツ/.test(t) ? (starved ? 5 : 3.5) : 0) + (/^ももすけ/.test(t) ? (starved ? 4.5 : 3) : 0) + (/^メロソ/.test(t) ? (hurt ? 3.5 : 2) : 0);
     const score = (t) => (/自傷/.test(t) ? -5 : 0) + atkPct(t) / 5 + (isHeal(t) ? (hurt ? 3 : 1.5) : 0) + named(t)
       + (isGuts(t) ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(t) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(t) ? 2.5 : 0);
-    const best = cards.sort((a, z) => score(z) - score(a))[0];
+    let best = cards.sort((a, z) => score(z) - score(a))[0];
+    // PLAYBOT_TACTICS_ASSIST_ROTATE=1 … アシカを順番に試す(2026-10-10 ハカセくん・改善部の指摘 A3。ボットはほぼ毎回「あつ」を選び、
+    //   ドラ・かどみうむ・みゃる・ニコラオが実戦0〜1回のままだった)。新規習得のカードのうち、覚え書きで選ばれた回がいちばん少ないものを選ぶ。
+    //   同じ回数なら点数の高いほう。新規習得が無い(強化だけの)画面は今までどおり点数で選ぶ。既定は切(今のまま)
+    if (process.env.PLAYBOT_TACTICS_ASSIST_ROTATE === '1') {
+      const fresh = cards.filter((t) => /新規習得/.test(t));
+      if (fresh.length) {
+        // 数えるのはアシカ本人(「あつの挑発」「あつの暴言」は どちらも あつ)
+        const who = (c) => String(c).replace(/\+$/, '').split(/\s+/)[0].split('の')[0];
+        const picked = {};
+        for (const r of loadKnowledge().runs) for (const c of new Set((r.assists || []).map(who))) picked[c] = (picked[c] || 0) + 1;
+        const n = (t) => picked[who(t)] || 0;
+        best = fresh.sort((a, z) => n(a) - n(z) || score(z) - score(a))[0];
+        log.note(`アシストカード: 順番に試す(${who(best)} はこれまで ${n(best)} 回)`);
+      }
+    }
     // 理由は、点数にいちばん効いた項目で言う
     const parts = [['火力を伸ばす', atkPct(best) / 5], [hurt ? '被ダメージが多いので回復' : '回復の手段を持つ', isHeal(best) ? (hurt ? 3 : 1.5) : 0],
       [starved ? 'ガッツ不足が多い' : 'ガッツを補う', isGuts(best) ? (starved ? 3.2 : 1.2) : 0], ['守りを固める', /被ダメ|軽減|守り/.test(best) ? (hurt ? 2.5 : 1) : 0],
