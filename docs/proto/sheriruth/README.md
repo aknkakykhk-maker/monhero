@@ -57,3 +57,9 @@
 | 地上の判定ライン | 線は今のまま。空中の段がある曲だけ「● GROUND」の字を添える(空中の段が無い曲は何も変わらない) |
 | 左手のスライド | 明るい水色・芯に白い実線・縁を太く |
 | 右手のスライド | 濃いピンク(水色より暗い)・芯に白い点線・縁を太く |
+
+### 空中のタップの見た目の案(16時)
+
+`drawSkyTap`(data/rhythm-mode.js の Canvas の描画の中)が、localStorage `mh_sky_tap_style_proto` で gold / glow / gem / roof を切り替える。
+撮り方: `python3 tools/serve.py 8899` を立てて `SKY_STYLE=glow SHOTS=2350,4700 node docs/proto/sheriruth/shots.js <出力先>`(偽の Supabase・自動演奏で、試作の曲のその時刻を撮る)。
+並べ方: `node docs/proto/sheriruth/sheet.js <出力先の親>`(`<親>/shots/<案>-<時刻>.png` を並べる)。

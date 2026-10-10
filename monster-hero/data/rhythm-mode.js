@@ -29763,6 +29763,46 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(quads[0].r0,quads[0].y0);quads.forEach(q=>ctx.lineTo(q.r1,q.y1));ctx.stroke();
     ctx.globalAlpha=1;
   };
+  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'?v:'gold';}catch{return 'gold';}};
+  // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
+  const roundBarPath=(x0,y0,w,h,r)=>{
+    const k=r*.29;
+    ctx.beginPath();ctx.moveTo(x0+r,y0);ctx.lineTo(x0+w-r,y0);ctx.lineTo(x0+w-k,y0+k);ctx.lineTo(x0+w,y0+r);ctx.lineTo(x0+w,y0+h-r);ctx.lineTo(x0+w-k,y0+h-k);ctx.lineTo(x0+w-r,y0+h);
+    ctx.lineTo(x0+r,y0+h);ctx.lineTo(x0+k,y0+h-k);ctx.lineTo(x0,y0+h-r);ctx.lineTo(x0,y0+r);ctx.lineTo(x0+k,y0+k);ctx.closePath();
+  };
+  const drawSkyTap=(hd,opts)=>{
+    const style=skyTapStyle(),W=Math.max(18,hd.w*sizeScale+4),H=Math.max(11,hd.h+6),x0=hd.cx-W/2,y0=hd.cy-H/2,cx=hd.cx,cy=hd.cy;
+    ctx.globalAlpha=opts.alpha;ctx.lineJoin='round';
+    if(style==='gold'){
+      // 案A(いまの): 金色の板+上向きの山形2つ
+      ctx.fillStyle='rgba(251,191,36,1)';roundBarPath(x0,y0,W,H,3);ctx.fill();ctx.strokeStyle='rgba(120,53,15,.95)';ctx.lineWidth=1.5;ctx.stroke();
+      const ch=Math.min(H*.6,9),cw=Math.min(W*.16,9),by=cy+ch/2;ctx.strokeStyle='rgba(69,26,3,.95)';ctx.lineWidth=2.2;
+      [-1,1].forEach(side=>{const x=cx+side*W*.22;ctx.beginPath();ctx.moveTo(x-cw,by);ctx.lineTo(x,by-ch);ctx.lineTo(x+cw,by);ctx.stroke();});
+    }else if(style==='glow'){
+      // 案B: 地上の板と同じ丸い板の形のまま、金色に光らせる(外に光の輪・上に白いつや)
+      ctx.strokeStyle='rgba(251,191,36,.28)';ctx.lineWidth=9;roundBarPath(x0,y0,W,H,H/2);ctx.stroke();
+      ctx.strokeStyle='rgba(253,224,71,.55)';ctx.lineWidth=4;ctx.stroke();
+      const g=ctx.createLinearGradient(0,y0,0,y0+H);g.addColorStop(0,'rgba(255,251,235,1)');g.addColorStop(.45,'rgba(253,224,71,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+      ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.2;ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(x0+H*.6,y0+2.2);ctx.lineTo(x0+W-H*.6,y0+2.2);ctx.stroke();
+    }else if(style==='gem'){
+      // 案C: 横に長い菱形(六角形)の宝石。地上の四角い板と形で分かれる。中に白い菱形
+      const e=Math.min(H*.9,W*.25),Hh=H*.62;
+      const path=(ix,iy)=>{ctx.beginPath();ctx.moveTo(x0+ix,cy);ctx.lineTo(x0+e,cy-Hh+iy);ctx.lineTo(x0+W-e,cy-Hh+iy);ctx.lineTo(x0+W-ix,cy);ctx.lineTo(x0+W-e,cy+Hh-iy);ctx.lineTo(x0+e,cy+Hh-iy);ctx.closePath();};
+      ctx.strokeStyle='rgba(251,191,36,.3)';ctx.lineWidth=7;path(0,0);ctx.stroke();
+      const g=ctx.createLinearGradient(0,cy-Hh,0,cy+Hh);g.addColorStop(0,'rgba(254,243,199,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(180,83,9,1)');
+      ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.4;ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,.85)';ctx.beginPath();ctx.moveTo(cx-Hh*.9,cy);ctx.lineTo(cx,cy-Hh*.55);ctx.lineTo(cx+Hh*.9,cy);ctx.lineTo(cx,cy+Hh*.55);ctx.closePath();ctx.fill();
+    }else{
+      // 案D: 屋根の形(上の真ん中がとがった板)。「上へ」が形で分かる
+      const peak=Math.min(H*.85,9),top=y0+peak*.35;
+      ctx.beginPath();ctx.moveTo(x0,top+peak);ctx.lineTo(cx,top-peak*.35);ctx.lineTo(x0+W,top+peak);ctx.lineTo(x0+W,y0+H);ctx.lineTo(x0,y0+H);ctx.closePath();
+      ctx.strokeStyle='rgba(251,191,36,.3)';ctx.lineWidth=7;ctx.stroke();
+      const g=ctx.createLinearGradient(0,top-peak*.35,0,y0+H);g.addColorStop(0,'rgba(255,251,235,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(194,65,12,1)');
+      ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.3;ctx.stroke();
+    }
+    ctx.globalAlpha=1;ctx.lineJoin='miter';
+  };
   const drawSkyShadowHead=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
@@ -30241,19 +30281,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const headOpts=o.pop===null?o:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
       // 押さえている最中の光は粒の下に敷く(粒の形は隠さない)。演出量「最小」では出さない
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
-      drawHead(note,geo,headOpts);
-      // 空中の段(試作): 空中の粒は「金色の板+上向きの山形2つ」。地上の白い板とは色・明るさ・形の3つで分ける
-      // (色の見分けにくい人にも、明るさの差と山形の形で分かるように。スライドの水色・ピンクとも重ならない色)
-      if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null){
-        const hd=geo.head,w=Math.max(18,hd.w*sizeScale+4),h=Math.max(12,hd.h+8),x0=hd.cx-w/2,y0=hd.cy-h/2;
-        ctx.globalAlpha=o.alpha;
-        ctx.fillStyle='rgba(251,191,36,1)';ctx.beginPath();ctx.moveTo(x0+3,y0);ctx.lineTo(x0+w-3,y0);ctx.lineTo(x0+w,y0+3);ctx.lineTo(x0+w,y0+h-3);ctx.lineTo(x0+w-3,y0+h);ctx.lineTo(x0+3,y0+h);ctx.lineTo(x0,y0+h-3);ctx.lineTo(x0,y0+3);ctx.closePath();ctx.fill();
-        ctx.strokeStyle='rgba(120,53,15,.95)';ctx.lineWidth=1.5;ctx.stroke();
-        const ch=Math.min(h*.6,9),cw=Math.min(w*.16,9),cy=hd.cy+ch/2;
-        ctx.strokeStyle='rgba(69,26,3,.95)';ctx.lineWidth=2.2;ctx.lineJoin='round';
-        [-1,1].forEach(side=>{const cx=hd.cx+side*w*.22;ctx.beginPath();ctx.moveTo(cx-cw,cy);ctx.lineTo(cx,cy-ch);ctx.lineTo(cx+cw,cy);ctx.stroke();});
-        ctx.globalAlpha=1;
-      }
+      if(!(geo.skyShadow&&!geo.slide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 空中の段(試作): 空中の粒の見た目(案を比べるため4通り。localStorage 'mh_sky_tap_style_proto' で選ぶ・既定は gold)
+      if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null)drawSkyTap(geo.head,o);
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
     drawFace(bitmap,cx,cy,size,alpha=1){
