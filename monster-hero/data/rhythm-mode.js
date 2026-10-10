@@ -1236,7 +1236,9 @@ const rhythmSkyTouch=(clientY,rect)=>{
 const rhythmSkyGroundFeedback=(clientY,rect)=>{const r=rhythmSkyTouch(clientY,rect);return !(r!==null&&r<rhythmSkySplitRatio());};
 const rhythmSkyAccepts=(note,touchRatio)=>{
   if(!RHYTHM_SKY_INPUT.active||!Number.isFinite(touchRatio))return true;
-  return rhythmNoteSkyHeight(note)>0?touchRatio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW:touchRatio>rhythmSkyLineRatio()+RHYTHM_GROUND_ACCEPT_ABOVE;
+  // 地上のノーツは、空中の線と地上の線のまん中より下を押したときだけ取る(2026-10-10 社長「中身がついてきてない」を受けて、
+  // 地上のタップを空中の線のすぐ下で押しても取れていた(77個中60個)のを直した。前は空中の線の5%下から下を全部地上として受けていた)
+  return rhythmNoteSkyHeight(note)>0?touchRatio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW:touchRatio>rhythmSkyLineRatio()+Math.max(RHYTHM_GROUND_ACCEPT_ABOVE,RHYTHM_SKY_LIFT.ratio*.5);
 };
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
