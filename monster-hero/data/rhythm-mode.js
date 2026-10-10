@@ -28820,8 +28820,11 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
   const project=point=>{
     const progress=1-(rhythmScrollPos(point.timeMs)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     // 空中の段(試作): 高さのある点は、その奥行きの持ち上げ幅ぶん上へ。groundOnly のときは影として地面に置く
-    const lift=!travel.groundOnly&&rhythmSlideHasSky(note)?rhythmSkyLiftPx(rect,yRatio)*rhythmSlideSkyAt(note,point.timeMs):0;
-    return {y:y-lift,left:rect.width*span.center-half,right:rect.width*span.center+half,sky:rhythmSlideHasSky(note)?rhythmSlideSkyAt(note,point.timeMs):0};
+    const skyAt=rhythmSlideHasSky(note)?rhythmSlideSkyAt(note,point.timeMs):0;
+    const lift=!travel.groundOnly?rhythmSkyLiftPx(rect,yRatio)*skyAt:0;
+    // 参考のアークと同じく、空中にある所はレーンより細いリボンにする(高さ1で6割の太さ。影は太さそのまま)
+    const thin=travel.groundOnly?1:1-.4*skyAt;
+    return {y:y-lift,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:rhythmSlideHasSky(note)?rhythmSlideSkyAt(note,point.timeMs):0};
   };
   let firstIndex=0;
   while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
