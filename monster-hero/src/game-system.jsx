@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a6c972d9d6377e83
+// generated-sha256: 51e976fbdf9c1530
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 20:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5314,6 +5314,16 @@ const Audio_ = (() => {
     const key = AUDIO_CACHE_KEYS[url];
     return key ? `${url}?v=${key}` : url;
   };
+  // 試作の入口(raw.githack.com / rawcdn.githack.com のコミット固定URL)だけ、音源を jsDelivr の同じコミットから読む。
+  // githack が音源を確認画面や打ち切りで返し、曲が始まらない端末があったため。本番(github.io)では null のまま
+  const protoAudioMirrorUrl = (url) => {
+    try {
+      if (typeof location === 'undefined' || !/(^|\.)githack\.com$/.test(location.hostname) || !/^audio\//.test(url)) return null;
+      const m = location.pathname.match(/^\/([^/]+)\/([^/]+)\/([0-9a-f]{7,40})\/(.*\/)?[^/]*$/);
+      if (!m) return null;
+      return `https://cdn.jsdelivr.net/gh/${m[1]}/${m[2]}@${m[3]}/${m[4] || ''}${audioUrlWithKey(url)}`;
+    } catch (e) { return null; }
+  };
   const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
   const _bgmGain = (pct) => pct <= 0 ? 0 : Math.pow(10, (-55 + (Math.min(100, pct) / 100) * 55) / 20) * 0.55;
 
@@ -5428,10 +5438,13 @@ const Audio_ = (() => {
     if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
     // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
     // こうすると、キーが変わっても同じ曲を二重に持たない。
-    const request = fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
+    const fetchDecode = (url) => fetch(url, { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then((data) => decode(ctx, data)).then((buffer) => { buffers.set(url, buffer); return buffer; })
+    }).then((data) => decode(ctx, data));
+    const mirror = protoAudioMirrorUrl(url);
+    const first = mirror ? fetchDecode(mirror).catch(() => fetchDecode(audioUrlWithKey(url))) : fetchDecode(audioUrlWithKey(url));
+    const request = first.then((buffer) => { buffers.set(url, buffer); return buffer; })
       .finally(() => loadingBuffers.delete(url));
     loadingBuffers.set(url, request);
     return request;

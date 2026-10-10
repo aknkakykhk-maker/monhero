@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4b19239e72252825
+// source-sha256: 074366fb8cf24ee9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 20:23";
+const BUILD_DATE = "2026-10-10 20:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6544,6 +6544,16 @@ const Audio_ = (() => {
     const key = AUDIO_CACHE_KEYS[url];
     return key ? `${url}?v=${key}` : url;
   };
+  const protoAudioMirrorUrl = url => {
+    try {
+      if (typeof location === 'undefined' || !/(^|\.)githack\.com$/.test(location.hostname) || !/^audio\//.test(url)) return null;
+      const m = location.pathname.match(/^\/([^/]+)\/([^/]+)\/([0-9a-f]{7,40})\/(.*\/)?[^/]*$/);
+      if (!m) return null;
+      return `https://cdn.jsdelivr.net/gh/${m[1]}/${m[2]}@${m[3]}/${m[4] || ''}${audioUrlWithKey(url)}`;
+    } catch (e) {
+      return null;
+    }
+  };
   const _gainFromPct = pct => pct <= 0 ? 0 : Math.pow(10, (-40 + Math.min(100, pct) / 100 * 40) / 20);
   const _bgmGain = pct => pct <= 0 ? 0 : Math.pow(10, (-55 + Math.min(100, pct) / 100 * 55) / 20) * 0.55;
   const buildAudioGraph = ctx => {
@@ -6699,12 +6709,15 @@ const Audio_ = (() => {
     if (loadingBuffers.has(url)) return loadingBuffers.get(url);
     const ctx = getAudioCtx();
     if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
-    const request = fetch(audioUrlWithKey(url), {
+    const fetchDecode = url => fetch(url, {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then(data => decode(ctx, data)).then(buffer => {
+    }).then(data => decode(ctx, data));
+    const mirror = protoAudioMirrorUrl(url);
+    const first = mirror ? fetchDecode(mirror).catch(() => fetchDecode(audioUrlWithKey(url))) : fetchDecode(audioUrlWithKey(url));
+    const request = first.then(buffer => {
       buffers.set(url, buffer);
       return buffer;
     }).finally(() => loadingBuffers.delete(url));

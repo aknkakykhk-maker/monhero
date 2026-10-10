@@ -154,6 +154,16 @@ const Audio_ = (() => {
     const key = AUDIO_CACHE_KEYS[url];
     return key ? `${url}?v=${key}` : url;
   };
+  // 試作の入口(raw.githack.com / rawcdn.githack.com のコミット固定URL)だけ、音源を jsDelivr の同じコミットから読む。
+  // githack が音源を確認画面や打ち切りで返し、曲が始まらない端末があったため。本番(github.io)では null のまま
+  const protoAudioMirrorUrl = (url) => {
+    try {
+      if (typeof location === 'undefined' || !/(^|\.)githack\.com$/.test(location.hostname) || !/^audio\//.test(url)) return null;
+      const m = location.pathname.match(/^\/([^/]+)\/([^/]+)\/([0-9a-f]{7,40})\/(.*\/)?[^/]*$/);
+      if (!m) return null;
+      return `https://cdn.jsdelivr.net/gh/${m[1]}/${m[2]}@${m[3]}/${m[4] || ''}${audioUrlWithKey(url)}`;
+    } catch (e) { return null; }
+  };
   const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
   const _bgmGain = (pct) => pct <= 0 ? 0 : Math.pow(10, (-55 + (Math.min(100, pct) / 100) * 55) / 20) * 0.55;
 
@@ -268,10 +278,13 @@ const Audio_ = (() => {
     if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
     // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
     // こうすると、キーが変わっても同じ曲を二重に持たない。
-    const request = fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
+    const fetchDecode = (url) => fetch(url, { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then((data) => decode(ctx, data)).then((buffer) => { buffers.set(url, buffer); return buffer; })
+    }).then((data) => decode(ctx, data));
+    const mirror = protoAudioMirrorUrl(url);
+    const first = mirror ? fetchDecode(mirror).catch(() => fetchDecode(audioUrlWithKey(url))) : fetchDecode(audioUrlWithKey(url));
+    const request = first.then((buffer) => { buffers.set(url, buffer); return buffer; })
       .finally(() => loadingBuffers.delete(url));
     loadingBuffers.set(url, request);
     return request;
