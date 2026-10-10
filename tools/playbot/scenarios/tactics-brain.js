@@ -451,6 +451,9 @@ async function maybeUseEx(s, b, mem, log) {
     }
     // 回復の EX(ウンディーネ・メロディー・スプーキー): 誰かのライフが4割を切った
     else if (role === 'heal' && b.slots.some((y) => y.occupied && !y.downed && y.hp && y.hp.now < y.hp.max * 0.4)) why = '味方のライフが細った(回復のEX)';
+    // ★メロディーの「おねがい♪メロディボックス」(全員回復+3ターン与ダメ↑被ダメ↓・5回)は、回復待ちだと使わない(2026-10-10 Expert で 52 ターン・WAVE 8 まで0回)。
+    //   重い攻撃の予告のとき・WAVE 3 から先の始め(敵のライフ9割以上)に使う
+    else if (role === 'heal' && exEarly && x.name === 'メロディー' && (bigHit || ((b.turn || 1) <= 2 && (b.wave || 0) >= 3 && b.enemy && b.enemy.hp >= b.enemy.max * 0.9))) why = bigHit ? '重い攻撃の予告(メロディボックスで守りと回復)' : '手強い WAVE の始め(メロディボックスで与ダメ↑)';
     // ★ウンディーネの生命の泉は、細るまで待たない(2026-10-10 ダイスくん: 上手な使い方は 1ラン 4.8 回・使う前のライフ平均 72%、
     //   1〜2 ターン目に 50%・狙われたターンに 68%。ボットは 1.7 回・39% で、Expert で +0.95 WAVE の差)
     else if (role === 'heal' && exEarly && x.name === 'ウンディーネ' && (heavyAimed || ((b.turn || 1) <= 2 && b.slots.some((y) => y.occupied && !y.downed && y.hp && y.hp.now < y.hp.max * 0.8)))) why = heavyAimed ? `${heavyAimed.name}が重く狙われている(生命の泉を早めに)` : 'WAVE の始めにライフを満たす(生命の泉を早めに)';
