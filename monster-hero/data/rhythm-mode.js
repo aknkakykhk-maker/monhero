@@ -24369,8 +24369,10 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
 // 曲の 102.5 秒から切った34秒の音源に合わせた MASTER。参考譜面(Arcaea)のアークを2本同時のスライドに置き換えた
 const SHERIRUTH_PROTO_DURATION_MS=34000;
 // 速さの表(試作・「画面が止まって動く」)。[時刻ms(試作の音源の時刻),倍率]。2026-10-10 テンポくん・オンプくんが参考譜面から決めた表。
-// 6.460〜6.866秒は止まる(この間に判定のノーツは来ない)。6.866秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ
-const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6866,1.8],[7515,1]]);
+// 6.460〜6.700秒は止まる(この間に判定のノーツは来ない)。6.700秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ。
+// 2026-10-10 止まり終わりを 6.866 → 6.700 へ(ドライバーくんの表: 前は止まっている0.4秒のあいだ、6.866秒のノーツが判定線の上に乗ったまま止まって見え、
+// 早く叩くおそれがあった。いまは止まっている間、次のノーツは判定線より手前(流れる道のりの 速度3で6%・速度6で14%・速度10で37%)に見える。判定の時刻は変わらない)
+const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6700,1.8],[7515,1]]);
 // 空中の段(試作): T=空中のタップ / F=空中のフリック(高さ1)/ S=高さのあるスライド(点は [時刻,レーン,幅,高さ0〜1,ease]、5つめの引数 hand は 'L'=水色・'R'=ピンク)
 const mhSkyTap=(timeMs,subLane,subLaneWidth,height=1)=>Object.freeze({...mhTap(timeMs,subLane,subLaneWidth),skyHeight:height});
 const mhSkyFlick=(timeMs,subLane,subLaneWidth,dirCode,height=1)=>Object.freeze({...mhFlick(timeMs,subLane,subLaneWidth,dirCode),skyHeight:height});
