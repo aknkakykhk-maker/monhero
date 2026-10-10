@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ef44f7ed083e6ac
+// source-sha256: 5aa8b4744830112d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127,6 +127,33 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
+const PLAYBOT_URL_PARAMS = (() => {
+  try {
+    return new URLSearchParams(window.location.search);
+  } catch (_) {
+    return new URLSearchParams('');
+  }
+})();
+const PLAYBOT_FAST = PLAYBOT_URL_PARAMS.get('playbotFast') === '1';
+const PLAYBOT_FAST_DIVISOR = 20;
+const PLAYBOT_SEED = (() => {
+  const v = PLAYBOT_URL_PARAMS.get('playbotSeed');
+  return v != null && /^\d{1,9}$/.test(v) ? Number(v) : null;
+})();
+const PLAYBOT_ACTIVE = PLAYBOT_FAST || PLAYBOT_SEED != null;
+const playbotSeededRandom = seed => {
+  let a = seed >>> 0;
+  return () => {
+    a = a + 0x6D2B79F5 >>> 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+};
+const playbotReseedRandom = () => {
+  if (PLAYBOT_SEED != null) Math.random = playbotSeededRandom(PLAYBOT_SEED);
+};
 const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = value => UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
@@ -344,7 +371,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 13:12";
+const BUILD_DATE = "2026-10-10 16:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -73151,7 +73178,8 @@ function MonsterHeroGame() {
   const CATCH_UP_SPEED = 4;
   const catchUpUntilRef = useRef(0);
   const battleMs = useCallback(baseMs => {
-    const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
+    const speeded = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
+    const base = PLAYBOT_FAST ? Math.round(speeded / PLAYBOT_FAST_DIVISOR) : speeded;
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
@@ -78421,6 +78449,7 @@ function MonsterHeroGame() {
   const submitRunScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     if (debugBattleRef.current) return;
+    if (PLAYBOT_ACTIVE) return;
     if (runHasDebugOnlyMonster()) return;
     if (speciesChallengeBattleRunRef.current) return submitSpeciesChallengeScoreOnce();
     if (isRaidJackMode(runMode)) return;
@@ -78529,6 +78558,7 @@ function MonsterHeroGame() {
     scoreSubmittedRef.current = true;
     if (!modeHasRanking(speciesChallengeRunMode(run))) return;
     if (debugBattleRef.current) return;
+    if (PLAYBOT_ACTIVE) return;
     try {
       const diff = rankingDifficultyForMode(speciesChallengeRunMode(run), run.difficultyId, run.speciesId);
       const result = await submitLocalScore(diff, score, runIdRef.current);
@@ -78547,6 +78577,7 @@ function MonsterHeroGame() {
   const submitTacticsScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
+    if (PLAYBOT_ACTIVE) return;
     const diff = tacticsRecordDifficulty();
     const saveBest = async () => {
       if (score > (Number(tacticsRecordsOf(runMode).hs[diff]) || 0)) {
@@ -82413,6 +82444,7 @@ function MonsterHeroGame() {
     gaveUp: false
   });
   const applyResetAllState = () => {
+    playbotReseedRandom();
     autoRepeatBondAwardMasuIdsRef.current = [];
     resetTacticsJoinCatchUp();
     const s = resetAllState();

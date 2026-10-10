@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3bd98bcce48665d3
+// generated-sha256: 67fd6a8a87374596
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77,6 +77,30 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
+// ---- ボット用の早送り・乱数の種(2026-10-10・研究所のアリーナくん向け。デバッグ専用) ----
+// URL に ?playbotFast=1 / ?playbotSeed=<数> を付けたときだけ効く。画面のどこにも出さず、ふつうのプレイ・保存には効かない。
+//   playbotFast … バトルの演出の待ち(battleMs を通る待ちすべて)を PLAYBOT_FAST_DIVISOR 分の1にする。
+//                 battleMs は演出の待ちだけに使い、ダメージ計算・抽選・報酬には渡らない(60-app.jsx の battleMs の注記)
+//   playbotSeed … ランを始めるたび(applyResetAllState)に Math.random を同じ種から作り直す。
+//                 同じ種なら、早送りあり/なしで同じ戦いになることを確かめるため
+// どちらかが付いた周回は、全国ランキングにも自己ベストにも残さない(submitRunScoreOnce。乱数を選べると記録を作れてしまうため)
+const PLAYBOT_URL_PARAMS = (() => { try { return new URLSearchParams(window.location.search); } catch (_) { return new URLSearchParams(''); } })();
+const PLAYBOT_FAST = PLAYBOT_URL_PARAMS.get('playbotFast') === '1';
+const PLAYBOT_FAST_DIVISOR = 20;
+const PLAYBOT_SEED = (() => { const v = PLAYBOT_URL_PARAMS.get('playbotSeed'); return v != null && /^\d{1,9}$/.test(v) ? Number(v) : null; })();
+const PLAYBOT_ACTIVE = PLAYBOT_FAST || PLAYBOT_SEED != null;
+// 種つきの乱数(mulberry32)。0以上1未満を返す
+const playbotSeededRandom = (seed) => {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+const playbotReseedRandom = () => { if (PLAYBOT_SEED != null) Math.random = playbotSeededRandom(PLAYBOT_SEED); };
 // 新しいバージョンのお知らせ(画面の上へ出るバナー)の出し方。
 // 2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
 //   'FULL' … 横いっぱいのボタンで「新しいバージョンがあります　更新する」(これまでの形)
@@ -187,7 +211,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 16:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -45278,7 +45302,9 @@ function MonsterHeroGame() {
   // 追いつきをいつまで続けるか(時刻)。0なら追いつき中でない
   const catchUpUntilRef = useRef(0);
   const battleMs = useCallback((baseMs) => {
-    const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
+    const speeded = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
+    // ボット用の早送り(?playbotFast=1。10-core.jsx の PLAYBOT_FAST)。ふつうのプレイでは false のまま
+    const base = PLAYBOT_FAST ? Math.round(speeded / PLAYBOT_FAST_DIVISOR) : speeded;
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
@@ -50658,6 +50684,8 @@ function MonsterHeroGame() {
     // デバッグ・練習の周回は、どのモードでも全国ランキングにも自己ベストにも残さない。
     // 呼び出し側でも弾いているが、ここでも止めて「デバッグから遊んだら記録がついた」を確実に防ぐ
     if (debugBattleRef.current) return;
+    // ボット用の早送り・乱数の種(?playbotFast / ?playbotSeed)を付けた周回も残さない(10-core.jsx の PLAYBOT_ACTIVE)
+    if (PLAYBOT_ACTIVE) return;
     // 正式実装前のモンスターを連れた周回も同じ扱いにする。デバッグのモード選択から入っても
     // 難易度の「この難易度で挑戦」が debugBattleRef を false に戻すため、ここで必ず止める
     if (runHasDebugOnlyMonster()) return;
@@ -50758,6 +50786,7 @@ function MonsterHeroGame() {
     scoreSubmittedRef.current = true;
     if (!modeHasRanking(speciesChallengeRunMode(run))) return;
     if (debugBattleRef.current) return;
+    if (PLAYBOT_ACTIVE) return; // ボット用の印を付けた周回は残さない(10-core.jsx)
     try {
       const diff = rankingDifficultyForMode(speciesChallengeRunMode(run), run.difficultyId, run.speciesId);
       const result = await submitLocalScore(diff, score, runIdRef.current);
@@ -50780,6 +50809,7 @@ function MonsterHeroGame() {
   const submitTacticsScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
+    if (PLAYBOT_ACTIVE) return; // ボット用の印を付けた周回は残さない(10-core.jsx)
     const diff = tacticsRecordDifficulty();
     const saveBest = async () => {
       if (score > (Number(tacticsRecordsOf(runMode).hs[diff]) || 0)) {
@@ -53642,6 +53672,8 @@ function MonsterHeroGame() {
   });
 
   const applyResetAllState = () => {
+    // ボット用の乱数の種(?playbotSeed)。ランの始まりごとに同じ種から作り直す。付いていなければ何もしない
+    playbotReseedRandom();
     // 新しいrunへ前周の絆報酬対象を持ち越さない。
     autoRepeatBondAwardMasuIdsRef.current = [];
     // あとから入る子の追いつき補正は1周ごとに数え直す(ステータスも間合いのボーナスも)

@@ -945,7 +945,9 @@ function MonsterHeroGame() {
   // 追いつきをいつまで続けるか(時刻)。0なら追いつき中でない
   const catchUpUntilRef = useRef(0);
   const battleMs = useCallback((baseMs) => {
-    const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
+    const speeded = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
+    // ボット用の早送り(?playbotFast=1。10-core.jsx の PLAYBOT_FAST)。ふつうのプレイでは false のまま
+    const base = PLAYBOT_FAST ? Math.round(speeded / PLAYBOT_FAST_DIVISOR) : speeded;
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
@@ -6325,6 +6327,8 @@ function MonsterHeroGame() {
     // デバッグ・練習の周回は、どのモードでも全国ランキングにも自己ベストにも残さない。
     // 呼び出し側でも弾いているが、ここでも止めて「デバッグから遊んだら記録がついた」を確実に防ぐ
     if (debugBattleRef.current) return;
+    // ボット用の早送り・乱数の種(?playbotFast / ?playbotSeed)を付けた周回も残さない(10-core.jsx の PLAYBOT_ACTIVE)
+    if (PLAYBOT_ACTIVE) return;
     // 正式実装前のモンスターを連れた周回も同じ扱いにする。デバッグのモード選択から入っても
     // 難易度の「この難易度で挑戦」が debugBattleRef を false に戻すため、ここで必ず止める
     if (runHasDebugOnlyMonster()) return;
@@ -6425,6 +6429,7 @@ function MonsterHeroGame() {
     scoreSubmittedRef.current = true;
     if (!modeHasRanking(speciesChallengeRunMode(run))) return;
     if (debugBattleRef.current) return;
+    if (PLAYBOT_ACTIVE) return; // ボット用の印を付けた周回は残さない(10-core.jsx)
     try {
       const diff = rankingDifficultyForMode(speciesChallengeRunMode(run), run.difficultyId, run.speciesId);
       const result = await submitLocalScore(diff, score, runIdRef.current);
@@ -6447,6 +6452,7 @@ function MonsterHeroGame() {
   const submitTacticsScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
+    if (PLAYBOT_ACTIVE) return; // ボット用の印を付けた周回は残さない(10-core.jsx)
     const diff = tacticsRecordDifficulty();
     const saveBest = async () => {
       if (score > (Number(tacticsRecordsOf(runMode).hs[diff]) || 0)) {
@@ -9309,6 +9315,8 @@ function MonsterHeroGame() {
   });
 
   const applyResetAllState = () => {
+    // ボット用の乱数の種(?playbotSeed)。ランの始まりごとに同じ種から作り直す。付いていなければ何もしない
+    playbotReseedRandom();
     // 新しいrunへ前周の絆報酬対象を持ち越さない。
     autoRepeatBondAwardMasuIdsRef.current = [];
     // あとから入る子の追いつき補正は1周ごとに数え直す(ステータスも間合いのボーナスも)
