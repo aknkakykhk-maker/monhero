@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 22:37 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/10 23:19 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>2</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>63</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>1</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>64</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,11 +88,6 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="r2610101500sheri">
-        <div class="row-title">新曲「sheriruth」: 参考譜面に寄せた MASTER の試作を見せる</div>
-        <div class="row-body">MASTER の30秒ほどを参考譜面(地上4レーン+空中のアーク・スカイノーツ)に寄せて試作し、参考譜面の同じ区間と並べて見せる。アーク→スライド(両手2本同時もあり)、スカイノーツ→スライドの通り道上のタップかフリック。空中と地上の2段は再現できない。丸写しでなく同じ雰囲気・忙しさに寄せる</div>
-        <div class="meta"><span>部長テンポくん</span><span>見込み 方針: 空中ノーツは MASTER の上の新しい難易度だけ(あとから)。先に地上5難易度を公開。地上の譜面は参考譜面に寄せ、今までの作り方と合わせて各難易度に調整し、作り方を道具に学習させる。止まる演出も地上の公開に入れる。優先: ①空中ノーツの判定の中身(社長「形だけ真似て中身がついてきていない」) ②止まる演出の試作 ③地上の公開譜面 ④道具への学習。並行: ダブルスライドの固まり・押した場所で光る段(ドライバーくん)・始点の幅を全曲 .64(ピンセットくん)。公開の時刻はテンポくんの新しい見込み待ち</span></div>
-      </li>
       <li id="w5">
         <div class="row-title">モンスターのTier表の見直し(総合で決める)</div>
         <div class="row-body">社長の選択で 10/10 朝からすぐ再開。①簡易シミュレーター ②Master の全種集め ③5回以上そろった子から調整の案、の順</div>
@@ -100,6 +95,11 @@ section{display:flex;flex-direction:column;gap:10px}
       </li></ul>
       <h3 style="margin-top:14px">これからの予定(まだ始めていない)</h3>
       <ul class="list">
+      <li id="r2610102320sky">
+        <div class="row-title">Sheriruth: 空中ノーツの新しい難易度(MASTER の上の6段目)を足す</div>
+        <div class="row-body">MASTER の譜面を土台に一部を空中ノーツへ。空中ノーツの描画・判定(試作で数字を確かめ済み)を本番の譜面で使う。6段目の一覧・解放・名前・レベル表・検査・見た目・更新履歴</div>
+        <div class="meta"><span>部長テンポくん</span><span>見込み 名前(案: ZENITH / HEAVEN / STRATOS)・解放条件(案: 同じ曲の MASTER クリア)を社長に聞いてから。保存の先回りの直しは #2652 で済み。SQL が要る表が2つ(プレイ記録・タッチ診断)</span></div>
+      </li>
       <li id="r2610101330speed">
         <div class="row-title">Tier 表の実戦を速くする(実戦係の採用・役割分け・ボット用の早送り)</div>
         <div class="row-body">いまは1回20〜30分・同時3本で1時間に6〜9回。①実戦係を1〜2人採用して並べる ②広く測るのはシミュレーター、実戦は上位・境目・ぶれの中の子・パーティに絞る ③デバッグ専用の早送り(通常プレイに出ない・保存とランキングに触れない・早送りあり/なしで結果が一致するのを数字で確かめてから使う)</div>
@@ -194,6 +194,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="shipped">
       <h2>公開したもの</h2>
       <ul class="list">
+      <li id="r2610101500sheri">
+        <div class="row-title">新曲「Sheriruth」: 地上の5難易度で公開(空中ノーツは試作・あとで新しい難易度に)</div>
+        <div class="row-body">MASTER の30秒ほどを参考譜面(地上4レーン+空中のアーク・スカイノーツ)に寄せて試作し、参考譜面の同じ区間と並べて見せる。アーク→スライド(両手2本同時もあり)、スカイノーツ→スライドの通り道上のタップかフリック。空中と地上の2段は再現できない。丸写しでなく同じ雰囲気・忙しさに寄せる</div>
+        <div class="meta"><span>部長テンポくん</span><span>PR #2650・#2652</span><span>本番URL → モンヒロビート → Sheriruth(MASTER の 1:22 ごろの止まる演出・EASY の手ごたえ)。空中ノーツの試作はデバッグ設定 → 🎵 モンヒロビート デバッグ → ▶ プレイ</span></div>
+      </li>
       <li id="r2610102040debug">
         <div class="row-title">sheriruth の試作を本番のデバッグモードから遊べるようにする</div>
         <div class="row-body">デバッグ設定 → 🎵 モンヒロビート デバッグ → ▶ プレイの一番上「試作をプレイ」。普通のプレイヤーには出ない。記録・報酬・ランキング・イベントに入らない。止まる演出の仕組み(速さの表)も本番に入った。既存曲は変わらない</div>
@@ -3707,8 +3712,8 @@ section{display:flex;flex-direction:column;gap:10px}
       </div>
       <div class="bar-row">
         <span class="bar-name">部長テンポくん</span>
-        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:62.96%"></span></span>
-        <span class="bar-val">17</span>
+        <span class="bar-track"><span class="bar-zero" style="left:3.70%"></span><span class="bar " style="left:3.70%;width:77.78%"></span></span>
+        <span class="bar-val">21</span>
       </div>
       <div class="bar-row">
         <span class="bar-name">部長ハカセくん</span>
