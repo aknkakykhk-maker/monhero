@@ -1518,7 +1518,7 @@ if (require.main === module) {
   const ONLY = argOf('--hero', '');
   // 緊急回復(auto・brink・bot・none)。カンマで並べると、1つ目で全部(EX の使い方すべて・実戦との突き合わせ・bot と best の差)を出し、
   //   2つ目からは EX=best だけ回して難易度ごとの表へ列を足す(2026-10-10 ハカセくん: 「AUTO と同じ」と「全滅の手前だけ」を並べる)
-  const EM_LIST = argOf('--emergency', 'brink,auto').split(',').filter(Boolean);
+  const EM_LIST = argOf('--emergency', 'bot,auto,brink,none').split(',').filter(Boolean);
   const EMERGENCY = EM_LIST[0];
   const EM_EXTRA = EM_LIST.slice(1);
   const EM_JA = { none: '使わない', auto: 'AUTO と同じ', brink: '全滅の手前だけ', bot: 'ボットと同じ(AUTO の条件+全滅の手前)' };
@@ -1553,38 +1553,47 @@ if (require.main === module) {
     }
     console.log(`  ${mode}: ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
   }
-  const statsX = {}; // [緊急回復][heroId][diff](EX=best だけ)
+  // 2つ目からの緊急回復: 表の列に足すのは EX=best だけ。'none'(緊急回復を使わない)は、古いボットの回と突き合わせるため EX=bot も回す
+  const statsX = {}; // [緊急回復][EX の使い方][heroId][diff]
+  const modesX = (em) => (em === 'none' && EMERGENCY !== 'none' ? ['bot', 'best'] : ['best']).filter((mo) => MODES.includes(mo));
   for (const em of EM_EXTRA) {
     statsX[em] = {};
-    for (const m of heroes) {
-      statsX[em][m.id] = {};
-      for (const d of DIFFS) {
-        let sum = 0; let clear = 0; let boss = 0; let eu = 0;
-        for (let i = 0; i < RUNS; i++) {
-          const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
-          const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: 'best', assist: ASSIST, training: TRAINING, emergency: em, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
-          sum += r.wave; if (r.result === 'clear') clear++; if (r.wave >= MAX_WAVE) boss++; eu += r.emergencyUses;
+    for (const mo of modesX(em)) {
+      statsX[em][mo] = {};
+      for (const m of heroes) {
+        statsX[em][mo][m.id] = {};
+        for (const d of DIFFS) {
+          let sum = 0; let clear = 0; let boss = 0; let eu = 0;
+          for (let i = 0; i < RUNS; i++) {
+            const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
+            const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mo, assist: ASSIST, training: TRAINING, emergency: em, distBonus: DIST_BONUS, uniqueUp: UNIQUE_UP });
+            sum += r.wave; if (r.result === 'clear') clear++; if (r.wave >= MAX_WAVE) boss++; eu += r.emergencyUses;
+          }
+          statsX[em][mo][m.id][d] = { avg: sum / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, emergency: eu / RUNS };
         }
-        statsX[em][m.id][d] = { avg: sum / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, emergency: eu / RUNS };
       }
+      console.log(`  緊急回復 ${em}(${mo}): ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
     }
-    console.log(`  緊急回復 ${em}(best): ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
   }
   const sec = ((Date.now() - t0) / 1000).toFixed(1);
   // ブラウザの実戦(tactics-knowledge.json)。ボットが止まった回(stopped)は数えない
   const knowledge = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'tactics-knowledge.json'), 'utf8'));
   const idByName = Object.fromEntries(MONS.map((m) => [m.name, m.id]));
-  const real = {}; const realClear = {};
-  for (const r of knowledge.runs || []) {
-    if (r.mode !== 'tacticsPro' || !['clear', 'wipe', 'timeout'].includes(r.result)) continue;
-    // 実戦のボットは 2026-10-10 から緊急回復を使える(r.bot.emergency。古い回は使わない)。シミュレーターの --emergency と同じ条件の回だけ比べる
-    //   シミュレーターが 'bot'(AUTO の条件+全滅の手前)なら緊急回復を使えるボット(r.bot.emergency が入)の回と、それ以外なら使えないボットの回と比べる
-    if (!!(r.bot && r.bot.emergency) !== (EMERGENCY === 'bot')) continue;
-    const id = idByName[r.hero]; if (!id || !DIFFS.includes(r.difficulty) || !heroes.some((m) => m.id === id)) continue;
-    const k = `${id}|${r.difficulty}`;
-    (real[k] = real[k] || []).push(r.result === 'clear' ? MAX_WAVE : Number(r.wave) || 0);
-    if (r.result === 'clear') realClear[r.difficulty] = (realClear[r.difficulty] || 0) + 1;
-  }
+  // 実戦のボットは 2026-10-10 から緊急回復を使える(r.bot.emergency が入。AUTO の条件 → だめなら全滅の手前。古い回は使わない)。
+  //   シミュレーターの緊急回復と同じ条件の回だけ比べる: 'bot' は緊急回復を使えるボットの回と、それ以外は使えないボットの回と
+  const realFor = (withEmergency) => {
+    const real = {}; const realClear = {};
+    for (const r of knowledge.runs || []) {
+      if (r.mode !== 'tacticsPro' || !['clear', 'wipe', 'timeout'].includes(r.result)) continue;
+      if (!!(r.bot && r.bot.emergency) !== withEmergency) continue;
+      const id = idByName[r.hero]; if (!id || !DIFFS.includes(r.difficulty) || !heroes.some((m) => m.id === id)) continue;
+      const k = `${id}|${r.difficulty}`;
+      (real[k] = real[k] || []).push(r.result === 'clear' ? MAX_WAVE : Number(r.wave) || 0);
+      if (r.result === 'clear') realClear[r.difficulty] = (realClear[r.difficulty] || 0) + 1;
+    }
+    return { real, realClear };
+  };
+  const { real, realClear } = realFor(EMERGENCY === 'bot');
 
   const L = []; const out = (t = '') => L.push(t);
   const pct = (x) => `${Math.round(x * 100)}%`;
@@ -1633,7 +1642,7 @@ if (require.main === module) {
     const key = MODES.includes('bot') ? 'bot' : MODES[0];
     for (const m of [...heroes].sort((a, b) => stats[key][b.id][d].avg - stats[key][a.id][d].avg)) {
       const old = (OLD[m.name] || {})[d];
-      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${bossCell(s)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')}${EM_EXTRA.map((em) => { const x = statsX[em][m.id][d]; return ` | ${x.avg.toFixed(2)} | ${pct(x.clear)} | ${bossCell(x)} | ${x.emergency.toFixed(1)}`; }).join('')} |`);
+      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${bossCell(s)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')}${EM_EXTRA.map((em) => { const x = statsX[em].best[m.id][d]; return ` | ${x.avg.toFixed(2)} | ${pct(x.clear)} | ${bossCell(x)} | ${x.emergency.toFixed(1)}`; }).join('')} |`);
     }
   }
   if (MODES.includes('bot') && MODES.includes('best')) {
@@ -1672,43 +1681,56 @@ if (require.main === module) {
   out('ボットが途中で止まった回(stopped)は除いた。実戦のクリアは WAVE 10 として数えた。「前の版」は 1 版目(スキル無し)。');
   out(`実戦は${EMERGENCY === 'bot' ? '緊急回復を使えるボット(arena-1 から)の回だけ' : '緊急回復を使わないボットの回だけ(2026-10-10 までの回はすべてこちら)'}を数えた(シミュレーターの緊急回復は「${EM_JA[EMERGENCY] || EMERGENCY}」)。`);
   out();
-  out(`| 勇者モン | 難易度 | 実戦の回数 | 実戦の平均 WAVE | 前の版 | ${MODES.map((mo) => `${MODE_JA[mo]} | 差`).join(' | ')} |`);
-  out(`| --- | --- | --- | --- | --- | ${MODES.map(() => '--- | ---').join(' | ')} |`);
-  const gaps = [];
-  for (const k of Object.keys(real).sort()) {
-    const [id, d] = k.split('|');
-    const r = real[k]; const ra = r.reduce((a, b) => a + b, 0) / r.length;
-    const old = (OLD[MON_BY_ID[id].name] || {})[d];
-    const g = { d, n: r.length, old: old ? ra - old.avg : null };
-    MODES.forEach((mo) => { g[mo] = ra - stats[mo][id][d].avg; });
-    gaps.push(g);
-    out(`| ${MON_BY_ID[id].name} | ${d} | ${r.length} | ${ra.toFixed(2)} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => `${stats[mo][id][d].avg.toFixed(2)} | ${sgn(g[mo])}`).join(' | ')} |`);
-  }
-  out();
-  out('回数で重みづけした「実戦 − シミュレーター」の平均(0 に近いほど実戦に近い):');
-  out();
-  out(`| 難易度 | 実戦の回数 | 前の版 | ${MODES.map((mo) => MODE_JA[mo]).join(' | ')} |`);
-  out(`| --- | --- | --- | ${MODES.map(() => '---').join(' | ')} |`);
   const summary = [];
-  for (const d of DIFFS) {
-    const xs = gaps.filter((x) => x.d === d); if (!xs.length) continue;
-    const n = xs.reduce((a, x) => a + x.n, 0);
-    const w = (key) => { const ys = xs.filter((x) => x[key] != null); const nn = ys.reduce((a, x) => a + x.n, 0); return nn ? ys.reduce((a, x) => a + x[key] * x.n, 0) / nn : null; };
-    const line = `| ${d} | ${n} | ${w('old') != null ? sgn(w('old')) : '-'} | ${MODES.map((mo) => sgn(w(mo))).join(' | ')} |`;
-    out(line); summary.push(line);
+  // 突き合わせの表(子ごと・回数で重みづけ・ボス戦)。st = [EX の使い方][heroId][diff]
+  const writeCompare = (st, modes, rr, tag) => {
+    const { real: R, realClear: RC } = rr;
+    out(`| 勇者モン | 難易度 | 実戦の回数 | 実戦の平均 WAVE | 前の版 | ${modes.map((mo) => `${MODE_JA[mo]} | 差`).join(' | ')} |`);
+    out(`| --- | --- | --- | --- | --- | ${modes.map(() => '--- | ---').join(' | ')} |`);
+    const gaps = [];
+    for (const k of Object.keys(R).sort()) {
+      const [id, d] = k.split('|');
+      const r = R[k]; const ra = r.reduce((a, b) => a + b, 0) / r.length;
+      const old = (OLD[MON_BY_ID[id].name] || {})[d];
+      const g = { d, n: r.length, old: old ? ra - old.avg : null };
+      modes.forEach((mo) => { g[mo] = ra - st[mo][id][d].avg; });
+      gaps.push(g);
+      out(`| ${MON_BY_ID[id].name} | ${d} | ${r.length} | ${ra.toFixed(2)} | ${old ? old.avg.toFixed(2) : '-'} | ${modes.map((mo) => `${st[mo][id][d].avg.toFixed(2)} | ${sgn(g[mo])}`).join(' | ')} |`);
+    }
+    out();
+    out('回数で重みづけした「実戦 − シミュレーター」の平均(0 に近いほど実戦に近い):');
+    out();
+    out(`| 難易度 | 実戦の回数 | 前の版 | ${modes.map((mo) => MODE_JA[mo]).join(' | ')} |`);
+    out(`| --- | --- | --- | ${modes.map(() => '---').join(' | ')} |`);
+    for (const d of DIFFS) {
+      const xs = gaps.filter((x) => x.d === d); if (!xs.length) continue;
+      const n = xs.reduce((a, x) => a + x.n, 0);
+      const w = (key) => { const ys = xs.filter((x) => x[key] != null); const nn = ys.reduce((a, x) => a + x.n, 0); return nn ? ys.reduce((a, x) => a + x[key] * x.n, 0) / nn : null; };
+      const line = `| ${d} | ${n} | ${w('old') != null ? sgn(w('old')) : '-'} | ${modes.map((mo) => sgn(w(mo))).join(' | ')} |`;
+      out(line); summary.push(`${tag} ${line}`);
+    }
+    out();
+    out('ボス戦(覚醒ムー)に入った回の勝ち率。全員ぶんを合わせたもの(届いた回で重みづけ)と、実戦(ボットがブラウザで戦った回のうち WAVE 10 まで届いた回):');
+    out();
+    out(`| 難易度 | ${modes.map((mo) => `${MODE_JA[mo]} 勝ち率(届いた割合)`).join(' | ')} | 実戦 勝ち率(届いた回) |`);
+    out(`| --- | ${modes.map(() => '---').join(' | ')} | --- |`);
+    for (const d of DIFFS) {
+      const cells = modes.map((mo) => { let b = 0; let c = 0; heroes.forEach((m) => { const x = st[mo][m.id][d]; b += x.boss; c += x.clear; }); return b > 0 ? `${pct(c / b)}(${pct(b / heroes.length)})` : '—'; });
+      const rs = Object.entries(R).filter(([k]) => k.endsWith(`|${d}`)).flatMap(([, v]) => v);
+      const rb = rs.filter((x) => x >= MAX_WAVE).length; const rc = (RC[d] || 0);
+      out(`| ${d} | ${cells.join(' | ')} | ${rb ? `${pct(rc / rb)}(${rb} 回)` : '—'} |`);
+    }
+    out();
+  };
+  writeCompare(stats, MODES, { real, realClear }, `緊急回復 ${EMERGENCY}`);
+  // 古いボット(緊急回復なし)の回は、シミュレーターの緊急回復なしと比べる
+  if (EMERGENCY !== 'none' && statsX.none && statsX.none.bot) {
+    out('### 古いボット(r.bot の無い回・緊急回復なし)との突き合わせ');
+    out();
+    out('2026-10-10 より前の回(ボットは緊急回復を使わない)を、シミュレーターの「緊急回復を使わない」と比べたもの。');
+    out();
+    writeCompare(statsX.none, modesX('none'), realFor(false), '緊急回復 none');
   }
-  out();
-  out('ボス戦(覚醒ムー)に入った回の勝ち率。全員ぶんを合わせたもの(届いた回で重みづけ)と、実戦(ボットがブラウザで戦った回のうち WAVE 10 まで届いた回):');
-  out();
-  out(`| 難易度 | ${MODES.map((mo) => `${MODE_JA[mo]} 勝ち率(届いた割合)`).join(' | ')} | 実戦 勝ち率(届いた回) |`);
-  out(`| --- | ${MODES.map(() => '---').join(' | ')} | --- |`);
-  for (const d of DIFFS) {
-    const cells = MODES.map((mo) => { let b = 0; let c = 0; heroes.forEach((m) => { const x = stats[mo][m.id][d]; b += x.boss; c += x.clear; }); return b > 0 ? `${pct(c / b)}(${pct(b / heroes.length)})` : '—'; });
-    const rs = Object.entries(real).filter(([k]) => k.endsWith(`|${d}`)).flatMap(([, v]) => v);
-    const rb = rs.filter((w) => w >= MAX_WAVE).length; const rc = (realClear[d] || 0);
-    out(`| ${d} | ${cells.join(' | ')} | ${rb ? `${pct(rc / rb)}(${rb} 回)` : '—'} |`);
-  }
-  out();
   out(`(${heroes.length} 体 × ${DIFFS.length} 難易度 × ${RUNS} 回 × 使い方 ${MODES.length} 通りを ${sec} 秒で回した。seed ${SEED})`);
   const text = `${L.join('\n')}\n`;
   if (mdFile) { fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true }); fs.writeFileSync(path.resolve(mdFile), text); console.log(`書き出した: ${mdFile}`); summary.forEach((s) => console.log(s)); }
