@@ -1212,7 +1212,7 @@ const RHYTHM_SKY_INPUT={active:false};
 const RHYTHM_SKY_THEMES=Object.freeze({
   default:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀',fx:Object.freeze({core:'255,255,255',main:'226,232,240',accent:'186,230,253'})}),
   beam:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀',fx:Object.freeze({core:'255,255,255',main:'226,232,240',accent:'148,163,184'})}),
-  plate:Object.freeze({rgb:'255,69,69',core:'#fff1f2',label:'赤(ふつうの板)',fx:Object.freeze({core:'255,241,242',main:'255,69,69',accent:'252,165,165'})}),
+  plate:Object.freeze({rgb:'239,68,68',core:'#ffe4e6',label:'赤(ふつうの板)',fx:Object.freeze({core:'255,228,230',main:'239,68,68',accent:'252,165,165'})}),
   glass_silver:Object.freeze({rgb:'221,214,254',core:'#f5f3ff',label:'白銀〜薄紫のガラス',fx:Object.freeze({core:'255,255,255',main:'221,214,254',accent:'148,163,184'})}),
   glass_red:Object.freeze({rgb:'239,68,68',core:'#fecaca',label:'赤のガラス',fx:Object.freeze({core:'254,202,202',main:'239,68,68',accent:'252,165,165'})}),
   ruby:Object.freeze({rgb:'239,68,68',core:'#fecaca',label:'赤',fx:Object.freeze({core:'254,202,202',main:'239,68,68',accent:'252,165,165'})}),
@@ -29418,7 +29418,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const HEAD_THICK=1;
   // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
   // 2026-09-27: 参考動画に寄せて、角の丸みを小さく(5→2)・真ん中に白い芯の帯・光を少し強く。厚みと色の種類は変えない
-  const SKY_NOTE_COLOR=Object.freeze({hi:'#fff1f2',mid:'#ff4545',lo:'#c81e1e',rgb:'255,69,69'});
+  // 赤は、フリックのピンク(#f472b6・#db2777)・横フリック左のオレンジ・判定 GREAT の赤(#f87171)から離した朱寄りの #ef4444 前後。芯は白で、縁と光だけが赤
+  const SKY_NOTE_COLOR=Object.freeze({hi:'#ffe4e6',mid:'#ef4444',lo:'#b91c1c',rgb:'239,68,68'});
   const SKY_ARROW_GLOWS=Object.freeze([[5,`rgba(${SKY_NOTE_COLOR.rgb},.95)`],[11,`rgba(${SKY_NOTE_COLOR.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
   const SKY_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,SKY_NOTE_COLOR.hi],[1,SKY_NOTE_COLOR.mid]]);
   const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
