@@ -273,7 +273,12 @@ function decidePick(b, opts, ctx) {
   const hpMax = b.slots.filter((x) => x.occupied).reduce((a, x) => a + (x.hp ? x.hp.max : 0), 0);
   const downed = b.slots.filter((x) => x.occupied && x.downed).length;
   const heal = opts.find((o) => o.card.type === 'heal');
-  if (heal && !ctx.healed && (downed > 0 || (hpMax && hpNow / hpMax < 0.35))) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%` };
+  // ★ターン終わりに自動回復(立っている子のライフ 上限の10%・ガッツ 5%。ポルツ・EX で増える。60-app.jsx の tacticsRegen)が入る。
+  //   回復は「次の攻撃を受けて、自動回復が入ったあと」の見込みで決める(2026-10-10 ハカセくんの直す順2。前は今のライフだけを見ていた)。
+  //   PLAYBOT_TACTICS_REGEN=0 で前の決め方に戻る(比べるため)
+  const regenOn = process.env.PLAYBOT_TACTICS_REGEN !== '0';
+  const hpSoon = !hpMax ? 1 : regenOn ? (Math.max(0, hpNow - (b.aimedDamage || 0)) + hpMax * 0.1) / hpMax : hpNow / hpMax;
+  if (heal && !ctx.healed && (downed > 0 || hpSoon < 0.35)) return { kind: 'support', card: heal.card, why: downed ? `倒れた子がいる(回復は倒れた子にも貯まる)` : `全体のライフが${Math.round((hpNow / hpMax) * 100)}%${regenOn ? `(次の攻撃と自動回復のあと ${Math.round(hpSoon * 100)}%)` : ''}` };
   // ④' あとから出たアシストカード。ガッツや手数を増やすものは、早めに使うほど得
   const richestG = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
   const leanG = alive.some((x) => x.guts && x.guts.max && x.guts.now < x.guts.max * 0.35);
@@ -282,7 +287,7 @@ function decidePick(b, opts, ctx) {
   if (momo && leanG && !ctx.healed) return { kind: 'support', card: momo.card, why: 'ガッツが細った子がいる(ももすけ: ガッツ回復)' };
   if (kiki && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.3) return { kind: 'support', card: kiki.card, why: '次のターンからカードの上限を増やす(きき)' };
   if (poltz && !ctx.buffed && richestG >= 0.3 && b.enemy && b.enemy.hp > b.enemy.max * 0.4) return { kind: 'support', card: poltz.card, why: '受けるたびにガッツが戻るようにする(ポルツ)' };
-  if (meloso && !ctx.healed && (hpMax && hpNow / hpMax < 0.55)) return { kind: 'support', card: meloso.card, why: 'ライフが減っている(メロソ: 回復とガード)' };
+  if (meloso && !ctx.healed && hpSoon < 0.55) return { kind: 'support', card: meloso.card, why: 'ライフが減っている(メロソ: 回復とガード)' };
   // ⑤ 攻撃。★スタンのカード(あつの挑発など・type debuff)は「ためる」「貫通の構え」のターンまで取っておく。
   //   先に撃つと、必殺技(×2.5)を止められずに倒れる(2026-10-09 Master の WAVE 3)。とどめのときだけは使ってよい
   const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
@@ -305,7 +310,10 @@ function decidePick(b, opts, ctx) {
   }
   // ⑥ 支援
   // ★支援は20ガッツかかる。ガッツが細っているとき(いちばん多い子でも6割未満)は使わず、⑦の「捨ててガッツを戻す」へ回す
-  const richest = alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
+  //   ★自動回復を見込む: 20 払って、ターン終わりにガッツが上限の5%戻ったあとに4割残るなら使う(前は今のガッツが6割以上。PLAYBOT_TACTICS_REGEN=0 で前の決め方)
+  const richest = regenOn
+    ? alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? (x.guts.now - 20 + x.guts.max * 0.05) / x.guts.max : 0), 0) + 0.2
+    : alive.reduce((m, x) => Math.max(m, x.guts && x.guts.max ? x.guts.now / x.guts.max : 0), 0);
   const buff = opts.find((o) => o.card.type === 'buff' && !/自傷/.test(o.card.label));
   if (buff && richest >= 0.6 && b.enemy && b.enemy.hp > b.enemy.max * 0.3 && !ctx.buffed) return { kind: 'support', card: buff.card, why: '攻撃が置けないので支援' };
   return null;
