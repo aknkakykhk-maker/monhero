@@ -4454,6 +4454,42 @@ function MonsterHeroGame() {
     window.addEventListener('popstate', onPop);
     return () => { clearInterval(timer); window.removeEventListener('popstate', onPop); };
   }, []);
+  // 読み込み直しの記録(本体は 50-error-boundary.jsx)。
+  // 起動したときに前回の印を調べ、正常に終わっていなければ記録を1件足す。そのあと、遊んでいるあいだ
+  // 15秒ごとに「いま遊んでいる」印(画面・音のデータの本数・使っているメモリ)を書き直す。
+  // 端末の中だけ。サーバーへは送らない。新しい保存キー mhdev_session_marker_v1 / mhdev_reload_log_v1 だけを使う
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const startedAt = Date.now();
+    let nav = '';
+    try { const e = window.performance.getEntriesByType('navigation')[0]; nav = e && e.type ? e.type : ''; } catch (e) {}
+    const entry = buildReloadLogEntry(reloadReadJson(RELOAD_MARKER_KEY), startedAt, nav);
+    if (entry) reloadWriteJson(RELOAD_LOG_KEY, pushReloadLog(reloadReadJson(RELOAD_LOG_KEY), entry));
+    const marker = { id:`${startedAt.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, startedAt, lastBeat:startedAt, state:'running', screen:'', audioBuffers:null, heapMB:null, nav };
+    const write = (state) => {
+      marker.lastBeat = Math.max(marker.startedAt, Date.now());
+      marker.state = state;
+      marker.screen = String(gameStateForBackRef.current || '');
+      try { const d = Audio_.diagnose(); marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null; } catch (e) {}
+      try { const m = window.performance && window.performance.memory; marker.heapMB = m && Number.isFinite(m.usedJSHeapSize) ? Math.round(m.usedJSHeapSize / 1048576) : null; } catch (e) {}
+      reloadWriteJson(RELOAD_MARKER_KEY, marker);
+    };
+    write('running');
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') write('running'); }, RELOAD_BEAT_MS);
+    // ★ページを離れるときは pagehide のあとに visibilitychange(hidden) が来るブラウザがある。
+    //   閉じた('closed')印を hidden で上書きすると、正常に閉じたのに「裏に回ったあと読み込み直された」と記録してしまう
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') { if (marker.state !== 'closed') write('hidden'); }
+      else write('running');
+    };
+    // pagehide … 閉じる・ほかのページへ移るときは正常終了('closed')。ブラウザの保存(persisted)に入るだけなら裏に回った扱い
+    const onPageHide = (event) => write(event && event.persisted ? 'hidden' : 'closed');
+    const onPageShow = (event) => { if (event && event.persisted) write('running'); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('pagehide', onPageHide); window.removeEventListener('pageshow', onPageShow); };
+  }, []);
   useEffect(() => {
     if (!pendingFriendCode) return;
     if (RELEASE_FLAGS.friends !== true) { setPendingFriendCode(''); return; }
@@ -15864,7 +15900,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showHomeArt ? (
     <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}</div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
