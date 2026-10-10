@@ -1336,7 +1336,9 @@ function upgradeUniques(st, w) {
   while (st.upgradePoints > 0) {
     const cand = G.tacticsFilledSlots(st.units).filter((i) => st.mons[i] && st.mons[i].unique && (st.uniqueLv[i] || 0) < MAX_UNIQUE_LV);
     if (!cand.length) break;
-    const slot = cand.sort((a, z) => (st.dmgBySlot[z] || 0) - (st.dmgBySlot[a] || 0))[0];
+    const slot = st.uniquePlan === 'hero' && cand.includes(st.heroSlot) ? st.heroSlot
+      : st.uniquePlan === 'even' ? cand.sort((a, z) => (st.uniqueLv[a] || 0) - (st.uniqueLv[z] || 0) || (st.dmgBySlot[z] || 0) - (st.dmgBySlot[a] || 0))[0]
+        : cand.sort((a, z) => (st.dmgBySlot[z] || 0) - (st.dmgBySlot[a] || 0))[0];
     st.uniqueLv[slot] = (st.uniqueLv[slot] || 0) + 1;
     st.upgradePoints -= 1;
     st.uniqueLog.push({ wave: w, id: st.mons[slot].id, level: st.uniqueLv[slot] });
@@ -1351,6 +1353,10 @@ function upgradeUniques(st, w) {
 //   - 起こす: ランで初めて倒れた子が出た合間に1回だけ聞く(mem.reviveAsked はランのあいだ戻らない)。
 //     ダメージの割合 35% 以上の子がいればその子、いなければ「倒れた数×2 ≥ 編成の数」なら最初の子
 //   - 鍛える: 丸太うけ+走り込み。ガッツ不足 4 回以上か元のガッツ 90 以下で、ライフが半分以上残っていれば 丸太うけ+猛勉強
+// トレーニングの選び方: bot(ボットと同じ)・none(しない)・hpdef(丸太うけ+走り込み)・atkhp(ドミノ倒し+走り込み)・atk2(ドミノ倒し×2)・role(ダメージ役だけドミノ倒し)
+const TRAINING_PLANS = ['bot', 'none', 'hpdef', 'atkhp', 'atk2', 'role'];
+// 固有技の強化ポイントの入れ方: bot(いちばんダメージを出した子へ。ボットと同じ)・hero(勇者モンへ)・even(段のいちばん低い子へ順に)
+const UNIQUE_PLANS = ['bot', 'hero', 'even'];
 const TRAINING_ID = { 丸太うけ: 'def', 走り込み: 'hp', 猛勉強: 'guts', ドミノ倒し: 'atk' };
 function trainAfterWave(st, w) {
   if (st.training === 'none') return;
@@ -1374,6 +1380,17 @@ function trainAfterWave(st, w) {
     const baseGuts = st.mons[slot].baseGuts;
     let plan = ['丸太うけ', '走り込み'];
     if (((st.gutsShortBy[slot] || 0) >= 4 || (Number.isFinite(baseGuts) && baseGuts <= 90)) && !(hpRatio < 0.5)) plan = ['丸太うけ', '猛勉強'];
+    // ほかの選び方(パーティのおすすめで比べる。2026-10-10 社長「どう強化したら良いか」)
+    if (st.training === 'hpdef') plan = ['丸太うけ', '走り込み'];
+    else if (st.training === 'atkhp') plan = ['ドミノ倒し', '走り込み'];
+    else if (st.training === 'atk2') plan = ['ドミノ倒し', 'ドミノ倒し'];
+    else if (st.training === 'role') {
+      // ダメージ役(頭割り以上を出した子)はドミノ倒し+走り込み、ほかは丸太うけ+走り込み。ガッツの少ない子は2つ目を猛勉強
+      const total = Object.values(st.dmgBySlot).reduce((a, b) => a + b, 0) || 1;
+      const carry = (st.dmgBySlot[slot] || 0) / total >= 1 / Math.max(1, filled.length);
+      plan = carry ? ['ドミノ倒し', '走り込み'] : ['丸太うけ', '走り込み'];
+      if (Number.isFinite(baseGuts) && baseGuts <= 90 && !(hpRatio < 0.5)) plan = [plan[0], '猛勉強'];
+    }
     const ids = plan.map((n) => TRAINING_ID[n]);
     const after = G.resolveTrainingStats({ atk: u.atk, def: u.def, hp: u.baseMaxHp, guts: u.baseMaxGuts }, ids, Math.min(st.turn, 20), null, G.BATTLE_MODE_TACTICS_PRO);
     st.units = G.applyTacticsTraining(st.units, slot, after, st.perma.muaHpPct || 0, st.perma.muaGutsPct || 0);
@@ -1381,7 +1398,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto' }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot' }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1400,12 +1417,13 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // WAVE 報酬の間合いボーナス(distDmgBonus)と、供モンが入るときの間合いの追いつき(tacticsJoinDistCatchUpRef。始めは 1)
     useDistBonus: distBonus, distBonus: [0, 0, 0, 0], waveDist: [0, 0, 0, 0], joinDistCatchUp: 1,
     // 固有技の強化(6 版目): 枠ごとの段・残りの強化ポイント・強化の記録
-    useUniqueUp: uniqueUp, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
+    useUniqueUp: uniqueUp, uniquePlan, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
     // 緊急回復(7 版目): 'auto'(① AUTO と同じ条件)・'brink'(② 全滅の手前だけ)・'bot'(①+②。2026-10-10 からのブラウザのボット arena-1 と同じ)・'none'(使わない。それまでのボット)
     emergency, emergencyUses: 0,
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
-  if (training !== 'bot' && training !== 'none') throw new Error(`トレーニングの選び方が分からない: ${training}`);
+  if (!TRAINING_PLANS.includes(training)) throw new Error(`トレーニングの選び方が分からない: ${training}`);
+  if (!UNIQUE_PLANS.includes(uniquePlan)) throw new Error(`固有技の強化の入れ方が分からない: ${uniquePlan}`);
   st.heroSlot = bestSlotFor(hero, [0, 1, 2, 3]);
   st.mons[st.heroSlot] = hero; st.units[st.heroSlot] = G.createTacticsUnit(hero);
   const waiting = allies.slice();
