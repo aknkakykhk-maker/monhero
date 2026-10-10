@@ -2498,6 +2498,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               ))}
             </div>
           </div>
+          {/* 縦⇄横の切り替え(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+              結果画面には見出しが無いので、いちばん上の帯の右(部屋と同じ右上)へ置く。向きは RHYTHM_VIEW_ROTATION が画面をまたいで持つので、
+              部屋で横 → 演奏 → 結果でも横のまま。結果で変えた向きも、部屋へ戻ればそのまま */}
+          <div data-rhythm-multi-result-orientation className="shrink-0 self-start"><RhythmOrientationButton/></div>
           <div className="flex w-16 shrink-0 flex-col items-center">
             <b data-rhythm-multi-team-rank className="text-5xl font-black leading-none text-amber-300 drop-shadow">{team.waiting ? '…' : team.rank}</b>
             <small className="text-[8px] font-black tracking-widest text-slate-400">SCORE RANK</small>
