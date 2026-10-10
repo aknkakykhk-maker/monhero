@@ -919,8 +919,8 @@ function rememberRun(L, stats) {
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
     texts: Object.entries(texts).sort((a, b) => b[1] - a[1]).slice(0, 30),
   });
-  // 増えすぎないよう、新しい 300 回ぶんだけ持つ
-  k.runs = k.runs.slice(-300);
+  // 増えすぎないよう、新しい 1000 回ぶんだけ持つ(300 だと Tier の暫定外しの回数が古い順に消えるため、2026-10-10 アリーナくんが上げた。1回約 2.7KB)
+  k.runs = k.runs.slice(-1000);
   fs.writeFileSync(KNOWLEDGE, `${JSON.stringify(k, null, 1)}\n`);
 }
 
