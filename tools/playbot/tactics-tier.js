@@ -2,7 +2,13 @@
 // 味方モンスターの Tier 表とバランス調整の案を作る。案だけで、ゲームの数字は変えない(決めるのは社長。2026-10-09)。
 //
 //   node tools/playbot/tactics-tier.js                    画面に出す
-//   node tools/playbot/tactics-tier.js --md <file>        Markdown を書き出す(docs/playbot/reports/tier/monster-tier.md)
+//   node tools/playbot/tactics-tier.js --md <file>        Markdown を書き出す(docs/playbot/reports/tier/monster-tier.md)。
+//                                                         あわせて tier.json の「モンスター」ほかも書き換える(下)
+//   --json <file>  tier.json の置き場所を変える / --no-json  tier.json を書かない
+//
+// tier.json(社長が見るページ tier-page.js の元)は、2026-10-10 まで人が monster-tier.md から写していた。
+// いまはここで書き出す。書き換えるのは 更新・数えた回・戦った体数・全体数・決め方・段・モンスター(1体ずつの Tier・理由・回数・机上)だけで、
+// asika-tier.js が書く "アシカ"・"組み合わせ" と、各モンスターの "おすすめアシカ"・"相性のいい供モン"(ほか知らない項目)は消さずに残す
 //
 // 集め方: 「すべて解放してバトル」で勇者モンを入れ替えながら少しずつ回す(回数の少ない子から選ぶ)。
 //   PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_EXPLORE=1 PLAYBOT_TACTICS_DIFF=Expert node tools/playbot/playbot.js --only tactics
@@ -24,6 +30,8 @@ const ROOT = path.resolve(HERE, '..', '..');
 const args = process.argv.slice(2);
 const mdAt = args.indexOf('--md');
 const mdFile = mdAt >= 0 ? args[mdAt + 1] : '';
+const jsonAt = args.indexOf('--json');
+const jsonFile = args.includes('--no-json') ? '' : (jsonAt >= 0 ? args[jsonAt + 1] : (mdFile ? path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'tier.json') : ''));
 
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(path.join(HERE, f), 'utf8')); } catch (e) { return d; } };
 const roster = readJson('tactics-roster.json', { monsters: [], assists: [] });
@@ -436,6 +444,72 @@ out('- `PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_EXPLORE=1` で、勇者モンを�
 out('- 表を作り直す: `node tools/playbot/tactics-tier.js --md docs/playbot/reports/tier/monster-tier.md`');
 
 const text = lines.join('\n') + '\n';
+
+// ---------- tier.json(tier-page.js が読む形。項目名は日本語) ----------
+// 強み・弱みは「ひとことの理由」を「。」で分けたもの(「〜が効く」→ 強み、それ以外 → 弱み。人が写していたときと同じ分け方)
+function tierJson(prev) {
+  const sorted = overall;
+  const diffCell = (o, d) => statsByDiff[d].find((y) => y.m.name === o.s.m.name);
+  const mons = sorted.map((o) => {
+    const reason = oneLine(o);
+    const parts = reason.split('。').filter(Boolean);
+    const good = parts.filter((t) => /が効く$/.test(t)).map((t) => t.replace(/が効く$/, ''));
+    const bad = parts.filter((t) => !/が効く$/.test(t)).map((t) => t.replace(/が弱い$/, ''));
+    const s = o.s;
+    const cell = Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, x && x.n ? x.tier.replace('未計測', '—') : '—']; }));
+    // 動いた理由(上の「難易度ごとの Tier」の表と同じ決め方)
+    const steps = TIER_DIFFS.map((d) => diffCell(o, d)).filter((x) => x && x.n && TIER_STEP[x.tier] != null).map((x) => TIER_STEP[x.tier]);
+    let why = '';
+    if (steps.length >= 2 && Math.max(...steps) - Math.min(...steps) >= 2) {
+      const bits = [];
+      if (s.m.hp <= 400) bits.push(`ライフ ${s.m.hp}。敵の火力が上がると、打たれ弱さが効いてくる`);
+      if (s.m.guts <= 90) bits.push(`ガッツ上限 ${s.m.guts}。敵のライフが増えると、撃てる回数の少なさが効いてくる`);
+      if (!bits.length) bits.push('回数が少なく、ぶれている可能性(回数を増やして確かめる)');
+      why = bits.join(' / ');
+    }
+    const dr = deskByName[s.m.name];
+    const entry = {
+      名前: s.m.name, 役: s.role, 総合: o.tier === '未計測' ? '回数不足' : o.tier, ...cell,
+      暫定: o.tier === '回数不足' || o.tier === '保留' ? false : !!o.provisional, 仮の総合: o.guess || '',
+      理由: reason, 強み: good.join('・'), 弱み: bad.join('・'),
+      回数: Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, x ? x.n : 0]; })),
+      勇者の回数: Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, x ? x.heroN : 0]; })),
+      難易度が暫定: Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, !!(x && x.n && x.provisional && x.tier !== '保留')]; })),
+      動いた理由: why,
+    };
+    if (dr) entry.机上 = { 通常技1発: Math.round(dr.nHit), '20ターンの火力': dr.dmg20, 受けられる: Object.fromEntries(TIER_DIFFS.map((d) => [d, dr.byDiff[d] ? dr.byDiff[d].w1Hits : 0])) };
+    // ほかの道具が書いた項目(おすすめアシカ・相性のいい供モンなど)は残す
+    const old = (prev.モンスター || []).find((x) => x && x.名前 === s.m.name) || {};
+    for (const [k, v] of Object.entries(old)) if (!(k in entry)) entry[k] = v;
+    return entry;
+  });
+  const count = Object.fromEntries(TIER_DIFFS.map((d) => [d, runs.filter((r) => r.difficulty === d).length]));
+  const head = {
+    更新: now,
+    数えた回: { 合計: TIER_DIFFS.reduce((a, d) => a + count[d], 0), ...count },
+    戦った体数: tried,
+    全体数: stats.length,
+    決め方: {
+      重み: Object.fromEntries(TIER_DIFFS.map((d) => [d, Math.round(DIFF_WEIGHT[d] * 10)])),
+      文: [
+        '決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。',
+        '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。',
+      ],
+      暫定: '試した回数が5回より少ない子は「暫定」です。回数が増えると Tier は動きます。',
+    },
+    段: ['S', 'A', 'B', 'C', 'D', '保留'],
+  };
+  const merged = { ...prev, ...head, モンスター: mons };
+  // 並び: 頭の項目 → モンスター → そのほか(アシカ・組み合わせ)
+  const order = [...Object.keys(head), 'モンスター'];
+  return Object.fromEntries([...order.map((k) => [k, merged[k]]), ...Object.keys(merged).filter((k) => !order.includes(k)).map((k) => [k, merged[k]])]);
+}
+if (jsonFile) {
+  let prev = {};
+  try { prev = JSON.parse(fs.readFileSync(path.resolve(jsonFile), 'utf8')); } catch (e) { prev = {}; }
+  fs.writeFileSync(path.resolve(jsonFile), JSON.stringify(tierJson(prev), null, 2) + '\n');
+  console.log(`書き出した: ${jsonFile}(モンスター ${stats.length}体。アシカ・組み合わせ・おすすめアシカ・相性のいい供モンは残した)`);
+}
 if (mdFile) {
   fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true });
   fs.writeFileSync(path.resolve(mdFile), text);
