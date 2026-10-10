@@ -2084,6 +2084,13 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(audio?.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
   };
+  // すでに作ってある音の作りが止まっていたら起こす(新しくは作らない)。指を離したとき・クリックのたびに呼ぶ。
+  // iPhone の Safari は「指を置いた瞬間(touchstart)」を音の許可の合図に数えないので、演奏の場所で最初に触ったときの warm() だけでは
+  // 最初のタップ音が遅れることがある(2026-10-11 社長「最初なんだけど、押してる感じラグを感じる」)。曲えらびの「決定」などで先に起こしておく
+  const wake=()=>{
+    if(!ctx||ctx.state==='closed'||ctx.state==='running'||typeof ctx.resume!=='function')return;
+    ctx.resume().catch(()=>{});
+  };
   // ===== 判定で鳴らし分ける(バンドリ！・プロセカなどと同じ考え方) =====
   // いちばん良い判定がいちばん気持ちよく鳴り、ずれるほど小さく・低く・短くなる。耳でも「いまの当たりはどうだったか」が分かる。
   // 作り置きの音は段('PERFECT'/'GREAT'/'GOOD')ごとに音色から作り分ける。下の JUDGE_VOICE はクラシック(その場で鳴らす音)用。
@@ -2542,7 +2549,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,playSky,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -3259,6 +3266,8 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('touchstart',captureTouchStart,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});
+    document.addEventListener('touchend',()=>RHYTHM_NOTE_SE_RUNTIME.wake(),{capture:true,passive:true});
+    document.addEventListener('click',()=>RHYTHM_NOTE_SE_RUNTIME.wake(),true);
     document.addEventListener('touchcancel',cancelTouches,{capture:true,passive:true});
     document.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch'){if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);}},true);
     document.addEventListener('pointermove',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
@@ -28299,20 +28308,23 @@ const rhythmEnsureHitEffects=area=>{
 // (同じ詳細度・同じ順なので、効き方は元と同じ)。名前が変わるとアニメーションは最初から流れ直すので、計算を強制しなくてよい。
 const RHYTHM_RESTART_ATTRS=['burst','combo-pop','cutin-play','flash','judgment-pop','life-damage-show','life-hit','ring','side-hit','hit-kind'];
 const RHYTHM_RESTART_SUFFIX='--b';
-const RHYTHM_RESTART_STYLE={sheets:typeof WeakSet==='function'?new WeakSet():null,count:-1,ready:false};
+// keyframes … これまでに見たキーフレーム(名前→{rule,sheet})。2回目からは新しく来たシートだけを調べる
+// (2026-10-11 出だしのラグ: 演奏が始まるまでに小さな style が1枚増えるたびに、ページの CSS 全部をもう一度たどっていた)
+const RHYTHM_RESTART_STYLE={sheets:typeof WeakSet==='function'?new WeakSet():null,count:-1,ready:false,keyframes:new Map()};
 const rhythmRestartStylesInstall=()=>{
   if(typeof document==='undefined'||!document.styleSheets||!RHYTHM_RESTART_STYLE.sheets)return false;
   const sheets=Array.from(document.styleSheets);
   if(RHYTHM_RESTART_STYLE.ready&&RHYTHM_RESTART_STYLE.count===sheets.length)return true;
   const token=new RegExp('\\[data-rhythm-('+RHYTHM_RESTART_ATTRS.join('|')+')="([^"]*)"\\]','g');
-  const keyframes=new Map(),renamed=new Set();
+  const keyframes=RHYTHM_RESTART_STYLE.keyframes,renamed=new Set();
   const walk=(list,fn)=>{for(let i=0;i<list.length;i++){const rule=list[i];fn(rule,list,i);if(rule.cssRules&&!(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule))walk(rule.cssRules,fn);}};
   const fresh=[];
   for(const sheet of sheets){
     let rules=null;try{rules=sheet.cssRules;}catch{continue;}
-    if(!rules)continue;
-    walk(rules,rule=>{if(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule&&!keyframes.has(rule.name))keyframes.set(rule.name,{rule,sheet});});
-    if(!RHYTHM_RESTART_STYLE.sheets.has(sheet))fresh.push({sheet,rules});
+    if(!rules||RHYTHM_RESTART_STYLE.sheets.has(sheet))continue;
+    // 同じ名前が後から来たら後のほうで覚え直す(CSS も後の定義が効く。style が差し替えられたときに古いものを指さないように)
+    walk(rules,rule=>{if(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule)keyframes.set(rule.name,{rule,sheet});});
+    fresh.push({sheet,rules});
   }
   const names=[...keyframes.keys()].filter(name=>!name.endsWith(RHYTHM_RESTART_SUFFIX)).sort((a,b)=>b.length-a.length);
   const nameRe=names.length?new RegExp('(^|[^\\w-])('+names.map(n=>n.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|')+')(?![\\w-])','g'):null;
@@ -28332,8 +28344,10 @@ const rhythmRestartStylesInstall=()=>{
     RHYTHM_RESTART_STYLE.sheets.add(sheet);
   }
   for(const name of renamed){
-    const dup=name+RHYTHM_RESTART_SUFFIX;if(keyframes.has(dup))continue;
-    const {rule,sheet}=keyframes.get(name);
+    const dup=name+RHYTHM_RESTART_SUFFIX,had=keyframes.get(dup);if(had&&sheets.includes(had.sheet))continue;
+    const {rule,sheet:own}=keyframes.get(name);if(!rule)continue;
+    // 元のキーフレームのシートがもう外されていたら、いまのページのシートの最後へ入れる
+    const sheet=sheets.includes(own)?own:sheets[sheets.length-1];
     try{sheet.insertRule(rule.cssText.replace(/^@(-webkit-)?keyframes\s+[^\s{]+/,m=>m.replace(/[^\s]+$/,dup)),sheet.cssRules.length);keyframes.set(dup,{rule:null,sheet});}catch{}
   }
   RHYTHM_RESTART_STYLE.count=document.styleSheets.length;RHYTHM_RESTART_STYLE.ready=true;
