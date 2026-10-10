@@ -212,6 +212,22 @@ out();
 // ---------- 社長室(iPhone)向けの上の3節(2026-10-10 社長「見づらい。総合的なTierもほしい」) ----------
 // 総合 Tier: 難易度ごとの点を Hard 0.4・Expert 0.4・Master 0.2 で重みづけ(Master はいまボットの戦い方の差が大きいので軽く見る)
 const DIFF_WEIGHT = { Hard: 0.2, Expert: 0.5, Master: 0.3 }; // 2026-10-10 改善部 T3: Hard は差が出にくいので軽く
+// 決め方の文は md と tier.json(→ tier.html)の両方へ、ここから同じものを書く(2026-10-10 改善部 W2: 2か所に手で書くと片方だけ古くなる)
+const HOW_TEXT = [
+  `決め方: 難易度ごとの点(下の「Tier の決め方」)を ${Object.entries(DIFF_WEIGHT).map(([d, w]) => `${d} ${Math.round(w * 10)}`).join('・')} の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。`,
+  '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。',
+];
+const PROVISIONAL_TEXT = 'その難易度で5回未満のマスは「*」で、総合には数えない。5回以上のマスが2つ以上ない子は「暫定」、5回以上のマスが1つも無い子は「回数不足」(総合はまだ付けず、* のマスから出した仮の Tier を添える)。回数が増えると Tier は動きます。';
+// まだ Tier の数字に効いていない機能(社長 2026-10-10「機能的なものも全て把握した上で」)。一覧の正本は mechanics.md の
+// 「入っていない・一部」の節。ここで読んで、md と tier.json(→ ページ)の決め方の文へ同じものを足す
+const MISSING_MECHANICS = (() => {
+  try {
+    const t = fs.readFileSync(path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'mechanics.md'), 'utf8');
+    const sec = (t.split(/^## 入っていない・一部.*$/m)[1] || '').split(/^## /m)[0];
+    return [...sec.matchAll(/^\d+\. \*\*(.+?)\*\*/gm)].map((m) => m[1]);
+  } catch (e) { return []; }
+})();
+if (MISSING_MECHANICS.length) HOW_TEXT.push(`まだ入れていない・一部だけの機能(シミュレーターかボットに無く、Tier の数字に効いていないもの。効きの大きい順): ${MISSING_MECHANICS.join('・')}。機能の一覧は docs/playbot/reports/tier/mechanics.md。`);
 const tierOfScore = (sc) => (sc >= 0.45 ? 'S' : sc >= 0.15 ? 'A' : sc >= -0.15 ? 'B' : sc >= -0.45 ? 'C' : 'D');
 const overall = stats.map((s) => {
   const per = TIER_DIFFS.map((d) => ({ d, x: statsByDiff[d].find((y) => y.m.name === s.m.name) })).filter((v) => v.x && v.x.n);
@@ -261,8 +277,8 @@ if (few.length) { out(); out(`回数不足(どの難易度も5回未満なので
 const heldAll = overall.filter((o) => o.tier === '保留');
 if (heldAll.length) { out(); out(`保留(EX をまだ使えていない): ${heldAll.map((o) => o.s.m.name).join('・')}`); }
 out();
-out('決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。');
-out('数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。');
+for (const t of HOW_TEXT) out(t);
+out(PROVISIONAL_TEXT);
 out();
 out('## 早見表');
 out();
@@ -491,11 +507,8 @@ function tierJson(prev) {
     全体数: stats.length,
     決め方: {
       重み: Object.fromEntries(TIER_DIFFS.map((d) => [d, Math.round(DIFF_WEIGHT[d] * 10)])),
-      文: [
-        '決め方: 難易度ごとの点(下の「Tier の決め方」)を Hard 2・Expert 5・Master 3 の重みで合わせる。Hard はほぼ全員が最後の WAVE まで届くので、クリアしたかどうか(クリアは WAVE 11 と数える)だけで差が付き、重みを軽くしている。',
-        '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。その難易度で5回未満のマスは総合に数えず、5回以上のマスが2つ以上ない子は「暫定」。',
-      ],
-      暫定: '試した回数が5回より少ない子は「暫定」です。回数が増えると Tier は動きます。',
+      文: HOW_TEXT,
+      暫定: PROVISIONAL_TEXT,
     },
     段: ['S', 'A', 'B', 'C', 'D', '保留'],
   };
@@ -509,6 +522,8 @@ if (jsonFile) {
   try { prev = JSON.parse(fs.readFileSync(path.resolve(jsonFile), 'utf8')); } catch (e) { prev = {}; }
   fs.writeFileSync(path.resolve(jsonFile), JSON.stringify(tierJson(prev), null, 2) + '\n');
   console.log(`書き出した: ${jsonFile}(モンスター ${stats.length}体。アシカ・組み合わせ・おすすめアシカ・相性のいい供モンは残した)`);
+  // ページ(tier.html)も同じ tier.json から作り直す。いつもの置き場所に書いたときだけ(試し用の --json では作らない)
+  if (jsonAt < 0) { const page = require('./tier-page'); const r = page.writePage(); console.log(r.ok ? `作り直した: ${r.out}` : `tier.html は作らなかった: ${r.problems.join(' / ')}`); }
 }
 if (mdFile) {
   fs.mkdirSync(path.dirname(path.resolve(mdFile)), { recursive: true });

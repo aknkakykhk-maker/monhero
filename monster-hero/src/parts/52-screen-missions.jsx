@@ -15,11 +15,16 @@
 // ・根の style で safe-area を足していたが、index.html:134 の body が既に持っているので
 //   二重取りだった。根は SCREEN_SHELL_CLASS だけにする
 // ・見出しは ScreenHead、タブは ScreenTabs(41-screen-ui.jsx)。赤バッジは label の中へ入れる
-// ・一括受け取りの色は、いま選んでいるタブの色に合わせる(タブとボタンが繋がって見えるように)
-function MissionsScreen({ missions, missionTab, onSelectTab, onBack, onClaim, onClaimBulk }) {
+// ・「すべて受け取る」は3つのタブの達成済みをまとめて1回で受け取る(2026-10-10・社長の選択)。色はいま選んでいるタブに合わせる
+// ・受け取ると、ギフトボックスを経由せずその場で持ち物へ入り、「手に入れたもの」の窓が出る。
+//   以前の作りでギフトボックスへ送ったまま受け取っていないものは「ギフトボックスに届いています」と出し、すべて受け取るで一緒に受け取れる
+function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onClaim, onClaimAll }) {
   const state = normalizeMissions(missions), defs = MISSION_DEFS[missionTab];
   const sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
   const resetAt = missionNextReset(missionTab);
+  // 以前の作りでギフトボックスへ送ったまま、まだ受け取っていないミッションか
+  const periodNow = missionTab === 'daily' ? state.dailyPeriod : missionTab === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
+  const inGiftBox = (m) => (Array.isArray(gifts) ? gifts : []).some(g => g?.id === `gift_mission_${missionTab}_${periodNow}_${m.id}` && !g.claimedAt);
   const bulkGradient = missionTab === 'daily' ? 'from-amber-500 to-orange-600'
     : missionTab === 'weekly' ? 'from-violet-600 to-indigo-600'
     : 'from-fuchsia-600 to-purple-800';
@@ -33,12 +38,12 @@ function MissionsScreen({ missions, missionTab, onSelectTab, onBack, onClaim, on
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
         {id:'monthly',color:'#c026d3',label:<>マンスリー{tabCountBadge(missionClaimableList(state,'monthly').length)}</>},
       ]}/>
-      {(()=>{const bulk=missionClaimableList(state,missionTab);return <button type="button" disabled={!bulk.length} onClick={()=>onClaimBulk(missionTab)} className={`shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`}>一括受け取り{bulk.length>0&&` (${bulk.length})`}</button>;})()}
+      {(()=>{const nowMs=Date.now();const backlog=(Array.isArray(gifts)?gifts:[]).filter(g=>g?.source==='mission'&&!g.claimedAt&&giftIsClaimable(g,nowMs)).length;const total=missionClaimableCount(state)+backlog;return <button type="button" data-mission-claim-all disabled={!total} onClick={()=>onClaimAll()} className={`shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`}>すべて受け取る{total>0&&` (${total})`}</button>;})()}
       <div className="mb-2 flex shrink-0 justify-center"><span className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[10px] font-black text-slate-300">次回更新: {new Date(resetAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{defs.length===0?<ScreenEmpty emoji="🗒️" lines={['このタブのミッションはありません','ほかのタブに受け取れるものがあるかもしれません']}/>:defs.map(m=>{const value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-white/10':done?'bg-amber-950/40 border-amber-400/60':'bg-slate-900 border-white/10'}`}>
         <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-black text-sm text-white break-words">{m.name}</h3><p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words">{m.condition}</p></div><b className="shrink-0 text-[12px] text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
         <div className="h-2 my-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/5"><div className={`h-full rounded-full transition-[width] ease-out ${done?'bg-amber-400':'bg-cyan-500'}`} style={{width:`${pct}%`}}></div></div>
-        <div className="flex items-center justify-between gap-2"><div className="min-w-0 text-[11px] font-black text-cyan-200 break-words">報酬: {m.rewards.map(giftRewardText).join(' / ')}</div>{isSent?<button type="button" disabled className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40">ギフト送付済み</button>:done?<button type="button" onClick={()=>onClaim(missionTab,m)} className="shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95">受け取る</button>:<span className="shrink-0 text-[11px] font-black text-slate-400">進行中 {pct}%</span>}</div>
+        <div className="flex items-center justify-between gap-2"><div className="min-w-0 text-[11px] font-black text-cyan-200 break-words">報酬: {m.rewards.map(giftRewardText).join(' / ')}</div>{isSent?<button type="button" disabled className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40">{inGiftBox(m)?'ギフトボックスに届いています':'受け取り済み'}</button>:done?<button type="button" onClick={()=>onClaim(missionTab,m)} className="shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95">受け取る</button>:<span className="shrink-0 text-[11px] font-black text-slate-400">進行中 {pct}%</span>}</div>
       </article>})}</div>
     </div>
   );
