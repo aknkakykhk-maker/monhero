@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b756c1c3a720ece2
+// source-sha256: 1c8693d98da4ae28
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 11:34";
+const BUILD_DATE = "2026-10-10 12:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6368,7 +6368,7 @@ const Audio_ = (() => {
     toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
-  const SONG_BUFFER_KEEP = 3;
+  const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
   let bgmSource = null,
     bgmSourceKey = null,
@@ -6754,9 +6754,13 @@ const Audio_ = (() => {
     resumeAudioCtxNoWait();
     if (buffers.has(track.src)) {
       startBgmBuffer(track.id, track, buffers.get(track.src), request);
+      rememberSongBuffer(track.src);
       return Promise.resolve();
     }
-    return loadBuffer(track.src).then(buffer => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
+    return loadBuffer(track.src).then(buffer => {
+      rememberSongBuffer(track.src);
+      startBgmBuffer(track.id, track, buffer, request);
+    }).catch(() => {});
   };
   const stopPreview = (resume = true) => {
     ++previewRequest;
@@ -7099,12 +7103,15 @@ const Audio_ = (() => {
   };
   const preloadBGM = key => {
     const track = resolveTrack(key);
-    if (track) loadBuffer(track.src).catch(() => {});
+    if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {});
   };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key);
     if (!track) return Promise.resolve(false);
-    return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
+    return Promise.race([loadBuffer(track.src).then(() => {
+      rememberSongBuffer(track.src);
+      return true;
+    }).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([load().then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   const playJingle = async key => {

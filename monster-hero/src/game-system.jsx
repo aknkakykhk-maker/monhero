@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b73c6cb421a9089d
+// generated-sha256: 31cf0c98d4fa898e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 11:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 12:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5167,9 +5167,14 @@ const Audio_ = (() => {
   // ★曲えらびの試聴と演奏で読んだ曲の音は、直近の数曲ぶんだけ持っておく(2026-09-27 の点検で見つけた)。
   //   解いた音は1曲で数十〜百MBあり、以前は一度読んだら二度と捨てなかったので、試聴しながら
   //   何曲も眺めるだけで数百MBに増え、iPhone ではメモリ不足で落ちる・発熱の原因になり得た。
-  //   場面のBGM(タイトル・ホーム・バトルなど)は今までどおり持ち続ける。捨てても、次に読むときは
-  //   通信のキャッシュが効くので、解き直すだけで済む
-  const SONG_BUFFER_KEEP = 3;
+  //   捨てても、次に読むときは通信のキャッシュが効くので、解き直すだけで済む。
+  // ★場面のBGM(タイトル・ホーム・バトルなど)も同じ数え方に入れた(2026-10-10)。
+  //   以前は「場面のBGMは持ち続ける」としていたが、バトルはWAVEや敵ごとに曲が変わり、長く周回するほど
+  //   読んだ曲が増え続けた(クイックを2ウェーブ回すだけで3本→6本。1本は解くと約60MB)。
+  //   iPhone の Safari がメモリ不足でタブを読み込み直し、「やっている最中に最初の画面へ戻る」ことがあった。
+  //   いま鳴らしている曲・いまの場面の曲・演奏中の曲は捨てない(bufferInUse)。
+  //   上限は、いまの場面+次の場面+少し前の2本ぶんで 4
+  const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
   // 通常BGM(bgmRequest)と同じ役目で、読み込みを待っているあいだに止められたり
@@ -5457,9 +5462,10 @@ const Audio_ = (() => {
     // 起動タップ前にdecode済みなら、user activation中に同期的に再生開始する。
     if (buffers.has(track.src)) {
       startBgmBuffer(track.id, track, buffers.get(track.src), request);
+      rememberSongBuffer(track.src);
       return Promise.resolve();
     }
-    return loadBuffer(track.src).then((buffer) => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
+    return loadBuffer(track.src).then((buffer) => { rememberSongBuffer(track.src); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
   };
   // 番号を進めることで、読み込み待ちの古い試聴を無効にする(あとから鳴り出さない)
   const stopPreview = (resume = true) => { ++previewRequest; stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
@@ -5660,10 +5666,10 @@ const Audio_ = (() => {
       };
     } catch(e){ return null; }
   };
-  const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).catch(() => {}); };
+  const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {}); };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
-    return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
+    return Promise.race([loadBuffer(track.src).then(() => { rememberSongBuffer(track.src); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([
     load().then(() => true).catch(() => false),
