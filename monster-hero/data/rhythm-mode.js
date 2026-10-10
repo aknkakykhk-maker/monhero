@@ -29847,7 +29847,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'||v==='star'||v==='wing'||v==='ring'||v==='glass'||v==='beam'||v==='ruby'||v==='cube'?v:'ruby';}catch{return 'ruby';}};
   // 案ごとの差し色(空中の柱・影とのつなぎ線の色。既存のどのノーツ・判定の色とも重ならない色を案ごとに選ぶ)
-  const skyAccentRgb=()=>{const st=skyTapStyle();return st==='star'?'226,232,240':st==='glass'?'203,213,225':st==='wing'?'129,140,248':st==='ring'?'248,113,113':'251,191,36';};
+  const skyAccentRgb=()=>{const st=skyTapStyle();return st==='star'||st==='beam'||st==='cube'?'226,232,240':st==='glass'?'203,213,225':st==='wing'?'129,140,248':st==='ring'||st==='ruby'?'248,113,113':'251,191,36';};
   // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
   const roundBarPath=(x0,y0,w,h,r)=>{
     const k=r*.29;
@@ -29862,7 +29862,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // ほかのノーツは全部「横長の角丸の板」なので、立体(角材・菱形の宝石・立方体)にする。金は使わない。柱(棒)は無く、床の影(drawSkyShadowHead)だけで高さを見せる
       const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
       const poly=(pts,fill,stroke,lw)=>{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.lineWidth=lw||1;ctx.strokeStyle=stroke;ctx.stroke();}};
-      const outerGlow=pts=>{poly(pts,null,`rgba(226,232,240,${(.14+.34*pp).toFixed(2)})`,4+7*pp);};
+      const outerGlow=pts=>{poly(pts,null,`rgba(${skyAccentRgb()},${(.18+.14*pp).toFixed(2)})`,4+2*pp);};
       const fade=(c0,c1,y0,y1)=>{const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,c0);g.addColorStop(1,c1);return g;};
       if(style==='beam'){
         // 案M 角材: 手前の面(白銀の芯・濃い縁)+上の面(明るい)+側面(画面の中心側。濃い)。地上の板より厚く、側面が見える
@@ -30025,13 +30025,20 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
     ctx.globalAlpha=opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
-    if(['glass','beam','ruby','cube'].includes(skyTapStyle())){
-      // 案L: 床に落ちる灰色のぼやけた影(参考動画「浮いていると分かるいちばん強い手がかり」)。外へ広がる3重の菱形でぼかしを出す
-      [[1.9,.12],[1.45,.2],[1,.34]].forEach(([k,al])=>{ctx.fillStyle=`rgba(30,41,59,${al})`;ctx.beginPath();ctx.moveTo(sh.cx-w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy-h*k);ctx.lineTo(sh.cx+w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy+h*k);ctx.closePath();ctx.fill();});
+    const st=skyTapStyle(),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
+    if(['glass','beam','ruby','cube'].includes(st)){
+      // 床に落ちる灰色のぼやけた影(参考動画「浮いていると分かるいちばん強い手がかり」)。外へ広がる3重の菱形でぼかしを出し、近づくほど濃くする
+      const dk=.75+.7*near;
+      [[1.9,.12],[1.45,.2],[1,.34]].forEach(([k,al])=>{ctx.fillStyle=`rgba(30,41,59,${Math.min(.9,al*dk).toFixed(3)})`;ctx.beginPath();ctx.moveTo(sh.cx-w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy-h*k);ctx.lineTo(sh.cx+w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy+h*k);ctx.closePath();ctx.fill();});
     }else{
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
     }
-    if(!['beam','ruby','cube'].includes(skyTapStyle())){ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();}
+    if(['beam','ruby','cube'].includes(st)){
+      // 影とノーツをつなぐ柱(2026-10-10 テンポ「柱を戻す。粒より目立たない細さと薄さで。近づくほど濃くはっきり」)。上(ノーツ側)が濃く、影へ向かって薄くなる細い線
+      const g=ctx.createLinearGradient(0,hd.cy,0,sh.cy),acc=skyAccentRgb();
+      g.addColorStop(0,`rgba(${acc},${(.3+.4*near).toFixed(2)})`);g.addColorStop(1,`rgba(${acc},${(.1+.2*near).toFixed(2)})`);
+      ctx.strokeStyle=g;ctx.lineWidth=1+1.1*near;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(hd.cx,hd.cy);ctx.lineTo(sh.cx,sh.cy);ctx.stroke();ctx.lineCap='butt';
+    }else{ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();}
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
