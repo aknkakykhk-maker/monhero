@@ -68,7 +68,7 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 10:25 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/10 10:26 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
@@ -96,7 +96,7 @@ section{display:flex;flex-direction:column;gap:10px}
       <li id="r2610101015mech">
         <div class="row-title">ゲームの機能(自動回復など)を全部踏まえて Tier を考える</div>
         <div class="row-body">機能の一覧表(mechanics.md・69機能)を作った。Tier の判断に入っている 60・一部 5・入っていない 4(緊急回復・強化ポイントのガッツ・供モンの間合い追いつき・魂格)。大きな見落としは、WAVE 報酬の間合いボーナスと固有技の強化がシミュレーターでずっと Lv0 のままだったこと、ボットが緊急回復を一度も押していないこと。入れる順番を決め、ダイスくん(シミュレーター)とアリーナくん(ボット)に割り振った。Tier 表のページに「まだ入れていない機能」を自動で出すようにした</div>
-        <div class="meta"><span>部長ハカセくん</span><span>見込み 改善部の確認: 大きな抜けは無し。足すのは2点(緊急回復は回数の上限なし・AUTO は自分で使う / 最後のボス 覚醒ムーの行)。研究所が足して、入っていない機能を順に入れる</span><span>PR #2514・#2517</span></div><details class="more"><summary>くわしく見る: 機能の一覧表</summary><div class="md"><p>研究所:部長ハカセくんの資料(2026-10-10)。ゲームのコード(60-app.jsx・32-tactics-units.jsx・17/18/19/22 の parts・data/)と、シミュレーター <code>tools/playbot/sim/battle.js</code>(4版目)・ボット <code>tools/playbot/scenarios/tactics-brain.js</code> を読んで作った。研究の対象は Hard・Expert・Master。</p>
+        <div class="meta"><span>部長ハカセくん</span><span>見込み 改善部の確認: 大きな抜けは無し。足すのは2点(緊急回復は回数の上限なし・AUTO は自分で使う / 最後のボス 覚醒ムーの行)。研究所が足して、入っていない機能を順に入れる</span><span>PR #2514・#2517・#2520</span></div><details class="more"><summary>くわしく見る: 機能の一覧表</summary><div class="md"><p>研究所:部長ハカセくんの資料(2026-10-10)。ゲームのコード(60-app.jsx・32-tactics-units.jsx・17/18/19/22 の parts・data/)と、シミュレーター <code>tools/playbot/sim/battle.js</code>(4版目)・ボット <code>tools/playbot/scenarios/tactics-brain.js</code> を読んで作った。研究の対象は Hard・Expert・Master。</p>
 <ul>
 <li>「シミュ」= シミュレーター、「ボット」= ブラウザのボット(実戦)。ボットは画面の見込みの数字(ダメージ・ガード・予告のダメージ)を読むので、式の中身は数字に乗るぶんだけ判断に入る</li>
 <li>「Tier」欄: どちらかに入っていれば「入っている(シミュ/実戦/両方)」。両方とも欠けがあれば「一部」。どちらにも無ければ「入っていない」</li>
