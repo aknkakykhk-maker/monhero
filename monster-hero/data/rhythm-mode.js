@@ -1216,10 +1216,11 @@ const rhythmSkySplitRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT.ratio
 const RHYTHM_SCROLL={points:null};
 // 駆け込み(2026-10-11 社長「参考動画のようにできないの?」・試作):
 //   [時刻,'RUSH',届く割合] と書いた区間は、次の区切りまでの間に「道の長さ(いまのノーツ速度で流れる時間 travelMs)×届く割合」だけ進む。
-//   止まり(倍率0)のすぐ後に置くと、止まっている間は次のノーツが道の外(見えない奥)にあり、駆け込みの間に奥から現れて、区切りの時刻ちょうどに判定線へ来る
-//   (届く割合 1.15 なら道の外から。1 より小さくすると、止まっている間も道の奥のその位置に見えている)。
+//   止まり(倍率0)のすぐ後に置くと、止まっている間は次のノーツが道の奥の端で止まって見え、駆け込みの間に一気に来て、区切りの時刻ちょうどに判定線へ着く
+//   (届く割合 .97 なら奥の端のすぐ内側。参考動画を1コマずつ測った値: 止まっている間は次に叩くノーツだけが奥の端(約100%)に見え、2〜3コマで判定線へ着く。
+//    1 より大きくすると道の外(見えない奥)に置ける)。
 //   道の長さで速さを決めるので、ノーツ速度3でも10でも同じ見え方になる。'RUSH' を書かない表(公開中の曲)は今までとまったく同じ計算
-const RHYTHM_SCROLL_RUSH_REACH=1.15;
+const RHYTHM_SCROLL_RUSH_REACH=.97;
 const rhythmScrollSet=(changes,travelMs)=>{
   const raw=(Array.isArray(changes)?changes:[]).filter(c=>Array.isArray(c)&&Number.isFinite(Number(c[0]))).slice().sort((a,b)=>Number(a[0])-Number(b[0]));
   const travel=Number(travelMs)>0?Number(travelMs):2150;
@@ -24338,7 +24339,8 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
 const SHERIRUTH_SCROLL_CHANGES=Object.freeze([[82060,0],[82194,1],[82466,0],[82762,1],[82952,0],[83086,1]]);
 // 止まる演出の参考版(デバッグの試作の枠だけ・RHYTHM_PROTO_SONGS)。[時刻,0]=止まり、[時刻,'RUSH']=駆け込み(次の区切りの時刻に次のノーツが判定線へ来る)
 const SHERIRUTH_STOP_REF_SCROLL_CHANGES=Object.freeze([[82060,0],[82194,'RUSH'],[82364,1],[82466,0],[82762,'RUSH'],[82932,1],[82952,0],[83086,'RUSH'],[83256,1]]);
-const SHERIRUTH_STOP_REF_TRIM_SCROLL_CHANGES=Object.freeze([[81979,0],[82276,'RUSH'],[82446,1],[82466,0],[82762,'RUSH'],[82932,1],[82952,0],[83167,'RUSH'],[83337,1]]);
+// 埋めを抜いた版は参考と同じ長さ: 止まり0.3秒/0.3秒/0.13秒、駆け込み0.17秒/0.17秒/0.25秒(3回目は 83.337秒のスライドの頭まで・参考の3コマ)
+const SHERIRUTH_STOP_REF_TRIM_SCROLL_CHANGES=Object.freeze([[81979,0],[82276,'RUSH'],[82446,1],[82466,0],[82762,'RUSH'],[82932,1],[82952,0],[83086,'RUSH'],[83337,1]]);
 // 埋めの単打を3つ抜いた MASTER(参考版の比べ用。公開版の譜面は変えない)
 const sheriruthMasterNotesTrimmed=Object.freeze(sheriruthMasterNotes.filter(note=>!(note.type==='TAP'&&[82040,82364,83256].includes(Math.round(Number(note.timeMs))))));
 const sheriruthCharts=Object.freeze({
@@ -27308,13 +27310,13 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     ])))
   }),
   // 止まる演出の参考版(2026-10-11 社長「参考動画のようにできないの?」)。社長が本番の版と比べて遊ぶための試作。本番の譜面・表は変えない。
-  // 参考は「叩く→止まる(道の上は空っぽ)→次の音でノーツが奥から現れて0.1〜0.2秒で判定線へ」を 81959・82446・82932 の1.5拍おきに3回。
+  // 参考は「叩く→止まる(次に叩くノーツだけが道の奥の端で止まって見える)→再開で2〜3コマ(0.17〜0.25秒)で判定線へ」を 81959・82446・82932 の1.5拍おきに3回。
   // 止まり(倍率0)のあとに駆け込み('RUSH'・rhythmScrollSet)を置き、駆け込みの終わり=次に叩くノーツの時刻にしてある
   Object.freeze({
     songId:'sheriruth_stop_ref',
     displayName:'Sheriruth',
     subtitle:'止まる演出・参考版(譜面そのまま)',
-    debugDescription:'公開版の MASTER の譜面そのままで、止まる間は道の上を空っぽにし、次のノーツが奥から0.17秒で来る形。MASTER の埋めのノーツ(82.040・82.364秒)があるので1回目の止まりは0.13秒。遊んでも記録には入らない',
+    debugDescription:'公開版の MASTER の譜面そのままで、止まる間は次に叩くノーツだけが道の奥の端で止まって見え、再開で0.17秒で一気に来る形(参考動画を1コマずつ測って合わせた)。MASTER の埋めのノーツ(82.040・82.364秒)があるので1回目の止まりは0.13秒。遊んでも記録には入らない',
     bgmTrackId:'melo_sheriruth',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(45,sheriruthMasterNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_STOP_REF_SCROLL_CHANGES}):emptyRhythmChart())
@@ -27324,7 +27326,7 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     songId:'sheriruth_stop_ref_trim',
     displayName:'Sheriruth',
     subtitle:'止まる演出・参考版(埋めを3つ抜く)',
-    debugDescription:'参考と同じ長さで止まる版。MASTER から 82.040・82.364・83.256秒の単打を抜いた(642→639・オンプくんの案3)。止まり 0.3秒/0.3秒/0.215秒。遊んでも記録には入らない',
+    debugDescription:'参考と同じ長さで止まる版。MASTER から 82.040・82.364・83.256秒の単打を抜いた(642→639・オンプくんの案3)。止まり 0.3秒/0.3秒/0.13秒・駆け込み 0.17/0.17/0.25秒。遊んでも記録には入らない',
     bgmTrackId:'melo_sheriruth',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(45,sheriruthMasterNotesTrimmed,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_STOP_REF_TRIM_SCROLL_CHANGES}):emptyRhythmChart())
