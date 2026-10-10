@@ -115,8 +115,13 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   }
   check('空中のノーツが無い譜面では、空中⇄地上の切り替えを1度も数えない',skyless.length===0,skyless.join(' / '));
   const sheriruth=RHYTHM_SONGS.find(song=>song.songId==='sheriruth');
-  const hell=sheriruth&&sheriruth.difficulties.HELL,master=sheriruth&&sheriruth.difficulties.MASTER;
+  // 公開前は HELL をデバッグの試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)に置いている。公開したら公開曲のほうを見る
+  const hellDebug=(loadRuntimeSongs().RHYTHM_PROTO_SONGS||[]).find(song=>song.songId==='sheriruth_hell_debug');
+  const hell=(sheriruth&&sheriruth.difficulties.HELL)||(hellDebug&&hellDebug.difficulties.HELL),master=sheriruth&&sheriruth.difficulties.MASTER;
+  check('Sheriruth HELL の譜面が見つかる(公開曲かデバッグの試作の枠)',!!(hell&&hell.notes&&hell.notes.length));
   if(hell&&master){
+    // 公開前は表(RHYTHM_CHART_LEVELS)を通らないので、譜面に書いた Lv. が式の値と一致しているかも見る
+    check('Sheriruth HELL の Lv. が式で出した値と同じ',hell.level===chartLevel(hell).level,`譜面 Lv.${hell.level} / 式 Lv.${chartLevel(hell).level}`);
     const back=chartStrain(grounded(hell)),masterStrain=chartStrain(master),hellStrain=chartStrain(hell);
     check('Sheriruth HELL の空中を地上へ戻すと、MASTER と同じ生の値になる',back.raw===masterStrain.raw,
       `戻した HELL ${back.raw} / MASTER ${masterStrain.raw}`);

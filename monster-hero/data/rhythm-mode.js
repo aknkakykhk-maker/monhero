@@ -15,6 +15,7 @@ const RHYTHM_DIFFICULTIES = Object.freeze([
 ]);
 // 6段目の難易度 HELL(2026-10-10・社長の決定。名前はバトルの「Hell」と同じ)。
 // 空中のノーツがある譜面を持つ曲だけに出す(譜面が無い曲は難易度のボタンに出ない)。その曲の MASTER を1回クリアすると開く。
+// ★2026-10-11 時点では公開している曲に HELL の譜面は無い(社長がデバッグで確かめてから公開)。仕組みだけ先に入れてあり、どの曲にも出ない。
 // ★上の RHYTHM_DIFFICULTIES(5難易度)へは入れない。5難易度を前提に数えているもの
 //   (全曲合算・週間・相棒・イベントの上乗せ・ミッション・称号・全国ランキングの合算)の数字を変えないため(社長の選択「含めない」)。
 //   全国ランキングへも送らない(rhythmRankingDifficultyKey が null を返す)。自己ベスト(mh_rhythm_best_v1)には残る
@@ -24544,9 +24545,12 @@ const sheriruthCharts=Object.freeze({
   HARD:mhChart(5,sheriruthHardNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
   EXPERT:mhChart(7,sheriruthExpertNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
   MASTER:mhChart(9,sheriruthMasterNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
-  // 6段目 HELL(空中のノーツあり)。Lv.は他の難易度と同じく RHYTHM_CHART_LEVELS(rhythm-chart-level.js が空中⇄地上の切り替えも数える)
-  HELL:mhChart(11,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
 });
+// 6段目 HELL(空中のノーツあり)。★まだ公開しない(2026-10-11 社長「デバッグで色々見てからやらないとだめ。特に重さをなくして」)。
+// 公開の Sheriruth には入れず、デバッグ画面の試作の枠(RHYTHM_PROTO_SONGS の sheriruth_hell_debug)からだけ遊べる。
+// Lv.46 は tools/mode/rhythm-chart-level.js の式(空中⇄地上の切り替えも数える)で出した値(rhythm-chart-level-check.js が式と一致するか見る)。
+// 公開するときは、sheriruth の difficulties を RHYTHM_PLAY_DIFFICULTIES で回して HELL:sheriruthHellChart を足し、レベル表は --write で出す
+const sheriruthHellChart=mhChart(46,sheriruthHellNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES});
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
@@ -26654,7 +26658,7 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   monster_short:Object.freeze({EASY:6,NORMAL:7,HARD:9,EXPERT:16,MASTER:22}),
   anima:Object.freeze({EASY:8,NORMAL:11,HARD:17,EXPERT:26,MASTER:44}),
   journey:Object.freeze({EASY:7,NORMAL:10,HARD:15,EXPERT:23,MASTER:36}),
-  sheriruth:Object.freeze({EASY:9,NORMAL:14,HARD:22,EXPERT:33,MASTER:45,HELL:46}),
+  sheriruth:Object.freeze({EASY:9,NORMAL:14,HARD:22,EXPERT:33,MASTER:45}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
@@ -27239,7 +27243,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'Sheriruth',
     bgmTrackId:'melo_sheriruth',
     artwork:'images/song-art/sheriruth.jpg?v=4302be7eca16',
-    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,sheriruthCharts[id]||emptyRhythmChart()
     ])))
   }),
@@ -27504,6 +27508,18 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     bgmTrackId:'melo_sheriruth_proto',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(47,sheriruthProtoMasterNotes,SHERIRUTH_PROTO_DURATION_MS,6,{scrollChanges:SHERIRUTH_PROTO_SCROLL_CHANGES}):emptyRhythmChart())
+    ])))
+  }),
+  // 公開前の6段目 HELL(2026-10-11 社長「HELL は準備まではしても、実装(公開)は勝手にしないで。デバッグで色々見てからやらないとだめ」)。
+  // 社長がデバッグ画面から遊んで確かめるための入口。音源は公開版の Sheriruth と同じ(譜面の時刻も公開版にそろえてある)
+  Object.freeze({
+    songId:'sheriruth_hell_debug',
+    displayName:'Sheriruth',
+    subtitle:'HELL(6段目・公開前)',
+    debugDescription:'公開前の6段目 HELL(空中のノーツあり・Lv.46・642ノーツ)。止まる演出は公開版と同じ。遊んでも自己ベスト・ランキング・報酬には入らない',
+    bgmTrackId:'melo_sheriruth',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?sheriruthHellChart:emptyRhythmChart())
     ])))
   }),
 ]);

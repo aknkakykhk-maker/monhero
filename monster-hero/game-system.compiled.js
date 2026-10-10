@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 813dea5106749b38
+// source-sha256: dfce7227c1f79e64
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 01:55";
+const BUILD_DATE = "2026-10-11 02:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15856,7 +15856,7 @@ const helpDataRows = id => {
     case 'assistantBondActions':
       return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'rhythmDifficultyRanks':
-      return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
+      return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).filter(d => typeof RHYTHM_DIFFICULTIES !== 'undefined' && RHYTHM_DIFFICULTIES.some(x => x.id === d.id) || typeof rhythmDemoSongs !== 'undefined' && rhythmDemoSongs(RHYTHM_SONGS).some(song => song.difficulties?.[d.id]?.notes?.length > 0)).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     case 'rhythmDemoSongLevels':
       {
         const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
@@ -97053,13 +97053,13 @@ function MonsterHeroGame() {
         className: "break-all text-[9px] text-slate-400"
       }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), React.createElement("div", {
         className: "space-y-2"
-      }, RHYTHM_DIFFICULTIES.filter(difficulty => song.difficulties[difficulty.id].notes.length > 0).map(difficulty => {
+      }, RHYTHM_PLAY_DIFFICULTIES.filter(difficulty => song.difficulties[difficulty.id]?.notes?.length > 0).map(difficulty => {
         const chart = song.difficulties[difficulty.id];
         return React.createElement("button", {
           key: difficulty.id,
           type: "button",
           "data-rhythm-proto-start": difficulty.id,
-          className: "min-h-[44px] w-full rounded-xl bg-rose-700 font-black",
+          className: `min-h-[44px] w-full rounded-xl font-black ${difficulty.id === 'HELL' ? 'bg-red-900 ring-1 ring-red-400/70' : 'bg-rose-700'}`,
           onClick: () => {
             setRhythmPlay({
               song,
@@ -97068,7 +97068,7 @@ function MonsterHeroGame() {
             });
             setGameState('RHYTHM_PLAY');
           }
-        }, "試作をプレイ（", difficulty.id, " Lv.", chart.level, "）");
+        }, difficulty.id === 'HELL' ? 'HELL をプレイ' : '試作をプレイ', "（", difficulty.id, " Lv.", chart.level, "）");
       })));
     }), RHYTHM_SONGS.map(song => {
       const track = rhythmSongTrack(song);

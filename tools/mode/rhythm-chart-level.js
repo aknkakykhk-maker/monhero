@@ -300,7 +300,8 @@ const loadRuntimeSongs=()=>{
   const context={Object,Number,Math,JSON,Array,String,Date,
     __MH_RHYTHM_CHART_SWITCH:process.env.__MH_RHYTHM_CHART_SWITCH||null};
   vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_IDS,
-    RHYTHM_PLAY_DIFFICULTIES:typeof RHYTHM_PLAY_DIFFICULTIES!=='undefined'?RHYTHM_PLAY_DIFFICULTIES:RHYTHM_DIFFICULTIES};`,context);
+    RHYTHM_PLAY_DIFFICULTIES:typeof RHYTHM_PLAY_DIFFICULTIES!=='undefined'?RHYTHM_PLAY_DIFFICULTIES:RHYTHM_DIFFICULTIES,
+    RHYTHM_PROTO_SONGS:typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[]};`,context);
   // HELL(6段目)も測る。譜面の無い曲は chartStrain が null を返して表に載らない
   context.out.RHYTHM_DIFFICULTIES=context.out.RHYTHM_PLAY_DIFFICULTIES;
   return context.out;
