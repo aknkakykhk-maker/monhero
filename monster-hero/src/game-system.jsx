@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a851ed0a0ae91e24
+// generated-sha256: c268e0c089860d4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-11 07:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-11 07:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19445,13 +19445,13 @@ function RhythmSkyStage({plane}){
   const theme=rhythmSkyTheme();if(theme.fx)Object.assign(RHYTHM_SKY_FX,theme.fx);
   // 空中の面・縁・柱・判定線は道の線と同じ白〜薄紫(改善部: 赤い枠が画面を占めて今の曲と並べると浮く。赤はノーツだけにする)
   const c='221,214,254',f=v=>Number(v).toFixed(2),fr=plane.front;
-  return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible'}}>
+  return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible',zIndex:2}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
       <linearGradient id="mhSkyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".55" stopColor={`rgb(${c})`} stopOpacity=".04"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".2"/></linearGradient>
       <linearGradient id="mhSkyBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".5" stopColor={`rgb(${c})`} stopOpacity=".22"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity="0"/></linearGradient>
       <linearGradient id="mhSkyPost" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".55"/></linearGradient>
-      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgb(40,28,92)" stopOpacity=".30"/><stop offset="1" stopColor="rgb(58,40,128)" stopOpacity=".62"/></linearGradient>
+      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgb(48,34,108)" stopOpacity=".55"/><stop offset="1" stopColor="rgb(66,46,146)" stopOpacity=".88"/></linearGradient>
       <clipPath id="mhSkyClip"><polygon points={plane.poly}/></clipPath>
     </defs>
     {/* 案Z: 道(地面)を薄い紫の無地にする。床の影(床より暗い)が見えるように。参考の道も無地の紫。空中の譜面の曲だけ */}

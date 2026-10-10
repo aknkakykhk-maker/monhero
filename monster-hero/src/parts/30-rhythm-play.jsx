@@ -484,13 +484,13 @@ function RhythmSkyStage({plane}){
   const theme=rhythmSkyTheme();if(theme.fx)Object.assign(RHYTHM_SKY_FX,theme.fx);
   // 空中の面・縁・柱・判定線は道の線と同じ白〜薄紫(改善部: 赤い枠が画面を占めて今の曲と並べると浮く。赤はノーツだけにする)
   const c='221,214,254',f=v=>Number(v).toFixed(2),fr=plane.front;
-  return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible'}}>
+  return <svg data-rhythm-sky-stage viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',overflow:'visible',zIndex:2}}>
     <style>{`@keyframes mhSkyFlow{from{transform:translateY(-12px)}to{transform:translateY(${f(fr.y)}px)}}[data-rhythm-sky-flow]{animation:mhSkyFlow 1.3s linear infinite}[data-rhythm-sky-flow="2"]{animation-delay:-.65s}@keyframes mhSkyPulse{0%,100%{opacity:.55}50%{opacity:1}}[data-rhythm-sky-pulse]{animation:mhSkyPulse 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){[data-rhythm-sky-flow],[data-rhythm-sky-pulse]{animation:none}}`}</style>
     <defs>
       <linearGradient id="mhSkyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".55" stopColor={`rgb(${c})`} stopOpacity=".04"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".2"/></linearGradient>
       <linearGradient id="mhSkyBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".5" stopColor={`rgb(${c})`} stopOpacity=".22"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity="0"/></linearGradient>
       <linearGradient id="mhSkyPost" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".55"/></linearGradient>
-      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgb(40,28,92)" stopOpacity=".30"/><stop offset="1" stopColor="rgb(58,40,128)" stopOpacity=".62"/></linearGradient>
+      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgb(48,34,108)" stopOpacity=".55"/><stop offset="1" stopColor="rgb(66,46,146)" stopOpacity=".88"/></linearGradient>
       <clipPath id="mhSkyClip"><polygon points={plane.poly}/></clipPath>
     </defs>
     {/* 案Z: 道(地面)を薄い紫の無地にする。床の影(床より暗い)が見えるように。参考の道も無地の紫。空中の譜面の曲だけ */}
