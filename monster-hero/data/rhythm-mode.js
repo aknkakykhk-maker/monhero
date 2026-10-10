@@ -28473,6 +28473,8 @@ const rhythmLayoutPlayArea=area=>{
     area.style.setProperty('--mh-above-line-px',`${Math.max(0,Math.round(y*rect.height))}px`);
   }
 };
+// 画面の上の外へ、帯の線の太さ(6px)より十分大きくはみ出したら、その先の帯の区切りは作らない(rhythmSlideSegmentQuads・DOM 版の rhythmSlideSegmentPolygons)
+const RHYTHM_SLIDE_OFFSCREEN_PX=64;
 const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
@@ -28490,11 +28492,13 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   // 外周(ふち)の点列も同じループで作る。あとからもう一度投影し直すと、
   // 画面に出ているSLIDEのぶんだけ毎フレームの計算が倍になるため。
   const head=from,rights=[],lefts=[];
-  for(let index=Math.max(1,firstIndex);index<source.length;index++){
+  outer:for(let index=Math.max(1,firstIndex);index<source.length;index++){
     const toPoint=source[index],fromTime=Number(fromPoint.timeMs),toTime=Number(toPoint.timeMs),spanMs=toTime-fromTime;
     for(let step=1;step<=RHYTHM_SLIDE_SEGMENT_STEPS;step++){
       const ratio=step/RHYTHM_SLIDE_SEGMENT_STEPS,timeMs=fromTime+spanMs*ratio;
       const to=step===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
+      // canvas 版(rhythmSlideSegmentQuads)と同じく、区切りがまるごと画面の上から RHYTHM_SLIDE_OFFSCREEN_PX より外へ出たら、その先は作らない
+      if(from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX)break outer;
       segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
       rights.push(`${to.right.toFixed(2)},${to.y.toFixed(2)}`);
       lefts.push(`${to.left.toFixed(2)},${to.y.toFixed(2)}`);
@@ -28759,8 +28763,6 @@ const rhythmCanvasNotesSetPreference=value=>{
 const rhythmCanvasNotesActive=flagOn=>{const pref=rhythmCanvasNotesPreference();if(pref==='canvas'||pref==='webgl')return true;if(pref==='dom')return false;return flagOn===true;};
 
 // SLIDE の帯の区切り。rhythmSlideSegmentPolygons と同じ手順で、文字列ではなく数値で返す(canvas 用)。
-// 画面の上の外へ、帯の線の太さ(6px)より十分大きくはみ出したら、その先の帯の区切りは作らない(rhythmSlideSegmentQuads)
-const RHYTHM_SLIDE_OFFSCREEN_PX=64;
 const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
