@@ -249,7 +249,7 @@ function writeAll(cache) {
   o();
   o('**組み方**: 始める前に供モンの候補を5体選び、WAVE 2・4・6 のあとに、まだ入っていない候補からくじで3体が出て1体を選ぶ。候補の5体に下の3体を入れ、出た3体のうち下の並びの前の子から選ぶ。5体中3体が出るので、指定の3体が1体も出ないことは無く、いつでもこの4体がそろう。**候補の残り2体は誰でもよい**(強さに効かない)。入る順はくじしだいで、シミュレーターも同じくじで測った。');
   o();
-  o('**並べ方**: Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11 と数える)。測り直した数字で並べ、くじのぶれ(標準誤差の2倍)の中の差には順位を付けず同じ順位にした。「確か」= 測り直しても、候補の全パーティの平均(基準)よりぶれ以上に上。EX とアシカの使い方は上手な使い方、アシカの選び方・トレーニングはボットと同じ、緊急回復は直したボットと同じ条件。暫定・回数不足の子(Tier 表で回数が足りない子)が入るパーティには、そう書いた。');
+  o('**並べ方**: Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11 と数える)。測り直した数字で並べた。「ぶれの中で並ぶ順位」は、くじのぶれ(標準誤差の2倍)の中の差を同じ順位にしたもの(同じ数字の組は、どれを選んでも同じくらい)。「確か」= 測り直しても、候補の全パーティの平均(基準)よりぶれ以上に上(そうでなければ「ぶれの中」)。EX とアシカの使い方は上手な使い方、アシカの選び方・トレーニングはボットと同じ、緊急回復は直したボットと同じ条件。暫定・回数不足の子(Tier 表で回数が足りない子)が入るパーティには、そう書いた。');
   const out = [];
   for (const d of DIFFS) {
     const rows = topParties(cache, d);
@@ -261,15 +261,16 @@ function writeAll(cache) {
     o(`基準(候補の全パーティ ${scanAll.length} 組の平均): ${d === 'Hard' ? `クリア率 ${pct(base)}` : `平均 WAVE ${base.toFixed(2)}`}`);
     o();
     if (!rows.length) { o('- まだ回していません'); continue; }
-    o('| 順位 | 勇者 | 供モン(入れたい順) | 点 | 確か | 1回目 |');
-    o('| --- | --- | --- | --- | --- | --- |');
+    // ★tier-page.js --check が読む表: | 順位 | 勇者 | 供モン | 点 | 確か |(順位は tier.json と同じ通し番号・確か は「確か」か「ぶれの中」)
+    o('| 順位 | 勇者 | 供モン | 点 | 確か | ぶれの中で並ぶ順位 | 暫定を含む | 1回目 |');
+    o('| --- | --- | --- | --- | --- | --- | --- | --- |');
     let rank = 1;
     rows.forEach((x, i) => {
       if (i > 0 && rows[i - 1].s - x.s > 2 * Math.hypot(rows[i - 1].e, x.e)) rank = i + 1;
       const [h, al] = x.k.split('|'); const allies = al.split(',');
       const firm = x.s - base > 2 * x.e;
       const prov = [h, ...allies].map((id) => NAME[id]).filter((n) => provisional.has(n));
-      o(`| ${rank} | ${NAME[h]} | ${allies.map((a) => NAME[a]).join('・')} | ${fmt(x.c, d)} | ${firm ? '確か' : '—'}${prov.length ? `(暫定を含む: ${prov.join('・')})` : ''} | ${fmt(x.first, d)} |`);
+      o(`| ${i + 1} | ${NAME[h]} | ${allies.map((a) => NAME[a]).join('・')} | ${fmt(x.c, d)} | ${firm ? '確か' : 'ぶれの中'} | ${rank} | ${prov.length ? prov.join('・') : '—'} | ${fmt(x.first, d)} |`);
       if (i < 5) {
         const det = detailOf(x.k, d);
         out.push({
