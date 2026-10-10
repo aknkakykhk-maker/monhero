@@ -286,7 +286,17 @@ async function betweenWaves(s, ctx) {
     if (hidden) await s.wait(400);
     const list = await s.listButtons();
     const go = FORWARD.map((re) => list.find((x) => re.test(x.label))).find(Boolean);
-    const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label) && !avoid.has(b.label));
+    // ★タクティクスの外へ出るボタンは「えらぶ」の候補にしない(2026-10-10 ハカセくん: 合間から「みゅあに話しかける」を押して
+    //   助手の話題一覧(音ゲーの「近いノーツが並んでいるときは…」など)へ迷い込み、戻る→一覧を繰り返して 60 手で打ち切り)
+    const OFFTRACK = /話しかける|ヘルプ|説明|攻略|モンヒロビート|モンビー|ノーツ|演奏|音ゲー|図鑑|設定|ランキング|お知らせ|更新履歴|HOME|ホーム/;
+    const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label) && !avoid.has(b.label) && !OFFTRACK.test(b.label));
+    // 迷い込んだ画面(タクティクスの合間ではない話題の一覧など)にいたら、まず閉じて戻る
+    const strayText = await s.page.evaluate(() => /近いノーツ|演奏が始まるまで|モンヒロビート/.test((document.body.innerText || '').replace(/\s+/g, ' ')));
+    if (strayText && !go) {
+      // 「戻る」は話題の一覧へ戻るだけのことがあるので、閉じる・× を先に探す
+      const close = list.find((x) => /^(閉じる|とじる|×|✕)$/.test(x.label)) || list.find((x) => /^(戻る|もどる)$/.test(x.label));
+      if (close) { await s.tap(close, 'WAVE の合間(迷い込んだ画面を閉じる)'); await s.wait(700); continue; }
+    }
     // 一覧に無い進むボタン(窓が出てくる演出の途中で、上に薄い層が重なっているとき)は、ボタンそのものを押す
     const direct = !go && await s.page.evaluate((sources) => {
       const res = sources.map((src) => new RegExp(src));
@@ -464,7 +474,19 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     stats.exUsed += ctx.log.data.ex.length - exBefore;
     b = await brain.readBoard(s);
     ctx.mem.recentDealt = ctx.mem.recentDealt || 0;
-    const picks = await brain.playTurn(s, b, ctx.mem, ctx.log, stats);
+    // 全滅の手前なら、カードを置かずに緊急回復(押すとそのまま敵の番へ進む)
+    // ★このターンに EX を使ったら緊急回復は押さない(2026-10-10 Expert W3: ヤオビクニの時間停止のあとに緊急回復を押し、
+    //   敵が動かずターンも進まないため 60 秒待って打ち切りになった。時間停止なら敵の攻撃も来ない)
+    let emergency = ctx.log.data.ex.length > exBefore ? '' : brain.emergencyWhy(b);
+    // EX の演出のあいだは手札が一時的にどれも押せない。見誤らないよう、少し待って読み直してから決める
+    if (emergency) { await s.wait(1500); b = await brain.readBoard(s); emergency = brain.emergencyWhy(b); }
+    let picks = [];
+    if (emergency) {
+      if (process.env.PLAYBOT_DEBUG) console.log(`    [判断] W${b.wave} T${b.turn} 緊急回復 … ${emergency}`);
+      ctx.log.note(`緊急回復: ${emergency}`);
+      ctx.log.data.emergency = (ctx.log.data.emergency || 0) + 1;
+      picks = [{ kind: 'emergency', why: emergency }];
+    } else picks = await brain.playTurn(s, b, ctx.mem, ctx.log, stats);
     if (danger) {
       stats.aimedDanger += 1;
       if (picks.some((p) => p.kind === 'guard')) stats.guardsWhenAimed += 1;
@@ -475,7 +497,10 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const before = await readTactics(s);
     // ★EXを使ったターン(併用できないEX)はカードを選べず、実行ボタンの代わりに「ターンを進める」が出る(71-screen-battle.jsx の data-tactics-ex-pass)
     let acted = false;
-    if (!before.actionEnabled && await s.page.evaluate(() => { const x = document.querySelector('[data-tactics-ex-pass]'); return !!x && !x.disabled; })) {
+    if (emergency) {
+      await tapEl(s, 'button[aria-label="緊急回復"]', '緊急回復');
+      acted = true;
+    } else if (!before.actionEnabled && await s.page.evaluate(() => { const x = document.querySelector('[data-tactics-ex-pass]'); return !!x && !x.disabled; })) {
       await tapEl(s, '[data-tactics-ex-pass]', 'ターンを進める');
       acted = true;
     } else {

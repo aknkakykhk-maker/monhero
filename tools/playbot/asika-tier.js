@@ -39,6 +39,11 @@ const argOf = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1]
 const DIFFS = ['Hard', 'Expert', 'Master'];
 const W = { Hard: 2, Expert: 5, Master: 3 }; // tactics-tier.js の DIFF_WEIGHT と同じ重み
 const PLAYS = ['bot', 'best'];
+// 回すシミュレーターの版(sim/battle.js)。キャッシュに残し、版が違うマスは回し直す。
+// 3 = アシカまで(トレーニング・間合いボーナス・固有技の強化・緊急回復は無し) / 7 = 全部入り(緊急回復は AUTO と同じ条件)
+const SIM_VER = 7;
+const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)' };
+const simVerText = (sec) => SIM_VER_TEXT[(sec && sec.simVer) || 3] || `${sec.simVer} 版目`;
 
 // ---------- 子プロセス: 1マス(勇者モン×難易度×設定)を N 回まわして足し合わせる ----------
 if (args[0] === '--worker') {
@@ -59,7 +64,7 @@ if (args[0] === '--worker') {
       const ally = t.ally === '*' ? (() => { const pool = sim.MONS.map((m) => m.id).filter((id) => id !== t.hero); return pool[Math.floor(sim.mulberry32(sim.hashSeed(t.seed, 'first', t.hero, t.diff, i))() * pool.length)]; })() : t.ally;
       if (ally) allies = [ally, ...others(t.hero, ally, sim.mulberry32(sim.hashSeed(t.seed, 'combo', t.hero, t.diff, i)))];
       else allies = sim.pickAllies(t.hero, sim.mulberry32(sim.hashSeed(t.seed, 'allies', t.hero, t.diff, i)));
-      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play, training: t.training || 'none' });
+      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play, ...((t.simVer || 3) >= 7 ? { training: 'bot' } : { training: 'none', distBonus: false, uniqueUp: false, emergency: 'none' }) });
       const reach = r.wave + (r.result === 'clear' ? 1 : 0);
       acc.n++; acc.sum += reach; acc.sq += reach * reach; if (r.result === 'clear') acc.clear++;
       if (t.card) { const u = (r.assistUses || {})[t.card] || 0; acc.uses += u; if (u > 0) acc.usedRuns++; }
@@ -111,13 +116,14 @@ async function compute(cache) {
   const only = argOf('--only', '');
   const fresh = args.includes('--fresh');
   // 残してあるマスのうち、回数と種が同じものは回し直さない(--fresh で全部回し直す)
-  const resume = (sec, meta) => (!fresh && sec && JSON.stringify(sec.runs) === JSON.stringify(meta.runs) && sec.seed === meta.seed ? sec.cells || {} : {});
+  const resume = (sec, meta) => (!fresh && sec && JSON.stringify(sec.runs) === JSON.stringify(meta.runs) && sec.seed === meta.seed && (sec.simVer || 3) === meta.simVer ? sec.cells || {} : {});
   const save = () => { const tmp = `${CACHE}.tmp`; fs.writeFileSync(tmp, JSON.stringify(cache)); fs.renameSync(tmp, CACHE); };
   const go = async (name, meta, tasks) => {
     const kept = resume(cache[name], meta);
     const todo = tasks.filter((t) => !kept[t.key]);
     cache[name] = { ...meta, at: jstNow(), cells: kept };
     console.error(`${{ asika: 'アシカ', combo: '組み合わせ', verify: '組み合わせの測り直し' }[name]}: ${tasks.length} マス(残してあった ${tasks.length - todo.length} マスは飛ばす)・並列 ${JOBS}`);
+    todo.forEach((t) => { t.simVer = meta.simVer; });
     await runTasks(todo, JOBS, (got) => { Object.assign(cache[name].cells, got); save(); });
     save();
   };
@@ -132,7 +138,7 @@ async function compute(cache) {
     }
     // 重いマス(Hard)から先に配る
     tasks.sort((a, z) => DIFFS.indexOf(a.diff) - DIFFS.indexOf(z.diff));
-    await go('asika', { runs: RUNS, seed: SEED }, tasks);
+    await go('asika', { runs: RUNS, seed: SEED, simVer: SIM_VER }, tasks);
   }
   if (only !== 'asika') {
     const tasks = [];
@@ -143,7 +149,7 @@ async function compute(cache) {
         tasks.push({ key: `${h.id}|${a.id}|${diff}`, hero: h.id, ally: a.id, diff, assist: 'bot', play: 'best', exMode: 'best', runs, seed: SEED });
       }
     }
-    await go('combo', { runs: { Expert: CRUNS, Master: CMRUNS }, seed: SEED }, tasks);
+    await go('combo', { runs: { Expert: CRUNS, Master: CMRUNS }, seed: SEED, simVer: SIM_VER }, tasks);
   }
   // ★A2(2026-10-10 改善部の指摘): 650 組から上位を拾うと、くじだけで相性 +0.5〜0.6 が出る。
   //   上位の候補(--verify-top 組)を、別の乱数の種で各 --verify-runs 回測り直す。比べる基準(その勇者モンの平均)も、
@@ -162,7 +168,7 @@ async function compute(cache) {
       for (const x of rows) tasks.push({ key: `${x.h.id}|${x.a.id}|${d}`, hero: x.h.id, ally: x.a.id, diff: d, assist: 'bot', play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
       for (const h of heroes) tasks.push({ key: `${h}|*|${d}`, hero: h, ally: '*', diff: d, assist: 'bot', play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
     }
-    await go('verify', { runs: VRUNS, seed: VSEED }, tasks);
+    await go('verify', { runs: VRUNS, seed: VSEED, simVer: SIM_VER }, tasks);
     cache.verify.pairs = top.map((x) => `${x.h.id}|${x.a.id}`);
     cache.verify.lowPairs = low.map((x) => `${x.h.id}|${x.a.id}`);
     save();
@@ -190,6 +196,15 @@ const NATURE = {
   poltz: '敵の攻撃を受けるたびにガッツ 20% 回復(1〜3回)',
   momosuke: '全体のガッツ 50〜90% 回復・上限と丈夫さアップ',
 };
+// まだ Tier の数字に効いていない機能(社長 2026-10-10「機能的なものも全て把握した上で」)。正本は mechanics.md の「入っていない・一部」の節。
+// 読み方は tactics-tier.js の MISSING_MECHANICS と同じ(番号付きの太字)
+const MISSING_MECHANICS = (() => {
+  try {
+    const t = fs.readFileSync(path.join(OUT_DIR, 'mechanics.md'), 'utf8');
+    const sec = (t.split(/^## 入っていない・一部.*$/m)[1] || '').split(/^## /m)[0];
+    return [...sec.matchAll(/^\d+\. \*\*(.+?)\*\*/gm)].map((m) => m[1]);
+  } catch (e) { return []; }
+})();
 const KIND = { oryo: '火力', myaru: '火力', kiki: '手数', atsu: '止める', dra: '守り', meloso: '回復', mua: '回復', cadmium: 'ガッツ', poltz: 'ガッツ', momosuke: 'ガッツ' };
 
 // ---------- 実戦の記録 ----------
@@ -291,7 +306,9 @@ function cardWords(c) {
     else bits.push(`優先しても平均なみ(WAVE ${sgn(c.score * 2, r1)})`);
     if (c.tier !== tiers[best] && ['S', 'A'].includes(tiers[best])) bits.push(`${best} では ${tiers[best]}(WAVE ${sgn(c.per[best].lift, r1)})`);
     if (botWeak(c)) bits.push(['C', 'D'].includes(c.tier) || c.score < 0 ? 'ボットは使い渋るが、上手に使っても弱い' : 'ボットの使い方では弱く見えている');
-    if (c.id === 'momosuke') bits.push('ガッツ切れがいちばんの負け筋なので効く');
+    // ★「ガッツ切れがいちばんの負け筋」は数えていなかった(2026-10-10 ハカセくんの確認)。シミュレーターには自動ガッツ回復
+    //   (毎ターン 5% +上乗せ)が入っているので、言えるのは「自動ガッツ回復があっても、ガッツを補うと伸びる」まで
+    if (c.id === 'momosuke') bits.push('自動ガッツ回復(毎ターン5%)を入れたシミュレーターでも、ガッツを補うと伸びる');
     if (c.id === 'atsu') bits.push('ボットは必ず最初に選ぶ');
     return bits.join('。');
   })();
@@ -421,10 +438,14 @@ function writeAll(cache) {
     const L = []; const o = (t = '') => L.push(t);
     o('# アシカ(アシストカード)の Tier(タクティクスプロ)');
     o();
-    o(`更新: ${now}(JST)・シミュレーター: 1マス ${cache.asika.runs} 回(26体 × 使い方2通り。トレーニング無しの版)・実戦: ${real.runs.length} 回`);
+    o(`更新: ${now}(JST)・シミュレーター: 1マス ${cache.asika.runs} 回(26体 × 使い方2通り。シミュレーター ${simVerText(cache.asika)})・実戦: ${real.runs.length} 回`);
     o();
     o('研究所(シミュレーター: ダイスくん)。各カードを「そのカードを優先して選ぶ」設定にしてシミュレーターで回し、届いた WAVE の差で決めます。強さはスキル込み(EX・勇者特性・固有技を入れたシミュレーター)。**Tier は上手な使い方の数字だけで決めます**(ボットの数字は「ボットの使い方で弱く見えているカード」にだけ使う)。');
     o();
+    if (MISSING_MECHANICS.length) {
+      o(`まだ入れていない・一部だけの機能(シミュレーターかボットに無く、この Tier の数字に効いていないもの。効きの大きい順): ${MISSING_MECHANICS.join('・')}。機能の一覧は docs/playbot/reports/tier/mechanics.md。この表の数字は、シミュレーター ${simVerText(cache.asika)}で回したもの。`);
+      o();
+    }
     o('## 総合 Tier');
     o();
     for (const t of ['S', 'A', 'B', 'C', 'D']) {
@@ -522,7 +543,7 @@ function writeAll(cache) {
     const L = []; const o = (t = '') => L.push(t);
     o('# 勇者モン × 供モンの組み合わせ(タクティクスプロ)');
     o();
-    o(`更新: ${now}(JST)・シミュレーター: Expert 各 ${cache.combo.runs.Expert} 回・Master 各 ${cache.combo.runs.Master} 回(26 × 25 通り)`);
+    o(`更新: ${now}(JST)・シミュレーター: Expert 各 ${cache.combo.runs.Expert} 回・Master 各 ${cache.combo.runs.Master} 回(26 × 25 通り・シミュレーター ${simVerText(cache.combo)})`);
     o();
     o('勇者モンごとに、最初に入る供モン(WAVE 2 のあと)を 25 通り入れ替えて回し、その勇者モンの平均との差(届いた WAVE)を出します。残りの供モン2体はくじ。Expert 5・Master 3 の重み(Master はほとんど WAVE 2 までに決まるので差が小さい)。アシカはボットの選び方、EX とアシカの使い方は上手な使い方。');
     o();
