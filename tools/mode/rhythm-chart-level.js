@@ -27,6 +27,9 @@
 //   3. 細さ        … 幅1・幅2のノーツは狙いが要る
 //   4. 種類        … 同時押し・FLICK・終点フリック・押さえながらの別ノーツ
 //   5. 経路        … SLIDEの折り返しの多さ
+// 空中の段(6段目 HELL・2026-10-10 社長「空中のぶんを数字に足す」)は、2. の「横の移動」と 5. の「追従の速さ」を
+// 横と縦の距離で数える(空中と地上を同じ指で行き来するぶん、指の動く距離が増える)。
+// 空中のノーツが無い譜面は縦の距離が0なので、数字は1つも変わらない。
 'use strict';
 const fs=require('fs');
 const path=require('path');
@@ -93,9 +96,27 @@ const WORK=Object.freeze({
   // SLIDEの追従の速さ。端から端まで走る一本は、同じ長さの小さいSLIDEより重い。
   slideTrack:.5,
   slideTrackMax:.9,
+  // 空中と地上を切り替える(直前のノーツと狙う判定ラインが違う)。狙う線そのものが変わるので、
+  // 指の交差(cross)と同じ重さで足す(どちらも「いま押さえている・触っている所とは別の所を狙い直す」動き。2026-10-10・社長「空中のぶんを数字に足す」)。
+  // 空中のノーツが無い譜面では一度も起きないので、既存の曲の数字は変わらない
+  skySwitch:.45,
 });
 
 const clamp=(value,lo,hi)=>Math.max(lo,Math.min(hi,value));
+// 空中の高さ1が、横に何レーンぶんの距離か。
+// 横画面(844×390)で、空中の判定ラインは地上より画面の高さの25%上(RHYTHM_SKY_LIFT・97.5px)。
+// 判定ラインの高さでの道の幅は画面の約81%で6レーン(1レーン約114px)。97.5÷114 ≒ 0.86レーン。
+// 横の移動と同じ物差し(HAND_MODEL.laneSpeedComfort・レーン毎秒)で数えるため、距離をレーンへそろえる。
+const SKY_LANES=.86;
+// ノーツの「触る点」の高さ(0=地上〜1=空中)。SLIDEは始点の高さ
+const noteTouchSky=note=>{
+  if(note&&note.type==='SLIDE'&&Array.isArray(note.slidePoints)&&note.slidePoints.length){
+    return clamp(Number(note.slidePoints[0].sky)||0,0,1);
+  }
+  return clamp(Number(note&&note.skyHeight)||0,0,1);
+};
+// 横と縦を合わせた距離(レーン)。縦が0なら横の距離そのもの(Math.hypot(x,0) は |x| と同じ値)
+const touchDistance=(laneDelta,skyDelta)=>Math.hypot(laneDelta,skyDelta*SKY_LANES);
 const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
 
 // --- 1ノーツぶんの仕事量 ---
@@ -109,7 +130,7 @@ const noteWork=(note,previous,context)=>{
       work*=1+WORK.gapBoostMax*(HAND_MODEL.restrikeComfortMs-gap)/HAND_MODEL.restrikeComfortMs;
     }
     // 2. 横の移動（触る点どうしの距離を時間で割る）
-    const laneSpeed=Math.abs(noteTouchLane(note)-noteTouchLane(previous))/(gap/1000);
+    const laneSpeed=touchDistance(noteTouchLane(note)-noteTouchLane(previous),noteTouchSky(note)-noteTouchSky(previous))/(gap/1000);
     work*=1+clamp(laneSpeed/HAND_MODEL.laneSpeedComfort,0,WORK.laneBoostMax);
   }
   // 3. 細さ
@@ -126,6 +147,7 @@ const noteWork=(note,previous,context)=>{
   if(note.endFlick===true)work+=WORK.endFlick;
   if(context.held)work+=WORK.whileHeld;
   if(context.cross)work+=WORK.cross;
+  if(context.skySwitch)work+=WORK.skySwitch;
   // 5. SLIDEの経路（折り返しの多さ と 追従の速さ）
   if(note.type==='SLIDE'&&Array.isArray(note.slidePoints)&&note.slidePoints.length>=2){
     const points=note.slidePoints;
@@ -136,7 +158,8 @@ const noteWork=(note,previous,context)=>{
       if(direction&&lastDirection&&direction!==lastDirection)turns++;
       if(direction)lastDirection=direction;
       const deltaMs=(Number(points[i].timeMs)||0)-(Number(points[i-1].timeMs)||0);
-      if(deltaMs>0)fastest=Math.max(fastest,Math.abs(delta)/(deltaMs/1000));
+      const skyDelta=clamp(Number(points[i].sky)||0,0,1)-clamp(Number(points[i-1].sky)||0,0,1);
+      if(deltaMs>0)fastest=Math.max(fastest,touchDistance(delta,skyDelta)/(deltaMs/1000));
     }
     work+=Math.min(WORK.slideTurnMax,turns*WORK.slideTurn);
     work+=Math.min(WORK.slideTrackMax,WORK.slideTrack*fastest/HAND_MODEL.laneSpeedComfort);
@@ -194,18 +217,21 @@ const chartStrain=chart=>{
   };
   const works=[];
   let previous=null;
-  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0};
+  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0,skySwitch:0};
   for(const note of notes){
     const timeMs=Number(note.timeMs)||0;
     const chordGapLanes=chordGapOf(note);
     const held=sustains.some(span=>span.startMs<timeMs-1&&timeMs<span.endMs);
     const chordChain=chordGapLanes!=null&&chainedChord(timeMs);
     const cross=held&&crossOf(note,timeMs);
-    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross});
+    // 空中(高さ半分以上)と地上の切り替え。同時押しの相方が違う段なのも切り替えに数える(並べた順で直前になる)
+    const skySwitch=!!previous&&(noteTouchSky(note)>=.5)!==(noteTouchSky(previous)>=.5);
+    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross,skySwitch});
     works.push({timeMs,work});
     if(chordGapLanes!=null)parts.chord++;
     if(chordChain)parts.chordChain++;
     if(cross)parts.cross++;
+    if(skySwitch)parts.skySwitch++;
     if(held)parts.held++;
     if(note.type==='FLICK')parts.flick++;
     if((Number(note.subLaneWidth)||2)<=2)parts.thin++;
@@ -273,7 +299,10 @@ const loadRuntimeSongs=()=>{
   // __MH_RHYTHM_CHART_SWITCH=after を付けて走らせると、切り替え後の姿でレベルを測れる。
   const context={Object,Number,Math,JSON,Array,String,Date,
     __MH_RHYTHM_CHART_SWITCH:process.env.__MH_RHYTHM_CHART_SWITCH||null};
-  vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_IDS};`,context);
+  vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_IDS,
+    RHYTHM_PLAY_DIFFICULTIES:typeof RHYTHM_PLAY_DIFFICULTIES!=='undefined'?RHYTHM_PLAY_DIFFICULTIES:RHYTHM_DIFFICULTIES};`,context);
+  // HELL(6段目)も測る。譜面の無い曲は chartStrain が null を返して表に載らない
+  context.out.RHYTHM_DIFFICULTIES=context.out.RHYTHM_PLAY_DIFFICULTIES;
   return context.out;
 };
 
@@ -348,7 +377,8 @@ if(require.main===module){
         console.log(`    ${difficulty.id.padEnd(6)} Lv.${String(level).padStart(2)}`
           +`  生${String(strain.raw).padEnd(6)} ピーク${String(strain.peak).padEnd(6)} 平均${String(strain.average).padEnd(6)}`
           +`  ${strain.notes}ノーツ/${strain.seconds}秒 (毎秒${strain.notesPerSecond})`
-          +`  細${strain.parts.thin} 同時${strain.parts.chord} 押しながら${strain.parts.held} フリック${strain.parts.flick}`);
+          +`  細${strain.parts.thin} 同時${strain.parts.chord} 押しながら${strain.parts.held} フリック${strain.parts.flick}`
+          +(strain.parts.skySwitch?`  空中⇄地上${strain.parts.skySwitch}`:''));
       }
     }
   }
