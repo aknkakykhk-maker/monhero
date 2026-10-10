@@ -29761,7 +29761,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(quads[0].r0,quads[0].y0);quads.forEach(q=>ctx.lineTo(q.r1,q.y1));ctx.stroke();
     ctx.globalAlpha=1;
   };
-  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'?v:'gold';}catch{return 'gold';}};
+  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'?v:'gold';}catch{return 'gold';}};
   // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
   const roundBarPath=(x0,y0,w,h,r)=>{
     const k=r*.29;
@@ -29771,7 +29771,37 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyTap=(hd,opts)=>{
     const style=skyTapStyle(),W=Math.max(18,hd.w*sizeScale+4),H=Math.max(11,hd.h+6),x0=hd.cx-W/2,y0=hd.cy-H/2,cx=hd.cx,cy=hd.cy;
     ctx.globalAlpha=opts.alpha;ctx.lineJoin='round';
-    if(style==='gold'){
+    if(style==='flat'||style==='lift'||style==='frame'){
+      // 案E〜G(改善部の指摘): 地上の板と同じ幅・同じ高さ・同じ丸みにして、色(金)と下へ伸びる影の柱だけで空中と分かるようにする
+      const fw=hd.w*sizeScale,fh=Math.max(8,hd.h),fx=cx-fw/2,fy0=cy-fh/2,r=Math.min(fh/2,5*sizeScale);
+      // 影の柱: 板の下へ、金から透明へ消える細い台形(板の幅の2割)。細い線1本より「ここから落ちている」が見える
+      const pl=Math.max(18,fh*3.4),pw=fw*.22;
+      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,'rgba(251,191,36,.6)');pg.addColorStop(1,'rgba(251,191,36,0)');
+      ctx.fillStyle=pg;ctx.beginPath();ctx.moveTo(cx-pw/2,cy);ctx.lineTo(cx+pw/2,cy);ctx.lineTo(cx+pw*.3,cy+pl);ctx.lineTo(cx-pw*.3,cy+pl);ctx.closePath();ctx.fill();
+      if(style==='flat'){
+        // 案E 同じ板・金: 地上の白い板と同じ形。金のグラデーション+濃い茶のふち(明るさも白い板と分かれる)+上の白いつや
+        const fy=fy0;
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(69,26,3,.85)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,240,138,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(120,53,15,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else if(style==='lift'){
+        // 案F 浮かせる: 同じ板を、地面側に落ちた暗い板(影)と少しずらして重ねる。板が持ち上がって見える
+        const rise=Math.max(2.5,fh*.4),fy=fy0-rise*.5;
+        roundBarPath(fx+1,fy0+rise,fw,fh,r);ctx.fillStyle='rgba(8,4,24,.62)';ctx.fill();
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(69,26,3,.85)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,240,138,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(120,53,15,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else{
+        // 案G 枠板: 中は暗い琥珀、金は太いふちと芯の線だけ。地上の白い板(中が明るい)と明るさが逆になるので、色が見分けにくくても分かる
+        const fy=fy0;
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(2,6,23,.7)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle='rgba(66,32,6,.95)';ctx.fill();
+        ctx.lineWidth=2.4;ctx.strokeStyle='rgba(251,191,36,1)';roundBarPath(fx+1.2,fy+1.2,fw-2.4,fh-2.4,Math.max(1,r-1));ctx.stroke();
+        ctx.fillStyle='rgba(253,224,71,.95)';ctx.fillRect(fx+fw*.2,cy-.8,fw*.6,1.6);
+      }
+    }else if(style==='gold'){
       // 案A(いまの): 金色の板+上向きの山形2つ
       ctx.fillStyle='rgba(251,191,36,1)';roundBarPath(x0,y0,W,H,3);ctx.fill();ctx.strokeStyle='rgba(120,53,15,.95)';ctx.lineWidth=1.5;ctx.stroke();
       const ch=Math.min(H*.6,9),cw=Math.min(W*.16,9),by=cy+ch/2;ctx.strokeStyle='rgba(69,26,3,.95)';ctx.lineWidth=2.2;
