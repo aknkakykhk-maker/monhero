@@ -1196,10 +1196,17 @@ const rhythmScrollTimeAt=s=>{
   const p=points[lo];return p.m>0?p.t+(y-p.s)/p.m:(lo+1<points.length?points[lo+1].t:Infinity);
 };
 const RHYTHM_SKY_INPUT={active:false};
-// 空中の段のある譜面で、地上と空中の真ん中より上を押した指か
+// 空中の段のある譜面で、指を押した高さ(プレイエリアの中の割合)。空中の段が無い譜面では null
+// 空中のノーツは「地上の判定ラインより少し上(RHYTHM_SKY_ACCEPT_BELOW)まで」、地上のノーツは「空中の判定ラインより少し下から」受け付ける。
+// あいだは両方を受け付けて、時刻と位置の近いほうを取る(親指で狙った線より下を押すくせがあっても取れるように・2026-10-10 人の指のくせの試しで空中のタップがほぼ全部取れなかったため)
+const RHYTHM_SKY_ACCEPT_BELOW=.035,RHYTHM_GROUND_ACCEPT_ABOVE=.05;
 const rhythmSkyTouch=(clientY,rect)=>{
-  if(!RHYTHM_SKY_INPUT.active||!rect||!(Number(rect.height)>0))return false;
-  return (Number(clientY)-Number(rect.top))/Number(rect.height)<rhythmSkySplitRatio();
+  if(!RHYTHM_SKY_INPUT.active||!rect||!(Number(rect.height)>0))return null;
+  return (Number(clientY)-Number(rect.top))/Number(rect.height);
+};
+const rhythmSkyAccepts=(note,touchRatio)=>{
+  if(!RHYTHM_SKY_INPUT.active||!Number.isFinite(touchRatio))return true;
+  return rhythmNoteSkyHeight(note)>0?touchRatio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW:touchRatio>rhythmSkyLineRatio()+RHYTHM_GROUND_ACCEPT_ABOVE;
 };
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
@@ -3464,7 +3471,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     };
     const acceptsPosition=note=>{
       // 空中の段(試作): 空中のノーツは空中の指で、地上のノーツは地上の指でだけ取る(スライドは横の位置だけで追う)
-      if(RHYTHM_SKY_INPUT.active&&!rhythmNoteIsSlide(note)&&note._rhythmOriginalType!=='SLIDE'&&(rhythmNoteSkyHeight(note)>0)!==(input?.sky===true))return false;
+      if(RHYTHM_SKY_INPUT.active&&!rhythmNoteIsSlide(note)&&note._rhythmOriginalType!=='SLIDE'&&!rhythmSkyAccepts(note,Number(input?.sky)))return false;
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return note.lane===lane;
@@ -24266,9 +24273,9 @@ const sheriruthMasterNotes=((t,h,f,s)=>[
 // 試作(2026-10-10・社長「こんなような譜面をモンビーですることは可能？」→「まず試作だけ見せて」)。公開しない。
 // 曲の 102.5 秒から切った34秒の音源に合わせた MASTER。参考譜面(Arcaea)のアークを2本同時のスライドに置き換えた
 const SHERIRUTH_PROTO_DURATION_MS=34000;
-// 速さの表(試作・「画面が止まって動く」)。[時刻ms,倍率]。いまは仕組みを確かめるための仮の表(9.0秒で止まり、9.6秒から2.5倍、10.2秒から元の速さ)。
-// 止める時刻はオンプくんが参考譜面から読んで差し替える
-const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[9000,0],[9600,2.5],[10200,1]]);
+// 速さの表(試作・「画面が止まって動く」)。[時刻ms(試作の音源の時刻),倍率]。2026-10-10 テンポくん・オンプくんが参考譜面から決めた表。
+// 6.460〜6.866秒は止まる(この間に判定のノーツは来ない)。6.866秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ
+const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6866,1.8],[7515,1]]);
 // 空中の段(試作): T=空中のタップ / F=空中のフリック(高さ1)/ S=高さのあるスライド(点は [時刻,レーン,幅,高さ0〜1,ease]、5つめの引数 hand は 'L'=水色・'R'=ピンク)
 const mhSkyTap=(timeMs,subLane,subLaneWidth,height=1)=>Object.freeze({...mhTap(timeMs,subLane,subLaneWidth),skyHeight:height});
 const mhSkyFlick=(timeMs,subLane,subLaneWidth,dirCode,height=1)=>Object.freeze({...mhFlick(timeMs,subLane,subLaneWidth,dirCode),skyHeight:height});
@@ -24278,39 +24285,30 @@ const mhSkySlide=(timeMs,endTimeMs,points,endFlick,hand)=>{
 };
 const sheriruthProtoMasterNotes=((t,h,f,s,T,F,S)=>[
 // <sheriruth-proto-master-notes>
-  t(2001,6,3,0),T(2001,9,2),t(2244,0,3,0),t(2244,3,3,0),
-  t(2406,6,3,0),t(2488,3,3,0),t(2650,9,3,0),t(2731,6,3,0),
-  T(2893,1,2),t(2974,3,3,0),t(3055,0,3,0),t(3136,3,3,0),
-  T(3298,1,2),h(3461,6,3,3785),t(3461,9,3,0),t(3704,3,3,0),
-  t(3947,0,3,0),t(3947,3,3,0),t(4109,0,3,0),h(4190,9,3,4758),
-  T(4353,5,2),T(4596,1,2),h(4758,0,3,5407),T(4920,5,2),
-  T(5244,9,2),t(5488,9,3,0),t(5650,3,3,0),T(5812,9,2),
-  t(5893,6,3,0),t(6055,9,3,0),T(6136,5,2),t(6217,6,3,0),
-  T(6380,1,2),T(6380,9,2),T(6542,5,2),t(6704,0,3,0),
-  t(6704,3,3,0),S(6866,16434,[[6866,4,2,0.25,0],[7028,3.5,2,0,0],[7353,1,2,0,0],[7434,1,2,0,0],[8001,1,2,0,0],[8650,4,2,0.25,0],[8893,3,2,0.5,0],[9137,1.5,2,0.5,0],[9299,1,2,0.25,0],[9947,4,2,1,0],[10191,4.5,2,1,0],[10434,3,2,0.5,0],[10758,0,2,0.25,0],[10920,0,2,0.25,0],[11002,0,2,0.25,0],[11488,3.5,2,0.25,0],[11569,3,2,0.25,0],[11893,4,2,0,0],[12461,1,2,0.25,0],[12866,1,2,0.5,0],[13272,3,2,0.5,0],[13515,2.5,2,0.5,0],[14002,5,2,0.5,0],[14569,3,2,1,0],[14731,4,2,1,0],[14894,4,2,0.75,0],[15056,3,2,0.25,0],[15461,5,2,0,0],[15542,5,2,0.25,0],[15786,3,2,1,0],[16029,4,2,1,0],[16191,4,2,1,0],[16434,1.5,2,1,0]],0,'R'),S(7434,15786,[[7434,1.5,2,1,0],[7677,4,2,1,0],[7758,4,2,0.75,0],[7920,4,2,0.25,0],[8245,3.5,2,0.5,0],[8488,1.5,2,0.5,0],[8650,1,2,0.25,0],[9542,5,2,0,0],[9785,5,2,0,0],[10110,2,2,0.5,0],[10272,0.5,2,1,0],[10353,0.5,2,1,0],[10596,0.5,2,1,0],[11245,4,2,0.25,0],[11407,4,2,0.25,0],[11812,1,2,0.25,0],[12380,0.5,2,0.75,0],[12704,0,2,0.75,0],[13110,2,2,0.25,0],[13353,1.5,2,0.5,0],[14164,4,2,0.5,0],[14407,3,2,0.5,0],[14650,1,2,0.5,0],[14894,0.5,2,0.5,0],[15137,2,2,1,0],[15461,1,2,1,0],[15786,2,2,0.5,0]],0,'L'),t(15948,6,3,0),
-  t(16110,6,3,0),T(16434,1,2),T(16596,1,2),t(16596,3,3,0),
-  t(16921,6,3,0),t(16921,0,3,0),t(17083,9,3,0),t(17164,3,3,0),
-  T(17407,9,2),t(17569,0,3,0),t(17569,3,3,0),T(17732,1,2),
-  t(17894,3,3,0),t(17894,0,3,0),T(18137,9,2),t(18218,6,3,0),
-  t(18299,9,3,0),t(18380,6,3,0),T(18867,1,2),t(19029,6,3,0),
-  t(19029,0,3,0),T(19191,9,2),t(19353,6,3,0),t(19353,9,3,0),
+  t(2001,6,3,0),T(2001,9,2),t(2244,3,3,0),t(2406,6,3,0),
+  t(2488,3,3,0),t(2650,9,3,0),t(2731,6,3,0),t(2974,3,3,0),
+  t(3136,3,3,0),h(3461,6,3,3785),t(3461,9,3,0),t(3947,0,3,0),
+  t(3947,3,3,0),t(4109,0,3,0),T(4353,5,2),T(4596,1,2),
+  T(4920,5,2),T(5244,9,2),t(5650,3,3,0),T(5812,9,2),
+  t(5893,6,3,0),t(6217,6,3,0),T(6380,1,2),T(6542,5,2),
+  t(6704,0,3,0),S(6866,16434,[[6866,4,2,0.25,0],[7028,3.5,2,0,0],[7353,1,2,0,0],[7434,2,2,1,0],[7677,4,2,1,0],[7920,4,2,0.25,0],[8326,3,2,0.5,0],[8407,3,2,0.25,0],[8650,4,2,0.25,0],[8974,3,2,0.5,0],[9055,3,2,0.25,0],[9542,5,2,0,0],[9785,5,2,0,0],[9866,4.5,2,0,0],[9947,4.5,2,1,0],[10191,4.5,2,1,0],[10596,1.5,2,0.5,0],[10677,1.5,2,1,0],[11245,4,2,0.25,0],[11488,4,2,0.25,0],[11650,3,2,0.25,0],[11893,4,2,0,0],[12380,1.5,2,0.25,0],[12704,1,2,0.5,0],[13272,3,2,0.5,0],[13515,2.5,2,0.5,0],[14002,5,2,0.5,0],[14569,3,2,1,0],[14731,4,2,1,0],[14894,4,2,0.75,0],[15056,3,2,0.25,0],[15461,5,2,0,0],[15542,5,2,0.25,0],[15786,3,2,1,0],[16191,4,2,1,0],[16434,1.5,2,1,0]],0,'R'),S(7434,15786,[[7434,1,2,0,0],[8001,1,2,0,0],[8326,2,2,0.25,0],[8407,2,2,0.5,0],[8650,1,2,0.25,0],[8893,2,2,0.25,0],[9055,2,2,0.5,0],[9299,1,2,0.25,0],[9866,3.5,2,1,0],[9947,3.5,2,0.25,0],[10272,0.5,2,1,0],[10596,0.5,2,1,0],[10677,0.5,2,0.25,0],[10758,0,2,0.25,0],[11002,0,2,0.25,0],[11407,3,2,0.25,0],[11488,3,2,0.25,0],[11812,1,2,0.25,0],[12704,0,2,0.75,0],[13110,1,2,0.25,0],[13515,1.5,2,0.5,0],[14083,3,2,0.5,0],[14407,2.5,2,0.5,0],[14650,1,2,0.5,0],[14894,0.5,2,0.5,0],[15137,2,2,1,0],[15461,1,2,1,0],[15786,2,2,0.5,0]],0,'L'),T(16434,1,2),
+  T(16596,1,2),t(16596,3,3,0),t(16921,0,3,0),t(16921,6,3,0),
+  t(17083,9,3,0),t(17164,3,3,0),T(17407,9,2),t(17569,3,3,0),
+  t(17894,0,3,0),t(17894,3,3,0),t(18218,6,3,0),t(18380,6,3,0),
+  T(18867,1,2),t(19029,6,3,0),t(19353,6,3,0),t(19353,9,3,0),
   t(19516,3,3,0),t(19597,9,3,0),t(19759,9,3,0),t(20002,0,3,0),
-  T(20164,1,2),t(20326,6,3,0),T(20489,1,2),t(20489,6,3,0),
-  T(20813,1,2),T(20813,9,2),t(20975,9,3,0),t(21056,0,3,0),
-  t(21218,3,3,0),t(21218,6,3,0),t(21462,3,3,0),t(21462,6,3,0),
-  t(21624,9,3,0),T(21867,1,2),t(21867,3,3,0),t(22029,0,3,0),
-  t(22029,6,3,0),T(22191,8,2),t(22272,6,3,0),h(22435,3,3,22840),
-  t(22435,9,3,0),t(22597,6,3,0),t(22840,0,3,0),T(23083,1,2),
-  T(23083,9,2),t(23245,3,3,0),T(23245,9,2),T(23408,1,2),
-  t(23489,9,3,0),t(23570,6,3,0),t(23732,3,3,0),t(23732,9,3,0),
+  t(20326,6,3,0),T(20489,1,2),t(20489,6,3,0),T(20813,1,2),
+  T(20813,9,2),t(21218,3,3,0),t(21218,6,3,0),t(21462,3,3,0),
+  t(21462,6,3,0),t(21624,9,3,0),t(21867,3,3,0),t(22029,0,3,0),
+  t(22029,6,3,0),t(22272,6,3,0),h(22435,3,3,22840),t(22435,9,3,0),
+  t(22597,6,3,0),T(23083,1,2),T(23083,9,2),T(23245,9,2),
+  T(23408,1,2),t(23570,6,3,0),t(23732,3,3,0),t(23732,9,3,0),
   t(23894,0,3,0),t(23894,6,3,0),t(24056,3,3,0),h(24137,6,3,24543),
-  T(24300,1,2),T(24705,1,2),t(24867,0,3,0),T(24867,9,2),
-  t(25110,9,3,0),t(25273,9,3,0),t(25435,6,3,0),t(25435,3,3,0),
-  T(25678,1,2),t(25678,6,3,0),T(25921,1,2),t(25921,3,3,0),
-  T(26246,9,2),t(26246,0,3,0),T(26408,1,2),t(26408,9,3,0),
-  t(26651,6,3,0),T(26651,9,2),t(26813,3,3,0),t(26894,0,3,0),
-  t(26975,6,3,0),t(27138,9,3,0),t(27138,0,3,0),t(27462,3,3,0),
-  S(27462,32084,[[27462,0.5,2,1,0],[30462,1,2,0.25,0],[32084,2,2,0.25,0]],0,'L'),S(27867,31841,[[27867,4.5,2,1,0],[29894,4,2,0,0],[31841,3,2,0,0]],0,'R'),t(32651,6,3,0),
+  T(24705,1,2),T(24867,9,2),t(25273,9,3,0),t(25435,3,3,0),
+  t(25435,6,3,0),t(25678,6,3,0),T(25921,1,2),t(25921,3,3,0),
+  t(26246,0,3,0),T(26246,9,2),t(26651,6,3,0),T(26651,9,2),
+  t(26813,3,3,0),t(26975,6,3,0),t(27138,0,3,0),t(27138,9,3,0),
+  S(27462,32084,[[27462,0.5,2,1,0],[30462,1,2,0.25,0],[32084,2,2,0.25,0]],0,'L'),t(27462,3,3,0),S(27867,31841,[[27867,4.5,2,1,0],[29894,4,2,0,0],[31841,3,2,0,0]],0,'R'),t(32651,6,3,0),
 // </sheriruth-proto-master-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 
@@ -29796,7 +29794,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(quads[0].r0,quads[0].y0);quads.forEach(q=>ctx.lineTo(q.r1,q.y1));ctx.stroke();
     ctx.globalAlpha=1;
   };
-  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'?v:'gold';}catch{return 'gold';}};
+  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'?v:'flat';}catch{return 'flat';}};
   // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
   const roundBarPath=(x0,y0,w,h,r)=>{
     const k=r*.29;
@@ -29806,7 +29804,47 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyTap=(hd,opts)=>{
     const style=skyTapStyle(),W=Math.max(18,hd.w*sizeScale+4),H=Math.max(11,hd.h+6),x0=hd.cx-W/2,y0=hd.cy-H/2,cx=hd.cx,cy=hd.cy;
     ctx.globalAlpha=opts.alpha;ctx.lineJoin='round';
-    if(style==='gold'){
+    if(style==='flat'||style==='lift'||style==='frame'||style==='deep'){
+      // 案E〜G(改善部の指摘): 地上の板と同じ幅・同じ高さ・同じ丸みにして、色(金)と下へ伸びる影の柱だけで空中と分かるようにする
+      const fw=hd.w*sizeScale,fh=Math.max(8,hd.h),fx=cx-fw/2,fy0=cy-fh/2,r=Math.min(fh/2,5*sizeScale);
+      // 影の柱: 板の下へ、金から透明へ消える細い台形(板の幅の2割)。細い線1本より「ここから落ちている」が見える
+      const pl=Math.max(18,fh*3.4),pw=fw*.22;
+      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,`rgba(251,191,36,${style==='deep'?.88:.6})`);pg.addColorStop(1,'rgba(251,191,36,0)');
+      ctx.fillStyle=pg;ctx.beginPath();ctx.moveTo(cx-pw/2,cy);ctx.lineTo(cx+pw/2,cy);ctx.lineTo(cx+pw*.3,cy+pl);ctx.lineTo(cx-pw*.3,cy+pl);ctx.closePath();ctx.fill();
+      if(style==='deep'){
+        // 案H 奥行き(案Eがもと): 板に厚み(下側の暗い面。板の高さの4割で、奥ほど板が小さいので自然に薄くなる)・柱を濃く・柱の芯に明るい線
+        const fy=fy0,t=Math.max(1.5,fh*.4);
+        ctx.lineWidth=1.4;ctx.strokeStyle='rgba(253,230,138,.8)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy+pl*.85);ctx.stroke();
+        roundBarPath(fx,fy+t,fw,fh,r);ctx.fillStyle='rgba(120,53,15,1)';ctx.fill();
+        roundBarPath(fx+1,fy+t+fh*.45,fw-2,fh*.55,r);ctx.fillStyle='rgba(69,26,3,.7)';ctx.fill();
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(41,16,2,.9)';roundBarPath(fx-1,fy-1,fw+2,fh+t+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,249,195,1)');g.addColorStop(.45,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(245,158,11,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(180,83,9,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else if(style==='flat'){
+        // 案E 同じ板・金: 地上の白い板と同じ形。金のグラデーション+濃い茶のふち(明るさも白い板と分かれる)+上の白いつや
+        const fy=fy0;
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(69,26,3,.85)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,240,138,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(120,53,15,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else if(style==='lift'){
+        // 案F 浮かせる: 同じ板を、地面側に落ちた暗い板(影)と少しずらして重ねる。板が持ち上がって見える
+        const rise=Math.max(2.5,fh*.4),fy=fy0-rise*.5;
+        roundBarPath(fx+1,fy0+rise,fw,fh,r);ctx.fillStyle='rgba(8,4,24,.62)';ctx.fill();
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(69,26,3,.85)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,240,138,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(120,53,15,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else{
+        // 案G 枠板: 中は暗い琥珀、金は太いふちと芯の線だけ。地上の白い板(中が明るい)と明るさが逆になるので、色が見分けにくくても分かる
+        const fy=fy0;
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(2,6,23,.7)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle='rgba(66,32,6,.95)';ctx.fill();
+        ctx.lineWidth=2.4;ctx.strokeStyle='rgba(251,191,36,1)';roundBarPath(fx+1.2,fy+1.2,fw-2.4,fh-2.4,Math.max(1,r-1));ctx.stroke();
+        ctx.fillStyle='rgba(253,224,71,.95)';ctx.fillRect(fx+fw*.2,cy-.8,fw*.6,1.6);
+      }
+    }else if(style==='gold'){
       // 案A(いまの): 金色の板+上向きの山形2つ
       ctx.fillStyle='rgba(251,191,36,1)';roundBarPath(x0,y0,W,H,3);ctx.fill();ctx.strokeStyle='rgba(120,53,15,.95)';ctx.lineWidth=1.5;ctx.stroke();
       const ch=Math.min(H*.6,9),cw=Math.min(W*.16,9),by=cy+ch/2;ctx.strokeStyle='rgba(69,26,3,.95)';ctx.lineWidth=2.2;
