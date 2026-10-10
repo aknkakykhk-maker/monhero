@@ -1,10 +1,11 @@
 // アシカ(アシストカード)の Tier 表・モンスターごとのおすすめアシカ・勇者モン×供モンの組み合わせを作る。
 // 案だけで、ゲームの数字は変えない。式はシミュレーター(sim/battle.js。ゲームのコードから写したもの)を使う。
 //
-//   node tools/playbot/asika-tier.js                       全部回して md・tier.json を書く(4並列で 20 分ほど)
+//   node tools/playbot/asika-tier.js                       全部回して md・tier.json を書く(2並列で 1 時間ほど)
 //   node tools/playbot/asika-tier.js --from-cache          回さずに、前に回した結果(asika-sim.json)から md・tier.json を作り直す
 //   node tools/playbot/asika-tier.js --only asika|combo    片方だけ回す(もう片方はキャッシュのまま)
-//   オプション: --runs 100(アシカ 1マスの回数)・--combo-runs 60(Expert)・--combo-master-runs 30・--jobs 4・--seed 1
+//   オプション: --runs 100(アシカ 1マスの回数)・--combo-runs 60(Expert)・--combo-master-runs 30・--jobs 2・--seed 1
+//   ★止まっても続きから: 終わったマスは 25 マスごとに asika-sim.json へ残す。同じオプションで出し直すと、残したマスは飛ばす(--fresh で全部回し直す)
 //
 // 書き出すもの:
 //   docs/playbot/reports/tier/asika-tier.md   アシカの Tier(社長が iPhone で見る。総合 → 早見表 → ひとこと → 詳しい表)
@@ -70,7 +71,8 @@ if (args[0] === '--worker') {
   return;
 }
 
-function runTasks(tasks, jobs) {
+// 終わったマスは onSave で 25 マスごとにファイルへ残す(コンテナが止まっても、出し直せば続きから回る。2026-10-10)
+function runTasks(tasks, jobs, onSave = () => {}) {
   return new Promise((resolve) => {
     const out = {}; let next = 0; let done = 0; const t0 = Date.now();
     if (!tasks.length) { resolve(out); return; }
@@ -80,8 +82,9 @@ function runTasks(tasks, jobs) {
     for (const w of workers) {
       w.on('message', (acc) => {
         out[acc.key] = acc; done++;
+        if (done % 25 === 0) onSave(out);
         if (done % 50 === 0 || done === tasks.length) process.stderr.write(`  ${done}/${tasks.length}(${((Date.now() - t0) / 1000).toFixed(0)} 秒)\n`);
-        if (done === tasks.length) { workers.forEach(end); resolve(out); } else feed(w);
+        if (done === tasks.length) { onSave(out); workers.forEach(end); resolve(out); } else feed(w);
       });
       feed(w);
     }
@@ -101,9 +104,21 @@ async function compute(cache) {
   const RUNS = Number(argOf('--runs', '100'));
   const CRUNS = Number(argOf('--combo-runs', '60'));
   const CMRUNS = Number(argOf('--combo-master-runs', '30'));
-  const JOBS = Number(argOf('--jobs', '4'));
+  const JOBS = Number(argOf('--jobs', '2'));
   const SEED = Number(argOf('--seed', '1'));
   const only = argOf('--only', '');
+  const fresh = args.includes('--fresh');
+  // 残してあるマスのうち、回数と種が同じものは回し直さない(--fresh で全部回し直す)
+  const resume = (sec, meta) => (!fresh && sec && JSON.stringify(sec.runs) === JSON.stringify(meta.runs) && sec.seed === meta.seed ? sec.cells || {} : {});
+  const save = () => { const tmp = `${CACHE}.tmp`; fs.writeFileSync(tmp, JSON.stringify(cache)); fs.renameSync(tmp, CACHE); };
+  const go = async (name, meta, tasks) => {
+    const kept = resume(cache[name], meta);
+    const todo = tasks.filter((t) => !kept[t.key]);
+    cache[name] = { ...meta, at: jstNow(), cells: kept };
+    console.error(`${name === 'asika' ? 'アシカ' : '組み合わせ'}: ${tasks.length} マス(残してあった ${tasks.length - todo.length} マスは飛ばす)・並列 ${JOBS}`);
+    await runTasks(todo, JOBS, (got) => { Object.assign(cache[name].cells, got); save(); });
+    save();
+  };
   if (only !== 'combo') {
     const tasks = [];
     for (const diff of DIFFS) for (const m of MONS) {
@@ -115,8 +130,7 @@ async function compute(cache) {
     }
     // 重いマス(Hard)から先に配る
     tasks.sort((a, z) => DIFFS.indexOf(a.diff) - DIFFS.indexOf(z.diff));
-    console.error(`アシカ: ${tasks.length} マス × ${RUNS} 回`);
-    cache.asika = { runs: RUNS, seed: SEED, at: jstNow(), cells: await runTasks(tasks, JOBS) };
+    await go('asika', { runs: RUNS, seed: SEED }, tasks);
   }
   if (only !== 'asika') {
     const tasks = [];
@@ -127,10 +141,8 @@ async function compute(cache) {
         tasks.push({ key: `${h.id}|${a.id}|${diff}`, hero: h.id, ally: a.id, diff, assist: 'bot', play: 'best', exMode: 'best', runs, seed: SEED });
       }
     }
-    console.error(`組み合わせ: ${tasks.length} マス`);
-    cache.combo = { runs: { Expert: CRUNS, Master: CMRUNS }, seed: SEED, at: jstNow(), cells: await runTasks(tasks, JOBS) };
+    await go('combo', { runs: { Expert: CRUNS, Master: CMRUNS }, seed: SEED }, tasks);
   }
-  fs.writeFileSync(CACHE, JSON.stringify(cache));
 }
 
 function jstNow() { return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' '); }

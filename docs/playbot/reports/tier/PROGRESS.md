@@ -27,8 +27,11 @@
 | --- | --- | --- |
 | Tier 表 | `tools/playbot/tactics-tier.js` → `monster-tier.md` | 6項目(攻め・守り・勇者特性・固有技・EX・間合い)の ◎○△。EX を一度も使えていない子は「保留」 |
 | 机上の表 | `tools/playbot/sim/desk.js` → `desk.md` | 1発のダメージ・ガッツ1あたり・20ターンで撃てる回数・序盤に何発受けられるか(難易度ごと) |
-| ゲームの読み込み | `tools/playbot/sim/load-game.js` | data(skills・ally・enemy)と pure の parts(17・18・19・22・32)をブラウザなしで読み込む。`createBattleEnemy` などがそのまま動く |
+| ゲームの読み込み | `tools/playbot/sim/load-game.js` | data(skills・ally・enemy・breeder)と pure の parts(17・18・19・22・32)をブラウザなしで読み込む。`createBattleEnemy` などがそのまま動く |
 | 実戦の記録 | `scenarios/tactics-brain.js` の `rememberRun` | 子ごとの技の回数(`use`)・立っていた枠の適性(`apt`)・敵との距離の差(`dd`)・特性の文の回数(`traitHits`)・EX を使った子(`exBy`) |
+| アシカ入りシミュレーター | `tools/playbot/sim/battle.js`(3 版目) | アシカ 10 枚の習得・強化の流れと効果。`simulateRun({ assist: 'bot'|'none'|<id>, assistPlay: 'bot'|'best' })`。EX_POLICIES・exMode の形は変えていない |
+| アシカ Tier・おすすめ・組み合わせ | `tools/playbot/asika-tier.js` → `asika-tier.md`・`combo.md`・tier.json | 集計は `asika-sim.json` に 25 マスごとに残す。止まったら同じコマンドで続きから。`--from-cache` で回さず作り直し |
+| tier.json の書き出し | `tools/playbot/tactics-tier.js --md …` | 「モンスター」ほかを書き換える。アシカ・組み合わせ・おすすめアシカ・相性のいい供モンは残す |
 
 ## ボットで直したこと(Tier の精度に効いたもの)
 
