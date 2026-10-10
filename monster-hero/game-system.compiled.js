@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b031a31101cefd72
+// source-sha256: 8f1a2485f7246f23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 17:42";
+const BUILD_DATE = "2026-10-10 17:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33911,7 +33911,7 @@ const RhythmTapTest = ({
         return;
       }
       run.activePointerFeedback = run.activePointerFeedback || new Map();
-      run.activePointerFeedback.set(entry.id, subLaneCoordinate);
+      rhythmSkyGroundFeedback(p.y, rect) ? run.activePointerFeedback.set(entry.id, subLaneCoordinate) : run.activePointerFeedback.delete(entry.id);
       setPressedLanes(pressedLanesNow());
       const rawAge = nowMs() - Number(entry.stamp);
       inputStarts([{
@@ -34029,7 +34029,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (run) {
       run.activePointerFeedback = run.activePointerFeedback || new Map();
-      run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+      if (rhythmSkyGroundFeedback(p.y, rect)) run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
       setPressedLanes(pressedLanesNow());
     }
     const originStamp = Number(e.nativeEvent?.__mhOriginStamp);
@@ -34055,7 +34055,7 @@ const RhythmTapTest = ({
     const mp = inputPoint(e.clientX, e.clientY),
       subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(mp.x, mp.y, inputAreaRect(area));
     if (subLaneCoordinate === null) return;
-    run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+    if (rhythmSkyGroundFeedback(mp.y, inputAreaRect(area))) run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);else run.activePointerFeedback.delete(e.pointerId);
     setPressedLanes(pressedLanesNow());
     inputMoves(rhythmInputKey('pointer', e.pointerId), subLaneCoordinate);
   };
@@ -34092,7 +34092,7 @@ const RhythmTapTest = ({
         const tp = inputPoint(touch.clientX, touch.clientY),
           lane = rhythmLaneAtPoint(tp.x, tp.y, rect),
           subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(tp.x, tp.y, rect);
-        if (subLaneCoordinate !== null) liveSubLanes.push(subLaneCoordinate);
+        if (subLaneCoordinate !== null && rhythmSkyGroundFeedback(tp.y, rect)) liveSubLanes.push(subLaneCoordinate);
         if (current.activeTouchInputs.has(inputKey)) {
           if (current.outsideStartInputs?.has(inputKey) && movedTouchInputs?.has(inputKey) && lane !== null && subLaneCoordinate !== null && subLaneCoordinate >= RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES && subLaneCoordinate <= RHYTHM_SUB_LANE_COUNT - RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES) {
             current.outsideStartInputs.delete(inputKey);
