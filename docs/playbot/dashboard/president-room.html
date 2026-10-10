@@ -68,12 +68,12 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/10 10:10 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/10 10:12 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>6</b><span>進行中</span></a>
+    <a class="count" href="#work"><b>7</b><span>進行中</span></a>
     <a class="count" href="#shipped"><b>46</b><span>公開したもの</span></a>
   </nav>
 
@@ -88,6 +88,11 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
+      <li id="r2610101015mech">
+        <div class="row-title">ゲームの機能(自動回復など)を全部踏まえて Tier を考える</div>
+        <div class="row-body">自動回復はシミュレーターに入っている(確認済み)。漏れをなくすため、勝ち負けに効く機能の一覧表(mechanics.md)をコードから作り、シミュレーター・Tier の判断に入っているかを1行ずつ書く。入っていないものは順に入れ、理由の文も見直す。改善部が抜けを確かめる</div>
+        <div class="meta"><span>部長ハカセくん</span><span>見込み 研究所から届きしだい書く</span></div>
+      </li>
       <li id="kG10">
         <div class="row-title">G10 ミッション画面にも「すべて受け取る」・手に入れた表示</div>
         <div class="row-body">毎日の報酬がミッション→ギフトの2段で、毎日6回ほど押す。社長の選択: ミッション画面にも「すべて受け取る」を作り、ギフトも含めて受け取ったら何を手に入れたか分かる表示を出す。受取履歴・保存キーは変えない</div>
