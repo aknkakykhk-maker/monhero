@@ -109,8 +109,8 @@ const computeGuardLevel = (defVal) => Math.max(0, Math.min(G.GUARD_EVOLUTION.len
 // 60-app.jsx guardCardCount(13516)
 const guardCardCount = (guardLv) => Math.min(4, 2 + Math.floor(Math.max(0, guardLv || 0) / 2));
 
-// 60-app.jsx buildDeck(13520)を簡略化: 通常技2枚・ガード・各子の距離撃1枚・固有技1枚(強化Lv0)。アシストカードは入れない
-function buildDeck(mons, aLvl, gLvl, rng, teachings = []) {
+// 60-app.jsx buildDeck(13520)を簡略化: 通常技2枚・ガード・各子の距離撃1枚・固有技1枚(強化した段。6 版目から)・持っているアシカ
+function buildDeck(mons, aLvl, gLvl, rng, teachings = [], uniqueLv = {}) {
   const pool = [];
   const atk = G.BASE_ATK_EVOLUTION[aLvl];
   pool.push({ ...atk, type: 'atk', name: '通常技' }, { ...atk, type: 'atk', name: '通常技' });
@@ -120,7 +120,9 @@ function buildDeck(mons, aLvl, gLvl, rng, teachings = []) {
     const revo = G.RANGE_EVOLUTION[aLvl];
     pool.push({ name: `${G.RANGE_LABELS[idx]}${revo.name}`, type: 'range_atk', rangeIdx: idx, guts: revo.guts, baseGuts: revo.baseGuts, mult: revo.mult, baseMult: revo.baseMult, crit: revo.crit, evoLevel: aLvl });
     const u = m.unique;
-    if (u) pool.push({ ...u, name: u.names ? u.names[0] : u.name, type: 'unique', guts: u.guts || u.baseGuts, baseGuts: u.baseGuts, baseMult: u.baseMult, evoLevel: 0, monId: u.monId || m.id, crit: 0.10, ownerSlotIdx: idx });
+    // 固有技の段(60-app.jsx buildDeck 13537〜13539): 名前は段の名前、会心は 10% + 5%×段(Lv8 まで)。倍率 +0.5×段は getDmg・getCardGuts が evoLevel から出す
+    const lv = Math.max(0, Math.min(MAX_UNIQUE_LV, uniqueLv[idx] || 0));
+    if (u) pool.push({ ...u, name: u.names ? u.names[Math.min(lv, u.names.length - 1)] : u.name, type: 'unique', guts: u.guts || u.baseGuts, baseGuts: u.baseGuts, baseMult: u.baseMult, evoLevel: lv, monId: u.monId || m.id, crit: 0.10 + 0.05 * lv, ownerSlotIdx: idx });
   });
   // 60-app.jsx buildDeck(13544): 持っているアシカを1枚ずつ(名前は段の名前・消費ガッツ 20)
   teachings.forEach((t) => pool.push({ ...t, name: G.BREEDER_EVO_NAMES[t.id][Math.min(t.evoLevel || 0, 2)], guts: 20, teach: true }));
@@ -1273,6 +1275,24 @@ const bestSlotFor = (mon, free) => free.slice().sort((a, b) => (G.DIST_APTITUDE_
 
 // 子ごとの与ダメージ(組み合わせの理由に使う)
 const dmgById = (st) => Object.fromEntries(Object.entries(st.dmgBySlot).filter(([i]) => st.mons[i]).map(([i, v]) => [st.mons[i].id, v]));
+// ---------- 固有技の強化(供モンが入った WAVE のあと) ----------
+const MAX_UNIQUE_LV = 8; // 11-masu-progression.jsx MAX_UNIQUE_SKILL_LEVEL(load-game.js は 11 を読まないので写す)
+// ゲーム: 供モンが入ると強化ポイントを 1〜4(60-app.jsx 14648: Math.floor(Math.random()*4)+1)。1ポイントで固有技が1段(upgradeUnique 14998・最大 MAX_UNIQUE_SKILL_LEVEL 8)。
+//   ポイントはガッツ+10(GUTS_RECOVERY_AMOUNT)にも使えるが、ボットは使わない。
+// 使い方はボット(tactics-brain.js 637〜646)と同じ: 1ポイントずつ、それまでにいちばんダメージを出した子の固有技(まだ Lv8 でないもの)へ。ポイントは使い切る
+function upgradeUniques(st, w) {
+  if (!st.useUniqueUp) return;
+  st.upgradePoints += Math.floor(st.rng() * 4) + 1;
+  while (st.upgradePoints > 0) {
+    const cand = G.tacticsFilledSlots(st.units).filter((i) => st.mons[i] && st.mons[i].unique && (st.uniqueLv[i] || 0) < MAX_UNIQUE_LV);
+    if (!cand.length) break;
+    const slot = cand.sort((a, z) => (st.dmgBySlot[z] || 0) - (st.dmgBySlot[a] || 0))[0];
+    st.uniqueLv[slot] = (st.uniqueLv[slot] || 0) + 1;
+    st.upgradePoints -= 1;
+    st.uniqueLog.push({ wave: w, id: st.mons[slot].id, level: st.uniqueLv[slot] });
+  }
+}
+
 // ---------- トレーニング(WAVE の合間) ----------
 // ゲーム: 60-app.jsx handleTraining 14724〜(1体ずつ2回。倒れた子を起こすと、その WAVE はだれも強化できない)・
 //   19-difficulties-and-rules.jsx resolveTrainingStats 935(選んだ順に1回ずつ掛ける)・32-tactics-units.jsx applyTacticsTraining 356 / reviveTacticsAt 347。
@@ -1311,7 +1331,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1329,6 +1349,8 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     exLog: exLog ? [] : null, assistScenes: exLog ? [] : null,
     // WAVE 報酬の間合いボーナス(distDmgBonus)と、供モンが入るときの間合いの追いつき(tacticsJoinDistCatchUpRef。始めは 1)
     useDistBonus: distBonus, distBonus: [0, 0, 0, 0], waveDist: [0, 0, 0, 0], joinDistCatchUp: 1,
+    // 固有技の強化(6 版目): 枠ごとの段・残りの強化ポイント・強化の記録
+    useUniqueUp: uniqueUp, uniqueLv: {}, upgradePoints: 0, uniqueLog: [],
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (training !== 'bot' && training !== 'none') throw new Error(`トレーニングの選び方が分からない: ${training}`);
@@ -1345,7 +1367,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     st.waveB = {}; st.turnB = {}; st.nextB = {}; st.fateWheel = { atkDown: 0, takenUp: 0 }; st.confuse = 0;
     st.ex = G.resetTacticsExWaveUses(st.ex); // スネグーラチカのプレゼントは WAVE ごとに回数が戻る
     st.guardLevel = computeGuardLevel(G.tacticsMaxDef(st.units));
-    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist, st.distBonus), st.guardLevel, rng, st.teachings);
+    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist, st.distBonus), st.guardLevel, rng, st.teachings, st.uniqueLv);
     st.hand = pool.slice(0, 5); st.deck = pool.slice(5); st.graveyard = [];
     st.turn = 1;
     st.intent = aim(st, nextAction(st, st.dist, null, { unannounced: true }));
@@ -1368,7 +1390,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
@@ -1401,11 +1423,11 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     }
     // WAVE のあとのアシカ選び(60-app.jsx 14799〜14822): 供モンが入った WAVE は固有技の強化のあと、WAVE 1・3・5・7・9 はトレーニングのあと
     if (w < maxWave) {
-      if (joined) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'join')));
+      if (joined) { upgradeUniques(st, w); learnTeaching(st, chooseTeaching(st, teachingPool(st, 'join'))); }
       else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, uniques: st.uniqueLog, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
 }
 
 function pickAllies(heroId, rng, n = 3) {
@@ -1456,16 +1478,17 @@ if (require.main === module) {
     for (const m of heroes) {
       stats[mode][m.id] = {};
       for (const d of DIFFS) {
-        const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0;
+        const waves = []; let past2 = 0; let clear = 0; let wipe = 0; let timeout = 0; let heroEx = 0; let dodges = 0; let boss = 0;
         for (let i = 0; i < RUNS; i++) {
           const allies = pickAllies(m.id, mulberry32(hashSeed(SEED, 'allies', m.id, d, i)));
           const r = simulateRun({ heroId: m.id, allies, difficulty: d, seed: hashSeed(SEED, i), maxWave: MAX_WAVE, exMode: mode, assist: ASSIST, training: TRAINING });
           waves.push(r.wave);
           if (r.wave > 2 || r.result === 'clear') past2++;
+          if (r.wave >= MAX_WAVE) boss++; // ボス戦(最後の WAVE。Hard〜Master は覚醒ムー)に入った回
           if (r.result === 'clear') clear++; else if (r.result === 'wipe') wipe++; else timeout++;
           heroEx += r.exUses[m.id] || 0; dodges += r.dodges;
         }
-        stats[mode][m.id][d] = { avg: waves.reduce((a, b) => a + b, 0) / waves.length, med: median(waves), past2: past2 / RUNS, clear: clear / RUNS, wipe: wipe / RUNS, timeout: timeout / RUNS, heroEx: heroEx / RUNS, dodges: dodges / RUNS };
+        stats[mode][m.id][d] = { avg: waves.reduce((a, b) => a + b, 0) / waves.length, med: median(waves), past2: past2 / RUNS, clear: clear / RUNS, boss: boss / RUNS, bossWin: boss ? clear / boss : NaN, wipe: wipe / RUNS, timeout: timeout / RUNS, heroEx: heroEx / RUNS, dodges: dodges / RUNS };
       }
     }
     console.log(`  ${mode}: ${((Date.now() - t0) / 1000).toFixed(0)} 秒`);
@@ -1474,18 +1497,21 @@ if (require.main === module) {
   // ブラウザの実戦(tactics-knowledge.json)。ボットが止まった回(stopped)は数えない
   const knowledge = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'tactics-knowledge.json'), 'utf8'));
   const idByName = Object.fromEntries(MONS.map((m) => [m.name, m.id]));
-  const real = {};
+  const real = {}; const realClear = {};
   for (const r of knowledge.runs || []) {
     if (r.mode !== 'tacticsPro' || !['clear', 'wipe', 'timeout'].includes(r.result)) continue;
     const id = idByName[r.hero]; if (!id || !DIFFS.includes(r.difficulty) || !heroes.some((m) => m.id === id)) continue;
     const k = `${id}|${r.difficulty}`;
     (real[k] = real[k] || []).push(r.result === 'clear' ? MAX_WAVE : Number(r.wave) || 0);
+    if (r.result === 'clear') realClear[r.difficulty] = (realClear[r.difficulty] || 0) + 1;
   }
 
   const L = []; const out = (t = '') => L.push(t);
   const pct = (x) => `${Math.round(x * 100)}%`;
   const sgn = (x) => `${x >= 0 ? '+' : ''}${x.toFixed(2)}`;
   const MODE_JA = { none: 'EX 無し', bot: 'EX=bot', best: 'EX=best' };
+  // ボス戦: 最後の WAVE まで届いた回のうちクリアした割合(届いた割合)。届いた回が 0 なら —
+  const bossCell = (x) => (x.boss > 0 ? `${pct(x.bossWin)}(${pct(x.boss)})` : '—');
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
   out(`\`node tools/playbot/sim/battle.js\` の出力(5 版目・スキル・アシカ・トレーニング・間合いボーナス入り。トレーニング ${TRAINING}・アシカ ${ASSIST})。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
@@ -1514,18 +1540,19 @@ if (require.main === module) {
   out('戦い方は tactics-brain.js の decidePick を縮めたもの(とどめ → 予告に合わせた守り → ハムのスタン → ガッツ1あたりの火力で攻撃 → 捨ててガッツを戻す → 余ればガード)。');
   out();
   out('「届いた WAVE」は負けた WAVE(クリアは 10)。「序盤越え」は WAVE 1〜2(1体の時間)を越えた割合。「EX」は勇者モンが1ランで EX を使った回数の平均。');
+  out('「ボス戦」は最後の WAVE(覚醒ムー)まで届いた回のうちクリアした割合で、かっこの中は届いた割合。Hard はほぼボス戦で勝ち負けが分かれるので、Hard はここを見る。');
   out('「前の版」は 1 版目(スキル無し)の平均 WAVE。');
   for (const d of DIFFS) {
     out();
     out(`## ${d}`);
     out();
-    const head = MODES.map((mo) => `${MODE_JA[mo]} 平均 | 序盤越え | クリア | EX`).join(' | ');
+    const head = MODES.map((mo) => `${MODE_JA[mo]} 平均 | 序盤越え | クリア | ボス戦 | EX`).join(' | ');
     out(`| 勇者モン | 前の版 | ${head} |`);
-    out(`| --- | --- | ${MODES.map(() => '--- | --- | --- | ---').join(' | ')} |`);
+    out(`| --- | --- | ${MODES.map(() => '--- | --- | --- | --- | ---').join(' | ')} |`);
     const key = MODES.includes('bot') ? 'bot' : MODES[0];
     for (const m of [...heroes].sort((a, b) => stats[key][b.id][d].avg - stats[key][a.id][d].avg)) {
       const old = (OLD[m.name] || {})[d];
-      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')} |`);
+      out(`| ${m.name} | ${old ? old.avg.toFixed(2) : '-'} | ${MODES.map((mo) => { const s = stats[mo][m.id][d]; return `${s.avg.toFixed(2)} | ${pct(s.past2)} | ${pct(s.clear)} | ${bossCell(s)} | ${s.heroEx.toFixed(1)}`; }).join(' | ')} |`);
     }
   }
   if (MODES.includes('bot') && MODES.includes('best')) {
@@ -1587,6 +1614,17 @@ if (require.main === module) {
     const w = (key) => { const ys = xs.filter((x) => x[key] != null); const nn = ys.reduce((a, x) => a + x.n, 0); return nn ? ys.reduce((a, x) => a + x[key] * x.n, 0) / nn : null; };
     const line = `| ${d} | ${n} | ${w('old') != null ? sgn(w('old')) : '-'} | ${MODES.map((mo) => sgn(w(mo))).join(' | ')} |`;
     out(line); summary.push(line);
+  }
+  out();
+  out('ボス戦(覚醒ムー)に入った回の勝ち率。全員ぶんを合わせたもの(届いた回で重みづけ)と、実戦(ボットがブラウザで戦った回のうち WAVE 10 まで届いた回):');
+  out();
+  out(`| 難易度 | ${MODES.map((mo) => `${MODE_JA[mo]} 勝ち率(届いた割合)`).join(' | ')} | 実戦 勝ち率(届いた回) |`);
+  out(`| --- | ${MODES.map(() => '---').join(' | ')} | --- |`);
+  for (const d of DIFFS) {
+    const cells = MODES.map((mo) => { let b = 0; let c = 0; heroes.forEach((m) => { const x = stats[mo][m.id][d]; b += x.boss; c += x.clear; }); return b > 0 ? `${pct(c / b)}(${pct(b / heroes.length)})` : '—'; });
+    const rs = Object.entries(real).filter(([k]) => k.endsWith(`|${d}`)).flatMap(([, v]) => v);
+    const rb = rs.filter((w) => w >= MAX_WAVE).length; const rc = (realClear[d] || 0);
+    out(`| ${d} | ${cells.join(' | ')} | ${rb ? `${pct(rc / rb)}(${rb} 回)` : '—'} |`);
   }
   out();
   out(`(${heroes.length} 体 × ${DIFFS.length} 難易度 × ${RUNS} 回 × 使い方 ${MODES.length} 通りを ${sec} 秒で回した。seed ${SEED})`);
