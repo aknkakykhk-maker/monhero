@@ -114,8 +114,14 @@ const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m)
     const tot = sum(names.map((k) => d[k]));
     if (names.length >= 2 && tot > 0 && Number.isFinite(d[m.name])) shares.push(d[m.name] / (tot / names.length));
   }
-  const heroLift = avg(heroRuns.map((r) => reach(r) - meanWave[r.difficulty]));
-  const memberLift = avg(inRuns.map((r) => reach(r) - meanWave[r.difficulty]));
+  const heroDevs = heroRuns.map((r) => reach(r) - meanWave[r.difficulty]);
+  const memberDevs = inRuns.map((r) => reach(r) - meanWave[r.difficulty]);
+  const heroLift = avg(heroDevs);
+  const memberLift = avg(memberDevs);
+  // ぶれ(標準誤差の2倍)。2026-10-10 改善部 R1: Tier の決め手がぶれの中かを見るため
+  const err2 = (xs) => { if (xs.length < 3) return NaN; const m = avg(xs); return 2 * Math.sqrt(sum(xs.map((x) => (x - m) ** 2)) / (xs.length - 1)) / Math.sqrt(xs.length); };
+  const heroErr = err2(heroDevs);
+  const memberErr = err2(memberDevs);
   const byDiff = {};
   for (const d of diffs) {
     const rs = inRuns.filter((r) => r.difficulty === d);
@@ -149,11 +155,14 @@ const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m)
   const exTotal = sum(inRuns.map((r) => exCountIn(r, m)));
   const role = roleOf(m);
   const share = avg(shares);
+  const shareErr = err2(shares);
   // 勇者モンの回数が少ないうちは、勇者の伸びを軽く見る(1回だけの負けで Tier が大きく動かないように。3回で同じ重さ)
   const parts = [];
-  if (role === '攻め' && shares.length) parts.push([(share - 1) * 1.2, 1]);
-  if (role !== '攻め' && inRuns.length) parts.push([memberLift / 2, 1]);
-  if (heroRuns.length) parts.push([heroLift / 2, Math.min(1, heroRuns.length / 3)]);
+  if (role === '攻め' && shares.length) parts.push([(share - 1) * 1.2, 1, '頭割り比', share - 1, shareErr]);
+  if (role !== '攻め' && inRuns.length) parts.push([memberLift / 2, 1, '入った回の伸び', memberLift, memberErr]);
+  if (heroRuns.length) parts.push([heroLift / 2, Math.min(1, heroRuns.length / 3), '勇者モンにした回の伸び', heroLift, heroErr]);
+  // 点の決め手(重みのある項目)のどれか1つでも、ぶれを超えているか
+  const sigAny = parts.some((p) => Number.isFinite(p[4]) && Math.abs(p[3]) > p[4]);
   const wsum = sum(parts.map((p) => p[1]));
   const score = wsum ? sum(parts.map((p) => p[0] * p[1])) / wsum : NaN;
   const n = inRuns.length;
@@ -174,7 +183,7 @@ const statsOf = (rs) => roster.monsters.filter((m) => m && !m.debugOnly).map((m)
   let tier = '未計測';
   if (n && exTotal === 0) tier = '保留';
   else if (Number.isFinite(score)) tier = score >= 0.45 ? 'S' : score >= 0.15 ? 'A' : score >= -0.15 ? 'B' : score >= -0.45 ? 'C' : 'D';
-  return { m, dist, role, n, heroN: heroRuns.length, share, shareN: shares.length, heroLift, memberLift, byDiff, assistRank, uniqueTotal, useRuns: useRuns.length, aptGood, aptN, traitTotal, traitRuns: traitRuns.length, exTotal, score, tier, marks, provisional: n < 5 };
+  return { m, dist, role, n, heroN: heroRuns.length, share, shareN: shares.length, heroLift, memberLift, byDiff, assistRank, uniqueTotal, useRuns: useRuns.length, aptGood, aptN, traitTotal, traitRuns: traitRuns.length, exTotal, score, tier, marks, provisional: n < 5, parts, sigAny, heroErr, memberErr, shareErr };
 });
 
 const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', '保留', '未計測'];
@@ -279,7 +288,9 @@ const overall = stats.map((s) => {
   const short = (d) => { const v = per.find((q) => q.d === d); return v ? `${v.x.tier.replace('未計測', '—')}${v.x.provisional && v.x.tier !== '保留' ? '*' : ''}` : '—'; };
   const gap = botWeak[s.m.name];
   const weakBot = Number.isFinite(gap) && gap >= BOT_WEAK_GAP && fixedBotHeroRuns(s.m.name) < BOT_FIXED_NEED;
-  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot, weakBot, botGap: gap, short, guess };
+  // 決め手がぶれの中(数えたマスのどれにも、ぶれを超える項目が無い)なら「暫定」(2026-10-10 改善部 R1)
+  const noisy = !!usable.length && !usable.some((v) => v.x.sigAny) && !['回数不足', '保留'].includes(tier);
+  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot || noisy, weakBot, noisy, usable, botGap: gap, short, guess };
 });
 const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '回数不足', '保留', '未計測'];
 overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
@@ -522,16 +533,19 @@ function evidenceOf(o) {
       const c = rs.filter((r) => r.result === 'clear').length;
       const p = c / rs.length; const base = clearRate[d];
       const err = 2 * Math.sqrt(Math.max(0.0001, p * (1 - p)) / rs.length);
-      rows.push({ 名前: 'Hard のクリア率', 値: `${pctOf(c, rs.length)}(${rs.length}回中${c}回)`, 基準: `全員の平均 ${Math.round(base * 100)}%`, 差: sgnInt((p - base) * 100), ぶれ: `±${Math.round(err * 100)}` });
+      rows.push({ 名前: 'Hard のクリア率', 値: `${pctOf(c, rs.length)}(${rs.length}回中${c}回)`, 基準: `全員の平均 ${Math.round(base * 100)}%`, 差: `${sgnInt((p - base) * 100)} ポイント`, ぶれ: `±${Math.round(err * 100)} ポイント` });
     } else {
       const ws = rs.map(reach); const a = avg(ws); const e = sd(ws);
-      rows.push({ 名前: `${d} の届いた WAVE(平均)`, 値: `${r1(a)}(${rs.length}回・最高 ${Math.max(...rs.map((r) => r.wave || 0))})`, 基準: `全員の平均 ${r1(meanWave[d])}`, 差: sgn(a - meanWave[d]), ぶれ: Number.isFinite(e) ? `±${r1((2 * e) / Math.sqrt(ws.length))}` : '1回だけ' });
+      rows.push({ 名前: `${d} の届いた WAVE(平均)`, 値: `${r1(a)}(${rs.length}回・最高 ${Math.max(...rs.map((r) => r.wave || 0))})`, 基準: `全員の平均 ${r1(meanWave[d])}`, 差: `${sgn(a - meanWave[d])} WAVE`, ぶれ: Number.isFinite(e) ? `±${r1((2 * e) / Math.sqrt(ws.length))} WAVE` : '1回だけ' });
     }
   }
   const heroDev = inRuns.filter((r) => r.hero === name).map((r) => reach(r) - meanWave[r.difficulty]);
   const heroErr = heroDev.length > 1 ? (2 * sd(heroDev)) / Math.sqrt(heroDev.length) : NaN;
-  if (heroN && Number.isFinite(s.heroLift)) rows.push({ 名前: '勇者モンにした回の伸び', 値: `WAVE ${sgn(s.heroLift)}(${heroN}回)`, 基準: 'その難易度の全員の平均', 差: sgn(s.heroLift), ぶれ: Number.isFinite(heroErr) ? `±${r1(heroErr)}` : '1回だけ' });
-  if (Number.isFinite(o.score)) rows.push({ 名前: 'Tier の点', 値: `${sgn(o.score)}(${o.tier})`, 基準: 'S 0.45 以上・A 0.15・B −0.15・C −0.45 以上・D それ未満', 差: '', ぶれ: '' });
+  if (heroN && Number.isFinite(s.heroLift)) rows.push({ 名前: '勇者モンにした回の伸び', 値: `WAVE ${sgn(s.heroLift)}(${heroN}回)`, 基準: 'その難易度の全員の平均', 差: `${sgn(s.heroLift)} WAVE`, ぶれ: Number.isFinite(heroErr) ? `±${r1(heroErr)} WAVE` : '1回だけ' });
+  if (Number.isFinite(o.score)) {
+    const bits = (o.usable || []).map((v) => `${v.d} ${sgn(v.x.score)}×重み${Math.round(DIFF_WEIGHT[v.d] * 10)}(${(v.x.parts || []).map((p) => `${p[2]} ${sgn(p[3])}${Number.isFinite(p[4]) ? `±${r1(p[4])}` : ''}`).join('・')})`);
+    rows.push({ 名前: 'Tier の点の内訳', 値: `${sgn(o.score)} → ${o.tier}`, 基準: bits.join(' / ') + '。S 0.45 以上・A 0.15・B −0.15・C −0.45 以上', 差: '', ぶれ: '' });
+  }
   const feats = [];
   if (s.marks.攻め === '◎') feats.push(mechOf('ダメージの式'));
   if (s.marks.守り === '◎') feats.push(mechOf('被ダメージの式'));
@@ -539,17 +553,24 @@ function evidenceOf(o) {
   if (s.marks.固有技 === '◎') feats.push(mechOf('固有技の効果'));
   if (s.marks.EX === '◎') feats.push(mechOf('EX('));
   if (s.marks.間合い === '◎') feats.push(mechOf('間合い適性'));
+  if (s.role !== '攻め' && Number.isFinite(s.memberLift) && inRuns.length >= 2) rows.push({ 名前: '入った回の伸び', 値: `WAVE ${sgn(s.memberLift)}(${inRuns.length}回)`, 基準: 'その難易度の全員の平均', 差: `${sgn(s.memberLift)} WAVE`, ぶれ: Number.isFinite(s.memberErr) ? `±${r1(s.memberErr)} WAVE` : '1回だけ' });
+  if (s.role === '攻め' && s.shareN >= 2) rows.push({ 名前: 'ダメージの頭割り比', 値: `${r1(s.share)} 倍(${s.shareN}回)`, 基準: '1.0 倍(同じ回の味方の平均)', 差: `${sgn(s.share - 1)} 倍`, ぶれ: Number.isFinite(s.shareErr) ? `±${r1(s.shareErr)} 倍` : '1回だけ' });
   const so = []; // だから
   const liftClear = Number.isFinite(heroErr) && Math.abs(s.heroLift) > heroErr;
   if (heroN >= 3 && Number.isFinite(s.heroLift) && !liftClear) so.push(`勇者モンにした回の伸び(WAVE ${sgn(s.heroLift)})は、ぶれ(±${r1(heroErr)})の中で、平均と差があるとはまだ言えない`);
   else if (heroN >= 3 && Number.isFinite(s.heroLift)) so.push(s.heroLift >= 0.5 ? `勇者モンにすると平均より WAVE ${sgn(s.heroLift)} 先まで届く。勇者モンの候補に入れてよい` : s.heroLift <= -0.5 ? `勇者モンにすると平均より WAVE ${r1(s.heroLift)}。勇者モンより供モンで使うほうがよい` : '勇者モンにしても平均とほぼ同じ');
-  if (s.role !== '攻め' && Number.isFinite(s.memberLift) && inRuns.length >= 5) so.push(`入った回は平均より WAVE ${sgn(s.memberLift)}(${s.role}役)`);
-  if (s.role === '攻め' && s.shareN >= 5) so.push(`ダメージは頭割りの ${r1(s.share)} 倍(${s.shareN}回)。${s.share >= 1.2 ? '火力の柱にできる' : s.share < 0.8 ? '火力は控えめ' : '火力はふつう'}`);
+  if (s.role !== '攻め' && Number.isFinite(s.memberLift) && inRuns.length >= 5) so.push(Number.isFinite(s.memberErr) && Math.abs(s.memberLift) > s.memberErr ? `入った回は平均より WAVE ${sgn(s.memberLift)}(${s.role}役)。${s.memberLift > 0 ? '供モンに入れると伸びる' : '供モンに入れると下がる'}` : `入った回の伸び(WAVE ${sgn(s.memberLift)})は、ぶれ(±${r1(s.memberErr)})の中で、まだ言えない`);
+  if (s.role === '攻め' && s.shareN >= 5) { const sig = Number.isFinite(s.shareErr) && Math.abs(s.share - 1) > s.shareErr; so.push(`ダメージは頭割りの ${r1(s.share)} 倍(${s.shareN}回)。${!sig ? 'ぶれの中で、火力が多い・少ないとはまだ言えない' : s.share >= 1.2 ? '火力の柱にできる' : s.share < 0.8 ? '火力は控えめ' : '火力はふつう'}`); }
+  if (Number.isFinite(o.score) && !o.noisy) {
+    const keys = (o.usable || []).flatMap((v) => (v.x.parts || []).filter((p) => Number.isFinite(p[4]) && Math.abs(p[3]) > p[4]).map((p) => `${v.d} の${p[2]} ${sgn(p[3])}(ぶれ ±${r1(p[4])})`));
+    if (keys.length) so.unshift(`${o.tier} の決め手: ${keys.join('・')}`);
+  }
   const unknown = [];
   const thin = per.filter(([, rs]) => rs.length && rs.length < 5).map(([d, rs]) => `${d} ${rs.length}回`);
   if (thin.length) unknown.push(`回数が5回に届かない難易度がある(${thin.join('・')})`);
   if (o.weakBot) unknown.push(`ボットの EX の使い方がシミュレーターの上手な使い方より WAVE ${r1(o.botGap)} 低いので、直したボットの回(いま ${fixedBotHeroRuns(name)}回)がたまるまで本当の強さは分からない`);
   if (s.tier === '保留') unknown.push('EX を一度も使えていないので Tier を付けていない');
+  if (o.noisy) unknown.push(`Tier の点の決め手(上の内訳)がどれもぶれの中なので、${o.tier} は仮(暫定)。回数が増えると動く`);
   const byDiffN = per.filter(([, rs]) => rs.length).map(([d, rs]) => `${d} ${rs.length}`).join('・');
   return {
     出どころ: '実戦',
