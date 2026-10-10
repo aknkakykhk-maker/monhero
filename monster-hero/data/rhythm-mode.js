@@ -26179,7 +26179,7 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   monster_short:Object.freeze({EASY:6,NORMAL:7,HARD:9,EXPERT:16,MASTER:22}),
   anima:Object.freeze({EASY:8,NORMAL:11,HARD:17,EXPERT:26,MASTER:44}),
   journey:Object.freeze({EASY:7,NORMAL:10,HARD:15,EXPERT:23,MASTER:36}),
-  sheriruth:Object.freeze({EASY:11,NORMAL:14,HARD:22,EXPERT:34,MASTER:49}),
+  sheriruth:Object.freeze({EASY:9,NORMAL:14,HARD:22,EXPERT:33,MASTER:45}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
