@@ -490,23 +490,15 @@ function RhythmSkyStage({plane}){
       <linearGradient id="mhSkyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".55" stopColor={`rgb(${c})`} stopOpacity=".04"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".2"/></linearGradient>
       <linearGradient id="mhSkyBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset=".5" stopColor={`rgb(${c})`} stopOpacity=".22"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity="0"/></linearGradient>
       <linearGradient id="mhSkyPost" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={`rgb(${c})`} stopOpacity="0"/><stop offset="1" stopColor={`rgb(${c})`} stopOpacity=".55"/></linearGradient>
+      <linearGradient id="mhSkyFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgb(40,28,92)" stopOpacity=".30"/><stop offset="1" stopColor="rgb(58,40,128)" stopOpacity=".62"/></linearGradient>
       <clipPath id="mhSkyClip"><polygon points={plane.poly}/></clipPath>
     </defs>
-    <polygon points={plane.poly} fill="url(#mhSkyFill)"/>
-    <g clipPath="url(#mhSkyClip)">
-      <rect data-rhythm-sky-flow="1" x="0" y="0" width="100" height="6" fill="url(#mhSkyBand)"/>
-      <rect data-rhythm-sky-flow="2" x="0" y="0" width="100" height="6" fill="url(#mhSkyBand)"/>
-    </g>
-    {plane.dividers.map((d,k)=><polyline key={k} points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".16" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
-    {[plane.leftEdge,plane.rightEdge].map((d,k)=><g key={k}><polyline points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".14" strokeWidth="4" vectorEffect="non-scaling-stroke"/><polyline points={d} fill="none" stroke={theme.core} strokeOpacity=".5" strokeWidth="1" vectorEffect="non-scaling-stroke"/></g>)}
-    {/* 空中と地上の判定ラインの「高さの差」がいつも見えるように、レーンの区切りごとに2本をつなぐ薄い縦の光(社長「立体感」) */}
-    {plane.markers.slice(1,-1).map((x,k)=><line key={'c'+k} x1={f(x)} y1={f(fr.gy)} x2={f(x)} y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".13" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
-    {[fr.l,fr.r].map((x,k)=>{const w=1.4;return <polygon key={k} points={`${f(x-w)},${f(fr.gy)} ${f(x+w)},${f(fr.gy)} ${f(x+w*.5)},${f(fr.y)} ${f(x-w*.5)},${f(fr.y)}`} fill="url(#mhSkyPost)"/>;})}
-    {/* 空中の判定線(参考の Sky Input と同じく、床の幅を越えて画面の横いっぱいに、遠近で傾かない水平な2本線と薄い光の帯。床とは別の面だと分かるように) */}
-    <rect x="-2" y={f(fr.y-1.2)} width="104" height="2.4" fill="url(#mhSkyBand)" opacity=".55"/>
-    <line x1="-2" y1={f(fr.y-.35)} x2="102" y2={f(fr.y-.35)} stroke={theme.core} strokeOpacity=".6" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
-    <line x1="-2" y1={f(fr.y+.35)} x2="102" y2={f(fr.y+.35)} stroke={theme.core} strokeOpacity=".6" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
-    {plane.markers.map((x,k)=><polygon key={k} points={`${f(x)},${f(fr.y-.9)} ${f(x+.9)},${f(fr.y)} ${f(x)},${f(fr.y+.9)} ${f(x-.9)},${f(fr.y)}`} fill={theme.core} fillOpacity=".55"/>)}
+    {/* 案Z: 道(地面)を薄い紫の無地にする。床の影(床より暗い)が見えるように。参考の道も無地の紫。空中の譜面の曲だけ */}
+    <polygon points={plane.floor} fill="url(#mhSkyFloor)"/>
+    {/* 案Z(2026-10-11・社長の決定): 空中の面・縁・柱・字は無し。空中の判定の線は、道の外まで横いっぱいの薄紫の細い線1本だけ
+        (6px の淡い帯+中心2px。白は空中のものと押した光だけに使うので、線は白にしない) */}
+    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke="rgb(150,118,235)" strokeOpacity=".38" strokeWidth="6" vectorEffect="non-scaling-stroke"/>
+    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke="rgb(165,135,245)" strokeOpacity=".95" strokeWidth="2" vectorEffect="non-scaling-stroke"/>
   </svg>;
 }
 const RhythmMonsterNoteGuide=()=>{
@@ -909,7 +901,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const left=pts.map(p=>`${f(p.l)},${f(p.y)}`),right=pts.map(p=>`${f(p.r)},${f(p.y)}`).reverse();
     const last=pts[pts.length-1];
     const dividers=Array.from({length:RHYTHM_LANE_COUNT-1},(_,k)=>pts.map(p=>{const y=p.gy/100;return `${f(rhythmProjectBoundary(k+1,y)*100)},${f(p.y)}`;}).join(' '));
-    return {poly:[...left,...right].join(' '),leftEdge:left.join(' '),rightEdge:pts.map(p=>`${f(p.r)},${f(p.y)}`).join(' '),dividers,front:{l:last.l,r:last.r,y:last.y,gy:last.gy},
+    const floorL=pts.map(p=>`${f(p.l)},${f(p.gy)}`),floorR=pts.map(p=>`${f(p.r)},${f(p.gy)}`).reverse();
+    return {floor:[...floorL,...floorR].join(' '),poly:[...left,...right].join(' '),leftEdge:left.join(' '),rightEdge:pts.map(p=>`${f(p.r)},${f(p.y)}`).join(' '),dividers,front:{l:last.l,r:last.r,y:last.y,gy:last.gy},
       markers:Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>rhythmProjectBoundary(k,last.gy/100)*100),
       posts:[[last.l,last.gy,last.l,last.y],[last.r,last.gy,last.r,last.y]].map(a=>a.map(f))};
   })();
@@ -2762,7 +2755,7 @@ scheduleTick();};
   <i data-rhythm-judgment-edge data-edge="top" aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
   <i data-rhythm-judgment-edge data-edge="bottom" aria-hidden="true" style={{position:'absolute',left:0,right:0,bottom:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
 </div>
-<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'var(--mh-judgment-line-bottom,12%)',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{skyPlane&&<RhythmSkyStage plane={skyPlane}/>}{skyChart&&<span data-rhythm-sky-label style={{position:'absolute',right:'2%',bottom:`calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT.ratio*100}% + 5px)`,fontSize:'12px',fontWeight:800,letterSpacing:'.12em',color:'#ede9fe',textShadow:'0 0 6px rgb(167,139,250),0 0 2px #000',pointerEvents:'none'}}>SKY</span>}{skyChart&&<span data-rhythm-ground-label style={{position:'absolute',right:'2%',bottom:'calc(var(--mh-judgment-line-bottom,12%) - 20px)',zIndex:12,fontSize:'12px',fontWeight:800,letterSpacing:'.08em',color:'#f5d0fe',textShadow:'0 0 4px #000',pointerEvents:'none'}}>● GROUND</span>}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
+<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'var(--mh-judgment-line-bottom,12%)',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{skyPlane&&<RhythmSkyStage plane={skyPlane}/>}{/* 案Z: SKY / GROUND の字は無し(線の位置と影で高さを見せる) */}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
 <div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:skyChart?'calc(var(--mh-judgment-line-bottom,12%) - 64px)':'calc(var(--mh-judgment-line-bottom,12%) + 38px)',...(skyChart?{opacity:.8,transform:'translateX(-50%) scale(.78)'}:{})}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。

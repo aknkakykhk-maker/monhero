@@ -1164,7 +1164,7 @@ const RHYTHM_JUDGMENT_LINE_Y={
 const RHYTHM_SKY_LIFT_RATIO=.16;
 // 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
-const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.25:RHYTHM_SKY_LIFT_RATIO;}};
+const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.39:RHYTHM_SKY_LIFT_RATIO;}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
 // 毎コマ何百回も呼ばれるので、点の列ごとに1回だけ数えて覚える。演奏中のノーツは譜面のノーツの写しだが、
 // 点の列(slidePoints)は譜面の凍らせた配列をそのまま持つので、それを鍵にする(凍っていない列は覚えずに毎回数える)。
@@ -29620,7 +29620,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
   // 2026-09-27: 参考動画に寄せて、角の丸みを小さく(5→2)・真ん中に白い芯の帯・光を少し強く。厚みと色の種類は変えない
   // 赤は、フリックのピンク(#f472b6・#db2777)・横フリック左のオレンジ・判定 GREAT の赤(#f87171)から離した朱寄りの #ef4444 前後。芯は白で、縁と光だけが赤
-  const SKY_NOTE_COLOR=Object.freeze({hi:'#ffe4e6',mid:'#ef4444',lo:'#b91c1c',rgb:'239,68,68'});
+  const SKY_NOTE_COLOR=Object.freeze({hi:'#ffffff',mid:'#cbd5e1',lo:'#94a3b8',rgb:'203,213,225'});
   const SKY_ARROW_GLOWS=Object.freeze([[5,`rgba(${SKY_NOTE_COLOR.rgb},.95)`],[11,`rgba(${SKY_NOTE_COLOR.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
   // 空中のフリックの▲は、縁を白・中を赤にする(地上のピンクの▲は中まで塗ってあるので、縁の有無で分かれる)
   const SKY_ARROW_FILL=Object.freeze([[0,'#ff7b7b'],[1,'#e11d1d']]);
@@ -30272,6 +30272,54 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;ctx.lineJoin='miter';
   };
+  // ── 空中の見た目 案Z(2026-10-11・社長の決定。docs/playbot/reports/2026-10-10/sky-design/ の v6)──
+  // 空中のものは全部「色の無いガラス」(白〜銀の半透明)・色が付いていれば地上。左右は位置で分ける。
+  // 箱=半透明の四角2枚(不透明度68%・上の面88%)+白い縁1.8px / 影=床より暗い角丸1枚(箱と同じ位置) / 帯=半透明の多角形1枚(46%)+白い芯の線(3px) / 星=白1種(半径17px)
+  const skyZOn=()=>skyTapStyle()==='plate';
+  const drawGlassBox=(hd,opts)=>{
+    const ds=Number(opts.depthScale)||1,faceH=Math.max(5,hd.h*1.25*ds),thick=faceH*.62,W=Math.max(10,hd.w*sizeScale),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
+    ctx.globalAlpha=opts.alpha;
+    ctx.fillStyle='rgba(205,218,238,.68)';ctx.fillRect(x0,y0,W,faceH+thick);
+    ctx.fillStyle='rgba(255,255,255,.88)';ctx.fillRect(x0,y0,W,faceH);
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.8;ctx.strokeRect(x0+.9,y0+.9,W-1.8,faceH+thick-1.8);
+    ctx.beginPath();ctx.moveTo(x0,y0+faceH);ctx.lineTo(x0+W,y0+faceH);ctx.stroke();
+    ctx.globalAlpha=1;
+  };
+  const drawSkyShadowZ=(geo,opts)=>{
+    const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
+    const ds=Number(opts.depthScale)||1,faceH=Math.max(5,hd.h*1.25*ds),W=Math.max(10,hd.w*sizeScale)-6,h=Math.max(4,faceH*.8);
+    ctx.globalAlpha=opts.alpha;ctx.fillStyle='rgba(6,3,20,.5)';
+    roundRectPath(ctx,sh.cx-W/2,sh.cy-h/2,W,h,3);ctx.fill();ctx.globalAlpha=1;
+  };
+  // 押した光の星(空中・白1種・半径17px)。焼いた1枚を加算で貼る
+  const skyStarSprite=()=>{
+    const id=`skystarz:${dpr}`;if(sprites.has(id))return sprites.get(id);
+    const R=17,S=makeSpriteCanvas(R*2+8,R*2+8),c=S.ctx,mx=R+4,my=R+4;
+    const g=c.createRadialGradient(mx,my,1,mx,my,R);g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(.3,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=g;c.beginPath();c.arc(mx,my,R,0,Math.PI*2);c.fill();
+    c.fillStyle='rgba(255,255,255,.9)';
+    [[1,0,1.1],[0,1,1.1],[.7,.7,.7],[.7,-.7,.7]].forEach(([dx,dy,k])=>{const L=R*k;c.beginPath();c.moveTo(mx-dx*L,my-dy*L);c.lineTo(mx+dy*1.8,my+dx*1.8);c.lineTo(mx+dx*L,my+dy*L);c.lineTo(mx-dy*1.8,my-dx*1.8);c.closePath();c.fill();});
+    sprites.set(id,S);return S;
+  };
+  const drawSkyStarZ=(px,py,alpha)=>{
+    const S=skyStarSprite();glowBegin();ctx.globalAlpha=alpha;ctx.drawImage(S.canvas,px-S.w/2,py-S.h/2,S.w,S.h);ctx.globalAlpha=1;glowEnd();
+  };
+  // 空中のスライド(案Z): 高さのある区切りは、半透明(46%)の多角形+白い芯の線。地上に近い区切りは地上の帯のまま
+  const drawSkySlideZ=(quads,opts)=>{
+    const {alpha}=opts;ctx.globalAlpha=alpha;
+    const air=quads.filter(q=>(Number(q.sky)||0)>.05);
+    quads.forEach(q=>{
+      const a=(Number(q.sky)||0)>.05;
+      ctx.fillStyle=a?'rgba(214,224,240,.46)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
+      ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();
+    });
+    if(air.length){
+      glowBegin();ctx.globalAlpha=alpha*.9;ctx.strokeStyle='#ffffff';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();air.forEach((q,i)=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;if(i===0||Math.abs(air[i-1].y1-q.y0)>1.5)ctx.moveTo(x0,q.y0);else ctx.lineTo(x0,q.y0);ctx.lineTo(x1,q.y1);});
+      ctx.stroke();ctx.lineCap='butt';glowEnd();
+    }
+    ctx.globalAlpha=1;
+  };
   const drawSkyShadowHead=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
@@ -30309,6 +30357,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!geo.slide||!geo.slide.length)return;
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
+    if(!failed&&opts.skySlideRgb&&skyZOn()){drawSkySlideZ(quads,opts);return;}
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       // ぼかし(drop-shadow 5px)の代わりに、外周をなぞる太い半透明の線
@@ -30460,10 +30509,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
       seen.add(index);
       const span=rhythmProjectSubLaneRange(index,1,ratio),x=span.left*cssW,w=Math.max(2,span.width*cssW);
-      ctx.fillStyle='rgb(239,68,68)';
+      ctx.fillStyle='rgb(255,255,255)';
       for(let k=0;k<slices;k++){const f=(k+1)/slices;ctx.globalAlpha=skyPressedAlpha*.12*f;ctx.fillRect(x,Y-up*f,w,up*f);}
       ctx.globalAlpha=skyPressedAlpha*.4;ctx.fillRect(x,Y,w,down);
-      ctx.globalAlpha=skyPressedAlpha*.9;ctx.fillStyle='rgb(254,202,202)';ctx.fillRect(x,Y-1,w,2);
+      ctx.globalAlpha=skyPressedAlpha*.9;ctx.fillStyle='rgb(255,255,255)';ctx.fillRect(x,Y-1,w,2);
       painted++;
     }
     glowEnd();ctx.globalAlpha=1;
@@ -30806,7 +30855,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
         if(elapsed>=end){hitSlots[slot]=null;continue;}
-        touch();glowBegin();if(hit.sky){drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
+        touch();glowBegin();if(hit.sky){if(!skyZOn())drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
@@ -30896,16 +30945,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const trackDim=trackOn&&note._trackOff?.4:1;
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
-        if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
+        if(geo.skyShadow&&!geo.slide){if(skyZOn())drawSkyShadowZ(geo,o);else drawSkyShadowHead(geo,o);}
         // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
-        if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb){
+        if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&!skyZOn()){
           const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha*trackDim;ctx.lineCap='round';
           [[1,0],[0,1]].forEach(([dx,dy],k)=>{const len=r*(k?1.15:1)*(.85+.15*Math.sin(t+k));
             ctx.strokeStyle=`rgba(${o.skySlideRgb},.55)`;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();
             ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();});
           ctx.lineCap='butt';ctx.globalAlpha=1;
         }
-        if(geo.skyShadow&&geo.slide&&geo.head){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
+        if(geo.skyShadow&&geo.slide&&geo.head&&!skyZOn()){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
         if(geo.band)drawBand(geo,o);
         if(geo.slide)drawSlide(geo,o);
         drawEndBar(note,geo,o);
@@ -30916,7 +30965,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       // 空中のノーツも、既定(plate)ではふつうの板(drawHead)で描く。旧スタイルは drawSkyTap(箱・星など)
       const skyPlate=!!(geo.skyShadow&&!geo.slide&&geo.head&&isSkyPlate(note));
-      if(skyPlate||!(geo.skyShadow&&!geo.slide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 案Z: 空中のタップ/フリックは半透明のガラスの箱(叩いて弾けるとき=popのときだけ従来の頭で描く)
+      const skyGlass=skyPlate&&o.pop===null&&!o.failed&&skyZOn();
+      if(skyGlass){
+        const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
+        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,ds=Number(o.depthScale)||1,fh=Math.max(5,hd.h*1.25*ds),ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(5,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
+      }else if(skyPlate||!(geo.skyShadow&&!geo.slide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 案Z: 空中のスライドを押している間は、頭に白い星(半径17px)
+      if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&effect!=='MINIMAL')drawSkyStarZ(geo.head.cx,geo.head.cy,o.alpha*trackDim);
       // 空中の段(試作): 空中の粒の見た目(案を比べるため4通り。localStorage 'mh_sky_tap_style_proto' で選ぶ・既定は gold)
       // 近づく細い輪(drawSkyGlow)は外した(2026-10-10 社長「参考動画を手本に」→ 参考は輪ではなく「奥は暗く手前は明るい」で近さを見せる。明るさは drawSkyTap 側)
       if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null&&!skyPlate)drawSkyTap(geo.head,o);
