@@ -35,8 +35,22 @@ check('助手ごとに別の本文になっている',
   ASSISTANTS.length < 2 || new Set(ASSISTANTS.map(who => linesFor(who.id).map(l => l.t).join('|'))).size === ASSISTANTS.length);
 check('登録数7体は表示条件を満たす', source.includes('eligible:count < 8'));
 check('登録数8体以上は通常表示しない', source.includes('masuMons.length >= 8'));
-check('通常表示とDEBUG表示が同じsceneを参照する',
-  (source.match(/assistantSceneLinesFor\('dailyMasuAdvice'\)/g) || []).length === 1);
+check('通常表示とDEBUG表示が同じ表示を参照する(shortcut が false のときだけふつうの助言)',
+  (source.match(/assistantSceneLinesFor\(dailyMasuAdvice\.shortcut===false\?'dailyMasuAdviceBasic':'dailyMasuAdvice'\)/g) || []).length === 1);
+
+// 「あきらめる」の近道は慣れた人だけ。はじめての人にはふつうの助言(2026-10-10・改善部の提案G9)
+vm.runInContext(`globalThis.__b = { basic: ASSISTANT_SCENES.dailyMasuAdviceBasic };`, ctx);
+const linesBasicFor = (id) => assistantSceneLines('dailyMasuAdviceBasic', null, 1, id);
+check('ふつうの助言のsceneが登録されている', !!ctx.__b.basic);
+check('ふつうの助言は、どの助手にも自分のぶんが5件以上ある',
+  ASSISTANTS.every(who => linesBasicFor(who.id).length >= 5 && linesBasicFor(who.id).every(line => (line.who || 'mua') === who.id)));
+check('ふつうの助言に「あきらめる」を勧める言葉が入っていない',
+  ASSISTANTS.every(who => linesBasicFor(who.id).every(line => !/あきらめ|諦め/.test(line.t))));
+check('「あきらめる」の近道は「近道」と言い直してある',
+  ASSISTANTS.every(who => linesFor(who.id)[0].t.includes('近道')));
+check('近道はクイックのクリア合計が線以上のときだけ(線は定数で持つ)',
+  source.includes('DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS = 3')
+    && source.includes('shortcut: quickClearTotal >= DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS'));
 // 本文は「いま選んでいる助手」のものを出す。ここが固定だと、ききを選んでもみゅあが話してしまう
 check('本文は選んでいる助手のものを出す',
   source.includes("const assistantSceneLinesFor = (scene) =>")

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4bbff8456ca652e
+// generated-sha256: 27e5a809b3aefcc5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -44417,6 +44417,8 @@ function MonsterHeroGame() {
   // 起動時のお知らせが2件以上のとき、一覧(まとめ)から「くわしく」で1件を開いている間だけ true(保存しない)
   const [updateGuideDetail, setUpdateGuideDetail] = useState(false);
   const dailyMasuAdviceCheckedRef = useRef(false);
+  // 日次アドバイスで「あきらめる」の近道を出す、クイックのクリア回数(合計)の線
+  const DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS = 3;
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
@@ -53960,7 +53962,10 @@ function MonsterHeroGame() {
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
-      if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true });
+      // 「あきらめる」の近道は、クイックを何回かクリアした人だけへ(2026-10-10・改善部の提案G9)。
+      // まだ慣れていない人には、最後まで遊んでリザルトから登録する、ふつうの助言を出す。回数の線は既存の記録(クイックのクリア回数)の合計
+      const quickClearTotal = Object.values(quickClearCounts || {}).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
+      if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true, shortcut: quickClearTotal >= DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS });
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
@@ -64729,7 +64734,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>);
       })()}
 
-      {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor('dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
+      {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor(dailyMasuAdvice.shortcut===false?'dailyMasuAdviceBasic':'dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {dailyMasuAdvice.debugCount!=null&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・登録数{dailyMasuAdvice.debugCount}体を想定</div>}
