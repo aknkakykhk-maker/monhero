@@ -78,7 +78,9 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
 - 2026-10-10 緊急回復の条件を選べるようにした: `PLAYBOT_TACTICS_EMERGENCY=auto`(AUTO と同じ条件だけ)/ `wipe`(全滅の手前だけ)/ `0`(押さない)/ 既定は両方。
   記録の `r.bot.emergency` に条件の名前('auto+wipe' など)を入れる。それより前の r.bot つきの回(`emergency: true`)は、すべて両方の条件(auto+wipe)で戦った回
 - 2026-10-10 **供モンの固定・アシカの順**(社長の「4体パーティのおすすめ」を実戦で確かめるため。ハカセくんの頼み)。
-  `PLAYBOT_TACTICS_ALLIES=ゴースト,モノリス,ハム`(名前でも id でも): 戦う前の編成で勇者モンの次にこの順で選び、WAVE の合間に加わる順もこの順。
+  `PLAYBOT_TACTICS_ALLIES=ゴースト,モノリス,ハム`(名前でも id でも): 戦う前の候補5体(PRO_ALLY_POOL_SIZE)のうち、勇者モンの次にこの3体を選ぶ(残り2体はふだんどおり)。
+  WAVE 2・4・6 のあとは、まだ入っていない候補からくじで3体が出る(PRO_ALLY_OFFER_SIZE・pickJoinCandidates)ので、指定の3体のうち並びの前の子を選ぶ。ほかの候補は2体だけなので毎回1体は指定の子が出て、3体とも必ずそろう(入る順はくじ次第)。
+  実際に加わった順は `r.bot.joined`(例 `W2:モノリス`)
   `PLAYBOT_TACTICS_ASSIST_ORDER=ポルツ,きき,あつ`(アシカ本人の名前): 出てきたカードのうち並びの前のアシカを選ぶ(新規習得も強化も)。順番に試す(ROTATE)より先に効く。
   記録の `r.bot.fixedAllies`・`r.bot.assistOrder` に残す
 
