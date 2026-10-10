@@ -29842,14 +29842,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         ctx.fillStyle='rgba(15,23,42,.38)';ctx.fillRect(fx,fy+fh-Math.max(1.5,fh*.22),fw,Math.max(1.5,fh*.22));
       }else if(style==='ruby'){
         // 案N 宝石の菱形(赤): 縦に長い菱形を4つの面に割る。明るい面・赤・暗い面で立体に見せ、中心に白い光の点。色は純な赤(GREAT の文字の色は判定の場所だけ)
-        const R=Math.max(9,hd.w*.4),T=[cx,cy-R*1.15],Rt=[cx+R*.82,cy],B=[cx,cy+R*1.15],L=[cx-R*.82,cy],C=[cx,cy];
+        const R=Math.max(11,hd.w*.52),T=[cx,cy-R*1.15],Rt=[cx+R*.82,cy],B=[cx,cy+R*1.15],L=[cx-R*.82,cy],C=[cx,cy];
         outerGlow([T,Rt,B,L]);
         poly([T,C,L],'rgba(254,202,202,1)');poly([T,Rt,C],'rgba(239,68,68,1)');poly([C,Rt,B],'rgba(153,27,27,1)');poly([L,C,B],'rgba(220,38,38,1)');
         poly([T,Rt,B,L],null,'rgba(15,23,42,.9)',2.4);poly([T,Rt,B,L],null,'rgba(255,255,255,.9)',1);
         const d=Math.max(1.8,R*.14)*(1+.9*pp);poly([[cx-d,cy],[cx,cy-d*1.2],[cx+d,cy],[cx,cy+d*1.2]],'rgba(255,255,255,1)');
       }else{
         // 案O 立方体(白銀・上が尖った六角形): 上の面(明るい)・左の面・右の面(暗い)の3面。参考の「側面が見える角材」を小さい立方体にしたもの
-        const R=Math.max(9,hd.w*.36),h=R*.866,T=[cx,cy-R],UR=[cx+h,cy-R*.5],LR=[cx+h,cy+R*.5],B=[cx,cy+R],LL=[cx-h,cy+R*.5],UL=[cx-h,cy-R*.5],C=[cx,cy];
+        const R=Math.max(11,hd.w*.5),h=R*.866,T=[cx,cy-R],UR=[cx+h,cy-R*.5],LR=[cx+h,cy+R*.5],B=[cx,cy+R],LL=[cx-h,cy+R*.5],UL=[cx-h,cy-R*.5],C=[cx,cy];
         outerGlow([T,UR,LR,B,LL,UL]);
         poly([T,UR,C,UL],'rgba(255,255,255,1)');poly([UL,C,B,LL],'rgba(148,163,184,1)');poly([UR,LR,B,C],'rgba(51,65,85,1)');
         poly([T,UR,LR,B,LL,UL],null,'rgba(15,23,42,.9)',2.4);poly([T,UR,LR,B,LL,UL],null,'rgba(255,255,255,.85)',1);
