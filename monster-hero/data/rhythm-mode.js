@@ -24364,7 +24364,13 @@ const SHERIRUTH_CROSS_SLIDES=Object.freeze([
   [127367,'L',[[127367,0.5],[128340,0.5],[128421,1],[130043,1],[130124,1.5],[130367,1.5],[130448,1.75],[130529,2],[130611,2],[130692,2.25],[130773,2.5],[130854,2.75],[130935,3],[131016,3],[131097,3.25],[131178,3.5],[131259,3.25],[131340,3],[131421,3],[131502,2.75],[131584,2.5],[131665,2.25],[131746,2],[131827,2],[131908,1.75],[131989,1.5]]],
   [127772,'R',[[127772,4.5],[128826,4.5],[128908,4],[130286,4],[130367,3.5],[130448,3.25],[130529,3],[130611,3],[130692,2.75],[130773,2.5],[130854,2.25],[130935,2],[131016,2],[131097,1.75],[131178,1.5],[131259,1.75],[131340,2],[131421,2],[131502,2.25],[131584,2.5],[131665,2.75],[131746,3],[131827,3],[131908,3.25],[131989,3.5],[132070,3.25],[132151,3],[132232,2.75],[132475,2.5]]],
 ]);
+// 縦画面で同じ親指が81msで叩き直す所(85.12秒・102.88秒)を、左右の親指に分かれる位置へ(オンプくん・時刻とノーツ数は変えない)。[時刻,元のサブレーン,新しいサブレーン]
+const SHERIRUTH_CROSS_TAP_MOVES=Object.freeze([[85040,6,9],[85121,9,6],[102798,3,6]]);
 const sheriruthMasterNotesCross=Object.freeze(sheriruthMasterNotes.map(note=>{
+  if(note.type==='TAP'){
+    const move=SHERIRUTH_CROSS_TAP_MOVES.find(([timeMs,subLane])=>timeMs===note.timeMs&&subLane===note.subLane);
+    return move?mhTap(note.timeMs,move[2],note.subLaneWidth):note;
+  }
   if(note.type!=='SLIDE')return note;
   const swap=SHERIRUTH_CROSS_SLIDES.find(([timeMs])=>timeMs===note.timeMs);
   return swap?mhSlideV2(note.timeMs,note.endTimeMs,swap[2].map(([timeMs,lane])=>[timeMs,lane,2]),note.endFlick):note;
@@ -27363,7 +27369,7 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     songId:'sheriruth_cross',
     displayName:'Sheriruth',
     subtitle:'MASTER(交差あり)',
-    debugDescription:'公開版の MASTER の見せ場のスライド4本の通り道だけを変え、108.5秒・111.1秒・130.8秒で2本が左右を入れ替わる版。ノーツ数・時刻は公開版のまま。遊んでも自己ベスト・ランキング・報酬には入らない',
+    debugDescription:'公開版の MASTER の見せ場のスライド4本の通り道だけを変え、108.5秒・111.1秒・130.8秒で2本が左右を入れ替わる版。縦画面で押せなかった 85.1秒・102.9秒の単打の位置も直した。ノーツ数・時刻は公開版のまま。遊んでも自己ベスト・ランキング・報酬には入らない',
     bgmTrackId:'melo_sheriruth',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(35,sheriruthMasterNotesCross,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}):emptyRhythmChart())
