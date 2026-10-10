@@ -116,6 +116,8 @@
 | キー | 値・既定値 | 用途 |
 | --- | --- | --- |
 | `mh_audio_muted` | boolean / `false` | ミュート状態 |
+| `mhdev_session_marker_v1` | object / 無し | **端末の中だけ**の「いま遊んでいる」印(`normalizeSessionMarker`)。起動から15秒ごとに書き直す(`startedAt`・`lastBeat`・`state` = `running`/`hidden`/`closed`・`screen`・`audioBuffers`・`heapMB`・`nav`)。1件だけ。次の起動でこれを読み、正常に終わっていなければ `mhdev_reload_log_v1` へ足す。無い・壊れているときは何もしない。サーバーへは送らない。`localStorage` へ直接書く(`storeSet` は通さない)。**`mhdev_` なのでバックアップに入らない**(この端末の記録なので、別の端末へ引き継がない) |
+| `mhdev_reload_log_v1` | array / `[]` | **端末の中だけ**の「前回、途中で読み込み直された」記録(`normalizeReloadLog`)。直近 `RELOAD_LOG_LIMIT`(12)件まで、新しいものが先頭。`kind` は `foreground`(遊んでいる最中に止まった)/ `background`(裏に回ったあと)。音量設定の「🔧 音が出ないとき」の下で見られる。サーバーへは送らない。`localStorage` へ直接書く。**`mhdev_` なのでバックアップに入らない** |
 | `mh_battle_speed_v1` | string | バトル速度(`normalizeBattleSpeed` で既定へ) |
 | `mh_battle_screen_style_v1` | string / `'TACTICS_NEW'` | タクティクス画面の表示設定（`TACTICS_OLD` / `TACTICS_NEW`）。未保存・旧`CLASSIC`値・不正値は新タクティクスUIへ正規化。通常のクラシックバトルには影響しない |
 | `mh_dex_idle_motion_v1` | boolean / `true` | モンスター図鑑の立ち絵を動かすか(図鑑のページの「動きを止める／動かす」)。無い・`false` 以外は動かす。見た目だけ |

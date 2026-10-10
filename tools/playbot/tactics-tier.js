@@ -67,8 +67,9 @@ const roleOf = (m) => ROLE_BY_EFFECT[m && m.ex && m.ex.effect] || '攻め';
 // ★同じ版のボットの回どうしで比べる(2026-10-10 改善部 T2)。技と間合いまで記録している回(use)= 勇者モン選び・EX の使い方などを直したあとのボット。
 //   それより前の回(昼の Master のモッチー23回など)は、ボットの違いがモンスターの差に見えてしまうので数えない
 // アシカを「順番に選ぶ」(r.bot.rotate)で戦った回は、モンスターの Tier に数えない。弱いアシカ(みゃる・ドラなど)から入るので、
-// その回の勇者モンが弱く見える(2026-10-10 ダイスくん: ユグドラシル Expert が3回とも WAVE 3 止まりだったわけ)。その回はアシカの記録にだけ使う
-const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && r.bot.rotate));
+// その回の勇者モンが弱く見える(2026-10-10 ダイスくん: ユグドラシル Expert が3回とも WAVE 3 止まりだったわけ)。その回はアシカの記録にだけ使う。
+// 供モンを決めて戦った回(r.bot.fixedAllies。おすすめパーティの確かめ)も、強い組み合わせで勇者モンが強く見えるので数えない
+const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)));
 // ★クリアした回は「WAVE 11 まで届いた」と数える(2026-10-10 改善部 T3)。Hard はほぼ全員が WAVE 10 に届くので、届いた WAVE だけでは差が出ない
 const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
 const sum = (a) => a.reduce((x, y) => x + y, 0);
@@ -491,7 +492,90 @@ out(`- まだ勇者モンにしていない子: ${least.length ? least.join('・
 out('- `PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_EXPLORE=1` で、勇者モンを「試した回数の少ない子」から選びます。毎晩の点検(60分まで)で回る分だけ足していきます');
 out('- 表を作り直す: `node tools/playbot/tactics-tier.js --md docs/playbot/reports/tier/monster-tier.md`');
 
-const text = lines.join('\n') + '\n';
+let text = lines.join('\n') + '\n';
+
+// ---------- 根拠(2026-10-10 社長「タップしたらその詳細を出すようにして。ちゃんと根拠があるように」) ----------
+// 全項目に共通の形 { 出どころ, 回数, 数字[{名前,値,基準,差,ぶれ}], 効いている機能[], だから, まだ分からない }。
+// 数字は実戦の記録(runs)からだけ作る。言えないことは書かず、分からないところは「まだ分からない」に理由つきで書く
+const MECH_NAMES = (() => {
+  try {
+    const t = fs.readFileSync(path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'mechanics.md'), 'utf8');
+    return t.split('\n').filter((l) => /^\| [^-|]/.test(l)).map((l) => l.split('|')[1].trim()).filter((x) => x && x !== '機能');
+  } catch (e) { return []; }
+})();
+const mechOf = (prefix) => MECH_NAMES.find((x) => x.startsWith(prefix)) || '';
+const pctOf = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : '—');
+const sgnInt = (x) => `${x >= 0 ? '+' : ''}${Math.round(x)}`;
+const sd = (xs) => { const m = avg(xs); return xs.length > 1 ? Math.sqrt(sum(xs.map((x) => (x - m) ** 2)) / (xs.length - 1)) : NaN; };
+const clearRate = {};
+for (const d of diffs) { const rs = runs.filter((r) => r.difficulty === d); clearRate[d] = rs.length ? rs.filter((r) => r.result === 'clear').length / rs.length : NaN; }
+function evidenceOf(o) {
+  const s = o.s;
+  const name = s.m.name;
+  const inRuns = runs.filter((r) => membersOf(r).includes(name));
+  const per = TIER_DIFFS.map((d) => [d, inRuns.filter((r) => r.difficulty === d)]);
+  const heroN = inRuns.filter((r) => r.hero === name).length;
+  const rows = [];
+  for (const [d, rs] of per) {
+    if (!rs.length) continue;
+    if (d === 'Hard') {
+      const c = rs.filter((r) => r.result === 'clear').length;
+      const p = c / rs.length; const base = clearRate[d];
+      const err = 2 * Math.sqrt(Math.max(0.0001, p * (1 - p)) / rs.length);
+      rows.push({ 名前: 'Hard のクリア率', 値: `${pctOf(c, rs.length)}(${rs.length}回中${c}回)`, 基準: `全員の平均 ${Math.round(base * 100)}%`, 差: sgnInt((p - base) * 100), ぶれ: `±${Math.round(err * 100)}` });
+    } else {
+      const ws = rs.map(reach); const a = avg(ws); const e = sd(ws);
+      rows.push({ 名前: `${d} の届いた WAVE(平均)`, 値: `${r1(a)}(${rs.length}回・最高 ${Math.max(...rs.map((r) => r.wave || 0))})`, 基準: `全員の平均 ${r1(meanWave[d])}`, 差: sgn(a - meanWave[d]), ぶれ: Number.isFinite(e) ? `±${r1((2 * e) / Math.sqrt(ws.length))}` : '1回だけ' });
+    }
+  }
+  const heroDev = inRuns.filter((r) => r.hero === name).map((r) => reach(r) - meanWave[r.difficulty]);
+  const heroErr = heroDev.length > 1 ? (2 * sd(heroDev)) / Math.sqrt(heroDev.length) : NaN;
+  if (heroN && Number.isFinite(s.heroLift)) rows.push({ 名前: '勇者モンにした回の伸び', 値: `WAVE ${sgn(s.heroLift)}(${heroN}回)`, 基準: 'その難易度の全員の平均', 差: sgn(s.heroLift), ぶれ: Number.isFinite(heroErr) ? `±${r1(heroErr)}` : '1回だけ' });
+  if (Number.isFinite(o.score)) rows.push({ 名前: 'Tier の点', 値: `${sgn(o.score)}(${o.tier})`, 基準: 'S 0.45 以上・A 0.15・B −0.15・C −0.45 以上・D それ未満', 差: '', ぶれ: '' });
+  const feats = [];
+  if (s.marks.攻め === '◎') feats.push(mechOf('ダメージの式'));
+  if (s.marks.守り === '◎') feats.push(mechOf('被ダメージの式'));
+  if (s.marks.勇者特性 === '◎' && s.m.trait) feats.push(mechOf(s.m.trait) || s.m.trait);
+  if (s.marks.固有技 === '◎') feats.push(mechOf('固有技の効果'));
+  if (s.marks.EX === '◎') feats.push(mechOf('EX('));
+  if (s.marks.間合い === '◎') feats.push(mechOf('間合い適性'));
+  const so = []; // だから
+  const liftClear = Number.isFinite(heroErr) && Math.abs(s.heroLift) > heroErr;
+  if (heroN >= 3 && Number.isFinite(s.heroLift) && !liftClear) so.push(`勇者モンにした回の伸び(WAVE ${sgn(s.heroLift)})は、ぶれ(±${r1(heroErr)})の中で、平均と差があるとはまだ言えない`);
+  else if (heroN >= 3 && Number.isFinite(s.heroLift)) so.push(s.heroLift >= 0.5 ? `勇者モンにすると平均より WAVE ${sgn(s.heroLift)} 先まで届く。勇者モンの候補に入れてよい` : s.heroLift <= -0.5 ? `勇者モンにすると平均より WAVE ${r1(s.heroLift)}。勇者モンより供モンで使うほうがよい` : '勇者モンにしても平均とほぼ同じ');
+  if (s.role !== '攻め' && Number.isFinite(s.memberLift) && inRuns.length >= 5) so.push(`入った回は平均より WAVE ${sgn(s.memberLift)}(${s.role}役)`);
+  if (s.role === '攻め' && s.shareN >= 5) so.push(`ダメージは頭割りの ${r1(s.share)} 倍(${s.shareN}回)。${s.share >= 1.2 ? '火力の柱にできる' : s.share < 0.8 ? '火力は控えめ' : '火力はふつう'}`);
+  const unknown = [];
+  const thin = per.filter(([, rs]) => rs.length && rs.length < 5).map(([d, rs]) => `${d} ${rs.length}回`);
+  if (thin.length) unknown.push(`回数が5回に届かない難易度がある(${thin.join('・')})`);
+  if (o.weakBot) unknown.push(`ボットの EX の使い方がシミュレーターの上手な使い方より WAVE ${r1(o.botGap)} 低いので、直したボットの回(いま ${fixedBotHeroRuns(name)}回)がたまるまで本当の強さは分からない`);
+  if (s.tier === '保留') unknown.push('EX を一度も使えていないので Tier を付けていない');
+  const byDiffN = per.filter(([, rs]) => rs.length).map(([d, rs]) => `${d} ${rs.length}`).join('・');
+  return {
+    出どころ: '実戦',
+    回数: inRuns.length ? `実戦 ${inRuns.length}回(${byDiffN}。勇者モンで ${heroN}回)` : 'まだ戦っていない',
+    数字: rows,
+    効いている機能: [...new Set(feats.filter(Boolean))],
+    だから: so.join('。') || (inRuns.length ? '' : 'まだ戦っていない'),
+    まだ分からない: unknown.join('。'),
+  };
+}
+
+// md にもページの詳細と同じ根拠を出す(W2: 同じ元データから)
+{
+  const L = ['', '## 根拠(ページの詳細と同じ)', '', '各モンスターの「根拠」。数字は実戦の記録から。ぶれは ±(標準誤差の2倍)。差がぶれより小さいときは、平均と差があるとはまだ言えない。', ''];
+  for (const o of overall) {
+    const e = evidenceOf(o);
+    L.push(`### ${o.s.m.name}(${o.tier === '未計測' ? '回数不足' : o.tier}${o.provisional && !['回数不足', '保留'].includes(o.tier) ? '・暫定' : ''})`, '');
+    L.push(`- 出どころ: ${e.出どころ}。${e.回数}`);
+    for (const x of e.数字) L.push(`- ${x.名前}: ${x.値}${x.基準 ? `/ 基準 ${x.基準}` : ''}${x.差 ? `/ 差 ${x.差}` : ''}${x.ぶれ ? `/ ぶれ ${x.ぶれ}` : ''}`);
+    if (e.効いている機能.length) L.push(`- 効いている機能: ${e.効いている機能.join('・')}`);
+    if (e.だから) L.push(`- だから: ${e.だから}`);
+    if (e.まだ分からない) L.push(`- まだ分からない: ${e.まだ分からない}`);
+    L.push('');
+  }
+  text += L.join('\n');
+}
 
 // ---------- tier.json(tier-page.js が読む形。項目名は日本語) ----------
 // 強み・弱みは「ひとことの理由」を「。」で分けたもの(「〜が効く」→ 強み、それ以外 → 弱み。人が写していたときと同じ分け方)
@@ -524,6 +608,7 @@ function tierJson(prev) {
       勇者の回数: Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, x ? x.heroN : 0]; })),
       難易度が暫定: Object.fromEntries(TIER_DIFFS.map((d) => { const x = diffCell(o, d); return [d, !!(x && x.n && x.provisional && x.tier !== '保留')]; })),
       動いた理由: why,
+      根拠: evidenceOf(o),
     };
     if (dr) entry.机上 = { 通常技1発: Math.round(dr.nHit), '20ターンの火力': dr.dmg20, 受けられる: Object.fromEntries(TIER_DIFFS.map((d) => [d, dr.byDiff[d] ? dr.byDiff[d].w1Hits : 0])) };
     // ほかの道具が書いた項目(おすすめアシカ・相性のいい供モンなど)は残す

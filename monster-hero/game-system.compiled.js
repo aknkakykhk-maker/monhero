@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 414b4e41bba95b95
+// source-sha256: 8ef44f7ed083e6ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 12:14";
+const BUILD_DATE = "2026-10-10 13:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6375,7 +6375,7 @@ const Audio_ = (() => {
     toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
-  const SONG_BUFFER_KEEP = 3;
+  const SONG_BUFFER_KEEP = 4;
   const songBufferOrder = [];
   let bgmSource = null,
     bgmSourceKey = null,
@@ -6762,9 +6762,13 @@ const Audio_ = (() => {
     resumeAudioCtxNoWait();
     if (buffers.has(track.src)) {
       startBgmBuffer(track.id, track, buffers.get(track.src), request);
+      rememberSongBuffer(track.src);
       return Promise.resolve();
     }
-    return loadBuffer(track.src).then(buffer => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
+    return loadBuffer(track.src).then(buffer => {
+      rememberSongBuffer(track.src);
+      startBgmBuffer(track.id, track, buffer, request);
+    }).catch(() => {});
   };
   const stopPreview = (resume = true) => {
     ++previewRequest;
@@ -7107,12 +7111,15 @@ const Audio_ = (() => {
   };
   const preloadBGM = key => {
     const track = resolveTrack(key);
-    if (track) loadBuffer(track.src).catch(() => {});
+    if (track) loadBuffer(track.src).then(() => rememberSongBuffer(track.src)).catch(() => {});
   };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key);
     if (!track) return Promise.resolve(false);
-    return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
+    return Promise.race([loadBuffer(track.src).then(() => {
+      rememberSongBuffer(track.src);
+      return true;
+    }).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([load().then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   const playJingle = async key => {
@@ -44812,6 +44819,127 @@ class MhErrorBoundary extends React.Component {
 const DebugThrowScreenError = () => {
   throw new Error('画面エラーの受け止めを試すために、わざと投げた例外');
 };
+const RELOAD_MARKER_KEY = 'mhdev_session_marker_v1';
+const RELOAD_LOG_KEY = 'mhdev_reload_log_v1';
+const RELOAD_LOG_LIMIT = 12;
+const RELOAD_BEAT_MS = 15000;
+const RELOAD_STATES = ['running', 'hidden', 'closed'];
+const reloadNum = (value, fallback = null) => Number.isFinite(Number(value)) && value !== null && value !== '' ? Number(value) : fallback;
+const normalizeSessionMarker = value => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const startedAt = reloadNum(value.startedAt),
+    lastBeat = reloadNum(value.lastBeat);
+  if (startedAt === null || lastBeat === null || startedAt <= 0 || lastBeat < startedAt) return null;
+  return {
+    id: typeof value.id === 'string' ? value.id.slice(0, 40) : '',
+    startedAt,
+    lastBeat,
+    state: RELOAD_STATES.includes(value.state) ? value.state : 'running',
+    screen: typeof value.screen === 'string' ? value.screen.slice(0, 40) : '',
+    audioBuffers: reloadNum(value.audioBuffers),
+    heapMB: reloadNum(value.heapMB),
+    nav: typeof value.nav === 'string' ? value.nav.slice(0, 20) : ''
+  };
+};
+const normalizeReloadLog = value => (Array.isArray(value) ? value : []).map(entry => {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+  const at = reloadNum(entry.at);
+  if (at === null || at <= 0) return null;
+  return {
+    at,
+    kind: entry.kind === 'background' ? 'background' : 'foreground',
+    minutes: reloadNum(entry.minutes, 0),
+    gapMinutes: reloadNum(entry.gapMinutes, 0),
+    screen: typeof entry.screen === 'string' ? entry.screen.slice(0, 40) : '',
+    audioBuffers: reloadNum(entry.audioBuffers),
+    heapMB: reloadNum(entry.heapMB),
+    nav: typeof entry.nav === 'string' ? entry.nav.slice(0, 20) : ''
+  };
+}).filter(Boolean).slice(0, RELOAD_LOG_LIMIT);
+const buildReloadLogEntry = (previous, now, nav = '') => {
+  const prev = normalizeSessionMarker(previous);
+  if (!prev || prev.state === 'closed') return null;
+  const at = reloadNum(now, Date.now());
+  return {
+    at,
+    kind: prev.state === 'hidden' ? 'background' : 'foreground',
+    minutes: Math.max(0, Math.round((prev.lastBeat - prev.startedAt) / 60000)),
+    gapMinutes: Math.max(0, Math.round((at - prev.lastBeat) / 60000)),
+    screen: prev.screen,
+    audioBuffers: prev.audioBuffers,
+    heapMB: prev.heapMB,
+    nav: String(nav || '').slice(0, 20)
+  };
+};
+const pushReloadLog = (log, entry) => normalizeReloadLog(entry ? [entry, ...normalizeReloadLog(log)] : log);
+const reloadReadJson = key => {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+};
+const reloadWriteJson = (key, value) => {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const describeReloadLogEntry = entry => {
+  const when = new Date(entry.at).toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const head = entry.kind === 'background' ? '裏に回ったあと読み込み直された' : '遊んでいる最中に読み込み直された';
+  const parts = [`${entry.minutes}分遊んだあと`, entry.screen ? `画面 ${entry.screen}` : '', Number.isFinite(entry.audioBuffers) ? `音のデータ ${entry.audioBuffers}本` : '', Number.isFinite(entry.heapMB) ? `メモリ ${entry.heapMB}MB` : ''].filter(Boolean);
+  return `${when} 起動 — ${head}(${parts.join('・')})`;
+};
+function ReloadLogPanel() {
+  const [log] = React.useState(() => normalizeReloadLog(reloadReadJson(RELOAD_LOG_KEY)));
+  const [copied, setCopied] = React.useState(false);
+  const copy = async () => {
+    const text = JSON.stringify({
+      log,
+      marker: reloadReadJson(RELOAD_MARKER_KEY),
+      ua: typeof navigator !== 'undefined' && navigator.userAgent || '',
+      build: typeof BUILD_DATE !== 'undefined' ? BUILD_DATE : ''
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (e) {
+      setCopied(false);
+    }
+  };
+  return React.createElement("div", {
+    "data-reload-log": true,
+    className: "mt-2 rounded-xl border border-white/10 bg-black/30 p-2.5 text-left"
+  }, React.createElement("div", {
+    className: "text-[12px] font-black text-slate-200"
+  }, "前回までの読み込み直し"), log.length === 0 ? React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-400"
+  }, "途中で読み込み直された記録は、ありません。") : React.createElement("ul", {
+    className: "mt-1 space-y-1"
+  }, log.map((entry, i) => React.createElement("li", {
+    key: i,
+    "data-reload-log-row": true,
+    className: "text-[11px] font-bold leading-snug text-slate-300"
+  }, describeReloadLogEntry(entry)))), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-snug text-slate-500"
+  }, "この端末の中だけに残します(新しい記録が12件を超えると古いものから消えます)。"), log.length > 0 && React.createElement("button", {
+    type: "button",
+    "data-reload-log-copy": true,
+    onClick: copy,
+    className: "mh-button mh-button-secondary mt-1.5 min-h-[40px] w-full rounded-xl border border-white/15 bg-slate-800 px-2 text-[11px] font-black text-slate-200 active:scale-95"
+  }, copied ? 'コピーしました' : '記録をコピー'));
+}
 function SettingsMenuLink({
   icon,
   label,
@@ -76539,6 +76667,63 @@ function MonsterHeroGame() {
     };
   }, []);
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const startedAt = Date.now();
+    let nav = '';
+    try {
+      const e = window.performance.getEntriesByType('navigation')[0];
+      nav = e && e.type ? e.type : '';
+    } catch (e) {}
+    const entry = buildReloadLogEntry(reloadReadJson(RELOAD_MARKER_KEY), startedAt, nav);
+    if (entry) reloadWriteJson(RELOAD_LOG_KEY, pushReloadLog(reloadReadJson(RELOAD_LOG_KEY), entry));
+    const marker = {
+      id: `${startedAt.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`,
+      startedAt,
+      lastBeat: startedAt,
+      state: 'running',
+      screen: '',
+      audioBuffers: null,
+      heapMB: null,
+      nav
+    };
+    const write = state => {
+      marker.lastBeat = Math.max(marker.startedAt, Date.now());
+      marker.state = state;
+      marker.screen = String(gameStateForBackRef.current || '');
+      try {
+        const d = Audio_.diagnose();
+        marker.audioBuffers = Number.isFinite(d && d.bufferCount) ? d.bufferCount : null;
+      } catch (e) {}
+      try {
+        const m = window.performance && window.performance.memory;
+        marker.heapMB = m && Number.isFinite(m.usedJSHeapSize) ? Math.round(m.usedJSHeapSize / 1048576) : null;
+      } catch (e) {}
+      reloadWriteJson(RELOAD_MARKER_KEY, marker);
+    };
+    write('running');
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') write('running');
+    }, RELOAD_BEAT_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        if (marker.state !== 'closed') write('hidden');
+      } else write('running');
+    };
+    const onPageHide = event => write(event && event.persisted ? 'hidden' : 'closed');
+    const onPageShow = event => {
+      if (event && event.persisted) write('running');
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, []);
+  useEffect(() => {
     if (!pendingFriendCode) return;
     if (RELEASE_FLAGS.friends !== true) {
       setPendingFriendCode('');
@@ -90827,14 +91012,14 @@ function MonsterHeroGame() {
     className: "mh-dialog-choice mt-3",
     "aria-expanded": showAudioDiag,
     onClick: () => setShowAudioDiag(v => !v)
-  }, "🔧 音が出ないとき ", showAudioDiag ? '▲' : '▼'), showAudioDiag && React.createElement(AudioTroubleshootPanel, {
+  }, "🔧 音が出ないとき ", showAudioDiag ? '▲' : '▼'), showAudioDiag && React.createElement(React.Fragment, null, React.createElement(AudioTroubleshootPanel, {
     info: audioDiag,
     peak: audioDiagPeak,
     muted: audioMuted,
     onTest: testAudioOutput,
     onRepair: repairAudioOutput,
     repairing: audioRepairing
-  }))) : showBgmArrangement ? React.createElement("div", {
+  }), React.createElement(ReloadLogPanel, null)))) : showBgmArrangement ? React.createElement("div", {
     className: "mh-title-modal"
   }, React.createElement("div", {
     className: "mh-title-dialog",

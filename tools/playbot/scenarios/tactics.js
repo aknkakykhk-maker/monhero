@@ -301,7 +301,11 @@ async function betweenWaves(s, ctx) {
     const go = FORWARD.map((re) => list.find((x) => re.test(x.label))).find(Boolean);
     // ★タクティクスの外へ出るボタンは「えらぶ」の候補にしない(2026-10-10 ハカセくん: 合間から「みゅあに話しかける」を押して
     //   助手の話題一覧(音ゲーの「近いノーツが並んでいるときは…」など)へ迷い込み、戻る→一覧を繰り返して 60 手で打ち切り)
-    const OFFTRACK = /話しかける|ヘルプ|説明|攻略|モンヒロビート|モンビー|ノーツ|演奏|音ゲー|図鑑|設定|ランキング|お知らせ|更新履歴|HOME|ホーム/;
+    // ★「新しいバージョンがあります 更新する」は押さない(押すとページを読み込み直してランが消える。2026-10-10 プラント Expert W5 でタイトルまで戻り打ち切り)。
+    //   ボットが遊んでいるあいだに、手元のファイルが新しくなると出る。「あとで更新する(この通知を閉じる)」で閉じる
+    const later = list.find((x) => /^あとで更新する/.test(x.label));
+    if (later) { await s.tap(later, 'WAVE の合間(更新の知らせを閉じる)'); await s.wait(500); continue; }
+    const OFFTRACK = /話しかける|ヘルプ|説明|攻略|モンヒロビート|モンビー|ノーツ|演奏|音ゲー|図鑑|設定|ランキング|お知らせ|更新履歴|更新する|HOME|ホーム/;
     const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label) && !avoid.has(b.label) && !OFFTRACK.test(b.label));
     // 迷い込んだ画面(タクティクスの合間ではない話題の一覧など)にいたら、まず閉じて戻る
     const strayText = await s.page.evaluate(() => /近いノーツ|演奏が始まるまで|モンヒロビート/.test((document.body.innerText || '').replace(/\s+/g, ' ')));

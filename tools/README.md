@@ -85,6 +85,7 @@ node tools/build.js --check
 | `node ctx.js rules [語]` | `CLAUDE.md` / `AGENTS.md` / `docs/rules/` を横断して、その語に触れている節だけを出す。 |
 | `node ctx.js diff [パス…]` | 生成物を除いた差分。素の `git diff` の代わり(`--staged` `--base <ref>` `--all`)。 |
 | `node where.js` | 場所だけを知る道具(`--screens` / `--outline` / `--text`)。`ctx.js` が内部で呼ぶ。 |
+| `node memory-soak.js --mode quick\|auto\|rhythm\|idle` | **長く遊んだときに、メモリが増え続けていないかを測る。**合格・不合格の検査ではなく数字を出す道具。1回ごとに強制的にごみを片付けてから、JSのヒープ・ブラウザ全体のメモリ・DOMの数・イベントの数・解いた音の本数を出す。`auto` はクイックをAUTOで回し続け、`rhythm` は曲を続けて演奏する。別の窓で `python3 tools/serve.py 8899` を起動しておく。ブラウザは1つだけ動かす(全体のメモリが混ざるため)。 |
 | `node check-drift.js <検査>` | **落ちた検査が探している本体の文字の並びのうち、今は無いものと、本体でいちばん似ている行を並べる。**「書き方が変わっただけ」か「本当に消えた」かの見分けに使う(読むだけ)。 |
 | `node mode/rhythm-gpu-estimate.js [--check]` | **実機が無くても GPU の重さを見積もる。**「おまかせ」4つが画面いっぱいを何回塗ったのと同じかを測り、機種の帯ごとの GPU の時間と fps の目安に直す。`--check` で `mode/gpu-budget.json` の上限を超えていないかを見る(1回5分ほど)。 |
 | `node mode/rhythm-slowmo-shot.js` | **演奏画面を「コマ送り」で撮る。** ブラウザの仮想の時間で、遅い環境でも本来の速さで遊んだときの 0.083秒ごとの画面を撮る(自動で叩く・叩いたときの光も写る)。参考動画と同じ間隔で並べて見比べるときに使う。 |

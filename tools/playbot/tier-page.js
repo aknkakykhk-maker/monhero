@@ -52,6 +52,21 @@ function validate(d) {
     if (!m.回数 || !DIFFS.every((k) => Number.isInteger(m.回数[k]) && m.回数[k] >= 0)) p.push(`${at}: 回数 に Hard・Expert・Master の0以上の整数が要る`);
     if (m.机上 && (!Number.isFinite(m.机上.通常技1発) || !m.机上.受けられる || !DIFFS.every((k) => Number.isFinite(m.机上.受けられる[k])))) p.push(`${at}: 机上の形がおかしい(通常技1発・20ターンの火力・受けられる{Hard,Expert,Master})`);
   }
+  // 根拠(2026-10-10 社長「表面的に出すだけじゃなくて…ちゃんと根拠があるように」)。全項目に同じ形で付く。無い項目は「根拠はまだ入っていません」と出す
+  const SOURCES = ['実戦', 'シミュレーター', '机上', '実戦+シミュレーター'];
+  const evidenceCheck = (e, at) => {
+    if (e === undefined) return;
+    const r = e && e.根拠;
+    if (r === undefined) return;
+    if (!r || typeof r !== 'object') { p.push(`${at}: 根拠 はオブジェクト`); return; }
+    if (!SOURCES.includes(r.出どころ)) p.push(`${at}: 根拠.出どころ は ${SOURCES.join(' / ')}`);
+    if (typeof r.回数 !== 'string') p.push(`${at}: 根拠.回数 は1文の文字`);
+    if (r.数字 !== undefined && (!Array.isArray(r.数字) || r.数字.length > 6 || r.数字.some((x) => !x || !x.名前 || typeof x.値 !== 'string'))) p.push(`${at}: 根拠.数字 は [{名前,値,基準,差,ぶれ}] の6行まで(値・基準・差・ぶれは単位つきの文字)`);
+    if (r.効いている機能 !== undefined && (!Array.isArray(r.効いている機能) || r.効いている機能.some((x) => typeof x !== 'string'))) p.push(`${at}: 根拠.効いている機能 は文字の配列`);
+    if (typeof r.だから !== 'string' || !r.だから) p.push(`${at}: 根拠.だから が空です`);
+    if (r.まだ分からない !== undefined && typeof r.まだ分からない !== 'string') p.push(`${at}: 根拠.まだ分からない は文字(無ければ "")`);
+  };
+  d.モンスター.forEach((m) => evidenceCheck(m, `モンスター「${m.名前}」`));
   const nameList = (v, at, label) => {
     if (v === undefined) return;
     if (!Array.isArray(v) || v.some((x) => !x || !x.名前 || !x.理由)) p.push(`${at}: ${label} は [{名前, 理由}] の配列`);
@@ -72,6 +87,7 @@ function validate(d) {
         if (!a.理由) p.push(`${at}: 理由が空です`);
         if (a.回数 && !DIFFS.every((k) => Number.isInteger(a.回数[k]) && a.回数[k] >= 0)) p.push(`${at}: 回数 に Hard・Expert・Master の0以上の整数が要る`);
         nameList(a.合うモンスター, at, '合うモンスター');
+        evidenceCheck(a, at);
       }
     }
   }
@@ -84,6 +100,7 @@ function validate(d) {
       if (c && !c.理由) p.push(`${at}: 理由が空です`);
       if (c && typeof c.実戦で確認 !== 'boolean') p.push(`${at}: 実戦で確認 は true / false`);
       if (c && c.点 !== undefined && !Number.isFinite(c.点)) p.push(`${at}: 点 は数`);
+      evidenceCheck(c, at);
     }
   }
   if (d.おすすめパーティ !== undefined) {
@@ -105,6 +122,7 @@ function validate(d) {
         if (!t.理由) p.push(`${at}: 理由が空です`);
         if (t.アシカ !== undefined && (!t.アシカ || !Array.isArray(t.アシカ.優先) || (t.アシカ.使いどころ !== undefined && !Array.isArray(t.アシカ.使いどころ)))) p.push(`${at}: アシカ は { 優先:[名前], 使いどころ:[文] }`);
         if (t.強化 !== undefined && (!t.強化 || typeof t.強化 !== 'object')) p.push(`${at}: 強化 は { トレーニング, 固有技の強化, ごほうび } のような文字の組`);
+        evidenceCheck(t, at);
         if (t.実戦で確認 != null && (!Number.isInteger(t.実戦で確認.回数) || !Number.isInteger(t.実戦で確認.クリア))) p.push(`${at}: 実戦で確認 は { 回数, クリア } か null`);
       }
     }
@@ -202,26 +220,44 @@ function build(d) {
   const kv = (rows) => `<dl>${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
   const diffTable = (m) => `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   const refList = (kind, list) => `<ul class="rl">${list.map((x) => `<li>${iconOf(kind, x.名前, 'sm')}<span><b>${esc(x.名前)}</b> ${esc(x.理由)}</span></li>`).join('')}</ul>`;
+  const evidence = (e) => {
+    const r = e && e.根拠;
+    if (!r) return '<div class="ev none">根拠はまだ入っていません。</div>';
+    const num = (v) => parseFloat(String(v == null ? '' : v).replace(/[±+−-]/g, (c) => (c === '−' || c === '-' ? '-' : '')));
+    const rows = (r.数字 || []).map((x) => {
+      const diff = Math.abs(num(x.差)), noise = Math.abs(num(x.ぶれ));
+      const inNoise = Number.isFinite(diff) && Number.isFinite(noise) && x.差 !== undefined && x.ぶれ !== undefined && diff < noise;
+      return `<tr${inNoise ? ' class="dim"' : ''}><td>${esc(x.名前)}</td><td>${esc(x.値)}</td><td>${esc(x.基準 || '')}</td><td>${esc(x.差 || '')}${inNoise ? ' <small>ぶれの中</small>' : ''}</td><td>${esc(x.ぶれ || '')}</td></tr>`;
+    }).join('');
+    return `<div class="ev">
+      <div class="evh"><span class="src src-${{ 実戦: 'j', シミュレーター: 's', 机上: 'd', '実戦+シミュレーター': 'js' }[r.出どころ] || 'd'}">${esc(r.出どころ)}</span><span class="evn">${esc(r.回数)}</span></div>
+      ${rows ? `<div class="tw"><table><thead><tr><th>数字</th><th>値</th><th>基準</th><th>差</th><th>ぶれ</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+      ${(r.効いている機能 || []).length ? `<div class="evf"><small>効いている機能</small> ${r.効いている機能.map((f) => `<span class="chip">${esc(f)}</span>`).join('')}</div>` : ''}
+      <p class="evs"><b>だから</b> ${esc(r.だから)}</p>
+      ${r.まだ分からない ? `<p class="evu"><b>まだ分からない</b> ${esc(r.まだ分からない)}</p>` : ''}
+    </div>`;
+  };
   const refAssists = (names) => `<ul class="rl">${names.map((n) => `<li>${iconOf('a', n, 'sm')}<span><b>${esc(n)}</b></span></li>`).join('')}</ul>`;
-  const assistBody = (a) => kv([
+  const assistBody = (a) => evidence(a) + kv([
     a.仮の総合 ? ['仮の総合', `${tier(a.仮の総合)} (5回未満のマスから出した仮)`] : null,
     ['ひとこと', esc(a.理由)],
     a.強み ? ['強み', esc(a.強み)] : null,
     a.弱み ? ['弱み', esc(a.弱み)] : null,
     a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : (a.合う子なし ? ['合うモンスター', esc(a.合う子なし)] : null),
   ]) + (a.回数 ? `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数</th></tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(a[k])}</td><td>${a.回数[k]}</td></tr>`).join('')}</tbody></table></div>` : '');
-  const fullBody = (m) => kv([
+  const fullBody = (m) => evidence(m) + kv([
     ['役', esc(m.役)],
     m.仮の総合 ? ['仮の総合', `${tier(m.仮の総合)} (5回未満のマスから出した仮)`] : null,
     ['ひとこと', esc(m.理由)],
     m.強み ? ['強み', esc(m.強み)] : null,
     m.弱み ? ['弱み', esc(m.弱み)] : null,
     m.動いた理由 ? ['動き', esc(m.動いた理由)] : null,
+    m.緊急回復 ? ['緊急回復', esc(m.緊急回復)] : null,
     m.おすすめアシカ && m.おすすめアシカ.length ? ['おすすめアシカ', refList('a', m.おすすめアシカ)] : null,
     m.相性のいい供モン && m.相性のいい供モン.length ? ['相性のいい供モン', refList('m', m.相性のいい供モン)] : null,
     m.机上 ? ['机上', `通常技1発 ${m.机上.通常技1発.toLocaleString('en-US')} / 20ターンの火力 ${(m.机上['20ターンの火力'] || 0).toLocaleString('en-US')}`] : null,
   ]) + diffTable(m);
-  const diffBody = (m, k) => kv([
+  const diffBody = (m, k) => evidence(m) + kv([
     ['役', esc(m.役)],
     ['この難易度', `${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' 暫定' : ''}(総合 ${esc(m.総合)})`],
     ['試した回数', `${m.回数[k]}回${m.勇者の回数 ? `(勇者モンにした回数 ${m.勇者の回数[k]})` : ''}`],
@@ -244,11 +280,12 @@ function build(d) {
     ${panels(k, (m) => diffBody(m, k), null, DIFF_TIERS)}
   </details>`).join('');
   const comboRow = (c) => `
-        <li class="cb ${c.良し悪し === '良い' ? 'cg' : 'cx'}">
-          <div class="pair">${iconOf('m', c.勇者)}<span class="x">×</span>${iconOf('m', c.供モン)}</div>
+        <li class="cb ${c.良し悪し === '良い' ? 'cg' : 'cx'}"><details class="cbd">
+          <summary><div class="pair">${iconOf('m', c.勇者)}<span class="x">×</span>${iconOf('m', c.供モン)}</div>
           <div class="ct"><b>勇者 ${esc(c.勇者)} × 供モン ${esc(c.供モン)}</b> <span class="vd">${c.良し悪し === '良い' ? '◎ よく合う' : '△ 合わない'}</span>${c.点 !== undefined ? `<small> ${esc(c.点)}点</small>` : ''}<small> ${c.実戦で確認 ? '実戦で確かめた' : '机上・シミュレーターの見立て'}</small>
-          <div>${esc(c.理由)}</div></div>
-        </li>`;
+          <div>${esc(c.理由)}</div></div></summary>
+          <div class="body">${evidence(c)}${kv([['勇者', esc(c.勇者)], ['供モン', esc(c.供モン)], ['ひとこと', esc(c.理由)]])}</div>
+        </details></li>`;
   const comboGroup = (label, hit) => {
     const list = combos.filter((c) => c.良し悪し === hit);
     return `<details class="diff" ${hit === '良い' ? 'open' : ''}><summary>${label}(${list.length}組)</summary>${list.length ? `<ul class="cbl">${list.map(comboRow).join('')}</ul>` : '<p class="empty">まだありません。</p>'}</details>`;
@@ -274,7 +311,7 @@ function build(d) {
       <details class="party">
         <summary><span class="rk">${esc(t.順位)}位</span><span class="faces">${faces}</span></summary>
         <div class="pinfo"><b>${esc(t.点.名前)} ${esc(t.点.値)}</b>${diff !== undefined ? `<small> 基準との差 ${esc(sign(diff))}</small>` : ''}<small> ${t.確か ? '測り直しても残った' : 'まだぶれ以内'}</small><small> ${esc(real)}</small></div>
-        <div class="body">${kv([['噛み合う理由', esc(t.理由)]])}${assist ? `<h4>アシカの入れ方</h4>${assist}` : ''}${grow ? `<h4>強化の順番</h4>${grow}` : ''}</div>
+        <div class="body">${evidence(t)}${kv([['噛み合う理由', esc(t.理由)]])}${assist ? `<h4>アシカの入れ方</h4>${assist}` : ''}${grow ? `<h4>強化の順番</h4>${grow}` : ''}</div>
       </details>`;
   };
   const partySection = hasParties
@@ -371,6 +408,23 @@ html{scroll-behavior:smooth;scroll-padding-top:56px}
 .party h4{margin:8px 0 4px;font-size:13px;font-family:var(--font-head)}
 .bl{margin:0;padding-left:1.2em}
 .pl{margin-bottom:12px}
+.ev{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:8px 10px;margin-bottom:10px;font-size:12px}
+.ev.none{color:var(--muted)}
+.evh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.src{font-family:var(--font-head);font-weight:800;font-size:11px;padding:1px 8px;border-radius:8px;color:#fff;white-space:nowrap}
+.src-j{background:var(--tB)}.src-s{background:var(--tC)}.src-d{background:var(--tH)}.src-js{background:linear-gradient(90deg,var(--tB),var(--tC))}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .src{color:#11161e}}
+:root[data-theme="dark"] .src{color:#11161e}
+.evn{color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.ev th,.ev td{white-space:normal;overflow-wrap:anywhere;padding:3px 4px}
+.ev .dim td{color:var(--muted);opacity:.75}
+.evf{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0}
+.chip{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.ev p{margin:4px 0}.evu{color:var(--muted)}
+.cb{padding:0;display:block}
+.cbd>summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:center;padding:8px 10px;-webkit-tap-highlight-color:transparent}
+.cbd>summary::-webkit-details-marker{display:none}
+.cbd .body{margin:0 10px 10px}
 .ic>i{position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform-origin:center center}
 ${css}
 </style>
@@ -384,7 +438,7 @@ ${css}
 
   <section id="monsters">
     <h2>モンスター 総合 Tier</h2>
-    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
+    <p class="note" style="margin-bottom:10px">${weights} の重みで難易度ごとの点を合わせた順。「暫定」の印は、試した回数が少なく動くかもしれない子。モンスターの Tier はブラウザの実戦の記録から(ボットが緊急回復を使うようになったのは 2026-10-10 からで、それより前の回は使っていません)。</p>${panels('総合', fullBody, null, OVERALL_TIERS)}
   </section>
 
   <section id="monsters-diff">
@@ -394,18 +448,18 @@ ${css}
 
   <section id="assists">
     <h2>アシカ Tier(アシストカード)</h2>
-    <p class="note" style="margin-bottom:10px">モンスターと同じ決め方の Tier。アイコンを押すと、難易度ごとの Tier・理由・合うモンスターが開きます。</p>${assistSection}
+    <p class="note" style="margin-bottom:10px">モンスターと同じ決め方の Tier。アイコンを押すと、難易度ごとの Tier・理由・合うモンスターが開きます。</p><p class="note" style="margin-bottom:10px">緊急回復は、ゲームの AUTO と同じ条件(出せるカードが無くガッツさえあれば出せるとき)と全滅の手前で使った数字です。回数の上限が無いので、ガッツの少ない子(モノリスなど)ほど押す回数が多く伸びます。手で遊んで緊急回復を押さないと、順位が変わる子がいます(各モンスターの「緊急回復」の行)。</p>${assistSection}
   </section>
 
   <section id="combos">
     <h2>勇者モン × 供モンの組み合わせ</h2>
-    <p class="note" style="margin-bottom:10px">よく合う組み合わせと合わない組み合わせ。「実戦で確かめた」は、タクティクスプロで実際に戦って確かめたもの。</p>
+    <p class="note" style="margin-bottom:10px">よく合う組み合わせと合わない組み合わせ。「実戦で確かめた」は、タクティクスプロで実際に戦って確かめたもの。</p><p class="note" style="margin-bottom:10px">緊急回復は、ゲームの AUTO と同じ条件(出せるカードが無くガッツさえあれば出せるとき)と全滅の手前で使った数字です。回数の上限が無いので、ガッツの少ない子(モノリスなど)ほど押す回数が多く伸びます。手で遊んで緊急回復を押さないと、順位が変わる子がいます(各モンスターの「緊急回復」の行)。</p>
     ${comboSection}
   </section>
 
   <section id="party">
     <h2>おすすめパーティ(勇者モン+供モン3体)</h2>
-    <p class="note" style="margin-bottom:10px">難易度ごとの上位の4体パーティ。押すと、噛み合う理由・アシカの入れ方・強化の順番が開きます。左端が勇者モンです。</p>
+    <p class="note" style="margin-bottom:10px">難易度ごとの上位の4体パーティ。押すと、噛み合う理由・アシカの入れ方・強化の順番が開きます。左端が勇者モンです。</p><p class="note" style="margin-bottom:10px">緊急回復は、ゲームの AUTO と同じ条件(出せるカードが無くガッツさえあれば出せるとき)と全滅の手前で使った数字です。回数の上限が無いので、ガッツの少ない子(モノリスなど)ほど押す回数が多く伸びます。手で遊んで緊急回復を押さないと、順位が変わる子がいます(各モンスターの「緊急回復」の行)。</p>
     ${partySection}
   </section>
 
