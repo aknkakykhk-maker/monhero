@@ -30199,6 +30199,15 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=Math.max(0,fade*power);ctx.lineWidth=1+3*fade;ctx.strokeStyle=`rgb(${C.core})`;diamond(W*(.22+grow*.78),.62);
     const lag=Math.max(0,(p-.12)/.88),lagGrow=1-Math.pow(1-lag,3);
     if(lag>0){ctx.globalAlpha=Math.max(0,(1-lag)*.8*power);ctx.lineWidth=1+2*(1-lag);ctx.strokeStyle=`rgb(${C.accent})`;diamond(W*(.18+lagGrow*1.15),.5);}
+    // 線に沿って左右へ伸びる光の筋(レンズの光の筋のよう。参考動画の Sky Input の弾け方・オンプくんのまとめ)。最初の6割
+    const lens=Math.min(1,p/.6);
+    if(lens<1){
+      const a=(1-lens)*power,len=W*(1.1+lens*1.6),th=1.6*(1-lens)+.5;
+      ctx.globalAlpha=a*.85;ctx.fillStyle=`rgb(${C.accent})`;
+      ctx.beginPath();ctx.moveTo(cx-len,Y);ctx.lineTo(cx,Y-th*2);ctx.lineTo(cx+len,Y);ctx.lineTo(cx,Y+th*2);ctx.closePath();ctx.fill();
+      ctx.globalAlpha=a;ctx.fillStyle=`rgb(${C.core})`;
+      ctx.beginPath();ctx.moveTo(cx-len*.7,Y);ctx.lineTo(cx,Y-th);ctx.lineTo(cx+len*.7,Y);ctx.lineTo(cx,Y+th);ctx.closePath();ctx.fill();
+    }
     // 十字の星(最初の4割だけ。横に長く、縦は上へ長めに伸ばして「空中」の向きを出す)
     const q=Math.min(1,p/.4);
     if(q<1){
@@ -30207,13 +30216,17 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.beginPath();ctx.moveTo(cx-len,Y);ctx.lineTo(cx,Y-th);ctx.lineTo(cx+len,Y);ctx.lineTo(cx,Y+th);ctx.closePath();ctx.fill();
       ctx.beginPath();ctx.moveTo(cx,Y-up);ctx.lineTo(cx+th,Y);ctx.lineTo(cx,Y+up*.45);ctx.lineTo(cx-th,Y);ctx.closePath();ctx.fill();
     }
-    // 上へ舞い上がるかけら(小さな菱形が6つ。外へ開きながら上がり、ゆっくり落ちる)
+    // 上へ舞い上がるかけら(小さな四角が6つ。回りながら外へ開いて上がり、ゆっくり落ちる。参考の「四角い小さな破片」)
     for(let i=0;i<6;i++){
       const ang=-Math.PI/2+(i-2.5)*.42,dist=W*(.18+grow*(.85+(i%2)*.25)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*.9+p*p*W*.25;
-      const r=Math.max(.6,(3.4-(i%3)*.6)*(1-p*.75));
+      const r=Math.max(.6,(3-(i%3)*.5)*(1-p*.7)),turn=(i%2?1:-1)*(.6+p*3);
+      const co=Math.cos(turn)*r,si=Math.sin(turn)*r;
       ctx.globalAlpha=Math.max(0,fade*power);ctx.fillStyle=i%2?`rgb(${C.main})`:`rgb(${C.core})`;
-      ctx.beginPath();ctx.moveTo(x,y-r*1.6);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r*1.6);ctx.lineTo(x-r,y);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(x-co+si,y-si-co);ctx.lineTo(x+co+si,y+si-co);ctx.lineTo(x+co-si,y+si+co);ctx.lineTo(x-co-si,y-si+co);ctx.closePath();ctx.fill();
     }
+    // 真ん中に残る光の点(輪が広がったあとも少し残る)
+    ctx.globalAlpha=Math.max(0,Math.min(1,(1-p)*1.6)*power);ctx.fillStyle=`rgb(${C.core})`;
+    ctx.beginPath();ctx.arc(cx,Y,1.5+2.5*(1-p),0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;
   };
   // 空中のノーツが空中の判定ラインへ近づくほど強まる光(試作)。drawSkyTap(板そのもの)の手前に敷く。
