@@ -29871,8 +29871,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         ?{edge:'127,29,29',mid:'254,226,226',top1:'252,165,165',side:'153,27,27',out:'69,10,10',glow:'248,113,113'}
         :{edge:'76,69,112',mid:'250,250,255',top1:'196,181,253',side:'100,116,139',out:'30,27,75',glow:'221,214,254'};
       const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
-      const al=Math.min(.96,.6+.34*pp),br=.78+.22*near;
-      const fw=hd.w*sizeScale,fh=Math.max(9,hd.h)*1.2,th=Math.max(5,fh*.62),sd=Math.max(3,fw*.09),fx=cx-fw/2,fy=cy-fh/2+th*.35;
+      const al=Math.min(.96,.64+.3*pp),br=.85+.15*near;
+      // オンプくんの測定(参考動画): 厚みは地上のタップと同じ・幅は地上の0.5〜0.9倍・明るさは地上の0.85〜0.9倍
+      const fw=hd.w*sizeScale*.88,fh=Math.max(8,hd.h),th=Math.max(5,fh*.7),sd=Math.max(3,fw*.09),fx=cx-fw/2,fy=cy-fh/2+th*.35;
       const sgn=cx<(typeof cssW==='number'?cssW/2:cx)?1:-1;
       const quad=(pts,fill,stroke,lw)=>{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.lineWidth=lw;ctx.strokeStyle=stroke;ctx.stroke();}};
       const top=[[fx,fy],[fx+fw,fy],[fx+fw+sgn*sd,fy-th],[fx+sgn*sd,fy-th]];
@@ -30059,7 +30060,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const st=skyTapStyle(),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
     if(['glass','beam','ruby','cube','glass_silver','glass_red'].includes(st)){
       // 床に落ちる灰色のぼやけた影(参考動画「浮いていると分かるいちばん強い手がかり」)。外へ広がる3重の菱形でぼかしを出し、近づくほど濃くする
-      const dk=.75+.7*near;
+      const dk=.6+.55*near;
       [[1.9,.12],[1.45,.2],[1,.34]].forEach(([k,al])=>{ctx.fillStyle=`rgba(30,41,59,${Math.min(.9,al*dk).toFixed(3)})`;ctx.beginPath();ctx.moveTo(sh.cx-w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy-h*k);ctx.lineTo(sh.cx+w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy+h*k);ctx.closePath();ctx.fill();});
     }else{
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
