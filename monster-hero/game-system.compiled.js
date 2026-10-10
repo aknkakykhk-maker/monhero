@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c75fcbf59762a14e
+// source-sha256: b00b3ccda232e578
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 10:14";
+const BUILD_DATE = "2026-10-10 10:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12209,6 +12209,22 @@ const giftIsExpired = (gift, now = Date.now()) => {
 };
 const giftIsClaimable = (gift, now = Date.now()) => !!gift && !gift.claimedAt && !giftIsExpired(gift, now) && !!normalizeGiftRewards(gift);
 const giftClaimableCount = (gifts, now = Date.now()) => (Array.isArray(gifts) ? gifts : []).filter(g => giftIsClaimable(g, now)).length;
+const summarizeClaimedGiftRewards = gifts => {
+  const totals = new Map();
+  (Array.isArray(gifts) ? gifts : []).forEach(gift => {
+    (normalizeGiftRewards(gift) || []).forEach(reward => {
+      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type;
+      const prev = totals.get(key);
+      totals.set(key, prev ? {
+        ...prev,
+        amount: prev.amount + reward.amount
+      } : {
+        ...reward
+      });
+    });
+  });
+  return [...totals.values()];
+};
 const buildGiftClaim = (gift, balances, now = Date.now()) => {
   if (!gift || gift.claimedAt || giftIsExpired(gift, now)) return {
     ok: false,
@@ -45168,17 +45184,20 @@ function ScreenThemeModal({
   }, "決定")));
 }
 function MissionsScreen({
+  gifts,
   missions,
   missionTab,
   onSelectTab,
   onBack,
   onClaim,
-  onClaimBulk
+  onClaimAll
 }) {
   const state = normalizeMissions(missions),
     defs = MISSION_DEFS[missionTab];
   const sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
   const resetAt = missionNextReset(missionTab);
+  const periodNow = missionTab === 'daily' ? state.dailyPeriod : missionTab === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
+  const inGiftBox = m => (Array.isArray(gifts) ? gifts : []).some(g => g?.id === `gift_mission_${missionTab}_${periodNow}_${m.id}` && !g.claimedAt);
   const bulkGradient = missionTab === 'daily' ? 'from-amber-500 to-orange-600' : missionTab === 'weekly' ? 'from-violet-600 to-indigo-600' : 'from-fuchsia-600 to-purple-800';
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -45219,13 +45238,16 @@ function MissionsScreen({
       label: React.createElement(React.Fragment, null, "マンスリー", tabCountBadge(missionClaimableList(state, 'monthly').length))
     }]
   }), (() => {
-    const bulk = missionClaimableList(state, missionTab);
+    const nowMs = Date.now();
+    const backlog = (Array.isArray(gifts) ? gifts : []).filter(g => g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, nowMs)).length;
+    const total = missionClaimableCount(state) + backlog;
     return React.createElement("button", {
       type: "button",
-      disabled: !bulk.length,
-      onClick: () => onClaimBulk(missionTab),
+      "data-mission-claim-all": true,
+      disabled: !total,
+      onClick: () => onClaimAll(),
       className: `shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`
-    }, "一括受け取り", bulk.length > 0 && ` (${bulk.length})`);
+    }, "すべて受け取る", total > 0 && ` (${total})`);
   })(), React.createElement("div", {
     className: "mb-2 flex shrink-0 justify-center"
   }, React.createElement("span", {
@@ -45275,7 +45297,7 @@ function MissionsScreen({
       type: "button",
       disabled: true,
       className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40"
-    }, "ギフト送付済み") : done ? React.createElement("button", {
+    }, inGiftBox(m) ? 'ギフトボックスに届いています' : '受け取り済み') : done ? React.createElement("button", {
       type: "button",
       onClick: () => onClaim(missionTab, m),
       className: "shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95"
@@ -73579,6 +73601,7 @@ function MonsterHeroGame() {
   }, [gameState, trainingSession?.position, trainingSession?.routePreview?.[0], trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
   const [giftTab, setGiftTab] = useState('unclaimed');
+  const [rewardReceipt, setRewardReceipt] = useState(null);
   const [missions, setMissions] = useState(() => normalizeMissions(null));
   const missionsRef = useRef(missions);
   missionsRef.current = missions;
@@ -83036,11 +83059,16 @@ function MonsterHeroGame() {
     setSkipInfoItemId(null);
     setGameState('HOME');
   };
-  const claimGiftIds = async ids => {
-    if (giftClaimingRef.current) return;
+  const claimGiftIds = async (ids, {
+    baseGifts = null,
+    title = 'ギフトを受け取りました'
+  } = {}) => {
+    if (giftClaimingRef.current || !baseGifts && missionClaimingRef.current) return null;
     giftClaimingRef.current = true;
     try {
       const wanted = new Set(ids);
+      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
+      const claimedGifts = [];
       let balances = {
         gold,
         breederPoints,
@@ -83049,15 +83077,16 @@ function MonsterHeroGame() {
       };
       let claimedCount = 0;
       const now = Date.now();
-      const nextGifts = gifts.map(gift => {
+      const nextGifts = sourceGifts.map(gift => {
         if (!wanted.has(gift?.id)) return gift;
         const result = buildGiftClaim(gift, balances, now);
         if (!result.ok) return gift;
         balances = result.balances;
         claimedCount++;
+        claimedGifts.push(result.gift);
         return result.gift;
       });
-      if (!claimedCount) return;
+      if (!claimedCount) return null;
       for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
       const entries = [];
       if (balances.breederXp !== breederXp) {
@@ -83096,19 +83125,32 @@ function MonsterHeroGame() {
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({
         key: 'mh_gifts',
-        before: gifts,
+        before: sourceGifts,
         next: keptGifts
       });
       const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
       if (!saved) {
         console.error('[gift] claim persistence failed');
-        return;
+        return null;
       }
       if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
       setGold(balances.gold);
       setBreederPoints(balances.breederPoints);
       setOwnedItems(balances.ownedItems);
       setGifts(keptGifts);
+      const rewards = summarizeClaimedGiftRewards(claimedGifts);
+      setRewardReceipt({
+        title,
+        rewards,
+        count: claimedCount
+      });
+      try {
+        Audio_.se.levelUp();
+      } catch {}
+      return {
+        count: claimedCount,
+        rewards
+      };
     } finally {
       giftClaimingRef.current = false;
     }
@@ -83252,38 +83294,80 @@ function MonsterHeroGame() {
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     claimedAt: null
   });
-  const sendMissionsToGiftBox = async (type, missionList) => {
-    if (missionClaimingRef.current) return 0;
-    missionClaimingRef.current = true;
-    try {
-      const state = normalizeMissions(missionsRef.current),
-        sentKey = type === 'daily' ? 'sentDaily' : type === 'weekly' ? 'sentWeekly' : 'sentMonthly';
-      const targets = (missionList || []).filter(m => m && !state[sentKey].includes(m.id) && missionValue(state, type, m) >= m.target);
-      if (!targets.length) return 0;
-      const period = type === 'daily' ? state.dailyPeriod : type === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
+  const sendMissionGroupsToGiftBox = async groups => {
+    {
+      const state = normalizeMissions(missionsRef.current);
       let nextGifts = Array.isArray(gifts) ? [...gifts] : [];
-      const sent = [...state[sentKey]];
-      targets.forEach(mission => {
-        const gift = buildMissionGift(type, period, mission);
-        if (!nextGifts.some(g => g?.id === gift.id)) nextGifts = [gift, ...nextGifts];
-        if (!sent.includes(mission.id)) sent.push(mission.id);
-        if (type === 'daily' && !mission.complete) state.weekly.dailyClaims = (Number(state.weekly.dailyClaims) || 0) + 1;
+      const giftIds = [];
+      let count = 0;
+      ['daily', 'weekly', 'monthly'].forEach(type => {
+        const requested = groups?.[type];
+        if (!requested) return;
+        const sentKey = type === 'daily' ? 'sentDaily' : type === 'weekly' ? 'sentWeekly' : 'sentMonthly';
+        const list = requested === 'all' ? missionClaimableList(state, type) : requested;
+        const targets = (list || []).filter(m => m && !state[sentKey].includes(m.id) && missionValue(state, type, m) >= m.target);
+        if (!targets.length) return;
+        const period = type === 'daily' ? state.dailyPeriod : type === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
+        const sent = [...state[sentKey]];
+        targets.forEach(mission => {
+          const gift = buildMissionGift(type, period, mission);
+          if (!nextGifts.some(g => g?.id === gift.id)) nextGifts = [gift, ...nextGifts];
+          giftIds.push(gift.id);
+          if (!sent.includes(mission.id)) sent.push(mission.id);
+          if (type === 'daily' && !mission.complete) state.weekly.dailyClaims = (Number(state.weekly.dailyClaims) || 0) + 1;
+        });
+        state[sentKey] = sent;
+        count += targets.length;
       });
-      state[sentKey] = sent;
+      if (!count) return null;
       const reconciled = reconcileMonthlyMissionCompletions(state);
       await storeSet('mh_gifts', nextGifts, false);
       await storeSet('mh_missions', reconciled, false);
       missionsRef.current = reconciled;
       setGifts(nextGifts);
       setMissions(reconciled);
-      targets.forEach(() => addAssistantBond('mission'));
-      return targets.length;
+      for (let i = 0; i < count; i++) addAssistantBond('mission');
+      return {
+        count,
+        giftIds,
+        gifts: nextGifts
+      };
+    }
+  };
+  const claimMissionRewards = async (groups, {
+    includeBacklog = false
+  } = {}) => {
+    if (missionClaimingRef.current || giftClaimingRef.current) return null;
+    missionClaimingRef.current = true;
+    try {
+      const sent = await sendMissionGroupsToGiftBox(groups);
+      const baseGifts = sent ? sent.gifts : Array.isArray(gifts) ? gifts : [];
+      const ids = sent ? [...sent.giftIds] : [];
+      if (includeBacklog) {
+        const now = Date.now();
+        baseGifts.forEach(g => {
+          if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id);
+        });
+      }
+      if (!ids.length) return null;
+      return await claimGiftIds(ids, {
+        baseGifts,
+        title: 'ミッション報酬を受け取りました'
+      });
     } finally {
       missionClaimingRef.current = false;
     }
   };
-  const claimMission = (type, mission) => sendMissionsToGiftBox(type, [mission]);
-  const claimMissionsBulk = type => sendMissionsToGiftBox(type, missionClaimableList(normalizeMissions(missionsRef.current), type));
+  const claimMission = (type, mission) => claimMissionRewards({
+    [type]: [mission]
+  });
+  const claimAllMissions = () => claimMissionRewards({
+    daily: 'all',
+    weekly: 'all',
+    monthly: 'all'
+  }, {
+    includeBacklog: true
+  });
   const openMissions = () => {
     setMissionTab('daily');
     setGameState('MISSIONS');
@@ -91925,12 +92009,13 @@ function MonsterHeroGame() {
       onClaim: claimGiftIds,
       onOpenLoginBonusList: () => setShowLoginBonusList(true)
     }), gameState === 'MISSIONS' && React.createElement(MissionsScreen, {
+      gifts: gifts,
       missions: missions,
       missionTab: missionTab,
       onSelectTab: setMissionTab,
       onBack: returnToHome,
       onClaim: claimMission,
-      onClaimBulk: claimMissionsBulk
+      onClaimAll: claimAllMissions
     }), showLoginBonusList && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
@@ -100443,6 +100528,30 @@ function MonsterHeroGame() {
       className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]"
     }, "フレンド画面をひらく"), React.createElement(ModalCloseButton, {
       onClick: () => setFriendCandidate(null)
+    }))), rewardReceipt && React.createElement(ModalFrame, {
+      label: "手に入れたもの",
+      border: "border-amber-400/70",
+      onClose: () => setRewardReceipt(null),
+      zIndex: MODAL_Z.confirm
+    }, React.createElement("div", {
+      "data-reward-receipt": true,
+      className: "text-center"
+    }, React.createElement("div", {
+      className: "text-[11px] font-black text-amber-300"
+    }, rewardReceipt.title), React.createElement("h3", {
+      className: "mt-0.5 text-lg font-black text-white"
+    }, "手に入れたもの")), React.createElement("div", {
+      className: "mt-3 max-h-[46vh] space-y-1.5 overflow-y-auto"
+    }, rewardReceipt.rewards.map((reward, idx) => React.createElement("div", {
+      key: idx,
+      "data-reward-receipt-row": true,
+      className: "rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white"
+    }, giftRewardText(reward)))), rewardReceipt.count > 1 && React.createElement("div", {
+      className: "mt-2 text-center text-[10px] font-bold text-slate-400"
+    }, rewardReceipt.count, "件をまとめて受け取りました"), React.createElement("div", {
+      className: "mt-3"
+    }, React.createElement(ModalCloseButton, {
+      onClick: () => setRewardReceipt(null)
     }))), confirmRequest && React.createElement(ConfirmSheet, {
       title: confirmRequest.title,
       message: confirmRequest.message || '',

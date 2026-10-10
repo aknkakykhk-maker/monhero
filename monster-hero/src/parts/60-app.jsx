@@ -1567,6 +1567,8 @@ function MonsterHeroGame() {
   useEffect(()=>{if(gameState!=='TRAINING_BOARD'||trainingMapOverview)return;requestAnimationFrame(()=>{const viewport=trainingMapRef.current,current=TRAINING_NODE_BY_ID[trainingSession?.position],next=TRAINING_NODE_BY_ID[trainingSession?.routePreview?.[0]];if(!viewport||!current)return;const focus=next?{x:current.x+(next.x-current.x)*.7,y:current.y+(next.y-current.y)*.7}:current;viewport.scrollTo({left:720*focus.x/100-viewport.clientWidth*.42,top:520*focus.y/100-viewport.clientHeight*.5,behavior:'smooth'});});},[gameState,trainingSession?.position,trainingSession?.routePreview?.[0],trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
   const [giftTab, setGiftTab] = useState('unclaimed');
+  // 受け取った直後に出す「手に入れたもの」の窓。{ title, rewards:[{type,itemId?,amount}], count } / null
+  const [rewardReceipt, setRewardReceipt] = useState(null);
   const [missions, setMissions] = useState(()=>normalizeMissions(null));
   const missionsRef = useRef(missions);
   missionsRef.current = missions;
@@ -9946,23 +9948,29 @@ function MonsterHeroGame() {
     setGameState('HOME');
   };
 
-  const claimGiftIds = async (ids) => {
-    if (giftClaimingRef.current) return;
+  // baseGifts … ミッションから送ったばかりのギフトを含めた一覧で受け取るときに渡す(画面の gifts はまだ古いため)
+  // title … 「手に入れたもの」の窓の見出し。まとめて受け取っても窓は1回だけ出る
+  const claimGiftIds = async (ids, { baseGifts = null, title = 'ギフトを受け取りました' } = {}) => {
+    // ミッションの受け取り中は動かない(古いギフト一覧で保存し直さないため)。ミッションの中から呼ぶときは baseGifts を渡す
+    if (giftClaimingRef.current || (!baseGifts && missionClaimingRef.current)) return null;
     giftClaimingRef.current = true;
     try {
       const wanted = new Set(ids);
+      const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
+      const claimedGifts = [];
       // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る
       let balances = { gold, breederPoints, ownedItems, breederXp };
       let claimedCount = 0;
       const now = Date.now();
-      const nextGifts = gifts.map(gift => {
+      const nextGifts = sourceGifts.map(gift => {
         if (!wanted.has(gift?.id)) return gift;
         const result = buildGiftClaim(gift, balances, now);
         if (!result.ok) return gift;
         balances = result.balances; claimedCount++;
+        claimedGifts.push(result.gift);
         return result.gift;
       });
-      if (!claimedCount) return;
+      if (!claimedCount) return null;
       for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
       // ブリーダー経験値が入ったときは、レベルが上がったぶんのポイントも配る。
       // 配った総数も更新しておく(読み込み時の補填が二重に配らないようにするため)
@@ -9988,12 +9996,17 @@ function MonsterHeroGame() {
       entries.push({ key:'mh_owned_items', before:ownedItems, next:balances.ownedItems });
       // 受け取ったぶんだけ「受取済み」が増えるので、ここでも古い控えを落とす
       const keptGifts = pruneGiftHistory(nextGifts);
-      entries.push({ key:'mh_gifts', before:gifts, next:keptGifts });
+      entries.push({ key:'mh_gifts', before:sourceGifts, next:keptGifts });
       const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
       // 成立しなかったときは巻き戻し済み。画面も動かさず「まだ受け取っていない」ままにする
-      if (!saved) { console.error('[gift] claim persistence failed'); return; }
+      if (!saved) { console.error('[gift] claim persistence failed'); return null; }
       if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
       setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(keptGifts);
+      // 何をいくつ手に入れたかを見せる(保存に成功したあとだけ。失敗して巻き戻したときは出さない)
+      const rewards = summarizeClaimedGiftRewards(claimedGifts);
+      setRewardReceipt({ title, rewards, count:claimedCount });
+      try { Audio_.se.levelUp(); } catch {}
+      return { count:claimedCount, rewards };
     } finally { giftClaimingRef.current = false; }
   };
   // タブに出す赤い丸バッジ。0件なら何も出さない。
@@ -10062,38 +10075,74 @@ function MonsterHeroGame() {
   // ミッション報酬のギフト。IDは「種別+期間+ミッションID」で固定なので、
   // 何度実行しても同じミッションのギフトが二重に増えることはない
   const buildMissionGift = (type,period,mission) => ({id:`gift_mission_${type}_${period}_${mission.id}`,source:'mission',missionId:mission.id,missionType:type,periodId:period,title:`ミッション報酬「${mission.name}」`,description:`${mission.condition}の達成報酬です。`,rewards:mission.rewards.map(r=>({...r})),createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString(),claimedAt:null});
-  // 達成済み・未受取のミッションをまとめてギフトへ送る共通処理。
-  // 個別受取(1件)も一括受取(複数件)も、同じ保存の流れ(ギフト→ミッションの順)を通す
-  const sendMissionsToGiftBox = async (type,missionList) => {
-    if(missionClaimingRef.current)return 0;
-    missionClaimingRef.current=true;
-    try{
-      const state=normalizeMissions(missionsRef.current), sentKey=type==='daily'?'sentDaily':type==='weekly'?'sentWeekly':'sentMonthly';
-      // 進捗と送付済みは保存されている値で判定し直す(画面の表示が古くても二重送付しない)
-      const targets=(missionList||[]).filter(m=>m&&!state[sentKey].includes(m.id)&&missionValue(state,type,m)>=m.target);
-      if(!targets.length)return 0;
-      const period=type==='daily'?state.dailyPeriod:type==='weekly'?state.weeklyPeriod:state.monthlyPeriod;
+  // 達成済み・未受取のミッションをまとめてギフトへ送る共通処理(1つ・1タブ・3タブすべてが同じ道を通る)。
+  // groups は { daily, weekly, monthly } で、値はミッションの配列、または 'all'(その時点の達成済み・未受取を全部)。
+  // 'all' はデイリー→ウィークリー→マンスリーの順に数え直すので、デイリーを受け取った結果でウィークリーが達成になっても取りこぼさない。
+  // ギフトIDは「種別+期間+ミッションID」で固定。受取履歴(sentDaily など)・ギフトIDは従来のまま変えない。
+  // 戻り値: { count, giftIds, gifts }(送ったものが無ければ null)
+  // 同期ロック(missionClaimingRef)は呼び出し側の claimMissionRewards が持つ。ここでは取らない
+  const sendMissionGroupsToGiftBox = async (groups) => {
+    {
+      const state=normalizeMissions(missionsRef.current);
       let nextGifts=Array.isArray(gifts)?[...gifts]:[];
-      const sent=[...state[sentKey]];
-      targets.forEach(mission=>{
-        const gift=buildMissionGift(type,period,mission);
-        if(!nextGifts.some(g=>g?.id===gift.id)) nextGifts=[gift,...nextGifts];
-        if(!sent.includes(mission.id)) sent.push(mission.id);
-        if(type==='daily'&&!mission.complete) state.weekly.dailyClaims=(Number(state.weekly.dailyClaims)||0)+1;
+      const giftIds=[];
+      let count=0;
+      ['daily','weekly','monthly'].forEach(type=>{
+        const requested=groups?.[type];
+        if(!requested)return;
+        const sentKey=type==='daily'?'sentDaily':type==='weekly'?'sentWeekly':'sentMonthly';
+        const list=requested==='all'?missionClaimableList(state,type):requested;
+        // 進捗と送付済みは保存されている値で判定し直す(画面の表示が古くても二重送付しない)
+        const targets=(list||[]).filter(m=>m&&!state[sentKey].includes(m.id)&&missionValue(state,type,m)>=m.target);
+        if(!targets.length)return;
+        const period=type==='daily'?state.dailyPeriod:type==='weekly'?state.weeklyPeriod:state.monthlyPeriod;
+        const sent=[...state[sentKey]];
+        targets.forEach(mission=>{
+          const gift=buildMissionGift(type,period,mission);
+          if(!nextGifts.some(g=>g?.id===gift.id)) nextGifts=[gift,...nextGifts];
+          giftIds.push(gift.id);
+          if(!sent.includes(mission.id)) sent.push(mission.id);
+          if(type==='daily'&&!mission.complete) state.weekly.dailyClaims=(Number(state.weekly.dailyClaims)||0)+1;
+        });
+        state[sentKey]=sent;
+        count+=targets.length;
       });
-      state[sentKey]=sent;
+      if(!count)return null;
       const reconciled=reconcileMonthlyMissionCompletions(state);
       // 固定IDと同期ロックに加え、ギフトを先に保存する。途中終了時も再操作では同じIDを再利用する。
       await storeSet('mh_gifts',nextGifts,false);
       await storeSet('mh_missions',reconciled,false);
       missionsRef.current=reconciled; setGifts(nextGifts); setMissions(reconciled);
-      targets.forEach(()=>addAssistantBond('mission'));
-      return targets.length;
-    }finally{missionClaimingRef.current=false;}
+      for(let i=0;i<count;i++)addAssistantBond('mission');
+      return { count, giftIds, gifts:nextGifts };
+    }
   };
-  const claimMission = (type,mission) => sendMissionsToGiftBox(type,[mission]);
-  // 選択中のタブで、達成済み・未受取のものをまとめてギフトへ送る
-  const claimMissionsBulk = (type) => sendMissionsToGiftBox(type,missionClaimableList(normalizeMissions(missionsRef.current),type));
+  // ミッションの報酬を、ギフトボックスを経由せずその場で受け取る(2026-10-10・社長の選択)。
+  // 中ではこれまでどおり「ギフトを作って(固定ID)→そのギフトを受け取る」。受け取り済みの控えは増えるが、
+  // 受け取り済みは新しい50件に整理されるので、ギフトボックスに受取待ちがたまり続けることはない。
+  // includeBacklog … 以前の作りでギフトボックスへ送ったまま受け取っていないミッションのギフトも、一緒に受け取る
+  // ★「ギフトを作って保存 → そのギフトを受け取って保存」を、1つの同期ロックの中で続けて行う。
+  //   途中で別の受け取り(二度押し・ギフトボックス)が割り込むと、古いギフト一覧で保存し直して、
+  //   作ったばかりのギフトが消える(受取済みの印だけ残り、報酬が入らない)ため。
+  //   ロックが取れなかったときは、何もせずに返る(古い一覧を読んで動かない)
+  const claimMissionRewards = async (groups, { includeBacklog = false } = {}) => {
+    if (missionClaimingRef.current || giftClaimingRef.current) return null;
+    missionClaimingRef.current = true;
+    try {
+      const sent = await sendMissionGroupsToGiftBox(groups);
+      const baseGifts = sent ? sent.gifts : (Array.isArray(gifts) ? gifts : []);
+      const ids = sent ? [...sent.giftIds] : [];
+      if (includeBacklog) {
+        const now = Date.now();
+        baseGifts.forEach(g => { if (g?.source === 'mission' && !g.claimedAt && giftIsClaimable(g, now) && !ids.includes(g.id)) ids.push(g.id); });
+      }
+      if (!ids.length) return null;
+      return await claimGiftIds(ids, { baseGifts, title:'ミッション報酬を受け取りました' });
+    } finally { missionClaimingRef.current = false; }
+  };
+  const claimMission = (type,mission) => claimMissionRewards({ [type]:[mission] });
+  // 3つのタブの達成済み・未受取を、まとめて1回で受け取る
+  const claimAllMissions = () => claimMissionRewards({ daily:'all', weekly:'all', monthly:'all' }, { includeBacklog:true });
   const openMissions = () => { setMissionTab('daily'); setGameState('MISSIONS'); };
 
   const returnToOfficialTitle = () => {
@@ -16185,12 +16234,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
         {gameState==='MISSIONS'&&(
           <MissionsScreen
+            gifts={gifts}
             missions={missions}
             missionTab={missionTab}
             onSelectTab={setMissionTab}
             onBack={returnToHome}
             onClaim={claimMission}
-            onClaimBulk={claimMissionsBulk}
+            onClaimAll={claimAllMissions}
           />
         )}
         {/* ギフトボックスから開く、7日ぶんのログインボーナス一覧 */}
@@ -20068,6 +20118,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <button type="button" onClick={()=>{ setFriendCandidate(null); openFriends(null); }} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">フレンド画面をひらく</button>
             <ModalCloseButton onClick={()=>setFriendCandidate(null)}/>
           </div>
+        </ModalFrame>
+      )}
+      {rewardReceipt&&(
+        <ModalFrame label="手に入れたもの" border="border-amber-400/70" onClose={()=>setRewardReceipt(null)} zIndex={MODAL_Z.confirm}>
+          <div data-reward-receipt className="text-center">
+            <div className="text-[11px] font-black text-amber-300">{rewardReceipt.title}</div>
+            <h3 className="mt-0.5 text-lg font-black text-white">手に入れたもの</h3>
+          </div>
+          <div className="mt-3 max-h-[46vh] space-y-1.5 overflow-y-auto">
+            {rewardReceipt.rewards.map((reward,idx)=><div key={idx} data-reward-receipt-row className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white">{giftRewardText(reward)}</div>)}
+          </div>
+          {rewardReceipt.count>1&&<div className="mt-2 text-center text-[10px] font-bold text-slate-400">{rewardReceipt.count}件をまとめて受け取りました</div>}
+          <div className="mt-3"><ModalCloseButton onClick={()=>setRewardReceipt(null)}/></div>
         </ModalFrame>
       )}
       {confirmRequest&&<ConfirmSheet title={confirmRequest.title} message={confirmRequest.message||''} confirmLabel={confirmRequest.confirmLabel||'OK'} danger={!!confirmRequest.danger} onConfirm={()=>answerConfirm(true)} onCancel={()=>answerConfirm(false)}/>}

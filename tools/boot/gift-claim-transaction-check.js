@@ -25,7 +25,7 @@ let failed = 0;
 const check = (label, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${label}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 const source = readAppSource();
-const from = source.indexOf('const claimGiftIds = async (ids) => {');
+const from = source.indexOf('const claimGiftIds = async (ids, {');
 if (from < 0) { console.log('NG: claimGiftIds が見つかりません'); process.exit(1); }
 // 関数の終わり。giftClaimingRef を戻す finally が最後にあるので、そこまでを本体とする
 const endMark = 'giftClaimingRef.current = false; }';
