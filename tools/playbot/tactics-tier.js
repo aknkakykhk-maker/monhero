@@ -83,7 +83,14 @@ const meanWave = {};
 for (const d of diffs) meanWave[d] = avg(runs.filter((r) => r.difficulty === d).map(reach));
 
 // その回に戦った子(ダメージの記録がある子 + 勇者モン + 供モン)
-const membersOf = (r) => [...new Set([r.hero, ...(r.allies || []), ...Object.keys(r.dmg || {})].filter(Boolean))];
+// 戦った顔ぶれ。r.allies(選んだつもりの供モン)は、2026-10-10 まで供モン選びの不具合で実際と違う回があった(209回中57回。アリーナくん)。
+// 盤面から読んだ r.alliesSeen を先に使い、無い回は dmg・use の名前(盤面から読むので正しい)を使う。どちらも無いときだけ r.allies
+const membersOf = (r) => {
+  const seen = Array.isArray(r.alliesSeen) ? r.alliesSeen : null;
+  const board = [...Object.keys(r.dmg || {}), ...Object.keys(r.use || {})];
+  const allies = seen || (board.length ? board : (r.allies || []));
+  return [...new Set([r.hero, ...allies].filter(Boolean))];
+};
 // その回に、その子の EX を何回使ったか(exBy は 2026-10-09 から。古い回は EX の名前で数える)
 const exCountIn = (r, m) => {
   if (r.exBy) return r.exBy[m.name] || 0;
