@@ -444,6 +444,8 @@ const rhythmMirrorNote = note => {
   if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:RHYTHM_MIRROR_LAST_LANE-Number(point.lane)}:point);
   // 横フリックの向きも左右を入れ替える(2026-09-26)
   if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
+  // 空中のスライドの手の色(左=水色・右=ピンク)も左右を入れ替える(2026-10-10)。hand を書いたノーツ(空中ノーツの譜面)だけに効く
+  if(note.hand==='L')next.hand='R';else if(note.hand==='R')next.hand='L';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
     if(!point||typeof point!=='object')return point;
     const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;
