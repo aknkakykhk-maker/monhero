@@ -1197,6 +1197,11 @@ const rhythmScrollTimeAt=s=>{
   while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].s<y)lo=mid;else hi=mid-1;}
   const p=points[lo];return p.m>0?p.t+(y-p.s)/p.m:(lo+1<points.length?points[lo+1].t:Infinity);
 };
+// 空中のノーツの手ごたえ(試作・2026-10-10・社長「見た目にもっと力いれてほしい」)。色は "r,g,b" の文字列。
+// ピンセットくんの色の案で差し替えるのはここだけ(core=芯の白っぽい光・main=金・accent=差し色の水色)
+const RHYTHM_SKY_FX={core:'255,251,235',main:'252,211,77',accent:'125,211,252'};
+// 取ったときの弾け方の長さ(ms)。地上(RHYTHM_HIT_EFFECT_MS.NORMAL=340)より長く、ふわっと残す
+const RHYTHM_SKY_HIT_MS=560;
 const RHYTHM_SKY_INPUT={active:false};
 // 空中の段の色(試作): 空中の面・空中の判定ライン・柱が使う。空中のノーツの見た目の案(localStorage 'mh_sky_tap_style_proto')ごとに変えられる。
 // 今あるノーツの色(水色・緑・紫・ピンク・オレンジ・黄緑・金のモンスターノーツ)とかぶらない色を選ぶこと
@@ -2385,6 +2390,34 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // フルコンボ等を達成して曲を終えたときの、リザルトへ行く前のお祝い演出で鳴らす1回だけの
   // 合成音。本物の掛け声(音声ファイル)は用意していないため、上昇アルペジオで代える。
   // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
+  // 空中のノーツを取ったとき、ふだんのタップ音に重ねる「きらっ」(試作・2026-10-10)。高い2音を少しずらして鳴らし、
+  // 小さく上がる音を添える。地上の音は変えない。MISS では鳴らさない。設定(音量・ON/OFF・全体ミュート)はタップ音と同じものを読む
+  const playSky=(judgment='MARVELOUS')=>{
+    if(judgment==='MISS')return false;
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,volume=settings.volume/100*voiceOf(settings,judgment).gain;
+    const tone=(type,freq,toFreq,start,sustain,peak)=>{
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type=type;
+      oscillator.frequency.setValueAtTime(freq,start);
+      if(toFreq&&toFreq!==freq)oscillator.frequency.exponentialRampToValueAtTime(toFreq,start+Math.min(.05,sustain*.5));
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.004);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      oscillator.connect(gain);gain.connect(output(audio));
+      oscillator.start(start);oscillator.stop(start+sustain+.02);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    };
+    // E7 と B7 のきらめき(15msずらす)+ G6→D7 へ小さく上がる音
+    tone('sine',2637.02,0,now,.16,.022);
+    tone('sine',3951.07,0,now+.015,.12,.015);
+    tone('triangle',1567.98,2349.32,now,.07,.016);
+    return true;
+  };
   const playFullCombo=()=>{
     const settings=readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
@@ -2440,7 +2473,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,prepare,play,playClear,playFlick,playMonster,playSky,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -27703,7 +27736,7 @@ const installRhythmGeometryStyles=()=>{
          元の見た目へ戻ってしまい、判定ラインへ光が10個ぶん residual として残り続ける。
          実機で「タップのとこがわけわかんないことになってる」と言われた原因がこれ(2026-09-05)。 */
     [data-rhythm-hit-layer]{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
-    [data-rhythm-hit-effect]{position:absolute;bottom:var(--mh-judgment-line-bottom,12%);left:var(--rhythm-hit-center,50%);
+    [data-rhythm-hit-effect]{position:absolute;bottom:calc(var(--mh-judgment-line-bottom,12%) + var(--rhythm-hit-lift,0%));left:var(--rhythm-hit-center,50%);
       width:var(--rhythm-hit-width,12%);height:0;pointer-events:none;
       transform:translateX(-50%)}
     [data-rhythm-hit-effect]>i,[data-rhythm-hit-effect]>b,[data-rhythm-hit-effect]>u{
@@ -28266,16 +28299,17 @@ const rhythmRestartAnimations=entries=>{
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
 // flick … フリックを取ったときの払った向き('up'|'left'|'right')。炎の筋を飛ばす。それ以外は ''
 // finish … ホールド・スライドを押し切ったとき。光の柱を高く・粒を遠くまで・光を少し幅広にする(2026-09-27)
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick='',finish=false})=>{
+// sky … 空中のノーツ(試作)。空中の判定ラインの上で、地上とは形も色も違う弾け方にする
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick='',finish=false,sky=false})=>{
   // 検証用に WebGL で描いているときは、同じ光をノーツの canvas へ描く(RHYTHM_CANVAS_RENDERER の「叩いたときの光」)。
   // DOM の部品には触らないので、返すもの(流し直す印)も無い
-  if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){
+  if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&(RHYTHM_CANVAS_RENDERER.hitsFor(area)||(sky&&!monster&&RHYTHM_CANVAS_RENDERER.skyHitsFor(area)))){
     const big=!!monster,rainbow=!big&&precise&&judgment==='MARVELOUS';
     RHYTHM_CANVAS_RENDERER.pushHit({
       center:Math.max(0,Math.min(1,Number(centerRatio)||.5)),
       width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:(finish?1.3:1.15)),
       color:big?'#fde047':rhythmHitEffectColor(judgment),judgment:big?'':String(judgment||''),
-      precise:rainbow,big,sparkScale:big?2.1:(finish?1.6:(rainbow?1.45:1)),flick:big?'':String(flick||''),finish:!big&&!!finish,
+      precise:rainbow,big,sparkScale:big?2.1:(finish?1.6:(rainbow?1.45:1)),flick:big?'':String(flick||''),finish:!big&&!!finish,sky:!!sky&&!big,
     });
     return null;
   }
@@ -28287,7 +28321,9 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   const width=Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(monster?1.5:(finish?1.3:1.15));
   item.style.setProperty('--rhythm-hit-center',`${(Math.max(0,Math.min(1,Number(centerRatio)||.5))*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
-  item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
+  item.style.setProperty('--rhythm-hit-color',monster?'#fde047':(sky?`rgb(${RHYTHM_SKY_FX.main})`:rhythmHitEffectColor(judgment)));
+  // 空中のノーツ(試作)は、空中の判定ラインの高さで弾ける(DOM の部品で描く端末向け。形は地上と同じで、色と高さだけ変える)
+  item.style.setProperty('--rhythm-hit-lift',sky&&!monster?`${(RHYTHM_SKY_LIFT_RATIO*100).toFixed(2)}%`:'0%');
   // MARVELOUSだけ、はじける粒を1つずつ違う色にして虹にする(2026-09-12)。
   // 単色のまま虹に見せる手が無いので、粒そのものの色をCSS変数で配る。
   // ★モンスターノーツは金色を優先する(そちらが特別扱いなので、虹で上書きしない)
@@ -30021,7 +30057,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const num=re=>{const m=str.match(re);return m?Number(m[1])/(m[2]?100:1):1;};
     const f=[num(/brightness\(([\d.]+)(%)?\)/),num(/saturate\(([\d.]+)(%)?\)/)];
     return f[0]===1&&f[1]===1?null:f;};
-  let hitArea=null,hitNext=0;
+  // skyHitArea … 空中のノーツの弾け方(試作)だけは、2D の canvas でもここで描く(地上の光は WebGL のときだけ)
+  let hitArea=null,hitNext=0,skyHitArea=null;
   const hitSlots=new Array(RHYTHM_HIT_EFFECT_POOL).fill(null),hitFilters=new Map();
   const readHitFilters=area=>{
     hitFilters.clear();
@@ -30140,6 +30177,64 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arc(x+r,y+r,r,Math.PI,Math.PI*1.5);
     ctx.lineTo(x+w-r,y);ctx.arc(x+w-r,y+r,r,Math.PI*1.5,Math.PI*2);ctx.lineTo(x+w,y+h);ctx.closePath();
   };
+  // 空中のノーツを取ったときの弾け方(試作)。地上の「縦の光の柱+閃光+粒」とは形を変え、
+  // 空中の判定ラインの上で「菱形の輪が広がる・十字の星がきらっと光る・かけらが上へ舞い上がる」。
+  // p は 0〜1 の進み。位置は空中の判定ライン(判定ラインの下端 hitY からプレイエリアの高さの RHYTHM_SKY_LIFT_RATIO 上)。
+  // 横の位置は、判定ラインで測った中心を空中の線の奥行きへ寄せる(道は奥ほど狭い)
+  const drawSkyHit=(h,p,hitY)=>{
+    const C=RHYTHM_SKY_FX,Y=hitY-cssH*RHYTHM_SKY_LIFT_RATIO;
+    const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
+    const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
+    const strong=h.judgment==='MARVELOUS'||h.judgment==='EXCELLENT'||h.precise,power=strong?1:(h.judgment==='GREAT'?.78:.55);
+    const fade=1-p,grow=1-Math.pow(1-p,3);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    // ふわっとした光のかたまり(放射状のグラデーションが無い WebGL でも同じに出るよう、同心円を重ねる)
+    for(let i=3;i>=1;i--){
+      ctx.globalAlpha=Math.max(0,fade*.13*(4-i)*power);ctx.fillStyle=`rgb(${C.main})`;
+      ctx.beginPath();ctx.arc(cx,Y,W*.3*i*(.55+grow*.7),0,Math.PI*2);ctx.fill();
+    }
+    // 広がる菱形の輪(2重。外は差し色で少し遅れて広がる)
+    const diamond=(R,flat)=>{ctx.beginPath();ctx.moveTo(cx,Y-R*flat);ctx.lineTo(cx+R,Y);ctx.lineTo(cx,Y+R*flat);ctx.lineTo(cx-R,Y);ctx.closePath();ctx.stroke();};
+    ctx.globalAlpha=Math.max(0,fade*power);ctx.lineWidth=1+3*fade;ctx.strokeStyle=`rgb(${C.core})`;diamond(W*(.22+grow*.78),.62);
+    const lag=Math.max(0,(p-.12)/.88),lagGrow=1-Math.pow(1-lag,3);
+    if(lag>0){ctx.globalAlpha=Math.max(0,(1-lag)*.8*power);ctx.lineWidth=1+2*(1-lag);ctx.strokeStyle=`rgb(${C.accent})`;diamond(W*(.18+lagGrow*1.15),.5);}
+    // 十字の星(最初の4割だけ。横に長く、縦は上へ長めに伸ばして「空中」の向きを出す)
+    const q=Math.min(1,p/.4);
+    if(q<1){
+      const a=(1-q)*power,len=W*(.5+q*.75),up=W*(.35+q*.9),th=2.6*(1-q)+.8;
+      ctx.globalAlpha=a;ctx.fillStyle=`rgb(${C.core})`;
+      ctx.beginPath();ctx.moveTo(cx-len,Y);ctx.lineTo(cx,Y-th);ctx.lineTo(cx+len,Y);ctx.lineTo(cx,Y+th);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(cx,Y-up);ctx.lineTo(cx+th,Y);ctx.lineTo(cx,Y+up*.45);ctx.lineTo(cx-th,Y);ctx.closePath();ctx.fill();
+    }
+    // 上へ舞い上がるかけら(小さな菱形が6つ。外へ開きながら上がり、ゆっくり落ちる)
+    for(let i=0;i<6;i++){
+      const ang=-Math.PI/2+(i-2.5)*.42,dist=W*(.18+grow*(.85+(i%2)*.25)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*.9+p*p*W*.25;
+      const r=Math.max(.6,(3.4-(i%3)*.6)*(1-p*.75));
+      ctx.globalAlpha=Math.max(0,fade*power);ctx.fillStyle=i%2?`rgb(${C.main})`:`rgb(${C.core})`;
+      ctx.beginPath();ctx.moveTo(x,y-r*1.6);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r*1.6);ctx.lineTo(x-r,y);ctx.closePath();ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  };
+  // 空中のノーツが空中の判定ラインへ近づくほど強まる光(試作)。drawSkyTap(板そのもの)の手前に敷く。
+  // 近さ c は、ノーツの中心から空中の線までの距離を、プレイエリアの高さの42%で割ったもの(遠いと0・線の上で1)。
+  // ふわっとした光は c*c で明るくなり、細い輪は外から板へ向かって縮みながら濃くなる
+  const drawSkyGlow=(hd,opts)=>{
+    if(!hd||effect==='MINIMAL'||lightweight)return;
+    const C=RHYTHM_SKY_FX,line=rhythmSkyLineRatio()*cssH,range=cssH*.42,dist=line-hd.cy;
+    if(!(dist>-Math.max(8,hd.h)&&dist<range))return;
+    const c=Math.max(0,Math.min(1,1-dist/range)),k=c*c,W=Math.max(18,hd.w*sizeScale*1.5),alpha=Number.isFinite(opts?.alpha)?opts.alpha:1;
+    ctx.save();
+    glowBegin();
+    for(let i=3;i>=1;i--){
+      ctx.globalAlpha=alpha*k*.11*(4-i);ctx.fillStyle=`rgb(${C.main})`;
+      ctx.beginPath();ctx.arc(hd.cx,hd.cy,W*(.3+.22*i)*(.75+.35*k),0,Math.PI*2);ctx.fill();
+    }
+    const r=W*(.6+1.1*(1-k));
+    ctx.globalAlpha=alpha*Math.min(1,c*1.3)*.85;ctx.lineWidth=1+2.2*k;ctx.strokeStyle=`rgb(${C.core})`;
+    ctx.beginPath();ctx.arc(hd.cx,hd.cy,r,0,Math.PI*2);ctx.stroke();
+    glowEnd();
+    ctx.restore();
+  };
   const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
     // フリックの炎の羽は、ほかの光より長く残る(0.46秒)。ほかの光は元の長さで終える
@@ -30193,7 +30288,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
-    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
+    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
@@ -30248,28 +30343,30 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;
     },
-    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;hitSlots.fill(null);},
+    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;skyHitArea=null;hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
     enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
     hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},
+    enableSkyHits(area){skyHitArea=area&&ctx?area:null;},
+    skyHitsFor(area){return !!skyHitArea&&!!ctx&&area===skyHitArea;},
     // DOM の部品と同じく10枠を順に使い回す(11個目は1個目を切って上書きする)。演出量「最小」・軽量モードでは出さない
     pushHit(hit){
-      if(!hitArea||effect==='MINIMAL'||lightweight)return;
+      if(!(hit.sky?(hitArea||skyHitArea):hitArea)||effect==='MINIMAL'||lightweight)return;
       const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
       const plume=!hit.big&&!!hit.flick&&HIT_PLUME_TILT[hit.flick]!==undefined;
       hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
-        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume,seed:plume?(Math.random()*4294967296)>>>0:0};
+        ms:hit.sky?RHYTHM_SKY_HIT_MS:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume:plume&&!hit.sky,seed:plume&&!hit.sky?(Math.random()*4294967296)>>>0:0};
       hitNext=(hitNext+1)%hitSlots.length;
     },
     // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
     drawHits(hitY){
-      if(!ctx||!hitArea||!Number.isFinite(hitY))return 0;
+      if(!ctx||!(hitArea||skyHitArea)||!Number.isFinite(hitY))return 0;
       const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
       for(let slot=0;slot<hitSlots.length;slot++){
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
         if(elapsed>=end){hitSlots[slot]=null;continue;}
-        touch();glowBegin();drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
+        touch();glowBegin();if(hit.sky)drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
@@ -30366,7 +30463,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       if(!(geo.skyShadow&&!geo.slide&&o.pop===null))drawHead(note,geo,headOpts);
       // 空中の段(試作): 空中の粒の見た目(案を比べるため4通り。localStorage 'mh_sky_tap_style_proto' で選ぶ・既定は gold)
-      if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null)drawSkyTap(geo.head,o);
+      if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null){drawSkyGlow(geo.head,o);drawSkyTap(geo.head,o);}
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
     drawFace(bitmap,cx,cy,size,alpha=1){
