@@ -29869,10 +29869,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // 遠くでは小さく暗く、近づくと大きく明るく(大きさは depthScale で決まる。明るさ・不透明度は近さ pp で上げる)。柱は参考に無いので出さない。床の影は drawSkyShadowHead
       const red=style==='glass_red';
       const P=red
-        ?{edge:'127,29,29',mid:'254,226,226',top1:'252,165,165',side:'153,27,27',out:'69,10,10',glow:'248,113,113'}
+        ?{edge:'196,32,32',mid:'255,232,232',top1:'252,165,165',side:'185,28,28',out:'69,10,10',glow:'255,120,120'}
         :{edge:'76,69,112',mid:'250,250,255',top1:'196,181,253',side:'100,116,139',out:'30,27,75',glow:'221,214,254'};
       const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
-      const al=Math.min(.97,.8+.17*pp),br=.88+.12*near;
+      const al=Math.min(.98,.86+.12*pp),br=.9+.1*near;
       // 近さの見せ方は参考どおり「奥は暗く・手前は明るい」(近づく輪は外した)。奥(near=0)は全体の濃さを .78 倍まで落とし、手前(near=1)で 1 倍にする
       ctx.globalAlpha=Math.min(1,opts.alpha*(.78+.22*near));
       // オンプくんの測定(参考動画): 厚みは地上のタップと同じ・幅は地上の0.5〜0.9倍・明るさは地上の0.85〜0.9倍
@@ -29882,7 +29882,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const top=[[fx,fy],[fx+fw,fy],[fx+fw+sgn*sd,fy-th],[fx+sgn*sd,fy-th]];
       const side=sgn>0?[[fx+fw,fy],[fx+fw+sd,fy-th],[fx+fw+sd,fy-th+fh],[fx+fw,fy+fh]]:[[fx,fy],[fx-sd,fy-th],[fx-sd,fy-th+fh],[fx,fy+fh]];
       const hull=[[Math.min(fx,fx+sgn*sd,fx-(sgn<0?sd:0)),fy-th],[Math.max(fx+fw,fx+fw+(sgn>0?sd:0)),fy-th],[Math.max(fx+fw,fx+fw+(sgn>0?sd:0)),fy+fh],[Math.min(fx,fx-(sgn<0?sd:0)),fy+fh]];
-      quad(hull,null,`rgba(${P.glow},${(.3+.2*pp).toFixed(2)})`,4+2*pp);
+      quad(hull,null,`rgba(${P.glow},${(.45+.25*pp).toFixed(2)})`,5+2*pp);
       quad(side,`rgba(${P.side},${(al*br).toFixed(2)})`,`rgba(${P.out},.85)`,1.2);
       const tg=ctx.createLinearGradient(0,fy-th,0,fy);tg.addColorStop(0,`rgba(255,255,255,${(al*br).toFixed(2)})`);
       tg.addColorStop(1,`rgba(${P.top1},${(al*.9).toFixed(2)})`);
@@ -29890,7 +29890,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const fg=ctx.createLinearGradient(fx,0,fx+fw,0);
       fg.addColorStop(0,`rgba(${P.edge},${Math.min(1,al+.1).toFixed(2)})`);fg.addColorStop(.2,`rgba(${P.mid},${(al*.85).toFixed(2)})`);fg.addColorStop(.5,`rgba(255,255,255,${(al*.8).toFixed(2)})`);fg.addColorStop(.8,`rgba(${P.mid},${(al*.85).toFixed(2)})`);fg.addColorStop(1,`rgba(${P.edge},${Math.min(1,al+.1).toFixed(2)})`);
       ctx.fillStyle=fg;ctx.fillRect(fx,fy,fw,fh);
-      ctx.lineWidth=2;ctx.strokeStyle=`rgba(${P.out},.8)`;ctx.strokeRect(fx-1,fy-1,fw+2,fh+2);ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.92)';ctx.strokeRect(fx,fy,fw,fh);
+      ctx.lineWidth=2;ctx.strokeStyle=`rgba(${P.out},.8)`;ctx.strokeRect(fx-1,fy-1,fw+2,fh+2);ctx.lineWidth=1.4;ctx.strokeStyle='rgba(255,255,255,.98)';ctx.strokeRect(fx,fy,fw,fh);
       ctx.fillStyle=`rgba(${P.out},.32)`;ctx.fillRect(fx,fy+fh-Math.max(1.5,fh*.2),fw,Math.max(1.5,fh*.2));
     }else if(style==='beam'||style==='ruby'||style==='cube'){
       // 空中専用の案M〜O(2026-10-10 テンポ「空いている色は無い。色でなく形で分ける」。参考動画: 空中は厚みのある角材で側面が見え、真下の床に影が付く)。
@@ -30059,20 +30059,25 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyShadowHead=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
-    ctx.globalAlpha=opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
     const st=skyTapStyle(),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
-    if(['glass','beam','ruby','cube','glass_silver','glass_red'].includes(st)){
-      // 床に落ちる灰色のぼやけた影(参考動画「浮いていると分かるいちばん強い手がかり」)。外へ広がる3重の菱形でぼかしを出し、近づくほど濃くする
-      const dk=.6+.55*near;
-      [[1.9,.12],[1.45,.2],[1,.34]].forEach(([k,al])=>{ctx.fillStyle=`rgba(30,41,59,${Math.min(.9,al*dk).toFixed(3)})`;ctx.beginPath();ctx.moveTo(sh.cx-w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy-h*k);ctx.lineTo(sh.cx+w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy+h*k);ctx.closePath();ctx.fill();});
+    const glassy=['glass','beam','ruby','cube','glass_silver','glass_red'].includes(st);
+    ctx.globalAlpha=glassy?opts.alpha:opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
+    if(glassy){
+      // 床に落ちる影(参考動画「浮いていると分かるいちばん強い手がかり」)。2026-10-10 テンポ「横画面の動画で影が見えない」→ 板の幅くらいの暗い楕円を真下に置き、
+      // 手前へ来るほど小さく濃く(濃さは真ん中で .6 前後)。外へ広がる3重の楕円でぼかしを出す。全体を .6 に落としていたのをやめて、不透明度はノーツと同じにした
+      const rx=Math.max(8,hd.w*sizeScale*.5)*(1.15-.3*near),ry=Math.max(2.5,rx*.32);
+      [[1.7,.14],[1.3,.24],[1,.3+.2*near]].forEach(([k,al])=>{
+        ctx.fillStyle=`rgba(8,10,30,${al.toFixed(3)})`;ctx.beginPath();
+        for(let i=0;i<16;i++){const t=i/16*Math.PI*2,x=sh.cx+Math.cos(t)*rx*k,y=sh.cy+Math.sin(t)*ry*k;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+        ctx.closePath();ctx.fill();});
     }else{
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
     }
-    if(['beam','ruby','cube'].includes(st)){
-      // 影とノーツをつなぐ柱(2026-10-10 テンポ「柱を戻す。粒より目立たない細さと薄さで。近づくほど濃くはっきり」)。上(ノーツ側)が濃く、影へ向かって薄くなる細い線
-      const g=ctx.createLinearGradient(0,hd.cy,0,sh.cy),acc=skyAccentRgb();
-      g.addColorStop(0,`rgba(${acc},${(.3+.4*near).toFixed(2)})`);g.addColorStop(1,`rgba(${acc},${(.1+.2*near).toFixed(2)})`);
-      ctx.strokeStyle=g;ctx.lineWidth=1+1.1*near;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(hd.cx,hd.cy);ctx.lineTo(sh.cx,sh.cy);ctx.stroke();ctx.lineCap='butt';
+    if(['beam','ruby','cube','glass_silver','glass_red'].includes(st)){
+      // 影とノーツをつなぐ細い縦の線(テンポ「影からノーツへ細い縦の線を1本。白〜薄紫・薄く」)。ノーツ側が濃く、影へ向かって薄い。近づくほど濃い
+      const g=ctx.createLinearGradient(0,hd.cy,0,sh.cy),acc=st.startsWith('glass_')?'221,214,254':skyAccentRgb();
+      g.addColorStop(0,`rgba(${acc},${(.3+.4*near).toFixed(2)})`);g.addColorStop(1,`rgba(${acc},${(.12+.2*near).toFixed(2)})`);
+      ctx.strokeStyle=g;ctx.lineWidth=1+1*near;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(hd.cx,hd.cy);ctx.lineTo(sh.cx,sh.cy);ctx.stroke();ctx.lineCap='butt';
     }else{ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();}
     ctx.globalAlpha=1;
   };
