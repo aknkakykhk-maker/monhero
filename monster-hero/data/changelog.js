@@ -35,6 +35,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-10 統括部長経由の依頼(mp4とジャケット・DECO*27)。歯ごたえは激しさの中間(chartIntensity:'strong')と社長が決めた
+    date: "2026-10-10 12:14", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Journey」を追加しました', status:'new',
+    image: 'images/song-art/journey.jpg?v=2285e26648c0',
+    items:[
+      'モンヒロビートに DECO*27 さんの「Journey」（2分44秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.36 です。',
+      'ノーツ数は 233 ／ 287 ／ 398 ／ 627 ／ 731 です。',
+    ],
+    assistantNotice: { id:'update_notice_journey_v1', type:'content' },
+  },
+  {
     date: "2026-10-10 11:20", type:'update', group:'rhythm', title:'モンヒロビートのマルチで、演奏のあとの結果画面でも縦と横を切り替えられるようになりました', status:'new',
     items:[
       'マルチの演奏のあとの結果画面にも「🔄」のボタンを付けました。自分の結果の画面では下の「みんなの結果を見る」の左、みんなの結果の画面では上の曲名の右にあります。',
