@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 27e5a809b3aefcc5
+// generated-sha256: b73c6cb421a9089d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 11:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21462,7 +21462,8 @@ scheduleTick();};
 {/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
-<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><div className={multi||raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2"}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></main>}
+<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2")}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、
@@ -42199,6 +42200,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               ))}
             </div>
           </div>
+          {/* 縦⇄横の切り替え(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
+              結果画面には見出しが無いので、いちばん上の帯の右(部屋と同じ右上)へ置く。向きは RHYTHM_VIEW_ROTATION が画面をまたいで持つので、
+              部屋で横 → 演奏 → 結果でも横のまま。結果で変えた向きも、部屋へ戻ればそのまま */}
+          <div data-rhythm-multi-result-orientation className="shrink-0 self-start"><RhythmOrientationButton/></div>
           <div className="flex w-16 shrink-0 flex-col items-center">
             <b data-rhythm-multi-team-rank className="text-5xl font-black leading-none text-amber-300 drop-shadow">{team.waiting ? '…' : team.rank}</b>
             <small className="text-[8px] font-black tracking-widest text-slate-400">SCORE RANK</small>
@@ -44249,6 +44254,10 @@ function MonsterHeroGame() {
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
   const [modeInfoId, setModeInfoId] = useState(null); // 「？」で開くモード説明
+  // モンヒロバトルの入口で開く、モードをまたいだランキング(null=閉じている / 'breeder' / 'bond' / 'power')。
+  // 2026-10-10 社長指示「ここのランキングの中は、ブリーダーレベルと絆レベルと総合を見れるように」。
+  // モードごとの記録は、モードの札・難易度の札の「ランキング」から見る(今までどおり)
+  const [systemRankTab, setSystemRankTab] = useState(null);
   const [profileBattleMode, setProfileBattleMode] = useState(null); // プロフィールのバトル記録詳細
   // 遊んだ時間。数えるのはrefだけにして、画面の描き直しを起こさない
   // (15秒ごとにstateを書き換えると、バトル中や音ゲー中に毎回描き直しが走ってしまう)。
@@ -44569,6 +44578,9 @@ function MonsterHeroGame() {
   const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
   const battleTutorialGuideCheckedRef = useRef(false);
+  // 「バトルのれんしゅうの案内」を出すかどうかの判定が1回終わったか。終わるまで、時刻で流れるお話(ハロウィン・ナイトなど)はHOMEで流し始めない
+  // (2026-10-10・改善部の指摘G8。はじめての人に、れんしゅうの案内とお話が同時に重なって出ていた)。保存はしない
+  const [battleGuideChecked, setBattleGuideChecked] = useState(false);
   const highScoresRef = useRef({});
   useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
@@ -48694,8 +48706,11 @@ function MonsterHeroGame() {
   // 起動の途中やタイトルの上に重ねない
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
+    // ★バトルのれんしゅうの案内の判定が終わり、れんしゅうの最中でないことも見る。
+    //   はじめての人は「れんしゅうの案内 →(見る/見ない)→ れんしゅう → HOME → お話」の順になり、重ならない(2026-10-10・G8)
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
-      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
+      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay
+      && battleGuideChecked && battleTutorialStep == null)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
@@ -48706,7 +48721,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
   // タクティクスバトルの導入も同じ置き方で、HOMEで1度だけ流す。
   // ★ほかの会話が出ているあいだは待つ(重ねて出すと、どちらも読めない)
   useEffect(() => {
@@ -53930,11 +53945,14 @@ function MonsterHeroGame() {
         storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
         storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false),
       ]);
+      // 村案内をまだ見ていない(これから流れる)ときは、案内の判定を先に延ばす。お話もその間は待つ(村案内のあと、ここへ戻って判定する)
       if (tourSeen !== true) { battleTutorialGuideCheckedRef.current = false; return; }
-      if (cancelled || seen === true || shown === true) return;
+      if (cancelled || seen === true || shown === true) { setBattleGuideChecked(true); return; }
       // 表示を決めた時点で記録し、「今は見ない」や再読込でも繰り返さない。
       await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false);
+      // 案内を出すと決めたのと同じタイミングで「判定が終わった」にする(案内が先に出て、お話はそのあとになる)
       if (!cancelled) { setTutorialKind('battleGuide'); setTutorialStep(0); }
+      setBattleGuideChecked(true);
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
@@ -53990,7 +54008,15 @@ function MonsterHeroGame() {
     setModeSelectTab('mode');
     setGameState('BATTLE_MODE_SELECT');
   };
-  const openBattleSystemSelect = () => { setModeSelectTab('mode'); setGameState('BATTLE_SYSTEM_SELECT'); };
+  // 入口のランキングを開く・タブを切り替える。モードえらび画面のタブを押したときと同じ取得をする
+  const openSystemRank = (key) => {
+    setSystemRankTab(key);
+    addAssistantBond('ranking');
+    if (key === 'bond') setBondRankMonFilter('all');
+    if (key === 'power') setPowerRankMonFilter('all');
+    loadRankings(null, true, false, key === 'power' ? 'bond' : key);
+  };
+  const openBattleSystemSelect = () => { setModeSelectTab('mode'); setSystemRankTab(null); setGameState('BATTLE_SYSTEM_SELECT'); };
 
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
@@ -61057,15 +61083,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen data-battle-system-select className="mhms-stage relative flex-1 flex flex-col h-full min-h-0 overflow-hidden text-white">
             <RhythmModeSelectStage notes={false}/>
             <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
-              <button aria-label="戻る" disabled={!!battleTutorial} onClick={returnToHome} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>
+              <button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>{if(systemRankTab){setSystemRankTab(null);return;}returnToHome();}} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>
               <div className="min-w-0 flex-1 leading-none">
                 <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONHERO BATTLE ・ SELECT</small>
                 <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モンヒロバトル</b>
-                <small className="block truncate text-[9px] font-black text-slate-300/90">どのバトルで遊ぶかを選びます</small>
+                <small className="block truncate text-[9px] font-black text-slate-300/90">{systemRankTab?'ランキング(ブリーダーLv・絆Lv・総合力)':'どのバトルで遊ぶかを選びます'}</small>
               </div>
             </header>
             {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下に札。横画面: 左に立ち絵、右に札 */}
-            <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
+            {systemRankTab&&(
+              <div data-battle-system-rank={systemRankTab} className="relative z-[1] mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col px-3 pt-2 pb-1">
+                {/* モードで分かれない3つ。中身・取得はモードえらび画面のタブと同じもの(総合力は絆Lvと同じ取得 'bond' を並べ替えたもの) */}
+                <div role="tablist" aria-label="ランキングの種類" className="mhbs-tabs grid-cols-3 mb-2 shrink-0">
+                  {[['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(
+                    <button key={key} role="tab" aria-selected={systemRankTab===key} onClick={()=>openSystemRank(key)} className={`mhbs-tab text-[11px] active:scale-95 ${systemRankTab===key?'on':''}`}><span aria-hidden="true" className="mr-0.5">🏆</span>{label}</button>
+                  ))}
+                </div>
+                <div className="shrink-0 w-full mb-2"><AssistantBubble scene="ranking" compact/></div>
+                {systemRankTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col">{renderBreederRankingBody()}</div>}
+                {systemRankTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col">{renderBondRankingBody()}</div>}
+                {systemRankTab==='power'&&<div className="flex-1 min-h-0 flex flex-col">{renderPowerRankingBody()}</div>}
+                <p className="shrink-0 pt-1.5 text-center text-[10px] font-bold text-slate-300/80">モードごとの記録は、それぞれのモードの「ランキング」から見られます</p>
+              </div>
+            )}
+            {!systemRankTab&&<div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
               <ModeSelectAssistantPanel assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist}/>
               <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
                 {!assistShown&&battleSelectAssistant&&<ModeSelectAssistToggles assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist} cls="justify-end" withLabel/>}
@@ -61111,13 +61152,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 {/* 下の小さいボタンの列(モンヒロビートのモードえらびと同じ並び)。ランキングと、ヘルプへの近道 */}
                 <div data-battle-system-shortcuts className="flex gap-2 pt-1">
-                  <button data-battle-system-ranking type="button" disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(BATTLE_MODE_CHALLENGE,difficulty,'BATTLE_SYSTEM_SELECT')}
+                  <button data-battle-system-ranking type="button" disabled={!!battleTutorial} onClick={()=>openSystemRank('breeder')}
                     className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-emerald-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">🏆</span><b className="text-[11px] font-black">ランキング</b></button>
                   <button data-battle-system-help type="button" disabled={!!battleTutorial} onClick={()=>openHelp()}
                     className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-amber-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">📖</span><b className="text-[11px] font-black">ヘルプ</b></button>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>);
         })()}
 

@@ -140,15 +140,28 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
   await s.inspect();
   // 勇者モン・供モン・距離・アシストカード。勇者モンは毎回ちがう子から選ぶ
   // --hero で指定があれば、その子たちを勇者モン・供モンの順に先に選ぶ(名前は本体のデータから引く)
+  // PLAYBOT_TACTICS_ALLIES=ゴースト,モノリス,ハム … 供モンをこの3体に固定する(名前でも id でも。2026-10-10 社長の「4体パーティのおすすめ」を実戦で確かめるため)。
+  //   戦う前の編成で勇者モンの次にこの順で選び、WAVE の合間に加わる順もこの順にする(tactics-brain.js の供モン選び)
+  const allyWant = String(process.env.PLAYBOT_TACTICS_ALLIES || '').split(',').map((x) => x.trim()).filter(Boolean);
   const wantIds = String(process.env.PLAYBOT_HERO_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
-  await page.evaluate(([n, ids]) => {
+  const allyNames = await page.evaluate(([n, ids, allies]) => {
     window.__pbPick = n; window.__pbChange = 1;
     // eslint-disable-next-line no-undef
-    window.__pbWant = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ids.map((id) => ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name).filter(Boolean) : [];
-  }, [Math.floor(rand() * 6), wantIds]);
+    const all = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {};
+    const nameOf = (x) => (all[x] && all[x].name) || (Object.values(all).some((m) => m && m.name === x) ? x : null);
+    window.__pbWant = ids.map(nameOf).filter(Boolean);
+    const al = allies.map(nameOf).filter(Boolean);
+    if (al.length) window.__pbWant = [...window.__pbWant.slice(0, 1), ...al, ...window.__pbWant.slice(1).filter((x) => !al.includes(x))];
+    return al;
+  }, [Math.floor(rand() * 6), wantIds, allyWant]);
+  if (allyWant.length && ctx) {
+    ctx.mem.fixedAllies = allyNames;
+    ctx.log.note(`供モンを固定: ${allyNames.join('・')}${allyNames.length < allyWant.length ? `(読めなかった名前あり: ${allyWant.join(',')})` : ''}`);
+  }
   // --hero の指定が無ければ、覚え書き(tactics-knowledge.json)の成績から勇者モン・供モンの順を決める
   if (!wantIds.length && ctx) {
     const pref = brain.preferredOrder(stats.difficulty || '', rand, ctx.mem.roster);
+    if (allyNames.length) pref.order = [pref.order.filter((x) => !allyNames.includes(x))[0], ...allyNames];
     await page.evaluate((names) => { window.__pbWant = names; }, pref.order);
     ctx.log.note(`編成の順(覚え書き ${pref.knownRuns}回ぶんから): ${pref.order.join('・')}`);
   }
@@ -286,7 +299,17 @@ async function betweenWaves(s, ctx) {
     if (hidden) await s.wait(400);
     const list = await s.listButtons();
     const go = FORWARD.map((re) => list.find((x) => re.test(x.label))).find(Boolean);
-    const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label) && !avoid.has(b.label));
+    // ★タクティクスの外へ出るボタンは「えらぶ」の候補にしない(2026-10-10 ハカセくん: 合間から「みゅあに話しかける」を押して
+    //   助手の話題一覧(音ゲーの「近いノーツが並んでいるときは…」など)へ迷い込み、戻る→一覧を繰り返して 60 手で打ち切り)
+    const OFFTRACK = /話しかける|ヘルプ|説明|攻略|モンヒロビート|モンビー|ノーツ|演奏|音ゲー|図鑑|設定|ランキング|お知らせ|更新履歴|HOME|ホーム/;
+    const options = list.filter((b) => !BACKWARD.test(b.label) && !/^\(無名|^BUTTON$/.test(b.label) && !avoid.has(b.label) && !OFFTRACK.test(b.label));
+    // 迷い込んだ画面(タクティクスの合間ではない話題の一覧など)にいたら、まず閉じて戻る
+    const strayText = await s.page.evaluate(() => /近いノーツ|演奏が始まるまで|モンヒロビート/.test((document.body.innerText || '').replace(/\s+/g, ' ')));
+    if (strayText && !go) {
+      // 「戻る」は話題の一覧へ戻るだけのことがあるので、閉じる・× を先に探す
+      const close = list.find((x) => /^(閉じる|とじる|×|✕)$/.test(x.label)) || list.find((x) => /^(戻る|もどる)$/.test(x.label));
+      if (close) { await s.tap(close, 'WAVE の合間(迷い込んだ画面を閉じる)'); await s.wait(700); continue; }
+    }
     // 一覧に無い進むボタン(窓が出てくる演出の途中で、上に薄い層が重なっているとき)は、ボタンそのものを押す
     const direct = !go && await s.page.evaluate((sources) => {
       const res = sources.map((src) => new RegExp(src));
@@ -465,7 +488,9 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     b = await brain.readBoard(s);
     ctx.mem.recentDealt = ctx.mem.recentDealt || 0;
     // 全滅の手前なら、カードを置かずに緊急回復(押すとそのまま敵の番へ進む)
-    let emergency = brain.emergencyWhy(b);
+    // ★このターンに EX を使ったら緊急回復は押さない(2026-10-10 Expert W3: ヤオビクニの時間停止のあとに緊急回復を押し、
+    //   敵が動かずターンも進まないため 60 秒待って打ち切りになった。時間停止なら敵の攻撃も来ない)
+    let emergency = ctx.log.data.ex.length > exBefore ? '' : brain.emergencyWhy(b);
     // EX の演出のあいだは手札が一時的にどれも押せない。見誤らないよう、少し待って読み直してから決める
     if (emergency) { await s.wait(1500); b = await brain.readBoard(s); emergency = brain.emergencyWhy(b); }
     let picks = [];
