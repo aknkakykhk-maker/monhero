@@ -218,6 +218,16 @@ const HOW_TEXT = [
   '数えるのは、直したボット(勇者モン選び・EX の使い方を直したあと)で戦った回だけ。固有技・EX・勇者特性・間合いを使えた回の成績で見る(EX を一度も使えていない子は保留)。',
 ];
 const PROVISIONAL_TEXT = 'その難易度で5回未満のマスは「*」で、総合には数えない。5回以上のマスが2つ以上ない子は「暫定」、5回以上のマスが1つも無い子は「回数不足」(総合はまだ付けず、* のマスから出した仮の Tier を添える)。回数が増えると Tier は動きます。';
+// まだ Tier の数字に効いていない機能(社長 2026-10-10「機能的なものも全て把握した上で」)。一覧の正本は mechanics.md の
+// 「入っていない・一部」の節。ここで読んで、md と tier.json(→ ページ)の決め方の文へ同じものを足す
+const MISSING_MECHANICS = (() => {
+  try {
+    const t = fs.readFileSync(path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'mechanics.md'), 'utf8');
+    const sec = (t.split(/^## 入っていない・一部.*$/m)[1] || '').split(/^## /m)[0];
+    return [...sec.matchAll(/^\d+\. \*\*(.+?)\*\*/gm)].map((m) => m[1]);
+  } catch (e) { return []; }
+})();
+if (MISSING_MECHANICS.length) HOW_TEXT.push(`まだ入れていない・一部だけの機能(シミュレーターかボットに無く、Tier の数字に効いていないもの。効きの大きい順): ${MISSING_MECHANICS.join('・')}。機能の一覧は docs/playbot/reports/tier/mechanics.md。`);
 const tierOfScore = (sc) => (sc >= 0.45 ? 'S' : sc >= 0.15 ? 'A' : sc >= -0.15 ? 'B' : sc >= -0.45 ? 'C' : 'D');
 const overall = stats.map((s) => {
   const per = TIER_DIFFS.map((d) => ({ d, x: statsByDiff[d].find((y) => y.m.name === s.m.name) })).filter((v) => v.x && v.x.n);
