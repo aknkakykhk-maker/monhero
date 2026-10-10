@@ -711,9 +711,17 @@ async function chooseBetween(s, mem, log) {
     };
     // 供モンを固定したとき(PLAYBOT_TACTICS_ALLIES)は、その順に加える
     const fixed = (mem.fixedAllies || []).map((nm) => allyBtns.find((t) => t.split(/\s+/)[0] === nm)).find(Boolean);
-    const best = fixed || allyBtns.sort((a, z) => scoreAlly(z) - scoreAlly(a))[0];
+    // ★同じ合間でこの画面をもう一度読んだら、さっき選んだ子を押し直す(2026-10-10 ハカセくんの指摘: 1回目に選んだあと「最初の供モンか」が変わって
+    //   点数が入れ替わり、2回目に別の子を押していた。記録はハム・実際に加わったのはゴーレム、というずれが出ていた)
+    mem.allyPickAt = mem.allyPickAt || {};
+    const again = allyBtns.find((t) => t.split(/\s+/)[0] === mem.allyPickAt[log.data.waves.length]);
+    const best = again || fixed || allyBtns.sort((a, z) => scoreAlly(z) - scoreAlly(a))[0];
+    mem.allyPickAt[log.data.waves.length] = best.split(/\s+/)[0];
     log.note(`供モン: ${best.split(/\s+/)[0]}(総合力 ${best.match(/総合力\s*([\d,]+)/)[1]}・覚え書きの頭割り比 ${allyScore(best.split(/\s+/)[0]).toFixed(2)})`);
-    if (!log.data.build.allies.some((x) => x.wave === log.data.waves.length)) log.data.build.allies.push({ wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) });
+    // 同じ合間で押し直したときは、最後に押した子で書き換える
+    const allyEntry = { wave: log.data.waves.length, name: best.split(/\s+/)[0], power: num(best.match(/総合力\s*([\d,]+)/)[1]) };
+    const atW = log.data.build.allies.findIndex((x) => x.wave === log.data.waves.length);
+    if (atW >= 0) log.data.build.allies[atW] = allyEntry; else log.data.build.allies.push(allyEntry);
     mem.lastPicked = best.split(/\s+/)[0];
     return press(new RegExp(`^${best.split(/\s+/)[0]}\\s+総合力`), '供モン(総合力)');
   }
@@ -1027,6 +1035,8 @@ function rememberRun(L, stats) {
     at: new Date().toISOString().slice(0, 16), mode: L.meta.mode, difficulty: L.meta.difficulty, hero: L.build.hero, pool: L.build.pool,
     allies: [...new Set(L.build.allies.map((a) => a.name))], // 同じ子を2回選んだ記録(押し直し)は1つにまとめる placements: L.build.placements.map((p) => `${p.name || '?'}:${p.dist}${p.grade}`),
     assists: L.build.assists.map((a) => `${a.card}${a.upgrade ? '+' : ''}`), ex: Object.entries(L.ex.reduce((o, e) => { o[e.ex || e.mon] = (o[e.ex || e.mon] || 0) + 1; return o; }, {})).map(([n, c]) => `${n}×${c}`),
+    // 盤面に実際にいた供モン(技を使った・ダメージを出した子。2026-10-10 から)。allies は合間に押した記録で、2026-10-10 まで押し直しのずれがあった(209回中57回)
+    alliesSeen: [...new Set([...Object.keys(use), ...Object.keys(dmg)])].filter((m) => m !== L.build.hero),
     result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
     // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
