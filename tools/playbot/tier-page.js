@@ -231,7 +231,7 @@ function build(d) {
     }).join('');
     return `<div class="ev">
       <div class="evh"><span class="src src-${{ 実戦: 'j', シミュレーター: 's', 机上: 'd', '実戦+シミュレーター': 'js' }[r.出どころ] || 'd'}">${esc(r.出どころ)}</span><span class="evn">${esc(r.回数)}</span></div>
-      ${rows ? `<div class="tw"><table><thead><tr><th>数字</th><th>値</th><th>基準</th><th>差</th><th>ぶれ</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+      ${rows ? `<div class="tw"><table><thead><tr><th>数字</th><th>値</th><th>基準</th><th>差</th><th>ぶれ</th></tr></thead><tbody>${rows}</tbody></table></div><p class="note" style="margin:4px 0 0"><small>ぶれ = この幅の中の差は、たまたまかもしれない(標準誤差の2倍)。差がぶれより小さい行は薄く「ぶれの中」。</small></p>` : ''}
       ${(r.効いている機能 || []).length ? `<div class="evf"><small>効いている機能</small> ${r.効いている機能.map((f) => `<span class="chip">${esc(f)}</span>`).join('')}</div>` : ''}
       <p class="evs"><b>だから</b> ${esc(r.だから)}</p>
       ${r.まだ分からない ? `<p class="evu"><b>まだ分からない</b> ${esc(r.まだ分からない)}</p>` : ''}
