@@ -29763,7 +29763,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(quads[0].r0,quads[0].y0);quads.forEach(q=>ctx.lineTo(q.r1,q.y1));ctx.stroke();
     ctx.globalAlpha=1;
   };
-  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'?v:'gold';}catch{return 'gold';}};
+  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'?v:'gold';}catch{return 'gold';}};
   // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
   const roundBarPath=(x0,y0,w,h,r)=>{
     const k=r*.29;
@@ -29773,14 +29773,24 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyTap=(hd,opts)=>{
     const style=skyTapStyle(),W=Math.max(18,hd.w*sizeScale+4),H=Math.max(11,hd.h+6),x0=hd.cx-W/2,y0=hd.cy-H/2,cx=hd.cx,cy=hd.cy;
     ctx.globalAlpha=opts.alpha;ctx.lineJoin='round';
-    if(style==='flat'||style==='lift'||style==='frame'){
+    if(style==='flat'||style==='lift'||style==='frame'||style==='deep'){
       // 案E〜G(改善部の指摘): 地上の板と同じ幅・同じ高さ・同じ丸みにして、色(金)と下へ伸びる影の柱だけで空中と分かるようにする
       const fw=hd.w*sizeScale,fh=Math.max(8,hd.h),fx=cx-fw/2,fy0=cy-fh/2,r=Math.min(fh/2,5*sizeScale);
       // 影の柱: 板の下へ、金から透明へ消える細い台形(板の幅の2割)。細い線1本より「ここから落ちている」が見える
       const pl=Math.max(18,fh*3.4),pw=fw*.22;
-      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,'rgba(251,191,36,.6)');pg.addColorStop(1,'rgba(251,191,36,0)');
+      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,`rgba(251,191,36,${style==='deep'?.88:.6})`);pg.addColorStop(1,'rgba(251,191,36,0)');
       ctx.fillStyle=pg;ctx.beginPath();ctx.moveTo(cx-pw/2,cy);ctx.lineTo(cx+pw/2,cy);ctx.lineTo(cx+pw*.3,cy+pl);ctx.lineTo(cx-pw*.3,cy+pl);ctx.closePath();ctx.fill();
-      if(style==='flat'){
+      if(style==='deep'){
+        // 案H 奥行き(案Eがもと): 板に厚み(下側の暗い面。板の高さの4割で、奥ほど板が小さいので自然に薄くなる)・柱を濃く・柱の芯に明るい線
+        const fy=fy0,t=Math.max(1.5,fh*.4);
+        ctx.lineWidth=1.4;ctx.strokeStyle='rgba(253,230,138,.8)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy+pl*.85);ctx.stroke();
+        roundBarPath(fx,fy+t,fw,fh,r);ctx.fillStyle='rgba(120,53,15,1)';ctx.fill();
+        roundBarPath(fx+1,fy+t+fh*.45,fw-2,fh*.55,r);ctx.fillStyle='rgba(69,26,3,.7)';ctx.fill();
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(41,16,2,.9)';roundBarPath(fx-1,fy-1,fw+2,fh+t+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,249,195,1)');g.addColorStop(.45,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(245,158,11,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(180,83,9,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else if(style==='flat'){
         // 案E 同じ板・金: 地上の白い板と同じ形。金のグラデーション+濃い茶のふち(明るさも白い板と分かれる)+上の白いつや
         const fy=fy0;
         ctx.lineWidth=2;ctx.strokeStyle='rgba(69,26,3,.85)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
