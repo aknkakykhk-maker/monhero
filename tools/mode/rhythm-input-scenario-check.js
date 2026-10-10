@@ -183,14 +183,14 @@ section('HOLD: 始点・保持・少しずれる・HOLD中TAP・終点・遅い�
   starts(run,[at('touch:1',2.5)],1000);
   RT.record('touch:1',0,0);   // 位置の追従は座標→レーンの変換が要るので、ここでは離す側だけを見る
   tick(run,1500);tick(run,2100);tick(run,2250);
-  check('押しっぱなしで終端を過ぎても MISS にならず GOOD で確定する',run.notes[0].holdJudgment==='GOOD',String(run.notes[0].holdJudgment));
+  check('押しっぱなしで終わりの判定窓を過ぎたら MISS で確定する',run.notes[0].holdJudgment==='MISS',String(run.notes[0].holdJudgment));
 }
 {
   reset();
   const run=makeRun([hold(1000,2000,2,2)]);
   starts(run,[at('touch:1',2.5)],1000);
   perfNow=2300;ends(run,['touch:1'],2300);
-  check('終端から300ms遅れて離してもGOOD(遅い側はやさしく)',run.notes[0].holdJudgment==='GOOD',String(run.notes[0].holdJudgment));
+  check('終端から300ms遅れて離すとMISS(窓を過ぎている)',run.notes[0].holdJudgment==='MISS',String(run.notes[0].holdJudgment));
   check('早すぎる離し(-241ms)は今までどおりMISS',X.rhythmJudgeRelease(-241)==='MISS'&&X.rhythmJudgeReleaseLenient(-241)==='MISS');
   check('判定表(RHYTHM_JUDGMENTS)は2026-09-11のGOOD170/BAD185のまま',X.RHYTHM_JUDGMENTS.map(j=>`${j.id}:${j.windowMs}`).join(',')==='MARVELOUS:55,EXCELLENT:100,GREAT:150,GOOD:170,BAD:185,MISS:null');
 }

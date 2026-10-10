@@ -705,6 +705,11 @@ const RHYTHM_NOTE_WIDTH_RATIO=.78;
 // なるだけで得が小さく、見た目の衝突に見合わないため戻した。
 // 「狙いどころが細く見える」問題は、帯を太くする以外の見せ方で別途考える。
 const RHYTHM_BODY_WIDTH_RATIO=.64;
+// スライドの始点の板と終わりの板の幅の割合(2026-10-10 社長「スライドの始まりのノーツのサイズがスライドラインと違う」)。
+// 板(.78)が帯(.64)より広く、始点で板が帯からはみ出して見えていたため、スライドだけ板を帯と同じ .64 へ狭める。
+// 帯は広げない(2026-09-11 に帯を .78 にしたら隣の帯がはみ出して戻した)。HOLD・TAP・FLICK の板は今までどおり .78。
+// 見た目だけの変更で、判定(当たりの幅・タイミング)は変えない。canvas・WebGL・DOM の3つの描き方すべてがこの関数を通る
+const rhythmHeadWidthRatio=note=>note&&(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE')?RHYTHM_BODY_WIDTH_RATIO:RHYTHM_NOTE_WIDTH_RATIO;
 // 入力側の余白(サブレーン)。見えている帯のふちギリギリを押したときに
 // 「外れた」ことにしないためのもの。指の当たりは点ではなく面なので、
 // 見た目どおりの範囲だけで受けると、狙って押しても外れることがある。
@@ -1382,7 +1387,9 @@ const rhythmSlideTrackingFor = difficultyId =>
 // 数字を別に持つと、タップだけ緩めて終端が置き去りになる。判定表のいちばん外側から作る。
 const RHYTHM_RELEASE_MAX_MS = RHYTHM_INPUT_MATCH_WINDOW_MS;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
-const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
+// 【2026-10-10・社長の決定】押しっぱなしで終わりの判定窓(RHYTHM_RELEASE_MAX_MS)を過ぎたら MISS。
+// 窓の中で離したぶんは、これまでどおり離した時刻で判定する(窓の中では MISS にしない)。
+const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = RHYTHM_RELEASE_MAX_MS;
 const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ── そのスライド1本ごとの「なぞりにくさ」を許容へ足す ──────────────────────────
 //
@@ -1459,18 +1466,15 @@ const rhythmJudgeRelease=deltaMs=>{
   }
   return 'MISS';
 };
-// 【2026-09-07・離すのが遅いほうはやさしくする】
-// それまでは、終端から+240msより遅く離す・押しっぱなしにすると MISS だった。
-// 親指で押さえていると「音が終わってから離す」のはごくふつうの動きで、これで
-// コンボが切れると「取れているのに切れた」と感じる。よその音ゲーもここは緩い
-// (プロセカ・CHUNITHMは離すタイミングを見ない、Quaverは離し忘れがGOODでコンボは続く)。
+// 【2026-09-07・離すのが遅いほうはやさしくする → 2026-10-10 終わりの窓を過ぎたら MISS】
+// 終わりの判定窓(RHYTHM_RELEASE_MAX_MS)の中で遅く離したぶんは、これまでどおり GOOD より下にしない。
+// 窓を過ぎても離さない(押しっぱなし)・窓を過ぎてから離したぶんは MISS。
 // **早く離すほう**は音が終わる前に手を離しているので、これまでどおり判定表で見る。
-// **遅く離すほう**(押しっぱなしを含む)は、どれだけ遅くても GOOD より下にしない。
-// 判定表そのもの(RHYTHM_JUDGMENTS)と早離しの扱いは変えていない。
 const RHYTHM_RELEASE_LATE_FLOOR = 'GOOD';
 const rhythmJudgeReleaseLenient=deltaMs=>{
   const judged=rhythmJudgeRelease(deltaMs);
   if(!(Number(deltaMs)>0))return judged;
+  if(Number(deltaMs)>RHYTHM_RELEASE_MAX_MS)return 'MISS';
   const floorRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(RHYTHM_RELEASE_LATE_FLOOR);
   const rank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(judged);
   return rank>floorRank?RHYTHM_RELEASE_LATE_FLOOR:judged;
@@ -2928,18 +2932,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
           session.autoCompletionDeferred=true;
         }
         if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS){
-          // 押しっぱなしのまま終端を過ぎた。離すのが遅いほうはやさしくするので、
-          // ここで確定するのは MISS ではなく「始点の判定と GOOD の悪いほう」。
-          // (終点フリックが要るノーツは、弾かずに終わったので MISS のまま)
+          // 押しっぱなしのまま終わりの判定窓を過ぎた。MISS で確定する。
           session.expiredGuard=true;
+          // 終点フリックを弾き終えたノーツだけは、指を置いたままでも「弾いて取った」ので MISS にしない
+          // (経路が速くて早い確定を見送ったとき、弾いても取れないノーツになってしまう)。
           const start=session.startJudgment||session.note.holdJudgment||'MISS';
           const lateJudgment=rhythmWorseJudgment(start,RHYTHM_RELEASE_LATE_FLOOR);
           const lateFloor=session.kind==='SLIDE'
             ?rhythmSlideTrackingFloor(session.checkpointPassed,session.checkpointIndex):null;
-          // 終点フリックが要るノーツで MISS にするのは「弾かずに終わった」ときだけ。
-          // 弾いたのに指を置いたままだったとき(＝経路が速くて早い確定を見送ったとき)まで
-          // MISS にすると、弾いても取れないノーツになってしまう。
-          session.note.holdJudgment=session.failed||(session.endFlickRequired&&!session.endFlickDone)?'MISS'
+          const flickTaken=session.endFlickRequired&&session.endFlickDone;
+          session.note.holdJudgment=(session.failed||!flickTaken)?'MISS'
             :lateFloor?rhythmWorseJudgment(lateJudgment,lateFloor):lateJudgment;
           session.note.holdDeltaMs=releaseDelta;
         }
@@ -26827,8 +26829,8 @@ const RHYTHM_TUTORIAL_CHART=Object.freeze({
 const RHYTHM_TUTORIAL_STEPS=Object.freeze([
   {fromMs:0,             title:'まずは「タップ」',       text:'ノーツが下の判定ラインに重なった瞬間に、画面を叩きます。'},
   {fromMs:rhythmTutorialMs(14), title:'2つ同時に「同時押し」', text:'左右に1つずつ出ます。指を2本置いて、同時に叩きます。'},
-  {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。'},
-  {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。'},
+  {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。離さないままだとMISSです。'},
+  {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。終わりは離します。'},
   {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'ピンクのノーツは、叩いたあと指を上へ払います。MASTERには、矢印の向き（左か右）へ払うノーツも出ます（左はオレンジ・右は黄緑）。'},
   {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒がピンクで上向きの矢印が付いているホールドは、離さずにそのまま上へ払って終わります。'},
   {fromMs:rhythmTutorialMs(58), title:'「モンスターノーツ」', text:'金色のノーツです。GREATより良い判定で取ると、設定したマスモンの能力が出ます。'},
@@ -28285,7 +28287,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const rect=frameLayout?.rect||RHYTHM_VIEW_ROTATION.rectOf(area);
   if(!(rect&&rect.width>0&&rect.height>0))return;
   const noteHeight=Number(frameLayout?.noteHeight)||el.offsetHeight,lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
-  const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
+  const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*rhythmHeadWidthRatio(note))),left=rect.width*projected.center-width/2;
   // 横位置をleftで毎フレーム書くとlayout系の更新になる。縦は本体transformで動かしているため、
   // CSS Transforms Level 2の独立translateへ横移動だけ分離し、見た目の座標を変えず合成側へ寄せる。
   // left=0 + translateX(left) なので、HOLD/SLIDEのbodyが使う -left の補正も従来と同じ実座標になる。
@@ -28430,7 +28432,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const endBar=el._rhythmEndBar||el.querySelector('[data-rhythm-end-bar]');
   if(endBar)el._rhythmEndBar=endBar;
   if(endBar&&Number.isFinite(releaseYpx)){
-    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
+    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*rhythmHeadWidthRatio(note));
     endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;
     endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+noteHeight/2-4).toFixed(2)}px`;
     endBar.style.width=`${barWidth.toFixed(2)}px`;
@@ -28522,7 +28524,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
   const chartNowMs=slideTravel?.chartNowMs;
   const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,chartNowMs);
-  const projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO));
+  const projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*rhythmHeadWidthRatio(note)));
   const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,checkpoints:null,end:null};
   const height=Math.max(0,Number(bodyHeight)||0);
   if(rhythmNoteIsSlide(note)){
@@ -28579,7 +28581,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   if(rhythmNoteHasBody(note)&&Number.isFinite(Number(releaseYpx))&&releaseYpx!==null){
     const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height);
     const end=rhythmNoteHasVariableSpan(note)&&rhythmNoteIsHold(note)?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
-    out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO),scale:end.scale};
+    out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*rhythmHeadWidthRatio(note)),scale:end.scale};
   }
   return out;
 };
