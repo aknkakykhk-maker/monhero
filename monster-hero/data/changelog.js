@@ -35,6 +35,20 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-10 統括部長経由の依頼(mp4とジャケット・Team Grimoire)。社長の決定で、地上の5難易度を参考譜面の流れに寄せて先に出し、空中のノーツの難易度はあとから足す。
+    // 音源の頭の無音を2小節切った(最初のノーツを3秒以内に)。音に合わせて流れが止まる演出はこの曲が初めて
+    date: "2026-10-10 22:39", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Sheriruth」を追加しました', status:'new',
+    image: 'images/song-art/sheriruth.jpg?v=4302be7eca16',
+    items:[
+      'モンヒロビートに Team Grimoire さんの「Sheriruth」（2分15秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.14 ／ HARD Lv.22 ／ EXPERT Lv.33 ／ MASTER Lv.45 です。',
+      'ノーツ数は 259 ／ 312 ／ 384 ／ 535 ／ 642 です。',
+      'EASY でも手ごたえのある譜面です。MASTER は、とても難しい譜面のひとつになりました。',
+      '曲の途中で、音に合わせてノーツの流れが一瞬止まり、そのあと一気に流れ出す所があります。止まっている間も、叩くタイミングは変わりません。',
+    ],
+    assistantNotice: { id:'update_notice_sheriruth_v1', type:'content' },
+  },
+  {
     // 2026-10-10 社長の決定「全曲で、ホールド・スライドの終わりに離さず押しっぱなしだと MISS」。終わりの判定窓の中で離したぶんは今までどおり
     date: "2026-10-10 20:55", type:'update', group:'rhythm', title:'モンヒロビート：ホールド・スライドを離さず押しっぱなしにすると、MISSになります', status:'new',
     items:[
