@@ -190,6 +190,15 @@ const NATURE = {
   poltz: '敵の攻撃を受けるたびにガッツ 20% 回復(1〜3回)',
   momosuke: '全体のガッツ 50〜90% 回復・上限と丈夫さアップ',
 };
+// まだ Tier の数字に効いていない機能(社長 2026-10-10「機能的なものも全て把握した上で」)。正本は mechanics.md の「入っていない・一部」の節。
+// 読み方は tactics-tier.js の MISSING_MECHANICS と同じ(番号付きの太字)
+const MISSING_MECHANICS = (() => {
+  try {
+    const t = fs.readFileSync(path.join(OUT_DIR, 'mechanics.md'), 'utf8');
+    const sec = (t.split(/^## 入っていない・一部.*$/m)[1] || '').split(/^## /m)[0];
+    return [...sec.matchAll(/^\d+\. \*\*(.+?)\*\*/gm)].map((m) => m[1]);
+  } catch (e) { return []; }
+})();
 const KIND = { oryo: '火力', myaru: '火力', kiki: '手数', atsu: '止める', dra: '守り', meloso: '回復', mua: '回復', cadmium: 'ガッツ', poltz: 'ガッツ', momosuke: 'ガッツ' };
 
 // ---------- 実戦の記録 ----------
@@ -291,7 +300,9 @@ function cardWords(c) {
     else bits.push(`優先しても平均なみ(WAVE ${sgn(c.score * 2, r1)})`);
     if (c.tier !== tiers[best] && ['S', 'A'].includes(tiers[best])) bits.push(`${best} では ${tiers[best]}(WAVE ${sgn(c.per[best].lift, r1)})`);
     if (botWeak(c)) bits.push(['C', 'D'].includes(c.tier) || c.score < 0 ? 'ボットは使い渋るが、上手に使っても弱い' : 'ボットの使い方では弱く見えている');
-    if (c.id === 'momosuke') bits.push('ガッツ切れがいちばんの負け筋なので効く');
+    // ★「ガッツ切れがいちばんの負け筋」は数えていなかった(2026-10-10 ハカセくんの確認)。シミュレーターには自動ガッツ回復
+    //   (毎ターン 5% +上乗せ)が入っているので、言えるのは「自動ガッツ回復があっても、ガッツを補うと伸びる」まで
+    if (c.id === 'momosuke') bits.push('自動ガッツ回復(毎ターン5%)を入れたシミュレーターでも、ガッツを補うと伸びる');
     if (c.id === 'atsu') bits.push('ボットは必ず最初に選ぶ');
     return bits.join('。');
   })();
@@ -425,6 +436,10 @@ function writeAll(cache) {
     o();
     o('研究所(シミュレーター: ダイスくん)。各カードを「そのカードを優先して選ぶ」設定にしてシミュレーターで回し、届いた WAVE の差で決めます。強さはスキル込み(EX・勇者特性・固有技を入れたシミュレーター)。**Tier は上手な使い方の数字だけで決めます**(ボットの数字は「ボットの使い方で弱く見えているカード」にだけ使う)。');
     o();
+    if (MISSING_MECHANICS.length) {
+      o(`まだ入れていない・一部だけの機能(シミュレーターかボットに無く、この Tier の数字に効いていないもの。効きの大きい順): ${MISSING_MECHANICS.join('・')}。機能の一覧は docs/playbot/reports/tier/mechanics.md。この表の数字は、シミュレーター 3 版目(トレーニング・間合いボーナスを入れる前)で回したもの。`);
+      o();
+    }
     o('## 総合 Tier');
     o();
     for (const t of ['S', 'A', 'B', 'C', 'D']) {

@@ -22,8 +22,11 @@
 // ★4 版目(2026-10-10・ダイスくん)でトレーニングを入れた: WAVE 1〜9 のあと毎回、立っている子へ2回ずつ(60-app.jsx handleTraining 14724・
 //   resolveTrainingStats・applyTacticsTraining)。倒れた子を起こすとその WAVE はだれも鍛えない。選び方はボット(tactics-brain.js 550〜587)と同じ。
 //   simulateRun({ training: 'bot'|'none' })
+// ★5 版目(2026-10-10・ダイスくん)で WAVE 報酬の間合いボーナス(distDmgBonus)を入れた: WAVE ごとに、枠ごとの攻撃ダメージ × DIST_BONUS_PER_DAMAGE を足す
+//   (60-app.jsx resolveEnemyDefeat 11193)。与ダメの倍率(getDmg 11081)と通常技・距離撃の段階(computeAtkTier 13617)の両方に効く。
+//   供モンが入った枠は「これまでの合計ダメージ × 1e-5 × 追いつきの倍率」まで引き上げる(catchUpTacticsDistBonus 1290)。simulateRun({ distBonus: false }) で切れる
 // ★まだ入れていないもの: 魂格・固有技の強化・
-//   WAVE 報酬の間合いボーナス(distDmgBonus)・緊急回復。近似したものは md の頭(APPROX)に書く。
+//   緊急回復。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
 const path = require('path');
 const { loadGame } = require('./load-game');
@@ -41,7 +44,7 @@ const APPROX = [
   'スネグーラチカのプレゼント・コイン・輪・乱心などの乱数は seed 付きの乱数で引く',
   '剣士モッチーの初期スタイルは片手剣(配置の画面で選べる初期スタイルは選ばない)。bot は EX で二刀流へ、best は勇者なら二刀流・供モンなら片手盾へ切り替える',
   'ボットの「見込みのダメージ」は画面の数字を読むが、ここでは同じ式(getDmg・被ダメージ)で出す',
-  '緊急回復・魂格・WAVE 報酬・固有技の強化は入れていない(実戦より弱く出る)',
+  '緊急回復・魂格・固有技の強化は入れていない(実戦より弱く出る)。魂格は Tier の対象外(素のモンスターで比べる)',
   'トレーニングの選び方はボットと同じ(丸太うけ+走り込み。ガッツの少ない子は丸太うけ+猛勉強。倒れた子を起こすかはランで1回だけ考える)。上手な選び方はまだ無い',
   'アシカのポルツは「味方のだれかが敵の攻撃を受けた・ガードで受け止めた」ターンに1回ぶん消化する(ゲームは handleEnemyTurn の tookEnemyAttack)',
   'アシカのみゅあ・かどみうむ・ももすけの上限アップは、そのカードの回復のあとで1体ずつの上限へ掛ける(ゲームは permaBuffs が変わったあとの useEffect で掛ける)',
@@ -91,11 +94,12 @@ const aptPctOf = (mon) => { // 60-app.jsx tacticsSlotApt(1185)。Hard〜Master �
 };
 // computeAtkTier(13608)の段階のしきい
 const ATK_TIER_THRESHOLDS = [0, 15, 20, 25, 30, 40, 50, 75, 100];
-// 60-app.jsx computeAtkTier(13609): 敵がいる距離の枠に立つ子の適性(+ distDmgBonus。ここでは0)で通常技・距離撃の段階が決まる
-function computeAtkTier(mons, dist) {
+// 60-app.jsx computeAtkTier(13617)・distTotalBonus(1190): 敵がいる距離の枠の「WAVE 報酬の間合いボーナス(distDmgBonus)+ そこに立つ子の適性」で
+//   通常技・距離撃の段階が決まる。素の適性は最高 A(+10%)なので、ボーナスが無いと Lv1(15%)に届かない(5 版目で入れた)
+function computeAtkTier(mons, dist, distBonus = null) {
   const mon = mons[dist];
   if (!mon) return 0;
-  const pct = (aptPctOf(mon)[dist] || 0) * 100;
+  const pct = (((distBonus || [])[dist] || 0) + (aptPctOf(mon)[dist] || 0)) * 100;
   let lvl = 0;
   for (let i = ATK_TIER_THRESHOLDS.length - 1; i >= 0; i--) { if (pct >= ATK_TIER_THRESHOLDS[i]) { lvl = i; break; } }
   return Math.max(0, Math.min(G.BASE_ATK_EVOLUTION.length - 1, lvl));
@@ -253,7 +257,7 @@ function getDmg(st, card, slot, additionalOryo, additionalDmgMod, halved, attack
   const id = mon.id;
   let traitMult = (id === 'Golem' ? 1.2 : 1.0) * ((id === 'Pixie' || id === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
   if (id === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5; // 禁忌解錠(引き継いだ固有技。ここでは出ない)
-  const distBonusMult = 1.0 + (aptPctOf(mon)[slot] || 0);
+  const distBonusMult = 1.0 + (st.distBonus[slot] || 0) + (aptPctOf(mon)[slot] || 0); // 60-app.jsx 11081(distDmgBonus + その枠の子の適性)
   const totalBuffMult = traitMult * cookieNow(st).dmgMult * blackNoteAt(st, slot, id).dmgMult * G.bowAtkMultOf(st.bow[slot])
     * mb.dmg * (card.type === 'unique' ? pandoraDevilNow(st, slot).dmg : 1)
     // 60-app.jsx 11086: みゃるの薬(getTurnBuff atkMult・tacticsSlotAtkMult)と、みゅあの muaAtkPct
@@ -1053,6 +1057,7 @@ function playTurn(st) {
     }
     dealt += total;
     st.dmgBySlot[slot] = (st.dmgBySlot[slot] || 0) + total;
+    st.waveDist[slot] += total; // 60-app.jsx 12881 turnDistDmg(攻撃カードのダメージを撃った子の枠へ)
   }
   st.enemy.hp = Math.max(0, st.enemy.hp - dealt);
   if (TRACE) {
@@ -1306,7 +1311,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false }) {
+function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1322,6 +1327,8 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // トレーニング: 選び方('bot' = tactics-brain.js 550〜587 と同じ / 'none' = しない)・子ごとのガッツ不足・起こすかを1回だけ聞いたか・記録
     training, gutsShortBy: {}, reviveAsked: false, trainingLog: [],
     exLog: exLog ? [] : null, assistScenes: exLog ? [] : null,
+    // WAVE 報酬の間合いボーナス(distDmgBonus)と、供モンが入るときの間合いの追いつき(tacticsJoinDistCatchUpRef。始めは 1)
+    useDistBonus: distBonus, distBonus: [0, 0, 0, 0], waveDist: [0, 0, 0, 0], joinDistCatchUp: 1,
   };
   if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (training !== 'bot' && training !== 'none') throw new Error(`トレーニングの選び方が分からない: ${training}`);
@@ -1334,11 +1341,11 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
     // 敵を出す(60-app.jsx spawnEnemy 13629): 総合力で敵が強くなる。WAVE で消えるもの(waveBuffs・turnBuffs・運命の輪・乱心・トリックスタート)を消す
     st.enemy = G.createBattleEnemy(w, difficulty, null, null, G.tacticsEnemyPowerMultiplier(st.powerStart, st.powerNow), { mode: 'tacticsPro' });
     st.dist = w === 1 ? st.heroSlot : Math.floor(rng() * 4);
-    st.roarStacks = 0; st.trick = [{}, {}, {}, {}]; st.trickRolled = null;
+    st.roarStacks = 0; st.trick = [{}, {}, {}, {}]; st.trickRolled = null; st.waveDist = [0, 0, 0, 0];
     st.waveB = {}; st.turnB = {}; st.nextB = {}; st.fateWheel = { atkDown: 0, takenUp: 0 }; st.confuse = 0;
     st.ex = G.resetTacticsExWaveUses(st.ex); // スネグーラチカのプレゼントは WAVE ごとに回数が戻る
     st.guardLevel = computeGuardLevel(G.tacticsMaxDef(st.units));
-    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist), st.guardLevel, rng, st.teachings);
+    const pool = buildDeck(st.mons, computeAtkTier(st.mons, st.dist, st.distBonus), st.guardLevel, rng, st.teachings);
     st.hand = pool.slice(0, 5); st.deck = pool.slice(5); st.graveyard = [];
     st.turn = 1;
     st.intent = aim(st, nextAction(st, st.dist, null, { unannounced: true }));
@@ -1354,18 +1361,23 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       if (exp.changed) st.units = G.scaleTacticsUnits(exp.units, st.perma.muaHpPct || 0, st.perma.muaGutsPct || 0);
       // 通常技・距離撃の段階を、敵の今の距離に合わせ直す(syncAtkTierForDist)
       if (st.dist !== before) {
-        const lvl = computeAtkTier(st.mons, st.dist);
+        const lvl = computeAtkTier(st.mons, st.dist, st.distBonus);
         const fix = (c) => patchAtkTier(c, lvl);
         st.hand = st.hand.map(fix); st.deck = st.deck.map(fix); st.graveyard = st.graveyard.map(fix);
       }
     }
     const turns = Math.min(st.turn, 20);
     st.turnsTotal += turns; st.waveTurns.push(turns);
-    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+    const summary = { turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
     if (out !== 'clear') return { result: out === 'wipe' ? 'wipe' : 'timeout', wave: w, ...summary };
     // WAVE を抜けた(60-app.jsx resolveEnemyDefeat 11131〜): 追いつき補正と自動回復の率
     const remaining = Math.max(0, 21 - st.turn);
     st.joinCatchUp = G.addTacticsJoinCatchUp(st.joinCatchUp, remaining);
+    if (st.useDistBonus) {
+      // 60-app.jsx resolveEnemyDefeat 11180・11193〜11198: 間合いの追いつきの倍率を積み、その WAVE に枠ごとに与えたダメージ × DIST_BONUS_PER_DAMAGE を足す
+      st.joinDistCatchUp = G.addTacticsJoinDistCatchUp(st.joinDistCatchUp, remaining);
+      st.distBonus = st.distBonus.map((b, i) => b + G.applyDistanceEnhancement(st.waveDist[i] * G.DIST_BONUS_PER_DAMAGE, null, w));
+    }
     st.autoHp = Math.max(0, st.autoHp + Math.max(-0.05, Math.min(0.05, (remaining - 10) * 0.005)));
     st.recentWave = st.recentDealt || st.recentWave; st.recentDealt = 0; // tactics.js 513
     // EX の上限アップは WAVE をまたがない
@@ -1381,6 +1393,8 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       const slot = bestSlotFor(mon, free);
       st.mons[slot] = mon;
       st.units[slot] = G.applyTacticsJoinCatchUp(G.createTacticsUnit(mon), st.joinCatchUp);
+      // 60-app.jsx catchUpTacticsDistBonus 1290〜1299: 入った枠の間合いボーナスを「これまでの合計ダメージ × 1e-5 × 追いつきの倍率」まで引き上げる
+      if (st.useDistBonus) st.distBonus = G.applyTacticsJoinDistBonus(st.distBonus, [slot], Math.max(0, G.applyDistanceEnhancement(G.tacticsJoinDistBonus(st.dealtTotal, G.DIST_BONUS_PER_DAMAGE, st.joinDistCatchUp), null, w)));
       scaleMua(st); // 入った子にも、みゅあ・かどみうむの上限アップ
       st.powerNow += monsterPowerOf(mon);
       joined = true;
@@ -1391,7 +1405,7 @@ function simulateRun({ heroId, allies = [], difficulty = 'Hard', seed = 1, maxWa
       else if ([1, 3, 5, 7, 9].includes(w)) learnTeaching(st, chooseTeaching(st, teachingPool(st, 'odd')));
     }
   }
-  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
+  return { result: 'clear', wave: maxWave, turns: st.turnsTotal, waveTurns: st.waveTurns, dealt: st.dealtTotal, taken: st.taken, exUses: st.exUses, dodges: st.dodges, assists: st.assistLog, assistUses: st.assistUses, training: st.trainingLog, distBonus: st.distBonus.map((x) => Math.round(x * 1000) / 1000), exLog: st.exLog, assistScenes: st.assistScenes, dmgById: dmgById(st) };
 }
 
 function pickAllies(heroId, rng, n = 3) {
@@ -1474,7 +1488,7 @@ if (require.main === module) {
   const MODE_JA = { none: 'EX 無し', bot: 'EX=bot', best: 'EX=best' };
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
-  out(`\`node tools/playbot/sim/battle.js\` の出力(4 版目・スキル・アシカ・トレーニング入り。トレーニング ${TRAINING}・アシカ ${ASSIST})。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
+  out(`\`node tools/playbot/sim/battle.js\` の出力(5 版目・スキル・アシカ・トレーニング・間合いボーナス入り。トレーニング ${TRAINING}・アシカ ${ASSIST})。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
   out();
   out('**2 版目で入れたもの**(社長の決まり「ステは弱いけどスキル系で調整してるから、そこもちゃんと見て判断して」):');
   out();
