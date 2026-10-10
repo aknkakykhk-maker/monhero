@@ -30349,7 +30349,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       drawn++;
       const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1,...opts};
       // 空中の段(試作): 手の色(左=水色・右=ピンク)。譜面のスライドに hand:'L'|'R' を書いたときだけ
-      if(note&&(note.hand==='L'||note.hand==='R')){o.slideRgb=note.hand==='L'?'34,211,238':'219,39,119';o.slideHand=note.hand;}
+      // 手の色(2026-10-10 改善部 N2: 水色・ピンクはタップ・フリックと同じ値だったので、スライドの紫の仲間で明るさを大きく変える)
+      //   左手 = 明るい薄紫(芯に白い実線)、右手 = 濃い紫(芯に白い点線)。色が見分けにくくても明るさと芯の線で分かる
+      if(note&&(note.hand==='L'||note.hand==='R')){o.slideRgb=note.hand==='L'?'196,181,253':'109,40,217';o.slideHand=note.hand;}
       if(o.pop===null){
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
