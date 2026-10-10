@@ -1145,7 +1145,7 @@ const RHYTHM_JUDGMENT_LINE_Y={
 const RHYTHM_SKY_LIFT_RATIO=.16;
 // 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
-const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.3:RHYTHM_SKY_LIFT_RATIO;}};
+const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.25:RHYTHM_SKY_LIFT_RATIO;}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
 const rhythmSlideHasSky=note=>Array.isArray(note?.slidePoints)&&note.slidePoints.some(point=>Number(point?.sky)>0);
 const rhythmSlideSkyAt=(note,chartTimeMs)=>{
@@ -30134,7 +30134,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     }
     // チェックポイント＝そこで判定が入るところ。DOM版の[data-rhythm-slide-checkpoint]と同じ見た目。
-    const checkpoints=geo.checkpoints;
+    const checkpoints=opts.skySlideRgb?null:geo.checkpoints;
     if(checkpoints&&checkpoints.length){
       ctx.strokeStyle=failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)';ctx.lineWidth=2;ctx.lineCap='round';
       checkpoints.forEach(line=>{const [x1,x2]=sizeX(line.x1,line.x2);ctx.beginPath();ctx.moveTo(x1,line.y);ctx.lineTo(x2,line.y);ctx.stroke();});
