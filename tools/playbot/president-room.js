@@ -270,6 +270,10 @@ try {
     console.log('要確認: PR はすべて公開済みなのに、台帳の「いま」が「受けた」のままの件が ' + stale.length + ' 件(終わっていれば 公開済み に、作業中なら 班で作業中 に):');
     stale.forEach((e) => console.log('  ' + e.id + ' ' + (e.件名 || e.頼み).slice(0, 30) + ' … ' + e.いま + ' ' + e.PR.join('・')));
   }
+  // Tier 表のページの出し直し忘れ(2026-10-10 社長「随時調査の進捗によって更新する仕組みにしてね」)
+  if (require('./tier-published.js').needsPublish()) {
+    console.log('要確認: Tier 表のページ(tier.html)が変わったのに、社長のページへ出し直していない(Artifact で出し直してから node tools/playbot/tier-published.js)');
+  }
 } catch (e) {
   console.log('要確認: 公開の載せ忘れを確かめられなかった(' + e.message.split('\n')[0] + ')');
 }
