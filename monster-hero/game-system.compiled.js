@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c400ec11d662476c
+// source-sha256: e83b35d79e922ecb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 16:23";
+const BUILD_DATE = "2026-10-10 16:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31213,6 +31213,33 @@ const RhythmTapTest = ({
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
+  const skyPlane = useMemo(() => {
+    if (!skyChart) return null;
+    const line = RHYTHM_JUDGMENT_LINE_Y.ratio,
+      base = rhythmProjectionScale(line),
+      steps = 24,
+      top = .03,
+      pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const y = top + (line - top) * i / steps;
+      pts.push({
+        y: (y - RHYTHM_SKY_LIFT_RATIO * rhythmProjectionScale(y) / base) * 100,
+        l: rhythmProjectBoundary(0, y) * 100,
+        r: rhythmProjectBoundary(RHYTHM_LANE_COUNT, y) * 100,
+        gy: y * 100
+      });
+    }
+    const f = v => v.toFixed(2);
+    const left = pts.map(p => `${f(p.l)},${f(p.y)}`),
+      right = pts.map(p => `${f(p.r)},${f(p.y)}`).reverse();
+    const last = pts[pts.length - 1];
+    return {
+      poly: [...left, ...right].join(' '),
+      leftEdge: left.join(' '),
+      rightEdge: pts.map(p => `${f(p.r)},${f(p.y)}`).join(' '),
+      posts: [[last.l, last.gy, last.l, last.y], [last.r, last.gy, last.r, last.y]].map(a => a.map(f))
+    };
+  }, [skyChart]);
   useEffect(() => {
     RHYTHM_SKY_INPUT.active = skyChart;
     return () => {
@@ -34952,7 +34979,65 @@ const RhythmTapTest = ({
       background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
     }
-  }), skyChart && React.createElement("div", {
+  }), skyPlane && React.createElement("svg", {
+    "data-rhythm-sky-plane": true,
+    viewBox: "0 0 100 100",
+    preserveAspectRatio: "none",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      overflow: 'visible'
+    }
+  }, React.createElement("defs", null, React.createElement("linearGradient", {
+    id: "mhSkyPlaneFill",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "#fbbf24",
+    stopOpacity: "0"
+  }), React.createElement("stop", {
+    offset: ".7",
+    stopColor: "#fbbf24",
+    stopOpacity: ".05"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "#fde68a",
+    stopOpacity: ".16"
+  }))), React.createElement("polygon", {
+    points: skyPlane.poly,
+    fill: "url(#mhSkyPlaneFill)"
+  }), React.createElement("polyline", {
+    points: skyPlane.leftEdge,
+    fill: "none",
+    stroke: "#fcd34d",
+    strokeOpacity: ".55",
+    strokeWidth: "1.4",
+    vectorEffect: "non-scaling-stroke"
+  }), React.createElement("polyline", {
+    points: skyPlane.rightEdge,
+    fill: "none",
+    stroke: "#fcd34d",
+    strokeOpacity: ".55",
+    strokeWidth: "1.4",
+    vectorEffect: "non-scaling-stroke"
+  }), skyPlane.posts.map((a, i) => React.createElement("line", {
+    key: i,
+    x1: a[0],
+    y1: a[1],
+    x2: a[2],
+    y2: a[3],
+    stroke: "#fcd34d",
+    strokeOpacity: ".45",
+    strokeWidth: "2",
+    strokeDasharray: "3 3",
+    vectorEffect: "non-scaling-stroke"
+  }))), skyChart && React.createElement("div", {
     "data-rhythm-sky-line": true,
     style: {
       position: 'absolute',
@@ -35025,7 +35110,11 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: skyChart ? `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO * 100}% + 150px)` : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
+      bottom: skyChart ? `calc(var(--mh-judgment-line-bottom,12%) + ${RHYTHM_SKY_LIFT_RATIO * 100}% + 150px)` : 'calc(var(--mh-judgment-line-bottom,12%) + 38px)',
+      ...(skyChart ? {
+        opacity: .62,
+        transform: 'translateX(-50%) scale(.82)'
+      } : {})
     }
   }, settings.judgmentFx === true && React.createElement("i", {
     ref: judgmentBurstRef,
