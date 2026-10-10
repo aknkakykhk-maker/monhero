@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-10 統括部長経由の依頼(mp4とジャケット・Team Grimoire)。社長の決定で地上の5難易度を先に出し、空中のノーツの難易度はあとから足す
+    date: "2026-10-10 20:28", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Sheriruth」を追加しました', status:'new',
+    image: 'images/song-art/sheriruth.jpg?v=4302be7eca16',
+    items:[
+      'モンヒロビートに Team Grimoire さんの「Sheriruth」（2分17秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.11 ／ NORMAL Lv.14 ／ HARD Lv.22 ／ EXPERT Lv.34 ／ MASTER Lv.49 です。',
+      'ノーツ数は 295 ／ 369 ／ 514 ／ 729 ／ 791 です。',
+      'MASTER は、いままででいちばん難しい譜面になりました。',
+    ],
+    assistantNotice: { id:'update_notice_sheriruth_v1', type:'content' },
+  },
+  {
     // 2026-10-10 統括部長経由の依頼(mp4とジャケット・DECO*27)。歯ごたえは激しさの中間(chartIntensity:'strong')と社長が決めた
     date: "2026-10-10 13:11", type:'update', group:'rhythm', title:'モンヒロビート：新曲「Journey」を追加しました', status:'new',
     image: 'images/song-art/journey.jpg?v=2285e26648c0',
