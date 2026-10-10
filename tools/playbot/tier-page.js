@@ -1,12 +1,12 @@
 // 味方モンスターの「Tier 表」のページを作る。社長が見るパネル式の1枚(アーティファクト用)。
 //
-// 研究所が数字を直すのは docs/playbot/reports/tier/tier.json(monster-tier.md と同じ値を写したもの)。
+// tier.json は手で書かない。monster-tier.md と同じ元データから tactics-tier.js(モンスター)・asika-tier.js(アシカ)が一緒に作る。
 // 直したら、このコマンドで作り直す(出来たページは統括部長が Artifact で同じ URL へ出し直す):
 //
 //   node tools/playbot/tier-page.js [--out <出力先>]    既定: docs/playbot/dashboard/tier.html
 //   node tools/playbot/tier-page.js --rebuild-icons     縮めた顔アイコンを作り直してからページを作る
 //   node tools/playbot/tier-page.js --json <別の tier.json>   試し用(その JSON を読む。--out と合わせて使う)
-//   node tools/playbot/tier-page.js --check             tier.json の形だけ確かめる(ページは作らない)
+//   node tools/playbot/tier-page.js --check             tier.json の形と、monster-tier.md・asika-tier.md(早見表・合うモンスター)・combo.md(よく合う・合わない)・tier.html との食い違いを確かめる(ページは作らない)
 //
 // 顔アイコンは docs/playbot/dashboard/tier-icons/(96px。map.json が 名前 → ファイル)から data URI で埋め込む。
 // スクリプトを使わない素の HTML(<details> で開閉)。社長室(president-room.js)と同じ作り・色。
@@ -182,7 +182,7 @@ function build(d) {
     ['ひとこと', esc(a.理由)],
     a.強み ? ['強み', esc(a.強み)] : null,
     a.弱み ? ['弱み', esc(a.弱み)] : null,
-    a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : null,
+    a.合うモンスター && a.合うモンスター.length ? ['合うモンスター', refList('m', a.合うモンスター)] : (a.合う子なし ? ['合うモンスター', esc(a.合う子なし)] : null),
   ]) + (a.回数 ? `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数</th></tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(a[k])}</td><td>${a.回数[k]}</td></tr>`).join('')}</tbody></table></div>` : '');
   const fullBody = (m) => kv([
     ['役', esc(m.役)],
@@ -346,17 +346,141 @@ ${css}
 `;
 }
 
+// ---------- md と tier.json と tier.html の食い違いを止める(2026-10-10 改善部 W2) ----------
+// 3つは同じ元データから道具が作る(monster-tier.md と tier.json の「モンスター」は tactics-tier.js、
+// asika-tier.md と「アシカ」は asika-tier.js、tier.html はこのファイル)。手で片方だけ直すと、ここで止まる。
+const TIER_DIR = path.join(ROOT, 'docs', 'playbot', 'reports', 'tier');
+const jsonHash = (text) => require('crypto').createHash('sha1').update(text).digest('hex').slice(0, 12);
+const HASH_MARK = (h) => `<!-- tier.json ${h} -->`;
+// md の「早見表」の行 → { 名前: [総合, Hard, Expert, Master] }
+function quickTable(md) {
+  const sec = (md.split(/^## 早見表\s*$/m)[1] || '').split(/^## /m)[0];
+  const rows = {};
+  for (const line of sec.split('\n')) {
+    const c = line.split('|').slice(1, -1).map((x) => x.trim());
+    if (c.length !== 5 || c[0] === 'モンスター' || c[0] === 'アシカ' || /^-+$/.test(c[1])) continue;
+    rows[c[0]] = c.slice(1);
+  }
+  return rows;
+}
+function crossCheck(d, jsonText) {
+  const p = [];
+  const read = (f) => { try { return fs.readFileSync(path.join(TIER_DIR, f), 'utf8'); } catch (e) { return null; } };
+  const mmd = read('monster-tier.md');
+  if (mmd == null) p.push('monster-tier.md がありません');
+  else {
+    const up = (mmd.match(/^更新: (\d{4}-\d{2}-\d{2} \d{2}:\d{2})/m) || [])[1];
+    if (up !== d.更新) p.push(`更新の時刻が違う(monster-tier.md ${up} / tier.json ${d.更新})。tactics-tier.js --md で両方を作り直す`);
+    const q = quickTable(mmd);
+    for (const m of d.モンスター) {
+      const r = q[m.名前];
+      if (!r) { p.push(`${m.名前}: monster-tier.md の早見表に無い`); continue; }
+      const mdOverall = r[0] === '不足' ? '回数不足' : r[0];
+      if (mdOverall !== m.総合) p.push(`${m.名前}: 総合が違う(md ${r[0]} / json ${m.総合})`);
+      DIFFS.forEach((k, i) => {
+        const cell = r[i + 1]; const star = cell.endsWith('*');
+        if (cell.replace(/\*$/, '') !== m[k]) p.push(`${m.名前}: ${k} が違う(md ${cell} / json ${m[k]})`);
+        else if (star !== !!(m.難易度が暫定 && m.難易度が暫定[k])) p.push(`${m.名前}: ${k} の暫定(*)が違う`);
+      });
+    }
+    const overallLine = (mmd.split(/^## 総合 Tier\s*$/m)[1] || '').split(/^## /m)[0];
+    for (const m of d.モンスター) {
+      if (!['S', 'A', 'B', 'C', 'D'].includes(m.総合)) continue;
+      const mdProv = overallLine.includes(`${m.名前}(暫定)`);
+      if (mdProv !== !!m.暫定) p.push(`${m.名前}: 総合の「暫定」が違う(md ${mdProv ? 'あり' : 'なし'} / json ${m.暫定 ? 'あり' : 'なし'})`);
+    }
+    for (const t of [...(d.決め方.文 || []), d.決め方.暫定].filter(Boolean)) {
+      if (!mmd.includes(t)) p.push(`決め方の文が monster-tier.md と違う: 「${t.slice(0, 30)}…」`);
+    }
+  }
+  if (Array.isArray(d.アシカ) && d.アシカ.length) {
+    const amd = read('asika-tier.md');
+    if (amd == null) p.push('asika-tier.md がありません');
+    else {
+      const q = quickTable(amd);
+      for (const c of d.アシカ) {
+        const r = q[c.名前];
+        if (!r) { p.push(`${c.名前}: asika-tier.md の早見表に無い`); continue; }
+        if (r[0].replace(/\*$/, '') !== c.総合 || r[0].endsWith('*') !== !!c.暫定) p.push(`${c.名前}: 総合が違う(md ${r[0]} / json ${c.総合}${c.暫定 ? '*' : ''})`);
+        DIFFS.forEach((k, i) => { if (r[i + 1] !== c[k]) p.push(`${c.名前}: ${k} が違う(md ${r[i + 1]} / json ${c[k]})`); });
+      }
+    }
+  }
+  // アシカの「合うモンスター」(asika-tier.md の「アシカごとの合うモンスター」の節)
+  if (Array.isArray(d.アシカ) && d.アシカ.length) {
+    const amd = read('asika-tier.md') || '';
+    const sec = (amd.split(/^## アシカごとの合うモンスター\s*$/m)[1] || '').split(/^## /m)[0];
+    const lines = Object.fromEntries(sec.split('\n').map((l) => l.match(/^- \*\*(.+?)\*\*: (.*)$/)).filter(Boolean).map((m) => [m[1], m[2]]));
+    for (const c of d.アシカ) {
+      const line = lines[c.名前];
+      const names = (c.合うモンスター || []).map((x) => (typeof x === 'string' ? x : x.名前));
+      if (line == null) { if (names.length || c.合う子なし) p.push(`${c.名前}: asika-tier.md の「合うモンスター」に無い`); continue; }
+      if (c.合う子なし ? line !== c.合う子なし : names.join('・') !== line.split('・').map((t) => t.replace(/\(.*\)$/, '')).join('・')) {
+        p.push(`${c.名前}: 合うモンスターが違う(md ${line.slice(0, 40)} / json ${c.合う子なし || names.join('・')})`);
+      }
+    }
+  }
+  // 組み合わせ(combo.md の「よく合う」「合わない」の表。どちらも測り直しの数字)
+  if (Array.isArray(d.組み合わせ) && d.組み合わせ.length) {
+    const cmd = read('combo.md');
+    if (cmd == null) p.push('combo.md がありません');
+    else {
+      const table = (head) => {
+        const sec = (cmd.split(new RegExp(`^## ${head}.*$`, 'm'))[1] || '').split(/^##+ /m)[0];
+        const rows = {};
+        for (const line of sec.split('\n')) {
+          const c = line.split('|').slice(1, -1).map((x) => x.trim());
+          if (c.length >= 3 && c[0] !== '勇者モン' && !/^-+$/.test(c[0])) rows[`${c[0]}×${c[1]}`] = Number(c[2]);
+        }
+        return rows;
+      };
+      const good = table('よく合う組み合わせ');
+      const bad = table('合わない組み合わせ');
+      for (const c of d.組み合わせ) {
+        const key = `${c.勇者}×${c.供モン}`;
+        const t = c.良し悪し === '良い' ? good : bad;
+        if (!(key in t)) p.push(`組み合わせ ${key}(${c.良し悪し}): combo.md の表に無い`);
+        else if (Math.abs(t[key] - c.点) > 0.005) p.push(`組み合わせ ${key}: 点が違う(md ${t[key]} / json ${c.点})`);
+      }
+    }
+  }
+  if (fs.existsSync(OUT) && OUT === path.join(ROOT, 'docs', 'playbot', 'dashboard', 'tier.html')) {
+    const html = fs.readFileSync(OUT, 'utf8');
+    if (!html.includes(HASH_MARK(jsonHash(jsonText)))) p.push('tier.html が今の tier.json から作られていない。node tools/playbot/tier-page.js で作り直す');
+  }
+  return p;
+}
+
+// tier.json からページを書く(tactics-tier.js からも呼ぶ)。形がおかしいときは書かない
+function writePage() {
+  const text = fs.readFileSync(JSON_PATH, 'utf8');
+  const d = JSON.parse(text);
+  const problems = validate(d);
+  if (problems.length) return { ok: false, problems };
+  const html = build(d) + HASH_MARK(jsonHash(text)) + '\n';
+  fs.writeFileSync(OUT, html);
+  return { ok: true, out: path.relative(ROOT, OUT), kb: html.length / 1024, n: d.モンスター.length };
+}
+
 function main() {
-  const d = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
+  const text = fs.readFileSync(JSON_PATH, 'utf8');
+  const d = JSON.parse(text);
   const problems = validate(d);
   if (problems.length) {
     console.error('tier.json に問題があります(ページは作りません):\n' + problems.map((x) => '  - ' + x).join('\n'));
     process.exit(1);
   }
-  if (process.argv.includes('--check')) { console.log(`tier.json OK(${d.モンスター.length}体)`); return; }
-  const html = build(d);
-  fs.writeFileSync(OUT, html);
-  console.log(`作りました: ${path.relative(ROOT, OUT)}(${(html.length / 1024).toFixed(0)}KB・${d.モンスター.length}体)`);
+  if (process.argv.includes('--check')) {
+    const diffs = jsonArg > 0 ? [] : crossCheck(d, text);
+    if (diffs.length) {
+      console.error('md・tier.json・tier.html が食い違っています(手で片方だけ直さず、道具で作り直す):\n' + diffs.map((x) => '  - ' + x).join('\n'));
+      process.exit(1);
+    }
+    console.log(`tier.json OK(${d.モンスター.length}体・md と tier.html とも一致)`);
+    return;
+  }
+  const r = writePage();
+  console.log(`作りました: ${r.out}(${r.kb.toFixed(0)}KB・${r.n}体)`);
 }
 if (require.main === module) main();
-module.exports = { validate, build };
+module.exports = { validate, build, writePage, crossCheck };

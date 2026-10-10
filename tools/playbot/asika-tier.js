@@ -55,13 +55,15 @@ if (args[0] === '--worker') {
     for (let i = 0; i < t.runs; i++) {
       let allies;
       // 同じ i なら、どの設定でも同じ供モン・同じ乱数の種(設定の差だけが見えるように)
-      if (t.ally) allies = [t.ally, ...others(t.hero, t.ally, sim.mulberry32(sim.hashSeed(t.seed, 'combo', t.hero, t.diff, i)))];
+      // ally '*' は「最初の供モンも 25 体からくじ」(組み合わせの測り直しで、その勇者モンの基準を同じ種で取る)
+      const ally = t.ally === '*' ? (() => { const pool = sim.MONS.map((m) => m.id).filter((id) => id !== t.hero); return pool[Math.floor(sim.mulberry32(sim.hashSeed(t.seed, 'first', t.hero, t.diff, i))() * pool.length)]; })() : t.ally;
+      if (ally) allies = [ally, ...others(t.hero, ally, sim.mulberry32(sim.hashSeed(t.seed, 'combo', t.hero, t.diff, i)))];
       else allies = sim.pickAllies(t.hero, sim.mulberry32(sim.hashSeed(t.seed, 'allies', t.hero, t.diff, i)));
-      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play });
+      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play, training: t.training || 'none' });
       const reach = r.wave + (r.result === 'clear' ? 1 : 0);
       acc.n++; acc.sum += reach; acc.sq += reach * reach; if (r.result === 'clear') acc.clear++;
       if (t.card) { const u = (r.assistUses || {})[t.card] || 0; acc.uses += u; if (u > 0) acc.usedRuns++; }
-      if (t.ally && r.dmgById && t.ally in r.dmgById) {
+      if (t.ally && t.ally !== '*' && r.dmgById && t.ally in r.dmgById) {
         const tot = Object.values(r.dmgById).reduce((a, b) => a + b, 0);
         acc.allyDmg += r.dmgById[t.ally]; acc.allyShare += tot > 0 ? r.dmgById[t.ally] / tot : 0; acc.allyN++;
       }
@@ -115,7 +117,7 @@ async function compute(cache) {
     const kept = resume(cache[name], meta);
     const todo = tasks.filter((t) => !kept[t.key]);
     cache[name] = { ...meta, at: jstNow(), cells: kept };
-    console.error(`${name === 'asika' ? 'アシカ' : '組み合わせ'}: ${tasks.length} マス(残してあった ${tasks.length - todo.length} マスは飛ばす)・並列 ${JOBS}`);
+    console.error(`${{ asika: 'アシカ', combo: '組み合わせ', verify: '組み合わせの測り直し' }[name]}: ${tasks.length} マス(残してあった ${tasks.length - todo.length} マスは飛ばす)・並列 ${JOBS}`);
     await runTasks(todo, JOBS, (got) => { Object.assign(cache[name].cells, got); save(); });
     save();
   };
@@ -142,6 +144,28 @@ async function compute(cache) {
       }
     }
     await go('combo', { runs: { Expert: CRUNS, Master: CMRUNS }, seed: SEED }, tasks);
+  }
+  // ★A2(2026-10-10 改善部の指摘): 650 組から上位を拾うと、くじだけで相性 +0.5〜0.6 が出る。
+  //   上位の候補(--verify-top 組)を、別の乱数の種で各 --verify-runs 回測り直す。比べる基準(その勇者モンの平均)も、
+  //   同じ種で「最初の供モンも 25 体からくじ」(ally '*')を同じ回数回して取り直す
+  const VRUNS = Number(argOf('--verify-runs', '300'));
+  const VTOP = Number(argOf('--verify-top', '10'));
+  const VSEED = Number(argOf('--verify-seed', String(SEED + 1000)));
+  if (only !== 'asika' && cache.combo && VRUNS > 0 && VTOP > 0) {
+    const sorted = analyzeCombo(cache, realRecords()).filter((x) => Number.isFinite(x.pts)).sort((a, z) => z.pts - a.pts);
+    // 上位だけでなく下位(合わない組)も、下から拾ったぶん下へ寄るので測り直す(2026-10-10 ハカセくん)
+    const top = sorted.slice(0, VTOP); const low = sorted.slice(-VTOP).reverse();
+    const rows = [...top, ...low];
+    const tasks = [];
+    const heroes = [...new Set(rows.map((x) => x.h.id))];
+    for (const d of ['Expert', 'Master']) {
+      for (const x of rows) tasks.push({ key: `${x.h.id}|${x.a.id}|${d}`, hero: x.h.id, ally: x.a.id, diff: d, assist: 'bot', play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
+      for (const h of heroes) tasks.push({ key: `${h}|*|${d}`, hero: h, ally: '*', diff: d, assist: 'bot', play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
+    }
+    await go('verify', { runs: VRUNS, seed: VSEED }, tasks);
+    cache.verify.pairs = top.map((x) => `${x.h.id}|${x.a.id}`);
+    cache.verify.lowPairs = low.map((x) => `${x.h.id}|${x.a.id}`);
+    save();
   }
 }
 
@@ -212,20 +236,22 @@ function analyzeAsika(cache, real) {
     for (const d of DIFFS) {
       const p = {};
       for (const play of PLAYS) { const q = pooled(id, play, d); p[play] = { ...q, lift: q.mean - base[`${play}|${d}`] }; }
-      const use = p.best.lift > p.bot.lift ? 'best' : 'bot';
+      // ★A3(2026-10-10 改善部の指摘): Tier は上手な使い方(best)1本で決める。2通りのよいほうを取ると、くじのぶれで上へ寄るため。
+      //   ボットの数字は「ボットの使い方で弱く見える」欄だけに使う
+      const use = 'best';
       per[d] = { ...p, use, lift: p[use].lift, score: p[use].lift / 2, tier: tierOfScore(p[use].lift / 2), n: p.bot.n + p.best.n };
     }
     const score = wavg((d) => per[d].score);
     const botScore = wavg((d) => per[d].bot.lift / 2);
     const bestScore = wavg((d) => per[d].best.lift / 2);
     const realFirm = DIFFS.filter((d) => real.byCard[id][d].n >= 5).length;
-    // 勇者モンごとの伸び(そのカード − その勇者モンの 10 枚の平均)。使い方はよいほう
+    // 勇者モンごとの伸び(そのカード − その勇者モンの 10 枚の平均)。使い方は上手(A3)
     const heroLift = {};
     for (const m of MONS) {
       heroLift[m.id] = wavg((d) => {
-        const vals = TEACH_IDS.map((x) => Math.max(mean(cell(x, 'bot', m.id, d)), mean(cell(x, 'best', m.id, d))));
+        const vals = TEACH_IDS.map((x) => mean(cell(x, 'best', m.id, d)));
         const avgH = vals.reduce((a, b) => a + b, 0) / vals.length;
-        return Math.max(mean(cell(id, 'bot', m.id, d)), mean(cell(id, 'best', m.id, d))) - avgH;
+        return mean(cell(id, 'best', m.id, d)) - avgH;
       });
     }
     return { id, name: CARD_NAME(id), per, score, botScore, bestScore, tier: tierOfScore(score), provisional: realFirm < 2, real: real.byCard[id], heroLift };
@@ -273,10 +299,11 @@ function cardWords(c) {
 }
 
 // ---------- おすすめアシカ(モンスターごと) ----------
+// ★A1(2026-10-10 改善部の指摘): 差 +0.4 WAVE 以上のカードだけを「おすすめ」にする。それ未満はくじのぶれの中なので「どれでも同じくらい」
+const RECOMMEND_MIN = 0.4;
 function recommendFor(m, A) {
   const list = A.cards.map((c) => ({ c, lift: c.heroLift[m.id] })).filter((x) => Number.isFinite(x.lift)).sort((a, z) => z.lift - a.lift);
-  const pick = list.filter((x) => x.lift > 0.05).slice(0, 3);
-  const top = pick.length >= 2 ? pick : list.slice(0, 2);
+  const top = list.filter((x) => x.lift >= RECOMMEND_MIN).slice(0, 3);
   return top.map(({ c, lift }) => {
     let why;
     if (KIND[c.id] === 'ガッツ' && m.baseGuts <= 90) why = `ガッツ上限 ${m.baseGuts} で撃てる回数が少ないのを、ガッツで補える`;
@@ -290,6 +317,15 @@ function recommendFor(m, A) {
     return { 名前: c.name, 理由: `${why}(この子が勇者モンのとき WAVE ${sgn(lift, r1)})`, lift };
   });
 }
+
+// アシカごとの合うモンスター: 優先すると伸びる(プラスの)子だけ、上から3体。プラスの子がいなければ「合う子は見つからなかった」の1文(2026-10-10 統括部長の指摘)
+function fitsOf(c) {
+  const all = MONS.map((m) => ({ m, l: c.heroLift[m.id] })).filter((x) => Number.isFinite(x.l)).sort((a, z) => z.l - a.l);
+  const fits = all.filter((x) => x.l > 0).slice(0, 3);
+  const none = !fits.length && all.length ? `合う子は見つからなかった(いちばん下がりにくいのは${all[0].m.name} WAVE ${sgn(all[0].l, r1)})` : null;
+  return { fits, none };
+}
+const bestCardFor = (m, A) => A.cards.map((c) => ({ name: c.name, lift: c.heroLift[m.id] })).filter((x) => Number.isFinite(x.lift)).sort((a, z) => z.lift - a.lift)[0] || { name: '—', lift: NaN };
 
 // ---------- 組み合わせ ----------
 const EX_ROLE = { coverAll: '守り', partyGuard: '守り', damageBack: '守り', lifeSpring: '支え', cookieBox: '支え', partyBoost: '支え', multiBuff: '支え', present: '支え', timeStop: '支え' };
@@ -328,6 +364,24 @@ function analyzeCombo(cache, real) {
   rows.allyMain = allyMain;
   return rows;
 }
+// 測り直した上位(A2)。相性 = (組 − 基準。Expert 5・Master 3) − 供モンとしての強さ(1回目の 650 組から)
+function analyzeVerify(cache, rows, which = 'pairs') {
+  const v = cache.verify;
+  if (!v || !Array.isArray(v[which])) return null;
+  const cell = (k) => v.cells[k];
+  const out = [];
+  for (const key of v[which]) {
+    const x = rows.find((y) => `${y.h.id}|${y.a.id}` === key);
+    if (!x) continue;
+    const lift = (d) => mean(cell(`${key}|${d}`)) - mean(cell(`${x.h.id}|*|${d}`));
+    const le = lift('Expert'); const lm = lift('Master');
+    const raw = Number.isFinite(lm) ? (le * 5 + lm * 3) / 8 : le;
+    if (!Number.isFinite(raw)) continue;
+    out.push({ ...x, first: x.pts, pts: raw - x.allyMain, vle: le, vlm: lm });
+  }
+  return out.sort((a, z) => z.pts - a.pts);
+}
+const VERIFY_FIRM = 0.3; // 測り直しでこれ以上残った組を「確か」とする(1組 300 回で、相性のぶれはおよそ ±0.15)
 function comboReason(x, good) {
   const { h, a } = x;
   const bits = [];
@@ -367,9 +421,9 @@ function writeAll(cache) {
     const L = []; const o = (t = '') => L.push(t);
     o('# アシカ(アシストカード)の Tier(タクティクスプロ)');
     o();
-    o(`更新: ${now}(JST)・シミュレーター: 1マス ${cache.asika.runs} 回(26体 × 使い方2通り)・実戦: ${real.runs.length} 回`);
+    o(`更新: ${now}(JST)・シミュレーター: 1マス ${cache.asika.runs} 回(26体 × 使い方2通り。トレーニング無しの版)・実戦: ${real.runs.length} 回`);
     o();
-    o('研究所:ハカセくん。各カードを「そのカードを優先して選ぶ」設定にしてシミュレーターで回し、届いた WAVE の差で決めます。強さはスキル込み(EX・勇者特性・固有技を入れたシミュレーター)。');
+    o('研究所(シミュレーター: ダイスくん)。各カードを「そのカードを優先して選ぶ」設定にしてシミュレーターで回し、届いた WAVE の差で決めます。強さはスキル込み(EX・勇者特性・固有技を入れたシミュレーター)。**Tier は上手な使い方の数字だけで決めます**(ボットの数字は「ボットの使い方で弱く見えているカード」にだけ使う)。');
     o();
     o('## 総合 Tier');
     o();
@@ -390,6 +444,12 @@ function writeAll(cache) {
     o();
     for (const c of A.cards) o(`- **${c.name}**: ${cardWords(c).reason}`);
     o();
+    o('## アシカごとの合うモンスター');
+    o();
+    o('その子が勇者モンのとき、そのカードを優先すると届く WAVE が伸びる子(その子の 10 枚の平均との差がプラスのものだけ。上手な使い方。上から3体)。');
+    o();
+    for (const c of A.cards) { const f = fitsOf(c); o(`- **${c.name}**: ${f.none || f.fits.map((x) => `${x.m.name}(${sgn(x.l, r1)})`).join('・')}`); }
+    o();
     o('## ボットの使い方で弱く見えているカード');
     o();
     const weak = A.cards.filter(botWeak);
@@ -400,7 +460,7 @@ function writeAll(cache) {
     o();
     o('## 詳しい表(難易度ごと・届いた WAVE の差)');
     o();
-    o('差 = そのカードを優先したときの届いた WAVE − 10 枚の平均(クリアは WAVE 11)。「ボット」はいまのボットの使い方、「上手」は上手な使い方。Tier は2通りのよいほうで決める。');
+    o('差 = そのカードを優先したときの届いた WAVE − 10 枚の平均(クリアは WAVE 11)。「ボット」はいまのボットの使い方、「上手」は上手な使い方。Tier は上手の数字で決める(2通りのよいほうを取ると、くじのぶれで上へ寄るため)。');
     o();
     for (const d of DIFFS) {
       o(`### ${d}(重み ${W[d]})`);
@@ -428,9 +488,9 @@ function writeAll(cache) {
     o();
     o('## モンスターごとのおすすめアシカ');
     o();
-    o('その勇者モンのとき、どのカードを優先すると届く WAVE が伸びるか(その子の 10 枚の平均との差。Hard 2・Expert 5・Master 3 の重み)。');
+    o(`その勇者モンのとき、どのカードを優先すると届く WAVE が伸びるか(その子の 10 枚の平均との差。上手な使い方。Hard 2・Expert 5・Master 3 の重み)。差 +${RECOMMEND_MIN} 以上のカードだけを「おすすめ」にした。それより小さいとくじのぶれと見分けられないので「どれでも同じくらい」と書く。`);
     o();
-    for (const m of MONS) o(`- **${m.name}**: ${recommendFor(m, A).map((x) => `${x.名前}(${sgn(x.lift, r1)})`).join('・')}`);
+    for (const m of MONS) { const r = recommendFor(m, A); o(`- **${m.name}**: ${r.length ? r.map((x) => `${x.名前}(${sgn(x.lift, r1)})`).join('・') : `どれでも同じくらい(いちばん伸びる ${bestCardFor(m, A).name} でも ${sgn(bestCardFor(m, A).lift, r1)})`}`); }
     o();
     o('## シミュレーターに入れたアシカの効果');
     o();
@@ -454,7 +514,10 @@ function writeAll(cache) {
   }
   if (C) {
     const good = C.filter((x) => Number.isFinite(x.pts)).sort((a, z) => z.pts - a.pts);
-    const top = good.slice(0, 20); const bottom = good.slice(-10).reverse();
+    const V = analyzeVerify(cache, C);
+    const VL = analyzeVerify(cache, C, 'lowPairs');
+    if (VL) VL.reverse(); // 合わない順(相性の低い順)
+    const top = V || good.slice(0, 20); const bottom = VL || good.slice(-10).reverse();
     const confirmed = (x, isGood) => x.realN >= 2 && Number.isFinite(x.realLift) && (isGood ? x.realLift > 0 : x.realLift < 0);
     const L = []; const o = (t = '') => L.push(t);
     o('# 勇者モン × 供モンの組み合わせ(タクティクスプロ)');
@@ -471,19 +534,46 @@ function writeAll(cache) {
     o();
     { const am = Object.entries(C.allyMain).sort((p, q) => q[1] - p[1]); o(`- 強い: ${am.slice(0, 5).map(([id, v]) => `${NAME[id]}(${sgn(v)})`).join('・')}`); o(`- 弱い: ${am.slice(-5).reverse().map(([id, v]) => `${NAME[id]}(${sgn(v)})`).join('・')}`); }
     o();
-    o('## よく合う組み合わせ(上位 20)');
+    if (V) {
+      o(`## よく合う組み合わせ(1回目の上位 ${V.length} 組を、別の種で各 ${cache.verify.runs} 回測り直したもの)`);
+      o();
+      o(`1回目(Expert ${cache.combo.runs.Expert} 回)で上位に出た組を、乱数の種を変えて Expert・Master 各 ${cache.verify.runs} 回回し直した。基準(その勇者モンの平均)も同じ種・同じ回数で取り直した(最初の供モンも 25 体からくじ)。`);
+      o(`**測り直しの相性で並べる。** 1回目より下がるのがふつう(650 組の中から上を拾うと、くじで上に出た組が混ざるため)。測り直しで +${VERIFY_FIRM} 以上残った組を「確か」とした。`);
+      o();
+      o('| 勇者モン | 供モン | 相性(測り直し) | 1回目 | 確か | 理由 |');
+      o('| --- | --- | --- | --- | --- | --- |');
+      for (const x of V) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${sgn(x.first)} | ${x.pts >= VERIFY_FIRM ? '確か' : 'くじだった見込み'} | ${comboReason(x, true)}${confirmed(x, true) ? '(実戦でも確認)' : ''} |`);
+      o();
+      o(`### 1回目の上位 20(測り直す前。目安)`);
+      o();
+      o('| 勇者モン | 供モン | 相性 |');
+      o('| --- | --- | --- |');
+      for (const x of good.slice(0, 20)) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} |`);
+    } else {
+      o('## よく合う組み合わせ(上位 20)');
+      o();
+      o('| 勇者モン | 供モン | 相性 | 理由 |');
+      o('| --- | --- | --- | --- |');
+      for (const x of top) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${comboReason(x, true)}${confirmed(x, true) ? '(実戦でも確認)' : ''} |`);
+    }
     o();
-    o('| 勇者モン | 供モン | 相性 | 理由 |');
-    o('| --- | --- | --- | --- |');
-    for (const x of top) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${comboReason(x, true)}${confirmed(x, true) ? '(実戦でも確認)' : ''} |`);
+    if (VL) {
+      o(`## 合わない組み合わせ(1回目の下位 ${VL.length} 組を、別の種で各 ${cache.verify.runs} 回測り直したもの)`);
+      o();
+      o(`上位と同じ測り直し。1回目より 0 へ戻るのがふつう(下から拾うと、くじで下に出た組が混ざるため)。測り直しで −${VERIFY_FIRM} 以下に残った組を「確か」とした。`);
+      o();
+      o('| 勇者モン | 供モン | 相性(測り直し) | 1回目 | 確か | 理由 |');
+      o('| --- | --- | --- | --- | --- | --- |');
+      for (const x of VL) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${sgn(x.first)} | ${x.pts <= -VERIFY_FIRM ? '確か' : 'くじだった見込み'} | ${comboReason(x, false).replace('(回数を足して確かめる)', x.pts <= -VERIFY_FIRM ? '(測り直しても下がるので、くじではない。わけはまだ読めていない)' : '(測り直すと差が小さくなった)')}${confirmed(x, false) ? '(実戦でも確認)' : ''} |`);
+    } else {
+      o('## 合わない組み合わせ(下位 10。1回目の数字で、測り直していない)');
+      o();
+      o('| 勇者モン | 供モン | 相性 | 理由 |');
+      o('| --- | --- | --- | --- |');
+      for (const x of bottom) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${comboReason(x, false)}${confirmed(x, false) ? '(実戦でも確認)' : ''} |`);
+    }
     o();
-    o('## 合わない組み合わせ(下位 10)');
-    o();
-    o('| 勇者モン | 供モン | 相性 | 理由 |');
-    o('| --- | --- | --- | --- |');
-    for (const x of bottom) o(`| ${x.h.name} | ${x.a.name} | ${sgn(x.pts)} | ${comboReason(x, false)}${confirmed(x, false) ? '(実戦でも確認)' : ''} |`);
-    o();
-    o('## 勇者モンごとの相性のいい供モン');
+    o('## 勇者モンごとの相性のいい供モン(1回目の数字。くじのぶれ ±0.3 の中にあるものが多い)');
     o();
     for (const h of MONS) {
       const xs = C.filter((x) => x.h.id === h.id && Number.isFinite(x.pts)).sort((a, z) => z.pts - a.pts);
@@ -494,7 +584,8 @@ function writeAll(cache) {
     o();
     o('作り直す: `node tools/playbot/asika-tier.js --only combo`(回さずに作り直すなら `--from-cache`)');
     fs.writeFileSync(path.join(OUT_DIR, 'combo.md'), L.join('\n') + '\n');
-    out.combo = { rows: C, top, bottom, confirmed };
+    // tier.json の「良い」組は、測り直したときは「確か」だけを載せる
+    out.combo = { rows: C, top: V ? V.filter((x) => x.pts >= VERIFY_FIRM) : top, bottom: VL ? VL.filter((x) => x.pts <= -VERIFY_FIRM) : bottom, confirmed };
   }
   // ---------- tier.json ----------
   const jf = path.join(OUT_DIR, 'tier.json');
@@ -502,16 +593,22 @@ function writeAll(cache) {
   if (A) {
     j.アシカ = A.cards.map((c) => {
       const w = cardWords(c);
-      const fits = MONS.map((m) => ({ m, l: c.heroLift[m.id] })).filter((x) => Number.isFinite(x.l)).sort((a, z) => z.l - a.l).slice(0, 3);
+      const { fits, none } = fitsOf(c);
       return {
         名前: c.name, 総合: c.tier, Hard: c.per.Hard.tier, Expert: c.per.Expert.tier, Master: c.per.Master.tier, 暫定: c.provisional, 仮の総合: '',
         理由: `${w.reason}(実戦 Hard ${c.real.Hard.n}・Expert ${c.real.Expert.n}・Master ${c.real.Master.n} 回)`,
         強み: w.good.join('・'), 弱み: w.bad.join('・'),
         回数: Object.fromEntries(DIFFS.map((d) => [d, c.per[d].n])),
         合うモンスター: fits.map((x) => ({ 名前: x.m.name, 理由: `この子が勇者モンのとき、優先すると WAVE ${sgn(x.l, r1)}` })),
+        ...(none ? { 合う子なし: none } : {}),
       };
     });
-    for (const jm of j.モンスター) { const m = MONS.find((x) => x.name === jm.名前); if (m) jm.おすすめアシカ = recommendFor(m, A).map(({ 名前, 理由 }) => ({ 名前, 理由 })); }
+    for (const jm of j.モンスター) {
+      const m = MONS.find((x) => x.name === jm.名前); if (!m) continue;
+      const r = recommendFor(m, A);
+      jm.おすすめアシカ = r.length ? r.map(({ 名前, 理由 }) => ({ 名前, 理由 }))
+        : [{ 名前: 'どれでも同じくらい', 理由: `差が WAVE +${RECOMMEND_MIN} に届くカードが無い(いちばん伸びる ${bestCardFor(m, A).name} でも ${sgn(bestCardFor(m, A).lift, r1)})` }];
+    }
   }
   if (C) {
     const { top, bottom, confirmed } = out.combo;
