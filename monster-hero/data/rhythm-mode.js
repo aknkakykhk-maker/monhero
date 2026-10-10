@@ -1165,14 +1165,17 @@ const RHYTHM_SKY_LIFT_RATIO=.16;
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
 const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.25:RHYTHM_SKY_LIFT_RATIO;}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
-// 毎コマ何百回も呼ばれるので、ノーツごとに1回だけ数えて覚える(譜面のノーツは凍らせてあり、中身は変わらない)
+// 毎コマ何百回も呼ばれるので、点の列ごとに1回だけ数えて覚える。演奏中のノーツは譜面のノーツの写しだが、
+// 点の列(slidePoints)は譜面の凍らせた配列をそのまま持つので、それを鍵にする(凍っていない列は覚えずに毎回数える)
 const RHYTHM_SLIDE_HAS_SKY_MEMO=typeof WeakMap==='function'?new WeakMap():null;
 const rhythmSlideHasSky=note=>{
-  if(!Array.isArray(note?.slidePoints))return false;
-  const memo=RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note)?RHYTHM_SLIDE_HAS_SKY_MEMO.get(note):undefined;
+  const points=note?.slidePoints;
+  if(!Array.isArray(points))return false;
+  const keep=RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(points);
+  const memo=keep?RHYTHM_SLIDE_HAS_SKY_MEMO.get(points):undefined;
   if(memo!==undefined)return memo;
-  const has=note.slidePoints.some(point=>Number(point?.sky)>0);
-  if(RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note))RHYTHM_SLIDE_HAS_SKY_MEMO.set(note,has);
+  const has=points.some(point=>Number(point?.sky)>0);
+  if(keep)RHYTHM_SLIDE_HAS_SKY_MEMO.set(points,has);
   return has;
 };
 const rhythmSlideSkyAt=(note,chartTimeMs)=>{
