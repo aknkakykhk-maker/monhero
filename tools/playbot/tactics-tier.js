@@ -228,6 +228,25 @@ const MISSING_MECHANICS = (() => {
   } catch (e) { return []; }
 })();
 if (MISSING_MECHANICS.length) HOW_TEXT.push(`まだ入れていない・一部だけの機能(シミュレーターかボットに無く、Tier の数字に効いていないもの。効きの大きい順): ${MISSING_MECHANICS.join('・')}。機能の一覧は docs/playbot/reports/tier/mechanics.md。`);
+// ボットの EX の使い方が下手な子(シミュレーターの「上手 − ボット」の平均が 0.2 WAVE 以上。sim.md の「EX の使い方」の表)は、
+// 直したボット(記録に r.bot がある回。2026-10-10 アリーナくん #2528 から)で勇者モンにした回が5回たまるまで「暫定」にする
+// (2026-10-10 統括部長: エイキが直す前のボットの回だけで C に確定した件)
+const BOT_WEAK_GAP = 0.2;
+const BOT_FIXED_NEED = 5;
+const botWeak = (() => {
+  try {
+    const t = fs.readFileSync(path.join(ROOT, 'docs', 'playbot', 'reports', 'tier', 'sim.md'), 'utf8');
+    const sec = (t.split(/^## EX の使い方.*$/m)[1] || '').split(/^## /m)[0];
+    const out = {};
+    for (const line of sec.split('\n')) {
+      const c = line.split('|').slice(1, -1).map((x) => x.trim());
+      if (c.length >= 6 && Number.isFinite(Number(c[c.length - 1]))) out[c[0]] = Number(c[c.length - 1]);
+    }
+    return out;
+  } catch (e) { return {}; }
+})();
+const fixedBotHeroRuns = (name) => runs.filter((r) => r.hero === name && r.bot).length;
+HOW_TEXT.push(`ボットの EX の使い方が下手な子(シミュレーターで「上手な使い方 − ボット」が平均 ${BOT_WEAK_GAP} WAVE 以上)は、直したボット(2026-10-10 から)で勇者モンにした回が ${BOT_FIXED_NEED} 回たまるまで「暫定」。`);
 const tierOfScore = (sc) => (sc >= 0.45 ? 'S' : sc >= 0.15 ? 'A' : sc >= -0.15 ? 'B' : sc >= -0.45 ? 'C' : 'D');
 const overall = stats.map((s) => {
   const per = TIER_DIFFS.map((d) => ({ d, x: statsByDiff[d].find((y) => y.m.name === s.m.name) })).filter((v) => v.x && v.x.n);
@@ -248,7 +267,9 @@ const overall = stats.map((s) => {
     tier = tierOfScore(score);
   }
   const short = (d) => { const v = per.find((q) => q.d === d); return v ? `${v.x.tier.replace('未計測', '—')}${v.x.provisional && v.x.tier !== '保留' ? '*' : ''}` : '—'; };
-  return { s, tier, score, n, provisional: firmCells.length < 2, short, guess };
+  const gap = botWeak[s.m.name];
+  const weakBot = Number.isFinite(gap) && gap >= BOT_WEAK_GAP && fixedBotHeroRuns(s.m.name) < BOT_FIXED_NEED;
+  return { s, tier, score, n, provisional: firmCells.length < 2 || weakBot, weakBot, botGap: gap, short, guess };
 });
 const OVERALL_ORDER = ['S', 'A', 'B', 'C', 'D', '回数不足', '保留', '未計測'];
 overall.sort((a, z) => OVERALL_ORDER.indexOf(a.tier) - OVERALL_ORDER.indexOf(z.tier) || (z.score || -9) - (a.score || -9));
@@ -274,6 +295,8 @@ for (const t of ['S', 'A', 'B', 'C', 'D']) {
 }
 const few = overall.filter((o) => o.tier === '回数不足');
 if (few.length) { out(); out(`回数不足(どの難易度も5回未満なので、総合はまだ付けない。かっこは * のマスから出した仮の Tier): ${few.map((o) => `${o.s.m.name}(仮${o.guess})`).join('・')}`); }
+const weakAll = overall.filter((o) => o.weakBot && !['回数不足', '保留', '未計測'].includes(o.tier));
+if (weakAll.length) { out(); out(`ボットの EX の使い方が下手なので、直したボットの回が${BOT_FIXED_NEED}回たまるまで暫定: ${weakAll.map((o) => `${o.s.m.name}(上手 − ボット +${o.botGap.toFixed(2)}・直したボット ${fixedBotHeroRuns(o.s.m.name)}回)`).join('・')}`); }
 const heldAll = overall.filter((o) => o.tier === '保留');
 if (heldAll.length) { out(); out(`保留(EX をまだ使えていない): ${heldAll.map((o) => o.s.m.name).join('・')}`); }
 out();

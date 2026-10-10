@@ -740,6 +740,19 @@ const giftIsExpired = (gift, now=Date.now()) => {
 // HOMEの通知バッジ・ギフト画面のバッジ・「すべて受け取る」が同じ判定を使う
 const giftIsClaimable = (gift, now=Date.now()) => !!gift && !gift.claimedAt && !giftIsExpired(gift, now) && !!normalizeGiftRewards(gift);
 const giftClaimableCount = (gifts, now=Date.now()) => (Array.isArray(gifts) ? gifts : []).filter(g => giftIsClaimable(g, now)).length;
+// 受け取ったギフトの報酬を、種類(品物は品物ごと)に合計する。「手に入れたもの」の窓に出す。
+// 読むだけで、保存や所持数には触れない。まとめて受け取ったときも1つの一覧になる
+const summarizeClaimedGiftRewards = (gifts) => {
+  const totals = new Map();
+  (Array.isArray(gifts) ? gifts : []).forEach(gift => {
+    (normalizeGiftRewards(gift) || []).forEach(reward => {
+      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type;
+      const prev = totals.get(key);
+      totals.set(key, prev ? { ...prev, amount:prev.amount + reward.amount } : { ...reward });
+    });
+  });
+  return [...totals.values()];
+};
 const buildGiftClaim = (gift, balances, now=Date.now()) => {
   if (!gift || gift.claimedAt || giftIsExpired(gift, now)) return { ok:false, reason:gift?.claimedAt?'claimed':'expired' };
   const rewards = normalizeGiftRewards(gift);
