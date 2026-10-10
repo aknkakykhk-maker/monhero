@@ -1201,8 +1201,8 @@ const rhythmScrollTimeAt=s=>{
 // ピンセットくんの色の案で差し替えるのはここだけ(core=芯の白っぽい光・main=金・accent=差し色の水色)
 // 色は演奏を始めるときに、空中の段の色(rhythmSkyTheme().fx)で上書きする(金はモンスターノーツと同じ系統なので使わない)
 const RHYTHM_SKY_FX={core:'255,255,255',main:'226,232,240',accent:'196,181,253'};
-// 取ったときの弾け方の長さ(ms)。地上(RHYTHM_HIT_EFFECT_MS.NORMAL=340)より長く、ふわっと残す
-const RHYTHM_SKY_HIT_MS=560;
+// 取ったときの弾け方の長さ(ms)。地上(RHYTHM_HIT_EFFECT_MS.NORMAL=340)とほぼ同じにする(空中だけ派手で別のゲームに見えないように・2026-10-10 社長「違和感もないように」)
+const RHYTHM_SKY_HIT_MS=380;
 const RHYTHM_SKY_INPUT={active:false};
 // 空中の段の色(試作): 空中の面・空中の判定ライン・柱が使う。空中のノーツの見た目の案(localStorage 'mh_sky_tap_style_proto')ごとに変えられる。
 // 今あるノーツの色(水色・緑・紫・ピンク・オレンジ・黄緑・金のモンスターノーツ)とかぶらない色を選ぶこと
@@ -30307,10 +30307,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyHit=(h,p,hitY)=>{
     // 案(localStorage 'mh_sky_tap_style_proto')ごとに形と色を変える(2026-10-10・ピンセットくんの案 beam/ruby/cube)。
     // 外側の光は空中の面の差し色(ピンセットくんの RHYTHM_SKY_THEMES の rgb。無ければ RHYTHM_SKY_FX.accent)
-    let style='';try{style=typeof localStorage!=='undefined'?String(localStorage.getItem('mh_sky_tap_style_proto')||''):'';}catch{style='';}
+    // 案は板の描き方(skyTapStyle)と同じものを読む。既定が変わっても板と弾け方がそろう
+    const style=skyTapStyle();
     const theme=typeof rhythmSkyTheme==='function'?rhythmSkyTheme():null;
     const silver={core:'255,255,255',main:'226,232,240'},red={core:'255,255,255',main:'239,68,68'};
     const base=style==='beam'||style==='cube'?silver:(style==='ruby'?red:{core:RHYTHM_SKY_FX.core,main:RHYTHM_SKY_FX.main});
+    const named=style==='beam'||style==='ruby'||style==='cube';
     const C={core:base.core,main:base.main,accent:(theme&&typeof theme.rgb==='string'&&theme.rgb)||RHYTHM_SKY_FX.accent};
     const Y=hitY-cssH*RHYTHM_SKY_LIFT_RATIO;
     const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
@@ -30321,32 +30323,32 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.setTransform(dpr,0,0,dpr,0,0);
     // ふわっとした光のかたまり(差し色。放射状のグラデーションが無い WebGL でも同じに出るよう、同心円を重ねる)
     for(let i=3;i>=1;i--){
-      ctx.globalAlpha=Math.max(0,fade*.12*(4-i)*power);ctx.fillStyle=`rgb(${style?C.accent:C.main})`;
-      ctx.beginPath();ctx.arc(cx,Y,W*.3*i*(.55+grow*.7),0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=Math.max(0,fade*.05*(4-i)*power);ctx.fillStyle=`rgb(${named?C.accent:C.main})`;
+      ctx.beginPath();ctx.arc(cx,Y,W*.2*i*(.5+grow*.4),0,Math.PI*2);ctx.fill();
     }
     // 線に沿って左右へ伸びる光の筋(レンズの光の筋のよう。参考の Sky Input の弾け方)。beam は長く強く、ruby は出さない
     const lensOn=style!=='ruby',lens=Math.min(1,p/(style==='beam'?.7:.6));
     if(lensOn&&lens<1){
-      const a=(1-lens)*power,len=W*((style==='beam'?1.5:1.1)+lens*(style==='beam'?2.2:1.6)),th=(style==='beam'?2:1.6)*(1-lens)+.5;
+      const a=(1-lens)*power*.8,len=W*((style==='beam'?.75:.55)+lens*(style==='beam'?.8:.6)),th=(style==='beam'?1.4:1.1)*(1-lens)+.4;
       ctx.globalAlpha=a*.85;ctx.fillStyle=`rgb(${C.accent})`;poly([cx-len,Y,cx,Y-th*2,cx+len,Y,cx,Y+th*2]);ctx.fill();
       ctx.globalAlpha=a;ctx.fillStyle=`rgb(${C.core})`;poly([cx-len*.7,Y,cx,Y-th,cx+len*.7,Y,cx,Y+th]);ctx.fill();
     }
     // 細い輪が広がる(菱形。ruby は差し色の赤、ほかは芯の色)
     const diamond=(R,flat)=>{ctx.beginPath();ctx.moveTo(cx,Y-R*flat);ctx.lineTo(cx+R,Y);ctx.lineTo(cx,Y+R*flat);ctx.lineTo(cx-R,Y);ctx.closePath();ctx.stroke();};
-    ctx.globalAlpha=Math.max(0,fade*power*(style==='cube'?.6:1));ctx.lineWidth=1+(style==='beam'?2:3)*fade;ctx.strokeStyle=`rgb(${style==='ruby'?C.main:C.core})`;diamond(W*(.22+grow*.78),.62);
+    ctx.globalAlpha=Math.max(0,fade*power*(style==='cube'?.6:1));ctx.lineWidth=1+1.5*fade;ctx.strokeStyle=`rgb(${style==='ruby'?C.main:C.core})`;diamond(W*(.18+grow*.42),.62);
     const lag=Math.max(0,(p-.12)/.88),lagGrow=1-Math.pow(1-lag,3);
-    if(lag>0){ctx.globalAlpha=Math.max(0,(1-lag)*.8*power);ctx.lineWidth=1+2*(1-lag);ctx.strokeStyle=`rgb(${C.accent})`;diamond(W*(.18+lagGrow*1.15),.5);}
+    if(lag>0){ctx.globalAlpha=Math.max(0,(1-lag)*.5*power);ctx.lineWidth=1+(1-lag);ctx.strokeStyle=`rgb(${C.accent})`;diamond(W*(.15+lagGrow*.6),.5);}
     if(style==='ruby'){
       // 案N 赤い宝石: 菱形が4つの面に割れて、赤い三角が4方向(斜め)へ回りながら飛ぶ
-      const sz=W*.22*(1-p*.5);
+      const sz=W*.13*(1-p*.5);
       for(let i=0;i<4;i++){
-        const ang=Math.PI/4+i*Math.PI/2,d=W*(.08+grow*.75),x=cx+Math.cos(ang)*d,y=Y+Math.sin(ang)*d*.7,turn=ang+p*2.4*(i%2?1:-1);
+        const ang=Math.PI/4+i*Math.PI/2,d=W*(.06+grow*.42),x=cx+Math.cos(ang)*d,y=Y+Math.sin(ang)*d*.7,turn=ang+p*2.4*(i%2?1:-1);
         ctx.globalAlpha=Math.max(0,fade*power);ctx.fillStyle=`rgb(${i%2?C.main:'254,202,202'})`;
         poly([x+Math.cos(turn)*sz,y+Math.sin(turn)*sz,x+Math.cos(turn+2.1)*sz*.7,y+Math.sin(turn+2.1)*sz*.7,x+Math.cos(turn-2.1)*sz*.7,y+Math.sin(turn-2.1)*sz*.7]);ctx.fill();
       }
     }else if(style==='cube'){
       // 案O 白銀の立方体: 上・左・右の3つの面が、それぞれ外へ開くように離れていく
-      const e=W*.2*(1-p*.35),d=W*.55*grow,a=Math.max(0,fade*power);
+      const e=W*.12*(1-p*.35),d=W*.35*grow,a=Math.max(0,fade*power);
       const top=[0,-1],left=[-.87,.5],right=[.87,.5];
       [[top,'255,255,255'],[left,C.main],[right,'203,213,225']].forEach(([dir,col])=>{
         const ox=cx+dir[0]*d,oy=Y+dir[1]*d*.8;ctx.globalAlpha=a;ctx.fillStyle=`rgb(${col})`;
@@ -30359,7 +30361,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 十字の星(最初の4割だけ。横に長く、縦は上へ長めに伸ばして「空中」の向きを出す。ruby は白い星形の閃光として強めに)
     const q=Math.min(1,p/(style==='ruby'?.3:.4));
     if(q<1&&style!=='cube'){
-      const a=(1-q)*power,len=W*((style==='ruby'?.4:.5)+q*.75),up=W*(.35+q*.9),th=2.6*(1-q)+.8;
+      const a=(1-q)*power,len=W*((style==='ruby'?.24:.28)+q*.3),up=W*(.2+q*.35),th=1.8*(1-q)+.6;
       ctx.globalAlpha=a;ctx.fillStyle=`rgb(${C.core})`;
       poly([cx-len,Y,cx,Y-th,cx+len,Y,cx,Y+th]);ctx.fill();
       poly([cx,Y-up,cx+th,Y,cx,Y+up*(style==='ruby'?1:.45),cx-th,Y]);ctx.fill();
@@ -30368,36 +30370,33 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(style!=='ruby'){
       const n=style==='cube'?8:6;
       for(let i=0;i<n;i++){
-        const spread=style==='cube'?.32:.42,ang=-Math.PI/2+(i-(n-1)/2)*spread,dist=W*(.18+grow*(.85+(i%2)*.25)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*(style==='cube'?1.15:.9)+p*p*W*.25;
-        const r=Math.max(.6,(3-(i%3)*.5)*(1-p*.7)),turn=(i%2?1:-1)*(.6+p*3),co=Math.cos(turn)*r,si=Math.sin(turn)*r;
+        const spread=style==='cube'?.32:.42,ang=-Math.PI/2+(i-(n-1)/2)*spread,dist=W*(.12+grow*(.4+(i%2)*.12)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*(style==='cube'?1.15:.9)+p*p*W*.12;
+        const r=Math.max(.6,(2.2-(i%3)*.4)*(1-p*.7)),turn=(i%2?1:-1)*(.6+p*3),co=Math.cos(turn)*r,si=Math.sin(turn)*r;
         ctx.globalAlpha=Math.max(0,fade*power);ctx.fillStyle=i%2?`rgb(${C.main})`:`rgb(${C.core})`;
         poly([x-co+si,y-si-co,x+co+si,y+si-co,x+co-si,y+si+co,x-co-si,y-si+co]);ctx.fill();
       }
     }
     // 真ん中に残る光の点
     ctx.globalAlpha=Math.max(0,Math.min(1,(1-p)*1.6)*power);ctx.fillStyle=`rgb(${C.core})`;
-    ctx.beginPath();ctx.arc(cx,Y,1.5+2.5*(1-p),0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx,Y,1+1.5*(1-p),0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;
   };
-  // 空中のノーツが空中の判定ラインへ近づくほど強まる光(試作)。drawSkyTap(板そのもの)の手前に敷く。
-  // 近さ c は、ノーツの中心から空中の線までの距離を、プレイエリアの高さの42%で割ったもの(遠いと0・線の上で1)。
-  // ふわっとした光は c*c で明るくなり、細い輪は外から板へ向かって縮みながら濃くなる
+  // 空中のノーツが空中の判定ラインへ近づいたときだけ出る細い輪(試作)。drawSkyTap(板そのもの)の手前に敷く。
+  // 2026-10-10 改善部 Q1「粒のまわりの大きな白い丸が、地上のノーツや板を隠している」→ 丸はやめ、板の幅の1.3倍ほどの細い輪だけにした。
+  // 近さ c は、ノーツの中心から空中の線までの距離を、プレイエリアの高さの42%で割ったもの(遠いと0・線の上で1)。c が .55 を越えてから濃くなる
   const drawSkyGlow=(hd,opts)=>{
     if(!hd||effect==='MINIMAL'||lightweight)return;
     // 色は案の差し色(ピンセットくんの RHYTHM_SKY_THEMES)に合わせる。無ければ RHYTHM_SKY_FX(金)
     const theme=typeof rhythmSkyTheme==='function'?rhythmSkyTheme():null,themed=theme&&typeof theme.rgb==='string'&&theme.rgb;
-    const C=themed?{core:'255,255,255',main:themed}:RHYTHM_SKY_FX,line=rhythmSkyLineRatio()*cssH,range=cssH*.42,dist=line-hd.cy;
+    const color=themed||RHYTHM_SKY_FX.main,line=rhythmSkyLineRatio()*cssH,range=cssH*.42,dist=line-hd.cy;
     if(!(dist>-Math.max(8,hd.h)&&dist<range))return;
-    const c=Math.max(0,Math.min(1,1-dist/range)),k=c*c,W=Math.max(18,hd.w*sizeScale*1.5),alpha=Number.isFinite(opts?.alpha)?opts.alpha:1;
+    const c=Math.max(0,Math.min(1,1-dist/range)),t=Math.max(0,Math.min(1,(c-.55)/.45));
+    if(!(t>0))return;
+    const k=t*t*(3-2*t),W=Math.max(18,hd.w*sizeScale*1.5),alpha=Number.isFinite(opts?.alpha)?opts.alpha:1;
     ctx.save();
     glowBegin();
-    for(let i=3;i>=1;i--){
-      ctx.globalAlpha=alpha*k*.11*(4-i);ctx.fillStyle=`rgb(${C.main})`;
-      ctx.beginPath();ctx.arc(hd.cx,hd.cy,W*(.3+.22*i)*(.75+.35*k),0,Math.PI*2);ctx.fill();
-    }
-    const r=W*(.6+1.1*(1-k));
-    ctx.globalAlpha=alpha*Math.min(1,c*1.3)*.85;ctx.lineWidth=1+2.2*k;ctx.strokeStyle=`rgb(${C.core})`;
-    ctx.beginPath();ctx.arc(hd.cx,hd.cy,r,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=alpha*k*.8;ctx.lineWidth=1.2;ctx.strokeStyle=`rgb(${color})`;
+    ctx.beginPath();ctx.arc(hd.cx,hd.cy,W*.65*(1.15-.15*k),0,Math.PI*2);ctx.stroke();
     glowEnd();
     ctx.restore();
   };
