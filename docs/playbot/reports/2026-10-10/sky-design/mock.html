@@ -1,0 +1,65 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000">
+<canvas id="c"></canvas>
+<script>
+const q=new URLSearchParams(location.search);const LAND=q.get('o')==='l';
+const W=LAND?844:390,H=LAND?390:640;const c=document.getElementById('c');const dpr=2;c.width=W*dpr;c.height=H*dpr;c.style.width=W+'px';c.style.height=H+'px';
+const x=c.getContext('2d');x.scale(dpr,dpr);
+// 道: 上(奥)が狭く下(手前)が広い台形。空中の面は同じ台形を上へ持ち上げた位置(SKY の線の高さ)で測る
+const topY=LAND?20:40,botY=H-(LAND?10:60),gY=H-(LAND?60:120),sY=LAND?150:300;
+const cx=W/2;const halfW=y=>{const t=(y-topY)/(botY-topY);return (LAND?60:40)+((LAND?330:180)-(LAND?60:40))*t;};
+const lane=(y,u)=>cx+halfW(y)*(u*2-1);       // u=0..1 でレーン位置
+// 背景
+let g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0b0820');g.addColorStop(1,'#05050f');x.fillStyle=g;x.fillRect(0,0,W,H);
+// 空中の面: 道より少し明るい帯(奥〜SKY の線)。細い横の格子で「そこに面がある」ことを見せる
+x.save();x.beginPath();x.moveTo(lane(topY,0),topY);x.lineTo(lane(topY,1),topY);x.lineTo(lane(sY,1)+8,sY);x.lineTo(lane(sY,0)-8,sY);x.closePath();
+g=x.createLinearGradient(0,topY,0,sY);g.addColorStop(0,'rgba(120,80,255,.04)');g.addColorStop(1,'rgba(120,80,255,.16)');x.fillStyle=g;x.fill();x.clip();
+x.strokeStyle='rgba(190,170,255,.14)';x.lineWidth=1;for(let y=topY+12;y<sY;y+=(y-topY)*.16+6){x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke();}
+x.restore();
+// 道(地面)
+x.beginPath();x.moveTo(lane(topY,0),topY);x.lineTo(lane(topY,1),topY);x.lineTo(lane(botY,1),botY);x.lineTo(lane(botY,0),botY);x.closePath();
+g=x.createLinearGradient(0,topY,0,botY);g.addColorStop(0,'#0e0c26');g.addColorStop(1,'#171640');x.fillStyle=g;x.fill();
+x.strokeStyle='rgba(255,255,255,.55)';x.lineWidth=1.4;x.stroke();
+for(let i=1;i<10;i++){x.beginPath();x.moveTo(lane(topY,i/10),topY);x.lineTo(lane(botY,i/10),botY);x.strokeStyle='rgba(160,150,255,.12)';x.lineWidth=1;x.stroke();}
+// 地面の判定ライン(太い紫)
+x.fillStyle='rgba(196,132,252,.85)';x.fillRect(lane(gY,0)-6,gY-2,lane(gY,1)-lane(gY,0)+12,4);
+// 空中の判定ライン(SKY): 2本の細い白紫の線。道の外まで伸ばして「面の高さ」を示す
+x.fillStyle='rgba(235,225,255,.95)';x.fillRect(lane(sY,0)-26,sY-3,lane(sY,1)-lane(sY,0)+52,1.5);x.fillRect(lane(sY,0)-26,sY+1.5,lane(sY,1)-lane(sY,0)+52,1);
+x.font='bold 10px sans-serif';x.fillStyle='#e9d5ff';x.fillText('SKY',lane(sY,1)+30,sY+4);
+x.fillStyle='#cbd5e1';x.fillText('GROUND',lane(gY,1)+10,gY+16);
+// 地上のノーツ: 不透明・硬い縁・平らな白〜水色の板(光らない)
+const plate=(y,u0,u1,col)=>{const h=LAND?9:11,a=lane(y,u0),b=lane(y,u1);x.fillStyle=col;x.fillRect(a,y-h/2,b-a,h);x.fillStyle='rgba(255,255,255,.9)';x.fillRect(a,y-h/2,b-a,1.5);x.fillStyle='rgba(0,0,0,.35)';x.fillRect(a,y+h/2-1.5,b-a,1.5);};
+plate(gY-170,.1,.3,'#cfe8ff');plate(gY-120,.6,.82,'#cfe8ff');plate(gY-60,.3,.5,'#cfe8ff');plate(gY-20,.62,.84,'#cfe8ff');
+// 空中: 加算の光・半透明・彩度の高い赤(MH の SKY 色)。形は「帯」と「星」で、地上の板とは別物にする
+x.globalCompositeOperation='lighter';
+const arc=[[.34,topY+10],[.36,topY+55],[.43,topY+115],[.55,sY-70],[.63,sY-22],[.66,sY]];
+// 床の影(帯の真下の地面に、細く暗い赤)
+const proj=(p)=>[lane(p[1]+ (gY-sY),p[0]),p[1]+(gY-sY)];
+x.globalCompositeOperation='source-over';
+x.beginPath();arc.forEach((p,i)=>{const [X,Y]=proj(p);i?x.lineTo(X,Y):x.moveTo(X,Y);});x.strokeStyle='rgba(239,68,68,.30)';x.lineWidth=9;x.lineCap='round';x.lineJoin='round';x.stroke();
+x.strokeStyle='rgba(2,3,16,.7)';x.lineWidth=4;x.stroke();
+// 支柱(細い点線): 帯から影へ
+x.strokeStyle='rgba(255,220,225,.28)';x.lineWidth=1;arc.forEach((p,i)=>{if(i%2)return;const [X,Y]=proj(p);const X0=lane(p[1],p[0]);x.beginPath();x.moveTo(X0,p[1]);x.lineTo(X,Y);x.stroke();});
+// 帯(先細り・手前ほど太い・外側の光→本体→白い芯)
+x.globalCompositeOperation='lighter';
+const wAt=y=>1.5+ (y-topY)/(sY-topY)*(LAND?8:11);
+const ribbon=(wMul,col,al)=>{x.beginPath();const L=[],R=[];arc.forEach(p=>{const X=lane(p[1],p[0]),w=wAt(p[1])*wMul;L.push([X-w,p[1]]);R.push([X+w,p[1]]);});x.moveTo(...L[0]);L.forEach(p=>x.lineTo(...p));R.reverse().forEach(p=>x.lineTo(...p));x.closePath();x.fillStyle=col;x.globalAlpha=al;x.fill();x.globalAlpha=1;};
+x.shadowColor='rgba(239,68,68,.8)';x.shadowBlur=16;ribbon(1.6,'rgba(239,68,68,.30)',1);x.shadowBlur=0;
+ribbon(1,'rgba(244,63,94,.80)',1);ribbon(.32,'rgba(255,235,238,.9)',1);
+// 頭: 白い芯+十字の光条+ハロ(SKY の線の上)
+const hx=lane(sY,.66),hy=sY;
+g=x.createRadialGradient(hx,hy,2,hx,hy,34);g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(.25,'rgba(255,120,140,.7)');g.addColorStop(1,'rgba(239,68,68,0)');x.fillStyle=g;x.beginPath();x.arc(hx,hy,34,0,7);x.fill();
+x.fillStyle='#fff';[[1,0],[0,1]].forEach(([dx,dy])=>{x.beginPath();x.moveTo(hx-dx*34,hy-dy*34);x.lineTo(hx+dy*3,hy+dx*3);x.lineTo(hx+dx*34,hy+dy*34);x.lineTo(hx-dy*3,hy-dx*3);x.closePath();x.globalAlpha=.9;x.fill();});x.globalAlpha=1;
+// 空中タップ: 光る赤い「宝石の板」(縁が光る・中が透ける)+床の影(丸)+細い線
+const airTap=(u0,u1,y)=>{const a=lane(y,u0),b=lane(y,u1),h=LAND?10:13;x.globalCompositeOperation='source-over';
+ const [sx,sy]=[ (a+b)/2, y+(gY-sY)];x.fillStyle='rgba(2,3,16,.55)';x.beginPath();x.ellipse(sx,sy,(b-a)*.6,h*.9,0,0,7);x.fill();x.strokeStyle='rgba(239,68,68,.35)';x.lineWidth=2;x.stroke();
+ x.strokeStyle='rgba(255,220,225,.35)';x.lineWidth=1;x.beginPath();x.moveTo((a+b)/2,y);x.lineTo(sx,sy-h*.9);x.stroke();
+ x.globalCompositeOperation='lighter';x.shadowColor='rgba(239,68,68,.9)';x.shadowBlur=14;
+ x.fillStyle='rgba(239,68,68,.30)';x.beginPath();x.moveTo(a+5,y-h/2);x.lineTo(b-5,y-h/2);x.lineTo(b,y+h/2);x.lineTo(a,y+h/2);x.closePath();x.fill();
+ x.shadowBlur=0;x.strokeStyle='rgba(255,170,180,.95)';x.lineWidth=1.6;x.stroke();x.fillStyle='rgba(255,240,242,.95)';x.fillRect(a+8,y-1,b-a-16,2);};
+airTap(.14,.34,topY+150);airTap(.52,.72,sY-70);
+x.globalCompositeOperation='source-over';
+// レーンの発光(地上と空中で同じ作り・同じ強さ): 同じグラデーションの柱。地上は判定ラインから、空中は SKY の線から立ち上げ、柱の左右の縁は各面のレーン線にぴったり重ねる
+const column=(yBase,u0,u1,hgt)=>{const a0=lane(yBase,u0),a1=lane(yBase,u1),b0=lane(yBase-hgt,u0),b1=lane(yBase-hgt,u1);const gg=x.createLinearGradient(0,yBase,0,yBase-hgt);gg.addColorStop(0,'rgba(120,200,255,.55)');gg.addColorStop(1,'rgba(120,200,255,0)');x.globalCompositeOperation='lighter';x.fillStyle=gg;x.beginPath();x.moveTo(a0,yBase);x.lineTo(a1,yBase);x.lineTo(b1,yBase-hgt);x.lineTo(b0,yBase-hgt);x.closePath();x.fill();x.strokeStyle='rgba(190,230,255,.7)';x.lineWidth=1;x.beginPath();x.moveTo(a0,yBase);x.lineTo(b0,yBase-hgt);x.moveTo(a1,yBase);x.lineTo(b1,yBase-hgt);x.stroke();x.globalCompositeOperation='source-over';};
+column(gY,.3,.5,LAND?60:110);column(sY,.6,.8,LAND?60:110);
+x.fillStyle='rgba(255,255,255,.5)';x.font='11px sans-serif';
+</script>
