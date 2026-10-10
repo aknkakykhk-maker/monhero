@@ -28800,7 +28800,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
     // 空中にある所も帯の太さは変えない(2026-10-10 社長「スライドの始まりのノーツのサイズがスライドラインと違う」。
     // 以前は参考のアークに寄せて高さ1で6割まで細くしていたが、始点の板の半分ほどになり幅が合わなかった)
     const thin=1;
-    return {y:y-lift,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:skyAt};
+    return {y:y-lift,gy:y,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:skyAt};
   };
   let firstIndex=0;
   while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
@@ -28825,7 +28825,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
       // 見えている所の形は変わらない(押さえたときの光・流れる光も判定ライン寄りの範囲しか使わない)。空中のあるスライドは上の farPos で切る
       if(!hasSky&&from.y<-RHYTHM_SLIDE_OFFSCREEN_PX&&to.y<-RHYTHM_SLIDE_OFFSCREEN_PX)return quads;
       // 高さ(sky)は空中のあるスライドだけに付ける(地上だけのスライド=既存の全曲は、区切りの形を今までと同じにする)
-      quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,sky:(Number(from.sky)+Number(to.sky))/2||0}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
+      quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,gy0:from.gy,gy1:to.gy,sky:(Number(from.sky)+Number(to.sky))/2||0}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
       from=to;
       if(rhythmScrollPos(timeMs)>farPos)return quads;
     }
@@ -28850,9 +28850,11 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   if(rhythmNoteIsSlide(note)){
     if(slideTravel){
       out.slide=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
-      out.checkpoints=rhythmSlideCheckpointLines(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
-      // 空中の段(試作): 高さのあるスライドは、地面に影の帯も置く(高さが見えるように)
-      if(rhythmSlideHasSky(note))out.slideShadow=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,{...slideTravel,groundOnly:true},rect,noteHeight/2);
+      // 空中のスライドは区切りの線を描かない(drawSlide が skySlideRgb のとき checkpoints を使わない)ので、作らない
+      out.checkpoints=rhythmSlideHasSky(note)?null:rhythmSlideCheckpointLines(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
+      // 空中の段: 高さのあるスライドは、地面に影の帯も置く(高さが見えるように)。影は空中の帯を持ち上げる前の位置(gy)そのもので、
+      // 左右の端は同じなので、空中の帯の区切りから作る(もう1回投影し直さない。2026-10-10 HELL のカクつき)
+      if(rhythmSlideHasSky(note)&&out.slide)out.slideShadow=out.slide.map(q=>({l0:q.l0,r0:q.r0,y0:q.gy0,l1:q.l1,r1:q.r1,y1:q.gy1,sky:q.sky}));
     }
   }else if(rhythmNoteIsHold(note)&&height>0){
     // 帯の上端(画面外でも可)から下端までを一定間隔でサンプルし、投影の曲線へ沿わせる(DOM 版の clipPath と同じ点)
@@ -30104,21 +30106,35 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
     // 継ぎ目(10等分の境目)は判定と無関係なので線を引かない。塗りだけ。
-    quads.forEach(q=>{
-      // 空中の段(試作): 高さのある区切りは、空中の色を薄く(半透明の帯)。高さが上がるほど空中の見せ方に寄せる
-      const air=!failed&&opts.skySlideRgb?Math.max(0,Math.min(1,(Number(q.sky)||0)*1.6)):0;
-      if(air>0)ctx.fillStyle=`rgba(${opts.skySlideRgb},${(.5-.28*air).toFixed(3)})`;
-      else ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
-      ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
-    // 空中にある区切りの左右の縁を、空中の色で光らせる(縁取りの帯。地上の帯との見分けの主役)
     if(!failed&&opts.skySlideRgb){
+      // 空中の段: 高さのある区切りは、空中の色を薄く(半透明の帯)。高さが上がるほど空中の見せ方に寄せる。
+      // 区切りが数百あるので(2026-10-10 HELL のカクつき)、高さを1/32刻みにそろえ、同じ色が続く区切りは1つの道にまとめて塗る・なぞる
+      // (色の濃さの差は最大0.004。まとめると区切りの継ぎ目の重なりが無くなる分だけ、継ぎ目がごくわずかに目立たなくなる)
+      const airOf=q=>Math.round(Math.max(0,Math.min(1,(Number(q.sky)||0)*1.6))*32)/32;
+      const groundFill=`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
+      let runAir=null;
+      const flushFill=()=>{if(runAir===null)return;ctx.fillStyle=runAir>0?`rgba(${opts.skySlideRgb},${(.5-.28*runAir).toFixed(3)})`:groundFill;ctx.fill();runAir=null;};
+      for(const q of quads){
+        const air=airOf(q);
+        if(air!==runAir){flushFill();runAir=air;ctx.beginPath();}
+        ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();
+      }
+      flushFill();
+      // 空中にある区切りの左右の縁を、空中の色で光らせる(縁取りの帯。地上の帯との見分けの主役)
       ctx.lineCap='round';
-      quads.forEach(q=>{const air=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.6));if(air<=.05)return;
-        ctx.strokeStyle=`rgba(${opts.skySlideRgb},${(.2*air).toFixed(3)})`;ctx.lineWidth=4;
-        ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.stroke();
-        ctx.strokeStyle=opts.skySlideCore||'#fff';ctx.globalAlpha=opts.alpha*air*.6;ctx.lineWidth=1.2;
-        ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.stroke();ctx.globalAlpha=opts.alpha;});
+      const strokeRun=(list,air)=>{
+        if(!list.length||air<=.05)return;
+        const path=()=>{ctx.beginPath();for(const q of list){ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);}};
+        ctx.strokeStyle=`rgba(${opts.skySlideRgb},${(.2*air).toFixed(3)})`;ctx.lineWidth=4;path();ctx.stroke();
+        ctx.strokeStyle=opts.skySlideCore||'#fff';ctx.globalAlpha=opts.alpha*air*.6;ctx.lineWidth=1.2;path();ctx.stroke();ctx.globalAlpha=opts.alpha;
+      };
+      let run=[],lineAir=null;
+      for(const q of quads){const air=airOf(q);if(air!==lineAir){strokeRun(run,lineAir);run=[];lineAir=air;}run.push(q);}
+      strokeRun(run,lineAir);
       ctx.lineCap='butt';
+    }else{
+      quads.forEach(q=>{
+        ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     }
     // 帯のふち。DOM版の[data-rhythm-slide-edge]と同じ濃さで外周だけをなぞる。
     ctx.beginPath();
