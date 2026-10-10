@@ -395,7 +395,11 @@ async function maybeUseEx(s, b, mem, log) {
     //   (2026-10-09: WAVE 1 の3連撃 132 ダメージに使い、2回とも WAVE 1 で使い切っていた)
     else if (role === 'shield' && x.name === 'ヤオビクニ') {
       const heavy = (threat === 'big' || threat === 'pierce' || threat === 'all') && b.slots.some((y) => y.occupied && !y.downed && y.aimDamage && y.hp && y.aimDamage >= y.hp.now * 0.4);
+      // ★予告の札が空でも、狙われた子が倒れる見込みなら使う(2026-10-10 Hard W6: ためた必殺技 1,453 がライフ 540 のヤオビクニへ。
+      //   札が「」と読まれて 'single' 扱いになり、EX を2回とも残したまま倒れ、そのランは最後まで使わなかった)
+      const lethal = b.slots.find((y) => y.occupied && !y.downed && y.aimDamage && y.hp && y.aimDamage >= y.hp.now);
       if (heavy) why = '必殺技・貫通撃・全体攻撃で大きく削られる予告(時間停止のEX)';
+      else if (lethal) why = `${lethal.name}が次の攻撃で倒れる見込み(時間停止のEX)`;
     }
     else if (role === 'shield' && bigHit) why = '重い攻撃の予告(守りのEX)';
     else if (role === 'dodge' && x.aimed && b.enemy && b.enemy.dist === DISTS[x.i] && bigHit) why = '狙われていて、敵と同じ距離(回避のEX)';
