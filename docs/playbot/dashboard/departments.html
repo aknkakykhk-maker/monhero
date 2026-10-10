@@ -30,6 +30,8 @@ p{margin:0}
 .members{display:flex;flex-wrap:wrap;gap:6px}
 .member{display:flex;flex-direction:column;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:4px 10px;min-width:0}
 .member b{font-size:14px;color:var(--fg)}
+.member .trait{font-style:normal;font-size:11px;color:var(--muted);margin-top:2px;max-width:16em}
+.trait-boss{margin:2px 0 0;font-size:13px;color:var(--muted)}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));gap:12px}
 section{display:flex;flex-direction:column;gap:4px;min-width:0}
 ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column;gap:2px}
@@ -38,7 +40,7 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
 <div class="wrap">
   <header>
     <h1>モンヒロ社 部署紹介</h1>
-    <p class="lead">10/10 08:35 更新 / まとめ: 統括部長:モンヒロくん。部の点は成績表(10/9から)の部員の点を足したもの。</p>
+    <p class="lead">10/10 09:48 更新 / まとめ: 統括部長:モンヒロくん。部の点は成績表(10/9から)の部員の点を足したもの。</p>
   </header>
   <nav class="toc"><a href="#hq">本社</a><a href="#battle">バトル部</a><a href="#rhythm">ビート部</a><a href="#patrol">見回り部</a><a href="#guard">守り部</a><a href="#lab">研究所</a><a href="#dev">開発部</a><a href="#repair">修理部</a><a href="#kaizen">改善部</a><a href="#sleep">経理部・広報部・品質管理部</a></nav>
   
@@ -46,6 +48,7 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>本社</h2><span class="chip ok">いつも</span></div>
       <p class="boss">統括部長:モンヒロくん</p>
+      <p class="trait-boss">性格: 世話焼きのまとめ役。みんなの報告を集めるのが好きで、確かめすぎて少し心配性</p>
       <p class="hito">社長の頼みを受けて、合う部へ振り、社長室にまとめる。重い作業は自分でしない</p>
     </header>
     
@@ -60,9 +63,10 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>バトル部</h2><span class="chip idle">待機</span></div>
       <p class="boss">部長ブレイブくん<span class="pts">部の点 5</span></p>
+      <p class="trait-boss">性格: 熱血で見た目にこだわる職人肌。社長の「もっと改良して」で燃える</p>
       <p class="hito">モンヒロバトルの見た目と遊びやすさの担当。社長の「もっと改良して」に一番こたえてきた部</p>
     </header>
-    <div class="members"><span class="member"><b>クラシックくん</b>クラシックバトル・AUTO</span><span class="member"><b>タクティクスくん</b>タクティクスバトル(最後のWAVEまで戦う)</span><span class="member"><b>イベントくん</b>イベント・レイド</span></div>
+    <div class="members"><span class="member"><b>クラシックくん</b>クラシックバトル・AUTO<i class="trait">昔ながらのやり方を大事にする堅実派</i></span><span class="member"><b>タクティクスくん</b>タクティクスバトル(最後のWAVEまで戦う)<i class="trait">一手先を読む策士。負けても最後のWAVEまで粘る</i></span><span class="member"><b>イベントくん</b>イベント・レイド<i class="trait">お祭り好きのにぎやか担当</i></span></div>
     <div class="cols">
       <section><h3>得意なこと</h3><ul><li>画面の作り直し(入口・モードえらび・難易度えらび)</li><li>社長の見た目の好みを形にする</li></ul></section>
       <section><h3>これまでの働き</h3><ul><li>バトルの入口を舞台+立ち絵+大きな札に(#2346ほか)</li><li>難易度えらびの色の強弱(#2383)</li><li>タクティクスのEX理由・クッキー満タンの光(#2371)</li><li>落ちていた検査2本を直した(#2387)</li></ul></section>
@@ -74,9 +78,10 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>ビート部</h2><span class="chip idle">待機</span></div>
       <p class="boss">部長テンポくん<span class="pts">部の点 14</span></p>
+      <p class="trait-boss">性格: 原因を突き止めるまで帰らない粘り強さ。ただし時間の見込みは楽天的</p>
       <p class="hito">モンヒロビートの押し心地と記録の番人。原因を最後まで突き止める粘り強さが持ち味</p>
     </header>
-    <div class="members"><span class="member"><b>リズムくん</b>モンヒロビート・ランキング・横画面</span><span class="member"><b>マルチくん</b>マルチ・マスモン</span><span class="member"><b>レイドくん</b>レイドビート</span><span class="member"><b>フィールくん</b>押し心地(タップ判定・ホールド)</span></div>
+    <div class="members"><span class="member"><b>リズムくん</b>モンヒロビート・ランキング・横画面<i class="trait">1ミリ秒のずれにもこだわる几帳面</i></span><span class="member"><b>マルチくん</b>マルチ・マスモン<i class="trait">みんなで遊ぶのが好きな仕切り屋</i></span><span class="member"><b>レイドくん</b>レイドビート<i class="trait">強い敵ほど燃える挑戦者</i></span><span class="member"><b>フィールくん</b>押し心地(タップ判定・ホールド)<i class="trait">指先の感覚に敏感な繊細派</i></span></div>
     <div class="cols">
       <section><h3>得意なこと</h3><ul><li>タップ判定・ホールドの細かい調べ</li><li>「ゲームの不具合か、ボットの見間違いか」の切り分け</li></ul></section>
       <section><h3>これまでの働き</h3><ul><li>隣のノーツに取られる件の原因と直し(#2362)</li><li>小さい画面のMISSはボットの見間違いと突き止めた(#2377)</li><li>通信不良の演奏のMISSもボットの巻き添えと突き止めた(#2406)</li><li>演奏しなかったマスモンの無料分・券が戻る仕組み(#2423・マルチくん)</li></ul></section>
@@ -88,9 +93,10 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>見回り部</h2><span class="chip idle">待機</span></div>
       <p class="boss">部長マップくん<span class="pts">部の点 35</span></p>
+      <p class="trait-boss">性格: 地図を広げて全体を見る、落ち着いた観察家</p>
       <p class="hito">はじめての人の目と、見た目の細かい崩れの見張り役。今日のMVPのデザインくんがいる部</p>
     </header>
-    <div class="members"><span class="member"><b>ルーキーくん</b>はじめての人の流れ</span><span class="member"><b>パトロールくん</b>画面の案内・探検</span><span class="member"><b>ストーリーくん</b>お話</span><span class="member"><b>デザインくん</b>見た目・小さい画面・文字の折り返し</span></div>
+    <div class="members"><span class="member"><b>ルーキーくん</b>はじめての人の流れ<i class="trait">何でも初めての目で驚ける素直さが武器</i></span><span class="member"><b>パトロールくん</b>画面の案内・探検<i class="trait">毎日同じ道を歩いても飽きないまじめ者</i></span><span class="member"><b>ストーリーくん</b>お話<i class="trait">お話の続きを考えるのが好きな夢見がち</i></span><span class="member"><b>デザインくん</b>見た目・小さい画面・文字の折り返し<i class="trait">1ピクセルのずれも許さない完璧主義</i></span></div>
     <div class="cols">
       <section><h3>得意なこと</h3><ul><li>文字の折り返し・はみ出しを1文字単位で探す</li><li>はじめて遊ぶ人の流れの点検</li></ul></section>
       <section><h3>これまでの働き</h3><ul><li>文字の折り返しの崩れ9件を見つけて直した(#2381・#2385)</li><li>見た目の基準の撮り直し・会話の数え方の直し(#2374)</li></ul></section>
@@ -102,9 +108,10 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>守り部</h2><span class="chip idle">待機</span></div>
       <p class="boss">部長ガードくん<span class="pts">部の点 7</span></p>
+      <p class="trait-boss">性格: 慎重で頑固な門番。口ぐせは「消さない・上書きしない」</p>
       <p class="hito">セーブデータ・時計・数・意地悪な操作の番人。データを壊さないことにいちばん厳しい部</p>
     </header>
-    <div class="members"><span class="member"><b>タイムくん</b>久しぶり・時計</span><span class="member"><b>カウントくん</b>育成・買い物の数</span><span class="member"><b>イジワルくん</b>意地悪な操作・通信不良</span></div>
+    <div class="members"><span class="member"><b>タイムくん</b>久しぶり・時計<i class="trait">時計を何度も見るせっかち</i></span><span class="member"><b>カウントくん</b>育成・買い物の数<i class="trait">数字が1つ合わないと眠れない</i></span><span class="member"><b>イジワルくん</b>意地悪な操作・通信不良<i class="trait">いたずら好き。でもわざと壊して弱点を教える根の親切さ</i></span></div>
     <div class="cols">
       <section><h3>得意なこと</h3><ul><li>保存データを壊さない直し方</li><li>二度押し・戻る・通信不良など、意地悪な操作の点検</li></ul></section>
       <section><h3>これまでの働き</h3><ul><li>強化の「完了」に確認・ブラウザの戻るで外へ出ない(#2397)</li><li>オート強化を「案→確定」にし、上がった数と配り方を見えるように(#2412・#2415)</li></ul></section>
@@ -116,6 +123,7 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>研究所</h2><span class="chip ok">作業中</span></div>
       <p class="boss">ハカセくん<span class="pts">部の点 7</span></p>
+      <p class="trait-boss">性格: 好奇心のかたまり。指摘されるとすぐ素直に作り直す研究者</p>
       <p class="hito">ボットの遊び方・戦い方を作る頭脳。社長の指摘を素直に取り込み、毎回やり方を作り直してくる</p>
     </header>
     
@@ -130,6 +138,7 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>開発部</h2><span class="chip idle">待機</span></div>
       <p class="boss">クラフトくん<span class="pts">部の点 −1</span></p>
+      <p class="trait-boss">性格: 腕のいいものづくり職人。作りたい気持ちが先走るのが玉にきず</p>
       <p class="hito">新しいモンスターや機能を作る部。腕はあるが、一度社長の指示に背いて減給になった</p>
     </header>
     
@@ -144,9 +153,10 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>修理部</h2><span class="chip idle">待機</span></div>
       <p class="boss">ドライバーくん / ドライバーくん2号<span class="pts">部の点 22</span></p>
+      <p class="trait-boss">性格: ドライバーくん: 無口な修理屋。測ってから直す / ドライバーくん2号: 整理整頓が大好きなきれい好き</p>
       <p class="hito">頼みごとごとに立つ小回りの部。測ってから直す、検査は弱めない、が信条</p>
     </header>
-    <div class="members"><span class="member"><b>ドライバーくん</b>画面の直し・重さの調べ・検査の直し</span><span class="member"><b>ドライバーくん2号</b>決まり(CLAUDE.md)の整理</span></div>
+    <div class="members"><span class="member"><b>ドライバーくん</b>画面の直し・重さの調べ・検査の直し<i class="trait">無口な修理屋。測ってから直す</i></span><span class="member"><b>ドライバーくん2号</b>決まり(CLAUDE.md)の整理<i class="trait">整理整頓が大好きなきれい好き</i></span></div>
     <div class="cols">
       <section><h3>得意なこと</h3><ul><li>記録を取ってから直す(推測で直さない)</li><li>検査を弱めずに今の作りへ合わせる</li></ul></section>
       <section><h3>これまでの働き</h3><ul><li>マルチの部屋でマスモンのステータス(#2403)</li><li>マスモン一覧が固まるのを4.1秒→0.2秒に(#2410)</li><li>保存キー3つを仕様書へ(#2411)・落ちていた検査4本(#2417)</li><li>CLAUDE.md を 25.2KB → 15.5KB に整理(#2414)</li></ul></section>
@@ -158,6 +168,7 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>改善部</h2><span class="chip warn">返事待ち</span></div>
       <p class="boss">部長ダメダシくん<span class="pts">部の点 4</span></p>
+      <p class="trait-boss">性格: 辛口の批評家。褒めないけれど、言い切る前に必ず確かめる律儀さがある</p>
       <p class="hito">批判的な目で、ゲームと会社の悪い所を遠慮なく指摘して改善案を出す。褒めない、でも言い切る前に確かめる</p>
     </header>
     
@@ -172,6 +183,7 @@ ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column
     <header class="dept-head">
       <div class="dept-name"><h2>経理部・広報部・品質管理部</h2><span class="chip idle">休眠</span></div>
       <p class="boss">ソロバンくん / メガホンくん / ルーペくん</p>
+      <p class="trait-boss">性格: ソロバンくん: 1円も見逃さない倹約家 / メガホンくん: 声の大きい明るい宣伝係 / ルーペくん: 何でも疑ってかかる虫眼鏡の目</p>
       <p class="hito">ふだんはセッションを立てない休眠部署。必要なときだけ動く</p>
     </header>
     
