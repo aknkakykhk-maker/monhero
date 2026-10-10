@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8048893a855761b6
+// source-sha256: fc1fa52049404607
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -31352,6 +31352,20 @@ const RhythmTapTest = ({
   settingsLiveRef.current = settings;
   useEffect(() => {
     RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+    if (typeof setTimeout !== 'function') return undefined;
+    const install = () => {
+      try {
+        rhythmRestartStylesInstall();
+      } catch {}
+    };
+    const first = setTimeout(install, 250),
+      again = setInterval(install, 400),
+      stop = setTimeout(() => clearInterval(again), 8000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(again);
+      clearTimeout(stop);
+    };
   }, []);
   const stepEffectCapRef = useRef(null);
   const [effectCapNotice, setEffectCapNotice] = useState(() => settingsIn && settingsIn.autoEffectDown !== false && rhythmAutoEffectMemory.level > 0 ? 1 : 0);

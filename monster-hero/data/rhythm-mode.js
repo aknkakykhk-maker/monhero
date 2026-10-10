@@ -2084,6 +2084,13 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(audio?.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
   };
+  // すでに作ってある音の作りが止まっていたら起こす(新しくは作らない)。指を離したとき・クリックのたびに呼ぶ。
+  // iPhone の Safari は「指を置いた瞬間(touchstart)」を音の許可の合図に数えないので、演奏の場所で最初に触ったときの warm() だけでは
+  // 最初のタップ音が遅れることがある(2026-10-11 社長「最初なんだけど、押してる感じラグを感じる」)。曲えらびの「決定」などで先に起こしておく
+  const wake=()=>{
+    if(!ctx||ctx.state==='closed'||ctx.state==='running'||typeof ctx.resume!=='function')return;
+    ctx.resume().catch(()=>{});
+  };
   // ===== 判定で鳴らし分ける(バンドリ！・プロセカなどと同じ考え方) =====
   // いちばん良い判定がいちばん気持ちよく鳴り、ずれるほど小さく・低く・短くなる。耳でも「いまの当たりはどうだったか」が分かる。
   // 作り置きの音は段('PERFECT'/'GREAT'/'GOOD')ごとに音色から作り分ける。下の JUDGE_VOICE はクラシック(その場で鳴らす音)用。
@@ -2542,7 +2549,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,playSky,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -3259,6 +3266,8 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('touchstart',captureTouchStart,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});
+    document.addEventListener('touchend',()=>RHYTHM_NOTE_SE_RUNTIME.wake(),{capture:true,passive:true});
+    document.addEventListener('click',()=>RHYTHM_NOTE_SE_RUNTIME.wake(),true);
     document.addEventListener('touchcancel',cancelTouches,{capture:true,passive:true});
     document.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch'){if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);}},true);
     document.addEventListener('pointermove',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
@@ -24346,6 +24355,26 @@ const SHERIRUTH_STOP_REF_SCROLL_CHANGES=Object.freeze([[82060,0],[82290,'RUSH',.
 const SHERIRUTH_STOP_REF_TRIM_SCROLL_CHANGES=Object.freeze([[81979,0],[82290,'RUSH',.356],[82446,1],[82480,0],[82790,'RUSH',.746],[82932,1],[82960,0],[83110,'RUSH',.821],[83337,1]]);
 // 埋めの単打を3つ抜いた MASTER(参考版の比べ用。公開版の譜面は変えない)
 const sheriruthMasterNotesTrimmed=Object.freeze(sheriruthMasterNotes.filter(note=>!(note.type==='TAP'&&[82040,82364,83256].includes(Math.round(Number(note.timeMs))))));
+// 交差するスライドの版(2026-10-11 社長「MASTER の見せ場だけ交差を入れたい」・オンプくんの下書き)。社長が試作の枠で遊んでから本番へ。
+// 公開版 MASTER のスライド4本(始まりの時刻で指す)の通り道だけを差し替える。ノーツ数・種類・時刻・スライドの始まりと終わりの時刻は公開版のまま。
+// 108.48秒・111.08秒・130.78秒で2本が左右を入れ替わる(帯は0.25レーン刻み。0.5に丸めると入れ替えが段差になる)。[始まりの時刻,手,[[時刻,レーン]…]]
+const SHERIRUTH_CROSS_SLIDES=Object.freeze([
+  [106771,'R',[[106771,4],[106852,4],[107014,3],[107096,2.5],[107258,1.5],[107339,1.5],[107744,4],[107906,4],[107987,3.5],[108069,3.5],[108150,3.25],[108231,3],[108312,3],[108393,2.75],[108474,2.5],[108555,2.25],[108636,2],[108717,2],[108798,1.75],[108879,1.5],[109447,1.5],[109528,1.75],[109609,2],[109690,2],[109772,2.25],[109852,2.5],[109934,2.75],[110015,3],[110096,3],[110177,3.25],[110258,3.5],[110339,3],[110420,2.75],[110501,2],[110582,1.5],[110663,2],[110744,1.75],[110825,1.5],[110907,1.5],[110988,1.25],[111069,1],[111150,0.75],[111231,0.5],[111312,0.5],[111393,0.25],[111474,0],[111555,0],[111636,0.25],[111717,0.5],[111799,0.5],[111880,0.75],[111961,1],[112042,1.25],[112123,1.5],[112204,1.5],[112285,1.75],[112366,2],[112447,2],[112528,1.75],[112610,1.5],[112690,1.5],[112771,2],[112853,2],[112934,2.5],[113015,2.5],[113096,3],[113420,3],[113501,3.5],[113582,3.5],[113663,4],[113745,4.5],[113826,4.5],[113907,5],[113988,5],[114150,4],[114231,4],[114312,3.5],[114393,3.5],[114474,3],[114555,3.5],[114636,3.5],[114718,4],[114799,3.5],[114880,3.5],[114961,3],[115123,4],[115204,4],[115366,5],[115609,3.5],[115691,3],[115853,4],[115934,4],[116015,4.5],[116339,2.5]]],
+  [107339,'L',[[107339,0.5],[107582,0.5],[107663,1],[107906,1],[107987,1.5],[108069,1.5],[108150,1.75],[108231,2],[108312,2],[108393,2.25],[108474,2.5],[108555,2.75],[108636,3],[108717,3],[108798,3.25],[108880,3.5],[109447,3.5],[109528,3.25],[109609,3],[109690,3],[109771,2.75],[109852,2.5],[109934,2.25],[110015,2],[110096,2],[110177,1.75],[110258,1.5],[110339,1.25],[110420,1],[110501,0.75],[110582,0.5],[110663,0],[110745,0.25],[110826,0.5],[110907,0.5],[110988,0.75],[111069,1],[111150,1.25],[111231,1.5],[111312,1.5],[111393,1.75],[111474,2],[111555,2],[111636,1.75],[111717,1.5],[111799,1.5],[111880,1.25],[111961,1],[112042,0.75],[112123,0.5],[112204,0.5],[112285,0.25],[112366,0],[112447,0.25],[112528,0.25],[112609,0],[112690,0.5],[112771,0.5],[112853,1],[112934,1.5],[113015,1.5],[113096,2],[113501,2],[113582,2.5],[113663,2.5],[113745,3],[113907,3],[113988,3.5],[114069,3.5],[114150,3],[114231,3],[114312,2.5],[114393,2.5],[114636,1],[114718,0.5],[114799,0.5],[115042,2],[115123,2],[115204,1.5],[115285,1.5],[115366,1],[115447,1],[115528,1.5],[115609,1.5],[115691,2]]],
+  [127367,'L',[[127367,0.5],[128340,0.5],[128421,1],[130043,1],[130124,1.5],[130367,1.5],[130448,1.75],[130529,2],[130611,2],[130692,2.25],[130773,2.5],[130854,2.75],[130935,3],[131016,3],[131097,3.25],[131178,3.5],[131259,3.25],[131340,3],[131421,3],[131502,2.75],[131584,2.5],[131665,2.25],[131746,2],[131827,2],[131908,1.75],[131989,1.5]]],
+  [127772,'R',[[127772,4.5],[128826,4.5],[128908,4],[130286,4],[130367,3.5],[130448,3.25],[130529,3],[130611,3],[130692,2.75],[130773,2.5],[130854,2.25],[130935,2],[131016,2],[131097,1.75],[131178,1.5],[131259,1.75],[131340,2],[131421,2],[131502,2.25],[131584,2.5],[131665,2.75],[131746,3],[131827,3],[131908,3.25],[131989,3.5],[132070,3.25],[132151,3],[132232,2.75],[132475,2.5]]],
+]);
+// 縦画面で同じ親指が81msで叩き直す所(85.12秒・102.88秒)を、左右の親指に分かれる位置へ(オンプくん・時刻とノーツ数は変えない)。[時刻,元のサブレーン,新しいサブレーン]
+const SHERIRUTH_CROSS_TAP_MOVES=Object.freeze([[85040,6,9],[85121,9,6],[102798,3,6]]);
+const sheriruthMasterNotesCross=Object.freeze(sheriruthMasterNotes.map(note=>{
+  if(note.type==='TAP'){
+    const move=SHERIRUTH_CROSS_TAP_MOVES.find(([timeMs,subLane])=>timeMs===note.timeMs&&subLane===note.subLane);
+    return move?mhTap(note.timeMs,move[2],note.subLaneWidth):note;
+  }
+  if(note.type!=='SLIDE')return note;
+  const swap=SHERIRUTH_CROSS_SLIDES.find(([timeMs])=>timeMs===note.timeMs);
+  return swap?mhSlideV2(note.timeMs,note.endTimeMs,swap[2].map(([timeMs,lane])=>[timeMs,lane,2]),note.endFlick):note;
+}));
 const sheriruthCharts=Object.freeze({
   EASY:mhChart(1,sheriruthEasyNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
   NORMAL:mhChart(3,sheriruthNormalNotes,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}),
@@ -27335,6 +27364,17 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
       id,rhythmChartOnRoad(id==='MASTER'?mhChart(45,sheriruthMasterNotesTrimmed,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_STOP_REF_TRIM_SCROLL_CHANGES}):emptyRhythmChart())
     ])))
   }),
+  // 交差するスライドの版(上の SHERIRUTH_CROSS_SLIDES)。Lv. は公開版と同じ 35 を出す(公開版の表の値。式はスライドどうしの交差を数えない)
+  Object.freeze({
+    songId:'sheriruth_cross',
+    displayName:'Sheriruth',
+    subtitle:'MASTER(交差あり)',
+    debugDescription:'公開版の MASTER の見せ場のスライド4本の通り道だけを変え、108.5秒・111.1秒・130.8秒で2本が左右を入れ替わる版。縦画面で押せなかった 85.1秒・102.9秒の単打の位置も直した。ノーツ数・時刻は公開版のまま。遊んでも自己ベスト・ランキング・報酬には入らない',
+    bgmTrackId:'melo_sheriruth',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='MASTER'?mhChart(35,sheriruthMasterNotesCross,SHERIRUTH_DURATION_MS,6,{scrollChanges:SHERIRUTH_SCROLL_CHANGES}):emptyRhythmChart())
+    ])))
+  }),
 ]);
 
 // 先行公開する「音ゲー体験版」で遊べる範囲。ここに書いた曲・難易度だけを体験版の画面へ出す。
@@ -28299,20 +28339,23 @@ const rhythmEnsureHitEffects=area=>{
 // (同じ詳細度・同じ順なので、効き方は元と同じ)。名前が変わるとアニメーションは最初から流れ直すので、計算を強制しなくてよい。
 const RHYTHM_RESTART_ATTRS=['burst','combo-pop','cutin-play','flash','judgment-pop','life-damage-show','life-hit','ring','side-hit','hit-kind'];
 const RHYTHM_RESTART_SUFFIX='--b';
-const RHYTHM_RESTART_STYLE={sheets:typeof WeakSet==='function'?new WeakSet():null,count:-1,ready:false};
+// keyframes … これまでに見たキーフレーム(名前→{rule,sheet})。2回目からは新しく来たシートだけを調べる
+// (2026-10-11 出だしのラグ: 演奏が始まるまでに小さな style が1枚増えるたびに、ページの CSS 全部をもう一度たどっていた)
+const RHYTHM_RESTART_STYLE={sheets:typeof WeakSet==='function'?new WeakSet():null,count:-1,ready:false,keyframes:new Map()};
 const rhythmRestartStylesInstall=()=>{
   if(typeof document==='undefined'||!document.styleSheets||!RHYTHM_RESTART_STYLE.sheets)return false;
   const sheets=Array.from(document.styleSheets);
   if(RHYTHM_RESTART_STYLE.ready&&RHYTHM_RESTART_STYLE.count===sheets.length)return true;
   const token=new RegExp('\\[data-rhythm-('+RHYTHM_RESTART_ATTRS.join('|')+')="([^"]*)"\\]','g');
-  const keyframes=new Map(),renamed=new Set();
+  const keyframes=RHYTHM_RESTART_STYLE.keyframes,renamed=new Set();
   const walk=(list,fn)=>{for(let i=0;i<list.length;i++){const rule=list[i];fn(rule,list,i);if(rule.cssRules&&!(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule))walk(rule.cssRules,fn);}};
   const fresh=[];
   for(const sheet of sheets){
     let rules=null;try{rules=sheet.cssRules;}catch{continue;}
-    if(!rules)continue;
-    walk(rules,rule=>{if(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule&&!keyframes.has(rule.name))keyframes.set(rule.name,{rule,sheet});});
-    if(!RHYTHM_RESTART_STYLE.sheets.has(sheet))fresh.push({sheet,rules});
+    if(!rules||RHYTHM_RESTART_STYLE.sheets.has(sheet))continue;
+    // 同じ名前が後から来たら後のほうで覚え直す(CSS も後の定義が効く。style が差し替えられたときに古いものを指さないように)
+    walk(rules,rule=>{if(typeof CSSKeyframesRule!=='undefined'&&rule instanceof CSSKeyframesRule)keyframes.set(rule.name,{rule,sheet});});
+    fresh.push({sheet,rules});
   }
   const names=[...keyframes.keys()].filter(name=>!name.endsWith(RHYTHM_RESTART_SUFFIX)).sort((a,b)=>b.length-a.length);
   const nameRe=names.length?new RegExp('(^|[^\\w-])('+names.map(n=>n.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|')+')(?![\\w-])','g'):null;
@@ -28332,8 +28375,10 @@ const rhythmRestartStylesInstall=()=>{
     RHYTHM_RESTART_STYLE.sheets.add(sheet);
   }
   for(const name of renamed){
-    const dup=name+RHYTHM_RESTART_SUFFIX;if(keyframes.has(dup))continue;
-    const {rule,sheet}=keyframes.get(name);
+    const dup=name+RHYTHM_RESTART_SUFFIX,had=keyframes.get(dup);if(had&&sheets.includes(had.sheet))continue;
+    const {rule,sheet:own}=keyframes.get(name);if(!rule)continue;
+    // 元のキーフレームのシートがもう外されていたら、いまのページのシートの最後へ入れる
+    const sheet=sheets.includes(own)?own:sheets[sheets.length-1];
     try{sheet.insertRule(rule.cssText.replace(/^@(-webkit-)?keyframes\s+[^\s{]+/,m=>m.replace(/[^\s]+$/,dup)),sheet.cssRules.length);keyframes.set(dup,{rule:null,sheet});}catch{}
   }
   RHYTHM_RESTART_STYLE.count=document.styleSheets.length;RHYTHM_RESTART_STYLE.ready=true;

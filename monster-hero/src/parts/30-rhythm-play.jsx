@@ -853,7 +853,18 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
-  useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
+  // 叩いたときの演出の流し直し用の CSS(rhythmRestartStylesInstall)も、曲の前の幕のうちに用意しておく。
+  // 2026-10-11 社長「最初なんだけど、押してる感じラグを感じる」: 最初に叩いたときに用意していたため、1回目の押しだけ
+  // CPU 3倍で処理 73〜99ms・次の絵まで 147〜207ms かかっていた(曲の途中は 3ms・44ms)。見た目・判定・時刻は変えない
+  useEffect(()=>{
+    RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+    if(typeof setTimeout!=='function')return undefined;
+    // 演奏の部品は曲が始まるまでに小さな style を足すことがあるので、幕・READY・カウントダウンの間(最初の8秒)は0.4秒ごとに見る。
+    // 変わっていなければすぐ戻る(シートの数を数えるだけ)。最初の押しで決まりを差し込むと、ページ全体のスタイル計算がやり直しになる
+    const install=()=>{try{rhythmRestartStylesInstall();}catch{}};
+    const first=setTimeout(install,250),again=setInterval(install,400),stop=setTimeout(()=>clearInterval(again),8000);
+    return ()=>{clearTimeout(first);clearInterval(again);clearTimeout(stop);};
+  },[]);
   const stepEffectCapRef=useRef(null);
   // 下げたときは画面の上のほうへ一瞬だけ知らせる(黙って下がると「設定したのに演出が出ない」と思われるため)
   // 前の曲で下げた段のまま始めるときも、始めに1回知らせる(黙って控えめなまま始まらないように)
