@@ -198,6 +198,10 @@ function newMemory() {
 }
 const monOf = (mem, name) => (mem.mons[name] = mem.mons[name] || { dmg: 0, taken: 0, aimed: 0, gutsShort: 0, downs: 0, turns: 0 });
 
+// スタンのカード: アシカ(あつの挑発など・type debuff)と、ハムの固有技「おなら」(このターン、敵を行動不能にする)。
+//   ★おならは 2026-10-10 から(ハカセくんの直す順5)。前は普通の攻撃として先に撃ち、ためる・貫通の構えのターンに残っていなかった。
+//   PLAYBOT_TACTICS_HAM_STUN=0 で前の扱い
+const isStunCard = (c) => c.type === 'debuff' || (process.env.PLAYBOT_TACTICS_HAM_STUN !== '0' && c.type === 'unique' && /おなら/.test(c.label || ''));
 function decidePick(b, opts, ctx) {
   const alive = b.slots.filter((x) => x.occupied && !x.downed);
   const threat = threatOf(b);
@@ -265,7 +269,7 @@ function decidePick(b, opts, ctx) {
   }
   // ③ 止める
   if ((threat === 'charge' || threat === 'pierceCharge') && !ctx.stunned) {
-    const st = atkOpts.find((a) => a.o.card.type === 'debuff');
+    const st = atkOpts.find((a) => isStunCard(a.o.card));
     if (st) return { kind: 'attack', card: st.o.card, slot: st.slot, value: st.value, why: `${threat === 'charge' ? '必殺技のため' : '貫通撃の構え'}をスタンで止める`, stun: true };
   }
   // ④ 回復
@@ -291,7 +295,7 @@ function decidePick(b, opts, ctx) {
   // ⑤ 攻撃。★スタンのカード(あつの挑発など・type debuff)は「ためる」「貫通の構え」のターンまで取っておく。
   //   先に撃つと、必殺技(×2.5)を止められずに倒れる(2026-10-09 Master の WAVE 3)。とどめのときだけは使ってよい
   const keepStun = !lethal && !(threat === 'charge' || threat === 'pierceCharge');
-  const atkUse = keepStun ? atkOpts.filter((a) => a.o.card.type !== 'debuff') : atkOpts;
+  const atkUse = keepStun ? atkOpts.filter((a) => !isStunCard(a.o.card)) : atkOpts;
   if (atkUse.length) {
     const a = atkUse[0];
     return { kind: 'attack', card: a.o.card, slot: a.slot, value: a.value, why: lethal ? 'とどめ' : a.pull ? `敵を${DISTS[ctx.mainDist]}距離へ引き寄せる(通常技の段階が上がる)` : '見込みのダメージがいちばん大きい' };
@@ -694,7 +698,16 @@ async function chooseBetween(s, mem, log) {
   const ups = scr.buttons.filter((t) => /のレベルを1つ上げる$/.test(t));
   if (ups.length) {
     const ownerDmg = (t) => { const sk = t.replace(/のレベルを1つ上げる$/, ''); const o = mem.uniqueOwner[sk]; return o ? monOf(mem, o).dmg : 0; };
-    const best = ups.sort((a, z) => ownerDmg(z) - ownerDmg(a))[0];
+    // ★2026-10-10 ハカセくんの直す順5: 役ごとに上げる。前はダメージの多い子からだけで、回復・守り・ガッツの固有技(支援役)が上がらなかった。
+    //   ダメージ役(頭割り以上)2回に、ほかの子1回の割合で回す(上げた回数 ÷ 重み の少ない順、同じならダメージ順)。PLAYBOT_TACTICS_UNIQUE_ROLE=0 で前の決め方
+    mem.uniqueUpBy = mem.uniqueUpBy || {};
+    const skOf = (t) => t.replace(/のレベルを1つ上げる$/, '');
+    const owners = Object.keys(mem.lastParty || {}).length || 1;
+    const weight = (t) => (ownerDmg(t) / Math.max(1, totalDmg) >= 1 / owners ? 2 : 1);
+    const best = process.env.PLAYBOT_TACTICS_UNIQUE_ROLE === '0'
+      ? ups.sort((a, z) => ownerDmg(z) - ownerDmg(a))[0]
+      : ups.sort((a, z) => (mem.uniqueUpBy[skOf(a)] || 0) / weight(a) - (mem.uniqueUpBy[skOf(z)] || 0) / weight(z) || ownerDmg(z) - ownerDmg(a))[0];
+    mem.uniqueUpBy[skOf(best)] = (mem.uniqueUpBy[skOf(best)] || 0) + 1;
     mem.uniqueUps = (mem.uniqueUps || 0) + 1;
     if (mem.uniqueUps > 12) return false;
     log.note(`固有技: ${best.replace(/のレベルを1つ上げる$/, '')}を上げる`);
