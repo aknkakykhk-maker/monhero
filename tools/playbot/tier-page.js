@@ -6,7 +6,7 @@
 //   node tools/playbot/tier-page.js [--out <出力先>]    既定: docs/playbot/dashboard/tier.html
 //   node tools/playbot/tier-page.js --rebuild-icons     縮めた顔アイコンを作り直してからページを作る
 //   node tools/playbot/tier-page.js --json <別の tier.json>   試し用(その JSON を読む。--out と合わせて使う)
-//   node tools/playbot/tier-page.js --check             tier.json の形と、monster-tier.md・asika-tier.md(早見表・合うモンスター)・combo.md(よく合う・合わない)・tier.html との食い違いを確かめる(ページは作らない)
+//   node tools/playbot/tier-page.js --check             tier.json の形と、monster-tier.md・asika-tier.md(早見表・合うモンスター)・combo.md(よく合う・合わない)・party.md(おすすめパーティ)・tier.html との食い違いを確かめる(ページは作らない)
 //
 // 顔アイコンは docs/playbot/dashboard/tier-icons/(96px。map.json が 名前 → ファイル)から data URI で埋め込む。
 // スクリプトを使わない素の HTML(<details> で開閉)。社長室(president-room.js)と同じ作り・色。
@@ -512,6 +512,28 @@ function crossCheck(d, jsonText) {
         const t = c.良し悪し === '良い' ? good : bad;
         if (!(key in t)) p.push(`組み合わせ ${key}(${c.良し悪し}): combo.md の表に無い`);
         else if (Math.abs(t[key] - c.点) > 0.005) p.push(`組み合わせ ${key}: 点が違う(md ${t[key]} / json ${c.点})`);
+      }
+    }
+  }
+  // おすすめパーティ(party.md の難易度ごとの表 | 順位 | 勇者 | 供モン | 点 | 確か |。供モンは「・」でつなぐ)
+  if (Array.isArray(d.おすすめパーティ) && d.おすすめパーティ.length) {
+    const pmd = read('party.md');
+    if (pmd == null) p.push('party.md がありません');
+    else {
+      for (const k of DIFFS) {
+        const sec = (pmd.split(new RegExp(`^## ${k}\\b.*$`, 'm'))[1] || '').split(/^## /m)[0];
+        const rows = {};
+        for (const line of sec.split('\n')) {
+          const c = line.split('|').slice(1, -1).map((x) => x.trim());
+          if (c.length >= 5 && /^\d+$/.test(c[0])) rows[c[0]] = c;
+        }
+        for (const x of d.おすすめパーティ.filter((y) => y.難易度 === k)) {
+          const r = rows[String(x.順位)];
+          const label = `パーティ ${k} ${x.順位}位`;
+          if (!r) { p.push(`${label}: party.md の「## ${k}」の表に無い`); continue; }
+          if (r[1] !== x.勇者 || r[2] !== (x.供モン || []).join('・')) p.push(`${label}: 顔ぶれが違う(md ${r[1]}+${r[2]} / json ${x.勇者}+${(x.供モン || []).join('・')})`);
+          if ((r[4] === '確か') !== !!x.確か) p.push(`${label}: 「確か」が違う(md ${r[4]} / json ${x.確か})`);
+        }
       }
     }
   }
