@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d23ebf658c9ad59d
+// generated-sha256: b56ecf0ffa4f790b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -19407,16 +19407,15 @@ function RhythmSkyStage({plane}){
       <rect data-rhythm-sky-flow="2" x="0" y="0" width="100" height="6" fill="url(#mhSkyBand)"/>
     </g>
     {plane.dividers.map((d,k)=><polyline key={k} points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".16" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
-    {[plane.leftEdge,plane.rightEdge].map((d,k)=><g key={k}><polyline points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".22" strokeWidth="5" vectorEffect="non-scaling-stroke"/><polyline points={d} fill="none" stroke={theme.core} strokeOpacity=".8" strokeWidth="1.4" vectorEffect="non-scaling-stroke"/></g>)}
+    {[plane.leftEdge,plane.rightEdge].map((d,k)=><g key={k}><polyline points={d} fill="none" stroke={`rgb(${c})`} strokeOpacity=".14" strokeWidth="4" vectorEffect="non-scaling-stroke"/><polyline points={d} fill="none" stroke={theme.core} strokeOpacity=".5" strokeWidth="1" vectorEffect="non-scaling-stroke"/></g>)}
     {/* 空中と地上の判定ラインの「高さの差」がいつも見えるように、レーンの区切りごとに2本をつなぐ薄い縦の光(社長「立体感」) */}
     {plane.markers.slice(1,-1).map((x,k)=><line key={'c'+k} x1={f(x)} y1={f(fr.gy)} x2={f(x)} y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".13" strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
     {[fr.l,fr.r].map((x,k)=>{const w=1.4;return <polygon key={k} points={`${f(x-w)},${f(fr.gy)} ${f(x+w)},${f(fr.gy)} ${f(x+w*.5)},${f(fr.y)} ${f(x-w*.5)},${f(fr.y)}`} fill="url(#mhSkyPost)"/>;})}
     {/* 空中の判定線(参考の Sky Input と同じく、床の幅を越えて画面の横いっぱいに、遠近で傾かない水平な2本線と薄い光の帯。床とは別の面だと分かるように) */}
-    <rect x="-2" y={f(fr.y-1.6)} width="104" height="3.2" fill="url(#mhSkyBand)" opacity=".9"/>
-    <line x1="-2" y1={f(fr.y)} x2="102" y2={f(fr.y)} stroke={`rgb(${c})`} strokeOpacity=".3" strokeWidth="8" vectorEffect="non-scaling-stroke"/>
-    <line data-rhythm-sky-pulse x1="-2" y1={f(fr.y-.45)} x2="102" y2={f(fr.y-.45)} stroke={theme.core} strokeOpacity=".95" strokeWidth="1.3" vectorEffect="non-scaling-stroke"/>
-    <line data-rhythm-sky-pulse x1="-2" y1={f(fr.y+.45)} x2="102" y2={f(fr.y+.45)} stroke={theme.core} strokeOpacity=".95" strokeWidth="1.3" vectorEffect="non-scaling-stroke"/>
-    {plane.markers.map((x,k)=><polygon key={k} points={`${f(x)},${f(fr.y-.9)} ${f(x+.9)},${f(fr.y)} ${f(x)},${f(fr.y+.9)} ${f(x-.9)},${f(fr.y)}`} fill={theme.core} fillOpacity=".9"/>)}
+    <rect x="-2" y={f(fr.y-1.2)} width="104" height="2.4" fill="url(#mhSkyBand)" opacity=".55"/>
+    <line x1="-2" y1={f(fr.y-.35)} x2="102" y2={f(fr.y-.35)} stroke={theme.core} strokeOpacity=".6" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
+    <line x1="-2" y1={f(fr.y+.35)} x2="102" y2={f(fr.y+.35)} stroke={theme.core} strokeOpacity=".6" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
+    {plane.markers.map((x,k)=><polygon key={k} points={`${f(x)},${f(fr.y-.9)} ${f(x+.9)},${f(fr.y)} ${f(x)},${f(fr.y+.9)} ${f(x-.9)},${f(fr.y)}`} fill={theme.core} fillOpacity=".55"/>)}
   </svg>;
 }
 const RhythmMonsterNoteGuide=()=>{

@@ -30092,16 +30092,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     quads.forEach(q=>{
       // 空中の段(試作): 高さのある区切りは、空中の色を薄く(半透明の帯)。高さが上がるほど空中の見せ方に寄せる
       const air=!failed&&opts.skySlideRgb?Math.max(0,Math.min(1,(Number(q.sky)||0)*1.6)):0;
-      if(air>0)ctx.fillStyle=`rgba(${opts.skySlideRgb},${(.5-.3*air).toFixed(3)})`;
+      if(air>0)ctx.fillStyle=`rgba(${opts.skySlideRgb},${(.5-.28*air).toFixed(3)})`;
       else ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
       ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     // 空中にある区切りの左右の縁を、空中の色で光らせる(縁取りの帯。地上の帯との見分けの主役)
     if(!failed&&opts.skySlideRgb){
       ctx.lineCap='round';
       quads.forEach(q=>{const air=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.6));if(air<=.05)return;
-        ctx.strokeStyle=`rgba(${opts.skySlideRgb},${(.35*air).toFixed(3)})`;ctx.lineWidth=6;
+        ctx.strokeStyle=`rgba(${opts.skySlideRgb},${(.2*air).toFixed(3)})`;ctx.lineWidth=4;
         ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.stroke();
-        ctx.strokeStyle=opts.skySlideCore||'#fff';ctx.globalAlpha=opts.alpha*air;ctx.lineWidth=1.8;
+        ctx.strokeStyle=opts.skySlideCore||'#fff';ctx.globalAlpha=opts.alpha*air*.6;ctx.lineWidth=1.2;
         ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.stroke();ctx.globalAlpha=opts.alpha;});
       ctx.lineCap='butt';
     }
@@ -30648,6 +30648,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
         if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
         // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
+        if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb){
+          const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha;ctx.lineCap='round';
+          [[1,0],[0,1]].forEach(([dx,dy],k)=>{const len=r*(k?1.15:1)*(.85+.15*Math.sin(t+k));
+            ctx.strokeStyle=`rgba(${o.skySlideRgb},.55)`;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();
+            ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();});
+          ctx.lineCap='butt';ctx.globalAlpha=1;
+        }
         if(geo.skyShadow&&geo.slide&&geo.head){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
         if(geo.band)drawBand(geo,o);
         if(geo.slide)drawSlide(geo,o);
