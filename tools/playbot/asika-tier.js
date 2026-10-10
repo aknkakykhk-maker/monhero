@@ -249,7 +249,7 @@ function realRecords() {
 const alliesOf = (r) => {
   const seen = Array.isArray(r.alliesSeen) ? r.alliesSeen : null;
   const board = [...Object.keys(r.dmg || {}), ...Object.keys(r.use || {})];
-  return [...new Set((seen || (board.length ? board : (r.allies || [])))).filter((n) => n && n !== r.hero)];
+  return [...new Set(seen || (board.length ? board : (r.allies || [])))].filter((n) => n && n !== r.hero);
 };
 
 // ---------- アシカの集計 ----------
