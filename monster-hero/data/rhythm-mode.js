@@ -30064,12 +30064,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=glassy?opts.alpha:opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
     if(glassy){
       // 床に落ちる影(参考動画「浮いていると分かるいちばん強い手がかり」)。2026-10-10 テンポ「横画面の動画で影が見えない」→ 板の幅くらいの暗い楕円を真下に置き、
-      // 手前へ来るほど小さく濃く(濃さは真ん中で .6 前後)。外へ広がる3重の楕円でぼかしを出す。全体を .6 に落としていたのをやめて、不透明度はノーツと同じにした
+      // 手前へ来るほど小さく濃く(濃さは真ん中で .6 前後)。外へ広がる3重の楕円でぼかしを出し、暗い背景でも見えるよう真ん中の輪にだけ薄い灰色の縁を引く。全体を .6 に落としていたのをやめて、不透明度はノーツと同じにした
       const rx=Math.max(8,hd.w*sizeScale*.5)*(1.15-.3*near),ry=Math.max(2.5,rx*.32);
       [[1.7,.14],[1.3,.24],[1,.3+.2*near]].forEach(([k,al])=>{
         ctx.fillStyle=`rgba(8,10,30,${al.toFixed(3)})`;ctx.beginPath();
         for(let i=0;i<16;i++){const t=i/16*Math.PI*2,x=sh.cx+Math.cos(t)*rx*k,y=sh.cy+Math.sin(t)*ry*k;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-        ctx.closePath();ctx.fill();});
+        ctx.closePath();ctx.fill();if(k===1.3){ctx.lineWidth=1;ctx.strokeStyle=`rgba(203,213,225,${(.28+.22*near).toFixed(2)})`;ctx.stroke();}});
     }else{
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
     }
