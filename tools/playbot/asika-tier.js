@@ -339,10 +339,15 @@ function cardEvidence(c, A, cache) {
     const p = c.per[d].best;
     return { 名前: `${d} の届いた WAVE(上手な使い方)`, 値: `${p.mean.toFixed(2)} WAVE`, 基準: `10 枚それぞれを優先したときの平均 ${A.base[`best|${d}`].toFixed(2)} WAVE`, 差: `${ev.sgn(p.lift)} WAVE`, ぶれ: `${ev.pm(2 * p.se)} WAVE` };
   });
+  // 「だから」に出す数字は、ここ(重みで合わせた差)の行にも出す(改善部 R3: だからの数字は必ず箱の数字のどこかにある)
+  const wsum = DIFFS.reduce((a, d) => a + W[d], 0);
+  const wLift = DIFFS.reduce((a, d) => a + c.per[d].best.lift * W[d], 0) / wsum;
+  const wSe = Math.sqrt(DIFFS.reduce((a, d) => a + ((W[d] / wsum) * c.per[d].best.se) ** 2, 0));
+  nums.push({ 名前: '重みで合わせた差', 値: `${ev.sgn(wLift)} WAVE`, 基準: `上の3つの差を Hard ${W.Hard}・Expert ${W.Expert}・Master ${W.Master} の重みで合わせた(Tier もこの差で決める)`, 差: `${ev.sgn(wLift)} WAVE`, ぶれ: `${ev.pm(2 * wSe)} WAVE` });
   const realN = DIFFS.map((d) => `${d} ${c.real[d].n}`).join('・');
-  const therefore = ['S', 'A'].includes(c.tier) ? `${c.name}は選べるときに優先して取る(優先すると届く WAVE が10枚の平均より ${ev.sgn(c.score * 2, 1)})`
-    : ['C', 'D'].includes(c.tier) ? `${c.name}より、A のカードを優先して取る(優先すると届く WAVE が10枚の平均より ${ev.sgn(c.score * 2, 1)})`
-      : `ほかに欲しいカードが無ければ取る。優先するほどの差は無い(10枚の平均より ${ev.sgn(c.score * 2, 1)})`;
+  const therefore = ['S', 'A'].includes(c.tier) ? `${c.name}は選べるときに優先して取る(重みで合わせた差 ${ev.sgn(wLift)} WAVE)`
+    : ['C', 'D'].includes(c.tier) ? `${c.name}より、A のカードを優先して取る(重みで合わせた差 ${ev.sgn(wLift)} WAVE)`
+      : `ほかに欲しいカードが無ければ取る。優先するほどの差は無い(重みで合わせた差 ${ev.sgn(wLift)} WAVE)`;
   // 難易度で向きが逆になるとき(ぶれより大きく逆)は書き添える
   const sign = c.score >= 0 ? 1 : -1;
   const against = DIFFS.filter((d) => { const p = c.per[d].best; return p.lift * sign < 0 && Math.abs(p.lift) > 2 * p.se; });
