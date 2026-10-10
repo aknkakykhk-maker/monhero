@@ -43,6 +43,9 @@ const PLAYS = ['bot', 'best'];
 // 3 = アシカまで(トレーニング・間合いボーナス・固有技の強化・緊急回復は無し) / 7 = 全部入り(緊急回復は AUTO と同じ条件) / 8 = 緊急回復はボットと同じ・上手な EX はボス戦のぶんを残す
 const SIM_VER = 8;
 const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)', 8: '8 版目(7 版目+緊急回復はボットと同じ「AUTO の条件 → 全滅の手前」・上手な EX はボス戦のぶんを残す)' };
+// 緊急回復をどの条件で測ったか(md の頭に1行。2026-10-10 ハカセくん)
+const EMERGENCY_TEXT = { 3: '緊急回復は入れていない(使わない)', 7: '緊急回復は AUTO と同じ条件(出せるカードが無く、ガッツさえあれば出せるとき)で測った。ガッツの少ない子は押す回数が多く、伸びやすい', 8: '緊急回復は直したボットと同じ条件(AUTO の条件 → だめなら全滅の手前。EX を使ったターンは押さない)で測った。ガッツの少ない子は押す回数が多く、伸びやすい' };
+const emergencyText = (sec) => EMERGENCY_TEXT[(sec && sec.simVer) || 3] || '';
 const simVerText = (sec) => SIM_VER_TEXT[(sec && sec.simVer) || 3] || `${sec.simVer} 版目`;
 
 // ---------- 子プロセス: 1マス(勇者モン×難易度×設定)を N 回まわして足し合わせる ----------
@@ -442,6 +445,7 @@ function writeAll(cache) {
     o();
     o('研究所(シミュレーター: ダイスくん)。各カードを「そのカードを優先して選ぶ」設定にしてシミュレーターで回し、届いた WAVE の差で決めます。強さはスキル込み(EX・勇者特性・固有技を入れたシミュレーター)。**Tier は上手な使い方の数字だけで決めます**(ボットの数字は「ボットの使い方で弱く見えているカード」にだけ使う)。');
     o();
+    if (emergencyText(cache.asika)) { o(`${emergencyText(cache.asika)}。`); o(); }
     if (MISSING_MECHANICS.length) {
       o(`まだ入れていない・一部だけの機能(シミュレーターかボットに無く、この Tier の数字に効いていないもの。効きの大きい順): ${MISSING_MECHANICS.join('・')}。機能の一覧は docs/playbot/reports/tier/mechanics.md。この表の数字は、シミュレーター ${simVerText(cache.asika)}で回したもの。`);
       o();
@@ -546,6 +550,7 @@ function writeAll(cache) {
     o(`更新: ${now}(JST)・シミュレーター: Expert 各 ${cache.combo.runs.Expert} 回・Master 各 ${cache.combo.runs.Master} 回(26 × 25 通り・シミュレーター ${simVerText(cache.combo)})`);
     o();
     o('勇者モンごとに、最初に入る供モン(WAVE 2 のあと)を 25 通り入れ替えて回し、その勇者モンの平均との差(届いた WAVE)を出します。残りの供モン2体はくじ。Expert 5・Master 3 の重み(Master はほとんど WAVE 2 までに決まるので差が小さい)。アシカはボットの選び方、EX とアシカの使い方は上手な使い方。');
+    if (emergencyText(cache.combo)) { o(); o(`${emergencyText(cache.combo)}。`); }
     o();
     o('**相性 = その組の伸び − その供モンがどの勇者と組んでも出す伸び(下の「供モンとしての強さ」)。** 引かないと、供モンとして強い子(ゴースト)がどの勇者とも上位に並んでしまうため。');
     o();
