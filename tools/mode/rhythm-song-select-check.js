@@ -57,7 +57,7 @@ const serve=()=>new Promise(resolve=>{
       // 選んでいる曲・難易度は本体(App)が持つ形になったので、ここでも同じように
       // 状態を持つ入れ物をかぶせて渡す(2026-09-05・曲を鳴らし続けるための作り替え)。
       // 直接 RhythmSongSelect を描くと、押しても何も変わらない部品を見ることになる。
-      const Host=({bestRecords})=>{
+      const Host=({bestRecords,noticeHidden=0})=>{
         const [songId,setSongId]=React.useState('');
         const [difficultyId,setDifficultyId]=React.useState('');
         // 並び順と助手の畳みも、本体(App)と同じように外側が持つ
@@ -71,11 +71,12 @@ const serve=()=>new Promise(resolve=>{
           songId,difficultyId,onSongId:setSongId,onDifficultyId:setDifficultyId,
           view,onView:setView,
           notice:React.createElement('p',{id:'probe-notice'},'ここに助手のひとことが入る'),
+          noticeHidden,
           onPlay:(song,difficulty)=>{window.__picked=`${song.songId}/${difficulty.id}`;},
         });
       };
       // 記録を差し替えて描き直せるようにしておく（ひし形の色を見るのに使う）
-      window.__rerender=bestRecords=>root.render(React.createElement(Host,{bestRecords}));
+      window.__rerender=(bestRecords,noticeHidden=0)=>root.render(React.createElement(Host,{bestRecords,noticeHidden}));
       root.render(React.createElement(Host,{bestRecords:[]}));
       return true;
     });
@@ -446,6 +447,18 @@ const serve=()=>new Promise(resolve=>{
     await page.click('#song-select-probe [data-rhythm-song-notice-toggle]');
     await page.waitForTimeout(250);
     ok('畳んであっても💬で開け、開いたことは覚える(noticeTouched)',await noticeShown()&&await page.evaluate(()=>window.__view&&window.__view.noticeTouched===true));
+    // 💬は一覧の上の吹き出しと「裏でクイック…」の行もまとめて畳む(2026-10-10・K3)。畳んでいる中に案内があるときは💬に印を出す
+    await page.evaluate(()=>{window.__resetView&&window.__resetView();});
+    await page.evaluate(r=>window.__rerender(r,2),await playedRecords(5));
+    await page.waitForTimeout(250);
+    ok('畳んでいるあいだに案内が隠れていれば、💬に数の印が出る',
+      await page.evaluate(()=>{const b=document.querySelector('#song-select-probe [data-rhythm-song-notice-badge]');return !!b&&b.textContent.trim()==='2';}));
+    await page.click('#song-select-probe [data-rhythm-song-notice-toggle]');
+    await page.waitForTimeout(250);
+    ok('開けば印は消える',await page.evaluate(()=>!document.querySelector('#song-select-probe [data-rhythm-song-notice-badge]')));
+    ok('曲えらびの上の案内も同じ答えで畳む(判定は1か所)',
+      gameSource.includes('const rhythmSelectNoticeOpen=')&&gameSource.includes('rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView)')
+      &&gameSource.includes('selectNoticesOpen&&rhythmSixLaneIntroVisible&&')&&gameSource.includes('selectNoticesOpen&&quickRunStartRowVisible&&'));
     ok('今までの保存(noticeTouched が無い)は「まだ押していない」として読む',
       await page.evaluate(()=>normalizeRhythmSelectView({noticeOpen:true}).noticeTouched===false&&normalizeRhythmSelectView({noticeTouched:true}).noticeTouched===true));
     await page.evaluate(()=>window.__rerender([]));
