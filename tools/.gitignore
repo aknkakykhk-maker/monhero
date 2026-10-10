@@ -3,3 +3,5 @@ node_modules/
 node_modules
 out/
 .tailwind-build/
+# 参考譜面(よそのゲームのプレイ動画)から写し取った表の置き場。リポジトリに置かない(2026-10-10 社長・台帳 r2610101530refcap)
+mode/ref-work/
