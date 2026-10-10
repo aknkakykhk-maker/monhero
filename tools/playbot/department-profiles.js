@@ -23,6 +23,7 @@ require('./scoreboard.js').writeAll();
 const scores = read('scores');
 const updatedAt = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+// 性格(2026-10-10 社長「今後は部員ごとに性格もいれてもらえると楽しそう」): 部長性格 と 部員[].性格 を出す
 // 部ごとの点: 所属が部の名前に含まれる部員の点を足す
 const pointsOf = (d) => scores.filter((s) => d.部.includes(s.所属)).reduce((a, s) => a + (Number(s.点) || 0), 0);
 const STATE = { 作業中: 'ok', 待機: 'idle', 休眠: 'idle', いつも: 'ok', 返事待ち: 'warn' };
@@ -31,12 +32,13 @@ const list = (items) => `<ul>${items.map((t) => `<li>${esc(t)}</li>`).join('')}<
 const cards = depts.map((d) => {
   const pts = pointsOf(d);
   const members = d.部員.length
-    ? `<div class="members">${d.部員.map((m) => `<span class="member"><b>${esc(m.名前)}</b>${esc(m.担当)}</span>`).join('')}</div>` : '';
+    ? `<div class="members">${d.部員.map((m) => `<span class="member"><b>${esc(m.名前)}</b>${esc(m.担当)}${m.性格 ? `<i class="trait">${esc(m.性格)}</i>` : ''}</span>`).join('')}</div>` : '';
   return `
   <article class="dept" id="${esc(d.id)}" style="--dc:${esc(d.色)}">
     <header class="dept-head">
       <div class="dept-name"><h2>${esc(d.部)}</h2><span class="chip ${STATE[d.状態] || 'idle'}">${esc(d.状態)}</span></div>
       <p class="boss">${esc(d.部長)}${d.id !== 'sleep' && d.id !== 'hq' ? `<span class="pts">部の点 ${pts < 0 ? '−' + Math.abs(pts) : pts}</span>` : ''}</p>
+      ${d.部長性格 ? `<p class="trait-boss">性格: ${esc(d.部長性格)}</p>` : ''}
       <p class="hito">${esc(d.ひとこと)}</p>
     </header>
     ${members}
@@ -81,6 +83,8 @@ p{margin:0}
 .members{display:flex;flex-wrap:wrap;gap:6px}
 .member{display:flex;flex-direction:column;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:4px 10px;min-width:0}
 .member b{font-size:14px;color:var(--fg)}
+.member .trait{font-style:normal;font-size:11px;color:var(--muted);margin-top:2px;max-width:16em}
+.trait-boss{margin:2px 0 0;font-size:13px;color:var(--muted)}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));gap:12px}
 section{display:flex;flex-direction:column;gap:4px;min-width:0}
 ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column;gap:2px}
