@@ -581,14 +581,22 @@ async function chooseBetween(s, mem, log) {
   const totalDmg = Object.values(mem.mons).reduce((a, m) => a + m.dmg, 0) || 1;
   // トレーニング
   if (scr.trainingName || scr.revive.length) {
-    if (scr.revive.length && !mem.reviveAsked) {
-      mem.reviveAsked = true;
+    // ★起こすと、その WAVE は誰も強化できない(BATTLE_NEW_MODE_PLAN.md 段階11)。主力が倒れたまま WAVE をまたがないよう、WAVE ごとに考える
+    //   (2026-10-10 ハカセくんの直す順3。前は mem.reviveAsked が1ランで1回きりで、2回目からは起こすかを考えていなかった)。
+    //   主力 = ダメージの3割以上を出した子・勇者モン(勇者特性は立っているときだけ効く)。PLAYBOT_TACTICS_REVIVE_EACH=0 で前の決め方
+    const eachWave = process.env.PLAYBOT_TACTICS_REVIVE_EACH !== '0';
+    const reviveKey = eachWave ? `w${log.data.waves.length}` : 'once';
+    mem.reviveAskedAt = mem.reviveAskedAt || {};
+    if (scr.revive.length && !mem.reviveAskedAt[reviveKey]) {
+      mem.reviveAskedAt[reviveKey] = true;
       const names = scr.revive.map((t) => (t.match(/^(\S+)を起こす/) || [])[1]).filter(Boolean);
       const alive = Object.keys(mem.lastParty || {}).length;
-      const key = names.find((nm) => (monOf(mem, nm).dmg / totalDmg) >= 0.35);
+      const key = eachWave
+        ? names.find((nm) => nm === log.data.build.hero) || names.find((nm) => (monOf(mem, nm).dmg / totalDmg) >= 0.3)
+        : names.find((nm) => (monOf(mem, nm).dmg / totalDmg) >= 0.35);
       if (key || names.length * 2 >= alive) {
         const nm = key || names[0];
-        log.note(`トレーニング: ${nm}を起こす(${key ? 'ダメージの多い子' : '半分以上が倒れている'})`);
+        log.note(`トレーニング: ${nm}を起こす(${key ? (nm === log.data.build.hero && eachWave ? '勇者モン' : 'ダメージの多い子') : '半分以上が倒れている'})`);
         log.data.build.training.push({ wave: log.data.waves.length, name: nm, picks: ['起こす'] });
         return press(new RegExp(`^${nm}を起こす`), 'トレーニング(起こす)');
       }
