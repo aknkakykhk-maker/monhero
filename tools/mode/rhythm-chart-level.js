@@ -252,14 +252,28 @@ const chartLevel=chart=>{
 // プレイヤーには「同じ難しさ」または「表示の不具合」に見える。
 // そこで、**生の値が確かに上なら、表示のレベルも必ず1以上上げる**。
 // 生の値そのものは変えないので、内訳（--verbose）を見れば本当の値が分かる。
+// --- 人が遊んで確かめて決めた上書き ---
+// 式の数字が手ごたえと大きく外れた譜面だけ、ここに根拠つきで書く。式・物差し(LEVEL_SCALE)・ほかの曲の数字は変えない。
+// 書くときは「人の指のくせのボット」で既存曲と同じ条件で比べ、取りこぼし方が近い曲のレベルに合わせる。
+const LEVEL_OVERRIDES=Object.freeze({
+  // 2026-10-11 社長「MASTER が難易度(Lv.45)ほど難しく感じなかった」→「数字を下げる(譜面は変えない)」。
+  // 人の指のくせのボット(横画面・指のくせ3種)で、MISS 0.87%・GREAT以下 2.49%・MARVELOUS未満 15.3%。
+  // Journey MASTER(36)・ハルカ MASTER(33)より少なく、ビッグブリッヂの死闘 MASTER(34)より多い → 35。
+  // 式が高く出たのは「同時押し」224・「押さえながら叩く」110 を1つずつ重く数えるため(この曲の同時押しは左右に離れた両手で取る形、
+  // 押さえているのはゆっくり動く長いスライドが多く、数ほど難しくない)
+  sheriruth:Object.freeze({MASTER:35}),
+});
 const songLevels=(song,difficulties)=>{
   const out={};
   let previous=null;
+  const overrides=song&&LEVEL_OVERRIDES[song.songId]||null;
   for(const difficulty of difficulties){
     const {level,strain}=chartLevel(song.difficulties[difficulty.id]);
     if(!strain){out[difficulty.id]={level:0,strain:null};continue;}
     let shown=level;
     if(previous&&strain.raw>previous.raw&&shown<=previous.level)shown=Math.min(LEVEL_MAX,previous.level+1);
+    // 上書きがあればそれを使う(下の難易度より下がらないようにだけは守る)
+    if(overrides&&Number.isFinite(overrides[difficulty.id]))shown=Math.max(overrides[difficulty.id],previous?previous.level+1:LEVEL_MIN);
     out[difficulty.id]={level:shown,strain};
     previous={level:shown,raw:strain.raw};
   }
@@ -310,7 +324,7 @@ const writeRuntimeLevels=()=>{
   return lines.length;
 };
 
-module.exports={chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,
+module.exports={chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,LEVEL_OVERRIDES,
   LEVEL_ANCHOR,LEVEL_SCALE,LEVEL_GAMMA,LEVEL_MIN,LEVEL_MAX,WORK};
 
 if(require.main===module){
