@@ -30,6 +30,9 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
 | 10-10 10:24 | エイキ | Expert | 全滅 | 3 | 直す前の版・アシカ順番(みゃる・ニコラオ・きき) |
 | 10-10 10:25 | ヤオビクニ | Expert | 全滅 | 2 | 直す前の版・アシカ順番(みゃる・みゅあ) |
 | 10-10 10:28 | エイキ | Expert | 全滅 | 4 | 緊急回復だけ入った版(全滅の手前の条件だけ)。緊急回復2回(W4 T2・T3)。2回目はライガー 622 が 629 の3連撃を持ちこたえた |
+| 10-10 10:30 | プラント | Expert | 全滅 | 2 | 直す順1〜3の版。EX 0回(W2 で終わり) |
+| 10-10 10:30 | ヤオビクニ | Expert | 打ち切り | 3 | 直す順1〜3の版。時間停止と緊急回復を同じターンに使い、ターンが進まず止まった(数えない。直した) |
+| 10-10 10:33 | エイキ | Expert | 全滅 | 3 | 全部入りの版(arena-1)。緊急回復0回 |
 
 ## ボットで直したこと
 
@@ -60,6 +63,9 @@ PLAYBOT_PORT=8981 PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_DIFF=Hard PLAYBOT_TACTIC
   ハムの固有技「おなら」(このターン敵を行動不能)を、あつの挑発と同じスタンのカードとして扱う: 「ためる」「貫通の構え」のターンに使い、それ以外は取っておく(とどめのときは撃つ)。`PLAYBOT_TACTICS_HAM_STUN=0` で前の扱い
 - 2026-10-10 覚え書きの1回ごとに `bot`(ボットの版と切り替え)を残す: `{ ver: 'arena-1', emergency, regen, reviveEach, trainV2, uniqueRole, hamStun, rotate }`(true=入)。
   `bot` の無い回はそれより前の版。直す前と比べる回は `PLAYBOT_TACTICS_EMERGENCY=0 PLAYBOT_TACTICS_REGEN=0 PLAYBOT_TACTICS_REVIVE_EACH=0 PLAYBOT_TACTICS_TRAIN_V2=0 PLAYBOT_TACTICS_UNIQUE_ROLE=0 PLAYBOT_TACTICS_HAM_STUN=0` で回す(時間停止の直しは切れない)
+- 2026-10-10 **EX を使ったターンは緊急回復を押さない**(`tactics.js`)。Expert W3 でヤオビクニの時間停止のあとに緊急回復を押し、敵が動かずターンも進まないので 60 秒待って打ち切り(stopped)になった
+- 2026-10-10 **WAVE の合間で、タクティクスの外へ出るボタンを押さない**(`tactics.js` の合間の処理。ハカセくんの報告)。進むボタンが見つからないときの「えらぶ」の候補から、話しかける・ヘルプ・説明・音ゲー(ノーツ・演奏・モンヒロビート)・図鑑・設定などを除いた。
+  助手の話題一覧(「近いノーツが並んでいるときは…」)に迷い込んでいたら、閉じる・× を先に、無ければ戻るを押す
 
 ## 見つけたボットの取りこぼし(ハカセくんへ渡す)
 
