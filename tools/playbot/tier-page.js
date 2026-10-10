@@ -6,7 +6,7 @@
 //   node tools/playbot/tier-page.js [--out <出力先>]    既定: docs/playbot/dashboard/tier.html
 //   node tools/playbot/tier-page.js --rebuild-icons     縮めた顔アイコンを作り直してからページを作る
 //   node tools/playbot/tier-page.js --json <別の tier.json>   試し用(その JSON を読む。--out と合わせて使う)
-//   node tools/playbot/tier-page.js --check             tier.json の形と、monster-tier.md・asika-tier.md・tier.html との食い違いを確かめる(ページは作らない)
+//   node tools/playbot/tier-page.js --check             tier.json の形と、monster-tier.md・asika-tier.md(早見表・合うモンスター)・combo.md(よく合う・合わない)・tier.html との食い違いを確かめる(ページは作らない)
 //
 // 顔アイコンは docs/playbot/dashboard/tier-icons/(96px。map.json が 名前 → ファイル)から data URI で埋め込む。
 // スクリプトを使わない素の HTML(<details> で開閉)。社長室(president-room.js)と同じ作り・色。
@@ -403,6 +403,44 @@ function crossCheck(d, jsonText) {
         if (!r) { p.push(`${c.名前}: asika-tier.md の早見表に無い`); continue; }
         if (r[0].replace(/\*$/, '') !== c.総合 || r[0].endsWith('*') !== !!c.暫定) p.push(`${c.名前}: 総合が違う(md ${r[0]} / json ${c.総合}${c.暫定 ? '*' : ''})`);
         DIFFS.forEach((k, i) => { if (r[i + 1] !== c[k]) p.push(`${c.名前}: ${k} が違う(md ${r[i + 1]} / json ${c[k]})`); });
+      }
+    }
+  }
+  // アシカの「合うモンスター」(asika-tier.md の「アシカごとの合うモンスター」の節)
+  if (Array.isArray(d.アシカ) && d.アシカ.length) {
+    const amd = read('asika-tier.md') || '';
+    const sec = (amd.split(/^## アシカごとの合うモンスター\s*$/m)[1] || '').split(/^## /m)[0];
+    const lines = Object.fromEntries(sec.split('\n').map((l) => l.match(/^- \*\*(.+?)\*\*: (.*)$/)).filter(Boolean).map((m) => [m[1], m[2]]));
+    for (const c of d.アシカ) {
+      const line = lines[c.名前];
+      const names = (c.合うモンスター || []).map((x) => (typeof x === 'string' ? x : x.名前));
+      if (line == null) { if (names.length || c.合う子なし) p.push(`${c.名前}: asika-tier.md の「合うモンスター」に無い`); continue; }
+      if (c.合う子なし ? line !== c.合う子なし : names.join('・') !== line.split('・').map((t) => t.replace(/\(.*\)$/, '')).join('・')) {
+        p.push(`${c.名前}: 合うモンスターが違う(md ${line.slice(0, 40)} / json ${c.合う子なし || names.join('・')})`);
+      }
+    }
+  }
+  // 組み合わせ(combo.md の「よく合う」「合わない」の表。どちらも測り直しの数字)
+  if (Array.isArray(d.組み合わせ) && d.組み合わせ.length) {
+    const cmd = read('combo.md');
+    if (cmd == null) p.push('combo.md がありません');
+    else {
+      const table = (head) => {
+        const sec = (cmd.split(new RegExp(`^## ${head}.*$`, 'm'))[1] || '').split(/^##+ /m)[0];
+        const rows = {};
+        for (const line of sec.split('\n')) {
+          const c = line.split('|').slice(1, -1).map((x) => x.trim());
+          if (c.length >= 3 && c[0] !== '勇者モン' && !/^-+$/.test(c[0])) rows[`${c[0]}×${c[1]}`] = Number(c[2]);
+        }
+        return rows;
+      };
+      const good = table('よく合う組み合わせ');
+      const bad = table('合わない組み合わせ');
+      for (const c of d.組み合わせ) {
+        const key = `${c.勇者}×${c.供モン}`;
+        const t = c.良し悪し === '良い' ? good : bad;
+        if (!(key in t)) p.push(`組み合わせ ${key}(${c.良し悪し}): combo.md の表に無い`);
+        else if (Math.abs(t[key] - c.点) > 0.005) p.push(`組み合わせ ${key}: 点が違う(md ${t[key]} / json ${c.点})`);
       }
     }
   }
