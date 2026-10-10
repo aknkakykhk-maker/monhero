@@ -1204,6 +1204,9 @@ const RHYTHM_SKY_THEMES=Object.freeze({
   default:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀'}),
   star:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀'}),
   glass:Object.freeze({rgb:'203,213,225',core:'#f8fafc',label:'銀(半透明)'}),
+  beam:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀'}),
+  ruby:Object.freeze({rgb:'239,68,68',core:'#fecaca',label:'赤'}),
+  cube:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀'}),
   wing:Object.freeze({rgb:'129,140,248',core:'#e0e7ff',label:'藍'}),
   ring:Object.freeze({rgb:'248,113,113',core:'#fee2e2',label:'赤'}),
 });
@@ -29806,7 +29809,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(quads[0].r0,quads[0].y0);quads.forEach(q=>ctx.lineTo(q.r1,q.y1));ctx.stroke();
     ctx.globalAlpha=1;
   };
-  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'||v==='star'||v==='wing'||v==='ring'||v==='glass'?v:'flat';}catch{return 'flat';}};
+  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'||v==='star'||v==='wing'||v==='ring'||v==='glass'||v==='beam'||v==='ruby'||v==='cube'?v:'flat';}catch{return 'flat';}};
   // 案ごとの差し色(空中の柱・影とのつなぎ線の色。既存のどのノーツ・判定の色とも重ならない色を案ごとに選ぶ)
   const skyAccentRgb=()=>{const st=skyTapStyle();return st==='star'?'226,232,240':st==='glass'?'203,213,225':st==='wing'?'129,140,248':st==='ring'?'248,113,113':'251,191,36';};
   // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
@@ -29818,7 +29821,41 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyTap=(hd,opts)=>{
     const style=skyTapStyle(),W=Math.max(18,hd.w*sizeScale+4),H=Math.max(11,hd.h+6),x0=hd.cx-W/2,y0=hd.cy-H/2,cx=hd.cx,cy=hd.cy;
     ctx.globalAlpha=opts.alpha;ctx.lineJoin='round';
-    if(style==='glass'){
+    if(style==='beam'||style==='ruby'||style==='cube'){
+      // 空中専用の案M〜O(2026-10-10 テンポ「空いている色は無い。色でなく形で分ける」。参考動画: 空中は厚みのある角材で側面が見え、真下の床に影が付く)。
+      // ほかのノーツは全部「横長の角丸の板」なので、立体(角材・菱形の宝石・立方体)にする。金は使わない。柱(棒)は無く、床の影(drawSkyShadowHead)だけで高さを見せる
+      const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
+      const poly=(pts,fill,stroke,lw)=>{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.lineWidth=lw||1;ctx.strokeStyle=stroke;ctx.stroke();}};
+      const outerGlow=pts=>{poly(pts,null,`rgba(226,232,240,${(.14+.34*pp).toFixed(2)})`,4+7*pp);};
+      const fade=(c0,c1,y0,y1)=>{const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,c0);g.addColorStop(1,c1);return g;};
+      if(style==='beam'){
+        // 案M 角材: 手前の面(白銀の芯・濃い縁)+上の面(明るい)+側面(画面の中心側。濃い)。地上の板より厚く、側面が見える
+        const sgn=cx<(typeof cssW==='number'?cssW/2:cx)?1:-1;
+        const fw=hd.w*sizeScale*1.05,fh=Math.max(10,hd.h*1.5),th=Math.max(6,fh*.75),sd=Math.max(3,fw*.1),fx=cx-fw/2,fy=cy-fh/2+th*.35;
+        const top=[[fx,fy],[fx+fw,fy],[fx+fw+sgn*sd,fy-th],[fx+sgn*sd,fy-th]];
+        const side=sgn>0?[[fx+fw,fy],[fx+fw+sd,fy-th],[fx+fw+sd,fy-th+fh],[fx+fw,fy+fh]]:[[fx,fy],[fx-sd,fy-th],[fx-sd,fy-th+fh],[fx,fy+fh]];
+        outerGlow([[fx,fy-th],[fx+fw,fy-th],[fx+fw,fy+fh],[fx,fy+fh]]);
+        poly(side,'rgba(51,65,85,1)','rgba(15,23,42,.9)',1.2);
+        poly(top,fade('rgba(255,255,255,1)','rgba(203,213,225,1)',fy-th,fy),'rgba(255,255,255,.95)',1);
+        const fg=ctx.createLinearGradient(fx,0,fx+fw,0);fg.addColorStop(0,'rgba(30,41,59,1)');fg.addColorStop(.22,'rgba(203,213,225,1)');fg.addColorStop(.5,'rgba(255,255,255,1)');fg.addColorStop(.78,'rgba(203,213,225,1)');fg.addColorStop(1,'rgba(30,41,59,1)');
+        ctx.fillStyle=fg;ctx.fillRect(fx,fy,fw,fh);ctx.lineWidth=1.2;ctx.strokeStyle='rgba(15,23,42,.9)';ctx.strokeRect(fx,fy,fw,fh);
+        ctx.fillStyle='rgba(15,23,42,.38)';ctx.fillRect(fx,fy+fh-Math.max(1.5,fh*.22),fw,Math.max(1.5,fh*.22));
+      }else if(style==='ruby'){
+        // 案N 宝石の菱形(赤): 縦に長い菱形を4つの面に割る。明るい面・赤・暗い面で立体に見せ、中心に白い光の点。色は純な赤(GREAT の文字の色は判定の場所だけ)
+        const R=Math.max(9,hd.w*.4),T=[cx,cy-R*1.15],Rt=[cx+R*.82,cy],B=[cx,cy+R*1.15],L=[cx-R*.82,cy],C=[cx,cy];
+        outerGlow([T,Rt,B,L]);
+        poly([T,C,L],'rgba(254,202,202,1)');poly([T,Rt,C],'rgba(239,68,68,1)');poly([C,Rt,B],'rgba(153,27,27,1)');poly([L,C,B],'rgba(220,38,38,1)');
+        poly([T,Rt,B,L],null,'rgba(15,23,42,.9)',2.4);poly([T,Rt,B,L],null,'rgba(255,255,255,.9)',1);
+        const d=Math.max(1.8,R*.14)*(1+.9*pp);poly([[cx-d,cy],[cx,cy-d*1.2],[cx+d,cy],[cx,cy+d*1.2]],'rgba(255,255,255,1)');
+      }else{
+        // 案O 立方体(白銀・上が尖った六角形): 上の面(明るい)・左の面・右の面(暗い)の3面。参考の「側面が見える角材」を小さい立方体にしたもの
+        const R=Math.max(9,hd.w*.36),h=R*.866,T=[cx,cy-R],UR=[cx+h,cy-R*.5],LR=[cx+h,cy+R*.5],B=[cx,cy+R],LL=[cx-h,cy+R*.5],UL=[cx-h,cy-R*.5],C=[cx,cy];
+        outerGlow([T,UR,LR,B,LL,UL]);
+        poly([T,UR,C,UL],'rgba(255,255,255,1)');poly([UL,C,B,LL],'rgba(148,163,184,1)');poly([UR,LR,B,C],'rgba(51,65,85,1)');
+        poly([T,UR,LR,B,LL,UL],null,'rgba(15,23,42,.9)',2.4);poly([T,UR,LR,B,LL,UL],null,'rgba(255,255,255,.85)',1);
+        ctx.lineWidth=1;ctx.strokeStyle='rgba(15,23,42,.7)';ctx.beginPath();ctx.moveTo(UL[0],UL[1]);ctx.lineTo(C[0],C[1]);ctx.lineTo(UR[0],UR[1]);ctx.moveTo(C[0],C[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();
+      }
+    }else if(style==='glass'){
       // 案L ガラスの角材(オンプくんの参考動画の読み: 空中は「厚みのある半透明の銀の角材」。色だけでなく 厚み・透け方・床の影 で地上と分ける)
       // 手前の面(半透明・端が濃く真ん中が明るい)の上に、奥へ細くなる上の面(明るい)を重ね、角材に見せる。近いほど不透明で明るい
       const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
@@ -29952,13 +29989,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
     ctx.globalAlpha=opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
-    if(skyTapStyle()==='glass'){
+    if(['glass','beam','ruby','cube'].includes(skyTapStyle())){
       // 案L: 床に落ちる灰色のぼやけた影(参考動画「浮いていると分かるいちばん強い手がかり」)。外へ広がる3重の菱形でぼかしを出す
       [[1.9,.12],[1.45,.2],[1,.34]].forEach(([k,al])=>{ctx.fillStyle=`rgba(30,41,59,${al})`;ctx.beginPath();ctx.moveTo(sh.cx-w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy-h*k);ctx.lineTo(sh.cx+w*k,sh.cy);ctx.lineTo(sh.cx,sh.cy+h*k);ctx.closePath();ctx.fill();});
     }else{
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
     }
-    ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();
+    if(!['beam','ruby','cube'].includes(skyTapStyle())){ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();}
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
