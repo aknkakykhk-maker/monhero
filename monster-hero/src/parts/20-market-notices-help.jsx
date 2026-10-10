@@ -737,7 +737,8 @@ const helpDataRows = (id) => {
     // 直接ヘルプへ手で書き写すと、しきい値を調整するたびヘルプだけ古くなるため、
     // rhythmRankForScoreへ各難易度のmaxScoreをそのまま渡して実データから表を作る
     case 'rhythmDifficultyRanks':
-      return (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d =>
+      // HELL(6段目)も並べる。5難易度だけの一覧(RHYTHM_DIFFICULTIES)ではなく、遊べる難易度の全部から作る
+      return (typeof RHYTHM_PLAY_DIFFICULTIES !== 'undefined' ? RHYTHM_PLAY_DIFFICULTIES : typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d =>
         [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     // 体験版で遊べる難易度と、そのレベル・ノーツ数。ヘルプへ手で書き写すと、
     // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
@@ -760,7 +761,8 @@ const helpDataRows = (id) => {
     case 'rhythmDemoSongList': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
-      const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+      // HELL がある曲は「6難易度」と数える(譜面が無い難易度は下で外れる)
+      const ids = typeof RHYTHM_SELECTABLE_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_SELECTABLE_DIFFICULTY_IDS : typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
       return list.map(song => {
         const charts = ids.map(id => song.difficulties[id]).filter(chart => chart && chart.notes && chart.notes.length > 0);
         if (!charts.length) return null;
@@ -777,7 +779,8 @@ const helpDataRows = (id) => {
     case 'rhythmDifficultySpread': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
-      const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+      // HELL の行も出す(譜面がある曲だけで幅を作る)
+      const ids = typeof RHYTHM_SELECTABLE_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_SELECTABLE_DIFFICULTY_IDS : typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
       return ids.map(id => {
         const entries = list.map(song => ({ song, chart: song.difficulties[id] }))
           .filter(entry => entry.chart && entry.chart.notes && entry.chart.notes.length > 0
