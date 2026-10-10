@@ -2499,6 +2499,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
 // ・HOLD横ズレ許容: 帯の半分幅に、0.3サブレーン(=0.15レーン)ぶんの余白を足す。
 //   HOLDは動かない的なので、経路を追従するSLIDEより厳しめにしている。
 const RHYTHM_MID_TRACKING_GRACE_MS=120;
+// 空中の段(試作): 高さのあるスライドが外れてから切れるまでの猶予。MASTER のホールド(120ms)を基準に、横持ち親指2本の人のくせのボットで決める
+const RHYTHM_SKY_SLIDE_CUT_GRACE_MS=120;
 const RHYTHM_HOLD_TRACKING_MARGIN_LANES=.15;
 // 帯が細くなっていくとき、追従の許容に残す「少し前の太さ」までの長さ(ms)。指の反応の遅れぶん。
 const RHYTHM_HOLD_NARROWING_LOOKBACK_MS=150;
@@ -2963,7 +2965,14 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       const areaBox=areaRect();
       const atFinger=areaBox?rhythmLaneCoordinateAtPoint(pos.clientX,pos.clientY,areaBox):null;
       const off=actual=>actual===null||Math.abs(actual-target)>tolerance;
-      bad=off(atLine)&&off(atFinger);
+      // 空中の段(試作・2026-10-10 社長「空中スライドのとき長押ししてたら、位置を合わせなくても勝手に判定オッケーになってない?」):
+      // 判定ラインより上を押さえた指は、見えている帯と同じ「判定ラインの幅で測った位置」(atFinger)だけで見る。
+      // 判定ラインの高さに直した位置(atLine)は奥の狭い道幅から外へ引き延ばすので、2つの許し幅を合わせると地上より広くなり、
+      // 指を動かさなくても1.5レーンほど動くアークを最後まで取れていた。空中の段が無い曲(既存の全曲)は今までどおり
+      const skyFinger=typeof RHYTHM_SKY_INPUT!=='undefined'&&RHYTHM_SKY_INPUT.active&&areaBox&&((Number(pos.clientY)-areaBox.top)/areaBox.height)<RHYTHM_JUDGMENT_LINE_Y.ratio;
+      bad=skyFinger?off(atFinger):off(atLine)&&off(atFinger);
+      // 描き分け用(試作): いま指が帯から外れているか・指の位置(プレイエリアの中の px)。印の見せ方が読む(判定には使わない)
+      if(session.note&&rhythmSlideHasSky(session.note)){session.note._trackOff=!!bad;session.note._trackFinger=areaBox?{x:Number(pos.clientX)-areaBox.left,y:Number(pos.clientY)-areaBox.top}:null;}
     }else if(chartNow>=Number(session.note?.endTimeMs)-RHYTHM_HOLD_END_TRACKING_SKIP_MS){
       // 終わりの100msは外れを見ない。指を離すときに接点が動く・もう成立する時間なので、ここで外れ扱いにしない。
       bad=false;
@@ -2991,14 +3000,20 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       bad=off(actual)&&off(atLine);
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
-    if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
+    // 空中のスライドは外れ始めも「いまの時刻」で記録する(止まっていた指が外れた瞬間に、猶予なしで切れないように)
+    if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=session.kind==='SLIDE'&&rhythmSlideHasSky(session.note)?Math.max(Number(pos.perfMs)||0,nowPerf()):pos.perfMs;
     // 【2026-09-12】SLIDEはここで打ち切らない。外れているあいだに来たチェックポイントだけが
     // 落ちて、指を戻せば続きは拾える(evaluateCheckpoints が数える)。
     // HOLDはこれまでどおり、猶予を超えたらその場でMISSを確定する。
-    if(session.kind==='SLIDE')return;
-    const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0
+    // 空中の段(試作・2026-10-10 社長「切れる作りにしてほしいけど猶予はあり」): 高さのあるスライドは、ホールドと同じく
+    // 猶予を超えて外れたらその場で切れる(MISS)。地上だけのスライド(既存の全曲)はこれまでどおり切れない
+    if(session.kind==='SLIDE'&&!rhythmSlideHasSky(session.note))return;
+    const graceMs=session.kind==='SLIDE'?RHYTHM_SKY_SLIDE_CUT_GRACE_MS:Number(session.note?._rhythmTrackingGraceMs)>0
       ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
-    if(pos.perfMs-session.trackingBadSincePerf<graceMs)return;
+    // 空中のスライドは「いまの時刻」で外れていた長さを測る。指が止まったままだと pos.perfMs は押した瞬間のまま進まず、
+    // 帯が離れていっても外れの長さが0のままで切れなかった(動かさないボットで見つけた)。ホールドは帯が横へ動かないので今までどおり
+    const elapsedPerf=(session.kind==='SLIDE'?Math.max(Number(pos.perfMs)||0,nowPerf()):pos.perfMs)-session.trackingBadSincePerf;
+    if(elapsedPerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
@@ -3530,6 +3545,14 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const acceptsPosition=note=>{
       // 空中の段(試作): 空中のノーツは空中の指で、地上のノーツは地上の指でだけ取る(スライドは横の位置だけで追う)
       if(RHYTHM_SKY_INPUT.active&&!rhythmNoteIsSlide(note)&&note._rhythmOriginalType!=='SLIDE'&&!rhythmSkyAccepts(note,Number(input?.sky)))return false;
+      // 空中から始まるスライドは、空中の段を押したときだけ押し始めを受ける(2026-10-10 社長「位置を合わせなくても勝手に判定オッケーになってない?」。
+      // それまでは地上の高さで押しても受けていた)。地上から始まるスライドは今までどおり高さを見ない。押し始めたあとは横の位置だけで追う。
+      // 高さが半分未満で始まるスライドは、見た目の位置が空中の受け付けの境目(地上の線の少し上)とほとんど同じで、
+      // 少し低く押しただけで断られるので、高さを問わない(人の指のくせのボットで見つけた)
+      if(RHYTHM_SKY_INPUT.active&&rhythmNoteIsSlide(note)&&rhythmSlideHasSky(note)&&rhythmSlideSkyAt(note,Number(note.timeMs)||0)>=.5){
+        const ratio=Number(input?.sky);
+        if(Number.isFinite(ratio)&&!(ratio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW))return false;
+      }
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return note.lane===lane;
