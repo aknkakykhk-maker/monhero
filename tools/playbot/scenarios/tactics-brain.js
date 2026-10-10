@@ -78,6 +78,8 @@ const readBoard = (s) => s.page.evaluate(() => {
     needsPlace: /置き場所を選ぶ/.test((action && action.innerText) || ''),
     exPanel: !!document.querySelector('[data-tactics-ex-panel]'),
     exPass: (() => { const b = document.querySelector('[data-tactics-ex-pass]'); return !!b && !b.disabled; })(),
+    // 緊急回復(全員のライフ・ガッツ +30%。そのターンはカードを使えない。71-screen-battle.jsx の aria-label="緊急回復")
+    emergencyReady: (() => { const b = document.querySelector('button[aria-label="緊急回復"]'); return !!b && !b.disabled; })(),
     over: !action && !hand.length && /敗\s*北|GAME OVER|ゲームオーバー|RUN RESULT|ラン終了|ランの結果|最終結果|ALL CLEAR|全WAVE制覇|CHAMPION/.test(text) || /敗\s*北|DEBUG\s*勝\s*利/.test(text),
     cleared: /ALL CLEAR|全WAVE制覇|CHAMPION|優勝|完全制覇/.test(text), gameOver: /敗\s*北|GAME OVER|ゲームオーバー|全滅/.test(text),
   };
@@ -95,6 +97,25 @@ function threatOf(b) {
   if (/様子見|移動|回復|攻撃力アップ/.test(b.notice) && !b.aimedDamage) return 'none';
   if (b.aimedDamage > 0) return 'single';
   return 'none';
+}
+
+// 緊急回復を押すか(2026-10-10 ハカセくんの指示。それまでボットは一度も押していなかった)。
+//   全員のライフ・ガッツが上限の30%戻り、そのターンはカードを使えない(60-app.jsx の useEmergency。倒れた子にも貯まる)。
+//   「全滅の手前」だけで押す: 次の攻撃で倒れる子がいて、そのあと立っている子が1体以下になり、+30% なら持ちこたえる子がいる。
+//   使える回復カードがあるときは回復カードで(攻撃もできる)。ガードのカードがあり、倒れそうなのが1体で貫通撃でもなければ、守りの判断(②)に任せる
+//   PLAYBOT_TACTICS_EMERGENCY=0 で切れる(直す前と比べるため)
+function emergencyWhy(b) {
+  if (process.env.PLAYBOT_TACTICS_EMERGENCY === '0' || !b.emergencyReady) return '';
+  const alive = b.slots.filter((x) => x.occupied && !x.downed && x.hp);
+  if (!alive.length) return '';
+  const usable = (re) => b.hand.some((c) => c.usable && re.test(c.type));
+  if (usable(/heal/)) return '';
+  const falling = alive.filter((x) => x.aimDamage > 0 && x.aimDamage >= x.hp.now);
+  const saved = falling.filter((x) => x.aimDamage < x.hp.now + Math.floor(x.hp.max * 0.3));
+  const standAfter = alive.length - falling.length;
+  if (!saved.length || standAfter >= 2) return '';
+  if (falling.length === 1 && threatOf(b) !== 'pierce' && usable(/guard/)) return '';
+  return `${falling.map((x) => x.name || '?').join('・')}が次の攻撃で倒れ、立っている子が${standAfter}体になる(回復カードなし。+30%で持ちこたえる)`;
 }
 
 // ---------- 押す ----------
@@ -929,6 +950,7 @@ function rememberRun(L, stats) {
     result: L.result, wave: stats.waveReached, turns: L.waves.reduce((a, w) => a + w.turns, 0), downs: L.waves.reduce((a, w) => a + w.downs, 0),
     lostAt: L.result === 'clear' ? null : (L.waves[L.waves.length - 1] || {}).enemy || null, dmg: Object.fromEntries(Object.entries(dmg).map(([m, d]) => [m, Math.round(d)])),
     // 子ごとの技の回数・間合い適性(2026-10-09 から)・勇者特性が効いた回数・EX を使った子
+    emergency: L.emergency || 0, // 緊急回復を押した回数(2026-10-10 から)
     heroStyle: L.build.heroStyle || null, // 勇者モンの初期スタイル(剣士モッチー。2026-10-10 から。それより前は片手剣)
     use, traitHits: L.waves.reduce((a, w) => a + (w.traitHits || 0), 0),
     exBy: L.ex.reduce((o, e) => { if (e.mon) o[e.mon] = (o[e.mon] || 0) + 1; return o; }, {}),
@@ -939,4 +961,4 @@ function rememberRun(L, stats) {
   fs.writeFileSync(KNOWLEDGE, `${JSON.stringify(k, null, 1)}\n`);
 }
 
-module.exports = { readBattleLog, saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };
+module.exports = { emergencyWhy, readBattleLog, saveRoster, preferredOrder, rememberRun, readBoard, threatOf, evalHand, decidePick, placePick, playTurn, maybeUseEx, chooseBetween, makeLog, explain, newMemory, monOf, THREAT_JA };

@@ -464,7 +464,15 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     stats.exUsed += ctx.log.data.ex.length - exBefore;
     b = await brain.readBoard(s);
     ctx.mem.recentDealt = ctx.mem.recentDealt || 0;
-    const picks = await brain.playTurn(s, b, ctx.mem, ctx.log, stats);
+    // 全滅の手前なら、カードを置かずに緊急回復(押すとそのまま敵の番へ進む)
+    const emergency = brain.emergencyWhy(b);
+    let picks = [];
+    if (emergency) {
+      if (process.env.PLAYBOT_DEBUG) console.log(`    [判断] W${b.wave} T${b.turn} 緊急回復 … ${emergency}`);
+      ctx.log.note(`緊急回復: ${emergency}`);
+      ctx.log.data.emergency = (ctx.log.data.emergency || 0) + 1;
+      picks = [{ kind: 'emergency', why: emergency }];
+    } else picks = await brain.playTurn(s, b, ctx.mem, ctx.log, stats);
     if (danger) {
       stats.aimedDanger += 1;
       if (picks.some((p) => p.kind === 'guard')) stats.guardsWhenAimed += 1;
@@ -475,7 +483,10 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
     const before = await readTactics(s);
     // ★EXを使ったターン(併用できないEX)はカードを選べず、実行ボタンの代わりに「ターンを進める」が出る(71-screen-battle.jsx の data-tactics-ex-pass)
     let acted = false;
-    if (!before.actionEnabled && await s.page.evaluate(() => { const x = document.querySelector('[data-tactics-ex-pass]'); return !!x && !x.disabled; })) {
+    if (emergency) {
+      await tapEl(s, 'button[aria-label="緊急回復"]', '緊急回復');
+      acted = true;
+    } else if (!before.actionEnabled && await s.page.evaluate(() => { const x = document.querySelector('[data-tactics-ex-pass]'); return !!x && !x.disabled; })) {
       await tapEl(s, '[data-tactics-ex-pass]', 'ターンを進める');
       acted = true;
     } else {
