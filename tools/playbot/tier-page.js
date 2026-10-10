@@ -6,7 +6,7 @@
 //   node tools/playbot/tier-page.js [--out <出力先>]    既定: docs/playbot/dashboard/tier.html
 //   node tools/playbot/tier-page.js --rebuild-icons     縮めた顔アイコンを作り直してからページを作る
 //   node tools/playbot/tier-page.js --json <別の tier.json>   試し用(その JSON を読む。--out と合わせて使う)
-//   node tools/playbot/tier-page.js --check             tier.json の形と、monster-tier.md・asika-tier.md(早見表・合うモンスター)・combo.md(よく合う・合わない)・tier.html との食い違いを確かめる(ページは作らない)
+//   node tools/playbot/tier-page.js --check             tier.json の形と、monster-tier.md・asika-tier.md(早見表・合うモンスター)・combo.md(よく合う・合わない)・party.md(おすすめパーティ)・tier.html との食い違いを確かめる(ページは作らない)
 //
 // 顔アイコンは docs/playbot/dashboard/tier-icons/(96px。map.json が 名前 → ファイル)から data URI で埋め込む。
 // スクリプトを使わない素の HTML(<details> で開閉)。社長室(president-room.js)と同じ作り・色。
@@ -86,6 +86,29 @@ function validate(d) {
       if (c && c.点 !== undefined && !Number.isFinite(c.点)) p.push(`${at}: 点 は数`);
     }
   }
+  if (d.おすすめパーティ !== undefined) {
+    if (!Array.isArray(d.おすすめパーティ)) p.push('おすすめパーティ は配列にする');
+    else {
+      const ranks = new Set();
+      for (const t of d.おすすめパーティ) {
+        const at = `おすすめパーティ「${t && t.難易度}${t && t.順位}位 ${t && t.勇者}」`;
+        if (!t) { p.push('空のおすすめパーティがあります'); continue; }
+        if (!DIFFS.includes(t.難易度)) p.push(`${at}: 難易度は ${DIFFS.join(' / ')}`);
+        if (!Number.isInteger(t.順位) || t.順位 < 1) p.push(`${at}: 順位は1以上の整数`);
+        else if (ranks.has(t.難易度 + t.順位)) p.push(`${at}: 同じ難易度で順位が重なっています`);
+        ranks.add(t.難易度 + t.順位);
+        if (!names.has(t.勇者)) p.push(`${at}: 勇者はモンスターの名前にする`);
+        if (!Array.isArray(t.供モン) || !t.供モン.length || t.供モン.some((n) => !names.has(n))) p.push(`${at}: 供モンはモンスターの名前の配列にする`);
+        if (!t.点 || !t.点.名前 || !Number.isFinite(t.点.値) || (t.点.基準との差 !== undefined && !Number.isFinite(t.点.基準との差))) p.push(`${at}: 点は { 名前, 値(数), 基準との差(数) }`);
+        if (typeof t.確か !== 'boolean') p.push(`${at}: 確か は true / false`);
+        if (t.暫定を含む !== undefined && (!Array.isArray(t.暫定を含む) || t.暫定を含む.some((n) => !names.has(n)))) p.push(`${at}: 暫定を含む はモンスターの名前の配列`);
+        if (!t.理由) p.push(`${at}: 理由が空です`);
+        if (t.アシカ !== undefined && (!t.アシカ || !Array.isArray(t.アシカ.優先) || (t.アシカ.使いどころ !== undefined && !Array.isArray(t.アシカ.使いどころ)))) p.push(`${at}: アシカ は { 優先:[名前], 使いどころ:[文] }`);
+        if (t.強化 !== undefined && (!t.強化 || typeof t.強化 !== 'object')) p.push(`${at}: 強化 は { トレーニング, 固有技の強化, ごほうび } のような文字の組`);
+        if (t.実戦で確認 != null && (!Number.isInteger(t.実戦で確認.回数) || !Number.isInteger(t.実戦で確認.クリア))) p.push(`${at}: 実戦で確認 は { 回数, クリア } か null`);
+      }
+    }
+  }
   return p;
 }
 
@@ -161,7 +184,9 @@ function build(d) {
   const mons = d.モンスター;
   const assists = Array.isArray(d.アシカ) ? d.アシカ : null;
   const combos = Array.isArray(d.組み合わせ) ? d.組み合わせ : null;
-  const aNames = [...new Set([...(assists || []).map((a) => a.名前), ...mons.flatMap((m) => (m.おすすめアシカ || []).map((x) => x.名前)), ...(assists || []).flatMap(() => [])])];
+  const parties = Array.isArray(d.おすすめパーティ) ? d.おすすめパーティ : [];
+  const hasParties = Array.isArray(d.おすすめパーティ);
+  const aNames = [...new Set([...(assists || []).map((a) => a.名前), ...mons.flatMap((m) => (m.おすすめアシカ || []).map((x) => x.名前)), ...parties.flatMap((t) => (t.アシカ && t.アシカ.優先) || [])])];
   const { cls, style, css } = loadIcons(mons.map((m) => m.名前), aNames);
   const iconOf = (kind, name, extra = '') => {
     const key = kind + ':' + name;
@@ -177,6 +202,7 @@ function build(d) {
   const kv = (rows) => `<dl>${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
   const diffTable = (m) => `<div class="tw"><table><thead><tr><th>難易度</th><th>Tier</th><th>試した回数(勇者)</th>${m.机上 ? '<th>受けられる</th>' : ''}</tr></thead><tbody>${DIFFS.map((k) => `<tr><td>${k}</td><td>${tier(m[k])}${m.難易度が暫定 && m.難易度が暫定[k] ? ' <small>暫定</small>' : ''}</td><td>${m.回数[k]}${m.勇者の回数 ? `(${m.勇者の回数[k]})` : ''}</td>${m.机上 ? `<td>${m.机上.受けられる[k]}発</td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   const refList = (kind, list) => `<ul class="rl">${list.map((x) => `<li>${iconOf(kind, x.名前, 'sm')}<span><b>${esc(x.名前)}</b> ${esc(x.理由)}</span></li>`).join('')}</ul>`;
+  const refAssists = (names) => `<ul class="rl">${names.map((n) => `<li>${iconOf('a', n, 'sm')}<span><b>${esc(n)}</b></span></li>`).join('')}</ul>`;
   const assistBody = (a) => kv([
     a.仮の総合 ? ['仮の総合', `${tier(a.仮の総合)} (5回未満のマスから出した仮)`] : null,
     ['ひとこと', esc(a.理由)],
@@ -232,6 +258,31 @@ function build(d) {
     ? panels('総合', assistBody, null, OVERALL_TIERS, assists, 'a', '枚')
     : soon;
   const comboSection = combos ? comboGroup('よく合う組み合わせ', '良い') + '\n    ' + comboGroup('合わない組み合わせ', '合わない') : soon;
+  const partyCard = (t) => {
+    const members = [t.勇者, ...t.供モン];
+    const prov = new Set(t.暫定を含む || []);
+    const faces = members.map((n, i) => `<span class="pm">${iconOf('m', n, i === 0 ? 'hero' : '')}<span class="nm2">${esc(n)}${prov.has(n) ? '<small>暫定</small>' : ''}</span></span>`).join('');
+    const diff = t.点.基準との差;
+    const sign = (v) => (v >= 0 ? '+' : '−') + Math.abs(v);
+    const assist = t.アシカ ? kv([
+      ['優先', refAssists(t.アシカ.優先)],
+      t.アシカ.使いどころ && t.アシカ.使いどころ.length ? ['使いどころ', `<ul class="bl">${t.アシカ.使いどころ.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`] : null,
+    ]) : '';
+    const grow = t.強化 ? kv(Object.entries(t.強化).map(([k, v]) => [k, esc(v)])) : '';
+    const real = t.実戦で確認 ? `実戦 ${t.実戦で確認.回数}回(クリア ${t.実戦で確認.クリア})` : '実戦ではまだ確かめていない';
+    return `
+      <details class="party">
+        <summary><span class="rk">${esc(t.順位)}位</span><span class="faces">${faces}</span></summary>
+        <div class="pinfo"><b>${esc(t.点.名前)} ${esc(t.点.値)}</b>${diff !== undefined ? `<small> 基準との差 ${esc(sign(diff))}</small>` : ''}<small> ${t.確か ? '測り直しても残った' : 'まだぶれ以内'}</small><small> ${esc(real)}</small></div>
+        <div class="body">${kv([['噛み合う理由', esc(t.理由)]])}${assist ? `<h4>アシカの入れ方</h4>${assist}` : ''}${grow ? `<h4>強化の順番</h4>${grow}` : ''}</div>
+      </details>`;
+  };
+  const partySection = hasParties
+    ? DIFFS.map((k) => {
+        const list = parties.filter((t) => t.難易度 === k).sort((a, b) => a.順位 - b.順位);
+        return `<details class="diff" ${k === 'Expert' ? 'open' : ''}><summary>${k} のおすすめパーティ(${list.length}組)</summary>${list.length ? `<div class="pl">${list.map(partyCard).join('')}</div>` : '<p class="empty">まだありません。</p>'}</details>`;
+      }).join('\n    ')
+    : soon;
   const weights = DIFFS.map((k) => `${k} ${d.決め方.重み[k]}`).join('・');
   const c = d.数えた回;
 
@@ -306,6 +357,20 @@ html{scroll-behavior:smooth;scroll-padding-top:56px}
 .cg{--c:var(--tB)}.cx{--c:var(--tS)}
 .pair{display:flex;align-items:center;gap:4px;flex:none}.pair .ic{width:44px;height:44px}.x{color:var(--muted);font-size:12px}
 .ct{min-width:0;overflow-wrap:anywhere}.vd{font-weight:800}
+.jump a{min-width:0}
+.party{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:10px;min-width:0}
+.party>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px;-webkit-tap-highlight-color:transparent}
+.party>summary::-webkit-details-marker{display:none}
+.rk{font-family:var(--font-head);font-weight:800;color:var(--accent);flex:none;min-width:2.2em}
+.faces{display:flex;gap:6px;min-width:0;flex:1;justify-content:space-between}
+.pm{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;flex:1}
+.pm .ic{width:100%;max-width:56px;height:auto;aspect-ratio:1}.pm .ic.hero{border-color:var(--accent)}
+.nm2{font-size:10px;line-height:1.25;text-align:center;overflow-wrap:anywhere;display:flex;flex-direction:column;align-items:center}
+.pinfo{padding:0 12px 8px;font-size:13px;display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+.party .body{margin:0 10px 10px}
+.party h4{margin:8px 0 4px;font-size:13px;font-family:var(--font-head)}
+.bl{margin:0;padding-left:1.2em}
+.pl{margin-bottom:12px}
 .ic>i{position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform-origin:center center}
 ${css}
 </style>
@@ -315,7 +380,7 @@ ${css}
     <p class="lead">${esc(d.更新)} 更新 / 研究所:ハカセくん / 数えた回 ${c.合計}回(Hard ${c.Hard}・Expert ${c.Expert}・Master ${c.Master})・戦った ${d.戦った体数}/${d.全体数}体。アイコンを押すと詳細が開きます。</p>
   </header>
 
-  <nav class="jump" aria-label="ページ内の移動"><a href="#monsters">モンスター</a><a href="#assists">アシカ</a><a href="#combos">組み合わせ</a></nav>
+  <nav class="jump" aria-label="ページ内の移動"><a href="#monsters">モンスター</a><a href="#assists">アシカ</a><a href="#combos">組み合わせ</a><a href="#party">パーティ</a></nav>
 
   <section id="monsters">
     <h2>モンスター 総合 Tier</h2>
@@ -336,6 +401,12 @@ ${css}
     <h2>勇者モン × 供モンの組み合わせ</h2>
     <p class="note" style="margin-bottom:10px">よく合う組み合わせと合わない組み合わせ。「実戦で確かめた」は、タクティクスプロで実際に戦って確かめたもの。</p>
     ${comboSection}
+  </section>
+
+  <section id="party">
+    <h2>おすすめパーティ(勇者モン+供モン3体)</h2>
+    <p class="note" style="margin-bottom:10px">難易度ごとの上位の4体パーティ。押すと、噛み合う理由・アシカの入れ方・強化の順番が開きます。左端が勇者モンです。</p>
+    ${partySection}
   </section>
 
   <section>
@@ -441,6 +512,28 @@ function crossCheck(d, jsonText) {
         const t = c.良し悪し === '良い' ? good : bad;
         if (!(key in t)) p.push(`組み合わせ ${key}(${c.良し悪し}): combo.md の表に無い`);
         else if (Math.abs(t[key] - c.点) > 0.005) p.push(`組み合わせ ${key}: 点が違う(md ${t[key]} / json ${c.点})`);
+      }
+    }
+  }
+  // おすすめパーティ(party.md の難易度ごとの表 | 順位 | 勇者 | 供モン | 点 | 確か |。供モンは「・」でつなぐ)
+  if (Array.isArray(d.おすすめパーティ) && d.おすすめパーティ.length) {
+    const pmd = read('party.md');
+    if (pmd == null) p.push('party.md がありません');
+    else {
+      for (const k of DIFFS) {
+        const sec = (pmd.split(new RegExp(`^## ${k}\\b.*$`, 'm'))[1] || '').split(/^## /m)[0];
+        const rows = {};
+        for (const line of sec.split('\n')) {
+          const c = line.split('|').slice(1, -1).map((x) => x.trim());
+          if (c.length >= 5 && /^\d+$/.test(c[0])) rows[c[0]] = c;
+        }
+        for (const x of d.おすすめパーティ.filter((y) => y.難易度 === k)) {
+          const r = rows[String(x.順位)];
+          const label = `パーティ ${k} ${x.順位}位`;
+          if (!r) { p.push(`${label}: party.md の「## ${k}」の表に無い`); continue; }
+          if (r[1] !== x.勇者 || r[2] !== (x.供モン || []).join('・')) p.push(`${label}: 顔ぶれが違う(md ${r[1]}+${r[2]} / json ${x.勇者}+${(x.供モン || []).join('・')})`);
+          if ((r[4] === '確か') !== !!x.確か) p.push(`${label}: 「確か」が違う(md ${r[4]} / json ${x.確か})`);
+        }
       }
     }
   }

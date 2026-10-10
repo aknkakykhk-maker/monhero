@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e0a73ac2136ee255
+// source-sha256: b756c1c3a720ece2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-10 11:20";
+const BUILD_DATE = "2026-10-10 11:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -72195,6 +72195,7 @@ function MonsterHeroGame() {
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
   const [modeInfoId, setModeInfoId] = useState(null);
+  const [systemRankTab, setSystemRankTab] = useState(null);
   const [profileBattleMode, setProfileBattleMode] = useState(null);
   const playtimeRef = useRef(normalizePlaytime(null));
   const playtimeDeviceRef = useRef(null);
@@ -72518,6 +72519,7 @@ function MonsterHeroGame() {
   const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
   const battleTutorialGuideCheckedRef = useRef(false);
+  const [battleGuideChecked, setBattleGuideChecked] = useState(false);
   const highScoresRef = useRef({});
   useEffect(() => {
     highScoresRef.current = highScores;
@@ -76551,7 +76553,7 @@ function MonsterHeroGame() {
   };
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
@@ -76562,7 +76564,7 @@ function MonsterHeroGame() {
       step: 0,
       live: true
     });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
   useEffect(() => {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
@@ -82738,12 +82740,16 @@ function MonsterHeroGame() {
         battleTutorialGuideCheckedRef.current = false;
         return;
       }
-      if (cancelled || seen === true || shown === true) return;
+      if (cancelled || seen === true || shown === true) {
+        setBattleGuideChecked(true);
+        return;
+      }
       await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false);
       if (!cancelled) {
         setTutorialKind('battleGuide');
         setTutorialStep(0);
       }
+      setBattleGuideChecked(true);
     })();
     return () => {
       cancelled = true;
@@ -82796,8 +82802,16 @@ function MonsterHeroGame() {
     setModeSelectTab('mode');
     setGameState('BATTLE_MODE_SELECT');
   };
+  const openSystemRank = key => {
+    setSystemRankTab(key);
+    addAssistantBond('ranking');
+    if (key === 'bond') setBondRankMonFilter('all');
+    if (key === 'power') setPowerRankMonFilter('all');
+    loadRankings(null, true, false, key === 'power' ? 'bond' : key);
+  };
   const openBattleSystemSelect = () => {
     setModeSelectTab('mode');
+    setSystemRankTab(null);
     setGameState('BATTLE_SYSTEM_SELECT');
   };
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
@@ -93293,7 +93307,13 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         "aria-label": "戻る",
         disabled: !!battleTutorial,
-        onClick: returnToHome,
+        onClick: () => {
+          if (systemRankTab) {
+            setSystemRankTab(null);
+            return;
+          }
+          returnToHome();
+        },
         className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30"
       }, "←"), React.createElement("div", {
         className: "min-w-0 flex-1 leading-none"
@@ -93303,7 +93323,36 @@ function MonsterHeroGame() {
         className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
       }, "モンヒロバトル"), React.createElement("small", {
         className: "block truncate text-[9px] font-black text-slate-300/90"
-      }, "どのバトルで遊ぶかを選びます"))), React.createElement("div", {
+      }, systemRankTab ? 'ランキング(ブリーダーLv・絆Lv・総合力)' : 'どのバトルで遊ぶかを選びます'))), systemRankTab && React.createElement("div", {
+        "data-battle-system-rank": systemRankTab,
+        className: "relative z-[1] mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col px-3 pt-2 pb-1"
+      }, React.createElement("div", {
+        role: "tablist",
+        "aria-label": "ランキングの種類",
+        className: "mhbs-tabs grid-cols-3 mb-2 shrink-0"
+      }, [['breeder', 'ブリーダーLv'], ['bond', '絆Lv'], ['power', '総合力']].map(([key, label]) => React.createElement("button", {
+        key: key,
+        role: "tab",
+        "aria-selected": systemRankTab === key,
+        onClick: () => openSystemRank(key),
+        className: `mhbs-tab text-[11px] active:scale-95 ${systemRankTab === key ? 'on' : ''}`
+      }, React.createElement("span", {
+        "aria-hidden": "true",
+        className: "mr-0.5"
+      }, "🏆"), label))), React.createElement("div", {
+        className: "shrink-0 w-full mb-2"
+      }, React.createElement(AssistantBubble, {
+        scene: "ranking",
+        compact: true
+      })), systemRankTab === 'breeder' && React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col"
+      }, renderBreederRankingBody()), systemRankTab === 'bond' && React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col"
+      }, renderBondRankingBody()), systemRankTab === 'power' && React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col"
+      }, renderPowerRankingBody()), React.createElement("p", {
+        className: "shrink-0 pt-1.5 text-center text-[10px] font-bold text-slate-300/80"
+      }, "モードごとの記録は、それぞれのモードの「ランキング」から見られます")), !systemRankTab && React.createElement("div", {
         className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown ? '' : 'portrait:justify-center'}`
       }, React.createElement(ModeSelectAssistantPanel, {
         assistant: battleSelectAssistant,
@@ -93383,7 +93432,7 @@ function MonsterHeroGame() {
         "data-battle-system-ranking": true,
         type: "button",
         disabled: !!battleTutorial,
-        onClick: () => openModeScoreRanking(BATTLE_MODE_CHALLENGE, difficulty, 'BATTLE_SYSTEM_SELECT'),
+        onClick: () => openSystemRank('breeder'),
         className: "mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-emerald-100 active:scale-95 disabled:opacity-40"
       }, React.createElement("span", {
         "aria-hidden": "true",
