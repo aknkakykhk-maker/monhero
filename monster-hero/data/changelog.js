@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-11 社長「MASTER が難易度(Lv.45)ほど難しく感じなかった」→ 数字を下げる(譜面は変えない)。人の指のくせのボットで既存曲と比べて決めた
+    date: "2026-10-11 03:20", type:'update', group:'rhythm', title:'モンヒロビート：「Sheriruth」MASTER のレベルを見直しました', status:'new',
+    items:[
+      '「Sheriruth」MASTER のレベルを Lv.45 から Lv.35 に見直しました。ほかの曲と遊んだ手ごたえを比べ、それに合う数字にしています。',
+      '譜面はこれまでと同じです。自己ベストやランキングの記録もそのままです。',
+    ],
+  },
+  {
     date: "2026-10-11 02:31", type:'fix', group:'ui', title:'HOMEのジャックのひとことが、ボタンに隠れず読めるようになりました', status:'new',
     items:[
       'ハロウィン・ナイトのあいだ、HOMEのジャックの吹き出しが「M/B管理」「神殿」などのボタンや上の帯に重なり、文の頭が隠れることがありました。',
@@ -57,9 +65,9 @@ const CHANGELOG = [
     image: 'images/song-art/sheriruth.jpg?v=4302be7eca16',
     items:[
       'モンヒロビートに Team Grimoire さんの「Sheriruth」（2分15秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.14 ／ HARD Lv.22 ／ EXPERT Lv.33 ／ MASTER Lv.45 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.14 ／ HARD Lv.22 ／ EXPERT Lv.33 ／ MASTER Lv.35 です。',
       'ノーツ数は 259 ／ 312 ／ 384 ／ 535 ／ 642 です。',
-      'EASY でも手ごたえのある譜面です。MASTER は、とても難しい譜面のひとつになりました。',
+      'EASY でも手ごたえのある譜面です。',
       '曲の途中で、音に合わせてノーツの流れが3回止まる所があります。止まったあとはいつもと同じ速さで流れてきます。止まっている間も、叩くタイミングは変わりません。',
     ],
     assistantNotice: { id:'update_notice_sheriruth_v1', type:'content' },
