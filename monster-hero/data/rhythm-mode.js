@@ -30486,6 +30486,32 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(f.o>.002){ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy,f.r);ctx.drawImage(hitFlareSprite().canvas,cx-95,hitY-55,190,110);}
     }
   };
+  // 空中のタップを叩いたとき(試作・2026-10-10 社長「空中タップの押した演出が地上タップより全然ない」)。
+  // 地上と同じ作りの弾け(中心のフラッシュ・立ち上がる光の柱・はじける粒)を、空中の判定線の上で空中の赤で出す。
+  // 床の影の位置にも小さな受けの波紋を出して、高さを伝える。参考の星形の閃光・輪・破片(drawSkyHit)はこの上に重ねる
+  const SKY_STRIKE_RGB='239,68,68';
+  const drawSkyStrike=(h,p,hitY,elapsed)=>{
+    const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio;
+    const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
+    const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
+    const power=h.judgment==='GREAT'?.85:(h.judgment==='GOOD'||h.judgment==='BAD'?.6:1);
+    // 楕円は24角形で描く(WebGL の描き込み先に ellipse が無いため・影と同じ作り)
+    const oval=(x0,y0,rx,ry)=>{ctx.beginPath();for(let i=0;i<24;i++){const t=i/24*Math.PI*2,x=x0+Math.cos(t)*rx,y=y0+Math.sin(t)*ry;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();};
+    // 床の受け: 影の位置で、平たい輪が広がって消える(はじめの6割)
+    const a=Math.max(0,Math.min(1,p/.6));
+    if(a<1){
+      const g=1-Math.pow(1-a,3),gx=h.center*cssW,rx=h.width*cssW*(.3+.45*g),ry=Math.max(2,rx*.2);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.globalAlpha=(1-a)*.5*power;ctx.fillStyle=`rgba(${SKY_STRIKE_RGB},.55)`;
+      oval(gx,hitY,rx*.7,ry*.7);ctx.fill();
+      ctx.globalAlpha=(1-a)*.8*power;ctx.lineWidth=1.5;ctx.strokeStyle='rgb(254,202,202)';
+      oval(gx,hitY,rx,ry);ctx.stroke();
+    }
+    if(!h._skyStrike)h._skyStrike={...h,sky:false,precise:false,plume:false,big:false,flick:'',center:cx/cssW,width:W/cssW,color:`rgb(${SKY_STRIKE_RGB})`,sparkScale:1.2};
+    const o=h._skyStrike;o.center=cx/cssW;o.width=W/cssW;
+    // 地上の虹色・金の柱と並べても負けないよう、同じ弾けを2回重ねて明るくする(光は足し算で重なる)
+    const before=ctx.globalAlpha;drawOneHit(o,p,Y,elapsed);drawOneHit(o,p,Y,elapsed);ctx.globalAlpha=before;
+  };
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
@@ -30566,7 +30592,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
         if(elapsed>=end){hitSlots[slot]=null;continue;}
-        touch();glowBegin();if(hit.sky)drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
+        touch();glowBegin();if(hit.sky){drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;

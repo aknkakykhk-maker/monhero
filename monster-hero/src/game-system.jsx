@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e5bd9aa242469f3f
+// generated-sha256: 578b3021f2ecaa61
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-10 20:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-10 20:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15019,7 +15019,7 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 //   一部の表だけ差し替える検査は ['rankings', 'bond_levels'] のように表の名前(の頭)を並べ、
 //   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
 // 実機で試すための試作ブランチだけ(claude/sheriruth-proto-device。main へは入れない): どの端末からも本物の Supabase へ書き込まない。
-// 社長の iPhone で raw.githack.com から開いても、ランキング・プロフィール・絆Lv・マスモンランキング・フレンドなどへ何も送らない(読み込みと集計の rpc は通す)
+// 社長の iPhone で raw.githack.com から開いても、ランキング・プロフィール・絆Lv・マスモンランキング・フレンドなどへ何も送らない(GET/HEAD の読み込みだけ通す。rpc も止める)
 const SB_PROTO_NO_WRITE = true;
 const sbAutomationWriteBlocked = (url, method) => {
   try {
@@ -15030,7 +15030,8 @@ const sbAutomationWriteBlocked = (url, method) => {
     const m = String(method || 'GET').toUpperCase();
     if (m === 'GET' || m === 'HEAD') return false;
     const u = String(url || '');
-    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    // 試作ブランチでは rpc(集計)の POST も止める(読み込みしかしない rpc だが、本番へ何も送らないことを優先する)
+    if (!u.startsWith(SUPABASE_URL) || (!SB_PROTO_NO_WRITE && u.includes('/rest/v1/rpc/'))) return false;
     if (Array.isArray(stubbed)) {
       const path = u.slice(SUPABASE_URL.length).split('?')[0];
       if (stubbed.some((t) => typeof t === 'string' && t && path.startsWith('/rest/v1/' + t))) return false;
