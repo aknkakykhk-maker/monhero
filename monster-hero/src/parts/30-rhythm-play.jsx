@@ -917,7 +917,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 速さの表(試作・2026-10-10): 譜面に scrollChanges があるときだけ、ノーツの見た目の位置を表で変える(判定の時刻は変えない)。
   // アシスト・ミラーで作り変えた譜面にも効くよう、元の譜面から読む
   const scrollChanges=rawChart?.scrollChanges||null;
-  useEffect(()=>{rhythmScrollSet(scrollChanges);return()=>rhythmScrollSet(null);},[scrollChanges]);
+  // 駆け込み('RUSH')は道の長さ(ノーツ速度で決まる)で速さを決めるので、ノーツ速度も渡す
+  useEffect(()=>{rhythmScrollSet(scrollChanges,rhythmTravelMsForSpeed(settings.noteSpeed));return()=>rhythmScrollSet(null);},[scrollChanges,settings.noteSpeed]);
   // ノーツを描く canvas の画素密度の上限。演出量「最小」は2倍まで(以前から)、そのうえで画質の設定で下げる(2026-09-26)。
   // begin() と warmSprites() に**同じ値**を渡すこと(食い違うと焼いた光を捨てて作り直す)
   // 画質「自動」では、演奏中に詰まりが続くと一段ずつ下げる(tick が数える)。曲の途中で切り替えるのはノーツとマスモンの顔だけ。
