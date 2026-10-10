@@ -29796,7 +29796,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(quads[0].r0,quads[0].y0);quads.forEach(q=>ctx.lineTo(q.r1,q.y1));ctx.stroke();
     ctx.globalAlpha=1;
   };
-  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'?v:'flat';}catch{return 'flat';}};
+  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'||v==='star'||v==='wing'||v==='ring'?v:'flat';}catch{return 'flat';}};
+  // 案ごとの差し色(空中の柱・影とのつなぎ線の色。既存のどのノーツ・判定の色とも重ならない色を案ごとに選ぶ)
+  const skyAccentRgb=()=>{const st=skyTapStyle();return st==='star'?'226,232,240':st==='wing'?'129,140,248':st==='ring'?'248,113,113':'251,191,36';};
   // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
   const roundBarPath=(x0,y0,w,h,r)=>{
     const k=r*.29;
@@ -29806,7 +29808,48 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const drawSkyTap=(hd,opts)=>{
     const style=skyTapStyle(),W=Math.max(18,hd.w*sizeScale+4),H=Math.max(11,hd.h+6),x0=hd.cx-W/2,y0=hd.cy-H/2,cx=hd.cx,cy=hd.cy;
     ctx.globalAlpha=opts.alpha;ctx.lineJoin='round';
-    if(style==='flat'||style==='lift'||style==='frame'||style==='deep'){
+    if(style==='star'||style==='wing'||style==='ring'){
+      // 空中専用の案(2026-10-10 社長「モンスターノーツと色が似てる。空中とか立体とか奥行き感を」)。金・黄・オレンジは使わない。
+      // 地上の板と形も変える(星・翼・輪)。近づくほど(判定の高さへ寄るほど)光が強まり、形が開く。arc は使わず折れ線だけで描く
+      const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
+      const a=Math.max(10,hd.w*sizeScale/2),b=Math.max(7,hd.h*1.5);
+      const poly=pts=>{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();};
+      const acc=skyAccentRgb();
+      // 柱: 形の下へ、差し色から透明へ消える細い台形。近いほど濃い
+      const pl=Math.max(20,b*3.2),pw=a*.18;
+      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,`rgba(${acc},${(.55+.35*pp).toFixed(2)})`);pg.addColorStop(1,`rgba(${acc},0)`);
+      ctx.fillStyle=pg;ctx.beginPath();ctx.moveTo(cx-pw/2,cy);ctx.lineTo(cx+pw/2,cy);ctx.lineTo(cx+pw*.3,cy+pl);ctx.lineTo(cx-pw*.3,cy+pl);ctx.closePath();ctx.fill();
+      if(style==='star'){
+        // 案I 星(白銀): 横に長い4つとがりの星。中心は白・先は銀。近いと光芒(十字の線)が伸びて外の光が太る
+        const k=1+.22*pp,ax=a*k,by=b*k*1.15,iq=.2;
+        const pts=[[cx-ax,cy],[cx-ax*iq,cy-by*iq],[cx,cy-by],[cx+ax*iq,cy-by*iq],[cx+ax,cy],[cx+ax*iq,cy+by*iq],[cx,cy+by],[cx-ax*iq,cy+by*iq]];
+        poly(pts);ctx.lineWidth=4+7*pp;ctx.strokeStyle=`rgba(226,232,240,${(.2+.35*pp).toFixed(2)})`;ctx.stroke();
+        ctx.lineWidth=2.6;ctx.strokeStyle='rgba(15,23,42,.85)';ctx.stroke();
+        const g=ctx.createLinearGradient(cx-ax,0,cx+ax,0);g.addColorStop(0,'rgba(148,163,184,1)');g.addColorStop(.5,'rgba(255,255,255,1)');g.addColorStop(1,'rgba(148,163,184,1)');
+        ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.stroke();
+        if(pp>.05){ctx.lineWidth=1.2;ctx.strokeStyle=`rgba(255,255,255,${(.5*pp+.1).toFixed(2)})`;ctx.beginPath();ctx.moveTo(cx-ax*(1.35+.5*pp),cy);ctx.lineTo(cx+ax*(1.35+.5*pp),cy);ctx.moveTo(cx,cy-by*(1.25+.4*pp));ctx.lineTo(cx,cy+by*(1.25+.4*pp));ctx.stroke();}
+      }else if(style==='wing'){
+        // 案J 翼(藍): 左右へ開く一対の翼(羽が3枚)。上が淡い藍・下が濃い藍・縁は白。近いと翼が開いて光る
+        const k=1+.25*pp,ax=a*k*1.05,by=b*k*1.1;
+        const wing=sg=>[[cx+sg*ax*.06,cy+by*.1],[cx+sg*ax*.34,cy-by*.95],[cx+sg*ax*.62,cy-by*1.0],[cx+sg*ax*1.0,cy-by*.72],[cx+sg*ax*.8,cy-by*.4],[cx+sg*ax*1.0,cy-by*.12],[cx+sg*ax*.74,cy+by*.1],[cx+sg*ax*.88,cy+by*.4],[cx+sg*ax*.46,cy+by*.34]];
+        [-1,1].forEach(sg=>{
+          poly(wing(sg));ctx.lineWidth=4+8*pp;ctx.strokeStyle=`rgba(129,140,248,${(.22+.4*pp).toFixed(2)})`;ctx.stroke();
+          const g=ctx.createLinearGradient(0,cy-by,0,cy+by*.4);g.addColorStop(0,'rgba(224,231,255,1)');g.addColorStop(.5,'rgba(99,102,241,1)');g.addColorStop(1,'rgba(30,27,75,1)');
+          ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1.3;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.stroke();
+        });
+        const dm=Math.max(3.5,Math.max(8,hd.h)*.55);poly([[cx-dm,cy],[cx,cy-dm*1.3],[cx+dm,cy],[cx,cy+dm*1.3]]);ctx.fillStyle='rgba(255,255,255,1)';ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(30,27,75,.9)';ctx.stroke();
+      }else{
+        // 案K 輪(赤): 中が空いた横長の輪。地上の板(中が詰まっている)と、形でも明るさでも分かれる。近いと外へもう1つの輪が広がり、芯が光る
+        const ry=b*1.0,ring=(rx,ty,n)=>{const out=[];for(let i=0;i<n;i++){const t=i/n*Math.PI*2;out.push([cx+Math.cos(t)*rx,cy+Math.sin(t)*ty]);}return out;};
+        const outer=ring(a,ry,28),inner=ring(a*.56,ry*.42,28);
+        if(pp>.05){poly(ring(a*(1.15+.35*pp),ry*(1.15+.35*pp),28));ctx.lineWidth=1.4;ctx.strokeStyle=`rgba(252,165,165,${(.6*pp).toFixed(2)})`;ctx.stroke();}
+        poly(outer);ctx.lineWidth=4+7*pp;ctx.strokeStyle=`rgba(248,113,113,${(.22+.38*pp).toFixed(2)})`;ctx.stroke();
+        ctx.beginPath();ctx.moveTo(outer[0][0],outer[0][1]);outer.forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();ctx.moveTo(inner[0][0],inner[0][1]);inner.forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();
+        const g=ctx.createLinearGradient(0,cy-ry,0,cy+ry);g.addColorStop(0,'rgba(254,226,226,1)');g.addColorStop(.5,'rgba(239,68,68,1)');g.addColorStop(1,'rgba(127,29,29,1)');
+        ctx.fillStyle=g;ctx.fill('evenodd');ctx.lineWidth=1.2;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.stroke();
+        const dm=Math.max(2.2,a*.12)*(1+.8*pp);poly([[cx-dm,cy],[cx,cy-dm*.8],[cx+dm,cy],[cx,cy+dm*.8]]);ctx.fillStyle='rgba(255,255,255,1)';ctx.fill();
+      }
+    }else if(style==='flat'||style==='lift'||style==='frame'||style==='deep'){
       // 案E〜G(改善部の指摘): 地上の板と同じ幅・同じ高さ・同じ丸みにして、色(金)と下へ伸びる影の柱だけで空中と分かるようにする
       const fw=hd.w*sizeScale*1.5,fh=Math.max(8,hd.h),fx=cx-fw/2,fy0=cy-fh/2,r=Math.min(fh/2,5*sizeScale);
       // 影の柱: 板の下へ、金から透明へ消える細い台形(板の幅の2割)。細い線1本より「ここから落ちている」が見える
@@ -29881,7 +29924,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const w=sh.w*.42,h=Math.max(2,sh.h*.32);
     ctx.globalAlpha=opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
     ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='rgba(251,191,36,.16)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();
+    ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
