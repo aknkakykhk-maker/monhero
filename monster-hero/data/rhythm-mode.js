@@ -1162,9 +1162,11 @@ const RHYTHM_JUDGMENT_LINE_Y={
 // 入力: 空中の段がある譜面だけ、地上と空中の判定ラインの真ん中より上を押した指を「空中」とし、空中のノーツは空中の指でだけ取れる。
 //   スライドは高さを見た目にだけ付け、判定は今までどおり横の位置だけで追う。
 const RHYTHM_SKY_LIFT_RATIO=.16;
+// 縦画面の空中の高さの差(2026-10-11・社長「中間を作って見比べる」)。デバッグ画面の切り替え(16/25/39%)だけが書く新しい保存キー。ふつうのプレイは書かないので16%のまま
+const rhythmSkyLiftPortrait=()=>{try{const v=Number(localStorage.getItem('mh_sky_lift_portrait_proto'));return v===25?.25:v===39?.39:RHYTHM_SKY_LIFT_RATIO;}catch(e){return RHYTHM_SKY_LIFT_RATIO;}};
 // 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
 // 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
-const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.39:RHYTHM_SKY_LIFT_RATIO;}};
+const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.39:rhythmSkyLiftPortrait();}};
 const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
 // 毎コマ何百回も呼ばれるので、点の列ごとに1回だけ数えて覚える。演奏中のノーツは譜面のノーツの写しだが、
 // 点の列(slidePoints)は譜面の凍らせた配列をそのまま持つので、それを鍵にする(凍っていない列は覚えずに毎回数える)。
@@ -30363,20 +30365,28 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 空中のものは全部「色の無いガラス」(白〜銀の半透明)・色が付いていれば地上。左右は位置で分ける。
   // 箱=半透明の四角2枚(不透明度68%・上の面88%)+白い縁1.8px / 影=床より暗い角丸1枚(箱と同じ位置) / 帯=半透明の多角形1枚(46%)+白い芯の線(3px) / 星=白1種(半径17px)
   const skyZOn=()=>skyTapStyle()==='plate';
+  // 空中タップの箱(2026-10-11・社長「白い部分の縦幅を小さく。白い箱が縁の延長みたいにあるだけで見分けがつく」):
+  // ふつうのノーツの板と同じ薄さの「枠」が主・本体はほぼ透明(後ろの道や地上ノーツが見える)・上の面と手前の縁だけ明るく・厚みは控えめ
+  const skyBoxDims=(hd,opts)=>{const ds=Number(opts.depthScale)||1,faceH=Math.max(5,hd.h*ds),thick=Math.max(2,faceH*.3),W=Math.max(10,hd.w*sizeScale);return {faceH,thick,W};};
   const drawGlassBox=(hd,opts)=>{
-    const ds=Number(opts.depthScale)||1,faceH=Math.max(5,hd.h*1.25*ds),thick=faceH*.62,W=Math.max(10,hd.w*sizeScale),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
+    const {faceH,thick,W}=skyBoxDims(hd,opts),x0=hd.cx-W/2,y0=hd.cy-faceH/2;
     ctx.globalAlpha=opts.alpha;
-    ctx.fillStyle='rgba(205,218,238,.68)';ctx.fillRect(x0,y0,W,faceH+thick);
-    ctx.fillStyle='rgba(255,255,255,.88)';ctx.fillRect(x0,y0,W,faceH);
-    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.8;ctx.strokeRect(x0+.9,y0+.9,W-1.8,faceH+thick-1.8);
+    ctx.fillStyle='rgba(205,218,238,.16)';ctx.fillRect(x0,y0,W,faceH+thick);               // 本体はほぼ透明
+    ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x0,y0,W,Math.max(2,faceH*.36));      // 上の面だけ明るく
+    ctx.fillStyle='rgba(200,215,240,.4)';ctx.fillRect(x0,y0+faceH,W,thick);                 // 手前の厚み(控えめ)
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.6;ctx.strokeRect(x0+.8,y0+.8,W-1.6,faceH+thick-1.6);
     ctx.beginPath();ctx.moveTo(x0,y0+faceH);ctx.lineTo(x0+W,y0+faceH);ctx.stroke();
     ctx.globalAlpha=1;
   };
   const drawSkyShadowZ=(geo,opts)=>{
     const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
-    const ds=Number(opts.depthScale)||1,faceH=Math.max(5,hd.h*1.25*ds),W=Math.max(10,hd.w*sizeScale)-6,h=Math.max(4,faceH*.8);
+    const {faceH,thick,W}=skyBoxDims(hd,opts),w=W-6,h=Math.max(4,(faceH+thick)*.8);
     ctx.globalAlpha=opts.alpha;ctx.fillStyle='rgba(6,3,20,.5)';
-    roundRectPath(ctx,sh.cx-W/2,sh.cy-h/2,W,h,3);ctx.fill();ctx.globalAlpha=1;
+    roundRectPath(ctx,sh.cx-w/2,sh.cy-h/2,w,h,3);ctx.fill();
+    // 箱から影へ、細い線(高さの手がかり)。箱の下の縁から影の上まで
+    const yTop=hd.cy+faceH/2+thick,yBot=sh.cy-h/2;
+    if(yBot-yTop>4){ctx.globalAlpha=opts.alpha*.28;ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(hd.cx,yTop);ctx.lineTo(sh.cx,yBot);ctx.stroke();}
+    ctx.globalAlpha=1;
   };
   // 押した光の星(空中・白1種・半径17px)。焼いた1枚を加算で貼る
   const skyStarSprite=()=>{
@@ -31070,7 +31080,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const skyGlass=skyPlate&&o.pop===null&&!o.failed&&skyZOn();
       if(skyGlass){
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
-        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,ds=Number(o.depthScale)||1,fh=Math.max(5,hd.h*1.25*ds),ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(5,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
+        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
       }else if(skyPlate||!(geo.skyShadow&&!geo.slide&&o.pop===null))drawHead(note,geo,headOpts);
       // 案Z: 空中のスライドを押している間は、頭に白い星(半径17px)
       if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&effect!=='MINIMAL')drawSkyStarZ(geo.head.cx,geo.head.cy,o.alpha*trackDim);

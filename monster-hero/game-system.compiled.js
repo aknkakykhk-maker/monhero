@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d9857e66e9d47c5
+// source-sha256: ae1c0f96773ec544
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-11 08:05";
+const BUILD_DATE = "2026-10-11 08:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30439,6 +30439,40 @@ function RhythmSkyStage({
     strokeWidth: "2",
     vectorEffect: "non-scaling-stroke"
   }));
+}
+function RhythmSkyLiftSwitch() {
+  const read = () => {
+    try {
+      const v = Number(localStorage.getItem('mh_sky_lift_portrait_proto'));
+      return v === 25 || v === 39 ? v : 16;
+    } catch (e) {
+      return 16;
+    }
+  };
+  const [value, setValue] = useState(read);
+  const pick = v => {
+    try {
+      if (v === 16) localStorage.removeItem('mh_sky_lift_portrait_proto');else localStorage.setItem('mh_sky_lift_portrait_proto', String(v));
+    } catch (e) {}
+    setValue(v);
+  };
+  return React.createElement("section", {
+    "data-rhythm-sky-lift-switch": true,
+    className: "mb-3 rounded-2xl border border-rose-400/50 bg-rose-950/25 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-rose-100"
+  }, "縦画面の空中の高さの差(試作・見比べ用)"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-rose-200/80"
+  }, "空中と地上の判定ラインの差(画面の高さに対する割合)。横画面は39%のまま。ここで選んだ値は縦画面の試作の HELL だけに効きます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, [16, 25, 39].map(v => React.createElement("button", {
+    key: v,
+    type: "button",
+    "data-rhythm-sky-lift": v,
+    "aria-pressed": value === v,
+    onClick: () => pick(v),
+    className: `min-h-[44px] rounded-xl text-sm font-black ${value === v ? 'bg-rose-600 text-white ring-2 ring-rose-200' : 'bg-slate-800 text-slate-300'}`
+  }, v, "%", v === 16 ? '(いま)' : ''))));
 }
 const RhythmMonsterNoteGuide = () => {
   const ratios = rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio => `${Math.round(ratio * 100)}%`);
@@ -97158,7 +97192,7 @@ function MonsterHeroGame() {
       className: "break-all text-right font-mono text-white"
     }, String(value))))))), React.createElement("div", {
       hidden: rhythmDebugTab !== 'play'
-    }, RHYTHM_PROTO_SONGS.map(song => {
+    }, React.createElement(RhythmSkyLiftSwitch, null), RHYTHM_PROTO_SONGS.map(song => {
       const track = rhythmSongTrack(song);
       return React.createElement("section", {
         key: song.songId,
