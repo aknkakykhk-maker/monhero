@@ -1113,7 +1113,11 @@ const rhythmReleaseLane=note=>{
 const RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES=1;
 const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   if(!rect||!Number.isFinite(rect.width)||rect.width<=0||!Number.isFinite(rect.height)||rect.height<=0)return null;
-  const yRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=(Number(clientX)-rect.left)/rect.width;
+  const rawYRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=(Number(clientX)-rect.left)/rect.width;
+  // 空中の段(試作): 空中の指は、判定ラインの高さの横幅でレーンを測る(空中のノーツは判定ラインの奥行きのまま真上へ持ち上げて描くため)
+  // (2026-10-10 人の指のくせの試しで直した: 境目より下・判定ラインより上を押した親指の横の位置が、奥の狭い道幅で測られて端の空中のノーツから外れていた。
+  //  空中の段がある曲では、判定ラインより上を押した指はすべて判定ラインの高さの道幅で測る)
+  const yRatio=typeof RHYTHM_SKY_INPUT!=='undefined'&&RHYTHM_SKY_INPUT.active&&rawYRatio<RHYTHM_JUDGMENT_LINE_Y.ratio?RHYTHM_JUDGMENT_LINE_Y.ratio:rawYRatio;
   const left=rhythmProjectBoundary(0,yRatio),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio),laneWidth=(right-left)/RHYTHM_LANE_COUNT;
   if(!Number.isFinite(nx)||!(laneWidth>0))return null;
   // サブレーンはレーンの半分なので、1サブレーン = laneWidth/2
@@ -1137,6 +1141,116 @@ const RHYTHM_JUDGMENT_LINE_Y={
     this.ratio=Number.isFinite(next)&&next>0&&next<1?next:RHYTHM_JUDGMENT_LINE_Y_RATIO;
   },
   reset(){this.ratio=RHYTHM_JUDGMENT_LINE_Y_RATIO;},
+};
+// ── 空中の段(試作・2026-10-10・社長「やっぱこの立体と言うか判定ライン変えてる仕様みたいのは難しいの？」→「今日、小さな試作を作る」)──
+// 使うのはデバッグ専用の試作曲(RHYTHM_PROTO_SONGS)だけ。TAP/FLICK の skyHeight(0〜1)と、SLIDE の slidePoints[].sky(0〜1)を読む。書いていないノーツは地上(今までどおり)。
+// 空中の判定ラインは、地上の判定ラインより画面の高さの RHYTHM_SKY_LIFT_RATIO だけ上。奥のノーツは奥行きの倍率で持ち上げを縮める。
+// 入力: 空中の段がある譜面だけ、地上と空中の判定ラインの真ん中より上を押した指を「空中」とし、空中のノーツは空中の指でだけ取れる。
+//   スライドは高さを見た目にだけ付け、判定は今までどおり横の位置だけで追う。
+const RHYTHM_SKY_LIFT_RATIO=.16;
+// 横画面では画面の高さが低いので、空中と地上の差を広げる(2026-10-10 社長「モンビーは縦でもできるけど基本は横使い」。
+// 参考動画(横画面)は差が画面の約39%。844×390 で 16% だと 62px しかなく、空中の段がつぶれて見えた)。演奏画面が向きに合わせて set する
+const RHYTHM_SKY_LIFT={ratio:RHYTHM_SKY_LIFT_RATIO,set(landscape){this.ratio=landscape?.25:RHYTHM_SKY_LIFT_RATIO;}};
+const rhythmNoteSkyHeight=note=>{const h=Number(note?.skyHeight);return Number.isFinite(h)&&h>0?Math.min(1,h):0;};
+// 毎コマ何百回も呼ばれるので、ノーツごとに1回だけ数えて覚える(譜面のノーツは凍らせてあり、中身は変わらない)
+const RHYTHM_SLIDE_HAS_SKY_MEMO=typeof WeakMap==='function'?new WeakMap():null;
+const rhythmSlideHasSky=note=>{
+  if(!Array.isArray(note?.slidePoints))return false;
+  const memo=RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note)?RHYTHM_SLIDE_HAS_SKY_MEMO.get(note):undefined;
+  if(memo!==undefined)return memo;
+  const has=note.slidePoints.some(point=>Number(point?.sky)>0);
+  if(RHYTHM_SLIDE_HAS_SKY_MEMO&&Object.isFrozen(note))RHYTHM_SLIDE_HAS_SKY_MEMO.set(note,has);
+  return has;
+};
+const rhythmSlideSkyAt=(note,chartTimeMs)=>{
+  const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
+  if(!points||points.length<2||!rhythmSlideHasSky(note))return 0;
+  const t=Number(chartTimeMs),h=point=>Math.max(0,Math.min(1,Number(point?.sky)||0));
+  if(!Number.isFinite(t)||t<=Number(points[0].timeMs))return h(points[0]);
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i];
+    if(t<=Number(b.timeMs)){
+      const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs)),p=Math.max(0,Math.min(1,(t-Number(a.timeMs))/span));
+      return h(a)+(h(b)-h(a))*rhythmSlideEaseProgress(rhythmSlideSegmentEase(note,a),p);
+    }
+  }
+  return h(points[points.length-1]);
+};
+const rhythmChartHasSky=notes=>Array.isArray(notes)&&notes.some(note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note));
+// 画面の高さ yRatio の位置で、高さ1のノーツを何px持ち上げるか(判定ラインの高さで rect.height*RHYTHM_SKY_LIFT_RATIO)
+const rhythmSkyLiftPx=(rect,yRatio)=>{
+  const h=Number(rect?.height)||0,line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line);
+  return base>0?h*RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(rhythmClamp01(Number(yRatio)))/base:0;
+};
+// 空中の判定ラインの高さ(プレイエリアの中の割合)と、地上と空中を分ける高さ
+const rhythmSkyLineRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT.ratio;
+const rhythmSkySplitRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT.ratio/2;
+// ── 速さの表(試作・2026-10-10・社長「画面が止まって動く」演出)──
+// 使うのはデバッグ専用の試作曲(RHYTHM_PROTO_SONGS)だけ(既存の曲は表を持たないので今までどおり)。判定の時刻は音楽どおりのまま、ノーツの見た目の位置だけを速さの表で変える。
+// 譜面に scrollChanges:[[時刻ms,倍率],…] があれば、その時刻から先の流れる速さを倍率にする(0で止まる)。
+// 見た目の位置は 1-(S(t)-S(visualTime))/travelMs。S は倍率を積み上げた時刻で、表が無ければ S(t)=t(今までと同じ計算)。
+// 最初の区切りより前は倍率1。倍率は0以上だけを読む(S は時刻が進めば減らない)。
+const RHYTHM_SCROLL={points:null};
+const rhythmScrollSet=changes=>{
+  const list=(Array.isArray(changes)?changes:[]).map(c=>[Number(c?.[0]),Number(c?.[1])]).filter(([t,m])=>Number.isFinite(t)&&Number.isFinite(m)&&m>=0).sort((a,b)=>a[0]-b[0]);
+  if(!list.length){RHYTHM_SCROLL.points=null;return;}
+  const points=[{t:list[0][0],s:list[0][0],m:list[0][1]}];
+  for(let i=1;i<list.length;i++){const p=points[points.length-1];points.push({t:list[i][0],s:p.s+(list[i][0]-p.t)*p.m,m:list[i][1]});}
+  RHYTHM_SCROLL.points=points;
+};
+// 時刻 t まで積み上げた位置 S(t)
+const rhythmScrollPos=t=>{
+  const points=RHYTHM_SCROLL.points,x=Number(t);
+  if(!points||!(x>points[0].t))return x;
+  let lo=0,hi=points.length-1;
+  while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].t<=x)lo=mid;else hi=mid-1;}
+  const p=points[lo];return p.s+(x-p.t)*p.m;
+};
+// S(t)=s になるいちばん早い時刻(拍の線を探し始める所に使う)。止まったまま届かないときは Infinity
+const rhythmScrollTimeAt=s=>{
+  const points=RHYTHM_SCROLL.points,y=Number(s);
+  if(!points||!(y>points[0].s))return y;
+  let lo=0,hi=points.length-1;
+  while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].s<y)lo=mid;else hi=mid-1;}
+  const p=points[lo];return p.m>0?p.t+(y-p.s)/p.m:(lo+1<points.length?points[lo+1].t:Infinity);
+};
+// 空中のノーツの手ごたえ(試作・2026-10-10・社長「見た目にもっと力いれてほしい」)。色は "r,g,b" の文字列。
+// ピンセットくんの色の案で差し替えるのはここだけ(core=芯の白っぽい光・main=金・accent=差し色の水色)
+// 色は演奏を始めるときに、空中の段の色(rhythmSkyTheme().fx)で上書きする(金はモンスターノーツと同じ系統なので使わない)
+const RHYTHM_SKY_FX={core:'255,255,255',main:'226,232,240',accent:'196,181,253'};
+// 取ったときの弾け方の長さ(ms)。地上(RHYTHM_HIT_EFFECT_MS.NORMAL=340)とほぼ同じにする(空中だけ派手で別のゲームに見えないように・2026-10-10 社長「違和感もないように」)
+const RHYTHM_SKY_HIT_MS=380;
+const RHYTHM_SKY_INPUT={active:false};
+// 空中の段の色(試作): 空中の面・空中の判定ライン・柱が使う。空中のノーツの見た目の案(localStorage 'mh_sky_tap_style_proto')ごとに変えられる。
+// 今あるノーツの色(水色・緑・紫・ピンク・オレンジ・黄緑・金のモンスターノーツ)とかぶらない色を選ぶこと
+const RHYTHM_SKY_THEMES=Object.freeze({
+  default:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀',fx:Object.freeze({core:'255,255,255',main:'226,232,240',accent:'186,230,253'})}),
+  beam:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀',fx:Object.freeze({core:'255,255,255',main:'226,232,240',accent:'148,163,184'})}),
+  plate:Object.freeze({rgb:'239,68,68',core:'#ffe4e6',label:'赤(ふつうの板)',fx:Object.freeze({core:'255,228,230',main:'239,68,68',accent:'252,165,165'})}),
+  glass_silver:Object.freeze({rgb:'221,214,254',core:'#f5f3ff',label:'白銀〜薄紫のガラス',fx:Object.freeze({core:'255,255,255',main:'221,214,254',accent:'148,163,184'})}),
+  glass_red:Object.freeze({rgb:'239,68,68',core:'#fecaca',label:'赤のガラス',fx:Object.freeze({core:'254,202,202',main:'239,68,68',accent:'252,165,165'})}),
+  ruby:Object.freeze({rgb:'239,68,68',core:'#fecaca',label:'赤',fx:Object.freeze({core:'254,202,202',main:'239,68,68',accent:'252,165,165'})}),
+  cube:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀',fx:Object.freeze({core:'255,255,255',main:'203,213,225',accent:'100,116,139'})}),
+  star:Object.freeze({rgb:'226,232,240',core:'#ffffff',label:'白銀'}),
+  glass:Object.freeze({rgb:'203,213,225',core:'#f8fafc',label:'銀(半透明)'}),
+  wing:Object.freeze({rgb:'129,140,248',core:'#e0e7ff',label:'藍'}),
+  ring:Object.freeze({rgb:'248,113,113',core:'#fee2e2',label:'赤'}),
+});
+const rhythmSkyTheme=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return RHYTHM_SKY_THEMES[v||'plate']||RHYTHM_SKY_THEMES.default;}catch{return RHYTHM_SKY_THEMES.ruby||RHYTHM_SKY_THEMES.default;}};
+// 空中の段のある譜面で、指を押した高さ(プレイエリアの中の割合)。空中の段が無い譜面では null
+// 空中のノーツは「地上の判定ラインより少し上(RHYTHM_SKY_ACCEPT_BELOW)まで」、地上のノーツは「空中の判定ラインより少し下から」受け付ける。
+// あいだは両方を受け付けて、時刻と位置の近いほうを取る(親指で狙った線より下を押すくせがあっても取れるように・2026-10-10 人の指のくせの試しで空中のタップがほぼ全部取れなかったため)
+const RHYTHM_SKY_ACCEPT_BELOW=.035,RHYTHM_GROUND_ACCEPT_ABOVE=.05;
+const rhythmSkyTouch=(clientY,rect)=>{
+  if(!RHYTHM_SKY_INPUT.active||!rect||!(Number(rect.height)>0))return null;
+  return (Number(clientY)-Number(rect.top))/Number(rect.height);
+};
+// 空中の段(試作): この高さの指で、地上のレーンの光(下まで伸びる柱)を出してよいか。地上と空中の真ん中より上なら出さない
+// (空中を取ったのに地上を叩いたように見えるため・2026-10-10 改善部 R1)。空中の段が無い譜面では常に出す
+const rhythmSkyGroundFeedback=(clientY,rect)=>{const r=rhythmSkyTouch(clientY,rect);return !(r!==null&&r<rhythmSkySplitRatio());};
+const rhythmSkyAccepts=(note,touchRatio)=>{
+  if(!RHYTHM_SKY_INPUT.active||!Number.isFinite(touchRatio))return true;
+  return rhythmNoteSkyHeight(note)>0?touchRatio<RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_ACCEPT_BELOW:touchRatio>rhythmSkyLineRatio()+RHYTHM_GROUND_ACCEPT_ABOVE;
 };
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
@@ -2306,6 +2420,34 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // フルコンボ等を達成して曲を終えたときの、リザルトへ行く前のお祝い演出で鳴らす1回だけの
   // 合成音。本物の掛け声(音声ファイル)は用意していないため、上昇アルペジオで代える。
   // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
+  // 空中のノーツを取ったとき、ふだんのタップ音に重ねる「きらっ」(試作・2026-10-10)。高い2音を少しずらして鳴らし、
+  // 小さく上がる音を添える。地上の音は変えない。MISS では鳴らさない。設定(音量・ON/OFF・全体ミュート)はタップ音と同じものを読む
+  const playSky=(judgment='MARVELOUS')=>{
+    if(judgment==='MISS')return false;
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,volume=settings.volume/100*voiceOf(settings,judgment).gain;
+    const tone=(type,freq,toFreq,start,sustain,peak)=>{
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type=type;
+      oscillator.frequency.setValueAtTime(freq,start);
+      if(toFreq&&toFreq!==freq)oscillator.frequency.exponentialRampToValueAtTime(toFreq,start+Math.min(.05,sustain*.5));
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.004);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      oscillator.connect(gain);gain.connect(output(audio));
+      oscillator.start(start);oscillator.stop(start+sustain+.02);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    };
+    // E7 と B7 のきらめき(15msずらす)+ G6→D7 へ小さく上がる音
+    tone('sine',2637.02,0,now,.16,.022);
+    tone('sine',3951.07,0,now+.015,.12,.015);
+    tone('triangle',1567.98,2349.32,now,.07,.016);
+    return true;
+  };
   const playFullCombo=()=>{
     const settings=readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
@@ -2361,7 +2503,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,prepare,play,playClear,playFlick,playMonster,playSky,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -3179,7 +3321,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   const applyTouchSpanGlow=()=>{
     if(typeof document==='undefined')return;
     const active=new Set();
-    touchStates.forEach(state=>state.subLanes.forEach(lane=>active.add(lane)));
+    touchStates.forEach(state=>{if(!state.sky)state.subLanes.forEach(lane=>active.add(lane));});
     // プレイ画面を作り直すとDOMが入れ替わるので、外れていたら引き直す
     if(!glowNodes||!glowNodes.length||!glowNodes[0].isConnected){
       RHYTHM_PERF.domQuery();
@@ -3237,7 +3379,10 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
           entered=[];
         }else acceptedRadiusX=rawRadiusX;
       }else if(rawRadiusX>0&&(!(acceptedRadiusX>0)||rawRadiusX<acceptedRadiusX))acceptedRadiusX=rawRadiusX;
-      touchStates.set(id,{...next,touch,centerAnchorX:stabilized.centerAnchorX,acceptedRadiusX});
+      // 空中の段(試作): 地上と空中の真ん中より上の指は、接触幅の地上の光も出さない(空中の光は演奏画面が空中の線の上に出す)。
+      // 空中の段が無い譜面では rhythmSkyGroundFeedback が常に true なので、今までどおり
+      const sky=typeof rhythmSkyGroundFeedback==='function'&&!rhythmSkyGroundFeedback(touch.clientY,rect);
+      touchStates.set(id,{...next,touch,centerAnchorX:stabilized.centerAnchorX,acceptedRadiusX,sky});
       if(isStart||centerChanged||entered.length)actions.push({id,touch,next,entered:isStart?next.subLanes:entered});
     });
     if(!actions.length){defer(applyTouchSpanGlow);return;}
@@ -3397,6 +3542,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       return rhythmSlideInputSpan(note);
     };
     const acceptsPosition=note=>{
+      // 空中の段(試作): 空中のノーツは空中の指で、地上のノーツは地上の指でだけ取る(スライドは横の位置だけで追う)
+      if(RHYTHM_SKY_INPUT.active&&!rhythmNoteIsSlide(note)&&note._rhythmOriginalType!=='SLIDE'&&!rhythmSkyAccepts(note,Number(input?.sky)))return false;
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return note.lane===lane;
@@ -4036,8 +4183,9 @@ const mhSlideV2=(timeMs,endTimeMs,points,endFlick)=>{
   });
 };
 // 4つ目は道のレーン数。自動譜面制作の版5(6レーン)で作った譜面は 6 を書く。書かなければ5レーン時代の譜面
-const mhChart=(level,notes,durationMs,laneCount)=>Object.freeze({level,notes:Object.freeze(notes),totalNotes:notes.length,durationMs,
-  ...(laneCount?{laneCount}:{})});
+// extra … 譜面に足す項目(試作の速さの表 scrollChanges など)。書かなければ今までと同じ
+const mhChart=(level,notes,durationMs,laneCount,extra)=>Object.freeze({level,notes:Object.freeze(notes),totalNotes:notes.length,durationMs,
+  ...(laneCount?{laneCount}:{}),...(extra&&typeof extra==='object'?extra:{})});
 const MONSTER_HERO_EASY_DURATION_MS=152761;
 
 const monsterHeroEasyNotes=((t,h,f,s)=>[
@@ -23491,6 +23639,55 @@ const journeyMasterNotes=((t,h,f,s)=>[
 // </journey-v3-master-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
 
+// 試作(2026-10-10・社長「こんなような譜面をモンビーですることは可能？」→「まず試作だけ見せて」)。公開しない。
+// 曲の 102.5 秒から切った34秒の音源に合わせた MASTER。参考譜面(Arcaea)のアークを2本同時のスライドに置き換えた
+const SHERIRUTH_PROTO_DURATION_MS=34000;
+// 速さの表(試作・「画面が止まって動く」)。[時刻ms(試作の音源の時刻),倍率]。2026-10-10 テンポくん・オンプくんが参考譜面から決めた表。
+// 6.460〜6.866秒は止まる(この間に判定のノーツは来ない)。6.866秒から1.8倍で2本のスライドが流れ出し、7.515秒から元の速さ
+const SHERIRUTH_PROTO_SCROLL_CHANGES=Object.freeze([[6460,0],[6866,1.8],[7515,1]]);
+// 空中の段(試作): T=空中のタップ / F=空中のフリック(高さ1)/ S=高さのあるスライド(点は [時刻,レーン,幅,高さ0〜1,ease]、5つめの引数 hand は 'L'=水色・'R'=ピンク)
+const mhSkyTap=(timeMs,subLane,subLaneWidth,height=1)=>Object.freeze({...mhTap(timeMs,subLane,subLaneWidth),skyHeight:height});
+const mhSkyFlick=(timeMs,subLane,subLaneWidth,dirCode,height=1)=>Object.freeze({...mhFlick(timeMs,subLane,subLaneWidth,dirCode),skyHeight:height});
+const mhSkySlide=(timeMs,endTimeMs,points,endFlick,hand)=>{
+  const base=mhSlideV2(timeMs,endTimeMs,points.map(([at,lane,width,,ease])=>[at,lane,width,ease||0]),endFlick);
+  return Object.freeze({...base,...(hand==='L'||hand==='R'?{hand}:{}),slidePoints:Object.freeze(base.slidePoints.map((point,index)=>Object.freeze({...point,sky:Math.max(0,Math.min(1,Number(points[index][3])||0))})))});
+};
+const sheriruthProtoMasterNotes=((t,h,f,s,T,F,S)=>[
+// <sheriruth-proto-master-notes>
+  t(2001,6,3,0),T(2001,9,2),t(2244,3,3,0),t(2244,6,3,0),
+  t(2406,6,3,0),t(2488,3,3,0),t(2650,9,3,0),t(2731,6,3,0),
+  T(2893,8,2),t(2974,3,3,0),t(3055,6,3,0),t(3136,3,3,0),
+  T(3298,8,2),h(3461,6,3,3785),t(3461,9,3,0),t(3947,0,3,0),
+  t(3947,3,3,0),t(4109,0,3,0),T(4353,5,2),T(4596,1,2),
+  h(4758,0,3,5407),T(4920,5,2),T(5244,9,2),t(5488,9,3,0),
+  t(5650,3,3,0),T(5812,9,2),t(5893,6,3,0),t(6055,9,3,0),
+  T(6136,5,2),t(6217,9,3,0),T(6380,1,2),T(6380,9,2),
+  t(6866,0,3,0),S(6866,16434,[[6866,4,2,0.25,0],[6947,4,2,0.25,0],[7109,3,2,0,0],[7191,2.5,2,0,0],[7353,1.5,2,0,0],[7758,4,2,0.75,0],[8001,4,2,0.25,0],[8082,3.5,2,0.25,0],[8164,3.5,2,0.5,0],[8245,3,2,0.5,0],[8407,3,2,0.25,0],[8488,3.5,2,0.25,0],[8569,3.5,2,0.25,0],[8650,4,2,0.25,0],[8731,4,2,0.25,0],[8812,3.5,2,0.5,0],[8893,3.5,2,0.5,0],[8974,3,2,0.5,0],[9055,3,2,0.25,0],[9137,3.5,2,0.25,0],[9218,3.5,2,0.25,0],[9380,4.5,2,0,0],[9461,4.5,2,0,0],[9542,5,2,0,0],[9785,5,2,0,0],[9866,4.5,2,0,0],[10191,4.5,2,1,0],[10677,1.5,2,1,0],[10758,2,2,1,0],[10839,2,2,0.75,0],[10920,2.5,2,0.75,0],[11002,3,2,0.5,0],[11083,3.5,2,0.5,0],[11164,3.5,2,0.25,0],[11245,4,2,0.25,0],[11488,4,2,0.25,0],[11650,3,2,0.25,0],[11731,3.5,2,0.25,0],[11812,3.5,2,0,0],[11893,4,2,0,0],[11975,3.5,2,0,0],[12137,2.5,2,0.25,0],[12218,2.5,2,0.25,0],[12380,1.5,2,0.25,0],[12866,1.5,2,0.5,0],[12948,2,2,0.5,0],[13029,2,2,0.5,0],[13110,2.5,2,0.5,0],[13191,2.5,2,0.5,0],[13272,3,2,0.5,0],[13353,3,2,0.5,0],[13434,2.5,2,0.5,0],[13515,2.5,2,0.5,0],[13677,3.5,2,0.5,0],[13758,3.5,2,0.5,0],[13840,4,2,0.5,0],[14002,5,2,0.5,0],[14083,4.5,2,0.5,0],[14164,4.5,2,0.75,0],[14245,4,2,0.75,0],[14326,4,2,0.75,0],[14407,3.5,2,0.75,0],[14488,3.5,2,1,0],[14569,3,2,1,0],[14731,4,2,1,0],[14894,4,2,0.75,0],[15056,3,2,0.25,0],[15218,4,2,0.25,0],[15299,4,2,0,0],[15461,5,2,0,0],[15542,5,2,0.25,0],[15704,4,2,0.75,0],[15786,3.5,2,1,0],[15867,3,2,1,0],[15948,3.5,2,1,0],[16029,3.5,2,1,0],[16110,4,2,1,0],[16191,4,2,1,0],[16434,2.5,2,1,0]],0,'R'),S(7434,15786,[[7434,1,2,0,0],[8082,1,2,0,0],[8164,1.5,2,0.25,0],[8245,2,2,0.25,0],[8407,2,2,0.5,0],[8488,1.5,2,0.5,0],[8569,1.5,2,0.25,0],[8650,1,2,0.25,0],[8731,1.5,2,0.25,0],[8812,1.5,2,0.25,0],[8893,2,2,0.25,0],[9055,2,2,0.5,0],[9137,1.5,2,0.5,0],[9218,1.5,2,0.25,0],[9299,1,2,0.25,0],[9380,1.5,2,0.25,0],[9461,1.5,2,0.5,0],[9704,3,2,0.75,0],[9785,3,2,1,0],[9866,3.5,2,1,0],[9947,3.5,2,0.25,0],[10029,3,2,0.5,0],[10434,0.5,2,1,0],[10677,0.5,2,0.25,0],[10758,0,2,0.25,0],[11002,0,2,0.25,0],[11488,3,2,0.25,0],[11812,1,2,0.25,0],[11975,1,2,0.25,0],[12056,0.5,2,0.5,0],[12461,0.5,2,0.5,0],[12542,0,2,0.75,0],[12704,0,2,0.75,0],[12785,0.5,2,0.75,0],[12866,0.5,2,0.5,0],[12948,1,2,0.5,0],[13029,1,2,0.25,0],[13110,1.5,2,0.25,0],[13515,1.5,2,0.5,0],[13596,2,2,0.5,0],[13677,2,2,0.5,0],[13758,2.5,2,0.5,0],[13840,2.5,2,0.5,0],[13921,3,2,0.5,0],[14002,3,2,0.5,0],[14083,3.5,2,0.5,0],[14164,3.5,2,0.5,0],[14245,3,2,0.5,0],[14326,3,2,0.5,0],[14407,2.5,2,0.5,0],[14488,2.5,2,0.5,0],[14731,1,2,0.5,0],[14813,0.5,2,0.5,0],[14894,0.5,2,0.5,0],[15137,2,2,1,0],[15218,2,2,1,0],[15299,1.5,2,1,0],[15380,1.5,2,1,0],[15461,1,2,1,0],[15542,1,2,1,0],[15623,1.5,2,0.75,0],[15704,1.5,2,0.75,0],[15786,2,2,0.5,0]],0,'L'),t(15948,3,3,0),
+  t(16110,3,3,0),T(16434,1,2),T(16596,1,2),t(16596,3,3,0),
+  t(16921,0,3,0),t(16921,6,3,0),t(17083,6,3,0),t(17164,3,3,0),
+  T(17407,9,2),t(17569,3,3,0),T(17569,8,2),t(17894,0,3,0),
+  t(17894,3,3,0),T(18137,1,2),t(18218,6,3,0),t(18299,0,3,0),
+  t(18380,6,3,0),T(18867,1,2),t(19029,0,3,0),t(19029,6,3,0),
+  T(19191,8,2),t(19353,6,3,0),t(19353,3,3,0),t(19516,3,3,0),
+  t(19597,9,3,0),t(19759,9,3,0),t(20002,0,3,0),T(20164,1,2),
+  t(20326,6,3,0),T(20489,1,2),t(20489,6,3,0),T(20813,1,2),
+  T(20813,9,2),t(20975,9,3,0),t(21056,0,3,0),t(21218,6,3,0),
+  t(21218,0,3,0),t(21462,3,3,0),t(21462,6,3,0),t(21624,6,3,0),
+  T(21867,1,2),t(21867,3,3,0),t(22029,0,3,0),T(22191,8,2),
+  t(22272,3,3,0),h(22435,3,3,22840),t(22435,9,3,0),t(22597,9,3,0),
+  t(22840,6,3,0),T(23083,1,2),T(23083,9,2),T(23245,9,2),
+  t(23245,0,3,0),T(23408,1,2),t(23489,9,3,0),t(23732,3,3,0),
+  t(23732,9,3,0),t(23894,3,3,0),t(23894,9,3,0),t(24056,3,3,0),
+  h(24137,6,3,24543),T(24300,1,2),T(24705,1,2),t(24867,0,3,0),
+  T(24867,9,2),t(25110,9,3,0),t(25273,9,3,0),t(25435,3,3,0),
+  t(25435,9,3,0),T(25678,1,2),t(25678,6,3,0),T(25921,1,2),
+  t(25921,3,3,0),t(26246,0,3,0),T(26246,9,2),T(26408,1,2),
+  t(26408,9,3,0),T(26651,9,2),t(26813,3,3,0),t(26975,6,3,0),
+  t(27138,0,3,0),S(27462,32084,[[27462,0.5,2,1,0],[28921,0.5,2,0.75,0],[29003,1,2,0.5,0],[30867,1,2,0.25,0],[30949,1.5,2,0.25,0],[31678,1.5,2,0.25,0],[31759,2,2,0.25,0],[32084,2,2,0.25,0]],0,'L'),t(27462,3,3,0),S(27867,31841,[[27867,4.5,2,1,0],[28840,4.5,2,0.5,0],[28921,4,2,0.5,0],[30300,4,2,0,0],[30381,3.5,2,0,0],[31354,3.5,2,0,0],[31435,3,2,0,0],[31841,3,2,0,0]],0,'R'),
+  t(32651,6,3,0),
+// </sheriruth-proto-master-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+
 const animaCharts=Object.freeze({
   EASY:mhChart(1,animaEasyNotes,ANIMA_DURATION_MS,6),
   NORMAL:mhChart(3,animaNormalNotes,ANIMA_DURATION_MS,6),
@@ -26438,6 +26635,22 @@ const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   return Object.freeze({...song,difficulties:Object.freeze(difficulties)});
 }));
 
+// デバッグ専用の試作曲(空中のノーツ・止まって動く演出の試作。2026-10-10 社長「プライベートでやるの毎回だるいから、普通にデバッグモードに入れてくんない?」)。
+// RHYTHM_SONGS へは入れない。曲えらび・全国ランキング・ミッション・称号・図鑑・お知らせは RHYTHM_SONGS か体験版の一覧から作るので、
+// ここに分けて置けばどこにも混ざらない。デバッグ画面(RHYTHM_DEBUG)の「試作」の枠からだけ遊べ、遊んでも記録は残さない(演奏画面へ from:'proto' で渡す)
+const RHYTHM_PROTO_SONGS=Object.freeze([
+  Object.freeze({
+    songId:'sheriruth_proto',
+    displayName:'Sheriruth',
+    subtitle:'試作 MASTER 30秒',
+    debugDescription:'空中のノーツ・止まって動く演出の試作。遊んでも自己ベスト・ランキング・報酬には入らない',
+    bgmTrackId:'melo_sheriruth_proto',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='MASTER'?mhChart(46,sheriruthProtoMasterNotes,SHERIRUTH_PROTO_DURATION_MS,6,{scrollChanges:SHERIRUTH_PROTO_SCROLL_CHANGES}):emptyRhythmChart())
+    ])))
+  }),
+]);
+
 // 先行公開する「音ゲー体験版」で遊べる範囲。ここに書いた曲・難易度だけを体験版の画面へ出す。
 // デバッグ画面の曲一覧(RHYTHM_SONGS)とは役割を分ける。デバッグ用の曲を体験版へ出さないため。
 // 2026-09-05、ユーザー指示で先行公開の5曲・5難易度になり、同日「風がそよぐ場所」「Close To Your Heart」を足して7曲になった。
@@ -26840,7 +27053,7 @@ const installRhythmGeometryStyles=()=>{
          元の見た目へ戻ってしまい、判定ラインへ光が10個ぶん residual として残り続ける。
          実機で「タップのとこがわけわかんないことになってる」と言われた原因がこれ(2026-09-05)。 */
     [data-rhythm-hit-layer]{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
-    [data-rhythm-hit-effect]{position:absolute;bottom:var(--mh-judgment-line-bottom,12%);left:var(--rhythm-hit-center,50%);
+    [data-rhythm-hit-effect]{position:absolute;bottom:calc(var(--mh-judgment-line-bottom,12%) + var(--rhythm-hit-lift,0%));left:var(--rhythm-hit-center,50%);
       width:var(--rhythm-hit-width,12%);height:0;pointer-events:none;
       transform:translateX(-50%)}
     [data-rhythm-hit-effect]>i,[data-rhythm-hit-effect]>b,[data-rhythm-hit-effect]>u{
@@ -27403,16 +27616,17 @@ const rhythmRestartAnimations=entries=>{
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
 // flick … フリックを取ったときの払った向き('up'|'left'|'right')。炎の筋を飛ばす。それ以外は ''
 // finish … ホールド・スライドを押し切ったとき。光の柱を高く・粒を遠くまで・光を少し幅広にする(2026-09-27)
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick='',finish=false})=>{
+// sky … 空中のノーツ(試作)。空中の判定ラインの上で、地上とは形も色も違う弾け方にする
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick='',finish=false,sky=false})=>{
   // 検証用に WebGL で描いているときは、同じ光をノーツの canvas へ描く(RHYTHM_CANVAS_RENDERER の「叩いたときの光」)。
   // DOM の部品には触らないので、返すもの(流し直す印)も無い
-  if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){
+  if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&(RHYTHM_CANVAS_RENDERER.hitsFor(area)||(sky&&!monster&&RHYTHM_CANVAS_RENDERER.skyHitsFor(area)))){
     const big=!!monster,rainbow=!big&&precise&&judgment==='MARVELOUS';
     RHYTHM_CANVAS_RENDERER.pushHit({
       center:Math.max(0,Math.min(1,Number(centerRatio)||.5)),
       width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:(finish?1.3:1.15)),
       color:big?'#fde047':rhythmHitEffectColor(judgment),judgment:big?'':String(judgment||''),
-      precise:rainbow,big,sparkScale:big?2.1:(finish?1.6:(rainbow?1.45:1)),flick:big?'':String(flick||''),finish:!big&&!!finish,
+      precise:rainbow,big,sparkScale:big?2.1:(finish?1.6:(rainbow?1.45:1)),flick:big?'':String(flick||''),finish:!big&&!!finish,sky:!!sky&&!big,
     });
     return null;
   }
@@ -27424,7 +27638,9 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   const width=Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(monster?1.5:(finish?1.3:1.15));
   item.style.setProperty('--rhythm-hit-center',`${(Math.max(0,Math.min(1,Number(centerRatio)||.5))*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
-  item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
+  item.style.setProperty('--rhythm-hit-color',monster?'#fde047':(sky?`rgb(${RHYTHM_SKY_FX.main})`:rhythmHitEffectColor(judgment)));
+  // 空中のノーツ(試作)は、空中の判定ラインの高さで弾ける(DOM の部品で描く端末向け。形は地上と同じで、色と高さだけ変える)
+  item.style.setProperty('--rhythm-hit-lift',sky&&!monster?`${(RHYTHM_SKY_LIFT.ratio*100).toFixed(2)}%`:'0%');
   // MARVELOUSだけ、はじける粒を1つずつ違う色にして虹にする(2026-09-12)。
   // 単色のまま虹に見せる手が無いので、粒そのものの色をCSS変数で配る。
   // ★モンスターノーツは金色を優先する(そちらが特別扱いなので、虹で上書きしない)
@@ -27625,7 +27841,7 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    const progress=1-(rhythmScrollPos(point.timeMs)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     return {y,left:rect.width*span.center-half,right:rect.width*span.center+half};
   };
   let firstIndex=0;
@@ -27665,13 +27881,14 @@ const rhythmSlideCheckpointLines=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   for(let index=0;index<times.length;index++){
     const at=Number(times[index]);
     if(!Number.isFinite(at)||at<=now)continue;
-    const progress=1-(at-Number(travel.visualTime))/Number(travel.travelMs);
+    const progress=1-(rhythmScrollPos(at)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs);
     const y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight;
     if(!Number.isFinite(y)||y<-rect.height||y>rect.height)continue;
     const yRatio=rhythmClamp01(y/rect.height);
     const span=rhythmProjectSlideSpan(rhythmSlideExpectedLane(note,at),note,yRatio,at);
     const half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
-    lines.push({x1:rect.width*span.center-half,x2:rect.width*span.center+half,y});
+    const lift=rhythmSlideHasSky(note)?rhythmSkyLiftPx(rect,yRatio)*rhythmSlideSkyAt(note,at):0;
+    lines.push({x1:rect.width*span.center-half,x2:rect.width*span.center+half,y:y-lift});
   }
   return lines;
 };
@@ -27800,7 +28017,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const holdAnchors=variableHold&&rhythmNoteHasHoldPoints(note)&&height>0&&slideTravel&&Number(slideTravel.travelMs)>0
     ?(()=>{
       const travelMs=Number(slideTravel.travelMs),visualTime=Number(slideTravel.visualTime);
-      const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(Number(timeMs)-visualTime)/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
+      const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(rhythmScrollPos(timeMs)-rhythmScrollPos(visualTime))/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
       const headMs=Math.max(Number(note.timeMs)||0,Number(slideTravel.chartNowMs)||0),endMs=rhythmReleaseTargetMs(note);
       const times=[endMs,...note.holdPoints.map(point=>Number(point.timeMs)),headMs]
         .filter(timeMs=>Number.isFinite(timeMs)&&timeMs>=Math.min(headMs,endMs)&&timeMs<=Math.max(headMs,endMs));
@@ -27909,9 +28126,20 @@ const rhythmCanvasNotesActive=flagOn=>{const pref=rhythmCanvasNotesPreference();
 const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
+  const hasSky=rhythmSlideHasSky(note);
+  // 空中の段のある長いスライド(試作)だけ、画面の奥の端(出てくる所)より先の区切りは作らない。
+  // 10秒・80点のスライドを毎コマ全部作ると、1コマに千回以上の投影になり固まった(2026-10-10 社長「ダブルスライドで1回固まる」)。
+  // 地上だけのスライド(既存の全曲)は今までどおり全部作る
+  const farPos=hasSky?rhythmScrollPos(travel.visualTime)+Number(travel.travelMs)*1.1:Infinity;
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
-    return {y,left:rect.width*span.center-half,right:rect.width*span.center+half};
+    const progress=1-(rhythmScrollPos(point.timeMs)-rhythmScrollPos(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    // 空中の段(試作): 高さのある点は、その奥行きの持ち上げ幅ぶん上へ。groundOnly のときは影として地面に置く
+    const skyAt=hasSky?rhythmSlideSkyAt(note,point.timeMs):0;
+    const lift=!travel.groundOnly?rhythmSkyLiftPx(rect,yRatio)*skyAt:0;
+    // 空中にある所も帯の太さは変えない(2026-10-10 社長「スライドの始まりのノーツのサイズがスライドラインと違う」。
+    // 以前は参考のアークに寄せて高さ1で6割まで細くしていたが、始点の板の半分ほどになり幅が合わなかった)
+    const thin=1;
+    return {y:y-lift,left:rect.width*span.center-half*thin,right:rect.width*span.center+half*thin,sky:skyAt};
   };
   let firstIndex=0;
   while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
@@ -27925,8 +28153,10 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
     for(let step=1;step<=steps;step++){
       const ratio=step/steps,timeMs=fromTime+spanMs*ratio;
       const to=step===steps?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
-      quads.push({l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
+      // 高さ(sky)は空中のあるスライドだけに付ける(地上だけのスライド=既存の全曲は、区切りの形を今までと同じにする)
+      quads.push(hasSky?{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y,sky:(Number(from.sky)+Number(to.sky))/2||0}:{l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
       from=to;
+      if(rhythmScrollPos(timeMs)>farPos)return quads;
     }
     fromPoint=toPoint;
   }
@@ -27950,6 +28180,8 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
     if(slideTravel){
       out.slide=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
       out.checkpoints=rhythmSlideCheckpointLines(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
+      // 空中の段(試作): 高さのあるスライドは、地面に影の帯も置く(高さが見えるように)
+      if(rhythmSlideHasSky(note))out.slideShadow=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,{...slideTravel,groundOnly:true},rect,noteHeight/2);
     }
   }else if(rhythmNoteIsHold(note)&&height>0){
     // 帯の上端(画面外でも可)から下端までを一定間隔でサンプルし、投影の曲線へ沿わせる(DOM 版の clipPath と同じ点)
@@ -27958,7 +28190,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
     const holdAnchors=variableHold&&rhythmNoteHasHoldPoints(note)&&slideTravel&&Number(slideTravel.travelMs)>0
       ?(()=>{
         const travelMs=Number(slideTravel.travelMs),visualTime=Number(slideTravel.visualTime);
-        const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(Number(timeMs)-visualTime)/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
+        const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(rhythmScrollPos(timeMs)-rhythmScrollPos(visualTime))/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
         const headMs=Math.max(Number(note.timeMs)||0,Number(slideTravel.chartNowMs)||0),endMs=rhythmReleaseTargetMs(note);
         const times=[endMs,...note.holdPoints.map(point=>Number(point.timeMs)),headMs]
           .filter(timeMs=>Number.isFinite(timeMs)&&timeMs>=Math.min(headMs,endMs)&&timeMs<=Math.max(headMs,endMs));
@@ -28001,6 +28233,16 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
     const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height);
     const end=rhythmNoteHasVariableSpan(note)&&rhythmNoteIsHold(note)?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
     out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*rhythmHeadWidthRatio(note)),scale:end.scale};
+  }
+  // 空中の段(試作): 空中の粒は高さぶん上へ。地面の位置は影として残す。スライドの頭・終わりの棒はその時刻の高さで
+  const skyHead=rhythmNoteIsSlide(note)?rhythmSlideSkyAt(note,Math.max(Number(note.timeMs)||0,Number(chartNowMs)||0)):rhythmNoteSkyHeight(note);
+  if(skyHead>0){
+    out.skyShadow={cx:out.head.cx,cy:out.head.cy,w:out.head.w,h:out.head.h};
+    out.head={...out.head,cy:out.head.cy-rhythmSkyLiftPx(rect,yRatio)*skyHead};
+  }
+  if(out.end&&rhythmNoteIsSlide(note)&&rhythmSlideHasSky(note)){
+    const endSky=rhythmSlideSkyAt(note,rhythmReleaseTargetMs(note));
+    if(endSky>0)out.end={...out.end,cy:out.end.cy-rhythmSkyLiftPx(rect,rhythmClamp01(out.end.cy/rect.height))*endSky};
   }
   return out;
 };
@@ -28489,6 +28731,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const HEAD_THICK=1;
   // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
   // 2026-09-27: 参考動画に寄せて、角の丸みを小さく(5→2)・真ん中に白い芯の帯・光を少し強く。厚みと色の種類は変えない
+  // 赤は、フリックのピンク(#f472b6・#db2777)・横フリック左のオレンジ・判定 GREAT の赤(#f87171)から離した朱寄りの #ef4444 前後。芯は白で、縁と光だけが赤
+  const SKY_NOTE_COLOR=Object.freeze({hi:'#ffe4e6',mid:'#ef4444',lo:'#b91c1c',rgb:'239,68,68'});
+  const SKY_ARROW_GLOWS=Object.freeze([[5,`rgba(${SKY_NOTE_COLOR.rgb},.95)`],[11,`rgba(${SKY_NOTE_COLOR.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
+  // 空中のフリックの▲は、縁を白・中を赤にする(地上のピンクの▲は中まで塗ってあるので、縁の有無で分かれる)
+  const SKY_ARROW_FILL=Object.freeze([[0,'#ff7b7b'],[1,'#e11d1d']]);
   const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
   const HEADS={
     TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
@@ -28499,12 +28746,17 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     LEFT:   headOf(RHYTHM_NOTE_COLORS.LEFT),
     RIGHT:  headOf(RHYTHM_NOTE_COLORS.RIGHT),
     MONSTER:{radius:5,gradient:['#fef3c7','#f59e0b'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',ring:'#fde68a',glow:[[12,'rgba(217,70,239,.32)'],[5,'rgba(253,224,71,.72)'],[10,'rgba(217,70,239,.42)'],[14,'rgba(34,211,238,.24)']]},
+    // 空中のノーツ(2026-10-10 社長「空中ノーツが四角すぎて違和感がある。普通のノーツのようにうまく表現できない？」)。
+    // ふつうのノーツと同じ作り(板の形・角の丸み・光り方・質感)で、色だけ空中用の明るい赤。暗いれんが色ではなく光らせる。違いは位置と床の影で出す
+    SKY:    headOf(SKY_NOTE_COLOR),
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
   // 強い光(2026-09-26)。光の層の並びを2回つなげた並びで焼いた画像を、1回だけ貼る。
   // はじめは毎フレーム「足し算(lighter)で2回貼る」形にしたが、それでフレームが60→30fpsへ落ちた
   // (CPUを1/4に絞った実測。原因を1つずつ外して特定)。焼くのは最初の1回だけなので、毎フレームの仕事は以前と同じ。
   for(const [name,style] of Object.entries(HEADS)){style.glowStrong=style.glow.length?Object.freeze([...style.glow,...style.glow]):style.glow;style.glowStrongKey=`${name}+`;}
+  // このフレームで描いた地上のノーツの外接四角(空中の細い線・影を、地上のノーツと重なる所では描かないために持つ)
+  const frameGround=[];
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // 道のふちの光(drawRoadFx)の形とグラデーションは、描く先と大きさが同じあいだは毎回同じなので使い回す(2026-09-27)。
   // 拍ごとに光るあいだ、毎フレーム4本のグラデーションと20点の投影計算を作り直していた。描く先か大きさが変われば作り直す
@@ -28566,7 +28818,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=1;
   };
   // 矢印(FLICK / 終点フリック)。三角にピンクの光(色は RHYTHM_NOTE_COLORS.FLICK)。
-  const arrowSprite=(key,w,h,glows,gradientStops)=>{
+  const arrowSprite=(key,w,h,glows,gradientStops,edge)=>{
     const id=`arrow:${key}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
     const margin=14,s=makeSpriteCanvas(w+margin*2,h+margin*2),c=s.ctx;
@@ -28574,6 +28826,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(const [blur,color] of glows){c.save();c.shadowBlur=blur;c.shadowColor=color;c.fillStyle=color;tri();c.fill();c.restore();}
     const g=c.createLinearGradient(0,margin,0,margin+h);gradientStops.forEach(([offset,color])=>g.addColorStop(offset,color));
     c.fillStyle=g;tri();c.fill();
+    if(edge){c.lineWidth=2.2;c.lineJoin='round';c.strokeStyle=edge;tri();c.stroke();}
     const sprite={...s,margin,tw:w,th:h};sprites.set(id,sprite);return sprite;
   };
   // モンスターノーツの外周の光(::before / ::after 相当)。粒の箱に対する内外の差(dx,dy)で描く。
@@ -28634,9 +28887,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const endBarKind=(note,flick)=>flick?'FLICK':rhythmNoteIsSlide(note)?'SLIDE':'HOLD';
   const END_FLICK_ARROW_GLOWS=Object.freeze([[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
   const END_FLICK_ARROW_FILL=Object.freeze([[0,RHYTHM_NOTE_COLORS.FLICK.hi],[.6,RHYTHM_NOTE_COLORS.FLICK.mid],[1,RHYTHM_NOTE_COLORS.FLICK.lo]]);
+  // 空中のタップ・フリック(skyHeight が数で >0)を、ふつうのノーツと同じ板で描くか(既定 'plate')。旧スタイルは localStorage で選べる
+  const isSkyPlate=note=>!!note&&Number(note.skyHeight)>0&&skyTapStyle()==='plate';
   const headStyle=(note,failed,monster)=>{
     if(failed)return HEADS.FAILED;
     if(monster)return HEADS.MONSTER;
+    if(isSkyPlate(note))return HEADS.SKY;
     const type=rhythmNoteVisualType(note);
     if(type==='FLICK'){const dir=rhythmFlickDir(note);if(dir==='left')return HEADS.LEFT;if(dir==='right')return HEADS.RIGHT;}
     return HEADS[type]||HEADS.TAP;
@@ -28655,7 +28911,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=alpha;
     glowBegin();
     if(style.glow.length&&!failed){
-      const glow=effect==='MINIMAL'||lightweight?glowSprite(monster?'MONSTER':note.type,style.radius,style.glow):null;
+      const glow=effect==='MINIMAL'||lightweight?glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow):null;
       if(effect==='MINIMAL'||lightweight)draw3Slice(glow,cx,cy,w,h,alpha);
       else draw3Slice(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),cx,cy,w*1.04,h*1.25,alpha);
     }
@@ -28706,7 +28962,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // ノーツの動き: 払う向きへ、同じ山形の残像がすっと流れ出て消える(0.6秒ごと)
       if(motion){const p=(frameNow%600)/600,base=ctx.globalAlpha;ctx.globalAlpha=base*(1-p)*.6;ctx.drawImage(sprite.canvas,cx-aw/2+(sideDir==='left'?-1:1)*p*aw*.35,ay,aw,ah);ctx.globalAlpha=base;}
     }else if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
-      const sprite=arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
+      const sprite=isSkyPlate(note)?arrowSprite('flickSky2',26,19,SKY_ARROW_GLOWS,SKY_ARROW_FILL,'#ffffff'):arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
       const ay=y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale;
       if(motion){
@@ -28913,6 +29169,253 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
+  // 空中の段(試作): 高さのあるスライドの影(地面に置いた帯)と、空中の粒の影・柱
+  const quadPath=q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();};
+  const drawSkyShadowBand=(quads,opts)=>{
+    if(!quads||!quads.length)return;
+    // 空中の段(試作): 高さのあるスライドの床の影。高さがある所ほど濃い暗い帯(高さ=帯と影の離れ方が見える)
+    quads.forEach(q=>{const a=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.4));if(a<=.02)return;
+      ctx.globalAlpha=opts.alpha*(.25+.45*a);ctx.fillStyle='rgba(2,0,10,.85)';
+      ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    ctx.globalAlpha=1;
+  };
+  const skyTapStyle=()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_sky_tap_style_proto'):'';return v==='glow'||v==='gem'||v==='roof'||v==='flat'||v==='lift'||v==='frame'||v==='deep'||v==='star'||v==='wing'||v==='ring'||v==='glass'||v==='beam'||v==='ruby'||v==='cube'||v==='glass_silver'||v==='glass_red'||v==='plate'?v:'plate';}catch{return 'plate';}};
+  // 案ごとの差し色(空中の柱・影とのつなぎ線の色。既存のどのノーツ・判定の色とも重ならない色を案ごとに選ぶ)
+  const skyAccentRgb=()=>{const st=skyTapStyle();return st==='glass_silver'?'221,214,254':st==='glass_red'?'248,113,113':st==='star'||st==='beam'||st==='cube'?'226,232,240':st==='glass'?'203,213,225':st==='wing'?'129,140,248':st==='ring'||st==='ruby'?'248,113,113':'251,191,36';};
+  // 角を丸めた板の道すじ(arc を使わず、角を3点の折れ線で丸める。WebGL の描き方でも同じに出るように)
+  const roundBarPath=(x0,y0,w,h,r)=>{
+    const k=r*.29;
+    ctx.beginPath();ctx.moveTo(x0+r,y0);ctx.lineTo(x0+w-r,y0);ctx.lineTo(x0+w-k,y0+k);ctx.lineTo(x0+w,y0+r);ctx.lineTo(x0+w,y0+h-r);ctx.lineTo(x0+w-k,y0+h-k);ctx.lineTo(x0+w-r,y0+h);
+    ctx.lineTo(x0+r,y0+h);ctx.lineTo(x0+k,y0+h-k);ctx.lineTo(x0,y0+h-r);ctx.lineTo(x0,y0+r);ctx.lineTo(x0+k,y0+k);ctx.closePath();
+  };
+  const drawSkyTap=(hd,opts)=>{
+    const style=skyTapStyle(),W=Math.max(18,hd.w*sizeScale+4),H=Math.max(11,hd.h+6),x0=hd.cx-W/2,y0=hd.cy-H/2,cx=hd.cx,cy=hd.cy;
+    ctx.globalAlpha=opts.alpha;ctx.lineJoin='round';
+    if(style==='glass_silver'||style==='glass_red'){
+      // 空中のノーツ(参考動画の見せ方をそのまま手本にし、色・形・質感だけモンヒロビートに合わせる。2026-10-10 社長「参考動画を参考にするのが1番良い」):
+      // 厚みのある横長の角材。手前の面+上の面+側面が見える。板の幅は地上の板と同じ。半透明のガラスで、端が濃く真ん中が明るい。
+      // 遠くでは小さく暗く、近づくと大きく明るく(大きさは depthScale で決まる。明るさ・不透明度は近さ pp で上げる)。柱は参考に無いので出さない。床の影は drawSkyShadowHead
+      const red=style==='glass_red';
+      const P=red
+        ?{edge:'196,32,32',mid:'255,232,232',top1:'252,165,165',side:'185,28,28',out:'69,10,10',glow:'255,120,120'}
+        :{edge:'76,69,112',mid:'250,250,255',top1:'196,181,253',side:'100,116,139',out:'30,27,75',glow:'221,214,254'};
+      const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
+      const al=Math.min(.98,.86+.12*pp),br=.9+.1*near;
+      // 近さの見せ方は参考どおり「奥は暗く・手前は明るい」(近づく輪は外した)。奥(near=0)は全体の濃さを .78 倍まで落とし、手前(near=1)で 1 倍にする
+      ctx.globalAlpha=Math.min(1,opts.alpha*(.78+.22*near));
+      // オンプくんの測定(参考動画): 厚みは地上のタップと同じ・幅は地上の0.5〜0.9倍・明るさは地上の0.85〜0.9倍
+      const fw=hd.w*sizeScale*.88,fh=Math.max(8,hd.h),th=Math.max(5,fh*.7),sd=Math.max(3,fw*.09),fx=cx-fw/2,fy=cy-fh/2+th*.35;
+      const sgn=cx<(typeof cssW==='number'?cssW/2:cx)?1:-1;
+      const quad=(pts,fill,stroke,lw)=>{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.lineWidth=lw;ctx.strokeStyle=stroke;ctx.stroke();}};
+      const top=[[fx,fy],[fx+fw,fy],[fx+fw+sgn*sd,fy-th],[fx+sgn*sd,fy-th]];
+      const side=sgn>0?[[fx+fw,fy],[fx+fw+sd,fy-th],[fx+fw+sd,fy-th+fh],[fx+fw,fy+fh]]:[[fx,fy],[fx-sd,fy-th],[fx-sd,fy-th+fh],[fx,fy+fh]];
+      const hull=[[Math.min(fx,fx+sgn*sd,fx-(sgn<0?sd:0)),fy-th],[Math.max(fx+fw,fx+fw+(sgn>0?sd:0)),fy-th],[Math.max(fx+fw,fx+fw+(sgn>0?sd:0)),fy+fh],[Math.min(fx,fx-(sgn<0?sd:0)),fy+fh]];
+      quad(hull,null,`rgba(${P.glow},${(.45+.25*pp).toFixed(2)})`,5+2*pp);
+      quad(side,`rgba(${P.side},${(al*br).toFixed(2)})`,`rgba(${P.out},.85)`,1.2);
+      const tg=ctx.createLinearGradient(0,fy-th,0,fy);tg.addColorStop(0,`rgba(255,255,255,${(al*br).toFixed(2)})`);
+      tg.addColorStop(1,`rgba(${P.top1},${(al*.9).toFixed(2)})`);
+      ctx.fillStyle=tg;ctx.beginPath();ctx.moveTo(top[0][0],top[0][1]);for(let i=1;i<4;i++)ctx.lineTo(top[i][0],top[i][1]);ctx.closePath();ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.92)';ctx.stroke();
+      const fg=ctx.createLinearGradient(fx,0,fx+fw,0);
+      fg.addColorStop(0,`rgba(${P.edge},${Math.min(1,al+.1).toFixed(2)})`);fg.addColorStop(.2,`rgba(${P.mid},${(al*.85).toFixed(2)})`);fg.addColorStop(.5,`rgba(255,255,255,${(al*.8).toFixed(2)})`);fg.addColorStop(.8,`rgba(${P.mid},${(al*.85).toFixed(2)})`);fg.addColorStop(1,`rgba(${P.edge},${Math.min(1,al+.1).toFixed(2)})`);
+      ctx.fillStyle=fg;ctx.fillRect(fx,fy,fw,fh);
+      ctx.lineWidth=2;ctx.strokeStyle=`rgba(${P.out},.8)`;ctx.strokeRect(fx-1,fy-1,fw+2,fh+2);ctx.lineWidth=1.4;ctx.strokeStyle='rgba(255,255,255,.98)';ctx.strokeRect(fx,fy,fw,fh);
+      ctx.fillStyle=`rgba(${P.out},.32)`;ctx.fillRect(fx,fy+fh-Math.max(1.5,fh*.2),fw,Math.max(1.5,fh*.2));
+    }else if(style==='beam'||style==='ruby'||style==='cube'){
+      // 空中専用の案M〜O(2026-10-10 テンポ「空いている色は無い。色でなく形で分ける」。参考動画: 空中は厚みのある角材で側面が見え、真下の床に影が付く)。
+      // ほかのノーツは全部「横長の角丸の板」なので、立体(角材・菱形の宝石・立方体)にする。金は使わない。柱(棒)は無く、床の影(drawSkyShadowHead)だけで高さを見せる
+      const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
+      const poly=(pts,fill,stroke,lw)=>{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.lineWidth=lw||1;ctx.strokeStyle=stroke;ctx.stroke();}};
+      const outerGlow=pts=>{poly(pts,null,`rgba(${skyAccentRgb()},${(.18+.14*pp).toFixed(2)})`,4+2*pp);};
+      const fade=(c0,c1,y0,y1)=>{const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,c0);g.addColorStop(1,c1);return g;};
+      if(style==='beam'){
+        // 案M 角材: 手前の面(白銀の芯・濃い縁)+上の面(明るい)+側面(画面の中心側。濃い)。地上の板より厚く、側面が見える
+        const sgn=cx<(typeof cssW==='number'?cssW/2:cx)?1:-1;
+        const fw=hd.w*sizeScale*1.05,fh=Math.max(10,hd.h*1.5),th=Math.max(6,fh*.75),sd=Math.max(3,fw*.1),fx=cx-fw/2,fy=cy-fh/2+th*.35;
+        const top=[[fx,fy],[fx+fw,fy],[fx+fw+sgn*sd,fy-th],[fx+sgn*sd,fy-th]];
+        const side=sgn>0?[[fx+fw,fy],[fx+fw+sd,fy-th],[fx+fw+sd,fy-th+fh],[fx+fw,fy+fh]]:[[fx,fy],[fx-sd,fy-th],[fx-sd,fy-th+fh],[fx,fy+fh]];
+        outerGlow([[fx,fy-th],[fx+fw,fy-th],[fx+fw,fy+fh],[fx,fy+fh]]);
+        poly(side,'rgba(51,65,85,1)','rgba(15,23,42,.9)',1.2);
+        poly(top,fade('rgba(255,255,255,1)','rgba(203,213,225,1)',fy-th,fy),'rgba(255,255,255,.95)',1);
+        const fg=ctx.createLinearGradient(fx,0,fx+fw,0);fg.addColorStop(0,'rgba(30,41,59,1)');fg.addColorStop(.22,'rgba(203,213,225,1)');fg.addColorStop(.5,'rgba(255,255,255,1)');fg.addColorStop(.78,'rgba(203,213,225,1)');fg.addColorStop(1,'rgba(30,41,59,1)');
+        ctx.fillStyle=fg;ctx.fillRect(fx,fy,fw,fh);ctx.lineWidth=1.2;ctx.strokeStyle='rgba(15,23,42,.9)';ctx.strokeRect(fx,fy,fw,fh);
+        ctx.fillStyle='rgba(15,23,42,.38)';ctx.fillRect(fx,fy+fh-Math.max(1.5,fh*.22),fw,Math.max(1.5,fh*.22));
+      }else if(style==='ruby'){
+        // 案N 宝石の菱形(赤): 縦に長い菱形を4つの面に割る。明るい面・赤・暗い面で立体に見せ、中心に白い光の点。色は純な赤(GREAT の文字の色は判定の場所だけ)
+        const R=Math.max(11,hd.w*.52),T=[cx,cy-R*1.15],Rt=[cx+R*.82,cy],B=[cx,cy+R*1.15],L=[cx-R*.82,cy],C=[cx,cy];
+        outerGlow([T,Rt,B,L]);
+        poly([T,C,L],'rgba(254,202,202,1)');poly([T,Rt,C],'rgba(239,68,68,1)');poly([C,Rt,B],'rgba(153,27,27,1)');poly([L,C,B],'rgba(220,38,38,1)');
+        poly([T,Rt,B,L],null,'rgba(15,23,42,.9)',2.4);poly([T,Rt,B,L],null,'rgba(255,255,255,.9)',1);
+        const d=Math.max(1.8,R*.14)*(1+.9*pp);poly([[cx-d,cy],[cx,cy-d*1.2],[cx+d,cy],[cx,cy+d*1.2]],'rgba(255,255,255,1)');
+      }else{
+        // 案O 立方体(白銀・上が尖った六角形): 上の面(明るい)・左の面・右の面(暗い)の3面。参考の「側面が見える角材」を小さい立方体にしたもの
+        const R=Math.max(11,hd.w*.5),h=R*.866,T=[cx,cy-R],UR=[cx+h,cy-R*.5],LR=[cx+h,cy+R*.5],B=[cx,cy+R],LL=[cx-h,cy+R*.5],UL=[cx-h,cy-R*.5],C=[cx,cy];
+        outerGlow([T,UR,LR,B,LL,UL]);
+        poly([T,UR,C,UL],'rgba(255,255,255,1)');poly([UL,C,B,LL],'rgba(148,163,184,1)');poly([UR,LR,B,C],'rgba(51,65,85,1)');
+        poly([T,UR,LR,B,LL,UL],null,'rgba(15,23,42,.9)',2.4);poly([T,UR,LR,B,LL,UL],null,'rgba(255,255,255,.85)',1);
+        ctx.lineWidth=1;ctx.strokeStyle='rgba(15,23,42,.7)';ctx.beginPath();ctx.moveTo(UL[0],UL[1]);ctx.lineTo(C[0],C[1]);ctx.lineTo(UR[0],UR[1]);ctx.moveTo(C[0],C[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();
+      }
+    }else if(style==='glass'){
+      // 案L ガラスの角材(オンプくんの参考動画の読み: 空中は「厚みのある半透明の銀の角材」。色だけでなく 厚み・透け方・床の影 で地上と分ける)
+      // 手前の面(半透明・端が濃く真ん中が明るい)の上に、奥へ細くなる上の面(明るい)を重ね、角材に見せる。近いほど不透明で明るい
+      const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
+      const fw=hd.w*sizeScale*1.12,fh=Math.max(9,hd.h)*1.3,th=Math.max(6,fh*.7),sd=Math.max(3,fw*.07),fx=cx-fw/2,fy=cy-fh/2+th*.3;
+      const al=.66+.3*pp;
+      const pl=Math.max(20,fh*3.4),pw=fw*.2;
+      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,`rgba(203,213,225,${(.5+.3*pp).toFixed(2)})`);pg.addColorStop(1,'rgba(203,213,225,0)');
+      ctx.fillStyle=pg;ctx.beginPath();ctx.moveTo(cx-pw/2,fy+fh);ctx.lineTo(cx+pw/2,fy+fh);ctx.lineTo(cx+pw*.3,fy+fh+pl);ctx.lineTo(cx-pw*.3,fy+fh+pl);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(fx-2,fy-th-2);ctx.lineTo(fx+fw+2,fy-th-2);ctx.lineTo(fx+fw+2,fy+fh+2);ctx.lineTo(fx-2,fy+fh+2);ctx.closePath();
+      ctx.lineWidth=3+6*pp;ctx.strokeStyle=`rgba(226,232,240,${(.12+.3*pp).toFixed(2)})`;ctx.stroke();
+      // 上の面(奥へ細くなる台形・明るい)
+      const tg=ctx.createLinearGradient(0,fy-th,0,fy);tg.addColorStop(0,`rgba(255,255,255,${al.toFixed(2)})`);tg.addColorStop(1,`rgba(203,213,225,${(al*.85).toFixed(2)})`);
+      ctx.fillStyle=tg;ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(fx+fw,fy);ctx.lineTo(fx+fw-sd,fy-th);ctx.lineTo(fx+sd,fy-th);ctx.closePath();ctx.fill();
+      ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.9)';ctx.stroke();
+      // 手前の面(半透明。端が濃い青灰・真ん中が明るい銀)
+      const fg=ctx.createLinearGradient(fx,0,fx+fw,0);fg.addColorStop(0,`rgba(51,65,85,${(al+.12).toFixed(2)})`);fg.addColorStop(.18,`rgba(203,213,225,${al.toFixed(2)})`);fg.addColorStop(.5,`rgba(248,250,252,${(al*.9).toFixed(2)})`);fg.addColorStop(.82,`rgba(203,213,225,${al.toFixed(2)})`);fg.addColorStop(1,`rgba(51,65,85,${(al+.12).toFixed(2)})`);
+      ctx.fillStyle=fg;ctx.fillRect(fx,fy,fw,fh);ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.9)';ctx.strokeRect(fx,fy,fw,fh);
+      ctx.fillStyle='rgba(15,23,42,.45)';ctx.fillRect(fx,fy+fh-Math.max(1.5,fh*.18),fw,Math.max(1.5,fh*.18));
+    }else if(style==='star'||style==='wing'||style==='ring'){
+      // 空中専用の案(2026-10-10 社長「モンスターノーツと色が似てる。空中とか立体とか奥行き感を」)。金・黄・オレンジは使わない。
+      // 地上の板と形も変える(星・翼・輪)。近づくほど(判定の高さへ寄るほど)光が強まり、形が開く。arc は使わず折れ線だけで描く
+      const near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44)),pp=near*near;
+      const a=Math.max(10,hd.w*sizeScale/2),b=Math.max(7,hd.h*1.5);
+      const poly=pts=>{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();};
+      const acc=skyAccentRgb();
+      // 柱: 形の下へ、差し色から透明へ消える細い台形。近いほど濃い
+      const pl=Math.max(20,b*3.2),pw=a*.18;
+      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,`rgba(${acc},${(.55+.35*pp).toFixed(2)})`);pg.addColorStop(1,`rgba(${acc},0)`);
+      ctx.fillStyle=pg;ctx.beginPath();ctx.moveTo(cx-pw/2,cy);ctx.lineTo(cx+pw/2,cy);ctx.lineTo(cx+pw*.3,cy+pl);ctx.lineTo(cx-pw*.3,cy+pl);ctx.closePath();ctx.fill();
+      if(style==='star'){
+        // 案I 星(白銀): 横に長い4つとがりの星。中心は白・先は銀。近いと光芒(十字の線)が伸びて外の光が太る
+        const k=1+.22*pp,ax=a*k,by=b*k*1.15,iq=.2;
+        const pts=[[cx-ax,cy],[cx-ax*iq,cy-by*iq],[cx,cy-by],[cx+ax*iq,cy-by*iq],[cx+ax,cy],[cx+ax*iq,cy+by*iq],[cx,cy+by],[cx-ax*iq,cy+by*iq]];
+        poly(pts);ctx.lineWidth=4+7*pp;ctx.strokeStyle=`rgba(226,232,240,${(.2+.35*pp).toFixed(2)})`;ctx.stroke();
+        ctx.lineWidth=2.6;ctx.strokeStyle='rgba(15,23,42,.85)';ctx.stroke();
+        const g=ctx.createLinearGradient(cx-ax,0,cx+ax,0);g.addColorStop(0,'rgba(148,163,184,1)');g.addColorStop(.5,'rgba(255,255,255,1)');g.addColorStop(1,'rgba(148,163,184,1)');
+        ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.stroke();
+        if(pp>.05){ctx.lineWidth=1.2;ctx.strokeStyle=`rgba(255,255,255,${(.5*pp+.1).toFixed(2)})`;ctx.beginPath();ctx.moveTo(cx-ax*(1.35+.5*pp),cy);ctx.lineTo(cx+ax*(1.35+.5*pp),cy);ctx.moveTo(cx,cy-by*(1.25+.4*pp));ctx.lineTo(cx,cy+by*(1.25+.4*pp));ctx.stroke();}
+      }else if(style==='wing'){
+        // 案J 翼(藍): 左右へ開く一対の翼(羽が3枚)。上が淡い藍・下が濃い藍・縁は白。近いと翼が開いて光る
+        const k=1+.25*pp,ax=a*k*1.3,by=b*k*.78;
+        const wing=sg=>[[cx+sg*ax*.06,cy+by*.1],[cx+sg*ax*.34,cy-by*.95],[cx+sg*ax*.62,cy-by*1.0],[cx+sg*ax*1.0,cy-by*.72],[cx+sg*ax*.8,cy-by*.4],[cx+sg*ax*1.0,cy-by*.12],[cx+sg*ax*.74,cy+by*.1],[cx+sg*ax*.88,cy+by*.4],[cx+sg*ax*.46,cy+by*.34]];
+        [-1,1].forEach(sg=>{
+          poly(wing(sg));ctx.lineWidth=4+8*pp;ctx.strokeStyle=`rgba(129,140,248,${(.22+.4*pp).toFixed(2)})`;ctx.stroke();
+          const g=ctx.createLinearGradient(0,cy-by,0,cy+by*.4);g.addColorStop(0,'rgba(224,231,255,1)');g.addColorStop(.5,'rgba(99,102,241,1)');g.addColorStop(1,'rgba(30,27,75,1)');
+          ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1.3;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.stroke();
+        });
+        const dm=Math.max(3.5,Math.max(8,hd.h)*.55);poly([[cx-dm,cy],[cx,cy-dm*1.3],[cx+dm,cy],[cx,cy+dm*1.3]]);ctx.fillStyle='rgba(255,255,255,1)';ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(30,27,75,.9)';ctx.stroke();
+      }else{
+        // 案K 輪(赤): 中が空いた横長の輪。地上の板(中が詰まっている)と、形でも明るさでも分かれる。近いと外へもう1つの輪が広がり、芯が光る
+        const ry=b*.9,ring=(rx,ty,n)=>{const out=[];for(let i=0;i<n;i++){const t=i/n*Math.PI*2;out.push([cx+Math.cos(t)*rx,cy+Math.sin(t)*ty]);}return out;};
+        const outer=ring(a,ry,28),inner=ring(a*.68,ry*.55,28);
+        if(pp>.05){poly(ring(a*(1.15+.35*pp),ry*(1.15+.35*pp),28));ctx.lineWidth=1.4;ctx.strokeStyle=`rgba(252,165,165,${(.6*pp).toFixed(2)})`;ctx.stroke();}
+        poly(outer);ctx.lineWidth=4+7*pp;ctx.strokeStyle=`rgba(248,113,113,${(.22+.38*pp).toFixed(2)})`;ctx.stroke();
+        ctx.beginPath();ctx.moveTo(outer[0][0],outer[0][1]);outer.forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();ctx.moveTo(inner[0][0],inner[0][1]);inner.forEach(q=>ctx.lineTo(q[0],q[1]));ctx.closePath();
+        const g=ctx.createLinearGradient(0,cy-ry,0,cy+ry);g.addColorStop(0,'rgba(254,226,226,1)');g.addColorStop(.5,'rgba(239,68,68,1)');g.addColorStop(1,'rgba(127,29,29,1)');
+        ctx.fillStyle=g;ctx.fill('evenodd');ctx.lineWidth=1.2;ctx.strokeStyle='rgba(255,255,255,.95)';ctx.stroke();
+        const dm=Math.max(2.2,a*.12)*(1+.8*pp);poly([[cx-dm,cy],[cx,cy-dm*.8],[cx+dm,cy],[cx,cy+dm*.8]]);ctx.fillStyle='rgba(255,255,255,1)';ctx.fill();
+      }
+    }else if(style==='flat'||style==='lift'||style==='frame'||style==='deep'){
+      // 案E〜G(改善部の指摘): 地上の板と同じ幅・同じ高さ・同じ丸みにして、色(金)と下へ伸びる影の柱だけで空中と分かるようにする
+      const fw=hd.w*sizeScale*1.5,fh=Math.max(8,hd.h),fx=cx-fw/2,fy0=cy-fh/2,r=Math.min(fh/2,5*sizeScale);
+      // 影の柱: 板の下へ、金から透明へ消える細い台形(板の幅の2割)。細い線1本より「ここから落ちている」が見える
+      const pl=Math.max(8,fh*1.4),pw=fw*.5;
+      const pg=ctx.createLinearGradient(0,cy,0,cy+pl);pg.addColorStop(0,`rgba(251,191,36,${style==='deep'?.4:.22})`);pg.addColorStop(1,'rgba(251,191,36,0)');
+      ctx.fillStyle=pg;ctx.beginPath();ctx.moveTo(cx-pw/2,cy);ctx.lineTo(cx+pw/2,cy);ctx.lineTo(cx+pw*.3,cy+pl);ctx.lineTo(cx-pw*.3,cy+pl);ctx.closePath();ctx.fill();
+      if(style==='deep'){
+        // 案H 奥行き(案Eがもと): 板に厚み(下側の暗い面。板の高さの4割で、奥ほど板が小さいので自然に薄くなる)・柱を濃く・柱の芯に明るい線
+        const fy=fy0,t=Math.max(1.5,fh*.4);
+        ctx.lineWidth=1.4;ctx.strokeStyle='rgba(253,230,138,.8)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy+pl*.85);ctx.stroke();
+        roundBarPath(fx,fy+t,fw,fh,r);ctx.fillStyle='rgba(120,53,15,1)';ctx.fill();
+        roundBarPath(fx+1,fy+t+fh*.45,fw-2,fh*.55,r);ctx.fillStyle='rgba(69,26,3,.7)';ctx.fill();
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(41,16,2,.9)';roundBarPath(fx-1,fy-1,fw+2,fh+t+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,249,195,1)');g.addColorStop(.45,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(245,158,11,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(180,83,9,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else if(style==='flat'){
+        // 案E 同じ板・金: 地上の白い板と同じ形。金のグラデーション+濃い茶のふち(明るさも白い板と分かれる)+上の白いつや
+        const fy=fy0;
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(69,26,3,.85)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,240,138,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(120,53,15,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else if(style==='lift'){
+        // 案F 浮かせる: 同じ板を、地面側に落ちた暗い板(影)と少しずらして重ねる。板が持ち上がって見える
+        const rise=Math.max(2.5,fh*.4),fy=fy0-rise*.5;
+        roundBarPath(fx+1,fy0+rise,fw,fh,r);ctx.fillStyle='rgba(8,4,24,.62)';ctx.fill();
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(69,26,3,.85)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        const g=ctx.createLinearGradient(0,fy,0,fy+fh);g.addColorStop(0,'rgba(254,240,138,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(120,53,15,.95)';ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(fx+r/2,fy+1,Math.max(0,fw-r),Math.max(1,fh*.2));
+      }else{
+        // 案G 枠板: 中は暗い琥珀、金は太いふちと芯の線だけ。地上の白い板(中が明るい)と明るさが逆になるので、色が見分けにくくても分かる
+        const fy=fy0;
+        ctx.lineWidth=2;ctx.strokeStyle='rgba(2,6,23,.7)';roundBarPath(fx-1,fy-1,fw+2,fh+2,r+1);ctx.stroke();
+        roundBarPath(fx,fy,fw,fh,r);ctx.fillStyle='rgba(66,32,6,.95)';ctx.fill();
+        ctx.lineWidth=2.4;ctx.strokeStyle='rgba(251,191,36,1)';roundBarPath(fx+1.2,fy+1.2,fw-2.4,fh-2.4,Math.max(1,r-1));ctx.stroke();
+        ctx.fillStyle='rgba(253,224,71,.95)';ctx.fillRect(fx+fw*.2,cy-.8,fw*.6,1.6);
+      }
+    }else if(style==='gold'){
+      // 案A(いまの): 金色の板+上向きの山形2つ
+      ctx.fillStyle='rgba(251,191,36,1)';roundBarPath(x0,y0,W,H,3);ctx.fill();ctx.strokeStyle='rgba(120,53,15,.95)';ctx.lineWidth=1.5;ctx.stroke();
+      const ch=Math.min(H*.6,9),cw=Math.min(W*.16,9),by=cy+ch/2;ctx.strokeStyle='rgba(69,26,3,.95)';ctx.lineWidth=2.2;
+      [-1,1].forEach(side=>{const x=cx+side*W*.22;ctx.beginPath();ctx.moveTo(x-cw,by);ctx.lineTo(x,by-ch);ctx.lineTo(x+cw,by);ctx.stroke();});
+    }else if(style==='glow'){
+      // 案B: 地上の板と同じ丸い板の形のまま、金色に光らせる(外に光の輪・上に白いつや)
+      ctx.strokeStyle='rgba(251,191,36,.28)';ctx.lineWidth=9;roundBarPath(x0,y0,W,H,H/2);ctx.stroke();
+      ctx.strokeStyle='rgba(253,224,71,.55)';ctx.lineWidth=4;ctx.stroke();
+      const g=ctx.createLinearGradient(0,y0,0,y0+H);g.addColorStop(0,'rgba(255,251,235,1)');g.addColorStop(.45,'rgba(253,224,71,1)');g.addColorStop(1,'rgba(217,119,6,1)');
+      ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.2;ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(x0+H*.6,y0+2.2);ctx.lineTo(x0+W-H*.6,y0+2.2);ctx.stroke();
+    }else if(style==='gem'){
+      // 案C: 横に長い菱形(六角形)の宝石。地上の四角い板と形で分かれる。中に白い菱形
+      const e=Math.min(H*.9,W*.25),Hh=H*.62;
+      const path=(ix,iy)=>{ctx.beginPath();ctx.moveTo(x0+ix,cy);ctx.lineTo(x0+e,cy-Hh+iy);ctx.lineTo(x0+W-e,cy-Hh+iy);ctx.lineTo(x0+W-ix,cy);ctx.lineTo(x0+W-e,cy+Hh-iy);ctx.lineTo(x0+e,cy+Hh-iy);ctx.closePath();};
+      ctx.strokeStyle='rgba(251,191,36,.3)';ctx.lineWidth=7;path(0,0);ctx.stroke();
+      const g=ctx.createLinearGradient(0,cy-Hh,0,cy+Hh);g.addColorStop(0,'rgba(254,243,199,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(180,83,9,1)');
+      ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.4;ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,.85)';ctx.beginPath();ctx.moveTo(cx-Hh*.9,cy);ctx.lineTo(cx,cy-Hh*.55);ctx.lineTo(cx+Hh*.9,cy);ctx.lineTo(cx,cy+Hh*.55);ctx.closePath();ctx.fill();
+    }else{
+      // 案D: 屋根の形(上の真ん中がとがった板)。「上へ」が形で分かる
+      const peak=Math.min(H*.85,9),top=y0+peak*.35;
+      ctx.beginPath();ctx.moveTo(x0,top+peak);ctx.lineTo(cx,top-peak*.35);ctx.lineTo(x0+W,top+peak);ctx.lineTo(x0+W,y0+H);ctx.lineTo(x0,y0+H);ctx.closePath();
+      ctx.strokeStyle='rgba(251,191,36,.3)';ctx.lineWidth=7;ctx.stroke();
+      const g=ctx.createLinearGradient(0,top-peak*.35,0,y0+H);g.addColorStop(0,'rgba(255,251,235,1)');g.addColorStop(.5,'rgba(251,191,36,1)');g.addColorStop(1,'rgba(194,65,12,1)');
+      ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.3;ctx.stroke();
+    }
+    ctx.globalAlpha=1;ctx.lineJoin='miter';
+  };
+  const drawSkyShadowHead=(geo,opts)=>{
+    const sh=geo.skyShadow,hd=geo.head;if(!sh||!hd)return;
+    const w=sh.w*.42,h=Math.max(2,sh.h*.32);
+    const st=skyTapStyle(),near=Math.max(0,Math.min(1,((Number(opts.depthScale)||1)-.56)/.44));
+    const glassy=['glass','beam','ruby','cube','glass_silver','glass_red','plate'].includes(st);
+    ctx.globalAlpha=glassy?opts.alpha:opts.alpha*.6;ctx.fillStyle='rgba(8,4,24,.6)';
+    if(glassy){
+      // 床に落ちる影(参考動画「浮いていると分かるいちばん強い手がかり」)。2026-10-10 テンポ「横画面の動画で影が見えない」→ 板の幅くらいの暗い楕円を真下に置き、
+      // 手前へ来るほど小さく濃く(濃さは真ん中で .6 前後)。外へ広がる3重の楕円でぼかしを出し、暗い背景でも見えるよう真ん中の輪にだけ薄い灰色の縁を引く。全体を .6 に落としていたのをやめて、不透明度はノーツと同じにした
+      const rx=Math.max(8,hd.w*sizeScale*.53)*(1.1-.1*near),ry=Math.max(3,rx*.34);
+      // 4-1(テンポ): 輪ではなく中まで塗った暗い楕円。地上のノーツと重なるときは描かない。外ほど薄い3重でぼかす
+      const covered=frameGround.some(g=>sh.cx+rx>g.x0&&sh.cx-rx<g.x1&&sh.cy+ry>g.y0&&sh.cy-ry<g.y1);
+      // 暗い床の上でも見えるよう、芯をさらに濃く・大きく(板の幅の1.0〜1.1倍)し、縁に板の色(#ef4444)のごく薄いにじみを足す(白い判定線の輪とは色で分ける・線の輪郭にはしない)
+      if(!covered)[[1.5,'239,68,68',.24],[1.3,'4,6,22',.3],[1.08,'4,6,22',.58],[.86,'4,6,22',.82+.12*near]].forEach(([k,rgb,al])=>{
+        ctx.fillStyle=`rgba(${rgb},${al.toFixed(3)})`;ctx.beginPath();
+        for(let i=0;i<16;i++){const t=i/16*Math.PI*2,x=sh.cx+Math.cos(t)*rx*k,y=sh.cy+Math.sin(t)*ry*k;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+        ctx.closePath();ctx.fill();});
+    }else{
+    ctx.beginPath();ctx.moveTo(sh.cx-w,sh.cy);ctx.lineTo(sh.cx,sh.cy-h);ctx.lineTo(sh.cx+w,sh.cy);ctx.lineTo(sh.cx,sh.cy+h);ctx.closePath();ctx.fill();
+    }
+    if(['beam','ruby','cube','glass_silver','glass_red','plate'].includes(st)){
+      // 影とノーツをつなぐ細い縦の線(テンポ「影からノーツへ細い縦の線を1本。白〜薄紫・薄く」)。ノーツ側が濃く、影へ向かって薄い。近づくほど濃い
+      const g=ctx.createLinearGradient(0,hd.cy,0,sh.cy),acc=st.startsWith('glass_')||st==='plate'?'221,214,254':skyAccentRgb();
+      g.addColorStop(0,`rgba(${acc},${(.3+.4*near).toFixed(2)})`);g.addColorStop(1,`rgba(${acc},${(.12+.2*near).toFixed(2)})`);
+      ctx.strokeStyle=g;ctx.lineWidth=1+1*near;ctx.lineCap='round';
+      // 地上のノーツと重なる所では線を描かない(線の上を地上の頭が通ると、地上のノーツが「線と影を持った空のノーツ」に見えるため)
+      let segs=[[Math.min(hd.cy,sh.cy),Math.max(hd.cy,sh.cy)]];
+      for(const gr of frameGround){if(hd.cx<gr.x0||hd.cx>gr.x1)continue;const next=[];for(const [a0,a1] of segs){if(gr.y1<=a0||gr.y0>=a1){next.push([a0,a1]);continue;}if(gr.y0>a0)next.push([a0,gr.y0]);if(gr.y1<a1)next.push([gr.y1,a1]);}segs=next;}
+      ctx.beginPath();for(const [a0,a1] of segs){if(a1-a0<1)continue;ctx.moveTo(hd.cx,a0);ctx.lineTo(hd.cx,a1);}ctx.stroke();ctx.lineCap='butt';
+    }else{ctx.strokeStyle=`rgba(${skyAccentRgb()},.16)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();}
+    ctx.globalAlpha=1;
+  };
   const drawSlide=(geo,opts)=>{
     const {failed,alpha,pressed}=opts;
     if(!geo.slide||!geo.slide.length)return;
@@ -28926,11 +29429,26 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       quads.forEach(q=>ctx.lineTo(q.r1,q.y1));
       for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
       ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
-      ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle=`rgba(${RHYTHM_NOTE_COLORS.SLIDE.rgb},.18)`;ctx.stroke();
+      ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle=`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.18)`;ctx.stroke();
     }
-    ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${RHYTHM_NOTE_COLORS.SLIDE.rgb},.5)`;
+    ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
     // 継ぎ目(10等分の境目)は判定と無関係なので線を引かない。塗りだけ。
-    quads.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    quads.forEach(q=>{
+      // 空中の段(試作): 高さのある区切りは、空中の色を薄く(半透明の帯)。高さが上がるほど空中の見せ方に寄せる
+      const air=!failed&&opts.skySlideRgb?Math.max(0,Math.min(1,(Number(q.sky)||0)*1.6)):0;
+      if(air>0)ctx.fillStyle=`rgba(${opts.skySlideRgb},${(.5-.28*air).toFixed(3)})`;
+      else ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${opts.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},${opts.slideRgb?.62:.5})`;
+      ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    // 空中にある区切りの左右の縁を、空中の色で光らせる(縁取りの帯。地上の帯との見分けの主役)
+    if(!failed&&opts.skySlideRgb){
+      ctx.lineCap='round';
+      quads.forEach(q=>{const air=Math.max(0,Math.min(1,(Number(q.sky)||0)*1.6));if(air<=.05)return;
+        ctx.strokeStyle=`rgba(${opts.skySlideRgb},${(.2*air).toFixed(3)})`;ctx.lineWidth=4;
+        ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.stroke();
+        ctx.strokeStyle=opts.skySlideCore||'#fff';ctx.globalAlpha=opts.alpha*air*.6;ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.l1,q.y1);ctx.moveTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.stroke();ctx.globalAlpha=opts.alpha;});
+      ctx.lineCap='butt';
+    }
     // 帯のふち。DOM版の[data-rhythm-slide-edge]と同じ濃さで外周だけをなぞる。
     ctx.beginPath();
     ctx.moveTo(quads[0].r0,quads[0].y0);
@@ -28938,7 +29456,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
     ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
     // ふちは明るく(2026-09-27・参考動画。以前は 1px・.56)
-    ctx.lineWidth=failed?1:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(243,232,255,.82)';ctx.stroke();
+    ctx.lineWidth=failed?1:opts.slideHand?2.8:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':opts.slideHand==='R'?'rgba(237,233,254,.9)':opts.slideRgb?`rgba(${opts.slideRgb},.95)`:'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
     let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
     // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく(2026-09-28・参考動画。以前は一様に .30)
@@ -28956,7 +29474,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     }
     // チェックポイント＝そこで判定が入るところ。DOM版の[data-rhythm-slide-checkpoint]と同じ見た目。
-    const checkpoints=geo.checkpoints;
+    const checkpoints=opts.skySlideRgb?null:geo.checkpoints;
     if(checkpoints&&checkpoints.length){
       ctx.strokeStyle=failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)';ctx.lineWidth=2;ctx.lineCap='round';
       checkpoints.forEach(line=>{const [x1,x2]=sizeX(line.x1,line.x2);ctx.beginPath();ctx.moveTo(x1,line.y);ctx.lineTo(x2,line.y);ctx.stroke();});
@@ -29037,7 +29555,32 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const num=re=>{const m=str.match(re);return m?Number(m[1])/(m[2]?100:1):1;};
     const f=[num(/brightness\(([\d.]+)(%)?\)/),num(/saturate\(([\d.]+)(%)?\)/)];
     return f[0]===1&&f[1]===1?null:f;};
-  let hitArea=null,hitNext=0;
+  // skyHitArea … 空中のノーツの弾け方(試作)だけは、2D の canvas でもここで描く(地上の光は WebGL のときだけ)
+  let hitArea=null,hitNext=0,skyHitArea=null;
+  // 空中の段(試作): 空中の高さで押しているサブレーンと、その光の濃さ(設定「レーンの光」と同じ 0 / .35 / 1)
+  let skyPressed=[],skyPressedAlpha=1;
+  // 空中の判定ラインの上で、押しているサブレーンを赤く光らせる(2026-10-10 社長「タップして光るレーンは、タップするところで地上と空中で変えるのは難しいかな?」)。
+  // 地上のレーンの光(下まで伸びる柱)の空中版。線から上へ短く伸びる光と、線の上の明るい筋。幅は空中の線の奥行きで投影したサブレーン1本ぶん。
+  // WebGL でも描けるように、グラデーションは使わず薄い四角を重ねる
+  const drawSkyPress=hitY=>{
+    if(!skyPressed.length||!(skyPressedAlpha>0)||!cssW||!cssH)return 0;
+    const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio,ratio=rhythmSkyLineRatio(),up=cssH*.12,down=cssH*.02,slices=8;
+    const seen=new Set();let painted=0;
+    touch();ctx.setTransform(dpr,0,0,dpr,0,0);glowBegin();
+    for(const value of skyPressed){
+      const index=Math.floor(Number(value));
+      if(!Number.isFinite(index)||index<0||index>=RHYTHM_MAX_SUB_LANE_WIDTH||seen.has(index))continue;
+      seen.add(index);
+      const span=rhythmProjectSubLaneRange(index,1,ratio),x=span.left*cssW,w=Math.max(2,span.width*cssW);
+      ctx.fillStyle='rgb(239,68,68)';
+      for(let k=0;k<slices;k++){const f=(k+1)/slices;ctx.globalAlpha=skyPressedAlpha*.12*f;ctx.fillRect(x,Y-up*f,w,up*f);}
+      ctx.globalAlpha=skyPressedAlpha*.4;ctx.fillRect(x,Y,w,down);
+      ctx.globalAlpha=skyPressedAlpha*.9;ctx.fillStyle='rgb(254,202,202)';ctx.fillRect(x,Y-1,w,2);
+      painted++;
+    }
+    glowEnd();ctx.globalAlpha=1;
+    return painted;
+  };
   const hitSlots=new Array(RHYTHM_HIT_EFFECT_POOL).fill(null),hitFilters=new Map();
   const readHitFilters=area=>{
     hitFilters.clear();
@@ -29156,6 +29699,65 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arc(x+r,y+r,r,Math.PI,Math.PI*1.5);
     ctx.lineTo(x+w-r,y);ctx.arc(x+w-r,y+r,r,Math.PI*1.5,Math.PI*2);ctx.lineTo(x+w,y+h);ctx.closePath();
   };
+  // 空中のノーツを取ったときの弾け方(試作)。2026-10-10 社長「表示方法は参考動画を参考にするのが1番良い」→ 参考(Arcaea の Sky Input)の順番と形を手本にする。
+  // オンプくんの言葉化: 線の上で「白〜差し色の星形の閃光+線に沿って左右へ伸びる光の筋」→「細い輪が広がる」→「真ん中に光の点が残る」→「四角い小さな破片が散る」。
+  // 形はどの案でも同じ。色だけ案(skyTapStyle)で変える。大きさと明るさは地上の弾け方にそろえる(空中だけ派手で別のゲームに見えないように)。
+  // 位置は空中の判定ライン(判定ラインの下端 hitY から、プレイエリアの高さの RHYTHM_SKY_LIFT_RATIO 上)。横の位置は空中の線の奥行きへ寄せる
+  const drawSkyHit=(h,p,hitY)=>{
+    const style=skyTapStyle(),theme=typeof rhythmSkyTheme==='function'?rhythmSkyTheme():null;
+    const redish=/ruby|red|ring/.test(style),silverish=/silver|beam|cube|star|glass/.test(style);
+    const main=redish?'239,68,68':(silverish?'226,232,240':RHYTHM_SKY_FX.main);
+    const accentRaw=(theme&&typeof theme.rgb==='string'&&theme.rgb)||main;
+    // 差し色は白へ6割寄せて使う(赤のままだと判定 GREAT の赤 #f87171 と取り違える・2026-10-10 ダメダシくんの指摘)。中心はいつも白
+    const tint=accentRaw.split(',').map(v=>Math.round(Number(v)*.4+255*.6)).join(',');
+    const C={core:'255,255,255',main,accent:tint};
+    const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio;
+    const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
+    const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
+    const strong=h.judgment==='MARVELOUS'||h.judgment==='EXCELLENT'||h.precise,power=strong?1:(h.judgment==='GREAT'?.78:.55);
+    const seg=(from,to)=>Math.max(0,Math.min(1,(p-from)/(to-from)));
+    const poly=pts=>{ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();};
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    // ① 星形の閃光と、線に沿って左右へ伸びる光の筋(0〜35%)
+    const a1=seg(0,.35);
+    if(a1<1){
+      const f=(1-a1)*power,len=W*(.55+a1*.6),th=1.2*(1-a1)+.4;
+      // 横長の楕円(差し色の太い筋)は出さない。白い細い筋だけ(端に少しだけ差し色)
+      ctx.globalAlpha=f*.45;ctx.fillStyle=`rgb(${C.accent})`;poly([cx-len,Y,cx,Y-.6,cx+len,Y,cx,Y+.6]);ctx.fill();
+      ctx.globalAlpha=f;ctx.fillStyle=`rgb(${C.core})`;poly([cx-len*.7,Y,cx,Y-th*.6,cx+len*.7,Y,cx,Y+th*.6]);ctx.fill();
+      // 星(4本の光の筋。縦は上へ少し長め)
+      const sl=W*(.22+a1*.25),su=W*(.28+a1*.3),sw=1.6*(1-a1)+.6;
+      poly([cx,Y-su,cx+sw,Y,cx,Y+sl*.7,cx-sw,Y]);ctx.fill();
+      ctx.globalAlpha=f*.7;poly([cx-sl*.55,Y-sl*.55,cx+sw*.5,Y-sw*.5,cx+sl*.55,Y+sl*.55,cx-sw*.5,Y+sw*.5]);ctx.fill();
+      poly([cx+sl*.55,Y-sl*.55,cx+sw*.5,Y+sw*.5,cx-sl*.55,Y+sl*.55,cx-sw*.5,Y-sw*.5]);ctx.fill();
+    }
+    // ② 細い輪が広がる(15〜85%)
+    const a2=seg(.15,.85);
+    if(a2>0&&a2<1){
+      const g=1-Math.pow(1-a2,3);
+      // 細い輪1本だけ(大きさは前の6割ほど)。色は白へ寄せた差し色
+      ctx.globalAlpha=(1-a2)*.7*power;ctx.lineWidth=1;ctx.strokeStyle=`rgb(${C.accent})`;
+      ctx.beginPath();ctx.arc(cx,Y,W*(.08+g*.26),0,Math.PI*2);ctx.stroke();
+    }
+    // ③ 真ん中に残る光の点(25%〜最後。最後の3割で消える)
+    const a3=seg(.25,1);
+    if(a3>0){
+      ctx.globalAlpha=Math.min(1,a3*4)*Math.min(1,(1-p)/.3)*power;ctx.fillStyle=`rgb(${C.core})`;
+      ctx.beginPath();ctx.arc(cx,Y,1.2+1.3*(1-a3),0,Math.PI*2);ctx.fill();
+    }
+    // ④ 四角い小さな破片が散る(20%〜最後。回りながら外へ、少し上へ。最後はゆっくり落ちる)
+    const a4=seg(.2,1);
+    if(a4>0){
+      const g=1-Math.pow(1-a4,2);
+      for(let i=0;i<8;i++){
+        const ang=-Math.PI/2+(i-3.5)*.55,dist=W*(.1+g*(.38+(i%2)*.1)),x=cx+Math.cos(ang)*dist,y=Y+Math.sin(ang)*dist*.85+a4*a4*W*.1;
+        const r=Math.max(.6,(2-(i%3)*.35)*(1-a4*.6)),turn=(i%2?1:-1)*(.5+a4*3),co=Math.cos(turn)*r,si=Math.sin(turn)*r;
+        ctx.globalAlpha=Math.max(0,(1-a4)*power);ctx.fillStyle=i%3===1?`rgb(${C.accent})`:`rgb(${C.core})`;
+        poly([x-co+si,y-si-co,x+co+si,y+si-co,x+co-si,y+si+co,x-co-si,y-si+co]);ctx.fill();
+      }
+    }
+    ctx.globalAlpha=1;
+  };
   const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
     // フリックの炎の羽は、ほかの光より長く残る(0.46秒)。ほかの光は元の長さで終える
@@ -29207,9 +29809,35 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(f.o>.002){ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy,f.r);ctx.drawImage(hitFlareSprite().canvas,cx-95,hitY-55,190,110);}
     }
   };
+  // 空中のタップを叩いたとき(試作・2026-10-10 社長「空中タップの押した演出が地上タップより全然ない」)。
+  // 地上と同じ作りの弾け(中心のフラッシュ・立ち上がる光の柱・はじける粒)を、空中の判定線の上で空中の赤で出す。
+  // 床の影の位置にも小さな受けの波紋を出して、高さを伝える。参考の星形の閃光・輪・破片(drawSkyHit)はこの上に重ねる
+  const SKY_STRIKE_RGB='239,68,68';
+  const drawSkyStrike=(h,p,hitY,elapsed)=>{
+    const Y=hitY-cssH*RHYTHM_SKY_LIFT.ratio;
+    const k=rhythmProjectionScale(rhythmSkyLineRatio())/Math.max(.01,rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio));
+    const cx=cssW/2+(h.center*cssW-cssW/2)*k,W=Math.max(34,h.width*cssW*k);
+    const power=h.judgment==='GREAT'?.85:(h.judgment==='GOOD'||h.judgment==='BAD'?.6:1);
+    // 楕円は24角形で描く(WebGL の描き込み先に ellipse が無いため・影と同じ作り)
+    const oval=(x0,y0,rx,ry)=>{ctx.beginPath();for(let i=0;i<24;i++){const t=i/24*Math.PI*2,x=x0+Math.cos(t)*rx,y=y0+Math.sin(t)*ry;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();};
+    // 床の受け: 影の位置で、平たい輪が広がって消える(はじめの6割)
+    const a=Math.max(0,Math.min(1,p/.6));
+    if(a<1){
+      const g=1-Math.pow(1-a,3),gx=h.center*cssW,rx=h.width*cssW*(.3+.45*g),ry=Math.max(2,rx*.2);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.globalAlpha=(1-a)*.5*power;ctx.fillStyle=`rgba(${SKY_STRIKE_RGB},.55)`;
+      oval(gx,hitY,rx*.7,ry*.7);ctx.fill();
+      ctx.globalAlpha=(1-a)*.8*power;ctx.lineWidth=1.5;ctx.strokeStyle='rgb(254,202,202)';
+      oval(gx,hitY,rx,ry);ctx.stroke();
+    }
+    if(!h._skyStrike)h._skyStrike={...h,sky:false,precise:false,plume:false,big:false,flick:'',center:cx/cssW,width:W/cssW,color:`rgb(${SKY_STRIKE_RGB})`,sparkScale:1.2};
+    const o=h._skyStrike;o.center=cx/cssW;o.width=W/cssW;
+    // 地上の虹色・金の柱と並べても負けないよう、同じ弾けを2回重ねて明るくする(光は足し算で重なる)
+    const before=ctx.globalAlpha;drawOneHit(o,p,Y,elapsed);drawOneHit(o,p,Y,elapsed);ctx.globalAlpha=before;
+  };
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
-    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
+    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
@@ -29264,28 +29892,33 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;
     },
-    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;hitSlots.fill(null);},
+    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;skyHitArea=null;skyPressed=[];hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
     enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
     hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},
+    enableSkyHits(area){skyHitArea=area&&ctx?area:null;skyPressed=[];},
+    // 空中の高さで押しているサブレーン(演奏画面が指の出入りのたびに渡す)。alpha は設定「レーンの光」の濃さ
+    setSkyPressed(coordinates,alpha=1){skyPressed=Array.isArray(coordinates)?coordinates.slice():[];skyPressedAlpha=Number.isFinite(Number(alpha))?Math.max(0,Math.min(1,Number(alpha))):1;},
+    skyHitsFor(area){return !!skyHitArea&&!!ctx&&area===skyHitArea;},
     // DOM の部品と同じく10枠を順に使い回す(11個目は1個目を切って上書きする)。演出量「最小」・軽量モードでは出さない
     pushHit(hit){
-      if(!hitArea||effect==='MINIMAL'||lightweight)return;
+      if(!(hit.sky?(hitArea||skyHitArea):hitArea)||effect==='MINIMAL'||lightweight)return;
       const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
       const plume=!hit.big&&!!hit.flick&&HIT_PLUME_TILT[hit.flick]!==undefined;
       hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
-        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume,seed:plume?(Math.random()*4294967296)>>>0:0};
+        ms:hit.sky?RHYTHM_SKY_HIT_MS:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume:plume&&!hit.sky,seed:plume&&!hit.sky?(Math.random()*4294967296)>>>0:0};
       hitNext=(hitNext+1)%hitSlots.length;
     },
     // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
     drawHits(hitY){
-      if(!ctx||!hitArea||!Number.isFinite(hitY))return 0;
+      if(!ctx||!(hitArea||skyHitArea)||!Number.isFinite(hitY))return 0;
       const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
+      if(skyHitArea&&skyPressed.length)count+=drawSkyPress(hitY);
       for(let slot=0;slot<hitSlots.length;slot++){
         const hit=hitSlots[slot];if(!hit)continue;
         const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
         if(elapsed>=end){hitSlots[slot]=null;continue;}
-        touch();glowBegin();drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
+        touch();glowBegin();if(hit.sky){drawSkyStrike(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));drawSkyHit(hit,Math.max(0,Math.min(1,t)),hitY);}else drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
@@ -29351,7 +29984,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         blank=true;
       }
       ctx.setTransform(dpr,0,0,dpr,0,0);
-      pendingClear=true;
+      pendingClear=true;frameGround.length=0;
       frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
       if(typeof ctx.gpuFrameBegin==='function')ctx.gpuFrameBegin();
@@ -29364,7 +29997,21 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       touch();
       drawn++;
       const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1,...opts};
+      // 空中の段(試作): 手の色(左=水色・右=ピンク)。譜面のスライドに hand:'L'|'R' を書いたときだけ
+      // 空中の段(試作): 高さのあるスライドは「空中の見せ方」で描く(社長: 左右は位置で分かるので色で分けない・地上のスライドは今の色のまま・空中は見せ方で分ける)
+      if(rhythmSlideHasSky(note)){const th=rhythmSkyTheme();o.skySlideRgb=th.rgb;o.skySlideCore=th.core;}
       if(o.pop===null){
+        if(geo.slideShadow)drawSkyShadowBand(geo.slideShadow,o);
+        if(geo.skyShadow&&!geo.slide)drawSkyShadowHead(geo,o);
+        // 空中から始まる(高さのある)スライドは、頭から床へ細い支柱を下ろす(参考のアークと同じ・高さが分かるように)
+        if(geo.slide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb){
+          const hd=geo.head,r=Math.max(10,hd.w*.75),t=frameNow/90;ctx.globalAlpha=o.alpha;ctx.lineCap='round';
+          [[1,0],[0,1]].forEach(([dx,dy],k)=>{const len=r*(k?1.15:1)*(.85+.15*Math.sin(t+k));
+            ctx.strokeStyle=`rgba(${o.skySlideRgb},.55)`;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();
+            ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(hd.cx-dx*len,hd.cy-dy*len);ctx.lineTo(hd.cx+dx*len,hd.cy+dy*len);ctx.stroke();});
+          ctx.lineCap='butt';ctx.globalAlpha=1;
+        }
+        if(geo.skyShadow&&geo.slide&&geo.head){const sh=geo.skyShadow,hd=geo.head;ctx.globalAlpha=o.alpha*.7;ctx.strokeStyle=`rgba(${o.slideRgb||RHYTHM_NOTE_COLORS.SLIDE.rgb},.75)`;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sh.cx,sh.cy);ctx.lineTo(hd.cx,hd.cy);ctx.stroke();ctx.globalAlpha=1;}
         if(geo.band)drawBand(geo,o);
         if(geo.slide)drawSlide(geo,o);
         drawEndBar(note,geo,o);
@@ -29372,7 +30019,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const headOpts=o.pop===null?o:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
       // 押さえている最中の光は粒の下に敷く(粒の形は隠さない)。演出量「最小」では出さない
       if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
-      drawHead(note,geo,headOpts);
+      // 空中のノーツも、既定(plate)ではふつうの板(drawHead)で描く。旧スタイルは drawSkyTap(箱・星など)
+      const skyPlate=!!(geo.skyShadow&&!geo.slide&&geo.head&&isSkyPlate(note));
+      if(skyPlate||!(geo.skyShadow&&!geo.slide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 空中の段(試作): 空中の粒の見た目(案を比べるため4通り。localStorage 'mh_sky_tap_style_proto' で選ぶ・既定は gold)
+      // 近づく細い輪(drawSkyGlow)は外した(2026-10-10 社長「参考動画を手本に」→ 参考は輪ではなく「奥は暗く手前は明るい」で近さを見せる。明るさは drawSkyTap 側)
+      if(geo.skyShadow&&!geo.slide&&geo.head&&o.pop===null&&!skyPlate)drawSkyTap(geo.head,o);
+      // 地上のノーツの場所を覚える(あとで描く空中のノーツの線・影を、重なる所で避けるため)
+      if(!geo.skyShadow&&geo.head){const hw=geo.head.w*sizeScale/2+2,hh=Math.max(8,geo.head.h*(o.depthScale||1))/2+2;frameGround.push({x0:geo.head.cx-hw,x1:geo.head.cx+hw,y0:geo.head.cy-hh,y1:geo.head.cy+hh});
+        const pts=geo.band||null;if(pts&&pts.length>1){let lo=1e9,hi=-1e9,top=pts[0].y,bot=pts[pts.length-1].y;for(const e of pts){lo=Math.min(lo,e.left);hi=Math.max(hi,e.right);}frameGround.push({x0:lo,x1:hi,y0:Math.min(top,bot),y1:Math.max(top,bot)});}
+        if(geo.slide)for(const q of geo.slide){frameGround.push({x0:Math.min(q.l0,q.l1),x1:Math.max(q.r0,q.r1),y0:Math.min(q.y0,q.y1),y1:Math.max(q.y0,q.y1)});}}
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
     drawFace(bitmap,cx,cy,size,alpha=1){
